@@ -708,6 +708,29 @@ announcement without age expiry and type 4's legacy +19h actual-instant rule.
 Missing type catalogs repair from bounded announcement/year partitions or seeded
 legacy exports; cold latency is not bounded by one GET during catalog repair.
 
+S12 ([#2697](https://github.com/WizardFactory/TodayWeather/issues/2697),
+[spec](../../specs/issue-2697.md)) implements this in `server2/src/warnings/`, not yet
+wired into the server2 process or any route switch. Source `kma-warning` uses kinds
+`bulletin-1`…`bulletin-4` (getPwnStatus plus getWthrWrnMsg pages for type 1;
+getWthrPwn, getWthrInfo and getWthrBrkNews for types 2–4), `pwn-cd` and `zone-seed`.
+Each provider acquisition or exported legacy document is one single-owner fetch group in
+the partition of its announcement KST date (`pwn-cd`: requested day). The latest bulletin is
+derived in memory by walking day partitions newest first: types 1–3 have no age
+expiry (recent days probed, older days discovered from complete per-year raw LISTs);
+type 4 reads only partitions on or after the KST date of now − 19 h and is omitted when
+stored KST time + 10 h < now. Days larger than one read are paged by whole acquisition. Equal announcements keep
+the earliest fetch. A missing day catalog is repaired from that exact period's raw
+prefix; an incomplete or failed repair skips the day because an acknowledged group
+always has its catalog and catalogs are never deleted. Catalog read errors fail with
+the legacy 501. Zone state for `specialInfo` is the newest zone seed plus every
+`pwn-cd` revision published since the seed's legacy sync point (every published day
+without one), replayed in memory by an owned refresh task; cold replay cost grows with
+time since the seed. Discovery scans back to 1970, so no stored bulletin ages out. Seeds come from the
+offline `server2/tools/migration/` converter and a loopback-only importer. Newly
+collected documents use the S02 seed key order, which S19 shadow comparison must
+confirm against production bytes; the Express session cookie and the shared S08
+classification of status-200 JSON gateway envelopes are recorded differences.
+
 Daily weather summaries are the authorized derived-weather exception; D04
 geocoding cache projections below do not permit normalized weather views. Preserve grid's
 legacy input sources/00:00 rule and >=18 valid hours, ASOS ordered valid min/max
