@@ -33,3 +33,7 @@ tower = { version = "0.5", features = ["util"] }
 [[bin]]
 name = "server2-feasibility"
 path = "benches/feasibility.rs"
+
+[[example]]
+name = "history_seed_import"
+path = "tools/migration/history_seed_import.rs"

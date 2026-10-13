@@ -1,0 +1,5 @@
+{"_id":{"$oid":"66f2f0a0c0ffee0000000101"},"stnId":108,"stnName":"서울","date":{"$date":"2026-09-24T09:03:00Z"},"t1h":21.1,"rs15m":0,"rs1h":0,"rs1d":0,"rns":false,"vec":270.5,"wdd":"W","wsd":1.5,"reh":61,"hPa":1012.3}
+{"_id":{"$oid":"66f2f0a0c0ffee0000000102"},"stnId":108,"stnName":"서울","date":{"$date":"2026-09-24T09:05:00Z"},"t1h":21.0,"rs15m":0.5,"rs1h":0.5,"rs1d":0.5,"rns":true,"vec":270.5,"wdd":"W","wsd":1.5,"reh":62,"hPa":1012.3}
+{"_id":{"$oid":"66f2f0a0c0ffee0000000103"},"stnId":112,"stnName":"인천","date":{"$date":"2026-09-24T09:21:00Z"},"t1h":20.0,"rns":false}
+{"_id":{"$oid":"66f2f0a0c0ffee0000000104"},"stnId":108,"stnName":"서울","date":{"$date":"2026-09-24T09:23:00Z"},"t1h":20.8,"rs15m":0,"rs1h":0.5,"rs1d":0.5,"rns":false,"vec":265,"wdd":"W","wsd":1.2,"reh":63,"hPa":1012.1}
+{"_id":{"$oid":"66f2f0a0c0ffee0000000105"},"stnId":108,"stnName":"서울","date":{"$date":"2026-09-24T09:21:00Z"},"t1h":20.9,"rs15m":0,"rs1h":0.5,"rs1d":0.5,"rns":true,"vec":268,"wdd":"W","wsd":1.3,"reh":62,"hPa":1012.2}
