@@ -1,0 +1,83 @@
+{
+  "binary_sha256": "a40a18f7ba1fda9ffc97ca08b69cafeb6949a456b1f5bec1b487c7e114aa3d07",
+  "capture_kind": "terminal result rendered from an actual isolated release-binary smoke.sh execution",
+  "captured_at_utc": "2026-10-13T06:21:06+00:00",
+  "command": "bash server2/deploy/smoke.sh --binary <release server2>",
+  "environment": "macOS, release binary, loopback recorded providers, frozen legacy origin, S03 local S3 peer",
+  "execution_log_sha256": "0d012982fb4fbc78365ed404dc4599afa157b977b7fff16da8fb28cfbc3cc79b",
+  "limitations": "Loopback fixtures only; no live provider/AWS/production latency/quota/shadow or cutover proof",
+  "new_file_link_policy": "Repository-relative references rendered as text when absent from the pinned commit; Markdown keeps local clickable links",
+  "observed": {
+    "peer_totals": {
+      "backend": 52,
+      "google": 2,
+      "kakao": 600,
+      "s3": 0
+    },
+    "replay": {
+      "percentiles_ms": {
+        "baseline": {
+          "cold": {
+            "max": 1.23,
+            "n": 15,
+            "p50": 0.82,
+            "p95": 1.23,
+            "p99": 1.23
+          },
+          "warm": {
+            "max": 0.97,
+            "n": 15,
+            "p50": 0.27,
+            "p95": 0.97,
+            "p99": 0.97
+          }
+        },
+        "candidate": {
+          "cold": {
+            "max": 1.29,
+            "n": 15,
+            "p50": 0.75,
+            "p95": 1.29,
+            "p99": 1.29
+          },
+          "warm": {
+            "max": 1.32,
+            "n": 15,
+            "p50": 0.26,
+            "p95": 1.32,
+            "p99": 1.32
+          }
+        }
+      },
+      "revision": {
+        "commit": "ca8735cf937a634e7af57396d605e26db8bfc4ff",
+        "dirty": true
+      },
+      "self_check": {
+        "detected": true,
+        "perturbation": "baseline legacy ko coordinate name changed",
+        "unexplained": 30
+      },
+      "unexplained": 0,
+      "workload_sha256": "98560fa94ebbbc3df8d896bb3d963db62fff138a38d32b72e3fd19afc3069846"
+    },
+    "rollback_known_gaps": [
+      "S19-GAP-1"
+    ],
+    "scenarios": [
+      "GW-COLD-WARM",
+      "GW-EMPTY-RESTORE",
+      "GW-SINGLE-FLIGHT",
+      "GW-CANCEL",
+      "GW-OUTAGE",
+      "GW-BUDGET",
+      "GW-PRESSURE",
+      "GW-DRAIN"
+    ]
+  },
+  "pdf_link_revision": "ca8735cf937a634e7af57396d605e26db8bfc4ff",
+  "pdf_sha256": "ef57cfca857dc8379eb17ada0692e1a2b2452b381a7347315643ba147f66b73e",
+  "schema": 1,
+  "screenshot_sha256": "51113c9402ed618abd3110211825f27253d62eb94b9957fc61cc6d97fb175ade",
+  "source_sha256": "87e9d9a4d472c44da8edc1a6a017fc0e49700d7d0aaf8139091477b94df46f1a"
+}

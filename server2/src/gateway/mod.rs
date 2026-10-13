@@ -1,6 +1,7 @@
 //! Staged public gateway: explicit legacy/native switches, owned deadlines and wire parity.
 pub mod backend;
 pub mod input;
+pub mod metrics;
 pub mod response;
 use crate::geocode::GeoClient;
 use axum::{
@@ -144,7 +145,14 @@ impl Gateway {
             async move { gateway.handle(request).await }
         })
     }
+    /// Records aggregate outcome counters around the unchanged request contract.
     pub async fn handle(&self, request: Request<Body>) -> Response {
+        let outcome = metrics::Outcome::start();
+        let response = self.respond(request).await;
+        outcome.finish(response.status().as_u16());
+        response
+    }
+    async fn respond(&self, request: Request<Body>) -> Response {
         let method = request.method().clone();
         let headers = request.headers().clone();
         if method == Method::OPTIONS {
@@ -166,7 +174,9 @@ impl Gateway {
         let inner = self.inner.clone();
         let deadline = Instant::now() + inner.deadline;
         // The spawned owner survives a disconnected waiter; all owned IO shares its deadline.
+        let owned = metrics::Owned::start();
         let task = tokio::spawn(async move {
+            let _owned = owned;
             let _owner = owner.clone();
             tokio::time::timeout_at(deadline, inner.process(route, lang, query, deadline, owner))
                 .await
