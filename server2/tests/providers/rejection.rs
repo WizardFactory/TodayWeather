@@ -25,6 +25,32 @@ fn json_gateway_quota_and_deterministic_codes() {
     assert_eq!(classify(200, quota, false, false), Disposition::Retryable);
 }
 
+/// Root coordination note from S12 (PR #2727): an HTTP 200 JSON body carrying code 30 must
+/// rotate as an auth rejection (legacy dataGoKrRejection isAuth: 20/30/31/32), in both the
+/// gateway envelope and the `response.header` form.
+#[test]
+fn http_200_json_code_30_is_auth_in_both_envelopes() {
+    let header = br#"{"response":{"header":{"resultCode":"30","resultMsg":"SERVICE_KEY_IS_NOT_REGISTERED_ERROR"}}}"#;
+    let gateway = br#"{"OpenAPI_ServiceResponse":{"cmmMsgHeader":{"errMsg":"SERVICE ERROR","returnReasonCode":"30"}}}"#;
+    for body in [header.as_slice(), gateway.as_slice()] {
+        for code in ["20", "30", "31", "32"] {
+            let body = String::from_utf8(body.to_vec())
+                .unwrap()
+                .replace("\"30\"", &format!("\"{code}\""));
+            assert_eq!(
+                classify(200, body.as_bytes(), true, false),
+                Disposition::Auth,
+                "{body}"
+            );
+            assert_eq!(
+                classify(200, body.as_bytes(), true, true),
+                Disposition::Auth,
+                "{body}"
+            );
+        }
+    }
+}
+
 #[test]
 fn recorded_xml_gateway_quota_keeps_precedence() {
     let body = fixture("gateway-quota.xml");

@@ -265,7 +265,8 @@ pub fn inspect_page(
                         Value::Number(_) => numeric = true,
                         Value::String(s) => {
                             let s = s.trim();
-                            numeric |= !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+                            // Legacy converters use `Number(raw)` after rejecting empty text.
+                            numeric |= !s.is_empty() && s.parse::<f64>().is_ok_and(f64::is_finite);
                         }
                         _ => return false,
                     }
@@ -390,6 +391,10 @@ pub fn inspect_web(request: &WebRequest, content_type: &str, body: &[u8]) -> Web
             let Some(view) = view else {
                 return WebVerdict::Invalid("charset");
             };
+            // Markup inside comments is not page structure (an unterminated comment is invalid).
+            let Some(view) = strip_comments(&view) else {
+                return WebVerdict::Invalid("html comment");
+            };
             // A truncated page (no closing `</html>`) is never a complete observation page.
             let complete = view.trim_end().to_ascii_lowercase().ends_with("</html>");
             let (publication, table) = if family == WebFamily::CityObservation {
@@ -470,8 +475,10 @@ fn inspect_rss(request: &WebRequest, body: &[u8]) -> WebVerdict {
     let mut slots = (None::<String>, None::<String>);
     let row_complete = |fields: &BTreeSet<&str>, slots: &(Option<String>, Option<String>)| {
         let digits = |v: &Option<String>| {
-            v.as_ref()
-                .is_some_and(|v| !v.is_empty() && v.bytes().all(|b| b.is_ascii_digit()))
+            v.as_ref().is_some_and(|v| {
+                let v = v.trim();
+                !v.is_empty() && v.bytes().all(|b| b.is_ascii_digit())
+            })
         };
         ROW.iter().all(|f| fields.contains(f)) && digits(&slots.0) && digits(&slots.1)
     };
@@ -525,9 +532,16 @@ fn inspect_rss(request: &WebRequest, body: &[u8]) -> WebVerdict {
                 if stack.is_empty() && !value.is_empty() {
                     return WebVerdict::Invalid("xml text");
                 }
+                // Text split by comments is one value: concatenate every fragment.
                 match stack.as_slice() {
-                    ["wid", "body", "data", "hour"] => slots.0 = Some(value.to_owned()),
-                    ["wid", "body", "data", "day"] => slots.1 = Some(value.to_owned()),
+                    ["wid", "body", "data", "hour"] => slots
+                        .0
+                        .get_or_insert_with(String::new)
+                        .push_str(text.as_str()),
+                    ["wid", "body", "data", "day"] => slots
+                        .1
+                        .get_or_insert_with(String::new)
+                        .push_str(text.as_str()),
                     _ => {}
                 }
                 let slot = match stack.as_slice() {
@@ -545,6 +559,15 @@ fn inspect_rss(request: &WebRequest, body: &[u8]) -> WebVerdict {
             | Token::EmptyDtd { .. }
             | Token::EntityDeclaration { .. }
             | Token::DtdEnd { .. } => return WebVerdict::Invalid("dtd"),
+            // CDATA would hide part of a header or hour/day value from the text checks.
+            Token::Cdata { .. }
+                if matches!(
+                    stack.as_slice(),
+                    ["wid", "header", ..] | ["wid", "body", "data", "hour" | "day"]
+                ) =>
+            {
+                return WebVerdict::Invalid("rss cdata");
+            }
             _ => {}
         }
     }
@@ -641,6 +664,18 @@ fn attributes(s: &str) -> Vec<(String, &str)> {
             out.push((key, ""));
         }
     }
+}
+/// Remove `<!-- ... -->` comments; `None` when a comment is never closed.
+fn strip_comments(view: &str) -> Option<String> {
+    let mut out = String::with_capacity(view.len());
+    let mut rest = view;
+    while let Some(start) = rest.find("<!--") {
+        out.push_str(&rest[..start]);
+        let end = rest[start + 4..].find("-->")?;
+        rest = &rest[start + 4 + end + 3..];
+    }
+    out.push_str(rest);
+    Some(out)
 }
 /// Markup between a selected `<table>` start tag (first match, or the last one when `last`)
 /// and the next `</table>`. `None` when no table matches or it is never closed.

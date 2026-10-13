@@ -126,3 +126,10 @@ each RSS `data` row needs every field legacy `parseShortRss` reads (`hour`, `day
 `s06`; `wdEn` optional) with numeric `hour`/`day`; life-index fields must be scalars (null,
 object or array is invalid; empty or malformed strings are "no value" as in the legacy
 converters) and each row needs at least one numeric index value.
+
+Third review (head `59ab0356`): HTML comments are removed before structure checks (an
+unterminated comment is invalid), so commented cells are not data; RSS `hour`/`day` text is
+concatenated across comment-split fragments and CDATA in header or `hour`/`day` is invalid;
+numeric index strings follow legacy `Number(raw)` (finite decimal such as `1.0` counts).
+Root coordination (S12, PR #2727): an HTTP 200 JSON body with code 20/30/31/32 is Auth in both
+the `response.header` and the `OpenAPI_ServiceResponse` forms; base `ca8735cf` missed the latter.

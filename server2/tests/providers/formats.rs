@@ -582,3 +582,102 @@ fn review_rows_need_cells_fields_and_values() {
         PageVerdict::Invalid(_)
     ));
 }
+
+/// Review 3 findings S13-R1 (comment cells), S13-R9 (split text) and S13-R11 (decimal strings).
+#[test]
+fn review_comments_split_text_and_decimal_values() {
+    // S13-R1: markup inside comments is not a data cell; unterminated comments are invalid.
+    let aws = fixture("aws-minute-euckr.html");
+    let minute = WebRequest::aws_minute(None);
+    let (open, close) = (b"<table border=\"1\">".as_slice(), b"</table>".as_slice());
+    let at = aws.windows(open.len()).position(|w| w == open).unwrap() + open.len();
+    let end = at
+        + aws[at..]
+            .windows(close.len())
+            .position(|w| w == close)
+            .unwrap();
+    let commented = [
+        &aws[..at],
+        b"<tr><!-- <td> --></tr><tr><!-- <td> --></tr>".as_slice(),
+        &aws[end..],
+    ]
+    .concat();
+    assert!(matches!(
+        inspect_web(&minute, "text/html", &commented),
+        WebVerdict::Invalid(_)
+    ));
+    let unterminated = [&aws[..at], b"<!-- open".as_slice(), &aws[at..]].concat();
+    assert!(matches!(
+        inspect_web(&minute, "text/html", &unterminated),
+        WebVerdict::Invalid(_)
+    ));
+    assert!(matches!(
+        inspect_web(&minute, "text/html", &aws),
+        WebVerdict::Valid(_)
+    ));
+
+    // S13-R9: a value split by a comment or hidden in CDATA is checked as a whole.
+    let rss = WebRequest::town_rss(60, 127).unwrap();
+    let body = String::from_utf8(fixture("town-rss.xml")).unwrap();
+    for (from, to) in [
+        ("<hour>18</hour>", "<hour>x<!--c-->18</hour>"),
+        ("<day>0</day>", "<day><![CDATA[x]]>0</day>"),
+        ("<tm>202610131400</tm>", "<tm><![CDATA[2026]]>10131400</tm>"),
+    ] {
+        let broken = body.replacen(from, to, 1);
+        assert!(
+            matches!(
+                inspect_web(&rss, "text/xml", broken.as_bytes()),
+                WebVerdict::Invalid(_)
+            ),
+            "{to}"
+        );
+    }
+    let split = body.replacen("<hour>18</hour>", "<hour>1<!--c-->8</hour>", 1);
+    assert!(matches!(
+        inspect_web(&rss, "text/xml", split.as_bytes()),
+        WebVerdict::Valid(_)
+    ));
+
+    // S13-R11: decimal numeric strings are values, as legacy `Number(raw)` accepts them.
+    let weeds =
+        DataGoKrRequest::new(F::WeedsPollenV3, Target::AllAreas, p(20260930, 1800)).unwrap();
+    let mut pollen = json(&fixture("pollen-v3-live-20261001.json"));
+    pollen["response"]["body"]["numOfRows"] = 1000.into();
+    pollen["response"]["body"]["totalCount"] = 3.into();
+    for row in pollen["response"]["body"]["items"]["item"]
+        .as_array_mut()
+        .unwrap()
+    {
+        row["today"] = "1.0".into();
+        row["tomorrow"] = "".into();
+    }
+    assert!(matches!(
+        inspect_page(&weeds, 1, None, &pollen),
+        PageVerdict::Valid(_)
+    ));
+    let uv = DataGoKrRequest::new(F::UvIdxV5, Target::AllAreas, p(20260926, 1200)).unwrap();
+    let mut whole = json(&fixture("uv-idx-v5.json"));
+    whole["response"]["body"]["numOfRows"] = 1000.into();
+    whole["response"]["body"]["totalCount"] = 3.into();
+    let row = whole["response"]["body"]["items"]["item"][0]
+        .as_object_mut()
+        .unwrap();
+    for (k, v) in row.iter_mut() {
+        if k.starts_with('h') {
+            *v = "".into();
+        }
+    }
+    row.insert("h3".into(), "2.5".into());
+    assert!(matches!(
+        inspect_page(&uv, 1, None, &whole),
+        PageVerdict::Valid(_)
+    ));
+    // Non-finite spellings are not values.
+    let mut infinite = whole.clone();
+    infinite["response"]["body"]["items"]["item"][0]["h3"] = "inf".into();
+    assert!(matches!(
+        inspect_page(&uv, 1, None, &infinite),
+        PageVerdict::Invalid(_)
+    ));
+}
