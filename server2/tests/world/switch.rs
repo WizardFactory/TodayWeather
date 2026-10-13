@@ -143,66 +143,59 @@ async fn native_world_switch_reproduces_s02_gateway_world_and_rolls_back() {
 }
 
 #[test]
-fn runtime_option_is_opt_in_and_loopback_only() {
-    let vars = |pairs: &'static [(&'static str, &'static str)]| {
+fn runtime_routing_list_selects_the_native_world_with_real_endpoints() {
+    let vars = |pairs: Vec<(&'static str, String)>| {
         move |name: &str| {
             pairs
                 .iter()
                 .find(|(k, _)| *k == name)
-                .map(|(_, v)| (*v).to_owned())
+                .map(|(_, v)| v.clone())
         }
     };
-    assert!(from_vars(&vars(&[])).unwrap().is_none());
-    assert!(from_vars(&vars(&[("SERVER2_WORLD_MODE", "native")])).is_err());
-    const BASE: [(&str, &str); 8] = [
-        ("SERVER2_WORLD_MODE", "native-local"),
-        ("SERVER2_WORLD_S3_ENDPOINT", "http://127.0.0.1:9/"),
-        ("SERVER2_WORLD_S3_BUCKET", "server2-local"),
-        ("SERVER2_WORLD_S3_ACCESS_KEY_ID", "server2-local"),
-        ("SERVER2_WORLD_S3_SECRET_ACCESS_KEY", "server2-local-secret"),
-        ("SERVER2_WORLD_VC_DAILY_UNITS", "1000"),
-        (
-            "SERVER2_WORLD_VC_QUOTA_ID",
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        ),
-        ("VC_SECRET_KEY", "synthetic-vc-key-0001"),
-    ];
-    static OK: [(&str, &str); 9] = [
-        BASE[0],
-        BASE[1],
-        BASE[2],
-        BASE[3],
-        BASE[4],
-        BASE[5],
-        BASE[6],
-        BASE[7],
-        ("SERVER2_WORLD_VC_URL", "http://127.0.0.1:9/timeline/"),
-    ];
-    let (backend, versions) = from_vars(&vars(&OK)).unwrap().unwrap();
+    let real = || {
+        vec![
+            ("SERVER2_NATIVE_FAMILIES", "dsf".to_owned()),
+            ("SERVER2_S3_BUCKET", "server2-world".to_owned()),
+            (
+                "SERVER2_S3_ACCESS_KEY_ID",
+                "configured-access-key".to_owned(),
+            ),
+            (
+                "SERVER2_S3_SECRET_ACCESS_KEY",
+                "configured-secret".to_owned(),
+            ),
+            ("SERVER2_WORLD_VC_DAILY_UNITS", "1000".to_owned()),
+            ("SERVER2_WORLD_VC_QUOTA_ID", "a".repeat(64)),
+            ("VC_SECRET_KEY", "synthetic-vc-key-0001".to_owned()),
+        ]
+    };
+    // No routing entry: nothing is built, whatever other world settings are present.
+    assert!(from_vars(&vars(vec![])).unwrap().is_none());
+    let mut removed = real();
+    removed[0] = ("SERVER2_WORLD_MODE", "native-local".to_owned());
+    assert!(from_vars(&vars(removed)).unwrap().is_none());
+    // Routed: production Visual Crossing and S3 endpoints by default.
+    let (backend, versions) = from_vars(&vars(real())).unwrap().unwrap();
     assert_eq!(versions.len(), 3);
     let dispatcher = BackendDispatcher::legacy("http://127.0.0.1:9").unwrap();
     backend.register(&dispatcher);
     assert_eq!(
         dispatcher.mode(Version::V000903, Family::Dsf),
-        BackendMode::Legacy
+        BackendMode::Legacy,
+        "registration alone keeps legacy"
     );
-    static LIVE: [(&str, &str); 9] = [
-        BASE[0],
-        BASE[1],
-        BASE[2],
-        BASE[3],
-        BASE[4],
-        BASE[5],
-        BASE[6],
-        BASE[7],
-        (
-            "SERVER2_WORLD_VC_URL",
-            "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/",
-        ),
-    ];
-    assert!(
-        from_vars(&vars(&LIVE)).is_err(),
-        "live provider URL rejected"
+    let mut one = real();
+    one.push(("SERVER2_WORLD_VERSIONS", "v000903".to_owned()));
+    let configured = from_vars(&vars(one)).unwrap().unwrap();
+    let dispatcher = BackendDispatcher::legacy("http://127.0.0.1:9").unwrap();
+    server2::world::runtime::select(&dispatcher, configured).unwrap();
+    assert_eq!(
+        dispatcher.mode(Version::V000903, Family::Dsf),
+        BackendMode::Native
+    );
+    assert_eq!(
+        dispatcher.mode(Version::V000901, Family::Dsf),
+        BackendMode::Legacy
     );
     let _ = World::new(
         memory(),

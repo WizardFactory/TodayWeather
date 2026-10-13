@@ -11,7 +11,8 @@ use axum::{
 use server2::budget::{BudgetError, BudgetObject, BudgetTransport, Clock as BudgetClock};
 use server2::storage::WriteCondition;
 use server2::world::{
-    AirConfig, AirFunding, AirProviderConfig, AirStore, FixedClock, HttpAirTransport, LiveAir,
+    AirConfig, AirFunding, AirHttpError, AirHttpRequest, AirHttpResponse, AirProviderConfig,
+    AirStore, AirTransport, FixedClock, HttpAirTransport, LiveAir,
 };
 use std::{
     collections::{BTreeMap, VecDeque},
@@ -275,4 +276,53 @@ pub fn waqi_body(iso: &str, geo: [f64; 2]) -> Vec<u8> {
     v["data"]["time"]["iso"] = iso.into();
     v["data"]["city"]["geo"] = serde_json::json!(geo);
     serde_json::to_vec(&v).unwrap()
+}
+/// Air transport double for a restart with the providers down: every call fails and is counted.
+#[derive(Default)]
+pub struct Down(pub std::sync::atomic::AtomicUsize);
+impl Down {
+    pub fn calls(&self) -> usize {
+        self.0.load(std::sync::atomic::Ordering::SeqCst)
+    }
+}
+impl AirTransport for Down {
+    fn send(
+        &self,
+        _: AirHttpRequest,
+        _: tokio::time::Instant,
+    ) -> server2::gateway::BoxFuture<'_, Result<AirHttpResponse, AirHttpError>> {
+        self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        Box::pin(async { Err(AirHttpError::Transport) })
+    }
+}
+/// The production air configuration (WAQI with its real endpoint root) after a restart with
+/// empty memory and the provider down. Stored S3 records are read before the chain.
+pub fn restarted<T: BudgetTransport + 'static>(
+    store: Arc<dyn AirStore>,
+    budget: Arc<T>,
+    clock: Arc<FixedClock>,
+) -> (Arc<LiveAir<T>>, Arc<Down>) {
+    let down = Arc::new(Down::default());
+    let config = AirConfig {
+        waqi: Some(AirProviderConfig {
+            base_url: "https://api.waqi.info/".into(),
+            key: WAQI_KEY.into(),
+            quota_id: "c".repeat(64),
+            monthly_units: 1000,
+            block_units: 10,
+        }),
+        ..AirConfig::default()
+    };
+    let air = LiveAir::new(
+        config,
+        store,
+        down.clone(),
+        AirFunding {
+            transport: budget,
+            clock: Arc::new(Linked(clock.clone())),
+        },
+        clock,
+    )
+    .unwrap();
+    (Arc::new(air), down)
 }

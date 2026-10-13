@@ -19,7 +19,7 @@ pub mod vc;
 
 pub use air::{AirOutcome, AirProvider, AirSource, RecordedWaqi, Unconfigured};
 pub use air_chain::{
-    AirConfig, AirConfigError, AirFunding, AirMetrics, AirProviderConfig, LiveAir, NoFunding,
+    AirConfig, AirConfigError, AirFunding, AirMetrics, AirProviderConfig, LiveAir,
 };
 pub use air_store::{AirCell, AirRecord, AirStore, BoundedS3, CatalogAirStore, MemoryAirStore};
 pub use air_transport::{

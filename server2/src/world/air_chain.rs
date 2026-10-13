@@ -10,11 +10,8 @@ use super::{
     js::num_string,
 };
 use crate::{
-    budget::{
-        BudgetError, BudgetObject, BudgetPolicy, BudgetStore, BudgetTransport, Clock as BudgetClock,
-    },
+    budget::{BudgetPolicy, BudgetStore, BudgetTransport, Clock as BudgetClock},
     gateway::BoxFuture,
-    storage::WriteCondition,
 };
 use std::{
     collections::{BTreeSet, HashMap},
@@ -84,16 +81,6 @@ pub struct AirFunding<T> {
 pub enum AirConfigError {
     Invalid(&'static str),
 }
-/// Budget transport of a restore-only source: never used.
-pub struct NoFunding;
-impl BudgetTransport for NoFunding {
-    async fn get_budget(&self, _: &str) -> Result<BudgetObject, BudgetError> {
-        Err(BudgetError::Transport)
-    }
-    async fn put_budget(&self, _: &str, _: &[u8], _: &WriteCondition) -> Result<u16, BudgetError> {
-        Err(BudgetError::Transport)
-    }
-}
 /// Aggregate counters; no coordinate, cell, key or body.
 #[derive(Debug, Default)]
 pub struct AirMetrics {
@@ -129,7 +116,6 @@ struct Minute {
 }
 struct Inner<T> {
     providers: Vec<ProviderState<T>>,
-    live: bool,
     store: Arc<dyn AirStore>,
     http: Option<Arc<dyn AirTransport>>,
     funding: Option<AirFunding<T>>,
@@ -247,7 +233,6 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         }
         Ok(Self::build(
             providers,
-            true,
             store,
             Some(http),
             Some(funding),
@@ -257,7 +242,6 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
     }
     fn build(
         providers: Vec<ProviderState<T>>,
-        live: bool,
         store: Arc<dyn AirStore>,
         http: Option<Arc<dyn AirTransport>>,
         funding: Option<AirFunding<T>>,
@@ -267,7 +251,6 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         Self {
             inner: Arc::new(Inner {
                 providers,
-                live,
                 store,
                 http,
                 funding,
@@ -319,8 +302,8 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         let Some(cell) = AirCell::of(lat, lon) else {
             return AirOutcome::None; // legacy 'no-coord'
         };
-        // Legacy 'no-provider': a live source without a configured provider reads nothing.
-        if self.inner.live && self.inner.providers.is_empty() {
+        // Legacy 'no-provider': without a configured provider nothing is read.
+        if self.inner.providers.is_empty() {
             return AirOutcome::None;
         }
         let row = match self.cached(cell, self.now()) {
@@ -402,12 +385,6 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                     observation: r.provider.parse(&r.body),
                 };
             }
-        }
-        if !self.inner.live {
-            return Row {
-                expire_at: now + FAILURE_TTL_MS,
-                observation: None,
-            };
         }
         self.inner.metrics.chains.fetch_add(1, Relaxed);
         let Some((record, observation)) = self.chain(cell, lat, lon, request_ms).await else {
@@ -638,20 +615,6 @@ fn roll(m: &mut Minute, now: f64) {
         m.index = index;
     }
 }
-impl LiveAir<NoFunding> {
-    /// S3/memory only: no provider is configured or called (restore after replacement).
-    pub fn restore_only(store: Arc<dyn AirStore>, clock: Arc<dyn Clock>) -> Self {
-        Self::build(
-            Vec::new(),
-            false,
-            store,
-            None,
-            None,
-            clock,
-            AirConfig::default(),
-        )
-    }
-}
 impl<T: BudgetTransport + 'static> AirSource for LiveAir<T> {
     fn current(&self, lat: f64, lon: f64, request_ms: f64) -> BoxFuture<'_, AirOutcome> {
         Box::pin(self.answer(lat, lon, request_ms))
@@ -661,7 +624,25 @@ impl<T: BudgetTransport + 'static> AirSource for LiveAir<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::budget::{BudgetError, BudgetObject};
+    use crate::storage::WriteCondition;
     use crate::world::{FixedClock, MemoryAirStore};
+
+    /// Budget transport double of this test: never reached because no funding is set.
+    struct UnusedBudget;
+    impl BudgetTransport for UnusedBudget {
+        async fn get_budget(&self, _: &str) -> Result<BudgetObject, BudgetError> {
+            Err(BudgetError::Transport)
+        }
+        async fn put_budget(
+            &self,
+            _: &str,
+            _: &[u8],
+            _: &WriteCondition,
+        ) -> Result<u16, BudgetError> {
+            Err(BudgetError::Transport)
+        }
+    }
 
     /// S13a-R1-F03: request A observed a memory miss; before A reaches the inflight lock,
     /// request B resolves the cell and removes its inflight entry. A must use B's row (here a
@@ -676,7 +657,7 @@ mod tests {
             monthly_units: 10,
             block_units: 10,
         };
-        let state = ProviderState::<NoFunding> {
+        let state = ProviderState::<UnusedBudget> {
             provider: AirProvider::Waqi,
             base: waqi.base_url.parse().unwrap(),
             config: waqi,
@@ -686,7 +667,6 @@ mod tests {
         // No funding: every provider is skipped, so a resolution ends in a failure row.
         let air = LiveAir::build(
             vec![state],
-            true,
             Arc::new(MemoryAirStore::default()),
             None,
             None,

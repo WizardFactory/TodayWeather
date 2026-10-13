@@ -4,7 +4,7 @@ use axum::{Router, body::Body, extract::Request, http::StatusCode, response::Res
 use server2::{
     Config, SharedState,
     gateway::{BackendDispatcher, Gateway, LegacyGeocoder, metrics},
-    geocode::{Geocoder, GeocoderConfig, MockQuota},
+    geocode::{BoxFuture, GeocodeError, Geocoder, GeocoderConfig, ProviderDemand, Quota},
     metrics_router,
 };
 use std::{
@@ -82,18 +82,33 @@ fn legacy_gateway(base: &str) -> Gateway {
         BackendDispatcher::legacy(base).unwrap(),
     )
 }
-fn mock_geocoder(base: &str, quota: usize) -> Geocoder {
+/// Counting quota double: one unit per possible attempt, no refund.
+struct CountingQuota(std::sync::atomic::AtomicUsize);
+impl Quota for CountingQuota {
+    fn reserve(&self, demands: Vec<ProviderDemand>) -> BoxFuture<'_, Result<(), GeocodeError>> {
+        Box::pin(async move {
+            let count: usize = demands.iter().map(|d| d.attempts as usize).sum();
+            self.0
+                .try_update(Ordering::AcqRel, Ordering::Acquire, |v| {
+                    v.checked_sub(count)
+                })
+                .map(|_| ())
+                .map_err(|_| GeocodeError::Quota)
+        })
+    }
+}
+/// The native geocoder configured with a test peer endpoint and a counting quota double.
+fn native_geocoder(base: &str, quota: usize) -> Geocoder {
     let config = GeocoderConfig {
-        mock_mode: true,
         kakao_base_url: base.into(),
         google_base_url: base.into(),
-        kakao_keys: vec!["local-dummy".into()],
+        kakao_keys: vec!["test-kakao".into()],
         google_key: None,
         ..GeocoderConfig::default()
     };
     Geocoder::new(config)
         .unwrap()
-        .with_quota(Arc::new(MockQuota::new(quota)))
+        .with_quota(Arc::new(CountingQuota(quota.into())))
 }
 
 #[tokio::test]
@@ -189,7 +204,7 @@ async fn geocoder_cache_flight_join_and_quota_are_counted() {
     let _serial = SERIAL.lock().await;
     let knobs = Arc::new(Knobs::default());
     let base = peer(knobs.clone()).await;
-    let geocoder = mock_geocoder(&base, 2);
+    let geocoder = native_geocoder(&base, 2);
 
     let before = values();
     assert!(geocoder.coord([37.566, 126.978], "ko").await.is_ok());
@@ -207,7 +222,7 @@ async fn geocoder_cache_flight_join_and_quota_are_counted() {
     assert_eq!(delta(&before, "server2_geocoder_kakao_attempts_total"), 0);
 
     knobs.provider_delay_ms.store(300, Ordering::SeqCst);
-    let geocoder = mock_geocoder(&base, 10);
+    let geocoder = native_geocoder(&base, 10);
     let before = values();
     let waiters = (0..8).map(|_| {
         let geocoder = geocoder.clone();

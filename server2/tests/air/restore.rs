@@ -1,11 +1,11 @@
 //! AC3: the S11 oracle air scenarios through the live air chain (loopback WAQI stub serving the
-//! recorded bodies), then S3-only restore with providers disabled and empty memory.
+//! recorded bodies), then a restart with empty memory, the production WAQI configuration and the
+//! provider down: S3 records alone restore the bytes.
 use super::common::{Peer, ScriptedVc, body, deadline, expect_calls, matches, ms, oracle, path};
-use super::support::{Stub, WAQI, WAQI_KEY, live, waqi_only};
+use super::support::{Memory, Stub, WAQI, WAQI_KEY, live, restarted, waqi_only};
 use server2::storage::CatalogLimits;
 use server2::world::{
-    AirStore, CatalogAirStore, Disabled, FixedClock, LiveAir, World, WorldBackend, WorldConfig,
-    WorldStore,
+    AirStore, CatalogAirStore, Disabled, FixedClock, World, WorldBackend, WorldConfig, WorldStore,
 };
 use std::sync::Arc;
 
@@ -85,18 +85,19 @@ async fn live_chain_matches_the_oracle_and_s3_alone_restores_the_same_bytes() {
                 }
             }
         }
-        // Restore pass: new engines, empty memory, VC and air providers disabled.
+        // Restore pass: new engines, empty memory, VC disabled and the air provider down.
         for step in sc["steps"].as_array().unwrap() {
             let at = Arc::new(FixedClock::new(ms(step["at"].as_str().unwrap())));
             let cold_air: Arc<dyn AirStore> =
                 Arc::new(CatalogAirStore::new(s3.clone(), CatalogLimits::default()).unwrap());
+            let (air, _down) = restarted(cold_air, Arc::new(Memory::default()), at.clone());
             let cold = WorldBackend::new(World::new(
                 Arc::new(
                     server2::world::CatalogWorldStore::new(s3.clone(), CatalogLimits::default())
                         .unwrap(),
                 ),
                 Arc::new(Disabled),
-                Arc::new(LiveAir::restore_only(cold_air, at.clone())),
+                air,
                 at,
                 WorldConfig::default(),
             ));
@@ -141,12 +142,13 @@ async fn restore_without_records_serves_no_air_and_does_not_invent_values() {
     let _ = warm.reply(&path(r), "ko", deadline()).await;
     let air_store: Arc<dyn AirStore> =
         Arc::new(CatalogAirStore::new(s3.clone(), CatalogLimits::default()).unwrap());
+    let (air, down) = restarted(air_store, Arc::new(Memory::default()), clock.clone());
     let cold = WorldBackend::new(World::new(
         Arc::new(
             server2::world::CatalogWorldStore::new(s3.clone(), CatalogLimits::default()).unwrap(),
         ),
         Arc::new(Disabled),
-        Arc::new(LiveAir::restore_only(air_store, clock.clone())),
+        air,
         clock,
         WorldConfig::default(),
     ));
@@ -157,4 +159,6 @@ async fn restore_without_records_serves_no_air_and_does_not_invent_values() {
         }
         other => panic!("{other:?}"),
     }
+    // No stored record: the configured provider was tried once and was down.
+    assert_eq!(down.calls(), 1);
 }

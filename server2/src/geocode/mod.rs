@@ -1,4 +1,4 @@
-//! Provider parity with owned work, bounded volatile reverse caching and gated live acquisition.
+//! Provider parity with owned work, bounded volatile reverse caching and funded acquisition.
 pub mod budget;
 mod cache;
 mod format;
@@ -114,36 +114,6 @@ impl Quota for DenyQuota {
         Box::pin(async { Err(GeocodeError::Quota) })
     }
 }
-/// A finite counter for explicit loopback mocks; Geocoder rejects it as a live activation path.
-pub struct MockQuota {
-    remaining: AtomicUsize,
-}
-impl MockQuota {
-    pub fn new(units: usize) -> Self {
-        Self {
-            remaining: AtomicUsize::new(units),
-        }
-    }
-    pub fn remaining(&self) -> usize {
-        self.remaining.load(Ordering::Acquire)
-    }
-}
-impl Quota for MockQuota {
-    fn reserve(&self, demands: Vec<ProviderDemand>) -> BoxFuture<'_, Result<(), GeocodeError>> {
-        Box::pin(async move {
-            let count = demands
-                .iter()
-                .try_fold(0_usize, |sum, v| sum.checked_add(v.attempts as usize))
-                .ok_or(GeocodeError::Quota)?;
-            self.remaining
-                .try_update(Ordering::AcqRel, Ordering::Acquire, |v| {
-                    v.checked_sub(count)
-                })
-                .map(|_| ())
-                .map_err(|_| GeocodeError::Quota)
-        })
-    }
-}
 /// Safe address-only persistence projection; reverse lookups never call AddressStore.
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -176,10 +146,12 @@ pub trait AddressStore: Send + Sync {
         projection: &'a AddressProjection,
     ) -> BoxFuture<'a, Result<(), GeocodeError>>;
 }
+/// Production endpoint roots (legacy `kakao.js` / `google.js` defaults).
+pub const KAKAO_ENDPOINT: &str = "https://dapi.kakao.com";
+pub const GOOGLE_ENDPOINT: &str = "https://maps.googleapis.com";
 /// Existing environment is injected by the operator; no legacy file is read.
 /// Keys and configuration deliberately have no Debug implementation.
 pub struct GeocoderConfig {
-    pub mock_mode: bool,
     pub kakao_base_url: String,
     pub google_base_url: String,
     pub kakao_keys: Vec<String>,
@@ -190,9 +162,8 @@ pub struct GeocoderConfig {
 impl Default for GeocoderConfig {
     fn default() -> Self {
         Self {
-            mock_mode: false,
-            kakao_base_url: "https://dapi.kakao.com".into(),
-            google_base_url: "https://maps.googleapis.com".into(),
+            kakao_base_url: KAKAO_ENDPOINT.into(),
+            google_base_url: GOOGLE_ENDPOINT.into(),
             kakao_keys: Vec::new(),
             google_key: None,
             cache_bytes: 4 * 1024 * 1024,
@@ -201,22 +172,19 @@ impl Default for GeocoderConfig {
     }
 }
 impl GeocoderConfig {
-    pub fn from_env() -> Result<Self, GeocodeError> {
-        let mut config = Self {
-            mock_mode: std::env::var("SERVER2_GEOCODER_MODE").is_ok_and(|v| v == "mock"),
-            ..Self::default()
-        };
-        if let Ok(value) = std::env::var("GEOCODER_KAKAO_KEYS") {
+    /// The existing legacy names: `GEOCODER_KAKAO_KEYS` (JSON array), `GEOCODER_GOOGLE_KEY`,
+    /// `GEOCODER_KAKAO_BASE_URL` and `GEOCODER_GOOGLE_BASE_URL` (production roots by default).
+    pub fn from_vars(var: &dyn Fn(&str) -> Option<String>) -> Result<Self, GeocodeError> {
+        let mut config = Self::default();
+        if let Some(value) = var("GEOCODER_KAKAO_KEYS") {
             config.kakao_keys = serde_json::from_str::<Vec<String>>(&value)
                 .map_err(|_| GeocodeError::InvalidConfiguration)?;
         }
-        config.google_key = std::env::var("GEOCODER_GOOGLE_KEY")
-            .ok()
-            .filter(|v| !v.is_empty());
-        if let Ok(value) = std::env::var("GEOCODER_KAKAO_BASE_URL") {
+        config.google_key = var("GEOCODER_GOOGLE_KEY").filter(|v| !v.is_empty());
+        if let Some(value) = var("GEOCODER_KAKAO_BASE_URL").filter(|v| !v.is_empty()) {
             config.kakao_base_url = value;
         }
-        if let Ok(value) = std::env::var("GEOCODER_GOOGLE_BASE_URL") {
+        if let Some(value) = var("GEOCODER_GOOGLE_BASE_URL").filter(|v| !v.is_empty()) {
             config.google_base_url = value;
         }
         config.validate()?;
@@ -238,24 +206,13 @@ impl GeocoderConfig {
         {
             return Err(GeocodeError::InvalidConfiguration);
         }
-        for (url, expected) in [
-            (&self.kakao_base_url, "https://dapi.kakao.com"),
-            (&self.google_base_url, "https://maps.googleapis.com"),
-        ] {
-            if self.mock_mode {
-                if !literal_loopback(url) {
-                    return Err(GeocodeError::InvalidConfiguration);
-                }
-            } else if url != expected {
-                return Err(GeocodeError::InvalidConfiguration);
-            }
-        }
-        if self.mock_mode {
-            // Validate the literal authority before normalizing the accepted root slash.
-            self.kakao_base_url = self.kakao_base_url.trim_end_matches('/').into();
-            self.google_base_url = self.google_base_url.trim_end_matches('/').into();
-        }
-        if !self.mock_mode
+        self.kakao_base_url =
+            endpoint_root(&self.kakao_base_url).ok_or(GeocodeError::InvalidConfiguration)?;
+        self.google_base_url =
+            endpoint_root(&self.google_base_url).ok_or(GeocodeError::InvalidConfiguration)?;
+        // Legacy `keys.googleKey`: against the production Google endpoint only the allowed key
+        // (fingerprint `ecd5fdb1`) is used; legacy skips the check only for a test endpoint.
+        if self.google_base_url == GOOGLE_ENDPOINT
             && let Some(key) = &self.google_key
         {
             use sha2::{Digest, Sha256};
@@ -267,25 +224,22 @@ impl GeocoderConfig {
         Ok(())
     }
 }
-fn literal_loopback(value: &str) -> bool {
-    let Ok(url) = reqwest::Url::parse(value) else {
-        return false;
-    };
-    // Hostnames and URL-normalized numeric aliases are not accepted as literal-loopback authority.
-    let prefix = value
-        .strip_prefix("http://")
-        .and_then(|v| v.split('/').next());
-    let literal = prefix.is_some_and(|v| {
-        v == "127.0.0.1" || v.starts_with("127.0.0.1:") || v == "[::1]" || v.starts_with("[::1]:")
-    });
-    literal
-        && url.scheme() == "http"
-        && matches!(url.host_str(), Some("127.0.0.1" | "[::1]" | "::1"))
+/// The transport rule: HTTPS, or plain HTTP only to a loopback address; a root path and no
+/// credentials, query or fragment. Returns the normalized root without its trailing slash.
+fn endpoint_root(value: &str) -> Option<String> {
+    let url = reqwest::Url::parse(value).ok()?;
+    let loopback = url
+        .host_str()
+        .and_then(|h| h.trim_matches(['[', ']']).parse::<std::net::IpAddr>().ok())
+        .is_some_and(|ip| ip.is_loopback());
+    let accepted = (url.scheme() == "https" || (url.scheme() == "http" && loopback))
+        && url.host_str().is_some_and(|h| !h.is_empty())
         && url.username().is_empty()
         && url.password().is_none()
         && url.query().is_none()
         && url.fragment().is_none()
-        && url.path() == "/"
+        && url.path() == "/";
+    accepted.then(|| url.as_str().trim_end_matches('/').to_owned())
 }
 #[derive(Clone)]
 pub struct Geocoder {
@@ -493,11 +447,7 @@ impl Inner {
         {
             return Ok(projection.geo);
         }
-        // Actual daily/peak quotas, seven-day shadow evidence and native activation are unapproved.
-        // Explicit loopback fixtures are the only acquisition surface in this implementation.
-        if !self.config.mock_mode {
-            return Err(GeocodeError::Quota);
-        }
+        // Every possible attempt is funded before HTTP; without a quota every lookup is denied.
         self.quota
             .reserve(self.demands(key))
             .await

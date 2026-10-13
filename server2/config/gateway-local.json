@@ -1,8 +1,23 @@
 {
-  "scope": "operator-injected environment; local mock only, no credential values",
+  "scope": "operator-injected environment; setting names only, no credential values",
   "opt_in": "SERVER2_GATEWAY_LEGACY_URL",
-  "geocoder_mode": "legacy",
-  "weather_family_modes": "legacy HTTP by default; native handlers require explicit library registration",
+  "native_routing": "SERVER2_NATIVE_FAMILIES: comma list of geocode and dsf; unset keeps every family on legacy",
+  "geocoder_settings": [
+    "GEOCODER_KAKAO_KEYS",
+    "GEOCODER_GOOGLE_KEY",
+    "GEOCODER_KAKAO_BASE_URL (default https://dapi.kakao.com)",
+    "GEOCODER_GOOGLE_BASE_URL (default https://maps.googleapis.com)",
+    "SERVER2_GEOCODER_KAKAO_DAILY_UNITS (per key, required with Kakao keys)",
+    "SERVER2_GEOCODER_GOOGLE_DAILY_UNITS (required with a Google key)"
+  ],
+  "s3_settings": [
+    "SERVER2_S3_REGION (default ap-northeast-2)",
+    "SERVER2_S3_ENDPOINT (default https://s3.<region>.amazonaws.com/)",
+    "SERVER2_S3_BUCKET",
+    "SERVER2_S3_ACCESS_KEY_ID",
+    "SERVER2_S3_SECRET_ACCESS_KEY"
+  ],
+  "weather_family_routing": "legacy HTTP unless the family is listed; SERVER2_WORLD_VERSIONS selects dsf versions",
   "gateway_seconds": 9,
   "backend_attempt_seconds": 3,
   "backend_attempts": 3,
@@ -10,6 +25,6 @@
   "provider_attempt_seconds": 3,
   "inflight": 40,
   "coordinate_cache": "bounded volatile exact normalized coordinate+locale; no S3",
-  "address_cache": "optional bounded address-only S3 projection; 30-day freshness",
-  "activation": "live native geocoder disabled until actual quota, label/shadow and cutover prerequisites"
+  "address_cache": "optional bounded address-only S3 projection; 30-day freshness; not wired by the process",
+  "activation": "measured quota limits (#2724), label/shadow and cutover prerequisites before production routing"
 }

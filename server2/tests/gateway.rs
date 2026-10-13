@@ -4,6 +4,8 @@ mod budget;
 mod geocode;
 #[path = "gateway/privacy.rs"]
 mod privacy;
+#[path = "gateway/runtime.rs"]
+mod runtime;
 #[path = "gateway/storage.rs"]
 mod storage;
 #[path = "gateway/wire.rs"]
