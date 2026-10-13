@@ -73,17 +73,25 @@ query as Express does for the used keys, selects the locale from the forwarded `
 `Native::Forward`; existing handlers keep `fetch`. On `Forward` the dispatcher runs the unchanged
 legacy hop with the remaining deadline. `register` leaves legacy selected; `select` switches and
 rolls back. The runtime source in this task is `LegacyOnly` (always `Forward`); S15b supplies the
-S3/provider source. A loopback-only `SERVER2_KMA_MODE=recorded-local` runtime option serves a
-recorded store snapshot file for the release-binary smoke; it rejects non-loopback legacy origins.
+S3/provider source. The loopback-only `SERVER2_KMA_MODE` runtime option accepts `recorded-local`
+(serves a recorded store snapshot file, `SERVER2_KMA_RECORDED`, at the recording's request instant
+via `KmaStore::as_of_ms`) and `forward-local` (native selected, every request forwarded). Both
+refuse a non-loopback legacy origin. Neither is a production input source.
 
 ## Verification (AC1-AC5)
 
-- Parity: the test store reproduces the oracle harness inputs (`rss-response-smoke.js`
-  `makeFixture`/`modelData` and stubs, ported to Rust with provenance) and the per-case modifiers
-  of `golden-record.js`. Assert bodies, Express weak ETags, and the dependency query order.
+- Parity: a pinned Node 16.20.2 oracle driver (retained in the fixture PROVENANCE, S11 precedent)
+  runs the real router through the maintained `rss-response-smoke.js` harness and records each
+  response plus every store answer in `KmaStore` vocabulary. The 15 S02 direct cases and 5 gateway
+  backend inputs use the `golden-record.js` modifiers; supplementary scenarios cover other paths.
+  A replay store answers in recorded order; tests assert bodies, Express weak ETags and call order.
+  The recorded S02 bodies are asserted equal to `records.json`.
 - Gateway: run the 5 gateway domestic v000903 cases through `Gateway` with the native switch and
   compare status, body and headers (except `date`/`connection`); legacy default and rollback.
 - Forward: coverage-style `Legacy` and missing town forward to a loopback legacy origin.
-- Checkpoint: release-mode measurement of the golden workloads (iterations, mean/p95 per
-  assembly, `getrusage` peak RSS and user/system CPU) on macOS and in Linux CI.
+- Checkpoint: `examples/kma_checkpoint.rs` assembles every recorded request repeatedly;
+  `tools/kma_checkpoint.py` records per-assembly timing and child rusage (peak RSS, CPU), with a
+  zero-round fixture-load baseline. The server2 CI entrypoint runs it on Linux.
+- S19: `tools/shadow/kma_family.py` (release smoke, paired replay with self-check, rollback) runs
+  in CI beside the gateway family.
 - Placement gate, artifact policy, fmt/clippy/test, release smoke.

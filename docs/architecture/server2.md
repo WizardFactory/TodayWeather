@@ -1580,3 +1580,59 @@ Capacity: at the default caps one tick funds at most 256 data.go.kr acquisitions
 plus backfill; D = 1,000 needs larger caps and the matching quota. Work beyond the caps is
 reported as capped and stays missing, so the affected cells remain on legacy; sustained capping
 is a cutover blocker, not an accepted gap.
+
+### S15 KMA v000903 assembly and Rust checkpoint (2026-10-13)
+
+[S15](../../plans/issue-2700.md) ([spec](../../specs/issue-2700.md)) adds `server2::domestic::kma`,
+a native port of the 37-step [v000903 router list](mobile-api.md#domestic-api-middleware-in-order)
+and a `Family::Kma` handler for the S10 dispatcher. Legacy stays selected by default.
+
+- **Boundary.** The port starts where legacy controllers receive store answers. `KmaStore` has one
+  synchronous method per dependency call (town list, short/current/shortest/RSS documents for
+  DB 1.0 and 2.0, mid forecast/land/temp, forecast zone, station minute and hourly rows, area
+  numbers, life index, MFDS rows, AirKorea current air, dust forecasts, the air-provider fallback,
+  station air forecasts, KASI rise/set and warning zone rows). Answers are ordered JSON; Dates are
+  `{"$date": ms}`. A key-sorted JSON map would change the response, so the answers keep property order.
+- **Semantics.** A JavaScript value model keeps shared object references, property order (array
+  indices first), `undefined` in memory and the legacy `try`/`catch` boundaries. A legacy exception
+  is a `Thrown` unwind that only a ported `catch` stops. Other Rust panics still fail the request.
+  Precipitation bounds stay beside rows and never reach JSON, as in the legacy `WeakMap`. Shared
+  logic is reused: S12 `zonesForTown`/`specialInfoFor`, the S11 `AqiConverter`, weather strings,
+  locale selection and number/date helpers. KMA strings missing from the S11 locale subset are in
+  `domestic/kma/locales.json`. ASOS history reads are off, as on the observed production checkout.
+  `manager.MAX_CURRENT_COUNT` is 192 (the oracle harness stubs 200; the recorded value is used in tests).
+- **Forwarding.** `BackendHandler` gains a defaulted `fetch_or_forward`. When the source cannot supply
+  inputs (for example, S14 coverage `Legacy`), the handler returns `Native::Forward`. It also forwards
+  when legacy would redirect a non-Korean coordinate, geocode and save a new town, remap a `KR` region
+  remotely or throw past every handler. The dispatcher then runs the unchanged legacy hop within the
+  remaining deadline. Nothing is invented. The legacy 400 region guard maps to the legacy hop's
+  dependency error.
+- **Air.** The goldens show no AirKorea dust forecast or station list, and no AirKorea forecast or
+  station-list endpoint is called. `getMinuDustFrcstDspth`/`getMsrstnList` remain unported, and
+  the host choice is still AK's decision. Stored dust forecasts and the provider fallback are
+  store answers.
+
+Parity uses a pinned Node 16.20.2 oracle recording ([provenance](../../server2/tests/domestic/fixtures/PROVENANCE.md)):
+61 requests through the real router and harness, with every store answer recorded in order. They
+include the 15 S02 direct-route v000903 goldens (bodies and Express ETags), the 5 gateway domestic
+v000903 backend inputs, and supplementary DB 1.0, RSS, station, rain-category, air-list, KAQ
+forecast, fallback, life-index/MFDS/rise-set, warning, temperature, error and clock-boundary cases.
+All 61 recordings match byte for byte, with the dependency calls in legacy order. The 5 gateway goldens match on
+the wire with the native switch (status, body and headers except `date`/`connection`). The legacy
+default, forward and rollback paths are tested. The release binary reproduces them through the
+S19 KMA family (`SERVER2_KMA_MODE=recorded-local`, loopback-only; `forward-local` exercises the
+forward path) with paired replay and a legacy/native/legacy rollback.
+
+The runtime source is `LegacyOnly`: until the S3 input source exists, a selected native family
+forwards every request. Parsing S13/S13a raw records into these store answers, reading S14
+history and exports, and the request-time RSS/mid/life acquisitions form the proposed follow-up
+S15b.
+
+O-2 checkpoint (Rust adoption is settled; this records correctness and cost). `kma_checkpoint`
+assembles every recorded request from memory, and `tools/kma_checkpoint.py` reads process rusage.
+On an Apple M4 release build (2,440 assemblies) the mean per assembly is 3.61 ms (p50 3.72, p95 4.01,
+p99 4.45, max 4.79 ms, including JSON encoding and store-answer conversion), CPU is 3.9 ms per request
+and peak RSS is 113 MiB, 109 MiB of which is the decoded fixture. The server2 CI entrypoint records
+the Linux values. The legacy oracle took about 7 ms per request on the same host, including loopback
+HTTP and Express. These are local fixture measurements, not production latency, concurrency or
+memory evidence. The S10 3-second native attempt and the 9-second gateway deadline are unchanged.
