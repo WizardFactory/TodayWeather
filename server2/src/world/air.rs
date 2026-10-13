@@ -399,27 +399,6 @@ impl AirSource for Unconfigured {
         Box::pin(async { AirOutcome::None })
     }
 }
-/// A recorded WAQI body served for every request, evaluated per request (test/replay source).
-pub struct RecordedWaqi {
-    observation: Option<Observation>,
-}
-impl RecordedWaqi {
-    pub fn new(body: &[u8]) -> Self {
-        Self {
-            observation: parse_waqi(body),
-        }
-    }
-}
-impl AirSource for RecordedWaqi {
-    fn current(&self, lat: f64, lon: f64, request_ms: f64) -> BoxFuture<'_, AirOutcome> {
-        Box::pin(async move {
-            match &self.observation {
-                Some(o) if usable(o, lat, lon, request_ms) => AirOutcome::Observation(o.clone()),
-                _ => AirOutcome::None,
-            }
-        })
-    }
-}
 
 /// Free-phase air providers in the legacy `FREE_ORDER` (S13a).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]

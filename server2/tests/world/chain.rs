@@ -7,9 +7,9 @@ use server2::{
     gateway::{BackendHandler, BoxFuture, GatewayError},
     storage::{Error as StorageError, WriteCondition},
     world::{
-        Cell, Disabled, Eligibility, FixedClock, FundedVc, HttpVcTransport, MemoryWorldStore,
-        Range, RawFetch, StoreError, Unconfigured, VcError, VcFunding, VcSource, World,
-        WorldBackend, WorldConfig, WorldReply, WorldStore,
+        Cell, Eligibility, FixedClock, FundedVc, HttpVcTransport, MemoryWorldStore, Range,
+        RawFetch, StoreError, Unconfigured, VcError, VcFunding, VcSource, World, WorldBackend,
+        WorldConfig, WorldReply, WorldStore,
     },
 };
 use std::{
@@ -407,7 +407,7 @@ async fn unreadable_s3_on_a_cold_cell_never_authorizes_a_provider_call() {
     assert_eq!(source.calls.load(Ordering::SeqCst), 0);
     let disabled = WorldBackend::new(World::new(
         memory(),
-        Arc::new(Disabled),
+        Arc::new(super::common::Down),
         Arc::new(Unconfigured),
         Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z"))),
         WorldConfig::default(),

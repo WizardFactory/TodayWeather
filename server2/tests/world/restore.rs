@@ -3,7 +3,7 @@
 use super::common::*;
 use server2::{
     gateway::BoxFuture,
-    world::{Disabled, FixedClock, World, WorldBackend, WorldConfig, WorldStore},
+    world::{FixedClock, World, WorldBackend, WorldConfig, WorldStore},
 };
 use std::sync::Arc;
 
@@ -23,7 +23,7 @@ impl AsyncStep for Restore {
             let clock = Arc::new(FixedClock::new(ms(step["at"].as_str().unwrap())));
             let cold = WorldBackend::new(World::new(
                 self.store.clone(),
-                Arc::new(Disabled),
+                Arc::new(super::common::Down),
                 air_for(sc),
                 clock,
                 WorldConfig::default(),

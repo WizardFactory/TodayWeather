@@ -13,6 +13,7 @@ fn geocode_format_matches_js_binary_rounding_and_language() {
     assert!(!is_korea_area([32.694, 123.952]));
 }
 
+use super::runtime::CountingQuota;
 use axum::{
     Router,
     body::Body,
@@ -21,7 +22,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde_json::{Value, json};
-use server2::geocode::{GeocodeError, Geocoder, GeocoderConfig, MockQuota};
+use server2::geocode::{GeocodeError, Geocoder, GeocoderConfig};
 use std::{
     collections::VecDeque,
     sync::{
@@ -79,7 +80,7 @@ async fn reply(State(state): State<StubState>, request: Request<Body>) -> Respon
     };
     let (status, body, delay) = item.unwrap_or((
         500,
-        json!({"error":"unexpected mock request"}),
+        json!({"error":"unexpected stub request"}),
         Duration::ZERO,
     ));
     tokio::time::sleep(delay).await;
@@ -91,11 +92,10 @@ async fn reply(State(state): State<StubState>, request: Request<Body>) -> Respon
 }
 pub fn config(stub: &Stub) -> GeocoderConfig {
     GeocoderConfig {
-        mock_mode: true,
         kakao_base_url: stub.base.clone(),
         google_base_url: stub.base.clone(),
-        kakao_keys: vec!["mock-kakao".into()],
-        google_key: Some("mock-google".into()),
+        kakao_keys: vec!["test-kakao".into()],
+        google_key: Some("test-google".into()),
         cache_bytes: 8192,
         max_owners: 40,
     }
@@ -103,7 +103,7 @@ pub fn config(stub: &Stub) -> GeocoderConfig {
 pub fn service(stub: &Stub) -> Geocoder {
     Geocoder::new(config(stub))
         .unwrap()
-        .with_quota(Arc::new(MockQuota::new(1000)))
+        .with_quota(Arc::new(CountingQuota::new(1000)))
 }
 fn ok(name: &str) -> (u16, Value, Duration) {
     (200, fixture(name), Duration::ZERO)
@@ -206,7 +206,7 @@ async fn geocode_kakao_rotates_auth_quota_transient_each_key_once() {
     .await;
     let mut options = config(&peer);
     options.kakao_keys = vec!["k0".into(), "k1".into(), "k2".into()];
-    let quota = Arc::new(MockQuota::new(4));
+    let quota = Arc::new(CountingQuota::new(4));
     let geo = Geocoder::new(options).unwrap().with_quota(quota.clone());
     assert!(geo.coord([37.566, 126.978], "ko").await.is_ok());
     assert_eq!(peer.state.count.load(Ordering::Acquire), 3);
@@ -223,7 +223,7 @@ async fn geocode_same_key_waiter_cancel_does_not_cancel_owner_or_refund_quota() 
         vec![],
     )
     .await;
-    let quota = Arc::new(MockQuota::new(2));
+    let quota = Arc::new(CountingQuota::new(2));
     let geo = Geocoder::new(config(&peer))
         .unwrap()
         .with_quota(quota.clone());
@@ -259,7 +259,7 @@ async fn geocode_distinct_owner_capacity_and_byte_cache_are_bounded() {
     options.cache_bytes = 800;
     let geo = Geocoder::new(options)
         .unwrap()
-        .with_quota(Arc::new(MockQuota::new(100)));
+        .with_quota(Arc::new(CountingQuota::new(100)));
     let first = tokio::spawn({
         let geo = geo.clone();
         async move { geo.coord([37.566, 126.978], "ko").await }
@@ -307,7 +307,7 @@ async fn geocode_provider_and_overall_deadline_bound_owned_work() {
     options.kakao_keys = vec!["k1".into(), "k2".into()];
     let geo = Geocoder::new(options)
         .unwrap()
-        .with_quota(Arc::new(MockQuota::new(3)));
+        .with_quota(Arc::new(CountingQuota::new(3)));
     let start = std::time::Instant::now();
     assert!(matches!(
         geo.coord([37.566, 126.978], "ko").await,
@@ -364,7 +364,7 @@ async fn geocode_terminal_request_does_not_rotate_keys_or_google_fallback() {
     options.kakao_keys = vec!["k0".into(), "k1".into()];
     let geo = Geocoder::new(options)
         .unwrap()
-        .with_quota(Arc::new(MockQuota::new(10)));
+        .with_quota(Arc::new(CountingQuota::new(10)));
     assert!(matches!(
         geo.coord([37.566, 126.978], "ko").await,
         Err(GeocodeError::Provider)
@@ -557,7 +557,7 @@ fn configured_kakao_env_child() {
     let Ok(expectation) = std::env::var("S10_KAKAO_PARSE_CHILD") else {
         return;
     };
-    let result = GeocoderConfig::from_env();
+    let result = GeocoderConfig::from_vars(&|name: &str| std::env::var(name).ok());
     match expectation.as_str() {
         "invalid" => assert!(matches!(result, Err(GeocodeError::InvalidConfiguration))),
         "valid" => assert_eq!(
@@ -605,7 +605,7 @@ fn review008_configured_kakao_env_rejects_present_invalid_entries() {
     }
 }
 #[tokio::test]
-async fn review013_mock_trailing_slash_is_normalized_before_request() {
+async fn review013_configured_trailing_slash_is_normalized_before_request() {
     let peer = stub(
         vec![ok("kakao.coord.seoul")],
         vec![ok("google.coord.newyork")],
@@ -616,7 +616,7 @@ async fn review013_mock_trailing_slash_is_normalized_before_request() {
     options.google_base_url.push('/');
     let geo = Geocoder::new(options)
         .unwrap()
-        .with_quota(Arc::new(MockQuota::new(10)));
+        .with_quota(Arc::new(CountingQuota::new(10)));
     assert!(geo.coord([37.566, 126.978], "ko").await.is_ok());
     assert!(geo.coord([40.748, -73.985], "en").await.is_ok());
     assert!(

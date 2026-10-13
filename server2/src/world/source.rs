@@ -54,8 +54,6 @@ pub enum VcError {
     ProviderDown,
     /// Transport/status/deadline failure without a usable billed body.
     Failed,
-    /// Providers are disabled for this process (restore-only mode).
-    Disabled,
 }
 pub trait VcSource: Send + Sync + 'static {
     /// Fetch one range for the cell centre; the bytes are the exact provider body.
@@ -81,13 +79,6 @@ pub enum Eligibility {
     /// Not established before the caller's deadline (or S08 failed); never treated as funded
     /// evidence, the caller keeps its own failure class.
     Unknown,
-}
-/// No provider access: S3/memory only.
-pub struct Disabled;
-impl VcSource for Disabled {
-    fn fetch(&self, _: Cell, _: Range, _: Instant) -> BoxFuture<'_, Result<Vec<u8>, VcError>> {
-        Box::pin(async { Err(VcError::Disabled) })
-    }
 }
 /// `formatCoordinate`: plain decimal with at most 6 decimals.
 pub fn coordinate(v: f64) -> String {
@@ -288,6 +279,9 @@ impl<P: VcTransport, T: BudgetTransport + 'static> FundedVc<P, T> {
         let url = reqwest::Url::parse(base).map_err(|_| AcquisitionError::Invalid)?;
         if !base.ends_with('/')
             || url.query().is_some()
+            || url.fragment().is_some()
+            || !url.username().is_empty()
+            || url.password().is_some()
             || !(url.scheme() == "https"
                 || (url.scheme() == "http"
                     && url

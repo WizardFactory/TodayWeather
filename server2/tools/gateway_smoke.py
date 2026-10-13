@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Actual opt-in gateway release HTTP smoke with task-owned loopback peers only."""
+"""Actual gateway release HTTP smoke: legacy -> native geocoder -> legacy with real-format
+configuration (keys, endpoints, daily quotas, S3) pointing at task-owned loopback test peers."""
 import argparse
 import concurrent.futures
 from datetime import datetime, timezone
@@ -15,6 +16,7 @@ import time
 import urllib.error
 import urllib.request
 from urllib.parse import quote
+import sys
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT/'server2/tests/gateway/fixtures/providers.json'
 class Peer(http.server.BaseHTTPRequestHandler):
@@ -44,9 +46,21 @@ def request(base,path,method='GET',headers=None):
     try: response=opener.open(req,timeout=10)
     except urllib.error.HTTPError as e: response=e
     with response:return response.status,dict(response.headers),response.read()
-def start(binary,endpoint,mode):
+def s3_peer():
+    child=subprocess.Popen([sys.executable,'tests/storage/catalog_peer.py'],cwd=ROOT/'server2',stdout=subprocess.PIPE,text=True)
+    ready,_,_=select.select([child.stdout],[],[],10);assert ready,'S3 peer startup timeout'
+    return child,child.stdout.readline().strip()
+def s3_keys(s3):
+    req=urllib.request.Request(s3+'server2-local?list-type=2',headers={'X-Server2-Test-Key':'server2-local'})
+    with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req,timeout=10) as r:text=r.read().decode()
+    assert '<IsTruncated>false</IsTruncated>' in text
+    return re.findall(r'<Key>([^<]+)</Key>',text)
+def start(binary,endpoint,family,s3):
     env={k:v for k,v in os.environ.items() if k in ('PATH','SYSTEMROOT','TMPDIR')}
-    env.update(SERVER2_BIND='127.0.0.1:0',SERVER2_METRICS_BIND='127.0.0.1:0',SERVER2_GATEWAY_LEGACY_URL=endpoint,SERVER2_GEOCODER_MODE=mode,GEOCODER_KAKAO_KEYS='["local-dummy"]',GEOCODER_GOOGLE_KEY='local-dummy',GEOCODER_KAKAO_BASE_URL=endpoint,GEOCODER_GOOGLE_BASE_URL=endpoint)
+    env.update(SERVER2_BIND='127.0.0.1:0',SERVER2_METRICS_BIND='127.0.0.1:0',SERVER2_GATEWAY_LEGACY_URL=endpoint,GEOCODER_KAKAO_KEYS='["local-dummy"]',GEOCODER_GOOGLE_KEY='local-dummy',GEOCODER_KAKAO_BASE_URL=endpoint,GEOCODER_GOOGLE_BASE_URL=endpoint,
+               SERVER2_GEOCODER_KAKAO_DAILY_UNITS='1000',SERVER2_GEOCODER_GOOGLE_DAILY_UNITS='1000',SERVER2_S3_ENDPOINT=s3,SERVER2_S3_BUCKET='server2-local',SERVER2_S3_ACCESS_KEY_ID='server2-local',SERVER2_S3_SECRET_ACCESS_KEY='server2-local-secret')
+    # Only the routing list differs between phases; legacy reads none of the native settings.
+    if family=='native':env['SERVER2_NATIVE_FAMILIES']='geocode'
     process=subprocess.Popen([binary],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     try:
         ready,_,_=select.select([process.stdout],[],[],10);assert ready,'startup timeout'
@@ -64,9 +78,11 @@ def run(binary):
     print('execution started UTC '+datetime.now(timezone.utc).isoformat(timespec='seconds'),flush=True)
     Peer.fixtures=json.loads(FIXTURES.read_text());http.server.ThreadingHTTPServer.request_queue_size=128;server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Peer)
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start();endpoint='http://127.0.0.1:'+str(server.server_port)
+    peer,s3=s3_peer()
     try:
-        for mode in ('legacy','mock','legacy'):
-            process,base=start(binary,endpoint,mode)
+        objects=[]
+        for mode in ('legacy','native','legacy'):
+            process,base=start(binary,endpoint,mode,s3)
             try:
                 assert request(base,'/health')[2]==b'OK'
                 status,h,b=request(base,'/weather/coord/37.566,126.978',headers={'Accept-Language':'ko-KR'});assert status==200,(status,b)
@@ -78,7 +94,7 @@ def run(binary):
                 assert request(base,'/geocode/v000903/coord/37.566,126.978',method='OPTIONS',headers={'Access-Control-Request-Headers':'x-fixture'})[0]==204
                 status,_,body=request(base,'/geocode/v000903/addr/'+quote('서울'),headers={'Accept-Language':'ko'});assert status==200,(status,body)
                 print('PASS '+mode+' release HTTP: health, weather merge, ETag304, HEAD, invalidcoords, preflight, address',flush=True)
-                if mode=='mock':
+                if mode=='native':
                     before=Peer.counts.copy()
                     def one(index):
                         started=time.monotonic();status,_,_=request(base,'/geocode/v000903/coord/'+str(37.7+index/1000)+',127.1',headers={'Accept-Language':'ko'});assert status==200;return (time.monotonic()-started)*1000
@@ -89,12 +105,25 @@ def run(binary):
                     b2=Peer.counts.copy();status,_,_=request(base,'/geocode/v000903/coord/37.9,127.1',headers={'Accept-Language':'en-US'});assert status==200
                     assert Peer.counts['kakao']-b2['kakao']==1 and Peer.counts['google']-b2['google']==1
                     ordered=sorted(distinct);p=lambda q: round(ordered[min(len(ordered)-1,int(q*len(ordered)))],2)
-                    print('PASS cold mock demand: 16 same-key callers -> 1 Kakao call; 16 distinct keys -> 16 Kakao calls; non-ko lookup -> Kakao+Google',flush=True)
-                    print('mock distinct-key elapsed ms '+json.dumps({'n':len(distinct),'p50':p(.5),'p95':p(.95),'p99':p(.99)},sort_keys=True),flush=True)
+                    print('PASS cold native demand: 16 same-key callers -> 1 Kakao call; 16 distinct keys -> 16 Kakao calls; non-ko lookup -> Kakao+Google',flush=True)
+                    print('native distinct-key elapsed ms '+json.dumps({'n':len(distinct),'p50':p(.5),'p95':p(.95),'p99':p(.99)},sort_keys=True),flush=True)
+                    keys=s3_keys(s3);assert keys and all(k.startswith('budgets/v2/kakao/') or k.startswith('budgets/v2/google/') for k in keys),keys
+                    assert not any('37.' in k or 'local-dummy' in k for k in keys),keys
+                    print('PASS daily quotas funded in S3 before HTTP: %d budget objects, no coordinate or key in any S3 key'%len(keys),flush=True)
             finally: stop(process)
-        print('PASS legacy -> mock -> legacy restart rollback; all owned processes stopped',flush=True)
+            objects.append(len(s3_keys(s3)))
+        assert objects[0]==0 and objects[1]>0 and objects[2]==objects[1],objects
+        env={k:v for k,v in os.environ.items() if k in ('PATH','SYSTEMROOT','TMPDIR')}
+        env.update(SERVER2_BIND='127.0.0.1:0',SERVER2_METRICS_BIND='127.0.0.1:0',SERVER2_GATEWAY_LEGACY_URL=endpoint,SERVER2_NATIVE_FAMILIES='geocode',
+                   GEOCODER_KAKAO_KEYS='["local-dummy"]',SERVER2_S3_ENDPOINT=s3,SERVER2_S3_BUCKET='server2-local',SERVER2_S3_ACCESS_KEY_ID='server2-local',SERVER2_S3_SECRET_ACCESS_KEY='server2-local-secret')
+        refused=subprocess.run([binary],env=env,stdin=subprocess.DEVNULL,capture_output=True,text=True,timeout=10)
+        assert refused.returncode!=0 and 'server2 public=' not in refused.stdout and 'invalid gateway configuration' in refused.stderr,(refused.returncode,refused.stderr)
+        print('PASS native geocode without SERVER2_GEOCODER_KAKAO_DAILY_UNITS is refused before binding (exit %d)'%refused.returncode,flush=True)
+        print('PASS legacy -> native -> legacy restart rollback; legacy phases added no S3 object (S3 objects per phase %s); all owned processes stopped'%objects,flush=True)
         print('observed peer counters: '+json.dumps(Peer.counts,sort_keys=True),flush=True)
         print('PASS S10 actual local release smoke; no live provider/AWS/quota or cutover claim',flush=True)
-    finally: server.shutdown();server.server_close();thread.join(timeout=2)
+    finally:
+        peer.terminate();peer.wait(timeout=5)
+        server.shutdown();server.server_close();thread.join(timeout=2)
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--binary',required=True);a=p.parse_args();run(str(Path(a.binary).resolve()))

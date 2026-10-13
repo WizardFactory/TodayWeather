@@ -33,12 +33,16 @@ Cargo local dependencies, literal resources and symlinks, plus both rename ends.
 Computed filesystem paths still require human review. Existing unrelated legacy
 maintenance remains allowed; this checker is for server2 tasks.
 
-No local serving persistence or shared-instance cache is introduced. Library S3
-and funded provider adapters are explicit capabilities, not startup deployment or
-production activation. S10 smoke uses owned loopback peers only:
+No local serving persistence or shared-instance cache is introduced. The runtime has
+no verification-only mode: `SERVER2_NATIVE_FAMILIES` routes `geocode` and `dsf` to the
+native backends, which use the real settings (keys, endpoints with production defaults,
+daily/monthly quotas and `SERVER2_S3_*`); without it every family stays on legacy. See the
+[gateway operations guide](../docs/operations/server2-gateway.md). The smokes give the
+release binary real-format configuration that points at owned loopback test peers:
 
 ```sh
 python3 tools/gateway_smoke.py --binary target/release/server2
+python3 tools/world_smoke.py --binary target/release/server2
 ```
 
 Private loopback metrics omit CORS. S10 consumes S02 gateway/geocode wire goldens

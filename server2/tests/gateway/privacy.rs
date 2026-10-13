@@ -1,7 +1,7 @@
 use super::geocode::{config, fixture, service, stub};
+use super::runtime::CountingQuota;
 use server2::geocode::{
     AddressProjection, AddressStore, BoxFuture, GeoClient, GeocodeError, Geocoder, GeocoderConfig,
-    MockQuota,
 };
 use std::{
     sync::{
@@ -137,49 +137,73 @@ async fn privacy_expired_corrupt_or_mismatched_address_projection_is_a_miss() {
     assert_eq!(peer.state.count.load(Ordering::Acquire), 1);
 }
 #[tokio::test]
-async fn activation_live_provider_quota_is_fail_closed_even_with_mock_funding() {
-    let geo = Geocoder::new(GeocoderConfig::default())
-        .unwrap()
-        .with_quota(Arc::new(MockQuota::new(1000)));
+async fn activation_without_a_configured_quota_is_fail_closed() {
+    let peer = stub(vec![], vec![]).await;
+    let geo = Geocoder::new(config(&peer)).unwrap();
     assert!(matches!(
         geo.coord([40.748, -73.985], "en").await,
         Err(GeocodeError::Quota)
     ));
+    assert_eq!(peer.state.count.load(Ordering::Acquire), 0);
 }
 #[test]
-fn activation_mock_requires_explicit_literal_loopback_urls() {
+fn configured_endpoints_follow_the_transport_rule() {
     for url in [
         "http://localhost:9999",
-        "http://127.1:9999",
-        "http://2130706433:9999",
-        "http://127.0.0.1.example:9999",
-        "https://127.0.0.1:9999",
+        "http://10.0.0.5:9999",
+        "http://geocode.example.test",
+        "ftp://127.0.0.1:9999",
         "http://127.0.0.1:9999?key=x",
         "http://127.0.0.1:9999/escape",
+        "https://dapi.kakao.com/v2",
         "http://user@127.0.0.1:9999",
+        "not a url",
     ] {
         let options = GeocoderConfig {
-            mock_mode: true,
             kakao_base_url: url.into(),
-            google_base_url: url.into(),
             ..GeocoderConfig::default()
         };
         assert!(Geocoder::new(options).is_err(), "{url}");
     }
-    let options = GeocoderConfig {
-        mock_mode: true,
-        kakao_base_url: "http://[::1]:9999".into(),
-        google_base_url: "http://[::1]:9999".into(),
-        ..GeocoderConfig::default()
+    for url in [
+        "https://dapi.kakao.com",
+        "https://geocode.example.test/",
+        "https://127.0.0.1:9999",
+        "http://127.0.0.1:9999",
+        "http://[::1]:9999",
+    ] {
+        let options = GeocoderConfig {
+            kakao_base_url: url.into(),
+            google_base_url: url.into(),
+            ..GeocoderConfig::default()
+        };
+        assert!(Geocoder::new(options).is_ok(), "{url}");
+    }
+}
+#[test]
+fn google_key_fingerprint_applies_to_the_production_endpoint() {
+    let vars = |base: Option<&'static str>| {
+        move |name: &str| match name {
+            "GEOCODER_GOOGLE_KEY" => Some("synthetic-google-key".to_owned()),
+            "GEOCODER_GOOGLE_BASE_URL" => base.map(str::to_owned),
+            _ => None,
+        }
     };
-    assert!(Geocoder::new(options).is_ok());
+    // Default (production) endpoint: a key with another fingerprint is not used (legacy rule).
+    let production = GeocoderConfig::from_vars(&vars(None)).unwrap();
+    assert_eq!(production.google_base_url, "https://maps.googleapis.com");
+    assert!(production.google_key.is_none());
+    // A configured test endpoint keeps the configured key, as legacy does for its stub.
+    let test = GeocoderConfig::from_vars(&vars(Some("http://127.0.0.1:9/"))).unwrap();
+    assert_eq!(test.google_base_url, "http://127.0.0.1:9");
+    assert_eq!(test.google_key.as_deref(), Some("synthetic-google-key"));
 }
 #[tokio::test]
 async fn activation_quota_reservation_denies_before_any_provider_request() {
     let peer = stub(vec![], vec![]).await;
     let geo = Geocoder::new(config(&peer))
         .unwrap()
-        .with_quota(Arc::new(MockQuota::new(0)));
+        .with_quota(Arc::new(CountingQuota::new(0)));
     assert!(matches!(
         geo.coord([37.566, 126.978], "ko").await,
         Err(GeocodeError::Quota)

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""S11 release-binary smoke: native world over loopback S3/VC/legacy peers only.
+"""S11/S13a release-binary smoke: native world weather and air with real-format configuration.
 
-Starts the actual release binary against task-owned loopback peers: the S06 S3 test peer,
-a legacy geocoder/backend fixture and a synthetic Visual Crossing Timeline stub. Checks the
-legacy default, opt-in native world, one funded fetch per cell, restore from S3 with the
-provider down, cell-only storage and rollback. No live provider, AWS or quota claim.
+Starts the actual release binary with the production setting names (routing list, S3, Visual
+Crossing and WAQI keys, quotas and endpoints) pointing at task-owned loopback peers: the S06 S3
+test peer, a legacy geocoder/backend fixture, a synthetic Visual Crossing Timeline stub and a
+synthetic WAQI geo feed. Checks the legacy default, the routed native world, one funded fetch
+per cell, air from the funded chain, restore of weather and air from S3 with the providers down,
+cell-only storage and rollback. No live provider, AWS or quota claim.
 """
 import argparse
 import base64
@@ -58,9 +60,12 @@ def timeline(first_day, days, now):
     return {'queryCost': 25, 'timezone': ZONE, 'tzoffset': offset, 'days': out, 'currentConditions': dict(current, source='obs')}
 
 
+WAQI_BODY = json.loads((ROOT / 'tests/air/fixtures/waqi-seoul.json').read_text())
+
+
 class Fixture(http.server.BaseHTTPRequestHandler):
     lock = threading.Lock()
-    vc_paths, legacy, down = [], 0, False
+    vc_paths, air_paths, legacy, down = [], [], 0, False
 
     def log_message(self, *_):
         pass
@@ -82,6 +87,17 @@ class Fixture(http.server.BaseHTTPRequestHandler):
             with self.lock:
                 Fixture.legacy += 1
             return self.reply(200, {'legacy': 'world'})
+        if self.path.startswith('/feed/geo:'):
+            with self.lock:
+                Fixture.air_paths.append(re.sub(r'token=[^&]*', 'token=<redacted>', self.path))
+                down = Fixture.down
+            if down:
+                return self.reply(500, {'status': 'error'})
+            # A synthetic observation of a station near the cell, observed now.
+            body = json.loads(json.dumps(WAQI_BODY))
+            body['data']['time'] = {'iso': datetime.now(timezone.utc).replace(microsecond=0).isoformat()}
+            body['data']['city']['geo'] = [51.52, -0.14]
+            return self.reply(200, body)
         match = re.match(r'^/timeline/(-?[\d.]+),(-?[\d.]+)/(last1days|yesterday|today)/next7days\?', self.path)
         if match:
             with self.lock:
@@ -166,12 +182,14 @@ def run(binary):
     fixture = 'http://127.0.0.1:%d' % server.server_port
     peer, s3 = s3_peer()
     base_env = {k: v for k, v in os.environ.items() if k in ('PATH', 'SYSTEMROOT', 'TMPDIR')}
+    # Every native setting is present in both configurations; only the routing list differs.
     base_env.update(SERVER2_BIND='127.0.0.1:0', SERVER2_METRICS_BIND='127.0.0.1:0', SERVER2_GATEWAY_LEGACY_URL=fixture,
-                    SERVER2_GEOCODER_MODE='legacy')
-    native_env = dict(base_env, SERVER2_WORLD_MODE='native-local', SERVER2_WORLD_S3_ENDPOINT=s3,
-                      SERVER2_WORLD_S3_BUCKET='server2-local', SERVER2_WORLD_S3_ACCESS_KEY_ID='server2-local',
-                      SERVER2_WORLD_S3_SECRET_ACCESS_KEY='server2-local-secret', SERVER2_WORLD_VC_URL=fixture + '/timeline/',
-                      SERVER2_WORLD_VC_DAILY_UNITS='1000', SERVER2_WORLD_VC_QUOTA_ID='a' * 64, VC_SECRET_KEY='local-dummy-vc-key')
+                    SERVER2_S3_ENDPOINT=s3, SERVER2_S3_BUCKET='server2-local', SERVER2_S3_ACCESS_KEY_ID='server2-local',
+                    SERVER2_S3_SECRET_ACCESS_KEY='server2-local-secret', SERVER2_WORLD_VC_URL=fixture + '/timeline/',
+                    SERVER2_WORLD_VC_DAILY_UNITS='1000', SERVER2_WORLD_VC_QUOTA_ID='a' * 64, VC_SECRET_KEY='local-dummy-vc-key',
+                    SERVER2_WORLD_AIR_WAQI_URL=fixture + '/', SERVER2_WORLD_AIR_WAQI_KEY='local-dummy-waqi-key',
+                    SERVER2_WORLD_AIR_WAQI_MONTHLY_UNITS='1000', SERVER2_WORLD_AIR_WAQI_QUOTA_ID='c' * 64)
+    native_env = dict(base_env, SERVER2_NATIVE_FAMILIES='dsf')
     path = '/weather/v000903/coord/51.507,-0.128?' + QUERY
     headers = {'Accept-Language': 'ko-KR'}
     try:
@@ -179,10 +197,11 @@ def run(binary):
         try:
             status, body = request(base, path, headers)
             assert status == 200 and json.loads(body)['legacy'] == 'world', (status, body)
-            assert Fixture.vc_paths == []
+            assert Fixture.vc_paths == [] and Fixture.air_paths == []
         finally:
             stop(process)
-        print('PASS default startup keeps the legacy world backend', flush=True)
+        assert dump(s3) == [], 'legacy startup wrote no S3 object'
+        print('PASS startup without the routing entry keeps the legacy world backend and reads no native setting', flush=True)
         process, base = start(binary, native_env)
         try:
             status, first = request(base, path, headers)
@@ -193,6 +212,8 @@ def run(binary):
             assert len(data['thisTime']) == 2 and len(data['daily']) == 10, (len(data['thisTime']), len(data['daily']))
             assert len(Fixture.vc_paths) == 1 and Fixture.vc_paths[0].startswith('/timeline/51.51,-0.13/last1days/next7days?unitGroup=us')
             assert Fixture.vc_paths[0].endswith('&key=<redacted>')
+            assert b'"airSource"' in first, 'air from the funded WAQI chain'
+            assert len(Fixture.air_paths) == 1 and Fixture.air_paths[0].startswith('/feed/geo:51.51;-0.13/'), Fixture.air_paths
             near = lambda i: '/weather/v000901/coord/51.50%d,-0.12%d?%s' % (1 + i % 9, 1 + i % 9, QUERY)
             with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
                 statuses = list(pool.map(lambda i: request(base, near(i), headers)[0], range(16)))
@@ -202,34 +223,39 @@ def run(binary):
             assert Fixture.legacy == 1, Fixture.legacy
         finally:
             stop(process)
-        print('PASS native world: legacy wire shape, one funded VC call per cell for 17 same-cell requests, cell-centre URLs', flush=True)
+        print('PASS native world: legacy wire shape, one funded VC call per cell for 17 same-cell requests, cell-centre URLs, air from the funded WAQI chain at the air cell', flush=True)
         Fixture.down = True
+        air_calls = len(Fixture.air_paths)
         process, base = start(binary, native_env)
         try:
             status, restored = request(base, path, headers)
             assert status == 200 and restored == first, 'restored bytes differ'
             assert len(Fixture.vc_paths) == 2, Fixture.vc_paths
+            assert len(Fixture.air_paths) == air_calls, (air_calls, Fixture.air_paths)
         finally:
             stop(process)
-        print('PASS restart with empty memory and the provider down serves identical bytes from S3', flush=True)
+        print('PASS restart with empty memory and the providers down serves identical weather and air bytes from S3', flush=True)
         objects = dump(s3)
         raw = [k for k, _ in objects if k.startswith('raw/v2/vc/timeline/')]
         assert len(raw) == 2, raw
+        air = [k for k, _ in objects if k.startswith('raw/v2/air-waqi/current/')]
+        assert len(air) == air_calls, (air_calls, air)
+        assert any(k.startswith('budgets/v2/waqi/') for k, _ in objects)
         for key, body in objects:
             text = key + '\n' + body.decode('utf-8', 'replace')
             for precise in ('51.507', '-0.128', '51.509', '-0.121', '48.8566', '2.3522'):
                 assert precise not in text, (key, precise)
-            assert 'local-dummy-vc-key' not in text, key
-        print('PASS S3 holds %d objects (%d raw); keys, metadata, bodies and catalogs carry cell coordinates only' % (len(objects), len(raw)), flush=True)
+            assert 'local-dummy-vc-key' not in text and 'local-dummy-waqi-key' not in text, key
+        print('PASS S3 holds %d objects (%d weather raw, %d air raw); keys, metadata, bodies and catalogs carry cell coordinates only' % (len(objects), len(raw), len(air)), flush=True)
         process, base = start(binary, base_env)
         try:
             status, body = request(base, path, headers)
             assert status == 200 and json.loads(body)['legacy'] == 'world'
         finally:
             stop(process)
-        print('PASS rollback: restart without SERVER2_WORLD_MODE returns to the legacy world backend', flush=True)
-        print('observed: vc_calls=%d legacy_world_hops=%d' % (len(Fixture.vc_paths), Fixture.legacy), flush=True)
-        print('PASS S11 local release smoke; no live provider, AWS, quota or cutover claim', flush=True)
+        print('PASS rollback: restart without dsf in SERVER2_NATIVE_FAMILIES returns to the legacy world backend', flush=True)
+        print('observed: vc_calls=%d air_calls=%d legacy_world_hops=%d' % (len(Fixture.vc_paths), len(Fixture.air_paths), Fixture.legacy), flush=True)
+        print('PASS S11/S13a release smoke with real-format configuration on test peers; no live provider, AWS, quota or cutover claim', flush=True)
     finally:
         peer.terminate()
         peer.wait(timeout=5)

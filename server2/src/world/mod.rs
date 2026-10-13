@@ -17,16 +17,16 @@ pub mod transport;
 pub mod units;
 pub mod vc;
 
-pub use air::{AirOutcome, AirProvider, AirSource, RecordedWaqi, Unconfigured};
+pub use air::{AirOutcome, AirProvider, AirSource, Unconfigured};
 pub use air_chain::{
-    AirConfig, AirConfigError, AirFunding, AirMetrics, AirProviderConfig, LiveAir, NoFunding,
+    AirConfig, AirConfigError, AirFunding, AirMetrics, AirProviderConfig, LiveAir,
 };
 pub use air_store::{AirCell, AirRecord, AirStore, BoundedS3, CatalogAirStore, MemoryAirStore};
 pub use air_transport::{
     AirHttpError, AirHttpRequest, AirHttpResponse, AirTransport, HttpAirTransport,
 };
 pub use engine::{Clock, Failure, FixedClock, SystemClock, World, WorldConfig};
-pub use source::{Disabled, Eligibility, FundedVc, VcError, VcFunding, VcSource};
+pub use source::{Eligibility, FundedVc, VcError, VcFunding, VcSource};
 pub use store::{CatalogWorldStore, MemoryWorldStore, RawFetch, StoreError, WorldStore};
 pub use transport::{HttpVcTransport, VcResponse, VcTransport, VcTransportError};
 

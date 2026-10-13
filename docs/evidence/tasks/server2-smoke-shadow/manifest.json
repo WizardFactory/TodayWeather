@@ -1,70 +1,70 @@
 {
-  "binary_sha256": "e83ea2ed6542bdc88eb86d9df5a99bdbd0b3ad3d35e0bdb711efcd7d1eec189c",
+  "binary_sha256": "7d09a7bb1e42de57b26786660f870e7b5e93676203339e8ad5d38a75bdd3b7c6",
   "capture_kind": "terminal result rendered from an actual isolated release-binary smoke.sh execution",
-  "captured_at_utc": "2026-10-13T09:50:54+00:00",
+  "captured_at_utc": "2026-10-13T15:00:42+00:00",
   "command": "bash server2/deploy/smoke.sh --binary <release server2>",
   "environment": "macOS, release binary, loopback recorded providers, frozen legacy origin, S03 local S3 peer",
-  "execution_log_sha256": "4df903ae3313a1b28165d204bde66f16385d82a0289a45fcc65d065d217a6e44",
+  "execution_log_sha256": "a4734f51a0d928746b77c338f8b7963981721db90d94cfc65d3e80a5dbb1ee06",
   "limitations": "Loopback fixtures only; no live provider/AWS/production latency/quota/shadow or cutover proof",
   "new_file_link_policy": "Repository-relative references rendered as text when absent from the pinned commit; Markdown keeps local clickable links",
   "observed": {
     "peer_totals": {
       "backend": 52,
       "google": 2,
-      "kakao": 600,
-      "s3": 0
+      "kakao": 76,
+      "s3": 158
     },
     "replay": {
       "percentiles_ms": {
         "baseline": {
           "cold_miss": {
-            "max": 1.25,
+            "max": 1.19,
             "n": 11,
-            "p50": 0.92,
-            "p95": 1.25,
-            "p99": 1.25
+            "p50": 0.93,
+            "p95": 1.19,
+            "p99": 1.19
           },
           "cold_pass": {
-            "max": 1.25,
+            "max": 1.19,
             "n": 15,
-            "p50": 0.78,
-            "p95": 1.25,
-            "p99": 1.25
+            "p50": 0.75,
+            "p95": 1.19,
+            "p99": 1.19
           },
           "warm_pass": {
-            "max": 1.03,
+            "max": 0.88,
             "n": 15,
-            "p50": 0.28,
-            "p95": 1.03,
-            "p99": 1.03
+            "p50": 0.31,
+            "p95": 0.88,
+            "p99": 0.88
           }
         },
         "candidate": {
           "cold_miss": {
-            "max": 2.53,
+            "max": 3.38,
             "n": 4,
-            "p50": 0.84,
-            "p95": 2.53,
-            "p99": 2.53
+            "p50": 0.31,
+            "p95": 3.38,
+            "p99": 3.38
           },
           "cold_pass": {
-            "max": 2.53,
+            "max": 3.38,
             "n": 15,
-            "p50": 1.45,
-            "p95": 2.53,
-            "p99": 2.53
+            "p50": 0.8,
+            "p95": 3.38,
+            "p99": 3.38
           },
           "warm_pass": {
-            "max": 1.42,
+            "max": 0.88,
             "n": 15,
-            "p50": 0.3,
-            "p95": 1.42,
-            "p99": 1.42
+            "p50": 0.19,
+            "p95": 0.88,
+            "p99": 0.88
           }
         }
       },
       "revision": {
-        "commit": "bd5e92f37701267dc8f5eeef947939544496f751",
+        "commit": "8c3a703c929b0c62b00ed3b510f0aa804b850877",
         "dirty": true
       },
       "self_check": {
@@ -79,24 +79,24 @@
       "legacy-3": {
         "backend_attempts": 3,
         "backend_oracle": "gateway-deadline",
-        "backend_stall": 9003.34,
+        "backend_stall": 9003.47,
         "connection_seconds": "default",
         "geocoder_kind": "legacy_geo",
-        "geocoder_stall": 5004.34
+        "geocoder_stall": 5003.57
       },
-      "mock-2": {
+      "native-2": {
         "backend_attempts": 3,
         "backend_oracle": "gateway-deadline",
-        "backend_stall": 9002.57,
+        "backend_stall": 9003.94,
         "connection_seconds": "default",
         "geocoder_kind": "kakao",
-        "geocoder_stall": 3004.08
+        "geocoder_stall": 3001.94
       }
     },
     "rollback_lifetime_refusal": [
       {
         "connection_seconds": 9,
-        "elapsed_ms": 4.09,
+        "elapsed_ms": 5.46,
         "exit_code": 1,
         "message": "SERVER2_CONNECTION_SECONDS must exceed the 9-second gateway deadline"
       }
@@ -112,9 +112,9 @@
       "GW-DRAIN"
     ]
   },
-  "pdf_link_revision": "bd5e92f37701267dc8f5eeef947939544496f751",
-  "pdf_sha256": "a1512983deb48bc04d0adb2849dd0a058b4330e1f20bce6ef2e3420e9e2a3349",
+  "pdf_link_revision": "958e18d9f5e2459f1ee16ccce43e374fc089dac2",
+  "pdf_sha256": "1aa6c2210c76a8655aaf4f503f792df55a83ba36e756fa1d7a73851475fb9db7",
   "schema": 1,
-  "screenshot_sha256": "0873ad2d82fea81ccd61e4c86790ed41c11d33e0c347acaef8e65875dda907ad",
-  "source_sha256": "9fc14538bb993a0417847f1fe9480ed177f11f61c3ec8a63ade886235fade43f"
+  "screenshot_sha256": "2d2c3544c3955ada86e2c153ecd646c5441d4457525a731976e13ae1a556b5c2",
+  "source_sha256": "7c9f30cd8d0ad78ac149286326a2a068bf721af11378b069b0f27579b55de868"
 }

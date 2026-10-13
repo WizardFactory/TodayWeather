@@ -127,11 +127,10 @@ async fn main() {
     let args: Vec<String> = std::env::args().collect();
     assert_eq!(args.len(), 2, "usage: warnings_smoke LOOPBACK_S3/");
     let s3 = &args[1];
-    assert!(seed::loopback_endpoint(s3));
     let deadline = || Instant::now() + Duration::from_secs(30);
     let clock = Arc::new(Fixed(AtomicI64::new(ms("2026-09-26T03:05:00.000Z"))));
 
-    // 1. Legacy seeds through the loopback-only importer path.
+    // 1. Legacy seeds through the importer path.
     let parsed = seed::parse(SEED.as_bytes()).unwrap();
     let imported = seed::import(&store(s3), &parsed, deadline()).await.unwrap();
     assert_eq!(imported, 5);

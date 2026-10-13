@@ -102,14 +102,3 @@ pub async fn import<T: CatalogTransport>(
     }
     Ok(count)
 }
-/// The importer refuses anything but an explicit loopback HTTP S3-compatible endpoint.
-pub fn loopback_endpoint(endpoint: &str) -> bool {
-    reqwest::Url::parse(endpoint).is_ok_and(|u| {
-        u.scheme() == "http"
-            && u.username().is_empty()
-            && u.password().is_none()
-            && u.host_str()
-                .and_then(|h| h.trim_matches(['[', ']']).parse::<std::net::IpAddr>().ok())
-                .is_some_and(|ip| ip.is_loopback())
-    })
-}
