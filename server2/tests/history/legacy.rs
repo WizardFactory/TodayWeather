@@ -152,6 +152,24 @@ fn legacy_converter_rejects_arrays_foreign_collections_and_personal_fields() {
         (
             "kma.town.current",
             "2.0",
+            "bad-number-newline.jsonl",
+            "non-scalar field 't1h'",
+        ),
+        (
+            "kma.town.current",
+            "2.0",
+            "bad-date-newline.jsonl",
+            "fcsDate and pubDate",
+        ),
+        (
+            "kma.town.current",
+            "2.0",
+            "bad-date-unicode.jsonl",
+            "fcsDate and pubDate",
+        ),
+        (
+            "kma.town.current",
+            "2.0",
             "bad-date-range.jsonl",
             "fcsDate and pubDate",
         ),
@@ -250,6 +268,17 @@ fn legacy_seed_parser_rejects_tampered_seeds() {
         ),
         good.replacen(r#""t1h":21.3"#, r#""t1h":{"$numberLong":"1_0"}"#, 1),
         good.replacen(r#""t1h":21.3"#, r#""t1h":{"$numberDouble":" 1.0"}"#, 1),
+        good.replacen(r#""t1h":21.3"#, r#""t1h":{"$numberLong":"10\n"}"#, 1),
+        good.replacen(
+            r#""pubDate":{"$date":"2026-09-24T01:00:00Z"}"#,
+            r#""pubDate":{"$date":"2026-09-24T01:00:00Z\n"}"#,
+            1,
+        ),
+        good.replacen(
+            r#""pubDate":{"$date":"2026-09-24T01:00:00Z"}"#,
+            "\"pubDate\":{\"$date\":\"\u{ff12}\u{ff10}\u{ff12}\u{ff16}-09-24T01:00:00Z\"}",
+            1,
+        ),
         // Metadata fields must hold their legacy types.
         good.replacen(r#""__v":0"#, r#""__v":"token""#, 1),
     ] {

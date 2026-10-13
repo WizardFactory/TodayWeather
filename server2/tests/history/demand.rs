@@ -316,13 +316,37 @@ async fn demand_equal_time_push_aggregates_are_written_once() {
         b.replace_push(&[g(98, 76)], T0, 25 * HOUR).await.unwrap(),
         PushOutcome::Replaced
     );
-    // A conflict between the read and the write re-reads and still yields to the first writer.
-    t.conflicts.store(1, Ordering::SeqCst);
+    // A competing writer commits a different aggregate for a later time between B's read and
+    // its conditional write: B's PUT fails, the re-read sees the newer aggregate, and B adopts it.
+    let e = T0 + 3 * HOUR + 25 * HOUR;
+    let competing = format!(
+        r#"{{"schema":1,"lastDemandMs":{},"cells":[{{"grid":{{"nx":61,"ny":127}},"lastDemandMs":{},"expiresMs":{e}}}]}}"#,
+        T0 + 3 * HOUR,
+        T0 + 3 * HOUR
+    );
+    *t.before_put.lock().unwrap() = Some((PUSH_KEY.into(), competing.clone().into_bytes()));
     assert_eq!(
-        b.replace_push(&[g(61, 127)], T0, 25 * HOUR).await.unwrap(),
+        b.replace_push(&[g(62, 127)], T0 + 2 * HOUR, 25 * HOUR)
+            .await
+            .unwrap(),
         PushOutcome::Superseded
     );
-    assert_eq!(b.active(T0 + HOUR), BTreeSet::from([g(98, 76)]));
+    assert_eq!(t.raw(PUSH_KEY).unwrap(), competing.as_bytes());
+    assert_eq!(b.active(T0 + 4 * HOUR), BTreeSet::from([g(61, 127)]));
+    // The same race at an equal time: first writer wins in S3 and in B's memory.
+    let c = store(&t);
+    let t5 = T0 + 5 * HOUR;
+    let e5 = t5 + 25 * HOUR;
+    let first = format!(
+        r#"{{"schema":1,"lastDemandMs":{t5},"cells":[{{"grid":{{"nx":70,"ny":127}},"lastDemandMs":{t5},"expiresMs":{e5}}}]}}"#
+    );
+    *t.before_put.lock().unwrap() = Some((PUSH_KEY.into(), first.clone().into_bytes()));
+    assert_eq!(
+        c.replace_push(&[g(71, 127)], t5, 25 * HOUR).await.unwrap(),
+        PushOutcome::Superseded
+    );
+    assert_eq!(t.raw(PUSH_KEY).unwrap(), first.as_bytes());
+    assert_eq!(c.active(t5 + HOUR), BTreeSet::from([g(70, 127)]));
 }
 
 #[tokio::test]

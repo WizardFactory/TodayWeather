@@ -55,6 +55,8 @@ pub struct MemoryDemand {
     pub page_size: usize,
     /// Number of upcoming PUTs answered 412 after a concurrent writer replaced the object.
     pub conflicts: AtomicUsize,
+    /// A competing writer that commits this object just before the next PUT to its key.
+    pub before_put: Mutex<Option<(String, Vec<u8>)>>,
 }
 impl MemoryDemand {
     pub fn paged(page_size: usize) -> Self {
@@ -98,6 +100,17 @@ impl DemandTransport for MemoryDemand {
     ) -> Result<u16, DemandError> {
         self.puts.fetch_add(1, Ordering::SeqCst);
         let mut map = self.objects.lock().unwrap();
+        let competing = {
+            let mut slot = self.before_put.lock().unwrap();
+            match slot.as_ref() {
+                Some((k, _)) if k == key => slot.take(),
+                _ => None,
+            }
+        };
+        if let Some((k, b)) = competing {
+            let version = map.get(&k).map_or(1, |(_, v)| v + 1);
+            map.insert(k, (b, version));
+        }
         if self
             .conflicts
             .try_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))

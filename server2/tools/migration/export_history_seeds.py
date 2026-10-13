@@ -45,7 +45,9 @@ STATION_FIELDS = ['stnId', 'stnName', 'date', 'weather', 'visibility', 'cloud', 
                   'sensoryTem', 'dspls', 'r1d', 's1d', 'reh', 'wdd', 'vec', 'wsd', 'hPa', 'rs1h', 'rs1d',
                   'rs15m', 'rns']
 ROWS = {'currentData': CURRENT_ROW, 'shortestData': SHORTEST_ROW, 'shortData': SHORT_ROW}
-ISO = re.compile(r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?(Z|[+-]\d{2}:\d{2})$')
+# ASCII digits and whole-string matches only, as the Rust importer parses (`fullmatch`, no `\d`).
+ISO = re.compile(r'([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\.([0-9]{1,9}))?'
+                 r'(Z|[+-][0-9]{2}:[0-9]{2})')
 WRAPPERS = ('$numberInt', '$numberLong', '$numberDouble', '$numberDecimal', '$date')
 
 
@@ -62,13 +64,13 @@ I64_MIN, I64_MAX = -(1 << 63), (1 << 63) - 1
 
 
 # Extended JSON wrapper grammar shared with the Rust importer (legacy.rs `int_text`/`decimal_text`).
-INT_TEXT = re.compile(r'^[+-]?[0-9]+$')
-DECIMAL_TEXT = re.compile(r'^[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$')
+INT_TEXT = re.compile(r'[+-]?[0-9]+')
+DECIMAL_TEXT = re.compile(r'[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?')
 DOUBLE_SPECIALS = {'Infinity': float('inf'), '-Infinity': float('-inf'), 'NaN': float('nan')}
 
 
 def wrapped_int(text):
-    if not isinstance(text, str) or not INT_TEXT.match(text):
+    if not isinstance(text, str) or not INT_TEXT.fullmatch(text):
         return None
     parsed = int(text)
     return parsed if I64_MIN <= parsed <= I64_MAX else None
@@ -107,7 +109,7 @@ MAX_INSTANT_MS = 253402268399999  # 9999-12-31 23:59:59.999 KST, the last suppor
 
 
 def parse_iso(text):
-    match = ISO.match(text) if isinstance(text, str) else None
+    match = ISO.fullmatch(text) if isinstance(text, str) else None
     if not match:
         raise Invalid(f'invalid ISO instant: {text!r}')
     y, mo, d, h, mi, s, frac, zone = match.groups()
@@ -145,7 +147,7 @@ def number(value):
         if key in ('$numberDouble', '$numberDecimal'):
             if inner in DOUBLE_SPECIALS:
                 return DOUBLE_SPECIALS[inner]
-            return float(inner) if DECIMAL_TEXT.match(inner) else None
+            return float(inner) if DECIMAL_TEXT.fullmatch(inner) else None
     return None
 
 

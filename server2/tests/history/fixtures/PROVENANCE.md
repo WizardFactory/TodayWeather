@@ -12,6 +12,7 @@ All fixtures are synthetic. None comes from a production database, provider or u
 | `bad-array.json`, `bad-personal.jsonl`, `bad-row-field.jsonl` | Rejection cases: `--jsonArray` output, a document with coordinates, and a row with a device identifier. |
 | `bad-duplicate-key.jsonl`, `bad-station-id.jsonl` | Rejection cases: a repeated member name hiding a device identifier, and a station id outside 32 bits. |
 | `bad-number-nan.jsonl`, `bad-number-overflow.jsonl`, `bad-number-long.jsonl` | Rejection cases: a `NaN` constant, a float literal beyond f64 and a `$numberLong` beyond i64. |
+| `bad-number-newline.jsonl`, `bad-date-newline.jsonl`, `bad-date-unicode.jsonl` | Rejection cases: a wrapper integer and an ISO date with a trailing newline, and an ISO date with full-width digits. |
 | `bad-number-digits.jsonl`, `bad-number-grammar.jsonl` | Rejection cases: a 401-digit integer literal and a `$numberLong` outside the shared wrapper grammar (`1_0`). |
 | `bad-daily-metadata.jsonl`, `bad-date-range.jsonl` | Rejection cases: identifiers hidden in v1 `dailySource.__v`, and a `pubDate` outside the supported instant range. |
 
