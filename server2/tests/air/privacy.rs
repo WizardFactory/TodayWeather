@@ -9,13 +9,14 @@ use std::sync::Arc;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn precise_coordinates_stay_in_memory() {
     let peer = Peer::new();
+    let s3 = server2::world::BoundedS3::new(peer.transport(), 12);
     let stub = Stub::start().await;
     stub.push(GOOGLE, Reply::json(fixture("google-seoul.json")));
     stub.push(OWM, Reply::json(fixture("openweather-seoul.json")));
     stub.push(WAQI, Reply::json(fixture("waqi-seoul.json")));
     let clock = Arc::new(FixedClock::new(ms("2026-09-27T14:30:00Z")));
     let store: Arc<dyn AirStore> =
-        Arc::new(CatalogAirStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+        Arc::new(CatalogAirStore::new(s3.clone(), CatalogLimits::default()).unwrap());
     let (air, _) = live(config(&stub, 100), store, clock.clone());
     let now = ms("2026-09-27T14:30:00Z");
     // Two precise users in one legacy cell share one Google call.

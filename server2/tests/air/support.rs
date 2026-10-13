@@ -189,6 +189,32 @@ impl BudgetTransport for Memory {
         Ok(200)
     }
 }
+/// Budget peer whose reads are delayed and whose concurrency is observed.
+#[derive(Default)]
+pub struct Slow {
+    pub inner: Memory,
+    pub delay_ms: u64,
+    pub in_flight: std::sync::atomic::AtomicUsize,
+    pub peak: std::sync::atomic::AtomicUsize,
+}
+impl BudgetTransport for Slow {
+    async fn get_budget(&self, key: &str) -> Result<BudgetObject, BudgetError> {
+        use std::sync::atomic::Ordering::SeqCst;
+        let now = self.in_flight.fetch_add(1, SeqCst) + 1;
+        self.peak.fetch_max(now, SeqCst);
+        tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
+        self.in_flight.fetch_sub(1, SeqCst);
+        self.inner.get_budget(key).await
+    }
+    async fn put_budget(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &WriteCondition,
+    ) -> Result<u16, BudgetError> {
+        self.inner.put_budget(key, body, condition).await
+    }
+}
 /// Budget clock driven by the world test clock.
 pub struct Linked(pub Arc<FixedClock>);
 impl BudgetClock for Linked {

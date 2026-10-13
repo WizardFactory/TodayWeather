@@ -21,7 +21,7 @@ pub use air::{AirOutcome, AirProvider, AirSource, RecordedWaqi, Unconfigured};
 pub use air_chain::{
     AirConfig, AirConfigError, AirFunding, AirMetrics, AirProviderConfig, LiveAir, NoFunding,
 };
-pub use air_store::{AirCell, AirRecord, AirStore, CatalogAirStore, MemoryAirStore};
+pub use air_store::{AirCell, AirRecord, AirStore, BoundedS3, CatalogAirStore, MemoryAirStore};
 pub use air_transport::{
     AirHttpError, AirHttpRequest, AirHttpResponse, AirTransport, HttpAirTransport,
 };

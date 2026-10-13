@@ -249,6 +249,112 @@ impl<T: CatalogTransport + 'static> AirStore for CatalogAirStore<T> {
         })
     }
 }
+/// One S3 admission shared by the world weather store, the air store and the S08 budgets of
+/// a process (S13a-R1-F02): every object, control, list and budget request holds a permit, so
+/// the combined in-flight S3 requests never exceed `limit` (the loopback S3 test peer drops
+/// connections beyond 16).
+pub struct BoundedS3<T> {
+    inner: Arc<T>,
+    gate: Arc<Semaphore>,
+    limit: usize,
+}
+impl<T> Clone for BoundedS3<T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            gate: self.gate.clone(),
+            limit: self.limit,
+        }
+    }
+}
+impl<T> BoundedS3<T> {
+    pub fn new(inner: T, limit: usize) -> Self {
+        let limit = limit.max(1);
+        Self {
+            inner: Arc::new(inner),
+            gate: Arc::new(Semaphore::new(limit)),
+            limit,
+        }
+    }
+    pub fn limit(&self) -> usize {
+        self.limit
+    }
+    /// Permits currently free (for tests and metrics).
+    pub fn available(&self) -> usize {
+        self.gate.available_permits()
+    }
+}
+impl<T: crate::storage::ObjectTransport> crate::storage::ObjectTransport for BoundedS3<T> {
+    async fn put(&self, record: &crate::storage::PreparedRecord) -> Result<u16, Error> {
+        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        self.inner.put(record).await
+    }
+    async fn head(&self, key: &str) -> Result<crate::storage::Object, Error> {
+        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        self.inner.head(key).await
+    }
+    async fn get(&self, key: &str, maximum: usize) -> Result<crate::storage::Object, Error> {
+        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        self.inner.get(key, maximum).await
+    }
+}
+impl<T: CatalogTransport> CatalogTransport for BoundedS3<T> {
+    async fn get_control(
+        &self,
+        key: &str,
+        maximum: usize,
+    ) -> Result<crate::storage::ControlObject, Error> {
+        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        self.inner.get_control(key, maximum).await
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &crate::storage::WriteCondition,
+    ) -> Result<u16, Error> {
+        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        self.inner.put_control(key, body, condition).await
+    }
+    async fn list_raw_document(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+        maximum_keys: usize,
+        maximum_bytes: usize,
+    ) -> Result<Vec<u8>, Error> {
+        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        self.inner
+            .list_raw_document(prefix, token, maximum_keys, maximum_bytes)
+            .await
+    }
+}
+impl<T: crate::budget::BudgetTransport> crate::budget::BudgetTransport for BoundedS3<T> {
+    async fn get_budget(
+        &self,
+        key: &str,
+    ) -> Result<crate::budget::BudgetObject, crate::budget::BudgetError> {
+        let _permit = self
+            .gate
+            .acquire()
+            .await
+            .map_err(|_| crate::budget::BudgetError::Transport)?;
+        self.inner.get_budget(key).await
+    }
+    async fn put_budget(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &crate::storage::WriteCondition,
+    ) -> Result<u16, crate::budget::BudgetError> {
+        let _permit = self
+            .gate
+            .acquire()
+            .await
+            .map_err(|_| crate::budget::BudgetError::Transport)?;
+        self.inner.put_budget(key, body, condition).await
+    }
+}
 /// Volatile in-process store for tests and examples; not a durable store.
 #[derive(Default)]
 pub struct MemoryAirStore {

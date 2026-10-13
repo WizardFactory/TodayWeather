@@ -13,16 +13,17 @@ use std::sync::Arc;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn smoke_live_air_with_s3_budgets_then_s3_only_restore() {
     let peer = Peer::new();
+    let s3 = server2::world::BoundedS3::new(peer.transport(), 12);
     let stub = Stub::start().await;
     let sc = scenario("air-waqi-high");
     let step = &sc["steps"][0];
     let clock = Arc::new(FixedClock::new(ms(step["at"].as_str().unwrap())));
     let air = LiveAir::new(
         waqi_only(&stub),
-        Arc::new(CatalogAirStore::new(peer.transport(), CatalogLimits::default()).unwrap()),
+        Arc::new(CatalogAirStore::new(s3.clone(), CatalogLimits::default()).unwrap()),
         Arc::new(HttpAirTransport::new().unwrap()),
         AirFunding {
-            transport: Arc::new(peer.transport()),
+            transport: Arc::new(s3.clone()),
             clock: Arc::new(Linked(clock.clone())),
         },
         clock.clone(),
@@ -30,7 +31,9 @@ async fn smoke_live_air_with_s3_budgets_then_s3_only_restore() {
     .unwrap();
     let vc = Arc::new(ScriptedVc::default());
     let backend = WorldBackend::new(World::new(
-        peer.store(),
+        Arc::new(
+            server2::world::CatalogWorldStore::new(s3.clone(), CatalogLimits::default()).unwrap(),
+        ),
         vc.clone(),
         Arc::new(air),
         clock.clone(),
@@ -59,9 +62,11 @@ async fn smoke_live_air_with_s3_budgets_then_s3_only_restore() {
     );
 
     let cold_store: Arc<dyn AirStore> =
-        Arc::new(CatalogAirStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+        Arc::new(CatalogAirStore::new(s3.clone(), CatalogLimits::default()).unwrap());
     let cold = WorldBackend::new(World::new(
-        peer.store(),
+        Arc::new(
+            server2::world::CatalogWorldStore::new(s3.clone(), CatalogLimits::default()).unwrap(),
+        ),
         Arc::new(Disabled),
         Arc::new(LiveAir::restore_only(cold_store, clock.clone())),
         clock,

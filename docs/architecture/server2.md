@@ -1505,7 +1505,9 @@ raw record (sources `air-google`, `air-openweather`, `air-waqi`; kind `current`;
 `air-<p|n><lat*100>-<p|n><lon*100>`; UTC-day partition) before it serves a request. A row
 lasts 30 minutes from its fetch; a failure or an unpublished body is cached for 2 minutes.
 Each request evaluates the observation with its own coordinate and time and renders it with
-the S11 code. The S11 oracle air scenarios match the legacy bytes through the live chain and
+the S11 code. The OpenWeather minute slot is taken together with its check, before funding.
+The local runtime gives weather, air and budget S3 requests one shared admission of 12
+in-flight requests (`BoundedS3`), and an air store reads at most two catalogs at a time. The S11 oracle air scenarios match the legacy bytes through the live chain and
 again from S3 alone with providers disabled.
 
 Recorded differences: the cell coordinate replaces the first requester's precise coordinate;

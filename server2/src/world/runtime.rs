@@ -2,7 +2,7 @@
 //! Without `SERVER2_WORLD_MODE` the gateway keeps the legacy world backend. No production,
 //! AWS or live provider configuration is accepted by this entrypoint.
 use super::{
-    AirConfig, AirFunding, AirProviderConfig, AirSource, AirStore, CatalogAirStore,
+    AirConfig, AirFunding, AirProviderConfig, AirSource, AirStore, BoundedS3, CatalogAirStore,
     CatalogWorldStore, FundedVc, HttpAirTransport, HttpVcTransport, LiveAir, SystemClock,
     Unconfigured, VcFunding, World, WorldBackend, WorldConfig,
 };
@@ -21,6 +21,8 @@ fn loopback_http(url: &str) -> bool {
                 .is_some_and(|ip| ip.is_loopback())
     })
 }
+/// Combined in-flight S3 requests of the local world runtime (the S3 test peer has 16 slots).
+const S3_IN_FLIGHT: usize = 12;
 /// A configured native world backend and the versions it is selected for.
 pub type Configured = (Arc<WorldBackend>, Vec<Version>);
 /// Build the local native world backend from injected variables, or None when not selected.
@@ -46,10 +48,13 @@ pub fn from_vars(var: &dyn Fn(&str) -> Option<String>) -> Result<Option<Configur
         need("SERVER2_WORLD_S3_ACCESS_KEY_ID")?,
         need("SERVER2_WORLD_S3_SECRET_ACCESS_KEY")?,
     );
-    let transport = || {
-        HttpS3Transport::new(&s3, &bucket, "ap-northeast-2", credentials.clone())
-            .map_err(|_| GatewayError::InvalidConfiguration)
-    };
+    // S13a: one bounded S3 admission for weather, air and budget requests of this process.
+    let shared = BoundedS3::new(
+        HttpS3Transport::new(&s3, &bucket, "ap-northeast-2", credentials)
+            .map_err(|_| GatewayError::InvalidConfiguration)?,
+        S3_IN_FLIGHT,
+    );
+    let transport = || -> Result<BoundedS3<HttpS3Transport>, GatewayError> { Ok(shared.clone()) };
     let units: u64 = need("SERVER2_WORLD_VC_DAILY_UNITS")?
         .parse()
         .map_err(|_| GatewayError::InvalidConfiguration)?;

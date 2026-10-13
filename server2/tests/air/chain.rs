@@ -171,6 +171,78 @@ async fn failures_are_cached_for_two_minutes_and_publication_failure_is_no_succe
     assert!(store.all().is_empty());
 }
 
+/// S13a-R1-F01: the OpenWeather minute cap holds while S08 funding is still in flight.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn openweather_minute_cap_is_atomic_across_cells() {
+    let stub = Stub::start().await;
+    stub.push(OWM, Reply::json(fixture("openweather-seoul.json")));
+    let clock = Arc::new(FixedClock::new(ms("2026-09-27T14:30:00Z")));
+    let config = AirConfig {
+        openweather: Some(provider(&stub, OWM_KEY, 'b', 1000)),
+        openweather_minute_cap: 1,
+        ..AirConfig::default()
+    };
+    let air = LiveAir::new(
+        config,
+        memory(),
+        Arc::new(server2::world::HttpAirTransport::new().unwrap()),
+        server2::world::AirFunding {
+            transport: Arc::new(Slow {
+                delay_ms: 200,
+                ..Slow::default()
+            }),
+            clock: Arc::new(Linked(clock.clone())),
+        },
+        clock.clone(),
+    )
+    .unwrap();
+    let now = ms("2026-09-27T14:30:00Z");
+    let _ = tokio::join!(
+        air.current(37.5, 127.0, now),
+        air.current(35.1, 129.0, now),
+        air.current(33.5, 126.5, now),
+        air.current(36.3, 127.4, now)
+    );
+    assert_eq!(stub.calls_to(OWM).len(), 1, "cap 1 per rolling minute");
+}
+
+/// S13a-R1-F02: one bounded admission caps all S3/budget requests that share it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn shared_s3_admission_bounds_in_flight_requests() {
+    use server2::budget::{BudgetError, BudgetObject, BudgetTransport};
+    use server2::storage::WriteCondition;
+    struct Probe(Arc<Slow>);
+    impl BudgetTransport for Probe {
+        async fn get_budget(&self, key: &str) -> Result<BudgetObject, BudgetError> {
+            self.0.get_budget(key).await
+        }
+        async fn put_budget(
+            &self,
+            key: &str,
+            body: &[u8],
+            condition: &WriteCondition,
+        ) -> Result<u16, BudgetError> {
+            self.0.put_budget(key, body, condition).await
+        }
+    }
+    let slow = Arc::new(Slow {
+        delay_ms: 20,
+        ..Slow::default()
+    });
+    let bounded = server2::world::BoundedS3::new(Probe(slow.clone()), 3);
+    let mut tasks = tokio::task::JoinSet::new();
+    for i in 0..40 {
+        let b = bounded.clone();
+        tasks.spawn(async move {
+            let _ = b.get_budget(&format!("budgets/v2/x/{i}.json")).await;
+        });
+    }
+    while tasks.join_next().await.is_some() {}
+    let peak = slow.peak.load(std::sync::atomic::Ordering::SeqCst);
+    assert!((1..=3).contains(&peak), "peak in-flight {peak}");
+    assert_eq!(bounded.available(), 3);
+}
+
 #[tokio::test]
 async fn unconfigured_keys_and_restore_only_never_call_providers() {
     let stub = Stub::start().await;

@@ -345,6 +345,10 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                 .unwrap_or_else(|e| e.into_inner());
             if let Some(rx) = inflight.get(&cell) {
                 rx.clone()
+            } else if let Some(row) = self.cached(cell, self.now()) {
+                // A resolution finished between the caller's memory check and this lock: its
+                // row is remembered before its inflight entry is removed (S13a-R1-F03).
+                return row;
             } else {
                 let (tx, rx) = watch::channel(None);
                 inflight.insert(cell, rx.clone());
@@ -485,9 +489,27 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         if *state.down_until.lock().unwrap_or_else(|e| e.into_inner()) > now {
             return skip();
         }
-        if state.provider == AirProvider::OpenWeather && !self.minute_allows(now) {
-            return skip();
+        // The OpenWeather minute slot is taken atomically with its check, before funding, so
+        // concurrent chains cannot all pass the cap (S13a-R1-F01). A slot whose funding is
+        // denied is returned; a funded slot counts the call like legacy `record`.
+        let slot = if state.provider == AirProvider::OpenWeather {
+            match self.take_minute(now) {
+                Some(index) => Some(index),
+                None => return skip(),
+            }
+        } else {
+            None
+        };
+        if self.fund(state).await {
+            return true;
         }
+        if let Some(index) = slot {
+            self.release_minute(index);
+        }
+        skip()
+    }
+    async fn fund(&self, state: &ProviderState<T>) -> bool {
+        let skip = || false;
         let Some(funding) = &self.inner.funding else {
             return skip();
         };
@@ -524,12 +546,24 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         }
         true
     }
-    fn minute_allows(&self, now: f64) -> bool {
+    /// Legacy rolling-minute estimate; on admission the call is counted in the same step.
+    fn take_minute(&self, now: f64) -> Option<i64> {
         let mut m = self.inner.minute.lock().unwrap_or_else(|e| e.into_inner());
         roll(&mut m, now);
         let fraction = (60_000. - now.rem_euclid(60_000.)) / 60_000.;
-        (m.current as f64 + m.previous as f64 * fraction)
-            < self.inner.config.openweather_minute_cap as f64
+        if m.current as f64 + m.previous as f64 * fraction
+            >= self.inner.config.openweather_minute_cap as f64
+        {
+            return None;
+        }
+        m.current += 1;
+        Some(m.index)
+    }
+    fn release_minute(&self, index: i64) {
+        let mut m = self.inner.minute.lock().unwrap_or_else(|e| e.into_inner());
+        if m.index == index {
+            m.current = m.current.saturating_sub(1);
+        }
     }
     fn request(&self, state: &ProviderState<T>, cell: AirCell) -> Option<AirHttpRequest> {
         let (lat, lon) = (num_string(cell.lat()), num_string(cell.lon()));
@@ -558,12 +592,6 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
     }
     async fn attempt(&self, state: &ProviderState<T>, cell: AirCell) -> Attempt {
         self.inner.metrics.provider_attempts.fetch_add(1, Relaxed);
-        if state.provider == AirProvider::OpenWeather {
-            let now = self.now();
-            let mut m = self.inner.minute.lock().unwrap_or_else(|e| e.into_inner());
-            roll(&mut m, now);
-            m.current += 1;
-        }
         let (Some(http), Some(request)) = (&self.inner.http, self.request(state, cell)) else {
             return Attempt::Failed;
         };
@@ -627,5 +655,55 @@ impl LiveAir<NoFunding> {
 impl<T: BudgetTransport + 'static> AirSource for LiveAir<T> {
     fn current(&self, lat: f64, lon: f64, request_ms: f64) -> BoxFuture<'_, AirOutcome> {
         Box::pin(self.answer(lat, lon, request_ms))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::world::{FixedClock, MemoryAirStore};
+
+    /// S13a-R1-F03: request A observed a memory miss; before A reaches the inflight lock,
+    /// request B resolves the cell and removes its inflight entry. A must use B's row (here a
+    /// 2-minute failure row) instead of starting a second resolution.
+    #[tokio::test]
+    async fn a_resolution_finished_after_the_memory_check_is_reused() {
+        let clock = Arc::new(FixedClock::new(1_790_000_000_000.));
+        let waqi = AirProviderConfig {
+            base_url: "http://127.0.0.1:9/".into(),
+            key: "S13A_LOCAL_WAQI_KEY".into(),
+            quota_id: "c".repeat(64),
+            monthly_units: 10,
+            block_units: 10,
+        };
+        let state = ProviderState::<NoFunding> {
+            provider: AirProvider::Waqi,
+            base: waqi.base_url.parse().unwrap(),
+            config: waqi,
+            window: AsyncMutex::new(None),
+            down_until: Mutex::new(f64::NEG_INFINITY),
+        };
+        // No funding: every provider is skipped, so a resolution ends in a failure row.
+        let air = LiveAir::build(
+            vec![state],
+            true,
+            Arc::new(MemoryAirStore::default()),
+            None,
+            None,
+            clock.clone(),
+            AirConfig::default(),
+        );
+        let (lat, lon, now) = (37.5665, 126.978, clock.now_ms());
+        let cell = AirCell::of(lat, lon).unwrap();
+        assert!(air.cached(cell, now).is_none(), "A: memory miss");
+        let _ = air.answer(lat, lon, now).await; // B resolves and remembers the failure row.
+        assert_eq!(air.metrics().chains.load(Relaxed), 1);
+        let row = air.shared(cell, lat, lon, now).await; // A continues after its miss.
+        assert!(row.observation.is_none() && row.expire_at > now);
+        assert_eq!(
+            air.metrics().chains.load(Relaxed),
+            1,
+            "no second resolution"
+        );
     }
 }

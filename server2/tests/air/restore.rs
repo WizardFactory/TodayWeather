@@ -26,10 +26,13 @@ async fn live_chain_matches_the_oracle_and_s3_alone_restores_the_same_bytes() {
     let mut restored = 0;
     for sc in scenarios {
         let peer = Peer::new();
+        let s3 = server2::world::BoundedS3::new(peer.transport(), 12);
         let stub = Stub::start().await;
-        let weather: Arc<dyn WorldStore> = peer.store();
+        let weather: Arc<dyn WorldStore> = Arc::new(
+            server2::world::CatalogWorldStore::new(s3.clone(), CatalogLimits::default()).unwrap(),
+        );
         let air_store: Arc<dyn AirStore> =
-            Arc::new(CatalogAirStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+            Arc::new(CatalogAirStore::new(s3.clone(), CatalogLimits::default()).unwrap());
         let clock = Arc::new(FixedClock::new(0.));
         let (air, _) = live(waqi_only(&stub), air_store, clock.clone());
         let vc = Arc::new(ScriptedVc::default());
@@ -86,9 +89,12 @@ async fn live_chain_matches_the_oracle_and_s3_alone_restores_the_same_bytes() {
         for step in sc["steps"].as_array().unwrap() {
             let at = Arc::new(FixedClock::new(ms(step["at"].as_str().unwrap())));
             let cold_air: Arc<dyn AirStore> =
-                Arc::new(CatalogAirStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+                Arc::new(CatalogAirStore::new(s3.clone(), CatalogLimits::default()).unwrap());
             let cold = WorldBackend::new(World::new(
-                peer.store(),
+                Arc::new(
+                    server2::world::CatalogWorldStore::new(s3.clone(), CatalogLimits::default())
+                        .unwrap(),
+                ),
                 Arc::new(Disabled),
                 Arc::new(LiveAir::restore_only(cold_air, at.clone())),
                 at,
@@ -115,6 +121,7 @@ async fn live_chain_matches_the_oracle_and_s3_alone_restores_the_same_bytes() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn restore_without_records_serves_no_air_and_does_not_invent_values() {
     let peer = Peer::new();
+    let s3 = server2::world::BoundedS3::new(peer.transport(), 12);
     let sc = air_scenarios()[0];
     let step = &sc["steps"][0];
     let r = &step["requests"][0];
@@ -123,7 +130,9 @@ async fn restore_without_records_serves_no_air_and_does_not_invent_values() {
     let vc = Arc::new(ScriptedVc::default());
     expect_calls(&vc, r);
     let warm = WorldBackend::new(World::new(
-        peer.store(),
+        Arc::new(
+            server2::world::CatalogWorldStore::new(s3.clone(), CatalogLimits::default()).unwrap(),
+        ),
         vc,
         Arc::new(server2::world::Unconfigured),
         clock.clone(),
@@ -131,9 +140,11 @@ async fn restore_without_records_serves_no_air_and_does_not_invent_values() {
     ));
     let _ = warm.reply(&path(r), "ko", deadline()).await;
     let air_store: Arc<dyn AirStore> =
-        Arc::new(CatalogAirStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+        Arc::new(CatalogAirStore::new(s3.clone(), CatalogLimits::default()).unwrap());
     let cold = WorldBackend::new(World::new(
-        peer.store(),
+        Arc::new(
+            server2::world::CatalogWorldStore::new(s3.clone(), CatalogLimits::default()).unwrap(),
+        ),
         Arc::new(Disabled),
         Arc::new(LiveAir::restore_only(air_store, clock.clone())),
         clock,
