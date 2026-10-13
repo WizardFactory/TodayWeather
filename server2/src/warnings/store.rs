@@ -344,6 +344,9 @@ impl<T: CatalogTransport> WarningStore<T> {
         deadline: Instant,
     ) -> Result<(), Error> {
         let (declaration, raw) = records::group(kind, date, members, &self.limits)?;
+        // Publication I/O (preflight/CAS catalog reads, raw/descriptor PUTs, reconciliation
+        // HEAD/GET and final verification) is sequential, so one slot bounds it as well.
+        let _slot = acquire(&self.reader.reads, deadline).await?;
         self.reader
             .catalogs
             .publish(declaration, raw, deadline)

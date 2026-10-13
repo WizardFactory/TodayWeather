@@ -57,9 +57,10 @@ published.
   back to 1970, the earliest storable period date; an unfinished LIST fails closed.
   Announcements later than KST tomorrow cannot come from the provider and are not scanned. Nothing found gives
   legacy 501 `data is empty`. Seed import is a precondition.
-- All S3 reads of one store (day reads, repairs and discovery LISTs from every walk,
-  zone refresh and collector check) share a store-wide bound of 4 concurrent operations,
-  so concurrent walks cannot exceed an endpoint's connection admission.
+- All S3 operations of one store (day reads, repairs, discovery LISTs and sequential
+  publications from every walk, zone refresh, collector and seed import) share a
+  store-wide bound of 4 concurrent operations, so they cannot exceed an endpoint's
+  connection admission.
 - A day is read with one full lookup; if its accumulated history exceeds the
   per-operation output bound, whole acquisitions are paged (halving the page down
   to one acquisition, which always fits because its publication fit), restarting

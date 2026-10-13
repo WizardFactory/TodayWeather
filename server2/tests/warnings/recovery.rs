@@ -673,7 +673,8 @@ impl CatalogTransport for Counting {
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn concurrent_walks_stay_within_the_store_read_bound() {
-    // A full zone replay and four bulletin walks at once never exceed `reads` S3 operations;
+    // A full zone replay, four bulletin walks and three publications at once never exceed
+    // `reads` S3 operations;
     // the loopback peer (like any S3 endpoint) refuses connections beyond its admission.
     let peer = Peer::new();
     publish_recorded(&peer.store()).await;
@@ -702,7 +703,45 @@ async fn concurrent_walks_stay_within_the_store_read_bound() {
             store.latest(kind, now, None, deadline()).await
         }));
     }
+    // Concurrent publications share the bound: two new acquisitions and a duplicate of an
+    // existing one (its identical raw PUT is reconciled by HEAD/GET).
+    let mut publications = Vec::new();
+    for (kind, date, body, fetched) in [
+        (
+            "bulletin-2",
+            20260928,
+            type2_body(202609281000, "a"),
+            "2026-09-28T01:00:00.000Z",
+        ),
+        (
+            "bulletin-2",
+            20260929,
+            type2_body(202609291000, "b"),
+            "2026-09-29T01:00:00.000Z",
+        ),
+        (
+            "bulletin-2",
+            20260926,
+            WTHR_PWN.as_bytes().to_vec(),
+            "2026-09-27T00:20:00.000Z",
+        ),
+    ] {
+        let store = store.clone();
+        publications.push(tokio::spawn(async move {
+            store
+                .publish(
+                    kind,
+                    date,
+                    vec![member(Operation::WthrPwn, &body, fetched)],
+                    deadline(),
+                )
+                .await
+        }));
+    }
     zones.await.unwrap().unwrap();
+    for p in publications {
+        p.await.unwrap().unwrap();
+    }
     let mut found = 0;
     for w in walks {
         found += usize::from(w.await.unwrap().unwrap().is_some());
