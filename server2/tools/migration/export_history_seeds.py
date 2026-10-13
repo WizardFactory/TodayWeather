@@ -70,20 +70,45 @@ DOUBLE_SPECIALS = {'Infinity': float('inf'), '-Infinity': float('-inf'), 'NaN': 
 
 
 def wrapped_int(text):
+    """`[+-]?digits` within i64; leading zeros are insignificant (Rust `i64::from_str`)."""
     if not isinstance(text, str) or not INT_TEXT.fullmatch(text):
         return None
-    parsed = int(text)
+    sign = -1 if text[0] == '-' else 1
+    digits = text.lstrip('+-').lstrip('0') or '0'
+    if len(digits) > 19:
+        return None
+    parsed = sign * int(digits)
     return parsed if I64_MIN <= parsed <= I64_MAX else None
 
 
 def bounded_int(text):
-    """Plain JSON integers must stay within f64 range, as serde_json requires."""
+    """Plain JSON integers as serde_json reads them: `-0` is the float negative zero, and
+    values beyond f64 are out of range."""
+    if text == '-0':
+        return -0.0
+    digits = text.lstrip('-')
+    if len(digits) > 309:
+        raise Invalid(f'number out of range: {text[:20]}...')
     value = int(text)
     try:
         float(value)
     except OverflowError as error:
         raise Invalid(f'number out of range: {text[:20]}...') from error
     return value
+
+
+def no_surrogates(value):
+    """serde_json rejects unpaired UTF-16 surrogate escapes; so does the converter."""
+    if isinstance(value, str):
+        if any('\ud800' <= ch <= '\udfff' for ch in value):
+            raise Invalid('unpaired surrogate in a string')
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            no_surrogates(key)
+            no_surrogates(item)
+    elif isinstance(value, list):
+        for item in value:
+            no_surrogates(item)
 
 
 def reject_constant(name):
@@ -289,7 +314,8 @@ def convert(collection, version, exported_at, source):
             text = raw.decode('utf-8')
             doc = json.loads(text, object_pairs_hook=unique_pairs, parse_constant=reject_constant,
                              parse_float=finite_float, parse_int=bounded_int)
-        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            no_surrogates(doc)
+        except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as error:
             raise Invalid(f'line {number_} is not a JSON document') from error
         except Invalid as error:
             raise Invalid(f'line {number_}: {error}') from error

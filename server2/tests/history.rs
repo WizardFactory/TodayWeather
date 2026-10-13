@@ -14,6 +14,8 @@ mod coverage;
 mod demand;
 #[path = "history/legacy.rs"]
 mod legacy;
+#[path = "history/parity.rs"]
+mod parity;
 #[path = "history/schedule.rs"]
 mod schedule;
 #[path = "history/smoke.rs"]

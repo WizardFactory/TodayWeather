@@ -127,7 +127,9 @@ separately authorized operator action.
 - Each document must match its legacy schema: top-level and data-row keys are allowlisted
   (plus `_id`/`__v`), grid or station identity (32-bit `stnId`) is required. Unknown keys and
   repeated member names at any depth reject the file in both the converter and the importer;
-  groups hold at most 20,000 documents and 8 MiB, seeds at most 64 MiB.
+  groups hold at most 20,000 documents and 8 MiB, seeds at most 64 MiB. Both tools read numbers,
+  dates and strings the same way (correctly rounded floats, `-0` as a float, no unpaired surrogates,
+  whole-string ASCII grammars); a differential test runs edge cases through both.
 - Seed (JSON Lines): line 1 manifest
   `{"schema":1,"tool":"export_history_seeds","collection":C,"dbVersion":V,"exportedAt":ISO,"sourceSha256":H,"documents":N,"groups":G}`;
   then one line per key in first-seen order

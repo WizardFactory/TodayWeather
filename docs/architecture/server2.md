@@ -1558,7 +1558,8 @@ the runtime owner starts `CaptureRunner::run`.
 - **Legacy export**: `server2/tools/migration/export_history_seeds.py` converts one offline
   `mongoexport` file (one document per line) of `kma.town.current|shortest|short`,
   `current|shortest|short` (v1) or `KmaStnHourly2|KmaStnMinute2` into a seed whose documents are
-  the original lines byte for byte, with manifest provenance. Import stores one `legacy-mongo`
+  the original lines byte for byte, with manifest provenance; the converter and the importer accept
+  the same documents (differential edge-case test). Import stores one `legacy-mongo`
   record per collection and key and export instant, so every export is a separate revision.
   `history::legacy::current_rows` reproduces the legacy read projection of current rows
   (verified against the legacy functions over the fixtures). Exporting production data is a
