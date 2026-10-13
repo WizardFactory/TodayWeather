@@ -3,8 +3,8 @@
 use super::chain::{Cx, Flow};
 use super::data::{SHORT_STRING, read_town};
 use super::js::{
-    Arr, Ob, V, add, catch, fixed, ge, gt, json_clone, le, loose_eq, lt, obj, parse_int, round,
-    slice, strict_eq, substr, sv, to_number, to_str,
+    Arr, Ob, V, add, catch, fixed, ge, gt, json_clone, le, loose_eq, lt, obj, parse_int,
+    parse_int10, round, slice, strict_eq, substr, sv, to_number, to_str,
 };
 use super::{TownModel, policy, precip, time};
 
@@ -328,7 +328,8 @@ fn sum_short_precipitation(short: &Arr, basic: &Arr) {
         if !matches!(date, V::Str(_)) || !matches!(tm, V::Str(_)) {
             continue;
         }
-        let hour = parse_int(&V::from(slice(&sv(&tm), 0, Some(2))));
+        // `parseInt(row.time.slice(0, 2), 10)`.
+        let hour = parse_int10(&V::from(slice(&sv(&tm), 0, Some(2))));
         let end = (hour / 3.).ceil() * 3.;
         let slot_time = V::Obj(obj(vec![
             ("date", date.clone()),

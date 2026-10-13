@@ -83,10 +83,17 @@ pub fn request(sc: &Value) -> KmaRequest {
 
 /// Recordings whose legacy result the port does not reproduce: the native assembly must forward
 /// them to legacy for the stated reason instead of answering.
-pub const FORWARDED: [(&str, &str); 1] = [(
-    "stn-small-year-datetime",
-    "date string form not reproduced (V8 legacy Date.parse): \"0001-09-24 09:03\"",
-)];
+pub const FORWARDED: [(&str, &str); 2] = [
+    // Legacy `decodeURI(req.originalUrl)` throws before its `try` (Express 500).
+    (
+        "query-malformed-escape",
+        "getAllDataFromDb: uncaught URIError: URI malformed",
+    ),
+    (
+        "stn-small-year-datetime",
+        "date string form not reproduced (V8 legacy Date.parse): \"0001-09-24 09:03\"",
+    ),
+];
 
 /// The recorded oracle as the library replay source (parsed once).
 pub fn source() -> &'static RecordedSource {

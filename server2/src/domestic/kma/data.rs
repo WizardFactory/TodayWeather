@@ -252,6 +252,11 @@ pub fn get_all_data_from_db(cx: &mut Cx) -> Flow {
     if params.get("town").is_undef() {
         params.set("town", "");
     }
+    // `log.info('## + ' + decodeURI(req.originalUrl) ...)` runs before the `try`: a malformed
+    // escape or invalid UTF-8 anywhere in the URL throws URIError (Express answers 500).
+    if !super::js::decode_uri_ok(&to_str(&cx.r("originalUrl"))) {
+        super::js::throw("URIError: URI malformed");
+    }
     let r = super::js::catch(|| -> Option<()> {
         let (coord, g_coord) = cx.coord().ok()?;
         let lat = super::js::to_number(&g_coord.get("lat"));

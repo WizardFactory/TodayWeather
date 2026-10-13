@@ -1660,15 +1660,17 @@ and a `Family::Kma` handler for the S10 dispatcher. Legacy stays selected by def
   store answers.
 
 Parity uses a pinned Node 16.20.2 oracle recording ([provenance](../../server2/tests/domestic/fixtures/PROVENANCE.md)):
-71 requests through the real router and harness, with every store answer and its arguments recorded in order. They
+73 requests through the real router and harness, with every store answer and its arguments recorded in order. They
 include the 15 S02 direct-route v000903 goldens (bodies and Express ETags), the 5 gateway domestic
 v000903 backend inputs, and supplementary DB 1.0, RSS, station, rain-category, air-list, KAQ
 forecast, fallback, life-index/MFDS/rise-set, warning, temperature, error, clock-boundary and invalid
-DB 1.0 RSS/current publication and Boolean station-time cases. 70 recordings match byte for byte, with the dependency calls in legacy order;
-the 71st (a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2026-01-09) is a
-declared forward. `Date.parse` is reproduced for the strict ISO, space and dotted forms (years from
+DB 1.0 RSS/current publication, Boolean station-time, hexadecimal area-number and malformed-escape
+cases. 71 recordings match byte for byte, with the dependency calls in legacy order. Two are declared
+forwards: a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2026-01-09, and a query
+with a malformed escape, for which legacy `decodeURI(req.originalUrl)` throws before its `try` (500). `Date.parse` is reproduced for the strict ISO, space and dotted forms (years from
 100 for the legacy forms) and digit-only strings, checked against the pinned V8; any other date
-string forwards to legacy. Numeric Date constructors map years 0-99 to 1900-1999, as in JavaScript. The 5 gateway goldens match on
+string forwards to legacy. Numeric Date constructors map years 0-99 to 1900-1999, `parseInt` without a radix reads `0x`
+hexadecimal, and `Number`/`parseInt`/`parseFloat` skip JavaScript whitespace only, as in JavaScript. The 5 gateway goldens match on
 the wire with the native switch (status, body and headers except `date`/`connection`). The legacy
 default, forward and rollback paths are tested. The recorded store is a test double: it checks each
 call's method, order and complete arguments and that every recorded call was used, forwarding on
@@ -1685,9 +1687,9 @@ request-time RSS/mid/life acquisitions form the proposed follow-up S15b.
 
 O-2 checkpoint (Rust adoption is settled; this records correctness and cost). `kma_checkpoint`
 assembles every recorded request from memory, and `tools/kma_checkpoint.py` reads process rusage.
-On an Apple M4 release build (2,840 assemblies) the mean per assembly is 3.49 ms (p50 3.66, p95 3.94,
-p99 4.40, max 4.52 ms, including JSON encoding and store-answer conversion), CPU is 3.5 ms per request
-and peak RSS is 155 MiB, 154 MiB of which is the decoded fixture (both test views). The server2 CI entrypoint records
+On an Apple M4 release build (2,920 assemblies) the mean per assembly is 3.51 ms (p50 3.72, p95 4.00,
+p99 4.44, max 4.57 ms, including JSON encoding and store-answer conversion), CPU is 3.5 ms per request
+and peak RSS is 159 MiB, 158 MiB of which is the decoded fixture (both test views). The server2 CI entrypoint records
 the Linux values. The legacy oracle took about 7 ms per request on the same host, including loopback
 HTTP and Express. These are local fixture measurements, not production latency, concurrency or
 memory evidence. The S10 3-second native attempt and the 9-second gateway deadline are unchanged.

@@ -207,9 +207,24 @@ impl Val {
     }
 }
 
+/// ECMAScript WhiteSpace and LineTerminator as `Number(string)`, `parseInt` and `parseFloat`
+/// skip them (pinned V8). Rust's `char::is_whitespace` also accepts U+0085, which they do not.
+pub fn is_js_space(c: char) -> bool {
+    matches!(
+        c,
+        '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'
+            ..='\u{200a}'
+                | '\u{2028}'
+                | '\u{2029}'
+                | '\u{202f}'
+                | '\u{205f}'
+                | '\u{3000}'
+                | '\u{feff}'
+    )
+}
 /// `Number(string)` for the decimal forms produced by legacy inputs.
 pub fn string_to_number(s: &str) -> f64 {
-    let t = s.trim_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
+    let t = s.trim_matches(is_js_space);
     if t.is_empty() {
         return 0.;
     }
@@ -239,7 +254,7 @@ pub fn string_to_number(s: &str) -> f64 {
 
 /// `parseFloat(string)`: longest decimal prefix after leading whitespace.
 pub fn parse_float(s: &str) -> f64 {
-    let t = s.trim_start_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
+    let t = s.trim_start_matches(is_js_space);
     for (word, value) in [
         ("Infinity", f64::INFINITY),
         ("+Infinity", f64::INFINITY),

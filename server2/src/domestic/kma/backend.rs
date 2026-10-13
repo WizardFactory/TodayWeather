@@ -154,10 +154,10 @@ fn decode_param(raw: &str) -> Option<String> {
     }
     String::from_utf8(out).ok()
 }
-/// `qs` value/key decoding: `+` is a space; a malformed escape keeps the raw text.
+/// `qs` `Utils.decode`: `+` is a space, but a failed `decodeURIComponent` (malformed escape or
+/// invalid UTF-8) returns the original text, plus signs included.
 fn decode_query(raw: &str) -> String {
-    let spaced = raw.replace('+', " ");
-    decode_param(&spaced).unwrap_or(spaced)
+    decode_param(&raw.replace('+', " ")).unwrap_or_else(|| raw.to_owned())
 }
 /// Keys `qs` would treat structurally or drop (bracket syntax, Object.prototype names).
 fn plain_key(key: &str) -> bool {
@@ -211,6 +211,7 @@ pub fn parse_path(path: &str, lang: &str) -> Option<KmaRequest> {
     let mut it = decoded.into_iter();
     Some(KmaRequest {
         version: "v000903".into(),
+        original_url: path.to_owned(),
         region: it.next(),
         city: it.next(),
         town: it.next(),
@@ -244,6 +245,22 @@ mod tests {
         assert!(parse_path("/v000903/kma/addr/%ZZ", "en").is_none());
         assert!(parse_path("/v000903/kma/addr/a?x[y]=1", "en").is_none());
         assert!(parse_path("/v000901/kma/addr/a", "en").is_none());
+        // Pinned qs: `F+%ZZ` -> "F+%ZZ", `a+%E0%A4%A` -> "a+%E0%A4%A", `a+%C3%28` -> "a+%C3%28".
+        let q = parse_path(
+            "/v000903/kma/addr/a?temperatureUnit=F+%ZZ&x=a+%E0%A4%A&y=a+%C3%28&z=a+b%20c",
+            "en",
+        )
+        .unwrap()
+        .query;
+        assert_eq!(
+            q,
+            [
+                ("temperatureUnit".into(), "F+%ZZ".into()),
+                ("x".into(), "a+%E0%A4%A".into()),
+                ("y".into(), "a+%C3%28".into()),
+                ("z".into(), "a b c".into())
+            ]
+        );
     }
     #[test]
     fn query_fields_beyond_the_qs_parameter_limit_are_ignored() {

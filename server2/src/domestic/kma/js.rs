@@ -688,15 +688,61 @@ pub fn fixed(v: &V, digits: usize) -> f64 {
 pub fn round(x: f64) -> f64 {
     wjs::round(x)
 }
-/// `parseInt(String(v), 10)`.
+/// Whether `decodeURI(s)` returns (every `%` starts two hex digits and the escaped bytes, with
+/// the literal text, form valid UTF-8) instead of throwing URIError.
+pub fn decode_uri_ok(s: &str) -> bool {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' {
+            let Some(byte) = s
+                .get(i + 1..i + 3)
+                .and_then(|h| u8::from_str_radix(h, 16).ok())
+            else {
+                return false;
+            };
+            if !b[i + 1].is_ascii_hexdigit() || !b[i + 2].is_ascii_hexdigit() {
+                return false;
+            }
+            out.push(byte);
+            i += 3;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    std::str::from_utf8(&out).is_ok()
+}
+/// `parseInt(String(v))` (radix omitted: a `0x`/`0X` prefix selects hexadecimal).
 pub fn parse_int(v: &V) -> f64 {
-    let s = to_str(v);
-    let t = s.trim_start_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
+    js_parse_int(&to_str(v), false)
+}
+/// `parseInt(String(v), 10)`.
+pub fn parse_int10(v: &V) -> f64 {
+    js_parse_int(&to_str(v), true)
+}
+fn js_parse_int(s: &str, decimal: bool) -> f64 {
+    let t = s.trim_start_matches(wjs::is_js_space);
     let (sign, rest) = match t.as_bytes().first() {
         Some(b'-') => (-1., &t[1..]),
         Some(b'+') => (1., &t[1..]),
         _ => (1., t),
     };
+    let hex = !decimal && (rest.starts_with("0x") || rest.starts_with("0X"));
+    if hex {
+        let digits: Vec<u32> = rest[2..].chars().map_while(|c| c.to_digit(16)).collect();
+        if digits.is_empty() {
+            return f64::NAN;
+        }
+        // Exact for up to 32 digits (one rounding to f64), as V8 rounds a power-of-two radix.
+        let value = if digits.len() <= 32 {
+            digits.iter().fold(0u128, |a, &d| (a << 4) | u128::from(d)) as f64
+        } else {
+            digits.iter().fold(0., |a, &d| a * 16. + f64::from(d))
+        };
+        return sign * value;
+    }
     let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
     if digits.is_empty() {
         f64::NAN
@@ -912,6 +958,49 @@ mod tests {
         assert_eq!(to_str(&add(&V::s("2026"), &V::s("0924"))), "20260924");
         assert_eq!(to_str(&add(&V::from(1.), &V::s("mm"))), "1mm");
         assert_eq!(parse_int(&V::s("0900")), 900.);
+        // Pinned Node 16.20.2 decodeURI (S15-R16).
+        for (s, ok) in [
+            ("/a?b=%EC%84%9C+c", true),
+            ("/a?t=F+%ZZ", false),
+            ("/a?x=%E0%A4%A", false),
+            ("/a?y=%C3%28", false),
+            ("/a?z=%", false),
+            ("/a?z=%2", false),
+            ("/a?z=%+1", false),
+            ("/서울?q=%25", true),
+            ("/a?s=%ED%A0%80", false),
+        ] {
+            assert_eq!(decode_uri_ok(s), ok, "{s}");
+        }
+        // `Number`/`parseFloat` skip JavaScript whitespace only (U+0085 is not; pinned V8).
+        assert!(wjs::string_to_number("\u{85}12").is_nan());
+        assert!(wjs::parse_float("\u{85}12").is_nan());
+        assert_eq!(wjs::string_to_number("\u{3000}12\u{2028}"), 12.);
+        // Pinned Node 16.20.2 results (S15-R15).
+        for (s, default, ten) in [
+            ("0x42394cec", 1111051500., 0.),
+            ("0X1f", 31., 0.),
+            ("-0x10", -16., -0.),
+            (" \u{feff}\u{3000}12", 12., 12.),
+            ("\u{85}12", f64::NAN, f64::NAN),
+            ("0x", f64::NAN, 0.),
+            ("0xg", f64::NAN, 0.),
+            ("1e3", 1., 1.),
+            ("  -12abc", -12., -12.),
+            ("+", f64::NAN, f64::NAN),
+            ("", f64::NAN, f64::NAN),
+            ("0b11", 0., 0.),
+            ("0o7", 0., 0.),
+            ("09", 9., 9.),
+        ] {
+            for (got, want) in [(parse_int(&V::s(s)), default), (parse_int10(&V::s(s)), ten)] {
+                assert!(
+                    got == want && got.is_sign_negative() == want.is_sign_negative()
+                        || got.is_nan() && want.is_nan(),
+                    "{s:?}: {got} vs {want}"
+                );
+            }
+        }
         assert_eq!(slice("1500", 0, Some(-2)), "15");
     }
 }

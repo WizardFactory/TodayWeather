@@ -168,6 +168,8 @@ pub struct KmaRequest {
     pub region: Option<String>,
     pub city: Option<String>,
     pub town: Option<String>,
+    /// The raw request path and query (`req.originalUrl`).
+    pub original_url: String,
     /// Decoded query pairs in order (Express `qs`: the first 1,000 raw fields, no bracket syntax).
     pub query: Vec<(String, String)>,
     pub locale: Locale,

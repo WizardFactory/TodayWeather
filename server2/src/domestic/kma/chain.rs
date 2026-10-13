@@ -255,6 +255,7 @@ pub fn run(
         ("params", V::Obj(params)),
         ("query", V::Obj(query)),
         ("baseUrl", V::from(format!("/{}/kma", request.version))),
+        ("originalUrl", V::from(request.original_url.as_str())),
     ]);
     let mut cx = Cx {
         req: V::Obj(req),

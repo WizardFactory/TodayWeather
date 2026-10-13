@@ -13,7 +13,8 @@
     "server2/tools/ci.py",
     "server2/src/gateway/runtime.rs",
     "server2/tests/gateway/runtime.rs",
-    "server2/tools/kma_smoke.py"
+    "server2/tools/kma_smoke.py",
+    "server2/src/world/js.rs"
   ],
   "outside": [
     {
