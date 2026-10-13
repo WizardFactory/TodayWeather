@@ -11,6 +11,8 @@ pub fn configured_gateway() -> Result<Option<Arc<Gateway>>, GatewayError> {
         .into_string()
         .map_err(|_| GatewayError::InvalidConfiguration)?;
     let backend = BackendDispatcher::legacy(&base)?;
+    // S11: opt-in loopback-only native world; absent configuration keeps legacy world.
+    crate::world::runtime::configure(&backend)?;
     let mode = env::var("SERVER2_GEOCODER_MODE").unwrap_or_else(|_| "legacy".into());
     let geocoder: Arc<dyn super::Geocoder> = match mode.as_str() {
         "legacy" => Arc::new(LegacyGeocoder::new(&base)?),

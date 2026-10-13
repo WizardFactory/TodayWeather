@@ -1,0 +1,37 @@
+{
+  "task": "S11",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2696",
+  "server2_paths": [
+    "server2/config/tasks/S11.json",
+    "server2/src/world/",
+    "server2/tests/world.rs",
+    "server2/tests/world/",
+    "server2/src/lib.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/Cargo.toml",
+    "server2/Cargo.lock",
+    "server2/tools/world_smoke.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2696.md",
+      "category": "documentation",
+      "reason": "S11 governing intent record; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2696.md",
+      "category": "documentation",
+      "reason": "S11 governing specification; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2696.md",
+      "category": "documentation",
+      "reason": "S11 execution plan and user scenarios; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain only the world/VC raw-record contract section affected by S11; no implementation outside server2"
+    }
+  ]
+}
