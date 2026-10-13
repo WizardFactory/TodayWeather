@@ -58,19 +58,24 @@ from stored combined/recent fetches lacking yesterday or the day before,
 expiring at that fetch's today record + 24 h) -> range combined/recent/forecast
 -> provider-down marker (10 min after a VC 401/403 or limit 429) -> an observed
 exhausted funding window (`_selectRange`) -> per-cell owner: a request behind an
-active fetch is a legacy waiter (stored current and today complete it, otherwise
-fall back), as is a request during the failure backoff (2 s; 15 min after a
-funded 200 body that is unusable) -> S08 funding of both attempts before HTTP
-(98/50/2 units); an unfundable range retries with `forecast` only when no current
-record exists -> VC request at the cell centre with the legacy requester policy
-(one retry of a concurrency 429 within 1.5 s; 401/403 and limit 429 mark the
-provider down; other statuses fail) -> validation (JSON, days, timezone, tzoffset
+active fetch is a legacy waiter (stored current and today complete it), as is a
+request during the failure backoff (2 s; 15 min after a funded 200 body that is
+unusable); a waiter that would otherwise fail first checks funding eligibility
+without HTTP (known exhaustion, or a probe that funds both attempts and keeps the
+reservation for the next fetch of the range) and answers 503 with the window end
+when exhausted -> S08 funding of both attempts before HTTP (98/50/2 units, one
+window per UTC day); an unfundable range retries with `forecast` only when no
+current record exists -> VC request at the cell centre with the legacy requester
+policy (8 s call budget, gzip, 4 MiB body; one retry after 300 ms of a
+concurrency 429 within 1.5 s or of a reset socket; 401/403 and limit 429 mark
+the provider down; other statuses and transport failures fail) -> validation (JSON, days, timezone, tzoffset
 or hours) and conversion -> S06 publication -> merge. Control windows start when
 the failure is handled. The waiter uses the gateway attempt deadline (at most 3 s);
 the owned fetch may continue to 8 s and publish for the next request. Failures use
 `_fallback`: serve current or stale (<= 6 h) records, else error; a provider-down
 or exhausted funding without a stored current returns Unavailable with the marker
-or window end as `retryAt`. Busy cells are not evicted from the bounded cell map.
+or window end as `retryAt`. Busy cells are not evicted from the bounded cell map;
+idle cells are trimmed back to capacity after a burst.
 
 ## Assembly
 
@@ -132,8 +137,10 @@ v16.20.2, legacy revision ca8735cf, recorded VC bodies corrected to the
 requested cell's echo fields) covering negative coordinates, cell boundaries,
 dateline, poles, DST, half-hour zones, missing fields, precipitation, missing
 current conditions, stale fallback, provider failures and air observations.
-Restore tests replay every recorded step from the S3 test peer with providers
-disabled. Privacy tests inspect all stored keys, metadata and bodies and the
+Restore tests rebuild every recorded successful (200) weather response from the
+S3 test peer with empty memory and VC disabled; the air observation is supplied
+separately by the recorded WAQI fixture because air raw persistence is not
+implemented, and non-200 steps are not restore cases. Privacy tests inspect all stored keys, metadata and bodies and the
 provider request URLs. Chain tests cover funding, provider-down, backoff,
 single flight and publication failure. A release-binary smoke uses loopback S3,
 VC and geocoder peers.

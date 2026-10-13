@@ -29,6 +29,8 @@ time = { version = "0.3", features = ["formatting", "macros"] }
 # S11: IANA zone offsets for the legacy world Intl rule (bundled tz data, no runtime file reads).
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 chrono-tz = { version = "0.10", default-features = false, features = ["std", "case-insensitive"] }
+# S11: classify a VC connection closed before the response as the legacy ECONNRESET retry.
+hyper = { version = "1", default-features = false }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

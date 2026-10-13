@@ -1312,15 +1312,21 @@ keeps only records that can still affect a later request.
 
 The legacy chain is preserved: combined/recent/forecast selection, the no-yesterday
 marker, 10-minute provider-down after a VC 401/403 or a daily/usage-limit 429, one
-retry of a concurrency 429, 2-second failure backoff and a 15-minute backoff after a
+retry after 300 ms of a concurrency 429 or a reset socket (`ECONNRESET`/`EPIPE`, including
+a connection closed before the response), the 8-second VC call budget with a 4 MiB
+gzip-capable body, 2-second failure backoff and a 15-minute backoff after a
 billed 200 body that is unusable (both measured from failure handling), waiters behind
 an active fetch that use stored current/today or fall back, stale serving up to 6
 hours and 503 `EWEATHERUNAVAILABLE` retry times. VC HTTP is funded through S08 before
-sending (98/50/2 units reserved for two attempts of a 49/25/1-unit range); a range
-that cannot be funded follows the legacy daily-budget path (forecast-only, then stale
-or 503 with the window end), and an observed exhausted window is checked before the
-cell lock as legacy `_selectRange` is. Busy cells are never evicted from the bounded
-cell map, so one owner fetches per cell. VC requests, S3 keys, catalogs, metadata and
+sending (98/50/2 units reserved for two attempts of a 49/25/1-unit range) in one S08
+window per UTC day, the legacy usage day; a range that cannot be funded follows the
+legacy daily-budget path (forecast-only, then stale or 503 with the window end). As
+legacy `_selectRange` checks the budget before the lock, a request that would fail
+behind a busy or backed-off cell first establishes funding eligibility without HTTP:
+a known exhausted window answers 503, otherwise a probe funds both attempts and keeps
+that reservation for the next fetch of the range. Busy cells are never evicted from
+the bounded cell map, so one owner fetches per cell, and idle cells are trimmed back
+to capacity after a burst. VC requests, S3 keys, catalogs, metadata and
 bodies carry only the cell centre; the response still echoes the requested `location`.
 
 Byte parity is tested against pinned Node v16.20.2 legacy-oracle recordings
@@ -1336,9 +1342,9 @@ at most 3 seconds, so the world waiter uses that attempt deadline instead of the
 legacy 2.5-second answer plus gateway retry; a VC fetch slower than the attempt
 returns the provider error while its owned fetch still publishes for the next request
 (legacy could succeed on a gateway retry). A slow air branch is released as
-`airStatus` pending just before the attempt deadline rather than at 4 seconds. A
-socket reset is not retried. Before a funding window has been observed exhausted, a
-cell in backoff returns the backoff error class. IANA offsets come from bundled
+`airStatus` pending just before the attempt deadline rather than at 4 seconds. S08
+reserves both attempts where legacy counted billed records, so a window can be
+declared exhausted earlier by up to one unused attempt per fetch. IANA offsets come from bundled
 `chrono-tz` data rather than Node 16 ICU data, and the process zone is UTC as in the
 S02 oracle. Live air acquisition (Google, OpenWeather, WAQI, VC air), its S08 funding
 identities and air raw persistence are undecided; the native default is the legacy

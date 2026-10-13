@@ -152,9 +152,8 @@ fn runtime_option_is_opt_in_and_loopback_only() {
                 .map(|(_, v)| (*v).to_owned())
         }
     };
-    let now = ms("2026-09-26T07:04:30.000Z") as i64;
-    assert!(from_vars(&vars(&[]), now).unwrap().is_none());
-    assert!(from_vars(&vars(&[("SERVER2_WORLD_MODE", "native")]), now).is_err());
+    assert!(from_vars(&vars(&[])).unwrap().is_none());
+    assert!(from_vars(&vars(&[("SERVER2_WORLD_MODE", "native")])).is_err());
     const BASE: [(&str, &str); 8] = [
         ("SERVER2_WORLD_MODE", "native-local"),
         ("SERVER2_WORLD_S3_ENDPOINT", "http://127.0.0.1:9/"),
@@ -179,7 +178,7 @@ fn runtime_option_is_opt_in_and_loopback_only() {
         BASE[7],
         ("SERVER2_WORLD_VC_URL", "http://127.0.0.1:9/timeline/"),
     ];
-    let (backend, versions) = from_vars(&vars(&OK), now).unwrap().unwrap();
+    let (backend, versions) = from_vars(&vars(&OK)).unwrap().unwrap();
     assert_eq!(versions.len(), 3);
     let dispatcher = BackendDispatcher::legacy("http://127.0.0.1:9").unwrap();
     backend.register(&dispatcher);
@@ -202,7 +201,7 @@ fn runtime_option_is_opt_in_and_loopback_only() {
         ),
     ];
     assert!(
-        from_vars(&vars(&LIVE), now).is_err(),
+        from_vars(&vars(&LIVE)).is_err(),
         "live provider URL rejected"
     );
     let _ = World::new(

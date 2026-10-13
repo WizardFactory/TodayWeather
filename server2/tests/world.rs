@@ -6,6 +6,8 @@ mod common;
 mod parity;
 #[path = "world/privacy.rs"]
 mod privacy;
+#[path = "world/requester.rs"]
+mod requester;
 #[path = "world/restore.rs"]
 mod restore;
 #[path = "world/switch.rs"]

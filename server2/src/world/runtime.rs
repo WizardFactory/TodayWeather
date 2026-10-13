@@ -2,12 +2,12 @@
 //! Without `SERVER2_WORLD_MODE` the gateway keeps the legacy world backend. No production,
 //! AWS or live provider configuration is accepted by this entrypoint.
 use super::{
-    CatalogWorldStore, FundedVc, SystemClock, Unconfigured, World, WorldBackend, WorldConfig,
+    CatalogWorldStore, FundedVc, HttpVcTransport, SystemClock, Unconfigured, VcFunding, World,
+    WorldBackend, WorldConfig,
 };
 use crate::{
-    budget::{BudgetPolicy, BudgetStore, Provider, SystemClock as BudgetClock},
+    budget::SystemClock as BudgetClock,
     gateway::{BackendDispatcher, BackendMode, GatewayError, Version},
-    providers::HttpProviderTransport,
     storage::{CatalogLimits, HttpS3Transport},
 };
 use std::{net::IpAddr, sync::Arc};
@@ -23,10 +23,7 @@ fn loopback_http(url: &str) -> bool {
 /// A configured native world backend and the versions it is selected for.
 pub type Configured = (Arc<WorldBackend>, Vec<Version>);
 /// Build the local native world backend from injected variables, or None when not selected.
-pub fn from_vars(
-    var: &dyn Fn(&str) -> Option<String>,
-    now_ms: i64,
-) -> Result<Option<Configured>, GatewayError> {
+pub fn from_vars(var: &dyn Fn(&str) -> Option<String>) -> Result<Option<Configured>, GatewayError> {
     let Some(mode) = var("SERVER2_WORLD_MODE") else {
         return Ok(None);
     };
@@ -56,28 +53,17 @@ pub fn from_vars(
         .parse()
         .map_err(|_| GatewayError::InvalidConfiguration)?;
     let quota_id = need("SERVER2_WORLD_VC_QUOTA_ID")?;
-    let day = now_ms.div_euclid(86_400_000) * 86_400_000;
-    let window = super::js::iso(day as f64)
-        .map(|s| s[..10].to_owned())
-        .ok_or(GatewayError::InvalidConfiguration)?;
-    let policy = BudgetPolicy {
-        provider: Provider::VisualCrossing,
+    // One S08 window per UTC day (the legacy usage day); FundedVc opens a fresh store per day.
+    let funding = VcFunding {
+        transport: Arc::new(transport()?),
         quota_id,
-        window_id: window,
-        starts_at_ms: day,
-        ends_at_ms: day + 86_400_000,
-        limit: units,
+        daily_units: units,
         block_units: units.clamp(1, 98),
+        clock: Arc::new(BudgetClock),
     };
-    let budget = Arc::new(
-        BudgetStore::new(Arc::new(transport()?), policy, Arc::new(BudgetClock))
-            .map_err(|_| GatewayError::InvalidConfiguration)?,
-    );
-    let provider = Arc::new(
-        HttpProviderTransport::new(8 * 1024 * 1024)
-            .map_err(|_| GatewayError::InvalidConfiguration)?,
-    );
-    let source = FundedVc::new(&vc, provider, budget, need("VC_SECRET_KEY")?)
+    let provider =
+        Arc::new(HttpVcTransport::new().map_err(|_| GatewayError::InvalidConfiguration)?);
+    let source = FundedVc::new(&vc, provider, funding, need("VC_SECRET_KEY")?)
         .map_err(|_| GatewayError::InvalidConfiguration)?;
     let store = CatalogWorldStore::new(transport()?, CatalogLimits::default())
         .map_err(|_| GatewayError::InvalidConfiguration)?;
@@ -99,12 +85,8 @@ pub fn from_vars(
 }
 /// Register the configured native world and select it for the configured versions.
 pub fn configure(dispatcher: &BackendDispatcher) -> Result<(), GatewayError> {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|_| GatewayError::InvalidConfiguration)?
-        .as_millis() as i64;
     let lookup = |name: &str| std::env::var(name).ok();
-    if let Some((backend, versions)) = from_vars(&lookup, now)? {
+    if let Some((backend, versions)) = from_vars(&lookup)? {
         backend.register(dispatcher);
         WorldBackend::select(dispatcher, &versions, BackendMode::Native)?;
     }

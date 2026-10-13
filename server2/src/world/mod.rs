@@ -10,13 +10,15 @@ pub mod records;
 pub mod runtime;
 pub mod source;
 pub mod store;
+pub mod transport;
 pub mod units;
 pub mod vc;
 
 pub use air::{AirOutcome, AirSource, RecordedWaqi, Unconfigured};
 pub use engine::{Clock, Failure, FixedClock, SystemClock, World, WorldConfig};
-pub use source::{Disabled, FundedVc, VcError, VcSource};
+pub use source::{Disabled, FundedVc, VcError, VcFunding, VcSource};
 pub use store::{CatalogWorldStore, MemoryWorldStore, RawFetch, StoreError, WorldStore};
+pub use transport::{HttpVcTransport, VcResponse, VcTransport, VcTransportError};
 
 use crate::gateway::{
     BackendDispatcher, BackendHandler, BackendMode, BoxFuture, Family, GatewayError, OrderedJson,

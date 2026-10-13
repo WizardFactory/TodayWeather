@@ -201,17 +201,7 @@ impl World {
             *used = *tick;
             return e.clone();
         }
-        // Evict only idle cells: an entry referenced by an owned load/fetch keeps its lock
-        // identity, so a cell never has two concurrent single-flight owners.
-        if map.len() >= self.inner.config.max_cells
-            && let Some(oldest) = map
-                .iter()
-                .filter(|(_, (_, e))| Arc::strong_count(e) == 1)
-                .min_by_key(|(_, (u, _))| *u)
-                .map(|(k, _)| *k)
-        {
-            map.remove(&oldest);
-        }
+        trim(map, self.inner.config.max_cells.saturating_sub(1));
         let e = Arc::new(CellEntry {
             cell,
             db: Mutex::new(None),
@@ -221,6 +211,32 @@ impl World {
         });
         map.insert(key, (*tick, e.clone()));
         e
+    }
+    /// Trim idle cells back to capacity after requests that had to exceed it while busy.
+    fn trim_cells(&self) {
+        let mut guard = self.inner.cells.lock().unwrap_or_else(|e| e.into_inner());
+        trim(&mut guard.1, self.inner.config.max_cells);
+    }
+    /// The funding-window part of `_selectRange` for a request that would otherwise fail
+    /// behind the cell lock: an exhausted window answers 503 with the window end.
+    async fn unfundable(&self, range: Range, output: &Found) -> Option<f64> {
+        let until = self.probe(range).await?;
+        if range == Range::Forecast || output.current.is_some() {
+            return Some(until);
+        }
+        self.probe(Range::Forecast).await
+    }
+    async fn probe(&self, range: Range) -> Option<f64> {
+        if let Some(until) = self.exhausted(range, self.inner.clock.now_ms()) {
+            return Some(until);
+        }
+        let until = self.inner.source.eligible(range).await?;
+        self.inner
+            .exhausted
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(range, until);
+        Some(until)
     }
     async fn loaded(
         &self,
@@ -336,10 +352,13 @@ impl World {
                 .unwrap_or_else(|e| e.into_inner());
         if waiter || backoff {
             // `_waitForRecords`: stored current and today complete the request; otherwise fall back.
-            return if output.current.is_some() && output.today.is_some() {
-                Flight::Complete(output)
-            } else {
-                Flight::Failed(output, Failure::Error)
+            if output.current.is_some() && output.today.is_some() {
+                return Flight::Complete(output);
+            }
+            // Legacy checks the funding window before the lock, so exhaustion outranks backoff.
+            return match self.unfundable(range, &output).await {
+                Some(until) => Flight::Failed(output, Failure::Unavailable(until)),
+                None => Flight::Failed(output, Failure::Error),
             };
         }
         if output.has_all(no_yesterday || forecast_only) {
@@ -452,6 +471,17 @@ impl World {
         now: f64,
         deadline: Instant,
     ) -> Result<Found, Failure> {
+        let result = self.acquire(lat, lon, now, deadline).await;
+        self.trim_cells();
+        result
+    }
+    async fn acquire(
+        &self,
+        lat: f64,
+        lon: f64,
+        now: f64,
+        deadline: Instant,
+    ) -> Result<Found, Failure> {
         let started = Instant::now();
         let Some(cell) = Cell::of(lat, lon) else {
             return Err(Failure::Error);
@@ -524,5 +554,20 @@ impl World {
             Ok(Err(_)) => AirOutcome::None,
             Err(_) => AirOutcome::Pending,
         }
+    }
+}
+/// Remove least recently used idle cells until at most `keep` remain. A cell referenced by an
+/// owned load/fetch keeps its lock identity, so it never gets a second single-flight owner.
+fn trim(map: &mut CellMap, keep: usize) {
+    while map.len() > keep {
+        let Some(oldest) = map
+            .iter()
+            .filter(|(_, (_, e))| Arc::strong_count(e) == 1)
+            .min_by_key(|(_, (u, _))| *u)
+            .map(|(k, _)| *k)
+        else {
+            return;
+        };
+        map.remove(&oldest);
     }
 }
