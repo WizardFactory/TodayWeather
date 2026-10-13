@@ -26,6 +26,7 @@ import argparse
 import datetime
 import hashlib
 import json
+import math
 import os
 import re
 import sys
@@ -176,6 +177,14 @@ def number(value):
     return None
 
 
+def integral(value, low, high):
+    """An Extended JSON number that is a finite integer within [low, high], else None."""
+    n = number(value)
+    if n is None or not math.isfinite(n) or n != math.floor(n) or not low <= n <= high:
+        return None
+    return int(n)
+
+
 def date_ms(value):
     if not isinstance(value, dict) or len(value) != 1 or '$date' not in value:
         return None
@@ -244,12 +253,12 @@ def validate(collection, doc):
         raise Invalid('invalid document __v')
     if collection in STATION:
         row(doc, STATION_FIELDS, collection)
-        station = number(doc.get('stnId'))
-        if station is None or station != int(station) or not 1 <= station <= 4294967295:
+        station = integral(doc.get('stnId'), 1, 4294967295)
+        if station is None:
             raise Invalid('station document needs a positive 32-bit integer stnId')
         if date_ms(doc.get('date')) is None:
             raise Invalid('station document needs an Extended JSON date')
-        return ('station', int(station))
+        return ('station', station)
     data = GRID_V2.get(collection) or GRID_V1[collection]
     v1 = collection in GRID_V1
     top = ['mCoord', 'pubDate', data] + (['dailySource'] if collection == 'short' else []) + ([] if v1 else ['fcsDate'])
@@ -257,8 +266,8 @@ def validate(collection, doc):
     coord = doc.get('mCoord')
     if not isinstance(coord, dict) or sorted(coord) != ['mx', 'my']:
         raise Invalid('document needs mCoord {mx,my}')
-    nx, ny = number(coord['mx']), number(coord['my'])
-    if nx is None or ny is None or nx != int(nx) or ny != int(ny) or not (1 <= nx <= 149 and 1 <= ny <= 253):
+    nx, ny = integral(coord['mx'], 1, 149), integral(coord['my'], 1, 253)
+    if nx is None or ny is None:
         raise Invalid('mCoord outside the KMA grid')
     if v1:
         rows = doc.get(data)
@@ -288,7 +297,7 @@ def validate(collection, doc):
         row(item, ROWS[data], data)
         if date_ms(doc.get('fcsDate')) is None or date_ms(doc.get('pubDate')) is None:
             raise Invalid('v2 document needs Extended JSON fcsDate and pubDate')
-    return ('grid', int(nx), int(ny))
+    return ('grid', nx, ny)
 
 
 def convert(collection, version, exported_at, source):
@@ -364,7 +373,8 @@ def main(argv=None):
     try:
         output, documents, groups = convert(args.collection, args.db_version, args.exported_at,
                                             Path(args.input).read_bytes())
-    except (OSError, Invalid) as error:
+    except (OSError, Invalid, ValueError, OverflowError, RecursionError) as error:
+        # Any unexpected parsing failure is a rejection of the input, never a partial seed.
         print(f'export_history_seeds: {error}', file=sys.stderr)
         return 2
     target = Path(args.output)

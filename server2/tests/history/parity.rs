@@ -25,6 +25,11 @@ fn pub_date(value: &str) -> String {
 fn date(value: &str) -> String {
     current(r#"{"$date":"2026-09-24T01:00:00Z"}"#, value, "21.3")
 }
+fn coord(mx: &str, my: &str) -> String {
+    format!(
+        r#"{{"mCoord":{{"mx":{mx},"my":{my}}},"pubDate":{{"$date":"2026-09-24T01:00:00Z"}},"fcsDate":{{"$date":"2026-09-24T01:00:00Z"}},"currentData":{{"date":"20260924","time":"1000","t1h":21.3}}}}"#
+    )
+}
 fn station(id: &str) -> String {
     format!(r#"{{"stnId":{id},"date":{{"$date":"2026-09-24T09:03:00Z"}},"t1h":20.5}}"#)
 }
@@ -132,8 +137,33 @@ fn cases() -> Vec<(&'static str, &'static str, String)> {
         "-108",
         "108.5",
         "4294967296",
+        r#"{"$numberDouble":"NaN"}"#,
+        r#"{"$numberDouble":"Infinity"}"#,
+        r#"{"$numberDouble":"-Infinity"}"#,
+        r#"{"$numberDouble":"1e400"}"#,
+        r#"{"$numberDouble":"108.0"}"#,
+        r#"{"$numberDecimal":"108"}"#,
+        "1e400",
+        "null",
+        "true",
     ] {
         out.push(("KmaStnMinute2", stn, station(v)));
+    }
+    for (mx, my) in [
+        ("60", "127"),
+        ("60.0", "127"),
+        (r#"{"$numberInt":"60"}"#, r#"{"$numberLong":"127"}"#),
+        (r#"{"$numberDouble":"60.0"}"#, "127"),
+        (r#"{"$numberDouble":"NaN"}"#, "127"),
+        (r#"{"$numberDouble":"Infinity"}"#, "127"),
+        ("60", r#"{"$numberDouble":"-Infinity"}"#),
+        (r#"{"$numberDouble":"1e400"}"#, "127"),
+        ("60.5", "127"),
+        ("0", "127"),
+        ("60", "254"),
+        (r#""60""#, "127"),
+    ] {
+        out.push(("kma.town.current", grid, coord(mx, my)));
     }
     out
 }
