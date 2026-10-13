@@ -1,6 +1,6 @@
 # S15 KMA v000903 oracle fixtures
 
-`oracle.json.gz` (sha256 `0d04413e8f0fd357cb7d76efcfd740f3314d420c9fb4c45dad23548f2c11feb0`) holds pinned legacy-oracle recordings
+`oracle.json.gz` (sha256 `8a53ae23a15b538c532a44f2c5f11104c7529cd015c40dfbe4572553bcd4a74e`) holds pinned legacy-oracle recordings
 for the native KMA v000903 assembly tests. It is test data only; the server2 runtime never reads
 it or any legacy file.
 
@@ -17,7 +17,7 @@ it or any legacy file.
   as the S02 recorder loads it, with the real `/v000903/kma` router (`route.kma.v000903.js`) and i18n.
   The harness stubs `manager.MAX_CURRENT_COUNT` as 200 (the deployed manager uses 192); tests use
   the recorded value.
-- Driver: the script below (sha256 `7be418016e974bd2150e7de0ed8249a1869f3eaab78765fddd1b40352ba9b0e7`), run as
+- Driver: the script below (sha256 `3ea58fb4a56902d06f7888eeb2e2fdf9a5793c1619a37a5acf7348ceb0374e2e`), run as
   `TZ=UTC NODE_ENV=production NODE_PATH=<deps>/node_modules node record-kma.js <repo> <out.json.gz>`.
   It is retained here as documentation rather than as an executable repository tool, because a new
   server2-located script reading legacy source would be a new placement exception; the S02 recorder
@@ -35,7 +35,7 @@ the store-read boundary, named by the server2 `KmaStore` methods: model reads (`
 `special_zones`) and controller dependencies (`region_code`, `forecast_zone`,
 `stn_hourly_and_min_rns`, `city_hourly`, `arpltn`, `dust_forecast`, `air_fallback`, `air_forecast`,
 `rise_set`). Dates are `{"$date": ms}`, undefined values `{"$undefined": true}`; object key
-order is preserved. 1299 answers in total; 1 are flagged `after_response` because legacy
+order is preserved. 1339 answers in total; 1 are flagged `after_response` because legacy
 `async.map` keeps calling after an error has already ended the chain and the reply was sent.
 Each call also records its complete arguments, copied when legacy made the call. The replay store
 (`server2/tests/domestic/recorded.rs`, a test double) checks the method, order and arguments of every call and that
@@ -54,8 +54,8 @@ dependency answer through the driver's `overrides`.
 
 ## Content
 
-66 scenarios: 15 S02 direct-route equivalents (domestic-v000903, domestic-locale-en, domestic-locale-ko, domestic-locale-ja, domestic-locale-zh-CN, domestic-locale-de, domestic-locale-zh-TW, domestic-v000903-db1, domestic-null-units, domestic-pop-covered, domestic-pop-missing-hour, domestic-old-no-pop, domestic-never-requested-history, domestic-partial-history, domestic-special-info); 5 gateway backend
-requests (gateway-v000903-domestic, gateway-query-normalization, gateway-history-never-requested, gateway-history-resumed-after-eight-days, gateway-history-partial-eight-day-history); and 46 supplementary scenarios (rss-older, rss-equal, busan, jeju, station-first-rain, station-first-snow-cloud, rain-categories, air-stations, air-stations-airnow, air-stale, air-kaq-forecast, air-dust-forecast, air-fallback, life-food-kasi, life-index-near-area, warning-two-zones, winter-cold-wind, hot-humid, missing-short, model-errors, unknown-air-unit, db1-history, stn-error, station-hourly-fill, db1-daily-source, short-publications, current-error, mid-forecast-error, yesterday-warmer, yesterday-colder, rss-unusable-values, current-sky-from-shortest, stn-invalid-zero, stn-fog-thunder, region-guard, clock-night-2340, clock-kst-0030, clock-kst-1010, clock-kst-1110, clock-kst-0605, clock-kst-1535, rss-pub-invalid-offset, rss-pub-hour24-fraction, rss-pub-non-ascii-offset, rss-pub-non-ascii, rss-pub-iso-offset).
+68 scenarios: 15 S02 direct-route equivalents (domestic-v000903, domestic-locale-en, domestic-locale-ko, domestic-locale-ja, domestic-locale-zh-CN, domestic-locale-de, domestic-locale-zh-TW, domestic-v000903-db1, domestic-null-units, domestic-pop-covered, domestic-pop-missing-hour, domestic-old-no-pop, domestic-never-requested-history, domestic-partial-history, domestic-special-info); 5 gateway backend
+requests (gateway-v000903-domestic, gateway-query-normalization, gateway-history-never-requested, gateway-history-resumed-after-eight-days, gateway-history-partial-eight-day-history); and 48 supplementary scenarios (rss-older, rss-equal, busan, jeju, station-first-rain, station-first-snow-cloud, rain-categories, air-stations, air-stations-airnow, air-stale, air-kaq-forecast, air-dust-forecast, air-fallback, life-food-kasi, life-index-near-area, warning-two-zones, winter-cold-wind, hot-humid, missing-short, model-errors, unknown-air-unit, db1-history, stn-error, station-hourly-fill, db1-daily-source, short-publications, current-error, mid-forecast-error, yesterday-warmer, yesterday-colder, rss-unusable-values, current-sky-from-shortest, stn-invalid-zero, stn-fog-thunder, region-guard, clock-night-2340, clock-kst-0030, clock-kst-1010, clock-kst-1110, clock-kst-0605, clock-kst-1535, rss-pub-invalid-offset, rss-pub-hour24-fraction, rss-pub-non-ascii-offset, rss-pub-non-ascii, rss-pub-iso-offset, rss-pub-hour24-submillisecond, stn-small-year-datetime).
 
 ## Driver source
 
@@ -420,6 +420,10 @@ for (const [id, pub] of [['invalid-offset', '2026-09-28T04:39:00+99:99'], ['hour
     ['non-ascii-offset', '2026-09-24T00:00:00+aé00'], ['non-ascii', '한글날짜'], ['iso-offset', '2026-09-24T08:00:00+09:00']]) {
     add('rss-pub-' + id, {path: SEOUL, lang: 'en'}, f => { f.rssPub = pub; }, {db: '1.0'});
 }
+// S15-R11: hour 24 with a sub-millisecond fraction is rejected by V8's ISO parser.
+add('rss-pub-hour24-submillisecond', {path: SEOUL, lang: 'en'}, f => { f.rssPub = '2026-09-23T24:00:00.0001Z'; }, {db: '1.0'});
+// S15-R12: V8's legacy parser reads `0001-09-24 09:03` as 2026-01-09 09:03 (the native port forwards).
+add('stn-small-year-datetime', {path: SEOUL, lang: 'zh-CN'}, f => { f.stnWeather = {stnDateTime: '0001-09-24 09:03', weather: '뇌우끝,비', weatherType: 53, rns: false, localMinAws: true, rs1h: 12.36, stnId: 108}; });
 
 async function run() {
     const out = [];

@@ -28,6 +28,11 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
     );
     let expected = sc["body"].as_str().unwrap();
     let status = sc["status"].as_u64().unwrap() as u16;
+    if let Some((_, why)) = FORWARDED.iter().find(|(f, _)| *f == id)
+        && !matches!(&outcome, Outcome::Legacy(r) if r.contains(why))
+    {
+        return Err(format!("{id}: expected a forward ({why})"));
+    }
     let actual = match outcome {
         Outcome::Json(json) => {
             if status != 200 {
@@ -41,7 +46,13 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
             }
             text
         }
-        Outcome::Legacy(reason) => return Err(format!("{id}: native forwarded ({reason})")),
+        Outcome::Legacy(reason) => {
+            // A declared forward: legacy answers this request (the port does not reproduce it).
+            return match FORWARDED.iter().find(|(f, _)| *f == id) {
+                Some((_, why)) if reason.contains(why) => Ok(()),
+                _ => Err(format!("{id}: native forwarded ({reason})")),
+            };
+        }
     };
     if actual != expected {
         return Err(format!(
@@ -62,7 +73,7 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
 }
 
 /// The pinned recording, in order (unique ids); change deliberately with the recording.
-const SCENARIOS: [&str; 66] = [
+const SCENARIOS: [&str; 68] = [
     "domestic-v000903",
     "domestic-locale-en",
     "domestic-locale-ko",
@@ -129,6 +140,8 @@ const SCENARIOS: [&str; 66] = [
     "rss-pub-non-ascii-offset",
     "rss-pub-non-ascii",
     "rss-pub-iso-offset",
+    "rss-pub-hour24-submillisecond",
+    "stn-small-year-datetime",
 ];
 
 #[test]
