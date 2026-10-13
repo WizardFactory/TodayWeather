@@ -85,7 +85,13 @@ impl MidModel {
 
 /// One synchronous method per legacy dependency call of the v000903 chain. Values are the
 /// legacy results as JSON with Dates as `{"$date": ms}`; `Err` is the callback error.
-/// Implementations must answer from a snapshot already in memory.
+/// Implementations must answer from a snapshot already in memory. A snapshot that cannot answer
+/// a call faithfully (the input is absent, not merely an error legacy would receive) calls
+/// [`unavailable`], which forwards the request to legacy.
+///
+/// Except for the town list (`towns`, cached by the long-lived legacy controller), every method
+/// is a legacy asynchronous read: the assembly treats each answer as an asynchronous callback, so
+/// an exception thrown after it is not caught by a `try` entered before the read.
 pub trait KmaStore {
     fn db_version(&self) -> DbVersion;
     /// `dbTown.find({})` (the `_findTown` list).
@@ -130,6 +136,16 @@ pub trait KmaStore {
     fn as_of_ms(&self) -> Option<f64> {
         None
     }
+    /// After a reply: why the snapshot's inputs were not fully used (a replayed recording), or
+    /// None. A reply built without inputs the snapshot holds is forwarded to legacy.
+    fn unconsumed(&self) -> Option<String> {
+        None
+    }
+}
+/// The store cannot answer a call from its snapshot: end the assembly and forward to legacy.
+/// It passes every legacy `catch` (see [`js::forward`]).
+pub fn unavailable(reason: impl Into<String>) -> ! {
+    js::forward(reason)
 }
 
 /// Legacy process parameters that differ between the deployed service and the S02 harness.
@@ -182,7 +198,11 @@ pub fn assemble(
     now_ms: f64,
     config: AssemblyConfig,
 ) -> Outcome {
-    chain::run(request, store, now_ms, config)
+    let outcome = chain::run(request, store, now_ms, config);
+    match (&outcome, store.unconsumed()) {
+        (Outcome::Legacy(_), _) | (_, None) => outcome,
+        (_, Some(reason)) => Outcome::Legacy(reason),
+    }
 }
 
 fn table() -> &'static HashMap<String, HashMap<String, String>> {

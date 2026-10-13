@@ -23,7 +23,7 @@ fn main() {
     for _ in 0..rounds {
         for sc in scenarios {
             // Store snapshots are built outside the timed assembly, as a source would hand them over.
-            let store = support::Replay::new(sc);
+            let store = support::replay(sc);
             let request = support::request(sc);
             let now = support::clock_ms(sc["clock"].as_str().unwrap());
             let t = Instant::now();

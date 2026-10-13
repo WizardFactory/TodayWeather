@@ -10,6 +10,10 @@ use crate::gateway::{OrderedJson, response::js_number};
 use crate::world::js as wjs;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+// Legacy exceptions unwind to a ported `catch`; an aborting panic strategy would end the process.
+#[cfg(panic = "abort")]
+compile_error!("server2::domestic::kma requires panic=unwind for legacy try/catch semantics");
+
 /// A legacy exception (TypeError or thrown Error) with its message.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Thrown(pub String);
@@ -24,12 +28,25 @@ pub struct Forward(pub String);
 pub fn forward(reason: impl Into<String>) -> ! {
     std::panic::resume_unwind(Box::new(Forward(reason.into())))
 }
-/// Legacy `try { f() } catch (e) { ... }`: Err for a [`Thrown`] exception only.
+thread_local! {
+    /// Count of asynchronous callbacks entered on this thread (see [`async_boundary`]).
+    static ASYNC_EPOCH: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+/// The code that follows runs in a legacy asynchronous callback (a database or HTTP answer):
+/// every `try` entered before this point has already returned, so an exception thrown later
+/// escapes it. The S02 harness answers its stubs synchronously; the deployed service does not.
+pub fn async_boundary() {
+    ASYNC_EPOCH.with(|e| e.set(e.get() + 1));
+}
+/// Legacy `try { f() } catch (e) { ... }`: Err for a [`Thrown`] exception raised before any
+/// asynchronous callback was entered inside `f`; a later exception propagates as uncaught.
 pub fn catch<T>(f: impl FnOnce() -> T) -> Result<T, Thrown> {
+    let entered = ASYNC_EPOCH.with(std::cell::Cell::get);
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
         Ok(v) => Ok(v),
         Err(payload) => match payload.downcast::<Thrown>() {
-            Ok(thrown) => Err(*thrown),
+            Ok(thrown) if ASYNC_EPOCH.with(std::cell::Cell::get) == entered => Err(*thrown),
+            Ok(thrown) => std::panic::resume_unwind(thrown),
             Err(other) => std::panic::resume_unwind(other),
         },
     }
@@ -842,6 +859,32 @@ mod tests {
         assert_eq!(ok, Ok(3));
         let bug = std::panic::catch_unwind(|| catch(|| -> () { panic!("bug") }));
         assert!(bug.is_err(), "a Rust panic is not a legacy exception");
+    }
+    #[test]
+    fn exceptions_after_an_async_callback_escape_earlier_trys() {
+        // try { read(cb) } catch: the callback's exception is not caught by this try...
+        let escaped = std::panic::catch_unwind(|| {
+            catch(|| {
+                async_boundary();
+                throw("TypeError in callback")
+            })
+        });
+        let payload = escaped.expect_err("uncaught");
+        assert_eq!(
+            payload.downcast_ref::<Thrown>(),
+            Some(&Thrown("TypeError in callback".into()))
+        );
+        // ...but a try entered inside the callback catches it.
+        let inner = catch(|| {
+            async_boundary();
+            catch(|| -> () { throw("inner") })
+        });
+        assert_eq!(inner, Ok(Err(Thrown("inner".into()))));
+        // A synchronous exception is caught as before.
+        assert_eq!(
+            catch(|| -> () { throw("sync") }),
+            Err(Thrown("sync".into()))
+        );
     }
     #[test]
     fn index_keys_come_first_and_undefined_is_dropped() {

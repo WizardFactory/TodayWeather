@@ -1,7 +1,11 @@
 //! The v000903 router list and the request context shared by its middleware.
 use super::js::{Arr, Forward, Ob, Thrown, V, obj, sv, to_str};
-use super::{AssemblyConfig, KmaRequest, KmaStore, Outcome, policy, time};
+use super::{
+    AssemblyConfig, DbVersion, KmaRequest, KmaStore, MidModel, Outcome, StoreResult, TownModel,
+    policy, time,
+};
 use crate::world::i18n::Locale;
+use serde_json::Value;
 
 /// `next()` or a final reply.
 pub enum Flow {
@@ -176,12 +180,59 @@ pub fn names() -> Vec<&'static str> {
     CHAIN.iter().map(|(n, _)| *n).collect()
 }
 
+/// The store as the chain sees it: each legacy asynchronous read answers in a callback.
+struct Callbacks<'a>(&'a dyn KmaStore);
+macro_rules! callback_reads {
+    ($($name:ident($($arg:ident: $ty:ty),*);)*) => {
+        $(fn $name(&self, $($arg: $ty),*) -> StoreResult {
+            let answer = self.0.$name($($arg),*);
+            super::js::async_boundary();
+            answer
+        })*
+    };
+}
+impl KmaStore for Callbacks<'_> {
+    fn db_version(&self) -> DbVersion {
+        self.0.db_version()
+    }
+    /// `self.dbTownList` is loaded once per legacy process: the warm lookup is synchronous.
+    fn towns(&self) -> StoreResult {
+        self.0.towns()
+    }
+    callback_reads! {
+        town(first: &str, second: &str, third: &str);
+        region_code(region: &str, city: &str);
+        town_model(model: TownModel, mx: &Value, my: &Value);
+        mid_model(model: MidModel, reg_id: &Value);
+        forecast_zone(region: &str, city: &str);
+        stn_hourly_and_min_rns(town: &Value, date_time: &str, current: &Value);
+        city_hourly(town: &Value);
+        area_no(first: &str, second: &str, third: &str);
+        area_no_near(lon_lat: &Value);
+        life_index(area_no: f64);
+        food_poisoning(sd: &str, sgg: &str, start: &str, end: &str);
+        arpltn(town: &Value, now_ms: f64);
+        dust_forecast(region: &str, city: &str, date: &str);
+        air_fallback(g_coord: &Value, now_ms: f64);
+        air_forecast(source: &str, station: &Value);
+        rise_set(geocode: &Value, dates: &[String]);
+        special_zones(area_codes: &[String]);
+    }
+    fn as_of_ms(&self) -> Option<f64> {
+        self.0.as_of_ms()
+    }
+    fn unconsumed(&self) -> Option<String> {
+        self.0.unconsumed()
+    }
+}
+
 pub fn run(
     request: &KmaRequest,
     store: &dyn KmaStore,
     now: f64,
     config: AssemblyConfig,
 ) -> Outcome {
+    let store = &Callbacks(store);
     let params = Ob::new();
     if let Some(r) = &request.region {
         params.set("region", r.as_str());

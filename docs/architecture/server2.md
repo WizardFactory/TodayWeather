@@ -1595,7 +1595,10 @@ and a `Family::Kma` handler for the S10 dispatcher. Legacy stays selected by def
   `{"$date": ms}`. A key-sorted JSON map would change the response, so the answers keep property order.
 - **Semantics.** A JavaScript value model keeps shared object references, property order (array
   indices first), `undefined` in memory and the legacy `try`/`catch` boundaries. A legacy exception
-  is a `Thrown` unwind that only a ported `catch` stops. Other Rust panics still fail the request.
+  is a `Thrown` unwind that only a ported `catch` stops. Store reads are asynchronous callbacks in
+  the deployed service, so an exception after a store answer escapes a `catch` entered before the
+  read and forwards (the S02 harness answers synchronously; no recording depends on this). Other
+  Rust panics still fail the request.
   Precipitation bounds stay beside rows and never reach JSON, as in the legacy `WeakMap`. Shared
   logic is reused: S12 `zonesForTown`/`specialInfoFor`, the S11 `AqiConverter`, weather strings,
   locale selection and number/date helpers. KMA strings missing from the S11 locale subset are in
@@ -1620,8 +1623,10 @@ forecast, fallback, life-index/MFDS/rise-set, warning, temperature, error and cl
 All 61 recordings match byte for byte, with the dependency calls in legacy order. The 5 gateway goldens match on
 the wire with the native switch (status, body and headers except `date`/`connection`). The legacy
 default, forward and rollback paths are tested. The release binary reproduces them through the
-S19 KMA family (`SERVER2_KMA_MODE=recorded-local`, loopback-only; `forward-local` exercises the
-forward path) with paired replay and a legacy/native/legacy rollback.
+S19 KMA family (`SERVER2_KMA_MODE=recorded-local`; `forward-local` exercises the forward path)
+with paired replay and a legacy/native/legacy rollback. Both local modes require a loopback legacy
+origin and public listener. The recorded store checks each call's method, order and arguments
+and that every recorded call was used, forwarding on any difference.
 
 The runtime source is `LegacyOnly`: until the S3 input source exists, a selected native family
 forwards every request. Parsing S13/S13a raw records into these store answers, reading S14

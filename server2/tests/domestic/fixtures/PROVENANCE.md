@@ -1,6 +1,6 @@
 # S15 KMA v000903 oracle fixtures
 
-`oracle.json.gz` (sha256 `fd1e262b25f5f97edd99b25ccfcd28a751dbb1eb7956ee85b4c6661bcaac990c`) holds pinned legacy-oracle recordings
+`oracle.json.gz` (sha256 `589aa9fec8072b313110bc458cb71ee20bfd29052a261310994de7be1ea89ec3`) holds pinned legacy-oracle recordings
 for the native KMA v000903 assembly tests. It is test data only; the server2 runtime never reads
 it or any legacy file.
 
@@ -17,7 +17,7 @@ it or any legacy file.
   as the S02 recorder loads it, with the real `/v000903/kma` router (`route.kma.v000903.js`) and i18n.
   The harness stubs `manager.MAX_CURRENT_COUNT` as 200 (the deployed manager uses 192); tests use
   the recorded value.
-- Driver: the script below (sha256 `02700ab3c561b69aec633ef6aba59c35de5e1727920fd37165fdfde3ad9b6a62`), run as
+- Driver: the script below (sha256 `6d03231ad8f1b33bd1d4b674b8ee30f2cf2e105c03d0eee1efdf8cb329627891`), run as
   `TZ=UTC NODE_ENV=production NODE_PATH=<deps>/node_modules node record-kma.js <repo> <out.json.gz>`.
   It is retained here as documentation rather than as an executable repository tool, because a new
   server2-located script reading legacy source would be a new placement exception; the S02 recorder
@@ -37,6 +37,14 @@ the store-read boundary, named by the server2 `KmaStore` methods: model reads (`
 `rise_set`). Dates are `{"$date": ms}`, undefined values `{"$undefined": true}`; object key
 order is preserved. 1199 answers in total; 1 are flagged `after_response` because legacy
 `async.map` keeps calling after an error has already ended the chain and the reply was sent.
+Each call also records its complete arguments, copied when legacy made the call. The replay store
+(`server2::domestic::kma::recorded`) checks the method, order and arguments of every call and that
+every recorded call was used; any difference forwards the request instead of answering.
+
+The harness answers model reads synchronously. In the deployed service they are asynchronous
+callbacks, so an exception thrown while a controller converts an answer escapes the `try` that
+issued the read. The native assembly follows the deployed behavior (such an exception forwards to
+legacy); no recorded scenario depends on the difference.
 
 The harness air fallback (`lib/AQI/airFallback.js`) throws synchronously in the oracle runtime
 (`axios` is not an oracle dependency); legacy catches it and serves no fallback. Those calls are
@@ -162,7 +170,7 @@ function answer(key, original, args, done) {
         if (!finished) { finished = true; suppress--; }
         thrown.push({key, message: String(e && e.message)});
         // The legacy caller catches this synchronous failure: no dependency answer is used.
-        if (key === 'air_fallback') calls && calls.push({m: 'air_fallback', args: enc([args[0]]), result: null, legacy_exception: String(e && e.message).split('\n')[0]});
+        if (key === 'air_fallback') calls && calls.push({m: 'air_fallback', args: enc(args), result: null, legacy_exception: String(e && e.message).split('\n')[0]});
         throw e;
     }
 }
@@ -172,28 +180,28 @@ function instrument(id, m) {
     let w = m;
     if (base === 'kecoController') {
         w = Object.create(m);
-        w.getArpLtnInfo = (town, date, cb) => answer('arpltn', c => m.getArpLtnInfo(town, date, c), [town, date], (e, v) => { record('arpltn', [], v, e); cb(e, v); });
-        w.getDustFrcst = (town, date, cb) => answer('dust_forecast', c => m.getDustFrcst(town, date, c), [town, date], (e, v) => { record('dust_forecast', [town.region, town.city, date], v, e); cb(e, v); });
+        w.getArpLtnInfo = (town, date, cb) => { const at = enc([town, date]); answer('arpltn', c => m.getArpLtnInfo(town, date, c), [town, date], (e, v) => { record('arpltn', at, v, e); cb(e, v); }); };
+        w.getDustFrcst = (town, date, cb) => { const at = enc([town.region, town.city, date]); answer('dust_forecast', c => m.getDustFrcst(town, date, c), [town, date], (e, v) => { record('dust_forecast', at, v, e); cb(e, v); }); };
     } else if (base === 'controllerKmaStnWeather') {
         w = Object.create(m);
-        w.getStnHourlyAndMinRns = (town, dt, cur, cb) => answer('stn', c => m.getStnHourlyAndMinRns(town, dt, cur, c), [town, dt, cur], (e, v) => { record('stn_hourly_and_min_rns', [dt], v, e); cb(e, v); });
-        w.getCityHourlyList = (town, cb) => answer('city_hourly', c => m.getCityHourlyList(town, c), [town], (e, v) => { record('city_hourly', [], v, e); cb(e, v); });
+        w.getStnHourlyAndMinRns = (town, dt, cur, cb) => { const at = enc([town, dt, cur]); answer('stn', c => m.getStnHourlyAndMinRns(town, dt, cur, c), [town, dt, cur], (e, v) => { record('stn_hourly_and_min_rns', at, v, e); cb(e, v); }); };
+        w.getCityHourlyList = (town, cb) => { const at = enc([town]); answer('city_hourly', c => m.getCityHourlyList(town, c), [town], (e, v) => { record('city_hourly', at, v, e); cb(e, v); }); };
     } else if (base === 'kasi.riseset.controller') {
         w = Object.create(m);
-        w.getRiseSetList = (geo, dates, cb) => answer('rise_set', c => m.getRiseSetList(geo, dates, c), [geo, dates], (e, v) => { record('rise_set', [geo, dates], v, e); cb(e, v); });
+        w.getRiseSetList = (geo, dates, cb) => { const at = enc([geo, dates]); answer('rise_set', c => m.getRiseSetList(geo, dates, c), [geo, dates], (e, v) => { record('rise_set', at, v, e); cb(e, v); }); };
     } else if (base === 'airkorea.hourly.forecast.controller' || base === 'kaq.hourly.forecast.controller') {
         const source = base.startsWith('kaq') ? 'kaq' : 'airkorea';
         w = function () {
             const inner = new m();
-            this.getForecast = (stn, cb) => answer('air_forecast_' + source, c => inner.getForecast(stn, c), [stn], (e, v) => { record('air_forecast', [source, stn], v, e); cb(e, v); });
+            this.getForecast = (stn, cb) => { const at = enc([source, stn]); answer('air_forecast_' + source, c => inner.getForecast(stn, c), [stn], (e, v) => { record('air_forecast', at, v, e); cb(e, v); }); };
         };
     } else if (base === 'airFallback') {
         w = Object.create(m);
-        w.getArpltn = (g, t, cb) => answer('air_fallback', c => m.getArpltn(g, t, c), [g, t], (e, v, reason) => { record('air_fallback', [g], v || null, e); cb(e, v, reason); });
+        w.getArpltn = (g, t, cb) => { const at = enc([g, t]); answer('air_fallback', c => m.getArpltn(g, t, c), [g, t], (e, v, reason) => { record('air_fallback', at, v || null, e); cb(e, v, reason); }); };
     } else if (base === 'kma.forecast.zone.controller') {
         w = function () {
             const inner = new m();
-            this.findForecastZoneByName = (r, c) => ({exec: cb => answer('forecast_zone', k => inner.findForecastZoneByName(r, c).exec(k), [r, c], (e, v) => { record('forecast_zone', [r, c], v, e); cb(e, v); })});
+            this.findForecastZoneByName = (r, c) => ({exec: cb => { const at = enc([r, c]); answer('forecast_zone', k => inner.findForecastZoneByName(r, c).exec(k), [r, c], (e, v) => { record('forecast_zone', at, v, e); cb(e, v); }); }});
         };
     } else {
         return m;

@@ -1,7 +1,7 @@
 //! PARITY: every pinned-oracle request assembles to the recorded legacy bytes with the
 //! recorded dependency answers consumed in order; the S02 v000903 KMA goldens are among them.
 use super::support::*;
-use server2::domestic::kma::{Outcome, assemble};
+use server2::domestic::kma::{KmaStore, Outcome, assemble};
 
 fn first_difference(a: &str, b: &str) -> String {
     let (a, b) = (a.as_bytes(), b.as_bytes());
@@ -19,7 +19,7 @@ fn first_difference(a: &str, b: &str) -> String {
 }
 pub fn run(sc: &serde_json::Value) -> Result<(), String> {
     let id = sc["id"].as_str().unwrap();
-    let store = Replay::new(sc);
+    let store = replay(sc);
     let outcome = assemble(
         &request(sc),
         &store,
@@ -55,7 +55,9 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
             return Err(format!("{id}: ETag {etag} vs {}", sc["etag"]));
         }
     }
-    store.assert_consumed(id);
+    if let Some(reason) = store.unconsumed() {
+        return Err(format!("{id}: {reason}"));
+    }
     Ok(())
 }
 

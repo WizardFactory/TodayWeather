@@ -25,10 +25,15 @@ convertUnits, insertStrForData, getSummaryAfterUnitConverter, makeResult, sendRe
   serialized as `null`, `toFixed`/`Math.round`, V8 sort order, `==`/`===` and relational coercion
   where the legacy code relies on them, and the request-local precipitation bounds that never
   reach JSON (`kmaPrecipitation` WeakMap). Each middleware keeps its legacy try/catch boundary:
-  an exception inside a guarded block abandons the rest of that block, as legacy does.
+  an exception inside a guarded block abandons the rest of that block, as legacy does. Store reads
+  are asynchronous callbacks in the deployed service (the S02 harness answers synchronously): an
+  exception thrown after a store answer is not caught by a `try` entered before the read and
+  forwards to legacy. The warm town list (`self.dbTownList`) is synchronous.
 - `store` is the `KmaStore` trait: one synchronous method per legacy dependency call, receiving the
   legacy query arguments and returning the legacy result (JSON, Dates as `{"$date": ms}`) or an
-  error. Calls are recorded in order; tests compare them with the oracle `dependency_trace`.
+  error. A snapshot that cannot answer a call calls `unavailable` (forward). Tests replay the
+  oracle recording, checking the method, order and complete arguments of every call and that every
+  recorded call was used.
 
 | Method | Legacy call |
 | --- | --- |
@@ -76,7 +81,8 @@ rolls back. The runtime source in this task is `LegacyOnly` (always `Forward`); 
 S3/provider source. The loopback-only `SERVER2_KMA_MODE` runtime option accepts `recorded-local`
 (serves a recorded store snapshot file, `SERVER2_KMA_RECORDED`, at the recording's request instant
 via `KmaStore::as_of_ms`) and `forward-local` (native selected, every request forwarded). Both
-refuse a non-loopback legacy origin. Neither is a production input source.
+refuse a non-loopback legacy origin or public listener (`SERVER2_BIND`). Neither is a production
+input source.
 
 ## Verification (AC1-AC5)
 

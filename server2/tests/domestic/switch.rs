@@ -67,7 +67,7 @@ impl KmaSource for Recorded {
         let id = self.next.lock().unwrap().take();
         Box::pin(async move {
             match id {
-                Some(id) => SourceAnswer::Snapshot(Box::new(Replay::new(scenario(id)))),
+                Some(id) => SourceAnswer::Snapshot(Box::new(replay(scenario(id)))),
                 None => SourceAnswer::Forward("no recorded snapshot".into()),
             }
         })
@@ -304,7 +304,7 @@ async fn assembly_paths_legacy_cannot_share_are_forwarded() {
         fn snapshot(&self, _: &KmaRequest, _: Instant) -> BoxFuture<'_, SourceAnswer> {
             // The store has towns, but not 명동.
             Box::pin(async {
-                SourceAnswer::Snapshot(Box::new(Replay::new(scenario("domestic-v000903"))))
+                SourceAnswer::Snapshot(Box::new(replay(scenario("domestic-v000903"))))
             })
         }
     }

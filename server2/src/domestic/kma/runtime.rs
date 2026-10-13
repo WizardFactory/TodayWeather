@@ -1,12 +1,16 @@
 //! Opt-in local process wiring for the native KMA v000903 family. Without `SERVER2_KMA_MODE`
 //! the gateway keeps the legacy KMA backend. `recorded-local` serves a recorded store snapshot
-//! file (local verification only) and requires a loopback legacy origin; no production, AWS or
+//! file (local verification only). Both local modes require a loopback legacy origin and a
+//! loopback public listener (`SERVER2_BIND`, default `127.0.0.1:3002`); no production, AWS or
 //! provider configuration is accepted here. The S3 input source is S15b.
 use super::backend::{KmaBackend, LegacyOnly, system_clock};
 use super::recorded::RecordedSource;
 use super::{AssemblyConfig, backend::KmaSource};
 use crate::gateway::{BackendDispatcher, BackendMode, GatewayError};
-use std::{net::IpAddr, sync::Arc};
+use std::{
+    net::{IpAddr, SocketAddr},
+    sync::Arc,
+};
 
 fn loopback_http(url: &str) -> bool {
     reqwest::Url::parse(url).is_ok_and(|u| {
@@ -16,6 +20,13 @@ fn loopback_http(url: &str) -> bool {
                 .is_some_and(|ip| ip.is_loopback())
     })
 }
+/// The public listener the process binds (`Config::from_env` reads the same variable).
+fn loopback_listener(bind: Option<String>) -> bool {
+    match bind {
+        None => crate::Config::default().public_addr.ip().is_loopback(),
+        Some(b) => b.parse::<SocketAddr>().is_ok_and(|a| a.ip().is_loopback()),
+    }
+}
 /// Build the configured backend, or None when not selected.
 pub fn from_vars(
     var: &dyn Fn(&str) -> Option<String>,
@@ -24,7 +35,8 @@ pub fn from_vars(
     let Some(mode) = var("SERVER2_KMA_MODE") else {
         return Ok(None);
     };
-    if !loopback_http(legacy_base) {
+    // Local modes serve recorded inputs: only a loopback client may reach them.
+    if !loopback_http(legacy_base) || !loopback_listener(var("SERVER2_BIND")) {
         return Err(GatewayError::InvalidConfiguration);
     }
     let source: Arc<dyn KmaSource> = match mode.as_str() {
