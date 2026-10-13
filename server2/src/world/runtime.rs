@@ -2,8 +2,9 @@
 //! Without `SERVER2_WORLD_MODE` the gateway keeps the legacy world backend. No production,
 //! AWS or live provider configuration is accepted by this entrypoint.
 use super::{
-    CatalogWorldStore, FundedVc, HttpVcTransport, SystemClock, Unconfigured, VcFunding, World,
-    WorldBackend, WorldConfig,
+    AirConfig, AirFunding, AirProviderConfig, AirSource, AirStore, CatalogAirStore,
+    CatalogWorldStore, FundedVc, HttpAirTransport, HttpVcTransport, LiveAir, SystemClock,
+    Unconfigured, VcFunding, World, WorldBackend, WorldConfig,
 };
 use crate::{
     budget::SystemClock as BudgetClock,
@@ -67,10 +68,69 @@ pub fn from_vars(var: &dyn Fn(&str) -> Option<String>) -> Result<Option<Configur
         .map_err(|_| GatewayError::InvalidConfiguration)?;
     let store = CatalogWorldStore::new(transport()?, CatalogLimits::default())
         .map_err(|_| GatewayError::InvalidConfiguration)?;
+    let air_store = || -> Result<Arc<dyn AirStore>, GatewayError> {
+        Ok(Arc::new(
+            CatalogAirStore::new(transport()?, CatalogLimits::default())
+                .map_err(|_| GatewayError::InvalidConfiguration)?,
+        ))
+    };
+    // S13a: unset keeps the S11 no-provider air output; `live-local` runs the funded chain
+    // against loopback providers; `restore-local` serves stored air records only.
+    let air: Arc<dyn AirSource> = match var("SERVER2_WORLD_AIR").as_deref() {
+        None => Arc::new(Unconfigured),
+        Some("restore-local") => {
+            Arc::new(LiveAir::restore_only(air_store()?, Arc::new(SystemClock)))
+        }
+        Some("live-local") => {
+            let provider = |name: &str| -> Result<Option<AirProviderConfig>, GatewayError> {
+                let Some(base_url) = var(&format!("SERVER2_WORLD_AIR_{name}_URL")) else {
+                    return Ok(None);
+                };
+                if !loopback_http(&base_url) {
+                    return Err(GatewayError::InvalidConfiguration);
+                }
+                let monthly_units: u64 = need(&format!("SERVER2_WORLD_AIR_{name}_MONTHLY_UNITS"))?
+                    .parse()
+                    .map_err(|_| GatewayError::InvalidConfiguration)?;
+                Ok(Some(AirProviderConfig {
+                    base_url,
+                    key: need(&format!("SERVER2_WORLD_AIR_{name}_KEY"))?,
+                    quota_id: need(&format!("SERVER2_WORLD_AIR_{name}_QUOTA_ID"))?,
+                    monthly_units,
+                    block_units: monthly_units.clamp(1, 100),
+                }))
+            };
+            let config = AirConfig {
+                google: provider("GOOGLE")?,
+                openweather: provider("OPENWEATHER")?,
+                waqi: provider("WAQI")?,
+                ..AirConfig::default()
+            };
+            if config.google.is_none() && config.openweather.is_none() && config.waqi.is_none() {
+                return Err(GatewayError::InvalidConfiguration);
+            }
+            Arc::new(
+                LiveAir::new(
+                    config,
+                    air_store()?,
+                    Arc::new(
+                        HttpAirTransport::new().map_err(|_| GatewayError::InvalidConfiguration)?,
+                    ),
+                    AirFunding {
+                        transport: Arc::new(transport()?),
+                        clock: Arc::new(BudgetClock),
+                    },
+                    Arc::new(SystemClock),
+                )
+                .map_err(|_| GatewayError::InvalidConfiguration)?,
+            )
+        }
+        Some(_) => return Err(GatewayError::InvalidConfiguration),
+    };
     let world = World::new(
         Arc::new(store),
         Arc::new(source),
-        Arc::new(Unconfigured),
+        air,
         Arc::new(SystemClock),
         WorldConfig::default(),
     );

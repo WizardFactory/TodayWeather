@@ -1,0 +1,71 @@
+{
+ "_comment": "Captured read-only from the WAQI geo feed on 2026-09-27 (token removed; forecast and debug fields dropped) for #2622.",
+ "status": "ok",
+ "data": {
+  "aqi": 87,
+  "idx": 5508,
+  "attributions": [
+   {
+    "name": "South Air Korea Environment Corporation (대기오염실시간공개시스템)",
+    "url": "https://www.airkorea.or.kr/"
+   },
+   {
+    "name": "Seoul Clean Air Pollution Information (서울특별시 기후대기환경정보)",
+    "url": "http://cleanair.seoul.go.kr/"
+   },
+   {
+    "name": "World Air Quality Index Project",
+    "url": "https://waqi.info/"
+   }
+  ],
+  "city": {
+   "geo": [
+    37.566535,
+    126.9779692
+   ],
+   "name": "Seoul (서울)"
+  },
+  "dominentpol": "pm25",
+  "iaqi": {
+   "co": {
+    "v": 5.5
+   },
+   "h": {
+    "v": 69.9
+   },
+   "no2": {
+    "v": 10.4
+   },
+   "o3": {
+    "v": 54.2
+   },
+   "p": {
+    "v": 998.6
+   },
+   "pm10": {
+    "v": 41
+   },
+   "pm25": {
+    "v": 87
+   },
+   "r": {
+    "v": 99.1
+   },
+   "so2": {
+    "v": 4.3
+   },
+   "t": {
+    "v": 21
+   },
+   "w": {
+    "v": 2
+   }
+  },
+  "time": {
+   "s": "2026-09-27 23:00:00",
+   "tz": "+09:00",
+   "v": 1790550000,
+   "iso": "2026-09-27T23:00:00+09:00"
+  }
+ }
+}

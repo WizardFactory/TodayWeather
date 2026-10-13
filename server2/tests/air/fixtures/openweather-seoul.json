@@ -1,0 +1,25 @@
+{
+ "_comment": "Reconstructed from the OpenWeather Air Pollution API documentation with the Visual Crossing Seoul values of 2026-09-27 (all components µg/m³); not a recorded response (#2628, the configured key was rejected).",
+ "coord": {
+  "lon": 126.978,
+  "lat": 37.5665
+ },
+ "list": [
+  {
+   "main": {
+    "aqi": 2
+   },
+   "components": {
+    "co": 231.3,
+    "no": 0.5,
+    "no2": 15.3,
+    "o3": 64.3,
+    "so2": 8.3,
+    "pm2_5": 19.0,
+    "pm10": 22.0,
+    "nh3": 1.2
+   },
+   "dt": 1790521200
+  }
+ ]
+}

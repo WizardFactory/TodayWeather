@@ -2,6 +2,7 @@
 //! (#2604). Terminal03 provenance: collectTownForecast.js407–410 and
 //! kmaWarningRequester.js80–98 at94019cf5. JSON gateway envelope: kmaWarningRequester.js
 //! 88–91 and lifeIndexKmaRequester.js 1159–1165 at ca8735cf (S13). No runtime legacy reads.
+use super::ResponseFormat;
 use serde_json::Value;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Disposition {
@@ -182,6 +183,17 @@ fn gateway_json(value: &Value) -> Option<&Value> {
         .filter(|h| h.is_object())
 }
 pub fn classify(status: u16, body: &[u8], data_go_kr: bool, valid: bool) -> Disposition {
+    classify_format(status, body, data_go_kr, valid, ResponseFormat::DataType)
+}
+/// `classify` for a service with another declared response format (S13a): the same
+/// precedence, with that format's success codes (newsky2 answers `0000`).
+pub fn classify_format(
+    status: u16,
+    body: &[u8],
+    data_go_kr: bool,
+    valid: bool,
+    format: ResponseFormat,
+) -> Disposition {
     let c = if data_go_kr { code(body) } else { None };
     if status == 429 || c.as_deref() == Some("22") {
         return Disposition::Quota;
@@ -204,7 +216,8 @@ pub fn classify(status: u16, body: &[u8], data_go_kr: bool, valid: bool) -> Disp
     }
     if data_go_kr
         && (std::str::from_utf8(body).is_ok_and(|t| t.trim_start().starts_with('<'))
-            || c.as_deref().is_some_and(|c| !matches!(c, "0" | "00")))
+            || c.as_deref()
+                .is_some_and(|c| !format.success_codes().contains(&c)))
     {
         return Disposition::Retryable;
     }

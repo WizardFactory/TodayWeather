@@ -8,6 +8,12 @@ pub enum Provider {
     VisualCrossing,
     Kakao,
     Google,
+    /// Google Air Quality API (S13a): a separate quota from Google geocoding.
+    GoogleAirQuality,
+    /// OpenWeather Air Pollution API (S13a).
+    OpenWeather,
+    /// WAQI (aqicn.org) geo feed (S13a).
+    Waqi,
 }
 impl Provider {
     pub fn path(self) -> &'static str {
@@ -16,6 +22,9 @@ impl Provider {
             Self::VisualCrossing => "visual_crossing",
             Self::Kakao => "kakao",
             Self::Google => "google",
+            Self::GoogleAirQuality => "google_air_quality",
+            Self::OpenWeather => "openweather",
+            Self::Waqi => "waqi",
         }
     }
 }

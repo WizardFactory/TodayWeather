@@ -13,6 +13,12 @@ pub enum Service {
     MidFcst,
     LivingWthrIdx,
     HealthWthrIdx,
+    /// AirKorea B552584 observations (S13a): one selected key, never rotated (#2636).
+    AirKorea,
+    /// KASI RiseSetInfoService (S13a).
+    RiseSet,
+    /// newsky2 ForecastZoneInfoService (S13a).
+    ForecastZone,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DataGoKrFamily {
@@ -91,6 +97,8 @@ impl DataGoKrFamily {
             Service::VilageFcst => Shape::Town,
             Service::MidFcst => Shape::Mid,
             Service::LivingWthrIdx | Service::HealthWthrIdx => Shape::Life,
+            // Not a DataGoKrFamily service.
+            Service::AirKorea | Service::RiseSet | Service::ForecastZone => Shape::Life,
         }
     }
 }
@@ -366,6 +374,8 @@ pub struct Endpoints {
     data_go_kr: Url,
     kma: Url,
     weather: Url,
+    /// newsky2 root of the forecast-zone code service (S13a; legacy HTTP, default HTTPS).
+    newsky: Url,
 }
 impl Default for Endpoints {
     fn default() -> Self {
@@ -377,22 +387,34 @@ impl Default for Endpoints {
         .expect("static endpoints")
     }
 }
+fn root(s: &str) -> Result<Url, DomesticError> {
+    let url: Url = s.parse().map_err(|_| DomesticError::Invalid("endpoint"))?;
+    if !crate::providers::valid_endpoint(&url)
+        || url.query().is_some()
+        || !url.path().ends_with('/')
+    {
+        return Err(DomesticError::Invalid("endpoint"));
+    }
+    Ok(url)
+}
 impl Endpoints {
     pub fn new(data_go_kr: &str, kma: &str, weather: &str) -> Result<Self, DomesticError> {
-        let root = |s: &str| -> Result<Url, DomesticError> {
-            let url: Url = s.parse().map_err(|_| DomesticError::Invalid("endpoint"))?;
-            if !crate::providers::valid_endpoint(&url)
-                || url.query().is_some()
-                || !url.path().ends_with('/')
-            {
-                return Err(DomesticError::Invalid("endpoint"));
-            }
-            Ok(url)
-        };
         Ok(Self {
             data_go_kr: root(data_go_kr)?,
             kma: root(kma)?,
             weather: root(weather)?,
+            newsky: root("https://newsky2.kma.go.kr/")?,
         })
+    }
+    /// Replace the newsky2 root (tests use literal loopback HTTP).
+    pub fn with_newsky(mut self, newsky: &str) -> Result<Self, DomesticError> {
+        self.newsky = root(newsky)?;
+        Ok(self)
+    }
+    pub(crate) fn data_go_kr(&self) -> &Url {
+        &self.data_go_kr
+    }
+    pub(crate) fn newsky(&self) -> &Url {
+        &self.newsky
     }
 }
