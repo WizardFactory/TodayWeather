@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "captured_at_utc": "2026-10-13T01:18:38+00:00",
+  "capture_kind": "terminal result rendered from actual isolated release execution",
+  "environment": "macOS, release binary, synthetic loopback provider/backend/legacy-geocoder peers",
+  "command": "python3 server2/tools/gateway_smoke.py --binary server2/target/release/server2",
+  "observed": {
+    "peer_counters": {
+      "backend": 9,
+      "google": 2,
+      "kakao": 19,
+      "legacy_geo": 8
+    }
+  },
+  "execution_log_sha256": "24c375f222f7a6fc382bf8f2ba31b6e4afdfd7f894c899c4d94a65a6c5f79b36",
+  "binary_sha256": "689ae87031212369d607eef8c99acf3fe2b727c95aa2c69a147ffa51a94d254f",
+  "pdf_link_revision": "538174524279c65d651d5c45c433db5bcb200651",
+  "new_file_link_policy": "Repository-relative references rendered as text when absent from the pinned commit; Markdown keeps local clickable links",
+  "source_sha256": "1fb2c9b03edf057563d5c2a83d6b73203dd9ea230ba3d2751b6e088d6bfb203f",
+  "pdf_sha256": "bf7c88964975560c9826197145be222b77a9300a2cdd1c6838e0129d99fb0209",
+  "screenshot_sha256": "32f54c9ace05c6a22453d4c732a327564171cb1d546cf19c64524a83216a40cd",
+  "limitations": "Synthetic loopback fixtures only; no live AWS/provider quota/production latency/cutover proof"
+}

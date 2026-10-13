@@ -6,12 +6,16 @@ use std::fmt;
 pub enum Provider {
     DataGoKr,
     VisualCrossing,
+    Kakao,
+    Google,
 }
 impl Provider {
     pub fn path(self) -> &'static str {
         match self {
             Self::DataGoKr => "data_go_kr",
             Self::VisualCrossing => "visual_crossing",
+            Self::Kakao => "kakao",
+            Self::Google => "google",
         }
     }
 }

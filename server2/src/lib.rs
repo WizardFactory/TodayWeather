@@ -217,3 +217,23 @@ pub fn shutdown_runtime(runtime: tokio::runtime::Runtime) {
 
 pub mod budget;
 pub mod providers;
+
+pub mod gateway;
+pub mod geocode;
+
+/// Gateway owns its own bounded request jobs; health keeps foundation admission.
+pub fn public_router_with_gateway(
+    state: Arc<SharedState>,
+    gateway: Arc<gateway::Gateway>,
+) -> Router {
+    let health_route = get(health)
+        .layer(middleware::from_fn_with_state(state.clone(), admission))
+        .layer(middleware::from_fn(cors));
+    Router::new()
+        .route("/health", health_route)
+        .fallback(move |request: Request| {
+            let gateway = gateway.clone();
+            async move { gateway.handle(request).await }
+        })
+        .with_state(state)
+}

@@ -1,0 +1,818 @@
+{
+ "kakao.coord.seoul": {
+  "meta": {
+   "total_count": 2
+  },
+  "documents": [
+   {
+    "region_type": "B",
+    "code": "0",
+    "address_name": "서울특별시 중구 태평로1가",
+    "region_1depth_name": "서울특별시",
+    "region_2depth_name": "중구",
+    "region_3depth_name": "태평로1가",
+    "region_4depth_name": "",
+    "x": 126.9779,
+    "y": 37.5663
+   },
+   {
+    "region_type": "H",
+    "code": "0",
+    "address_name": "서울특별시 중구 명동",
+    "region_1depth_name": "서울특별시",
+    "region_2depth_name": "중구",
+    "region_3depth_name": "명동",
+    "region_4depth_name": "",
+    "x": 126.9851,
+    "y": 37.5609
+   }
+  ]
+ },
+ "kakao.coord.jeju": {
+  "meta": {
+   "total_count": 2
+  },
+  "documents": [
+   {
+    "region_type": "B",
+    "code": "0",
+    "address_name": "제주특별자치도 제주시 이도일동",
+    "region_1depth_name": "제주특별자치도",
+    "region_2depth_name": "제주시",
+    "region_3depth_name": "이도일동",
+    "region_4depth_name": "",
+    "x": 126.5302,
+    "y": 33.5093
+   },
+   {
+    "region_type": "H",
+    "code": "0",
+    "address_name": "제주특별자치도 제주시 이도1동",
+    "region_1depth_name": "제주특별자치도",
+    "region_2depth_name": "제주시",
+    "region_3depth_name": "이도1동",
+    "region_4depth_name": "",
+    "x": 126.5288,
+    "y": 33.5087
+   }
+  ]
+ },
+ "kakao.coord.island": {
+  "meta": {
+   "total_count": 2
+  },
+  "documents": [
+   {
+    "region_type": "B",
+    "code": "0",
+    "address_name": "경상북도 울릉군 울릉읍 도동리",
+    "region_1depth_name": "경상북도",
+    "region_2depth_name": "울릉군",
+    "region_3depth_name": "울릉읍",
+    "region_4depth_name": "도동리",
+    "x": 130.9057,
+    "y": 37.4842
+   },
+   {
+    "region_type": "H",
+    "code": "0",
+    "address_name": "경상북도 울릉군 울릉읍",
+    "region_1depth_name": "경상북도",
+    "region_2depth_name": "울릉군",
+    "region_3depth_name": "울릉읍",
+    "region_4depth_name": "",
+    "x": 130.9057,
+    "y": 37.4842
+   }
+  ]
+ },
+ "kakao.coord.space": {
+  "meta": {
+   "total_count": 2
+  },
+  "documents": [
+   {
+    "region_type": "B",
+    "code": "0",
+    "address_name": "경기도 수원시 장안구 파장동",
+    "region_1depth_name": "경기도",
+    "region_2depth_name": "수원시 장안구",
+    "region_3depth_name": "파장동",
+    "region_4depth_name": "",
+    "x": 127.0,
+    "y": 37.3
+   },
+   {
+    "region_type": "H",
+    "code": "0",
+    "address_name": "경기도 수원시 장안구 파장동",
+    "region_1depth_name": "경기도",
+    "region_2depth_name": "수원시 장안구",
+    "region_3depth_name": "파장동",
+    "region_4depth_name": "",
+    "x": 127.0,
+    "y": 37.3
+   }
+  ]
+ },
+ "kakao.coord.empty": {
+  "meta": {
+   "total_count": 0
+  },
+  "documents": []
+ },
+ "kakao.addr.jamsil": {
+  "meta": {
+   "is_end": true,
+   "total_count": 1,
+   "pageable_count": 1
+  },
+  "documents": [
+   {
+    "road_address": null,
+    "address_name": "서울 송파구 잠실본동",
+    "address": {
+     "address_name": "서울 송파구 잠실본동",
+     "y": "37.506153291140606",
+     "x": "127.08432653401003"
+    },
+    "y": "37.506153291140606",
+    "x": "127.08432653401003",
+    "address_type": "REGION"
+   }
+  ]
+ },
+ "google.coord.seoul.en": {
+  "status": "OK",
+  "results": [
+   {
+    "address_components": [
+     {
+      "long_name": "1",
+      "short_name": "1",
+      "types": [
+       "premise"
+      ]
+     },
+     {
+      "long_name": "Jung-gu",
+      "short_name": "Jung-gu",
+      "types": [
+       "political",
+       "sublocality",
+       "sublocality_level_1"
+      ]
+     },
+     {
+      "long_name": "Seoul",
+      "short_name": "Seoul",
+      "types": [
+       "administrative_area_level_1",
+       "political"
+      ]
+     },
+     {
+      "long_name": "South Korea",
+      "short_name": "KR",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 37.566,
+      "lng": 126.978
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "street_address"
+    ],
+    "formatted_address": "1 Sejong-daero, Jung-gu, Seoul, South Korea"
+   },
+   {
+    "address_components": [
+     {
+      "long_name": "Myeong-dong",
+      "short_name": "Myeong-dong",
+      "types": [
+       "political",
+       "sublocality",
+       "sublocality_level_2"
+      ]
+     },
+     {
+      "long_name": "Jung-gu",
+      "short_name": "Jung-gu",
+      "types": [
+       "political",
+       "sublocality",
+       "sublocality_level_1"
+      ]
+     },
+     {
+      "long_name": "Seoul",
+      "short_name": "Seoul",
+      "types": [
+       "administrative_area_level_1",
+       "political"
+      ]
+     },
+     {
+      "long_name": "South Korea",
+      "short_name": "KR",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 37.561,
+      "lng": 126.985
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "political",
+     "sublocality",
+     "sublocality_level_2"
+    ],
+    "formatted_address": "Myeong-dong, Jung-gu, Seoul, South Korea"
+   },
+   {
+    "address_components": [
+     {
+      "long_name": "Jung-gu",
+      "short_name": "Jung-gu",
+      "types": [
+       "political",
+       "sublocality",
+       "sublocality_level_1"
+      ]
+     },
+     {
+      "long_name": "Seoul",
+      "short_name": "Seoul",
+      "types": [
+       "administrative_area_level_1",
+       "political"
+      ]
+     },
+     {
+      "long_name": "South Korea",
+      "short_name": "KR",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 37.564,
+      "lng": 126.998
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "political",
+     "sublocality",
+     "sublocality_level_1"
+    ],
+    "formatted_address": "Jung-gu, Seoul, South Korea"
+   }
+  ]
+ },
+ "google.coord.seoul.ko": {
+  "status": "OK",
+  "results": [
+   {
+    "address_components": [
+     {
+      "long_name": "명동",
+      "short_name": "명동",
+      "types": [
+       "political",
+       "sublocality",
+       "sublocality_level_2"
+      ]
+     },
+     {
+      "long_name": "중구",
+      "short_name": "중구",
+      "types": [
+       "political",
+       "sublocality",
+       "sublocality_level_1"
+      ]
+     },
+     {
+      "long_name": "서울특별시",
+      "short_name": "서울특별시",
+      "types": [
+       "administrative_area_level_1",
+       "political"
+      ]
+     },
+     {
+      "long_name": "대한민국",
+      "short_name": "KR",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 37.561,
+      "lng": 126.985
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "political",
+     "sublocality",
+     "sublocality_level_2"
+    ],
+    "formatted_address": "대한민국 서울특별시 중구 명동"
+   }
+  ]
+ },
+ "google.coord.newyork": {
+  "status": "OK",
+  "results": [
+   {
+    "address_components": [
+     {
+      "long_name": "20",
+      "short_name": "20",
+      "types": [
+       "street_number"
+      ]
+     },
+     {
+      "long_name": "Manhattan",
+      "short_name": "Manhattan",
+      "types": [
+       "political",
+       "sublocality",
+       "sublocality_level_1"
+      ]
+     },
+     {
+      "long_name": "New York",
+      "short_name": "New York",
+      "types": [
+       "locality",
+       "political"
+      ]
+     },
+     {
+      "long_name": "New York",
+      "short_name": "NY",
+      "types": [
+       "administrative_area_level_1",
+       "political"
+      ]
+     },
+     {
+      "long_name": "United States",
+      "short_name": "US",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 40.748,
+      "lng": -73.985
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "street_address"
+    ],
+    "formatted_address": "20 W 34th St, New York, NY 10001, USA"
+   },
+   {
+    "address_components": [
+     {
+      "long_name": "Manhattan",
+      "short_name": "Manhattan",
+      "types": [
+       "political",
+       "sublocality",
+       "sublocality_level_1"
+      ]
+     },
+     {
+      "long_name": "New York",
+      "short_name": "New York",
+      "types": [
+       "locality",
+       "political"
+      ]
+     },
+     {
+      "long_name": "New York",
+      "short_name": "NY",
+      "types": [
+       "administrative_area_level_1",
+       "political"
+      ]
+     },
+     {
+      "long_name": "United States",
+      "short_name": "US",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 40.783,
+      "lng": -73.971
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "political",
+     "sublocality",
+     "sublocality_level_1"
+    ],
+    "formatted_address": "Manhattan, New York, NY, USA"
+   },
+   {
+    "address_components": [
+     {
+      "long_name": "New York",
+      "short_name": "New York",
+      "types": [
+       "locality",
+       "political"
+      ]
+     },
+     {
+      "long_name": "New York",
+      "short_name": "NY",
+      "types": [
+       "administrative_area_level_1",
+       "political"
+      ]
+     },
+     {
+      "long_name": "United States",
+      "short_name": "US",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 40.713,
+      "lng": -74.006
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "locality",
+     "political"
+    ],
+    "formatted_address": "New York, NY, USA"
+   }
+  ]
+ },
+ "google.coord.london": {
+  "status": "OK",
+  "results": [
+   {
+    "address_components": [
+     {
+      "long_name": "Whitehall",
+      "short_name": "Whitehall",
+      "types": [
+       "route"
+      ]
+     },
+     {
+      "long_name": "London",
+      "short_name": "London",
+      "types": [
+       "postal_town"
+      ]
+     },
+     {
+      "long_name": "England",
+      "short_name": "England",
+      "types": [
+       "administrative_area_level_1",
+       "political"
+      ]
+     },
+     {
+      "long_name": "United Kingdom",
+      "short_name": "GB",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 51.507,
+      "lng": -0.128
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "route"
+    ],
+    "formatted_address": "Whitehall, London SW1A 2DD, UK"
+   },
+   {
+    "address_components": [
+     {
+      "long_name": "London",
+      "short_name": "London",
+      "types": [
+       "locality",
+       "political"
+      ]
+     },
+     {
+      "long_name": "England",
+      "short_name": "England",
+      "types": [
+       "administrative_area_level_1",
+       "political"
+      ]
+     },
+     {
+      "long_name": "United Kingdom",
+      "short_name": "GB",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 51.507,
+      "lng": -0.128
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "locality",
+     "political"
+    ],
+    "formatted_address": "London, UK"
+   }
+  ]
+ },
+ "google.coord.tsushima": {
+  "status": "OK",
+  "results": [
+   {
+    "address_components": [
+     {
+      "long_name": "Tsushima",
+      "short_name": "Tsushima",
+      "types": [
+       "locality",
+       "political"
+      ]
+     },
+     {
+      "long_name": "Nagasaki",
+      "short_name": "Nagasaki",
+      "types": [
+       "administrative_area_level_1",
+       "political"
+      ]
+     },
+     {
+      "long_name": "Japan",
+      "short_name": "JP",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 34.2,
+      "lng": 129.29
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "locality",
+     "political"
+    ],
+    "formatted_address": "Tsushima, Nagasaki, Japan"
+   }
+  ]
+ },
+ "google.coord.fallback": {
+  "status": "OK",
+  "results": [
+   {
+    "address_components": [
+     {
+      "long_name": "Nunavut",
+      "short_name": "NU",
+      "types": [
+       "administrative_area_level_1",
+       "political"
+      ]
+     },
+     {
+      "long_name": "Canada",
+      "short_name": "CA",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 70.0,
+      "lng": -90.0
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "administrative_area_level_1",
+     "political"
+    ],
+    "formatted_address": "Nunavut, Canada"
+   }
+  ]
+ },
+ "google.coord.noformatted": {
+  "status": "OK",
+  "results": [
+   {
+    "address_components": [
+     {
+      "long_name": "Somewhere",
+      "short_name": "Somewhere",
+      "types": [
+       "locality",
+       "political"
+      ]
+     },
+     {
+      "long_name": "Nowhere",
+      "short_name": "NW",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 10.0,
+      "lng": 10.0
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "locality",
+     "political"
+    ]
+   }
+  ]
+ },
+ "google.coord.zero": {
+  "status": "ZERO_RESULTS",
+  "results": []
+ },
+ "google.coord.denied": {
+  "status": "REQUEST_DENIED",
+  "error_message": "synthetic",
+  "results": []
+ },
+ "google.coord.overlimit": {
+  "status": "OVER_QUERY_LIMIT",
+  "results": []
+ },
+ "google.addr.jamsil": {
+  "status": "OK",
+  "results": [
+   {
+    "address_components": [
+     {
+      "long_name": "Jamsilbon-dong",
+      "short_name": "Jamsilbon-dong",
+      "types": [
+       "political",
+       "sublocality",
+       "sublocality_level_2"
+      ]
+     },
+     {
+      "long_name": "Songpa-gu",
+      "short_name": "Songpa-gu",
+      "types": [
+       "political",
+       "sublocality",
+       "sublocality_level_1"
+      ]
+     },
+     {
+      "long_name": "Seoul",
+      "short_name": "Seoul",
+      "types": [
+       "administrative_area_level_1",
+       "political"
+      ]
+     },
+     {
+      "long_name": "South Korea",
+      "short_name": "KR",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 37.5061273,
+      "lng": 127.0842945
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "political",
+     "sublocality",
+     "sublocality_level_2"
+    ],
+    "formatted_address": "Jamsilbon-dong, Songpa-gu, Seoul, South Korea"
+   }
+  ]
+ },
+ "google.addr.nocountry": {
+  "status": "OK",
+  "results": [
+   {
+    "address_components": [
+     {
+      "long_name": "Somewhere",
+      "short_name": "Somewhere",
+      "types": [
+       "natural_feature"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 12.34567,
+      "lng": 56.78912
+     },
+     "location_type": "APPROXIMATE"
+    },
+    "place_id": "synthetic",
+    "types": [
+     "natural_feature"
+    ],
+    "formatted_address": "Somewhere"
+   }
+  ]
+ },
+ "google.addr.zero": {
+  "status": "ZERO_RESULTS",
+  "results": []
+ }
+}

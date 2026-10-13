@@ -43,6 +43,7 @@ def main():
     if local_tests.exists():
         commands.insert(2, [sys.executable, str(local_tests)])
         commands.append([sys.executable, str(local_smoke), '--binary', 'target/release/server2'])
+    commands.append([sys.executable, 'tools/gateway_smoke.py', '--binary', 'target/release/server2'])
     # Uses the just-built GNU binary: real private_manifest, then the non-musl
     # fence, without worker claims or any AWS/IMDS network path.
     commands.append([sys.executable, sandbox, 'manifest-functional'])

@@ -1208,7 +1208,7 @@ S18 follows the accepted D01–D03 push policy and its route/state verification 
 | O-7 | No blanket removal of health-index/KAQ behavior that current active API fixtures contain |
 | O-8 | v000705 town is active; exclude only zero-observed in-scope public APIs; /ww evidence gap remains |
 | O-9 | Approved: raw PUT + complete fetch-group catalog publication before new success. S3 outage uses valid complete memory or existing route error/fallback; no undurable new success. Drain assists but is not the durability boundary; no route switch before actual compatibility gates and approval |
-| O-10 | Separate server2 key set during coexistence remains |
+| O-10 | AK clarified 2026-10-13: reuse the existing injected Kakao/Google `.env` keys for S10; actual geocoder quotas and activation evidence remain required. The separate data.go.kr coexistence-key policy is unchanged |
 | O-13 | Store summaries; product exposure remains a separate decision |
 
 The [S01 record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009156640)
@@ -1264,3 +1264,29 @@ retain independent caches and require the coordination gate in section 9.
 One separately authorized host attempt failed before guard readiness and measurement. At 13:06:08Z, AWS readback confirmed host termination, owned root/SG/IAM/profile removal and zero retained S3 versions. Egress stayed closed; no SSM/bootstrap/worker/provider work ran. The live console exposed both a multibyte console bound mismatch and a bootcmd timer/sysinit ordering cycle inferred from logs plus upstream unit definitions.
 
 The focused correction moves all stock guard setup to final-stage runcmd, retains closed egress/watchdog/expiry, accepts complete CLI text within 65,536 characters and 131,072 UTF-8 bytes, and removes the host workspace test invocation per AK. The [operations manual](../operations/server2-feasibility.md#2026-10-09-actual-execution-and-focused-correction) records direct evidence, cleanup and limitations. The eight unfinished preparation15 files are preserved separately, not shipped. No further AWS launch, merge or budget reset is part of this correction. QA6 remains historical; new live readiness and independent review are not claimed. Tests are not added or run under AK's instruction. S09/O-2/O-5 and downstream S10/S13 remain pending.
+
+### S10 local-first gateway implementation (2026-10-13)
+
+[S10](../../plans/issue-2695.md) adds an opt-in public gateway with default
+legacy geocoder/weather HTTP adapters. No production route is switched by
+startup defaults. Explicit library registration permits a native weather handler
+for one family/version and preserves legacy rollback. The
+[request sequence](diagrams/server2-gateway.html) and
+[operations guide](../operations/server2-gateway.md) describe this staged path.
+
+Native geocoder acquisition is restricted to explicitly configured literal-loopback
+mock endpoints in this implementation. Existing injected `GEOCODER_KAKAO_KEYS`
+and `GEOCODER_GOOGLE_KEY` names and the Google fingerprint restriction are
+preserved. Present Kakao key lists must be JSON arrays of nonempty strings;
+malformed entries reject mock configuration. S08 adds Kakao/Google budget identities; the geocoder funding bridge
+reserves/consumes every possible key attempt before owned work, while the
+weather-only executor rejects those identities. This is not real quota approval.
+
+Exact coordinate/locale single-flight and results remain bounded volatile RAM.
+The optional address-only S3 adapter stores a bounded 16-KiB projection with
+30-day freshness, verifies complete PUT acknowledgment and exact readback, and
+never exposes a reverse-geocode persistence method. It is a permitted derived
+address-cache exception, not a weather raw/catalog publication shortcut. It is
+not automatically wired to runtime credentials. Coarse coordinate serving,
+live native providers, seven-day shadow, measured real quotas and cutover remain
+gated. Local fixture timings do not satisfy production latency or quota gates.

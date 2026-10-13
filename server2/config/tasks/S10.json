@@ -1,0 +1,98 @@
+{
+  "task": "S10",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2695",
+  "server2_paths": [
+    "server2/config/tasks/S10.json",
+    "server2/src/lib.rs",
+    "server2/src/main.rs",
+    "server2/Cargo.toml",
+    "server2/Cargo.lock",
+    "server2/src/budget/model.rs",
+    "server2/src/providers/acquisition.rs",
+    "server2/tests/gateway.rs",
+    "server2/examples/gateway_smoke.rs",
+    "server2/tools/gateway_smoke.py",
+    "server2/tools/render_gateway_manual.py",
+    "server2/tools/ci.py",
+    "server2/config/gateway-local.json",
+    "server2/src/gateway/mod.rs",
+    "server2/src/gateway/input.rs",
+    "server2/src/gateway/backend.rs",
+    "server2/src/gateway/response.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/src/geocode/mod.rs",
+    "server2/src/geocode/format.rs",
+    "server2/src/geocode/provider.rs",
+    "server2/src/geocode/cache.rs",
+    "server2/src/geocode/budget.rs",
+    "server2/src/geocode/storage.rs",
+    "server2/tests/gateway/wire.rs",
+    "server2/tests/gateway/geocode.rs",
+    "server2/tests/gateway/privacy.rs",
+    "server2/tests/gateway/budget.rs",
+    "server2/tests/gateway/storage.rs",
+    "server2/tests/gateway/peer.py",
+    "server2/tests/gateway/fixtures/providers.json",
+    "server2/tests/gateway/fixtures/PROVENANCE.md",
+    "server2/src/providers/transport.rs",
+    "server2/README.md"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2695.md",
+      "category": "documentation",
+      "reason": "S10 maintained contract, design, operator guide or selected actual usage evidence; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2695.md",
+      "category": "documentation",
+      "reason": "S10 maintained contract, design, operator guide or selected actual usage evidence; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2695.md",
+      "category": "documentation",
+      "reason": "S10 maintained contract, design, operator guide or selected actual usage evidence; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "S10 maintained contract, design, operator guide or selected actual usage evidence; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "S10 maintained contract, design, operator guide or selected actual usage evidence; no implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-gateway.md",
+      "category": "documentation",
+      "reason": "S10 maintained contract, design, operator guide or selected actual usage evidence; no implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-gateway.pdf",
+      "category": "documentation",
+      "reason": "S10 maintained contract, design, operator guide or selected actual usage evidence; no implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-gateway/usage.png",
+      "category": "documentation",
+      "reason": "S10 maintained contract, design, operator guide or selected actual usage evidence; no implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-gateway/manifest.json",
+      "category": "documentation",
+      "reason": "S10 maintained contract, design, operator guide or selected actual usage evidence; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-gateway.sequence.json",
+      "category": "documentation",
+      "reason": "S10 maintained contract, design, operator guide or selected actual usage evidence; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-gateway.html",
+      "category": "documentation",
+      "reason": "S10 maintained contract, design, operator guide or selected actual usage evidence; no implementation outside server2"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2695#issuecomment-6135299135"
+}

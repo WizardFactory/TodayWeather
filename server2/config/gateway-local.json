@@ -1,0 +1,15 @@
+{
+  "scope": "operator-injected environment; local mock only, no credential values",
+  "opt_in": "SERVER2_GATEWAY_LEGACY_URL",
+  "geocoder_mode": "legacy",
+  "weather_family_modes": "legacy HTTP by default; native handlers require explicit library registration",
+  "gateway_seconds": 9,
+  "backend_attempt_seconds": 3,
+  "backend_attempts": 3,
+  "lookup_seconds": 5,
+  "provider_attempt_seconds": 3,
+  "inflight": 40,
+  "coordinate_cache": "bounded volatile exact normalized coordinate+locale; no S3",
+  "address_cache": "optional bounded address-only S3 projection; 30-day freshness",
+  "activation": "live native geocoder disabled until actual quota, label/shadow and cutover prerequisites"
+}
