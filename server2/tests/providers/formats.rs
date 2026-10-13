@@ -474,3 +474,111 @@ fn review_stale_rss_and_euc_kr_city_publication() {
         WebVerdict::Stale(p(20261013, 1400))
     );
 }
+
+/// Review 2 findings S13-R1 (rows without cells), S13-R9 and S13-R10 (PR #2726).
+#[test]
+fn review_rows_need_cells_fields_and_values() {
+    // S13-R1: rows without data cells are not observation rows.
+    let aws = fixture("aws-minute-euckr.html");
+    let minute = WebRequest::aws_minute(None);
+    let (open, close) = (b"<table border=\"1\">".as_slice(), b"</table>".as_slice());
+    let at = aws.windows(open.len()).position(|w| w == open).unwrap() + open.len();
+    let end = at
+        + aws[at..]
+            .windows(close.len())
+            .position(|w| w == close)
+            .unwrap();
+    let hollow = [&aws[..at], b"<tr></tr><tr></tr>".as_slice(), &aws[end..]].concat();
+    assert!(matches!(
+        inspect_web(&minute, "text/html", &hollow),
+        WebVerdict::Invalid(_)
+    ));
+
+    // S13-R9: every legacy-read RSS row field is required; hour/day are numeric.
+    let rss = WebRequest::town_rss(60, 127).unwrap();
+    let body = String::from_utf8(fixture("town-rss.xml")).unwrap();
+    let start = body.find("<data seq=\"0\">").unwrap();
+    let stop = body.find("</body>").unwrap();
+    for rows in [
+        "<data/>",
+        r#"<data seq="0"></data>"#,
+        r#"<data seq="0"><hour>18</hour><day>0</day><temp>17.0</temp></data>"#,
+    ] {
+        let broken = format!("{}{rows}{}", &body[..start], &body[stop..]);
+        assert!(
+            matches!(
+                inspect_web(&rss, "text/xml", broken.as_bytes()),
+                WebVerdict::Invalid(_)
+            ),
+            "{rows}"
+        );
+    }
+    let hour = body.replacen("<hour>18</hour>", "<hour>x</hour>", 1);
+    assert!(matches!(
+        inspect_web(&rss, "text/xml", hour.as_bytes()),
+        WebVerdict::Invalid(_)
+    ));
+    let missing = body.replacen("<s06>0.0</s06>", "", 1);
+    assert!(matches!(
+        inspect_web(&rss, "text/xml", missing.as_bytes()),
+        WebVerdict::Invalid(_)
+    ));
+    // wdEn is optional for legacy parsing.
+    let no_wd_en = body.replacen("<wdEn>W</wdEn>", "", 1);
+    assert!(matches!(
+        inspect_web(&rss, "text/xml", no_wd_en.as_bytes()),
+        WebVerdict::Valid(_)
+    ));
+
+    // S13-R10: index values must be scalar and at least one numeric per row.
+    let uv = DataGoKrRequest::new(F::UvIdxV5, Target::AllAreas, p(20260926, 1200)).unwrap();
+    let mut whole = json(&fixture("uv-idx-v5.json"));
+    whole["response"]["body"]["numOfRows"] = 1000.into();
+    whole["response"]["body"]["totalCount"] = 3.into();
+    for value in [
+        Value::Null,
+        serde_json::json!({"v": 1}),
+        serde_json::json!([1]),
+    ] {
+        let mut bad = whole.clone();
+        bad["response"]["body"]["items"]["item"][0]["h0"] = value;
+        assert!(matches!(
+            inspect_page(&uv, 1, None, &bad),
+            PageVerdict::Invalid(_)
+        ));
+    }
+    let mut empty = whole.clone();
+    let row = empty["response"]["body"]["items"]["item"][1]
+        .as_object_mut()
+        .unwrap();
+    for (k, v) in row.iter_mut() {
+        if k.starts_with('h') {
+            *v = "".into();
+        }
+    }
+    assert!(matches!(
+        inspect_page(&uv, 1, None, &empty),
+        PageVerdict::Invalid(_)
+    ));
+    let weeds =
+        DataGoKrRequest::new(F::WeedsPollenV3, Target::AllAreas, p(20260930, 1800)).unwrap();
+    let mut pollen = json(&fixture("pollen-v3-live-20261001.json"));
+    pollen["response"]["body"]["numOfRows"] = 1000.into();
+    pollen["response"]["body"]["totalCount"] = 3.into();
+    assert!(matches!(
+        inspect_page(&weeds, 1, None, &pollen),
+        PageVerdict::Valid(_)
+    ));
+    let mut null = pollen.clone();
+    null["response"]["body"]["items"]["item"][0]["today"] = Value::Null;
+    assert!(matches!(
+        inspect_page(&weeds, 1, None, &null),
+        PageVerdict::Invalid(_)
+    ));
+    let mut blank = pollen.clone();
+    blank["response"]["body"]["items"]["item"][2]["tomorrow"] = "".into();
+    assert!(matches!(
+        inspect_page(&weeds, 1, None, &blank),
+        PageVerdict::Invalid(_)
+    ));
+}

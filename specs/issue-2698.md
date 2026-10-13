@@ -119,3 +119,10 @@ lets callers reject an older RSS or minute page as `Stale` (legacy skipped curre
 fetching). Each consumed unit is reported as `Unsettled` before HTTP and settled in place, and a
 drop guard records the call, so cancellation after funding or sending is counted. Key-ring
 settlement re-advances when a concurrent call left it on a key this call saw rejected.
+
+Second review (head `9fb53dbf`): the AWS data table needs at least two rows that contain cells;
+each RSS `data` row needs every field legacy `parseShortRss` reads (`hour`, `day`, `temp`, `tmx`,
+`tmn`, `sky`, `pty`, `wfKor`, `wfEn`, `pop`, `r12`, `s12`, `ws`, `wd`, `wdKor`, `reh`, `r06`,
+`s06`; `wdEn` optional) with numeric `hour`/`day`; life-index fields must be scalars (null,
+object or array is invalid; empty or malformed strings are "no value" as in the legacy
+converters) and each row needs at least one numeric index value.

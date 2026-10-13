@@ -239,24 +239,38 @@ pub fn inspect_page(
         Shape::Life => {
             // UV rows carry hourly `hN` values; pollen rows carry daily grades. A response of
             // the other index family is not this request's data.
+            // Index fields must be scalars (an empty string is the provider's "no value");
+            // a row needs at least one numeric index value to be index data at all.
             let uv = request.family() == DataGoKrFamily::UvIdxV5;
-            let content = |row: &Map<String, Value>| {
+            let index_field = |k: &str| {
                 if uv {
-                    row.keys().any(|k| {
-                        k.len() > 1
-                            && k.starts_with('h')
-                            && k[1..].bytes().all(|b| b.is_ascii_digit())
-                    })
+                    k.len() > 1 && k.starts_with('h') && k[1..].bytes().all(|b| b.is_ascii_digit())
                 } else {
-                    [
-                        "today",
-                        "tomorrow",
-                        "dayaftertomorrow",
-                        "theDayAfterTomorrow",
-                    ]
-                    .iter()
-                    .any(|k| row.contains_key(*k))
+                    matches!(
+                        k,
+                        "today"
+                            | "tomorrow"
+                            | "dayaftertomorrow"
+                            | "todaysaftertomorrow"
+                            | "theDayAfterTomorrow"
+                    )
                 }
+            };
+            let content = |row: &Map<String, Value>| {
+                let mut numeric = false;
+                for (_, v) in row.iter().filter(|(k, _)| index_field(k)) {
+                    // Legacy converters omit empty or malformed strings; null/object/array
+                    // are not a provider value form.
+                    match v {
+                        Value::Number(_) => numeric = true,
+                        Value::String(s) => {
+                            let s = s.trim();
+                            numeric |= !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+                        }
+                        _ => return false,
+                    }
+                }
+                numeric
             };
             let mut issuance: Option<String> = None;
             for row in &items {
@@ -410,7 +424,13 @@ pub fn inspect_web(request: &WebRequest, content_type: &str, body: &[u8]) -> Web
                     .and_then(|t| t.split_whitespace().last().map(str::to_owned));
                 // Innermost (data) table: closed, with a header row and at least one data row.
                 let table = table_section(&view, true, |_| true).is_some_and(|section| {
-                    section.to_ascii_lowercase().matches("<tr").count() >= 2
+                    let lower = section.to_ascii_lowercase();
+                    lower
+                        .split("<tr")
+                        .skip(1)
+                        .filter(|row| row.contains("<td"))
+                        .count()
+                        >= 2
                 }) && tags(&view).filter(|t| t.name == "table").count() >= 2;
                 (stamp.and_then(|s| Publication::parse_dotted(&s)), table)
             };
@@ -441,6 +461,20 @@ fn inspect_rss(request: &WebRequest, body: &[u8]) -> WebVerdict {
     let (mut tm, mut x, mut y) = (None::<String>, None::<String>, None::<String>);
     let mut data = 0usize;
     let mut root = false;
+    // Fields legacy `parseShortRss` reads as `item.<field>[0]` (wdEn is optional there).
+    const ROW: [&str; 18] = [
+        "hour", "day", "temp", "tmx", "tmn", "sky", "pty", "wfKor", "wfEn", "pop", "r12", "s12",
+        "ws", "wd", "wdKor", "reh", "r06", "s06",
+    ];
+    let mut fields: BTreeSet<&str> = BTreeSet::new();
+    let mut slots = (None::<String>, None::<String>);
+    let row_complete = |fields: &BTreeSet<&str>, slots: &(Option<String>, Option<String>)| {
+        let digits = |v: &Option<String>| {
+            v.as_ref()
+                .is_some_and(|v| !v.is_empty() && v.bytes().all(|b| b.is_ascii_digit()))
+        };
+        ROW.iter().all(|f| fields.contains(f)) && digits(&slots.0) && digits(&slots.1)
+    };
     for token in Tokenizer::from(text) {
         let Ok(token) = token else {
             return WebVerdict::Invalid("xml");
@@ -457,25 +491,44 @@ fn inspect_rss(request: &WebRequest, body: &[u8]) -> WebVerdict {
                     return WebVerdict::Invalid("xml depth");
                 }
                 stack.push(local.as_str());
-                if stack.as_slice() == ["wid", "body", "data"] {
-                    data += 1;
+                match stack.as_slice() {
+                    ["wid", "body", "data"] => {
+                        data += 1;
+                        fields.clear();
+                        slots = (None, None);
+                    }
+                    ["wid", "body", "data", field] if !fields.insert(field) => {
+                        return WebVerdict::Invalid("duplicate rss field");
+                    }
+                    _ => {}
                 }
             }
-            Token::ElementEnd { end, .. } => match end {
-                ElementEnd::Open => {}
-                ElementEnd::Empty => {
-                    stack.pop();
-                }
-                ElementEnd::Close(_, local) => {
-                    if stack.pop() != Some(local.as_str()) {
-                        return WebVerdict::Invalid("xml nesting");
+            Token::ElementEnd { end, .. } => {
+                let closes_row = stack.as_slice() == ["wid", "body", "data"];
+                match end {
+                    ElementEnd::Open => continue,
+                    ElementEnd::Empty => {
+                        stack.pop();
+                    }
+                    ElementEnd::Close(_, local) => {
+                        if stack.pop() != Some(local.as_str()) {
+                            return WebVerdict::Invalid("xml nesting");
+                        }
                     }
                 }
-            },
+                if closes_row && !row_complete(&fields, &slots) {
+                    return WebVerdict::Invalid("rss row");
+                }
+            }
             Token::Text { text } => {
                 let value = text.as_str().trim();
                 if stack.is_empty() && !value.is_empty() {
                     return WebVerdict::Invalid("xml text");
+                }
+                match stack.as_slice() {
+                    ["wid", "body", "data", "hour"] => slots.0 = Some(value.to_owned()),
+                    ["wid", "body", "data", "day"] => slots.1 = Some(value.to_owned()),
+                    _ => {}
                 }
                 let slot = match stack.as_slice() {
                     ["wid", "header", "tm"] => &mut tm,

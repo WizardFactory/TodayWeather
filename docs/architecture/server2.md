@@ -1314,7 +1314,8 @@ count and no duplicate row, and all pages share one publication. Records then ca
 `Pagination{complete: true}` in one owning partition (publication `YYYYMMDD-HHMM`; AWS/city by
 KST day). Forecast rows must echo the requested grid, carry their slot fields and one accepted
 publication; ultra-short HH30 requests answered as HH00 or HH30 of that hour are stored under
-the canonical HH00 period (#2676). UV and pollen rows must carry their own index fields.
+the canonical HH00 period (#2676). UV and pollen rows must carry their own scalar index
+fields with at least one numeric value. RSS rows need every field the legacy parser reads.
 HTML pages must be complete (`</html>`) with a closed observation table holding data rows;
 the EUC-KR city label does not hide its timestamp. Callers may pass a minimum publication for
 RSS and the AWS minute page (`WebRequest::not_before`) so an older page is `Stale`.
