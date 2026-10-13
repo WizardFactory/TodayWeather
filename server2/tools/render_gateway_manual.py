@@ -103,6 +103,7 @@ def main():
     styles['Normal'].leading = 12
     styles['Normal'].allowWidows = 0
     styles['Normal'].allowOrphans = 0
+    styles['Heading2'].keepWithNext = True
     styles['Code'].fontSize = 7.5
     styles['Code'].leading = 10
     blocks, paragraph, code, table_rows = [], [], None, []
@@ -161,7 +162,7 @@ def main():
                       author='TodayWeather', invariant=1).build(blocks, onFirstPage=footer, onLaterPages=footer)
     manifest = {'schema':1,'captured_at_utc':stamp,
                 'capture_kind':'terminal result rendered from actual isolated release execution',
-                'environment':'macOS, release binary, synthetic loopback S3/provider peers',
+                'environment':'macOS, release binary, synthetic loopback provider/backend/legacy-geocoder peers',
                 'command':'python3 server2/tools/gateway_smoke.py --binary server2/target/release/server2',
                 'observed':{'peer_counters':json.loads(next(line.split(': ',1)[1] for line in text.splitlines() if line.startswith('observed peer counters: ')))},
                 'execution_log_sha256':hashlib.sha256(raw).hexdigest(),

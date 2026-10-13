@@ -17,13 +17,13 @@ python3 tools/gateway_smoke.py --binary target/release/server2
 
 The smoke starts task-owned loopback HTTP peers and the actual release binary on ephemeral public/private ports. It supplies dummy keys in a restricted child environment, so the test does not load an operator's `.env`, send live provider requests or create AWS resources. It stops its child processes and local peers when the run finishes.
 
-The smoke checks health, weather/geocode responses, conditional ETag `304`, empty `HEAD` bodies, invalid coordinates, CORS preflight and address lookup. It restarts through `legacy` → `mock` → `legacy` to exercise rollback. The mock phase also checks that 16 same-key cold callers cause one Kakao call, 16 distinct keys cause 16 Kakao calls, and a non-Korean lookup uses one Kakao call plus one Google supplement. These counts describe controlled fixture demand; they do not estimate production quotas or provider latency. The script prints its observed percentiles for the current run.
+The smoke checks health, weather/geocode responses, conditional ETag `304`, empty `HEAD` bodies, invalid coordinates, CORS preflight and address lookup. It restarts through `legacy` → `mock` → `legacy` to exercise rollback. The mock phase also checks that 16 same-key cold callers cause one Kakao call, 16 distinct keys cause 16 Kakao calls, and a non-ko locale lookup at a Korean coordinate uses one Kakao call plus one Google supplement. These counts describe controlled fixture demand; they do not estimate production quotas or provider latency. The script prints its observed percentiles for the current run.
 
 The gateway test target covers pinned S02 wire records, query/number encoding, backend retry/error classification, explicit family/version switches, cancellation and deadline ownership, provider parsing, cache privacy, quota funding and address projection storage. A successful local smoke is additional functional evidence; it does not replace those regression checks or the separate activation gates.
 
 ## Process configuration
 
-The binary reads configuration from its injected environment. It does not open a legacy `.env` file or import legacy runtime assets.
+The binary reads configuration from its injected environment. It does not open a legacy `.env` file or import legacy runtime assets. In mock mode, a present `GEOCODER_KAKAO_KEYS` value must be a JSON array of nonempty strings; malformed values fail configuration instead of silently dropping keys.
 
 | Variable | Behavior |
 | --- | --- |
@@ -67,10 +67,10 @@ These instructions cover local verification and configuration. They do not autho
 
 ## Recorded local verification
 
-The 2026-10-13 00:50:20 UTC release-process run passed against task-owned
+The 2026-10-13 01:18:38 UTC release-process run passed against task-owned
 loopback peers: 16 same-key cold callers shared one Kakao request; 16 distinct
-keys caused 16 requests; a non-Korean lookup used Kakao plus Google. The
-16-sample distinct-key mock timings were p50 59.08 ms, p95/p99 64.24 ms
+keys caused 16 requests; a non-ko locale lookup at a Korean coordinate used Kakao plus Google. The
+16-sample distinct-key mock timings were p50 62.76 ms, p95/p99 66.65 ms
 with eight concurrent clients and a fixed 50-ms peer delay. These are synthetic
 local elapsed times, not live provider tails or production quota evidence.
 Legacy/mock/legacy restart rollback and the separate foundation socket/drain

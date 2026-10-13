@@ -19,7 +19,7 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    sync::{Semaphore, watch},
+    sync::{OwnedSemaphorePermit, Semaphore, watch},
     time::Instant,
 };
 
@@ -207,11 +207,8 @@ impl GeocoderConfig {
             ..Self::default()
         };
         if let Ok(value) = std::env::var("GEOCODER_KAKAO_KEYS") {
-            config.kakao_keys = serde_json::from_str::<Vec<serde_json::Value>>(&value)
-                .unwrap_or_default()
-                .into_iter()
-                .filter_map(|v| v.as_str().filter(|v| !v.is_empty()).map(str::to_owned))
-                .collect();
+            config.kakao_keys = serde_json::from_str::<Vec<String>>(&value)
+                .map_err(|_| GeocodeError::InvalidConfiguration)?;
         }
         config.google_key = std::env::var("GEOCODER_GOOGLE_KEY")
             .ok()
@@ -252,6 +249,11 @@ impl GeocoderConfig {
             } else if url != expected {
                 return Err(GeocodeError::InvalidConfiguration);
             }
+        }
+        if self.mock_mode {
+            // Validate the literal authority before normalizing the accepted root slash.
+            self.kakao_base_url = self.kakao_base_url.trim_end_matches('/').into();
+            self.google_base_url = self.google_base_url.trim_end_matches('/').into();
         }
         if !self.mock_mode
             && let Some(key) = &self.google_key
@@ -299,6 +301,20 @@ struct Inner {
     flights: Mutex<HashMap<LookupKey, Flight>>,
     owners: Arc<Semaphore>,
     rotation: AtomicUsize,
+}
+/// Cleanup runs on success, timeout and unwinding, without retaining a dead receiver.
+/// The task owns the permit through provider/cache work even if all waiters disconnect.
+struct FlightGuard {
+    inner: Arc<Inner>,
+    key: LookupKey,
+    _permit: OwnedSemaphorePermit,
+}
+impl Drop for FlightGuard {
+    fn drop(&mut self) {
+        if let Ok(mut flights) = self.inner.flights.lock() {
+            flights.remove(&self.key);
+        }
+    }
 }
 impl Geocoder {
     pub fn new(mut config: GeocoderConfig) -> Result<Self, GeocodeError> {
@@ -401,6 +417,11 @@ impl Geocoder {
                 flights.insert(key.clone(), receiver.clone());
                 let inner = self.inner.clone();
                 tokio::spawn(async move {
+                    let flight = FlightGuard {
+                        inner: inner.clone(),
+                        key: key.clone(),
+                        _permit: permit,
+                    };
                     let result = tokio::time::timeout(Duration::from_secs(5), inner.acquire(&key))
                         .await
                         .unwrap_or(Err(GeocodeError::Provider));
@@ -415,10 +436,7 @@ impl Geocoder {
                             inner.cache.put(key.clone(), geo.clone());
                         }
                     }
-                    if let Ok(mut flights) = inner.flights.lock() {
-                        flights.remove(&key);
-                    }
-                    drop(permit);
+                    drop(flight);
                     sender.send_replace(Some(result));
                 });
                 receiver

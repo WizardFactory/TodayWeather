@@ -1,10 +1,24 @@
 //! Public gateway input normalization.
 use super::{GatewayError, Version};
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum Route {
     Weather(Version, [f64; 2]),
     Coord([f64; 2]),
     Address(String),
+}
+// Debug supports assertion diagnostics without exposing a precise identity.
+impl std::fmt::Debug for Route {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Weather(version, _) => f
+                .debug_tuple("Weather")
+                .field(version)
+                .field(&"<redacted>")
+                .finish(),
+            Self::Coord(_) => f.write_str("Coord(<redacted>)"),
+            Self::Address(_) => f.write_str("Address(<redacted>)"),
+        }
+    }
 }
 pub fn parse_loc(raw: &str) -> Result<[f64; 2], GatewayError> {
     let mut parts = raw.split(',');

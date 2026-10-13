@@ -1277,7 +1277,8 @@ for one family/version and preserves legacy rollback. The
 Native geocoder acquisition is restricted to explicitly configured literal-loopback
 mock endpoints in this implementation. Existing injected `GEOCODER_KAKAO_KEYS`
 and `GEOCODER_GOOGLE_KEY` names and the Google fingerprint restriction are
-preserved. S08 adds Kakao/Google budget identities; the geocoder funding bridge
+preserved. Present Kakao key lists must be JSON arrays of nonempty strings;
+malformed entries reject mock configuration. S08 adds Kakao/Google budget identities; the geocoder funding bridge
 reserves/consumes every possible key attempt before owned work, while the
 weather-only executor rejects those identities. This is not real quota approval.
 

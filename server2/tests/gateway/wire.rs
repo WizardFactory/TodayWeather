@@ -112,6 +112,47 @@ fn native_gateway(
 fn request(path: &str) -> Request {
     Request::builder().uri(path).body(Body::empty()).unwrap()
 }
+// Expected client values are independently specified by the copied legacy
+// provider fixtures (kakao.coord.seoul, google.coord.seoul.en/london and
+// google.addr.jamsil); never deserialize them from a public expected response.
+fn oracle_geo(id: &str) -> GeoClient {
+    if id.contains("world") {
+        return geo_world();
+    }
+    if id.ends_with("-addr") {
+        return GeoClient {
+            country: Some("KR".into()),
+            address: Some("서울특별시/송파구/잠실본동".into()),
+            location: Some(Location {
+                lat: 37.506,
+                long: 127.084,
+            }),
+            ..GeoClient::default()
+        };
+    }
+    let english = id.contains("history") || id == "geocode-v000903-coord";
+    GeoClient {
+        name: Some(if english { "Myeong-dong" } else { "명동" }.into()),
+        country: Some("KR".into()),
+        address: Some(
+            if english {
+                "Myeong-dong, Jung-gu, Seoul, South Korea"
+            } else {
+                "서울특별시 중구 명동"
+            }
+            .into(),
+        ),
+        location: Some(Location {
+            lat: 37.566,
+            long: 126.978,
+        }),
+        kma_address: Some(KmaAddress {
+            name1: "서울특별시".into(),
+            name2: Some("중구".into()),
+            name3: Some("명동".into()),
+        }),
+    }
+}
 #[tokio::test]
 async fn s02_gateway_and_geocode_wire_goldens() {
     let records: serde_json::Value =
@@ -132,28 +173,57 @@ async fn s02_gateway_and_geocode_wire_goldens() {
             .decode(case["body_base64"].as_str().unwrap())
             .unwrap();
         let status = case["status"].as_u64().unwrap();
-        let mut geo = geo_world();
-        if status == 200 {
-            let body: serde_json::Value = serde_json::from_slice(&expected).unwrap();
-            let mut fields = serde_json::Map::new();
-            for key in ["name", "country", "address", "location", "kmaAddress"] {
-                if let Some(value) = body.get(key) {
-                    fields.insert(key.into(), value.clone());
+        // Dependency expectations come from the copied provider oracle, independently
+        // of the public response being compared. records.json retains hop paths and
+        // provider names, but does not retain the geocoder result or hop response body.
+        let geo = oracle_geo(id);
+        let backend_body = if status == 200 && id.starts_with("gateway-") {
+            // Explicit synthetic reconstruction: public S02 bytes minus newly added
+            // geo fields, with the actual standalone S02 backend's location. This is
+            // not represented as an unavailable recorded gateway-hop body. Independent
+            // unmodified backend records are exercised by recorded_backend_merge_inputs.
+            let version = if id.contains("v000902") {
+                "v000902"
+            } else if id.contains("v000903") || id.contains("history") || id.contains("query") {
+                "v000903"
+            } else {
+                "v000901"
+            };
+            let family = if id.contains("world") {
+                "world"
+            } else {
+                "domestic"
+            };
+            let backend = records["cases"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|c| c["id"] == format!("{family}-{version}"))
+                .unwrap();
+            let recorded = OrderedJson::parse(
+                &STANDARD
+                    .decode(backend["body_base64"].as_str().unwrap())
+                    .unwrap(),
+            )
+            .unwrap();
+            let mut reconstructed = OrderedJson::parse(&expected).unwrap();
+            if let OrderedJson::Object(entries) = &mut reconstructed {
+                entries.retain(|(key, _)| {
+                    !["name", "country", "address"]
+                        .iter()
+                        .any(|name| key == &name.encode_utf16().collect::<Vec<_>>())
+                });
+                if let Some((_, location)) = entries
+                    .iter_mut()
+                    .find(|(key, _)| key == &"location".encode_utf16().collect::<Vec<_>>())
+                {
+                    *location = recorded.get("location").unwrap().clone();
                 }
             }
-            geo = serde_json::from_value(serde_json::Value::Object(fields)).unwrap();
-            if geo.country.as_deref() == Some("KR") && geo.kma_address.is_none() {
-                geo.kma_address = Some(KmaAddress {
-                    name1: "서울특별시".into(),
-                    name2: Some("중구".into()),
-                    name3: Some("명동".into()),
-                });
-            }
-            // Public address result intentionally contains no KMA fields.
-            if id.contains("-addr") {
-                geo.kma_address = None;
-            }
-        }
+            reconstructed.to_bytes()
+        } else {
+            expected.clone()
+        };
         let geo_error = if [
             "geocode-auth",
             "geocode-quota",
@@ -173,7 +243,7 @@ async fn s02_gateway_and_geocode_wire_goldens() {
         } else {
             None
         };
-        let (gateway, seen) = native_gateway(geo, expected.clone(), geo_error, backend_error);
+        let (gateway, seen) = native_gateway(geo, backend_body, geo_error, backend_error);
         let mut req = request(case["request"]["path"].as_str().unwrap());
         if let Some(headers) = case["request"]["headers"].as_object() {
             for (key, value) in headers {
@@ -582,4 +652,113 @@ async fn native_backend_attempt_is_capped_at_three_seconds() {
     assert!(started.elapsed() >= Duration::from_secs(3));
     assert!(started.elapsed() < Duration::from_secs(4));
     assert_eq!(gateway.inflight(), 0);
+}
+
+#[test]
+fn precise_routes_have_redacted_debug_output() {
+    use server2::gateway::input::Route;
+    for route in [
+        Route::Weather(Version::V000903, [37.566, 126.978]),
+        Route::Coord([37.566, 126.978]),
+        Route::Address("sensitive street address".into()),
+    ] {
+        let debug = format!("{route:?}");
+        assert!(
+            !debug.contains("37.566"),
+            "coordinate leaked through Route Debug"
+        );
+        assert!(
+            !debug.contains("126.978"),
+            "coordinate leaked through Route Debug"
+        );
+        assert!(
+            !debug.contains("sensitive"),
+            "address leaked through Route Debug"
+        );
+    }
+}
+
+#[tokio::test]
+async fn recorded_backend_merge_inputs() {
+    let records: serde_json::Value =
+        serde_json::from_str(include_str!("../golden/records.json")).unwrap();
+    for (backend_id, geo, route, old_location, new_location, appended) in [
+        (
+            "domestic-v000903",
+            oracle_geo("gateway-v000903-domestic"),
+            "/weather/v000903/coord/37.5663,126.9779",
+            r#""location":{"lat":37.566,"long":126.978}"#,
+            r#""location":{"lat":37.566,"long":126.978}"#,
+            r#","name":"명동","country":"KR","address":"서울특별시 중구 명동"}"#,
+        ),
+        (
+            "world-v000903",
+            geo_world(),
+            "/weather/v000903/coord/51.507,-0.128",
+            r#""location":{"lat":35.68,"lon":139.76}"#,
+            r#""location":{"lat":51.507,"long":-0.128}"#,
+            r#","name":"London","country":"GB","address":"London, UK"}"#,
+        ),
+    ] {
+        let record = records["cases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["id"] == backend_id)
+            .unwrap();
+        let backend = STANDARD
+            .decode(record["body_base64"].as_str().unwrap())
+            .unwrap();
+        let raw = std::str::from_utf8(&backend).unwrap();
+        assert_eq!(
+            raw.matches(old_location).count(),
+            1,
+            "independent recorded location marker"
+        );
+        for key in ["name", "country", "address"] {
+            assert!(
+                serde_json::from_slice::<serde_json::Value>(&backend)
+                    .unwrap()
+                    .get(key)
+                    .is_none()
+            );
+        }
+        // The expected transformation is constructed from exact text markers and
+        // fixed literal geo fields, independent of OrderedJson::merge_geo/to_bytes.
+        let mut expected = raw.replace(old_location, new_location);
+        assert!(expected.ends_with('}'));
+        expected.pop();
+        expected.push_str(appended);
+        let (gateway, seen) = native_gateway(geo, backend, None, None);
+        let response = gateway.handle(request(route)).await;
+        assert_eq!(response.status(), 200);
+        assert_eq!(
+            to_bytes(response.into_body(), 6 * 1024 * 1024)
+                .await
+                .unwrap()
+                .as_ref(),
+            expected.as_bytes(),
+            "{backend_id}"
+        );
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        assert!(seen[0].0.contains(if backend_id.starts_with("domestic") {
+            "/kma/addr/"
+        } else {
+            "/dsf/coord/"
+        }));
+    }
+}
+
+#[tokio::test]
+async fn independent_kma_and_dsf_merge_adds_missing_fields_and_replaces_in_place() {
+    for (geo,path,backend,expected) in [
+        (oracle_geo("gateway-v000903-domestic"),"/weather/v000903/coord/37.5663,126.9779",br#"{"temperature":20}"#.as_slice(),"{\"temperature\":20,\"name\":\"명동\",\"country\":\"KR\",\"address\":\"서울특별시 중구 명동\",\"location\":{\"lat\":37.566,\"long\":126.978}}"),
+        (geo_world(),"/weather/coord/51.507,-0.128",br#"{"temperature":12}"#.as_slice(),r#"{"temperature":12,"name":"London","country":"GB","address":"London, UK","location":{"lat":51.507,"long":-0.128}}"#),
+        (geo_world(),"/weather/coord/51.507,-0.128",br#"{"country":"XX","temperature":12,"location":{"lat":0,"lon":0},"name":"stale","address":"stale"}"#.as_slice(),r#"{"country":"GB","temperature":12,"location":{"lat":51.507,"long":-0.128},"name":"London","address":"London, UK"}"#),
+    ] {
+        let (gateway,_)=native_gateway(geo,backend.to_vec(),None,None);
+        let response=gateway.handle(request(path)).await;assert_eq!(response.status(),200);
+        assert_eq!(to_bytes(response.into_body(),1000).await.unwrap().as_ref(),expected.as_bytes());
+    }
 }

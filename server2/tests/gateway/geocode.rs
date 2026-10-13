@@ -407,3 +407,224 @@ async fn geocode_malformed_kakao_document_is_terminal_before_supplement() {
     ));
     assert_eq!(peer.state.count.load(Ordering::Acquire), 1);
 }
+
+#[tokio::test]
+async fn review002_in_box_tsushima_keeps_jp_label_and_routes_to_dsf() {
+    use axum::body::to_bytes;
+    use server2::gateway::{
+        BackendDispatcher, BackendHandler, BackendMode, Family, Gateway, GatewayError, OrderedJson,
+        Version,
+    };
+    use tower::ServiceExt;
+    struct Capture(Arc<Mutex<Vec<String>>>);
+    impl BackendHandler for Capture {
+        fn fetch(
+            &self,
+            path: String,
+            _: String,
+            _: tokio::time::Instant,
+        ) -> server2::gateway::BoxFuture<'_, Result<OrderedJson, GatewayError>> {
+            self.0.lock().unwrap().push(path);
+            Box::pin(async { Ok(OrderedJson::parse(b"{}").unwrap()) })
+        }
+    }
+    let peer = stub(
+        vec![ok("kakao.coord.empty")],
+        vec![ok("google.coord.tsushima")],
+    )
+    .await;
+    let geo = service(&peer);
+    let output = geo.coord([34.2, 129.29], "en").await.unwrap();
+    assert_eq!(
+        bytes(&output),
+        r#"{"name":"Tsushima","country":"JP","address":"Tsushima, Nagasaki, Japan","location":{"lat":34.2,"long":129.29}}"#
+    );
+    assert_eq!(peer.state.count.load(Ordering::Acquire), 2);
+    let captured = Arc::new(Mutex::new(Vec::new()));
+    let dispatcher = BackendDispatcher::legacy(&peer.base).unwrap().with_native(
+        Version::V000901,
+        Family::Dsf,
+        Arc::new(Capture(captured.clone())),
+    );
+    dispatcher
+        .set_backend(Version::V000901, Family::Dsf, BackendMode::Native)
+        .unwrap();
+    let gateway = Gateway::new(Arc::new(geo), dispatcher);
+    let response = gateway
+        .router()
+        .oneshot(
+            Request::builder()
+                .uri("/weather/coord/34.2,129.29")
+                .header("accept-language", "en")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        to_bytes(response.into_body(), 2048).await.unwrap().as_ref(),
+        bytes(&output).as_bytes()
+    );
+    assert_eq!(
+        *captured.lock().unwrap(),
+        vec!["/v000901/dsf/coord/34.2,129.29"]
+    );
+    assert_eq!(peer.state.count.load(Ordering::Acquire), 2); // warm reverse result; no extra providers
+}
+
+#[tokio::test]
+async fn review002_google_denied_overlimit_and_zero_are_exact_501_single_attempts() {
+    use axum::body::to_bytes;
+    use server2::gateway::{BackendDispatcher, Gateway};
+    use tower::ServiceExt;
+    for name in [
+        "google.coord.denied",
+        "google.coord.overlimit",
+        "google.coord.zero",
+    ] {
+        let peer = stub(vec![], vec![ok(name), ok(name)]).await;
+        let geo = service(&peer);
+        assert!(matches!(
+            geo.coord([40.748, -73.985], "en").await,
+            Err(GeocodeError::Provider)
+        ));
+        assert_eq!(peer.state.count.load(Ordering::Acquire), 1);
+        let gateway = Gateway::new(
+            Arc::new(geo),
+            BackendDispatcher::legacy(&peer.base).unwrap(),
+        );
+        let response = gateway
+            .router()
+            .oneshot(
+                Request::builder()
+                    .uri("/geocode/v000903/coord/40.748,-73.985")
+                    .header("accept-language", "en")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+        assert_eq!(response.headers()["cache-control"], "no-store");
+        assert_eq!(
+            to_bytes(response.into_body(), 2048).await.unwrap().as_ref(),
+            b"Not Implemented"
+        );
+        assert_eq!(peer.state.count.load(Ordering::Acquire), 2);
+        assert!(
+            peer.state
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .all(|path| path.starts_with("/maps/api/geocode/json?"))
+        );
+    }
+}
+
+#[tokio::test]
+async fn review006_owner_panic_is_terminal_without_permanent_flight() {
+    use server2::geocode::{BoxFuture, ProviderDemand, Quota};
+    struct PanicOnce(AtomicUsize);
+    impl Quota for PanicOnce {
+        fn reserve(&self, _: Vec<ProviderDemand>) -> BoxFuture<'_, Result<(), GeocodeError>> {
+            Box::pin(async move {
+                if self.0.fetch_add(1, Ordering::AcqRel) == 0 {
+                    panic!("injected owner panic");
+                }
+                Ok(())
+            })
+        }
+    }
+    let peer = stub(vec![ok("kakao.coord.seoul")], vec![]).await;
+    let quota = Arc::new(PanicOnce(AtomicUsize::new(0)));
+    let geo = Geocoder::new(config(&peer))
+        .unwrap()
+        .with_quota(quota.clone());
+    assert!(matches!(
+        geo.coord([37.566, 126.978], "ko").await,
+        Err(GeocodeError::Provider)
+    ));
+    assert!(geo.coord([37.566, 126.978], "ko").await.is_ok());
+    assert_eq!(quota.0.load(Ordering::Acquire), 2);
+    assert_eq!(peer.state.count.load(Ordering::Acquire), 1);
+    assert_eq!(geo.active_owners(), 0);
+}
+
+#[test]
+fn configured_kakao_env_child() {
+    let Ok(expectation) = std::env::var("S10_KAKAO_PARSE_CHILD") else {
+        return;
+    };
+    let result = GeocoderConfig::from_env();
+    match expectation.as_str() {
+        "invalid" => assert!(matches!(result, Err(GeocodeError::InvalidConfiguration))),
+        "valid" => assert_eq!(
+            result.unwrap().kakao_keys,
+            vec!["synthetic-kakao-a", "synthetic-kakao-b"]
+        ),
+        "absent" => assert!(result.unwrap().kakao_keys.is_empty()),
+        _ => panic!("invalid test setup"),
+    }
+}
+#[test]
+fn review008_configured_kakao_env_rejects_present_invalid_entries() {
+    let executable = std::env::current_exe().unwrap();
+    for (value, expected) in [
+        (Some("not-json"), "invalid"),
+        (Some(""), "invalid"),
+        (Some("{}"), "invalid"),
+        (Some("null"), "invalid"),
+        (Some("[\"synthetic\",3]"), "invalid"),
+        (Some("[\"\"]"), "invalid"),
+        (
+            Some("[\"synthetic-kakao-a\",\"synthetic-kakao-b\"]"),
+            "valid",
+        ),
+        (None, "absent"),
+    ] {
+        let mut command = std::process::Command::new(&executable);
+        command
+            .env_clear()
+            .env("S10_KAKAO_PARSE_CHILD", expected)
+            .args([
+                "--exact",
+                "geocode::configured_kakao_env_child",
+                "--nocapture",
+            ]);
+        if let Some(value) = value {
+            command.env("GEOCODER_KAKAO_KEYS", value);
+        }
+        let output = command.output().unwrap();
+        assert!(
+            output.status.success(),
+            "strict configured env child failed: {}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+    }
+}
+#[tokio::test]
+async fn review013_mock_trailing_slash_is_normalized_before_request() {
+    let peer = stub(
+        vec![ok("kakao.coord.seoul")],
+        vec![ok("google.coord.newyork")],
+    )
+    .await;
+    let mut options = config(&peer);
+    options.kakao_base_url.push('/');
+    options.google_base_url.push('/');
+    let geo = Geocoder::new(options)
+        .unwrap()
+        .with_quota(Arc::new(MockQuota::new(10)));
+    assert!(geo.coord([37.566, 126.978], "ko").await.is_ok());
+    assert!(geo.coord([40.748, -73.985], "en").await.is_ok());
+    assert!(
+        peer.state
+            .calls
+            .lock()
+            .unwrap()
+            .iter()
+            .all(|value| !value.starts_with("//"))
+    );
+}

@@ -79,10 +79,10 @@ def run(binary):
                 status,_,body=request(base,'/geocode/v000903/addr/'+quote('서울'),headers={'Accept-Language':'ko'});assert status==200,(status,body)
                 print('PASS '+mode+' release HTTP: health, weather merge, ETag304, HEAD, invalidcoords, preflight, address',flush=True)
                 if mode=='mock':
-                    before=Peer.counts.copy();latencies=[]
+                    before=Peer.counts.copy()
                     def one(index):
                         started=time.monotonic();status,_,_=request(base,'/geocode/v000903/coord/'+str(37.7+index/1000)+',127.1',headers={'Accept-Language':'ko'});assert status==200;return (time.monotonic()-started)*1000
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:latencies=list(pool.map(one,[0]*16))
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:list(pool.map(one,[0]*16))
                     delta=Peer.counts['kakao']-before['kakao'];assert delta==1,delta
                     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:distinct=list(pool.map(one,range(1,17)))
                     assert Peer.counts['kakao']-before['kakao']==17

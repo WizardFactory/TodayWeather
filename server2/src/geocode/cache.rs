@@ -37,8 +37,11 @@ impl MemoryCache {
         ))
     }
     pub fn get(&self, key: &LookupKey) -> Option<GeoClient> {
+        self.get_at(key, now_ms())
+    }
+    fn get_at(&self, key: &LookupKey, now: u64) -> Option<GeoClient> {
         let entry = self.0.get(key)?;
-        if !fresh(entry.value.updated_unix_ms, now_ms()) {
+        if !fresh(entry.value.updated_unix_ms, now) {
             drop(entry);
             self.0.remove(key);
             return None;
@@ -72,4 +75,59 @@ pub fn now_ms() -> u64 {
 }
 pub fn fresh(updated: u64, now: u64) -> bool {
     updated != 0 && updated <= now && now - updated <= MONTH_MS
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::geocode::Location;
+
+    #[test]
+    fn review010_reverse_memory_ttl_boundary_expiry_and_future_timestamp() {
+        let cache = MemoryCache::new(4096).unwrap();
+        let key = LookupKey::Coord {
+            lat: 37.566_f64.to_bits(),
+            lon: 126.978_f64.to_bits(),
+            language: "ko".into(),
+        };
+        let updated = MONTH_MS * 2;
+        let geo = GeoClient {
+            location: Some(Location {
+                lat: 37.566,
+                long: 126.978,
+            }),
+            ..GeoClient::default()
+        };
+        cache
+            .0
+            .insert(
+                key.clone(),
+                Entry {
+                    geo: geo.clone(),
+                    updated_unix_ms: updated,
+                },
+                1024,
+            )
+            .unwrap();
+        assert!(fresh(updated, updated + MONTH_MS));
+        assert!(cache.get_at(&key, updated + MONTH_MS).is_some());
+        assert!(!fresh(updated, updated + MONTH_MS + 1));
+        assert!(cache.get_at(&key, updated + MONTH_MS + 1).is_none());
+        assert_eq!(cache.bytes(), 0);
+        cache
+            .0
+            .insert(
+                key.clone(),
+                Entry {
+                    geo,
+                    updated_unix_ms: updated + 1,
+                },
+                1024,
+            )
+            .unwrap();
+        assert!(!fresh(updated + 1, updated));
+        assert!(cache.get_at(&key, updated).is_none());
+        assert_eq!(cache.bytes(), 0);
+        assert!(!fresh(0, updated));
+    }
 }

@@ -198,3 +198,42 @@ fn privacy_error_text_contains_no_query_key_or_coordinate() {
         assert!(!format!("{error:?}").contains("37.566"));
     }
 }
+
+#[tokio::test]
+async fn review006_panicking_address_store_does_not_poison_address_flight() {
+    struct PanicStore(AtomicUsize);
+    impl AddressStore for PanicStore {
+        fn get<'a>(
+            &'a self,
+            _: &'a str,
+        ) -> BoxFuture<'a, Result<Option<AddressProjection>, GeocodeError>> {
+            Box::pin(async move {
+                if self.0.fetch_add(1, Ordering::AcqRel) == 0 {
+                    panic!("injected address store panic");
+                }
+                Ok(None)
+            })
+        }
+        fn put<'a>(
+            &'a self,
+            _: &'a str,
+            _: &'a AddressProjection,
+        ) -> BoxFuture<'a, Result<(), GeocodeError>> {
+            Box::pin(async { Ok(()) })
+        }
+    }
+    let peer = stub(
+        vec![],
+        vec![(200, fixture("google.addr.nocountry"), Duration::ZERO)],
+    )
+    .await;
+    let store = Arc::new(PanicStore(AtomicUsize::new(0)));
+    let geo = service(&peer).with_address_store(store.clone());
+    assert!(matches!(
+        geo.addr("Somewhere", "en").await,
+        Err(GeocodeError::Provider)
+    ));
+    assert!(geo.addr("Somewhere", "en").await.is_ok());
+    assert_eq!(store.0.load(Ordering::Acquire), 2);
+    assert_eq!(geo.active_owners(), 0);
+}
