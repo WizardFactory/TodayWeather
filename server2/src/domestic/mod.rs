@@ -2,11 +2,14 @@
 //! raw-format checks. Produces checked `resolver::Acquisition` groups; it has no route,
 //! scheduler or response assembly (S14/S15) and never stores normalized weather values.
 mod acquire;
+pub mod airkorea;
 pub mod family;
 pub mod format;
 pub mod keys;
 pub mod metrics;
 pub mod publication;
+pub mod riseset;
+pub mod zone;
 use crate::{budget::BudgetError, providers::Disposition, resolver::Acquisition};
 pub use acquire::{DomesticAcquirer, KeyRing};
 use std::fmt;

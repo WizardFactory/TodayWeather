@@ -1,5 +1,6 @@
 use super::{
-    Disposition, ProviderResponse, ProviderTransport, ProviderTransportError, Request, classify,
+    Disposition, ProviderResponse, ProviderTransport, ProviderTransportError, Request,
+    ResponseFormat, classify_format,
 };
 use crate::budget::{BudgetError, BudgetStore, BudgetTransport, Provider, Reservation};
 use std::sync::Arc;
@@ -102,7 +103,11 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
         if match provider {
             Provider::DataGoKr => units != 1,
             Provider::VisualCrossing => !matches!(units, 49 | 25 | 1),
-            Provider::Kakao | Provider::Google => true,
+            Provider::Kakao
+            | Provider::Google
+            | Provider::GoogleAirQuality
+            | Provider::OpenWeather
+            | Provider::Waqi => true,
         } {
             return Err(AcquisitionError::Invalid);
         }
@@ -141,6 +146,31 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
         validator: Arc<W>,
         report: &mut CallReport,
     ) -> Result<AcquisitionOutcome, AcquisitionError> {
+        self.execute_formatted(
+            endpoint,
+            ResponseFormat::DataType,
+            candidates,
+            deadline,
+            validator,
+            report,
+        )
+        .await
+    }
+    /// `execute_reported` for a service that declares another response format (S13a). The
+    /// format selects the appended credential/format parameters and the success codes; the
+    /// admission, funding, retry and rotation contract is unchanged.
+    pub async fn execute_formatted<T: BudgetTransport, W: Validator>(
+        &self,
+        endpoint: reqwest::Url,
+        format: ResponseFormat,
+        candidates: Vec<Candidate<T>>,
+        deadline: Instant,
+        validator: Arc<W>,
+        report: &mut CallReport,
+    ) -> Result<AcquisitionOutcome, AcquisitionError> {
+        if self.provider != Provider::DataGoKr && format != ResponseFormat::DataType {
+            return Err(AcquisitionError::Invalid);
+        }
         if candidates.is_empty()
             || candidates.len() > 2
             || (self.provider == Provider::VisualCrossing && candidates.len() != 1)
@@ -161,7 +191,9 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                 return Err(AcquisitionError::Invalid);
             }
         }
-        if !super::transport::valid_endpoint(&endpoint) {
+        if !super::transport::valid_endpoint(&endpoint)
+            || (self.provider == Provider::DataGoKr && !format.admits(&endpoint))
+        {
             return Err(AcquisitionError::Invalid);
         }
         let mut admission = timeout_at(deadline, self.admission.clone().acquire_owned())
@@ -190,6 +222,7 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                 endpoint: endpoint.clone(),
                 key: ProviderKey(candidates[key].key.0.clone()),
                 provider: self.provider,
+                format,
             };
             let response = match timeout_at(deadline, self.transport.send(&request)).await {
                 Ok(r) => r,
@@ -203,8 +236,13 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                 Err(ProviderTransportError::Response { status }) => {
                     // Incomplete bytes never reach JSON validation or Data/NoData.
                     // Preserve only received HTTP priority, not any partial provider code.
-                    let disposition =
-                        classify(status, &[], self.provider == Provider::DataGoKr, false);
+                    let disposition = classify_format(
+                        status,
+                        &[],
+                        self.provider == Provider::DataGoKr,
+                        false,
+                        format,
+                    );
                     report.settle(AttemptResult::Disposition(disposition));
                     if attempt == 2 || disposition == Disposition::Rejected {
                         return Err(AcquisitionError::Provider(disposition));
@@ -242,8 +280,13 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                 let _slot = slot;
                 let parsed = serde_json::from_slice::<serde_json::Value>(&response.body).ok();
                 let valid = parsed.as_ref().is_some_and(|v| validator.valid(v));
-                let mut disposition =
-                    classify(response.status, &response.body, is_data_go_kr, valid);
+                let mut disposition = classify_format(
+                    response.status,
+                    &response.body,
+                    is_data_go_kr,
+                    valid,
+                    format,
+                );
                 // Only an invalid successful JSON body may be a family no-data envelope.
                 if !valid
                     && disposition == Disposition::Retryable

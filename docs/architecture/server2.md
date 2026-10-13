@@ -1384,8 +1384,8 @@ another call saw rejected.
 Recorded differences: HTTPS instead of HTTP for apis.data.go.kr and KMA web hosts (live KMA
 web HTTPS reachability is unverified), JSON instead of XML, at most one funded retry per page
 instead of later whole-pass retries, and codes 10/12 terminal. AirKorea/KECO, KASI rise/set and
-forecast-zone requests (`returnType`, `_type`, `type=json`) are not ported by S13; warnings
-remain S12. Verification uses recorded and synthetic fixtures with loopback provider and S3
+forecast-zone requests (`returnType`, `_type`, `type=json`) were not ported by S13; S13a adds
+them ([below](#s13a-provider-formats-and-live-world-air-2026-10-13)); warnings remain S12. Verification uses recorded and synthetic fixtures with loopback provider and S3
 peers only; no live provider, quota or AWS behavior is claimed.
 
 ### S11 native world weather and air (2026-10-13)
@@ -1437,7 +1437,8 @@ goldens, including negative coordinates, cell boundaries, date line, poles, DST,
 half-hour zones, missing fields, malformed route inputs, provider failures and WAQI
 air rendering. Restore tests rebuild every recorded 200 weather response from the S3
 test peer with empty memory and providers disabled; the air observation is supplied
-by the same recorded WAQI fixture, because air raw persistence is not implemented.
+by the same recorded WAQI fixture. S13a adds air raw persistence and an S3-only restore of
+the recorded air scenarios ([below](#s13a-provider-formats-and-live-world-air-2026-10-13)).
 
 Known differences and gates: the S10 dispatcher gives a native family one attempt of
 at most 3 seconds, so the world waiter uses that attempt deadline instead of the
@@ -1451,14 +1452,71 @@ and S08 abandons a store block's remainder when a larger reservation needs a new
 block, so a window can be declared exhausted somewhat earlier than legacy. IANA offsets come from bundled
 `chrono-tz` data rather than Node 16 ICU data, and the process zone is UTC as in the
 S02 oracle. Live air acquisition (Google, OpenWeather, WAQI, VC air), its S08 funding
-identities and air raw persistence are moved to [#2729](https://github.com/WizardFactory/TodayWeather/issues/2729)
-by AK (2026-10-13); air raw records will be keyed by provider station or grid, never by
-precise user coordinates. Until then the native default is the legacy no-provider air
-output, with tested rendering for a supplied observation. AK accepted the single native
+identities and air raw persistence were moved to [#2729](https://github.com/WizardFactory/TodayWeather/issues/2729)
+by AK (2026-10-13), with air raw records keyed by provider station or grid, never by
+precise user coordinates. S13a implements the free-phase chain (VC air and the paid phase
+excluded); without `SERVER2_WORLD_AIR` the native default remains the legacy no-provider air
+output. AK accepted the single native
 S10 attempt described above as an intended difference. Cold loads
 read 21 catalogs (at most four at a time) and, for busy cells, up to seven days of
 forecast fetches; this remains a pre-cutover measurement item. No production route,
 AWS resource, live provider or shadow comparison is changed by S11.
+
+### S13a provider formats and live world air (2026-10-13)
+
+[S13a](../../plans/issue-2729.md) extends the S08 transport and ports the remaining domestic
+provider inputs and the overseas air chain. Native families stay off by default.
+
+The funded transport now takes a per-call `ResponseFormat`: `DataType` (`serviceKey`,
+`dataType=JSON`; the S13 default, unchanged), `ReturnType` (`serviceKey`, `returnType=json`;
+AirKorea B552584), `UnderscoreType` (`_type=json`, `ServiceKey`; KASI) and `Type` (`type=json`,
+`ServiceKey`; newsky2). The transport appends these parameters in the legacy order and
+rejects a family query that already carries a credential or format parameter. Success codes
+are per format; only newsky2 also accepts `0000`. `classify` and `execute` keep their S13
+behavior. `budget::Provider` adds `GoogleAirQuality`, `OpenWeather` and `Waqi` funding
+identities, which the shared data.go.kr/VC transport and executor reject.
+
+`server2::domestic` adds AirKorea station (`getCtprvnRltmMesureDnsty`, `ver=1.3`) and sido
+(`getCtprvnMesureSidoLIst`, `searchCondition=HOUR`) observations for the 17 legacy sido
+names (100 rows per page, at most 20 pages and 2,000 rows, one selected key and no rotation),
+KASI `getAreaRiseSetInfo` for the 102 legacy areas, and the newsky2 forecast-zone code list.
+KASI and the zone list rotate keys as #2604 does. A page becomes a record only when
+the legacy checks pass: AirKorea `00`, an `items` array, echoed page numbers, row counts, a
+valid KST data time, a nonblank identity, the requested sido, no duplicate across pages and at
+least one numeric concentration; KASI one item that echoes the area and day and has the 12
+time fields; zone `resultMsg OK` and a complete, duplicate-free `regId` list. Records use
+source `data-go-kr` and kinds `airkorea-station`, `airkorea-sido`, `kasi-area-rise-set` and
+`forecast-zone`. AirKorea `getMinuDustFrcstDspth` and `getMsrstnList` are not ported, because
+legacy still calls them on the retired `openapi.airkorea.or.kr` host; the choice of a host is
+an open decision.
+
+`world::LiveAir` replaces `Unconfigured` when `SERVER2_WORLD_AIR=live-local` (loopback
+providers only) or `restore-local` (stored records only). The air cell is the legacy
+`toFixed(2)` cell, and providers are requested at that cell, never at the user's precise
+coordinate. A request uses an unexpired memory row, then the S3 records of the cell, then
+the chain. One owned task resolves each cell; the 4-second air release does not cancel it.
+The chain follows legacy `FREE_ORDER` (Google, OpenWeather, WAQI, then WAQI again if it was
+not tried). Each provider gets at most one 3-second attempt with no retry. Before HTTP, one
+S08 unit is reserved and consumed in the provider's monthly UTC window.
+OpenWeather also has a rolling-minute cap. A provider is marked down for 10 minutes after
+401, 403 or 429. The first observation that passes `evaluate` for the first requester wins;
+otherwise the last unusable observation is kept. That provider body is published as one
+raw record (sources `air-google`, `air-openweather`, `air-waqi`; kind `current`; key
+`air-<p|n><lat*100>-<p|n><lon*100>`; UTC-day partition) before it serves a request. A row
+lasts 30 minutes from its fetch; a failure or an unpublished body is cached for 2 minutes.
+Each request evaluates the observation with its own coordinate and time and renders it with
+the S11 code. The OpenWeather minute slot is taken together with its check, before funding.
+The local runtime gives weather, air and budget S3 requests one shared admission of 12
+in-flight requests (`BoundedS3`), and an air store reads at most two catalogs at a time. The S11 oracle air scenarios match the legacy bytes through the live chain and
+again from S3 alone with providers disabled.
+
+Recorded differences: the cell coordinate replaces the first requester's precise coordinate;
+an S08 reservation that fails closed replaces the legacy Mongo counter, which allowed calls
+after a read failure. Down markers and the OpenWeather minute window are kept per process
+instead of in shared Mongo. A body that is not published is not a success. KASI and newsky2
+use HTTPS. The paid phase (legacy default off) and Visual Crossing air are not ported. Live
+HTTPS reachability of KASI and newsky2, real quotas and live provider shapes beyond the
+recorded or synthetic fixtures are unverified.
 
 ### S14 legacy history and demand-gated capture (2026-10-13)
 

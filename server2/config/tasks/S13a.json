@@ -1,0 +1,51 @@
+{
+  "task": "S13a",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2729",
+  "server2_paths": [
+    "server2/config/tasks/S13a.json",
+    "server2/src/budget/model.rs",
+    "server2/src/providers/mod.rs",
+    "server2/src/providers/transport.rs",
+    "server2/src/providers/acquisition.rs",
+    "server2/src/providers/rejection.rs",
+    "server2/src/domestic/mod.rs",
+    "server2/src/domestic/family.rs",
+    "server2/src/domestic/acquire.rs",
+    "server2/src/domestic/airkorea.rs",
+    "server2/src/domestic/riseset.rs",
+    "server2/src/domestic/zone.rs",
+    "server2/src/world/mod.rs",
+    "server2/src/world/air.rs",
+    "server2/src/world/air_chain.rs",
+    "server2/src/world/air_store.rs",
+    "server2/src/world/air_transport.rs",
+    "server2/src/world/runtime.rs",
+    "server2/tests/formats.rs",
+    "server2/tests/formats/",
+    "server2/tests/air.rs",
+    "server2/tests/air/"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2729.md",
+      "category": "documentation",
+      "reason": "S13a governing intent record; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2729.md",
+      "category": "documentation",
+      "reason": "S13a governing specification; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2729.md",
+      "category": "documentation",
+      "reason": "S13a governing plan and scenarios; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S13a provider-format/air section and update S11/S13 sentences that say these items are not ported"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2729#issuecomment-6143039351"
+}

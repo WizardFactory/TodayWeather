@@ -2,6 +2,9 @@
 //! Raw Visual Crossing bodies per legacy 0.02-degree cell are the only persisted weather
 //! input; DsfForecast records, current/day views and the response are derived on read.
 pub mod air;
+pub mod air_chain;
+pub mod air_store;
+pub mod air_transport;
 pub mod assemble;
 pub mod engine;
 pub mod i18n;
@@ -14,7 +17,14 @@ pub mod transport;
 pub mod units;
 pub mod vc;
 
-pub use air::{AirOutcome, AirSource, RecordedWaqi, Unconfigured};
+pub use air::{AirOutcome, AirProvider, AirSource, RecordedWaqi, Unconfigured};
+pub use air_chain::{
+    AirConfig, AirConfigError, AirFunding, AirMetrics, AirProviderConfig, LiveAir, NoFunding,
+};
+pub use air_store::{AirCell, AirRecord, AirStore, BoundedS3, CatalogAirStore, MemoryAirStore};
+pub use air_transport::{
+    AirHttpError, AirHttpRequest, AirHttpResponse, AirTransport, HttpAirTransport,
+};
 pub use engine::{Clock, Failure, FixedClock, SystemClock, World, WorldConfig};
 pub use source::{Disabled, Eligibility, FundedVc, VcError, VcFunding, VcSource};
 pub use store::{CatalogWorldStore, MemoryWorldStore, RawFetch, StoreError, WorldStore};
