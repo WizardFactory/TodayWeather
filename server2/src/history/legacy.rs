@@ -484,13 +484,16 @@ fn scalar(v: &Value) -> bool {
         _ => true,
     }
 }
+/// `_id` must be an ObjectId and `__v` a number wherever they appear.
+fn metadata_ok(o: &serde_json::Map<String, Value>) -> bool {
+    o.get("_id").is_none_or(oid) && o.get("__v").is_none_or(|v| ext_number(v).is_some())
+}
 fn row_ok(row: &Value, fields: &[&str]) -> bool {
     row.as_object().is_some_and(|o| {
         only_keys(o, fields)
-            && o.iter().all(|(k, v)| match k.as_str() {
-                "_id" => oid(v),
-                _ => scalar(v),
-            })
+            && metadata_ok(o)
+            && o.iter()
+                .all(|(k, v)| matches!(k.as_str(), "_id" | "__v") || scalar(v))
     })
 }
 /// Any JSON value whose objects, at every depth, have unique member names. A repeated name
@@ -600,6 +603,7 @@ fn validate_document(kind: LegacyKind, key: ExportKey, doc: &[u8]) -> Result<(),
         let daily_ok = o.get("dailySource").is_none_or(|d| {
             d.as_object().is_some_and(|d| {
                 only_keys(d, &["pubDate", "rows"])
+                    && metadata_ok(d)
                     && d.get("pubDate").is_none_or(Value::is_string)
                     && d.get("rows").is_none_or(|r| {
                         r.as_array()
@@ -647,13 +651,16 @@ fn ext_number(v: &Value) -> Option<f64> {
 /// Extended JSON dates: `{"$date":ISO}`, `{"$date":{"$numberLong":ms}}` or `{"$date":ms}`.
 fn ext_date_ms(v: &Value) -> Option<i64> {
     let inner = v.as_object().filter(|o| o.len() == 1)?.get("$date")?;
-    match inner {
-        Value::String(s) => parse_iso(s),
-        Value::Number(n) => n.as_i64(),
-        Value::Object(o) if o.len() == 1 => o.get("$numberLong")?.as_str()?.parse().ok(),
-        _ => None,
-    }
+    let ms = match inner {
+        Value::String(s) => parse_iso(s)?,
+        Value::Number(n) => n.as_i64()?,
+        Value::Object(o) if o.len() == 1 => o.get("$numberLong")?.as_str()?.parse().ok()?,
+        _ => return None,
+    };
+    (0..=MAX_INSTANT_MS).contains(&ms).then_some(ms)
 }
+/// Last instant whose KST wall clock is still a supported publication (9999-12-31 23:59 KST).
+pub const MAX_INSTANT_MS: i64 = 253_402_268_399_999;
 /// `YYYY-MM-DDTHH:MM:SS(.f{1,9})?(Z|±HH:MM)` to UTC milliseconds.
 pub fn parse_iso(s: &str) -> Option<i64> {
     if !s.is_ascii() {
@@ -715,7 +722,8 @@ pub fn parse_iso(s: &str) -> Option<i64> {
     )
     .ok()?;
     let utc = time::PrimitiveDateTime::new(date, clock).assume_utc();
-    Some(utc.unix_timestamp() * 1000 + millis - offset_min * 60_000)
+    let ms = utc.unix_timestamp() * 1000 + millis - offset_min * 60_000;
+    (0..=MAX_INSTANT_MS).contains(&ms).then_some(ms)
 }
 /// Canonical `YYYY-MM-DDTHH:MM:SS.mmmZ` (the converter's form).
 pub fn format_iso(ms: i64) -> String {
@@ -732,12 +740,16 @@ pub fn format_iso(ms: i64) -> String {
         ms.rem_euclid(1000)
     )
 }
-fn kst_publication(ms: i64) -> Publication {
-    schedule::from_ms(ms)
+fn kst_publication(ms: i64) -> Result<Publication, LegacyError> {
+    if !(0..=MAX_INSTANT_MS).contains(&ms) {
+        return Err(LegacyError::Invalid("instant outside the supported range"));
+    }
+    Ok(schedule::from_ms(ms))
 }
 /// Catalog partition of an export instant: KST `YYYYMMDD-HHMM`.
-pub fn partition(exported_at_ms: u64) -> String {
-    kst_publication(exported_at_ms as i64).partition()
+pub fn partition(exported_at_ms: u64) -> Result<String, LegacyError> {
+    let ms = i64::try_from(exported_at_ms).map_err(|_| LegacyError::Invalid("instant"))?;
+    Ok(kst_publication(ms)?.partition())
 }
 pub fn catalog_id(
     kind: LegacyKind,
@@ -748,7 +760,7 @@ pub fn catalog_id(
         source: SOURCE.into(),
         kind: kind.kind().into(),
         key_sha256: sha256(&key.provider_key().canonical_bytes()?),
-        partition: partition(exported_at_ms),
+        partition: partition(exported_at_ms)?,
     };
     id.validate()?;
     Ok(id)
@@ -760,7 +772,9 @@ pub fn acquisitions(
     limits: &CatalogLimits,
 ) -> Result<Vec<Acquisition>, LegacyError> {
     let exported = seed.manifest.exported_at_ms;
-    let publication = kst_publication(exported as i64);
+    let publication = kst_publication(
+        i64::try_from(exported).map_err(|_| LegacyError::Invalid("export instant"))?,
+    )?;
     let mut out = Vec::with_capacity(seed.groups.len());
     for g in &seed.groups {
         let mut body = Vec::with_capacity(seed.manifest_line.len() + g.line.len() + 2);
@@ -917,7 +931,7 @@ pub fn current_rows(kind: LegacyKind, documents: &[Vec<u8>]) -> Result<Vec<u8>, 
                     )
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            let pub_date = kst_publication(pub_ms).compact();
+            let pub_date = kst_publication(pub_ms)?.compact();
             Ok(format!(
                 "{{\"pubDate\":\"{pub_date}\",\"ret\":[{}]}}",
                 rows.join(",")
@@ -1007,6 +1021,27 @@ mod tests {
         // Multibyte input never slices inside a character.
         assert_eq!(parse_iso("2026-09-24T02:10:00+\u{e9}\u{e9}x"), None);
         assert_eq!(parse_iso("2026-09-24T02:10:00.\u{e9}Z"), None);
+    }
+    #[test]
+    fn nested_metadata_cannot_carry_identifiers() {
+        let key = ExportKey::Grid(Grid::new(60, 127).unwrap());
+        let doc = |daily: &str, row: &str| {
+            format!(
+                r#"{{"mCoord":{{"mx":60,"my":127}},"pubDate":"202609240900","shortData":[{{"date":"20260924","time":"0900"{row}}}],"dailySource":{{"pubDate":"202609240500","rows":[]{daily}}}}}"#
+            )
+        };
+        assert!(validate_document(LegacyKind::ShortV1, key, doc("", "").as_bytes()).is_ok());
+        for (daily, row) in [
+            (r#","__v":{"deviceId":"d-1"}"#, ""),
+            (r#","_id":"token""#, ""),
+            ("", r#","__v":"token""#),
+            ("", r#","_id":{"$oid":"not-an-object-id-value!"}"#),
+        ] {
+            assert!(
+                validate_document(LegacyKind::ShortV1, key, doc(daily, row).as_bytes()).is_err(),
+                "{daily}{row}"
+            );
+        }
     }
     #[test]
     fn compact_scanner_splits_exact_values() {

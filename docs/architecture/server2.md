@@ -1493,7 +1493,8 @@ the runtime owner starts `CaptureRunner::run`.
   the anchor and within its one-day retention. Station data and ASOS never cover a grid hour; a
   legacy deployment with `ASOS_HISTORY_READ_ENABLED` keeps every request on legacy. The capture
   index is rebuilt from published S06 catalogs only (per-key monthly catalog listings and the
-  national day catalogs), so an interrupted raw upload never counts; an incomplete listing of
+  national day catalogs, each catalog read and validated), so an interrupted raw upload or an
+  empty or corrupt catalog never counts; an incomplete listing of
   any required capture, minute or export kind forwards to legacy.
 - **Legacy export**: `server2/tools/migration/export_history_seeds.py` converts one offline
   `mongoexport` file (one document per line) of `kma.town.current|shortest|short`,
@@ -1507,7 +1508,7 @@ the runtime owner starts `CaptureRunner::run`.
 Estimated cost (derived from legacy code, not measured): legacy collectors kept during
 coexistence call data.go.kr about 24N current, 48N ultra-short and 16N short per day plus
 past-current refills (N about 2,033 grids). server2 adds about 64 funded calls per demand cell per
-day (24 + 24 + 16 pages), at most 53 backfill calls when a cell becomes active, and about 768
+day (24 + 24 + 16 pages), at most 53 backfill acquisitions when a cell becomes active (about 60 page calls with two-page short forecasts; worst-case charge 530 attempts), and about 768
 keyless KMA pages per day while any demand exists. D = 1,000 demand cells adds about 64,000 funded
 calls and about 200,000 S3 PUT per day (raw, descriptor and catalog versions). The AWS-minute day
 catalog grows to 720 entries, so its retained catalog versions dominate version storage. Real

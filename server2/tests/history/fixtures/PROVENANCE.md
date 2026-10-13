@@ -11,6 +11,7 @@ All fixtures are synthetic. None comes from a production database, provider or u
 | `expected-current-v1.json` | `JSON.stringify` of the legacy `ControllerTown._getTownDataFromDB` callback value for grid 60/127. |
 | `bad-array.json`, `bad-personal.jsonl`, `bad-row-field.jsonl` | Rejection cases: `--jsonArray` output, a document with coordinates, and a row with a device identifier. |
 | `bad-duplicate-key.jsonl`, `bad-station-id.jsonl` | Rejection cases: a repeated member name hiding a device identifier, and a station id outside 32 bits. |
+| `bad-daily-metadata.jsonl`, `bad-date-range.jsonl` | Rejection cases: identifiers hidden in v1 `dailySource.__v`, and a `pubDate` outside the supported instant range. |
 
 The two expected files were written by hand from the legacy read code and then confirmed by
 running the legacy functions at 47a96078 over these fixtures with stubbed models (evidence kept

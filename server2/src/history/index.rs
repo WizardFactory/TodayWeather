@@ -113,14 +113,47 @@ impl CaptureIndex {
                     index.mark_incomplete(family.kind(), ALL_DATES);
                     continue;
                 };
+                let mut wanted = Vec::new();
                 for key in keys {
                     let Some(publication) = partition_publication(&prefix, &key) else {
                         report.unparsed += 1;
                         continue;
                     };
                     if publication >= capture_from {
-                        index.insert(family, Target::Cell(*grid), publication);
-                        report.captured += 1;
+                        wanted.push(publication);
+                    }
+                }
+                // Each listed catalog is read and validated; only an entry for exactly that
+                // publication counts. Empty, corrupt or mismatched catalogs stay missing.
+                for batch in wanted.chunks(config.concurrency) {
+                    let ids: Vec<CatalogId> = batch
+                        .iter()
+                        .map(|p| CatalogId {
+                            source: family.source().into(),
+                            kind: family.kind().into(),
+                            key_sha256: sha.clone(),
+                            partition: p.partition(),
+                        })
+                        .collect();
+                    let reads = super::join_all(
+                        ids.iter()
+                            .map(|id| read_entries(transport, id, &limits))
+                            .collect(),
+                    )
+                    .await;
+                    report.catalogs += ids.len();
+                    for (publication, read) in batch.iter().zip(reads) {
+                        let found = read?;
+                        if found
+                            .iter()
+                            .flatten()
+                            .any(|e| period_publication(&e.identity.period) == Some(*publication))
+                        {
+                            index.insert(family, Target::Cell(*grid), *publication);
+                            report.captured += 1;
+                        } else {
+                            report.invalid_catalogs += 1;
+                        }
                     }
                 }
             }
@@ -214,6 +247,8 @@ pub struct RebuildConfig {
     /// Days of legacy export snapshots kept (station hourly retention plus today).
     pub export_days: u32,
     pub pages_per_prefix: usize,
+    /// Catalog reads in flight at once (the S3 peer and host share a connection bound).
+    pub concurrency: usize,
 }
 impl Default for RebuildConfig {
     fn default() -> Self {
@@ -221,6 +256,7 @@ impl Default for RebuildConfig {
             capture_days: 10,
             export_days: 11,
             pages_per_prefix: 4,
+            concurrency: 8,
         }
     }
 }
@@ -231,6 +267,8 @@ pub struct RebuildReport {
     pub captured: usize,
     pub exports: usize,
     pub catalogs: usize,
+    /// Listed per-cell catalogs that were empty, corrupt or held another publication.
+    pub invalid_catalogs: usize,
     pub unparsed: usize,
     /// Kind/date listings that exceeded their page bound.
     pub incomplete: Vec<(String, u32)>,
@@ -293,6 +331,13 @@ async fn entries<T: IndexListing>(
     report: &mut RebuildReport,
 ) -> Result<Option<Vec<Envelope>>, Error> {
     report.catalogs += 1;
+    read_entries(transport, id, limits).await
+}
+async fn read_entries<T: IndexListing>(
+    transport: &T,
+    id: &CatalogId,
+    limits: &CatalogLimits,
+) -> Result<Option<Vec<Envelope>>, Error> {
     match transport.get_control(&id.key(), limits.control_bytes).await {
         Ok(object) => Ok(Catalog::from_bytes(&object.body, id, limits)
             .ok()

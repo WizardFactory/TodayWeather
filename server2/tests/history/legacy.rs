@@ -113,6 +113,18 @@ fn legacy_converter_rejects_arrays_foreign_collections_and_personal_fields() {
             "duplicate member name",
         ),
         ("KmaStnMinute2", "2.0", "bad-station-id.jsonl", "32-bit"),
+        (
+            "short",
+            "1.0",
+            "bad-daily-metadata.jsonl",
+            "invalid __v in dailySource",
+        ),
+        (
+            "kma.town.current",
+            "2.0",
+            "bad-date-range.jsonl",
+            "fcsDate and pubDate",
+        ),
     ] {
         let out = temp_path(&format!("reject-{collection}-{input}"));
         let _ = std::fs::remove_file(&out);
@@ -133,6 +145,23 @@ fn legacy_converter_rejects_arrays_foreign_collections_and_personal_fields() {
         assert!(stderr.contains(needle), "{needle} not in {stderr}");
         assert!(!Path::new(&out).exists(), "no output on failure");
     }
+    // An export instant whose KST date leaves the supported range is refused.
+    let out = temp_path("reject-exported-range");
+    let input_path = fixture_path("kma.town.current.v2.jsonl");
+    let (code, _, stderr) = convert(&[
+        "--collection",
+        "kma.town.current",
+        "--db-version",
+        "2.0",
+        "--exported-at",
+        "9999-12-31T23:59:00Z",
+        "--input",
+        input_path.to_str().unwrap(),
+        "--output",
+        out.to_str().unwrap(),
+    ]);
+    assert_eq!(code, 2, "{stderr}");
+    assert!(stderr.contains("supported range"), "{stderr}");
 }
 
 #[test]
@@ -169,6 +198,15 @@ fn legacy_seed_parser_rejects_tampered_seeds() {
             r#""t1h":{"deviceId":"PRIVATE"},"t1h":21.3"#,
             1,
         ),
+        // Out-of-range instants are refused before any KST conversion.
+        good.replacen(
+            r#""pubDate":{"$date":"2026-09-24T01:00:00Z"}"#,
+            r#""pubDate":{"$date":{"$numberLong":"9223372036854775807"}}"#,
+            1,
+        ),
+        good.replacen(EXPORTED, "9999-12-31T23:59:00.000Z", 1),
+        // Metadata fields must hold their legacy types.
+        good.replacen(r#""__v":0"#, r#""__v":"token""#, 1),
     ] {
         assert!(tampered != good);
         assert!(
@@ -220,9 +258,9 @@ fn legacy_records_carry_identity_and_exact_seed_lines() {
     );
     assert_eq!(
         acquisitions[0].declaration.partitions[0].partition,
-        legacy::partition(EXPORTED_MS)
+        legacy::partition(EXPORTED_MS).unwrap()
     );
-    assert_eq!(legacy::partition(EXPORTED_MS), "20260924-1110");
+    assert_eq!(legacy::partition(EXPORTED_MS).unwrap(), "20260924-1110");
     assert_eq!(
         LegacyKind::from_collection("KmaStnMinute2"),
         Some(LegacyKind::StnMinute2)

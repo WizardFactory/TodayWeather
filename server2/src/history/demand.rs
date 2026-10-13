@@ -17,7 +17,8 @@ pub const PREFIX: &str = "state/demand/grid/";
 pub const REQUEST_PREFIX: &str = "state/demand/grid/request/";
 pub const PUSH_KEY: &str = "state/demand/grid/push.json";
 pub const REQUEST_BYTES: usize = 4096;
-pub const PUSH_BYTES: usize = 512 * 1024;
+/// Fits the largest valid aggregate (8,192 cells with 15-digit times, about 790 KB).
+pub const PUSH_BYTES: usize = 1024 * 1024;
 pub const PUSH_CELLS: usize = 8192;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -311,6 +312,9 @@ impl<T: DemandTransport> DemandStore<T> {
             cells,
         };
         let body = serde_json::to_vec(&record).expect("push serialization");
+        if body.len() > PUSH_BYTES {
+            return Err(DemandError::Invalid("push demand aggregate size"));
+        }
         for _ in 0..self.config.attempts {
             let condition = match self.transport.get_demand(PUSH_KEY).await? {
                 None => WriteCondition::Absent,
@@ -398,15 +402,11 @@ impl<T: DemandTransport> DemandStore<T> {
             entry.0 = entry.0.max(last);
             entry.1 = Some(entry.1.map_or(last, |d| d.max(last)));
         }
-        match push {
-            Some(record) => {
-                m.push_snapshot = Some(record.last_demand_ms);
-                m.push = record.cells;
-            }
-            None => {
-                m.push_snapshot = None;
-                m.push = Vec::new();
-            }
+        drop(m);
+        // Monotonic: a concurrent replace_push that completed after this read is never undone,
+        // and a missing or invalid object never clears demand already held in memory.
+        if let Some(record) = push {
+            self.adopt_push(record);
         }
         Ok(report)
     }

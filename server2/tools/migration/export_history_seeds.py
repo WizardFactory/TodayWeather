@@ -66,6 +66,9 @@ def unique_pairs(pairs):
     return dict(pairs)
 
 
+MAX_INSTANT_MS = 253402268399999  # 9999-12-31 23:59:59.999 KST, the last supported publication
+
+
 def parse_iso(text):
     match = ISO.match(text) if isinstance(text, str) else None
     if not match:
@@ -78,7 +81,10 @@ def parse_iso(text):
     millis = int((frac or '0').ljust(3, '0')[:3])
     offset = 0 if zone == 'Z' else (int(zone[1:3]) * 60 + int(zone[4:6])) * (1 if zone[0] == '+' else -1)
     epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
-    return int((instant - epoch).total_seconds()) * 1000 + millis - offset * 60000
+    ms = int((instant - epoch).total_seconds()) * 1000 + millis - offset * 60000
+    if not 0 <= ms <= MAX_INSTANT_MS:
+        raise Invalid(f'instant outside the supported range: {text!r}')
+    return ms
 
 
 def format_iso(ms):
@@ -112,14 +118,16 @@ def date_ms(value):
     inner = value['$date']
     try:
         if isinstance(inner, str):
-            return parse_iso(inner)
-        if isinstance(inner, int) and not isinstance(inner, bool):
-            return inner
-        if isinstance(inner, dict) and len(inner) == 1 and isinstance(inner.get('$numberLong'), str):
-            return int(inner['$numberLong'])
+            ms = parse_iso(inner)
+        elif isinstance(inner, int) and not isinstance(inner, bool):
+            ms = inner
+        elif isinstance(inner, dict) and len(inner) == 1 and isinstance(inner.get('$numberLong'), str):
+            ms = int(inner['$numberLong'])
+        else:
+            return None
     except (Invalid, ValueError):
         return None
-    return None
+    return ms if 0 <= ms <= MAX_INSTANT_MS else None
 
 
 def oid(value):
@@ -142,15 +150,21 @@ def only(obj, allowed, where):
             raise Invalid(f'unknown field {key!r} in {where}')
 
 
+def metadata(value, where):
+    """`_id` must be an ObjectId and `__v` a number wherever they appear."""
+    if '_id' in value and not oid(value['_id']):
+        raise Invalid(f'invalid _id in {where}')
+    if '__v' in value and number(value['__v']) is None:
+        raise Invalid(f'invalid __v in {where}')
+
+
 def row(value, allowed, where):
     if not isinstance(value, dict):
         raise Invalid(f'{where} must be an object')
     only(value, allowed, where)
+    metadata(value, where)
     for key, item in value.items():
-        if key == '_id':
-            if not oid(item):
-                raise Invalid(f'invalid _id in {where}')
-        elif not scalar(item):
+        if key not in ('_id', '__v') and not scalar(item):
             raise Invalid(f'non-scalar field {key!r} in {where}')
 
 
@@ -193,6 +207,7 @@ def validate(collection, doc):
             if not isinstance(daily, dict):
                 raise Invalid('dailySource must be an object')
             only(daily, ['pubDate', 'rows'], 'dailySource')
+            metadata(daily, 'dailySource')
             if 'pubDate' in daily and not isinstance(daily['pubDate'], str):
                 raise Invalid('dailySource pubDate must be a string')
             if 'rows' in daily:

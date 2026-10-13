@@ -290,6 +290,50 @@ async fn demand_push_snapshots_never_move_backwards() {
 }
 
 #[tokio::test]
+async fn demand_rebuild_never_rolls_push_memory_back() {
+    let t = Arc::new(MemoryDemand::default());
+    let s = store(&t);
+    s.replace_push(&[g(98, 76)], T0 + HOUR, 25 * HOUR)
+        .await
+        .unwrap();
+    // A rebuild that reads an older aggregate (a stale read racing a newer replace) keeps memory.
+    let e = T0 + 25 * HOUR;
+    t.plant(
+        PUSH_KEY,
+        format!(r#"{{"schema":1,"lastDemandMs":{T0},"cells":[{{"grid":{{"nx":60,"ny":127}},"lastDemandMs":{T0},"expiresMs":{e}}}]}}"#).as_bytes(),
+    );
+    s.rebuild().await.unwrap();
+    assert_eq!(s.active(T0 + 2 * HOUR), BTreeSet::from([g(98, 76)]));
+    // A missing object never clears push demand already held.
+    t.objects.lock().unwrap().remove(PUSH_KEY);
+    s.rebuild().await.unwrap();
+    assert_eq!(s.active(T0 + 2 * HOUR), BTreeSet::from([g(98, 76)]));
+}
+
+#[tokio::test]
+async fn demand_push_aggregate_at_the_cell_limit_round_trips() {
+    let t = Arc::new(MemoryDemand::default());
+    let s = store(&t);
+    let cells: Vec<Grid> = (1..=149u16)
+        .flat_map(|nx| (1..=253u16).map(move |ny| g(nx, ny)))
+        .take(8192)
+        .collect();
+    let big = 253_402_268_000_000 - DEMAND_WINDOW_MS;
+    s.replace_push(&cells, big, DEMAND_WINDOW_MS).await.unwrap();
+    assert!(t.raw(PUSH_KEY).unwrap().len() > 512 * 1024);
+    let fresh = store(&t);
+    let report = fresh.rebuild().await.unwrap();
+    assert_eq!((report.push_cells, report.invalid), (8192, 0));
+    // One more cell is refused before any write.
+    let mut over = cells.clone();
+    over.push(g(149, 253));
+    assert!(matches!(
+        s.replace_push(&over, big + 1, HOUR).await,
+        Err(DemandError::Invalid(_))
+    ));
+}
+
+#[tokio::test]
 async fn demand_rebuild_after_replacement_restores_the_active_set() {
     let t = Arc::new(MemoryDemand::paged(2));
     let s = store(&t);

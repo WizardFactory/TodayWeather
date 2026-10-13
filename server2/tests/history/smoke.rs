@@ -17,7 +17,9 @@ use server2::history::legacy::{self, ExportKey, LegacyKind};
 use server2::history::metrics::HistoryMetrics;
 use server2::history::schedule::{self, Family, Target};
 use server2::providers::{HttpProviderTransport, HttpPublicTransport, ProviderKey};
-use server2::storage::{CatalogLimits, CatalogStore, Limits, RawRecordStore};
+use server2::storage::{
+    CatalogLimits, CatalogStore, CatalogTransport, Limits, RawRecordStore, WriteCondition,
+};
 use std::{
     collections::{BTreeMap, BTreeSet},
     sync::{Arc, Mutex},
@@ -149,6 +151,30 @@ async fn smoke_demand_capture_rebuild_coverage_and_legacy_import() {
         .await
         .unwrap();
 
+    // Damaged catalogs: an empty catalog for 11:00 and corrupt JSON for 10:00 never count.
+    let wire = peer.transport();
+    let empty =
+        server2::history::coverage::catalog_id(Family::Current, target_of(cell), p(20261013, 1100))
+            .unwrap();
+    let body = server2::storage::Catalog::empty(empty.clone())
+        .bytes(&CatalogLimits::default())
+        .unwrap();
+    assert_eq!(
+        wire.put_control(&empty.key(), &body, &WriteCondition::Absent)
+            .await
+            .unwrap(),
+        200
+    );
+    let corrupt =
+        server2::history::coverage::catalog_id(Family::Current, target_of(cell), p(20261013, 1000))
+            .unwrap();
+    assert_eq!(
+        wire.put_control(&corrupt.key(), b"{}", &WriteCondition::Absent)
+            .await
+            .unwrap(),
+        200
+    );
+
     // Legacy export seed for the same grid, imported into the peer.
     let exported = "2026-10-13T04:00:00.000Z";
     let out = temp_path("smoke-export");
@@ -192,6 +218,15 @@ async fn smoke_demand_capture_rebuild_coverage_and_legacy_import() {
     assert!(index.has(Family::Short, target, p(20261013, 1400)));
     // Raw presence alone is not publication: the orphan is not counted as captured.
     assert!(!index.has(Family::Current, target, p(20261013, 1200)));
+    assert!(
+        !index.has(Family::Current, target, p(20261013, 1100)),
+        "empty catalog"
+    );
+    assert!(
+        !index.has(Family::Current, target, p(20261013, 1000)),
+        "corrupt catalog"
+    );
+    assert_eq!(rebuild.invalid_catalogs, 2);
     assert_eq!(index.minutes().collect::<Vec<_>>(), captured_minute);
     assert_eq!(
         index.exports(LegacyKind::TownCurrent, ExportKey::Grid(cell)),
@@ -259,6 +294,9 @@ async fn smoke_demand_capture_rebuild_coverage_and_legacy_import() {
     assert_eq!(&minute[0].records()[0].bytes[..], &minute_page[..]);
 }
 
+fn target_of(cell: server2::history::Grid) -> Target {
+    Target::Cell(cell)
+}
 fn schedule_coverage(request: &HistoryRequest, index: &CaptureIndex) -> Coverage {
     server2::history::coverage::coverage(request, index, &CoverageConfig::default())
 }

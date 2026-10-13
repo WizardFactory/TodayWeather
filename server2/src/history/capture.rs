@@ -364,7 +364,7 @@ impl<S: CaptureSource, P: Publisher, D: DemandTransport> CaptureRunner<S, P, D> 
             if batch.is_empty() {
                 break;
             }
-            for (item, outcome, period) in join_all(batch).await {
+            for (item, outcome, period) in super::join_all(batch).await {
                 match outcome {
                     Outcome::Published => {
                         r.published += 1;
@@ -497,27 +497,4 @@ impl<S: CaptureSource, P: Publisher, D: DemandTransport> CaptureRunner<S, P, D> 
 enum Request {
     Funded(DataGoKrRequest),
     Web(WebRequest),
-}
-/// Await every future, polling them concurrently (bounded by the caller's batch size).
-async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
-    let mut futures: Vec<std::pin::Pin<Box<F>>> = futures.into_iter().map(Box::pin).collect();
-    let mut out: Vec<Option<F::Output>> = futures.iter().map(|_| None).collect();
-    std::future::poll_fn(|cx| {
-        let mut pending = false;
-        for (f, slot) in futures.iter_mut().zip(out.iter_mut()) {
-            if slot.is_none() {
-                match f.as_mut().poll(cx) {
-                    std::task::Poll::Ready(v) => *slot = Some(v),
-                    std::task::Poll::Pending => pending = true,
-                }
-            }
-        }
-        if pending {
-            std::task::Poll::Pending
-        } else {
-            std::task::Poll::Ready(())
-        }
-    })
-    .await;
-    out.into_iter().flatten().collect()
 }

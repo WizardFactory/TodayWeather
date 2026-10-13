@@ -38,7 +38,8 @@ Durable demand lives only under `state/demand/grid/`:
   `push.json`. The active set at `now` is every valid request record and push cell with
   `expiresMs > now`.
 - The wire adapter for `HttpS3Transport` accepts only `state/demand/grid/` keys, JSON bodies up to
-  4 KiB (request) or 512 KiB (push), fully consumed acknowledgments and bounded LIST XML.
+  4 KiB (request) or 1 MiB (push; the largest valid aggregate is checked before writing), fully
+  consumed acknowledgments and bounded LIST XML. A rebuild only adopts a newer push snapshot.
 
 ## Capture schedule (AC3)
 
@@ -84,7 +85,8 @@ observation instants, and legacy export snapshots `(legacy kind, key, exportedAt
 updated after each publish and rebuilt after a replacement from published S06 catalogs only:
 per-key monthly listings of `index/v2/{source}/{kind}/{key}/{YYYYMM}` for per-cell and legacy
 kinds (legacy catalogs are read for exact export instants) and the national KST-day catalogs.
-A raw object without a catalog entry never counts. A listing beyond its page bound or an
+Every listed catalog is read (eight at a time) and counts only with an entry for exactly that
+publication; a raw object without a catalog entry, an empty or a corrupt catalog never counts. A listing beyond its page bound or an
 unreadable catalog marks the kind incomplete.
 
 `coverage(request, index)` for `{grid, station, at}`:
@@ -150,7 +152,7 @@ Derived from legacy code and docs, not measured. N = 2,033 grids, D = demand cel
 Legacy during coexistence keeps current 24N, ultra-short 48N, short 16N, past-current up to
 23N per pass, RSS about 8N (KMA web) and national pages about 900/day. server2 capture per demand
 cell per day: 24 current + 24 shortest + 8 short publications (16 calls at 2 pages) = 64 funded
-calls plus at most 23+23+7 backfill on new or resumed demand; national pages about 768/day while
+calls plus at most 23+23+7 backfill acquisitions (about 60 page calls; worst-case charge 530 attempts) on new or resumed demand; national pages about 768/day while
 any demand exists. Each acquisition writes one raw object per page, one descriptor and one
 catalog version (about 3 PUT), so D = 1,000 adds about 64,000 funded calls and roughly 200,000
 S3 PUT per day. Real quotas, demand counts and S3 prices remain to be measured before cutover.
