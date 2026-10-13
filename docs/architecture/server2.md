@@ -1438,7 +1438,7 @@ Byte parity is tested against pinned Node v16.20.2 legacy-oracle recordings
 goldens, including negative coordinates, cell boundaries, date line, poles, DST,
 half-hour zones, missing fields, malformed route inputs, provider failures and WAQI
 air rendering. Restore tests rebuild every recorded 200 weather response from the S3
-test peer with empty memory and providers disabled; the air observation is supplied
+test peer with empty memory and a provider double that fails every fetch; the air observation is supplied
 by the same recorded WAQI fixture. S13a adds air raw persistence and an S3-only restore of
 the recorded air scenarios ([below](#s13a-provider-formats-and-live-world-air-2026-10-13)).
 

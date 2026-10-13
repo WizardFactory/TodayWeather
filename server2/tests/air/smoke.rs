@@ -6,7 +6,7 @@ use super::common::{Peer, ScriptedVc, body, deadline, expect_calls, matches, ms,
 use super::support::{Linked, Reply, Stub, WAQI, restarted, waqi_only};
 use server2::storage::CatalogLimits;
 use server2::world::{
-    AirFunding, AirStore, CatalogAirStore, Disabled, FixedClock, HttpAirTransport, LiveAir, World,
+    AirFunding, AirStore, CatalogAirStore, FixedClock, HttpAirTransport, LiveAir, World,
     WorldBackend, WorldConfig, runtime::build,
 };
 use std::sync::Arc;
@@ -69,7 +69,7 @@ async fn smoke_live_air_with_s3_budgets_then_s3_only_restore() {
         Arc::new(
             server2::world::CatalogWorldStore::new(s3.clone(), CatalogLimits::default()).unwrap(),
         ),
-        Arc::new(Disabled),
+        Arc::new(super::common::Down),
         air,
         clock,
         WorldConfig::default(),

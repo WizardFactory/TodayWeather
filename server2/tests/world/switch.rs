@@ -199,7 +199,7 @@ fn runtime_routing_list_selects_the_native_world_with_real_endpoints() {
     );
     let _ = World::new(
         memory(),
-        Arc::new(server2::world::Disabled),
+        Arc::new(super::common::Down),
         Arc::new(Unconfigured),
         Arc::new(server2::world::FixedClock::new(0.)),
         WorldConfig::default(),

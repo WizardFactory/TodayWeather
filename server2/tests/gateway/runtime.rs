@@ -306,6 +306,15 @@ fn routing_list_and_required_settings_fail_closed() {
             "SERVER2_WORLD_VC_URL",
             "http://weather.example.test/timeline/",
         ),
+        // S10C-R1-F02: a fragment would drop the request path; user information is refused.
+        (
+            "SERVER2_WORLD_VC_URL",
+            "https://weather.example.test/timeline/#/",
+        ),
+        (
+            "SERVER2_WORLD_VC_URL",
+            "https://user@weather.example.test/timeline/",
+        ),
         ("SERVER2_GEOCODER_KAKAO_DAILY_UNITS", "many"),
         ("SERVER2_WORLD_VERSIONS", "v000705"),
     ] {

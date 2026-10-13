@@ -5,7 +5,7 @@ use super::common::{Peer, ScriptedVc, body, deadline, expect_calls, matches, ms,
 use super::support::{Memory, Stub, WAQI, WAQI_KEY, live, restarted, waqi_only};
 use server2::storage::CatalogLimits;
 use server2::world::{
-    AirStore, CatalogAirStore, Disabled, FixedClock, World, WorldBackend, WorldConfig, WorldStore,
+    AirStore, CatalogAirStore, FixedClock, World, WorldBackend, WorldConfig, WorldStore,
 };
 use std::sync::Arc;
 
@@ -96,7 +96,7 @@ async fn live_chain_matches_the_oracle_and_s3_alone_restores_the_same_bytes() {
                     server2::world::CatalogWorldStore::new(s3.clone(), CatalogLimits::default())
                         .unwrap(),
                 ),
-                Arc::new(Disabled),
+                Arc::new(super::common::Down),
                 air,
                 at,
                 WorldConfig::default(),
@@ -147,7 +147,7 @@ async fn restore_without_records_serves_no_air_and_does_not_invent_values() {
         Arc::new(
             server2::world::CatalogWorldStore::new(s3.clone(), CatalogLimits::default()).unwrap(),
         ),
-        Arc::new(Disabled),
+        Arc::new(super::common::Down),
         air,
         clock,
         WorldConfig::default(),

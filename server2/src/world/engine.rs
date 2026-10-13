@@ -408,7 +408,6 @@ impl World {
                     self.back_off(&entry, FAILURE_BACKOFF_MS);
                     return Flight::Failed(output, Failure::Error);
                 }
-                Err(VcError::Disabled) => return Flight::Failed(output, Failure::Error),
             }
         };
         let parsed = OrderedJson::parse(&body).map(|j| Val::from_ordered(&j));
