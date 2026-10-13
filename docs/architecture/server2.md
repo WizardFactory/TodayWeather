@@ -1517,3 +1517,66 @@ instead of in shared Mongo. A body that is not published is not a success. KASI 
 use HTTPS. The paid phase (legacy default off) and Visual Crossing air are not ported. Live
 HTTPS reachability of KASI and newsky2, real quotas and live provider shapes beyond the
 recorded or synthetic fixtures are unverified.
+
+### S14 legacy history and demand-gated capture (2026-10-13)
+
+[S14](../../plans/issue-2699.md) ([spec](../../specs/issue-2699.md)) adds the internal
+`server2::history` library. It wires no route and starts no task; S15 consumes its inputs and
+the runtime owner starts `CaptureRunner::run`.
+
+- **Demand** (O-1/O-11): `state/demand/grid/request/{nx:03}-{ny:03}.json` holds exactly
+  `schema`, `grid`, `lastDemandMs` and `expiresMs = lastDemandMs + 8 days`;
+  `state/demand/grid/push.json` aggregates push-subscribed grid cells with the same fields, an
+  expiry of at most 8 days and the aggregate's observation time as top-level `lastDemandMs`; an
+  older snapshot never replaces a newer one. Any other field, a repeated member name or another
+  key shape is rejected and never counts as demand. Writes are conditional, coalesced to one per 10 minutes per cell, and the active set is
+  rebuilt from S3 after a replacement.
+- **Capture**: only active cells. Every 10 minutes the runner requests the latest
+  `ultra-srt-ncst`, `ultra-srt-fcst` and `vilage-fcst` publications per cell and, while any cell
+  is active, the national AWS hourly and city pages; the AWS minute page every 2 minutes. Per-cell
+  backfill (23 current, 23 ultra-short, 7 short publications) and national pages (192 hours) are
+  attempted at most once per KST hour each; backfill left by a cap or funding stop carries over
+  to the next tick. Calls stay under S08 budgets and per-tick HTTP attempt caps (2,560 funded,
+  64 keyless; each acquisition is charged its worst case of two attempts per page before it
+  starts), four acquisitions run at a time, a funding error stops further data.go.kr launches,
+  present publications are skipped, and a publication counts only after S06 publication. One owner per scope per process;
+  multi-host capture still needs the section 9 gate. RSS, mid-range and life-index inputs are
+  latest-only and stay request-time acquisitions.
+- **Coverage**: a required publication is covered by a captured group or by a legacy export
+  snapshot taken after it (the export reproduces the legacy store, gaps included). Lookbacks are
+  the legacy 192 hourly slots, 195 hours of short publications, 192 hours of national pages and
+  the `(anchor - 20 min, anchor]` minute window with continuous pages. Anything missing returns
+  `Legacy` with the gaps named (`NeverCaptured`/`Partial`); only a missing newest per-cell
+  publication returns `NeedsLatest`. A station-minute export counts only if taken at or after
+  the anchor and within its one-day retention. Station data and ASOS never cover a grid hour; a
+  legacy deployment with `ASOS_HISTORY_READ_ENABLED` keeps every request on legacy. The capture
+  index is rebuilt from published S06 catalogs only (per-key monthly catalog listings and the
+  national day catalogs, each catalog read and validated), so an interrupted raw upload or an
+  empty or corrupt catalog never counts (a corrupt one marks its date incomplete, so no export
+  can hide it); an incomplete listing of
+  any required capture, minute or export kind forwards to legacy.
+- **Legacy export**: `server2/tools/migration/export_history_seeds.py` converts one offline
+  `mongoexport` file (one document per line) of `kma.town.current|shortest|short`,
+  `current|shortest|short` (v1) or `KmaStnHourly2|KmaStnMinute2` into a seed whose documents are
+  the original lines byte for byte, with manifest provenance; the converter and the importer accept
+  the same documents (differential edge-case test). Import stores one `legacy-mongo`
+  record per collection and key and export instant, so every export is a separate revision.
+  `history::legacy::current_rows` reproduces the legacy read projection of current rows
+  (verified against the legacy functions over the fixtures). Exporting production data is a
+  separately authorized operator action; no `server/` file changed.
+
+Estimated cost (derived from legacy code, not measured): legacy collectors kept during
+coexistence call data.go.kr about 24N current, 48N ultra-short and 16N short per day plus
+past-current refills (N about 2,033 grids). server2 adds about 64 funded calls per demand cell per
+day (24 + 24 + 16 pages), at most 53 backfill acquisitions when a cell becomes active (about 60 page calls with two-page short forecasts; worst-case charge 530 attempts), and about 768
+keyless KMA pages per day while any demand exists. D = 1,000 demand cells adds about 64,000 funded
+calls and about 200,000 S3 PUT per day (raw, descriptor and catalog versions). The AWS-minute day
+catalog grows to 720 entries, so its retained catalog versions dominate version storage. Real
+quotas, demand counts and prices remain to be measured before cutover.
+
+Capacity: at the default caps one tick funds at most 256 data.go.kr acquisitions (worst case
+10 attempts each; usually one page), about 36,800 per day, while regular capture needs about
+56 acquisitions per demand cell per day. The defaults therefore sustain roughly 600 demand cells
+plus backfill; D = 1,000 needs larger caps and the matching quota. Work beyond the caps is
+reported as capped and stays missing, so the affected cells remain on legacy; sustained capping
+is a cutover blocker, not an accepted gap.

@@ -249,6 +249,7 @@ pub fn shutdown_runtime(runtime: tokio::runtime::Runtime) {
 
 pub mod budget;
 pub mod domestic;
+pub mod history;
 pub mod providers;
 
 pub mod gateway;
