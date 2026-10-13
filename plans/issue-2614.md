@@ -1,7 +1,7 @@
 # Plan: document and later implement server2
 
 Source: [intent](../intent/issue-2614.md), [spec](../specs/issue-2614.md).
-Current status (2026-10-13): S01–S14 are complete (S13a #2729 stays open for one AirKorea decision) and S19 has its first increment; S10 gateway/geocode (#2723), S11 world (#2728), S12 warnings (#2727), S13 domestic acquisition (#2726), S13a provider formats/air (#2733), S14 history/capture (#2732), S10b gateway lifetime (#2731) and the first S19 increment (#2725) are merged at master `87ab79cd`. Native families stay off by default; legacy HTTP remains selected. Next: S15 domestic KMA v000903 assembly. See the dated entry at the end. Earlier status paragraphs below are historical. No production/resource action or route cutover is authorized by that work.
+Current status (2026-10-13): the implementation PRs for S01–S14 are merged and their issues are closed, except that follow-ups S10a #2724 (live geocoder/quotas) and S13a #2729 (one AirKorea decision) remain open; S19 has its first (gateway) increment. S10 gateway/geocode (#2723), S11 world (#2728), S12 warnings (#2727), S13 domestic acquisition (#2726), S13a provider formats/air (#2733), S14 history/capture (#2732), S10b gateway lifetime (#2731) and the first S19 increment (#2725) are merged at master `87ab79cd`. Native families stay off by default; legacy HTTP remains selected. Next: S15 domestic KMA v000903 assembly. See the dated entry at the end. Earlier status paragraphs below are historical. No production/resource action or route cutover is authorized by that work.
 
 ## This PR
 
@@ -185,14 +185,14 @@ the operation deadline or returning expired data.
 | S08 | [server2 S08: enforce provider reservations and rejection rules](https://github.com/WizardFactory/TodayWeather/issues/2693) | [S04](https://github.com/WizardFactory/TodayWeather/issues/2689), [S05](https://github.com/WizardFactory/TodayWeather/issues/2690), [S06](https://github.com/WizardFactory/TodayWeather/issues/2691) |
 | S09 | [server2 S09: verify locally and minimize EC2 validation](https://github.com/WizardFactory/TodayWeather/issues/2694) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S03](https://github.com/WizardFactory/TodayWeather/issues/2688), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693) |
 | S10 | [server2 S10: port gateway and geocoding with legacy backend switches](https://github.com/WizardFactory/TodayWeather/issues/2695) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693), [S09](https://github.com/WizardFactory/TodayWeather/issues/2694) |
-| S10a | [server2 S10a: measure geocoder quotas and enable live geocoder mode](https://github.com/WizardFactory/TodayWeather/issues/2724) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S19](https://github.com/WizardFactory/TodayWeather/issues/2704) |
-| S10b | [server2 S10b: keep the gateway 501 deadline response within the connection lifetime](https://github.com/WizardFactory/TodayWeather/issues/2730) (merged #2731) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S19](https://github.com/WizardFactory/TodayWeather/issues/2704) |
+| S10a | [server2 S10a: measure geocoder quotas and enable live geocoder mode](https://github.com/WizardFactory/TodayWeather/issues/2724) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S19](https://github.com/WizardFactory/TodayWeather/issues/2704) gateway increment (#2725) |
+| S10b | [server2 S10b: keep the gateway 501 deadline response within the connection lifetime](https://github.com/WizardFactory/TodayWeather/issues/2730) (merged #2731) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S19](https://github.com/WizardFactory/TodayWeather/issues/2704) gateway increment (#2725) |
 | S11 | [server2 S11: port world weather and air](https://github.com/WizardFactory/TodayWeather/issues/2696) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695) |
 | S12 | [server2 S12: port warning history and latest bulletin recovery](https://github.com/WizardFactory/TodayWeather/issues/2697) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695) |
 | S13 | [server2 S13: port domestic provider acquisition and raw formats](https://github.com/WizardFactory/TodayWeather/issues/2698) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693), [S09](https://github.com/WizardFactory/TodayWeather/issues/2694) |
 | S13a | [server2 S13a: extend provider formats for air, rise/set and zone data](https://github.com/WizardFactory/TodayWeather/issues/2729) (merged #2733) | [S13](https://github.com/WizardFactory/TodayWeather/issues/2698), [S11](https://github.com/WizardFactory/TodayWeather/issues/2696) |
 | S14 | [server2 S14: migrate legacy history and close acquisition gaps](https://github.com/WizardFactory/TodayWeather/issues/2699) | [S01](https://github.com/WizardFactory/TodayWeather/issues/2686), [S13](https://github.com/WizardFactory/TodayWeather/issues/2698) |
-| S15 | [server2 S15: port domestic KMA v000903 assembly and Rust checkpoint](https://github.com/WizardFactory/TodayWeather/issues/2700) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S11](https://github.com/WizardFactory/TodayWeather/issues/2696), [S12](https://github.com/WizardFactory/TodayWeather/issues/2697), [S13](https://github.com/WizardFactory/TodayWeather/issues/2698), [S14](https://github.com/WizardFactory/TodayWeather/issues/2699), [S13a](https://github.com/WizardFactory/TodayWeather/issues/2729) |
+| S15 | [server2 S15: port domestic KMA v000903 assembly and Rust checkpoint](https://github.com/WizardFactory/TodayWeather/issues/2700) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S11](https://github.com/WizardFactory/TodayWeather/issues/2696), [S12](https://github.com/WizardFactory/TodayWeather/issues/2697), [S13](https://github.com/WizardFactory/TodayWeather/issues/2698), [S14](https://github.com/WizardFactory/TodayWeather/issues/2699), [S13a](https://github.com/WizardFactory/TodayWeather/issues/2729) merged scope (#2733; its AirKorea decision follows S02 golden parity) |
 | S16 | [server2 S16: store daily summaries and last-year lookup](https://github.com/WizardFactory/TodayWeather/issues/2701) | [S11](https://github.com/WizardFactory/TodayWeather/issues/2696), [S14](https://github.com/WizardFactory/TodayWeather/issues/2699), [S15](https://github.com/WizardFactory/TodayWeather/issues/2700) |
 | S17 | [server2 S17: port used older weather versions, nation and town](https://github.com/WizardFactory/TodayWeather/issues/2702) | [S15](https://github.com/WizardFactory/TodayWeather/issues/2700) |
 | S18 | [server2 S18: implement used push and notice state with new registrations](https://github.com/WizardFactory/TodayWeather/issues/2703) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S12](https://github.com/WizardFactory/TodayWeather/issues/2697), [S15](https://github.com/WizardFactory/TodayWeather/issues/2700) |
@@ -366,9 +366,17 @@ AK authorized merging the reviewed server2 PRs in dependency order and starting 
 next parallel tasks. Merged to master: S10 #2723 (`ca8735cf`), S13 #2726 (`47a96078`),
 S19 first increment #2725 (`d15ea118`), S11 #2728 (`45e9193b`), S12 #2727 (`7ffe0b80`),
 S10b #2731 (`ae81f972`), S13a #2733 (`91b29d0f`) and S14 #2732 (`87ab79cd`). Each was
-merged pinned to a head with 14/14 CI and an independent Codex PASS; integration-only
-changes (master merges, the S12 code-30 expectation and S12 store-wide S3 bound) were
-re-verified before merge.
+merged pinned to a head with 14/14 CI and an independent Codex PASS, as recorded in
+each issue's closing or completion comment ([#2695](https://github.com/WizardFactory/TodayWeather/issues/2695),
+[#2698](https://github.com/WizardFactory/TodayWeather/issues/2698),
+[#2704](https://github.com/WizardFactory/TodayWeather/issues/2704),
+[#2696](https://github.com/WizardFactory/TodayWeather/issues/2696),
+[#2697](https://github.com/WizardFactory/TodayWeather/issues/2697),
+[#2730](https://github.com/WizardFactory/TodayWeather/issues/2730),
+[#2729](https://github.com/WizardFactory/TodayWeather/issues/2729),
+[#2699](https://github.com/WizardFactory/TodayWeather/issues/2699)). Integration-only
+changes (master merges, the S12 code-30 expectation and the S12 store-wide S3 bound) were
+re-run locally and in CI before merge; the S12 bound also received a focused Codex PASS.
 
 Follow-ups: [S10a #2724](https://github.com/WizardFactory/TodayWeather/issues/2724)
 owns actual Kakao/Google quotas and the live geocoder mode; S20 now also requires it
@@ -376,7 +384,11 @@ for the gateway family and a keep-alive decision for the 9 s `501` (S10b guarant
 only within 3 s of connection accept). [S13a #2729](https://github.com/WizardFactory/TodayWeather/issues/2729)
 remains open for the AirKorea dust-forecast/station-list decision (legacy calls a
 retired host; S02 goldens contain no dust-forecast fields). S11 live air is in S13a;
-AK accepted the single native S10 attempt as an intended difference. S14's ASOS
-history-read concern is resolved by the observed `5bca407` deployment, which predates
-`2116c6bf`; recheck before cutover. Native families remain off; no AWS, live provider,
+AK accepted the single native S10 attempt as an intended difference
+([decision record](https://github.com/WizardFactory/TodayWeather/pull/2728#issuecomment-6142276647)).
+S14's ASOS history-read concern: the [observed service host](../docs/architecture/ec2-internals.md)
+runs a `5bca407` checkout (commit date 2019-03-07), and `2116c6bf` (2026-09-24), which adds
+`ASOS_HISTORY_READ_ENABLED`, is not its ancestor, so the observed deployment has no such
+switch. This is a timestamped observation, not proof of the current deployment; recheck
+the deployed revision before cutover. Native families remain off; no AWS, live provider,
 deployment or cutover action was taken.
