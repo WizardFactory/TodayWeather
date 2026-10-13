@@ -44,10 +44,21 @@ def declared_for(declared, scope, item, pass_name):
     return None
 
 
-def compare(baseline, candidate, declared):
+def acquisitions(hops):
+    counts = {}
+    for hop in hops:
+        if hop[0] not in BACKEND_KINDS:
+            counts[hop[0]] = counts.get(hop[0], 0) + 1
+    return counts
+
+
+def compare(baseline, candidate, declared, plan=None):
     """Classify differences between matched baseline/candidate records.
 
     Records: {id, pass, status, headers, body, hops:[(kind, path, language)]}.
+    plan: {request: {pass: {side: {kind: count}}}}. A declared acquisition difference
+    applies only when both sides match the planned per-request counts exactly; any
+    deviation from a planned count is unexplained even if both sides agree.
     """
     declared_out, unexplained = [], []
     index = {(r['id'], r['pass']): r for r in candidate}
@@ -73,12 +84,19 @@ def compare(baseline, candidate, declared):
         right_backend = [h for h in right['hops'] if h[0] in BACKEND_KINDS]
         if left_backend != right_backend:
             unexplained.append(dict(where, kind='backend-hops', baseline=len(left_backend), candidate=len(right_backend)))
-        count = lambda hops: {k: sum(1 for h in hops if h[0] == k) for k in {h[0] for h in hops if h[0] not in BACKEND_KINDS}}
-        left_acq, right_acq = count(left['hops']), count(right['hops'])
+        left_acq, right_acq = acquisitions(left['hops']), acquisitions(right['hops'])
+        expected = (plan or {}).get(left['id'], {}).get(left['pass'])
+        if expected is not None:
+            deviations = [(side, observed, expected.get(side, {})) for side, observed in
+                          (('baseline', left_acq), ('candidate', right_acq)) if observed != expected.get(side, {})]
+            for side, observed, wanted in deviations:
+                unexplained.append(dict(where, kind='acquisition-plan', side=side, observed=observed, expected=wanted))
+            if deviations:
+                continue
         for kind in sorted(set(left_acq) | set(right_acq)):
             if left_acq.get(kind, 0) == right_acq.get(kind, 0):
                 continue
-            match = declared_for(declared, 'acquisition', kind, left['pass'])
+            match = declared_for(declared, 'acquisition', kind, left['pass']) if expected is not None else None
             item = dict(where, kind='acquisition', source=kind, baseline=left_acq.get(kind, 0), candidate=right_acq.get(kind, 0))
             (declared_out if match else unexplained).append(dict(item, declared=match) if match else item)
     for key in index:
@@ -90,10 +108,14 @@ def oracle_check(records, cases, transport):
     """Compare records naming an S02 legacy case with its recorded status/body/headers."""
     mismatches, checked = [], 0
     for record in records:
-        case = cases.get(record.get('oracle'))
-        if case is None:
+        if not record.get('oracle'):
             continue
         checked += 1
+        case = cases.get(record['oracle'])
+        if case is None:
+            mismatches.append({'request': record['id'], 'pass': record['pass'], 'oracle': record['oracle'],
+                               'problems': [{'field': 'oracle', 'expected': record['oracle'], 'observed': None}]})
+            continue
         body = base64.b64decode(case['body_base64'])
         expected = {}
         for name, value in case['headers']:
@@ -113,10 +135,17 @@ def oracle_check(records, cases, transport):
 
 
 def summarize(records):
-    by_pass = {}
+    """Pass-level percentiles plus the first-pass requests that actually acquired a geocode.
+
+    `cold_pass` is the first pass in a fresh process (it mixes cache misses, RAM hits and
+    error routes); `cold_miss` keeps only requests with a non-backend acquisition hop.
+    """
+    groups = {}
     for record in records:
-        by_pass.setdefault(record['pass'], []).append(record['elapsed_ms'])
-    return {name: harness.percentiles(values) for name, values in by_pass.items()}
+        groups.setdefault(record['pass'] + '_pass', []).append(record['elapsed_ms'])
+        if record['pass'] == 'cold' and acquisitions(record['hops']):
+            groups.setdefault('cold_miss', []).append(record['elapsed_ms'])
+    return {name: harness.percentiles(values) for name, values in sorted(groups.items())}
 
 
 def run(family, binary, workload, report_path, self_check):
@@ -133,12 +162,17 @@ def run(family, binary, workload, report_path, self_check):
         print('side ' + side + ': ' + info['configuration'] + '; ' + json.dumps(summarize(records), sort_keys=True), flush=True)
     declared = fixture['declared_differences']
     transport = next((d['names'] for d in declared if d['id'] == 'D-TRANSPORT'), [])
-    declared_out, unexplained = compare(sides['baseline']['records'], sides['candidate']['records'], declared)
+    plan = {item['id']: item['acquisitions'] for item in fixture['workload'] if 'acquisitions' in item}
+    declared_out, unexplained = compare(sides['baseline']['records'], sides['candidate']['records'], declared, plan)
     cases = module.oracle_cases()
+    expected_oracles = 2 * sum(1 for item in fixture['workload'] if item.get('oracle'))
     oracle = {}
     for side in sides:
         checked, mismatches = oracle_check(sides[side]['records'], cases, transport)
-        oracle[side] = {'checked': checked, 'mismatches': mismatches}
+        if checked != expected_oracles:
+            mismatches.append({'problems': [{'field': 'oracle-count', 'expected': expected_oracles, 'observed': checked}]})
+        merged, merge_mismatches = module.structural_oracle(fixture, sides[side]['records'])
+        oracle[side] = {'checked': checked, 'structural_checked': merged, 'mismatches': mismatches + merge_mismatches}
     report = {
         'schema': 1, 'family': family, 'started_at_utc': started,
         'revision': harness.revision(),
@@ -154,7 +188,7 @@ def run(family, binary, workload, report_path, self_check):
     failed = bool(unexplained) or any(oracle[s]['mismatches'] for s in oracle)
     if self_check:
         records, info = module.replay_side(binary, fixture, 'baseline', perturb=True)
-        _, perturbed = compare(records, sides['candidate']['records'], declared)
+        _, perturbed = compare(records, sides['candidate']['records'], declared, plan)
         report['self_check'] = {'perturbation': info['perturbation'], 'unexplained': len(perturbed),
                                 'detected': bool(perturbed)}
         print('self-check perturbation "' + info['perturbation'] + '": ' + str(len(perturbed)) + ' unexplained differences detected', flush=True)
@@ -166,7 +200,8 @@ def run(family, binary, workload, report_path, self_check):
     for item in unexplained[:20]:
         print('  UNEXPLAINED ' + json.dumps(item, ensure_ascii=False, sort_keys=True), flush=True)
     for side in oracle:
-        print('S02 oracle ' + side + ': ' + str(oracle[side]['checked']) + ' checked, ' + str(len(oracle[side]['mismatches'])) + ' mismatches', flush=True)
+        print('oracle ' + side + ': S02 ' + str(oracle[side]['checked']) + ' checked, weather merge ' +
+              str(oracle[side]['structural_checked']) + ' checked, ' + str(len(oracle[side]['mismatches'])) + ' mismatches', flush=True)
         for item in oracle[side]['mismatches'][:10]:
             print('  ORACLE ' + json.dumps(item, ensure_ascii=False, sort_keys=True), flush=True)
     print(report['verdict'] + ' paired replay ' + family + '; offline frozen inputs only, not a live shadow', flush=True)

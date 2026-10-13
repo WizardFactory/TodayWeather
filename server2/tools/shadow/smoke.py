@@ -36,7 +36,8 @@ def main(argv=None):
             results, peers = module.smoke(binary, set(args.scenario) if args.scenario else None)
             report['families'][family] = {'verdict': 'PASS', 'scenarios': results, 'peer_totals': peers}
             print('observed peer totals ' + family + ': ' + json.dumps(peers, sort_keys=True), flush=True)
-        except AssertionError as error:
+        except (AssertionError, ValueError) as error:
+            # ValueError: an unknown/empty --scenario selection never counts as a pass.
             report['families'][family] = {'verdict': 'FAIL', 'error': str(error)}
             print('FAIL ' + family + ': ' + str(error), flush=True)
             status = 1

@@ -78,7 +78,8 @@ def build_pdf(screenshot, image, stamp, revision):
     def flush_table():
         if rows:
             cells = [[Paragraph(markup(cell), styles['Normal']) for cell in row] for row in rows]
-            table = Table(cells, colWidths=[180, 352], repeatRows=1, hAlign='LEFT')
+            widths = [180, 352] if len(rows[0]) == 2 else [532 / len(rows[0])] * len(rows[0])
+            table = Table(cells, colWidths=widths, repeatRows=1, hAlign='LEFT')
             table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP'),
                                        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#edf2f7')),
                                        ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.HexColor('#a0aec0')),

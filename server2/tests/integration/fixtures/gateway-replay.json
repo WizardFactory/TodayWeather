@@ -5,7 +5,9 @@
     "s02_records": "server2/tests/golden/records.json (S02 legacy wire oracle, revision f568508da68d408a282752f55614407899631c88)",
     "provider_fixtures": "server2/tests/gateway/fixtures/providers.json (copied legacy offline provider oracle, see PROVENANCE.md)",
     "legacy_geocode": "Frozen legacy-origin geocode replies. Each body is derived from the named S02 record; test_shadow.py checks every derivation against records.json.",
-    "privacy": "Fixture coordinates and addresses are the public S02/provider fixture places, not user data."
+    "privacy": "Fixture coordinates and addresses are the public S02/provider fixture places, not user data.",
+    "acquisitions": "Per request and pass: exact geocoder acquisition counts per side. Legacy-mode server2 has no geocode cache, so every geocoded route calls the legacy geocoder in both passes; the native side acquires each distinct coordinate/locale or address key once in the cold pass and serves the warm pass from RAM.",
+    "merge_oracle": "Successful weather bodies must equal the frozen S02 backend body merged with the frozen legacy geocode fields (name, country, address, location), independently of both server2 configurations."
   },
   "legacy_geocode": [
     {
@@ -14,7 +16,20 @@
       "lon": 126.978,
       "lang": "ko",
       "source": "S02 gateway-default-domestic merged name/country/address/location; kmaAddress from its recorded backend hop path",
-      "body": {"name": "명동", "country": "KR", "address": "서울특별시 중구 명동", "location": {"lat": 37.566, "long": 126.978}, "kmaAddress": {"name1": "서울특별시", "name2": "중구", "name3": "명동"}}
+      "body": {
+        "name": "명동",
+        "country": "KR",
+        "address": "서울특별시 중구 명동",
+        "location": {
+          "lat": 37.566,
+          "long": 126.978
+        },
+        "kmaAddress": {
+          "name1": "서울특별시",
+          "name2": "중구",
+          "name3": "명동"
+        }
+      }
     },
     {
       "route": "coord",
@@ -22,7 +37,20 @@
       "lon": 126.978,
       "lang": "en",
       "source": "S02 geocode-v000903-coord response body",
-      "body": {"name": "Myeong-dong", "country": "KR", "address": "Myeong-dong, Jung-gu, Seoul, South Korea", "location": {"lat": 37.566, "long": 126.978}, "kmaAddress": {"name1": "서울특별시", "name2": "중구", "name3": "명동"}}
+      "body": {
+        "name": "Myeong-dong",
+        "country": "KR",
+        "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+        "location": {
+          "lat": 37.566,
+          "long": 126.978
+        },
+        "kmaAddress": {
+          "name1": "서울특별시",
+          "name2": "중구",
+          "name3": "명동"
+        }
+      }
     },
     {
       "route": "coord",
@@ -30,13 +58,28 @@
       "lon": -0.128,
       "lang": "ko",
       "source": "S02 gateway-default-world merged name/country/address/location (no kmaAddress outside Korea)",
-      "body": {"name": "London", "country": "GB", "address": "London, UK", "location": {"lat": 51.507, "long": -0.128}}
+      "body": {
+        "name": "London",
+        "country": "GB",
+        "address": "London, UK",
+        "location": {
+          "lat": 51.507,
+          "long": -0.128
+        }
+      }
     },
     {
       "route": "addr",
       "address": "서울특별시/송파구/잠실본동",
       "source": "S02 geocode-v000903-addr response body",
-      "body": {"country": "KR", "address": "서울특별시/송파구/잠실본동", "location": {"lat": 37.506, "long": 127.084}}
+      "body": {
+        "country": "KR",
+        "address": "서울특별시/송파구/잠실본동",
+        "location": {
+          "lat": 37.506,
+          "long": 127.084
+        }
+      }
     }
   ],
   "backend_records": {
@@ -55,39 +98,357 @@
     {
       "id": "D-TRANSPORT",
       "scope": "header",
-      "names": ["date", "connection", "keep-alive"],
+      "names": [
+        "date",
+        "connection",
+        "keep-alive"
+      ],
       "reason": "Transport observations, not functional parity (S10 specification); both sides are separate processes and clocks."
     },
     {
       "id": "D-ACQ-GEOCODER",
       "scope": "acquisition",
-      "passes": ["cold"],
-      "kinds": ["legacy_geo", "kakao", "google"],
+      "passes": [
+        "cold"
+      ],
+      "kinds": [
+        "legacy_geo",
+        "kakao",
+        "google"
+      ],
       "reason": "Baseline acquires geocodes through the legacy HTTP geocoder; the candidate acquires them from recorded Kakao/Google providers. Backend hops must remain identical."
     },
     {
       "id": "D-ACQ-WARM-CACHE",
       "scope": "acquisition",
-      "passes": ["warm"],
-      "kinds": ["legacy_geo", "kakao", "google"],
+      "passes": [
+        "warm"
+      ],
+      "kinds": [
+        "legacy_geo",
+        "kakao",
+        "google"
+      ],
       "reason": "The candidate serves warm precise lookups from bounded volatile RAM; legacy-mode server2 delegates geocode caching to the legacy origin."
     }
   ],
   "workload": [
-    {"id": "W01", "method": "GET", "path": "/geocode/v000903/coord/37.5663,126.9779", "oracle": "geocode-v000903-coord"},
-    {"id": "W02", "method": "GET", "path": "/geocode/v000903/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%86%A1%ED%8C%8C%EA%B5%AC/%EC%9E%A0%EC%8B%A4%EB%B3%B8%EB%8F%99", "oracle": "geocode-v000903-addr"},
-    {"id": "W03", "method": "GET", "path": "/geocode/v000901/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%86%A1%ED%8C%8C%EA%B5%AC/%EC%9E%A0%EC%8B%A4%EB%B3%B8%EB%8F%99", "oracle": "geocode-v000901-addr"},
-    {"id": "W04", "method": "GET", "path": "/geocode/v000903/coord/37.5663,126.9779", "headers": {"accept-language": "ko-KR,ko;q=0.9"}},
-    {"id": "W05", "method": "GET", "path": "/weather/coord/37.5663,126.9779?temperatureUnit=F&windSpeedUnit=mph&pressureUnit=inHg&distanceUnit=mi&precipitationUnit=in&airUnit=aqicn&airForecastSource=kaq", "headers": {"accept-language": "ko-KR,ko;q=0.9"}},
-    {"id": "W06", "method": "GET", "path": "/weather/v000902/coord/37.5663,126.9779", "headers": {"accept-language": "ko-KR,ko;q=0.9"}},
-    {"id": "W07", "method": "GET", "path": "/weather/v000903/coord/37.5663,126.9779?temperatureUnit=C", "headers": {"accept-language": "ko-KR,ko;q=0.9"}},
-    {"id": "W08", "method": "GET", "path": "/weather/coord/51.507,-0.128?temperatureUnit=F&windSpeedUnit=mph&pressureUnit=inHg&distanceUnit=mi&precipitationUnit=in&airUnit=aqicn&airForecastSource=kaq", "headers": {"accept-language": "ko-KR,ko;q=0.9"}},
-    {"id": "W09", "method": "GET", "path": "/weather/v000903/coord/51.507,-0.128", "headers": {"accept-language": "ko-KR,ko;q=0.9"}},
-    {"id": "W10", "method": "HEAD", "path": "/weather/v000903/coord/37.5663,126.9779?temperatureUnit=C", "headers": {"accept-language": "ko-KR,ko;q=0.9"}},
-    {"id": "W11", "method": "GET", "path": "/weather/v000903/coord/37.5663,126.9779?temperatureUnit=C", "headers": {"accept-language": "ko-KR,ko;q=0.9"}, "if_none_match_from": "W07"},
-    {"id": "W12", "method": "OPTIONS", "path": "/geocode/v000903/coord/37.5663,126.9779", "headers": {"access-control-request-headers": "content-type, x-replay"}},
-    {"id": "W13", "method": "GET", "path": "/weather/coord/not-a-coordinate", "oracle": "weather-invalid"},
-    {"id": "W14", "method": "GET", "path": "/weather/coord/0.0001,0.0001", "oracle": "gateway-zero"},
-    {"id": "W15", "method": "GET", "path": "/weather/v000705/coord/37.5,127", "oracle": "gateway-excluded"}
+    {
+      "id": "W01",
+      "method": "GET",
+      "path": "/geocode/v000903/coord/37.5663,126.9779",
+      "oracle": "geocode-v000903-coord",
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {
+            "kakao": 1,
+            "google": 1
+          }
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "W02",
+      "method": "GET",
+      "path": "/geocode/v000903/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%86%A1%ED%8C%8C%EA%B5%AC/%EC%9E%A0%EC%8B%A4%EB%B3%B8%EB%8F%99",
+      "oracle": "geocode-v000903-addr",
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {
+            "google": 1
+          }
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "W03",
+      "method": "GET",
+      "path": "/geocode/v000901/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%86%A1%ED%8C%8C%EA%B5%AC/%EC%9E%A0%EC%8B%A4%EB%B3%B8%EB%8F%99",
+      "oracle": "geocode-v000901-addr",
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "W04",
+      "method": "GET",
+      "path": "/geocode/v000903/coord/37.5663,126.9779",
+      "headers": {
+        "accept-language": "ko-KR,ko;q=0.9"
+      },
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {
+            "kakao": 1
+          }
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "W05",
+      "method": "GET",
+      "path": "/weather/coord/37.5663,126.9779?temperatureUnit=F&windSpeedUnit=mph&pressureUnit=inHg&distanceUnit=mi&precipitationUnit=in&airUnit=aqicn&airForecastSource=kaq",
+      "headers": {
+        "accept-language": "ko-KR,ko;q=0.9"
+      },
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        }
+      },
+      "merge_oracle": true
+    },
+    {
+      "id": "W06",
+      "method": "GET",
+      "path": "/weather/v000902/coord/37.5663,126.9779",
+      "headers": {
+        "accept-language": "ko-KR,ko;q=0.9"
+      },
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        }
+      },
+      "merge_oracle": true
+    },
+    {
+      "id": "W07",
+      "method": "GET",
+      "path": "/weather/v000903/coord/37.5663,126.9779?temperatureUnit=C",
+      "headers": {
+        "accept-language": "ko-KR,ko;q=0.9"
+      },
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        }
+      },
+      "merge_oracle": true
+    },
+    {
+      "id": "W08",
+      "method": "GET",
+      "path": "/weather/coord/51.507,-0.128?temperatureUnit=F&windSpeedUnit=mph&pressureUnit=inHg&distanceUnit=mi&precipitationUnit=in&airUnit=aqicn&airForecastSource=kaq",
+      "headers": {
+        "accept-language": "ko-KR,ko;q=0.9"
+      },
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {
+            "google": 1
+          }
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        }
+      },
+      "merge_oracle": true
+    },
+    {
+      "id": "W09",
+      "method": "GET",
+      "path": "/weather/v000903/coord/51.507,-0.128",
+      "headers": {
+        "accept-language": "ko-KR,ko;q=0.9"
+      },
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        }
+      },
+      "merge_oracle": true
+    },
+    {
+      "id": "W10",
+      "method": "HEAD",
+      "path": "/weather/v000903/coord/37.5663,126.9779?temperatureUnit=C",
+      "headers": {
+        "accept-language": "ko-KR,ko;q=0.9"
+      },
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "W11",
+      "method": "GET",
+      "path": "/weather/v000903/coord/37.5663,126.9779?temperatureUnit=C",
+      "headers": {
+        "accept-language": "ko-KR,ko;q=0.9"
+      },
+      "if_none_match_from": "W07",
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1
+          },
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "W12",
+      "method": "OPTIONS",
+      "path": "/geocode/v000903/coord/37.5663,126.9779",
+      "headers": {
+        "access-control-request-headers": "content-type, x-replay"
+      },
+      "acquisitions": {
+        "cold": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "W13",
+      "method": "GET",
+      "path": "/weather/coord/not-a-coordinate",
+      "oracle": "weather-invalid",
+      "acquisitions": {
+        "cold": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "W14",
+      "method": "GET",
+      "path": "/weather/coord/0.0001,0.0001",
+      "oracle": "gateway-zero",
+      "acquisitions": {
+        "cold": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "W15",
+      "method": "GET",
+      "path": "/weather/v000705/coord/37.5,127",
+      "oracle": "gateway-excluded",
+      "acquisitions": {
+        "cold": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    }
   ]
 }

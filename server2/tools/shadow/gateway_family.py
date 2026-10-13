@@ -130,6 +130,22 @@ class Peers:
     def hops_since(self, mark):
         return self.providers.hops_since(mark[0]) + self.legacy.hops_since(mark[1])
 
+    def hold(self, kind):
+        """Hold replies of one kind until release(), regardless of scheduling speed."""
+        gate = threading.Event()
+        for peer in (self.providers, self.legacy):
+            peer.gate[kind] = gate
+        return gate
+
+    def release(self, kind):
+        for peer in (self.providers, self.legacy):
+            gate = peer.gate.pop(kind, None)
+            if gate is not None:
+                gate.set()
+
+    def count(self, kind):
+        return self.counts().get(kind, 0)
+
     def set(self, kind, delay=None, fault=None):
         for peer in (self.providers, self.legacy):
             if delay is None:
@@ -262,38 +278,42 @@ def scenario_single_flight(ctx):
 
 
 def scenario_cancellation(ctx):
+    wait = harness.wait_until
     with ctx.process('mock') as p:
         host, port = harness.loopback(p.public)
-        ctx.peers.set('kakao', delay=1.0)
+        path = '/geocode/v000903/coord/36.202,127.502'
+        before = ctx.observe(p)
+        ctx.peers.hold('kakao')
+        result = {}
         try:
-            before = ctx.observe(p)
-            path = '/geocode/v000903/coord/36.202,127.502'
             with socket.create_connection((host, port), timeout=3) as abandoned:
                 abandoned.sendall(('GET ' + path + ' HTTP/1.1\r\nHost: 127.0.0.1\r\nAccept-Language: ko\r\n\r\n').encode())
-                time.sleep(0.2)
-            time.sleep(0.2)
-            joined = get(p, path, KO)
-            time.sleep(0.3)
-            m, c = changes(p, ctx, before)
+                wait(lambda: ctx.peers.count('kakao') > before[1].get('kakao', 0), 5, 'owned Kakao request')
+            waiter = threading.Thread(target=lambda: result.update(reply=get(p, path, KO)))
+            waiter.start()
+            wait(lambda: p.metrics().get(GEO + 'joined_total', 0) > before[0].get(GEO + 'joined_total', 0), 5, 'second waiter to join')
         finally:
-            ctx.peers.set('kakao')
-        expect(joined.status == 200, 'later waiter receives the surviving owner result', joined.status)
+            ctx.peers.release('kakao')
+        waiter.join(timeout=8)
+        wait(lambda: p.metrics()[GW + 'owned_inflight'] == 0, 5, 'owned geocode work to end')
+        m, c = changes(p, ctx, before)
+        joined = result.get('reply')
+        expect(joined is not None and joined.status == 200, 'later waiter receives the surviving owner result')
         expect(c == {'kakao': 1} and m.get(GEO + 'flights_total') == 1 and m.get(GEO + 'joined_total', 0) >= 1,
                'cancelled initiator neither cancels nor duplicates the owned lookup', [m, c])
         get(p, WEATHER_KR, KO)
-        ctx.peers.set('backend', delay=1.0)
+        before = ctx.observe(p)
+        ctx.peers.hold('backend')
         try:
-            before = ctx.observe(p)
             with socket.create_connection((host, port), timeout=3) as abandoned:
                 abandoned.sendall(('GET ' + WEATHER_KR + ' HTTP/1.1\r\nHost: 127.0.0.1\r\nAccept-Language: ko\r\n\r\n').encode())
-                time.sleep(0.2)
-            time.sleep(1.4)
-            m2, c2 = changes(p, ctx, before)
+                wait(lambda: ctx.peers.count('backend') > before[1].get('backend', 0), 5, 'owned backend request')
         finally:
-            ctx.peers.set('backend')
+            ctx.peers.release('backend')
+        wait(lambda: p.metrics()[GW + 'owned_inflight'] == 0, 5, 'abandoned weather owner to finish')
+        m2, c2 = changes(p, ctx, before)
         expect(c2 == {'backend': 1} and m2.get(GW + 'backend_attempts_total') == 1,
                'abandoned weather owner completes one backend attempt without retry', [m2, c2])
-        expect(p.metrics()[GW + 'owned_inflight'] == 0, 'owned work drained after abandonment')
         return {'geocode': {'metrics': m, 'peers': c}, 'weather': {'metrics': m2, 'peers': c2},
                 'abandoned_observed': m.get(GW + 'abandoned_total', 0) + m2.get(GW + 'abandoned_total', 0)}
 
@@ -387,19 +407,21 @@ def scenario_budget_exhaustion(ctx):
 def scenario_pressure(ctx):
     with ctx.process('mock') as p:
         get(p, WEATHER_KR, KO)
-        ctx.peers.set('backend', delay=1.5)
-        barrier = threading.Barrier(48)
-
-        def one(_):
-            barrier.wait()
-            return get(p, WEATHER_KR, KO)
+        before = ctx.observe(p)
+        admitted = lambda: ctx.peers.count('backend') - before[1].get('backend', 0)
+        ctx.peers.hold('backend')
+        pool = concurrent.futures.ThreadPoolExecutor(48)
         try:
-            before = ctx.observe(p)
-            with concurrent.futures.ThreadPoolExecutor(48) as pool:
-                replies = list(pool.map(one, range(48)))
-            m, c = changes(p, ctx, before)
+            futures = [pool.submit(get, p, WEATHER_KR, KO) for _ in range(48)]
+            # Backend replies are held, so admission occupancy is observed rather than timed.
+            harness.wait_until(lambda: admitted() == 40 and sum(f.done() for f in futures) == 8, 20,
+                               '40 admitted owners and 8 completed rejections')
         finally:
-            ctx.peers.set('backend')
+            ctx.peers.release('backend')
+        replies = [f.result(timeout=15) for f in futures]
+        pool.shutdown()
+        harness.wait_until(lambda: p.metrics()[GW + 'owned_inflight'] == 0, 5, 'owned work to drain')
+        m, c = changes(p, ctx, before)
         ok = [r for r in replies if r.status == 200]
         busy = [r for r in replies if r.status == 503]
         expect(len(ok) == 40 and len(busy) == 8, 'admission bound 40 serves 40 and rejects 8',
@@ -408,7 +430,6 @@ def scenario_pressure(ctx):
                'capacity rejection retains Retry-After 5 and no-store')
         expect(c == {'backend': 40} and m.get(GW + 'responses_unavailable_total') == 8,
                'rejected requests perform no backend or geocoder work', [m, c])
-        expect(p.metrics()[GW + 'owned_inflight'] == 0, 'owned work drained after pressure')
         return {'offered': 48, 'ok': len(ok), 'unavailable': len(busy), 'metrics': m, 'peers': c,
                 'rss_kib': p.rss_kib()}
 
@@ -416,26 +437,28 @@ def scenario_pressure(ctx):
 def scenario_spot_drain(ctx):
     with ctx.process('mock') as p:
         get(p, WEATHER_KR, KO)
-        ctx.peers.set('backend', delay=1.5)
         result = {}
+        before = ctx.observe(p)
+        ctx.peers.hold('backend')
         try:
-            before = ctx.observe(p)
             worker = threading.Thread(target=lambda: result.update(reply=get(p, WEATHER_KR, KO)))
             worker.start()
-            time.sleep(0.3)
+            harness.wait_until(lambda: ctx.peers.count('backend') > before[1].get('backend', 0), 5, 'in-flight backend request')
             signalled = time.monotonic()
             p.signal()
-            worker.join(timeout=8)
-            code = p.process.wait(timeout=8)
-            stopped = (time.monotonic() - signalled) * 1000
+            time.sleep(0.2)
         finally:
-            ctx.peers.set('backend')
+            ctx.peers.release('backend')
+        worker.join(timeout=8)
+        code = p.process.wait(timeout=8)
+        stopped = (time.monotonic() - signalled) * 1000
         counts = harness.delta(ctx.peers.counts(), before[1])
         reply = result.get('reply')
         expect(reply is not None and reply.status == 200, 'in-flight request completes during SIGTERM drain')
         expect(code == 0 and stopped < 5500, 'process drains and exits cleanly within the 5s drain budget', {'code': code, 'ms': stopped})
         expect(counts == {'backend': 1}, 'drain neither retries nor abandons owned work', counts)
         return {'status': reply.status, 'exit_code': code, 'stop_ms': round(stopped, 2), 'peers': counts}
+
 
 
 SCENARIOS = [
@@ -445,7 +468,7 @@ SCENARIOS = [
     ('GW-CANCEL', 'disconnected initiators do not cancel or duplicate owned work', scenario_cancellation),
     ('GW-OUTAGE', 'provider, backend, S3 and legacy-origin outages', scenario_outages),
     ('GW-BUDGET', 'quota exhaustion fails closed with no provider request', scenario_budget_exhaustion),
-    ('GW-PRESSURE', 'admission bound under 48 concurrent slow requests', scenario_pressure),
+    ('GW-PRESSURE', 'admission bound under 48 concurrent held requests', scenario_pressure),
     ('GW-DRAIN', 'Spot-style SIGTERM drain completes in-flight work', scenario_spot_drain),
 ]
 
@@ -477,7 +500,62 @@ SUMMARIES = {
 }
 
 
+def language(headers):
+    """Mirror of the gateway's Accept-Language reduction: first tag before '-', default en."""
+    value = (headers or {}).get('accept-language')
+    return 'en' if value is None else value.split('-')[0]
+
+
+def weather_oracle(records, frozen):
+    """Independent merge oracle for successful weather bodies.
+
+    Expected = frozen S02 backend body (selected by the observed backend hop) with the frozen
+    legacy geocode name/country/address/location assigned in legacy merge order. Both sides
+    must match it, so a shared assembly regression cannot pass the paired comparison.
+    """
+    checked, mismatches = 0, []
+    for record in records:
+        if not record.get('merge_oracle'):
+            continue
+        checked += 1
+        problem = None
+        backend = [hop for hop in record['hops'] if hop[0] == 'backend']
+        match = re.fullmatch(r'/(v00090[123])/(kma|dsf)/.+', urlsplit(backend[-1][1]).path) if backend else None
+        loc = re.search(r'/coord/([^/?]+)', record['path'])
+        if record['status'] != 200 or record['method'] != 'GET' or not match or not loc:
+            problem = {'field': 'weather-merge', 'observed': 'status %d, backend hops %d' % (record['status'], len(backend))}
+        else:
+            lat, lon = (round(float(x), 3) for x in unquote(loc[1]).split(','))
+            geo = frozen.coord.get((lat, lon, language(record.get('headers_sent'))))
+            if geo is None:
+                problem = {'field': 'weather-merge', 'observed': 'no frozen geocode for request'}
+            else:
+                expected = json.loads(frozen.backends[(match[1], match[2])])
+                fields = json.loads(geo)
+                for key in ('name', 'country', 'address', 'location'):
+                    if key in fields:
+                        expected[key] = fields[key]
+                try:
+                    observed = json.loads(record['body'])
+                except ValueError:
+                    observed = None
+                # Order-sensitive comparison of the parsed documents (key order and values).
+                if json.dumps(observed, ensure_ascii=False) != json.dumps(expected, ensure_ascii=False):
+                    problem = {'field': 'weather-merge', 'observed': 'body differs from backend+geocode merge'}
+        if problem:
+            mismatches.append({'request': record['id'], 'pass': record['pass'], 'problems': [problem]})
+    return checked, mismatches
+
+
+def structural_oracle(fixture, records):
+    return weather_oracle(records, Frozen(fixture))
+
+
 def smoke(binary, selected=None):
+    known = {scenario[0] for scenario in SCENARIOS}
+    if selected is not None and (not selected or selected - known):
+        raise ValueError('unknown or empty scenario selection: ' + ', '.join(sorted(selected - known)) +
+                         '; known: ' + ', '.join(sorted(known)))
     frozen = Frozen(_json(REPLAY_FIXTURE))
     ctx = Context(binary, frozen)
     results = []
@@ -515,6 +593,8 @@ def replay_side(binary, fixture, side, perturb=False):
                     reply = harness.request(process.public, item['path'], item['method'], headers)
                     etags[item['id']] = reply.header('etag') or ''
                     records.append({'id': item['id'], 'pass': pass_name, 'oracle': item.get('oracle'),
+                                    'merge_oracle': bool(item.get('merge_oracle')), 'path': item['path'],
+                                    'method': item['method'], 'headers_sent': headers,
                                     'status': reply.status, 'headers': reply.headers, 'body': reply.body,
                                     'elapsed_ms': reply.elapsed_ms, 'hops': peers.hops_since(mark)})
                 acquisitions[pass_name] = harness.delta(peers.counts(), start)

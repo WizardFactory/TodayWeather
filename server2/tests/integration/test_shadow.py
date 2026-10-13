@@ -48,11 +48,33 @@ class CompareTest(unittest.TestCase):
 
     def test_geocoder_acquisition_differences_are_declared_per_pass(self):
         for pass_name, expected in (('cold', 'D-ACQ-GEOCODER'), ('warm', 'D-ACQ-WARM-CACHE')):
+            plan = {'W01': {pass_name: {'baseline': {'legacy_geo': 1}, 'candidate': {'kakao': 1}}}}
             declared, unexplained = replay.compare(
                 [record(pass_name=pass_name, hops=[('legacy_geo', '/geocode/x', 'ko')])],
-                [record(pass_name=pass_name, hops=[('kakao', '/v2/local/x', '')])], DECLARED)
+                [record(pass_name=pass_name, hops=[('kakao', '/v2/local/x', '')])], DECLARED, plan)
             self.assertEqual(unexplained, [])
             self.assertEqual({d['declared'] for d in declared}, {expected})
+
+    def test_declared_acquisition_kind_does_not_admit_unplanned_counts(self):
+        # R1-01: a declared kind cannot hide extra or warm-pass provider work.
+        plan = {'W01': {'warm': {'baseline': {'legacy_geo': 1}, 'candidate': {}}}}
+        extra = [('google', '/maps/api/geocode/json', '')] * 100
+        declared, unexplained = replay.compare(
+            [record(pass_name='warm', hops=[('legacy_geo', '/geocode/x', 'ko')])],
+            [record(pass_name='warm', hops=extra)], DECLARED, plan)
+        self.assertEqual(declared, [])
+        self.assertEqual([(u['kind'], u['side'], u['observed']) for u in unexplained],
+                         [('acquisition-plan', 'candidate', {'google': 100})])
+        # Without a plan entry a differing acquisition is never declared.
+        _, unexplained = replay.compare(
+            [record(hops=[('legacy_geo', '/geocode/x', 'ko')])], [record(hops=[('kakao', '/v2', '')])], DECLARED, {})
+        self.assertEqual({u['kind'] for u in unexplained}, {'acquisition'})
+
+    def test_equal_but_unplanned_acquisitions_are_unexplained(self):
+        plan = {'W01': {'cold': {'baseline': {'legacy_geo': 1}, 'candidate': {'legacy_geo': 1}}}}
+        _, unexplained = replay.compare(
+            [record(hops=[('legacy_geo', '/g', 'ko')] * 2)], [record(hops=[('legacy_geo', '/g', 'ko')] * 2)], DECLARED, plan)
+        self.assertEqual(sorted(u['side'] for u in unexplained), ['baseline', 'candidate'])
 
     def test_backend_and_undeclared_acquisition_differences_are_unexplained(self):
         _, unexplained = replay.compare(
@@ -79,6 +101,30 @@ class OracleTest(unittest.TestCase):
         fields = {(p['field'], p.get('name')) for p in mismatches[0]['problems']}
         # Recorded headers are compared as observed; content-length was unchanged here.
         self.assertEqual(fields, {('body', None), ('header', 'etag')})
+
+    def test_unresolved_oracle_reference_fails(self):
+        # R1-03: a named but missing S02 case is a mismatch, never a silent skip.
+        checked, mismatches = replay.oracle_check([dict(record(), oracle='missing-case')], CASES, ['date'])
+        self.assertEqual(checked, 1)
+        self.assertEqual(mismatches[0]['problems'], [{'field': 'oracle', 'expected': 'missing-case', 'observed': None}])
+
+    def test_weather_merge_oracle_is_independent_of_server2(self):
+        # R1-04: successful weather bodies must equal the frozen backend body merged with the
+        # frozen legacy geocode fields, so a shared assembly regression cannot pass on both sides.
+        frozen = gateway_family.Frozen(FIXTURE)
+        backend = json.loads(frozen.backends[('v000903', 'kma')])
+        geo = json.loads(frozen.coord[(37.566, 126.978, 'ko')])
+        merged = dict(backend)
+        for key in ('name', 'country', 'address', 'location'):
+            merged[key] = geo[key]
+        hop = ('backend', '/v000903/kma/addr/x', 'ko')
+        good = record('W07', body=json.dumps(merged, ensure_ascii=False).encode(), hops=[hop])
+        good.update(path='/weather/v000903/coord/37.5663,126.9779', method='GET', headers_sent={'accept-language': 'ko-KR'},
+                    merge_oracle=True)
+        bad = dict(good, body=json.dumps(dict(merged, name='wrong'), ensure_ascii=False).encode())
+        self.assertEqual(gateway_family.weather_oracle([good], frozen), (1, []))
+        checked, mismatches = gateway_family.weather_oracle([bad], frozen)
+        self.assertEqual((checked, mismatches[0]['request']), (1, 'W07'))
 
 
 class HarnessTest(unittest.TestCase):
@@ -156,6 +202,21 @@ class RegistryTest(unittest.TestCase):
         self.assertEqual(len({s[0] for s in module.SCENARIOS}), len(module.SCENARIOS))
         with self.assertRaises(ValueError):
             families.load('domestic')
+
+    def test_unknown_or_empty_scenario_selection_is_rejected(self):
+        # R1-02: a selector typo must not produce a zero-scenario PASS.
+        for selection in ({'GW-TYPO'}, {'GW-COLD-WARM', 'GW-TYPO'}, set()):
+            with self.assertRaises(ValueError, msg=selection):
+                gateway_family.smoke('unused-binary', selection)
+
+    def test_workload_acquisition_plan_covers_every_request(self):
+        for item in FIXTURE['workload']:
+            plan = item.get('acquisitions')
+            self.assertIsInstance(plan, dict, item['id'])
+            self.assertEqual(set(plan), {'cold', 'warm'}, item['id'])
+            for sides in plan.values():
+                self.assertEqual(set(sides), {'baseline', 'candidate'}, item['id'])
+            self.assertEqual(plan['warm']['candidate'], {}, item['id'] + ': warm native lookups must be RAM hits')
 
     def test_smoke_entrypoint_is_valid_bash(self):
         subprocess.run(['bash', '-n', str(SERVER2 / 'deploy/smoke.sh')], check=True)

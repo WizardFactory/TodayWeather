@@ -108,6 +108,7 @@ class RecordingPeer(http.server.ThreadingHTTPServer):
         self.hops = []
         self.delay = {}
         self.fault = {}
+        self.gate = {}
         super().__init__(('127.0.0.1', 0), PeerHandler)
         self.thread = threading.Thread(target=self.serve_forever, daemon=True)
         self.thread.start()
@@ -158,6 +159,10 @@ class PeerHandler(http.server.BaseHTTPRequestHandler):
             status, content_type, body = 500, 'application/json', b'{}'
         if delay:
             time.sleep(delay)
+        gate = self.server.gate.get(kind)
+        if gate is not None:
+            # Held until the scenario releases it, so overlap does not depend on sleep timing.
+            gate.wait(timeout=15)
         try:
             self.send_response(status)
             self.send_header('Content-Type', content_type)
@@ -258,6 +263,18 @@ class Server2:
             for stream in (self.process.stdout, self.process.stderr):
                 if stream and not stream.closed:
                     stream.close()
+
+
+def wait_until(condition, timeout, message):
+    """Bounded polling for an observable state instead of a fixed sleep."""
+    deadline = time.monotonic() + timeout
+    while True:
+        value = condition()
+        if value:
+            return value
+        if time.monotonic() >= deadline:
+            raise AssertionError('timed out waiting for ' + message)
+        time.sleep(0.02)
 
 
 def delta(after, before):
