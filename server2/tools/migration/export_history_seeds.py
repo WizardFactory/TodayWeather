@@ -58,6 +58,20 @@ RECORD_BYTES = 8 * 1024 * 1024   # S05 raw record limit (manifest + group line)
 SEED_BYTES = 64 * 1024 * 1024    # Rust importer seed bound
 
 
+I64_MIN, I64_MAX = -(1 << 63), (1 << 63) - 1
+
+
+def reject_constant(name):
+    raise Invalid(f'non-JSON numeric constant {name}')
+
+
+def finite_float(text):
+    value = float(text)
+    if value != value or value in (float('inf'), float('-inf')):
+        raise Invalid(f'number out of range: {text}')
+    return value
+
+
 def unique_pairs(pairs):
     names = [name for name, _ in pairs]
     if len(names) != len(set(names)):
@@ -104,7 +118,8 @@ def number(value):
             return None
         try:
             if key in ('$numberInt', '$numberLong'):
-                return float(int(inner))
+                parsed = int(inner)
+                return float(parsed) if I64_MIN <= parsed <= I64_MAX else None
             if key in ('$numberDouble', '$numberDecimal'):
                 return float(inner)
         except ValueError:
@@ -246,7 +261,8 @@ def convert(collection, version, exported_at, source):
             raise Invalid(f'line {number_} has surrounding whitespace')
         try:
             text = raw.decode('utf-8')
-            doc = json.loads(text, object_pairs_hook=unique_pairs)
+            doc = json.loads(text, object_pairs_hook=unique_pairs, parse_constant=reject_constant,
+                             parse_float=finite_float)
         except (UnicodeDecodeError, json.JSONDecodeError) as error:
             raise Invalid(f'line {number_} is not a JSON document') from error
         except Invalid as error:

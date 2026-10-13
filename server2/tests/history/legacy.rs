@@ -122,6 +122,24 @@ fn legacy_converter_rejects_arrays_foreign_collections_and_personal_fields() {
         (
             "kma.town.current",
             "2.0",
+            "bad-number-nan.jsonl",
+            "non-JSON numeric constant",
+        ),
+        (
+            "kma.town.current",
+            "2.0",
+            "bad-number-overflow.jsonl",
+            "number out of range",
+        ),
+        (
+            "kma.town.current",
+            "2.0",
+            "bad-number-long.jsonl",
+            "non-scalar field 't1h'",
+        ),
+        (
+            "kma.town.current",
+            "2.0",
             "bad-date-range.jsonl",
             "fcsDate and pubDate",
         ),
@@ -205,6 +223,14 @@ fn legacy_seed_parser_rejects_tampered_seeds() {
             1,
         ),
         good.replacen(EXPORTED, "9999-12-31T23:59:00.000Z", 1),
+        // Numbers the converter refuses are refused by the importer too.
+        good.replacen(r#""t1h":21.3"#, r#""t1h":NaN"#, 1),
+        good.replacen(r#""t1h":21.3"#, r#""t1h":1e400"#, 1),
+        good.replacen(
+            r#""t1h":21.3"#,
+            r#""t1h":{"$numberLong":"9223372036854775808"}"#,
+            1,
+        ),
         // Metadata fields must hold their legacy types.
         good.replacen(r#""__v":0"#, r#""__v":"token""#, 1),
     ] {
