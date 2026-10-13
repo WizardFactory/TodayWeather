@@ -44,6 +44,12 @@ def main():
         commands.insert(2, [sys.executable, str(local_tests)])
         commands.append([sys.executable, str(local_smoke), '--binary', 'target/release/server2'])
     commands.append([sys.executable, 'tools/gateway_smoke.py', '--binary', 'target/release/server2'])
+    # S19: shadow tool unit tests, then the integrated release smoke (scenarios, paired
+    # replay with self-check, cache-aware rollback). The two reused smokes ran above.
+    commands.insert(3, [sys.executable, 'tests/integration/test_shadow.py'])
+    os.environ.setdefault('SERVER2_PYTHON', sys.executable)
+    commands.append(['bash', 'deploy/smoke.sh', '--binary', 'target/release/server2', '--skip-reused',
+                     '--out', str(root/'reports/server2-smoke/ci')])
     # Uses the just-built GNU binary: real private_manifest, then the non-musl
     # fence, without worker claims or any AWS/IMDS network path.
     commands.append([sys.executable, sandbox, 'manifest-functional'])
