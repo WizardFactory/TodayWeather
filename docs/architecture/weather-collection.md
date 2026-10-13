@@ -229,14 +229,17 @@ list entry. When the provider rejects the credential itself (codes 20, 30, 31,
 32, or HTTP 401/403 classified from the gateway body) or the entry is a
 placeholder, the request moves to the previous entry, wrapping once. Quota
 (code 22), transport, timeout, 5xx and payload failures never change the key,
-so switching keys cannot bypass a quota. When every key is rejected the request
+so switching keys cannot bypass a quota. A 401/403 that carries the regular result envelope keeps that code, so quota
+returned with HTTP 401/403 still stops. The whole key search shares the call's
+30-second budget. When every key is rejected the request
 fails with `NO_VALID_KEY`. Each rejection is logged as `KEY_REJECTED` with the
 operation, key position and code only. Station metadata
 (`MsrstnInfoInqireSvc/getMsrstnList`, gather startup), the dust forecast
 (`ArpltnInforInqireSvc/getMinuDustFrcstDspth`, `ver=1.1`, `/gather/kecoForecast`)
 and the nearby-station lookup (`MsrstnInfoInqireSvc/getNearbyMsrstnList`,
 `ver=1.1`, no current caller) now use the same supported service and complete
-page validation; the retired `openapi.airkorea.or.kr` host is no longer called.
+page validation and reject an item that lacks a field its consumer reads
+(`INVALID_ITEM`); the retired `openapi.airkorea.or.kr` host is no longer called.
 Station metadata omits `ver`, so `dmX` stays latitude and `dmY` longitude as
 `parseMsrstnList` expects. Although the forecast document says date searches
 ignore paging, the provider returned 10 of 28 items without `numOfRows` on

@@ -10,14 +10,24 @@ var NEARBY = 'getNearbyMsrstnList';
 var BASE = 'https://apis.data.go.kr/B552584/';
 // Every operation is paged (provider default 10 rows) and must return every page. The forecast document
 // says date searches ignore paging, but on 2026-10-13 the provider returned 10 of 28 items without numOfRows.
+// `item` checks the fields its consumer dereferences; station/sido rows are validated by parseRows.
+function text(value) { return typeof value === 'string' && value.trim() !== ''; }
+function coordinate(value) { return typeof value === 'string' || (typeof value === 'number' && isFinite(value)); }
 var OPERATIONS = {};
 OPERATIONS[STATION] = {service: 'ArpltnInforInqireSvc', params: {ver: '1.3'}};
 OPERATIONS[SIDO] = {service: 'ArpltnStatsSvc', params: {searchCondition: 'HOUR'}};
 // Without ver, dmX is latitude and dmY longitude: the order parseMsrstnList expects.
-OPERATIONS[STATION_LIST] = {service: 'MsrstnInfoInqireSvc', params: {}};
+// Empty coordinates are allowed: completeGeoMsrStnInfo geocodes the address.
+OPERATIONS[STATION_LIST] = {service: 'MsrstnInfoInqireSvc', params: {}, item: function (item) {
+    return text(item.stationName) && coordinate(item.dmX) && coordinate(item.dmY);
+}};
 // ver 1.1 adds model images 7-9.
-OPERATIONS[FORECAST] = {service: 'ArpltnInforInqireSvc', params: {ver: '1.1'}};
-OPERATIONS[NEARBY] = {service: 'MsrstnInfoInqireSvc', params: {ver: '1.1'}};
+OPERATIONS[FORECAST] = {service: 'ArpltnInforInqireSvc', params: {ver: '1.1'}, item: function (item) {
+    return text(item.dataTime) && text(item.informCode) && text(item.informData) && typeof item.informGrade === 'string';
+}};
+OPERATIONS[NEARBY] = {service: 'MsrstnInfoInqireSvc', params: {ver: '1.1'}, item: function (item) {
+    return text(item.stationName);
+}};
 // The provider rejected the credential itself (access denied, not registered, expired, unregistered IP).
 // Quota (22) is deliberately absent: switching keys must not bypass a quota.
 var INVALID_CREDENTIAL = ['PROVIDER_20', 'PROVIDER_30', 'PROVIDER_31', 'PROVIDER_32',
@@ -54,13 +64,27 @@ function buildUrl(sido, key, operation, page, pageSize, base) {
     return operationUrl(operation, key, {sidoName: sido, pageNo: page || 1, numOfRows: pageSize || 100}, base);
 }
 // Only a small code allowlist can enter logs/errors; no provider message/body/URL.
+function providerCode(code) {
+    return ['01','03','05','10','12','20','22','23','29','30','31','32','99'].indexOf(code) !== -1 ?
+        'PROVIDER_' + code : 'PROVIDER_ERROR';
+}
 function gatewayCode(text) {
     var code = /<(?:returnReasonCode|resultCode)>\s*(20|22|29|30|31|32)\s*<\//.exec(text) ||
         /"returnReasonCode"\s*:\s*"?(20|22|29|30|31|32)"?/.exec(text);
     if (code) { return 'PROVIDER_' + code[1]; }
     if (/DEADLINE_HAS_EXPIRED_ERROR/.test(text)) { return 'PROVIDER_31'; }
     if (/SERVICE_KEY_IS_NOT_REGISTERED_ERROR/.test(text)) { return 'PROVIDER_30'; }
+    if (/LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR/.test(text)) { return 'PROVIDER_22'; }
     return null;
+}
+// A 401/403 may carry the regular envelope (for example quota code 22); its code wins over the status.
+function rejectionCode(text, status) {
+    var payload;
+    try { payload = JSON.parse(text); } catch (_) { payload = null; }
+    if (payload && payload.response && payload.response.header && payload.response.header.resultCode !== undefined) {
+        return providerCode(String(payload.response.header.resultCode));
+    }
+    return gatewayCode(text) || 'HTTP_' + status;
 }
 function kstInstant(value) {
     if (typeof value !== 'string') { return NaN; }
@@ -125,25 +149,25 @@ function parseRows(data, operation, keys) {
     Object.defineProperty(output, 'unavailable', {value: unavailable});
     return output;
 }
-function itemsBody(payload) {
+function itemsBody(payload, check) {
     if (!payload || typeof payload !== 'object' || !payload.response || !payload.response.header) {
         throw failure('INVALID_ENVELOPE');
     }
     var code = String(payload.response.header.resultCode);
-    if (code !== '00') {
-        // Only a small code allowlist can enter logs/errors; no provider message/body/URL.
-        throw failure(['01','03','05','10','12','20','22','23','29','30','31','32','99'].indexOf(code) !== -1 ? 'PROVIDER_' + code : 'PROVIDER_ERROR');
-    }
+    if (code !== '00') { throw failure(providerCode(code)); }
     var body = payload.response.body;
     if (!body || !Array.isArray(body.items)) { throw failure('INVALID_ITEMS'); }
-    // Some operations echo request parameters per item; credentials must not reach storage or archives.
     body.items.forEach(function (item) {
-        if (item && typeof item === 'object') { delete item.serviceKey; }
+        if (!item || typeof item !== 'object' || Array.isArray(item) || (check && !check(item))) {
+            throw failure('INVALID_ITEM');
+        }
+        // Some operations echo request parameters per item; credentials must not reach storage or archives.
+        delete item.serviceKey;
     });
     return body;
 }
-function envelope(payload, page, size) {
-    var body = itemsBody(payload);
+function envelope(payload, page, size, check) {
+    var body = itemsBody(payload, check);
     var total = Number(body.totalCount), actualPage = Number(body.pageNo), actualSize = Number(body.numOfRows);
     if (!/^\d+$/.test(String(body.totalCount)) || total > 2000 || actualPage !== page || actualSize !== size ||
         body.items.length !== Math.min(size, Math.max(0, total - (page - 1) * size))) {
@@ -192,7 +216,7 @@ function create(options) {
                 res.on('end', function () {
                     if (done) { return; }
                     var text = Buffer.concat(chunks).toString('utf8');
-                    if (classify) { return finish(failure(gatewayCode(text) || 'HTTP_' + status)); }
+                    if (classify) { return finish(failure(rejectionCode(text, status))); }
                     var body;
                     try { body = JSON.parse(text); }
                     catch (_) { return finish(failure(gatewayCode(text) || 'INVALID_JSON')); }
@@ -207,10 +231,12 @@ function create(options) {
             });
         } catch (_) { finish(failure('REQUEST_ERROR')); }
     }
-    function query(operation, key, params, cb) {
+    // `deadline` (epoch ms) lets key failover share one budget; it defaults to a fresh budget.
+    function query(operation, key, params, cb, deadline) {
         var spec = Object.prototype.hasOwnProperty.call(OPERATIONS, operation) ? OPERATIONS[operation] : null;
         if (!spec) { return cb(failure('INVALID_OPERATION')); }
-        var all = [], page = 1, total, calls = 0, deadline = Date.now() + (options.budgetMs || 30000);
+        var all = [], page = 1, total, calls = 0;
+        deadline = deadline || Date.now() + (options.budgetMs || 30000);
         function next() {
             if (page > maxPages || Date.now() >= deadline) { return cb(failure('COLLECTION_LIMIT')); }
             var url;
@@ -225,7 +251,7 @@ function create(options) {
                         return cb(err);
                     }
                     var body;
-                    try { body = envelope(payload, page, size); }
+                    try { body = envelope(payload, page, size, spec.item); }
                     catch (e) { return cb(e); }
                     if (total !== undefined && total !== Number(body.totalCount)) { return cb(failure('CHANGED_TOTAL')); }
                     total = Number(body.totalCount);
@@ -239,23 +265,23 @@ function create(options) {
         }
         next();
     }
-    function fetch(sido, key, operation, cb) {
+    function fetch(sido, key, operation, cb, deadline) {
         if (operation !== STATION && operation !== SIDO) { return cb(failure('INVALID_OPERATION')); }
         query(operation, key, {sidoName: sido}, function (err, result) {
             if (err) { return cb(err); }
             result.parm = {sidoName: sido};
             cb(null, result);
-        });
+        }, deadline);
     }
     // Index of the last key that produced a valid response; tried first next time.
     var preferred = -1;
     function withKeys(keys, operation, run, cb) {
         if (!Array.isArray(keys) || !keys.length) { return cb(failure('NO_KEY')); }
         var index = preferred >= 0 && preferred < keys.length ? preferred : keys.length - 1;
-        var rejected = [];
+        var rejected = [], deadline = Date.now() + (options.budgetMs || 30000);
         (function attemptKey() {
             var current = index;
-            run(keys[current], function (err, result) {
+            run(keys[current], deadline, function (err, result) {
                 if (err && INVALID_CREDENTIAL.indexOf(err.code) !== -1) {
                     rejected.push(err.code);
                     if (options.onKeyRejected) { options.onKeyRejected(operation, current, err.code); }
@@ -264,6 +290,7 @@ function create(options) {
                         none.rejected = rejected;
                         return cb(none);
                     }
+                    if (Date.now() >= deadline) { return cb(failure('COLLECTION_LIMIT')); }
                     index = (current - 1 + keys.length) % keys.length;
                     return attemptKey();
                 }
@@ -273,10 +300,10 @@ function create(options) {
         })();
     }
     function fetchWithKeys(keys, sido, operation, cb) {
-        withKeys(keys, operation, function (key, done) { fetch(sido, key, operation, done); }, cb);
+        withKeys(keys, operation, function (key, deadline, done) { fetch(sido, key, operation, done, deadline); }, cb);
     }
     function queryWithKeys(keys, operation, params, cb) {
-        withKeys(keys, operation, function (key, done) { query(operation, key, params, done); }, cb);
+        withKeys(keys, operation, function (key, deadline, done) { query(operation, key, params, done, deadline); }, cb);
     }
     return {fetch: fetch, query: query, fetchWithKeys: fetchWithKeys, queryWithKeys: queryWithKeys};
 }

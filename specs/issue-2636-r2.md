@@ -8,18 +8,18 @@ Inputs: [intent](../intent/issue-2636-r2.md), [issue-2636 spec](issue-2636.md), 
 - HTTP 401 and 403, classified from the body when possible;
 - a placeholder, empty or malformed key (`NO_KEY`, `INVALID_KEY_ENCODING`).
 
-Quota (`22`), other provider codes, transport errors, timeouts, HTTP 5xx and payload validation errors return immediately after the existing single transient retry; they do not change the key. When every key fails as invalid, the error code is `NO_VALID_KEY` and carries no key text. The remembered index is per client instance and is updated only after a successful envelope. Logs record operation, key index and stable codes only.
+A 401/403 that carries the regular envelope keeps that envelope's code, so a quota `22` returned with HTTP 401/403 is not a credential rejection (review R1). Quota (`22`), other provider codes, transport errors, timeouts, HTTP 5xx and payload validation errors return immediately after the existing single transient retry; they do not change the key. When every key fails as invalid, the error code is `NO_VALID_KEY` and carries no key text. The remembered index is per client instance and is updated only after a successful envelope. Logs record operation, key index and stable codes only.
 
 ## Supported operations (AC2)
 | Operation | Service path | Parameters | Validation |
 | --- | --- | --- | --- |
 | station realtime | `ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty` | unchanged | unchanged |
 | sido hour | `ArpltnStatsSvc/getCtprvnMesureSidoLIst` | unchanged | unchanged |
-| station list | `MsrstnInfoInqireSvc/getMsrstnList` | `numOfRows=100`, paged; no `ver` (keeps the long-standing `dmX`=latitude, `dmY`=longitude order that `parseMsrstnList` and the swap guard expect) | complete pages; every item has a string `stationName`; returns `{list}` |
-| dust forecast | `ArpltnInforInqireSvc/getMinuDustFrcstDspth` | `searchDate=YYYY-MM-DD`, `ver=1.1` | resultCode `00`, `items` array; pagination fields are not enforced because the provider ignores paging for date searches; item count ≤ 200; returns `{list}` |
-| nearby station | `MsrstnInfoInqireSvc/getNearbyMsrstnList` | `tmX`, `tmY`, `ver=1.1` | resultCode `00`, `items` array; returns `{list}` |
+| station list | `MsrstnInfoInqireSvc/getMsrstnList` | `numOfRows=100`, paged; no `ver` (keeps the long-standing `dmX`=latitude, `dmY`=longitude order that `parseMsrstnList` and the swap guard expect) | complete pages; every item has a string `stationName` and string or numeric `dmX`/`dmY` (empty allowed for geocoding); returns `{list}` |
+| dust forecast | `ArpltnInforInqireSvc/getMinuDustFrcstDspth` | `searchDate=YYYY-MM-DD`, `ver=1.1`, `numOfRows=100`, paged | complete pages (the document says date searches ignore paging, but on 2026-10-13 the provider returned 10 of 28 items without `numOfRows`); every item has string `dataTime`, `informCode`, `informData`, `informGrade`; returns `{list}` |
+| nearby station | `MsrstnInfoInqireSvc/getNearbyMsrstnList` | `tmX`, `tmY`, `ver=1.1`, `numOfRows=100`, paged | complete pages; every item has a string `stationName`; returns `{list}` |
 
-All requests use HTTPS, `returnType=json`, the existing whole-attempt timeout, byte limit and single transient retry. Response bodies, URLs and keys are not logged. The legacy domain constants, `_jsonRequest`, `_checkLimit` and key-index recursion are removed. `getStationNameFromMsrstn` keeps its behavior for `{list:[...]}`.
+All requests use HTTPS, `returnType=json`, the existing whole-attempt timeout, byte limit and single transient retry, the common 20-page / 2,000-row limit, and fail with `INVALID_ITEM` when an item is not an object or lacks a field its consumer reads. One 30-second budget covers the whole key search, its pages and retries (PR #2737 review R2/R3). Response bodies, URLs and keys are not logged. The legacy domain constants, `_jsonRequest`, `_checkLimit` and key-index recursion are removed. `getStationNameFromMsrstn` keeps its behavior for `{list:[...]}`.
 
 Forecast parsing keeps `_parseFrcst` and `_saveFrcst` (filter by `dataTime`, `informGrade` split, nine image URLs). `ver=1.1` adds images 7–9 with no schema change: `imageUrl` stays an array.
 

@@ -22,10 +22,10 @@ function transport(responder) {
             if (answer.hang) return;
             const response = new EventEmitter(); response.statusCode = answer.status || 200; response.destroy = () => {};
             cb(response);
-            setImmediate(() => {
+            setTimeout(() => {
                 response.emit('data', Buffer.from(typeof answer.body === 'string' ? answer.body : JSON.stringify(answer.body || {})));
                 response.emit('end');
-            });
+            }, answer.delay || 0);
         });
         return request;
     };
@@ -199,4 +199,71 @@ test('no runtime request to the retired openapi.airkorea.or.kr host remains', ()
         assert(!source.includes('openapi.airkorea.or.kr'), file);
         assert(!/require\(['"]request['"]\)/.test(source), file);
     }
+});
+
+// Review round 1 (PR #2737).
+test('R1: a 401/403 with a regular JSON or XML envelope keeps its provider code; quota never switches keys', async () => {
+    const envelope = code => ({response: {header: {resultCode: code, resultMsg: 'synthetic'}}});
+    for (const [answer, pattern, calls] of [
+        [{status: 401, body: envelope('22')}, /PROVIDER_22/, 1],
+        [{status: 403, body: envelope('22')}, /PROVIDER_22/, 1],
+        [{status: 401, body: '<response><header><resultCode>22</resultCode></header></response>'}, /PROVIDER_22/, 1],
+        [{status: 403, body: gateway('LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR', '22')}, /PROVIDER_22/, 1],
+        [{status: 403, body: envelope('30')}, /NO_VALID_KEY/, 3],
+        [{status: 401, body: envelope('99')}, /PROVIDER_99/, 1]
+    ]) {
+        const t = transport(() => answer);
+        await assert.rejects(invoke(Api.create({transport: t}), 'fetchWithKeys', KEYS, '서울', Api.STATION), pattern);
+        assert.equal(t.calls.length, calls, JSON.stringify(answer.body));
+    }
+});
+
+test('R2: malformed station-list, forecast and nearby items fail with INVALID_ITEM before any consumer', async () => {
+    const cases = [
+        [Api.STATION_LIST, 'msrstn', [null], [{}], [{stationName: '', dmX: '37', dmY: '127'}], [{stationName: 'x', dmX: {}, dmY: '127'}]],
+        [Api.FORECAST, 'frcst', [null], [{dataTime: '2026-10-13 23시 발표', informCode: 'PM10', informData: '2026-10-13'}]],
+        [Api.NEARBY, 'nearby', [null], [{}], [{stationName: 7}]]
+    ];
+    for (const [op, name, ...variants] of cases) {
+        for (const items of variants) {
+            const data = fixture(name); Object.assign(data.response.body, {items, totalCount: items.length, numOfRows: 100, pageNo: 1});
+            await assert.rejects(invoke(Api.create({transport: transport(() => ({body: data}))}), 'query', op, 'synthetic', {}), /INVALID_ITEM/, op);
+        }
+    }
+});
+
+test('R2: an invalid item stops station-list and forecast collection once, without writes', async () => {
+    const writes = [], saved = [];
+    function Frcst(doc) { this.doc = doc; }
+    Frcst.prototype.save = function (cb) { saved.push(this.doc); cb(null); };
+    Frcst.find = () => ({lean: () => ({exec: cb => cb(null, [])}), exec: cb => cb(null, [])});
+    Frcst.remove = (q, cb) => cb && cb(null);
+    const h = harness({overrides: {
+        'models/modelMsrStnInfo.js': {update(q, row, opts, cb) { writes.push(row); cb(null, {ok: 1}); }},
+        'models/modelMinuDustFrcst.js': Frcst,
+        'controllers/airkorea.hourly.forecast.controller.js': function () { this.do = () => {}; },
+        'lib/kmaTimeLib.js': {toTimeZone: () => new Date(2026, 9, 13, 23, 30), convertDateToYYYY_MM_DD: () => '2026-10-13'}
+    }});
+    const t = transport(url => {
+        const data = fixture(url.includes('getMsrstnList') ? 'msrstn' : 'frcst');
+        Object.assign(data.response.body, {numOfRows: 100, pageNo: 1});
+        data.response.body.items[1] = null;
+        return {body: data};
+    });
+    h.keco._observationApi = Api.create({transport: t}); h.keco.setServiceKeys(['synthetic']);
+    for (const method of ['getAllMsrStnInfo', 'getMinuDustFrcstDspth']) {
+        let calls = 0, error;
+        await new Promise(resolve => { h.keco[method]((err) => { calls++; error = err; resolve(); }); });
+        await new Promise(resolve => setTimeout(resolve, 10));
+        assert.equal(calls, 1, method); assert.match(String(error && error.code), /INVALID_ITEM/, method);
+    }
+    assert.equal(writes.length, 0); assert.equal(saved.length, 0);
+});
+
+test('R3: key failover shares one budget across keys, pages and retries', async () => {
+    const t = transport(() => ({status: 401, body: gateway('DEADLINE_HAS_EXPIRED_ERROR', '31'), delay: 40}));
+    const start = Date.now();
+    await assert.rejects(invoke(Api.create({transport: t, budgetMs: 60}), 'fetchWithKeys', KEYS, '서울', Api.STATION), /COLLECTION_LIMIT|TIMEOUT/);
+    assert(Date.now() - start < 100, 'elapsed ' + (Date.now() - start));
+    assert(t.calls.length <= 2, 'calls ' + t.calls.length);
 });
