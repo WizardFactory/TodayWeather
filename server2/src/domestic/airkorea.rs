@@ -129,10 +129,13 @@ fn numeric(value: &Value) -> bool {
         Value::String(s) => {
             let t = s.trim();
             let (int, frac) = t.split_once('.').unwrap_or((t, "0"));
+            // Legacy `/^\d+(?:\.\d+)?$/` and then `Number(value)` finite and nonnegative
+            // (S13a-R2-F01: an overflowing decimal is Infinity, not a concentration).
             !int.is_empty()
                 && !frac.is_empty()
                 && int.bytes().all(|b| b.is_ascii_digit())
                 && frac.bytes().all(|b| b.is_ascii_digit())
+                && t.parse::<f64>().is_ok_and(|f| f.is_finite() && f >= 0.)
         }
         _ => false,
     }

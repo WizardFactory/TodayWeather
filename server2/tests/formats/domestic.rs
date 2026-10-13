@@ -217,6 +217,27 @@ async fn airkorea_invalid_or_incomplete_sets_never_become_records() {
     }
 }
 
+/// S13a-R2-F01: an overflowing decimal string is not a usable concentration (legacy
+/// `Number(value)` is Infinity), for station and sido operations.
+#[tokio::test]
+async fn airkorea_overflowing_concentration_is_not_usable() {
+    let huge = "9".repeat(400);
+    for (operation, path, identity) in [
+        (AirKoreaOperation::Station, STATION, "stationName"),
+        (AirKoreaOperation::Sido, SIDO, "cityName"),
+    ] {
+        let e = env().await;
+        let mut row = serde_json::json!({"sidoName": "서울", "dataTime": "2026-10-13 13:00", "pm10Value": huge});
+        row[identity] = "중구".into();
+        let body = airkorea_envelope(vec![row], 1, 1);
+        e.stub.push(path, Reply::json(body.clone()));
+        e.stub.push(path, Reply::json(body));
+        let request = AirKoreaRequest::new(operation, "서울").unwrap();
+        let outcome = e.acquirer.acquire_airkorea(&request, deadline()).await;
+        assert!(not_complete(&outcome), "{operation:?}: {outcome:?}");
+    }
+}
+
 #[tokio::test]
 async fn airkorea_total_zero_is_terminal_no_data_after_one_attempt() {
     let e = env().await;
