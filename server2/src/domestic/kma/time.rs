@@ -37,7 +37,18 @@ pub fn world_time(now_ms: f64, tz: f64) -> String {
 }
 /// `Date.UTC`-style construction with JavaScript month/day overflow (`new Date(y, m, d, h, mi, s)`
 /// in the UTC process zone).
+/// `new Date(y, m, d, h, mi, s)` / `Date.UTC(y, ...)` (process zone UTC): a year whose integer is
+/// 0-99 means 1900-1999, as for every numeric Date constructor in the legacy code.
 pub fn make_date(y: f64, m: f64, d: f64, h: f64, mi: f64, s: f64) -> f64 {
+    let y = if y.is_finite() && (0. ..=99.).contains(&y.trunc()) {
+        1900. + y.trunc()
+    } else {
+        y
+    };
+    make_date_literal(y, m, d, h, mi, s)
+}
+/// MakeDate with the year taken literally (the `Date.parse` ISO forms).
+pub fn make_date_literal(y: f64, m: f64, d: f64, h: f64, mi: f64, s: f64) -> f64 {
     if ![y, m, d, h, mi, s].iter().all(|x| x.is_finite()) {
         return f64::NAN;
     }
@@ -143,7 +154,7 @@ pub fn parse_date(s: &str) -> f64 {
                 && (1. ..=31.).contains(&d)
                 && mi <= 59.
                 && (h < 24. || (h == 24. && mi == 0.)))
-                .then(|| make_date(y, m - 1., d, h, mi, 0.))
+                .then(|| make_date_literal(y, m - 1., d, h, mi, 0.))
         };
         if let Some(ms) = dotted() {
             return ms;
@@ -169,7 +180,7 @@ fn iso_date_time(b: &[u8], num: &dyn Fn(std::ops::Range<usize>) -> Option<f64>) 
     let date_ok = (1. ..=12.).contains(&m) && (1. ..=31.).contains(&d);
     if b.len() == 10 {
         return Some(if date_ok {
-            make_date(y, m - 1., d, 0., 0., 0.)
+            make_date_literal(y, m - 1., d, 0., 0., 0.)
         } else {
             f64::NAN
         });
@@ -226,7 +237,7 @@ fn iso_date_time(b: &[u8], num: &dyn Fn(std::ops::Range<usize>) -> Option<f64>) 
         // V8's ISO parser rejects it; with a space the legacy parser decides (not reproduced).
         return strict.then_some(f64::NAN);
     }
-    Some(make_date(y, m - 1., d, h, mi, sec) + milli - sign * (oh * 60. + om) * 60_000.)
+    Some(make_date_literal(y, m - 1., d, h, mi, sec) + milli - sign * (oh * 60. + om) * 60_000.)
 }
 /// `kmaTimeLib.convertDateToYYYYMMDD(date)`.
 pub fn yyyymmdd(v: &V) -> String {
@@ -389,6 +400,21 @@ mod tests {
         let d = convert_string_to_date(&V::s("20260924"));
         assert_eq!(yyyymmdd(&d), "20260924");
         assert!(convert_string_to_date(&V::s("20260231")).is_undef());
+        // `new Date(1, 8, 24, 9, 0, 0)` is 1901: the year check fails as in legacy (S15-R13).
+        assert!(convert_string_to_date(&V::s("000109240900")).is_undef());
+        assert!(convert_string_to_date(&V::s("009909240900")).is_undef());
+        assert_eq!(
+            yyyymmdd(&convert_string_to_date(&V::s("010009240900"))),
+            "1000924"
+        );
+        assert_eq!(
+            make_date(1., 8., 24., 0., 0., 0.),
+            make_date_literal(1901., 8., 24., 0., 0., 0.)
+        );
+        assert_eq!(
+            make_date(-1., 0., 1., 0., 0., 0.),
+            make_date_literal(-1., 0., 1., 0., 0., 0.)
+        );
         let o = V::Obj(super::super::js::obj(vec![
             ("date", V::s("20260925")),
             ("time", V::s("0000")),

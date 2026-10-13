@@ -679,6 +679,11 @@ mod tests {
             assert!(timestamp(&V::s(s)).is_nan(), "{s}");
             assert!(!is_tz_iso(s), "{s}");
         }
+        // `Date.UTC(1, ...)` is 1901, so the year check rejects compact years below 100 (S15-R13).
+        for s in ["000109240900", "009909240900"] {
+            assert!(timestamp(&V::s(s)).is_nan(), "{s}");
+        }
+        assert!(timestamp(&V::s("010009240900")).is_finite());
         // Matching the pattern but rejected by V8 (S15-R10).
         for s in ["2026-09-24T08:00:00+99:99", "2026-09-24T24:00:00.001Z"] {
             assert!(is_tz_iso(s) && timestamp(&V::s(s)).is_nan(), "{s}");
