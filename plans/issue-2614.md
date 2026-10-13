@@ -1,7 +1,7 @@
 # Plan: document and later implement server2
 
 Source: [intent](../intent/issue-2614.md), [spec](../specs/issue-2614.md).
-Current status (2026-10-13): the implementation PRs for S01–S14 are merged and their issues are closed, except that follow-ups S10a #2724 (live geocoder/quotas) and S13a #2729 (one AirKorea decision) remain open; S19 has its first (gateway) increment. S10 gateway/geocode (#2723), S11 world (#2728), S12 warnings (#2727), S13 domestic acquisition (#2726), S13a provider formats/air (#2733), S14 history/capture (#2732), S10b gateway lifetime (#2731) and the first S19 increment (#2725) are merged at master `87ab79cd`. Native families stay off by default; legacy HTTP remains selected. Next: S15 domestic KMA v000903 assembly. See the dated entry at the end. Earlier status paragraphs below are historical. No production/resource action or route cutover is authorized by that work.
+Current status (2026-10-13): issues S01–S14 (#2686–#2699) are closed; S01 is a decision task, and S02–S14 closed after their implementation PRs merged. Follow-ups S10a #2724 (live geocoder/quotas) and S13a #2729 (one AirKorea decision) remain open; S19 has its first (gateway) increment. S10 gateway/geocode (#2723), S11 world (#2728), S12 warnings (#2727), S13 domestic acquisition (#2726), S13a provider formats/air (#2733), S14 history/capture (#2732), S10b gateway lifetime (#2731) and the first S19 increment (#2725) are merged at master `87ab79cd`. Native families stay off by default; legacy HTTP remains selected. Next: S15 domestic KMA v000903 assembly. See the dated entry at the end. Earlier status paragraphs below are historical. No production/resource action or route cutover is authorized by that work.
 
 ## This PR
 
