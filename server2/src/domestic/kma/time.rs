@@ -115,6 +115,8 @@ pub fn new_date(v: &V) -> f64 {
         V::Str(s) => parse_date(s),
         V::Undef => f64::NAN,
         V::Null => 0.,
+        // ToNumber(boolean): `new Date(false)` is 0 ms, `new Date(true)` 1 ms.
+        V::Bool(b) => f64::from(u8::from(*b)),
         other => parse_date(&to_str(other)),
     }
 }
@@ -400,6 +402,8 @@ mod tests {
         let d = convert_string_to_date(&V::s("20260924"));
         assert_eq!(yyyymmdd(&d), "20260924");
         assert!(convert_string_to_date(&V::s("20260231")).is_undef());
+        assert_eq!(new_date(&V::Bool(false)), 0.);
+        assert_eq!(new_date(&V::Bool(true)), 1.);
         // `new Date(1, 8, 24, 9, 0, 0)` is 1901: the year check fails as in legacy (S15-R13).
         assert!(convert_string_to_date(&V::s("000109240900")).is_undef());
         assert!(convert_string_to_date(&V::s("009909240900")).is_undef());

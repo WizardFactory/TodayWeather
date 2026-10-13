@@ -1618,12 +1618,12 @@ and a `Family::Kma` handler for the S10 dispatcher. Legacy stays selected by def
   store answers.
 
 Parity uses a pinned Node 16.20.2 oracle recording ([provenance](../../server2/tests/domestic/fixtures/PROVENANCE.md)):
-69 requests through the real router and harness, with every store answer and its arguments recorded in order. They
+71 requests through the real router and harness, with every store answer and its arguments recorded in order. They
 include the 15 S02 direct-route v000903 goldens (bodies and Express ETags), the 5 gateway domestic
 v000903 backend inputs, and supplementary DB 1.0, RSS, station, rain-category, air-list, KAQ
 forecast, fallback, life-index/MFDS/rise-set, warning, temperature, error, clock-boundary and invalid
-DB 1.0 RSS/current publication cases. 68 recordings match byte for byte, with the dependency calls in legacy order;
-the 69th (a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2026-01-09) is a
+DB 1.0 RSS/current publication and Boolean station-time cases. 70 recordings match byte for byte, with the dependency calls in legacy order;
+the 71st (a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2026-01-09) is a
 declared forward. `Date.parse` is reproduced for the strict ISO, space and dotted forms (years from
 100 for the legacy forms) and digit-only strings, checked against the pinned V8; any other date
 string forwards to legacy. Numeric Date constructors map years 0-99 to 1900-1999, as in JavaScript. The 5 gateway goldens match on
