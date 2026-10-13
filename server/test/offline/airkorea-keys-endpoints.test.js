@@ -210,7 +210,12 @@ test('R1: a 401/403 with a regular JSON or XML envelope keeps its provider code;
         [{status: 401, body: '<response><header><resultCode>22</resultCode></header></response>'}, /PROVIDER_22/, 1],
         [{status: 403, body: gateway('LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR', '22')}, /PROVIDER_22/, 1],
         [{status: 403, body: envelope('30')}, /NO_VALID_KEY/, 3],
-        [{status: 401, body: envelope('99')}, /PROVIDER_99/, 1]
+        [{status: 401, body: envelope('99')}, /PROVIDER_99/, 1],
+        // Review round 2: XML and gateway-JSON bodies keep non-credential codes too.
+        [{status: 403, body: '<response><header><resultCode>99</resultCode></header></response>'}, /PROVIDER_99/, 1],
+        [{status: 403, body: gateway('SERVICE ERROR', '99')}, /PROVIDER_99/, 1],
+        [{status: 403, body: gateway('SERVICE ERROR', '77')}, /PROVIDER_ERROR/, 1],
+        [{status: 401, body: '<OpenAPI_ServiceResponse><returnReasonCode>31</returnReasonCode></OpenAPI_ServiceResponse>'}, /NO_VALID_KEY/, 3]
     ]) {
         const t = transport(() => answer);
         await assert.rejects(invoke(Api.create({transport: t}), 'fetchWithKeys', KEYS, '서울', Api.STATION), pattern);
@@ -220,7 +225,8 @@ test('R1: a 401/403 with a regular JSON or XML envelope keeps its provider code;
 
 test('R2: malformed station-list, forecast and nearby items fail with INVALID_ITEM before any consumer', async () => {
     const cases = [
-        [Api.STATION_LIST, 'msrstn', [null], [{}], [{stationName: '', dmX: '37', dmY: '127'}], [{stationName: 'x', dmX: {}, dmY: '127'}]],
+        [Api.STATION_LIST, 'msrstn', [null], [{}], [{stationName: '', dmX: '37', dmY: '127'}], [{stationName: 'x', dmX: {}, dmY: '127'}],
+            [{stationName: 'x', dmX: '', dmY: '', addr: 123}]],
         [Api.FORECAST, 'frcst', [null], [{dataTime: '2026-10-13 23시 발표', informCode: 'PM10', informData: '2026-10-13'}]],
         [Api.NEARBY, 'nearby', [null], [{}], [{stationName: 7}]]
     ];
@@ -250,6 +256,19 @@ test('R2: an invalid item stops station-list and forecast collection once, witho
         data.response.body.items[1] = null;
         return {body: data};
     });
+    // Review round 2: an empty-coordinate station with a non-string address used to throw in the geocoding step.
+    const addressCase = transport(() => {
+        const data = fixture('msrstn'); Object.assign(data.response.body, {numOfRows: 100, pageNo: 1});
+        Object.assign(data.response.body.items[0], {dmX: '', dmY: '', addr: 123});
+        return {body: data};
+    });
+    h.keco._observationApi = Api.create({transport: addressCase}); h.keco.setServiceKeys(['synthetic']);
+    {
+        let calls = 0, error;
+        await new Promise(resolve => { h.keco.getAllMsrStnInfo(err => { calls++; error = err; resolve(); }); });
+        await new Promise(resolve => setTimeout(resolve, 10));
+        assert.equal(calls, 1); assert.equal(error && error.code, 'INVALID_ITEM');
+    }
     h.keco._observationApi = Api.create({transport: t}); h.keco.setServiceKeys(['synthetic']);
     for (const method of ['getAllMsrStnInfo', 'getMinuDustFrcstDspth']) {
         let calls = 0, error;
