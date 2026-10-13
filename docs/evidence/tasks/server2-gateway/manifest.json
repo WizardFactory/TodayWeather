@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "captured_at_utc": "2026-10-13T00:50:20+00:00",
+  "capture_kind": "terminal result rendered from actual isolated release execution",
+  "environment": "macOS, release binary, synthetic loopback S3/provider peers",
+  "command": "python3 server2/tools/gateway_smoke.py --binary server2/target/release/server2",
+  "observed": {
+    "peer_counters": {
+      "backend": 9,
+      "google": 2,
+      "kakao": 19,
+      "legacy_geo": 8
+    }
+  },
+  "execution_log_sha256": "4063a1edadd29fe2fb415629d348cc18d46d64acd351f32513f56b4c99f34477",
+  "binary_sha256": "45850056d7ea9a30d4864fde9768273040a91b3a708e0bedf2fa65a998e0f59c",
+  "pdf_link_revision": "07fdaf991d617f16944d75c201d64f35a4f2c83a",
+  "new_file_link_policy": "Repository-relative references rendered as text when absent from the pinned commit; Markdown keeps local clickable links",
+  "source_sha256": "41ace820cc688101d40da057c2bf59e377fcf2b3993ea3041385429f26b34838",
+  "pdf_sha256": "13c811f82b30e2f3efc9c35d4fda9c03fffda4f9362c99c22ad763bccd7d017a",
+  "screenshot_sha256": "ee086777d42d9b1a43194e37a5cd1fb50e19541d961cc1c21486fe5b59cd052a",
+  "limitations": "Synthetic loopback fixtures only; no live AWS/provider quota/production latency/cutover proof"
+}

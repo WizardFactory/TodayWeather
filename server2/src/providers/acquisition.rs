@@ -68,6 +68,7 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
         if match provider {
             Provider::DataGoKr => units != 1,
             Provider::VisualCrossing => !matches!(units, 49 | 25 | 1),
+            Provider::Kakao | Provider::Google => true,
         } {
             return Err(AcquisitionError::Invalid);
         }

@@ -232,7 +232,7 @@ to block their named work after S01 closes.
 | O-6 | D04 authorizes memory/S3 caches; S07/S10 select layout/validity and prove exact labels, privacy, quota/deadline behavior |
 | O-7 / O-8 | S02 fixture scope, S15/S17 current active behavior; unknown scope stays on legacy until dispositioned |
 | O-9 | S05–S08 publication/reservation/outage semantics, S10–S13 affected serving and warning behavior, S18 state acceptance and O01 publication |
-| O-10 | S03/S08/S10/S13 separate-key and quota prerequisites |
+| O-10 | S10 Kakao/Google reuse existing injected `.env` keys per AK 2026-10-13; actual quotas remain prerequisite. S03/S08/S13 data.go.kr separate-key policy is unchanged |
 | O-13 | S16 authorized summary storage only; new API/UI remains excluded |
 
 Ordinary legacy maintenance remains allowed in `server/`. The S02 planned new
@@ -347,3 +347,20 @@ The focused correction moves all stock guard setup to final-stage runcmd, retain
 ### S09 external-review correction17
 
 PR2722 review5471241898 is addressed within the declared tooling scope: watchdog bounded retries and truthful failure receipts, per-client provider-data storage observations without discarding overload outcomes, existing operator expectation alignment, and warm-wave population labels. CLI serialized-output limits remain conservative and documented. No new tests or local suites, AWS execution, route release or merge are authorized. Actual intended-host/S3 measurements and O-2/O-5 still block S10/S13.
+
+### S09 integrated and S10 staged gateway (2026-10-13)
+
+PR #2722 is merged at `07fdaf991d617f16944d75c201d64f35a4f2c83a`;
+S09 #2694 is complete under AK's local-first amendment. The separately authorized
+one-host AWS smoke passed and its instance/resources were cleaned up; see the
+[issue result](https://github.com/WizardFactory/TodayWeather/issues/2694#issuecomment-6135052769).
+Earlier dated S09 blocker entries above are retained historical records.
+
+S10 is being implemented on that integrated base with parallel gateway, geocoder
+and design lanes plus root integration. Its [task plan](issue-2695.md) and
+[exact path declaration](../server2/config/tasks/S10.json) govern changes.
+Default explicit legacy HTTP adapters remain; native geocoder acquisition is
+local mock-only. Reuse existing injected Kakao/Google `.env` keys; do not require
+a new geocoder key set. Actual daily/peak quotas, production exact-label/shadow
+and cutover checks remain activation gates. No S10 AWS execution, live provider
+traffic, production switch or merge is authorized by this implementation task.

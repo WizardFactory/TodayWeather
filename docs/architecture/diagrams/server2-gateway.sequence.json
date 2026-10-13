@@ -1,0 +1,318 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "S10 Planned Gateway and Geocode Ownership",
+    "output": "docs/architecture/diagrams/server2-gateway.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1000,
+      645
+    ],
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "07fdaf991d617f16944d75c201d64f35a4f2c83a",
+      "provider": "github",
+      "link_mode": "web"
+    },
+    "column_fit": "spread",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "dashed": {
+          "label": "optional cache"
+        },
+        "security": {
+          "label": "funded acquisition"
+        },
+        "default": {
+          "label": "lookup or admission"
+        }
+      }
+    }
+  },
+  "participants": [
+    {
+      "id": "client",
+      "type": "external",
+      "label": "API client",
+      "sublabel": "weather / geocode",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 169,
+          "end_line": 185,
+          "label": "S10 design contract"
+        }
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "backend",
+      "label": "Gateway",
+      "sublabel": "9s public deadline",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 169,
+          "end_line": 185,
+          "label": "S10 design contract"
+        }
+      ]
+    },
+    {
+      "id": "geocode",
+      "type": "backend",
+      "label": "Geocoder",
+      "sublabel": "5s owned lookup",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 263,
+          "end_line": 271,
+          "label": "S10 design contract"
+        }
+      ]
+    },
+    {
+      "id": "ram",
+      "type": "database",
+      "label": "Volatile RAM",
+      "sublabel": "bounded precise keys",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 618,
+          "end_line": 635,
+          "label": "S10 design contract"
+        }
+      ]
+    },
+    {
+      "id": "provider",
+      "type": "external",
+      "label": "Providers",
+      "sublabel": "3s attempt cap",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 169,
+          "end_line": 176,
+          "label": "S10 design contract"
+        }
+      ]
+    },
+    {
+      "id": "safeS3",
+      "type": "database",
+      "label": "Address S3",
+      "sublabel": "optional safe cache",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 618,
+          "end_line": 645,
+          "label": "S10 design contract"
+        }
+      ]
+    },
+    {
+      "id": "backend",
+      "type": "backend",
+      "label": "Backend",
+      "sublabel": "family + version",
+      "sources": [
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 180,
+          "end_line": 185,
+          "label": "S10 design contract"
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 271,
+      "to": 431,
+      "label": "Conditional acquisition and safe address cache"
+    },
+    {
+      "from": 437,
+      "to": 536,
+      "label": "Response and weather backend"
+    }
+  ],
+  "messages": [
+    {
+      "id": "request",
+      "from": "client",
+      "to": "gateway",
+      "y": 160,
+      "label": "GET weather / geocode",
+      "variant": "emphasis",
+      "note": "Planned S10 flow; production activation remains gated."
+    },
+    {
+      "id": "lookup",
+      "from": "gateway",
+      "to": "geocode",
+      "y": 188,
+      "label": "validate; join owned lookup",
+      "variant": "default",
+      "note": "Default weather version v000901; exact route/query/locale contract."
+    },
+    {
+      "id": "memory-read",
+      "from": "geocode",
+      "to": "ram",
+      "y": 216,
+      "label": "exact key + locale",
+      "variant": "default",
+      "note": "Precise reverse-geocode keys and bodies remain in volatile RAM."
+    },
+    {
+      "id": "memory-result",
+      "from": "ram",
+      "to": "geocode",
+      "y": 244,
+      "label": "fresh hit or miss",
+      "variant": "return",
+      "note": "No provider-free cold reverse-geocode promise."
+    },
+    {
+      "id": "address-read",
+      "from": "geocode",
+      "to": "safeS3",
+      "y": 272,
+      "label": "address lookup only",
+      "variant": "dashed",
+      "note": "Optional permitted address projection; never a precise-coordinate archive."
+    },
+    {
+      "id": "address-result",
+      "from": "safeS3",
+      "to": "geocode",
+      "y": 300,
+      "label": "valid projection or miss",
+      "variant": "return",
+      "note": "Expiry and exact label/field parity apply."
+    },
+    {
+      "id": "provider-request",
+      "from": "geocode",
+      "to": "provider",
+      "y": 328,
+      "label": "funded leader acquisition",
+      "variant": "security",
+      "note": "On cache miss: one owned chain; same-key waiters share retries."
+    },
+    {
+      "id": "provider-result",
+      "from": "provider",
+      "to": "geocode",
+      "y": 356,
+      "label": "legacy-shaped geocode",
+      "variant": "return",
+      "note": "Kakao/Google branches preserve the legacy terminal and supplement behavior."
+    },
+    {
+      "id": "memory-fill",
+      "from": "geocode",
+      "to": "ram",
+      "y": 384,
+      "label": "bounded result admission",
+      "variant": "default",
+      "note": "Original expiry is fixed; a canceled waiter cannot cancel shared work."
+    },
+    {
+      "id": "address-write",
+      "from": "geocode",
+      "to": "safeS3",
+      "y": 412,
+      "label": "address projection only",
+      "variant": "dashed",
+      "note": "Optional S3 write may never include reverse lookup bodies or precise history."
+    },
+    {
+      "id": "geo-result",
+      "from": "geocode",
+      "to": "gateway",
+      "y": 440,
+      "label": "exact label + location",
+      "variant": "return",
+      "note": "Geocode-only requests skip backend dispatch."
+    },
+    {
+      "id": "backend-request",
+      "from": "gateway",
+      "to": "backend",
+      "y": 468,
+      "label": "weather: selected adapter",
+      "variant": "emphasis",
+      "note": "Legacy HTTP by default. A registered in-process family uses the same contract."
+    },
+    {
+      "id": "backend-result",
+      "from": "backend",
+      "to": "gateway",
+      "y": 496,
+      "label": "JSON or mapped error",
+      "variant": "return",
+      "note": "At most three attempts; each <=3s and bounded by the original 9s deadline."
+    },
+    {
+      "id": "response",
+      "from": "gateway",
+      "to": "client",
+      "y": 524,
+      "label": "legacy status / bytes / headers",
+      "variant": "return",
+      "note": "Weather max-age=300; geocode max-age=2592000; errors no-store."
+    }
+  ],
+  "activations": [
+    {
+      "participant": "gateway",
+      "from": 160,
+      "to": 531,
+      "type": "backend"
+    },
+    {
+      "participant": "geocode",
+      "from": 188,
+      "to": 446,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Local verification",
+      "items": [
+        "Validate input before reading the exact-key volatile geocode cache.",
+        "Run all recorded S02 wire cases, including aliases, errors, HEAD, 304 and preflight.",
+        "Measure cold/warm one- and two-provider mock bursts and distinct-key demand."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Privacy and ownership",
+      "items": [
+        "Precise reverse-geocode results and lookup history stay in bounded volatile RAM.",
+        "S3 address caching is optional; coarse reverse labels require separate exact-parity proof.",
+        "A waiter owns its response deadline, while a shared job owns its bounded acquisition and reservation."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Activation remains separate",
+      "items": [
+        "Reuse the existing operator-injected geocoder environment; this diagram contains no keys.",
+        "Actual daily and peak provider quotas remain unknown. Local mock results do not accept those gates.",
+        "Production family activation needs parity, seven-day paired shadow, measured latency, quota headroom and AK cutover authority."
+      ]
+    }
+  ]
+}

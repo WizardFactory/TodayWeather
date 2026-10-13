@@ -32,6 +32,8 @@ async fn wait_shutdown(mut stop: watch::Receiver<bool>) {
     }
 }
 async fn serve(config: Config) -> io::Result<()> {
+    let gateway = server2::gateway::runtime::configured_gateway()
+        .map_err(|_| io::Error::other("invalid gateway configuration"))?;
     let public = TcpListener::bind(config.public_addr).await?;
     let private = TcpListener::bind(config.metrics_addr).await?;
     println!(
@@ -43,9 +45,13 @@ async fn serve(config: Config) -> io::Result<()> {
     let public = BoundedListener::new(public, config.connection_limit, lifetime);
     let private = BoundedListener::new(private, 16, lifetime);
     let state = Arc::new(SharedState::new(&config));
+    let router = match gateway {
+        Some(gateway) => server2::public_router_with_gateway(state.clone(), gateway),
+        None => public_router(state.clone()),
+    };
     let (tx, rx) = watch::channel(false);
     let mut public_task = tokio::spawn(
-        axum::serve(public, public_router(state.clone()))
+        axum::serve(public, router)
             .with_graceful_shutdown(wait_shutdown(rx.clone()))
             .into_future(),
     );

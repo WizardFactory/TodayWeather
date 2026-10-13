@@ -69,6 +69,7 @@ impl ProviderTransport for HttpProviderTransport {
                 Provider::VisualCrossing => {
                     query.append_pair("key", &request.key.0);
                 }
+                Provider::Kakao | Provider::Google => return Err(ProviderTransportError::Invalid),
             }
         }
         let mut response = self
