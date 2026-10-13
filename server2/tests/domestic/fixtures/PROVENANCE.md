@@ -1,6 +1,6 @@
 # S15 KMA v000903 oracle fixtures
 
-`oracle.json.gz` (sha256 `e80765b39e0b8703a248ea93f467aba3f6954f2c4d03b965eec6a6a32c8ac6b6`) holds pinned legacy-oracle recordings
+`oracle.json.gz` (sha256 `fd1e262b25f5f97edd99b25ccfcd28a751dbb1eb7956ee85b4c6661bcaac990c`) holds pinned legacy-oracle recordings
 for the native KMA v000903 assembly tests. It is test data only; the server2 runtime never reads
 it or any legacy file.
 
@@ -17,7 +17,7 @@ it or any legacy file.
   as the S02 recorder loads it, with the real `/v000903/kma` router (`route.kma.v000903.js`) and i18n.
   The harness stubs `manager.MAX_CURRENT_COUNT` as 200 (the deployed manager uses 192); tests use
   the recorded value.
-- Driver: the script below (sha256 `7af29cf32568ff04c0399eb49a056232ba6c65e402ab6091937cff90d25f6252`), run as
+- Driver: the script below (sha256 `02700ab3c561b69aec633ef6aba59c35de5e1727920fd37165fdfde3ad9b6a62`), run as
   `TZ=UTC NODE_ENV=production NODE_PATH=<deps>/node_modules node record-kma.js <repo> <out.json.gz>`.
   It is retained here as documentation rather than as an executable repository tool, because a new
   server2-located script reading legacy source would be a new placement exception; the S02 recorder
@@ -35,7 +35,7 @@ the store-read boundary, named by the server2 `KmaStore` methods: model reads (`
 `special_zones`) and controller dependencies (`region_code`, `forecast_zone`,
 `stn_hourly_and_min_rns`, `city_hourly`, `arpltn`, `dust_forecast`, `air_fallback`, `air_forecast`,
 `rise_set`). Dates are `{"$date": ms}`, undefined values `{"$undefined": true}`; object key
-order is preserved. 1079 answers in total; 1 are flagged `after_response` because legacy
+order is preserved. 1199 answers in total; 1 are flagged `after_response` because legacy
 `async.map` keeps calling after an error has already ended the chain and the reply was sent.
 
 The harness air fallback (`lib/AQI/airFallback.js`) throws synchronously in the oracle runtime
@@ -46,8 +46,8 @@ dependency answer through the driver's `overrides`.
 
 ## Content
 
-55 scenarios: 15 S02 direct-route equivalents (domestic-v000903, domestic-locale-en, domestic-locale-ko, domestic-locale-ja, domestic-locale-zh-CN, domestic-locale-de, domestic-locale-zh-TW, domestic-v000903-db1, domestic-null-units, domestic-pop-covered, domestic-pop-missing-hour, domestic-old-no-pop, domestic-never-requested-history, domestic-partial-history, domestic-special-info); 5 gateway backend
-requests (gateway-v000903-domestic, gateway-query-normalization, gateway-history-never-requested, gateway-history-resumed-after-eight-days, gateway-history-partial-eight-day-history); and 35 supplementary scenarios (rss-older, rss-equal, busan, jeju, station-first-rain, station-first-snow-cloud, rain-categories, air-stations, air-stations-airnow, air-stale, air-kaq-forecast, air-dust-forecast, air-fallback, life-food-kasi, life-index-near-area, warning-two-zones, winter-cold-wind, hot-humid, missing-short, model-errors, unknown-air-unit, db1-history, stn-error, station-hourly-fill, db1-daily-source, short-publications, current-error, mid-forecast-error, region-guard, clock-night-2340, clock-kst-0030, clock-kst-1010, clock-kst-1110, clock-kst-0605, clock-kst-1535).
+61 scenarios: 15 S02 direct-route equivalents (domestic-v000903, domestic-locale-en, domestic-locale-ko, domestic-locale-ja, domestic-locale-zh-CN, domestic-locale-de, domestic-locale-zh-TW, domestic-v000903-db1, domestic-null-units, domestic-pop-covered, domestic-pop-missing-hour, domestic-old-no-pop, domestic-never-requested-history, domestic-partial-history, domestic-special-info); 5 gateway backend
+requests (gateway-v000903-domestic, gateway-query-normalization, gateway-history-never-requested, gateway-history-resumed-after-eight-days, gateway-history-partial-eight-day-history); and 41 supplementary scenarios (rss-older, rss-equal, busan, jeju, station-first-rain, station-first-snow-cloud, rain-categories, air-stations, air-stations-airnow, air-stale, air-kaq-forecast, air-dust-forecast, air-fallback, life-food-kasi, life-index-near-area, warning-two-zones, winter-cold-wind, hot-humid, missing-short, model-errors, unknown-air-unit, db1-history, stn-error, station-hourly-fill, db1-daily-source, short-publications, current-error, mid-forecast-error, yesterday-warmer, yesterday-colder, rss-unusable-values, current-sky-from-shortest, stn-invalid-zero, stn-fog-thunder, region-guard, clock-night-2340, clock-kst-0030, clock-kst-1010, clock-kst-1110, clock-kst-0605, clock-kst-1535).
 
 ## Driver source
 
@@ -395,6 +395,12 @@ add('db1-daily-source', {path: SEOUL, lang: 'en'}, f => {
 add('short-publications', {path: SEOUL, lang: 'en'}, f => { f.shortPublications = {'20260923': '202609221700', '20260926': '202609230500', '20260927': '202609220500'}; });
 add('current-error', {path: SEOUL, lang: 'ko'}, f => { f.modelErrors = {'kma.town.current.model': 'current read failed'}; });
 add('mid-forecast-error', {path: SEOUL, lang: 'en'}, f => { f.modelErrors = {'kma.town.mid.forecast.model': 'forecast read failed'}; });
+add('yesterday-warmer', {path: SEOUL, lang: 'de'}, f => { f.current.forEach(r => { if (r.date === '20260923') { r.t1h = 13.6; r.sky = 4; r.pty = 1; r.rn1 = 2.5; } }); });
+add('yesterday-colder', {path: SEOUL, lang: 'ja'}, f => { f.current.forEach(r => { if (r.date === '20260923') r.t1h = 27.4; }); f.current[f.current.length - 1].t1h = 21.4; });
+add('rss-unusable-values', {path: SEOUL, lang: 'en'}, f => { f.rss.forEach((r, i) => { r.temp = i % 2 ? -999 : 24.46; r.ws = i % 3 ? -1 : 2.55; r.wd = [8, 2.5, 3, 7, 0, -1, 4][i]; r.pop = i % 2 ? 50 : -1; r.tmx = -999; r.tmn = -999; }); });
+add('current-sky-from-shortest', {path: SEOUL, lang: 'ko'}, f => { f.current.forEach((r, i) => { if (i % 4 === 0) r.sky = -1; }); f.current[f.current.length - 1].sky = -1; f.shortest.forEach(r => { r.date = '20260924'; }); });
+add('stn-invalid-zero', {path: SEOUL, lang: 'en'}, f => { f.stnWeather = {t1h: 0, vec: 0, wsd: 0}; });
+add('stn-fog-thunder', {path: SEOUL, lang: 'zh-CN'}, f => { f.stnWeather = {stnDateTime: '2026-09-24 09:03', weather: '뇌우끝,비', weatherType: 53, rns: false, localMinAws: true, rs1h: 12.36, stnId: 108}; });
 add('region-guard', {path: '/addr/' + enc8('중국/베이징'), lang: 'en'});
 for (const [id, clock] of [['night-2340', '2026-09-24T14:40:00.000Z'], ['kst-0030', '2026-09-23T15:30:00.000Z'], ['kst-1010', '2026-09-24T01:10:00.000Z'],
     ['kst-1110', '2026-09-24T02:10:00.000Z'], ['kst-0605', '2026-09-23T21:05:00.000Z'], ['kst-1535', '2026-09-24T06:35:00.000Z']]) {
