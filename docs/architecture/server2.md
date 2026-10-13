@@ -1494,7 +1494,8 @@ the runtime owner starts `CaptureRunner::run`.
   legacy deployment with `ASOS_HISTORY_READ_ENABLED` keeps every request on legacy. The capture
   index is rebuilt from published S06 catalogs only (per-key monthly catalog listings and the
   national day catalogs, each catalog read and validated), so an interrupted raw upload or an
-  empty or corrupt catalog never counts; an incomplete listing of
+  empty or corrupt catalog never counts (a corrupt one marks its date incomplete, so no export
+  can hide it); an incomplete listing of
   any required capture, minute or export kind forwards to legacy.
 - **Legacy export**: `server2/tools/migration/export_history_seeds.py` converts one offline
   `mongoexport` file (one document per line) of `kma.town.current|shortest|short`,

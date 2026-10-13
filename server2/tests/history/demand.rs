@@ -304,10 +304,30 @@ async fn demand_rebuild_never_rolls_push_memory_back() {
     );
     s.rebuild().await.unwrap();
     assert_eq!(s.active(T0 + 2 * HOUR), BTreeSet::from([g(98, 76)]));
+    // An equal-time aggregate read during a rebuild never replaces the one this store wrote.
+    s.replace_push(&[g(61, 127)], T0 + 2 * HOUR, 25 * HOUR)
+        .await
+        .unwrap();
+    let e2 = T0 + 27 * HOUR;
+    let t2 = T0 + 2 * HOUR;
+    t.plant(
+        PUSH_KEY,
+        format!(r#"{{"schema":1,"lastDemandMs":{t2},"cells":[{{"grid":{{"nx":60,"ny":127}},"lastDemandMs":{t2},"expiresMs":{e2}}}]}}"#).as_bytes(),
+    );
+    s.rebuild().await.unwrap();
+    assert_eq!(s.active(T0 + 3 * HOUR), BTreeSet::from([g(61, 127)]));
     // A missing object never clears push demand already held.
     t.objects.lock().unwrap().remove(PUSH_KEY);
     s.rebuild().await.unwrap();
-    assert_eq!(s.active(T0 + 2 * HOUR), BTreeSet::from([g(98, 76)]));
+    assert_eq!(s.active(T0 + 3 * HOUR), BTreeSet::from([g(61, 127)]));
+    // A fresh process adopts whatever aggregate is durable.
+    t.plant(
+        PUSH_KEY,
+        format!(r#"{{"schema":1,"lastDemandMs":{t2},"cells":[{{"grid":{{"nx":60,"ny":127}},"lastDemandMs":{t2},"expiresMs":{e2}}}]}}"#).as_bytes(),
+    );
+    let fresh = store(&t);
+    fresh.rebuild().await.unwrap();
+    assert_eq!(fresh.active(T0 + 3 * HOUR), BTreeSet::from([g(60, 127)]));
 }
 
 #[tokio::test]

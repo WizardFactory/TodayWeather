@@ -143,10 +143,14 @@ impl CaptureIndex {
                     .await;
                     report.catalogs += ids.len();
                     for (publication, read) in batch.iter().zip(reads) {
-                        let found = read?;
+                        let Some(found) = read? else {
+                            // Unreadable archived revisions: no export may paper over them.
+                            report.invalid_catalogs += 1;
+                            index.mark_incomplete(family.kind(), publication.date());
+                            continue;
+                        };
                         if found
                             .iter()
-                            .flatten()
                             .any(|e| period_publication(&e.identity.period) == Some(*publication))
                         {
                             index.insert(family, Target::Cell(*grid), *publication);

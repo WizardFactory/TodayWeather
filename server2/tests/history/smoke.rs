@@ -151,30 +151,6 @@ async fn smoke_demand_capture_rebuild_coverage_and_legacy_import() {
         .await
         .unwrap();
 
-    // Damaged catalogs: an empty catalog for 11:00 and corrupt JSON for 10:00 never count.
-    let wire = peer.transport();
-    let empty =
-        server2::history::coverage::catalog_id(Family::Current, target_of(cell), p(20261013, 1100))
-            .unwrap();
-    let body = server2::storage::Catalog::empty(empty.clone())
-        .bytes(&CatalogLimits::default())
-        .unwrap();
-    assert_eq!(
-        wire.put_control(&empty.key(), &body, &WriteCondition::Absent)
-            .await
-            .unwrap(),
-        200
-    );
-    let corrupt =
-        server2::history::coverage::catalog_id(Family::Current, target_of(cell), p(20261013, 1000))
-            .unwrap();
-    assert_eq!(
-        wire.put_control(&corrupt.key(), b"{}", &WriteCondition::Absent)
-            .await
-            .unwrap(),
-        200
-    );
-
     // Legacy export seed for the same grid, imported into the peer.
     let exported = "2026-10-13T04:00:00.000Z";
     let out = temp_path("smoke-export");
@@ -218,15 +194,7 @@ async fn smoke_demand_capture_rebuild_coverage_and_legacy_import() {
     assert!(index.has(Family::Short, target, p(20261013, 1400)));
     // Raw presence alone is not publication: the orphan is not counted as captured.
     assert!(!index.has(Family::Current, target, p(20261013, 1200)));
-    assert!(
-        !index.has(Family::Current, target, p(20261013, 1100)),
-        "empty catalog"
-    );
-    assert!(
-        !index.has(Family::Current, target, p(20261013, 1000)),
-        "corrupt catalog"
-    );
-    assert_eq!(rebuild.invalid_catalogs, 2);
+    assert_eq!(rebuild.invalid_catalogs, 0);
     assert_eq!(index.minutes().collect::<Vec<_>>(), captured_minute);
     assert_eq!(
         index.exports(LegacyKind::TownCurrent, ExportKey::Grid(cell)),
@@ -255,6 +223,63 @@ async fn smoke_demand_capture_rebuild_coverage_and_legacy_import() {
             assert!(gaps.iter().any(|x| x.family == Family::Short));
         }
         other => panic!("expected legacy forwarding, got {other:?}"),
+    }
+
+    // Damaged catalogs: an empty catalog for 11:00 and corrupt JSON for 10:00 never count.
+    let wire = peer.transport();
+    let empty =
+        server2::history::coverage::catalog_id(Family::Current, target_of(cell), p(20261013, 1100))
+            .unwrap();
+    let body = server2::storage::Catalog::empty(empty.clone())
+        .bytes(&CatalogLimits::default())
+        .unwrap();
+    assert_eq!(
+        wire.put_control(&empty.key(), &body, &WriteCondition::Absent)
+            .await
+            .unwrap(),
+        200
+    );
+    let corrupt =
+        server2::history::coverage::catalog_id(Family::Current, target_of(cell), p(20261013, 1000))
+            .unwrap();
+    assert_eq!(
+        wire.put_control(&corrupt.key(), b"{}", &WriteCondition::Absent)
+            .await
+            .unwrap(),
+        200
+    );
+
+    let (damaged, report) = CaptureIndex::rebuild(
+        &peer.transport(),
+        &replacement.known(),
+        &BTreeSet::new(),
+        now,
+        &RebuildConfig::default(),
+    )
+    .await
+    .unwrap();
+    assert!(
+        !damaged.has(Family::Current, target, p(20261013, 1100)),
+        "empty catalog"
+    );
+    assert!(
+        !damaged.has(Family::Current, target, p(20261013, 1000)),
+        "corrupt catalog"
+    );
+    assert_eq!(report.invalid_catalogs, 2);
+    assert_eq!(
+        report.incomplete,
+        vec![("ultra-srt-ncst".to_owned(), 20261013)],
+        "unreadable catalog marks its family/date incomplete"
+    );
+    // The export (state up to 12:00) would cover 10:00, but unreadable archived revisions
+    // forward the request to legacy instead of letting the export hide them.
+    match schedule_coverage(&request, &damaged) {
+        Coverage::Legacy { reason, .. } => assert_eq!(
+            reason,
+            server2::history::coverage::LegacyReason::IndexIncomplete
+        ),
+        other => panic!("expected IndexIncomplete, got {other:?}"),
     }
 
     // Exact readback of the captured provider bytes through S06 catalogs.

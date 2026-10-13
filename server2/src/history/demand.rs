@@ -322,7 +322,7 @@ impl<T: DemandTransport> DemandStore<T> {
                     if let Ok(stored) = parse_push(&object.body)
                         && stored.last_demand_ms > snapshot_ms
                     {
-                        self.adopt_push(stored);
+                        self.adopt_push(stored, false);
                         return Ok(PushOutcome::Superseded);
                     }
                     WriteCondition::Match(object.etag)
@@ -334,7 +334,7 @@ impl<T: DemandTransport> DemandStore<T> {
                 .await?
             {
                 200 => {
-                    self.adopt_push(record);
+                    self.adopt_push(record, false);
                     return Ok(PushOutcome::Replaced);
                 }
                 409 | 412 => continue,
@@ -344,9 +344,13 @@ impl<T: DemandTransport> DemandStore<T> {
         Err(DemandError::Conflict)
     }
     /// Keep the newest push aggregate in memory regardless of completion order.
-    fn adopt_push(&self, record: PushRecord) {
+    /// A completed write (or a newer durable aggregate it lost to) may replace an equal-time
+    /// snapshot; a rebuild read only fills empty memory or replaces a strictly older one.
+    fn adopt_push(&self, record: PushRecord, from_read: bool) {
         let mut m = self.memory();
-        if m.push_snapshot.is_none_or(|s| s <= record.last_demand_ms) {
+        if m.push_snapshot
+            .is_none_or(|s| s < record.last_demand_ms || (!from_read && s == record.last_demand_ms))
+        {
             m.push_snapshot = Some(record.last_demand_ms);
             m.push = record.cells;
         }
@@ -406,7 +410,7 @@ impl<T: DemandTransport> DemandStore<T> {
         // Monotonic: a concurrent replace_push that completed after this read is never undone,
         // and a missing or invalid object never clears demand already held in memory.
         if let Some(record) = push {
-            self.adopt_push(record);
+            self.adopt_push(record, true);
         }
         Ok(report)
     }
