@@ -767,8 +767,12 @@ pub fn sv(v: &V) -> String {
 fn utf16(s: &str) -> Vec<u16> {
     s.encode_utf16().collect()
 }
+/// UTF-16 code units to a string. JavaScript strings may hold an unpaired surrogate that a Rust
+/// string cannot; replacing it would change the reply, so the request is forwarded instead.
 fn from16(u: &[u16]) -> String {
-    String::from_utf16_lossy(u)
+    String::from_utf16(u).unwrap_or_else(|_| {
+        forward("unpaired UTF-16 surrogate in a string (kept by JavaScript, not reproduced)")
+    })
 }
 /// `s.substr(start, len)` on a string (start >= 0).
 pub fn substr(s: &str, start: usize, len: usize) -> String {
@@ -958,6 +962,15 @@ mod tests {
         assert_eq!(to_str(&add(&V::s("2026"), &V::s("0924"))), "20260924");
         assert_eq!(to_str(&add(&V::from(1.), &V::s("mm"))), "1mm");
         assert_eq!(parse_int(&V::s("0900")), 900.);
+        // An unpaired surrogate forwards instead of becoming U+FFFD (S15-R17).
+        let lone = OrderedJson::parse(br#"{"name":"a\ud800b"}"#).unwrap();
+        let p = std::panic::catch_unwind(|| from_store(&lone)).expect_err("forward");
+        assert!(p.downcast_ref::<Forward>().is_some());
+        let pair = OrderedJson::parse(br#"{"name":"\ud83d\ude00"}"#).unwrap();
+        assert_eq!(sv(&from_store(&pair).get("name")), "\u{1f600}");
+        let half = std::panic::catch_unwind(|| substr("\u{1f600}x", 1, 2)).expect_err("forward");
+        assert!(half.downcast_ref::<Forward>().is_some());
+        assert_eq!(slice("a\u{1f600}b", 1, Some(3)), "\u{1f600}");
         // Pinned Node 16.20.2 decodeURI (S15-R16).
         for (s, ok) in [
             ("/a?b=%EC%84%9C+c", true),

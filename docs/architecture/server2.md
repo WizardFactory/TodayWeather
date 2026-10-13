@@ -1670,7 +1670,8 @@ forwards: a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2
 with a malformed escape, for which legacy `decodeURI(req.originalUrl)` throws before its `try` (500). `Date.parse` is reproduced for the strict ISO, space and dotted forms (years from
 100 for the legacy forms) and digit-only strings, checked against the pinned V8; any other date
 string forwards to legacy. Numeric Date constructors map years 0-99 to 1900-1999, `parseInt` without a radix reads `0x`
-hexadecimal, and `Number`/`parseInt`/`parseFloat` skip JavaScript whitespace only, as in JavaScript. The 5 gateway goldens match on
+hexadecimal, and `Number`/`parseInt`/`parseFloat` skip JavaScript whitespace only, as in JavaScript. A store string
+with an unpaired UTF-16 surrogate (which a Rust string cannot hold) forwards instead of being replaced. The 5 gateway goldens match on
 the wire with the native switch (status, body and headers except `date`/`connection`). The legacy
 default, forward and rollback paths are tested. The recorded store is a test double: it checks each
 call's method, order and complete arguments and that every recorded call was used, forwarding on

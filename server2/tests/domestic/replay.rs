@@ -314,3 +314,25 @@ async fn a_rust_panic_in_assembly_forwards_to_legacy() {
         .unwrap();
     assert!(matches!(served, Native::Forward));
 }
+
+/// A store string with an unpaired UTF-16 surrogate (kept by JavaScript, `"\ud800"` in JSON)
+/// forwards instead of being replaced by U+FFFD in a native reply.
+#[test]
+fn an_unpaired_surrogate_in_a_store_answer_forwards() {
+    warm();
+    let id = "life-food-kasi";
+    let mut sc = scenario(id).clone();
+    let i = sc["calls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .position(|c| c["m"] == "rise_set")
+        .unwrap();
+    sc["calls"][i]["result"][0]["locationName"] = "SURROGATE-MARKER".into();
+    let text = serde_json::to_string(&serde_json::json!({ "scenarios": [sc] }))
+        .unwrap()
+        .replacen("SURROGATE-MARKER", "\\ud800", 1);
+    let source = RecordedSource::parse(text.as_bytes()).unwrap();
+    let o = outcome(&source, id);
+    assert!(forwarded(&o, "unpaired UTF-16 surrogate"), "{o:?}");
+}
