@@ -1,0 +1,60 @@
+{
+  "task": "S13",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2698",
+  "server2_paths": [
+    "server2/config/tasks/S13.json",
+    "server2/src/lib.rs",
+    "server2/src/providers/mod.rs",
+    "server2/src/providers/acquisition.rs",
+    "server2/src/providers/rejection.rs",
+    "server2/src/providers/public.rs",
+    "server2/src/providers/transport.rs",
+    "server2/src/domestic/mod.rs",
+    "server2/src/domestic/keys.rs",
+    "server2/src/domestic/publication.rs",
+    "server2/src/domestic/family.rs",
+    "server2/src/domestic/format.rs",
+    "server2/src/domestic/acquire.rs",
+    "server2/src/domestic/metrics.rs",
+    "server2/tests/providers.rs",
+    "server2/tests/providers/support.rs",
+    "server2/tests/providers/rejection.rs",
+    "server2/tests/providers/publication.rs",
+    "server2/tests/providers/requests.rs",
+    "server2/tests/providers/formats.rs",
+    "server2/tests/providers/acquire.rs",
+    "server2/tests/providers/smoke.rs",
+    "server2/tests/providers/fixtures/PROVENANCE.md",
+    "server2/tests/providers/fixtures/pollen-v3-live-20261001.json",
+    "server2/tests/providers/fixtures/uv-idx-v5.json",
+    "server2/tests/providers/fixtures/gateway-30.json",
+    "server2/tests/providers/fixtures/gateway-quota.xml",
+    "server2/tests/providers/fixtures/city-obs-2026-09-25.html",
+    "server2/tests/providers/fixtures/aws-minute-euckr.html",
+    "server2/tests/providers/fixtures/town-rss.xml",
+    "server2/tests/providers/fixtures/make_aws_fixture.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2698.md",
+      "category": "documentation",
+      "reason": "S13 governing intent record; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2698.md",
+      "category": "documentation",
+      "reason": "S13 governing specification; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2698.md",
+      "category": "documentation",
+      "reason": "S13 governing plan and scenarios; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain only the domestic acquisition/provider contract text affected by S13"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2698#issuecomment-6139318688"
+}

@@ -1,6 +1,7 @@
 //! Code/status precedence ported from server/lib/dataGoKrRejection.js at 94019cf5
 //! (#2604). Terminal03 provenance: collectTownForecast.js407–410 and
-//! kmaWarningRequester.js80–98 at94019cf5. No runtime legacy reads.
+//! kmaWarningRequester.js80–98 at94019cf5. JSON gateway envelope: kmaWarningRequester.js
+//! 88–91 and lifeIndexKmaRequester.js 1159–1165 at ca8735cf (S13). No runtime legacy reads.
 use serde_json::Value;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Disposition {
@@ -32,9 +33,12 @@ fn code(body: &[u8]) -> Option<String> {
         return Some(c);
     }
     let value: Value = serde_json::from_slice(body).ok()?;
+    // The gateway also answers its envelope as JSON when dataType=JSON is requested
+    // (legacy kmaWarningRequester.classify / lifeIndexKmaRequester.parseUvIdxV5).
     let header = value
         .get("response")
         .and_then(|r| r.get("header"))
+        .or_else(|| gateway_json(&value))
         .unwrap_or(&value);
     for field in ["returnReasonCode", "resultCode"] {
         if let Some(v) = header.get(field) {
@@ -56,6 +60,16 @@ fn terminal_code(body: &[u8]) -> Option<String> {
     let text = std::str::from_utf8(body).ok()?;
     if !text.trim_start().starts_with('<') {
         let json: Value = serde_json::from_slice(body).ok()?;
+        if let Some(header) = gateway_json(&json) {
+            return header
+                .get("returnReasonCode")
+                .and_then(|v| match v {
+                    Value::String(s) => Some(s.trim().to_owned()),
+                    Value::Number(n) => Some(n.to_string()),
+                    _ => None,
+                })
+                .filter(|c| !c.is_empty() && c.bytes().all(|b| b.is_ascii_digit()));
+        }
         return json
             .get("response")?
             .get("header")?
@@ -159,6 +173,13 @@ fn terminal_code(body: &[u8]) -> Option<String> {
         return None;
     }
     found
+}
+/// JSON-form gateway envelope `{"OpenAPI_ServiceResponse":{"cmmMsgHeader":{...}}}`.
+fn gateway_json(value: &Value) -> Option<&Value> {
+    value
+        .get("OpenAPI_ServiceResponse")?
+        .get("cmmMsgHeader")
+        .filter(|h| h.is_object())
 }
 pub fn classify(status: u16, body: &[u8], data_go_kr: bool, valid: bool) -> Disposition {
     let c = if data_go_kr { code(body) } else { None };
