@@ -1,0 +1,2972 @@
+{
+ "texts": {
+  "status": "o 없 음",
+  "pwn": "o 없음",
+  "sample": "(1) 풍랑 예비특보\r\no 06월 07일 아침 : 동해중부앞바다\r\n(2) 호우 예비특보\r\no 06월 29일 저녁 : 제주도(제주도산지)\r\no 06월 29일 밤 : 제주도(제주도남부)",
+  "special": "o 호우경보 : 제주도(제주도산지, 제주시중산간)\r\no 강풍주의보 : 서울, 인천\r\no 폭풍해일주의보 : 부산\r\no 이상한특보 : 어딘가",
+  "weird": "oo o  o\to : x o없음 o 없 음",
+  "msg0": "o 없 음",
+  "msg7_0": "o 없음",
+  "msg1": "o 호우경보 : 제주도(제주도산지)\r\no 호우주의보 : 제주도(서귀포시남부, 서귀포시동부, 서귀포시중산간)",
+  "msg7_1": "o 없음",
+  "msg2": "o 강풍주의보 : 제주도(제주도산지, 제주시동부, 제주시중산간, 서귀포시동부, 서귀포시중산간)\r\no 호우경보 : 제주도(제주도산지, 제주시중산간)\r\no 호우주의보 : 제주도(제주시동부, 서귀포시남부, 서귀포시동부, 서귀포시중산간)",
+  "msg7_2": "o 없음",
+  "msg3": "o 강풍주의보 : 제주도(추자도, 서귀포시남부 제외)\r\no 호우경보 : 제주도(제주도산지, 제주시중산간)\r\no 호우주의보 : 제주도(제주시서부, 제주시북부, 제주시동부, 서귀포시남부, 서귀포시동부, 서귀포시중산간)",
+  "msg7_3": "o 없음",
+  "msg4": "o 강풍주의보 : 제주도(추자도, 서귀포시남부 제외)\r\no 호우주의보 : 제주도(추자도, 서귀포시서부 제외)",
+  "msg7_4": "o 없음",
+  "msg5": "o 강풍주의보 : 전라남도(거문도.초도), 제주도(추자도, 서귀포시남부 제외)\r\no 풍랑주의보 : 남해서부동쪽먼바다\r\no 호우주의보 : 제주도(추자도, 서귀포시서부 제외)",
+  "msg7_5": "o 없음",
+  "msg6": "o 강풍주의보 : 전라남도(거문도.초도, 완도여서도), 제주도(서귀포시남부 제외)\r\no 풍랑주의보 : 남해서부서쪽먼바다, 남해서��동쪽먼바다\r\no 호우주의보 : 전라남도(거문도.초도), 제주도(제주도산지, 제주시북부, 제주시동부, 제주시중산간)",
+  "msg7_6": "o 없음",
+  "msg7": "o 강풍주의보 : 전라남도(거문도.초도, 완도여서도), 제주도(서귀포시남부 제외)\r\no 풍랑주의보 : 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다, 남해서부동쪽먼바다\r\no 호우주의보 : 전라남도(거문도.초도, 완도(여서도 제외), 완도여서도), 제주도(제주도산지, 추자도, 제주시북부, 제주시동부, 제주시중산간)",
+  "msg7_7": "o 없음",
+  "msg8": "o 강풍주의보 : 전라남도(거문도.초도, 완도여서도), 제주도(제주도산지, 추자도, 제주시북부, 제주시동부, 제주시중산간)\r\no 풍랑주의보 : 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다, 남해서부동쪽먼바다\r\no 호우주의보 : 전라남도(거문도.초도, 완도(여서도 제외), 완도여서도), 제주도(제주도산지, 추자도, 제주시북부, 제주시동부, 제주시중산간)",
+  "msg7_8": "o 없음",
+  "msg9": "o 강풍주의보 : 전라남도(완도여서도), 제주도(제주도산지, 추자도, 제주시북부, 제주시동부, 제주시중산간)\r\no 풍랑주의보 : 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다, 남해서부동쪽먼바다\r\no 호우주의보 : 전라남도(거문도.초도, 완도(여서도 제외), 완도여서도), 제주도(제주도산지, 추자도, 제주시북부, 제주시동부, 제주시중산간)",
+  "msg7_9": "o 없음",
+  "msg10": "o 강풍주의보 : 전라남도(흑산도.홍도), 제주도(추자도, 제주시북부)\r\no 풍랑주의보 : 서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다\r\no 호우주의보 : 전라남도(진도, 거문도.초도, 완도(여서도 제외), 완도여서도, 무안북부), 제주도(추자도, 제주시북부)",
+  "msg7_10": "o 없음",
+  "msg11": "o 강풍주의보 : 전라남도(흑산도.홍도), 제주도(추자도)\r\no 풍랑주의보 : 서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다\r\no 호우주의보 : 전라남도(진도, 거문도.초도, 완도(여서도 제외), 완도여서도, 무안북부), 제주도(추자도)",
+  "msg7_11": "o 없음",
+  "msg12": "o 강풍주의보 : 전라남도(흑산도.홍도), 제주도(추자도)\r\no 풍랑주의보 : 서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다\r\no 호우경보 : 제주도(추자도)\r\no 호우주의보 : 전라남도(진도, 흑산도.홍도, 거문도.초도, 완도(여서도 제외), 완도여서도, 무안북부)",
+  "msg7_12": "o 없음",
+  "msg13": "o 강풍주의보 : 전라남도(흑산도.홍도), 제주도(추자도)\r\no 풍랑주의보 : 서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다\r\no 호우주의보 : 전라남도(진도, 흑산도.홍도, 거문도.초도, 완도(여서도 제외), 완도여서도, 무안북부), 제주도(추자도)",
+  "msg7_13": "o 없음",
+  "msg14": "o 강풍주의보 : 전라남도(흑산도.홍도), 제주도(추자도)\r\no 풍랑주의보 : 서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다\r\no 호우주의보 : 전라남도(진도, 흑산도.홍도, 무안북부), 제주도(추자도)",
+  "msg7_14": "(1) 풍랑 예비특보\r\no 09월 26일 새벽(00시~06시) : 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다",
+  "msg15": "o 강풍주의보 : 전라남도(흑산도.홍도)\r\no 풍랑주의보 : 서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다\r\no 호우주의보 : 전라남도(진도, 흑산도.홍도, 무안북부)",
+  "msg7_15": "(1) 풍랑 예비특보\r\no 09월 26일 새벽(00시~06시) : 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다",
+  "msg16": "o 강풍주의보 : 전라남도(흑산도.홍도)\r\no 풍랑주의보 : 서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다\r\no 호우주의보 : 전라남도(진도, 흑산도.홍도, 무안북부)",
+  "msg7_16": "(1) 풍랑 예비특보\r\no 09월 26일 새벽(00시~06시) : 남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다",
+  "msg17": "o 강풍주의보 : 전라남도(흑산도.홍도)\r\no 풍랑주의보 : 서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다\r\no 호우주의보 : 전라남도(흑산도.홍도, 무안북부)",
+  "msg7_17": "(1) 풍랑 예비특보\r\no 09월 26일 새벽(00시~06시) : 남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽���쪽먼바다",
+  "msg18": "o 강풍주의보 : 전라남도(흑산도.홍도)\r\no 풍랑주의보 : 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다\r\no 호우주의보 : 전라남도(흑산도.홍도, 무안북부)",
+  "msg7_18": "(1) 풍랑 예비특보\r\no 09월 26일 새벽(00시~06시) : 남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다",
+  "msg19": "o 풍랑주의보 : 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다\r\no 호우주의보 : 전라남도(흑산도.홍도, 무안북부)",
+  "msg7_19": "(1) 풍랑 예비특보\r\no 09월 26일 새벽(00시~06시) : 남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다",
+  "msg20": "o 풍랑주의보 : 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다",
+  "msg7_20": "(1) 풍랑 예비특보\r\no 09월 26일 새벽(00시~06시) : 남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+ },
+ "special": {
+  "status": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "pwn": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "sample": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": []
+   },
+   {
+    "weather": -1,
+    "weatherStr": "06월07일아침",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "location": "동해중부앞바다 (2) 호우 예비특보"
+     }
+    ]
+   },
+   {
+    "weather": -1,
+    "weatherStr": "06월29일저녁",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "location": "제주도(제주도산지)"
+     }
+    ]
+   },
+   {
+    "weather": -1,
+    "weatherStr": "06월29일밤",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "location": "제주도(제주도남부)"
+     }
+    ]
+   }
+  ],
+  "special": [
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 2,
+    "levelStr": "경보",
+    "info": [
+     {
+      "location": "제주도(제주도산지, 제주시중산간)"
+     }
+    ]
+   },
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서울, 인천"
+     }
+    ]
+   },
+   {
+    "weather": 7,
+    "weatherStr": "폭풍해일",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "부산"
+     }
+    ]
+   },
+   {
+    "weather": -1,
+    "weatherStr": "이상한특보",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "location": "어딘가"
+     }
+    ]
+   }
+  ],
+  "weird": [
+   {
+    "weather": -1,
+    "weatherStr": "oo",
+    "level": -1,
+    "levelStr": "",
+    "info": []
+   },
+   {
+    "weather": -1,
+    "weatherStr": "o",
+    "level": -1,
+    "levelStr": "",
+    "info": []
+   },
+   {
+    "weather": -1,
+    "weatherStr": "",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "location": "x o없음"
+     }
+    ]
+   },
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg0": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg7_0": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg1": [
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 2,
+    "levelStr": "경보",
+    "info": [
+     {
+      "location": "제주도(제주도산지)"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "제주도(서귀포시남부, 서귀포시동부, 서귀포시중산간)"
+     }
+    ]
+   }
+  ],
+  "msg7_1": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg2": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "제주도(제주도산지, 제주시동부, 제주시중산간, 서귀포시동부, 서귀포시중산간)"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 2,
+    "levelStr": "경보",
+    "info": [
+     {
+      "location": "제주도(제주도산지, 제주시중산간)"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "제주도(제주시동부, 서귀포시남부, 서귀포시동부, 서귀포시중산간)"
+     }
+    ]
+   }
+  ],
+  "msg7_2": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg3": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "제주도(추자도, 서귀포시남부 제외)"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 2,
+    "levelStr": "경보",
+    "info": [
+     {
+      "location": "제주도(제주도산지, 제주시중산간)"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "제주도(제주시서부, 제주시북부, 제주시동부, 서귀포시남부, 서귀포시동부, 서귀포시중산간)"
+     }
+    ]
+   }
+  ],
+  "msg7_3": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg4": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "제주도(추자도, 서귀포시남부 제외)"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "제주도(추자도, 서귀포시서부 제외)"
+     }
+    ]
+   }
+  ],
+  "msg7_4": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg5": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(거문도.초도), 제주도(추자도, 서귀포시남부 제외)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "남해서부동쪽먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "제주도(추자도, 서귀포시서부 제외)"
+     }
+    ]
+   }
+  ],
+  "msg7_5": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg6": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(거문도.초도, 완도여서도), 제주도(서귀포시남부 제외)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "남해서부서쪽먼바다, 남해서��동쪽먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(거문도.초도), 제주도(제주도산지, 제주시북부, 제주시동부, 제주시중산간)"
+     }
+    ]
+   }
+  ],
+  "msg7_6": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg7": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(거문도.초도, 완도여서도), 제주도(서귀포시남부 제외)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다, 남해서부동쪽먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(거문도.초도, 완도(여서도 제외), 완도여서도), 제주도(제주도산지, 추자도, 제주시북부, 제주시동부, 제주시중산간)"
+     }
+    ]
+   }
+  ],
+  "msg7_7": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg8": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(거문도.초도, 완도여서도), 제주도(제주도산지, 추자도, 제주시북부, 제주시동부, 제주시중산간)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다, 남해서부동쪽먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(거문도.초도, 완도(여서도 제외), 완도여서도), 제주도(제주도산지, 추자도, 제주시북부, 제주시동부, 제주시중산간)"
+     }
+    ]
+   }
+  ],
+  "msg7_8": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg9": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(완도여서도), 제주도(제주도산지, 추자도, 제주시북부, 제주시동부, 제주시중산간)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다, 남해서부동쪽먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(거문도.초도, 완도(여서도 제외), 완도여서도), 제주도(제주도산지, 추자도, 제주시북부, 제주시동부, 제주시중산간)"
+     }
+    ]
+   }
+  ],
+  "msg7_9": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg10": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(흑산도.홍도), 제주도(추자도, 제주시북부)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(진도, 거문도.초도, 완도(여서도 제외), 완도여서도, 무안북부), 제주도(추자도, 제주시북부)"
+     }
+    ]
+   }
+  ],
+  "msg7_10": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg11": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(흑산도.홍도), 제주도(추자도)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(진도, 거문도.초도, 완도(여서도 제외), 완도여서도, 무안북부), 제주도(추자도)"
+     }
+    ]
+   }
+  ],
+  "msg7_11": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg12": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(흑산도.홍도), 제주도(추자도)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 2,
+    "levelStr": "경보",
+    "info": [
+     {
+      "location": "제주도(추자도)"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(진도, 흑산도.홍도, 거문도.초도, 완도(여서도 제외), 완도여서도, 무안북부)"
+     }
+    ]
+   }
+  ],
+  "msg7_12": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg13": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(흑산도.홍도), 제주도(추자도)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(진도, 흑산도.홍도, 거문도.초도, 완도(여서도 제외), 완도여서도, 무안북부), 제주도(추자도)"
+     }
+    ]
+   }
+  ],
+  "msg7_13": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg14": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(흑산도.홍도), 제주도(추자도)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(진도, 흑산도.홍도, 무안북부), 제주도(추자도)"
+     }
+    ]
+   }
+  ],
+  "msg7_14": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": []
+   },
+   {
+    "weather": -1,
+    "weatherStr": "09월26일새벽(00시~06시)",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "location": "제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+     }
+    ]
+   }
+  ],
+  "msg15": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(흑산도.홍도)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해서부서쪽먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(진도, 흑산도.홍도, 무안북부)"
+     }
+    ]
+   }
+  ],
+  "msg7_15": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": []
+   },
+   {
+    "weather": -1,
+    "weatherStr": "09월26일새벽(00시~06시)",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "location": "제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+     }
+    ]
+   }
+  ],
+  "msg16": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(흑산도.홍도)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(진도, 흑산도.홍도, 무안북부)"
+     }
+    ]
+   }
+  ],
+  "msg7_16": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": []
+   },
+   {
+    "weather": -1,
+    "weatherStr": "09월26일새벽(00시~06시)",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "location": "남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+     }
+    ]
+   }
+  ],
+  "msg17": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(흑산도.홍도)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽안쪽먼바다, 서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(흑산도.홍도, 무안북부)"
+     }
+    ]
+   }
+  ],
+  "msg7_17": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": []
+   },
+   {
+    "weather": -1,
+    "weatherStr": "09월26일새벽(00시~06시)",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "location": "남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽���쪽먼바다"
+     }
+    ]
+   }
+  ],
+  "msg18": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(흑산도.홍도)"
+     }
+    ]
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(흑산도.홍도, 무안북부)"
+     }
+    ]
+   }
+  ],
+  "msg7_18": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": []
+   },
+   {
+    "weather": -1,
+    "weatherStr": "09월26일새벽(00시~06시)",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "location": "남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+     }
+    ]
+   }
+  ],
+  "msg19": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "전라남도(흑산도.홍도, 무안북부)"
+     }
+    ]
+   }
+  ],
+  "msg7_19": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": []
+   },
+   {
+    "weather": -1,
+    "weatherStr": "09월26일새벽(00시~06시)",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "location": "남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+     }
+    ]
+   }
+  ],
+  "msg20": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": [
+     {
+      "location": "서해남부북쪽바깥먼바다, 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다"
+     }
+    ]
+   }
+  ],
+  "msg7_20": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": []
+   },
+   {
+    "weather": -1,
+    "weatherStr": "09월26일새벽(00시~06시)",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "location": "남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+     }
+    ]
+   }
+  ]
+ },
+ "preliminary": {
+  "status": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "pwn": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "sample": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": [
+     {
+      "timeStr": "06월 07일 아침",
+      "location": "동해중부앞바다"
+     }
+    ]
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": [
+     {
+      "timeStr": "06월 29일 저녁",
+      "location": "제주도(제주도산지)"
+     },
+     {
+      "timeStr": "06월 29일 밤",
+      "location": "제주도(제주도남부)"
+     }
+    ]
+   }
+  ],
+  "special": [
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 2,
+    "levelStr": "경보",
+    "info": []
+   },
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 7,
+    "weatherStr": "폭풍해일",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": -1,
+    "weatherStr": "이상한특보",
+    "level": -1,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "weird": [
+   {
+    "weather": -1,
+    "weatherStr": "oo",
+    "level": -1,
+    "levelStr": "",
+    "info": [
+     {
+      "timeStr": "o",
+      "location": ""
+     },
+     {
+      "timeStr": "",
+      "location": "x o없음"
+     },
+     {
+      "timeStr": "없 음",
+      "location": ""
+     }
+    ]
+   }
+  ],
+  "msg0": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg7_0": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg1": [
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 2,
+    "levelStr": "경보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_1": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg2": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 2,
+    "levelStr": "경보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_2": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg3": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 2,
+    "levelStr": "경보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_3": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg4": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_4": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg5": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_5": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg6": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_6": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg7": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_7": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg8": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_8": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg9": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_9": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg10": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_10": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg11": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_11": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg12": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 2,
+    "levelStr": "경보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_12": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg13": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_13": [
+   {
+    "weather": 0,
+    "weatherStr": "없음",
+    "level": 0,
+    "levelStr": "",
+    "info": []
+   }
+  ],
+  "msg14": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_14": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": [
+     {
+      "timeStr": "09월 26일 새벽(00시~06시)",
+      "location": "제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+     }
+    ]
+   }
+  ],
+  "msg15": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_15": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": [
+     {
+      "timeStr": "09월 26일 새벽(00시~06시)",
+      "location": "제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+     }
+    ]
+   }
+  ],
+  "msg16": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_16": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": [
+     {
+      "timeStr": "09월 26일 새벽(00시~06시)",
+      "location": "남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+     }
+    ]
+   }
+  ],
+  "msg17": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_17": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": [
+     {
+      "timeStr": "09월 26일 새벽(00시~06시)",
+      "location": "남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽���쪽먼바다"
+     }
+    ]
+   }
+  ],
+  "msg18": [
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_18": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": [
+     {
+      "timeStr": "09월 26일 새벽(00시~06시)",
+      "location": "남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+     }
+    ]
+   }
+  ],
+  "msg19": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_19": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": [
+     {
+      "timeStr": "09월 26일 새벽(00시~06시)",
+      "location": "남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+     }
+    ]
+   }
+  ],
+  "msg20": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 1,
+    "levelStr": "주의보",
+    "info": []
+   }
+  ],
+  "msg7_20": [
+   {
+    "weather": 2,
+    "weatherStr": "풍랑",
+    "level": 3,
+    "levelStr": "예비특보",
+    "info": [
+     {
+      "timeStr": "09월 26일 새벽(00시~06시)",
+      "location": "남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다"
+     }
+    ]
+   }
+  ]
+ },
+ "towns": [
+  {
+   "town": [
+    "서울특별시",
+    "종로구",
+    "청운효자동"
+   ],
+   "zones": [
+    "L1100100",
+    "L1100000",
+    "L1000000",
+    "L1100200",
+    "L1100300",
+    "L1100400"
+   ]
+  },
+  {
+   "town": [
+    "제주특별자치도",
+    "서귀포시",
+    "성산읍"
+   ],
+   "zones": [
+    "L1091400",
+    "L1091410",
+    "L1091420",
+    "L1091430",
+    "L1091440",
+    "L1090000",
+    "L1000000",
+    "L1090500"
+   ]
+  },
+  {
+   "town": [
+    "제주특별자치도",
+    "제주시",
+    "추자면"
+   ],
+   "zones": [
+    "L1091000",
+    "L1090000",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "경상북도",
+    "울릉군",
+    "울릉읍"
+   ],
+   "zones": [
+    "L1072100",
+    "L1600000",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "인천광역시",
+    "옹진군",
+    "백령면"
+   ],
+   "zones": [
+    "L1014200",
+    "L1014000",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "경기도",
+    "수원시장안구",
+    "파장동"
+   ],
+   "zones": [
+    "L1011900",
+    "L1010000",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "부산광역시",
+    "해운대구",
+    "우동"
+   ],
+   "zones": [
+    "L1082500",
+    "L1150000",
+    "L1000000",
+    "L1082600",
+    "L1082700"
+   ]
+  },
+  {
+   "town": [
+    "세종특별자치시",
+    "",
+    ""
+   ],
+   "zones": [
+    "L1170000",
+    "L1170100",
+    "L1170110",
+    "L1170120",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "대구광역시",
+    "군위군",
+    "군위읍"
+   ],
+   "zones": [
+    "L1070200",
+    "L1140000",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "경상북도",
+    "군위군",
+    "군위읍"
+   ],
+   "zones": [
+    "L1070200",
+    "L1140000",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "강원특별자치도",
+    "강릉시",
+    "교동"
+   ],
+   "zones": [
+    "L1022500",
+    "L1022510",
+    "L1022520",
+    "L1020000",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "전라북도",
+    "전주시덕진구",
+    "인후동"
+   ],
+   "zones": [
+    "L1061300",
+    "L1060000",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "충청북도",
+    "청원군",
+    "오창읍"
+   ],
+   "zones": [
+    "L1041400",
+    "L1041410",
+    "L1041420",
+    "L1040000",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "서울특별시",
+    "",
+    ""
+   ],
+   "zones": [
+    "L1100000",
+    "L1100100",
+    "L1100200",
+    "L1100300",
+    "L1100400",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "없는도",
+    "x",
+    "y"
+   ],
+   "zones": []
+  },
+  {
+   "town": [
+    "경상남도",
+    "없는시",
+    "z"
+   ],
+   "zones": [
+    "L1080000",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "인천광역시",
+    "남동구",
+    "구월동"
+   ],
+   "zones": [
+    "L1110100",
+    "L1110110",
+    "L1110120",
+    "L1110130",
+    "L1110000",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "광주광역시",
+    "북구",
+    "용봉동"
+   ],
+   "zones": [
+    "L1130100",
+    "L1130110",
+    "L1130120",
+    "L1130000",
+    "L1000000"
+   ]
+  },
+  {
+   "town": [
+    "울산광역시",
+    "울주군",
+    "언양읍"
+   ],
+   "zones": [
+    "L1082800",
+    "L1160000",
+    "L1000000",
+    "L1082900"
+   ]
+  },
+  {
+   "town": [
+    "대전광역시",
+    "유성구",
+    "봉명동"
+   ],
+   "zones": [
+    "L1030100",
+    "L1120000",
+    "L1000000"
+   ]
+  }
+ ],
+ "events": 206,
+ "state": [
+  {
+   "areaCode": "L1083410",
+   "areaName": "합천군서북부",
+   "warnVar": 13,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202608041600,
+   "eventTmSeq": 9,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1071200",
+   "areaName": "상주시",
+   "warnVar": 12,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609011000,
+   "eventTmSeq": 4,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1072610",
+   "areaName": "김천시북부",
+   "warnVar": 12,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609021600,
+   "eventTmSeq": 16,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1082700",
+   "areaName": "부산서부",
+   "warnVar": 12,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609031600,
+   "eventTmSeq": 18,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1072620",
+   "areaName": "김천시남부",
+   "warnVar": 12,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609021600,
+   "eventTmSeq": 16,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1083410",
+   "areaName": "합천군서북부",
+   "warnVar": 12,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609021600,
+   "eventTmSeq": 16,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1072620",
+   "areaName": "김천시남부",
+   "warnVar": 13,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202608091600,
+   "eventTmSeq": 65,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1071200",
+   "areaName": "상주시",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202608081530,
+   "eventTmSeq": 47,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1072610",
+   "areaName": "김천시북부",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202608081530,
+   "eventTmSeq": 47,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1072610",
+   "areaName": "김천시북부",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202608081530,
+   "eventTmSeq": 47,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1071200",
+   "areaName": "상주시",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202608311700,
+   "eventTmSeq": 453,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1082700",
+   "areaName": "��산서부",
+   "warnVar": 13,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609021600,
+   "eventTmSeq": 16,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1072610",
+   "areaName": "김천시북부",
+   "warnVar": 13,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202608251600,
+   "eventTmSeq": 295,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1071200",
+   "areaName": "상주시",
+   "warnVar": 13,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202608231600,
+   "eventTmSeq": 287,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1082700",
+   "areaName": "부산서부",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202608281510,
+   "eventTmSeq": 341,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1082700",
+   "areaName": "부산서부",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609100400,
+   "eventTmSeq": 68,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1083410",
+   "areaName": "합천군서북부",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202608271945,
+   "eventTmSeq": 320,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1072620",
+   "areaName": "김천시남부",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202608300530,
+   "eventTmSeq": 382,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1132110",
+   "areaName": "동해남부남쪽안쪽먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609230300,
+   "eventTmSeq": 107,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1132120",
+   "areaName": "동해남부남쪽바깥먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609230300,
+   "eventTmSeq": 107,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1072100",
+   "areaName": "울릉도.독도",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609221230,
+   "eventTmSeq": 104,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1312020",
+   "areaName": "남해동부바깥먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609230600,
+   "eventTmSeq": 109,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1312010",
+   "areaName": "남해동부안쪽먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609230600,
+   "eventTmSeq": 109,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1152020",
+   "areaName": "동해중부바깥먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609221200,
+   "eventTmSeq": 103,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1152010",
+   "areaName": "동해중부안쪽먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609221200,
+   "eventTmSeq": 103,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1132220",
+   "areaName": "동해남부북쪽바깥먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609221600,
+   "eventTmSeq": 105,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1132210",
+   "areaName": "동해남부북쪽안쪽먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609221600,
+   "eventTmSeq": 105,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1131100",
+   "areaName": "울산앞바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609230000,
+   "eventTmSeq": 106,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1131200",
+   "areaName": "경북남부앞바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609221600,
+   "eventTmSeq": 105,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1324020",
+   "areaName": "제주도남쪽바깥먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609230600,
+   "eventTmSeq": 109,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1324110",
+   "areaName": "제주도남동쪽안쪽먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609230600,
+   "eventTmSeq": 109,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1052600",
+   "areaName": "거문도.초도",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261030,
+   "eventTmSeq": 126,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1323300",
+   "areaName": "제주도남부앞바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609230600,
+   "eventTmSeq": 109,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1323200",
+   "areaName": "제주도동부앞바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609230600,
+   "eventTmSeq": 109,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1322200",
+   "areaName": "남해서부동쪽먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261030,
+   "eventTmSeq": 126,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1232120",
+   "areaName": "서해남부북쪽바깥먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609260900,
+   "eventTmSeq": 124,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1232220",
+   "areaName": "서해남부남쪽바깥먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609260900,
+   "eventTmSeq": 124,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1232210",
+   "areaName": "서해남부남쪽안쪽먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609260900,
+   "eventTmSeq": 124,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1052500",
+   "areaName": "흑산도.홍도",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609260730,
+   "eventTmSeq": 119,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1053410",
+   "areaName": "무안군북부",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609260800,
+   "eventTmSeq": 121,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1052500",
+   "areaName": "흑산도.홍도",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609260800,
+   "eventTmSeq": 121,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1232110",
+   "areaName": "서해남부북쪽안쪽먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609260800,
+   "eventTmSeq": 121,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1052300",
+   "areaName": "진도군",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609260800,
+   "eventTmSeq": 121,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "S1322100",
+   "areaName": "남해서부서쪽먼바다",
+   "warnVar": 6,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261000,
+   "eventTmSeq": 125,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091000",
+   "areaName": "추자도",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261000,
+   "eventTmSeq": 125,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091000",
+   "areaName": "추자도",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609260900,
+   "eventTmSeq": 124,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1052600",
+   "areaName": "거문도.초도",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261000,
+   "eventTmSeq": 125,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1053320",
+   "areaName": "완도군여서도",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609260900,
+   "eventTmSeq": 124,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1053310",
+   "areaName": "완도군(여서도 제외)",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609260900,
+   "eventTmSeq": 124,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091320",
+   "areaName": "제주시북부",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261130,
+   "eventTmSeq": 128,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091320",
+   "areaName": "제주시북부",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261130,
+   "eventTmSeq": 128,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091340",
+   "areaName": "제주시중산간",
+   "warnVar": 2,
+   "warnStress": 1,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261140,
+   "eventTmSeq": 129,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091340",
+   "areaName": "제주시중산간",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261140,
+   "eventTmSeq": 129,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091330",
+   "areaName": "제주시동부",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261140,
+   "eventTmSeq": 129,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091330",
+   "areaName": "제주시동부",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261140,
+   "eventTmSeq": 129,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1090500",
+   "areaName": "제주도산지",
+   "warnVar": 2,
+   "warnStress": 1,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261200,
+   "eventTmSeq": 130,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1090500",
+   "areaName": "제주도산지",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261140,
+   "eventTmSeq": 129,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1053320",
+   "areaName": "완도군여서도",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261000,
+   "eventTmSeq": 125,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091310",
+   "areaName": "제주시서부",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261130,
+   "eventTmSeq": 128,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091440",
+   "areaName": "서귀포시중산간",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261140,
+   "eventTmSeq": 129,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091430",
+   "areaName": "서귀포시동부",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261140,
+   "eventTmSeq": 129,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091410",
+   "areaName": "서귀포시서부",
+   "warnVar": 1,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261130,
+   "eventTmSeq": 128,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091440",
+   "areaName": "서귀포시중산간",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261200,
+   "eventTmSeq": 130,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091430",
+   "areaName": "서귀포시동부",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261200,
+   "eventTmSeq": 130,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091420",
+   "areaName": "서귀포시남부",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261200,
+   "eventTmSeq": 130,
+   "eventRank": 0
+  },
+  {
+   "areaCode": "L1091310",
+   "areaName": "제주시서부",
+   "warnVar": 2,
+   "warnStress": 0,
+   "active": false,
+   "command": "2",
+   "eventTmFc": 202609261130,
+   "eventTmSeq": 128,
+   "eventRank": 0
+  }
+ ],
+ "partialCount": 186,
+ "partialInfo": [
+  [],
+  [
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "locationName": "서귀포시남부"
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "locationName": "서귀포시동부"
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "locationName": "서귀포시중산간"
+   },
+   {
+    "weather": 3,
+    "weatherStr": "호우",
+    "level": 1,
+    "levelStr": "주의보",
+    "locationName": "제주도산지"
+   },
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "locationName": "서귀포시동부"
+   },
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "locationName": "서귀포시서부"
+   },
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "locationName": "서귀포시중산간"
+   },
+   {
+    "weather": 1,
+    "weatherStr": "강풍",
+    "level": 1,
+    "levelStr": "주의보",
+    "locationName": "제주도산지"
+   }
+  ],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  []
+ ],
+ "lines": [
+  "a\n\n<b\n\n*c \n\no\n\n-d\n\n※e\n[f \n강풍주의보 끝",
+  "<첫줄 \n\no 강풍주의보 \n[괄호] \n\n- 끝"
+ ],
+ "announcement": "2026-09-27T09:10:00.000Z",
+ "kstDate": [
+  "20260928",
+  "20260926"
+ ],
+ "provenance": "Legacy functions executed at ca8735cf by an uncommitted oracle; see PROVENANCE.md"
+}

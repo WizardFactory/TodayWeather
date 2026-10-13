@@ -1,0 +1,379 @@
+//! Durable recovery on the owned loopback S3 peer: empty memory, no provider, faults.
+use super::common::*;
+use server2::{
+    gateway::OrderedJson,
+    storage::{CatalogLimits, HttpS3Transport},
+    warnings::{
+        ServiceConfig, StoreConfig, Town, WarningService, WarningStore,
+        provider::Operation,
+        records::{self, Member},
+    },
+};
+use std::{sync::Arc, time::Duration};
+
+fn member(op: Operation, body: &[u8], fetched: &str) -> Member {
+    Member {
+        role: op.role().into(),
+        bytes: body.to_vec().into(),
+        fetched_at_ms: ms(fetched) as u64,
+    }
+}
+fn store_with(peer: &Peer, lookback_days: i64) -> Arc<WarningStore<HttpS3Transport>> {
+    let limits = CatalogLimits {
+        deadline: Duration::from_secs(9),
+        ..CatalogLimits::default()
+    };
+    let config = StoreConfig {
+        lookback_days,
+        ..StoreConfig::default()
+    };
+    Arc::new(WarningStore::new(peer.transport(), limits, config).unwrap())
+}
+fn service_on(
+    store: Arc<WarningStore<HttpS3Transport>>,
+    clock: Arc<FixedClock>,
+    refresh: Duration,
+) -> WarningService<HttpS3Transport> {
+    WarningService::new(
+        store,
+        clock,
+        ServiceConfig {
+            refresh,
+            deadline: Duration::from_secs(9),
+            ..ServiceConfig::default()
+        },
+    )
+}
+/// Recorded provider acquisitions of 2026-09-26/27 (type 1 with its bulletin page).
+async fn publish_recorded(store: &WarningStore<HttpS3Transport>) {
+    let at = "2026-09-27T00:20:00.000Z";
+    store
+        .publish(
+            "bulletin-1",
+            20260926,
+            vec![
+                member(Operation::PwnStatus, PWN_STATUS.as_bytes(), at),
+                member(Operation::WrnMsg, WRN_MSG.as_bytes(), at),
+            ],
+            deadline(),
+        )
+        .await
+        .unwrap();
+    store
+        .publish(
+            "bulletin-2",
+            20260926,
+            vec![member(Operation::WthrPwn, WTHR_PWN.as_bytes(), at)],
+            deadline(),
+        )
+        .await
+        .unwrap();
+    store
+        .publish(
+            "bulletin-3",
+            20260927,
+            vec![member(Operation::WthrInfo, WTHR_INFO.as_bytes(), at)],
+            deadline(),
+        )
+        .await
+        .unwrap();
+    store
+        .publish(
+            "bulletin-4",
+            20260927,
+            vec![member(Operation::BrkNews, BRK_NEWS.as_bytes(), at)],
+            deadline(),
+        )
+        .await
+        .unwrap();
+}
+fn types(list: &OrderedJson) -> Vec<(f64, String)> {
+    let OrderedJson::Array(items) = list else {
+        panic!()
+    };
+    items
+        .iter()
+        .map(|i| {
+            (
+                i.get("type").unwrap().number().unwrap(),
+                i.get("announcement").unwrap().string().unwrap(),
+            )
+        })
+        .collect()
+}
+#[tokio::test]
+async fn week_old_provider_bulletins_recover_from_s3_alone() {
+    let peer = Peer::new();
+    publish_recorded(&peer.store()).await;
+    // Replacement host one week later: fresh store/service, empty memory, no provider source.
+    let clock = FixedClock::at("2026-10-04T00:10:00.000Z");
+    let service = peer.service(clock);
+    let list = service.special(true).await.unwrap();
+    assert_eq!(
+        types(&list),
+        vec![
+            (1., "2026-09-26T03:00:00.000Z".into()),
+            (2., "2026-09-25T21:00:00.000Z".into()),
+            (3., "2026-09-26T20:40:00.000Z".into()),
+        ]
+    );
+    let type1 = &match &list {
+        OrderedJson::Array(a) => a.clone(),
+        _ => unreachable!(),
+    }[0];
+    let bulletin = type1.get("bulletin").unwrap();
+    let msg = items(WRN_MSG)
+        .into_iter()
+        .find(|m| m["tmSeq"] == 130)
+        .unwrap();
+    assert_eq!(
+        bulletin.get("title").unwrap().string().unwrap(),
+        msg["t1"].as_str().unwrap().replace('\r', "").trim()
+    );
+    assert_eq!(type1.get("comment").unwrap().string().unwrap(), "o 없음");
+    assert_eq!(type1.get("name").unwrap().string().unwrap(), "기상특보");
+    let type2 = &match &list {
+        OrderedJson::Array(a) => a.clone(),
+        _ => unreachable!(),
+    }[1];
+    let expected: serde_json::Value = oracle()["preliminary"]["pwn"].clone();
+    let got: serde_json::Value =
+        serde_json::from_slice(&type2.get("situationList").unwrap().to_bytes()).unwrap();
+    assert_eq!(got, expected);
+    // Type 2 comment: legacy cleanText then _insertLineChange before 'o'.
+    assert!(
+        type2
+            .get("comment")
+            .unwrap()
+            .string()
+            .unwrap()
+            .starts_with("<예비특보 추가 발표 현황> \n\n\no 당초")
+    );
+    // The English locale only changes names.
+    let en = service.special(false).await.unwrap();
+    assert_eq!(types(&en), types(&list));
+}
+#[tokio::test]
+async fn weather_flash_follows_legacy_plus_nineteen_hours() {
+    let peer = Peer::new();
+    publish_recorded(&peer.store()).await;
+    // brk-news latest tmFc 202609270910 KST = actual 2026-09-27T00:10Z.
+    for (now, present) in [
+        ("2026-09-27T10:10:00.000Z", true),
+        ("2026-09-27T19:10:00.000Z", true),
+        ("2026-09-27T19:10:00.001Z", false),
+    ] {
+        let service = peer.service(FixedClock::at(now));
+        let list = service.special(true).await.unwrap();
+        let kinds: Vec<f64> = types(&list).into_iter().map(|t| t.0).collect();
+        assert_eq!(kinds.first() == Some(&4.), present, "{now}");
+        assert_eq!(kinds.len(), if present { 4 } else { 3 });
+    }
+    // A warm process applies the same boundary to its memory result.
+    let clock = FixedClock::at("2026-09-27T19:10:00.000Z");
+    let service = peer.service(clock.clone());
+    assert_eq!(types(&service.special(true).await.unwrap()).len(), 4);
+    clock.set("2026-09-27T19:10:00.001Z");
+    assert_eq!(types(&service.special(true).await.unwrap()).len(), 3);
+}
+fn type2_body(tm_fc: i64, rem: &str) -> Vec<u8> {
+    provider_body(&[
+        serde_json::json!({"stnId": "108", "tmFc": tm_fc, "tmSeq": 1, "pwn": "o 없음", "rem": rem}),
+    ])
+}
+async fn latest_type2(peer: &Peer) -> String {
+    let service = peer.service(FixedClock::at("2026-09-30T00:00:00.000Z"));
+    let list = service.special(true).await.unwrap();
+    types(&list).into_iter().find(|t| t.0 == 2.).unwrap().1
+}
+#[tokio::test]
+async fn interrupted_publication_never_loses_acknowledged_latest() {
+    let peer = Peer::new();
+    let store = peer.store();
+    publish_recorded(&store).await;
+    let acknowledged = "2026-09-25T21:00:00.000Z";
+    assert_eq!(latest_type2(&peer).await, acknowledged);
+    let limits = CatalogLimits::default();
+    let newer = vec![Member {
+        role: Operation::WthrPwn.role().into(),
+        bytes: type2_body(202609281000, "newer").into(),
+        fetched_at_ms: ms("2026-09-28T01:01:00.000Z") as u64,
+    }];
+    let (declaration, raw) =
+        records::group("bulletin-2", 20260928, newer.clone(), &limits).unwrap();
+    let raw_key = raw[0].envelope.identity.object_key().unwrap();
+    let descriptor_key = declaration
+        .reference(&limits)
+        .unwrap()
+        .descriptor_key()
+        .unwrap();
+    let catalog_key = records::catalog("bulletin-2", 20260928).unwrap().key();
+    for key in [&descriptor_key, &raw_key, &catalog_key] {
+        peer.fault("reject", key).await;
+        assert!(
+            store
+                .publish("bulletin-2", 20260928, newer.clone(), deadline())
+                .await
+                .is_err()
+        );
+        // Not acknowledged: the previously acknowledged latest is still served from S3.
+        assert_eq!(latest_type2(&peer).await, acknowledged, "fault on {key}");
+        peer.fault("clear", key).await;
+    }
+    // After writes recover, the complete orphan group is repaired and becomes servable.
+    assert_eq!(latest_type2(&peer).await, "2026-09-28T01:00:00.000Z");
+
+    // A partial multi-page group (second page rejected) is never served.
+    let pages = vec![
+        Member {
+            role: Operation::WthrPwn.role().into(),
+            bytes: type2_body(202609291000, "page-one").into(),
+            fetched_at_ms: ms("2026-09-29T01:01:00.000Z") as u64,
+        },
+        Member {
+            role: Operation::WthrPwn.role().into(),
+            bytes: type2_body(202609291100, "page-two").into(),
+            fetched_at_ms: ms("2026-09-29T01:01:01.000Z") as u64,
+        },
+    ];
+    let (_, raw) = records::group("bulletin-2", 20260929, pages.clone(), &limits).unwrap();
+    let second = raw[1].envelope.identity.object_key().unwrap();
+    peer.fault("reject", &second).await;
+    assert!(
+        store
+            .publish("bulletin-2", 20260929, pages, deadline())
+            .await
+            .is_err()
+    );
+    assert_eq!(latest_type2(&peer).await, "2026-09-28T01:00:00.000Z");
+    peer.fault("clear", &second).await;
+
+    // An ambiguous catalog commit is reconciled from actual catalogs.
+    let later = vec![Member {
+        role: Operation::WthrPwn.role().into(),
+        bytes: type2_body(202609291200, "later").into(),
+        fetched_at_ms: ms("2026-09-29T03:01:00.000Z") as u64,
+    }];
+    peer.fault(
+        "drop-commit",
+        &records::catalog("bulletin-2", 20260929).unwrap().key(),
+    )
+    .await;
+    let _ = store
+        .publish("bulletin-2", 20260929, later, deadline())
+        .await;
+    assert_eq!(latest_type2(&peer).await, "2026-09-29T03:00:00.000Z");
+}
+#[tokio::test]
+async fn missing_catalog_is_repaired_from_raw_records() {
+    let peer = Peer::new();
+    publish_recorded(&peer.store()).await;
+    peer.fault(
+        "forget",
+        &records::catalog("bulletin-3", 20260927).unwrap().key(),
+    )
+    .await;
+    let service = peer.service(FixedClock::at("2026-10-04T00:10:00.000Z"));
+    let kinds: Vec<f64> = types(&service.special(true).await.unwrap())
+        .into_iter()
+        .map(|t| t.0)
+        .collect();
+    assert_eq!(kinds, vec![1., 2., 3.]);
+    let store = service.store();
+    assert!(
+        store
+            .counters
+            .repaired_days
+            .load(std::sync::atomic::Ordering::Relaxed)
+            >= 1
+    );
+}
+#[tokio::test]
+async fn s3_outage_uses_valid_memory_or_legacy_error() {
+    let mut peer = Peer::new();
+    publish_recorded(&peer.store()).await;
+    let clock = FixedClock::at("2026-10-04T00:10:00.000Z");
+    // Refresh on every request; stale memory (300 s) is the outage fallback.
+    let warm = service_on(store_with(&peer, 400), clock.clone(), Duration::ZERO);
+    assert_eq!(types(&warm.special(true).await.unwrap()).len(), 3);
+    let cold = service_on(store_with(&peer, 400), clock.clone(), Duration::ZERO);
+    peer.kill();
+    assert_eq!(types(&warm.special(true).await.unwrap()).len(), 3);
+    let response = get(&cold, &[("accept-language", "ko")]).await;
+    assert_eq!(response.status().as_u16(), 501);
+    assert_eq!(
+        response.headers()["content-type"].to_str().unwrap(),
+        "text/html; charset=utf-8"
+    );
+    assert!(response.headers().get("cache-control").is_none());
+    assert_eq!(body(response).await, b"warning storage unavailable");
+}
+#[tokio::test]
+async fn missing_type_returns_legacy_data_is_empty() {
+    let peer = Peer::new();
+    let store = store_with(&peer, 5);
+    store
+        .publish(
+            "bulletin-2",
+            20260926,
+            vec![member(
+                Operation::WthrPwn,
+                WTHR_PWN.as_bytes(),
+                "2026-09-26T00:00:00.000Z",
+            )],
+            deadline(),
+        )
+        .await
+        .unwrap();
+    let service = service_on(
+        store,
+        FixedClock::at("2026-09-27T00:00:00.000Z"),
+        Duration::from_secs(30),
+    );
+    let response = get(&service, &[]).await;
+    assert_eq!(response.status().as_u16(), 501);
+    assert_eq!(body(response).await, b"data is empty");
+}
+#[tokio::test]
+async fn zone_state_recovers_from_published_days() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let mut rows = items(PWN_CD);
+    rows.extend(items(PWN_CD_DAILY));
+    let partial: Vec<_> = rows
+        .iter()
+        .filter(|r| server2::warnings::js::number(r.get("tmFc")) <= 202609261000.)
+        .cloned()
+        .collect();
+    let (early, late): (Vec<_>, Vec<_>) = partial
+        .into_iter()
+        .partition(|r| server2::warnings::js::number(r.get("tmFc")) < 202609200000.);
+    for (date, part) in [(20260919, early), (20260926, late)] {
+        store
+            .publish(
+                records::ZONE_KIND,
+                date,
+                vec![Member {
+                    role: Operation::PwnCd.role().into(),
+                    bytes: provider_body(&part).into(),
+                    fetched_at_ms: ms("2026-09-26T01:05:00.000Z") as u64,
+                }],
+                deadline(),
+            )
+            .await
+            .unwrap();
+    }
+    let service = peer.service(FixedClock::at("2026-09-26T02:00:00.000Z"));
+    let o = oracle();
+    let town = Town {
+        first: "제주특별자치도".into(),
+        second: "서귀포시".into(),
+        third: "성산읍".into(),
+    };
+    let list = service.special_info(&town).await.unwrap();
+    let got: serde_json::Value =
+        serde_json::from_slice(&server2::warnings::service::special_info_json(&list).to_bytes())
+            .unwrap();
+    assert_eq!(got, o["partialInfo"][1]);
+    assert!(!list.is_empty());
+}

@@ -1,0 +1,25 @@
+{
+ "response": {
+  "header": {
+   "resultCode": "00",
+   "resultMsg": "NORMAL_SERVICE"
+  },
+  "body": {
+   "dataType": "JSON",
+   "items": {
+    "item": [
+     {
+      "stnId": "108",
+      "tmFc": 202609260600,
+      "tmSeq": 29,
+      "pwn": "o 없음",
+      "rem": "<예비특보 추가 발표 현황> \no 당초 오늘(26일) 새벽으로 예정되었던 제주도(제주도남쪽바깥먼바다,제주도남서쪽안쪽먼바다)의 풍랑 예비특보는 발표 가능성이 낮아져 해제하나, 오늘 낮까지 바람이 강하게 불고 물결이 높게 일겠으니, 항해나 조업하는 선박은 각별히 유의하기 바랍니다."
+     }
+    ]
+   },
+   "pageNo": 1,
+   "numOfRows": 3,
+   "totalCount": 1
+  }
+ }
+}
