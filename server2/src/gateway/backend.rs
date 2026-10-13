@@ -140,6 +140,7 @@ impl Geocoder for LegacyGeocoder {
 }
 impl LegacyGeocoder {
     async fn lookup(&self, path: String, lang: String) -> Result<GeoClient, GatewayError> {
+        super::metrics::add(&super::metrics::COUNTERS.legacy_geocode_attempts);
         let (status, body) = self
             .http
             .get(&path, &lang, Duration::from_secs(5), 256 * 1024)
@@ -267,6 +268,7 @@ impl BackendDispatcher {
             if remaining.is_zero() {
                 return Err(GatewayError::Provider);
             }
+            super::metrics::add(&super::metrics::COUNTERS.backend_attempts);
             let result = self
                 .http
                 .get(

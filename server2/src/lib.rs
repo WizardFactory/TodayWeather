@@ -193,7 +193,7 @@ async fn metrics(State(s): State<Arc<SharedState>>) -> Response {
         s.config.cpu_limit,
         s.memory_bytes(),
         s.config.cache_bytes
-    );
+    ) + &gateway::metrics::render();
     (
         [
             ("content-type", "text/plain; version=0.0.4; charset=utf-8"),
@@ -222,6 +222,7 @@ pub mod providers;
 
 pub mod gateway;
 pub mod geocode;
+pub mod world;
 
 /// Gateway owns its own bounded request jobs; health keeps foundation admission.
 pub fn public_router_with_gateway(
@@ -239,3 +240,4 @@ pub fn public_router_with_gateway(
         })
         .with_state(state)
 }
+pub mod warnings;

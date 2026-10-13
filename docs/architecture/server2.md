@@ -185,6 +185,21 @@ cutover approval. Whole-gateway gates remain: 501 rate <= legacy, p95 <= legacy
 + 10%, >= 99.9% within 9s, and cache-aware rollback. This design executes none
 of those cutover checks and asserts no production response parity.
 
+S19 ([#2704](https://github.com/WizardFactory/TodayWeather/issues/2704)) provides
+the local tooling that these gates consume, one family module at a time; the
+gateway/geocode family is first. `server2/deploy/smoke.sh` runs the actual release
+binary against recorded providers, a frozen legacy origin and the local S3 peer. It
+asserts aggregate gateway/geocoder counters on the loopback metrics listener.
+Offline paired replay classifies every difference as declared or unexplained
+and records revision, workload and cold/warm percentiles. The rollback rehearsal
+switches `/weather` and `/geocode` together while checking the cache and deadline
+contracts. These are local fixture results, not seven-day shadow, production
+latency or quota evidence. Live shadow configuration and traffic mirroring
+need separate operational authority. The rehearsal pins open gap S19-GAP-1: the
+default 9-second foundation connection lifetime closes the socket before the
+gateway's 9-second deadline `501` is written. See the
+[smoke/shadow guide](../operations/server2-smoke-shadow.md).
+
 ## 3. Rust runtime and memory lookup
 
 One API process per host uses Tokio's multithreaded runtime for HTTP/S3/provider
@@ -689,6 +704,29 @@ that can disagree with the serving commit. Preserve types 1–3's greatest
 announcement without age expiry and type 4's legacy +19h actual-instant rule.
 Missing type catalogs repair from bounded announcement/year partitions or seeded
 legacy exports; cold latency is not bounded by one GET during catalog repair.
+
+S12 ([#2697](https://github.com/WizardFactory/TodayWeather/issues/2697),
+[spec](../../specs/issue-2697.md)) implements this in `server2/src/warnings/`, not yet
+wired into the server2 process or any route switch. Source `kma-warning` uses kinds
+`bulletin-1`…`bulletin-4` (getPwnStatus plus getWthrWrnMsg pages for type 1;
+getWthrPwn, getWthrInfo and getWthrBrkNews for types 2–4), `pwn-cd` and `zone-seed`.
+Each provider acquisition or exported legacy document is one single-owner fetch group in
+the partition of its announcement KST date (`pwn-cd`: requested day). The latest bulletin is
+derived in memory by walking day partitions newest first: types 1–3 have no age
+expiry (recent days probed, older days discovered from complete per-year raw LISTs);
+type 4 reads only partitions on or after the KST date of now − 19 h and is omitted when
+stored KST time + 10 h < now. Days larger than one read are paged by whole acquisition. Equal announcements keep
+the earliest fetch. A missing day catalog is repaired from that exact period's raw
+prefix; an incomplete or failed repair skips the day because an acknowledged group
+always has its catalog and catalogs are never deleted. Catalog read errors fail with
+the legacy 501. Zone state for `specialInfo` is the newest zone seed plus every
+`pwn-cd` revision published since the seed's legacy sync point (every published day
+without one), replayed in memory by an owned refresh task; cold replay cost grows with
+time since the seed. Discovery scans back to 1970, so no stored bulletin ages out. Seeds come from the
+offline `server2/tools/migration/` converter and a loopback-only importer. Newly
+collected documents use the S02 seed key order, which S19 shadow comparison must
+confirm against production bytes; the Express session cookie and the shared S08
+classification of status-200 JSON gateway envelopes are recorded differences.
 
 Daily weather summaries are the authorized derived-weather exception; D04
 geocoding cache projections below do not permit normalized weather views. Preserve grid's
@@ -1346,3 +1384,75 @@ instead of later whole-pass retries, and codes 10/12 terminal. AirKorea/KECO, KA
 forecast-zone requests (`returnType`, `_type`, `type=json`) are not ported by S13; warnings
 remain S12. Verification uses recorded and synthetic fixtures with loopback provider and S3
 peers only; no live provider, quota or AWS behavior is claimed.
+
+### S11 native world weather and air (2026-10-13)
+
+[S11](../../plans/issue-2696.md) adds `server2::world`, a native `Family::Dsf`
+handler for the S10 dispatcher. Registration keeps legacy HTTP selected; only
+an explicit `set_backend` (or the loopback-only `SERVER2_WORLD_MODE=native-local`
+runtime option) switches a version, and switching back is the rollback.
+
+Visual Crossing Timeline bodies are the only persisted world weather input:
+source `vc`, kind `timeline`, `ProviderKey::WorldCell` of the legacy cell centre,
+period `{first local date of days[], range}`, `fetched_at_ms` equal to the request
+instant used for conversion, and one single-member fetch group per acquisition in
+partition `{first date}-{range}`. A new success requires complete S06 publication
+(O-9). Reads cover every range for first dates D-5..D+1, which contains every fetch
+that can affect the legacy 48-hour decision window; an absent catalog needs a
+complete one-period repair before a provider miss is accepted. DsfForecast records,
+the twoDaysAgo/yesterday/today/current/stale classification, the no-yesterday
+marker and the response are derived in memory and never persisted. Per-cell memory
+keeps only records that can still affect a later request.
+
+The legacy chain is preserved: combined/recent/forecast selection, the no-yesterday
+marker, 10-minute provider-down after a VC 401/403 or a daily/usage-limit 429, one
+retry after 300 ms of a concurrency 429 or a reset socket (`ECONNRESET`/`EPIPE`, including
+a connection closed before the response), the 8-second VC call budget with a 4 MiB raw
+(16 MiB decoded) gzip-capable body, 2-second failure backoff and a 15-minute backoff after a
+billed 200 body that is unusable (both measured from failure handling), waiters behind
+an active fetch that use stored current/today or fall back, stale serving up to 6
+hours and 503 `EWEATHERUNAVAILABLE` retry times. VC HTTP is funded through S08 before
+sending (98/50/2 units reserved for two attempts of a 49/25/1-unit range) in one S08
+window per UTC day, the legacy usage day; a range that cannot be funded follows the
+legacy daily-budget path (forecast-only, then stale or 503 with the window end).
+Funding steps of a window are serialized: unconsumed units of a reservation return to
+the window's pool and fund later fetches of any range before a new S08 reservation,
+and a denied amount marks larger needs exhausted for that window. As legacy
+`_selectRange` checks the budget before the lock, a request that would fail behind a
+busy or backed-off cell first establishes funding eligibility without HTTP: pooled
+funds or a new pooled reservation prove eligibility, a denial answers 503 with the
+window end, and concurrent checks share that outcome. The check is awaited until the
+response deadline without cancelling the owned S08 step, and exhaustion is decided only
+by the ledger (returned units make a window fundable again the same day). Busy cells are never evicted
+from the bounded cell map, so one owner fetches per cell; idle cells are trimmed back
+to capacity when a request or a detached owned load/fetch finishes. VC requests, S3 keys, catalogs, metadata and
+bodies carry only the cell centre; the response still echoes the requested `location`.
+
+Byte parity is tested against pinned Node v16.20.2 legacy-oracle recordings
+(`server2/tests/world/fixtures`), the S02 world goldens and the S10 gateway world
+goldens, including negative coordinates, cell boundaries, date line, poles, DST,
+half-hour zones, missing fields, malformed route inputs, provider failures and WAQI
+air rendering. Restore tests rebuild every recorded 200 weather response from the S3
+test peer with empty memory and providers disabled; the air observation is supplied
+by the same recorded WAQI fixture, because air raw persistence is not implemented.
+
+Known differences and gates: the S10 dispatcher gives a native family one attempt of
+at most 3 seconds, so the world waiter uses that attempt deadline instead of the
+legacy 2.5-second answer plus gateway retry; a VC fetch slower than the attempt
+returns the provider error while its owned fetch still publishes for the next request
+(legacy could succeed on a gateway retry). A slow air branch is released as
+`airStatus` pending just before the attempt deadline rather than at 4 seconds. S08
+reserves both attempts where legacy counted billed records; unused units are pooled
+for later fetches, except a final single unit that cannot fund two forecast attempts,
+and S08 abandons a store block's remainder when a larger reservation needs a new
+block, so a window can be declared exhausted somewhat earlier than legacy. IANA offsets come from bundled
+`chrono-tz` data rather than Node 16 ICU data, and the process zone is UTC as in the
+S02 oracle. Live air acquisition (Google, OpenWeather, WAQI, VC air), its S08 funding
+identities and air raw persistence are moved to [#2729](https://github.com/WizardFactory/TodayWeather/issues/2729)
+by AK (2026-10-13); air raw records will be keyed by provider station or grid, never by
+precise user coordinates. Until then the native default is the legacy no-provider air
+output, with tested rendering for a supplied observation. AK accepted the single native
+S10 attempt described above as an intended difference. Cold loads
+read 21 catalogs (at most four at a time) and, for busy cells, up to seven days of
+forecast fetches; this remains a pre-cutover measurement item. No production route,
+AWS resource, live provider or shadow comparison is changed by S11.

@@ -1,0 +1,71 @@
+{
+  "task": "S19",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2704",
+  "scope": "First S19 increment: gateway/geocode family integrated smoke, offline paired replay and cache-aware rollback rehearsal. Later families add modules under the same tooling paths.",
+  "server2_paths": [
+    "server2/config/tasks/S19.json",
+    "server2/deploy/smoke.sh",
+    "server2/tools/shadow/",
+    "server2/tests/integration/",
+    "server2/tools/ci.py",
+    "server2/src/gateway/metrics.rs",
+    "server2/src/gateway/mod.rs",
+    "server2/src/gateway/backend.rs",
+    "server2/src/geocode/mod.rs",
+    "server2/src/lib.rs"
+  ],
+  "server2_path_reasons": {
+    "server2/deploy/smoke.sh": "Release-binary integrated smoke entrypoint with local S3-compatible peer and recorded providers",
+    "server2/tools/shadow/": "Family-pluggable offline paired replay, scenario smoke and rollback rehearsal tooling plus manual renderer",
+    "server2/tests/integration/": "Python tool tests, Rust metrics regression test and frozen replay fixtures",
+    "server2/tools/ci.py": "Run the S19 tool tests and integrated smoke in the existing server2 CI job",
+    "server2/src/gateway/metrics.rs": "Additive aggregate gateway/geocoder counters; no request, coordinate, key or provider text",
+    "server2/src/gateway/mod.rs": "Count gateway outcomes and owned inflight work; no behavior change",
+    "server2/src/gateway/backend.rs": "Count legacy backend and legacy geocoder HTTP attempts; no behavior change",
+    "server2/src/geocode/mod.rs": "Count cache hits, joined waiters, owned flights, provider attempts and quota/capacity rejections; no behavior change",
+    "server2/src/lib.rs": "Append gateway counters to the existing loopback metrics response"
+  },
+  "outside": [
+    {
+      "path": "intent/issue-2704.md",
+      "category": "documentation",
+      "reason": "S19 governing intent record; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2704.md",
+      "category": "documentation",
+      "reason": "S19 governing specification; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2704.md",
+      "category": "documentation",
+      "reason": "S19 execution plan and user scenarios; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain the cutover/shadow tooling contract text only; no implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-smoke-shadow.md",
+      "category": "documentation",
+      "reason": "Operator guide for the S19 smoke, paired replay and rollback rehearsal tooling"
+    },
+    {
+      "path": "docs/operations/server2-smoke-shadow.pdf",
+      "category": "documentation",
+      "reason": "Rendered and visually checked PDF of the S19 operator guide"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-smoke-shadow/usage.png",
+      "category": "documentation",
+      "reason": "Actual terminal capture of the S19 release-binary smoke run"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-smoke-shadow/manifest.json",
+      "category": "documentation",
+      "reason": "Hashes and provenance of the S19 actual-run capture, guide and PDF"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2704#issuecomment-6139253207"
+}
