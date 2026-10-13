@@ -1597,8 +1597,8 @@ and a `Family::Kma` handler for the S10 dispatcher. Legacy stays selected by def
   indices first), `undefined` in memory and the legacy `try`/`catch` boundaries. A legacy exception
   is a `Thrown` unwind that only a ported `catch` stops. Store reads are asynchronous callbacks in
   the deployed service, so an exception after a store answer escapes a `catch` entered before the
-  read and forwards (the S02 harness answers synchronously; no recording depends on this). Other
-  Rust panics still fail the request.
+  read and forwards (the S02 harness answers synchronously; no recording depends on this). Any
+  other Rust panic is a port defect: the backend forwards that request to legacy.
   Precipitation bounds stay beside rows and never reach JSON, as in the legacy `WeakMap`. Shared
   logic is reused: S12 `zonesForTown`/`specialInfoFor`, the S11 `AqiConverter`, weather strings,
   locale selection and number/date helpers. KMA strings missing from the S11 locale subset are in

@@ -83,12 +83,17 @@ impl KmaBackend {
             .await
             .map_err(|_| GatewayError::Provider)?
             .map_err(|_| GatewayError::Provider)?;
-        let outcome = tokio::task::spawn_blocking(move || {
+        let outcome = match tokio::task::spawn_blocking(move || {
             let _permit = permit;
             assemble(&request, store.as_ref(), now, config)
         })
         .await
-        .map_err(|_| GatewayError::Provider)?;
+        {
+            Ok(outcome) => outcome,
+            // A Rust panic is a port defect, not legacy behavior: legacy answers instead.
+            Err(e) if e.is_panic() => return Ok(Native::Forward),
+            Err(_) => return Err(GatewayError::Provider),
+        };
         match outcome {
             Outcome::Json(json) => Ok(Native::Served(json)),
             // The legacy hop treats a non-200 backend reply as a dependency failure.

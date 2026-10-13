@@ -193,3 +193,124 @@ async fn recorded_source_serves_recorded_bytes_and_forwards_unrecorded_requests(
     assert_eq!(guard.err(), Some(GatewayError::Provider));
     assert!(RecordedSource::parse(b"{}").is_err());
 }
+
+/// A malformed non-ASCII publication string is rejected as legacy rejects it (`NaN`), not
+/// sliced inside a character: DB 1.0 RSS `pubDate` `한글날짜` assembles and is served.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn non_ascii_publication_strings_do_not_panic() {
+    warm();
+    let id = "domestic-v000903-db1";
+    let source = edited(id, |sc| {
+        let i = sc["calls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .position(|c| c["m"] == "town_model" && c["args"][0] == "ShortRss")
+            .unwrap();
+        sc["calls"][i]["result"][0]["pubDate"] = "한글날짜".into();
+    });
+    let o = outcome(&source, id);
+    assert!(matches!(o, Outcome::Json(_)), "{o:?}");
+    let backend = KmaBackend::new(Arc::new(source), system_clock(), oracle_config());
+    let sc = scenario(id);
+    let served = backend
+        .fetch_or_forward(
+            format!("/v000903/kma{}", sc["path"].as_str().unwrap()),
+            sc["lang"].as_str().unwrap_or("").to_owned(),
+            tokio::time::Instant::now() + std::time::Duration::from_secs(3),
+        )
+        .await
+        .unwrap();
+    assert!(matches!(served, Native::Served(_)));
+}
+
+/// A Rust panic during assembly is a port defect: the backend forwards to legacy instead of
+/// failing the request.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_rust_panic_in_assembly_forwards_to_legacy() {
+    use serde_json::Value;
+    use server2::domestic::kma::{
+        DbVersion, KmaRequest, KmaStore, MidModel, StoreResult, TownModel,
+        backend::{KmaSource, SourceAnswer},
+    };
+    use server2::gateway::BoxFuture;
+    struct Defect;
+    impl KmaStore for Defect {
+        fn db_version(&self) -> DbVersion {
+            DbVersion::V2
+        }
+        fn towns(&self) -> StoreResult {
+            panic!("simulated port defect")
+        }
+        fn town(&self, _: &str, _: &str, _: &str) -> StoreResult {
+            unreachable!()
+        }
+        fn region_code(&self, _: &str, _: &str) -> StoreResult {
+            unreachable!()
+        }
+        fn town_model(&self, _: TownModel, _: &Value, _: &Value) -> StoreResult {
+            unreachable!()
+        }
+        fn mid_model(&self, _: MidModel, _: &Value) -> StoreResult {
+            unreachable!()
+        }
+        fn forecast_zone(&self, _: &str, _: &str) -> StoreResult {
+            unreachable!()
+        }
+        fn stn_hourly_and_min_rns(&self, _: &Value, _: &str, _: &Value) -> StoreResult {
+            unreachable!()
+        }
+        fn city_hourly(&self, _: &Value) -> StoreResult {
+            unreachable!()
+        }
+        fn area_no(&self, _: &str, _: &str, _: &str) -> StoreResult {
+            unreachable!()
+        }
+        fn area_no_near(&self, _: &Value) -> StoreResult {
+            unreachable!()
+        }
+        fn life_index(&self, _: f64) -> StoreResult {
+            unreachable!()
+        }
+        fn food_poisoning(&self, _: &str, _: &str, _: &str, _: &str) -> StoreResult {
+            unreachable!()
+        }
+        fn arpltn(&self, _: &Value, _: f64) -> StoreResult {
+            unreachable!()
+        }
+        fn dust_forecast(&self, _: &str, _: &str, _: &str) -> StoreResult {
+            unreachable!()
+        }
+        fn air_fallback(&self, _: &Value, _: f64) -> StoreResult {
+            unreachable!()
+        }
+        fn air_forecast(&self, _: &str, _: &Value) -> StoreResult {
+            unreachable!()
+        }
+        fn rise_set(&self, _: &Value, _: &[String]) -> StoreResult {
+            unreachable!()
+        }
+        fn special_zones(&self, _: &[String]) -> StoreResult {
+            unreachable!()
+        }
+    }
+    struct Source;
+    impl KmaSource for Source {
+        fn snapshot(&self, _: &KmaRequest, _: tokio::time::Instant) -> BoxFuture<'_, SourceAnswer> {
+            Box::pin(async { SourceAnswer::Snapshot(Box::new(Defect)) })
+        }
+    }
+    let backend = KmaBackend::new(Arc::new(Source), system_clock(), oracle_config());
+    let served = backend
+        .fetch_or_forward(
+            format!(
+                "/v000903/kma{}",
+                scenario("domestic-v000903")["path"].as_str().unwrap()
+            ),
+            "ko".into(),
+            tokio::time::Instant::now() + std::time::Duration::from_secs(3),
+        )
+        .await
+        .unwrap();
+    assert!(matches!(served, Native::Forward));
+}

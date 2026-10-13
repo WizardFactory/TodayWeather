@@ -84,13 +84,15 @@ pub fn timestamp(v: &V) -> f64 {
 }
 /// `/^\d{4}-\d\d-\d\dT.*(?:Z|[+-]\d\d:\d\d)$/`.
 fn is_tz_iso(s: &str) -> bool {
+    // Byte tests: a non-ASCII string must be rejected, never sliced inside a character.
     let b = s.as_bytes();
+    let dig = |r: std::ops::Range<usize>| b[r].iter().all(u8::is_ascii_digit);
     if b.len() < 11
-        || !digits(&s[0..4], 4)
+        || !dig(0..4)
         || b[4] != b'-'
-        || !digits(&s[5..7], 2)
+        || !dig(5..7)
         || b[7] != b'-'
-        || !digits(&s[8..10], 2)
+        || !dig(8..10)
         || b[10] != b'T'
     {
         return false;
@@ -653,4 +655,23 @@ pub fn yesterday(current: &V, rows: &V) -> V {
         r.del("t1h");
     }
     r
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn non_ascii_publication_strings_are_rejected_without_panicking() {
+        // midForecastPolicy returns NaN for these; 4 is not a character boundary here.
+        for s in [
+            "한글날짜",
+            "한글날짜T00:00Z",
+            "2026-09-24T한",
+            "가나다라마바사아",
+        ] {
+            assert!(timestamp(&V::s(s)).is_nan(), "{s}");
+            assert!(!is_tz_iso(s), "{s}");
+        }
+        assert!(timestamp(&V::s("2026-09-24T08:00:00Z")).is_finite());
+    }
 }

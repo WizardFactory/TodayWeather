@@ -61,6 +61,71 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
     Ok(())
 }
 
+/// The pinned recording, in order (unique ids); change deliberately with the recording.
+const SCENARIOS: [&str; 61] = [
+    "domestic-v000903",
+    "domestic-locale-en",
+    "domestic-locale-ko",
+    "domestic-locale-ja",
+    "domestic-locale-zh-CN",
+    "domestic-locale-de",
+    "domestic-locale-zh-TW",
+    "domestic-v000903-db1",
+    "domestic-null-units",
+    "domestic-pop-covered",
+    "domestic-pop-missing-hour",
+    "domestic-old-no-pop",
+    "domestic-never-requested-history",
+    "domestic-partial-history",
+    "domestic-special-info",
+    "gateway-v000903-domestic",
+    "gateway-query-normalization",
+    "gateway-history-never-requested",
+    "gateway-history-resumed-after-eight-days",
+    "gateway-history-partial-eight-day-history",
+    "rss-older",
+    "rss-equal",
+    "busan",
+    "jeju",
+    "station-first-rain",
+    "station-first-snow-cloud",
+    "rain-categories",
+    "air-stations",
+    "air-stations-airnow",
+    "air-stale",
+    "air-kaq-forecast",
+    "air-dust-forecast",
+    "air-fallback",
+    "life-food-kasi",
+    "life-index-near-area",
+    "warning-two-zones",
+    "winter-cold-wind",
+    "hot-humid",
+    "missing-short",
+    "model-errors",
+    "unknown-air-unit",
+    "db1-history",
+    "stn-error",
+    "station-hourly-fill",
+    "db1-daily-source",
+    "short-publications",
+    "current-error",
+    "mid-forecast-error",
+    "yesterday-warmer",
+    "yesterday-colder",
+    "rss-unusable-values",
+    "current-sky-from-shortest",
+    "stn-invalid-zero",
+    "stn-fog-thunder",
+    "region-guard",
+    "clock-night-2340",
+    "clock-kst-0030",
+    "clock-kst-1010",
+    "clock-kst-1110",
+    "clock-kst-0605",
+    "clock-kst-1535",
+];
+
 #[test]
 fn all_oracle_scenarios_match_legacy_bytes() {
     let mut errors = Vec::new();
@@ -78,7 +143,11 @@ fn all_oracle_scenarios_match_legacy_bytes() {
             errors.push(e);
         }
     }
-    assert!(scenarios().len() >= 49);
+    let recorded: Vec<&str> = scenarios()
+        .iter()
+        .map(|s| s["id"].as_str().unwrap())
+        .collect();
+    assert_eq!(recorded, SCENARIOS, "the pinned scenario set changed");
     assert!(
         errors.is_empty(),
         "{} of {} differ:\n{}",

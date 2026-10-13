@@ -346,14 +346,16 @@ fn publication_ms(p: &V) -> f64 {
     let Some(t) = p.str() else {
         return f64::NAN;
     };
+    // Byte tests: a non-ASCII string must be rejected, never sliced inside a character.
     let b = t.as_bytes();
+    let dig = |r: std::ops::Range<usize>| b[r].iter().all(u8::is_ascii_digit);
     let ok = b.len() == 14
-        && t[0..4].bytes().all(|c| c.is_ascii_digit())
+        && dig(0..4)
         && b[4] == b'-'
-        && t[5..7].bytes().all(|c| c.is_ascii_digit())
+        && dig(5..7)
         && b[7] == b'-'
-        && t[8..10].bytes().all(|c| c.is_ascii_digit())
-        && t[10..14].bytes().all(|c| c.is_ascii_digit());
+        && dig(8..10)
+        && dig(10..14);
     if !ok {
         return f64::NAN;
     }
@@ -421,7 +423,8 @@ fn append_food_poisoning(cx: &Cx, days: &V) {
             && publication_ms(&publication) <= now
             && publication
                 .str()
-                .is_some_and(|p| p[..10].replace('-', "") == to_str(&base))
+                .and_then(|p| p.get(..10))
+                .is_some_and(|p| p.replace('-', "") == to_str(&base))
             && is_finite_number(&value)
             && (0. ..=100.).contains(&to_number(&value))
             && is_finite_number(&risk)
@@ -1252,4 +1255,17 @@ pub fn air_forecast_list(cx: &mut Cx) -> Flow {
         }
     }
     Flow::Next
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn non_ascii_mfds_publications_are_rejected_without_panicking() {
+        // 14 bytes, not ASCII: `한글날짜ab` (4 x 3 + 2).
+        for s in ["한글날짜ab", "2026-09-한abc", "2026-한-09abc"] {
+            assert!(publication_ms(&V::s(s)).is_nan(), "{s}");
+        }
+        assert!(publication_ms(&V::s("2026-09-240600")).is_finite());
+    }
 }
