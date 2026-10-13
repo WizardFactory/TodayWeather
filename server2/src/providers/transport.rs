@@ -72,54 +72,62 @@ impl ProviderTransport for HttpProviderTransport {
                 Provider::Kakao | Provider::Google => return Err(ProviderTransportError::Invalid),
             }
         }
-        let mut response = self
+        let response = self
             .client
             .get(url)
             .send()
             .await
             .map_err(|_| ProviderTransportError::Transport)?;
-        let status = response.status().as_u16();
-        let headers = response.headers();
-        if headers
-            .iter()
-            .map(|(k, v)| k.as_str().len() + v.as_bytes().len())
-            .sum::<usize>()
-            > 8192
-            || headers.contains_key("content-encoding")
-        {
-            return Err(ProviderTransportError::Response { status });
-        }
-        let content_type = headers
-            .get("content-type")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("")
-            .to_owned();
-        if content_type.len() > 512 {
-            return Err(ProviderTransportError::Response { status });
-        }
-        if response
-            .content_length()
-            .is_some_and(|n| n > self.maximum as u64)
-        {
-            return Err(ProviderTransportError::Response { status });
-        }
-        let mut body = Vec::new();
-        while let Some(chunk) = response
-            .chunk()
-            .await
-            .map_err(|_| ProviderTransportError::Response { status })?
-        {
-            if chunk.len() > self.maximum.saturating_sub(body.len()) {
-                return Err(ProviderTransportError::Response { status });
-            }
-            body.extend_from_slice(&chunk);
-        }
-        Ok(ProviderResponse {
-            status,
-            content_type,
-            body,
-        })
+        read_bounded(response, self.maximum).await
     }
+}
+
+/// Shared header/body bounds for funded and keyless provider responses.
+pub(crate) async fn read_bounded(
+    mut response: reqwest::Response,
+    maximum: usize,
+) -> Result<ProviderResponse, ProviderTransportError> {
+    let status = response.status().as_u16();
+    let headers = response.headers();
+    if headers
+        .iter()
+        .map(|(k, v)| k.as_str().len() + v.as_bytes().len())
+        .sum::<usize>()
+        > 8192
+        || headers.contains_key("content-encoding")
+    {
+        return Err(ProviderTransportError::Response { status });
+    }
+    let content_type = headers
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_owned();
+    if content_type.len() > 512 {
+        return Err(ProviderTransportError::Response { status });
+    }
+    if response
+        .content_length()
+        .is_some_and(|n| n > maximum as u64)
+    {
+        return Err(ProviderTransportError::Response { status });
+    }
+    let mut body = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|_| ProviderTransportError::Response { status })?
+    {
+        if chunk.len() > maximum.saturating_sub(body.len()) {
+            return Err(ProviderTransportError::Response { status });
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok(ProviderResponse {
+        status,
+        content_type,
+        body,
+    })
 }
 
 pub(crate) fn valid_endpoint(url: &reqwest::Url) -> bool {

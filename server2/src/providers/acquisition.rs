@@ -23,6 +23,11 @@ pub struct Candidate<T> {
 }
 pub trait Validator: Send + Sync + 'static {
     fn valid(&self, json: &serde_json::Value) -> bool;
+    /// Family-specific terminal no-data envelope for a successful JSON body (for example a
+    /// publication that is not available yet). It never overrides quota/auth/rejection.
+    fn no_data(&self, _json: &serde_json::Value) -> bool {
+        false
+    }
 }
 impl<F: Fn(&serde_json::Value) -> bool + Send + Sync + 'static> Validator for F {
     fn valid(&self, json: &serde_json::Value) -> bool {
@@ -41,6 +46,35 @@ pub struct AcquiredBody {
 pub enum AcquisitionOutcome {
     Data(AcquiredBody),
     NoData(AcquiredBody),
+}
+/// Observed result of one funded HTTP attempt (one consumed unit).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttemptResult {
+    Disposition(Disposition),
+    Transport,
+    Deadline,
+    /// The unit was consumed and HTTP may have been sent, but the call was dropped
+    /// (cancelled) before an outcome was observed. Still a funded attempt.
+    Unsettled,
+}
+/// Per-call accounting for metrics and key stickiness. Contains no key, URL or body.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CallReport {
+    /// Units durably reserved per candidate before any HTTP; never refunded.
+    pub reserved: Vec<u64>,
+    /// One entry per consumed unit: (candidate index, observed result). The entry is added
+    /// before HTTP as `Unsettled` and replaced when the outcome is known.
+    pub attempts: Vec<(u8, AttemptResult)>,
+}
+impl CallReport {
+    pub fn reserved_units(&self) -> u64 {
+        self.reserved.iter().sum()
+    }
+    fn settle(&mut self, result: AttemptResult) {
+        if let Some(last) = self.attempts.last_mut() {
+            last.1 = result;
+        }
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AcquisitionError {
@@ -87,6 +121,26 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
         candidates: Vec<Candidate<T>>,
         deadline: Instant,
     ) -> Result<AcquisitionOutcome, AcquisitionError> {
+        let mut report = CallReport::default();
+        self.execute_reported(
+            endpoint,
+            candidates,
+            deadline,
+            self.validator.clone(),
+            &mut report,
+        )
+        .await
+    }
+    /// Same admission, funding, retry and rotation contract as `execute`, with a per-call
+    /// validator and an attempt report that is filled even when the call fails.
+    pub async fn execute_reported<T: BudgetTransport, W: Validator>(
+        &self,
+        endpoint: reqwest::Url,
+        candidates: Vec<Candidate<T>>,
+        deadline: Instant,
+        validator: Arc<W>,
+        report: &mut CallReport,
+    ) -> Result<AcquisitionOutcome, AcquisitionError> {
         if candidates.is_empty()
             || candidates.len() > 2
             || (self.provider == Provider::VisualCrossing && candidates.len() != 1)
@@ -124,20 +178,26 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                     .await
                     .map_err(AcquisitionError::Funding)?,
             );
+            report.reserved.push(maximum);
         }
         let mut key = 0;
         for attempt in 1..=2 {
             funds[key]
                 .consume(self.units, deadline)
                 .map_err(AcquisitionError::Funding)?;
+            report.attempts.push((key as u8, AttemptResult::Unsettled));
             let request = Request {
                 endpoint: endpoint.clone(),
                 key: ProviderKey(candidates[key].key.0.clone()),
                 provider: self.provider,
             };
-            let response = timeout_at(deadline, self.transport.send(&request))
-                .await
-                .map_err(|_| AcquisitionError::Deadline)?;
+            let response = match timeout_at(deadline, self.transport.send(&request)).await {
+                Ok(r) => r,
+                Err(_) => {
+                    report.settle(AttemptResult::Deadline);
+                    return Err(AcquisitionError::Deadline);
+                }
+            };
             let response = match response {
                 Ok(r) => r,
                 Err(ProviderTransportError::Response { status }) => {
@@ -145,6 +205,7 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                     // Preserve only received HTTP priority, not any partial provider code.
                     let disposition =
                         classify(status, &[], self.provider == Provider::DataGoKr, false);
+                    report.settle(AttemptResult::Disposition(disposition));
                     if attempt == 2 || disposition == Disposition::Rejected {
                         return Err(AcquisitionError::Provider(disposition));
                     }
@@ -157,6 +218,7 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                     continue;
                 }
                 Err(_) => {
+                    report.settle(AttemptResult::Transport);
                     if attempt == 1 {
                         continue;
                     }
@@ -164,20 +226,32 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                 }
             };
             if response.body.len() > 8 * 1024 * 1024 || response.content_type.len() > 512 {
+                report.settle(AttemptResult::Transport);
                 return Err(AcquisitionError::Transport);
             }
-            let slot = timeout_at(deadline, self.cpu.clone().acquire_owned())
-                .await
-                .map_err(|_| AcquisitionError::Deadline)?
-                .map_err(|_| AcquisitionError::Invalid)?;
-            let validator = self.validator.clone();
+            let slot = match timeout_at(deadline, self.cpu.clone().acquire_owned()).await {
+                Ok(slot) => slot.map_err(|_| AcquisitionError::Invalid)?,
+                Err(_) => {
+                    report.settle(AttemptResult::Deadline);
+                    return Err(AcquisitionError::Deadline);
+                }
+            };
+            let validator = validator.clone();
             let is_data_go_kr = self.provider == Provider::DataGoKr;
             let task = tokio::task::spawn_blocking(move || {
                 let _slot = slot;
-                let valid = serde_json::from_slice::<serde_json::Value>(&response.body)
-                    .ok()
-                    .is_some_and(|v| validator.valid(&v));
-                let disposition = classify(response.status, &response.body, is_data_go_kr, valid);
+                let parsed = serde_json::from_slice::<serde_json::Value>(&response.body).ok();
+                let valid = parsed.as_ref().is_some_and(|v| validator.valid(v));
+                let mut disposition =
+                    classify(response.status, &response.body, is_data_go_kr, valid);
+                // Only an invalid successful JSON body may be a family no-data envelope.
+                if !valid
+                    && disposition == Disposition::Retryable
+                    && (200..300).contains(&response.status)
+                    && parsed.as_ref().is_some_and(|v| validator.no_data(v))
+                {
+                    disposition = Disposition::NoData;
+                }
                 (response, disposition, admission)
             });
             let (
@@ -188,14 +262,19 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                 },
                 disposition,
                 returned_admission,
-            ) = timeout_at(deadline, task)
-                .await
-                .map_err(|_| AcquisitionError::Deadline)?
-                .map_err(|_| AcquisitionError::Invalid)?;
+            ) = match timeout_at(deadline, task).await {
+                Ok(joined) => joined.map_err(|_| AcquisitionError::Invalid)?,
+                Err(_) => {
+                    report.settle(AttemptResult::Deadline);
+                    return Err(AcquisitionError::Deadline);
+                }
+            };
             admission = returned_admission;
             if Instant::now() >= deadline {
+                report.settle(AttemptResult::Deadline);
                 return Err(AcquisitionError::Deadline);
             }
+            report.settle(AttemptResult::Disposition(disposition));
             if matches!(disposition, Disposition::Data | Disposition::NoData) {
                 let raw = AcquiredBody {
                     body,
