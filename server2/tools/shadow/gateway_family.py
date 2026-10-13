@@ -626,9 +626,12 @@ def legacy_deadline_mismatches(reply):
         problems.append(['status', case['status'], reply.status])
     if reply.body != base64.b64decode(case['body_base64']):
         problems.append(['body_sha256', case['body_sha256'], reply.digest()])
-    for name, value in case['headers']:
-        if name not in TRANSPORT_HEADERS and reply.header(name) != value:
-            problems.append([name, value, reply.header(name)])
+    expected = {name: value for name, value in case['headers'] if name not in TRANSPORT_HEADERS}
+    observed = {name: value for name, value in reply.headers.items() if name not in TRANSPORT_HEADERS}
+    # Exact functional header set: a missing, changed or additional header is a mismatch.
+    for name in sorted(set(expected) | set(observed)):
+        if observed.get(name) != expected.get(name):
+            problems.append([name, expected.get(name), observed.get(name)])
     return problems
 
 

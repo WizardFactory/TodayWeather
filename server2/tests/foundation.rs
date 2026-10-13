@@ -230,6 +230,7 @@ fn connection_lifetime_selection_tracks_the_gateway_deadline() {
 /// Starts the actual binary with the gateway enabled in a restricted environment.
 /// Returns its exit status if it exited within five seconds, plus its captured output.
 fn start_gateway_process(
+    bind: &str,
     lifetime: Option<&str>,
 ) -> (Option<std::process::ExitStatus>, String, String) {
     use std::process::{Command, Stdio};
@@ -237,7 +238,7 @@ fn start_gateway_process(
     let mut command = Command::new(env!("CARGO_BIN_EXE_server2"));
     command
         .env_clear()
-        .env("SERVER2_BIND", "127.0.0.1:0")
+        .env("SERVER2_BIND", bind)
         .env("SERVER2_METRICS_BIND", "127.0.0.1:0")
         .env("SERVER2_GATEWAY_LEGACY_URL", "http://127.0.0.1:9")
         .stdin(Stdio::null())
@@ -272,8 +273,12 @@ fn start_gateway_process(
 /// the 9-second deadline is a configuration error before any listener is bound.
 #[test]
 fn gateway_lifetime_at_or_below_deadline_is_refused_before_binding() {
+    // An occupied public address: a bind attempt would fail with AddrInUse, so the
+    // lifetime message proves the configuration check runs before any bind.
+    let occupied = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let occupied = occupied.local_addr().unwrap().to_string();
     for seconds in ["9", "1"] {
-        let (status, stdout, stderr) = start_gateway_process(Some(seconds));
+        let (status, stdout, stderr) = start_gateway_process(&occupied, Some(seconds));
         assert!(
             status.is_some_and(|status| !status.success()),
             "lifetime {seconds}: expected a startup failure, got {status:?} {stdout}"
@@ -287,9 +292,15 @@ fn gateway_lifetime_at_or_below_deadline_is_refused_before_binding() {
             "lifetime {seconds}: {stderr}"
         );
     }
+    // Control: a valid lifetime reaches the bind and fails on the occupied address.
+    let (status, _, stderr) = start_gateway_process(&occupied, Some("10"));
+    assert!(
+        status.is_some_and(|status| !status.success()) && stderr.contains("AddrInUse"),
+        "{status:?} {stderr}"
+    );
     // Controls: the default and a lifetime above the deadline start and announce listeners.
     for lifetime in [None, Some("10")] {
-        let (status, stdout, stderr) = start_gateway_process(lifetime);
+        let (status, stdout, stderr) = start_gateway_process("127.0.0.1:0", lifetime);
         assert!(status.is_none(), "lifetime {lifetime:?} exited: {stderr}");
         assert!(stdout.starts_with("server2 public=127.0.0.1:"), "{stdout}");
     }
