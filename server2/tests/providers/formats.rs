@@ -311,3 +311,166 @@ fn recorded_city_page_uses_its_declared_utf8_charset() {
         WebVerdict::NotPublished
     );
 }
+
+/// Review findings S13-R1..R6 (PR #2726): regressions that must never yield data.
+#[test]
+fn review_truncated_or_incomplete_html_is_not_data() {
+    // S13-R1: a truncated or table-less page is not a complete observation page.
+    let city = fixture("city-obs-2026-09-25.html");
+    let request = WebRequest::city(p(20260925, 1900)).unwrap();
+    let cut = city.len() - 20;
+    assert!(matches!(
+        inspect_web(&request, "text/html", &city[..cut]),
+        WebVerdict::Invalid(_)
+    ));
+    let minimal = br#"<html><body><input name="tm" value="2026.09.25.19:00"><table id="weather_table"></body></html>"#;
+    assert!(matches!(
+        inspect_web(&request, "text/html;charset=UTF-8", minimal),
+        WebVerdict::Invalid(_)
+    ));
+    let aws = fixture("aws-minute-euckr.html");
+    let minute = WebRequest::aws_minute(None);
+    // Drop the closing tag and its newline (plain literal: the placement gate rejects
+    // escaped literals that contain '/').
+    let truncated = &aws[..aws.len() - "</html>".len() - 1];
+    assert!(matches!(
+        inspect_web(&minute, "text/html", truncated),
+        WebVerdict::Invalid(_)
+    ));
+    let header_only = replace_ascii(&aws, b"<tr><td>108", b"<!-- --><td>108");
+    let header_only = replace_ascii(&header_only, b"<tr><td>112", b"<!-- --><td>112");
+    assert!(matches!(
+        inspect_web(&minute, "text/html", &header_only),
+        WebVerdict::Invalid(_)
+    ));
+}
+
+#[test]
+fn review_family_fields_publication_minutes_and_page_identity() {
+    // S13-R2: missing forecast slot fields or another life-index family are invalid.
+    let r = vilage();
+    let mut missing = json(&vilage_page(1, 50, 999, ("20261013", "1400"), (60, 127)));
+    missing["response"]["body"]["items"]["item"][3]
+        .as_object_mut()
+        .unwrap()
+        .remove("fcstTime");
+    assert!(matches!(
+        inspect_page(&r, 1, None, &missing),
+        PageVerdict::Invalid(_)
+    ));
+    let uv = DataGoKrRequest::new(F::UvIdxV5, Target::AllAreas, p(20260930, 1800)).unwrap();
+    let mut pollen = json(&fixture("pollen-v3-live-20261001.json"));
+    pollen["response"]["body"]["numOfRows"] = 1000.into();
+    pollen["response"]["body"]["totalCount"] = 3.into();
+    assert!(matches!(
+        inspect_page(&uv, 1, None, &pollen),
+        PageVerdict::Invalid(_)
+    ));
+    let weeds =
+        DataGoKrRequest::new(F::WeedsPollenV3, Target::AllAreas, p(20260930, 1800)).unwrap();
+    let mut ultraviolet = json(&fixture("uv-idx-v5.json"));
+    ultraviolet["response"]["body"]["numOfRows"] = 1000.into();
+    ultraviolet["response"]["body"]["totalCount"] = 3.into();
+    assert!(matches!(
+        inspect_page(&weeds, 1, None, &ultraviolet),
+        PageVerdict::Invalid(_)
+    ));
+
+    // S13-R4: an ultra-short answer must be HH00 or HH30 of the requested hour.
+    let short = DataGoKrRequest::new(
+        F::UltraSrtFcst,
+        Target::Grid { nx: 60, ny: 127 },
+        p(20261013, 1430),
+    )
+    .unwrap();
+    for minute in ["1401", "1459", "1415"] {
+        let body = vilage_page(1, 60, 999, ("20261013", minute), (60, 127));
+        assert!(
+            matches!(
+                inspect_page(&short, 1, None, &json(&body)),
+                PageVerdict::Invalid(_)
+            ),
+            "{minute}"
+        );
+    }
+
+    // S13-R6: page identity is mandatory for multi-page sets and the life index.
+    let mut later = json(&vilage_page(2, 1068, 999, ("20261013", "1400"), (60, 127)));
+    later["response"]["body"]
+        .as_object_mut()
+        .unwrap()
+        .remove("pageNo");
+    assert!(matches!(
+        inspect_page(&r, 2, Some(Expect { total: 1068 }), &later),
+        PageVerdict::Invalid(_)
+    ));
+    let mut first = json(&vilage_page(1, 1068, 999, ("20261013", "1400"), (60, 127)));
+    first["response"]["body"]
+        .as_object_mut()
+        .unwrap()
+        .remove("numOfRows");
+    assert!(matches!(
+        inspect_page(&r, 1, None, &first),
+        PageVerdict::Invalid(_)
+    ));
+    let mut life = json(&fixture("uv-idx-v5.json"));
+    life["response"]["body"]["numOfRows"] = 1000.into();
+    life["response"]["body"]["totalCount"] = 3.into();
+    life["response"]["body"]
+        .as_object_mut()
+        .unwrap()
+        .remove("pageNo");
+    let uv = DataGoKrRequest::new(F::UvIdxV5, Target::AllAreas, p(20260926, 1200)).unwrap();
+    assert!(matches!(
+        inspect_page(&uv, 1, None, &life),
+        PageVerdict::Invalid(_)
+    ));
+    // A complete single forecast page may omit the echo, as legacy `_requestPage` allowed.
+    let mut single = json(&vilage_page(1, 50, 999, ("20261013", "1400"), (60, 127)));
+    let body = single["response"]["body"].as_object_mut().unwrap();
+    body.remove("pageNo");
+    body.remove("numOfRows");
+    assert!(matches!(
+        inspect_page(&r, 1, None, &single),
+        PageVerdict::Valid(_)
+    ));
+}
+
+#[test]
+fn review_stale_rss_and_euc_kr_city_publication() {
+    // S13-R3: a caller-supplied minimum turns an older RSS publication into Stale.
+    let body = fixture("town-rss.xml");
+    let rss = WebRequest::town_rss(60, 127)
+        .unwrap()
+        .not_before(p(20261013, 1700))
+        .unwrap();
+    assert_eq!(
+        inspect_web(&rss, "text/xml", &body),
+        WebVerdict::Stale(p(20261013, 1400))
+    );
+    let current = WebRequest::town_rss(60, 127)
+        .unwrap()
+        .not_before(p(20261013, 1400))
+        .unwrap();
+    assert_eq!(
+        inspect_web(&current, "text/xml", &body),
+        WebVerdict::Valid(p(20261013, 1400))
+    );
+    let city_request = WebRequest::city(p(20261013, 1400)).unwrap();
+    assert!(city_request.clone().not_before(p(20261013, 1400)).is_err());
+    // S13-R5: the EUC-KR label before the timestamp does not hide the publication.
+    let city = fixture("city-obs-euckr.html");
+    assert!(
+        std::str::from_utf8(&city).is_err(),
+        "fixture must remain EUC-KR bytes"
+    );
+    assert_eq!(
+        inspect_web(&city_request, "text/html", &city),
+        WebVerdict::Valid(p(20261013, 1400))
+    );
+    let later = WebRequest::city(p(20261013, 1500)).unwrap();
+    assert_eq!(
+        inspect_web(&later, "text/html", &city),
+        WebVerdict::Stale(p(20261013, 1400))
+    );
+}

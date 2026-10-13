@@ -267,6 +267,15 @@ impl WebRequest {
             publication: not_before,
         }
     }
+    /// Minimum acceptable publication for grid RSS or the minute page (for example
+    /// `publication::rss_latest` or the last stored one); an older page is `Stale`.
+    pub fn not_before(mut self, minimum: Publication) -> Result<Self, DomesticError> {
+        if !matches!(self.family, WebFamily::TownRss | WebFamily::AwsMinute) {
+            return Err(DomesticError::Invalid("minimum publication"));
+        }
+        self.publication = Some(minimum);
+        Ok(self)
+    }
     pub fn aws_hourly(hour: Publication) -> Result<Self, DomesticError> {
         Self::hourly(WebFamily::AwsHourly, hour)
     }

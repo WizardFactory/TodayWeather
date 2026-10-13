@@ -3,7 +3,7 @@
 //! forecastGridCollection identities, midForecastPolicy, lifeIndexKmaRequester page checks.
 //! KMA web rules: TownRss.parseShortRss, KmaScraper `_parseStnMinInfo`, `_decodeKmaHtml`,
 //! `_parseCityWeatherHtml` (ca8735cf). Nothing here normalizes or stores weather values.
-use super::family::{DataGoKrRequest, Shape, Target, WebFamily, WebRequest};
+use super::family::{DataGoKrFamily, DataGoKrRequest, Shape, Target, WebFamily, WebRequest};
 use super::publication::Publication;
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
@@ -116,18 +116,23 @@ pub fn inspect_page(
         return empty();
     }
     let per = u64::from(request.family().rows());
-    if body
-        .get("numOfRows")
-        .is_some_and(|v| number(v) != Some(per))
-        || body
-            .get("pageNo")
-            .is_some_and(|v| number(v) != Some(u64::from(page)))
+    let rows = items.len() as u64;
+    // Page identity is mandatory whenever completeness depends on it (any multi-page set)
+    // and always for the life index (legacy `_validatePollenPageV3`); a single forecast
+    // page may omit it as legacy `_requestPage` allowed.
+    let paged = page > 1 || rows != total || shape == Shape::Life;
+    let echo = |name: &str, wanted: u64| match body.get(name) {
+        Some(v) => number(v) == Some(wanted),
+        None => !paged,
+    };
+    if page == 0
+        || !echo("numOfRows", per)
+        || !echo("pageNo", u64::from(page))
         || total > u64::from(u32::MAX)
         || expect.is_some_and(|e| u64::from(e.total) != total)
     {
         return PageVerdict::Invalid("page echo or total");
     }
-    let rows = items.len() as u64;
     let before = per * u64::from(page - 1);
     let expected = if page == 1 && rows == total {
         total
@@ -146,10 +151,10 @@ pub fn inspect_page(
             let Target::Grid { nx, ny } = request.target() else {
                 return PageVerdict::Invalid("target");
             };
-            let value = if request.family() == super::family::DataGoKrFamily::UltraSrtNcst {
-                "obsrValue"
-            } else {
-                "fcstValue"
+            let current = request.family() == DataGoKrFamily::UltraSrtNcst;
+            let value = if current { "obsrValue" } else { "fcstValue" };
+            let digits = |v: Option<String>, n: usize| {
+                v.is_some_and(|v| v.len() == n && v.bytes().all(|b| b.is_ascii_digit()))
             };
             let mut echo: Option<Publication> = None;
             for row in &items {
@@ -162,8 +167,13 @@ pub fn inspect_page(
                 let Some(p) = Publication::parse_compact(&format!("{date}{time}")) else {
                     return PageVerdict::Invalid("base echo");
                 };
-                if echo.is_some_and(|e| e != p) {
-                    return PageVerdict::Invalid("mixed publication");
+                // Ultra-short is answered as HH00 or HH30 only (#2676); other minutes are not
+                // an accepted publication form.
+                if echo.is_some_and(|e| e != p)
+                    || (request.family() == DataGoKrFamily::UltraSrtFcst
+                        && !matches!(p.minute(), 0 | 30))
+                {
+                    return PageVerdict::Invalid("base echo");
                 }
                 echo = Some(p);
                 if row.get("nx").and_then(number) != Some(u64::from(*nx))
@@ -173,6 +183,9 @@ pub fn inspect_page(
                         .and_then(Value::as_str)
                         .is_some_and(|c| !c.is_empty())
                     || row.get(value).and_then(text).is_none()
+                    || (!current
+                        && !(digits(row.get("fcstDate").and_then(text), 8)
+                            && digits(row.get("fcstTime").and_then(text), 4)))
                 {
                     return PageVerdict::Invalid("forecast row");
                 }
@@ -207,9 +220,9 @@ pub fn inspect_page(
                     _ => false,
                 };
                 let content = match request.family() {
-                    super::family::DataGoKrFamily::MidFcst => fields(&["wfSv"]),
-                    super::family::DataGoKrFamily::MidLandFcst => fields(&["wf", "rnSt"]),
-                    super::family::DataGoKrFamily::MidTa => fields(&["taMin", "taMax"]),
+                    DataGoKrFamily::MidFcst => fields(&["wfSv"]),
+                    DataGoKrFamily::MidLandFcst => fields(&["wf", "rnSt"]),
+                    DataGoKrFamily::MidTa => fields(&["taMin", "taMax"]),
                     _ => fields(&["wf", "wh"]),
                 };
                 if !id_ok || !content {
@@ -224,8 +237,32 @@ pub fn inspect_page(
             request.publication()
         }
         Shape::Life => {
+            // UV rows carry hourly `hN` values; pollen rows carry daily grades. A response of
+            // the other index family is not this request's data.
+            let uv = request.family() == DataGoKrFamily::UvIdxV5;
+            let content = |row: &Map<String, Value>| {
+                if uv {
+                    row.keys().any(|k| {
+                        k.len() > 1
+                            && k.starts_with('h')
+                            && k[1..].bytes().all(|b| b.is_ascii_digit())
+                    })
+                } else {
+                    [
+                        "today",
+                        "tomorrow",
+                        "dayaftertomorrow",
+                        "theDayAfterTomorrow",
+                    ]
+                    .iter()
+                    .any(|k| row.contains_key(*k))
+                }
+            };
             let mut issuance: Option<String> = None;
             for row in &items {
+                if !content(row) {
+                    return PageVerdict::Invalid("life row");
+                }
                 let (Some(area), Some(date)) = (
                     row.get("areaNo").and_then(text),
                     row.get("date").and_then(text),
@@ -339,37 +376,45 @@ pub fn inspect_web(request: &WebRequest, content_type: &str, body: &[u8]) -> Web
             let Some(view) = view else {
                 return WebVerdict::Invalid("charset");
             };
+            // A truncated page (no closing `</html>`) is never a complete observation page.
+            let complete = view.trim_end().to_ascii_lowercase().ends_with("</html>");
             let (publication, table) = if family == WebFamily::CityObservation {
+                // Keep only the timestamp characters: the label (기상실황표) is non-ASCII and
+                // appears as U+FFFD in an EUC-KR view, so it cannot be removed by text match.
                 let topinfo = element_text(&view, |tag| {
                     class_has(tag, "cmp-table-topinfo") || class_has(tag, "table_topinfo")
                 })
-                .map(|t| {
-                    t.replace("기상실황표", "")
-                        .split_whitespace()
-                        .collect::<String>()
-                })
-                .filter(|t| !t.is_empty());
+                .and_then(|t| {
+                    let stamp: String = t
+                        .chars()
+                        .filter(|c| c.is_ascii_digit() || matches!(c, '.' | ':'))
+                        .collect();
+                    Publication::parse_dotted(&stamp)
+                });
                 let stamp = topinfo.or_else(|| {
                     tags(&view)
                         .find(|t| t.name == "input" && t.attr("name") == Some("tm"))
-                        .and_then(|t| t.attr("value").map(|v| v.split_whitespace().collect()))
+                        .and_then(|t| {
+                            let value = t.attr("value")?.split_whitespace().collect::<String>();
+                            Publication::parse_dotted(&value)
+                        })
                 });
-                let table = tags(&view).any(|t| {
-                    t.name == "table"
-                        && (t.attr("id") == Some("weather_table")
-                            || class_has(&t, "table_develop3"))
-                });
-                (stamp.and_then(|s| Publication::parse_dotted(&s)), table)
+                // The observation table must be closed and hold at least one data cell.
+                let table = table_section(&view, false, |t| {
+                    t.attr("id") == Some("weather_table") || class_has(t, "table_develop3")
+                })
+                .is_some_and(|section| section.to_ascii_lowercase().contains("<td"));
+                (stamp, table)
             } else {
                 let stamp = element_text(&view, |tag| class_has(tag, "ehead"))
                     .and_then(|t| t.split_whitespace().last().map(str::to_owned));
-                let tables = tags(&view).filter(|t| t.name == "table").count();
-                let rows = tags(&view).filter(|t| t.name == "tr").count();
-                (
-                    stamp.and_then(|s| Publication::parse_dotted(&s)),
-                    tables >= 2 && rows >= 2,
-                )
+                // Innermost (data) table: closed, with a header row and at least one data row.
+                let table = table_section(&view, true, |_| true).is_some_and(|section| {
+                    section.to_ascii_lowercase().matches("<tr").count() >= 2
+                }) && tags(&view).filter(|t| t.name == "table").count() >= 2;
+                (stamp.and_then(|s| Publication::parse_dotted(&s)), table)
             };
+            let table = table && complete;
             let Some(publication) = publication else {
                 return WebVerdict::NotPublished;
             };
@@ -460,6 +505,12 @@ fn inspect_rss(request: &WebRequest, body: &[u8]) -> WebVerdict {
     if grid.as_ref().map(|(a, b)| (Some(a), Some(b))) != Some((x.as_ref(), y.as_ref())) {
         return WebVerdict::Invalid("rss grid");
     }
+    if request
+        .publication()
+        .is_some_and(|minimum| publication < minimum)
+    {
+        return WebVerdict::Stale(publication);
+    }
     WebVerdict::Valid(publication)
 }
 
@@ -537,6 +588,14 @@ fn attributes(s: &str) -> Vec<(String, &str)> {
             out.push((key, ""));
         }
     }
+}
+/// Markup between a selected `<table>` start tag (first match, or the last one when `last`)
+/// and the next `</table>`. `None` when no table matches or it is never closed.
+fn table_section(view: &str, last: bool, select: impl Fn(&Tag<'_>) -> bool) -> Option<&str> {
+    let mut matches = tags(view).filter(|t| t.name == "table" && select(t));
+    let tag = if last { matches.last() } else { matches.next() }?;
+    let rest = &view[tag.end..];
+    Some(&rest[..rest.to_ascii_lowercase().find("</table")?])
 }
 /// Text content of the first element matching `select`, up to its first closing tag of the
 /// same name, with nested tags removed.

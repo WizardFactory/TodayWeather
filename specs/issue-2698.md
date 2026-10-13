@@ -105,3 +105,17 @@ KASI rise/set (`_type=json`), forecast-zone codes (`newsky2`, `type=json`), warn
 Unit and loopback tests with recorded and synthetic fixtures; release-mode smoke over real
 loopback HTTP with the S03/S06 S3 peer (budget authority, raw PUT, catalog publication and
 exact readback). fmt, clippy, full test suite, placement gate and artifact policy.
+
+## 2026-10-13 amendment (PR #2726 review S13-R1..R8)
+
+Source: Codex review of head `9f734972`. Tightened, not widened: `pageNo`/`numOfRows` echoes
+are mandatory for any multi-page set and for the life index (a complete single forecast page
+may still omit them, as legacy did); forecast rows need `fcstDate`/`fcstTime` (not current);
+UV rows need an `hN` field and pollen rows a daily grade field; ultra-short echoes are only
+HH00/HH30 of the requested hour. HTML pages must end with `</html>`; the city table must be
+closed with a data cell and the AWS innermost table closed with a data row; the city timestamp
+is extracted from the topinfo characters so an EUC-KR label cannot hide it. `WebRequest::not_before`
+lets callers reject an older RSS or minute page as `Stale` (legacy skipped current grids before
+fetching). Each consumed unit is reported as `Unsettled` before HTTP and settled in place, and a
+drop guard records the call, so cancellation after funding or sending is counted. Key-ring
+settlement re-advances when a concurrent call left it on a key this call saw rejected.

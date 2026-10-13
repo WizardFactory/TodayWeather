@@ -2,7 +2,7 @@
 //! `resolver::Acquisition`. Publication through S06 (O-9) remains the caller's step.
 use super::family::{DataGoKrRequest, Endpoints, Service, WebRequest};
 use super::format::{Expect, PageReport, PageVerdict, WebVerdict, inspect_page, inspect_web};
-use super::metrics::DomesticMetrics;
+use super::metrics::{CallGuard, DomesticMetrics};
 use super::{Acquired, DomesticError};
 use crate::budget::{BudgetStore, BudgetTransport, Clock, Provider};
 use crate::providers::{
@@ -103,12 +103,29 @@ impl<B: BudgetTransport> KeyRing<B> {
             .map(|(k, _)| usize::from(*k) + 1)
             .max();
         let advance = answered.or(rejected).unwrap_or(0);
-        if advance > 0 {
-            let next = (start + advance) % self.entries.len();
-            let _ = self
-                .current
-                .compare_exchange(start, next, Ordering::AcqRel, Ordering::Acquire);
+        if advance == 0 {
+            return;
         }
+        let n = self.entries.len();
+        let next = (start + advance) % n;
+        // Absolute positions this call saw rejected. A concurrent call may already have
+        // moved the ring; move again only if it now points at one of those keys.
+        let rejected_at: Vec<usize> = report
+            .attempts
+            .iter()
+            .filter(|(_, r)| {
+                matches!(
+                    r,
+                    AttemptResult::Disposition(Disposition::Quota | Disposition::Auth)
+                )
+            })
+            .map(|(k, _)| (start + usize::from(*k)) % n)
+            .collect();
+        let _ = self
+            .current
+            .try_update(Ordering::AcqRel, Ordering::Acquire, |current| {
+                (current == start || rejected_at.contains(&current)).then_some(next)
+            });
     }
 }
 
@@ -253,12 +270,12 @@ where
                 expect,
             });
             let (start, candidates) = ring.candidates();
-            let mut report = CallReport::default();
+            let mut guard = CallGuard::new(&self.metrics);
             let result = self
                 .funded
-                .execute_reported(url, candidates, deadline, validator, &mut report)
+                .execute_reported(url, candidates, deadline, validator, &mut guard.report)
                 .await;
-            self.metrics.record_call(&report, &result);
+            let report = guard.finish(&result);
             ring.settle(start, &report);
             let body = match result {
                 Ok(AcquisitionOutcome::Data(body)) => body,
@@ -471,5 +488,95 @@ impl From<AcquisitionError> for DomesticError {
             AcquisitionError::Provider(d) => Self::Provider(d),
             AcquisitionError::Transport => Self::Transport,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::budget::{BudgetError, BudgetObject, BudgetPolicy};
+    use crate::storage::WriteCondition;
+    struct Unreachable;
+    impl BudgetTransport for Unreachable {
+        async fn get_budget(&self, _: &str) -> Result<BudgetObject, BudgetError> {
+            Err(BudgetError::Transport)
+        }
+        async fn put_budget(
+            &self,
+            _: &str,
+            _: &[u8],
+            _: &WriteCondition,
+        ) -> Result<u16, BudgetError> {
+            Err(BudgetError::Transport)
+        }
+    }
+    struct Fixed;
+    impl Clock for Fixed {
+        fn now_ms(&self) -> Result<i64, BudgetError> {
+            Ok(10)
+        }
+    }
+    fn ring(n: usize) -> KeyRing<Unreachable> {
+        let entries = (0..n)
+            .map(|i| {
+                let policy = BudgetPolicy {
+                    provider: Provider::DataGoKr,
+                    quota_id: format!("{i:x}").repeat(64),
+                    window_id: "unit".into(),
+                    starts_at_ms: 1,
+                    ends_at_ms: 100,
+                    limit: 10,
+                    block_units: 10,
+                };
+                let store =
+                    BudgetStore::new(Arc::new(Unreachable), policy, Arc::new(Fixed)).unwrap();
+                (ProviderKey(format!("unit-key-{i}")), Arc::new(store))
+            })
+            .collect();
+        KeyRing::new(entries).unwrap()
+    }
+    fn report(attempts: &[(u8, Disposition)]) -> CallReport {
+        CallReport {
+            reserved: vec![2, 1],
+            attempts: attempts
+                .iter()
+                .map(|(k, d)| (*k, AttemptResult::Disposition(*d)))
+                .collect(),
+        }
+    }
+    /// S13-R8: two calls started at key 0; the first moved to key 1, the second saw keys 0
+    /// and 1 rejected. The later settle must still skip past key 1.
+    #[test]
+    fn concurrent_settles_do_not_lose_a_rejected_key_skip() {
+        let r = ring(3);
+        r.settle(
+            0,
+            &report(&[(0, Disposition::Quota), (1, Disposition::Data)]),
+        );
+        assert_eq!(r.current(), 1);
+        r.settle(
+            0,
+            &report(&[(0, Disposition::Auth), (1, Disposition::Quota)]),
+        );
+        assert_eq!(r.current(), 2);
+        // Reverse order: the stale success does not move the ring back onto a rejected key.
+        let r = ring(3);
+        r.settle(
+            0,
+            &report(&[(0, Disposition::Auth), (1, Disposition::Quota)]),
+        );
+        r.settle(
+            0,
+            &report(&[(0, Disposition::Quota), (1, Disposition::Data)]),
+        );
+        assert_eq!(r.current(), 2);
+        // Unrelated movement by another call is preserved.
+        let r = ring(3);
+        r.settle(
+            0,
+            &report(&[(0, Disposition::Quota), (1, Disposition::Data)]),
+        );
+        r.settle(2, &report(&[(0, Disposition::Data)]));
+        assert_eq!(r.current(), 1);
     }
 }

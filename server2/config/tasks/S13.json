@@ -31,6 +31,7 @@
     "server2/tests/providers/fixtures/gateway-quota.xml",
     "server2/tests/providers/fixtures/city-obs-2026-09-25.html",
     "server2/tests/providers/fixtures/aws-minute-euckr.html",
+    "server2/tests/providers/fixtures/city-obs-euckr.html",
     "server2/tests/providers/fixtures/town-rss.xml",
     "server2/tests/providers/fixtures/make_aws_fixture.py"
   ],

@@ -53,18 +53,27 @@ pub enum AttemptResult {
     Disposition(Disposition),
     Transport,
     Deadline,
+    /// The unit was consumed and HTTP may have been sent, but the call was dropped
+    /// (cancelled) before an outcome was observed. Still a funded attempt.
+    Unsettled,
 }
 /// Per-call accounting for metrics and key stickiness. Contains no key, URL or body.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CallReport {
     /// Units durably reserved per candidate before any HTTP; never refunded.
     pub reserved: Vec<u64>,
-    /// One entry per consumed unit: (candidate index, observed result).
+    /// One entry per consumed unit: (candidate index, observed result). The entry is added
+    /// before HTTP as `Unsettled` and replaced when the outcome is known.
     pub attempts: Vec<(u8, AttemptResult)>,
 }
 impl CallReport {
     pub fn reserved_units(&self) -> u64 {
         self.reserved.iter().sum()
+    }
+    fn settle(&mut self, result: AttemptResult) {
+        if let Some(last) = self.attempts.last_mut() {
+            last.1 = result;
+        }
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -176,6 +185,7 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
             funds[key]
                 .consume(self.units, deadline)
                 .map_err(AcquisitionError::Funding)?;
+            report.attempts.push((key as u8, AttemptResult::Unsettled));
             let request = Request {
                 endpoint: endpoint.clone(),
                 key: ProviderKey(candidates[key].key.0.clone()),
@@ -184,7 +194,7 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
             let response = match timeout_at(deadline, self.transport.send(&request)).await {
                 Ok(r) => r,
                 Err(_) => {
-                    report.attempts.push((key as u8, AttemptResult::Deadline));
+                    report.settle(AttemptResult::Deadline);
                     return Err(AcquisitionError::Deadline);
                 }
             };
@@ -195,9 +205,7 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                     // Preserve only received HTTP priority, not any partial provider code.
                     let disposition =
                         classify(status, &[], self.provider == Provider::DataGoKr, false);
-                    report
-                        .attempts
-                        .push((key as u8, AttemptResult::Disposition(disposition)));
+                    report.settle(AttemptResult::Disposition(disposition));
                     if attempt == 2 || disposition == Disposition::Rejected {
                         return Err(AcquisitionError::Provider(disposition));
                     }
@@ -210,7 +218,7 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                     continue;
                 }
                 Err(_) => {
-                    report.attempts.push((key as u8, AttemptResult::Transport));
+                    report.settle(AttemptResult::Transport);
                     if attempt == 1 {
                         continue;
                     }
@@ -218,13 +226,13 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                 }
             };
             if response.body.len() > 8 * 1024 * 1024 || response.content_type.len() > 512 {
-                report.attempts.push((key as u8, AttemptResult::Transport));
+                report.settle(AttemptResult::Transport);
                 return Err(AcquisitionError::Transport);
             }
             let slot = match timeout_at(deadline, self.cpu.clone().acquire_owned()).await {
                 Ok(slot) => slot.map_err(|_| AcquisitionError::Invalid)?,
                 Err(_) => {
-                    report.attempts.push((key as u8, AttemptResult::Deadline));
+                    report.settle(AttemptResult::Deadline);
                     return Err(AcquisitionError::Deadline);
                 }
             };
@@ -257,18 +265,16 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
             ) = match timeout_at(deadline, task).await {
                 Ok(joined) => joined.map_err(|_| AcquisitionError::Invalid)?,
                 Err(_) => {
-                    report.attempts.push((key as u8, AttemptResult::Deadline));
+                    report.settle(AttemptResult::Deadline);
                     return Err(AcquisitionError::Deadline);
                 }
             };
             admission = returned_admission;
             if Instant::now() >= deadline {
-                report.attempts.push((key as u8, AttemptResult::Deadline));
+                report.settle(AttemptResult::Deadline);
                 return Err(AcquisitionError::Deadline);
             }
-            report
-                .attempts
-                .push((key as u8, AttemptResult::Disposition(disposition)));
+            report.settle(AttemptResult::Disposition(disposition));
             if matches!(disposition, Disposition::Data | Disposition::NoData) {
                 let raw = AcquiredBody {
                     body,

@@ -42,6 +42,7 @@ counters! {
     attempts_retryable => "Funded attempts with an invalid or transient response.",
     attempts_transport => "Funded attempts without a usable HTTP response.",
     attempts_deadline => "Funded attempts interrupted by the caller deadline.",
+    attempts_unsettled => "Funded attempts whose call was cancelled before an outcome.",
     funding_denied => "Calls stopped by budget funding before or between attempts.",
     public_attempts => "Keyless KMA web HTTP attempts.",
     groups_complete => "Complete acquisitions returned for publication.",
@@ -50,8 +51,39 @@ counters! {
     stale => "Acquisitions answered with an older publication.",
     no_data => "Acquisitions answered as terminal no data.",
 }
+/// Records one funded call exactly once: on `finish`, or on drop when the owning future is
+/// cancelled after reservation or HTTP (those units are spent and still counted).
+pub(crate) struct CallGuard<'a> {
+    metrics: &'a DomesticMetrics,
+    pub(crate) report: CallReport,
+    recorded: bool,
+}
+impl<'a> CallGuard<'a> {
+    pub(crate) fn new(metrics: &'a DomesticMetrics) -> Self {
+        Self {
+            metrics,
+            report: CallReport::default(),
+            recorded: false,
+        }
+    }
+    pub(crate) fn finish<T>(mut self, result: &Result<T, AcquisitionError>) -> CallReport {
+        self.metrics.record_call(
+            &self.report,
+            matches!(result, Err(AcquisitionError::Funding(_))),
+        );
+        self.recorded = true;
+        std::mem::take(&mut self.report)
+    }
+}
+impl Drop for CallGuard<'_> {
+    fn drop(&mut self) {
+        if !self.recorded {
+            self.metrics.record_call(&self.report, false);
+        }
+    }
+}
 impl DomesticMetrics {
-    pub(crate) fn record_call<T>(&self, report: &CallReport, result: &Result<T, AcquisitionError>) {
+    fn record_call(&self, report: &CallReport, funding_denied: bool) {
         self.funded_calls.fetch_add(1, Relaxed);
         self.reserved_units
             .fetch_add(report.reserved_units(), Relaxed);
@@ -67,10 +99,11 @@ impl DomesticMetrics {
                 AttemptResult::Disposition(Disposition::Retryable) => &self.attempts_retryable,
                 AttemptResult::Transport => &self.attempts_transport,
                 AttemptResult::Deadline => &self.attempts_deadline,
+                AttemptResult::Unsettled => &self.attempts_unsettled,
             };
             counter.fetch_add(1, Relaxed);
         }
-        if matches!(result, Err(AcquisitionError::Funding(_))) {
+        if funding_denied {
             self.funding_denied.fetch_add(1, Relaxed);
         }
     }

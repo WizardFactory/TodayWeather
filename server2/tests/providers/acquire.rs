@@ -618,3 +618,35 @@ async fn mid_range_and_multi_page_life_index_families() {
     let r = e.acquirer.acquire(&uv, deadline()).await;
     assert!(matches!(r, Err(DomesticError::Incomplete(_))), "{r:?}");
 }
+
+/// Review finding S13-R7 (PR #2726): cancelling the caller after funding and HTTP still
+/// accounts for the spent reservation and the funded attempt.
+#[tokio::test]
+async fn cancelled_acquisition_still_counts_funded_units() {
+    let e = env().await;
+    e.stub.push(VILAGE, Reply::json(page(1, 50)).delayed(800));
+    let cancelled = tokio::time::timeout(
+        Duration::from_millis(200),
+        e.acquirer.acquire(&vilage(), deadline()),
+    )
+    .await;
+    assert!(cancelled.is_err(), "caller cancellation expected");
+    // The provider saw the request although the caller is gone.
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert_eq!(e.stub.calls().len(), 1);
+    let m = e.metrics.snapshot();
+    assert_eq!(
+        (
+            m.funded_calls,
+            m.reserved_units,
+            m.funded_attempts,
+            m.attempts_unsettled
+        ),
+        (1, 3, 1, 1)
+    );
+    assert!(
+        e.metrics
+            .render()
+            .contains("server2_domestic_attempts_unsettled_total 1\n")
+    );
+}

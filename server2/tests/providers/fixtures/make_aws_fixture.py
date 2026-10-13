@@ -28,7 +28,20 @@ def page():
     )
 
 
+def city():
+    """Legacy EUC-KR city-observation layout (`table_topinfo`, `table_develop3`)."""
+    return (
+        '<html>\n<head>\n<meta http-equiv="Content-Type" content="text/html; charset=euc-kr">\n'
+        '<title>도시별관측</title>\n</head>\n<body>\n'
+        '<div class="table_topinfo">기상실황표 2026.10.13.14:00</div>\n'
+        '<table class="table_develop3">\n<thead><tr id="table_header2"><th>지점</th><th>현재일기</th>'
+        '<th>현재기온</th></tr></thead>\n<tbody>\n<tr><td>서울</td><td>맑음</td><td>18.4</td></tr>\n'
+        '</tbody>\n</table>\n</body>\n</html>\n'
+    )
+
+
 if __name__ == '__main__':
-    target = Path(__file__).with_name('aws-minute-euckr.html')
-    target.write_bytes(page().encode('euc-kr'))
-    print(target)
+    for name, text in (('aws-minute-euckr.html', page()), ('city-obs-euckr.html', city())):
+        target = Path(__file__).with_name(name)
+        target.write_bytes(text.encode('euc-kr'))
+        print(target)
