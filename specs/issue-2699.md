@@ -53,10 +53,13 @@ Durable demand lives only under `state/demand/grid/`:
 RSS, mid-range and life-index inputs are latest-only (`getShortRss` reads only future rows) and
 remain request-time acquisitions for S15; S14 does not capture them.
 
-Each hourly tick, for every active cell (request or push demand), the planner emits the latest
-publication of each per-cell family that is not already present, then backfill: up to 23
-earlier `current` slots (legacy `PastConditionGather` slots), 23 `shortest` and 7 `short`
-publications (data.go.kr serves about one day). While at least one cell is active it also emits
+Every 10 minutes (legacy current checks run at minutes 2/12/.../52), for every active cell
+(request or push demand), the planner emits the latest publication of each per-cell family that
+is not already present, then backfill: up to 23 earlier `current` slots (legacy
+`PastConditionGather` slots), 23 `shortest` and 7 `short` publications (data.go.kr serves about
+one day). Per-cell backfill runs once per KST hour (like the hourly legacy past-condition pass)
+and at once for a cell that became active since the previous pass, so a persistent provider gap
+is not retried every tick. While at least one cell is active it also emits
 the latest national hourly pages and backfills missing national pages for 192 hours (the KMA
 pages accept a past hour). The minute page is requested every 2 minutes only while at least one
 cell is active, with `not_before` set to the last captured minute. No timer covers all grids and
