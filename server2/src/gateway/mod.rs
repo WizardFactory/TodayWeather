@@ -18,6 +18,8 @@ use tokio::{
     sync::{OwnedSemaphorePermit, Semaphore},
     time::Instant,
 };
+/// Original public gateway deadline; a deadline expiry answers the legacy `501`.
+pub const PUBLIC_DEADLINE: Duration = Duration::from_secs(9);
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Version {
@@ -112,7 +114,7 @@ impl Gateway {
                 backends,
                 slots: Arc::new(Semaphore::new(40)),
                 limit: 40,
-                deadline: Duration::from_secs(9),
+                deadline: PUBLIC_DEADLINE,
             }),
         }
     }
@@ -123,7 +125,7 @@ impl Gateway {
         limit: usize,
         deadline: Duration,
     ) -> Result<Self, GatewayError> {
-        if limit == 0 || limit > 40 || deadline.is_zero() || deadline > Duration::from_secs(9) {
+        if limit == 0 || limit > 40 || deadline.is_zero() || deadline > PUBLIC_DEADLINE {
             return Err(GatewayError::InvalidConfiguration);
         }
         Ok(Self {

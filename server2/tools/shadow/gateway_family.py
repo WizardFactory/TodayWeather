@@ -9,8 +9,10 @@ import base64
 import concurrent.futures
 import http.client
 import json
+import os
 import re
 import socket
+import subprocess
 import threading
 import time
 from urllib.parse import parse_qs, quote, unquote, urlsplit
@@ -609,29 +611,64 @@ def replay_side(binary, fixture, side, perturb=False):
                      'perturbation': frozen.perturbation}
 
 
-# The foundation closes every public connection at SERVER2_CONNECTION_SECONDS (default 9),
-# which races the gateway's 9s deadline. The deadline contract is therefore probed with a
-# 12s connection lifetime, and the default-configuration result is pinned as a known gap.
-DEADLINE_PROBE_LIFETIME = {'SERVER2_CONNECTION_SECONDS': '12'}
-KNOWN_GAP = 'S19-GAP-1'
+# S10b (#2730) closed S19-GAP-1: with the gateway enabled the default connection lifetime is
+# 12s, so the deadline probe runs the default configuration and expects the S02 legacy 501.
+DEADLINE_ORACLE = 'gateway-deadline'
+TRANSPORT_HEADERS = ('date', 'connection', 'keep-alive')
+LIFETIME_REFUSAL = 'SERVER2_CONNECTION_SECONDS must exceed the 9-second gateway deadline'
+
+
+def legacy_deadline_mismatches(reply):
+    """Status, body bytes and functional headers that differ from the S02 deadline record."""
+    case = oracle_cases()[DEADLINE_ORACLE]
+    problems = []
+    if reply.status != case['status']:
+        problems.append(['status', case['status'], reply.status])
+    if reply.body != base64.b64decode(case['body_base64']):
+        problems.append(['body_sha256', case['body_sha256'], reply.digest()])
+    for name, value in case['headers']:
+        if name not in TRANSPORT_HEADERS and reply.header(name) != value:
+            problems.append([name, value, reply.header(name)])
+    return problems
+
+
+def lifetime_refusal(ctx):
+    """Gateway enabled with a 9s lifetime: configuration error before any listener is bound."""
+    env = {'PATH': os.defpath, 'SERVER2_BIND': '127.0.0.1:0', 'SERVER2_METRICS_BIND': '127.0.0.1:0'}
+    env.update(gateway_env(ctx.peers, 'legacy'), SERVER2_CONNECTION_SECONDS='9')
+    started = time.monotonic()
+    try:
+        out = subprocess.run([str(ctx.binary)], env=env, stdin=subprocess.DEVNULL,
+                             capture_output=True, text=True, timeout=10)
+    except subprocess.TimeoutExpired as error:
+        output = error.stdout.decode() if isinstance(error.stdout, bytes) else str(error.stdout)
+        raise AssertionError('gateway with SERVER2_CONNECTION_SECONDS=9 kept running: ' + output.strip())
+    elapsed = (time.monotonic() - started) * 1000
+    expect(out.returncode != 0 and 'server2 public=' not in out.stdout and LIFETIME_REFUSAL in out.stderr,
+           'gateway with SERVER2_CONNECTION_SECONDS=9 is refused before binding', [out.returncode, out.stdout, out.stderr])
+    return {'connection_seconds': 9, 'exit_code': out.returncode, 'elapsed_ms': round(elapsed, 2), 'message': LIFETIME_REFUSAL}
 
 
 def deadline_probe(ctx, mode):
-    """Stalled backend reaches the 9s deadline after three <=3s attempts; geocoder caps hold."""
-    with ctx.process(mode, extra=DEADLINE_PROBE_LIFETIME) as p:
+    """Default lifetime: stalled backend gets the legacy 501 at the 9s deadline; geocoder caps hold."""
+    with ctx.process(mode) as p:
         get(p, WEATHER_KR, KO)
         ctx.peers.set('backend', fault='hang')
         try:
             before = ctx.observe(p)
-            stalled = get(p, WEATHER_KR, KO)
+            try:
+                stalled = get(p, WEATHER_KR, KO)
+            except (ConnectionError, http.client.HTTPException) as error:
+                raise AssertionError('default configuration closed the connection before the 9s deadline 501 ('
+                                     + type(error).__name__ + ')')
             m, c = changes(p, ctx, before)
         finally:
             ctx.peers.set('backend')
-        expect(stalled.status == 501 and stalled.header('cache-control') == 'no-store'
-               and 8500 <= stalled.elapsed_ms <= 10500 and c.get('backend') == 3
-               and m.get(GW + 'responses_dependency_error_total') == 1,
-               'stalled backend: 501 no-store at the 9s deadline after three attempts',
-               [stalled.status, stalled.elapsed_ms, m, c])
+        mismatches = legacy_deadline_mismatches(stalled)
+        expect(not mismatches and 8500 <= stalled.elapsed_ms <= 10500 and c.get('backend') == 3
+               and m.get(GW + 'responses_dependency_error_total') == 1 and not m.get(GW + 'abandoned_total'),
+               'stalled backend: legacy 501 bytes/headers at the 9s deadline after three attempts',
+               [mismatches, stalled.elapsed_ms, m, c])
         kind, cap = ('kakao', (2500, 4000)) if mode == 'mock' else ('legacy_geo', (4500, 6000))
         ctx.peers.set(kind, fault='hang')
         try:
@@ -641,36 +678,9 @@ def deadline_probe(ctx, mode):
         expect(geo.status == 501 and geo.header('cache-control') == 'no-store' and cap[0] <= geo.elapsed_ms <= cap[1],
                'stalled geocoder ends within its attempt/lookup cap', [geo.status, geo.elapsed_ms])
         expect(p.stop() == 0, 'deadline probe stopped cleanly')
-    return {'connection_seconds': 12, 'backend_stall': round(stalled.elapsed_ms, 2), 'backend_attempts': c.get('backend'),
+    return {'connection_seconds': 'default', 'backend_stall': round(stalled.elapsed_ms, 2),
+            'backend_attempts': c.get('backend'), 'backend_oracle': DEADLINE_ORACLE,
             'geocoder_stall': round(geo.elapsed_ms, 2), 'geocoder_kind': kind}
-
-
-def connection_lifetime_gap(ctx, p):
-    """Strict known gap: with default settings the 9s deadline 501 is not delivered.
-
-    Fails when the observation changes (for example after a fix), so the pin is updated deliberately.
-    """
-    ctx.peers.set('backend', fault='hang')
-    started = time.monotonic()
-    try:
-        before = ctx.observe(p)
-        try:
-            reply = get(p, WEATHER_KR, KO)
-            outcome = 'status %d' % reply.status
-        except (ConnectionError, http.client.HTTPException) as error:
-            outcome = 'connection closed without response (' + type(error).__name__ + ')'
-        elapsed = (time.monotonic() - started) * 1000
-        time.sleep(0.2)
-        m, _ = changes(p, ctx, before)
-    finally:
-        ctx.peers.set('backend')
-    expect(outcome.startswith('connection closed') and 8500 <= elapsed <= 10000 and m.get(GW + 'abandoned_total') == 1,
-           KNOWN_GAP + ' observation changed; re-assess and update the pinned known gap', [outcome, elapsed, m])
-    print('KNOWN GAP ' + KNOWN_GAP + ': default SERVER2_CONNECTION_SECONDS=9 closes the socket at %.0f ms, before the '
-          '9s deadline 501 is written (abandoned_total +1); decision pending' % elapsed, flush=True)
-    return {'id': KNOWN_GAP, 'connection_seconds': 9, 'observed': outcome, 'elapsed_ms': round(elapsed, 2),
-            'metrics': m, 'expected_contract': '501 Not Implemented, no-store at the 9s deadline',
-            'status': 'open decision; see the S19 operations guide'}
 
 
 REHEARSAL = [
@@ -721,20 +731,23 @@ def rollback(binary, deadlines=True):
                     phase['revalidation_with_previous_etag'] = revalidated
                 invalid = get(p, '/weather/coord/not-a-coordinate')
                 expect(invalid.status == 400 and invalid.header('cache-control') == 'no-store', 'error no-store contract')
-                if deadlines and number == 3:
-                    phase['known_gaps'] = [connection_lifetime_gap(ctx, p)]
                 expect(p.stop() == 0, 'phase stopped cleanly')
+            if number == 1:
+                phase['lifetime_refusal'] = lifetime_refusal(ctx)
             if deadlines and number > 1:
                 phase['deadlines_ms'] = deadline_probe(ctx, mode)
             phases.append(phase)
             line = 'PASS rollback phase %d %s: cold peers[%s] warm peers[%s]' % (
                 number, mode, peers_text(phase['cold']['peers']), peers_text(phase['warm']['peers']))
+            if 'lifetime_refusal' in phase:
+                line += '; 9s lifetime refused before binding (exit %d)' % phase['lifetime_refusal']['exit_code']
             if 'revalidation_with_previous_etag' in phase:
                 hits = sum(1 for v in phase['revalidation_with_previous_etag'].values() if v['status'] == 304)
                 line += '; previous-phase ETag 304=%d/%d' % (hits, len(REHEARSAL))
             if 'deadlines_ms' in phase:
                 d = phase['deadlines_ms']
-                line += '; stalled backend 501 at %.0fms after %d attempts; stalled %s 501 at %.0fms' % (
+                line += ('; default lifetime: stalled backend legacy 501 at %.0fms after %d attempts; '
+                         'stalled %s 501 at %.0fms') % (
                     d['backend_stall'], d['backend_attempts'], d['geocoder_kind'], d['geocoder_stall'])
             print(line, flush=True)
             previous = phase

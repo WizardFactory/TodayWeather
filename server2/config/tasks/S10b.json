@@ -1,0 +1,90 @@
+{
+  "task": "S10b",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2730",
+  "scope": "Gateway-enabled connection lifetime: 12s default and startup refusal at 9s or less so the 9s deadline 501 is delivered; foundation default and listener semantics unchanged. S19 rehearsal expects the 501 instead of pinning S19-GAP-1.",
+  "server2_paths": [
+    "server2/config/tasks/S10b.json",
+    "server2/src/lib.rs",
+    "server2/src/gateway/mod.rs",
+    "server2/tests/foundation.rs",
+    "server2/tools/smoke.py",
+    "server2/tools/shadow/gateway_family.py",
+    "server2/tools/shadow/render_manual.py"
+  ],
+  "server2_path_reasons": {
+    "server2/src/lib.rs": "Select the gateway connection lifetime and reject a lifetime that does not exceed the gateway deadline before binding",
+    "server2/src/gateway/mod.rs": "Name the existing 9s public deadline as a constant so the lifetime check tracks it; no behavior change",
+    "server2/tests/foundation.rs": "Regression tests for lifetime selection and the release-process startup refusal",
+    "server2/tools/smoke.py": "Keep the foundation smoke gateway-disabled even when the caller environment sets the gateway origin",
+    "server2/tools/shadow/gateway_family.py": "Rehearsal expects the legacy deadline 501 under the default configuration and checks the startup refusal",
+    "server2/tools/shadow/render_manual.py": "Record the deadline and refusal observations instead of the removed known-gap list in the evidence manifest"
+  },
+  "outside": [
+    {
+      "path": "intent/issue-2730.md",
+      "category": "documentation",
+      "reason": "S10b governing intent record; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2730.md",
+      "category": "documentation",
+      "reason": "S10b governing specification; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2730.md",
+      "category": "documentation",
+      "reason": "S10b execution plan and user scenarios; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Replace the open S19-GAP-1 description with the decided lifetime contract only"
+    },
+    {
+      "path": "docs/operations/server2-gateway.md",
+      "category": "documentation",
+      "reason": "Operator guide: gateway lifetime default and startup refusal"
+    },
+    {
+      "path": "docs/operations/server2-gateway.pdf",
+      "category": "documentation",
+      "reason": "Rendered and visually checked PDF of the gateway guide"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-gateway/usage.png",
+      "category": "documentation",
+      "reason": "Actual terminal capture of the gateway smoke rerun for the regenerated guide"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-gateway/manifest.json",
+      "category": "documentation",
+      "reason": "Hashes and provenance of the regenerated gateway capture, guide and PDF"
+    },
+    {
+      "path": "docs/operations/server2-foundation.md",
+      "category": "documentation",
+      "reason": "Foundation guide: connection lifetime default depends on gateway enablement"
+    },
+    {
+      "path": "docs/operations/server2-smoke-shadow.md",
+      "category": "documentation",
+      "reason": "S19 guide: deadline expectation under the default configuration; S19-GAP-1 closed"
+    },
+    {
+      "path": "docs/operations/server2-smoke-shadow.pdf",
+      "category": "documentation",
+      "reason": "Rendered and visually checked PDF of the S19 guide"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-smoke-shadow/usage.png",
+      "category": "documentation",
+      "reason": "Actual terminal capture of the smoke.sh rerun for the regenerated S19 guide"
+    },
+    {
+      "path": "docs/evidence/tasks/server2-smoke-shadow/manifest.json",
+      "category": "documentation",
+      "reason": "Hashes and provenance of the regenerated S19 capture, guide and PDF"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2730#issuecomment-6142719065"
+}
