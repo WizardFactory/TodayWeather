@@ -1456,3 +1456,50 @@ S10 attempt described above as an intended difference. Cold loads
 read 21 catalogs (at most four at a time) and, for busy cells, up to seven days of
 forecast fetches; this remains a pre-cutover measurement item. No production route,
 AWS resource, live provider or shadow comparison is changed by S11.
+
+### S14 legacy history and demand-gated capture (2026-10-13)
+
+[S14](../../plans/issue-2699.md) ([spec](../../specs/issue-2699.md)) adds the internal
+`server2::history` library. It wires no route and starts no task; S15 consumes its inputs and
+the runtime owner starts `CaptureRunner::run`.
+
+- **Demand** (O-1/O-11): `state/demand/grid/request/{nx:03}-{ny:03}.json` holds exactly
+  `schema`, `grid`, `lastDemandMs` and `expiresMs = lastDemandMs + 8 days`;
+  `state/demand/grid/push.json` aggregates push-subscribed grid cells with the same fields and
+  an expiry of at most 8 days. Any other field or key shape is rejected and never counts as
+  demand. Writes are conditional, coalesced to one per 10 minutes per cell, and the active set is
+  rebuilt from S3 after a replacement.
+- **Capture**: only active cells. Every 10 minutes the runner requests the latest
+  `ultra-srt-ncst`, `ultra-srt-fcst` and `vilage-fcst` publications per cell and, while any cell
+  is active, the national AWS hourly and city pages; the AWS minute page every 2 minutes. Per-cell
+  backfill (23 current, 23 ultra-short, 7 short publications) runs once per KST hour and at once
+  for a newly active cell; national pages backfill 192 hours. Calls stay under S08 budgets and
+  per-tick caps (64 funded, 8 keyless), a funding error stops the pass, present publications are
+  skipped, and a publication counts only after S06 publication. One owner per scope per process;
+  multi-host capture still needs the section 9 gate. RSS, mid-range and life-index inputs are
+  latest-only and stay request-time acquisitions.
+- **Coverage**: a required publication is covered by a captured group or by a legacy export
+  snapshot taken after it (the export reproduces the legacy store, gaps included). Lookbacks are
+  the legacy 192 hourly slots, 195 hours of short publications, 192 hours of national pages and
+  the `(anchor - 20 min, anchor]` minute window with continuous pages. Anything missing returns
+  `Legacy` with the gaps named (`NeverCaptured`/`Partial`); only a missing newest per-cell
+  publication returns `NeedsLatest`. Station data and ASOS never cover a grid hour; a legacy
+  deployment with `ASOS_HISTORY_READ_ENABLED` keeps every request on legacy. The capture index
+  is rebuilt from bounded raw LIST pages; an incomplete listing forwards to legacy.
+- **Legacy export**: `server2/tools/migration/export_history_seeds.py` converts one offline
+  `mongoexport` file (one document per line) of `kma.town.current|shortest|short`,
+  `current|shortest|short` (v1) or `KmaStnHourly2|KmaStnMinute2` into a seed whose documents are
+  the original lines byte for byte, with manifest provenance. Import stores one `legacy-mongo`
+  record per collection and key and export instant, so every export is a separate revision.
+  `history::legacy::current_rows` reproduces the legacy read projection of current rows
+  (verified against the legacy functions over the fixtures). Exporting production data is a
+  separately authorized operator action; no `server/` file changed.
+
+Estimated cost (derived from legacy code, not measured): legacy collectors kept during
+coexistence call data.go.kr about 24N current, 48N ultra-short and 16N short per day plus
+past-current refills (N about 2,033 grids). server2 adds about 64 funded calls per demand cell per
+day (24 + 24 + 16 pages), at most 53 backfill calls when a cell becomes active, and about 768
+keyless KMA pages per day while any demand exists. D = 1,000 demand cells adds about 64,000 funded
+calls and about 200,000 S3 PUT per day (raw, descriptor and catalog versions). The AWS-minute day
+catalog grows to 720 entries, so its retained catalog versions dominate version storage. Real
+quotas, demand counts and prices remain to be measured before cutover.
