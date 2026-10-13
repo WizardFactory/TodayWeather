@@ -34,6 +34,7 @@ The binary reads configuration from its injected environment. It does not open a
 | `GEOCODER_KAKAO_KEYS` | Existing JSON-array key setting. Use dummy values for mock peers; keep actual values out of fixtures, commands recorded as evidence and repository files. |
 | `GEOCODER_GOOGLE_KEY` | Existing single-key setting. Use a dummy value for mocks. The non-mock library configuration retains the existing Google fingerprint restriction. |
 | `SERVER2_BIND` / `SERVER2_METRICS_BIND` | Public/private listener settings inherited from the foundation. Metrics must remain loopback. The smoke chooses ephemeral ports. |
+| `SERVER2_CONNECTION_SECONDS` | Absolute connection lifetime from the foundation. With the gateway enabled the default is 12 seconds, so the 9-second deadline `501` is written before the socket closes. A configured value of 9 or less fails startup before any listener binds; the allowed range is 10..30. The foundation default without the gateway stays 9. |
 
 AK instructed reuse of the existing geocoder `.env` configuration rather than provisioning a separate server2 key set. Continue using the operator's existing environment-injection mechanism. Do not execute the file as a shell script or copy its secret values into server2 configuration. The local smoke deliberately supplies its own dummy environment and does not need those real keys.
 
@@ -67,13 +68,15 @@ These instructions cover local verification and configuration. They do not autho
 
 ## Recorded local verification
 
-The 2026-10-13 01:18:38 UTC release-process run passed against task-owned
-loopback peers: 16 same-key cold callers shared one Kakao request; 16 distinct
+The 2026-10-13 09:50:38 UTC release-process run passed against task-owned
+loopback peers, using the default 12-second gateway connection lifetime: 16 same-key cold callers shared one Kakao request; 16 distinct
 keys caused 16 requests; a non-ko locale lookup at a Korean coordinate used Kakao plus Google. The
-16-sample distinct-key mock timings were p50 62.76 ms, p95/p99 66.65 ms
+16-sample distinct-key mock timings were p50 63.15 ms, p95/p99 67.80 ms
 with eight concurrent clients and a fixed 50-ms peer delay. These are synthetic
 local elapsed times, not live provider tails or production quota evidence.
 Legacy/mock/legacy restart rollback and the separate foundation socket/drain
-smoke passed. The [actual terminal capture](../evidence/tasks/server2-gateway/usage.png)
+smoke passed. With `SERVER2_CONNECTION_SECONDS=9` and the gateway enabled, the same release binary exited with status 1 and the
+configuration message before binding. The deadline `501` under the default lifetime is exercised by the
+[S19 rollback rehearsal](server2-smoke-shadow.md#cache-aware-rollback-rehearsal). The [actual terminal capture](../evidence/tasks/server2-gateway/usage.png)
 is rendered from the execution output. The companion PDF is generated from
 this editable guide and visually checked page by page.

@@ -107,11 +107,12 @@ To add a family, put a module next to `gateway_family.py` that provides the same
 - Geocoder source: every route uses the legacy geocoder in legacy phases, and no route does in the native phase.
 - Empty-memory re-acquisition cost: cold and warm peer deltas.
 - An ETag issued before the switch revalidates with 304 after it when the bodies are identical, so client and CloudFront validators stay usable.
-- Deadlines, probed with `SERVER2_CONNECTION_SECONDS=12`: a stalled backend gives 501 no-store at about 9s after three attempts. A stalled Kakao call gives 501 at about 3s; a stalled legacy geocoder gives 501 at about 5s.
+- Deadlines, probed with the default gateway configuration in the native and second legacy phases: a stalled backend gives the legacy 501 at about 9s after three attempts. Its status, body bytes and functional headers must match the S02 `gateway-deadline` record; only `date`, `connection` and `keep-alive` are excluded as transport headers. A stalled Kakao call gives 501 at about 3s; a stalled legacy geocoder gives 501 at about 5s.
+- Lifetime refusal, checked in the first phase: the release binary with the gateway enabled and `SERVER2_CONNECTION_SECONDS=9` must exit nonzero with the configuration message before announcing its listeners.
 
-### Known gap S19-GAP-1 (decision pending)
+### Closed gap S19-GAP-1
 
-With the default `SERVER2_CONNECTION_SECONDS=9`, the foundation's absolute connection lifetime closes the client socket at about 9s, just before the gateway writes its deadline `501 Not Implemented`. The client sees a closed connection, and `server2_gateway_abandoned_total` increments. The rehearsal pins this observation strictly: it fails if the behavior changes, so a fix must update the pin deliberately. Possible fixes are to raise the lifetime when the gateway is enabled, to reject gateway startup unless the lifetime exceeds 9s, or to exempt dispatched requests from the absolute lifetime. The [S19 plan](../../plans/issue-2704.md#open-decision) lists them. Until an owner decides, do not treat the default configuration as satisfying the legacy deadline contract.
+S19 found that the foundation's 9s absolute connection lifetime closed the client socket just before the gateway wrote its 9s deadline `501 Not Implemented`. AK chose the fix on 2026-10-13, and S10b ([#2730](https://github.com/WizardFactory/TodayWeather/issues/2730)) implemented it. With `SERVER2_GATEWAY_LEGACY_URL` set, the connection lifetime defaults to 12s, and a configured `SERVER2_CONNECTION_SECONDS` of 9 or less fails startup. The rehearsal no longer pins the gap; it fails if the default configuration does not deliver the legacy 501. The 501 guarantee covers a request that starts within lifetime minus 9s of the connection being accepted; a later keep-alive request on the same connection can still outlive it. The [S19 plan](../../plans/issue-2704.md#open-decision) keeps the original options as history.
 
 ## Limitations
 
@@ -119,22 +120,22 @@ These are local loopback fixtures. Timings, counts and RSS do not represent prod
 
 ## Recorded local verification
 
-The 2026-10-13 run of `smoke.sh` against the macOS release binary passed every stage. The S19 stages started at 06:41:57 UTC.
+The 2026-10-13 run of `smoke.sh` against the macOS release binary of the S10b change passed every stage. The S19 stages started at 09:50:54 UTC.
 
 - Reused foundation and S10 smokes passed.
 - All eight gateway scenarios passed. Peer totals for the scenario run were backend 52, Kakao 600, Google 2 and S3 0.
-- Quota exhaustion: 588 of 589 lookups were funded, and the rejected lookup made no provider call. RSS was 7,840 KiB before and 10,512 KiB after.
+- Quota exhaustion: 588 of 589 lookups were funded, and the rejected lookup made no provider call. RSS was 7,792 KiB before and 10,560 KiB after.
 - Admission pressure: while backend replies were held, 40 requests were admitted and 8 were rejected with 503.
-- SIGTERM drain: the held in-flight request completed and the process stopped 216 ms after the signal.
+- SIGTERM drain: the held in-flight request completed and the process stopped 208 ms after the signal.
 - Paired replay over 15 requests and two passes: every request matched its acquisition plan. There were 0 unexplained differences. On each side, 12 S02 oracle checks and 10 weather merge-oracle checks found 0 mismatches. Observed declared differences were `D-TRANSPORT`, `D-ACQ-GEOCODER` and `D-ACQ-WARM-CACHE`. The perturbed self-check found 30 unexplained differences.
 - Replay p95 (nearest rank) for the baseline and the candidate:
 
 | Group | Baseline | Candidate |
 | --- | --- | --- |
-| `cold_pass` (n=15) | 1.26 ms | 2.31 ms |
-| `cold_miss` | 1.26 ms (n=11) | 2.21 ms (n=4) |
-| `warm_pass` (n=15) | 1.00 ms | 1.39 ms |
+| `cold_pass` (n=15) | 1.25 ms | 2.53 ms |
+| `cold_miss` | 1.25 ms (n=11) | 2.53 ms (n=4) |
+| `warm_pass` (n=15) | 1.03 ms | 1.42 ms |
 
-- Rollback: every cross-switch ETag revalidated with 304 (4/4 per switch). The stalled backend gave 501 at 9,003-9,004 ms after three attempts. Stalled Kakao gave 501 at 3,002 ms, and the stalled legacy geocoder gave 501 at 5,003 ms. S19-GAP-1 was observed as a connection closed at 9,004 ms.
+- Rollback: every cross-switch ETag revalidated with 304 (4/4 per switch). With the default gateway lifetime, the stalled backend gave the legacy 501 at 9,003 ms after three attempts in both the native and legacy phases. Stalled Kakao gave 501 at 3,004 ms, and the stalled legacy geocoder gave 501 at 5,004 ms. The gateway with `SERVER2_CONNECTION_SECONDS=9` exited with status 1 before binding.
 
 The [actual terminal capture](../evidence/tasks/server2-smoke-shadow/usage.png) is rendered from that execution log; `docs/evidence/tasks/server2-smoke-shadow/manifest.json` records its hashes. These are synthetic loopback timings, not production latency.

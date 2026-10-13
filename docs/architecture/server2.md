@@ -195,9 +195,12 @@ and records revision, workload and cold/warm percentiles. The rollback rehearsal
 switches `/weather` and `/geocode` together while checking the cache and deadline
 contracts. These are local fixture results, not seven-day shadow, production
 latency or quota evidence. Live shadow configuration and traffic mirroring
-need separate operational authority. The rehearsal pins open gap S19-GAP-1: the
-default 9-second foundation connection lifetime closes the socket before the
-gateway's 9-second deadline `501` is written. See the
+need separate operational authority. S10b
+([#2730](https://github.com/WizardFactory/TodayWeather/issues/2730)) closed gap
+S19-GAP-1, where the 9-second foundation connection lifetime closed the socket before
+the gateway's 9-second deadline `501` was written. With the gateway enabled, the
+connection lifetime defaults to 12 seconds, and a lifetime of 9 seconds or less fails
+startup. The rehearsal expects the legacy `501` under that default. See the
 [smoke/shadow guide](../operations/server2-smoke-shadow.md).
 
 ## 3. Rust runtime and memory lookup
