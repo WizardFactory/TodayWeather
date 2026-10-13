@@ -27,6 +27,17 @@ impl KmaSource for LegacyOnly {
     }
 }
 
+/// Register the v000903 KMA handler with the current runtime source and select it
+/// (`SERVER2_NATIVE_FAMILIES` contains `kma`). The source is [`LegacyOnly`] until S15b.
+pub fn select_native(dispatcher: &BackendDispatcher) -> Result<(), GatewayError> {
+    let backend = Arc::new(KmaBackend::new(
+        Arc::new(LegacyOnly),
+        system_clock(),
+        AssemblyConfig::default(),
+    ));
+    backend.register(dispatcher);
+    KmaBackend::select(dispatcher, BackendMode::Native)
+}
 /// Request clock (`Date.now()` in ms).
 pub type Clock = Arc<dyn Fn() -> f64 + Send + Sync>;
 pub fn system_clock() -> Clock {

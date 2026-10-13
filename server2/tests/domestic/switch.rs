@@ -10,7 +10,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use server2::{
     domestic::kma::{
         AssemblyConfig, KmaRequest,
-        backend::{KmaBackend, KmaSource, LegacyOnly, SourceAnswer},
+        backend::{KmaBackend, KmaSource, SourceAnswer, select_native},
     },
     gateway::{
         BackendDispatcher, BackendMode, BoxFuture, Family, Gateway, GatewayError, Geocoder, Version,
@@ -278,6 +278,8 @@ async fn native_kma_reproduces_s02_gateway_goldens_and_rolls_back() {
     );
 }
 
+/// `SERVER2_NATIVE_FAMILIES=kma` registers and selects the handler with the runtime source
+/// (`LegacyOnly` until S15b): every request reaches legacy and the goldens hold.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn runtime_default_source_forwards_everything_to_legacy() {
     warm();
@@ -285,8 +287,15 @@ async fn runtime_default_source_forwards_everything_to_legacy() {
     let case: Case = Arc::new(Mutex::new(None));
     let origin = legacy_origin(hits.clone(), case.clone()).await;
     let dispatcher = BackendDispatcher::legacy(&origin).unwrap();
-    backend(Arc::new(LegacyOnly)).register(&dispatcher);
-    KmaBackend::select(&dispatcher, BackendMode::Native).unwrap();
+    assert_eq!(
+        dispatcher.mode(Version::V000903, Family::Kma),
+        BackendMode::Legacy
+    );
+    select_native(&dispatcher).unwrap();
+    assert_eq!(
+        dispatcher.mode(Version::V000903, Family::Kma),
+        BackendMode::Native
+    );
     let gateway = Gateway::new(Arc::new(Myeongdong), dispatcher);
     for id in CASES {
         let (status, headers, bytes) = send(&gateway, &case, id).await;
@@ -320,4 +329,22 @@ async fn assembly_paths_legacy_cannot_share_are_forwarded() {
     assert_golden(CASES[0], status, &headers, &bytes);
     assert_eq!(hits.load(Ordering::SeqCst), 1, "absent town forwarded");
     let _ = AssemblyConfig::default();
+}
+
+/// The routing list is the only switch: `kma` alone builds the gateway without S3 or provider
+/// settings while the source is `LegacyOnly`; unset keeps legacy.
+#[test]
+fn native_families_kma_is_the_only_switch() {
+    use server2::gateway::runtime::{NativeFamilies, from_vars};
+    let with = |families: Option<&'static str>| {
+        move |name: &str| match name {
+            "SERVER2_GATEWAY_LEGACY_URL" => Some("http://127.0.0.1:9".to_owned()),
+            "SERVER2_NATIVE_FAMILIES" => families.map(str::to_owned),
+            _ => None,
+        }
+    };
+    assert!(NativeFamilies::from_vars(&with(Some("kma"))).unwrap().kma);
+    assert!(!NativeFamilies::from_vars(&with(None)).unwrap().kma);
+    assert!(from_vars(&with(Some("kma"))).unwrap().is_some());
+    assert!(from_vars(&with(Some("kma,kma"))).is_err());
 }

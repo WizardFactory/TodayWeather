@@ -40,8 +40,8 @@ Split (proposed to AK in the PR and the report): the S02 goldens are defined at 
 store-read boundary, so assembly parity is provable there. Building those inputs at runtime from
 S3 (parsing S13/S13a raw records into legacy rows, reading S14 history/legacy exports, station
 selection, AirKorea/life-index/KASI/MFDS/warning store reads, and the request-time RSS/mid/life
-acquisitions) is a second, separately reviewable task ("S15b"). Until it lands, the release binary
-does not register the native KMA handler and adds no runtime mode; v000903 KMA stays on legacy.
+acquisitions) is a second, separately reviewable task ("S15b"). Until it lands, a `kma` entry in
+`SERVER2_NATIVE_FAMILIES` selects a handler that forwards every request to legacy.
 
 Out of scope: S15b input sourcing; older KMA versions, nation and town (S17); route switches
 (S20); legacy retirement; any `server/` edit; live provider calls, AWS, deployment, merge,

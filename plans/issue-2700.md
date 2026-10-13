@@ -28,7 +28,9 @@ updated in `docs/architecture/server2.md`.
   `server2/tools/kma_checkpoint.py`, `server2/config/tasks/S15.json`.
 - Change (additive): `server2/src/domestic/mod.rs` (`pub mod kma;`), `server2/src/gateway/backend.rs`
   (defaulted `fetch_or_forward` and the forward branch), `server2/tools/ci.py` (checkpoint).
-- No runtime mode or setting is added (AK, 2026-10-13); the S19 KMA family waits for S15b.
+- No runtime mode is added (AK, 2026-10-13). `kma` joins the S10c `SERVER2_NATIVE_FAMILIES` list
+  (`server2/src/gateway/runtime.rs`, its test in `server2/tests/gateway/runtime.rs`);
+  `server2/tools/kma_smoke.py` is the release check. The S19 KMA family waits for S15b.
 - Docs: intent/spec/plan `issue-2700.md`; one S15 section in `docs/architecture/server2.md`.
 - Not changed: `server/`, `plans/issue-2614.md`.
 
@@ -52,5 +54,5 @@ Expected Red cause: missing `server2::domestic::kma`.
 
 ## Rollback and blast radius
 
-Library and a handler that the release binary does not register; v000903 KMA stays on legacy.
+Library and a handler selected only by `kma` in `SERVER2_NATIVE_FAMILIES`, forwarding to legacy until S15b.
 Revert the PR to roll back. Production switches remain S20.

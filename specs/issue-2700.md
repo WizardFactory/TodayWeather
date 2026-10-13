@@ -78,8 +78,9 @@ query as Express does for the used keys, selects the locale from the forwarded `
 `Native::Forward`; existing handlers keep `fetch`. On `Forward` the dispatcher runs the unchanged
 legacy hop with the remaining deadline. `register` leaves legacy selected; `select` switches and
 rolls back. The library default source is `LegacyOnly` (always `Forward`); S15b supplies the
-S3/provider source. S15 adds no runtime mode or setting (AK, 2026-10-13): the release binary does
-not register the backend, so v000903 KMA stays on legacy. Tests inject the recorded-store double,
+S3/provider source. S15 adds no runtime mode (AK, 2026-10-13): routing is the S10c
+`SERVER2_NATIVE_FAMILIES` list, whose `kma` entry registers and selects the handler with the
+`LegacyOnly` source (every request forwarded, no setting read) until S15b. Tests inject the recorded-store double,
 which answers at the recording's request instant via `KmaStore::as_of_ms`.
 
 ## Verification (AC1-AC5)
@@ -97,6 +98,7 @@ which answers at the recording's request instant via `KmaStore::as_of_ms`.
 - Checkpoint: `examples/kma_checkpoint.rs` assembles every recorded request repeatedly;
   `tools/kma_checkpoint.py` records per-assembly timing and child rusage (peak RSS, CPU), with a
   zero-round fixture-load baseline. The server2 CI entrypoint runs it on Linux.
-- S19: no KMA family module in S15. A release-binary family needs a real input source (S15b);
-  verification-only runtime modes are not added. The existing release smoke runs unchanged.
+- Release: `tools/kma_smoke.py` runs legacy -> `SERVER2_NATIVE_FAMILIES=kma` -> legacy on the
+  release binary against a loopback legacy origin (identical bytes; refused bad entries). An S19
+  KMA family with paired replay needs the real input source (S15b).
 - Placement gate, artifact policy, fmt/clippy/test, release smoke.

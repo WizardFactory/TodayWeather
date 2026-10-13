@@ -10,7 +10,10 @@
     "server2/tests/domestic/",
     "server2/examples/kma_checkpoint.rs",
     "server2/tools/kma_checkpoint.py",
-    "server2/tools/ci.py"
+    "server2/tools/ci.py",
+    "server2/src/gateway/runtime.rs",
+    "server2/tests/gateway/runtime.rs",
+    "server2/tools/kma_smoke.py"
   ],
   "outside": [
     {
