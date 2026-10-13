@@ -61,8 +61,10 @@ pub struct WarningService<T> {
     clock: Arc<dyn Clock>,
     config: ServiceConfig,
     latest: Mutex<HashMap<u8, Cached<Option<Bulletin>>>>,
-    zones: Arc<Mutex<Option<ZoneCache>>>,
+    zones: ZoneSlot,
+    zone_refresh: Arc<Mutex<()>>,
 }
+type ZoneSlot = Arc<std::sync::Mutex<Option<ZoneCache>>>;
 /// Failures keep the legacy 501 contract; `Empty` is legacy `data is empty`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ServeError {
@@ -85,7 +87,8 @@ impl<T: CatalogTransport> WarningService<T> {
             clock,
             config,
             latest: Mutex::new(HashMap::new()),
-            zones: Arc::new(Mutex::new(None)),
+            zones: Arc::new(std::sync::Mutex::new(None)),
+            zone_refresh: Arc::new(Mutex::new(())),
         }
     }
     pub fn store(&self) -> &Arc<WarningStore<T>> {
@@ -97,7 +100,7 @@ impl<T: CatalogTransport> WarningService<T> {
     /// Drop memory results (tests and replacement simulation).
     pub async fn clear_memory(&self) {
         self.latest.lock().await.clear();
-        *self.zones.lock().await = None;
+        *self.zones.lock().unwrap_or_else(|e| e.into_inner()) = None;
     }
     async fn latest_of(
         &self,
@@ -162,29 +165,59 @@ impl<T: CatalogTransport> WarningService<T> {
         let now_ms = self.now_ms()?;
         Ok(special::current(&latest, now_ms, korean))
     }
-    /// Zone state through one owned refresh task: it completes and fills memory even when
-    /// the waiting request reaches its deadline. Warm refreshes re-read only the days the
-    /// collector can still publish; a full rebuild replays everything since the seed.
+    /// Valid zone memory for the outage fallback (younger than refresh + stale).
+    fn zone_memory(
+        zones: &ZoneSlot,
+        config: &ServiceConfig,
+        fresh: bool,
+    ) -> Option<Arc<ZoneState>> {
+        let memory = zones.lock().unwrap_or_else(|e| e.into_inner());
+        let limit = if fresh {
+            config.zone_refresh
+        } else {
+            config.zone_refresh + config.stale
+        };
+        memory
+            .as_ref()
+            .filter(|c| c.at.elapsed() < limit)
+            .map(|c| c.state.clone())
+    }
+    /// Zone state through one owned single-flight refresh task: it completes and fills memory
+    /// even when the waiting request reaches its deadline. Warm refreshes re-read only the days
+    /// the collector can still publish; a full rebuild replays everything since the seed.
+    /// Memory is readable during a refresh, so a timed-out or failed refresh still serves
+    /// valid memory.
     async fn zone_state(
         &self,
         now_ms: i64,
         deadline: Instant,
     ) -> Result<Arc<ZoneState>, ServeError> {
-        let (store, zones, config) = (self.store.clone(), self.zones.clone(), self.config.clone());
+        if let Some(state) = Self::zone_memory(&self.zones, &self.config, true) {
+            return Ok(state);
+        }
+        let (store, zones, refresh, config) = (
+            self.store.clone(),
+            self.zones.clone(),
+            self.zone_refresh.clone(),
+            self.config.clone(),
+        );
         let task = tokio::spawn(async move {
-            let mut memory = zones.lock_owned().await;
-            if let Some(c) = memory.as_ref()
-                && c.at.elapsed() < config.zone_refresh
-            {
-                return Ok(c.state.clone());
+            let _single = refresh.lock_owned().await;
+            if let Some(state) = Self::zone_memory(&zones, &config, true) {
+                return Ok(state);
             }
+            let previous = zones
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .as_ref()
+                .map(|c| (c.state.clone(), c.full_at));
             let owned = Instant::now() + config.zone_deadline;
-            let refreshed = match memory.as_ref() {
-                Some(c) if c.full_at.elapsed() < config.zone_full => {
+            let refreshed = match previous {
+                Some((state, full_at)) if full_at.elapsed() < config.zone_full => {
                     store.recent_zone_rows(now_ms, owned).await.map(|rows| {
-                        let mut state = (*c.state).clone();
+                        let mut state = (*state).clone();
                         state.apply(&prepare_events(&rows));
-                        (state, c.full_at)
+                        (state, full_at)
                     })
                 }
                 _ => store
@@ -192,29 +225,21 @@ impl<T: CatalogTransport> WarningService<T> {
                     .await
                     .map(|state| (state, Instant::now())),
             };
-            match refreshed {
-                Ok((state, full_at)) => {
-                    let state = Arc::new(state);
-                    *memory = Some(ZoneCache {
-                        state: state.clone(),
-                        at: Instant::now(),
-                        full_at,
-                    });
-                    Ok(state)
-                }
-                Err(e) => match memory.as_ref() {
-                    Some(c) if c.at.elapsed() < config.zone_refresh + config.stale => {
-                        Ok(c.state.clone())
-                    }
-                    _ => Err(ServeError::Storage(e)),
-                },
-            }
+            let (state, full_at) = refreshed.map_err(ServeError::Storage)?;
+            let state = Arc::new(state);
+            *zones.lock().unwrap_or_else(|e| e.into_inner()) = Some(ZoneCache {
+                state: state.clone(),
+                at: Instant::now(),
+                full_at,
+            });
+            Ok(state)
         });
-        match tokio::time::timeout_at(deadline, task).await {
+        let result = match tokio::time::timeout_at(deadline, task).await {
             Ok(Ok(result)) => result,
             Ok(Err(_)) => Err(ServeError::Storage(Error::Transport)),
             Err(_) => Err(ServeError::Storage(Error::Timeout)),
-        }
+        };
+        result.or_else(|e| Self::zone_memory(&self.zones, &self.config, false).ok_or(e))
     }
     /// `getSpecialInfo(town)`: active warnings of the town's zones, legacy order.
     pub async fn special_info(&self, town: &Town) -> Result<Vec<SpecialInfo>, ServeError> {

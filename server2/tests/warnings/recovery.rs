@@ -10,6 +10,7 @@ use server2::{
     },
 };
 use std::{sync::Arc, time::Duration};
+use tokio::time::Instant;
 
 fn member(op: Operation, body: &[u8], fetched: &str) -> Member {
     Member {
@@ -18,15 +19,12 @@ fn member(op: Operation, body: &[u8], fetched: &str) -> Member {
         fetched_at_ms: ms(fetched) as u64,
     }
 }
-fn store_with(peer: &Peer, min_year: i64) -> Arc<WarningStore<HttpS3Transport>> {
+fn store_with(peer: &Peer) -> Arc<WarningStore<HttpS3Transport>> {
     let limits = CatalogLimits {
         deadline: Duration::from_secs(9),
         ..CatalogLimits::default()
     };
-    let config = StoreConfig {
-        min_year,
-        ..StoreConfig::default()
-    };
+    let config = StoreConfig::default();
     Arc::new(WarningStore::new(peer.transport(), limits, config).unwrap())
 }
 fn service_on(
@@ -294,9 +292,9 @@ async fn s3_outage_uses_valid_memory_or_legacy_error() {
     publish_recorded(&peer.store()).await;
     let clock = FixedClock::at("2026-10-04T00:10:00.000Z");
     // Refresh on every request; stale memory (300 s) is the outage fallback.
-    let warm = service_on(store_with(&peer, 2010), clock.clone(), Duration::ZERO);
+    let warm = service_on(store_with(&peer), clock.clone(), Duration::ZERO);
     assert_eq!(types(&warm.special(true).await.unwrap()).len(), 3);
-    let cold = service_on(store_with(&peer, 2010), clock.clone(), Duration::ZERO);
+    let cold = service_on(store_with(&peer), clock.clone(), Duration::ZERO);
     peer.kill();
     assert_eq!(types(&warm.special(true).await.unwrap()).len(), 3);
     let response = get(&cold, &[("accept-language", "ko")]).await;
@@ -311,7 +309,7 @@ async fn s3_outage_uses_valid_memory_or_legacy_error() {
 #[tokio::test]
 async fn missing_type_returns_legacy_data_is_empty() {
     let peer = Peer::new();
-    let store = store_with(&peer, 2026);
+    let store = store_with(&peer);
     store
         .publish(
             "bulletin-2",
@@ -394,21 +392,21 @@ async fn import(store: &WarningStore<HttpS3Transport>, file: &[u8]) {
 }
 #[tokio::test]
 async fn years_old_bulletins_have_no_age_expiry() {
-    // S12-R1-01: no lookback bound; older days are discovered from complete raw LISTs.
+    // S12-R1-01: no age bound down to the earliest storable period (1970).
     let peer = Peer::new();
     let store = peer.store();
     let docs = (1..=3)
-        .map(|k| seed_doc(k, "2024-03-01T09:10:00.000Z"))
+        .map(|k| seed_doc(k, "2005-03-01T09:10:00.000Z"))
         .collect();
-    import(&store, &seed_file(docs, None, "2024-03-02T00:00:00.000Z")).await;
+    import(&store, &seed_file(docs, None, "2005-03-02T00:00:00.000Z")).await;
     let service = peer.service(FixedClock::at("2026-10-04T00:10:00.000Z"));
     let list = service.special(true).await.unwrap();
     assert_eq!(
         types(&list),
         vec![
-            (1., "2024-03-01T00:10:00.000Z".into()),
-            (2., "2024-03-01T00:10:00.000Z".into()),
-            (3., "2024-03-01T00:10:00.000Z".into()),
+            (1., "2005-03-01T00:10:00.000Z".into()),
+            (2., "2005-03-01T00:10:00.000Z".into()),
+            (3., "2005-03-01T00:10:00.000Z".into()),
         ]
     );
     let c = &service.store().counters;
@@ -518,4 +516,100 @@ async fn a_day_larger_than_one_read_is_paged_whole_acquisitions() {
             .load(std::sync::atomic::Ordering::Relaxed)
             >= 1
     );
+}
+
+async fn publish_zone_row(
+    store: &WarningStore<HttpS3Transport>,
+    date: u32,
+    row: serde_json::Value,
+) {
+    store
+        .publish(
+            records::ZONE_KIND,
+            date,
+            vec![Member {
+                role: Operation::PwnCd.role().into(),
+                bytes: provider_body(&[row]).into(),
+                fetched_at_ms: ms("2026-09-28T01:00:00.000Z") as u64,
+            }],
+            deadline(),
+        )
+        .await
+        .unwrap();
+}
+fn jongno() -> Town {
+    Town {
+        first: "서울특별시".into(),
+        second: "종로구".into(),
+        third: "청운효자동".into(),
+    }
+}
+#[tokio::test]
+async fn zone_replay_starts_from_the_seed_sync_not_its_export_time() {
+    // S12-R2-02: a late export of an older sync state must not hide published releases.
+    for marker in [
+        serde_json::json!({"areaCode": "_sync", "warnVar": -1, "lastSyncAt": "2026-09-24T00:00:00.000Z", "oldestSyncedTmFc": "20260726"}),
+        serde_json::json!({"areaCode": "_sync", "warnVar": -1, "lastSyncAt": "2026-09-24T00:00:00.000Z"}),
+    ] {
+        let peer = Peer::new();
+        let store = peer.store();
+        let zone = serde_json::json!([
+            {"areaCode": "L1100100", "areaName": "seed", "warnVar": 3, "warnStress": 1, "active": true,
+             "command": "1", "eventTmFc": 202609200900_i64, "eventTmSeq": 1, "eventRank": 1},
+            marker
+        ]);
+        let zone = OrderedJson::parse(&serde_json::to_vec(&zone).unwrap()).unwrap();
+        import(
+            &store,
+            &seed_file(vec![], Some(zone), "2026-10-12T00:00:00.000Z"),
+        )
+        .await;
+        publish_zone_row(
+            &store,
+            20260927,
+            zone_row("L1100100", 3, 1, "2", 202609270900),
+        )
+        .await;
+        let service = peer.service(FixedClock::at("2026-10-13T00:10:00.000Z"));
+        assert!(service.special_info(&jongno()).await.unwrap().is_empty());
+    }
+}
+#[tokio::test]
+async fn zone_refresh_timeout_serves_valid_memory() {
+    // S12-R2-01: the request deadline elapses before a slow refresh; valid memory is served.
+    let peer = Peer::new();
+    let store = peer.store();
+    publish_zone_row(
+        &store,
+        20260927,
+        zone_row("L1100100", 3, 1, "1", 202609270900),
+    )
+    .await;
+    let service = WarningService::new(
+        store,
+        FixedClock::at("2026-09-28T00:10:00.000Z"),
+        ServiceConfig {
+            zone_refresh: Duration::ZERO,
+            deadline: Duration::from_millis(30),
+            ..ServiceConfig::default()
+        },
+    );
+    peer.fault("slow-all", "index/v2/unused.json").await;
+    // Cold: the waiter times out, the owned task still fills memory.
+    assert!(service.special_info(&jongno()).await.is_err());
+    let filled = Instant::now();
+    loop {
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        // Memory younger than refresh + stale answers even though every refresh times out.
+        if let Ok(list) = service.special_info(&jongno()).await {
+            assert_eq!(list.len(), 1);
+            break;
+        }
+        assert!(
+            filled.elapsed() < Duration::from_secs(20),
+            "owned refresh never filled memory"
+        );
+    }
+    let again = service.special_info(&jongno()).await.unwrap();
+    assert_eq!(again.len(), 1);
 }

@@ -705,8 +705,9 @@ the earliest fetch. A missing day catalog is repaired from that exact period's r
 prefix; an incomplete or failed repair skips the day because an acknowledged group
 always has its catalog and catalogs are never deleted. Catalog read errors fail with
 the legacy 501. Zone state for `specialInfo` is the newest zone seed plus every
-`pwn-cd` revision published since that snapshot, replayed in memory by an owned refresh
-task; cold replay cost grows with time since the seed. Seeds come from the
+`pwn-cd` revision published since the seed's legacy sync point (every published day
+without one), replayed in memory by an owned refresh task; cold replay cost grows with
+time since the seed. Discovery scans back to 1970, so no stored bulletin ages out. Seeds come from the
 offline `server2/tools/migration/` converter and a loopback-only importer. Newly
 collected documents use the S02 seed key order, which S19 shadow comparison must
 confirm against production bytes; the Express session cookie and the shared S08

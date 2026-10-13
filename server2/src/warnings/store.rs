@@ -23,6 +23,9 @@ use tokio::{task::JoinSet, time::Instant};
 /// Days the collector may still (re)publish: `planDays` covers today - 59 .. today.
 pub const ZONE_LOOKBACK_DAYS: i64 = 59;
 const FLASH_VALID_MS: i64 = 10 * 3_600_000;
+/// The earliest date a raw-record period can carry (`Period` validation); discovery scans
+/// every year down to it, so no stored bulletin is excluded by age.
+const FIRST_DATE: u32 = 19700101;
 /// Bounded restarts when a concurrent publication changes a catalog between pages.
 const PAGE_RESTARTS: usize = 3;
 
@@ -30,8 +33,6 @@ const PAGE_RESTARTS: usize = 3;
 pub struct StoreConfig {
     /// Concurrent day lookups per wave; the first wave is also the recent repair window.
     pub wave: usize,
-    /// Oldest year scanned when discovering published days (no age expiry above it).
-    pub min_year: i64,
     /// Complete acquisitions materialized per paged read when a day exceeds one read.
     pub page_acquisitions: usize,
     /// LIST pages allowed per discovery year (1000 keys each).
@@ -41,7 +42,6 @@ impl Default for StoreConfig {
     fn default() -> Self {
         Self {
             wave: 8,
-            min_year: 2010,
             page_acquisitions: 8,
             list_pages: 256,
         }
@@ -50,7 +50,6 @@ impl Default for StoreConfig {
 impl StoreConfig {
     pub fn validate(&self) -> Result<(), Error> {
         if !(1..=16).contains(&self.wave)
-            || !(1970..=9999).contains(&self.min_year)
             || !(1..=64).contains(&self.page_acquisitions)
             || !(1..=4096).contains(&self.list_pages)
         {
@@ -289,9 +288,6 @@ fn best(items: Vec<Option<Bulletin>>) -> Option<Bulletin> {
     }
     found
 }
-fn first_day(year: i64) -> u32 {
-    (year * 10000 + 101) as u32
-}
 impl<T: CatalogTransport> WarningStore<T> {
     pub fn new(transport: T, limits: CatalogLimits, config: StoreConfig) -> Result<Self, Error> {
         config.validate()?;
@@ -443,7 +439,8 @@ impl<T: CatalogTransport> WarningStore<T> {
         Ok(out)
     }
     /// Latest bulletin of `kind` at `now_ms`. Types 1-3 have no age expiry: after the recent
-    /// day walk, older days are discovered by complete raw LISTs back to `min_year`.
+    /// day walk, older days are discovered by complete raw LISTs back to 1970, the earliest
+    /// storable period. Announcements after KST tomorrow cannot come from the provider.
     /// Type 4 is `None` once `stored + 10 h < now` (actual + 19 h). `floor` (a known older
     /// partition) bounds memory refreshes.
     pub async fn latest(
@@ -474,7 +471,7 @@ impl<T: CatalogTransport> WarningStore<T> {
             .first(name, recent, &map, |day| best(day.items), deadline)
             .await?;
         if found.is_none() && kind != 4 && floor_index.is_none_or(|f| f < oldest) {
-            let low = floor.unwrap_or(first_day(self.config.min_year));
+            let low = floor.unwrap_or(FIRST_DATE);
             let older = self
                 .discovered(name, low, js::date_of_index(oldest - 1), deadline)
                 .await?;
@@ -519,16 +516,37 @@ impl<T: CatalogTransport> WarningStore<T> {
         let seed = self
             .day(ZONE_SEED_KIND, records::SEED_DATE, deadline)
             .await?;
-        let mut from = first_day(self.config.min_year);
+        let mut from = FIRST_DATE;
         if let Some(latest) = seed.items.last() {
-            for doc in records::zone_seed(latest)? {
-                if let Some(entry) = Entry::from_legacy(&doc) {
+            let docs = records::zone_seed(latest)?;
+            for doc in &docs {
+                if let Some(entry) = Entry::from_legacy(doc) {
                     state.insert(entry);
                 }
             }
-            // Days before the snapshot are already reflected in it (two-day overlap).
-            let exported = latest[0].envelope.identity.fetched_at_ms as i64;
-            from = from.max(kst_date(exported, -2));
+            // The snapshot reflects events only through its `_sync.lastSyncAt` (a later export
+            // time proves nothing); getPwnCd rows are final at D+2, so replay from two days
+            // before that sync. Without a valid marker, replay every published day.
+            // An unfinished legacy bootstrap (covered start later than sync - 59 days) has not
+            // seen older days either, so it also replays everything.
+            let marker = docs
+                .iter()
+                .find(|d| d.get("areaCode").and_then(Value::as_str) == Some("_sync"));
+            let synced = marker
+                .and_then(|d| d.get("lastSyncAt"))
+                .and_then(Value::as_str)
+                .and_then(js::parse_iso);
+            let covered = |synced: i64| {
+                marker
+                    .and_then(|d| d.get("oldestSyncedTmFc"))
+                    .and_then(Value::as_str)
+                    .and_then(|s| s.parse::<u32>().ok())
+                    .is_some_and(|oldest| oldest <= kst_date(synced, -ZONE_LOOKBACK_DAYS))
+            };
+            if let Some(synced) = synced.filter(|s| covered(*s)) {
+                let exported = latest[0].envelope.identity.fetched_at_ms as i64;
+                from = kst_date(synced.min(exported), -2).max(FIRST_DATE);
+            }
         }
         let today = js::day_index(kst_date(now_ms, 0));
         let recent_start = (today - ZONE_LOOKBACK_DAYS).max(js::day_index(from));
