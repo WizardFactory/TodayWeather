@@ -524,9 +524,7 @@ pub fn parse_google(body: &[u8]) -> Option<Observation> {
 pub fn parse_openweather(body: &[u8]) -> Option<Observation> {
     let body = json_object(body)?;
     let item = body.get("list").arr()?.first()?;
-    if item.obj().is_none() {
-        return None;
-    }
+    item.obj()?;
     let components = item.get("components");
     let dt = item.get("dt").num().filter(|v| finite(*v))?;
     if components.obj().is_none() && components.arr().is_none() {

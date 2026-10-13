@@ -196,7 +196,7 @@ fn policy(
 }
 /// One provider attempt's classified outcome (legacy `httpClient` kinds).
 enum Attempt {
-    Observation(AirRecord, Observation),
+    Observation(Box<(AirRecord, Observation)>),
     /// 401/403/429: the provider is marked down.
     Rejected,
     Failed,
@@ -457,7 +457,8 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                 }
                 tried.insert(provider);
                 match self.attempt(state, cell).await {
-                    Attempt::Observation(record, o) => {
+                    Attempt::Observation(found) => {
+                        let (record, o) = *found;
                         if usable(&o, lat, lon, request_ms) {
                             return Some((record, o));
                         }
@@ -590,7 +591,7 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         if !(fetched.is_finite() && fetched >= 0.) {
             return Attempt::Failed;
         }
-        Attempt::Observation(
+        Attempt::Observation(Box::new((
             AirRecord {
                 provider,
                 fetched_at_ms: fetched as u64,
@@ -598,7 +599,7 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                 body,
             },
             observation,
-        )
+        )))
     }
 }
 fn roll(m: &mut Minute, now: f64) {
