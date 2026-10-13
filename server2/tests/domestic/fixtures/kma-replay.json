@@ -1,0 +1,165 @@
+{
+  "schema": 1,
+  "family": "kma",
+  "provenance": {
+    "s02_records": "server2/tests/golden/records.json (S02 legacy wire oracle)",
+    "recording": "server2/tests/domestic/fixtures/oracle.json.gz (S15 pinned legacy oracle; see PROVENANCE.md). The frozen legacy origin serves its recorded gateway-* backend bodies; the native side serves its recorded store answers through SERVER2_KMA_MODE=recorded-local.",
+    "legacy_geocode": "Copied from server2/tests/integration/fixtures/gateway-replay.json (derived from S02 records).",
+    "max_current_count": "The oracle harness stubs manager.MAX_CURRENT_COUNT as 200; the native side is run with the recorded value.",
+    "acquisitions": "Per request and pass: the legacy side geocodes and makes one KMA backend hop; the native side geocodes and assembles in process (no backend hop)."
+  },
+  "legacy_geocode": [
+    {
+      "route": "coord",
+      "lat": 37.566,
+      "lon": 126.978,
+      "lang": "ko",
+      "source": "S02 gateway-default-domestic merged name/country/address/location; kmaAddress from its recorded backend hop path",
+      "body": {
+        "name": "명동",
+        "country": "KR",
+        "address": "서울특별시 중구 명동",
+        "location": {
+          "lat": 37.566,
+          "long": 126.978
+        },
+        "kmaAddress": {
+          "name1": "서울특별시",
+          "name2": "중구",
+          "name3": "명동"
+        }
+      }
+    },
+    {
+      "route": "coord",
+      "lat": 37.566,
+      "lon": 126.978,
+      "lang": "en",
+      "source": "S02 geocode-v000903-coord response body",
+      "body": {
+        "name": "Myeong-dong",
+        "country": "KR",
+        "address": "Myeong-dong, Jung-gu, Seoul, South Korea",
+        "location": {
+          "lat": 37.566,
+          "long": 126.978
+        },
+        "kmaAddress": {
+          "name1": "서울특별시",
+          "name2": "중구",
+          "name3": "명동"
+        }
+      }
+    }
+  ],
+  "workload": [
+    {
+      "id": "K01",
+      "path": "/weather/v000903/coord/37.5663,126.9779?temperatureUnit=F&windSpeedUnit=mph&pressureUnit=inHg&distanceUnit=mi&precipitationUnit=in&airUnit=aqicn&airForecastSource=kaq",
+      "method": "GET",
+      "headers": {
+        "accept-language": "ko-KR,ko;q=0.9"
+      },
+      "oracle": "gateway-v000903-domestic",
+      "recording": "gateway-v000903-domestic",
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1,
+            "kma_backend": 1
+          },
+          "candidate": {
+            "legacy_geo": 1
+          }
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1,
+            "kma_backend": 1
+          },
+          "candidate": {
+            "legacy_geo": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "K02",
+      "path": "/weather/v000903/coord/37.5663,126.9779?temperatureUnit=C&temperatureUnit=F&note=a+b&bad=%ZZ&airForecastSource=kaq",
+      "method": "GET",
+      "headers": {
+        "accept-language": "ko-KR,ko;q=0.9"
+      },
+      "oracle": "gateway-query-normalization",
+      "recording": "gateway-query-normalization",
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1,
+            "kma_backend": 1
+          },
+          "candidate": {
+            "legacy_geo": 1
+          }
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1,
+            "kma_backend": 1
+          },
+          "candidate": {
+            "legacy_geo": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "K03",
+      "path": "/weather/v000903/coord/37.5663,126.9779",
+      "method": "GET",
+      "headers": {},
+      "oracle": "gateway-history-never-requested",
+      "recording": "gateway-history-never-requested",
+      "acquisitions": {
+        "cold": {
+          "baseline": {
+            "legacy_geo": 1,
+            "kma_backend": 1
+          },
+          "candidate": {
+            "legacy_geo": 1
+          }
+        },
+        "warm": {
+          "baseline": {
+            "legacy_geo": 1,
+            "kma_backend": 1
+          },
+          "candidate": {
+            "legacy_geo": 1
+          }
+        }
+      }
+    }
+  ],
+  "declared_differences": [
+    {
+      "id": "D-TRANSPORT",
+      "scope": "header",
+      "names": [
+        "date",
+        "connection",
+        "keep-alive"
+      ],
+      "reason": "Per-response transport headers; not part of the S02 functional contract."
+    },
+    {
+      "id": "D-NATIVE-KMA",
+      "scope": "acquisition",
+      "kinds": [
+        "kma_backend"
+      ],
+      "reason": "S15: the native side assembles the v000903 KMA response in process instead of the legacy backend hop."
+    }
+  ]
+}

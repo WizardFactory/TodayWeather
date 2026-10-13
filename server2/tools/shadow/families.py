@@ -6,8 +6,8 @@ oracle_cases() and rollback(). S11/S12/S13 families add entries here.
 """
 import importlib
 
-READY = ('gateway',)
-MODULES = {'gateway': 'gateway_family'}
+READY = ('gateway', 'kma')
+MODULES = {'gateway': 'gateway_family', 'kma': 'kma_family'}
 
 
 def load(family):

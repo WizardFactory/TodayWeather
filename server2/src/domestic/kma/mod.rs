@@ -19,6 +19,8 @@ mod mid;
 mod policy;
 mod precip;
 mod present;
+pub mod recorded;
+pub mod runtime;
 mod short;
 mod time;
 
@@ -124,6 +126,10 @@ pub trait KmaStore {
     fn rise_set(&self, geocode: &Value, dates: &[String]) -> StoreResult;
     /// `KmaSpecialWeatherZone.find({active: true, warnVar > 0, areaCode in codes})`.
     fn special_zones(&self, area_codes: &[String]) -> StoreResult;
+    /// The request instant a snapshot was taken for (`Date.now()`); None uses the backend clock.
+    fn as_of_ms(&self) -> Option<f64> {
+        None
+    }
 }
 
 /// Legacy process parameters that differ between the deployed service and the S02 harness.

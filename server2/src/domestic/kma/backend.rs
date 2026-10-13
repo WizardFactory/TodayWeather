@@ -77,7 +77,7 @@ impl KmaBackend {
             SourceAnswer::Snapshot(store) => store,
             SourceAnswer::Forward(_) => return Ok(Native::Forward),
         };
-        let now = (self.clock)();
+        let now = store.as_of_ms().unwrap_or_else(|| (self.clock)());
         let config = self.config;
         let permit = tokio::time::timeout_at(deadline, self.cpu.clone().acquire_owned())
             .await

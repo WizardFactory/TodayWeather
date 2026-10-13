@@ -8,7 +8,7 @@
 //! mapped to legacy error handling.
 use crate::gateway::{OrderedJson, response::js_number};
 use crate::world::js as wjs;
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 /// A legacy exception (TypeError or thrown Error) with its message.
 #[derive(Debug, Clone, PartialEq)]
@@ -49,8 +49,71 @@ pub struct Total {
 
 #[derive(Default, Debug)]
 pub struct Props {
-    entries: Vec<(String, V)>,
+    entries: Vec<(Rc<str>, V)>,
+    /// Key positions for larger objects (rows carry 30-50 properties).
+    index: Option<HashMap<Rc<str>, usize, BuildFnv>>,
+    /// Whether any key is an array index (those enumerate first).
+    numeric: bool,
     kept: Vec<(String, Option<Total>)>,
+}
+const INDEX_FROM: usize = 12;
+/// FNV-1a for short property names (no untrusted-key flooding concern: keys come from the
+/// fixed legacy vocabulary and store field names).
+#[derive(Default, Clone, Copy, Debug)]
+pub struct BuildFnv;
+pub struct Fnv(u64);
+impl std::hash::BuildHasher for BuildFnv {
+    type Hasher = Fnv;
+    fn build_hasher(&self) -> Fnv {
+        Fnv(0xcbf2_9ce4_8422_2325)
+    }
+}
+impl std::hash::Hasher for Fnv {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        for b in bytes {
+            self.0 = (self.0 ^ u64::from(*b)).wrapping_mul(0x0100_0000_01b3);
+        }
+    }
+}
+impl Props {
+    fn find(&self, k: &str) -> Option<usize> {
+        match &self.index {
+            Some(ix) => ix.get(k).copied(),
+            None => self.entries.iter().position(|(key, _)| &**key == k),
+        }
+    }
+    fn reindex(&mut self) {
+        self.index = (self.entries.len() > INDEX_FROM).then(|| {
+            self.entries
+                .iter()
+                .enumerate()
+                .map(|(i, (k, _))| (k.clone(), i))
+                .collect()
+        });
+    }
+    /// Entries in JavaScript enumeration order.
+    fn ordered(&self) -> Vec<(Rc<str>, V)> {
+        if !self.numeric {
+            return self.entries.clone();
+        }
+        let mut index: Vec<(u64, &(Rc<str>, V))> = self
+            .entries
+            .iter()
+            .filter_map(|e| index_key(&e.0).map(|n| (n, e)))
+            .collect();
+        index.sort_by_key(|(n, _)| *n);
+        let mut out: Vec<(Rc<str>, V)> = index.into_iter().map(|(_, e)| e.clone()).collect();
+        out.extend(
+            self.entries
+                .iter()
+                .filter(|e| index_key(&e.0).is_none())
+                .cloned(),
+        );
+        out
+    }
 }
 #[derive(Clone, Debug)]
 pub struct Ob(Rc<RefCell<Props>>);
@@ -91,55 +154,57 @@ impl Ob {
         Self(Rc::new(RefCell::new(Props::default())))
     }
     pub fn get(&self, k: &str) -> V {
-        self.0
-            .borrow()
-            .entries
-            .iter()
-            .find(|(key, _)| key == k)
-            .map_or(V::Undef, |(_, v)| v.clone())
+        let p = self.0.borrow();
+        p.find(k).map_or(V::Undef, |i| p.entries[i].1.clone())
     }
     /// `hasOwnProperty`.
     pub fn has(&self, k: &str) -> bool {
-        self.0.borrow().entries.iter().any(|(key, _)| key == k)
+        self.0.borrow().find(k).is_some()
     }
     pub fn set(&self, k: &str, v: impl Into<V>) {
         let v = v.into();
         let mut p = self.0.borrow_mut();
-        if let Some(slot) = p.entries.iter_mut().find(|(key, _)| key == k) {
-            slot.1 = v;
-        } else {
-            p.entries.push((k.to_owned(), v));
+        if let Some(i) = p.find(k) {
+            p.entries[i].1 = v;
+            return;
+        }
+        let key: Rc<str> = k.into();
+        if index_key(k).is_some() {
+            p.numeric = true;
+        }
+        let at = p.entries.len();
+        p.entries.push((key.clone(), v));
+        match &mut p.index {
+            Some(ix) => {
+                ix.insert(key, at);
+            }
+            None if at + 1 > INDEX_FROM => p.reindex(),
+            None => (),
         }
     }
     /// `delete obj[k]`.
     pub fn del(&self, k: &str) {
-        self.0.borrow_mut().entries.retain(|(key, _)| key != k);
+        let mut p = self.0.borrow_mut();
+        if let Some(i) = p.find(k) {
+            p.entries.remove(i);
+            p.reindex();
+        }
     }
     /// Own enumerable keys in JavaScript order (array indices ascending, then insertion order).
     pub fn keys(&self) -> Vec<String> {
-        let p = self.0.borrow();
-        let mut index: Vec<(u64, String)> = p
-            .entries
-            .iter()
-            .filter_map(|(k, _)| index_key(k).map(|n| (n, k.clone())))
-            .collect();
-        index.sort_by_key(|(n, _)| *n);
-        let mut out: Vec<String> = index.into_iter().map(|(_, k)| k).collect();
-        out.extend(
-            p.entries
-                .iter()
-                .filter(|(k, _)| index_key(k).is_none())
-                .map(|(k, _)| k.clone()),
-        );
-        out
+        self.0
+            .borrow()
+            .ordered()
+            .into_iter()
+            .map(|(k, _)| k.to_string())
+            .collect()
     }
     pub fn entries(&self) -> Vec<(String, V)> {
-        self.keys()
+        self.0
+            .borrow()
+            .ordered()
             .into_iter()
-            .map(|k| {
-                let v = self.get(&k);
-                (k, v)
-            })
+            .map(|(k, v)| (k.to_string(), v))
             .collect()
     }
     pub fn len(&self) -> usize {
@@ -679,12 +744,15 @@ pub fn to_json(v: &V) -> Option<OrderedJson> {
                 .map(|x| to_json(x).unwrap_or(OrderedJson::Null))
                 .collect(),
         ),
-        V::Obj(o) => OrderedJson::Object(
-            o.entries()
-                .iter()
-                .filter_map(|(k, x)| to_json(x).map(|j| (utf16(k), j)))
-                .collect(),
-        ),
+        V::Obj(o) => {
+            let p = o.0.borrow();
+            let encode = |(k, x): &(Rc<str>, V)| to_json(x).map(|j| (utf16(k), j));
+            OrderedJson::Object(if p.numeric {
+                p.ordered().iter().filter_map(encode).collect()
+            } else {
+                p.entries.iter().filter_map(encode).collect()
+            })
+        }
     })
 }
 /// The value `JSON.parse` produces from OrderedJson.

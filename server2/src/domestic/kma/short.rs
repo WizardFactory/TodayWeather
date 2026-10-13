@@ -128,24 +128,54 @@ pub fn day_summary(list: &Arr, date: &V) -> V {
     list.push(item.clone());
     item
 }
-/// `_createOrGet3hSummaryList(list, date, strTime)`.
-pub fn summary_3h(list: &Arr, date: &V, time: &V) -> V {
+/// The slot end time of `_createOrGet3hSummaryList` (`HH00`, hours rounded up to a multiple of 3).
+fn slot_target(time: &V) -> String {
     let n = parse_int(&V::from(substr(&sv(time), 0, 2)));
     let target = (n / 3.).ceil() * 3.;
-    let target = if target < 10. {
+    if target < 10. {
         format!("0{}00", to_str(&V::Num(target)))
     } else {
         format!("{}00", to_str(&V::Num(target)))
-    };
-    let target = V::from(target);
-    for item in list.items() {
-        if strict_eq(&item.get("date3h"), date) && strict_eq(&item.get("time3h"), &target) {
-            return item;
+    }
+}
+/// `_createOrGet3hSummaryList(list, date, strTime)` with an index over string dates (the list
+/// order and the single object per (date, slot) are unchanged).
+pub struct Slots {
+    pub list: Arr,
+    map: std::collections::HashMap<(String, String), V>,
+}
+impl Slots {
+    pub fn new() -> Self {
+        Self {
+            list: Arr::new(),
+            map: std::collections::HashMap::new(),
         }
     }
-    let item = V::Obj(obj(vec![("date3h", date.clone()), ("time3h", target)]));
-    list.push(item.clone());
-    item
+    pub fn get(&mut self, date: &V, time: &V) -> V {
+        let target = slot_target(time);
+        if let V::Str(d) = date {
+            let key = (d.to_string(), target);
+            if let Some(found) = self.map.get(&key) {
+                return found.clone();
+            }
+            let item = V::Obj(obj(vec![
+                ("date3h", date.clone()),
+                ("time3h", V::from(key.1.clone())),
+            ]));
+            self.list.push(item.clone());
+            self.map.insert(key, item.clone());
+            return item;
+        }
+        let target = V::from(target);
+        for item in self.list.items() {
+            if strict_eq(&item.get("date3h"), date) && strict_eq(&item.get("time3h"), &target) {
+                return item;
+            }
+        }
+        let item = V::Obj(obj(vec![("date3h", date.clone()), ("time3h", target)]));
+        self.list.push(item.clone());
+        item
+    }
 }
 /// `_isRssValueUsable(value, missing)`.
 pub fn usable(v: &V, missing: f64) -> bool {
@@ -218,9 +248,9 @@ fn summary_to_3h(summary: &V) -> V {
 }
 /// `_convert1Hto3H(srcList, usePartial)`.
 pub fn convert_1h_to_3h(src: &Arr, use_partial: bool) -> Arr {
-    let summaries = Arr::new();
+    let mut slots = Slots::new();
     for row in src.items() {
-        let summary = summary_3h(&summaries, &row.get("date"), &row.get("time"));
+        let summary = slots.get(&row.get("date"), &row.get("time"));
         if strict_eq(&row.get("time"), &summary.get("time3h")) && !row.get("pop").nullish() {
             summary.set("popAtT", row.get("pop"));
         }
@@ -232,7 +262,7 @@ pub fn convert_1h_to_3h(src: &Arr, use_partial: bool) -> Arr {
         }
     }
     let out = Arr::new();
-    for summary in summaries.items() {
+    for summary in slots.list.items() {
         if !use_partial && !loose_eq(&summary.get("date").len(), &V::Num(3.)) {
             continue;
         }
@@ -833,11 +863,22 @@ pub fn update_current_list_for_validation(cx: &mut Cx) -> Flow {
     for i in (0..=192).rev() {
         dates.push(cx.current_time_value(9. - f64::from(i)));
     }
+    // `==` against string slot keys: string rows match by text; any other row keeps the scan.
+    let mut seen = std::collections::HashSet::new();
+    let mut other = Vec::new();
+    for c in a.items() {
+        match (c.get("date"), c.get("time")) {
+            (V::Str(d), V::Str(t)) => {
+                seen.insert((d.to_string(), t.to_string()));
+            }
+            _ => other.push(c),
+        }
+    }
     for (d, t) in dates {
-        let exists = a
-            .items()
-            .iter()
-            .any(|c| loose_eq(&c.get("date"), &s(&d)) && loose_eq(&c.get("time"), &s(&t)));
+        let exists = seen.contains(&(d.clone(), t.clone()))
+            || other
+                .iter()
+                .any(|c| loose_eq(&c.get("date"), &s(&d)) && loose_eq(&c.get("time"), &s(&t)));
         if exists {
             continue;
         }
@@ -1318,10 +1359,21 @@ fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
         }
     }
     let tmp = convert_1h_to_3h(current, true);
+    // Slots are unique per (date, time) string pair, so a map gives the same single match as
+    // the legacy nested scan.
+    let mut slots: std::collections::HashMap<(String, String), V> =
+        std::collections::HashMap::new();
+    for t in tmp.items() {
+        if let (V::Str(d), V::Str(tm)) = (t.get("date"), t.get("time")) {
+            slots.entry((d.to_string(), tm.to_string())).or_insert(t);
+        }
+    }
     for item in short.items() {
-        for t in tmp.items() {
-            if strict_eq(&item.get("date"), &t.get("date"))
-                && strict_eq(&item.get("time"), &t.get("time"))
+        let matched = match (item.get("date"), item.get("time")) {
+            (V::Str(d), V::Str(tm)) => slots.get(&(d.to_string(), tm.to_string())).cloned(),
+            _ => None,
+        };
+        if let Some(t) = matched {
             {
                 for key in t.o().keys() {
                     if key == "t1h" {
@@ -1414,10 +1466,10 @@ fn merge_short_by_shortest(short: &V, shortest: &V, current: &V, ct: &(String, S
     // lastFilterTime/restCount only feed a log line; the property read still happens.
     let _ = filtered.at(filtered.len() - 1).get("time");
     let tmp = convert_1h_to_3h(&filtered, false);
-    let rain = Arr::new();
+    let mut rain = Slots::new();
     let mut totals: Vec<(V, Vec<Option<super::js::Total>>)> = Vec::new();
     for src in filtered.items() {
-        let slot = summary_3h(&rain, &src.get("date"), &src.get("time"));
+        let slot = rain.get(&src.get("date"), &src.get("time"));
         let t = precip::get(&src, "rn1").or_else(|| precip::read(&src.get("rn1"), &V::Undef, "mm"));
         match totals.iter_mut().find(|(k, _)| strict_eq(k, &slot)) {
             Some((_, v)) => v.push(t),
