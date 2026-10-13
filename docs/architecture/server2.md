@@ -1305,3 +1305,59 @@ address-cache exception, not a weather raw/catalog publication shortcut. It is
 not automatically wired to runtime credentials. Coarse coordinate serving,
 live native providers, seven-day shadow, measured real quotas and cutover remain
 gated. Local fixture timings do not satisfy production latency or quota gates.
+
+### S13 domestic provider acquisition (2026-10-13)
+
+[S13](../../plans/issue-2698.md) ([spec](../../specs/issue-2698.md)) adds the internal
+`server2::domestic` acquisition library. It returns checked `resolver::Acquisition` groups
+for S06 publication (O-9); it wires no route, scheduler or response assembly, and it never
+stores normalized weather values. S14 owns capture timing and S15 owns assembly.
+
+| Source / kinds | Request contract | Raw format |
+| --- | --- | --- |
+| `data-go-kr`: `ultra-srt-ncst`, `ultra-srt-fcst`, `vilage-fcst` | VilageFcstInfoService_2.0, `base_date/base_time/nx/ny`, 999 rows, ≤5 pages | JSON (`dataType=JSON`) pages |
+| `data-go-kr`: `mid-fcst`, `mid-land-fcst`, `mid-ta`, `mid-sea-fcst` | MidFcstInfoService, `stnId`/`regId`, `tmFc` 0600/1800 | JSON |
+| `data-go-kr`: `uv-idx-v5`, `{oak,pine,weeds}-pollen-v3` | `areaNo=` (all), `time=YYYYMMDDHH`, 1000 rows, ≤8 pages | JSON pages |
+| `kma-web`: `town-rss` | `wid/queryDFS.jsp?gridx&gridy` | XML bytes (root `wid`) |
+| `kma-web`: `aws-minute`, `aws-hourly`, `city-obs` | `nph-aws_txt_min[?YYYYMMDDHH00&0&MINDB_60M&0&m]`, `currentweather.jsp?tm=` | EUC-KR or declared UTF-8 HTML bytes |
+
+Publication helpers port the legacy KST query-time rules (short HH10, ultra-short HH45,
+current HH40, mid 08/20, 23 past-current slots, UV three-hour slots, RSS latest). A
+multi-page result becomes records only after every page repeats `totalCount`, echoes
+`pageNo`/`numOfRows` (mandatory for multi-page sets and the life index), has the expected row
+count and no duplicate row, and all pages share one publication. Records then carry
+`Pagination{complete: true}` in one owning partition (publication `YYYYMMDD-HHMM`; AWS/city by
+KST day). Forecast rows must echo the requested grid, carry their slot fields and one accepted
+publication; ultra-short HH30 requests answered as HH00 or HH30 of that hour are stored under
+the canonical HH00 period (#2676). UV and pollen rows must carry their own scalar index
+fields with at least one numeric value. RSS rows need every field the legacy parser reads.
+HTML pages must be complete (`</html>`) with a closed observation table holding data rows;
+the EUC-KR city label does not hide its timestamp. Callers may pass a minimum publication for
+RSS and the AWS minute page (`WebRequest::not_before`) so an older page is `Stale`.
+
+Rejections never become records. S08 `classify` now also reads the JSON-form gateway
+envelope `OpenAPI_ServiceResponse.cmmMsgHeader.returnReasonCode`, so JSON quota/auth answers
+rotate or stop like the XML form (#2604). A per-call validator turns `03`, an empty `00`,
+life-index `99` and a page whose rows all echo another publication into terminal NoData after
+one funded attempt (legacy notPublished/previousPublication), reported as `NotPublished`,
+`NoData` or `Stale`. Any later-page failure discards the whole set. A per-service key ring
+keeps the #2604 sticky position: each call offers the current key plus the next distinct
+quota owner; the ring moves to the key that answered or past every rejected key. Keys follow
+`dataGoKrKeys.parse` and are percent-decoded once; the transport encodes once.
+
+KMA web pages use a keyless transport with the S08 body/header bounds, HTTPS or literal
+loopback, same-host redirects only, and at most two attempts (transport failure, incomplete
+body or 5xx) inside the caller deadline. Legacy unbounded RSS retries and 10×1 s scrape loops
+are capture scheduling for S14, not acquisition. Aggregate `server2_domestic_*` counters cover
+funded calls, acknowledged reserved and consumed units, per-outcome attempts, funding denials,
+public attempts and complete/incomplete groups; they are not yet exposed on `/internal/metrics`.
+Each consumed unit is recorded before HTTP, so a caller cancelled after funding or sending is
+still counted (`attempts_unsettled`); concurrent calls cannot move the key ring back onto a key
+another call saw rejected.
+
+Recorded differences: HTTPS instead of HTTP for apis.data.go.kr and KMA web hosts (live KMA
+web HTTPS reachability is unverified), JSON instead of XML, at most one funded retry per page
+instead of later whole-pass retries, and codes 10/12 terminal. AirKorea/KECO, KASI rise/set and
+forecast-zone requests (`returnType`, `_type`, `type=json`) are not ported by S13; warnings
+remain S12. Verification uses recorded and synthetic fixtures with loopback provider and S3
+peers only; no live provider, quota or AWS behavior is claimed.
