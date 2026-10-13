@@ -1,0 +1,89 @@
+{
+ "_comment": "Reconstructed from the Google Air Quality API currentConditions:lookup documentation (field names, units) with Seoul-like values; not a recorded response (#2628, the API was not enabled on the project when this was written).",
+ "dateTime": "2026-09-27T14:00:00Z",
+ "regionCode": "kr",
+ "indexes": [
+  {
+   "code": "uaqi",
+   "displayName": "Universal AQI",
+   "aqi": 63,
+   "aqiDisplay": "63",
+   "color": {
+    "red": 0.6,
+    "green": 0.85,
+    "blue": 0.2
+   },
+   "category": "Good air quality",
+   "dominantPollutant": "pm25"
+  },
+  {
+   "code": "kor_cai",
+   "displayName": "CAI (KR)",
+   "aqi": 58,
+   "aqiDisplay": "58",
+   "color": {
+    "red": 0.2,
+    "green": 0.6,
+    "blue": 0.9
+   },
+   "category": "Moderate air quality",
+   "dominantPollutant": "pm25"
+  }
+ ],
+ "pollutants": [
+  {
+   "code": "co",
+   "displayName": "CO",
+   "fullName": "Carbon monoxide",
+   "concentration": {
+    "value": 334.24,
+    "units": "PARTS_PER_BILLION"
+   }
+  },
+  {
+   "code": "no2",
+   "displayName": "NO2",
+   "fullName": "Nitrogen dioxide",
+   "concentration": {
+    "value": 10.4,
+    "units": "PARTS_PER_BILLION"
+   }
+  },
+  {
+   "code": "o3",
+   "displayName": "O3",
+   "fullName": "Ozone",
+   "concentration": {
+    "value": 54.2,
+    "units": "PARTS_PER_BILLION"
+   }
+  },
+  {
+   "code": "pm10",
+   "displayName": "PM10",
+   "fullName": "Inhalable particulate matter (<10µm)",
+   "concentration": {
+    "value": 41.0,
+    "units": "MICROGRAMS_PER_CUBIC_METER"
+   }
+  },
+  {
+   "code": "pm25",
+   "displayName": "PM2.5",
+   "fullName": "Fine particulate matter (<2.5µm)",
+   "concentration": {
+    "value": 29.0,
+    "units": "MICROGRAMS_PER_CUBIC_METER"
+   }
+  },
+  {
+   "code": "so2",
+   "displayName": "SO2",
+   "fullName": "Sulfur dioxide",
+   "concentration": {
+    "value": 4.3,
+    "units": "PARTS_PER_BILLION"
+   }
+  }
+ ]
+}

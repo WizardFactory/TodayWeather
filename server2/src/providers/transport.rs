@@ -1,11 +1,69 @@
 use super::ProviderKey;
 use crate::budget::Provider;
 use std::{future::Future, net::IpAddr, time::Duration};
+/// Credential and response-format parameters a data.go.kr-style service declares (S13a).
+/// `DataType` is the S13 default; the others are the legacy forms of services that do not
+/// accept `dataType`. The transport appends them after the family query.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
+pub enum ResponseFormat {
+    /// `serviceKey=<key>&dataType=JSON` (VilageFcst, MidFcst, life index).
+    #[default]
+    DataType,
+    /// `serviceKey=<key>&returnType=json` (AirKorea B552584, `airkoreaObservation.buildUrl`).
+    ReturnType,
+    /// `_type=json&ServiceKey=<key>` (KASI RiseSetInfoService, `kasi.riseset.controller`).
+    UnderscoreType,
+    /// `type=json&ServiceKey=<key>` (newsky2 ForecastZoneInfoService, `kma.forecast.zone`).
+    Type,
+}
+impl ResponseFormat {
+    /// Credential parameter name, spelled as legacy sends it.
+    pub fn key_param(self) -> &'static str {
+        match self {
+            Self::DataType | Self::ReturnType => "serviceKey",
+            Self::UnderscoreType | Self::Type => "ServiceKey",
+        }
+    }
+    /// Format parameter name and value, spelled as legacy sends it.
+    pub fn format_param(self) -> (&'static str, &'static str) {
+        match self {
+            Self::DataType => ("dataType", "JSON"),
+            Self::ReturnType => ("returnType", "json"),
+            Self::UnderscoreType => ("_type", "json"),
+            Self::Type => ("type", "json"),
+        }
+    }
+    /// Legacy order: the credential first for the data.go.kr 2.0 and B552584 builders, last
+    /// for the KASI and newsky2 URL builders.
+    fn key_first(self) -> bool {
+        matches!(self, Self::DataType | Self::ReturnType)
+    }
+    /// Header result codes that mean success. The newsky2 services answer `0000`.
+    pub fn success_codes(self) -> &'static [&'static str] {
+        match self {
+            Self::Type => &["0", "00", "0000"],
+            _ => &["0", "00"],
+        }
+    }
+    /// The family query must not already carry a credential (any case) or format parameter.
+    pub(crate) fn admits(self, url: &reqwest::Url) -> bool {
+        let (format, _) = self.format_param();
+        !url.query_pairs()
+            .any(|(k, _)| k.eq_ignore_ascii_case("servicekey") || k == format || k == "dataType")
+    }
+}
 /// No Debug: URL/query and key are privately held, never budget metadata or diagnostics.
 pub struct Request {
     pub(crate) endpoint: reqwest::Url,
     pub(crate) key: ProviderKey,
     pub(crate) provider: Provider,
+    pub(crate) format: ResponseFormat,
+}
+impl Request {
+    /// The declared response format (the credential itself is never exposed).
+    pub fn format(&self) -> ResponseFormat {
+        self.format
+    }
 }
 pub struct ProviderResponse {
     pub status: u16,
@@ -63,13 +121,28 @@ impl ProviderTransport for HttpProviderTransport {
             let mut query = url.query_pairs_mut();
             match request.provider {
                 Provider::DataGoKr => {
-                    query.append_pair("serviceKey", &request.key.0);
-                    query.append_pair("dataType", "JSON");
+                    let format = request.format;
+                    if !format.admits(&request.endpoint) {
+                        return Err(ProviderTransportError::Invalid);
+                    }
+                    let (name, value) = format.format_param();
+                    if format.key_first() {
+                        query.append_pair(format.key_param(), &request.key.0);
+                        query.append_pair(name, value);
+                    } else {
+                        query.append_pair(name, value);
+                        query.append_pair(format.key_param(), &request.key.0);
+                    }
                 }
                 Provider::VisualCrossing => {
                     query.append_pair("key", &request.key.0);
                 }
-                Provider::Kakao | Provider::Google => return Err(ProviderTransportError::Invalid),
+                // Geocoding and air providers use their own transports.
+                Provider::Kakao
+                | Provider::Google
+                | Provider::GoogleAirQuality
+                | Provider::OpenWeather
+                | Provider::Waqi => return Err(ProviderTransportError::Invalid),
             }
         }
         let response = self

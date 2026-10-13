@@ -1,16 +1,19 @@
 //! Overseas current-air branch: normalized observation, WAQI body parsing, request-time
 //! evaluation and the legacy `_applyAirObservation` rendering (#2628 at ca8735cf).
-//! Live air provider acquisition is not implemented in S11 (undecided funding/persistence).
+//! S13a adds the Google and OpenWeather parsers; the live chain is `air_chain::LiveAir`.
 use super::{
     i18n::Locale,
     js::{Obj, Val, dot_time, iso},
     units::{
         air_grade_str, airkorea_grade_str, airnow_grade_str, index2grade, ppb2ppm, shorten_station,
-        value2grade, value2index,
+        um2ppm, value2grade, value2index,
     },
     vc::parse_iso_z,
 };
-use crate::gateway::{BoxFuture, OrderedJson};
+use crate::{
+    budget::Provider,
+    gateway::{BoxFuture, OrderedJson},
+};
 
 pub const POLLUTANTS: [&str; 6] = ["pm10", "pm25", "o3", "no2", "so2", "co"];
 const FRESHNESS_MS: f64 = 8. * 3_600_000.;
@@ -416,4 +419,137 @@ impl AirSource for RecordedWaqi {
             }
         })
     }
+}
+
+/// Free-phase air providers in the legacy `FREE_ORDER` (S13a).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum AirProvider {
+    Google,
+    OpenWeather,
+    Waqi,
+}
+impl AirProvider {
+    /// `config/air.js` FREE_ORDER: Google -> OpenWeather -> WAQI (aqicn).
+    pub const ORDER: [AirProvider; 3] = [Self::Google, Self::OpenWeather, Self::Waqi];
+    /// Raw record source.
+    pub fn source(self) -> &'static str {
+        match self {
+            Self::Google => "air-google",
+            Self::OpenWeather => "air-openweather",
+            Self::Waqi => "air-waqi",
+        }
+    }
+    pub fn from_source(source: &str) -> Option<Self> {
+        Self::ORDER.into_iter().find(|p| p.source() == source)
+    }
+    /// S08 funding identity.
+    pub fn budget(self) -> Provider {
+        match self {
+            Self::Google => Provider::GoogleAirQuality,
+            Self::OpenWeather => Provider::OpenWeather,
+            Self::Waqi => Provider::Waqi,
+        }
+    }
+    /// The adapter's `parse` for a 2xx body; None is the legacy `invalid-body` failure.
+    pub fn parse(self, body: &[u8]) -> Option<Observation> {
+        match self {
+            Self::Google => parse_google(body),
+            Self::OpenWeather => parse_openweather(body),
+            Self::Waqi => parse_waqi(body),
+        }
+    }
+}
+const GASES: [&str; 4] = ["o3", "no2", "so2", "co"];
+/// `observation.fromUgm3`: PM stays ug/m3; a gas becomes ppm by the molar conversion.
+fn from_ugm3(code: &str, value: &Val) -> Option<f64> {
+    let v = value.num().filter(|v| finite(*v))?;
+    if !GASES.contains(&code) {
+        return Some(v);
+    }
+    Some(um2ppm(code, v)).filter(|p| finite(*p))
+}
+/// Set a pollutant like the legacy object assignment (a later duplicate wins).
+fn assign(list: &mut Vec<(&'static str, f64)>, code: &'static str, value: f64) {
+    match list.iter_mut().find(|(c, _)| *c == code) {
+        Some(slot) => slot.1 = value,
+        None => list.push((code, value)),
+    }
+}
+fn json_object(body: &[u8]) -> Option<Val> {
+    // httpClient: a 2xx body must parse to a non-null object (arrays included).
+    let v = Val::from_ordered(&OrderedJson::parse(body).ok()?);
+    matches!(v, Val::Obj(_) | Val::Arr(_)).then_some(v)
+}
+/// Google Air Quality `currentConditions:lookup` body (`providers/google.js` parse).
+pub fn parse_google(body: &[u8]) -> Option<Observation> {
+    let body = json_object(body)?;
+    let items = body.get("pollutants").arr()?;
+    let time = body.get("dateTime").str()?.to_owned();
+    let mut pollutants = Vec::new();
+    for item in items {
+        let Some(code) = item
+            .get("code")
+            .str()
+            .and_then(|c| POLLUTANTS.iter().find(|p| **p == c).copied())
+        else {
+            continue;
+        };
+        let c = item.get("concentration");
+        if c.obj().is_none() || !c.get("value").num().is_some_and(finite) {
+            continue;
+        }
+        let value = match c.get("units").str() {
+            Some("MICROGRAMS_PER_CUBIC_METER") => from_ugm3(code, c.get("value")),
+            Some("PARTS_PER_BILLION") if GASES.contains(&code) => {
+                c.get("value").num().map(ppb2ppm).filter(|v| finite(*v))
+            }
+            Some("PARTS_PER_MILLION") if GASES.contains(&code) => c.get("value").num(),
+            _ => None,
+        };
+        if let Some(v) = value {
+            assign(&mut pollutants, code, v);
+        }
+    }
+    Some(create(
+        "google",
+        false,
+        &Val::Str(time),
+        &Val::Undef,
+        &Val::Undef,
+        &pollutants,
+        &Val::Str("Google Air Quality".into()),
+    ))
+}
+/// OpenWeather `/data/2.5/air_pollution` body (`providers/openweather.js` parse).
+pub fn parse_openweather(body: &[u8]) -> Option<Observation> {
+    let body = json_object(body)?;
+    let item = body.get("list").arr()?.first()?;
+    item.obj()?;
+    let components = item.get("components");
+    let dt = item.get("dt").num().filter(|v| finite(*v))?;
+    if components.obj().is_none() && components.arr().is_none() {
+        return None;
+    }
+    let mut pollutants = Vec::new();
+    for (field, code) in [
+        ("pm2_5", "pm25"),
+        ("pm10", "pm10"),
+        ("o3", "o3"),
+        ("no2", "no2"),
+        ("so2", "so2"),
+        ("co", "co"),
+    ] {
+        if let Some(v) = from_ugm3(code, components.get(field)) {
+            assign(&mut pollutants, code, v);
+        }
+    }
+    Some(create(
+        "openweather",
+        false,
+        &Val::Num(dt * 1000.),
+        &Val::Undef,
+        &Val::Undef,
+        &pollutants,
+        &Val::Str("OpenWeather".into()),
+    ))
 }

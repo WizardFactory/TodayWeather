@@ -1,14 +1,18 @@
 //! Funded data.go.kr page acquisition and keyless KMA web acquisition into one checked
 //! `resolver::Acquisition`. Publication through S06 (O-9) remains the caller's step.
+use super::airkorea::AirKoreaRequest;
 use super::family::{DataGoKrRequest, Endpoints, Service, WebRequest};
 use super::format::{Expect, PageReport, PageVerdict, WebVerdict, inspect_page, inspect_web};
 use super::metrics::{CallGuard, DomesticMetrics};
+use super::publication::Publication;
+use super::riseset::RiseSetRequest;
+use super::zone::ZoneRequest;
 use super::{Acquired, DomesticError};
 use crate::budget::{BudgetStore, BudgetTransport, Clock, Provider};
 use crate::providers::{
     AcquiredBody, AcquisitionError, AcquisitionOutcome, AttemptResult, CallReport, Candidate,
     Disposition, FundedExecutor, ProviderKey, ProviderTransport, ProviderTransportError,
-    PublicRequest, PublicTransport, Validator,
+    PublicRequest, PublicTransport, ResponseFormat, Validator,
 };
 use crate::resolver::Acquisition;
 use crate::storage::{
@@ -66,9 +70,13 @@ impl<B: BudgetTransport> KeyRing<B> {
     }
     /// The current key and, when configured, the next one as the single rotation candidate.
     fn candidates(&self) -> (usize, Vec<Candidate<B>>) {
+        self.offer(true)
+    }
+    /// `candidates`, or only the current key for a service that never rotates (AirKorea).
+    fn offer(&self, rotate: bool) -> (usize, Vec<Candidate<B>>) {
         let start = self.current();
         let n = self.entries.len();
-        let picked = if n > 1 {
+        let picked = if n > 1 && rotate {
             vec![start, (start + 1) % n]
         } else {
             vec![start]
@@ -147,6 +155,68 @@ impl Validator for PageValidator {
                 inspect_page(&self.request, self.page, self.expect, json),
                 PageVerdict::NotPublished | PageVerdict::Stale(_) | PageVerdict::NoData
             )
+    }
+}
+/// Page facts of an S13a family page (AirKorea, KASI, forecast zone).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PageFacts {
+    pub(crate) total: u32,
+    pub(crate) rows: u32,
+    /// Row identities used to reject duplicates across pages.
+    pub(crate) row_keys: Vec<String>,
+    /// Newest publication on the page (data time, locdate or fetch day).
+    pub(crate) publication: Publication,
+    /// At least one row carries a usable value (AirKorea concentration).
+    pub(crate) usable: bool,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum PageCheck {
+    Valid(PageFacts),
+    /// Terminal empty answer on page 1 (never a record).
+    NoData,
+    Invalid(&'static str),
+}
+/// A data.go.kr-key family with its own response format (S13a). Sealed to this crate.
+pub(crate) trait Paged: Clone + Send + Sync + 'static {
+    fn service(&self) -> Service;
+    fn format(&self) -> ResponseFormat;
+    /// Whether a rejected key rotates to the next ring entry within the call (#2604).
+    fn rotates(&self) -> bool;
+    fn per_page(&self) -> u32;
+    fn max_pages(&self) -> u32;
+    fn kind(&self) -> &'static str;
+    fn provider_key(&self) -> crate::storage::ProviderKey;
+    fn endpoint(&self, endpoints: &Endpoints, page: u32) -> Result<reqwest::Url, DomesticError>;
+    fn partition(&self, publication: Publication) -> String;
+    /// `total` is page 1's count for later pages; `now_ms` is the fetch wall clock.
+    fn inspect(
+        &self,
+        page: u32,
+        total: Option<u32>,
+        json: &serde_json::Value,
+        now_ms: i64,
+    ) -> PageCheck;
+}
+struct PagedValidator<F> {
+    request: F,
+    page: u32,
+    total: Option<u32>,
+    now_ms: i64,
+}
+impl<F: Paged> Validator for PagedValidator<F> {
+    fn valid(&self, json: &serde_json::Value) -> bool {
+        matches!(
+            self.request
+                .inspect(self.page, self.total, json, self.now_ms),
+            PageCheck::Valid(_)
+        )
+    }
+    fn no_data(&self, json: &serde_json::Value) -> bool {
+        self.page == 1
+            && self
+                .request
+                .inspect(self.page, self.total, json, self.now_ms)
+                == PageCheck::NoData
     }
 }
 struct Unused;
@@ -365,6 +435,167 @@ where
             .collect::<Result<Vec<_>, _>>()
             .map_err(DomesticError::Storage)?;
         self.group(records, &publication.partition())
+    }
+
+    /// AirKorea station or sido observations for one sido (S13a). Every page must pass.
+    pub async fn acquire_airkorea(
+        &self,
+        request: &AirKoreaRequest,
+        deadline: Instant,
+    ) -> Result<Acquired, DomesticError> {
+        self.acquire_paged(request, deadline).await
+    }
+    /// KASI sunrise/sunset of one legacy area and day (S13a).
+    pub async fn acquire_rise_set(
+        &self,
+        request: &RiseSetRequest,
+        deadline: Instant,
+    ) -> Result<Acquired, DomesticError> {
+        self.acquire_paged(request, deadline).await
+    }
+    /// The forecast-zone code list (S13a).
+    pub async fn acquire_zones(
+        &self,
+        request: &ZoneRequest,
+        deadline: Instant,
+    ) -> Result<Acquired, DomesticError> {
+        self.acquire_paged(request, deadline).await
+    }
+    async fn inspect_paged<F: Paged>(
+        &self,
+        request: &F,
+        page: u32,
+        total: Option<u32>,
+        body: &AcquiredBody,
+        now_ms: i64,
+        deadline: Instant,
+    ) -> Result<PageCheck, DomesticError> {
+        let (request, bytes) = (request.clone(), body.body.clone());
+        self.blocking(deadline, move || {
+            match serde_json::from_slice::<serde_json::Value>(&bytes) {
+                Ok(json) => request.inspect(page, total, &json, now_ms),
+                Err(_) => PageCheck::Invalid("json"),
+            }
+        })
+        .await
+    }
+    async fn acquire_paged<F: Paged>(
+        &self,
+        request: &F,
+        deadline: Instant,
+    ) -> Result<Acquired, DomesticError> {
+        let ring = self
+            .rings
+            .get(&request.service())
+            .ok_or(DomesticError::Invalid("no key ring for service"))?;
+        let incomplete = |reason| {
+            self.metrics.incomplete();
+            DomesticError::Incomplete(reason)
+        };
+        let mut pages: Vec<(AcquiredBody, PageFacts, u64)> = Vec::new();
+        let mut seen = HashSet::new();
+        let (mut total, mut count, mut page) = (None, 1, 1);
+        while page <= count {
+            let url = request.endpoint(&self.endpoints, page)?;
+            let now = self.now_ms()?;
+            let validator = Arc::new(PagedValidator {
+                request: request.clone(),
+                page,
+                total,
+                now_ms: now as i64,
+            });
+            let (start, candidates) = ring.offer(request.rotates());
+            let mut guard = CallGuard::new(&self.metrics);
+            let result = self
+                .funded
+                .execute_formatted(
+                    url,
+                    request.format(),
+                    candidates,
+                    deadline,
+                    validator,
+                    &mut guard.report,
+                )
+                .await;
+            let report = guard.finish(&result);
+            // A non-rotating service (AirKorea) keeps its one selected key (#2636).
+            if request.rotates() {
+                ring.settle(start, &report);
+            }
+            let body = match result {
+                Ok(AcquisitionOutcome::Data(body)) => body,
+                Ok(AcquisitionOutcome::NoData(_)) => {
+                    if page > 1 {
+                        return Err(incomplete("no data after the first page"));
+                    }
+                    self.metrics.no_data();
+                    return Ok(Acquired::NoData);
+                }
+                Err(e) => {
+                    if !pages.is_empty() {
+                        self.metrics.incomplete();
+                    }
+                    return Err(e.into());
+                }
+            };
+            let fetched = self.now_ms()?;
+            let PageCheck::Valid(facts) = self
+                .inspect_paged(request, page, total, &body, now as i64, deadline)
+                .await?
+            else {
+                return Err(incomplete("page changed after validation"));
+            };
+            if facts.row_keys.iter().any(|k| !seen.insert(k.clone())) {
+                return Err(incomplete("duplicate row across pages"));
+            }
+            if page == 1 {
+                count = if facts.rows == facts.total {
+                    1
+                } else {
+                    facts.total.div_ceil(request.per_page())
+                };
+                if count > request.max_pages() || count as usize > self.limits.members {
+                    return Err(incomplete("page count exceeds the family limit"));
+                }
+                total = Some(facts.total);
+            }
+            pages.push((body, facts, fetched));
+            page += 1;
+        }
+        if !pages.iter().any(|(_, f, _)| f.usable) {
+            return Err(incomplete("no usable observation"));
+        }
+        let publication = pages
+            .iter()
+            .map(|(_, f, _)| f.publication)
+            .max()
+            .ok_or(DomesticError::Invalid("no pages"))?;
+        let key = request.provider_key();
+        let pages_total = pages.len() as u32;
+        let records = pages
+            .into_iter()
+            .enumerate()
+            .map(|(i, (body, _, fetched))| {
+                RawRecord::new(
+                    DATA_GO_KR,
+                    request.kind(),
+                    &key,
+                    publication.period(),
+                    fetched,
+                    body.status,
+                    content_type(&body.content_type),
+                    Some(Pagination {
+                        page: i as u32 + 1,
+                        pages: pages_total,
+                        complete: true,
+                    }),
+                    body.body.into(),
+                    &self.limits.raw,
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(DomesticError::Storage)?;
+        self.group(records, &request.partition(publication))
     }
 
     fn group(&self, records: Vec<RawRecord>, partition: &str) -> Result<Acquired, DomesticError> {
