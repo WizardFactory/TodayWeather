@@ -253,7 +253,8 @@
       "dot": "cyan",
       "title": "AirKorea recovery design (#2636)",
       "items": [
-        "Migrate station/city observations to supported HTTPS services; validate full batches before writes.",
+        "All AirKorea calls (observations, station list, forecast, nearby) use supported HTTPS services; validate every page before writes.",
+        "Skip keys the provider rejects as credentials; quota never switches keys.",
         "Await station and province aggregate storage; emit sanitized UTC outcomes.",
         "Nation: retain fresh province averages; absent data uses shared global air at representative points."
       ]

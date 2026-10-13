@@ -201,8 +201,8 @@ raw or encoded `serviceKey` once, requests JSON, validates the response header
 and every page, and then normalizes observation fields. Each attempt has a
 5-second deadline and 2 MiB body limit; transient transport/5xx failures retry
 once. A province has a 30-second fetch budget and at most 20 pages / 2,000 rows.
-Authentication, quota and invalid payloads terminate without key rotation or
-outer retry multiplication. Four provinces run concurrently; one failure does
+Quota and invalid payloads terminate without key rotation or outer retry
+multiplication. Four provinces run concurrently; one failure does
 not stop the other provinces. Scheduled station/sido runs cannot overlap another
 run of the same type in the same process (there is no new distributed lock).
 
@@ -221,13 +221,36 @@ province, stable error code, saved count, unavailable station names and observat
 time, never URLs, keys or provider bodies. Successful outcomes use stdout so the
 production error-only Winston console does not suppress them; failures use error
 logging. Best-effort S3 observation archival remains outside DB success semantics.
-Forecast and station-metadata legacy APIs are not migrated by this change.
 
-The user confirmed on 2026-09-29 that the AirKorea operating key is expired and
-will be renewed separately. No current provider entitlement, live collection
-success or production recovery is claimed. See the [rollout and rollback
-procedure](../operations/airkorea-recovery.md) for renewal and scheduled
-readback gates. Client-requested nation recovery uses Mongo plus the existing
+**Key selection and remaining operations (#2636, 2026-10-13).** Every AirKorea
+request uses the same client and the configured `AIRKOREA_SECRET_KEYS` list.
+It starts with the key that last produced a valid response, otherwise the last
+list entry. When the provider rejects the credential itself (codes 20, 30, 31,
+32, or HTTP 401/403 classified from the gateway body) or the entry is a
+placeholder, the request moves to the previous entry, wrapping once. Quota
+(code 22), transport, timeout, 5xx and payload failures never change the key,
+so switching keys cannot bypass a quota. When every key is rejected the request
+fails with `NO_VALID_KEY`. Each rejection is logged as `KEY_REJECTED` with the
+operation, key position and code only. Station metadata
+(`MsrstnInfoInqireSvc/getMsrstnList`, gather startup), the dust forecast
+(`ArpltnInforInqireSvc/getMinuDustFrcstDspth`, `ver=1.1`, `/gather/kecoForecast`)
+and the nearby-station lookup (`MsrstnInfoInqireSvc/getNearbyMsrstnList`,
+`ver=1.1`, no current caller) now use the same supported service and complete
+page validation; the retired `openapi.airkorea.or.kr` host is no longer called.
+Station metadata omits `ver`, so `dmX` stays latitude and `dmY` longitude as
+`parseMsrstnList` expects. Although the forecast document says date searches
+ignore paging, the provider returned 10 of 28 items without `numOfRows` on
+2026-10-13, so every operation requests and verifies all pages. Item-level
+`serviceKey` echoes are removed before storage or archival.
+
+On 2026-10-13 a read-only check of the locally configured operator key list
+found one valid key (the others: one expired, three unregistered). Collection
+had failed because it used only the last, expired entry. An isolated run with
+that list against the real provider and an in-memory MongoDB stored fresh
+station, province, station-metadata and forecast rows that the existing read
+path returned. The gather host's own key list and deployed collection were not
+observed. See the [rollout and rollback procedure](../operations/airkorea-recovery.md)
+for configuration and scheduled readback gates. Client-requested nation recovery uses Mongo plus the existing
 global-air chain and never calls AirKorea; see [nation response](mobile-api.md#nation-air-recovery-2636).
 
 ## Current-grid quota prevention (#2648)

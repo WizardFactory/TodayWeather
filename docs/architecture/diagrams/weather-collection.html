@@ -5401,7 +5401,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>AirKorea recovery design (#2636)</h3>
         </div>
         <ul>
-          <li>Migrate station/city observations to supported HTTPS services; validate full batches before writes.</li>
+          <li>All AirKorea calls (observations, station list, forecast, nearby) use supported HTTPS services; validate every page before writes.</li>
+          <li>Skip keys the provider rejects as credentials; quota never switches keys.</li>
           <li>Await station and province aggregate storage; emit sanitized UTC outcomes.</li>
           <li>Nation: retain fresh province averages; absent data uses shared global air at representative points.</li>
         </ul>
