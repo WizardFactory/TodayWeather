@@ -13,8 +13,6 @@ pub fn configured_gateway() -> Result<Option<Arc<Gateway>>, GatewayError> {
     let backend = BackendDispatcher::legacy(&base)?;
     // S11: opt-in loopback-only native world; absent configuration keeps legacy world.
     crate::world::runtime::configure(&backend)?;
-    // S15: opt-in loopback-only native KMA v000903; absent configuration keeps legacy KMA.
-    crate::domestic::kma::runtime::configure(&backend, &base)?;
     let mode = env::var("SERVER2_GEOCODER_MODE").unwrap_or_else(|_| "legacy".into());
     let geocoder: Arc<dyn super::Geocoder> = match mode.as_str() {
         "legacy" => Arc::new(LegacyGeocoder::new(&base)?),

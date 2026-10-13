@@ -5,12 +5,9 @@
     "server2/config/tasks/S15.json",
     "server2/src/domestic/mod.rs",
     "server2/src/domestic/kma/",
-    "server2/src/api/",
     "server2/src/gateway/backend.rs",
-    "server2/src/gateway/runtime.rs",
     "server2/tests/domestic.rs",
     "server2/tests/domestic/",
-    "server2/tools/shadow/",
     "server2/examples/kma_checkpoint.rs",
     "server2/tools/kma_checkpoint.py",
     "server2/tools/ci.py"

@@ -1,18 +1,20 @@
-//! Local verification source: serves recorded store answers in the S15 oracle recording format
-//! (`scenarios[]` with `path`, `query`, `lang`, `clock`, `db` and ordered `calls` carrying the
-//! method, its arguments as copied when legacy made the call, and the answer). It lets the release
-//! binary assemble native KMA responses against loopback peers for the smoke and paired replay,
-//! and it is the replay store of the parity tests. It is not a production input source (S15b
-//! supplies that from S3).
+//! Test double: serves recorded store answers in the S15 oracle recording format (`scenarios[]`
+//! with `path`, `query`, `lang`, `clock`, `db` and ordered `calls` carrying the method, its
+//! arguments as copied when legacy made the call, and the answer). It is the replay store of the
+//! parity, gateway and checkpoint workloads; the runtime has no recorded or local input mode
+//! (S15b supplies the S3 input source).
 //!
 //! A recording replays only the request it was made for: a call outside the recorded order, with
 //! different arguments or beyond the recorded calls, and a reply leaving recorded calls unused,
-//! forward the request to legacy ([`super::unavailable`]) instead of assembling from inputs the
+//! forward the request to legacy (`kma::unavailable`) instead of assembling from inputs the
 //! recording does not contain.
-use super::backend::{KmaSource, SourceAnswer, parse_path};
-use super::{DbVersion, KmaRequest, KmaStore, MidModel, StoreError, StoreResult, TownModel};
-use crate::gateway::{BoxFuture, OrderedJson};
 use serde_json::{Value, json};
+use server2::domestic::kma::{
+    DbVersion, KmaRequest, KmaStore, MidModel, StoreError, StoreResult, TownModel,
+    backend::{KmaSource, SourceAnswer, parse_path},
+    unavailable,
+};
+use server2::gateway::{BoxFuture, OrderedJson};
 use std::{io::Read, sync::Arc, sync::Mutex};
 use tokio::time::Instant;
 
@@ -44,7 +46,7 @@ fn text(v: &OrderedJson, key: &str) -> Option<String> {
 }
 /// `Date.parse` of `YYYY-MM-DDTHH:MM:SS.sssZ`.
 fn iso_ms(s: &str) -> Option<f64> {
-    crate::history::legacy::parse_iso(s).map(|ms| ms as f64)
+    server2::history::legacy::parse_iso(s).map(|ms| ms as f64)
 }
 fn is_undefined(v: &Value) -> bool {
     v.as_object()
@@ -201,14 +203,14 @@ impl RecordedStore {
         let index = *next;
         let Some(call) = self.calls.get(index) else {
             drop(next);
-            super::unavailable(format!(
+            unavailable(format!(
                 "recording has no call #{index} ({m}); {} recorded",
                 self.calls.len()
             ));
         };
         if call.method != m {
             drop(next);
-            super::unavailable(format!(
+            unavailable(format!(
                 "recorded call #{index} is {}, assembly called {m}",
                 call.method
             ));
@@ -216,7 +218,7 @@ impl RecordedStore {
         let args = normalize(&args);
         if call.args != args {
             drop(next);
-            super::unavailable(format!(
+            unavailable(format!(
                 "recorded call #{index} {m} arguments differ: recorded {}, assembly {args}",
                 call.args
             ));

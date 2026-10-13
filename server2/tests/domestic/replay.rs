@@ -1,101 +1,21 @@
-//! RUNTIME: the opt-in local KMA mode is loopback-only, and the recorded-store source used by
-//! the release smoke serves the recorded legacy bytes at the recording's request instant.
+//! REPLAY: the recorded-store test double answers only the request it was recorded for, the
+//! backend serves its recorded legacy bytes at the recording's request instant, and an exception
+//! thrown in a store callback is not caught by a `try` entered before the read.
 use super::support::*;
 use server2::{
     domestic::kma::{
         AssemblyConfig, Outcome, assemble,
         backend::{KmaBackend, system_clock},
-        recorded::RecordedSource,
-        runtime::from_vars,
     },
     gateway::{BackendHandler, GatewayError, backend::Native},
 };
 use std::sync::Arc;
 
-fn vars(pairs: Vec<(&'static str, String)>) -> impl Fn(&str) -> Option<String> {
-    move |name: &str| {
-        pairs
-            .iter()
-            .find(|(k, _)| *k == name)
-            .map(|(_, v)| v.clone())
-    }
-}
-
 #[test]
-fn runtime_option_is_opt_in_and_loopback_only() {
-    let local = "http://127.0.0.1:9/";
-    assert!(
-        from_vars(&vars(vec![]), local).unwrap().is_none(),
-        "unset keeps legacy"
-    );
-    let recorded = || {
-        vec![
-            ("SERVER2_KMA_MODE", "recorded-local".to_owned()),
-            ("SERVER2_KMA_RECORDED", FIXTURE.to_owned()),
-        ]
-    };
-    assert!(from_vars(&vars(recorded()), local).unwrap().is_some());
-    assert_eq!(
-        from_vars(&vars(recorded()), "https://legacy.example.com/").err(),
-        Some(GatewayError::InvalidConfiguration),
-        "a non-loopback legacy origin is refused"
-    );
-    assert!(from_vars(&vars(vec![("SERVER2_KMA_MODE", "native".into())]), local).is_err());
-    assert!(
-        from_vars(
-            &vars(vec![("SERVER2_KMA_MODE", "recorded-local".into())]),
-            local
-        )
-        .is_err(),
-        "recorded-local needs a recording"
-    );
-    assert!(
-        from_vars(
-            &vars(vec![
-                ("SERVER2_KMA_MODE", "recorded-local".into()),
-                ("SERVER2_KMA_RECORDED", "/nonexistent/recording.json".into()),
-            ]),
-            local
-        )
-        .is_err()
-    );
-    let mut bad = recorded();
-    bad.push(("SERVER2_KMA_MAX_CURRENT_COUNT", "many".into()));
-    assert!(from_vars(&vars(bad), local).is_err());
-    assert!(
-        from_vars(
-            &vars(vec![("SERVER2_KMA_MODE", "forward-local".into())]),
-            local
-        )
-        .unwrap()
-        .is_some()
-    );
+fn deployed_current_count_is_the_default() {
+    // `manager.MAX_CURRENT_COUNT`; the oracle harness stubs 200 and the tests use that value.
     assert_eq!(AssemblyConfig::default().max_current_count, 192);
-    // The public listener must be loopback too: a recorded snapshot is never served remotely.
-    for bind in [
-        "0.0.0.0:3002",
-        "[::]:3002",
-        "192.0.2.10:3002",
-        "not-an-address",
-    ] {
-        let mut env = recorded();
-        env.push(("SERVER2_BIND", bind.into()));
-        assert_eq!(
-            from_vars(&vars(env), local).err(),
-            Some(GatewayError::InvalidConfiguration),
-            "{bind}"
-        );
-        let env = vec![
-            ("SERVER2_KMA_MODE", "forward-local".to_owned()),
-            ("SERVER2_BIND", bind.to_owned()),
-        ];
-        assert!(from_vars(&vars(env), local).is_err(), "{bind}");
-    }
-    for bind in ["127.0.0.1:0", "[::1]:3002"] {
-        let mut env = recorded();
-        env.push(("SERVER2_BIND", bind.into()));
-        assert!(from_vars(&vars(env), local).unwrap().is_some(), "{bind}");
-    }
+    assert_eq!(oracle_config().max_current_count, 200);
 }
 
 /// A recording with one scenario's fields edited (keys of the edited copy are re-sorted, which

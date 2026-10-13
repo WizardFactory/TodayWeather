@@ -1,13 +1,12 @@
 //! Shared S15 fixtures: the pinned legacy-oracle recording and its replay stores (the library
-//! `RecordedSource`, also used by the release smoke).
+//! `RecordedSource` test double).
 #![allow(dead_code)]
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde_json::Value;
-use server2::domestic::kma::{
-    AssemblyConfig, KmaRequest,
-    backend::parse_path,
-    recorded::{RecordedSource, RecordedStore},
-};
+#[path = "recorded.rs"]
+pub mod recorded;
+pub use recorded::{RecordedSource, RecordedStore};
+use server2::domestic::kma::{AssemblyConfig, KmaRequest, backend::parse_path};
 use std::{io::Read, sync::OnceLock};
 
 pub const FIXTURE: &str = concat!(

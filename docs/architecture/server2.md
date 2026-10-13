@@ -1611,8 +1611,10 @@ and a `Family::Kma` handler for the S10 dispatcher. Legacy stays selected by def
   remaining deadline. Nothing is invented. The legacy 400 region guard maps to the legacy hop's
   dependency error.
 - **Air.** The goldens show no AirKorea dust forecast or station list, and no AirKorea forecast or
-  station-list endpoint is called. `getMinuDustFrcstDspth`/`getMsrstnList` remain unported, and
-  the host choice is still AK's decision. Stored dust forecasts and the provider fallback are
+  station-list endpoint is called. AK decided on 2026-10-13 (#2729) that `getMinuDustFrcstDspth`
+  and `getMsrstnList` are not ported. Nearest-station selection must use ported station coordinates
+  (for example an offline export of legacy `MsrStnInfo` with provenance), never `getMsrstnList`.
+  In S15 the station list arrives inside the `arpltn` store answer. Stored dust forecasts and the provider fallback are
   store answers.
 
 Parity uses a pinned Node 16.20.2 oracle recording ([provenance](../../server2/tests/domestic/fixtures/PROVENANCE.md)):
@@ -1622,14 +1624,13 @@ v000903 backend inputs, and supplementary DB 1.0, RSS, station, rain-category, a
 forecast, fallback, life-index/MFDS/rise-set, warning, temperature, error and clock-boundary cases.
 All 61 recordings match byte for byte, with the dependency calls in legacy order. The 5 gateway goldens match on
 the wire with the native switch (status, body and headers except `date`/`connection`). The legacy
-default, forward and rollback paths are tested. The release binary reproduces them through the
-S19 KMA family (`SERVER2_KMA_MODE=recorded-local`; `forward-local` exercises the forward path)
-with paired replay and a legacy/native/legacy rollback. Both local modes require a loopback legacy
-origin and public listener. The recorded store checks each call's method, order and arguments
-and that every recorded call was used, forwarding on any difference.
+default, forward and rollback paths are tested. The recorded store is a test double: it checks each
+call's method, order and complete arguments and that every recorded call was used, forwarding on
+any difference.
 
-The runtime source is `LegacyOnly`: until the S3 input source exists, a selected native family
-forwards every request. Parsing S13/S13a raw records into these store answers, reading S14
+S15 adds no runtime mode or setting. The release binary does not register the native KMA backend:
+without an input source there is nothing native to serve, so v000903 KMA stays on legacy. `LegacyOnly`
+(every request forwarded) is the library default source. The S19 KMA family module waits for S15b. Parsing S13/S13a raw records into these store answers, reading S14
 history and exports, and the request-time RSS/mid/life acquisitions form the proposed follow-up
 S15b.
 

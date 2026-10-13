@@ -38,7 +38,7 @@ the store-read boundary, named by the server2 `KmaStore` methods: model reads (`
 order is preserved. 1199 answers in total; 1 are flagged `after_response` because legacy
 `async.map` keeps calling after an error has already ended the chain and the reply was sent.
 Each call also records its complete arguments, copied when legacy made the call. The replay store
-(`server2::domestic::kma::recorded`) checks the method, order and arguments of every call and that
+(`server2/tests/domestic/recorded.rs`, a test double) checks the method, order and arguments of every call and that
 every recorded call was used; any difference forwards the request instead of answering.
 
 The harness answers model reads synchronously. In the deployed service they are asynchronous

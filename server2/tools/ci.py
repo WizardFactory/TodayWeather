@@ -52,9 +52,8 @@ def main():
     # replay with self-check, cache-aware rollback). The two reused smokes ran above.
     commands.insert(3, [sys.executable, 'tests/integration/test_shadow.py'])
     os.environ.setdefault('SERVER2_PYTHON', sys.executable)
-    # S15: the KMA v000903 family module runs beside the gateway family.
     commands.append(['bash', 'deploy/smoke.sh', '--binary', 'target/release/server2', '--skip-reused',
-                     '--family', 'gateway', '--family', 'kma', '--out', str(root/'reports/server2-smoke/ci')])
+                     '--out', str(root/'reports/server2-smoke/ci')])
     # Uses the just-built GNU binary: real private_manifest, then the non-musl
     # fence, without worker claims or any AWS/IMDS network path.
     commands.append([sys.executable, sandbox, 'manifest-functional'])

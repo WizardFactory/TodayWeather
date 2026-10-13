@@ -32,7 +32,7 @@ used field byte for byte before the KMA family can move off legacy.
 
 In scope: the assembly library with an explicit input contract, the native backend handler and
 source trait, a dispatcher forward-to-legacy outcome, golden parity tests, a release-mode
-checkpoint measurement, a loopback release-binary smoke, the server2 design text, commit/push,
+checkpoint measurement, the existing release smoke (unchanged), the server2 design text, commit/push,
 PR, CI and independent review/correction. Code, tests and SDLC evidence may pass to the
 configured Codex reviewer.
 
@@ -40,8 +40,8 @@ Split (proposed to AK in the PR and the report): the S02 goldens are defined at 
 store-read boundary, so assembly parity is provable there. Building those inputs at runtime from
 S3 (parsing S13/S13a raw records into legacy rows, reading S14 history/legacy exports, station
 selection, AirKorea/life-index/KASI/MFDS/warning store reads, and the request-time RSS/mid/life
-acquisitions) is a second, separately reviewable task ("S15b"). Until it lands, the native KMA
-handler is registered but the runtime source forwards every request to legacy.
+acquisitions) is a second, separately reviewable task ("S15b"). Until it lands, the release binary
+does not register the native KMA handler and adds no runtime mode; v000903 KMA stays on legacy.
 
 Out of scope: S15b input sourcing; older KMA versions, nation and town (S17); route switches
 (S20); legacy retirement; any `server/` edit; live provider calls, AWS, deployment, merge,
@@ -50,6 +50,6 @@ auto-merge or merge queue; reading `.env` secrets; edits to `plans/issue-2614.md
 Decisions consumed: O-1/O-11 (history coverage keeps cold cells on legacy), O-2 (Rust adopted;
 checkpoint only), O-7/O-8 (current active behavior), O-9.
 
-Risks and open questions: AirKorea dust-forecast/station-list host choice remains AK's open
-decision (no golden requires it); the air provider fallback, KASI/MFDS/life-index stores and
+Risks and open questions: AirKorea dust-forecast/station-list are not ported (AK, 2026-10-13,
+#2729); S15b must select the nearest station from ported station coordinates. The air provider fallback, KASI/MFDS/life-index stores and
 station observations are inputs supplied by S15b; local timings are not production latency.

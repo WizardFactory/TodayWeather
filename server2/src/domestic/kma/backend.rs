@@ -19,7 +19,7 @@ pub enum SourceAnswer {
 pub trait KmaSource: Send + Sync {
     fn snapshot(&self, request: &KmaRequest, deadline: Instant) -> BoxFuture<'_, SourceAnswer>;
 }
-/// The runtime default until the S3 input source exists: every request stays on legacy.
+/// A source that keeps every request on legacy (the default until the S15b S3 source exists).
 pub struct LegacyOnly;
 impl KmaSource for LegacyOnly {
     fn snapshot(&self, _: &KmaRequest, _: Instant) -> BoxFuture<'_, SourceAnswer> {

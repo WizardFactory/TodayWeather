@@ -77,12 +77,10 @@ query as Express does for the used keys, selects the locale from the forwarded `
 `BackendHandler` gains a defaulted `fetch_or_forward` returning `Native::Served(json)` or
 `Native::Forward`; existing handlers keep `fetch`. On `Forward` the dispatcher runs the unchanged
 legacy hop with the remaining deadline. `register` leaves legacy selected; `select` switches and
-rolls back. The runtime source in this task is `LegacyOnly` (always `Forward`); S15b supplies the
-S3/provider source. The loopback-only `SERVER2_KMA_MODE` runtime option accepts `recorded-local`
-(serves a recorded store snapshot file, `SERVER2_KMA_RECORDED`, at the recording's request instant
-via `KmaStore::as_of_ms`) and `forward-local` (native selected, every request forwarded). Both
-refuse a non-loopback legacy origin or public listener (`SERVER2_BIND`). Neither is a production
-input source.
+rolls back. The library default source is `LegacyOnly` (always `Forward`); S15b supplies the
+S3/provider source. S15 adds no runtime mode or setting (AK, 2026-10-13): the release binary does
+not register the backend, so v000903 KMA stays on legacy. Tests inject the recorded-store double,
+which answers at the recording's request instant via `KmaStore::as_of_ms`.
 
 ## Verification (AC1-AC5)
 
@@ -90,7 +88,8 @@ input source.
   runs the real router through the maintained `rss-response-smoke.js` harness and records each
   response plus every store answer in `KmaStore` vocabulary. The 15 S02 direct cases and 5 gateway
   backend inputs use the `golden-record.js` modifiers; supplementary scenarios cover other paths.
-  A replay store answers in recorded order; tests assert bodies, Express weak ETags and call order.
+  A replay store (test double) answers in recorded order after checking each call's complete
+  arguments; tests assert bodies, Express weak ETags, call order and that every call was used.
   The recorded S02 bodies are asserted equal to `records.json`.
 - Gateway: run the 5 gateway domestic v000903 cases through `Gateway` with the native switch and
   compare status, body and headers (except `date`/`connection`); legacy default and rollback.
@@ -98,6 +97,6 @@ input source.
 - Checkpoint: `examples/kma_checkpoint.rs` assembles every recorded request repeatedly;
   `tools/kma_checkpoint.py` records per-assembly timing and child rusage (peak RSS, CPU), with a
   zero-round fixture-load baseline. The server2 CI entrypoint runs it on Linux.
-- S19: `tools/shadow/kma_family.py` (release smoke, paired replay with self-check, rollback) runs
-  in CI beside the gateway family.
+- S19: no KMA family module in S15. A release-binary family needs a real input source (S15b);
+  verification-only runtime modes are not added. The existing release smoke runs unchanged.
 - Placement gate, artifact policy, fmt/clippy/test, release smoke.

@@ -15,22 +15,20 @@ updated in `docs/architecture/server2.md`.
 | K3 | User during rain forecast (#2620) | Shortest POP covered, missing hour, old rows | Slot-hour POP replaced, kept when hour T lacks POP, integer POP | AC1; `parity::*` (`domestic-pop-*`, `domestic-old-no-pop`) |
 | K4 | User of a cell with short history | Never-requested, partial, resumed-after-8-days current rows | Yesterday/comparison and daily rows exactly as legacy | AC1; `parity::*` (history recordings), `switch::native_kma_reproduces_s02_gateway_goldens_and_rolls_back` |
 | K5 | User in a warning zone | Active zone row for the town | `specialInfo` and summary as legacy (ko) | AC1; `parity::*` (`domestic-special-info`, `warning-two-zones`) |
-| K6 | Gateway caller (`/weather/v000903/coord`) | Native switch on; five gateway cases | Status, body and headers equal the goldens; legacy default; rollback | AC2; `switch::native_kma_reproduces_s02_gateway_goldens_and_rolls_back`; S19 `KMA-*` smoke, replay, rollback |
-| K7 | Cell the source cannot serve | Source returns Forward / store lacks the town | Request reaches the legacy origin; no native body invented | AC2; `switch::runtime_default_source_forwards_everything_to_legacy`, `switch::assembly_paths_legacy_cannot_share_are_forwarded`, `runtime::*`, S19 `KMA-FORWARD` |
+| K6 | Gateway caller (`/weather/v000903/coord`) | Native switch on; five gateway cases | Status, body and headers equal the goldens; legacy default; rollback | AC2; `switch::native_kma_reproduces_s02_gateway_goldens_and_rolls_back` |
+| K7 | Cell the source cannot serve | Source returns Forward / store lacks the town | Request reaches the legacy origin; no native body invented | AC2; `switch::runtime_default_source_forwards_everything_to_legacy`, `switch::assembly_paths_legacy_cannot_share_are_forwarded`, `replay::*` |
 | K8 | Operator measures the checkpoint | Release run of all recorded workloads | Time, peak RSS, CPU recorded | AC4; `examples/kma_checkpoint.rs` with `tools/kma_checkpoint.py` (local and Linux CI) |
 | K9 | Reviewer checks placement | Placement gate with S15.json | Only declared paths changed | AC5; `check_placement.py`, `test_placement.py` |
 
 ## Files
 
-- Add: `server2/src/domestic/kma/` (assembly, JS value model, store trait, backend, recorded
-  source, runtime option, locales), `server2/tests/domestic.rs`, `server2/tests/domestic/` (parity,
-  switch, runtime tests; oracle recording, PROVENANCE, S19 replay workload),
-  `server2/examples/kma_checkpoint.rs`, `server2/tools/kma_checkpoint.py`,
-  `server2/tools/shadow/kma_family.py`, `server2/config/tasks/S15.json`.
+- Add: `server2/src/domestic/kma/` (assembly, JS value model, store trait, backend, locales),
+  `server2/tests/domestic.rs`, `server2/tests/domestic/` (parity, switch and replay tests, the
+  recorded-store test double, oracle recording, PROVENANCE), `server2/examples/kma_checkpoint.rs`,
+  `server2/tools/kma_checkpoint.py`, `server2/config/tasks/S15.json`.
 - Change (additive): `server2/src/domestic/mod.rs` (`pub mod kma;`), `server2/src/gateway/backend.rs`
-  (defaulted `fetch_or_forward` and the forward branch), `server2/src/gateway/runtime.rs`
-  (opt-in KMA mode), `server2/tools/shadow/families.py` (KMA family), `server2/tools/ci.py`
-  (checkpoint and the KMA family in the integrated smoke).
+  (defaulted `fetch_or_forward` and the forward branch), `server2/tools/ci.py` (checkpoint).
+- No runtime mode or setting is added (AK, 2026-10-13); the S19 KMA family waits for S15b.
 - Docs: intent/spec/plan `issue-2700.md`; one S15 section in `docs/architecture/server2.md`.
 - Not changed: `server/`, `plans/issue-2614.md`.
 
@@ -39,7 +37,7 @@ updated in `docs/architecture/server2.md`.
 1. Declaration and issue comment. 2. Red: parity/switch tests against the base (missing
 `server2::domestic::kma`). 3. JS value model, time/precipitation/policy helpers. 4. Middleware port
 in route order, checked against a local per-middleware oracle trace and the oracle recording.
-5. Backend, forward outcome, runtime option, S19 family, checkpoint. 6. Green, refactor,
+5. Backend, forward outcome, checkpoint. 6. Green, refactor,
 fmt/clippy/test, release smoke, placement, artifact policy. 7. Commit, push, PR, CI, Codex review
 loop, readiness and issue status.
 
@@ -47,12 +45,12 @@ loop, readiness and issue status.
 
 `cargo +1.99.0 fmt --check`; `cargo +1.99.0 clippy --locked --workspace --all-targets -- -D warnings`;
 `cargo +1.99.0 test --locked --workspace`; `python3.11 server2/tools/kma_checkpoint.py --binary <release example>`;
-`bash server2/deploy/smoke.sh --binary <release> --skip-reused --family gateway --family kma`;
+`bash server2/deploy/smoke.sh --binary <release> --skip-reused` (existing families, unchanged);
 `python3.11 server2/tools/check_placement.py --root . --declaration server2/config/tasks/S15.json --base 87ab79cd`;
 `python3.11 server2/tools/test_placement.py`; `python3 scripts/check-artifact-policy.py --staged` and `--range`.
 Expected Red cause: missing `server2::domestic::kma`.
 
 ## Rollback and blast radius
 
-Library plus an opt-in handler; legacy stays selected by default and the runtime source forwards.
+Library and a handler that the release binary does not register; v000903 KMA stays on legacy.
 Revert the PR to roll back. Production switches remain S20.
