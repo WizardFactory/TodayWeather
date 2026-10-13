@@ -391,7 +391,9 @@ impl Geocoder {
         self.lookup(LookupKey::Address(address.into())).await
     }
     async fn lookup(&self, key: LookupKey) -> Result<GeoClient, GeocodeError> {
+        use crate::gateway::metrics::{COUNTERS, add};
         if let Some(geo) = self.inner.cache.get(&key) {
+            add(&COUNTERS.geocoder_cache_hits);
             return Ok(geo);
         }
         let mut receiver = {
@@ -402,17 +404,18 @@ impl Geocoder {
                 .map_err(|_| GeocodeError::Capacity)?;
             // Recheck after acquiring ownership: a preceding owner may have completed between locks.
             if let Some(geo) = self.inner.cache.get(&key) {
+                add(&COUNTERS.geocoder_cache_hits);
                 return Ok(geo);
             }
             if let Some(receiver) = flights.get(&key) {
+                add(&COUNTERS.geocoder_joined);
                 receiver.clone()
             } else {
-                let permit = self
-                    .inner
-                    .owners
-                    .clone()
-                    .try_acquire_owned()
-                    .map_err(|_| GeocodeError::Capacity)?;
+                let permit = self.inner.owners.clone().try_acquire_owned().map_err(|_| {
+                    add(&COUNTERS.capacity_rejections);
+                    GeocodeError::Capacity
+                })?;
+                add(&COUNTERS.geocoder_flights);
                 let (sender, receiver) = watch::channel(None);
                 flights.insert(key.clone(), receiver.clone());
                 let inner = self.inner.clone();
@@ -495,7 +498,12 @@ impl Inner {
         if !self.config.mock_mode {
             return Err(GeocodeError::Quota);
         }
-        self.quota.reserve(self.demands(key)).await?;
+        self.quota
+            .reserve(self.demands(key))
+            .await
+            .inspect_err(|_| {
+                crate::gateway::metrics::add(&crate::gateway::metrics::COUNTERS.quota_rejections)
+            })?;
         match key {
             LookupKey::Coord { lat, lon, language } => {
                 let loc = [f64::from_bits(*lat), f64::from_bits(*lon)];
@@ -575,6 +583,11 @@ impl Inner {
             let attempt = remaining.min(Duration::from_secs(3));
             let key_value = keys[(start + offset) % keys.len()];
             let url = self.url(provider, key, key_value);
+            let counters = &crate::gateway::metrics::COUNTERS;
+            crate::gateway::metrics::add(match provider {
+                GeoProvider::Kakao => &counters.kakao_attempts,
+                GeoProvider::Google => &counters.google_attempts,
+            });
             let mut request = self.client.get(url).timeout(attempt);
             if provider == GeoProvider::Kakao {
                 request = request.header(

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<wid>
+<header>
+<tm>202610131400</tm>
+<ts>3</ts>
+<x>60</x>
+<y>127</y>
+</header>
+<body>
+<data seq="0">
+<hour>18</hour><day>0</day><temp>17.0</temp><tmx>-999.0</tmx><tmn>-999.0</tmn><sky>1</sky><pty>0</pty><wfKor>맑음</wfKor><wfEn>Clear</wfEn><pop>0</pop><r12>0.0</r12><s12>0.0</s12><ws>1.8</ws><wd>6</wd><wdKor>서</wdKor><wdEn>W</wdEn><reh>55</reh><r06>0.0</r06><s06>0.0</s06>
+</data>
+<data seq="1">
+<hour>21</hour><day>0</day><temp>14.0</temp><tmx>-999.0</tmx><tmn>-999.0</tmn><sky>3</sky><pty>0</pty><wfKor>구름 많음</wfKor><wfEn>Mostly Cloudy</wfEn><pop>20</pop><r12>0.0</r12><s12>0.0</s12><ws>1.2</ws><wd>7</wd><wdKor>북서</wdKor><wdEn>NW</wdEn><reh>70</reh><r06>0.0</r06><s06>0.0</s06>
+</data>
+</body>
+</wid>
