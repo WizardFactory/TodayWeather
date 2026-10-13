@@ -1,6 +1,6 @@
 # server2 integrated smoke, paired replay and rollback rehearsal
 
-S19 adds one repeatable local verification path per server2 family. This first increment covers the gateway/geocode family. Every check runs the actual release binary against task-owned loopback peers: recorded Kakao/Google providers, a frozen legacy origin (legacy geocoder plus weather backends) and the S03 local S3-compatible peer. Nothing reads an operator `.env`, calls a live provider, creates AWS resources, deploys or mirrors traffic.
+S19 adds one repeatable local verification path per server2 family. This first increment covers the gateway/geocode family. Every check runs the actual release binary against task-owned loopback peers: recorded Kakao/Google providers, a frozen legacy origin (legacy geocoder plus weather backends) and the S03 local S3-compatible peer. Since S10c ([#2736](https://github.com/WizardFactory/TodayWeather/issues/2736)) both sides use the real runtime configuration: the legacy side has no routing entry, and the native side sets `SERVER2_NATIVE_FAMILIES=geocode` with the existing geocoder keys, configured daily quotas and the `SERVER2_S3_*` settings, all pointing at the test peers. Nothing reads an operator `.env`, calls a live provider, creates AWS resources, deploys or mirrors traffic.
 
 See the [server2 contract](../architecture/server2.md), the [gateway guide](server2-gateway.md), the [S19 specification](../../specs/issue-2704.md) and the [path declaration](../../server2/config/tasks/S19.json).
 
@@ -46,29 +46,29 @@ The loopback metrics listener (`/internal/metrics`) now appends aggregate gatewa
 | `geocoder_kakao_attempts_total`, `geocoder_google_attempts_total` | Provider HTTP attempts |
 | `geocoder_quota_rejections_total`, `geocoder_capacity_rejections_total` | Fail-closed quota and owner-capacity rejections |
 
-Each scenario compares these deltas with independent peer counters. The S3 peer counts every request it receives, and the gateway family must send none.
+Each scenario compares these deltas with independent peer counters. The S3 peer counts every request it receives. The legacy side must send none; on the native side the peer may hold only S08 quota records under `budgets/v2/kakao/` and `budgets/v2/google/`, with no coordinate, address, result or key in any object key.
 
 ## Gateway family scenarios
 
 | ID | What it proves |
 | --- | --- |
 | GW-COLD-WARM | Cold: one owned flight, one Kakao call, one backend hop. Warm: RAM hits, no provider work, byte-identical body and ETag. |
-| GW-EMPTY-RESTORE | Each restart re-acquires one reverse and one address lookup. Nothing reaches S3: precise results are RAM-only, and `S3AddressStore` is not wired in the process (S10a decides). |
+| GW-EMPTY-RESTORE | Each restart re-acquires one reverse and one address lookup. S3 holds only quota records: precise results are RAM-only, and `S3AddressStore` is not wired in the process (S10a decides). |
 | GW-SINGLE-FLIGHT | 16 same-key cold callers share one flight and one Kakao call. |
 | GW-CANCEL | A disconnected initiator does not cancel or duplicate the owned lookup or backend work; a later waiter joins. |
-| GW-OUTAGE | Provider HTTP 500 gives 501 no-store, one attempt per key, and the failure is not cached. Backend 500 gives exactly three attempts and 501. An S3 outage has no gateway impact. With an unreachable legacy origin, both routes fail fast in legacy mode; native mode still serves geocode. |
-| GW-BUDGET | 16 dummy Kakao keys plus Google reserve 17 units per Korean lookup, so the fixed 10,000-unit mock quota funds exactly 588 lookups. The next lookup fails closed with no provider request. Warm keys still serve. RSS growth stays below 64 MiB. |
+| GW-OUTAGE | Provider HTTP 500 gives 501 no-store, one attempt per key, and the failure is not cached. Backend 500 gives exactly three attempts and 501. An S3 outage does not affect warm lookups or weather backends; new native lookups fail closed once the owned quota block is spent. With an unreachable legacy origin, both routes fail fast with legacy routing; native routing still serves geocode. |
+| GW-BUDGET | 16 dummy Kakao keys plus Google, each with a configured daily quota of 64 units: every Korean lookup reserves one unit of each key before HTTP, so 64 lookups are funded. The next lookup fails closed with no provider request. Warm keys still serve. RSS growth stays below 64 MiB. The scenario uses its own keys because S08 keeps one policy per quota owner and UTC day. |
 | GW-PRESSURE | 48 concurrent requests while backend replies are held: the 40-slot admission serves 40 and rejects 8 with 503, `Retry-After: 5` and no-store. Rejected requests do no work. |
 | GW-DRAIN | SIGTERM during an in-flight request: the request completes with 200, the process exits 0 within the 5s drain, and no retry occurs. |
 
-Partial group publication, publication hashes and summary/state cases require S3 publication. The gateway family does not publish to S3, so those cases belong to the weather-family modules (S13, S11, S12 and later) when they are added.
+Partial group publication, publication hashes and summary/state cases require S3 publication. The gateway family writes only quota records to S3, so those cases belong to the weather-family modules (S13, S11, S12 and later) when they are added.
 
 ## Paired replay
 
 `replay.py` runs a frozen 15-request workload (`server2/tests/integration/fixtures/gateway-replay.json`) twice per side, first cold and then warm, each side in a fresh process:
 
-- Baseline: `SERVER2_GEOCODER_MODE=legacy` against the frozen legacy origin. Its geocode replies are derived from S02 legacy records, and a unit test checks every derivation.
-- Candidate: `SERVER2_GEOCODER_MODE=mock` (the native geocoder) against the recorded provider fixtures and the same backend bodies.
+- Baseline: no `SERVER2_NATIVE_FAMILIES` (legacy routing) against the frozen legacy origin. Its geocode replies are derived from S02 legacy records, and a unit test checks every derivation.
+- Candidate: `SERVER2_NATIVE_FAMILIES=geocode` (the native geocoder with configured daily quotas in the S3 peer) against the recorded provider fixtures and the same backend bodies.
 
 The comparator checks status, body bytes, every header and the dependency hops. A difference passes only when a declared entry names it:
 
@@ -76,7 +76,7 @@ The comparator checks status, body bytes, every header and the dependency hops. 
 | --- | --- |
 | `D-TRANSPORT` | `date`, `connection`, `keep-alive` headers. These are transport observations, not functional parity. |
 | `D-ACQ-GEOCODER` | Cold pass: legacy HTTP geocoder versus Kakao/Google acquisition. |
-| `D-ACQ-WARM-CACHE` | Warm pass: the native side serves precise lookups from RAM; legacy mode delegates caching to the legacy origin. |
+| `D-ACQ-WARM-CACHE` | Warm pass: the native side serves precise lookups from RAM; with legacy routing, caching is delegated to the legacy origin. |
 
 Backend hops, status, body, ETag, Cache-Control and content headers have no waiver. A declared acquisition difference applies only when both sides match the request's exact planned counts for that pass (`acquisitions` in the fixture). Any deviation is unexplained, including extra provider calls, any warm-pass native provider call, and extra calls that both sides happen to share.
 
@@ -101,7 +101,7 @@ To add a family, put a module next to `gateway_family.py` that provides the same
 
 ## Cache-aware rollback rehearsal
 
-`rollback.py` restarts the binary legacy -> mock -> legacy against the same legacy origin. Each process has one geocoder mode, so `/weather` and `/geocode` switch together. Each phase checks:
+`rollback.py` restarts the binary legacy -> native -> legacy against the same legacy origin; only `SERVER2_NATIVE_FAMILIES` changes. Each process has one geocoder route, so `/weather` and `/geocode` switch together. Each phase checks:
 
 - Cache-Control: weather `max-age=300`, geocode `max-age=2592000`, errors `no-store`.
 - Geocoder source: every route uses the legacy geocoder in legacy phases, and no route does in the native phase.
@@ -120,22 +120,23 @@ These are local loopback fixtures. Timings, counts and RSS do not represent prod
 
 ## Recorded local verification
 
-The 2026-10-13 run of `smoke.sh` against the macOS release binary of the S10b change passed every stage. The S19 stages started at 09:50:54 UTC.
+The 2026-10-13 run of `smoke.sh` against the macOS release binary of the S10c change passed every stage. The S19 stages started at 15:00:42 UTC.
 
 - Reused foundation and S10 smokes passed.
-- All eight gateway scenarios passed. Peer totals for the scenario run were backend 52, Kakao 600, Google 2 and S3 0.
-- Quota exhaustion: 588 of 589 lookups were funded, and the rejected lookup made no provider call. RSS was 7,792 KiB before and 10,560 KiB after.
+- All eight gateway scenarios passed. Peer totals for the scenario run were backend 52, Kakao 76, Google 2 and S3 158 requests; the S3 peer held only `budgets/v2/kakao|google/` quota records.
+- Quota exhaustion: with a 64-unit daily quota per key, 64 of 65 lookups were funded, and the rejected lookup made no provider call. RSS was 9,360 KiB before and 12,736 KiB after.
 - Admission pressure: while backend replies were held, 40 requests were admitted and 8 were rejected with 503.
-- SIGTERM drain: the held in-flight request completed and the process stopped 208 ms after the signal.
+- SIGTERM drain: the held in-flight request completed and the process stopped 213 ms after the signal.
 - Paired replay over 15 requests and two passes: every request matched its acquisition plan. There were 0 unexplained differences. On each side, 12 S02 oracle checks and 10 weather merge-oracle checks found 0 mismatches. Observed declared differences were `D-TRANSPORT`, `D-ACQ-GEOCODER` and `D-ACQ-WARM-CACHE`. The perturbed self-check found 30 unexplained differences.
 - Replay p95 (nearest rank) for the baseline and the candidate:
 
 | Group | Baseline | Candidate |
 | --- | --- | --- |
-| `cold_pass` (n=15) | 1.25 ms | 2.53 ms |
-| `cold_miss` | 1.25 ms (n=11) | 2.53 ms (n=4) |
-| `warm_pass` (n=15) | 1.03 ms | 1.42 ms |
+| `cold_pass` (n=15) | 1.19 ms | 3.38 ms |
+| `cold_miss` | 1.19 ms (n=11) | 3.38 ms (n=4) |
+| `warm_pass` (n=15) | 0.88 ms | 0.88 ms |
 
-- Rollback: every cross-switch ETag revalidated with 304 (4/4 per switch). With the default gateway lifetime, the stalled backend gave the legacy 501 at 9,003 ms after three attempts in both the native and legacy phases. Stalled Kakao gave 501 at 3,004 ms, and the stalled legacy geocoder gave 501 at 5,004 ms. The gateway with `SERVER2_CONNECTION_SECONDS=9` exited with status 1 before binding.
+- Rollback: every cross-switch ETag revalidated with 304 (4/4 per switch). With the default gateway lifetime, the stalled backend gave the legacy 501 at 9,004 ms (native phase) and 9,003 ms (second legacy phase) after three attempts. Stalled Kakao gave 501 at 3,002 ms, and the stalled legacy geocoder gave 501 at 5,004 ms. The gateway with `SERVER2_CONNECTION_SECONDS=9` exited with status 1 before binding.
 
 The [actual terminal capture](../evidence/tasks/server2-smoke-shadow/usage.png) is rendered from that execution log; `docs/evidence/tasks/server2-smoke-shadow/manifest.json` records its hashes. These are synthetic loopback timings, not production latency.
+

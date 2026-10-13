@@ -2,8 +2,10 @@
 
 The release binary runs against three task-owned loopback peers: recorded Kakao/Google
 providers, a frozen legacy origin (geocoder plus weather backends) and the S03 local
-S3-compatible peer. The gateway family has no S3 dependency in its process entrypoint;
-the S3 peer is attached so every scenario can assert that no request reaches it.
+S3-compatible peer. Both sides use the production setting names. The legacy side has no
+routing entry and reads no native setting; the native side lists `geocode` in
+SERVER2_NATIVE_FAMILIES and funds every provider attempt from configured daily quotas whose
+S08 budget objects live in the S3 peer. Scenarios assert that S3 holds budget objects only.
 """
 import base64
 import concurrent.futures
@@ -29,6 +31,7 @@ WEATHER_WORLD = '/weather/coord/51.507,-0.128'
 GEOCODE_KR = '/geocode/v000903/coord/37.5663,126.9779'
 ADDRESS = '/geocode/v000903/addr/' + quote('서울특별시/송파구/잠실본동', safe='/')
 GW, GEO = 'server2_gateway_', 'server2_geocoder_'
+BUDGET_UNITS = 64
 REPLAY_LIMITATIONS = ('Offline frozen inputs on loopback peers; local timings are not production latency, '
                       'quota or seven-day shadow evidence. No live shadow, mirroring or provider call.')
 _CACHE = {}
@@ -170,22 +173,36 @@ class Peers:
             peer.close()
 
 
-def gateway_env(peers, mode, keys=1, legacy=None):
+def gateway_env(peers, mode, keys=1, legacy=None, daily_units=100000, key_prefix='local-dummy-'):
+    """Real-format configuration; `mode` is the routing choice ('legacy' or 'native')."""
     config = peers.s3.config_values
-    return {
+    env = {
         'SERVER2_GATEWAY_LEGACY_URL': legacy or peers.legacy.base,
-        'SERVER2_GEOCODER_MODE': mode,
         'GEOCODER_KAKAO_BASE_URL': peers.providers.base,
         'GEOCODER_GOOGLE_BASE_URL': peers.providers.base,
-        'GEOCODER_KAKAO_KEYS': json.dumps(['local-dummy-' + str(i) for i in range(keys)]),
-        'GEOCODER_GOOGLE_KEY': 'local-dummy',
-        # Attached for future family wiring; the gateway entrypoint must not use it.
+        'GEOCODER_KAKAO_KEYS': json.dumps([key_prefix + str(i) for i in range(keys)]),
+        'GEOCODER_GOOGLE_KEY': key_prefix + 'google',
+        'SERVER2_GEOCODER_KAKAO_DAILY_UNITS': str(daily_units),
+        'SERVER2_GEOCODER_GOOGLE_DAILY_UNITS': str(daily_units),
         'SERVER2_S3_ENDPOINT': peers.s3.base,
-        'AWS_ACCESS_KEY_ID': config['test_access_key'],
-        'AWS_SECRET_ACCESS_KEY': config['test_secret_key'],
-        'AWS_REGION': 'us-east-1',
-        'AWS_EC2_METADATA_DISABLED': 'true',
+        'SERVER2_S3_BUCKET': config['bucket'],
+        'SERVER2_S3_ACCESS_KEY_ID': config['test_access_key'],
+        'SERVER2_S3_SECRET_ACCESS_KEY': config['test_secret_key'],
     }
+    if mode == 'native':
+        env['SERVER2_NATIVE_FAMILIES'] = 'geocode'
+    elif mode != 'legacy':
+        raise ValueError('unknown routing: ' + mode)
+    return env
+
+
+def s3_budget_only(peers):
+    """Every S3 object is an S08 geocoder budget object: no coordinate, address or result."""
+    keys = sorted(peers.s3.objects)
+    bad = [k for k in keys if not k.startswith(('budgets/v2/kakao/', 'budgets/v2/google/'))
+           or 'dummy' in k or '37.' in k]
+    expect(not bad, 'S3 holds geocoder budget objects only', bad)
+    return len(keys)
 
 
 class Context:
@@ -193,8 +210,8 @@ class Context:
         self.binary, self.frozen = binary, frozen
         self.peers = Peers(frozen)
 
-    def process(self, mode, keys=1, legacy=None, extra=None):
-        env = gateway_env(self.peers, mode, keys, legacy)
+    def process(self, mode, keys=1, legacy=None, extra=None, daily_units=100000, key_prefix='local-dummy-'):
+        env = gateway_env(self.peers, mode, keys, legacy, daily_units, key_prefix)
         env.update(extra or {})
         return harness.Server2(self.binary, env)
 
@@ -211,8 +228,11 @@ def expect(condition, message, observed=None):
 
 
 def changes(process, ctx, before):
+    """Metric and provider/legacy peer deltas. S3 budget traffic is checked separately."""
     metrics, counts = ctx.observe(process)
-    return harness.delta(metrics, before[0]), harness.delta(counts, before[1])
+    delta = harness.delta(counts, before[1])
+    delta.pop('s3', None)
+    return harness.delta(metrics, before[0]), delta
 
 
 def get(process, path, headers=None, method='GET'):
@@ -220,7 +240,7 @@ def get(process, path, headers=None, method='GET'):
 
 
 def scenario_cold_warm(ctx):
-    with ctx.process('mock') as p:
+    with ctx.process('native') as p:
         before = ctx.observe(p)
         cold = get(p, WEATHER_KR, KO)
         expect(cold.status == 200, 'cold weather status', cold.status)
@@ -247,7 +267,7 @@ def scenario_cold_warm(ctx):
 def scenario_empty_memory_restore(ctx):
     observed = []
     for restart in range(2):
-        with ctx.process('mock') as p:
+        with ctx.process('native') as p:
             before = ctx.observe(p)
             expect(get(p, GEOCODE_KR, KO).status == 200, 'coordinate lookup after start')
             expect(get(p, ADDRESS, KO).status == 200, 'address lookup after start')
@@ -257,14 +277,14 @@ def scenario_empty_memory_restore(ctx):
             expect(c == {'kakao': 1, 'google': 1}, 'one Kakao reverse and one Google address acquisition', c)
             observed.append({'restart': restart, 'metrics': m, 'peers': c})
             expect(p.stop() == 0, 'clean stop')
-    expect(ctx.peers.counts()['s3'] == 0 and not ctx.peers.s3.objects,
-           'no precise coordinate or address publication reached S3')
-    return {'restarts': observed, 's3_requests': 0, 's3_objects': 0,
-            'note': 'Precise reverse results are RAM-only by contract; S3AddressStore is not wired in the process (S10a decides).'}
+    objects = s3_budget_only(ctx.peers)
+    return {'restarts': observed, 's3_requests': ctx.peers.counts()['s3'], 's3_objects': objects,
+            'note': 'Precise reverse results are RAM-only by contract; S3 holds only S08 budget objects; '
+                    'S3AddressStore is not wired in the process (S10a decides).'}
 
 
 def scenario_single_flight(ctx):
-    with ctx.process('mock') as p:
+    with ctx.process('native') as p:
         ctx.peers.set('kakao', delay=0.4)
         try:
             before = ctx.observe(p)
@@ -281,7 +301,7 @@ def scenario_single_flight(ctx):
 
 def scenario_cancellation(ctx):
     wait = harness.wait_until
-    with ctx.process('mock') as p:
+    with ctx.process('native') as p:
         host, port = harness.loopback(p.public)
         path = '/geocode/v000903/coord/36.202,127.502'
         before = ctx.observe(p)
@@ -322,7 +342,7 @@ def scenario_cancellation(ctx):
 
 def scenario_outages(ctx):
     result = {}
-    with ctx.process('mock') as p:
+    with ctx.process('native') as p:
         ctx.peers.set('kakao', fault='500')
         before = ctx.observe(p)
         try:
@@ -360,7 +380,7 @@ def scenario_outages(ctx):
         result['s3_outage'] = {'status': served.status, 'peers': c}
 
     down = 'http://127.0.0.1:' + str(harness.free_port())
-    for mode in ('legacy', 'mock'):
+    for mode in ('legacy', 'native'):
         with ctx.process(mode, legacy=down) as p:
             before = ctx.observe(p)
             weather = get(p, WEATHER_KR, KO)
@@ -375,23 +395,26 @@ def scenario_outages(ctx):
                        'native mode: geocode is served natively; weather backend still needs legacy', [m, c])
             result['legacy_down_' + mode] = {'weather': weather.status, 'geocode': geocode.status,
                                              'weather_ms': round(weather.elapsed_ms, 2), 'metrics': m, 'peers': c}
-    expect(ctx.peers.counts()['s3'] == 0, 'no S3 request in any outage case')
+    s3_budget_only(ctx.peers)
     return result
 
 
 def scenario_budget_exhaustion(ctx):
-    # 16 Kakao keys plus Google reserve 17 mock units per Korean reverse lookup;
-    # the process-fixed 10,000-unit mock quota funds exactly 588 lookups.
-    with ctx.process('mock', keys=16) as p:
+    # 16 Kakao keys plus Google: every Korean reverse lookup reserves one unit of each key's
+    # configured daily quota (S08 budgets in the S3 peer), so a 64-unit limit funds 64 lookups.
+    # Separate keys: S08 keeps one policy per quota owner and day, so a changed limit for the
+    # same key applies from the next UTC day (a mismatch fails closed).
+    with ctx.process('native', keys=16, daily_units=BUDGET_UNITS, key_prefix='budget-dummy-') as p:
         rss_before = p.rss_kib()
         before = ctx.observe(p)
-        paths = ['/geocode/v000903/coord/' + format(35.0 + i / 1000, '.3f') + ',127.5' for i in range(589)]
+        paths = ['/geocode/v000903/coord/' + format(35.0 + i / 1000, '.3f') + ',127.5' for i in range(BUDGET_UNITS + 1)]
         with concurrent.futures.ThreadPoolExecutor(16) as pool:
             statuses = list(pool.map(lambda path: get(p, path, KO).status, paths))
         m, c = changes(p, ctx, before)
-        expect(statuses.count(200) == 588 and statuses.count(501) == 1, 'quota funds exactly 588 lookups',
+        expect(statuses.count(200) == BUDGET_UNITS and statuses.count(501) == 1,
+               'daily quota funds exactly %d lookups' % BUDGET_UNITS,
                {'200': statuses.count(200), '501': statuses.count(501)})
-        expect(c == {'kakao': 588} and m.get(GEO + 'quota_rejections_total') == 1,
+        expect(c == {'kakao': BUDGET_UNITS} and m.get(GEO + 'quota_rejections_total') == 1,
                'exhaustion fails closed before any provider request', [m, c])
         before = ctx.observe(p)
         cached = get(p, paths[0], KO) if statuses[0] == 200 else get(p, paths[1], KO)
@@ -401,13 +424,15 @@ def scenario_budget_exhaustion(ctx):
                'after exhaustion: warm keys still serve, new keys fail closed with no provider work', [m2, c2])
         rss_after = p.rss_kib()
         growth = (rss_after - rss_before) if rss_before and rss_after else None
-        expect(growth is None or growth < 64 * 1024, 'RSS growth during 589 distinct lookups stays below 64 MiB', growth)
-        return {'lookups': 589, 'ok': 588, 'rejected': statuses.count(501), 'metrics': m, 'peers': c,
-                'after': {'metrics': m2, 'peers': c2}, 'rss_kib': {'before': rss_before, 'after': rss_after}}
+        expect(growth is None or growth < 64 * 1024, 'RSS growth during the distinct lookups stays below 64 MiB', growth)
+        objects = s3_budget_only(ctx.peers)
+        return {'lookups': BUDGET_UNITS + 1, 'ok': BUDGET_UNITS, 'rejected': statuses.count(501), 'metrics': m, 'peers': c,
+                'after': {'metrics': m2, 'peers': c2}, 'rss_kib': {'before': rss_before, 'after': rss_after},
+                'daily_units_per_key': BUDGET_UNITS, 's3_budget_objects': objects}
 
 
 def scenario_pressure(ctx):
-    with ctx.process('mock') as p:
+    with ctx.process('native') as p:
         get(p, WEATHER_KR, KO)
         before = ctx.observe(p)
         admitted = lambda: ctx.peers.count('backend') - before[1].get('backend', 0)
@@ -437,7 +462,7 @@ def scenario_pressure(ctx):
 
 
 def scenario_spot_drain(ctx):
-    with ctx.process('mock') as p:
+    with ctx.process('native') as p:
         get(p, WEATHER_KR, KO)
         result = {}
         before = ctx.observe(p)
@@ -465,7 +490,7 @@ def scenario_spot_drain(ctx):
 
 SCENARIOS = [
     ('GW-COLD-WARM', 'cold then warm requests: one owned acquisition, warm RAM hits', scenario_cold_warm),
-    ('GW-EMPTY-RESTORE', 'restart with empty memory: bounded re-acquisition, nothing published to S3', scenario_empty_memory_restore),
+    ('GW-EMPTY-RESTORE', 'restart with empty memory: bounded re-acquisition, only budget objects in S3', scenario_empty_memory_restore),
     ('GW-SINGLE-FLIGHT', '16 same-key cold callers share one provider call', scenario_single_flight),
     ('GW-CANCEL', 'disconnected initiators do not cancel or duplicate owned work', scenario_cancellation),
     ('GW-OUTAGE', 'provider, backend, S3 and legacy-origin outages', scenario_outages),
@@ -489,10 +514,10 @@ SUMMARIES = {
     'GW-CANCEL': lambda o: 'geocode peers[%s] joined=%d; weather peers[%s]; abandoned=%d' % (
         peers_text(o['geocode']['peers']), o['geocode']['metrics'].get(GEO + 'joined_total', 0),
         peers_text(o['weather']['peers']), o['abandoned_observed']),
-    'GW-OUTAGE': lambda o: 'provider 501 peers[%s]; backend 501 peers[%s]; S3 down weather=%d; legacy down: legacy-mode %d/%d, mock-mode %d/%d' % (
+    'GW-OUTAGE': lambda o: 'provider 501 peers[%s]; backend 501 peers[%s]; S3 down weather=%d; legacy down: legacy %d/%d, native %d/%d' % (
         peers_text(o['provider']['failed']['peers']), peers_text(o['backend']['peers']), o['s3_outage']['status'],
         o['legacy_down_legacy']['weather'], o['legacy_down_legacy']['geocode'],
-        o['legacy_down_mock']['weather'], o['legacy_down_mock']['geocode']),
+        o['legacy_down_native']['weather'], o['legacy_down_native']['geocode']),
     'GW-BUDGET': lambda o: '%d lookups -> ok=%d rejected=%d peers[%s]; after: new key peers[%s]; RSS KiB %s->%s' % (
         o['lookups'], o['ok'], o['rejected'], peers_text(o['peers']), peers_text(o['after']['peers']),
         o['rss_kib']['before'], o['rss_kib']['after']),
@@ -571,7 +596,7 @@ def smoke(binary, selected=None):
                             'seconds': round(time.monotonic() - started, 2), 'observed': observed})
             print('PASS ' + scenario_id + ' ' + title, flush=True)
             print('     ' + SUMMARIES[scenario_id](observed), flush=True)
-        expect(ctx.peers.counts()['s3'] == 0, 'gateway family sent no request to the S3 peer')
+        s3_budget_only(ctx.peers)
         return results, ctx.peers.counts()
     finally:
         ctx.close()
@@ -579,7 +604,7 @@ def smoke(binary, selected=None):
 
 def replay_side(binary, fixture, side, perturb=False):
     frozen = Frozen(fixture, perturb)
-    mode = 'legacy' if side == 'baseline' else 'mock'
+    mode = 'legacy' if side == 'baseline' else 'native'
     peers = Peers(frozen)
     records, acquisitions = [], {}
     try:
@@ -603,10 +628,12 @@ def replay_side(binary, fixture, side, perturb=False):
             metrics = {k: v for k, v in process.metrics().items() if k.startswith((GW, GEO)) and v}
             expect(process.stop() == 0, 'replay side stopped cleanly')
         s3 = peers.counts()['s3']
+        objects = s3_budget_only(peers)
     finally:
         peers.close()
-    expect(s3 == 0, 'replay side sent no request to the S3 peer')
-    return records, {'configuration': 'SERVER2_GEOCODER_MODE=' + mode, 'mode': mode,
+    expect(mode == 'native' or s3 == 0, 'the legacy side sent no request to the S3 peer', s3)
+    configuration = 'SERVER2_NATIVE_FAMILIES=geocode' if mode == 'native' else 'SERVER2_NATIVE_FAMILIES unset'
+    return records, {'configuration': configuration, 'mode': mode, 's3_budget_objects': objects,
                      'acquisitions': acquisitions, 'metrics': metrics, 's3_requests': s3,
                      'perturbation': frozen.perturbation}
 
@@ -672,7 +699,7 @@ def deadline_probe(ctx, mode):
                and m.get(GW + 'responses_dependency_error_total') == 1 and not m.get(GW + 'abandoned_total'),
                'stalled backend: legacy 501 bytes/headers at the 9s deadline after three attempts',
                [mismatches, stalled.elapsed_ms, m, c])
-        kind, cap = ('kakao', (2500, 4000)) if mode == 'mock' else ('legacy_geo', (4500, 6000))
+        kind, cap = ('kakao', (2500, 4000)) if mode == 'native' else ('legacy_geo', (4500, 6000))
         ctx.peers.set(kind, fault='hang')
         try:
             geo = get(p, '/geocode/v000903/coord/36.404,127.704', KO)
@@ -695,12 +722,12 @@ REHEARSAL = [
 
 
 def rollback(binary, deadlines=True):
-    """legacy -> mock(native geocoder) -> legacy, switching /weather and /geocode together."""
+    """legacy -> native geocoder -> legacy, switching /weather and /geocode together."""
     frozen = Frozen(_json(REPLAY_FIXTURE))
     ctx = Context(binary, frozen)
     phases, previous = [], None
     try:
-        for number, mode in enumerate(('legacy', 'mock', 'legacy'), 1):
+        for number, mode in enumerate(('legacy', 'native', 'legacy'), 1):
             phase = {'phase': number, 'mode': mode}
             with ctx.process(mode) as p:
                 for pass_name in ('cold', 'warm'):
@@ -754,7 +781,7 @@ def rollback(binary, deadlines=True):
                     d['backend_stall'], d['backend_attempts'], d['geocoder_kind'], d['geocoder_stall'])
             print(line, flush=True)
             previous = phase
-        expect(ctx.peers.counts()['s3'] == 0, 'rollback rehearsal sent no request to the S3 peer')
+        s3_budget_only(ctx.peers)
         return phases
     finally:
         ctx.close()

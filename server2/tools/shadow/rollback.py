@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Cache-aware rollback rehearsal for a ready family, using the actual release binary.
 
-For the gateway family the rehearsal restarts legacy -> native(mock) -> legacy with the
+For the gateway family the rehearsal restarts legacy -> native -> legacy with the
 same legacy origin, so /weather and /geocode switch together. Each phase checks the
 Cache-Control contract, cross-switch ETag revalidation, no-store errors, empty-memory
 re-acquisition cost and the 9s/5s/3s deadline caps. Loopback peers only.

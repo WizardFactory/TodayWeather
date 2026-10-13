@@ -726,7 +726,8 @@ the legacy 501. Zone state for `specialInfo` is the newest zone seed plus every
 `pwn-cd` revision published since the seed's legacy sync point (every published day
 without one), replayed in memory by an owned refresh task; cold replay cost grows with
 time since the seed. Discovery scans back to 1970, so no stored bulletin ages out. Seeds come from the
-offline `server2/tools/migration/` converter and a loopback-only importer. Newly
+offline `server2/tools/migration/` converter and an importer that uses the shared
+`SERVER2_S3_*` settings (S10c). Newly
 collected documents use the S02 seed key order, which S19 shadow comparison must
 confirm against production bytes; the Express session cookie and the shared S08
 classification of status-200 JSON gateway envelopes are recorded differences.
@@ -1315,13 +1316,14 @@ for one family/version and preserves legacy rollback. The
 [request sequence](diagrams/server2-gateway.html) and
 [operations guide](../operations/server2-gateway.md) describe this staged path.
 
-Native geocoder acquisition is restricted to explicitly configured literal-loopback
-mock endpoints in this implementation. Existing injected `GEOCODER_KAKAO_KEYS`
+S10 restricted native geocoder acquisition to a loopback `mock` mode; S10c
+([below](#s10c-real-runtime-configuration-2026-10-13)) replaced it with the real
+configuration. Existing injected `GEOCODER_KAKAO_KEYS`
 and `GEOCODER_GOOGLE_KEY` names and the Google fingerprint restriction are
 preserved. Present Kakao key lists must be JSON arrays of nonempty strings;
-malformed entries reject mock configuration. S08 adds Kakao/Google budget identities; the geocoder funding bridge
+malformed entries reject the configuration. S08 adds Kakao/Google budget identities; the geocoder funding bridge
 reserves/consumes every possible key attempt before owned work, while the
-weather-only executor rejects those identities. This is not real quota approval.
+weather-only executor rejects those identities. Configured limits are not measured quotas (#2724).
 
 Exact coordinate/locale single-flight and results remain bounded volatile RAM.
 The optional address-only S3 adapter stores a bounded 16-KiB projection with
@@ -1392,8 +1394,8 @@ peers only; no live provider, quota or AWS behavior is claimed.
 
 [S11](../../plans/issue-2696.md) adds `server2::world`, a native `Family::Dsf`
 handler for the S10 dispatcher. Registration keeps legacy HTTP selected; only
-an explicit `set_backend` (or the loopback-only `SERVER2_WORLD_MODE=native-local`
-runtime option) switches a version, and switching back is the rollback.
+an explicit `set_backend` (or `dsf` in the `SERVER2_NATIVE_FAMILIES` routing list since
+S10c) switches a version, and switching back is the rollback.
 
 Visual Crossing Timeline bodies are the only persisted world weather input:
 source `vc`, kind `timeline`, `ProviderKey::WorldCell` of the legacy cell centre,
@@ -1436,7 +1438,7 @@ Byte parity is tested against pinned Node v16.20.2 legacy-oracle recordings
 goldens, including negative coordinates, cell boundaries, date line, poles, DST,
 half-hour zones, missing fields, malformed route inputs, provider failures and WAQI
 air rendering. Restore tests rebuild every recorded 200 weather response from the S3
-test peer with empty memory and providers disabled; the air observation is supplied
+test peer with empty memory and a provider double that fails every fetch; the air observation is supplied
 by the same recorded WAQI fixture. S13a adds air raw persistence and an S3-only restore of
 the recorded air scenarios ([below](#s13a-provider-formats-and-live-world-air-2026-10-13)).
 
@@ -1455,8 +1457,8 @@ S02 oracle. Live air acquisition (Google, OpenWeather, WAQI, VC air), its S08 fu
 identities and air raw persistence were moved to [#2729](https://github.com/WizardFactory/TodayWeather/issues/2729)
 by AK (2026-10-13), with air raw records keyed by provider station or grid, never by
 precise user coordinates. S13a implements the free-phase chain (VC air and the paid phase
-excluded); without `SERVER2_WORLD_AIR` the native default remains the legacy no-provider air
-output. AK accepted the single native
+excluded); with no configured air provider key the native output remains the legacy
+no-provider air output. AK accepted the single native
 S10 attempt described above as an intended difference. Cold loads
 read 21 catalogs (at most four at a time) and, for busy cells, up to seven days of
 forecast fetches; this remains a pre-cutover measurement item. No production route,
@@ -1490,8 +1492,9 @@ source `data-go-kr` and kinds `airkorea-station`, `airkorea-sido`, `kasi-area-ri
 legacy still calls them on the retired `openapi.airkorea.or.kr` host; the choice of a host is
 an open decision.
 
-`world::LiveAir` replaces `Unconfigured` when `SERVER2_WORLD_AIR=live-local` (loopback
-providers only) or `restore-local` (stored records only). The air cell is the legacy
+`world::LiveAir` is the air source of the native world (S10c removed the S13a
+`SERVER2_WORLD_AIR=live-local|restore-local` settings; a provider takes part when its key is
+configured, and restore from S3 is ordinary behavior). The air cell is the legacy
 `toFixed(2)` cell, and providers are requested at that cell, never at the user's precise
 coordinate. A request uses an unexpired memory row, then the S3 records of the cell, then
 the chain. One owned task resolves each cell; the 4-second air release does not cancel it.
@@ -1506,9 +1509,9 @@ raw record (sources `air-google`, `air-openweather`, `air-waqi`; kind `current`;
 lasts 30 minutes from its fetch; a failure or an unpublished body is cached for 2 minutes.
 Each request evaluates the observation with its own coordinate and time and renders it with
 the S11 code. The OpenWeather minute slot is taken together with its check, before funding.
-The local runtime gives weather, air and budget S3 requests one shared admission of 12
+The runtime gives weather, air and budget S3 requests one shared admission of 12
 in-flight requests (`BoundedS3`), and an air store reads at most two catalogs at a time. The S11 oracle air scenarios match the legacy bytes through the live chain and
-again from S3 alone with providers disabled.
+again from S3 after a restart with empty memory and the configured provider down.
 
 Recorded differences: the cell coordinate replaces the first requester's precise coordinate;
 an S08 reservation that fails closed replaces the legacy Mongo counter, which allowed calls
@@ -1581,6 +1584,45 @@ plus backfill; D = 1,000 needs larger caps and the matching quota. Work beyond t
 reported as capped and stays missing, so the affected cells remain on legacy; sustained capping
 is a cutover blocker, not an accepted gap.
 
+### S10c real runtime configuration (2026-10-13)
+
+[S10c](../../plans/issue-2736.md) ([spec](../../specs/issue-2736.md)) applies AK's 2026-10-13
+decision that server2 has no runtime mode that legacy lacks. It removes the geocoder `mock`
+mode and its built-in 10,000-unit counter (`MockQuota`), `SERVER2_WORLD_MODE=native-local`,
+`SERVER2_WORLD_AIR=live-local|restore-local` with `LiveAir::restore_only`, and the
+loopback-only endpoint checks of the world runtime and both seed importers. The transport rule
+stays everywhere: HTTPS, or plain HTTP only to a loopback address. No replacement mode,
+flag or dry-run path exists; tests and smokes give the real settings values that point at
+task-owned test peers, and test doubles (quota, transport) live inside the tests.
+
+| Concern | Setting | Default / rule |
+| --- | --- | --- |
+| Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf`, `kma` (S15) | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
+| World versions | `SERVER2_WORLD_VERSIONS` | `v000901,v000902,v000903` |
+| S3 (shared) | `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`, `SERVER2_S3_BUCKET`, `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY` | `ap-northeast-2`; `https://s3.<region>.amazonaws.com/`; bucket and static credentials required when any family is native. One 12-request admission for weather, air and budgets. The importers use the same settings. |
+| Geocoder keys/endpoints | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY`, `GEOCODER_KAKAO_BASE_URL`, `GEOCODER_GOOGLE_BASE_URL` | Existing legacy names; `https://dapi.kakao.com`, `https://maps.googleapis.com`; the Google fingerprint rule applies to the production endpoint, as in legacy. |
+| Geocoder quotas | `SERVER2_GEOCODER_KAKAO_DAILY_UNITS` (per key), `SERVER2_GEOCODER_GOOGLE_DAILY_UNITS` | Required with that provider's key. One S08 window per key and UTC day, owner = domain-separated SHA-256 of the key. |
+| World weather | `VC_SECRET_KEY`, `SERVER2_WORLD_VC_DAILY_UNITS`, `SERVER2_WORLD_VC_QUOTA_ID`, `SERVER2_WORLD_VC_URL` | URL defaults to the legacy Timeline root `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/`. |
+| World air | `SERVER2_WORLD_AIR_<GOOGLE\|OPENWEATHER\|WAQI>_KEY`, `_MONTHLY_UNITS`, `_QUOTA_ID`, `_URL` | A provider takes part when its key is set (units and owner then required); URLs default to `https://airquality.googleapis.com/`, `https://api.openweathermap.org/`, `https://api.waqi.info/`. No key: legacy no-provider output. |
+
+`FundedQuota` now opens one S08 budget store per key and UTC day from configured limits,
+claims at most 50 units per authority block, and still funds every possible attempt of a
+lookup before HTTP without refunds. Without a quota the geocoder denies every acquisition.
+S08 keeps one policy per owner and window, so a changed limit applies from the next UTC day;
+a restart with another limit inside the same day denies that key until the day ends. A
+provider day that is not the UTC day overlaps two windows; the #2724 limits must account for
+that. The air source is always `LiveAir`: memory, then the S3 records of the cell, then the
+funded chain; with no provider key it returns the legacy no-provider output.
+
+Verification (local, test peers only): a Red test failed on the base because the geocoder
+refused configured HTTPS endpoints without `mock` and the world runtime required
+`SERVER2_WORLD_MODE`. The gateway built from real-format settings serves the S02
+`geocode-v000903-coord` bytes with budgets in the S06 S3 test peer; the S11 oracle air
+scenarios restore from S3 with the production WAQI configuration and its transport down;
+`gateway_smoke.py`, `world_smoke.py` and `deploy/smoke.sh` pass on the release binary. Live
+provider reachability, real quotas, runtime credential rotation and AWS behavior remain
+unverified; production routing still needs the #2724 limits and the cutover gates.
+
 ### S15 KMA v000903 assembly and Rust checkpoint (2026-10-13)
 
 [S15](../../plans/issue-2700.md) ([spec](../../specs/issue-2700.md)) adds `server2::domestic::kma`,
@@ -1632,11 +1674,14 @@ default, forward and rollback paths are tested. The recorded store is a test dou
 call's method, order and complete arguments and that every recorded call was used, forwarding on
 any difference.
 
-S15 adds no runtime mode or setting. The release binary does not register the native KMA backend:
-without an input source there is nothing native to serve, so v000903 KMA stays on legacy. `LegacyOnly`
-(every request forwarded) is the library default source. The S19 KMA family module waits for S15b. Parsing S13/S13a raw records into these store answers, reading S14
-history and exports, and the request-time RSS/mid/life acquisitions form the proposed follow-up
-S15b.
+Routing uses the S10c list only: `kma` in `SERVER2_NATIVE_FAMILIES` registers and selects the
+v000903 KMA handler; removing it and restarting is the rollback. S15 adds no other setting or mode.
+Until the S15b input source exists the handler's source is `LegacyOnly`, so a listed `kma` forwards
+every request to legacy and reads no S3 setting; S15b will read the shared `SERVER2_S3_*` settings.
+`tools/kma_smoke.py` checks legacy -> `kma` -> legacy on the release binary (identical bytes, the
+legacy KMA hop in every phase, unknown or repeated entries refused before binding). Parsing
+S13/S13a raw records into these store answers, reading S14 history and exports, and the
+request-time RSS/mid/life acquisitions form the proposed follow-up S15b.
 
 O-2 checkpoint (Rust adoption is settled; this records correctness and cost). `kma_checkpoint`
 assembles every recorded request from memory, and `tools/kma_checkpoint.py` reads process rusage.

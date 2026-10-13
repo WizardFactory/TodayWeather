@@ -1,4 +1,4 @@
-//! Legacy seed export (offline converter) and loopback-only import.
+//! Legacy seed export (offline converter) and import with the shared S3 settings.
 use super::common::*;
 use server2::{gateway::OrderedJson, warnings::seed};
 use std::process::Command;
@@ -94,18 +94,49 @@ fn converter_rejects_invalid_documents_without_output() {
     let _ = std::fs::remove_dir_all(dir);
 }
 #[test]
-fn importer_is_loopback_only_and_validates_seed_files() {
-    assert!(seed::loopback_endpoint("http://127.0.0.1:9000/"));
-    assert!(seed::loopback_endpoint("http://[::1]:9000/"));
+fn importer_settings_follow_the_transport_rule_and_seed_files_are_validated() {
+    use server2::storage::S3Settings;
+    let settings = |endpoint: Option<&'static str>| {
+        move |name: &str| match name {
+            "SERVER2_S3_ENDPOINT" => endpoint.map(str::to_owned),
+            "SERVER2_S3_BUCKET" => Some("server2-seeds".to_owned()),
+            "SERVER2_S3_ACCESS_KEY_ID" => Some("configured-access-key".to_owned()),
+            "SERVER2_S3_SECRET_ACCESS_KEY" => Some("configured-secret".to_owned()),
+            _ => None,
+        }
+    };
+    // The real regional endpoint is the default; any HTTPS or loopback HTTP endpoint is accepted.
+    let default = S3Settings::from_vars(&settings(None)).unwrap();
+    assert_eq!(default.endpoint, "https://s3.ap-northeast-2.amazonaws.com/");
     for endpoint in [
         "https://s3.ap-northeast-2.amazonaws.com/",
+        "https://s3.example.test/",
+        "http://127.0.0.1:9000/",
+        "http://[::1]:9000/",
+    ] {
+        assert!(
+            S3Settings::from_vars(&settings(Some(endpoint))).is_ok(),
+            "{endpoint}"
+        );
+    }
+    for endpoint in [
         "http://10.0.0.5:9000/",
         "http://localhost.example.com/",
         "http://user:pass@127.0.0.1:9000/",
+        "https://s3.example.test/prefix/",
         "not a url",
     ] {
-        assert!(!seed::loopback_endpoint(endpoint), "{endpoint}");
+        assert!(
+            S3Settings::from_vars(&settings(Some(endpoint))).is_err(),
+            "{endpoint}"
+        );
     }
+    let no_bucket = |name: &str| {
+        (name != "SERVER2_S3_BUCKET")
+            .then(|| settings(None)(name))
+            .flatten()
+    };
+    assert!(S3Settings::from_vars(&no_bucket).is_err());
     assert!(seed::parse(br#"{"schema":2,"exportedAt":"2026-10-12T00:00:00.000Z"}"#).is_err());
     assert!(seed::parse(br#"{"schema":1,"exportedAt":"2026-10-12T00:00:00.000Z","special":[{"type":5,"announcement":"2026-09-20T09:10:00.000Z"}]}"#).is_err());
     assert!(

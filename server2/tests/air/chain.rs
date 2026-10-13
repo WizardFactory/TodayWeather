@@ -1,9 +1,7 @@
 //! Legacy provider order, S08 funding, down markers, single flight and O-9 publication.
 use super::common::ms;
 use super::support::*;
-use server2::world::{
-    AirConfig, AirOutcome, AirSource, AirStore, FixedClock, LiveAir, MemoryAirStore,
-};
+use server2::world::{AirConfig, AirOutcome, AirSource, FixedClock, LiveAir, MemoryAirStore};
 use std::sync::Arc;
 
 const T: &str = "2026-09-27T14:20:00Z";
@@ -244,7 +242,7 @@ async fn shared_s3_admission_bounds_in_flight_requests() {
 }
 
 #[tokio::test]
-async fn unconfigured_keys_and_restore_only_never_call_providers() {
+async fn unconfigured_keys_and_no_provider_never_call_providers() {
     let stub = Stub::start().await;
     stub.push(WAQI, Reply::json(fresh_waqi()));
     let clock = Arc::new(FixedClock::new(ms(T)));
@@ -255,9 +253,10 @@ async fn unconfigured_keys_and_restore_only_never_call_providers() {
         air.current(37.5, 127.0, ms(T)).await,
         AirOutcome::None
     ));
-    let restore = LiveAir::restore_only(memory() as Arc<dyn AirStore>, clock.clone());
+    // No provider key at all: the legacy `no-provider` output, nothing is read or called.
+    let (none, _) = live(AirConfig::default(), memory(), clock.clone());
     assert!(matches!(
-        restore.current(37.5, 127.0, ms(T)).await,
+        none.current(37.5, 127.0, ms(T)).await,
         AirOutcome::None
     ));
     assert!(stub.calls().is_empty());

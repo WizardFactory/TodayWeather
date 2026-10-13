@@ -77,7 +77,8 @@ def main():
     args = parser.parse_args()
     log_path = Path(args.log).resolve()
     binary = Path(args.binary).resolve()
-    if not log_path.is_relative_to(ROOT / 'reports/sdlc/issue-2695-s10') or not binary.is_relative_to(ROOT / 'server2/target'):
+    owned = [ROOT / 'reports/sdlc' / task for task in ('issue-2695-s10', 'issue-2736-s10c')]
+    if not any(log_path.is_relative_to(path) for path in owned) or not binary.is_relative_to(ROOT / 'server2/target'):
         raise ValueError('only owned task receipt and build binary are accepted')
     raw = log_path.read_bytes()
     text = raw.decode('utf-8')

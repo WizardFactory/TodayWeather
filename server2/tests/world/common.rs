@@ -6,8 +6,8 @@ use server2::{
     storage::{CatalogLimits, HttpS3Transport},
     world::{
         AirSource, CatalogWorldStore, Cell, Clock, FixedClock, MemoryWorldStore, Range,
-        RecordedWaqi, Unconfigured, VcError, VcSource, World, WorldBackend, WorldConfig,
-        WorldReply, WorldStore, js::Val,
+        Unconfigured, VcError, VcSource, World, WorldBackend, WorldConfig, WorldReply, WorldStore,
+        js::Val,
     },
 };
 use std::{
@@ -425,5 +425,46 @@ impl<T: AsyncStep> AsyncStep for &mut T {
         step: &'a serde_json::Value,
     ) -> BoxFuture<'a, ()> {
         (**self).run(sc, index, step)
+    }
+}
+
+/// VC source double for a restart with the provider down: every fetch fails (no billed body).
+pub struct Down;
+impl VcSource for Down {
+    fn fetch(
+        &self,
+        _: server2::world::Cell,
+        _: Range,
+        _: Instant,
+    ) -> BoxFuture<'_, Result<Vec<u8>, VcError>> {
+        Box::pin(async { Err(VcError::Failed) })
+    }
+}
+/// Air source double: one recorded WAQI body served for every request, evaluated per request.
+pub struct RecordedWaqi {
+    observation: Option<server2::world::air::Observation>,
+}
+impl RecordedWaqi {
+    pub fn new(body: &[u8]) -> Self {
+        Self {
+            observation: server2::world::air::parse_waqi(body),
+        }
+    }
+}
+impl AirSource for RecordedWaqi {
+    fn current(
+        &self,
+        lat: f64,
+        lon: f64,
+        request_ms: f64,
+    ) -> BoxFuture<'_, server2::world::AirOutcome> {
+        Box::pin(async move {
+            match &self.observation {
+                Some(o) if server2::world::air::usable(o, lat, lon, request_ms) => {
+                    server2::world::AirOutcome::Observation(o.clone())
+                }
+                _ => server2::world::AirOutcome::None,
+            }
+        })
     }
 }
