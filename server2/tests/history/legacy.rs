@@ -140,6 +140,18 @@ fn legacy_converter_rejects_arrays_foreign_collections_and_personal_fields() {
         (
             "kma.town.current",
             "2.0",
+            "bad-number-digits.jsonl",
+            "number out of range",
+        ),
+        (
+            "kma.town.current",
+            "2.0",
+            "bad-number-grammar.jsonl",
+            "non-scalar field 't1h'",
+        ),
+        (
+            "kma.town.current",
+            "2.0",
             "bad-date-range.jsonl",
             "fcsDate and pubDate",
         ),
@@ -231,6 +243,13 @@ fn legacy_seed_parser_rejects_tampered_seeds() {
             r#""t1h":{"$numberLong":"9223372036854775808"}"#,
             1,
         ),
+        good.replacen(
+            r#""t1h":21.3"#,
+            &format!(r#""t1h":1{}"#, "0".repeat(400)),
+            1,
+        ),
+        good.replacen(r#""t1h":21.3"#, r#""t1h":{"$numberLong":"1_0"}"#, 1),
+        good.replacen(r#""t1h":21.3"#, r#""t1h":{"$numberDouble":" 1.0"}"#, 1),
         // Metadata fields must hold their legacy types.
         good.replacen(r#""__v":0"#, r#""__v":"token""#, 1),
     ] {

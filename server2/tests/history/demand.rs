@@ -290,6 +290,42 @@ async fn demand_push_snapshots_never_move_backwards() {
 }
 
 #[tokio::test]
+async fn demand_equal_time_push_aggregates_are_written_once() {
+    let t = Arc::new(MemoryDemand::default());
+    let a = store(&t);
+    let b = store(&t);
+    // A commits X at T. B (same T, different cells) is superseded and adopts X, so a delayed
+    // acknowledgment of A can never leave B's memory or S3 holding a different aggregate.
+    assert_eq!(
+        a.replace_push(&[g(98, 76)], T0, 25 * HOUR).await.unwrap(),
+        PushOutcome::Replaced
+    );
+    assert_eq!(
+        b.replace_push(&[g(60, 127)], T0, 25 * HOUR).await.unwrap(),
+        PushOutcome::Superseded
+    );
+    assert!(
+        String::from_utf8(t.raw(PUSH_KEY).unwrap())
+            .unwrap()
+            .contains(r#""nx":98"#)
+    );
+    assert_eq!(b.active(T0 + HOUR), BTreeSet::from([g(98, 76)]));
+    assert_eq!(a.active(T0 + HOUR), BTreeSet::from([g(98, 76)]));
+    // An identical retry at the same time is accepted (idempotent).
+    assert_eq!(
+        b.replace_push(&[g(98, 76)], T0, 25 * HOUR).await.unwrap(),
+        PushOutcome::Replaced
+    );
+    // A conflict between the read and the write re-reads and still yields to the first writer.
+    t.conflicts.store(1, Ordering::SeqCst);
+    assert_eq!(
+        b.replace_push(&[g(61, 127)], T0, 25 * HOUR).await.unwrap(),
+        PushOutcome::Superseded
+    );
+    assert_eq!(b.active(T0 + HOUR), BTreeSet::from([g(98, 76)]));
+}
+
+#[tokio::test]
 async fn demand_rebuild_never_rolls_push_memory_back() {
     let t = Arc::new(MemoryDemand::default());
     let s = store(&t);

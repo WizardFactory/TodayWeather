@@ -320,7 +320,9 @@ impl<T: DemandTransport> DemandStore<T> {
                 None => WriteCondition::Absent,
                 Some(object) => {
                     if let Ok(stored) = parse_push(&object.body)
-                        && stored.last_demand_ms > snapshot_ms
+                        && (stored.last_demand_ms > snapshot_ms
+                            || (stored.last_demand_ms == snapshot_ms
+                                && stored.cells != record.cells))
                     {
                         self.adopt_push(stored, false);
                         return Ok(PushOutcome::Superseded);

@@ -635,12 +635,13 @@ fn ext_number(v: &Value) -> Option<f64> {
             let (k, inner) = o.iter().next()?;
             let s = inner.as_str()?;
             match k.as_str() {
-                "$numberInt" | "$numberLong" => s.parse::<i64>().ok().map(|n| n as f64),
+                "$numberInt" | "$numberLong" => int_text(s).map(|n| n as f64),
                 "$numberDouble" | "$numberDecimal" => match s {
                     "Infinity" => Some(f64::INFINITY),
                     "-Infinity" => Some(f64::NEG_INFINITY),
                     "NaN" => Some(f64::NAN),
-                    _ => s.parse::<f64>().ok(),
+                    _ if decimal_text(s) => s.parse::<f64>().ok(),
+                    _ => None,
                 },
                 _ => None,
             }
@@ -648,13 +649,45 @@ fn ext_number(v: &Value) -> Option<f64> {
         _ => None,
     }
 }
+/// `[+-]?digits` within i64 (shared with the converter's `INT_TEXT`).
+fn int_text(s: &str) -> Option<i64> {
+    let digits = s.strip_prefix(['+', '-']).unwrap_or(s);
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    s.parse().ok()
+}
+/// `[+-]?(digits[.digits*]|.digits)([eE][+-]?digits)?` (shared with `DECIMAL_TEXT`).
+fn decimal_text(s: &str) -> bool {
+    let b = s.strip_prefix(['+', '-']).unwrap_or(s).as_bytes();
+    let (mantissa, exponent) = match b.iter().position(|c| matches!(c, b'e' | b'E')) {
+        Some(i) => (&b[..i], Some(&b[i + 1..])),
+        None => (b, None),
+    };
+    let digits = |x: &[u8]| x.iter().all(u8::is_ascii_digit);
+    let mantissa_ok = match mantissa.iter().position(|c| *c == b'.') {
+        Some(i) => {
+            let (int, frac) = (&mantissa[..i], &mantissa[i + 1..]);
+            digits(int) && digits(frac) && !(int.is_empty() && frac.is_empty())
+        }
+        None => !mantissa.is_empty() && digits(mantissa),
+    };
+    let exponent_ok = exponent.is_none_or(|e| {
+        let e = e
+            .strip_prefix(b"+")
+            .or_else(|| e.strip_prefix(b"-"))
+            .unwrap_or(e);
+        !e.is_empty() && digits(e)
+    });
+    mantissa_ok && exponent_ok
+}
 /// Extended JSON dates: `{"$date":ISO}`, `{"$date":{"$numberLong":ms}}` or `{"$date":ms}`.
 fn ext_date_ms(v: &Value) -> Option<i64> {
     let inner = v.as_object().filter(|o| o.len() == 1)?.get("$date")?;
     let ms = match inner {
         Value::String(s) => parse_iso(s)?,
         Value::Number(n) => n.as_i64()?,
-        Value::Object(o) if o.len() == 1 => o.get("$numberLong")?.as_str()?.parse().ok()?,
+        Value::Object(o) if o.len() == 1 => int_text(o.get("$numberLong")?.as_str()?)?,
         _ => return None,
     };
     (0..=MAX_INSTANT_MS).contains(&ms).then_some(ms)
@@ -1021,6 +1054,26 @@ mod tests {
         // Multibyte input never slices inside a character.
         assert_eq!(parse_iso("2026-09-24T02:10:00+\u{e9}\u{e9}x"), None);
         assert_eq!(parse_iso("2026-09-24T02:10:00.\u{e9}Z"), None);
+    }
+    #[test]
+    fn numeric_wrapper_grammar_matches_the_converter() {
+        let n = |k: &str, v: &str| ext_number(&serde_json::json!({ k: v }));
+        assert_eq!(n("$numberLong", "10"), Some(10.0));
+        assert_eq!(n("$numberLong", "+10"), Some(10.0));
+        assert_eq!(n("$numberInt", "-7"), Some(-7.0));
+        for bad in ["1_0", " 10 ", "10 ", "", "+", "1.0", "9223372036854775808"] {
+            assert_eq!(n("$numberLong", bad), None, "{bad}");
+        }
+        assert_eq!(n("$numberDouble", "20.5"), Some(20.5));
+        assert_eq!(n("$numberDouble", ".5"), Some(0.5));
+        assert_eq!(n("$numberDouble", "5."), Some(5.0));
+        assert_eq!(n("$numberDouble", "1e3"), Some(1000.0));
+        assert!(n("$numberDouble", "NaN").is_some_and(f64::is_nan));
+        for bad in [
+            "1_0.0", " 1.0", "inf", "nan", "infinity", ".", "1e", "e5", "0x10",
+        ] {
+            assert_eq!(n("$numberDouble", bad), None, "{bad}");
+        }
     }
     #[test]
     fn nested_metadata_cannot_carry_identifiers() {

@@ -61,6 +61,29 @@ SEED_BYTES = 64 * 1024 * 1024    # Rust importer seed bound
 I64_MIN, I64_MAX = -(1 << 63), (1 << 63) - 1
 
 
+# Extended JSON wrapper grammar shared with the Rust importer (legacy.rs `int_text`/`decimal_text`).
+INT_TEXT = re.compile(r'^[+-]?[0-9]+$')
+DECIMAL_TEXT = re.compile(r'^[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$')
+DOUBLE_SPECIALS = {'Infinity': float('inf'), '-Infinity': float('-inf'), 'NaN': float('nan')}
+
+
+def wrapped_int(text):
+    if not isinstance(text, str) or not INT_TEXT.match(text):
+        return None
+    parsed = int(text)
+    return parsed if I64_MIN <= parsed <= I64_MAX else None
+
+
+def bounded_int(text):
+    """Plain JSON integers must stay within f64 range, as serde_json requires."""
+    value = int(text)
+    try:
+        float(value)
+    except OverflowError as error:
+        raise Invalid(f'number out of range: {text[:20]}...') from error
+    return value
+
+
 def reject_constant(name):
     raise Invalid(f'non-JSON numeric constant {name}')
 
@@ -116,14 +139,13 @@ def number(value):
         (key, inner), = value.items()
         if not isinstance(inner, str):
             return None
-        try:
-            if key in ('$numberInt', '$numberLong'):
-                parsed = int(inner)
-                return float(parsed) if I64_MIN <= parsed <= I64_MAX else None
-            if key in ('$numberDouble', '$numberDecimal'):
-                return float(inner)
-        except ValueError:
-            return None
+        if key in ('$numberInt', '$numberLong'):
+            parsed = wrapped_int(inner)
+            return None if parsed is None else float(parsed)
+        if key in ('$numberDouble', '$numberDecimal'):
+            if inner in DOUBLE_SPECIALS:
+                return DOUBLE_SPECIALS[inner]
+            return float(inner) if DECIMAL_TEXT.match(inner) else None
     return None
 
 
@@ -137,7 +159,9 @@ def date_ms(value):
         elif isinstance(inner, int) and not isinstance(inner, bool):
             ms = inner
         elif isinstance(inner, dict) and len(inner) == 1 and isinstance(inner.get('$numberLong'), str):
-            ms = int(inner['$numberLong'])
+            ms = wrapped_int(inner['$numberLong'])
+            if ms is None:
+                return None
         else:
             return None
     except (Invalid, ValueError):
@@ -262,7 +286,7 @@ def convert(collection, version, exported_at, source):
         try:
             text = raw.decode('utf-8')
             doc = json.loads(text, object_pairs_hook=unique_pairs, parse_constant=reject_constant,
-                             parse_float=finite_float)
+                             parse_float=finite_float, parse_int=bounded_int)
         except (UnicodeDecodeError, json.JSONDecodeError) as error:
             raise Invalid(f'line {number_} is not a JSON document') from error
         except Invalid as error:
