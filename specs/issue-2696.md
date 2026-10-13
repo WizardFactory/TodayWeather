@@ -61,12 +61,13 @@ exhausted funding window (`_selectRange`) -> per-cell owner: a request behind an
 active fetch is a legacy waiter (stored current and today complete it), as is a
 request during the failure backoff (2 s; 15 min after a funded 200 body that is
 unusable); a waiter that would otherwise fail first checks funding eligibility
-without HTTP (known exhaustion, or a probe that funds both attempts and keeps the
-reservation for the next fetch of the range) and answers 503 with the window end
+without HTTP (pooled funds, or a new reservation pooled for later fetches of any
+range; concurrent checks share the outcome) and answers 503 with the window end
 when exhausted -> S08 funding of both attempts before HTTP (98/50/2 units, one
-window per UTC day); an unfundable range retries with `forecast` only when no
+window per UTC day, serialized per window; unconsumed units are pooled and used
+before a new reservation); an unfundable range retries with `forecast` only when no
 current record exists -> VC request at the cell centre with the legacy requester
-policy (8 s call budget, gzip, 4 MiB body; one retry after 300 ms of a
+policy (8 s call budget, gzip, 4 MiB raw and 16 MiB decoded body; one retry after 300 ms of a
 concurrency 429 within 1.5 s or of a reset socket; 401/403 and limit 429 mark
 the provider down; other statuses and transport failures fail) -> validation (JSON, days, timezone, tzoffset
 or hours) and conversion -> S06 publication -> merge. Control windows start when
@@ -75,7 +76,8 @@ the owned fetch may continue to 8 s and publish for the next request. Failures u
 `_fallback`: serve current or stale (<= 6 h) records, else error; a provider-down
 or exhausted funding without a stored current returns Unavailable with the marker
 or window end as `retryAt`. Busy cells are not evicted from the bounded cell map;
-idle cells are trimmed back to capacity after a burst.
+idle cells are trimmed back to capacity when a request or a detached owned
+load/fetch finishes.
 
 ## Assembly
 

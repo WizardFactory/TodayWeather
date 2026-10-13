@@ -3,9 +3,9 @@
 use super::common::*;
 use axum::{Router, extract::Request, http::StatusCode, response::IntoResponse};
 use server2::{
-    budget::{BudgetError, Clock as BudgetClock},
+    budget::{BudgetError, BudgetObject, BudgetTransport, Clock as BudgetClock},
     gateway::{BackendHandler, BoxFuture, GatewayError},
-    storage::Error as StorageError,
+    storage::{Error as StorageError, WriteCondition},
     world::{
         Cell, Disabled, FixedClock, FundedVc, HttpVcTransport, MemoryWorldStore, Range, RawFetch,
         StoreError, Unconfigured, VcError, VcFunding, VcSource, World, WorldBackend, WorldConfig,
@@ -70,21 +70,46 @@ pub(crate) fn funded_at(
     clock: Arc<FixedClock>,
     limit: u64,
 ) -> Arc<FundedVc<HttpVcTransport, server2::storage::HttpS3Transport>> {
+    funded_with(peer.transport(), endpoint, clock, limit, limit.min(98))
+}
+pub(crate) fn funded_with<T: BudgetTransport + 'static>(
+    transport: T,
+    endpoint: &str,
+    clock: Arc<FixedClock>,
+    limit: u64,
+    block: u64,
+) -> Arc<FundedVc<HttpVcTransport, T>> {
     Arc::new(
         FundedVc::new(
             endpoint,
             Arc::new(HttpVcTransport::new().unwrap()),
             VcFunding {
-                transport: Arc::new(peer.transport()),
+                transport: Arc::new(transport),
                 quota_id: "a".repeat(64),
                 daily_units: limit,
-                block_units: limit.min(98),
+                block_units: block,
                 clock: Arc::new(ScenarioClock(clock)),
             },
             "synthetic-vc-key-0001".into(),
         )
         .unwrap(),
     )
+}
+/// S3 budget transport whose authority reads are delayed, so funding steps overlap in time.
+struct Delayed<T>(T, Duration);
+impl<T: BudgetTransport> BudgetTransport for Delayed<T> {
+    async fn get_budget(&self, key: &str) -> Result<BudgetObject, BudgetError> {
+        tokio::time::sleep(self.1).await;
+        self.0.get_budget(key).await
+    }
+    async fn put_budget(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &WriteCondition,
+    ) -> Result<u16, BudgetError> {
+        self.0.put_budget(key, body, condition).await
+    }
 }
 fn funded(peer: &Peer, stub: &Stub, clock: Arc<FixedClock>, limit: u64) -> Arc<dyn VcSource> {
     funded_at(peer, &stub.endpoint, clock, limit)
@@ -833,4 +858,180 @@ async fn busy_burst_is_trimmed_back_to_capacity() {
         3,
         "restored from the store, no refetch"
     );
+}
+
+/// S11-R3-F01: concurrent requests behind backed-off cells share the funding outcome; both get
+/// the legacy 503 for an exhausted window even while the first check is still in progress.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_backoff_requests_share_the_exhaustion_outcome() {
+    let peer = Peer::new();
+    let stub = stub().await;
+    let clock = Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z")));
+    let source = funded_with(
+        Delayed(peer.transport(), Duration::from_millis(200)),
+        &stub.endpoint,
+        clock.clone(),
+        4,
+        4,
+    );
+    let backend = Arc::new(WorldBackend::new(World::new(
+        peer.store(),
+        source,
+        Arc::new(Unconfigured),
+        clock.clone(),
+        WorldConfig::default(),
+    )));
+    let a = "/v000903/dsf/coord/35.68,139.76?temperatureUnit=C";
+    let b = "/v000903/dsf/coord/34.7,135.5?temperatureUnit=C";
+    stub.queue.lock().unwrap().push_back((500, Vec::new()));
+    stub.queue.lock().unwrap().push_back((500, Vec::new()));
+    assert!(matches!(
+        backend.reply(a, "en", deadline()).await,
+        WorldReply::Error
+    ));
+    assert!(matches!(
+        backend.reply(b, "en", deadline()).await,
+        WorldReply::Error
+    ));
+    clock.set(ms("2026-09-26T07:04:31.000Z"));
+    let tasks: Vec<_> = [a, b]
+        .into_iter()
+        .map(|p| {
+            let backend = backend.clone();
+            tokio::spawn(async move { backend.reply(p, "en", deadline()).await })
+        })
+        .collect();
+    for t in tasks {
+        match t.await.unwrap() {
+            WorldReply::Unavailable(at) => assert_eq!(at, ms("2026-09-27T00:00:00.000Z")),
+            other => panic!("{other:?}"),
+        }
+    }
+    assert_eq!(stub.seen.lock().unwrap().len(), 2);
+}
+
+/// S11-R3-F02: a fetch and an eligibility probe for the last funds of a window are serialized;
+/// the fetch is funded (by its own or the probe's reservation) and never sees false exhaustion.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn fetch_and_probe_never_race_into_false_exhaustion() {
+    let peer = Peer::new();
+    let stub = stub().await;
+    let clock = Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z")));
+    let (r, body) = request_body("london-recorded", 0, 0);
+    let source = funded_with(
+        Delayed(peer.transport(), Duration::from_millis(200)),
+        &stub.endpoint,
+        clock.clone(),
+        4,
+        2,
+    );
+    let backend = Arc::new(WorldBackend::new(World::new(
+        peer.store(),
+        source,
+        Arc::new(Unconfigured),
+        clock.clone(),
+        WorldConfig::default(),
+    )));
+    let a = "/v000903/dsf/coord/35.68,139.76?temperatureUnit=C";
+    stub.queue.lock().unwrap().push_back((500, Vec::new()));
+    // First pair of units: A's forecast fails and backs off.
+    assert!(matches!(
+        backend.reply(a, "en", deadline()).await,
+        WorldReply::Error
+    ));
+    clock.set(ms("2026-09-26T07:04:31.000Z"));
+    stub.queue.lock().unwrap().push_back((200, body));
+    // Overlap A's probe (inside its backoff) with B's fetch for the final pair.
+    let probe = {
+        let backend = backend.clone();
+        tokio::spawn(async move { backend.reply(a, "en", deadline()).await })
+    };
+    let fetch = {
+        let backend = backend.clone();
+        let p = path(r);
+        tokio::spawn(async move { backend.reply(&p, "ko", deadline()).await })
+    };
+    assert!(
+        matches!(fetch.await.unwrap(), WorldReply::Body(_)),
+        "B must be funded"
+    );
+    assert!(matches!(
+        probe.await.unwrap(),
+        WorldReply::Error | WorldReply::Unavailable(_)
+    ));
+    assert_eq!(stub.seen.lock().unwrap().len(), 2);
+}
+
+/// S11-R3-F03: unconsumed funds serve any range, so a combined failure plus a combined
+/// eligibility check cannot starve forecast; a new UTC day funds again.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn pooled_funds_serve_any_range_and_roll_over() {
+    let peer = Peer::new();
+    let stub = stub().await;
+    let clock = Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z")));
+    let source = funded_with(peer.transport(), &stub.endpoint, clock.clone(), 196, 98);
+    let cell = Cell::of(35.68, 139.76).unwrap();
+    let soon = || Instant::now() + Duration::from_secs(3);
+    stub.queue.lock().unwrap().push_back((500, Vec::new()));
+    assert_eq!(
+        source.fetch(cell, Range::Combined, soon()).await,
+        Err(VcError::Failed)
+    );
+    // Eligibility for combined reserves the window's other 98 units.
+    assert_eq!(source.eligible(Range::Combined).await, None);
+    stub.queue.lock().unwrap().push_back((200, b"{}".to_vec()));
+    assert!(source.fetch(cell, Range::Forecast, soon()).await.is_ok());
+    stub.queue.lock().unwrap().push_back((200, b"{}".to_vec()));
+    assert!(source.fetch(cell, Range::Combined, soon()).await.is_ok());
+    clock.set(ms("2026-09-27T00:00:01.000Z"));
+    stub.queue.lock().unwrap().push_back((200, b"{}".to_vec()));
+    assert!(source.fetch(cell, Range::Forecast, soon()).await.is_ok());
+    assert_eq!(stub.seen.lock().unwrap().len(), 4);
+}
+
+/// S11-R3-F04: cells kept by detached owned fetches that outlive their requests are trimmed
+/// when that owned work finishes, without another request.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn detached_burst_is_trimmed_after_owned_work_finishes() {
+    let (_, body) = request_body("london-recorded", 0, 0);
+    let source = Arc::new(Slow {
+        body,
+        delay: Duration::from_millis(500),
+        calls: AtomicUsize::new(0),
+    });
+    let clock = Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z")));
+    let world = World::new(
+        memory(),
+        source.clone(),
+        Arc::new(Unconfigured),
+        clock,
+        WorldConfig {
+            max_cells: 1,
+            ..WorldConfig::default()
+        },
+    );
+    let backend = Arc::new(WorldBackend::new(world.clone()));
+    let paths = [
+        "/v000903/dsf/coord/51.507,-0.128?temperatureUnit=C",
+        "/v000903/dsf/coord/40.71,-74.0?temperatureUnit=C",
+        "/v000903/dsf/coord/-33.86,151.2?temperatureUnit=C",
+    ];
+    let tasks: Vec<_> = paths
+        .into_iter()
+        .map(|p| {
+            let b = backend.clone();
+            let short = Instant::now() + Duration::from_millis(100);
+            tokio::spawn(async move { b.reply(p, "en", short).await })
+        })
+        .collect();
+    for t in tasks {
+        assert!(matches!(t.await.unwrap(), WorldReply::Error));
+    }
+    assert!(
+        world.cached_cells() > 1,
+        "busy cells exceed capacity meanwhile"
+    );
+    tokio::time::sleep(Duration::from_millis(900)).await;
+    assert!(world.cached_cells() <= 1, "{}", world.cached_cells());
+    assert_eq!(source.calls.load(Ordering::SeqCst), 3);
 }

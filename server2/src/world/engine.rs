@@ -255,6 +255,9 @@ impl World {
         let owned = self.clone();
         let task_entry = entry.clone();
         let task = tokio::spawn(async move {
+            // Declared before the entry so the entry is released first, then idle cells trim.
+            let _trim = Trim(owned.clone());
+            let task_entry = task_entry;
             let _op = task_entry.op.lock().await;
             if let Some(db) = task_entry
                 .db
@@ -330,6 +333,9 @@ impl World {
         mut forecast_only: bool,
         mut output: Found,
     ) -> Flight {
+        // A detached owned fetch trims idle cells when it finishes, after releasing its cell.
+        let _trim = Trim(self.clone());
+        let entry = entry;
         // Another owner is fetching (legacy lock held elsewhere): this request waits for it.
         let (_op, waiter) = match entry.op.try_lock() {
             Ok(guard) => (guard, false),
@@ -471,9 +477,9 @@ impl World {
         now: f64,
         deadline: Instant,
     ) -> Result<Found, Failure> {
-        let result = self.acquire(lat, lon, now, deadline).await;
-        self.trim_cells();
-        result
+        // Trims when the request finishes or is cancelled, after its cell reference is gone.
+        let _trim = Trim(self.clone());
+        self.acquire(lat, lon, now, deadline).await
     }
     async fn acquire(
         &self,
@@ -569,5 +575,12 @@ fn trim(map: &mut CellMap, keep: usize) {
             return;
         };
         map.remove(&oldest);
+    }
+}
+/// Trims the cell map to capacity when dropped (request end, cancellation or owned-task end).
+struct Trim(World);
+impl Drop for Trim {
+    fn drop(&mut self) {
+        self.0.trim_cells();
     }
 }

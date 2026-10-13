@@ -22,6 +22,23 @@ enum Act {
     Close,
     /// Respond with status and body, optionally gzip-encoded.
     Respond(u16, Vec<u8>, bool),
+    /// Respond 200 with these exact bytes labelled `content-encoding: gzip`.
+    Encoded(Vec<u8>),
+    /// Send headers and part of the declared body, then stall.
+    Stall,
+}
+/// Response head; plain literals for the version/type keep encoded strings path-free.
+fn head(status: u16, gzip: bool, length: usize) -> String {
+    let (version, json, crlf) = ("HTTP/1.1", "application/json", "\r\n");
+    let encoding = if gzip { "content-encoding: gzip" } else { "" };
+    let mut head = format!("{version} {status} X{crlf}content-type: {json}{crlf}");
+    if gzip {
+        head.push_str(&format!("{encoding}{crlf}"));
+    }
+    head.push_str(&format!(
+        "content-length: {length}{crlf}connection: close{crlf}{crlf}"
+    ));
+    head
 }
 struct Peer2 {
     endpoint: String,
@@ -69,21 +86,22 @@ async fn tcp_peer() -> Peer2 {
                         } else {
                             body
                         };
-                        // Plain literals for the version/type keep encoded strings path-free.
-                        let (version, json, crlf) = ("HTTP/1.1", "application/json", "\r\n");
-                        let encoding = if gzip { "content-encoding: gzip" } else { "" };
-                        let mut head =
-                            format!("{version} {status} X{crlf}content-type: {json}{crlf}");
-                        if gzip {
-                            head.push_str(&format!("{encoding}{crlf}"));
-                        }
-                        head.push_str(&format!(
-                            "content-length: {}{crlf}connection: close{crlf}{crlf}",
-                            body.len()
-                        ));
+                        let head = head(status, gzip, body.len());
                         let _ = socket.write_all(head.as_bytes()).await;
                         let _ = socket.write_all(&body).await;
                         let _ = socket.shutdown().await;
+                    }
+                    Act::Encoded(body) => {
+                        let _ = socket
+                            .write_all(head(200, true, body.len()).as_bytes())
+                            .await;
+                        let _ = socket.write_all(&body).await;
+                        let _ = socket.shutdown().await;
+                    }
+                    Act::Stall => {
+                        let _ = socket.write_all(head(200, false, 100).as_bytes()).await;
+                        let _ = socket.write_all(b"{\"days\":").await;
+                        tokio::time::sleep(Duration::from_secs(10)).await;
                     }
                 }
             });
@@ -240,4 +258,42 @@ async fn gzip_bodies_are_decoded_and_statuses_classified() {
         Err(VcError::Failed)
     );
     assert_eq!(vc.count(), 3, "a 5xx is not retried");
+}
+
+/// S11-R3-F05: malformed gzip, decoded-size overflow and a stalled body all fail without a
+/// retry, within the call deadline, and no error value carries the key-bearing URL.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn decoding_and_deadline_boundaries_fail_closed() {
+    let s3 = Peer::new();
+    let vc = tcp_peer().await;
+    let source = setup(&s3, &vc);
+    vc.queue(&[Act::Encoded(b"not gzip at all".to_vec())]);
+    let malformed = source.fetch(cell(), Range::Forecast, within(8000)).await;
+    assert_eq!(malformed, Err(VcError::Failed));
+    assert_eq!(vc.count(), 1, "a malformed gzip body is not retried");
+    // 17 MiB of zeros compresses far below the 4 MiB raw cap but exceeds the decoded cap.
+    let mut e = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::best());
+    e.write_all(&vec![0u8; 17 * 1024 * 1024]).unwrap();
+    let bomb = e.finish().unwrap();
+    assert!(bomb.len() < 4 * 1024 * 1024);
+    vc.queue(&[Act::Encoded(bomb)]);
+    let overflow = source.fetch(cell(), Range::Forecast, within(8000)).await;
+    assert_eq!(overflow, Err(VcError::Failed));
+    assert_eq!(vc.count(), 2);
+    vc.queue(&[Act::Stall, ok(b"{}")]);
+    let started = Instant::now();
+    let stalled = source.fetch(cell(), Range::Forecast, within(1000)).await;
+    assert_eq!(stalled, Err(VcError::Failed));
+    assert!(
+        started.elapsed() < Duration::from_millis(1500),
+        "bounded by the call deadline"
+    );
+    assert_eq!(vc.count(), 3);
+    for outcome in [malformed, overflow, stalled] {
+        let text = format!("{outcome:?}");
+        assert!(
+            !text.contains("synthetic-vc-key") && !text.contains("key="),
+            "{text}"
+        );
+    }
 }

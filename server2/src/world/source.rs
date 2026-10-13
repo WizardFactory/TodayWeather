@@ -12,13 +12,9 @@ use crate::{
     gateway::BoxFuture,
     providers::{AcquisitionError, ProviderKey},
 };
-use std::{
-    collections::{HashMap, HashSet},
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 use tokio::{
-    sync::Semaphore,
+    sync::{Mutex as AsyncMutex, Semaphore, oneshot},
     time::{Instant, sleep, timeout_at},
 };
 
@@ -101,8 +97,10 @@ pub fn timeline_url(base: &str, cell: Cell, range: Range) -> String {
 /// within 1.5 s of the call start or for a reset socket, when more than 300 ms remain.
 const RETRY_DELAY: Duration = Duration::from_millis(300);
 const RETRY_WINDOW: Duration = Duration::from_millis(1500);
-/// Bound on how long an eligibility probe may hold a waiter (the probe itself continues).
+/// Bound on how long an eligibility check may hold a waiter (the funding task continues).
 const PROBE_WAIT: Duration = Duration::from_millis(1500);
+/// Pooled reservations kept per window; smaller leftovers beyond this are dropped.
+const POOL_MAX: usize = 8;
 const DAY_MS: i64 = 86_400_000;
 fn concurrency_429(body: &[u8]) -> bool {
     String::from_utf8_lossy(body)
@@ -147,26 +145,128 @@ impl<T> VcFunding<T> {
         })
     }
 }
-/// One funding window: its own S08 store (never restored across windows), funded reservations
-/// kept from eligibility probes for the next fetch of that range, and observed exhaustion.
+/// One funding window: its own S08 store (never restored across windows), acknowledged
+/// reservations not yet consumed (any range may use them), and the smallest denied amount.
 struct Window<T> {
     starts_at_ms: i64,
     budget: Arc<BudgetStore<T>>,
-    pool: HashMap<Range, Reservation>,
-    probing: HashSet<Range>,
-    exhausted: HashSet<Range>,
+    pool: Vec<Reservation>,
+    denied: Option<u64>,
 }
-type Windows<T> = Arc<Mutex<Option<Window<T>>>>;
+type Ledger<T> = Arc<AsyncMutex<Option<Window<T>>>>;
+enum Want {
+    /// Take funds for a fetch (pooled first, else a new S08 reservation).
+    Fetch(oneshot::Sender<(Reservation, i64)>),
+    /// Establish eligibility only; a new reservation is pooled for the next fetch.
+    Probe,
+}
+enum Got {
+    Funded,
+    Exhausted(f64),
+    Unknown,
+}
+fn pool(window: &mut Window<impl Sized>, r: Reservation, need_floor: u64) {
+    if r.units() < need_floor {
+        return;
+    }
+    window.pool.push(r);
+    if window.pool.len() > POOL_MAX
+        && let Some(i) = window
+            .pool
+            .iter()
+            .enumerate()
+            .min_by_key(|(_, r)| r.units())
+            .map(|(i, _)| i)
+    {
+        window.pool.swap_remove(i);
+    }
+}
+/// The serialized funding step: every reservation, probe and denial of a window happens under
+/// one lock, so a fetch can never miss a pooled reservation or race a probe into a false
+/// exhaustion. Runs as an owned task so a caller's deadline never cancels an S08 operation.
+async fn acquire<T: BudgetTransport + 'static>(
+    ledger: Ledger<T>,
+    funding: Arc<VcFunding<T>>,
+    need: u64,
+    want: Want,
+) -> Got {
+    let mut guard = ledger.lock().await;
+    let Ok(now) = funding.clock.now_ms() else {
+        return Got::Unknown;
+    };
+    let starts = now.div_euclid(DAY_MS) * DAY_MS;
+    if guard.as_ref().map(|w| w.starts_at_ms) != Some(starts) {
+        let Some(budget) = funding.policy(starts).and_then(|p| {
+            BudgetStore::new(funding.transport.clone(), p, funding.clock.clone()).ok()
+        }) else {
+            return Got::Unknown;
+        };
+        *guard = Some(Window {
+            starts_at_ms: starts,
+            budget: Arc::new(budget),
+            pool: Vec::new(),
+            denied: None,
+        });
+    }
+    let Some(window) = guard.as_mut() else {
+        return Got::Unknown;
+    };
+    let end = (starts + DAY_MS) as f64;
+    // Best fit from acknowledged, unconsumed funds of any range.
+    let fit = window
+        .pool
+        .iter()
+        .enumerate()
+        .filter(|(_, r)| r.units() >= need)
+        .min_by_key(|(_, r)| r.units())
+        .map(|(i, _)| i);
+    let reservation = match fit {
+        Some(i) => match want {
+            Want::Probe => return Got::Funded,
+            Want::Fetch(_) => window.pool.swap_remove(i),
+        },
+        None if window.denied.is_some_and(|d| d <= need) => return Got::Exhausted(end),
+        None => {
+            // Valid for the rest of the window; each S3 operation is bounded by its transport.
+            let valid =
+                Instant::now() + Duration::from_millis((starts + DAY_MS - now).max(0) as u64);
+            match window.budget.reserve(need, valid).await {
+                Ok(r) => r,
+                // A larger need than the remaining units or the policy block: the legacy
+                // daily-budget (EVCBUDGET) path. Denial is monotonic within a window.
+                Err(BudgetError::Exhausted | BudgetError::Invalid(_)) => {
+                    window.denied = Some(window.denied.map_or(need, |d| d.min(need)));
+                    return Got::Exhausted(end);
+                }
+                Err(_) => return Got::Unknown,
+            }
+        }
+    };
+    match want {
+        Want::Probe => {
+            pool(window, reservation, 2);
+            Got::Funded
+        }
+        Want::Fetch(reply) => {
+            // A caller that gave up returns the reservation to the pool instead of losing it.
+            if let Err((r, _)) = reply.send((reservation, starts)) {
+                pool(window, r, 2);
+            }
+            Got::Funded
+        }
+    }
+}
 /// S08-funded Visual Crossing source with the legacy `vcRequester` policy. Two attempts
-/// (98/50/2 units) are reserved before any HTTP; only a concurrency 429 or a reset socket is
+/// (98/50/2 units) are funded before any HTTP; only a concurrency 429 or a reset socket is
 /// retried, a 401/403 or a limit 429 marks the provider down, and every 2xx body is returned for
-/// engine validation (an unusable billed body backs off 15 minutes there).
+/// engine validation (an unusable billed body backs off 15 minutes there). Unconsumed units of
+/// a reservation return to the window's pool for any later fetch.
 pub struct FundedVc<P, T> {
     base: String,
     key: String,
     transport: Arc<P>,
-    funding: VcFunding<T>,
-    window: Windows<T>,
+    funding: Arc<VcFunding<T>>,
+    ledger: Ledger<T>,
     admission: Arc<Semaphore>,
 }
 impl<P: VcTransport, T: BudgetTransport + 'static> FundedVc<P, T> {
@@ -198,69 +298,68 @@ impl<P: VcTransport, T: BudgetTransport + 'static> FundedVc<P, T> {
             base: base.to_owned(),
             key,
             transport,
-            funding,
-            window: Arc::new(Mutex::new(None)),
+            funding: Arc::new(funding),
+            ledger: Arc::new(AsyncMutex::new(None)),
             admission: Arc::new(Semaphore::new(4)),
         })
     }
-    /// The current UTC-day window's store, creating a fresh one when the day changed.
-    fn current(&self) -> Result<(i64, Arc<BudgetStore<T>>), VcError> {
-        let now = self.funding.clock.now_ms().map_err(|_| VcError::Failed)?;
-        let starts = now.div_euclid(DAY_MS) * DAY_MS;
-        let mut guard = self.window.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(w) = guard.as_ref().filter(|w| w.starts_at_ms == starts) {
-            return Ok((starts, w.budget.clone()));
-        }
-        let policy = self.funding.policy(starts).ok_or(VcError::Failed)?;
-        let budget = Arc::new(
-            BudgetStore::new(
-                self.funding.transport.clone(),
-                policy,
-                self.funding.clock.clone(),
-            )
-            .map_err(|_| VcError::Failed)?,
-        );
-        *guard = Some(Window {
-            starts_at_ms: starts,
-            budget: budget.clone(),
-            pool: HashMap::new(),
-            probing: HashSet::new(),
-            exhausted: HashSet::new(),
-        });
-        Ok((starts, budget))
+    fn spawn_acquire(&self, need: u64, want: Want) -> tokio::task::JoinHandle<Got> {
+        tokio::spawn(acquire(
+            self.ledger.clone(),
+            self.funding.clone(),
+            need,
+            want,
+        ))
     }
-    fn with_window<R>(&self, starts: i64, f: impl FnOnce(&mut Window<T>) -> R) -> Option<R> {
-        settle(&self.window, starts, f)
-    }
-    /// A pooled reservation for the range, or a new one for both attempts.
-    async fn funds(&self, range: Range, deadline: Instant) -> Result<Reservation, VcError> {
-        let (starts, budget) = self.current()?;
-        if let Some(r) = self
-            .with_window(starts, |w| w.pool.remove(&range))
-            .flatten()
-        {
-            return Ok(r);
-        }
-        let end = (starts + DAY_MS) as f64;
-        match budget.reserve(units(range) * 2, deadline).await {
-            Ok(r) => Ok(r),
-            // A range larger than the remaining units or the policy block cannot be funded
-            // in this window: the legacy daily-budget (EVCBUDGET) path.
-            Err(BudgetError::Exhausted | BudgetError::Invalid(_)) => {
-                self.with_window(starts, |w| w.exhausted.insert(range));
-                Err(VcError::Exhausted { retry_at_ms: end })
+    /// Return unconsumed units to the window they were reserved in (never across windows).
+    fn release(&self, reservation: Reservation, starts: i64) {
+        let ledger = self.ledger.clone();
+        tokio::spawn(async move {
+            let mut guard = ledger.lock().await;
+            if let Some(w) = guard.as_mut().filter(|w| w.starts_at_ms == starts) {
+                pool(w, reservation, 2);
             }
-            Err(_) => Err(VcError::Failed),
-        }
+        });
     }
-}
-fn settle<T, R>(
-    window: &Mutex<Option<Window<T>>>,
-    starts: i64,
-    f: impl FnOnce(&mut Window<T>) -> R,
-) -> Option<R> {
-    let mut guard = window.lock().unwrap_or_else(|e| e.into_inner());
-    guard.as_mut().filter(|w| w.starts_at_ms == starts).map(f)
+    async fn attempts(
+        &self,
+        url: &reqwest::Url,
+        units: u64,
+        funds: &mut Reservation,
+        deadline: Instant,
+    ) -> Result<Vec<u8>, VcError> {
+        let started = Instant::now();
+        for attempt in 1..=2 {
+            funds
+                .consume(units, deadline)
+                .map_err(|_| VcError::Failed)?;
+            let result = self.transport.get(url.clone(), deadline).await;
+            let time_left = deadline.saturating_duration_since(Instant::now()) > RETRY_DELAY;
+            let retry = attempt == 1 && time_left;
+            let response = match result {
+                Err(VcTransportError::Reset) if retry => {
+                    sleep(RETRY_DELAY).await;
+                    continue;
+                }
+                Err(_) => return Err(VcError::Failed),
+                Ok(r) => r,
+            };
+            match response.status {
+                429 if concurrency_429(&response.body) => {
+                    if retry && started.elapsed() < RETRY_WINDOW {
+                        sleep(RETRY_DELAY).await;
+                        continue;
+                    }
+                    return Err(VcError::Failed);
+                }
+                429 if limit_429(&response.body) => return Err(VcError::ProviderDown),
+                401 | 403 => return Err(VcError::ProviderDown),
+                200..=299 => return Ok(response.body),
+                _ => return Err(VcError::Failed),
+            }
+        }
+        Err(VcError::Failed)
+    }
 }
 impl<P: VcTransport, T: BudgetTransport + 'static> VcSource for FundedVc<P, T> {
     fn fetch(
@@ -278,84 +377,27 @@ impl<P: VcTransport, T: BudgetTransport + 'static> VcSource for FundedVc<P, T> {
                 .await
                 .map_err(|_| VcError::Failed)?
                 .map_err(|_| VcError::Failed)?;
-            let started = Instant::now();
             // Fund both permitted attempts before any HTTP; no refunds or late reservations.
-            let mut funds = self.funds(range, deadline).await?;
-            for attempt in 1..=2 {
-                funds
-                    .consume(units, deadline)
-                    .map_err(|_| VcError::Failed)?;
-                let result = self.transport.get(url.clone(), deadline).await;
-                let time_left = deadline.saturating_duration_since(Instant::now()) > RETRY_DELAY;
-                let retry = attempt == 1 && time_left;
-                let response = match result {
-                    Err(VcTransportError::Reset) if retry => {
-                        sleep(RETRY_DELAY).await;
-                        continue;
-                    }
-                    Err(_) => return Err(VcError::Failed),
-                    Ok(r) => r,
-                };
-                match response.status {
-                    429 if concurrency_429(&response.body) => {
-                        if retry && started.elapsed() < RETRY_WINDOW {
-                            sleep(RETRY_DELAY).await;
-                            continue;
-                        }
-                        return Err(VcError::Failed);
-                    }
-                    429 if limit_429(&response.body) => return Err(VcError::ProviderDown),
-                    401 | 403 => return Err(VcError::ProviderDown),
-                    200..=299 => return Ok(response.body),
-                    _ => return Err(VcError::Failed),
-                }
-            }
-            Err(VcError::Failed)
+            let (reply, funded) = oneshot::channel();
+            let task = self.spawn_acquire(units * 2, Want::Fetch(reply));
+            let (mut funds, starts) = match timeout_at(deadline, task).await {
+                Ok(Ok(Got::Exhausted(end))) => return Err(VcError::Exhausted { retry_at_ms: end }),
+                Ok(Ok(Got::Funded)) => funded.await.map_err(|_| VcError::Failed)?,
+                _ => return Err(VcError::Failed),
+            };
+            let result = self.attempts(&url, units, &mut funds, deadline).await;
+            self.release(funds, starts);
+            result
         })
     }
-    /// `_checkProvider` budget part without HTTP: a window known exhausted, a pooled
-    /// reservation, or a probe that funds both attempts and keeps them for the next fetch of
-    /// this range (no reservation is discarded by the probe itself).
+    /// `_checkProvider` budget part without HTTP: pooled funds or a new reservation (pooled for
+    /// the next fetch of any range) prove eligibility; a denial proves exhaustion. Concurrent
+    /// callers queue on the window lock and see the earlier outcome.
     fn eligible(&self, range: Range) -> BoxFuture<'_, Option<f64>> {
         Box::pin(async move {
-            let (starts, budget) = self.current().ok()?;
-            let end = (starts + DAY_MS) as f64;
-            let start_probe = self.with_window(starts, |w| {
-                if w.exhausted.contains(&range) {
-                    return Err(end);
-                }
-                Ok(!w.pool.contains_key(&range) && w.probing.insert(range))
-            })?;
-            match start_probe {
-                Err(end) => return Some(end),
-                Ok(false) => return None,
-                Ok(true) => {}
-            }
-            let window = self.window.clone();
-            // Valid for the rest of the window; S3 operations are bounded by the transport.
-            let now = self.funding.clock.now_ms().unwrap_or(starts);
-            let valid =
-                Instant::now() + Duration::from_millis((starts + DAY_MS - now).max(0) as u64);
-            let probe = tokio::spawn(async move {
-                let outcome = budget.reserve(units(range) * 2, valid).await;
-                settle(&window, starts, |w| {
-                    w.probing.remove(&range);
-                    match outcome {
-                        Ok(r) => {
-                            w.pool.insert(range, r);
-                            false
-                        }
-                        Err(BudgetError::Exhausted | BudgetError::Invalid(_)) => {
-                            w.exhausted.insert(range);
-                            true
-                        }
-                        Err(_) => false,
-                    }
-                })
-                .unwrap_or(false)
-            });
-            match timeout_at(Instant::now() + PROBE_WAIT, probe).await {
-                Ok(Ok(true)) => Some(end),
+            let task = self.spawn_acquire(units(range) * 2, Want::Probe);
+            match timeout_at(Instant::now() + PROBE_WAIT, task).await {
+                Ok(Ok(Got::Exhausted(end))) => Some(end),
                 _ => None,
             }
         })
