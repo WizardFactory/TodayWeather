@@ -6,6 +6,7 @@ pub mod airkorea;
 pub mod family;
 pub mod format;
 pub mod keys;
+pub mod kma;
 pub mod metrics;
 pub mod publication;
 pub mod riseset;

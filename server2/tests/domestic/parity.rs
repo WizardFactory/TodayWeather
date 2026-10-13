@@ -1,0 +1,129 @@
+//! PARITY: every pinned-oracle request assembles to the recorded legacy bytes with the
+//! recorded dependency answers consumed in order; the S02 v000903 KMA goldens are among them.
+use super::support::*;
+use server2::domestic::kma::{Outcome, assemble};
+
+fn first_difference(a: &str, b: &str) -> String {
+    let (a, b) = (a.as_bytes(), b.as_bytes());
+    let i = a
+        .iter()
+        .zip(b)
+        .position(|(x, y)| x != y)
+        .unwrap_or(a.len().min(b.len()));
+    let from = i.saturating_sub(120);
+    format!(
+        "at byte {i}\n  native: {}\n  legacy: {}",
+        String::from_utf8_lossy(&a[from..(i + 120).min(a.len())]),
+        String::from_utf8_lossy(&b[from..(i + 120).min(b.len())])
+    )
+}
+pub fn run(sc: &serde_json::Value) -> Result<(), String> {
+    let id = sc["id"].as_str().unwrap();
+    let store = Replay::new(sc);
+    let outcome = assemble(
+        &request(sc),
+        &store,
+        clock_ms(sc["clock"].as_str().unwrap()),
+        oracle_config(),
+    );
+    let expected = sc["body"].as_str().unwrap();
+    let status = sc["status"].as_u64().unwrap() as u16;
+    let actual = match outcome {
+        Outcome::Json(json) => {
+            if status != 200 {
+                return Err(format!("{id}: native 200, legacy {status}"));
+            }
+            String::from_utf8(json.to_bytes()).unwrap()
+        }
+        Outcome::Status(code, text) => {
+            if code != status {
+                return Err(format!("{id}: native {code}, legacy {status}"));
+            }
+            text
+        }
+        Outcome::Legacy(reason) => return Err(format!("{id}: native forwarded ({reason})")),
+    };
+    if actual != expected {
+        return Err(format!(
+            "{id}: body differs {}",
+            first_difference(&actual, expected)
+        ));
+    }
+    if status == 200 {
+        let etag = server2::gateway::response::etag(actual.as_bytes());
+        if sc["etag"].as_str() != Some(etag.as_str()) {
+            return Err(format!("{id}: ETag {etag} vs {}", sc["etag"]));
+        }
+    }
+    store.assert_consumed(id);
+    Ok(())
+}
+
+#[test]
+fn all_oracle_scenarios_match_legacy_bytes() {
+    let mut errors = Vec::new();
+    for sc in scenarios() {
+        if let Err(e) = std::panic::catch_unwind(|| run(sc)).unwrap_or_else(|p| {
+            Err(format!(
+                "{}: panic {}",
+                sc["id"],
+                p.downcast_ref::<String>()
+                    .cloned()
+                    .or_else(|| p.downcast_ref::<&str>().map(|s| s.to_string()))
+                    .unwrap_or_default()
+            ))
+        }) {
+            errors.push(e);
+        }
+    }
+    assert!(scenarios().len() >= 49);
+    assert!(
+        errors.is_empty(),
+        "{} of {} differ:\n{}",
+        errors.len(),
+        scenarios().len(),
+        errors.join("\n\n")
+    );
+}
+
+/// The S02 direct-route v000903 goldens are byte-identical to their oracle recordings
+/// (so matching the recording is matching the golden), including the Express ETag/304 tag.
+#[test]
+fn s02_direct_goldens_equal_recorded_oracle_bodies() {
+    let ids = [
+        "domestic-v000903",
+        "domestic-locale-en",
+        "domestic-locale-ko",
+        "domestic-locale-ja",
+        "domestic-locale-zh-CN",
+        "domestic-locale-de",
+        "domestic-locale-zh-TW",
+        "domestic-v000903-db1",
+        "domestic-null-units",
+        "domestic-pop-covered",
+        "domestic-pop-missing-hour",
+        "domestic-old-no-pop",
+        "domestic-never-requested-history",
+        "domestic-partial-history",
+        "domestic-special-info",
+    ];
+    for id in ids {
+        assert_eq!(
+            scenario(id)["body"].as_str().unwrap(),
+            golden_body(id),
+            "{id}"
+        );
+        let etag = golden(id)["headers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|h| h[0] == "etag")
+            .map(|h| h[1].clone())
+            .unwrap();
+        assert_eq!(scenario(id)["etag"], etag, "{id}");
+    }
+    // The 304 golden revalidates the v000903 ETag with an empty body.
+    let revalidate = golden("domestic-v000903-304");
+    assert_eq!(revalidate["status"], 304);
+    assert_eq!(revalidate["body_base64"], "");
+}
