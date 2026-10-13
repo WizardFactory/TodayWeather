@@ -1290,3 +1290,52 @@ address-cache exception, not a weather raw/catalog publication shortcut. It is
 not automatically wired to runtime credentials. Coarse coordinate serving,
 live native providers, seven-day shadow, measured real quotas and cutover remain
 gated. Local fixture timings do not satisfy production latency or quota gates.
+
+### S11 native world weather and air (2026-10-13)
+
+[S11](../../plans/issue-2696.md) adds `server2::world`, a native `Family::Dsf`
+handler for the S10 dispatcher. Registration keeps legacy HTTP selected; only
+an explicit `set_backend` (or the loopback-only `SERVER2_WORLD_MODE=native-local`
+runtime option) switches a version, and switching back is the rollback.
+
+Visual Crossing Timeline bodies are the only persisted world weather input:
+source `vc`, kind `timeline`, `ProviderKey::WorldCell` of the legacy cell centre,
+period `{first local date of days[], range}`, `fetched_at_ms` equal to the request
+instant used for conversion, and one single-member fetch group per acquisition in
+partition `{first date}-{range}`. A new success requires complete S06 publication
+(O-9). Reads cover every range for first dates D-5..D+1, which contains every fetch
+that can affect the legacy 48-hour decision window; an absent catalog needs a
+complete one-period repair before a provider miss is accepted. DsfForecast records,
+the twoDaysAgo/yesterday/today/current/stale classification, the no-yesterday
+marker and the response are derived in memory and never persisted. Per-cell memory
+keeps only records that can still affect a later request.
+
+The legacy chain is preserved: combined/recent/forecast selection, the no-yesterday
+marker, 10-minute provider-down after a VC 401/403, 2-second and 15-minute failure
+backoff, 2.5-second waiter budget with an owned fetch that continues to publish,
+stale serving up to 6 hours and 503 `EWEATHERUNAVAILABLE` retry times. VC HTTP is
+funded through S08 (49/25/1 units, two attempts reserved); a range that cannot be
+funded follows the legacy daily-budget path (forecast-only, then stale or 503 with
+the window end). VC requests, S3 keys, catalogs, metadata and bodies carry only the
+cell centre; the response still echoes the requested `location`.
+
+Byte parity is tested against pinned Node v16.20.2 legacy-oracle recordings
+(`server2/tests/world/fixtures`), the S02 world goldens and the S10 gateway world
+goldens, including negative coordinates, cell boundaries, date line, poles, DST,
+half-hour zones, missing fields, provider failures and WAQI air rendering. Restore
+tests rebuild every recorded response from the S3 test peer with empty memory and
+providers disabled.
+
+Known differences and gates: the native handler has the single 3-second S10
+attempt, while legacy can succeed on a gateway retry after a slow fetch; the S08
+executor retries a transient 5xx/invalid body once, cannot distinguish a VC
+concurrency 429 from a limit 429 (no global provider-down for 429), and a 200 body
+that is not JSON backs off 2 seconds instead of 15 minutes; a cell in backoff with
+exhausted funding returns the backoff error class. IANA offsets come from bundled
+`chrono-tz` data rather than Node 16 ICU data, and the process zone is UTC as in
+the S02 oracle. Live air acquisition (Google, OpenWeather, WAQI, VC air), its S08
+funding identities and air raw persistence are undecided; the native default is the
+legacy no-provider air output, with tested rendering for a supplied observation.
+Cold loads of busy cells read up to seven days of forecast fetches and remain a
+pre-cutover measurement item. No production route, AWS resource, live provider or
+shadow comparison is changed by S11.

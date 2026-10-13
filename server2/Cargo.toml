@@ -26,6 +26,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
 time = { version = "0.3", features = ["formatting", "macros"] }
+# S11: IANA zone offsets for the legacy world Intl rule (bundled tz data, no runtime file reads).
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+chrono-tz = { version = "0.10", default-features = false, features = ["std", "case-insensitive"] }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

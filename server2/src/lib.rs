@@ -220,6 +220,7 @@ pub mod providers;
 
 pub mod gateway;
 pub mod geocode;
+pub mod world;
 
 /// Gateway owns its own bounded request jobs; health keeps foundation admission.
 pub fn public_router_with_gateway(
