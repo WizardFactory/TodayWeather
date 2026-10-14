@@ -431,6 +431,23 @@ test('#2745 quota failover shares one budget across keys', async () => {
     assert(new Set(t.keys).size <= 2, 'keys ' + new Set(t.keys).size);
 });
 
+// Review round 3 C-1: the transient retry is not sent with a key a parallel request exhausted meanwhile.
+test('#2745 a transient retry does not reuse a key exhausted by a parallel request', async () => {
+    const t = transport(url => {
+        const forecast = new URL(url).pathname.endsWith('getMinuDustFrcstDspth'), key = keyOf(url);
+        if (forecast) return key === 'synthetic-k2' ? QUOTA : {body: fixture('frcst')};
+        return key === 'synthetic-k2' ? {hang: true} : {body: fixture('stations')};
+    });
+    const api = Api.create({transport: t, timeoutMs: 50, now: clock(EVENING)});
+    const [stations] = await Promise.all([
+        invoke(api, 'fetchWithKeys', KEYS, '서울', Api.STATION),
+        invoke(api, 'queryWithKeys', KEYS, Api.FORECAST, {searchDate: '2026-10-14'}).catch(() => {})
+    ]);
+    assert.equal(stations.list.length, 4);
+    const station = t.calls.filter(url => url.includes('getCtprvnRltmMesureDnsty')).map(keyOf);
+    assert.deepEqual(station, ['synthetic-k2', 'synthetic-k1'], 'the timed-out key is not retried');
+});
+
 test('#2745 keco logs quota rotation by key position only', async () => {
     const h = harness();
     // The production constructor wires both callbacks.
