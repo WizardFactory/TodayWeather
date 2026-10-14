@@ -654,7 +654,7 @@ async fn cancelled_acquisition_still_counts_funded_units() {
 /// S13d (#2747): each HTTP attempt uses its service's legacy timeout
 /// (`collectTownForecast.js:373`, `kma.forecast.zone.controller.js:123`,
 /// `lifeIndexKmaRequester.js:431/1277/1495`, `kmaWarningRequester.js:20`,
-/// `airkoreaObservation.js:183`, `kasi.riseset.controller.js:92`, `kmaScraper.js:206/269`,
+/// `airkoreaObservation.js:189`, `kasi.riseset.controller.js:92`, `kmaScraper.js:206/269`,
 /// `dsf.controller.js:53`).
 #[test]
 fn each_service_uses_its_legacy_attempt_timeout() {

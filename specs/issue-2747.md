@@ -6,7 +6,7 @@ Task: issue-2747-s13d; revision/base: 05c06c67; date: 2026-10-14. Inputs: [inten
 
 Every rule below follows (1) the provider's documentation, (2) the legacy collector, and (3) how the
 legacy service (`tw_svc`) assembles a response when data is missing. Legacy references are at
-`server/` on master `05c06c67`.
+`server/` on master `f49921b6` (the base after merging #2746; other cited files are unchanged since `05c06c67`).
 
 | Service | Legacy per-request timeout | server2 constant |
 | --- | --- | --- |
@@ -14,7 +14,7 @@ legacy service (`tw_svc`) assembles a response when data is missing. Legacy refe
 | Forecast zone `getFcstZoneCd` | `server/controllers/kma/kma.forecast.zone.controller.js:123` (10000) | `TOWN_FORECAST` 10 s |
 | UV V5, pollen V3 | `server/lib/lifeIndexKmaRequester.js:1277`, `:1495` (30 s) | `LIFE_INDEX` 30 s |
 | Warnings `WthrWrnInfoService` | `server/lib/kmaWarningRequester.js:20` (`TIMEOUT_MS = 30*1000`) | `WARNINGS` 30 s |
-| AirKorea B552584 (all four operations) | `server/lib/airkoreaObservation.js:183` (`timeoutMs` default 5000) | `AIRKOREA` 5 s |
+| AirKorea B552584 (all four operations) | `server/lib/airkoreaObservation.js:189` (`timeoutMs` default 5000) | `AIRKOREA` 5 s |
 | KASI `getAreaRiseSetInfo` | `server/controllers/kasi.riseset.controller.js:92` (5000) | `KASI` 5 s |
 | KMA AWS and city pages | `server/lib/kmaScraper.js:206`, `:269` (30000) | `KMA_WEB` 30 s |
 | KMA town RSS | `server/controllers/kma/kma.town.short.rss.controller.js:107` (no timeout) | `KMA_WEB` 30 s (bounded) |
@@ -55,13 +55,14 @@ day+3.
    `HttpProviderTransport` sets it per request. `HttpPublicTransport` uses `KMA_WEB`.
    `family::Service::attempt_timeout` and `WebFamily::attempt_timeout` expose the same values to
    owned callers; a test checks that both agree for every family path.
-2. **Owned time.** `family::owned_provider_time(attempt) = 2 x attempt`: the two HTTP attempts that
-   S08/S13 allow per page. S14 capture uses `now + owned_provider_time + call_timeout` (the former
+2. **Owned time.** `family::owned_provider_time(attempt, pages) = 2 x attempt x pages`: the two
+   HTTP attempts that S08/S13 allow on each page. S14 capture uses
+   `now + owned_provider_time(attempt, family max pages) + call_timeout` (the former
    3 s is now only the publication allowance). The S07 resolver default `acquisition` is 63 s (two
-   30 s attempts plus 3 s), at most 120 s.
+   30 s attempts plus 3 s), at most 600 s; callers set it per family.
 3. **Shared owned acquisition (`resolver::OwnedFlights`).** One owned task per key. The key is a
    grid publication or a national dataset and publication time. The first joiner starts the task
-   with `owned_for` (at most 120 s); the task never observes a waiter. `join` returns at
+   with `owned_for` (at most 600 s); the task never observes a waiter. `join` returns at
    `min(ready_by, now + 3 s)`:
    - `Ready(T)` when the task finished (also within `retain` after it finished, so a request that
      read the store just before publication does not start a second acquisition);

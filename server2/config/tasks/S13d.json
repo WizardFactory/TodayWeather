@@ -12,6 +12,8 @@
     "server2/src/resolver/",
     "server2/src/world/engine.rs",
     "server2/tests/providers/acquire.rs",
+    "server2/tests/history/capture.rs",
+    "server2/tests/history/support.rs",
     "server2/tests/resolver.rs",
     "server2/tests/resolver/",
     "server2/tests/formats.rs",

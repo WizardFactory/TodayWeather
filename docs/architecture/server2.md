@@ -1925,15 +1925,17 @@ request path; the connect bound is 3 s):
 | VilageFcst 2.0, MidFcst, forecast zone | 10 s | `collectTownForecast.js:373`, `kma.forecast.zone.controller.js:123` |
 | UV V5, pollen V3 | 30 s | `lifeIndexKmaRequester.js:1277`, `:1495` |
 | Warnings | 30 s | `kmaWarningRequester.js:20` |
-| AirKorea (four B552584 operations), KASI | 5 s | `airkoreaObservation.js:183`, `kasi.riseset.controller.js:92` |
+| AirKorea (four B552584 operations), KASI | 5 s | `airkoreaObservation.js:189`, `kasi.riseset.controller.js:92` |
 | KMA web pages (RSS, AWS, city) | 30 s | `kmaScraper.js:206`, `:269`; legacy RSS had no timeout |
 | Visual Crossing | 8 s | `dsf.controller.js:53` (S11 already used it) |
 
 Another data.go.kr path keeps 3 s. World air providers keep the S13a 3 s (`config/air.js:49`).
-An owned acquisition may spend two attempts per page (`family::owned_provider_time`). The S14
-capture deadline is now those two attempts plus the former 3 s, which becomes the publication
-allowance. The S07 resolver's owned `acquisition` stage defaults to 63 s (two 30 s attempts plus
-3 s) and is capped at 120 s.
+An owned acquisition may spend two attempts for each page it can need
+(`family::owned_provider_time`); five VilageFcst pages give 100 s. The S14 capture deadline is that
+time plus the former 3 s, which becomes the publication allowance. The S07 resolver's owned
+`acquisition` stage defaults to 63 s (one page of two 30 s attempts plus 3 s); callers set it per
+family, at most 600 s. The response owner waits until the shared task ends, and `drain` waits for
+running shared acquisitions and reports them (`DrainReport::unfinished_acquisitions`).
 
 **Shared owned acquisitions.** `resolver::OwnedFlights` runs one owned task per key. A key is a grid
 publication, or a national dataset and publication time. AirKorea, KMA scraper pages and ASOS answer
