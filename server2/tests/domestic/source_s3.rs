@@ -5,6 +5,7 @@
 use super::source::{docs_json, same};
 use rusty_s3::Credentials;
 use serde_json::json;
+use server2::domestic::kma::source::observe::{Acquire, Locate};
 use server2::domestic::kma::{
     AssemblyConfig, MidModel, Outcome, TownModel, assemble,
     backend::{KmaSource, SourceAnswer, parse_path},
@@ -13,7 +14,6 @@ use server2::domestic::kma::{
         towns, zone_documents,
     },
 };
-use server2::domestic::kma::source::observe::{Acquire, Locate};
 use server2::domestic::publication::Publication;
 use server2::domestic::{Acquired, DomesticError};
 use server2::gateway::OrderedJson;

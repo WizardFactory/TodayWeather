@@ -63,3 +63,26 @@ Risks: legacy timing cannot be reproduced exactly. Legacy collected every grid o
 server2 applies its own captured publications in fetch order with the legacy save rules. That is
 the intended native semantics after cutover, not a shadow-parity claim. The JSON provider form
 replaces legacy XML; the oracle feeds legacy the same item values in xml2js form.
+
+# Intent (S15b-2, 2026-10-15)
+
+Task: issue-2742-s15b (slice S15b-2); base: master `05c06c67`, merged with `f49921b6`. Authority: AK's
+corrections of 2026-10-14 (ASOS per legacy #2564/#2648, on-demand acquisition through S08 as raw
+records, the fill rule, the 3-second request wait without 503 or forward, nationwide datasets
+single-flight per publication) and the decisions of 2026-10-15 (the AWS hourly page as the
+ongoing-hour source; the station registry seeded from a one-time `kmastninfos` copy, built here
+as offline tools only), relayed by the root coordinator.
+
+- AC7: KMA AWS minute/hourly and city observation pages parse as legacy `KmaScraper` reads them
+  and rebuild `KmaStnInfo`, `KmaStnHourly2` and `KmaStnMinute2` with the legacy saver rules;
+  `stn_hourly_and_min_rns` and `city_hourly` answer as `controllerKmaStnWeather` does.
+- AC8: the assembly composes ASOS history as legacy does with `readEnabled` (`mergeHourly`,
+  `mergeDaily`, `status`, `historyStatus`, comparison eligibility) from a new `KmaStore::history`;
+  stores without it keep the legacy default (no read).
+- AC9: the S3 source acquires the pages and the mapped station's ASOS ranges on demand,
+  single-flight per dataset and publication, publishes them as raw records, waits at most 3 s and
+  answers late data as legacy answers absent data; the next request uses the completed records.
+- AC10: S14 coverage never forwards to legacy; the replaced test pins the fill rule.
+- AC11: offline `kmastninfos` converter and importer; the registry starts from the imported seed.
+- AC12: placement per `server2/config/tasks/S15b-2.json`; every acquisition path confirmed by a
+  small number of live calls whose results are recorded in the PR.

@@ -62,8 +62,11 @@ const ASOS_MAX_KM: f64 = 100.;
 
 /// S13 acquisition seam for request-time acquisitions (tests inject doubles).
 pub trait Acquire: Send + Sync + 'static {
-    fn web(&self, request: WebRequest, deadline: Instant)
-    -> BoxFuture<'_, Result<Acquired, DomesticError>>;
+    fn web(
+        &self,
+        request: WebRequest,
+        deadline: Instant,
+    ) -> BoxFuture<'_, Result<Acquired, DomesticError>>;
     fn asos(
         &self,
         request: AsosRequest,
@@ -210,7 +213,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     }
     /// Start `work` once per key; a key attempted within `memo` is not started again. Returns
     /// the flight to wait for (a running one is joined).
-    fn start<F>(self: &Arc<Self>, key: Flight, memo: Duration, work: F) -> Option<watch::Receiver<bool>>
+    fn start<F>(
+        self: &Arc<Self>,
+        key: Flight,
+        memo: Duration,
+        work: F,
+    ) -> Option<watch::Receiver<bool>>
     where
         F: FnOnce(Arc<Self>) -> BoxFuture<'static, ()> + Send + 'static,
     {
@@ -291,9 +299,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     fn load(self: &Arc<Self>, now_ms: i64) -> Option<watch::Receiver<bool>> {
         let stale = {
             let s = self.state();
-            s.pages
-                .minute_read
-                .is_none_or(|at| at.elapsed() >= RELOAD)
+            s.pages.minute_read.is_none_or(|at| at.elapsed() >= RELOAD)
         };
         if !stale {
             return None;
@@ -339,16 +345,21 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             };
             let parsed = tokio::task::spawn_blocking(move || {
                 (
-                    hourly.iter().filter_map(|a| parse_hourly(a)).collect::<Vec<_>>(),
-                    city.iter().filter_map(|a| parse_city_record(a)).collect::<Vec<_>>(),
+                    hourly
+                        .iter()
+                        .filter_map(|a| parse_hourly(a))
+                        .collect::<Vec<_>>(),
+                    city.iter()
+                        .filter_map(|a| parse_city_record(a))
+                        .collect::<Vec<_>>(),
                 )
             })
             .await
             .unwrap_or_default();
             let mut s = self.state();
             for (p, rows, at) in parsed.0 {
-                if !s.pages.hourly.contains_key(&p) {
-                    s.pages.hourly.insert(p, rows);
+                if let std::collections::btree_map::Entry::Vacant(e) = s.pages.hourly.entry(p) {
+                    e.insert(rows);
                     s.pages.hourly_at.insert(p, at);
                 }
             }
@@ -361,7 +372,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         // The newest registry seed, if one was imported.
         if let Some(seed) = self.read_seed(now_ms, deadline).await {
             let mut s = self.state();
-            if s.seed.as_ref().is_none_or(|old| old.len() != seed.len() || **old != *seed) {
+            if s.seed
+                .as_ref()
+                .is_none_or(|old| old.len() != seed.len() || **old != *seed)
+            {
                 s.seed = Some(Arc::new(seed));
                 s.pages.dirty = true;
             }
@@ -415,13 +429,25 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         let months = super::history_months(now_ms as f64);
         let parts = self
             .reader
-            .partitions(super::seed::SOURCE, super::seed::KIND, &super::seed::key(), &months, deadline)
+            .partitions(
+                super::seed::SOURCE,
+                super::seed::KIND,
+                &super::seed::key(),
+                &months,
+                deadline,
+            )
             .await
             .ok()?;
         let newest = parts.last()?;
         let acquisitions = self
             .reader
-            .raw(super::seed::SOURCE, super::seed::KIND, &super::seed::key(), newest, deadline)
+            .raw(
+                super::seed::SOURCE,
+                super::seed::KIND,
+                &super::seed::key(),
+                newest,
+                deadline,
+            )
             .await
             .ok()?;
         let latest = acquisitions
@@ -457,7 +483,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             })
         })
     }
-    fn ensure_hourly(self: &Arc<Self>, hour: Publication, memo: Duration) -> Option<watch::Receiver<bool>> {
+    fn ensure_hourly(
+        self: &Arc<Self>,
+        hour: Publication,
+        memo: Duration,
+    ) -> Option<watch::Receiver<bool>> {
         if self.state().pages.hourly.contains_key(&hour) {
             return None;
         }
@@ -521,11 +551,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         match self.acquire.web(request, deadline).await {
             Ok(Acquired::Complete(acquisition)) => {
                 let records = acquisition.records.clone();
-                let r = self.reader
+                let r = self
+                    .reader
                     .store
                     .publish(acquisition.declaration, acquisition.records, deadline)
                     .await;
-                        r.ok()?;
+                r.ok()?;
                 Some(records)
             }
             _ => None,
@@ -568,12 +599,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 geo,
             )
         };
-        let folded =
-            tokio::task::spawn_blocking(move || {
-                fold(seed.as_deref().map(Vec::as_slice), &hourly, &hourly_at, &city, &minute, &geo)
-            })
-            .await
-            .ok();
+        let folded = tokio::task::spawn_blocking(move || {
+            fold(
+                seed.as_deref().map(Vec::as_slice),
+                &hourly,
+                &hourly_at,
+                &city,
+                &minute,
+                &geo,
+            )
+        })
+        .await
+        .ok();
         let Some((folded, unresolved)) = folded else {
             return;
         };
@@ -589,9 +626,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             addresses
                 .into_iter()
                 .filter(|a| {
-                    s.geo
-                        .get(a)
-                        .is_none_or(|(v, at)| v.is_none() && at.elapsed() >= Duration::from_secs(3600))
+                    s.geo.get(a).is_none_or(|(v, at)| {
+                        v.is_none() && at.elapsed() >= Duration::from_secs(3600)
+                    })
                 })
                 .collect()
         };
@@ -671,14 +708,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         };
         if stale {
             let station_c = station.clone();
-            let rx = self.start(Flight::AsosLoad(station.clone()), Duration::ZERO, move |this| {
-                Box::pin(async move { this.load_asos(&station_c, now_ms).await })
-            });
+            let rx = self.start(
+                Flight::AsosLoad(station.clone()),
+                Duration::ZERO,
+                move |this| Box::pin(async move { this.load_asos(&station_c, now_ms).await }),
+            );
             Self::wait(rx.into_iter().collect(), until).await;
         }
         let plan = {
             let s = self.state();
-            if s.asos_failed.get(&station).is_some_and(|at| at.elapsed() < ASOS_RELOAD)
+            if s.asos_failed
+                .get(&station)
+                .is_some_and(|at| at.elapsed() < ASOS_RELOAD)
                 && !s.asos.contains_key(&station)
             {
                 return reason("cache-read-failed", Some(mapping.json()));
@@ -780,10 +821,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             .map(|e| e.fetched.clone())
             .unwrap_or_default();
         for f in mine {
-            if !fetched
-                .iter()
-                .any(|g| g.fetched_at_ms == f.fetched_at_ms && g.start == f.start && g.kind == f.kind)
-            {
+            if !fetched.iter().any(|g| {
+                g.fetched_at_ms == f.fetched_at_ms && g.start == f.start && g.kind == f.kind
+            }) {
                 fetched.push(f);
             }
         }
@@ -798,7 +838,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     }
     async fn acquire_asos(self: Arc<Self>, station: &str, request: AsosRequest) {
         let deadline = Instant::now() + ACQUIRE_DEADLINE;
-        let Ok(Acquired::Complete(acquisition)) = self.acquire.asos(request.clone(), deadline).await
+        let Ok(Acquired::Complete(acquisition)) =
+            self.acquire.asos(request.clone(), deadline).await
         else {
             return;
         };
@@ -812,7 +853,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         {
             return;
         }
-        let f = asos_fetched(request.asos_kind(), request.start(), request.end(), &records);
+        let f = asos_fetched(
+            request.asos_kind(),
+            request.start(),
+            request.end(),
+            &records,
+        );
         if let Some(entry) = self.state().asos.get_mut(station) {
             entry.fetched.push(f);
             entry
@@ -990,7 +1036,9 @@ impl Mapping {
             (
                 "method",
                 OrderedJson::String(
-                    "nearest-configured-ASOS-city-station".encode_utf16().collect(),
+                    "nearest-configured-ASOS-city-station"
+                        .encode_utf16()
+                        .collect(),
                 ),
             ),
         ])
@@ -1012,7 +1060,9 @@ pub fn nearest(town: &Doc, stations: &[Doc], max_km: f64) -> Option<Mapping> {
         if s.get("isCityWeather") != Some(&Val::Bool(true)) {
             continue;
         }
-        let Some(Val::Arr(g)) = s.get("geo") else { continue };
+        let Some(Val::Arr(g)) = s.get("geo") else {
+            continue;
+        };
         let (Some(x), Some(y)) = (
             g.first().and_then(Val::as_num),
             g.get(1).and_then(Val::as_num),
@@ -1033,7 +1083,8 @@ pub fn nearest(town: &Doc, stations: &[Doc], max_km: f64) -> Option<Mapping> {
         let rad = std::f64::consts::PI / 180.;
         let dl = (y - lat) * rad;
         let dn = (x - lon) * rad;
-        let a = (dl / 2.).sin().powi(2) + (lat * rad).cos() * (y * rad).cos() * (dn / 2.).sin().powi(2);
+        let a =
+            (dl / 2.).sin().powi(2) + (lat * rad).cos() * (y * rad).cos() * (dn / 2.).sin().powi(2);
         let km = 6371. * 2. * a.sqrt().min(1.).asin();
         let better = best.as_ref().is_none_or(|b| {
             km < b.distance_km

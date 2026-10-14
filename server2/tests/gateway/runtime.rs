@@ -254,8 +254,14 @@ fn kma_requires_data_go_kr_keys_daily_units_and_valid_provider_roots() {
             ),
             ("SERVER2_NATIVE_FAMILIES", "kma".to_owned()),
             ("SERVER2_S3_BUCKET", "server2-kma".to_owned()),
-            ("SERVER2_S3_ACCESS_KEY_ID", "configured-access-key".to_owned()),
-            ("SERVER2_S3_SECRET_ACCESS_KEY", "configured-secret".to_owned()),
+            (
+                "SERVER2_S3_ACCESS_KEY_ID",
+                "configured-access-key".to_owned(),
+            ),
+            (
+                "SERVER2_S3_SECRET_ACCESS_KEY",
+                "configured-secret".to_owned(),
+            ),
             (
                 "SERVER2_DATA_GO_KR_KEYS",
                 r#"["configured-data-go-kr-key-0001"]"#.to_owned(),
@@ -265,7 +271,10 @@ fn kma_requires_data_go_kr_keys_daily_units_and_valid_provider_roots() {
     };
     assert!(gateway(&vars(complete())).unwrap().is_some());
     for missing in ["SERVER2_DATA_GO_KR_KEYS", "SERVER2_DATA_GO_KR_DAILY_UNITS"] {
-        let partial = complete().into_iter().filter(|(k, _)| *k != missing).collect();
+        let partial = complete()
+            .into_iter()
+            .filter(|(k, _)| *k != missing)
+            .collect();
         assert!(gateway(&vars(partial)).is_err(), "{missing}");
     }
     for (name, value) in [
@@ -281,7 +290,10 @@ fn kma_requires_data_go_kr_keys_daily_units_and_valid_provider_roots() {
         assert!(gateway(&vars(settings)).is_err(), "{name}={value}");
     }
     let mut loopback = complete();
-    loopback.push(("SERVER2_KMA_WEATHER_BASE_URL", "http://127.0.0.1:9/".to_owned()));
+    loopback.push((
+        "SERVER2_KMA_WEATHER_BASE_URL",
+        "http://127.0.0.1:9/".to_owned(),
+    ));
     assert!(gateway(&vars(loopback)).unwrap().is_some());
 }
 

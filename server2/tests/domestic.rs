@@ -14,9 +14,9 @@ mod source_s3;
 mod source_s3_oracle;
 #[path = "domestic/stations.rs"]
 mod stations;
+#[path = "providers/support.rs"]
+mod stub;
 #[path = "domestic/support.rs"]
 mod support;
 #[path = "domestic/switch.rs"]
 mod switch;
-#[path = "providers/support.rs"]
-mod stub;

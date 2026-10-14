@@ -34,13 +34,14 @@ async fn main() {
             std::process::exit(2);
         }
     };
-    let (parsed, acquisition) = match seed::parse(&bytes).and_then(|p| Ok((p, seed::acquisition(&bytes)?))) {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!("station_seed_import: {e}");
-            std::process::exit(2);
-        }
-    };
+    let (parsed, acquisition) =
+        match seed::parse(&bytes).and_then(|p| Ok((p, seed::acquisition(&bytes)?))) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("station_seed_import: {e}");
+                std::process::exit(2);
+            }
+        };
     let limits = CatalogLimits {
         deadline: Duration::from_secs(9),
         ..CatalogLimits::default()

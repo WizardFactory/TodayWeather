@@ -84,9 +84,7 @@ pub fn ranges(kind: AsosKind, keys: &[String]) -> Vec<(String, String)> {
     let mut out: Vec<(String, String)> = Vec::new();
     for k in sorted {
         match out.last_mut() {
-            Some(last)
-                if policy::instant(&V::s(&k)) - policy::instant(&V::s(&last.1)) == step =>
-            {
+            Some(last) if policy::instant(&V::s(&k)) - policy::instant(&V::s(&last.1)) == step => {
                 last.1 = k
             }
             _ => out.push((k.clone(), k)),
@@ -192,7 +190,11 @@ pub fn normalize(
 }
 fn tm_key(kind: AsosKind, tm: &str) -> Option<String> {
     let b = tm.as_bytes();
-    let d = |r: std::ops::Range<usize>| b.get(r.clone()).filter(|x| x.iter().all(u8::is_ascii_digit)).map(|_| &tm[r]);
+    let d = |r: std::ops::Range<usize>| {
+        b.get(r.clone())
+            .filter(|x| x.iter().all(u8::is_ascii_digit))
+            .map(|_| &tm[r])
+    };
     if b.len() < 10 || b[4] != b'-' || b[7] != b'-' {
         return None;
     }
@@ -224,7 +226,7 @@ impl AsosStore {
     /// Documents ordered by `_id` (the collection dump).
     pub fn docs(&self) -> Vec<Doc> {
         let mut out = self.docs.clone();
-        out.sort_by(|a, b| text(a, "_id").cmp(&text(b, "_id")));
+        out.sort_by_key(|a| text(a, "_id"));
         out
     }
     fn find(&self, id: &str) -> Option<usize> {
@@ -242,7 +244,7 @@ impl AsosStore {
             })
             .cloned()
             .collect();
-        out.sort_by(|a, b| text(a, "key").cmp(&text(b, "key")));
+        out.sort_by_key(|a| text(a, "key"));
         out
     }
     fn complete(doc: &Doc, kind: AsosKind) -> bool {
@@ -250,7 +252,8 @@ impl AsosStore {
         let f = |k: &str| values.and_then(|v| v.get(k)).and_then(Val::as_num);
         match kind {
             AsosKind::Hourly => {
-                f("t1h").is_some_and(|n| valid("t1h", n)) && f("reh").is_some_and(|n| valid("reh", n))
+                f("t1h").is_some_and(|n| valid("t1h", n))
+                    && f("reh").is_some_and(|n| valid("reh", n))
             }
             AsosKind::Daily => match (f("taMin"), f("taMax")) {
                 (Some(lo), Some(hi)) => valid("taMin", lo) && valid("taMax", hi) && lo <= hi,
@@ -277,7 +280,12 @@ impl AsosStore {
     }
     /// The ranges a legacy `Recovery.run(station, start, end)` requests now: hourly runs, then
     /// daily runs.
-    pub fn plan(&self, station: &str, start_date: &str, end_date: &str) -> Vec<(AsosKind, String, String)> {
+    pub fn plan(
+        &self,
+        station: &str,
+        start_date: &str,
+        end_date: &str,
+    ) -> Vec<(AsosKind, String, String)> {
         let mut out = Vec::new();
         for kind in [AsosKind::Hourly, AsosKind::Daily] {
             let expected = range(kind, start_date, end_date);
@@ -327,7 +335,9 @@ impl AsosStore {
         }
         let key = iso[..16].replace(['-', 'T', ':'], "");
         if !policy::instant(&V::s(&key)).is_finite()
-            || !self.missing(AsosKind::Hourly, station, std::slice::from_ref(&key)).contains(&key)
+            || !self
+                .missing(AsosKind::Hourly, station, std::slice::from_ref(&key))
+                .contains(&key)
         {
             return;
         }
@@ -401,5 +411,8 @@ impl AsosStore {
     }
 }
 fn text(d: &Doc, k: &str) -> String {
-    d.get(k).and_then(Val::as_str).unwrap_or_default().to_owned()
+    d.get(k)
+        .and_then(Val::as_str)
+        .unwrap_or_default()
+        .to_owned()
 }

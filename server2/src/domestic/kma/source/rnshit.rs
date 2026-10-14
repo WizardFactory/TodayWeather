@@ -26,7 +26,8 @@ pub fn rns_allowed(station: &Doc) -> bool {
         (Some(h), Some(c)) => h / c,
         _ => f64::NAN,
     };
-    !(rate < 0.5)
+    // NaN (an undefined statistic) is never below 0.5.
+    rate.is_nan() || rate >= 0.5
 }
 /// `_filterStnList`: an undefined `isMountain` or a city station is kept, otherwise only
 /// non-mountain stations.
@@ -50,7 +51,12 @@ fn truthy(v: Option<&Val>) -> bool {
 /// `_updateRnsHitRate`: given the station's grid current row (`pty`, `rn1`) and the `rns` values
 /// of its minute rows in the hour ending at that current slot, the new `(rnsHit, rnsCount)`, or
 /// None when legacy updates nothing (not raining, fewer than 15 minute rows, or no `rns`).
-pub fn update(station: &Doc, pty: f64, rn1: f64, minute_rns: &[Option<bool>]) -> Option<(f64, f64)> {
+pub fn update(
+    station: &Doc,
+    pty: f64,
+    rn1: f64,
+    minute_rns: &[Option<bool>],
+) -> Option<(f64, f64)> {
     if !(pty > 0. || rn1 > 0.) {
         return None;
     }
@@ -80,10 +86,19 @@ mod tests {
     #[test]
     fn hit_rate_rule_keeps_undefined_statistics() {
         assert!(rns_allowed(&stn(&[])));
-        assert!(rns_allowed(&stn(&[("rnsHit", Val::Num(1.)), ("rnsCount", Val::Num(2.))])));
-        assert!(!rns_allowed(&stn(&[("rnsHit", Val::Num(0.)), ("rnsCount", Val::Num(1.))])));
+        assert!(rns_allowed(&stn(&[
+            ("rnsHit", Val::Num(1.)),
+            ("rnsCount", Val::Num(2.))
+        ])));
+        assert!(!rns_allowed(&stn(&[
+            ("rnsHit", Val::Num(0.)),
+            ("rnsCount", Val::Num(1.))
+        ])));
         // 0/0 is NaN: kept.
-        assert!(rns_allowed(&stn(&[("rnsHit", Val::Num(0.)), ("rnsCount", Val::Num(0.))])));
+        assert!(rns_allowed(&stn(&[
+            ("rnsHit", Val::Num(0.)),
+            ("rnsCount", Val::Num(0.))
+        ])));
     }
     #[test]
     fn mountain_filter_follows_legacy() {
@@ -103,7 +118,11 @@ mod tests {
             .collect();
         assert_eq!(
             kept,
-            vec![Some(Val::str("1")), Some(Val::str("3")), Some(Val::str("4"))]
+            vec![
+                Some(Val::str("1")),
+                Some(Val::str("3")),
+                Some(Val::str("4"))
+            ]
         );
     }
     #[test]
@@ -111,7 +130,7 @@ mod tests {
         let s = stn(&[("rnsHit", Val::Num(3.)), ("rnsCount", Val::Num(4.))]);
         let rows = |v: Option<bool>| vec![v; 15];
         assert_eq!(update(&s, 0., 0., &rows(Some(true))), None);
-        assert_eq!(update(&s, 1., 0., &vec![Some(true); 14]), None);
+        assert_eq!(update(&s, 1., 0., &[Some(true); 14]), None);
         assert_eq!(update(&s, 1., 0., &rows(None)), None);
         assert_eq!(update(&s, 1., 0., &rows(Some(false))), Some((3., 5.)));
         let mut mixed = rows(Some(false));

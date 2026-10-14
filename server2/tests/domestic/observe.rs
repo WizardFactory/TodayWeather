@@ -77,9 +77,11 @@ fn asos_hourly() -> Vec<u8> {
     let mut items = Vec::new();
     for d in 17..=23 {
         for h in 0..24 {
-            items.push(serde_json::json!({"tm": format!("2026-09-{d} {h:02}:00"), "stnId": "108",
+            items.push(
+                serde_json::json!({"tm": format!("2026-09-{d} {h:02}:00"), "stnId": "108",
                 "ta": "15.5", "taQcflg": "", "hm": "70", "hmQcflg": "", "rn": "", "ws": "1.0",
-                "wd": "90", "dc10Tca": "5"}));
+                "wd": "90", "dc10Tca": "5"}),
+            );
         }
     }
     asos_body(items)
@@ -87,9 +89,11 @@ fn asos_hourly() -> Vec<u8> {
 fn asos_daily() -> Vec<u8> {
     asos_body(
         (17..=23)
-            .map(|d| serde_json::json!({"tm": format!("2026-09-{d}"), "stnId": "108",
+            .map(|d| {
+                serde_json::json!({"tm": format!("2026-09-{d}"), "stnId": "108",
                 "minTa": "11.0", "maxTa": "22.0", "avgTa": "16.0", "avgRhm": "60", "sumRn": "",
-                "avgWs": "1.5"}))
+                "avgWs": "1.5"})
+            })
             .collect(),
     )
 }
@@ -102,10 +106,13 @@ struct Scripted {
 }
 impl Scripted {
     fn new(delay: Duration) -> Self {
-        let hourly = [(p(20260924, 1000), "2026.09.24.10:00"), (p(20260924, 900), "2026.09.24.09:00")]
-            .into_iter()
-            .map(|(h, s)| (h, aws_page(s, false)))
-            .collect();
+        let hourly = [
+            (p(20260924, 1000), "2026.09.24.10:00"),
+            (p(20260924, 900), "2026.09.24.09:00"),
+        ]
+        .into_iter()
+        .map(|(h, s)| (h, aws_page(s, false)))
+        .collect();
         Self {
             delay,
             calls: Mutex::new(Vec::new()),
@@ -166,7 +173,10 @@ impl Acquire for Scripted {
                 ),
                 WebFamily::AwsHourly => {
                     let h = request.publication().unwrap();
-                    self.calls.lock().unwrap().push(format!("aws-hourly {}", h.compact()));
+                    self.calls
+                        .lock()
+                        .unwrap()
+                        .push(format!("aws-hourly {}", h.compact()));
                     match self.hourly.get(&h) {
                         Some(b) => ("aws-hourly", h, b.clone(), "text/html"),
                         None => return Err(DomesticError::Transport),
@@ -174,11 +184,19 @@ impl Acquire for Scripted {
                 }
                 WebFamily::CityObservation => {
                     let h = request.publication().unwrap();
-                    self.calls.lock().unwrap().push(format!("city {}", h.compact()));
+                    self.calls
+                        .lock()
+                        .unwrap()
+                        .push(format!("city {}", h.compact()));
                     if h != p(20260924, 1000) {
                         return Ok(Acquired::Stale(p(20260924, 1000)));
                     }
-                    ("city-obs", h, city_page("2026.09.24.10:00"), "text/html;charset=UTF-8")
+                    (
+                        "city-obs",
+                        h,
+                        city_page("2026.09.24.10:00"),
+                        "text/html;charset=UTF-8",
+                    )
                 }
                 WebFamily::TownRss => return Err(DomesticError::Transport),
             };
@@ -249,17 +267,27 @@ impl Locate for Table {
         })
     }
 }
-fn source(peer: &Peer, acquire: Arc<dyn Acquire>, locate: Arc<dyn Locate>) -> S3Source<server2::world::BoundedS3<server2::storage::HttpS3Transport>> {
+fn source(
+    peer: &Peer,
+    acquire: Arc<dyn Acquire>,
+    locate: Arc<dyn Locate>,
+) -> S3Source<server2::world::BoundedS3<server2::storage::HttpS3Transport>> {
     S3Source::new(peer.transport(), Arc::new(|| NOW), acquire, locate).unwrap()
 }
-async fn snapshot(s: &S3Source<server2::world::BoundedS3<server2::storage::HttpS3Transport>>) -> Box<dyn server2::domestic::kma::KmaStore + Send> {
-    match s.snapshot(&request(), deadline() + Duration::from_secs(10)).await {
+async fn snapshot(
+    s: &S3Source<server2::world::BoundedS3<server2::storage::HttpS3Transport>>,
+) -> Box<dyn server2::domestic::kma::KmaStore + Send> {
+    match s
+        .snapshot(&request(), deadline() + Duration::from_secs(10))
+        .await
+    {
         SourceAnswer::Snapshot(s) => s,
         SourceAnswer::Forward(r) => panic!("forwarded: {r}"),
     }
 }
 fn get<'a>(j: &'a OrderedJson, k: &str) -> &'a OrderedJson {
-    j.get(k).unwrap_or_else(|| panic!("{k} in {}", String::from_utf8_lossy(&j.to_bytes())))
+    j.get(k)
+        .unwrap_or_else(|| panic!("{k} in {}", String::from_utf8_lossy(&j.to_bytes())))
 }
 fn len(j: &OrderedJson) -> usize {
     match j {
@@ -269,7 +297,9 @@ fn len(j: &OrderedJson) -> usize {
 }
 fn town(snapshot: &dyn server2::domestic::kma::KmaStore) -> serde_json::Value {
     let towns = snapshot.towns().unwrap();
-    let OrderedJson::Array(list) = towns else { panic!() };
+    let OrderedJson::Array(list) = towns else {
+        panic!()
+    };
     serde_json::from_slice(&list[0].to_bytes()).unwrap()
 }
 
@@ -288,9 +318,16 @@ async fn station_and_history_inputs_are_acquired_once_published_and_answered() {
         .stn_hourly_and_min_rns(&town, "202609241049", &serde_json::json!({}))
         .unwrap();
     assert_eq!(get(&stn, "stnId").number(), Some(108.));
-    assert_eq!(get(&stn, "stnDateTime").string().as_deref(), Some("2026.09.24.10:49"));
+    assert_eq!(
+        get(&stn, "stnDateTime").string().as_deref(),
+        Some("2026.09.24.10:49")
+    );
     assert!(stn.get("cityHourAws").is_some(), "the 10:00 hourly row");
-    assert_eq!(get(&stn, "weather").string().as_deref(), Some("맑음"), "the city page of 10:00");
+    assert_eq!(
+        get(&stn, "weather").string().as_deref(),
+        Some("맑음"),
+        "the city page of 10:00"
+    );
     // 중구 rains on the minute page; one rain station is not a local rain answer.
     assert_eq!(get(&stn, "nearStnId").string().as_deref(), Some("108"));
     assert!(stn.get("localMinAws").is_none());
@@ -298,7 +335,9 @@ async fn station_and_history_inputs_are_acquired_once_published_and_answered() {
     assert_eq!(len(&city), 2, "09:00 and 10:00 rows of station 108");
     let history = a.history(&town).unwrap();
     assert_eq!(
-        get(get(&history, "mapping"), "stationId").string().as_deref(),
+        get(get(&history, "mapping"), "stationId")
+            .string()
+            .as_deref(),
         Some("108")
     );
     assert_eq!(len(get(&history, "hourly")), 168);
@@ -314,9 +353,17 @@ async fn station_and_history_inputs_are_acquired_once_published_and_answered() {
         "asos-hourly 202609170000-202609232300",
         "asos-daily 20260917-20260923",
     ] {
-        assert_eq!(calls.iter().filter(|c| *c == once).count(), 1, "{once}: {calls:?}");
+        assert_eq!(
+            calls.iter().filter(|c| *c == once).count(),
+            1,
+            "{once}: {calls:?}"
+        );
     }
-    assert_eq!(*locate.0.lock().unwrap(), 3, "each station address geocoded once");
+    assert_eq!(
+        *locate.0.lock().unwrap(),
+        3,
+        "each station address geocoded once"
+    );
     // A new process (empty memory) answers from the published records alone.
     let fresh = Arc::new(Scripted::new(Duration::ZERO));
     let s3b = source(&peer, fresh.clone(), Arc::new(Table(Mutex::new(0))));
@@ -330,7 +377,9 @@ async fn station_and_history_inputs_are_acquired_once_published_and_answered() {
     );
     let again = fresh.calls();
     assert!(
-        !again.iter().any(|c| c.starts_with("asos") || c.ends_with("202609241000") || c == "aws-minute"),
+        !again
+            .iter()
+            .any(|c| c.starts_with("asos") || c.ends_with("202609241000") || c == "aws-minute"),
         "{again:?}"
     );
 }
@@ -344,7 +393,11 @@ async fn late_acquisitions_answer_as_absent_data_and_complete_for_the_next_reque
     let s3 = source(&peer, slow.clone(), Arc::new(Table(Mutex::new(0))));
     let started = std::time::Instant::now();
     let first = snapshot(&s3).await;
-    assert!(started.elapsed() < Duration::from_millis(4500), "{:?}", started.elapsed());
+    assert!(
+        started.elapsed() < Duration::from_millis(4500),
+        "{:?}",
+        started.elapsed()
+    );
     let town = town(first.as_ref());
     // No station pages within the wait: legacy's answers for an empty station collection and
     // an expired history read.
@@ -353,7 +406,9 @@ async fn late_acquisitions_answer_as_absent_data_and_complete_for_the_next_reque
         .unwrap_err();
     assert!(err.0.starts_with("Fail to find stn coords"), "{}", err.0);
     assert_eq!(
-        get(&first.history(&town).unwrap(), "reason").string().as_deref(),
+        get(&first.history(&town).unwrap(), "reason")
+            .string()
+            .as_deref(),
         Some("cache-read-timeout")
     );
     // The owned acquisitions finish and publish; the next request uses them.

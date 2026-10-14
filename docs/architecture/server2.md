@@ -1892,3 +1892,55 @@ Verification (local, test peers only):
 - The release `kma_smoke.py` passes.
 
 Live provider shapes and timing, the cold-cell latency (S15b-4) and production quotas are unverified.
+
+### S15b-2 station observations and ASOS history (2026-10-15)
+
+S15b-2 ([plan](../../plans/issue-2742.md#s15b-2-station-observations-and-asos-history), [spec](../../specs/issue-2742.md#specification-s15b-2)) sources `stn_hourly_and_min_rns`, `city_hourly` and the new
+`KmaStore::history` (legacy `lib/history/service.loadForTown`). AK's corrections of 2026-10-14
+and 2026-10-15 apply: no legacy forward and no pre-collection; recent current hours come from the
+KMA backfill and older hours back to D-7 from the nearest ASOS city station within 100 km
+(legacy #2564/#2648); a request waits at most 3 s and late data is answered as legacy answers
+absent data; the nationwide AWS hourly page is the ongoing-hour ASOS source.
+
+**Request-time acquisitions** (`domestic::kma::source::observe`, single-flight per dataset and
+publication, shared by every cell, published to S06 before use):
+
+| Dataset | When | Calls |
+| --- | --- | --- |
+| AWS minute page (`nph-aws_txt_min`) | newest stored page older than 2 minutes | ≤ 30/h, ≤ 720/day (keyless) |
+| AWS hourly page (`…?YYYYMMDDHH00&0&MINDB_60M&0&m`) | each KST hour from minute 15; missing hours of the 8-day `getCityHourlyList` window once per hour, three at a time (legacy `getStnPastHourlyWeather`) | 1/h; once 190 at a cold start |
+| City page (`currentweather.jsp?tm=`) | the latest hour; the page serves only its latest hour | 1/h (retry ≤ 6/h while stale) |
+| ASOS hourly/daily range (data.go.kr, per station) | the mapped station's missing D-7..D-1 keys, contiguous runs as legacy `Recovery.run`, each range at most once per hour | cold 2 per station; then ≤ 2/day per mapped station plus hourly retries of incomplete ranges |
+
+The data.go.kr ASOS form has no nationwide request (live 2026-10-14: no `stnIds` answers `11`,
+`stnIds=0` answers `03`, two stations `02`); the KMA API허브 nationwide forms need an authKey that
+is not configured. So rows of the city stations on the AWS hourly page fill ongoing hours
+(`t1h`, `reh`, `rs1h`→`rn1` outside November–March, `wsd`, `vec`; marked `origin`) and the ranges
+are requested only for keys still incomplete. Funding: `SERVER2_DATA_GO_KR_KEYS` (JSON array,
+the legacy `DONGNAE_SECRET_KEYS` form) with `SERVER2_DATA_GO_KR_DAILY_UNITS` per key and KST day
+(S08); provider roots default to production HTTPS and accept loopback overrides for tests.
+
+**Legacy collections rebuilt in memory.** Pages are parsed as cheerio 0.20.0 / htmlparser2 3.8.3
+read them (EUC-KR, entities, implied closes) and saved with the Mongoose 5.1.2 upsert rules of
+`_saveStnHourly2`/`_saveStnMinute2`. `KmaStnInfo` starts from the imported legacy `kmastninfos`
+seed (`tools/migration/export_station_seeds.py` + `station_seed_import`, offline; the production
+export is a separately authorized action) and then follows `_saveStnInfo`: a new station is
+registered once its address geocodes through the product geocoder, `isCityWeather` follows runs
+with city data. `getStnHourlyAndMinRns` and `getCityHourlyList` are ported with the 2d `$near`
+order. The ASOS store follows `Recovery.run`, `policy.normalize` and `Store.save` (first valid value
+per field), and the assembly ports `mergeHourly`, `mergeDaily`, `status` and the `historyStatus`
+response. S14 coverage no longer forwards: it lists what is fetched, what ASOS fills and what is
+absent.
+
+Verification (local, test peers only): pinned Node 16.20.2 oracles
+([stations](../../server2/tests/domestic/fixtures/STATIONS-PROVENANCE.md),
+[chain](../../server2/tests/domestic/fixtures/PROVENANCE.md)) for page parsing, savers, station
+answers, ASOS recovery over the live station-108 bodies, and 9 chain scenarios with the history
+read enabled (85 scenarios byte-identical); request-time tests over the S3 peer (single-flight,
+3-second answer, completion for the next request, a fresh process served from S3, the seeded
+registry); the release `kma_smoke.py` with provider roots on the loopback origin. Live calls are
+listed in the PR. Not reproduced: legacy re-runs of the hourly page at minutes 4/9/15/30, station
+rows of hours with no city page, `rnsHit`/`rnsCount` updates (legacy runs `_updateRnsHitRate` only
+from `/gather` against the retired `KmaStnMinute`; the rules are ported but not wired, an open
+decision), and the deployed `ASOS_HISTORY_STATIONS` allowlist (every registry city station is a
+candidate).

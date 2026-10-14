@@ -1,5 +1,6 @@
 //! `lib/midForecastPolicy.js`, `lib/history/policy.js` and `lib/history/observations.js` as used
-//! by the v000903 chain (ASOS history reads are off; see the module docs in `mod.rs`).
+//! by the v000903 chain (the ASOS history read is enabled when the store supplies it; see
+//! `KmaStore::history`).
 use super::js::{Arr, Ob, V, gt, is_finite_number, obj, strict_eq, to_str};
 use super::time::{DAY, HOUR, make_date};
 use crate::world::js as wjs;
@@ -785,17 +786,24 @@ pub fn merge_daily(req: &V, records: &V, now: f64) {
             super::js::throw("a.date.localeCompare is not a function");
         }
     }
-    daily.sort_by(|a, b| match to_str(&a.get("date")).cmp(&to_str(&b.get("date"))) {
-        std::cmp::Ordering::Less => -1.,
-        std::cmp::Ordering::Equal => 0.,
-        std::cmp::Ordering::Greater => 1.,
-    });
+    daily.sort_by(
+        |a, b| match to_str(&a.get("date")).cmp(&to_str(&b.get("date"))) {
+            std::cmp::Ordering::Less => -1.,
+            std::cmp::Ordering::Equal => 0.,
+            std::cmp::Ordering::Greater => 1.,
+        },
+    );
 }
 /// `policy.status(req, now)`.
 pub fn status(req: &V, now: f64) -> V {
     let (start, end) = window(now).map_or_else(Default::default, |(s, e, _)| (s, e));
     let mut hours: Vec<(String, V)> = Vec::new();
-    for r in req.get("currentList").as_arr().map(Arr::items).unwrap_or_default() {
+    for r in req
+        .get("currentList")
+        .as_arr()
+        .map(Arr::items)
+        .unwrap_or_default()
+    {
         if let Some(k) = slot(&r) {
             match hours.iter_mut().find(|(x, _)| *x == k) {
                 Some(slot) => slot.1 = r,
@@ -806,7 +814,12 @@ pub fn status(req: &V, now: f64) -> V {
     let mut days: Vec<(String, V)> = Vec::new();
     let mid = req.get("midData");
     if mid.truthy() {
-        for r in mid.get("dailyData").as_arr().map(Arr::items).unwrap_or_default() {
+        for r in mid
+            .get("dailyData")
+            .as_arr()
+            .map(Arr::items)
+            .unwrap_or_default()
+        {
             let d = to_str(&r.get("date"));
             match days.iter_mut().find(|(x, _)| *x == d) {
                 Some(slot) => slot.1 = r,

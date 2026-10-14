@@ -332,7 +332,8 @@ async fn assembly_paths_legacy_cannot_share_are_forwarded() {
 }
 
 /// The routing list is the only switch (S15b-1): `kma` builds the S3 input source from the
-/// shared `SERVER2_S3_*` settings, which are then required; unset keeps legacy and reads none.
+/// shared `SERVER2_S3_*` settings and (S15b-2) the data.go.kr key settings, which are then
+/// required; unset keeps legacy and reads none.
 #[test]
 fn native_families_kma_is_the_only_switch() {
     use server2::gateway::runtime::{NativeFamilies, from_vars};
@@ -344,6 +345,8 @@ fn native_families_kma_is_the_only_switch() {
             "SERVER2_S3_BUCKET" if s3 => Some("server2-test".to_owned()),
             "SERVER2_S3_ACCESS_KEY_ID" if s3 => Some("test-access".to_owned()),
             "SERVER2_S3_SECRET_ACCESS_KEY" if s3 => Some("test-secret".to_owned()),
+            "SERVER2_DATA_GO_KR_KEYS" if s3 => Some(r#"["s15b2-test-placeholder-key"]"#.to_owned()),
+            "SERVER2_DATA_GO_KR_DAILY_UNITS" if s3 => Some("10".to_owned()),
             _ => None,
         }
     };

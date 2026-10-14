@@ -1,6 +1,6 @@
 # S15 KMA v000903 oracle fixtures
 
-`oracle.json.gz` (sha256 `a5069c92dd2cf4f9d5e0cd81bfe0a18e563ba368ceb841ff823c1312d3e0cc07`) holds pinned legacy-oracle recordings
+`oracle.json.gz` (sha256 `7327bcbc0fc36fef9925736d1edebd39e8cfda726ca6415b48aed8515364f6c9`) holds pinned legacy-oracle recordings
 for the native KMA v000903 assembly tests. It is test data only; the server2 runtime never reads
 it or any legacy file.
 
@@ -19,7 +19,10 @@ it or any legacy file.
   `controllerManager.js` value (D4, AK 2026-10-14, S15b-1 #2742). Recorded again on master `1ce314d6`
   with 192: all 76 statuses, ETags, bodies and store calls are identical to the earlier 200 recording,
   and tests use the runtime default.
-- Driver: the script below (sha256 `42832d5bceb622637ccda2ba0be0c44be1db66f8e77ae9471d5fb980fb6a6300`), run as
+  S15b-2 (#2742, AK 2026-10-14) added 9 `history-*` scenarios recorded with
+  `config.history.readEnabled` true; the other 76 recordings are byte-identical, and recording on
+  master `f49921b6` gives the same bytes.
+- Driver: the script below (sha256 `d9f7a410b94ea32c98f5a051ed10a3757e6f16f35d0f503f15e78c30582eb821`), run as
   `TZ=UTC NODE_ENV=production NODE_PATH=<deps>/node_modules node record-kma.js <repo> <out.json.gz>`.
   It is retained here as documentation rather than as an executable repository tool, because a new
   server2-located script reading legacy source would be a new placement exception; the S02 recorder
@@ -35,9 +38,10 @@ type, ETag, exact body and, in order, every dependency answer the legacy control
 the store-read boundary, named by the server2 `KmaStore` methods: model reads (`towns`, `town`,
 `town_model`, `mid_model`, `area_no`, `area_no_near`, `life_index`, `food_poisoning`,
 `special_zones`) and controller dependencies (`region_code`, `forecast_zone`,
-`stn_hourly_and_min_rns`, `city_hourly`, `arpltn`, `dust_forecast`, `air_fallback`, `air_forecast`,
-`rise_set`). Dates are `{"$date": ms}`, undefined values `{"$undefined": true}`; object key
-order is preserved. 1480 answers in total; 1 are flagged `after_response` because legacy
+`stn_hourly_and_min_rns`, `city_hourly`, `history`, `arpltn`, `dust_forecast`, `air_fallback`,
+`air_forecast`, `rise_set`). `history` is `lib/history/service.loadForTown`, recorded only when
+the scenario enables `config.history.readEnabled`. Dates are `{"$date": ms}`, undefined values `{"$undefined": true}`; object key
+order is preserved. 1669 answers in total; 1 are flagged `after_response` because legacy
 `async.map` keeps calling after an error has already ended the chain and the reply was sent.
 Each call also records its complete arguments, copied when legacy made the call. The replay store
 (`server2/tests/domestic/recorded.rs`, a test double) checks the method, order and arguments of every call and that
@@ -56,8 +60,8 @@ dependency answer through the driver's `overrides`.
 
 ## Content
 
-76 scenarios: 15 S02 direct-route equivalents (domestic-v000903, domestic-locale-en, domestic-locale-ko, domestic-locale-ja, domestic-locale-zh-CN, domestic-locale-de, domestic-locale-zh-TW, domestic-v000903-db1, domestic-null-units, domestic-pop-covered, domestic-pop-missing-hour, domestic-old-no-pop, domestic-never-requested-history, domestic-partial-history, domestic-special-info); 5 gateway backend
-requests (gateway-v000903-domestic, gateway-query-normalization, gateway-history-never-requested, gateway-history-resumed-after-eight-days, gateway-history-partial-eight-day-history); and 56 supplementary scenarios (rss-older, rss-equal, busan, jeju, station-first-rain, station-first-snow-cloud, rain-categories, air-stations, air-stations-airnow, air-stale, air-kaq-forecast, air-dust-forecast, air-fallback, life-food-kasi, life-index-near-area, warning-two-zones, winter-cold-wind, hot-humid, missing-short, model-errors, unknown-air-unit, db1-history, stn-error, station-hourly-fill, db1-daily-source, short-publications, current-error, mid-forecast-error, yesterday-warmer, yesterday-colder, rss-unusable-values, current-sky-from-shortest, stn-invalid-zero, stn-fog-thunder, region-guard, clock-night-2340, clock-kst-0030, clock-kst-1010, clock-kst-1110, clock-kst-0605, clock-kst-1535, rss-pub-invalid-offset, rss-pub-hour24-fraction, rss-pub-non-ascii-offset, rss-pub-non-ascii, rss-pub-iso-offset, rss-pub-hour24-submillisecond, current-pub-small-year, stn-boolean-datetime-false, stn-boolean-datetime-true, life-index-hex-area, life-index-long-hex-area, query-malformed-escape, current-interpolated-strings, stn-cloud-radix-sign, stn-small-year-datetime).
+85 scenarios: 15 S02 direct-route equivalents (domestic-v000903, domestic-locale-en, domestic-locale-ko, domestic-locale-ja, domestic-locale-zh-CN, domestic-locale-de, domestic-locale-zh-TW, domestic-v000903-db1, domestic-null-units, domestic-pop-covered, domestic-pop-missing-hour, domestic-old-no-pop, domestic-never-requested-history, domestic-partial-history, domestic-special-info); 5 gateway backend
+requests (gateway-v000903-domestic, gateway-query-normalization, gateway-history-never-requested, gateway-history-resumed-after-eight-days, gateway-history-partial-eight-day-history); and 56 supplementary scenarios (rss-older, rss-equal, busan, jeju, station-first-rain, station-first-snow-cloud, rain-categories, air-stations, air-stations-airnow, air-stale, air-kaq-forecast, air-dust-forecast, air-fallback, life-food-kasi, life-index-near-area, warning-two-zones, winter-cold-wind, hot-humid, missing-short, model-errors, unknown-air-unit, db1-history, stn-error, station-hourly-fill, db1-daily-source, short-publications, current-error, mid-forecast-error, yesterday-warmer, yesterday-colder, rss-unusable-values, current-sky-from-shortest, stn-invalid-zero, stn-fog-thunder, region-guard, clock-night-2340, clock-kst-0030, clock-kst-1010, clock-kst-1110, clock-kst-0605, clock-kst-1535, rss-pub-invalid-offset, rss-pub-hour24-fraction, rss-pub-non-ascii-offset, rss-pub-non-ascii, rss-pub-iso-offset, rss-pub-hour24-submillisecond, current-pub-small-year, stn-boolean-datetime-false, stn-boolean-datetime-true, life-index-hex-area, life-index-long-hex-area, query-malformed-escape, current-interpolated-strings, stn-cloud-radix-sign, stn-small-year-datetime); and 9 S15b-2 ASOS history scenarios with the read enabled (history-stations-unconfigured, history-asos-fill, history-asos-fill-en, history-read-timeout, history-station-unavailable, history-read-error, history-with-station-hourly, history-yesterday-from-asos, history-short-rain-3h).
 
 ## Driver source
 
@@ -188,6 +192,10 @@ function instrument(id, m) {
         w = Object.create(m);
         w.getStnHourlyAndMinRns = (town, dt, cur, cb) => { const at = enc([town, dt, cur]); answer('stn', c => m.getStnHourlyAndMinRns(town, dt, cur, c), [town, dt, cur], (e, v) => { record('stn_hourly_and_min_rns', at, v, e); cb(e, v); }); };
         w.getCityHourlyList = (town, cb) => { const at = enc([town]); answer('city_hourly', c => m.getCityHourlyList(town, c), [town], (e, v) => { record('city_hourly', at, v, e); cb(e, v); }); };
+    } else if (base === 'service' && /history[\\/]service$/.test(String(id))) {
+        // S15b-2: the ASOS history read (config.history.readEnabled) at the store boundary.
+        w = Object.create(m);
+        w.loadForTown = (town, cb) => { const at = enc([town]); answer('history', c => m.loadForTown(town, c), [town], (e, v) => { record('history', at, v, e); cb(e, v); }); };
     } else if (base === 'kasi.riseset.controller') {
         w = Object.create(m);
         w.getRiseSetList = (geo, dates, cb) => { const at = enc([geo, dates]); answer('rise_set', c => m.getRiseSetList(geo, dates, c), [geo, dates], (e, v) => { record('rise_set', at, v, e); cb(e, v); }); };
@@ -293,6 +301,7 @@ function hours(name, last, n, values) {
     return out;
 }
 
+let this_f = null;
 // Each case: id, modifier(fixture), request {path, query, lang}, options {db, clock, overrides, place}.
 const cases = [];
 function add(id, request, modifier, options) { cases.push({id, request, modifier: modifier || (() => {}), options: options || {}}); }
@@ -465,6 +474,56 @@ add('stn-cloud-radix-sign', {path: SEOUL, lang: 'en'}, f => { f.stnWeather = {st
 // S15-R12: V8's legacy parser reads `0001-09-24 09:03` as 2026-01-09 09:03 (the native port forwards).
 add('stn-small-year-datetime', {path: SEOUL, lang: 'zh-CN'}, f => { f.stnWeather = {stnDateTime: '0001-09-24 09:03', weather: '뇌우끝,비', weatherType: 53, rns: false, localMinAws: true, rs1h: 12.36, stnId: 108}; });
 
+// S15b-2: ASOS history fill (#2564/#2648) with config.history.readEnabled (AK 2026-10-14).
+function asos(kind, key, values, station) {
+    const st = station || '108';
+    const ms = Date.UTC(+key.slice(0, 4), +key.slice(4, 6) - 1, +key.slice(6, 8), kind === 'hourly' ? +key.slice(8, 10) : 0) - 9 * 3600000;
+    return {_id: kind + ':' + st + ':' + key, kind, stationId: st, key, date: new RealDate(ms), kstDate: key.slice(0, 8), timeBasis: 'UTC',
+        source: 'KMA_ASOS', fetchedAt: new RealDate(Date.UTC(2026, 8, 24)), values};
+}
+const MAPPING = {stationId: '108', stationName: '서울', distanceKm: 1.234567, method: 'nearest-configured-ASOS-city-station'};
+function asosData(f) {
+    const hourly = [], daily = [];
+    for (const [i, r] of f.current.entries()) {
+        const key = r.date + r.time.slice(0, 2) + '00';
+        if (r.date >= '20260924') continue;
+        if (i % 5 === 0) hourly.push(asos('hourly', key, {t1h: 17.5 + i % 3, reh: 60 + i % 9, rn1: i % 10 === 0 ? 0.5 : 0, wsd: 2.1, vec: 180, sky: 1 + i % 4}));
+        else if (i % 7 === 0) hourly.push(asos('hourly', key, {t1h: 19.1, reh: 64}));
+    }
+    hourly.push(asos('hourly', '202609170300', {t1h: 12.5, reh: 80, sky: 4}));
+    for (const d of ['20260917', '20260918', '20260919', '20260920', '20260922', '20260923'])
+        daily.push(asos('daily', d, {taMin: 14.2, taMax: 24.8, t1d: 19.3, reh: 66, rn1: d === '20260920' ? 12.5 : 0, wsd: 2.4}));
+    daily.push(asos('daily', '20260916', {taMin: 10, taMax: 20}));
+    daily.push(asos('daily', '20260921', {taMin: 25, taMax: 20}));
+    return {mapping: clone(MAPPING), hourly, daily};
+}
+const invalidate = f => f.current.forEach((r, i) => {
+    if (i % 5 === 0) { r.t1h = -50; r.reh = -1; r.rn1 = -1; r.sky = -1; }
+    else if (i % 7 === 0) { r.t1h = 61; r.wsd = -1; }
+});
+add('history-stations-unconfigured', {path: SEOUL, lang: 'ko'}, null, {history: true});
+add('history-asos-fill', {path: SEOUL, lang: 'ko'}, invalidate, {history: true, overrides: {history: () => asosData(this_f)}});
+add('history-asos-fill-en', {path: SEOUL, query: UNITS[0], lang: 'en'}, invalidate, {history: true, overrides: {history: () => asosData(this_f)}});
+add('history-read-timeout', {path: SEOUL, lang: 'en'}, invalidate, {history: true, overrides: {history: {reason: 'cache-read-timeout', hourly: [], daily: []}}});
+add('history-station-unavailable', {path: SEOUL, lang: 'en'}, null, {history: true, overrides: {history: {reason: 'station-unavailable', hourly: [], daily: []}}});
+add('history-read-error', {path: SEOUL, lang: 'en'}, invalidate, {history: true, overrides: {history: {__error: 'history read failed'}}});
+add('history-with-station-hourly', {path: SEOUL, lang: 'ko'}, f => {
+    invalidate(f);
+}, {history: true, overrides: {history: () => asosData(this_f), city_hourly: () => {
+    const rows = [];
+    for (let h = 0; h < 60; h++) {
+        const ms = Date.UTC(2026, 8, 24, 9) - h * 3600000;
+        rows.push({stnId: 108, date: new RealDate(ms), t1h: 21 + (h % 5) / 10, reh: 40 + h % 7, rs1h: h % 9 === 0 ? 0.5 : 0, vec: 90, wsd: 1.2});
+    }
+    return rows;
+}}});
+add('history-yesterday-from-asos', {path: SEOUL, lang: 'ko'}, f => {
+    f.current.forEach(r => { if (r.date === '20260923' && r.time === '0900') { r.t1h = -50; } });
+}, {history: true, overrides: {history: () => ({mapping: clone(MAPPING), hourly: [asos('hourly', '202609230900', {t1h: 15.5, reh: 70})], daily: []})}});
+add('history-short-rain-3h', {path: SEOUL, lang: 'en'}, f => {
+    f.current.forEach(r => { if (r.date === '20260924' && r.time < '0600') { r.rn1 = -1; r.pty = -1; } });
+}, {history: true, overrides: {history: () => ({mapping: clone(MAPPING), hourly: [asos('hourly', '202609240100', {rn1: 1.5, t1h: 15, reh: 90}), asos('hourly', '202609240200', {t1h: 15, reh: 90})], daily: []})}});
+
 async function run() {
     const out = [];
     for (const c of cases) {
@@ -473,7 +532,9 @@ async function run() {
         const harness = makeDomesticHarness();
         const fixture = harness.makeFixture(harness.locations[c.options.place || 0], c.options.policy || 'newer');
         c.modifier(fixture);
-        const h = harness.createHarness(c.options.db || '2.0', fixture, {oracleRoute: path.join(server, 'routes/v000903/route.kma.v000903.js'), translate: translate()});
+        this_f = fixture;
+        const h = harness.createHarness(c.options.db || '2.0', fixture, {oracleRoute: path.join(server, 'routes/v000903/route.kma.v000903.js'), translate: translate(),
+            config: c.options.history ? {readEnabled: true} : undefined});
         if (c.options.zones) {
             const codes = h.load(path.join(server, 'lib/kmaWarningZones.js')).zonesForTown(fixture.place.town);
             assert(codes.length, 'zones for town');

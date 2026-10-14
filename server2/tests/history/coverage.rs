@@ -47,7 +47,12 @@ fn full(index: &mut CaptureIndex, from_ms: i64) {
     }
     minutes(index, p(20261013, 1403), p(20261013, 1423), 2);
 }
-type Filled = (ColdCell, Vec<(Family, Publication)>, Vec<Publication>, Vec<Gap>);
+type Filled = (
+    ColdCell,
+    Vec<(Family, Publication)>,
+    Vec<Publication>,
+    Vec<Gap>,
+);
 fn filled(c: Coverage) -> Filled {
     match c {
         Coverage::Fill {
@@ -113,10 +118,7 @@ fn coverage_never_requested_cell_is_fetched_asos_filled_and_never_forwarded() {
     assert_eq!(of(&fetch, Family::Short).len(), 8);
     // ASOS: the older current hours back to D-7 00:00 KST.
     assert_eq!(asos.len(), 158);
-    assert_eq!(
-        (asos[0], asos[157]),
-        (p(20261006, 0), p(20261012, 1300))
-    );
+    assert_eq!((asos[0], asos[157]), (p(20261006, 0), p(20261012, 1300)));
     // Before D-7 there is no source: absent, as legacy answers absent data.
     let current = absent.iter().find(|x| x.family == Family::Current).unwrap();
     assert_eq!(
@@ -136,7 +138,10 @@ fn coverage_resumed_after_eight_days_fills_the_gap_from_asos() {
     }
     let (cold, fetch, asos, absent) = filled(coverage(&request(), &index));
     assert_eq!(cold, ColdCell::Partial);
-    assert!(of(&fetch, Family::Current).is_empty(), "the last day was captured");
+    assert!(
+        of(&fetch, Family::Current).is_empty(),
+        "the last day was captured"
+    );
     assert_eq!(
         (asos[0], *asos.last().unwrap()),
         (p(20261006, 0), p(20261011, 1400))
@@ -160,7 +165,10 @@ fn coverage_partial_history_leaves_each_older_missing_hour_to_asos() {
     partial.merge(&index_without_current(&index));
     let (cold, fetch, asos, absent) = filled(coverage(&request(), &partial));
     assert_eq!(cold, ColdCell::Partial);
-    assert!(fetch.is_empty() && absent.is_empty(), "{fetch:?} {absent:?}");
+    assert!(
+        fetch.is_empty() && absent.is_empty(),
+        "{fetch:?} {absent:?}"
+    );
     assert_eq!(asos, vec![p(20261010, 300), p(20261010, 400)]);
 }
 fn index_without_current(full: &CaptureIndex) -> CaptureIndex {
@@ -247,7 +255,10 @@ fn coverage_combines_an_export_snapshot_with_captures_after_it() {
     let (cold, fetch, asos, _) = filled(coverage(&request(), &stale));
     assert_eq!(cold, ColdCell::Partial);
     assert_eq!(asos[0], p(20261010, 1000));
-    assert_eq!(*of(&fetch, Family::Current).last().unwrap(), p(20261013, 1300));
+    assert_eq!(
+        *of(&fetch, Family::Current).last().unwrap(),
+        p(20261013, 1300)
+    );
 }
 
 #[test]
@@ -261,7 +272,10 @@ fn coverage_fills_recent_hours_from_kma_and_older_hours_from_asos() {
     let (_, fetch, asos, absent) = filled(coverage(&request(), &station_only));
     assert_eq!(of(&fetch, Family::Current).len(), 24);
     assert_eq!(asos.len(), 158);
-    assert!(asos.iter().all(|h| *h >= p(20261006, 0) && *h < p(20261012, 1400)));
+    assert!(
+        asos.iter()
+            .all(|h| *h >= p(20261006, 0) && *h < p(20261012, 1400))
+    );
     assert_eq!(
         absent
             .iter()
@@ -304,17 +318,11 @@ fn coverage_minute_window_requires_continuous_fresh_pages() {
     // Capture started inside the window (demand began 10 minutes ago).
     let mut late = without_minutes(&base);
     minutes(&mut late, p(20261013, 1415), p(20261013, 1423), 2);
-    assert!(matches!(
-        coverage(&request(), &late),
-        Coverage::Fill { .. }
-    ));
+    assert!(matches!(coverage(&request(), &late), Coverage::Fill { .. }));
     // Newest page older than anchor-3min.
     let mut old = without_minutes(&base);
     minutes(&mut old, p(20261013, 1403), p(20261013, 1421), 2);
-    assert!(matches!(
-        coverage(&request(), &old),
-        Coverage::Fill { .. }
-    ));
+    assert!(matches!(coverage(&request(), &old), Coverage::Fill { .. }));
     // A snapshot two days after the anchor no longer holds the window (one-day retention).
     let mut late_export = without_minutes(&base);
     late_export.add_export(
@@ -355,6 +363,10 @@ fn coverage_incomplete_index_is_reported_without_forwarding() {
         let mut index = CaptureIndex::default();
         full(&mut index, 0);
         index.mark_incomplete(kind, date);
-        assert_eq!(coverage(&request(), &index), Coverage::IndexIncomplete, "{kind}");
+        assert_eq!(
+            coverage(&request(), &index),
+            Coverage::IndexIncomplete,
+            "{kind}"
+        );
     }
 }

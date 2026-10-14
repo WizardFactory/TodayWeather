@@ -39,7 +39,12 @@ impl<T: Clone> Clone for Reader<T> {
         }
     }
 }
-fn catalog(source: &str, kind: &str, key: &ProviderKey, partition: &str) -> Result<CatalogId, Error> {
+fn catalog(
+    source: &str,
+    kind: &str,
+    key: &ProviderKey,
+    partition: &str,
+) -> Result<CatalogId, Error> {
     let id = CatalogId {
         source: source.into(),
         kind: kind.into(),
@@ -174,6 +179,7 @@ impl<T: IndexListing + Clone> Reader<T> {
     }
     /// The newest acquisitions of one catalog, latest first, read in pages of `page` until
     /// `enough` holds for the acquisitions read so far (or the catalog ends).
+    #[allow(clippy::too_many_arguments)] // One catalog identity plus paging and a stop rule.
     pub async fn latest_raw(
         &self,
         source: &str,

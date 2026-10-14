@@ -4,11 +4,11 @@
 //! The registry starts from the seed's documents (legacy fields such as `rnsHit`, `rnsCount` and
 //! `isMountain` included) and the station pages then apply the legacy saver rules on top.
 use super::doc::{Doc, Val};
+use crate::gateway::OrderedJson;
 use crate::resolver::Acquisition;
 use crate::storage::{
     CatalogId, CatalogLimits, GroupDeclaration, GroupMember, Period, ProviderKey, RawRecord,
 };
-use crate::gateway::OrderedJson;
 use serde_json::Value;
 
 pub const SOURCE: &str = "legacy-mongo";
@@ -78,9 +78,8 @@ pub fn parse(bytes: &[u8]) -> Result<StationSeed, SeedError> {
         return Err(SeedError("framing"));
     }
     let mut lines = bytes[..bytes.len() - 1].split(|b| *b == b'\n');
-    let manifest: Value =
-        serde_json::from_slice(lines.next().ok_or(SeedError("manifest"))?)
-            .map_err(|_| SeedError("manifest"))?;
+    let manifest: Value = serde_json::from_slice(lines.next().ok_or(SeedError("manifest"))?)
+        .map_err(|_| SeedError("manifest"))?;
     let field = |k: &str| manifest.get(k).ok_or(SeedError("manifest"));
     if field("schema")? != 1
         || field("tool")? != "export_station_seeds"

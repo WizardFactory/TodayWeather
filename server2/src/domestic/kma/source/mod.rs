@@ -11,21 +11,21 @@
 //! life inputs (S15b-3), request-time acquisition and unknown-town geocoding (S15b-4) are not
 //! sourced yet: the snapshot ends the assembly with a named temporary forward for them, and the
 //! `kma` family stays off until S15b-4.
+pub mod asos;
 mod doc;
 mod grid;
-pub mod asos;
 pub mod html;
-pub mod observe;
 mod items;
 mod mid;
+pub mod observe;
 pub mod pages;
+mod records;
+mod reference;
 pub mod rnshit;
+mod rss;
 pub mod seed;
 pub mod stations;
 pub mod stn;
-mod records;
-mod reference;
-mod rss;
 mod zone;
 
 pub use doc::{Doc, Val};

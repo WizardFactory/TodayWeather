@@ -8,6 +8,7 @@
 //!   through the legacy #2564/#2648 history read (invalid or missing fields at exact hourly keys,
 //!   with provenance and `historyStatus`);
 //! - anything older has no source and stays absent, as legacy answers absent data.
+//!
 //! No grid hour is invented.
 use super::{
     Grid,

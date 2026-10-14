@@ -131,3 +131,67 @@ use `AssemblyConfig::default()`.
   Every request is still forwarded (S15b-1 temporary), with identical bytes.
 - **Checks:** fmt, fresh clippy, `cargo test --locked --workspace`, `deploy/smoke.sh`, the
   placement gate, `test_placement.py`, and artifact policy `--staged` and `--range`.
+
+# Specification (S15b-2)
+
+Legacy references are master `f49921b6`; sources followed on disagreement are named.
+
+## Pages and station collections (AC7)
+
+- Parsing: `KmaScraper._parseStnMinInfo`, `_decodeKmaHtml`, `_parseCityWeatherHtml` and
+  `_mergeAWSandCity` (`server/lib/kmaScraper.js`), with cheerio 0.20.0 / htmlparser2 3.8.3 tree
+  rules, legacy entity decoding and strict EUC-KR (`iconv`). `YYYY.MM.DD.HH:MM` parses as V8 does.
+- Savers: `_saveStnHourly2`/`_saveStnMinute2` (`kmaScraper.js:821-832`, `:1630-1642`) upsert
+  `{stnId, date}` with Mongoose 5.1.2 casts. `_saveStnInfo` (`:608-714`) registers a station the
+  first time its address geocodes (`(산간)` removed) and updates `isCityWeather` unless the run had
+  no city data (`keepCityWeather`). Registration is applied in page order (legacy runs rows in
+  parallel). Geocoding is the product geocoder with the `_convertGeoCodeByApiServer` checks
+  (Korean location in 33–39 N, 124–132 E).
+- Readers: `getStnHourlyAndMinRns` (`controllerKmaStnWeather.js:1108-1240`) and
+  `getCityHourlyList` (`:817-837`) with `getStnList` (`:784-810`; 2d `$near`, planar degrees,
+  inclusive `$maxDistance`, natural order on ties), `findHourlies2`, `_getStnMinute2`,
+  `_checkPrecipFromStnMinuteList` and `_findRainStnMinuteList` (the `date` identity rule).
+- Seed (AK 2026-10-15): `export_station_seeds.py` validates a `mongoexport` of `kmastninfos`
+  against `modelKmaStnInfo.js` and keeps the lines byte for byte; `station_seed_import` publishes it
+  as one raw record (`legacy-mongo`/`kma-stn-info`); the registry starts from the newest seed.
+- Rain-sensor statistics: `_updateRnsHitRate` (`kmaScraper.js:1317-1408`), the 0.5 rule
+  (`controllerKmaStnWeather.js:411-417`) and `_filterStnList` (`:765-774`) are ported as functions.
+  Source followed: the legacy call graph. None of them is on the v000903 path (`/gather` only, and
+  `getStnHourly`/`getStnMinute` of v000001), so the snapshot copies the seeded values unchanged.
+
+## ASOS history (AC8)
+
+- `KmaStore::history(town)` answers `loadForTown`: `{mapping, hourly, daily}` or
+  `{mapping?, reason, hourly: [], daily: []}`; null means reads disabled.
+- `mergeCurrentByStnHourly` reads `city_hourly` then `history` and runs `mergeLegacy` then
+  `mergeHourly`; a failed read keeps the default `{reason: 'cache-read-timeout'}`.
+- `mergeMidWithShort` runs `mergeDaily` and `status` before its window filter;
+  `historyStatus = status + mapping + reason` (`lib/history/service.js:66-77`,
+  `policy.js:163-290`).
+- Docs: `docs/architecture/mobile-api.md` (historical observation composition),
+  `docs/rewrite/server-response-assembly.md` items 10 and 20. On the read budget the docs say 3 s
+  (`configuration-inventory.md:78`) and the code 250 ms; the code is followed, and server2's own
+  wait is AK's 3 s.
+
+## Request-time acquisition (AC9)
+
+- Nationwide pages: AWS minute when the newest page is older than 2 minutes; AWS hourly per KST
+  hour from minute 15 (legacy runs at 4/9/15/30, `controllerManager.js:2754-2800`; one acquisition
+  per publication here) plus a once-per-hour backfill of the 8-day window three at a time
+  (`getStnPastHourlyWeather`); the city page of the latest hour (it serves only that hour).
+- ASOS: `policy.nearest` over the registry's city stations (haversine ≤ 100 km, lower ID on ties);
+  the window D-7..D-1 KST; `Recovery.run` ranges of incomplete keys, each at most once per hour;
+  `Provider.fetch` checks per page (`provider.js:107-142`); `policy.normalize` and `Store.save`.
+  AWS hourly rows of the station fill ongoing hours first (AK 2026-10-15).
+- Waiting: S3 state first, then the needed acquisitions, a fold and station geocoding, all within
+  `min(deadline, 3 s)`. Late: empty station collections (legacy errors such as `Fail to find stn
+  coords`) and `cache-read-timeout`; no 503 and no forward.
+- Settings: `SERVER2_DATA_GO_KR_KEYS`, `SERVER2_DATA_GO_KR_DAILY_UNITS` (required with `kma`),
+  optional `SERVER2_DATA_GO_KR_BASE_URL`, `SERVER2_KMA_BASE_URL`, `SERVER2_KMA_WEATHER_BASE_URL`.
+
+## Coverage (AC10)
+
+`coverage(request, index)` returns `Complete`, `NeedsLatest` (only fetchable publications missing),
+`Fill {fetch, asos, absent}` or `IndexIncomplete`; there is no legacy reason. Fetch reach: current
+and ultra-short latest + 23, short latest + 7, AWS hourly the window, city and minute latest only.
+`asos`: missing current hours from D-7 00:00 KST. `absent`: the rest.

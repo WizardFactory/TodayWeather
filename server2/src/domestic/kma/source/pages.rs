@@ -134,8 +134,7 @@ fn parse_aws_doc(doc: &Document, requested: Option<&str>) -> Result<AwsPage, Pag
         .iter()
         .copied()
         .filter(|n| {
-            doc.name(*n) == "table"
-                && doc.ancestors(*n).iter().any(|a| doc.name(*a) == "table")
+            doc.name(*n) == "table" && doc.ancestors(*n).iter().any(|a| doc.name(*a) == "table")
         })
         .collect();
     let mut rows = Vec::new();
@@ -150,7 +149,8 @@ fn parse_aws_doc(doc: &Document, requested: Option<&str>) -> Result<AwsPage, Pag
             let mut p = 0usize;
             for td in doc.child_elements(tr, "td") {
                 let t = strip_first_ws(&strip_newlines(&strip_first_ws(&doc.text(td, false))));
-                if t != "." && t != "-"
+                if t != "."
+                    && t != "-"
                     && let Some(name) = AWS_FIELDS.get(p)
                 {
                     match *name {
@@ -182,8 +182,7 @@ fn parse_aws_doc(doc: &Document, requested: Option<&str>) -> Result<AwsPage, Pag
                 p += 1;
             }
             let zero = |k: &str| row.get(k) == Some(&Val::Num(0.));
-            if p > AWS_FIELDS.len() || (zero("t1h") && zero("vec") && zero("wsd") && zero("vec1"))
-            {
+            if p > AWS_FIELDS.len() || (zero("t1h") && zero("vec") && zero("wsd") && zero("vec1")) {
                 continue;
             }
             rows.push(row);
@@ -290,8 +289,9 @@ pub fn parse_city(
                     if let Some(id) = stn_param(href) {
                         row.set("stnId", Val::str(id));
                     }
-                    let mut name =
-                        strip_all_ws(&strip_newlines(&a.map_or_else(|| doc.text(td, false), |a| doc.text(a, false))));
+                    let mut name = strip_all_ws(&strip_newlines(
+                        &a.map_or_else(|| doc.text(td, false), |a| doc.text(a, false)),
+                    ));
                     if name == "백령도" {
                         name = "백령".into();
                     }
@@ -300,7 +300,8 @@ pub fn parse_city(
                     continue;
                 }
                 let key = fields.get(i).copied();
-                let mut t = strip_all_ws(&strip_newlines(&doc.text(td, true))).replace('\u{a0}', "");
+                let mut t =
+                    strip_all_ws(&strip_newlines(&doc.text(td, true))).replace('\u{a0}', "");
                 if key == Some("wsd") && t.is_empty() {
                     let script = doc
                         .descendants(td)

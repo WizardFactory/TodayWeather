@@ -22,8 +22,11 @@ const DAILY: &str = "1360000/AsosDalyInfoService/getWthrDataList";
 fn docs_json(docs: &[Doc]) -> OrderedJson {
     OrderedJson::Array(docs.iter().map(Doc::json).collect())
 }
-fn query<'a>(request: &'a OrderedJson, name: &str) -> Option<String> {
-    request.get("query").and_then(|q| q.get(name)).and_then(OrderedJson::string)
+fn query(request: &OrderedJson, name: &str) -> Option<String> {
+    request
+        .get("query")
+        .and_then(|q| q.get(name))
+        .and_then(OrderedJson::string)
 }
 /// (kind, start key, end key) of a recorded provider request.
 fn requested(request: &OrderedJson) -> (AsosKind, String, String) {
@@ -43,9 +46,8 @@ fn requested(request: &OrderedJson) -> (AsosKind, String, String) {
     }
 }
 fn accepted(body: &str) -> bool {
-    serde_json::from_str::<serde_json::Value>(body).is_ok_and(|j| {
-        j["response"]["header"]["resultCode"] == "00"
-    })
+    serde_json::from_str::<serde_json::Value>(body)
+        .is_ok_and(|j| j["response"]["header"]["resultCode"] == "00")
 }
 
 #[test]
@@ -81,9 +83,18 @@ fn asos_history_store_rebuilds_like_legacy_recovery() {
                     },
                 );
             }
-            same(&docs_json(&store.docs()), at(run, &["store"]), &format!("{id} run {n} store"));
             same(
-                &docs_json(&store.read(AsosKind::Hourly, &station, &format!("{start}0000"), &format!("{end}2300"))),
+                &docs_json(&store.docs()),
+                at(run, &["store"]),
+                &format!("{id} run {n} store"),
+            );
+            same(
+                &docs_json(&store.read(
+                    AsosKind::Hourly,
+                    &station,
+                    &format!("{start}0000"),
+                    &format!("{end}2300"),
+                )),
                 at(run, &["read", "hourly"]),
                 &format!("{id} run {n} hourly read"),
             );
@@ -103,7 +114,10 @@ fn asos_requests_accept_only_legacy_station_ranges() {
     assert!(ok(AsosKind::Daily, "90", "20261007", "20261013"));
     assert!(!ok(AsosKind::Daily, "090", "20261007", "20261013"));
     assert!(!ok(AsosKind::Daily, "1080", "20261007", "20261013"));
-    assert!(!ok(AsosKind::Daily, "108", "20261006", "20261013"), "eight days");
+    assert!(
+        !ok(AsosKind::Daily, "108", "20261006", "20261013"),
+        "eight days"
+    );
     assert!(!ok(AsosKind::Daily, "108", "20261013", "20261007"));
     assert!(!ok(AsosKind::Hourly, "108", "202610070030", "202610132300"));
     assert!(!ok(AsosKind::Hourly, "108", "202610072400", "202610132300"));
@@ -115,12 +129,18 @@ fn asos_requests_accept_only_legacy_station_ranges() {
     );
 }
 
-async fn env() -> (Stub, DomesticAcquirer<HttpProviderTransport, HttpPublicTransport, Memory>) {
+async fn env() -> (
+    Stub,
+    DomesticAcquirer<HttpProviderTransport, HttpPublicTransport, Memory>,
+) {
     let stub = Stub::start().await;
     let wire = Arc::new(Memory::default());
     let clk = clock(kst(2026, 10, 14, 10, 0));
     let mut rings = BTreeMap::new();
-    rings.insert(Service::Asos, ring(wire, clk.clone(), &[(KEY_A, 'a'), (KEY_B, 'b')]));
+    rings.insert(
+        Service::Asos,
+        ring(wire, clk.clone(), &[(KEY_A, 'a'), (KEY_B, 'b')]),
+    );
     let acquirer = DomesticAcquirer::new(
         Arc::new(HttpProviderTransport::new(8 * 1024 * 1024).unwrap()),
         Arc::new(HttpPublicTransport::new(8 * 1024 * 1024).unwrap()),
@@ -147,7 +167,8 @@ fn item(i: usize) -> serde_json::Value {
 async fn asos_acquisition_checks_pages_like_the_legacy_provider() {
     let first_run = &items_of(at(&items_of(at(oracle(), &["asos"]))[0], &["runs"]))[0];
     let live = text(at(&items_of(at(first_run, &["requests"]))[0], &["body"]));
-    let request = AsosRequest::new(AsosKind::Hourly, "108", "202610070000", "202610132300").unwrap();
+    let request =
+        AsosRequest::new(AsosKind::Hourly, "108", "202610070000", "202610132300").unwrap();
     // The recorded station-108 range: one page, legacy query order, one raw record.
     let (stub, acquirer) = env().await;
     stub.push(HOURLY, Reply::json(live.clone().into_bytes()));
@@ -168,7 +189,17 @@ async fn asos_acquisition_checks_pages_like_the_legacy_provider() {
             .filter(|n| !matches!(**n, "serviceKey" | "dataType"))
             .copied()
             .collect::<Vec<_>>(),
-        ["dataCd", "dateCd", "stnIds", "startDt", "endDt", "pageNo", "numOfRows", "startHh", "endHh"]
+        [
+            "dataCd",
+            "dateCd",
+            "stnIds",
+            "startDt",
+            "endDt",
+            "pageNo",
+            "numOfRows",
+            "startHh",
+            "endHh"
+        ]
     );
     assert_eq!(call.get("dateCd"), Some("HR"));
     assert_eq!(call.get("startHh"), Some("00"));
@@ -200,12 +231,27 @@ async fn asos_acquisition_checks_pages_like_the_legacy_provider() {
     // page, a changed total, a wrong page echo and a non-JSON body.
     let repeated = hourly_page(&items[..999], 2, 1998);
     for (name, pages) in [
-        ("quota", vec![br#"{"response":{"header":{"resultCode":"22","resultMsg":"LIMITED"}}}"#.to_vec()]),
+        (
+            "quota",
+            vec![br#"{"response":{"header":{"resultCode":"22","resultMsg":"LIMITED"}}}"#.to_vec()],
+        ),
         ("truncated", vec![hourly_page(&items[..10], 1, 12)]),
-        ("repeated", vec![hourly_page(&items[..999], 1, 1998), repeated]),
-        ("total", vec![hourly_page(&items[..999], 1, 1200), hourly_page(&items[999..], 2, 1201)]),
+        (
+            "repeated",
+            vec![hourly_page(&items[..999], 1, 1998), repeated],
+        ),
+        (
+            "total",
+            vec![
+                hourly_page(&items[..999], 1, 1200),
+                hourly_page(&items[999..], 2, 1201),
+            ],
+        ),
         ("echo", vec![hourly_page(&items[..10], 2, 10)]),
-        ("xml", vec![b"<OpenAPI_ServiceResponse></OpenAPI_ServiceResponse>".to_vec()]),
+        (
+            "xml",
+            vec![b"<OpenAPI_ServiceResponse></OpenAPI_ServiceResponse>".to_vec()],
+        ),
     ] {
         let (stub, acquirer) = env().await;
         for _ in 0..2 {
@@ -214,12 +260,22 @@ async fn asos_acquisition_checks_pages_like_the_legacy_provider() {
             }
         }
         let outcome = acquirer.acquire_asos(&request, deadline()).await;
-        assert!(!matches!(outcome, Ok(Acquired::Complete(_))), "{name}: {outcome:?}");
+        assert!(
+            !matches!(outcome, Ok(Acquired::Complete(_))),
+            "{name}: {outcome:?}"
+        );
     }
     // The daily form has no hours.
     let daily = AsosRequest::new(AsosKind::Daily, "108", "20261007", "20261013").unwrap();
     let (stub, acquirer) = env().await;
-    stub.push(DAILY, Reply::json(hourly_page(&[serde_json::json!({"tm": "2026-10-07", "stnId": "108", "minTa": "1", "maxTa": "2"})], 1, 1)));
+    stub.push(
+        DAILY,
+        Reply::json(hourly_page(
+            &[serde_json::json!({"tm": "2026-10-07", "stnId": "108", "minTa": "1", "maxTa": "2"})],
+            1,
+            1,
+        )),
+    );
     assert!(matches!(
         acquirer.acquire_asos(&daily, deadline()).await,
         Ok(Acquired::Complete(_))

@@ -59,7 +59,12 @@ fn digits(s: &str) -> bool {
 impl AsosRequest {
     /// `station` is a canonical legacy station id (`policy.station`: 1–3 digits, no leading
     /// zero); `start..=end` stay within seven KST days (`policy.range`).
-    pub fn new(kind: AsosKind, station: &str, start: &str, end: &str) -> Result<Self, DomesticError> {
+    pub fn new(
+        kind: AsosKind,
+        station: &str,
+        start: &str,
+        end: &str,
+    ) -> Result<Self, DomesticError> {
         let canonical = !station.is_empty()
             && station.len() <= 3
             && digits(station)
@@ -243,9 +248,7 @@ impl Paged for AsosRequest {
         let echoed = number(body.get("pageNo"));
         let size = number(body.get("numOfRows"));
         let max = f64::from(MAX_PAGES * ROWS);
-        let Some(count) =
-            count.filter(|c| c.fract() == 0. && *c >= 0. && *c <= max)
-        else {
+        let Some(count) = count.filter(|c| c.fract() == 0. && *c >= 0. && *c <= max) else {
             return PageCheck::Invalid("pagination");
         };
         if echoed != Some(f64::from(page))

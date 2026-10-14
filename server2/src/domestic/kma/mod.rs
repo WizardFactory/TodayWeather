@@ -6,8 +6,9 @@
 //! controller receives. Building those answers from S3 raw records (S13/S13a/S14) is a separate
 //! source; nothing here calls a provider or reads legacy files.
 //!
-//! Legacy deployment facts preserved: process clock zone UTC, ASOS history reads off
-//! (`config.history.readEnabled` unset), `manager.MAX_CURRENT_COUNT` 192 (the S02 oracle harness
+//! Legacy deployment facts preserved: process clock zone UTC, ASOS history reads as the store
+//! supplies them ([`KmaStore::history`]: null is legacy `config.history.readEnabled` unset; the
+//! S15b-2 S3 source reads them, AK 2026-10-14), `manager.MAX_CURRENT_COUNT` 192 (the S02 oracle harness
 //! stubs 200; see [`AssemblyConfig`]), AirKorea dust-forecast and station-list collection not
 //! ported (their store reads return whatever a source supplies).
 mod air;

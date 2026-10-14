@@ -6,7 +6,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use server2::domestic::kma::source::Doc;
 use server2::domestic::kma::source::pages::{PageError, merge_aws_city, parse_aws, parse_city};
 use server2::domestic::kma::source::stations::{Registry, RowStore, StationGeo};
-use server2::domestic::kma::source::stn::{StnError, Stations};
+use server2::domestic::kma::source::stn::{Stations, StnError};
 use server2::gateway::OrderedJson;
 use std::{io::Read, sync::OnceLock};
 
@@ -66,7 +66,11 @@ fn observation_pages_parse_like_legacy() {
         match (got, result.get("error").and_then(OrderedJson::string)) {
             (Ok((pub_date, rows)), None) => {
                 assert_eq!(pub_date, text(at(result, &["pubDate"])), "{id} pubDate");
-                same(&rows_json(&rows), at(result, &["rows"]), &format!("{id} rows"));
+                same(
+                    &rows_json(&rows),
+                    at(result, &["rows"]),
+                    &format!("{id} rows"),
+                );
             }
             (Err(e), Some(expected)) => {
                 // The header failure is reported with the publication error by the port.
@@ -92,8 +96,11 @@ fn aws_and_city_rows_merge_like_legacy() {
         };
         let aws_case = find("aws_id");
         let city_case = find("city_id");
-        let aws = parse_aws(&bytes(aws_case, "base64"), opt(aws_case, "requested").as_deref())
-            .unwrap();
+        let aws = parse_aws(
+            &bytes(aws_case, "base64"),
+            opt(aws_case, "requested").as_deref(),
+        )
+        .unwrap();
         let city = parse_city(
             &bytes(city_case, "base64"),
             &opt(city_case, "content_type").unwrap_or_default(),
@@ -146,8 +153,11 @@ fn station_store_saves_and_answers_like_legacy() {
     for case in items_of(at(oracle(), &["stn"])) {
         let id = text(at(case, &["id"]));
         let geo = table_geo(case);
-        let (mut registry, mut hourly, mut minute) =
-            (Registry::default(), RowStore::default(), RowStore::default());
+        let (mut registry, mut hourly, mut minute) = (
+            Registry::default(),
+            RowStore::default(),
+            RowStore::default(),
+        );
         for run in items_of(at(case, &["runs"])) {
             let requested = opt(run, "requested");
             let aws = parse_aws(&bytes(run, "aws"), requested.as_deref()).unwrap();
@@ -170,9 +180,21 @@ fn station_store_saves_and_answers_like_legacy() {
                 hourly.save(&aws.rows);
             }
         }
-        same(&rows_json(registry.docs()), at(case, &["registry"]), &format!("{id} registry"));
-        same(&rows_json(hourly.docs()), at(case, &["hourly"]), &format!("{id} hourly"));
-        same(&rows_json(minute.docs()), at(case, &["minute"]), &format!("{id} minute"));
+        same(
+            &rows_json(registry.docs()),
+            at(case, &["registry"]),
+            &format!("{id} registry"),
+        );
+        same(
+            &rows_json(hourly.docs()),
+            at(case, &["hourly"]),
+            &format!("{id} hourly"),
+        );
+        same(
+            &rows_json(minute.docs()),
+            at(case, &["minute"]),
+            &format!("{id} minute"),
+        );
         let stations = Stations {
             registry: &registry,
             hourly: &hourly,

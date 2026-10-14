@@ -59,10 +59,15 @@ pub fn dotted_minute(ms: f64) -> String {
 /// `kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM` / `...HHoZZ` (`substr` based).
 fn dotted(date_time: &str, hour_only: bool) -> String {
     let u: Vec<u16> = date_time.encode_utf16().collect();
-    let sub = |a: usize, n: usize| String::from_utf16_lossy(&u[a.min(u.len())..(a + n).min(u.len())]);
+    let sub =
+        |a: usize, n: usize| String::from_utf16_lossy(&u[a.min(u.len())..(a + n).min(u.len())]);
     let mut s = format!("{}.{}.{}", sub(0, 4), sub(4, 2), sub(6, 2));
     if u.len() > 8 {
-        s += &format!(".{}:{}", sub(8, 2), if hour_only { "00".into() } else { sub(10, 2) });
+        s += &format!(
+            ".{}:{}",
+            sub(8, 2),
+            if hour_only { "00".into() } else { sub(10, 2) }
+        );
     }
     s
 }
@@ -138,8 +143,14 @@ impl Stations<'_> {
         w.set("cityMinAws", Val::Doc(minute));
         let near = self.registry.near(lon, lat, Some(0.2), false, 5);
         if let Some(first) = near.first() {
-            w.set("nearStnId", first.get("stnId").cloned().unwrap_or(Val::Undef));
-            w.set("nearStnName", first.get("stnName").cloned().unwrap_or(Val::Undef));
+            w.set(
+                "nearStnId",
+                first.get("stnId").cloned().unwrap_or(Val::Undef),
+            );
+            w.set(
+                "nearStnName",
+                first.get("stnName").cloned().unwrap_or(Val::Undef),
+            );
         }
         if near.len() >= 2
             && let Some(result) = self.check_precip(&near, &stn_date_time)
@@ -216,7 +227,11 @@ impl Stations<'_> {
 /// `getStnList`'s empty-result error (`"..." + coords` joins the array).
 fn no_station(lon: f64, lat: f64) -> StnError {
     use crate::gateway::response::js_number;
-    StnError(format!("Fail to find stn coords={},{}", js_number(lon), js_number(lat)))
+    StnError(format!(
+        "Fail to find stn coords={},{}",
+        js_number(lon),
+        js_number(lat)
+    ))
 }
 /// `a == b` for a numeric row id and a text registry id.
 fn loose_eq(a: Option<&Val>, b: Option<&Val>) -> bool {

@@ -98,8 +98,8 @@ pub fn kma_acquirer(
     let keys = crate::domestic::keys::parse_keys(
         &var("SERVER2_DATA_GO_KR_KEYS").ok_or(GatewayError::InvalidConfiguration)?,
     );
-    let units = units(var, "SERVER2_DATA_GO_KR_DAILY_UNITS")?
-        .ok_or(GatewayError::InvalidConfiguration)?;
+    let units =
+        units(var, "SERVER2_DATA_GO_KR_DAILY_UNITS")?.ok_or(GatewayError::InvalidConfiguration)?;
     let invalid = |_| GatewayError::InvalidConfiguration;
     crate::domestic::kma::source::observe::DailyAcquirer::new(
         Arc::new(crate::providers::HttpProviderTransport::new(8 * 1024 * 1024).map_err(invalid)?),
