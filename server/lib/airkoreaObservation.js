@@ -30,9 +30,15 @@ OPERATIONS[NEARBY] = {service: 'MsrstnInfoInqireSvc', params: {ver: '1.1'}, item
     return text(item.stationName);
 }};
 // The provider rejected the credential itself (access denied, not registered, expired, unregistered IP).
-// Quota (22) is deliberately absent: switching keys must not bypass a quota.
 var INVALID_CREDENTIAL = ['PROVIDER_20', 'PROVIDER_30', 'PROVIDER_31', 'PROVIDER_32',
     'HTTP_401', 'HTTP_403', 'NO_KEY', 'INVALID_KEY_ENCODING'];
+// The key reached its daily request limit (HTTP 429, or code 22 from an envelope, a gateway body or the
+// LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR marker). #2745: the key is skipped until its data.go.kr
+// quota day (KST) ends and the request continues with the next key.
+var QUOTA = ['PROVIDER_22', 'HTTP_429'];
+var DAY_MS = 86400000, KST_MS = 9 * 3600000;
+// First instant of the next KST calendar day.
+function kstDayEnd(ms) { return Math.floor((ms + KST_MS) / DAY_MS) * DAY_MS + DAY_MS - KST_MS; }
 var VALUES = ['so2Value', 'coValue', 'o3Value', 'no2Value', 'pm10Value', 'pm25Value',
     'pm10Value24', 'pm25Value24', 'khaiValue'];
 
@@ -277,23 +283,53 @@ function create(options) {
     }
     // Index of the last key that produced a valid response; tried first next time.
     var preferred = -1;
+    // Wall clock for quota days; injectable for tests. Budgets and timeouts keep Date.now().
+    var now = options.now || Date.now;
+    // Key text -> epoch ms at which its quota day ends (#2745). Shared by every operation of this client,
+    // kept in memory only and never logged.
+    var exhaustedUntil = new Map();
+    function exhausted(key) {
+        var until = exhaustedUntil.get(key);
+        if (until === undefined) { return false; }
+        if (now() < until) { return true; }
+        exhaustedUntil.delete(key);
+        return false;
+    }
+    // From the remembered key (otherwise the last entry) downward, wrapping once. A credential rejection
+    // skips the key for this request; a quota rejection skips it until its KST day ends. Either way the
+    // request restarts with the next key, so a key never repeats a page after such a rejection.
     function withKeys(keys, operation, run, cb) {
         if (!Array.isArray(keys) || !keys.length) { return cb(failure('NO_KEY')); }
-        var index = preferred >= 0 && preferred < keys.length ? preferred : keys.length - 1;
-        var rejected = [], deadline = Date.now() + (options.budgetMs || 30000);
+        var n = keys.length;
+        var start = preferred >= 0 && preferred < n ? preferred : n - 1;
+        var rejected = [], quota = false, step = 0, deadline = Date.now() + (options.budgetMs || 30000);
         (function attemptKey() {
-            var current = index;
+            while (step < n && exhausted(keys[(start - step + n) % n])) {
+                rejected.push('QUOTA_EXHAUSTED');
+                quota = true;
+                step++;
+            }
+            if (step >= n) {
+                // Quota clears with the next KST day; only an all-credential failure is NO_VALID_KEY.
+                var none = failure(quota ? 'QUOTA_EXHAUSTED' : 'NO_VALID_KEY');
+                none.rejected = rejected;
+                return cb(none);
+            }
+            if (rejected.length && Date.now() >= deadline) { return cb(failure('COLLECTION_LIMIT')); }
+            var current = (start - step + n) % n;
+            step++;
             run(keys[current], deadline, function (err, result) {
+                if (err && QUOTA.indexOf(err.code) !== -1) {
+                    rejected.push(err.code);
+                    quota = true;
+                    var until = kstDayEnd(now());
+                    exhaustedUntil.set(keys[current], until);
+                    if (options.onKeyExhausted) { options.onKeyExhausted(operation, current, err.code, until); }
+                    return attemptKey();
+                }
                 if (err && INVALID_CREDENTIAL.indexOf(err.code) !== -1) {
                     rejected.push(err.code);
                     if (options.onKeyRejected) { options.onKeyRejected(operation, current, err.code); }
-                    if (rejected.length >= keys.length) {
-                        var none = failure('NO_VALID_KEY');
-                        none.rejected = rejected;
-                        return cb(none);
-                    }
-                    if (Date.now() >= deadline) { return cb(failure('COLLECTION_LIMIT')); }
-                    index = (current - 1 + keys.length) % keys.length;
                     return attemptKey();
                 }
                 if (!err) { preferred = current; }

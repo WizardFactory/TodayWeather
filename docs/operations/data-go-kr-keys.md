@@ -22,6 +22,12 @@ runs, deployment, process restarts or provider subscription changes.
 5. If all keys reject, stop acceptance and inspect service approvals/quota. Do
    not loop the same rejected keys. Transport/server errors do not prove key
    rejection. An empty list must send no requests.
+   `AIRKOREA_SECRET_KEYS` follows its own rule (#2745, AK decision 2026-10-14):
+   a key at its daily quota (HTTP 429 or code 22) is skipped until the end of
+   the KST day and the same request continues with the next key, so one
+   exhausted key no longer stops AirKorea collection. `QUOTA_EXHAUSTED` in the
+   collection log means no AirKorea key had quota left that KST day; see the
+   [AirKorea runbook](airkorea-recovery.md).
 6. Roll back by restoring the private previous configuration and code revision,
    then restart under the same deployment authorization. No DB migration is
    involved; accepted weather records remain compatible.
