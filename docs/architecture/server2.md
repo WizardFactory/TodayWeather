@@ -1721,8 +1721,10 @@ date. The newsky2 root, `Endpoints::with_newsky` and the `ResponseFormat::Type` 
 operation (`KeyRing::preferred`), otherwise the last configured key. Each page call offers one key.
 A credential rejection (HTTP 401/403 or codes 20/30/31/32) moves to the previous key and restarts
 from page 1 within the same deadline; after every key is rejected the call fails with
-`Provider(Auth)`. Quota (429 or code 22, also inside a 401/403 body), other provider codes,
-transport failures, unread 401/403 bodies and invalid bodies stop without changing the key. For
+`Provider(Auth)`. Since [S13c](#s13c-airkorea-quota-key-rotation-2026-10-14) a quota answer
+(429 or code 22, also inside a 401/403 body) does the same and marks the key exhausted until the
+end of its KST day. Other provider codes, transport failures, unread 401/403 bodies and invalid
+bodies stop without changing the key. For
 `ReturnType`, a 401/403 whose body carries an explicit code other than a credential or quota code
 is `Rejected`, as in legacy `rejectionCode`; a 401/403 or 200 gateway body without a 1-3 digit code
 other than `00` is read for the legacy `DEADLINE_HAS_EXPIRED_ERROR`/`SERVICE_KEY_IS_NOT_REGISTERED_ERROR` (credential)
@@ -1770,6 +1772,44 @@ search date are not recorded. Verification uses the legacy offline fixtures `frc
 `msrstn.json` (copied byte for byte), a labelled synthetic `getFcstZoneCd` page, loopback provider
 stubs and the S3 test peer; the release smoke publishes and reads back each kind. Live HTTPS
 behavior of the three services, real quotas and key lists are unverified.
+
+### S13c AirKorea quota key rotation (2026-10-14)
+
+[S13c](../../plans/issue-2745-s13c.md) ([spec](../../specs/issue-2745-s13c.md)) applies AK's
+2026-10-14 [#2745](https://github.com/WizardFactory/TodayWeather/issues/2745) decision to the
+S13b AirKorea key selection, as legacy [#2746](https://github.com/WizardFactory/TodayWeather/pull/2746)
+does. A quota answer (`Disposition::Quota`: HTTP 429 or code 22, including the JSON gateway
+envelope and 401/403 bodies) on the selected key marks that `KeyRing` entry exhausted until the
+first instant of the next KST day (`KeyRing::exhausted(index, now_ms)`), and the acquisition
+restarts from page 1 with the previous entry, in the S13b order. Exhausted entries are skipped
+without funding or HTTP by every AirKorea operation of the acquirer until the KST day ends; the
+next day probes them again. Each page call rechecks its key, so an acquisition that is paging
+when a parallel acquisition marks the key exhausted restarts with the next key instead of
+funding another page. When no entry completes and at least one was exhausted the call fails with
+`Provider(Quota)`; an all-credential failure stays `Provider(Auth)`. The last working key is still
+remembered (`preferred`). Code 23 (per-second limit) is not a daily quota and keeps stopping.
+The forecast-zone and KASI rings (#2604 rotation) are unchanged, and an S08 `Funding` denial still
+stops the call.
+
+Funding is unchanged: every page call offers one key and reserves two units on that key's S08
+budget before any HTTP (one attempt plus one transient retry); an exhausted key reserves nothing.
+With *n* keys and *P* pages the worst case is *n·P* page calls, *2·n·P* attempts and *2·n·P*
+reserved units, the same bound as the S13b credential failover (at most 20 pages; for example
+3 keys and the 7-page station list: 21 calls, 42 units). The usual case, quota on page 1, costs
+one extra call and two extra units per exhausted key and day per acquirer (parallel acquisitions
+already sending to the key can each receive one quota answer). Exhaustion is held in memory per
+acquirer, so after a restart each exhausted key costs one more quota answer per acquisition that
+reaches it before the first answer is recorded. Only a provider quota answer marks a key: a page
+recheck that finds the key already exhausted never moves the end of that exhaustion.
+
+Verification: the formats suite replays the exact provider body recorded live on 2026-10-14 23:56
+KST (`fixtures/airkorea-quota-429.json`, HTTP 429, `returnReasonCode "22"`) and covers rotation and
+memory, every quota form, all keys at quota until KST midnight with no funding, quota on page 2,
+a key exhausted by a parallel acquisition, and code 23. A live run at 00:08 KST on 2026-10-15 sent
+one 서울 station request through `DomesticAcquirer` with the operator key list and the local S3
+peer: the third key's quota had reset at KST midnight, so it completed on that key with one funded
+call (2 units), and the page was published and read back. Live rotation was observed through the
+legacy client in the same KST day as the quota answer, not through server2.
 
 ### S15b-1 KMA S3 input source (2026-10-14)
 

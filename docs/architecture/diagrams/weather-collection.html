@@ -5403,7 +5403,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </div>
         <ul>
           <li>All AirKorea calls (observations, station list, forecast, nearby) use supported HTTPS services; validate every page before writes.</li>
-          <li>Skip keys the provider rejects as credentials; quota never switches keys.</li>
+          <li>Skip keys the provider rejects as credentials; a key at its daily quota is skipped until KST midnight (#2745).</li>
           <li>Await station and province aggregate storage; emit sanitized UTC outcomes.</li>
           <li>Nation: retain fresh province averages; absent data uses shared global air at representative points.</li>
         </ul>
