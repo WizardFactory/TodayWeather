@@ -242,8 +242,8 @@ raw or encoded `serviceKey` once, requests JSON, validates the response header
 and every page, and then normalizes observation fields. Each attempt has a
 5-second deadline and 2 MiB body limit; transient transport/5xx failures retry
 once. A province has a 30-second fetch budget and at most 20 pages / 2,000 rows.
-Quota and invalid payloads terminate without key rotation or outer retry
-multiplication. Four provinces run concurrently; one failure does
+Invalid payloads terminate without key rotation or outer retry
+multiplication; a key at its daily quota is skipped (see key selection below). Four provinces run concurrently; one failure does
 not stop the other provinces. Scheduled station/sido runs cannot overlap another
 run of the same type in the same process (there is no new distributed lock).
 
@@ -268,13 +268,32 @@ request uses the same client and the configured `AIRKOREA_SECRET_KEYS` list.
 It starts with the key that last produced a valid response, otherwise the last
 list entry. When the provider rejects the credential itself (codes 20, 30, 31,
 32, or HTTP 401/403 classified from the gateway body) or the entry is a
-placeholder, the request moves to the previous entry, wrapping once. Quota
-(code 22), transport, timeout, 5xx and payload failures never change the key,
-so switching keys cannot bypass a quota. A 401/403 that carries the regular result envelope keeps that code, so quota
-returned with HTTP 401/403 still stops. The whole key search shares the call's
+placeholder, the request moves to the previous entry, wrapping once. Transport,
+timeout, 5xx and payload failures never change the key. A 401/403 that carries
+the regular result envelope keeps that code, so quota returned with HTTP 401/403
+is quota, not a credential rejection. The whole key search shares the call's
 30-second budget. When every key is rejected the request
 fails with `NO_VALID_KEY`. Each rejection is logged as `KEY_REJECTED` with the
-operation, key position and code only. Station metadata
+operation, key position and code only.
+
+**Quota rotation (#2745, 2026-10-14).** AK decided that a key at its daily
+quota must not stop collection while other keys work. A quota answer (HTTP 429,
+or code 22 from the envelope, a gateway body or the
+`LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR` marker) marks that key
+exhausted until the end of the current KST day (the data.go.kr quota day), logs
+`KEY_QUOTA` with the operation, key position, code and the UTC end time, and
+restarts the same request with the next key in the order above. Exhausted keys
+are skipped without an HTTP call by every AirKorea operation of the process until
+their KST day ends; the next day probes them again. Each page attempt rechecks the
+key, so a request that is paging when a parallel request marks its key exhausted
+restarts with the next key instead of sending further pages. A key never receives a
+second request for the same page after a quota or credential rejection. When no
+usable key remains and at least one was exhausted, the request fails with
+`QUOTA_EXHAUSTED`; only an all-credential failure is `NO_VALID_KEY`. The memory
+is per process and is lost on restart; afterwards each exhausted key costs one
+more quota answer per request that reaches it before the first answer is recorded
+(parallel requests already in flight can each receive one). Code 23 (per-second limit) is not a daily quota and keeps
+stopping without a key change. Station metadata
 (`MsrstnInfoInqireSvc/getMsrstnList`, gather startup), the dust forecast
 (`ArpltnInforInqireSvc/getMinuDustFrcstDspth`, `ver=1.1`, `/gather/kecoForecast`)
 and the nearby-station lookup (`MsrstnInfoInqireSvc/getNearbyMsrstnList`,
