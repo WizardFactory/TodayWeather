@@ -2014,7 +2014,8 @@ async fn national_scope_is_acquired_once_for_many_locations() {
     // Slow: every waiter returns at its bound; one acquisition publishes for all of them.
     let peer = Peer::new();
     let (resolver, calls) = slow_resolver(&peer, Duration::from_secs(4), config.clone());
-    let locations: Vec<String> = (0..12)
+    // Eight concurrent owners stay below the S3 test peer's 16-connection limit.
+    let locations: Vec<String> = (0..8)
         .map(|i| format!("{:.4},127.0001", 33.0 + f64::from(i) * 0.5))
         .collect();
     let started = Instant::now();

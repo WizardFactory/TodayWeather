@@ -1975,7 +1975,8 @@ Verification (local, test peers only). These tests failed on the base tree:
 
 - a town forecast and an RSS page answering after 4 s;
 - a 4 s resolver acquisition that must publish after the waiter left;
-- one acquisition for twelve locations;
+- one acquisition for twelve locations on one scope (the base run made twelve; the test now uses eight
+  concurrent owners, below the S3 test peer's connection limit);
 - a pollen row with only `twodaysaftertomorrow`.
 
 These functional tests use real loopback transports:
