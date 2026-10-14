@@ -2054,8 +2054,12 @@ once if it is not stored, so the 24-hour station rows have no hourly gaps (legac
 Verification (local; test peers only): a pinned Node 16.20.2 + Mongoose 5.1.2 oracle
 ([provenance](../../server2/tests/domestic/fixtures/AIR-PROVENANCE.md)) records the legacy
 documents and 48 `getArpLtnInfo` answers, 156 comparator orders and 84 `getDustFrcst` answers;
-the Rust fold and readers match byte for byte, directly and from the S06 S3 test peer with empty
-memory. A loopback AirKorea stub shows one acquisition for concurrent requests, publication
+the Rust fold and readers match every one byte for byte directly. From the S06 S3 test peer with
+empty memory they match all 48 `getArpLtnInfo` answers and 56 of the 84 forecast queries (those
+for 10-14..10-17, replayed at noon KST of their date after every run; the 10-12 and 10-13
+queries would need an instant before later runs); comparator orders are checked directly only. A
+station row whose coordinate does not cast (`dmX` `-`) is rejected like the Mongoose CastError
+and the stored station keeps its document. A loopback AirKorea stub shows one acquisition for concurrent requests, publication
 before use, a request released before a slow acquisition and served by the next one, and the
 fallback answer and its deadline. Live calls on 2026-10-14 confirmed the three AirKorea operations,
 WAQI and Google Air Quality (200); the OpenWeather key answered 401. Production quotas, the
