@@ -258,10 +258,6 @@ impl Paged for AsosRequest {
             return PageCheck::Invalid("pagination");
         }
         let count = count as u32;
-        if count == 0 {
-            // Legacy returns no rows; there is nothing to store.
-            return PageCheck::NoData;
-        }
         let items: Vec<&Value> = match body.get("items").and_then(|i| i.get("item")) {
             Some(Value::Array(a)) => a.iter().collect(),
             Some(v @ Value::Object(_)) => vec![v],
@@ -269,8 +265,13 @@ impl Paged for AsosRequest {
             Some(_) => return PageCheck::Invalid("items"),
         };
         let before = (page - 1) * ROWS;
+        // Legacy checks the item count first (`ASOS_TRUNCATED_PAGE`), also for a zero total.
         if items.len() as u32 != ROWS.min(count.saturating_sub(before)) {
             return PageCheck::Invalid("truncated page");
+        }
+        if count == 0 {
+            // Legacy returns no rows; there is nothing to store.
+            return PageCheck::NoData;
         }
         // Legacy rejects a page whose items repeat an earlier page (`ASOS_REPEATED_PAGE`).
         let row_keys = vec![serde_json::to_string(&items).unwrap_or_default()];

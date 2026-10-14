@@ -248,6 +248,11 @@ async fn asos_acquisition_checks_pages_like_the_legacy_provider() {
             ],
         ),
         ("echo", vec![hourly_page(&items[..10], 2, 10)]),
+        // S15b2-R13: a zero total with items is a truncated page, not absent data.
+        (
+            "zero total with items",
+            vec![hourly_page(&items[..1], 1, 0)],
+        ),
         (
             "xml",
             vec![b"<OpenAPI_ServiceResponse></OpenAPI_ServiceResponse>".to_vec()],
@@ -260,8 +265,9 @@ async fn asos_acquisition_checks_pages_like_the_legacy_provider() {
             }
         }
         let outcome = acquirer.acquire_asos(&request, deadline()).await;
+        // A rejection is an error: neither records nor terminal no-data.
         assert!(
-            !matches!(outcome, Ok(Acquired::Complete(_))),
+            !matches!(outcome, Ok(Acquired::Complete(_)) | Ok(Acquired::NoData)),
             "{name}: {outcome:?}"
         );
     }
