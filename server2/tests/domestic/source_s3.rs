@@ -62,6 +62,9 @@ impl Peer {
             }
         }
     }
+    pub fn endpoint(&self) -> &str {
+        &self.endpoint
+    }
     pub fn transport(&self) -> BoundedS3<HttpS3Transport> {
         BoundedS3::new(
             HttpS3Transport::new(

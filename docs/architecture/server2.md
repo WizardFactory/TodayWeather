@@ -1909,7 +1909,7 @@ dataset and period (S13b `DomesticAcquirer`, funded through S08, published throu
 | --- | --- | --- | --- |
 | Real-time observations | `ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty`, `sidoName=전국`, `numOfRows=1000`, `ver=1.3`, `returnType=json` | `airkorea-station` / `sido-nationwide` / the dataset's most common data hour `YYYYMMDD-HH00` | the request's KST hour; at most one attempt per hour every 10 minutes |
 | Station list | `MsrstnInfoInqireSvc/getMsrstnList`, 100 rows per page, no `ver` (S13b) | `airkorea-station-list` / `stations` / KST fetch day | the newest list older than 7 days (legacy: only at process start) |
-| Dust forecast | `ArpltnInforInqireSvc/getMinuDustFrcstDspth`, `searchDate`, `ver=1.1` (S13b) | `airkorea-dust-forecast` / `dust-forecast` / search date | the announcement `_checkDataTime` expects; only for `airForecastSource=airkorea` |
+| Dust forecast | `ArpltnInforInqireSvc/getMinuDustFrcstDspth`, `searchDate`, `ver=1.1` (S13b) | `airkorea-dust-forecast` / `dust-forecast` / search date | the announcement `_checkDataTime` expects; only when the request reads AirKorea forecasts (`airForecastSource=airkorea`, or absent or `(null)`, which legacy defaults to `airkorea`; the app sends `kaq`) |
 
 Legacy collected real-time observations per sido (`kecoRequester._collectProvinces`, 17 calls at UTC
 minutes 3, 13, ... 53). The technical document lists `전국` among the `sidoName` values; on
@@ -1918,7 +1918,7 @@ Jeonnam and Gwangju stations). Seven of the 672 rows had `dataTime: null`: legac
 have rejected that sido's whole batch; server2 skips such a row and keeps the dataset. AirKorea
 requests per hour: one page per national fetch, normally one to three fetches per hour while
 requests arrive (at most six), about 24-72 a day, plus 7 station-list pages a week and at most 24
-forecast pages a day (only for `airkorea` forecasts). The development quota is 500 requests a day per
+forecast pages a day (only for requests that read AirKorea forecasts). The development quota is 500 requests a day per
 operation; legacy used about 2,450 observation calls a day. Keys follow the S13b/S13c acquirer as
 is: the last working key, otherwise the last key; a quota answer (429 or code 22) exhausts that key
 until KST midnight and the call continues with the next key (#2745). The acquirer and its S08
@@ -1932,13 +1932,16 @@ coordinates); `parseRows` (station operation, `Arpltn.getKeyList()`) and `saveRL
 `MinuDustFrcst` (search dates `date-2..date` hold every document `getDustFrcst` returns). Documents
 keep the Mongoose 5.1.2 update form. The readers are the tw_svc ones: `getArpLtnInfo` (2d `$near`,
 `$maxDistance` 1, six stations, rows of the last 24 hours, `_mergeArpltnList` with the 8-hour check,
-the first three stations ordered by the legacy comparator with the V8 short-array sort) and
+the first three stations ordered by the legacy comparator with the V8 short-array sort; a
+multi-page nationwide dataset is dated by its most common data time over all pages) and
 `getDustFrcst` with `_convertDustFrcstRegion` over `region.csv`. `air_fallback` is the shared world
 `LiveAir` chain (memory, S3 records, providers) for the town coordinate, evaluated per request
 (`observation.evaluate`); the world family and the KMA fallback share one instance.
 
 **Request time (AK, 2026-10-14).** A request waits for an owned acquisition only until its own
-deadline (100 ms before the native attempt ends). Otherwise it answers with what S3 holds: the
+deadline (100 ms before the native attempt ends); every read, lock and parse is bounded by that
+deadline, and a re-read after the acquisition that cannot finish keeps the data read first.
+Otherwise it answers with what S3 holds: the
 legacy answer for missing data (no merged observation, an empty station list, the forecast error,
 no fallback value), never 503 or a forward. The acquisition keeps running with the legacy AirKorea
 bound (30 s per call) and serves the next request; joined requests share it. Data a request waited

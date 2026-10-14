@@ -251,6 +251,11 @@ pub(crate) trait Paged: Clone + Send + Sync + 'static {
     fn provider_key(&self) -> crate::storage::ProviderKey;
     fn endpoint(&self, endpoints: &Endpoints, page: u32) -> Result<reqwest::Url, DomesticError>;
     fn partition(&self, publication: Publication) -> String;
+    /// The publication of a complete acquisition from its pages: the newest page publication,
+    /// except where a family dates the whole dataset differently (S15b-3 nationwide).
+    fn publication(&self, pages: &[&PageFacts]) -> Option<Publication> {
+        pages.iter().map(|f| f.publication).max()
+    }
     /// `total` is page 1's count for later pages; `now_ms` is the fetch wall clock.
     fn inspect(
         &self,
@@ -732,10 +737,9 @@ where
         if !pages.iter().any(|(_, f, _)| f.usable) {
             return Err(incomplete("no usable row"));
         }
-        let publication = pages
-            .iter()
-            .map(|(_, f, _)| f.publication)
-            .max()
+        let facts: Vec<&PageFacts> = pages.iter().map(|(_, f, _)| f).collect();
+        let publication = request
+            .publication(&facts)
             .ok_or(DomesticError::Invalid("no pages"))?;
         let key = request.provider_key();
         let pages_total = pages.len() as u32;

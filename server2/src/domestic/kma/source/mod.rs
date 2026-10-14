@@ -436,10 +436,7 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
             .then(|| crate::history::Grid::new(coord.mx as u16, coord.my as u16))
             .flatten()
             .ok_or("town grid outside the KMA grid")?;
-        let dust_wanted = request
-            .query
-            .iter()
-            .any(|(k, v)| k == "airForecastSource" && v == "airkorea");
+        let dust_wanted = air_input::airkorea_forecast_requested(&request.query);
         let (zones, (current, shortest, short, rss), air) = tokio::join!(
             self.zones(now, deadline),
             async {

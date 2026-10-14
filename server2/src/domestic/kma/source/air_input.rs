@@ -65,6 +65,15 @@ pub fn page_items(pages: &[Arc<[u8]>]) -> Option<Vec<Value>> {
     }
     Some(out)
 }
+/// Run a read until `deadline` (including lock and parsing waits); a timeout is an error.
+async fn bounded<T>(
+    deadline: Instant,
+    work: impl std::future::Future<Output = Result<T, String>>,
+) -> Result<T, String> {
+    tokio::time::timeout_at(deadline, work)
+        .await
+        .unwrap_or_else(|_| Err("request deadline".into()))
+}
 /// The wall clock in ms: acquisitions completed while a request waited for them are visible to
 /// it, although they complete after the request instant.
 fn wall_ms() -> f64 {
@@ -228,18 +237,21 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
     /// The folded station list; an absent or old list starts its acquisition, and an absent
     /// list is waited for until `deadline`.
     pub async fn stations(&self, now: f64, deadline: Instant) -> Result<Arc<Stations>, String> {
-        let current = self.station_fold(now, now, deadline).await?;
+        let current = bounded(deadline, self.station_fold(now, now, deadline)).await?;
         let stale = current
             .as_ref()
             .is_none_or(|(_, newest)| *newest < now - STATION_LIST_AGE_MS);
         if stale {
             let rx = self.flight("station-list", AirKoreaRequest::station_list());
-            if current.is_none() && wait(rx, deadline).await {
-                return Ok(self
-                    .station_fold(now, wall_ms().max(now), deadline)
-                    .await?
-                    .map(|(s, _)| s)
-                    .unwrap_or_default());
+            if current.is_none()
+                && wait(rx, deadline).await
+                && let Ok(Some((s, _))) = bounded(
+                    deadline,
+                    self.station_fold(now, wall_ms().max(now), deadline),
+                )
+                .await
+            {
+                return Ok(s);
             }
         }
         Ok(current.map(|(s, _)| s).unwrap_or_default())
@@ -345,17 +357,21 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         now: f64,
         deadline: Instant,
     ) -> Result<Arc<Observations>, String> {
-        let (folded, current) = self.observation_fold(now, now, deadline).await?;
+        let (folded, current) =
+            bounded(deadline, self.observation_fold(now, now, deadline)).await?;
         if current {
             return Ok(folded);
         }
         let hour = hour_partition(now);
         let rx = self.flight(&format!("nationwide-{hour}"), AirKoreaRequest::nationwide());
         if wait(rx, deadline).await {
-            return Ok(self
-                .observation_fold(now, wall_ms().max(now), deadline)
-                .await?
-                .0);
+            // A refresh that cannot finish keeps the data read first.
+            let refreshed = bounded(
+                deadline,
+                self.observation_fold(now, wall_ms().max(now), deadline),
+            )
+            .await;
+            return Ok(refreshed.map_or(folded, |(o, _)| o));
         }
         Ok(folded)
     }
@@ -386,8 +402,8 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                 .into_iter()
                 .filter(|p| *p >= oldest)
                 .collect();
-            let previous = cache.take();
-            let mut kept: ObsParts = previous
+            // Cloned, not taken: a request cancelled by its deadline leaves the cache intact.
+            let mut kept: ObsParts = cache
                 .as_ref()
                 .map(|c| c.parts.clone())
                 .unwrap_or_default()
@@ -478,7 +494,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         date: u32,
         deadline: Instant,
     ) -> Result<Forecasts, String> {
-        let folded = self.forecast_fold(now, now, date, deadline).await?;
+        let folded = bounded(deadline, self.forecast_fold(now, now, date, deadline)).await?;
         let expected = expected_announcement(now).unwrap_or_default();
         if folded
             .docs()
@@ -494,9 +510,12 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             .ok()
             .and_then(|r| self.flight(&format!("dust-forecast-{}", search.partition()), r));
         if wait(rx, deadline).await {
-            return self
-                .forecast_fold(now, wall_ms().max(now), date, deadline)
-                .await;
+            let refreshed = bounded(
+                deadline,
+                self.forecast_fold(now, wall_ms().max(now), date, deadline),
+            )
+            .await;
+            return Ok(refreshed.unwrap_or(folded));
         }
         Ok(folded)
     }
@@ -646,6 +665,21 @@ fn start_flight(
             }
         })
     })
+}
+/// Whether `getKecoDustForecast` reads dust forecasts for this query: legacy
+/// `checkQueryValidation` sets an absent or `(null)` `airForecastSource` to `airkorea`, and the
+/// middleware continues only for the string `airkorea` (a repeated key is an array: never).
+pub fn airkorea_forecast_requested(query: &[(String, String)]) -> bool {
+    let values: Vec<&str> = query
+        .iter()
+        .filter(|(k, _)| k == "airForecastSource")
+        .map(|(_, v)| v.as_str())
+        .collect();
+    match values.as_slice() {
+        [] => true,
+        [one] => *one == "airkorea" || *one == "(null)",
+        _ => false,
+    }
 }
 /// The KST date `YYYYMMDD` of an instant (`_getCurrentTimeValue(+9).date`).
 pub fn kst_date(now: f64) -> u32 {

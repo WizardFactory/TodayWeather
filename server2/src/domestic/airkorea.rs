@@ -319,6 +319,26 @@ impl Paged for AirKoreaRequest {
         url.query_pairs_mut().extend_pairs(self.query(page));
         Ok(url)
     }
+    /// The nationwide dataset is dated by its most common data time over every page (ties:
+    /// the newest); every other request by its newest page publication.
+    fn publication(&self, pages: &[&PageFacts]) -> Option<Publication> {
+        if self.target != Target::Nation {
+            return pages.iter().map(|f| f.publication).max();
+        }
+        let mut hours: std::collections::BTreeMap<Publication, usize> = Default::default();
+        for key in pages.iter().flat_map(|f| f.row_keys.iter()) {
+            if let Some(time) = key
+                .rsplit_once('@')
+                .and_then(|(_, t)| Publication::parse_compact(t))
+            {
+                *hours.entry(time).or_default() += 1;
+            }
+        }
+        hours
+            .into_iter()
+            .max_by(|a, b| a.1.cmp(&b.1).then(a.0.cmp(&b.0)))
+            .map(|(p, _)| p)
+    }
     fn partition(&self, publication: Publication) -> String {
         match (&self.target, self.operation) {
             (Target::SearchDate(day), _) => day.base_date(),

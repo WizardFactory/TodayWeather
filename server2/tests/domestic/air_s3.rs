@@ -225,6 +225,10 @@ struct StubState {
     delay_ms: AtomicUsize,
     /// Data hour of the nationwide rows, in hours before now.
     hours_ago: AtomicUsize,
+    /// Added to every PM10 value (distinguishes a later acquisition).
+    pm10_offset: AtomicUsize,
+    /// Answer 1,200 rows on two pages: 1,000 of the previous hour, then 200 of this hour.
+    two_pages: AtomicUsize,
     queries: Mutex<Vec<String>>,
 }
 fn now_ms() -> f64 {
@@ -264,12 +268,30 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> impl IntoRespo
         assert_eq!(get("returnType").as_deref(), Some("json"));
         let ago = state.hours_ago.load(Ordering::SeqCst) as f64;
         let hour = kst_text(now_ms() - ago * 3_600_000.);
+        let offset = state.pm10_offset.load(Ordering::SeqCst);
+        if state.two_pages.load(Ordering::SeqCst) == 1 {
+            let page: usize = get("pageNo").unwrap().parse().unwrap();
+            let (range, time) = if page == 1 {
+                (0..1000, kst_text(now_ms() - 3_600_000.))
+            } else {
+                (1000..1200, kst_text(now_ms()))
+            };
+            let items: Vec<serde_json::Value> = range
+                .map(|i| {
+                    json!({"stationName": format!("측정소{i}"), "sidoName": "서울",
+                    "dataTime": time, "pm10Value": "10"})
+                })
+                .collect();
+            let body = json!({"response": {"header": {"resultCode": "00", "resultMsg": "NORMAL_CODE"},
+                "body": {"totalCount": 1200, "items": items, "pageNo": page, "numOfRows": 1000}}});
+            return ([("content-type", "application/json")], body.to_string());
+        }
         let items: Vec<serde_json::Value> = STATIONS
             .iter()
             .enumerate()
             .map(|(i, (name, _, _))| {
                 json!({"stationName": name, "sidoName": "서울", "mangName": "도시대기",
-                       "dataTime": hour, "pm10Value": format!("{}", 20 + i), "pm25Value": "9",
+                       "dataTime": hour, "pm10Value": format!("{}", 20 + i + offset), "pm25Value": "9",
                        "khaiValue": "50", "khaiGrade": "1", "pm10Grade1h": "1", "pm25Grade1h": "1",
                        "so2Value": "0.003", "coValue": "0.4", "o3Value": "0.03", "no2Value": "0.02"})
             })
@@ -447,6 +469,8 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
     // A new process: the station list is in S3, the observation of this hour too; drop it by
     // using a reader whose request instant is one hour later (no dataset for that hour yet).
     stub.state.delay_ms.store(2_000, Ordering::SeqCst);
+    // The delayed acquisition answers other values, so the next request proves it reads them.
+    stub.state.pm10_offset.store(50, Ordering::SeqCst);
     let later = now_ms() + 3_600_000.;
     let inputs2 = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
         &peer,
@@ -469,9 +493,15 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
         "{:?}",
         started.elapsed()
     );
-    // Older than 8 hours? No: the previous hour's rows are still fresh for `later`.
+    // The previous hour's rows are still fresh for `later`: the stored value is served.
     let arpltn = answer.arpltn.unwrap();
     assert_eq!(items_of(arpltn.get("stnList").unwrap()).len(), 3);
+    let pm10 = |a: &OrderedJson| {
+        a.get("arpltn")
+            .and_then(|m| m.get("pm10Value"))
+            .and_then(OrderedJson::number)
+    };
+    assert_eq!(pm10(&arpltn), Some(20.));
     assert_eq!(
         stub.state.nationwide.load(Ordering::SeqCst),
         2,
@@ -490,8 +520,70 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
             Instant::now() + Duration::from_secs(3),
         )
         .await;
-    assert!(next.arpltn.unwrap().get("arpltn").is_some());
+    assert_eq!(
+        pm10(next.arpltn.as_ref().unwrap()),
+        Some(70.),
+        "the late acquisition's value"
+    );
     assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 2);
+    // A fresh reader serves the published value as well.
+    let cold = AirInputs::new(transport.clone(), store.clone());
+    let restored = cold
+        .load(&seoul, "서울특별시", "중구", false, later, deadline())
+        .await;
+    assert_eq!(pm10(restored.arpltn.as_ref().unwrap()), Some(70.));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_two_page_nationwide_dataset_is_dated_by_its_overall_mode() {
+    let peer = Peer::new();
+    let store = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    stub.state.two_pages.store(1, Ordering::SeqCst);
+    let acquire = live(&peer, store.clone(), &stub.base);
+    // Page 1: 1,000 rows of the previous hour; page 2: 200 rows of this hour.
+    let previous = kst(now_ms() - 3_600_000.).hour_start();
+    assert_eq!(
+        acquire.acquire(AirKoreaRequest::nationwide()).await,
+        Ok(Some(previous.period()))
+    );
+    assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 2, "two pages");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn every_read_ends_by_the_request_deadline() {
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    seed_oracle(&store).await;
+    // Every S3 GET now takes 20 ms: a cold load of 26 hours of datasets cannot finish in time.
+    reqwest::Client::new()
+        .post(format!("{}__catalog?mode=slow-all&key=x", peer.endpoint()))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    let inputs = AirInputs::new(transport.clone(), store.clone());
+    let started = std::time::Instant::now();
+    let answer = inputs
+        .load(
+            &town(37.5657, 126.9769),
+            "서울특별시",
+            "중구",
+            true,
+            1_791_955_500_000.,
+            Instant::now() + Duration::from_millis(300),
+        )
+        .await;
+    assert!(
+        started.elapsed() < Duration::from_millis(450),
+        "{:?}",
+        started.elapsed()
+    );
+    assert!(
+        answer.arpltn.is_err(),
+        "unread data is the legacy error answer"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -867,5 +959,43 @@ async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
             .unwrap(),
         "fallback",
     );
+    // No `airForecastSource`: legacy defaults it to `airkorea`, so the forecast is loaded too
+    // (here the legacy error for an empty collection), never a forward.
+    assert_eq!(
+        snapshot
+            .dust_forecast("서울특별시", "종로구", "20260924")
+            .unwrap_err()
+            .0,
+        r#"Fail to find dust forecast {"informData":{"$gte":"2026-09-24"}}"#
+    );
     assert_eq!(transport.available(), 12);
+}
+
+#[test]
+fn the_forecast_source_follows_legacy_query_defaults() {
+    use server2::domestic::kma::source::air_input::airkorea_forecast_requested as wanted;
+    let q = |pairs: &[(&str, &str)]| -> Vec<(String, String)> {
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    };
+    assert!(wanted(&q(&[])), "absent: default airkorea");
+    assert!(
+        wanted(&q(&[("airForecastSource", "(null)")])),
+        "(null): default"
+    );
+    assert!(wanted(&q(&[("airForecastSource", "airkorea")])));
+    assert!(
+        !wanted(&q(&[("airForecastSource", "kaq")])),
+        "the app's value"
+    );
+    assert!(!wanted(&q(&[("airForecastSource", "")])));
+    assert!(
+        !wanted(&q(&[
+            ("airForecastSource", "airkorea"),
+            ("airForecastSource", "airkorea")
+        ])),
+        "a repeated key is an array"
+    );
 }

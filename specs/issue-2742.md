@@ -155,7 +155,8 @@ coordinates; server2 does not store it (none live).
 
 - `AirKoreaRequest::nationwide()`: query `sidoName=전국`, `pageNo`, `numOfRows=1000`, `ver=1.3`;
   every row needs a nonblank `stationName` and is unique per station and data time; a row without
-  a valid data time is unusable; the publication is the most common data time (ties: newest).
+  a valid data time is unusable; the publication is the most common data time over all pages
+  (ties: newest).
   Record key `sido-nationwide`, kind `airkorea-station`, partition of that hour.
 - The S3 source reads published catalogs only. Observations: the hour partitions of the last 26
   hours, re-read at most every 60 s (the last 3 hours each refresh) or after an own acquisition,
@@ -164,8 +165,10 @@ coordinates; server2 does not store it (none live).
   `date-2..date`.
 - A request starts (or joins) the acquisition of a missing current dataset: the nationwide hour
   of the request instant (one attempt per hour every 10 minutes), a station list older than 7
-  days (waited for only when none exists), the expected dust announcement (only for
-  `airForecastSource=airkorea`). The request waits until 100 ms before its deadline; an
+  days (waited for only when none exists), the expected dust announcement (only when the request
+  reads AirKorea forecasts: `airForecastSource` `airkorea`, or absent or `(null)` as legacy
+  `checkQueryValidation` defaults it). The request waits until 100 ms before its deadline (every
+  read, lock and parse is bounded by it; a re-read that cannot finish keeps the first result); an
   acquisition runs with a 30 s call bound and a 10 s publication bound. A request that waited sees
   acquisitions completed by the wall clock; otherwise only those completed by its instant.
 - Demand-gated capture: while a request arrived in the last 24 hours, the process checks every 10
