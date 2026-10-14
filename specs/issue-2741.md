@@ -35,8 +35,8 @@ without changing the key. A success records that key. Each page call offers one 
 the S08 executor never rotates AirKorea itself. For `ReturnType`, an HTTP 401/403 whose body
 carries an explicit code other than 20/30/31/32/22 is `Rejected` (legacy `rejectionCode`); an
 unread 401/403 body is a retryable download failure; a 401/403 or 200 gateway body without a
-numeric code is read for the legacy expired/unregistered (credential) and quota markers
-(review S13B-R1-02/03).
+1-3 digit code other than `00` is read for the legacy expired/unregistered (credential) and quota
+markers (review S13B-R1-02/03, round 2).
 
 ## Validation and records (AC2)
 

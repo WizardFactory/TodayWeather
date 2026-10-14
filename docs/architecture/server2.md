@@ -1724,8 +1724,8 @@ from page 1 within the same deadline; after every key is rejected the call fails
 `Provider(Auth)`. Quota (429 or code 22, also inside a 401/403 body), other provider codes,
 transport failures, unread 401/403 bodies and invalid bodies stop without changing the key. For
 `ReturnType`, a 401/403 whose body carries an explicit code other than a credential or quota code
-is `Rejected`, as in legacy `rejectionCode`; a 401/403 or 200 gateway body without a numeric code is
-read for the legacy `DEADLINE_HAS_EXPIRED_ERROR`/`SERVICE_KEY_IS_NOT_REGISTERED_ERROR` (credential)
+is `Rejected`, as in legacy `rejectionCode`; a 401/403 or 200 gateway body without a 1-3 digit code
+other than `00` is read for the legacy `DEADLINE_HAS_EXPIRED_ERROR`/`SERVICE_KEY_IS_NOT_REGISTERED_ERROR` (credential)
 and `LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR` (quota) markers. This replaces the S13a
 single key without rotation. The zone list keeps the S13a #2604 ring: each page call offers the
 current key and the next one, and the ring moves to the key that answered or past every rejected

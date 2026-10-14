@@ -165,6 +165,19 @@ fn airkorea_200_gateway_markers_follow_legacy_gateway_code() {
             r#"{"response":{"header":{"resultMsg":"DEADLINE_HAS_EXPIRED_ERROR"}}}"#,
             Disposition::Retryable,
         ),
+        // S13B-R2: an empty, nonnumeric or `00` reason code does not hide the markers.
+        (
+            r#"{"OpenAPI_ServiceResponse":{"cmmMsgHeader":{"returnAuthMsg":"DEADLINE_HAS_EXPIRED_ERROR","returnReasonCode":""}}}"#,
+            Disposition::Auth,
+        ),
+        (
+            r#"{"OpenAPI_ServiceResponse":{"cmmMsgHeader":{"returnAuthMsg":"SERVICE_KEY_IS_NOT_REGISTERED_ERROR","returnReasonCode":"00"}}}"#,
+            Disposition::Auth,
+        ),
+        (
+            "<OpenAPI_ServiceResponse><cmmMsgHeader><returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</returnAuthMsg><returnReasonCode>x</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>",
+            Disposition::Quota,
+        ),
     ] {
         assert_eq!(
             classify_format(200, body.as_bytes(), true, false, r),

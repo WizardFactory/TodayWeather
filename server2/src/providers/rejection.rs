@@ -185,6 +185,49 @@ fn gateway_json(value: &Value) -> Option<&Value> {
 const QUOTA_MARKER: &[u8] = b"LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR";
 const EXPIRED_MARKER: &[u8] = b"DEADLINE_HAS_EXPIRED_ERROR";
 const UNREGISTERED_MARKER: &[u8] = b"SERVICE_KEY_IS_NOT_REGISTERED_ERROR";
+/// AirKorea body rejections (S13b), ported from legacy `airkoreaObservation.rejectionCode` and
+/// `gatewayCode` at ae21b6cc. A 401/403 with the regular JSON envelope keeps that envelope's
+/// code. Otherwise a 401/403, or a 200 body that is not JSON or is the JSON gateway envelope,
+/// is read for a 1-3 digit code other than `00`, then for the gateway markers; a 401/403
+/// without either rejects the key. `None` leaves the S13 precedence in charge.
+fn airkorea_rejection(status: u16, body: &[u8], c: Option<&str>) -> Option<Disposition> {
+    let rejection = matches!(status, 401 | 403);
+    let json = serde_json::from_slice::<Value>(body).ok();
+    let envelope = json
+        .as_ref()
+        .and_then(|v| v.get("response")?.get("header")?.get("resultCode"));
+    let credential = |code: &str| match code {
+        "20" | "30" | "31" | "32" => Disposition::Auth,
+        "22" => Disposition::Quota,
+        _ => Disposition::Rejected,
+    };
+    if rejection && envelope.is_some() {
+        return Some(credential(c.unwrap_or("")));
+    }
+    let gateway_body = rejection
+        || (status == 200
+            && json
+                .as_ref()
+                .is_none_or(|v| v.get("OpenAPI_ServiceResponse").is_some()));
+    if !gateway_body {
+        return None;
+    }
+    let numeric = c.filter(|c| {
+        (1..=3).contains(&c.len()) && c.bytes().all(|b| b.is_ascii_digit()) && *c != "00"
+    });
+    if let Some(code) = numeric {
+        // A 200 non-credential code keeps the S13 retry/rejection rules.
+        return (rejection || credential(code) != Disposition::Rejected).then(|| credential(code));
+    }
+    let has = |m: &[u8]| body.windows(m.len()).any(|w| w == m);
+    if has(EXPIRED_MARKER) || has(UNREGISTERED_MARKER) {
+        return Some(Disposition::Auth);
+    }
+    if has(QUOTA_MARKER) {
+        return Some(Disposition::Quota);
+    }
+    rejection.then_some(Disposition::Auth)
+}
 pub fn classify(status: u16, body: &[u8], data_go_kr: bool, valid: bool) -> Disposition {
     classify_format(status, body, data_go_kr, valid, ResponseFormat::DataType)
 }
@@ -203,28 +246,11 @@ pub fn classify_format(
     if status == 429 || c.as_deref() == Some("22") {
         return Disposition::Quota;
     }
-    if format == ResponseFormat::ReturnType && data_go_kr && c.is_none() {
-        // Legacy `gatewayCode` markers of a gateway body without a numeric code: read for a
-        // 401/403 and for a 200 body that is not JSON or is the JSON gateway envelope.
-        let gateway_body = matches!(status, 401 | 403)
-            || (status == 200
-                && serde_json::from_slice::<Value>(body)
-                    .map_or(true, |v| v.get("OpenAPI_ServiceResponse").is_some()));
-        if gateway_body {
-            let has = |m: &[u8]| body.windows(m.len()).any(|w| w == m);
-            if has(EXPIRED_MARKER) || has(UNREGISTERED_MARKER) {
-                return Disposition::Auth;
-            }
-            if has(QUOTA_MARKER) {
-                return Disposition::Quota;
-            }
-        }
-    }
-    if format == ResponseFormat::ReturnType && data_go_kr && matches!(status, 401 | 403) {
-        match c.as_deref() {
-            Some("20" | "30" | "31" | "32") | None => return Disposition::Auth,
-            Some(_) => return Disposition::Rejected,
-        }
+    if format == ResponseFormat::ReturnType
+        && data_go_kr
+        && let Some(d) = airkorea_rejection(status, body, c.as_deref())
+    {
+        return d;
     }
     if matches!(status, 401 | 403) || matches!(c.as_deref(), Some("20" | "30" | "31" | "32")) {
         return Disposition::Auth;
