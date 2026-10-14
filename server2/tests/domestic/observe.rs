@@ -203,7 +203,7 @@ impl Acquire for Scripted {
                     (
                         "city-obs",
                         h,
-                        city_page("2026.09.24.10:00"),
+                        city_page("2026.9.24.10:00"),
                         "text/html;charset=UTF-8",
                     )
                 }

@@ -3,9 +3,9 @@
 //! script/style raw text, CDATA as comments and lowercase tag/attribute names. No HTML5 tree
 //! construction (no implied `tbody`), so `table > tr` stays as written, as legacy sees it.
 //!
-//! Entities: the 106 legacy (no-semicolon) entities and the HTML 4.01 named set. A
-//! semicolon-terminated name outside that set (an HTML5-only entity) cannot be decoded as legacy
-//! would and fails the parse, so the page is not used rather than read differently.
+//! Entities: htmlparser2's own `entities` 1.0.0 maps: the 106 legacy (no-semicolon) entities
+//! and the 2,125 semicolon-terminated names of `maps/entities.json` (copied with its license to
+//! `data/html-entities.json`). An unknown name stays as text, as htmlparser2 leaves it.
 
 /// One node of the tree.
 #[derive(Debug, Clone)]
@@ -255,7 +255,6 @@ pub fn parse(html: &str) -> Result<Document, ParseError> {
         }
         buf[a as usize..z as usize].iter().collect()
     };
-    let mut error = false;
     // Emit decoded entity text to text or attribute data.
     macro_rules! partial {
         ($b:expr, $v:expr) => {
@@ -625,16 +624,10 @@ pub fn parse(html: &str) -> Result<Document, ParseError> {
             }
             S::InNamedEntity => {
                 if c == ';' {
-                    match strict_entity(&section(start + 1, i)) {
-                        Some(v) => {
-                            partial!(b, v);
-                            start = i + 1;
-                        }
-                        None if start + 1 < i && is_name(&section(start + 1, i)) => {
-                            // A named entity this table does not hold (HTML5-only).
-                            error = true;
-                        }
-                        None => {}
+                    // An unknown name stays as written (htmlparser2 emits nothing).
+                    if let Some(v) = strict_entity(&section(start + 1, i)) {
+                        partial!(b, v);
+                        start = i + 1;
                     }
                     if start + 1 < i {
                         legacy_entity(&buf, &mut start, i, &mut |v| partial!(b, v));
@@ -676,9 +669,6 @@ pub fn parse(html: &str) -> Result<Document, ParseError> {
         }
         i += 1;
     }
-    if error {
-        return Err(ParseError);
-    }
     // `_cleanup` then `_finish`: trailing data.
     if state == S::Text {
         if start >= 0 && start < len {
@@ -692,9 +682,20 @@ pub fn parse(html: &str) -> Result<Document, ParseError> {
             S::InComment | S::AfterComment1 | S::AfterComment2 => {
                 b.add(Node::Comment);
             }
+            // `_handleTrailingData`: decode what can be decoded, then the rest is data of the base
+            // state (text in text; nothing inside a tag).
             S::InNamedEntity | S::InNumericEntity | S::InHexEntity => {
-                // Rare at the end of a document: treated as text after decoding attempts.
-                return Err(ParseError);
+                match state {
+                    S::InNamedEntity => {
+                        legacy_entity(&buf, &mut start, len, &mut |v| partial!(b, v))
+                    }
+                    _ => numeric_entity(&buf, &mut start, len, state == S::InHexEntity, &mut |v| {
+                        partial!(b, v)
+                    }),
+                }
+                if start < len && base == S::Text {
+                    b.text(&section(start, len));
+                }
             }
             S::InTagName
             | S::BeforeAttributeName
@@ -710,9 +711,6 @@ pub fn parse(html: &str) -> Result<Document, ParseError> {
     }
     b.on_end();
     Ok(b.doc)
-}
-fn is_name(s: &str) -> bool {
-    !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric())
 }
 fn legacy_entity(buf: &[char], start: &mut isize, i: isize, emit: &mut dyn FnMut(String)) {
     let from = *start + 1;
@@ -810,140 +808,15 @@ const LATIN1: [&str; 96] = [
     "ograve", "oacute", "ocirc", "otilde", "ouml", "divide", "oslash", "ugrave", "uacute", "ucirc",
     "uuml", "yacute", "thorn", "yuml",
 ];
-/// Semicolon-terminated named entities: the legacy set and the HTML 4.01 symbols and Greek.
+/// Semicolon-terminated named entities: `entities` 1.0.0 `maps/entities.json`.
 fn strict_entity(name: &str) -> Option<String> {
-    if let Some(c) = legacy(name) {
-        return Some(c.to_string());
-    }
-    let cp: u32 = match name {
-        "apos" => 39,
-        "OElig" => 338,
-        "oelig" => 339,
-        "Scaron" => 352,
-        "scaron" => 353,
-        "Yuml" => 376,
-        "fnof" => 402,
-        "circ" => 710,
-        "tilde" => 732,
-        "ensp" => 8194,
-        "emsp" => 8195,
-        "thinsp" => 8201,
-        "zwnj" => 8204,
-        "zwj" => 8205,
-        "lrm" => 8206,
-        "rlm" => 8207,
-        "ndash" => 8211,
-        "mdash" => 8212,
-        "lsquo" => 8216,
-        "rsquo" => 8217,
-        "sbquo" => 8218,
-        "ldquo" => 8220,
-        "rdquo" => 8221,
-        "bdquo" => 8222,
-        "dagger" => 8224,
-        "Dagger" => 8225,
-        "bull" => 8226,
-        "hellip" => 8230,
-        "permil" => 8240,
-        "prime" => 8242,
-        "Prime" => 8243,
-        "lsaquo" => 8249,
-        "rsaquo" => 8250,
-        "oline" => 8254,
-        "frasl" => 8260,
-        "euro" => 8364,
-        "image" => 8465,
-        "weierp" => 8472,
-        "real" => 8476,
-        "trade" => 8482,
-        "alefsym" => 8501,
-        "larr" => 8592,
-        "uarr" => 8593,
-        "rarr" => 8594,
-        "darr" => 8595,
-        "harr" => 8596,
-        "crarr" => 8629,
-        "lArr" => 8656,
-        "uArr" => 8657,
-        "rArr" => 8658,
-        "dArr" => 8659,
-        "hArr" => 8660,
-        "forall" => 8704,
-        "part" => 8706,
-        "exist" => 8707,
-        "empty" => 8709,
-        "nabla" => 8711,
-        "isin" => 8712,
-        "notin" => 8713,
-        "ni" => 8715,
-        "prod" => 8719,
-        "sum" => 8721,
-        "minus" => 8722,
-        "lowast" => 8727,
-        "radic" => 8730,
-        "prop" => 8733,
-        "infin" => 8734,
-        "ang" => 8736,
-        "and" => 8743,
-        "or" => 8744,
-        "cap" => 8745,
-        "cup" => 8746,
-        "int" => 8747,
-        "there4" => 8756,
-        "sim" => 8764,
-        "cong" => 8773,
-        "asymp" => 8776,
-        "ne" => 8800,
-        "equiv" => 8801,
-        "le" => 8804,
-        "ge" => 8805,
-        "sub" => 8834,
-        "sup" => 8835,
-        "nsub" => 8836,
-        "sube" => 8838,
-        "supe" => 8839,
-        "oplus" => 8853,
-        "otimes" => 8855,
-        "perp" => 8869,
-        "sdot" => 8901,
-        "lceil" => 8968,
-        "rceil" => 8969,
-        "lfloor" => 8970,
-        "rfloor" => 8971,
-        "lang" => 9001,
-        "rang" => 9002,
-        "loz" => 9674,
-        "spades" => 9824,
-        "clubs" => 9827,
-        "hearts" => 9829,
-        "diams" => 9830,
-        _ => return greek(name),
-    };
-    char::from_u32(cp).map(String::from)
-}
-fn greek(name: &str) -> Option<String> {
-    const UPPER: [&str; 25] = [
-        "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa",
-        "Lambda", "Mu", "Nu", "Xi", "Omicron", "Pi", "Rho", "", "Sigma", "Tau", "Upsilon", "Phi",
-        "Chi", "Psi", "Omega",
-    ];
-    const LOWER: [&str; 25] = [
-        "alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta", "theta", "iota", "kappa",
-        "lambda", "mu", "nu", "xi", "omicron", "pi", "rho", "sigmaf", "sigma", "tau", "upsilon",
-        "phi", "chi", "psi", "omega",
-    ];
-    if let Some(i) = UPPER.iter().position(|n| !n.is_empty() && *n == name) {
-        return char::from_u32(0x391 + i as u32).map(String::from);
-    }
-    if let Some(i) = LOWER.iter().position(|n| *n == name) {
-        return char::from_u32(0x3B1 + i as u32).map(String::from);
-    }
-    match name {
-        "thetasym" => Some("\u{3d1}".into()),
-        "upsih" => Some("\u{3d2}".into()),
-        "piv" => Some("\u{3d6}".into()),
-        _ => None,
-    }
+    static MAP: std::sync::OnceLock<std::collections::HashMap<String, String>> =
+        std::sync::OnceLock::new();
+    MAP.get_or_init(|| {
+        serde_json::from_str(include_str!("data/html-entities.json")).expect("pinned entity map")
+    })
+    .get(name)
+    .cloned()
 }
 
 impl Document {

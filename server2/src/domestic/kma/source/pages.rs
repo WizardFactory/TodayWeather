@@ -90,9 +90,10 @@ fn strip_all_ws(s: &str) -> String {
     s.chars().filter(|c| !js_ws(*c)).collect()
 }
 
-/// `new Date('YYYY.MM.DD.HH:MM')` in the UTC legacy process, for the exact page form.
+/// `new Date('YYYY.M[M].D[D].H[H]:MM')` in the UTC legacy process. A form the port does not
+/// reproduce is `NaN` here (page parsing never forwards).
 pub fn page_date(s: &str) -> f64 {
-    crate::domestic::kma::time::parse_date(s.trim_matches(js_ws))
+    crate::domestic::kma::time::try_parse_date(s.trim_matches(js_ws)).unwrap_or(f64::NAN)
 }
 
 /// One AWS page (`{pubDate, stnList}`).

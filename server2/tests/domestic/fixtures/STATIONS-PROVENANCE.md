@@ -1,6 +1,6 @@
 # S15b-2 station and ASOS oracle fixtures
 
-`stations.json.gz` (sha256 `e00e98d1759ecc4aa9eae5331b63316d080cade0ae38c2c2bcb782ba213f185a`) holds pinned legacy-oracle results for the S15b-2 station
+`stations.json.gz` (sha256 `d1d1d4b3607287905153b8c4b05f87efbd1fb46663108e1598e8ceedaad199ee`) holds pinned legacy-oracle results for the S15b-2 station
 and ASOS tests (`server2/tests/domestic/stations.rs`, `server2/tests/domestic/asos.rs`).
 `kmastninfos.jsonl` is a synthetic, provenance-labelled `mongoexport`-shaped sample of the legacy
 `kmastninfos` collection (three invented stations; the field forms of relaxed and canonical
@@ -37,7 +37,8 @@ server2 runtime never reads them or any legacy file.
 ## What is recorded
 
 - `pages`: `KmaScraper._parseStnMinInfo` (cheerio over the decoded AWS page) and
-  `_decodeKmaHtml`/`_parseCityWeatherHtml` results, or the legacy error, per page.
+  `_decodeKmaHtml`/`_parseCityWeatherHtml` results, or the legacy error, per page (21 cases,
+  including unpadded city publication times and unknown, HTML5 and document-ending entities).
 - `merge`: `_mergeAWSandCity` of an AWS and a city page.
 - `stn`: five scenarios replaying hourly runs (`_saveStnInfo` per row, serialized in page order,
   then `_saveStnHourly2`; city-unavailable runs keep `isCityWeather`) and minute pages
@@ -494,7 +495,7 @@ async function asos(L) {
 module.exports = {asos};
 ```
 
-### `station-fixtures.js` (sha256 `ecfc6c5a6272fbd5a02d5d807b45d1f5ef7c799924d19c62e946a3b87ea61a35`)
+### `station-fixtures.js` (sha256 `91145680847fe6f5a16475b81d227eca63fc994b4c8a36104f9ccc97a8d6b8e3`)
 
 ```js
 /* S15b-2 station page inputs: committed server2 fixtures, synthetic edge pages and (with
@@ -560,7 +561,22 @@ function pages() {
         {id: 'city-no-header', kind: 'city', content_type: 'text/html; charset=utf-8', base64: utf(
             '<html><body><div class="cmp-table-topinfo"><strong>기상실황표</strong>2026.10.14.21:00</div><table id="weather_table"><tbody><tr><td>x</td></tr></tbody></table></body></html>')},
         {id: 'city-bad-pub', kind: 'city', content_type: 'text/html; charset=utf-8', base64: utf(
-            '<html><body><div class="cmp-table-topinfo">기상실황표 2026-10-14 21:00</div></body></html>')}
+            '<html><body><div class="cmp-table-topinfo">기상실황표 2026-10-14 21:00</div></body></html>')},
+        // S15b2-R8: unpadded month, day and hour in the city publication.
+        ...[['city-unpadded-pub', '2026.10.05.03:00'], ['city-unpadded-pub-no-request', undefined], ['city-unpadded-stale', '2026.10.05.04:00']].map(([id, requested]) => ({
+            id, kind: 'city', content_type: 'text/html;charset=UTF-8', requested, base64: utf(
+                '<html><body><div class="cmp-table-topinfo"><strong>기상실황표</strong>2026.10.5.3:00</div><table id="weather_table"><thead><tr id="table_header2"><th>이름</th><th>현재일기</th><th>현재<br/>기온</th></tr></thead>' +
+                '<tbody><tr><td><a href="city-obs.do?stn=108">서울</a></td><td>맑음</td><td>9.5</td></tr></tbody></table></body></html>\n')})),
+        // S15b2-R9: unknown and HTML5 entities inside and outside the observation tables, and an
+        // entity cut by the end of the document.
+        {id: 'aws-entities', kind: 'aws', requested: '2026.10.14.22:00', base64: euc(awsPage('2026.10.14.22:00', [
+            R('108', '서울&check;', {19: '서울 &doesnotexist; 종로구 &hearts;x'}),
+            R('109', '&notanentity;이름', {12: '&NotEqual;W', 13: '1.2&amp'})
+        ], {tail: '<p>&doesnotexist;&check;&amp</p>\n'}))},
+        {id: 'aws-trailing-entity', kind: 'aws', base64: euc(awsPage('2026.10.14.22:00', [R('108', '서울')]).replace(/\n$/, '') + '\n&cop')},
+        {id: 'city-entities', kind: 'city', content_type: 'text/html;charset=UTF-8', base64: utf(
+            '<html><body><p>&doesnotexist;</p><div class="cmp-table-topinfo"><strong>기상실황표</strong>2026.10.14.22:00</div><table id="weather_table"><thead><tr id="table_header2"><th>이름</th><th>현재일기</th><th>현재<br/>기온</th></tr></thead>' +
+            '<tbody><tr><td><a href="city-obs.do?stn=108&amp;a=&check;">서울&hearts;</a></td><td>맑음&doesnotexist;</td><td>9.5</td></tr></tbody></table></body></html>\n')}
     ];
     if (process.env.S15B_LIVE) {
         out.push({id: 'live-aws-minute', local: true, kind: 'aws', base64: file(path.join(LIVE, 'aws-minute.body'))});

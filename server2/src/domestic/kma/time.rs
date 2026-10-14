@@ -126,13 +126,23 @@ pub fn new_date(v: &V) -> f64 {
 /// - `YYYY-MM-DD{T|t| }HH:MM[:SS[.fraction]][Z|z|+-HH:MM|+-HHMM]` (hour 24 only at exactly
 ///   midnight, offsets up to 23:59; with `T` an out-of-range field is `NaN` as in V8; the space
 ///   form only for years from 100);
-/// - the legacy dotted `YYYY.MM.DD[ HH:MM]` and `YYYY.MM.DD.HH:MM` forms with in-range fields and
-///   years from 100;
+/// - the legacy dotted `YYYY.M[M].D[D]` date, optionally followed by ` H[H]:M[M]` or
+///   `.H[H]:M[M]` (the KMA page forms; checked against the pinned V8 for 1- and 2-digit month,
+///   day, hour and minute fields): in-range fields give the UTC fields; with a time, an
+///   out-of-range field or a year below 100 is `NaN`;
 /// - strings without an ASCII digit and digit-only strings of 7 or more digits (`NaN`).
 ///
 /// Any other string with digits may be accepted by V8's permissive legacy parser; the request is
 /// forwarded to legacy rather than guessing.
 pub fn parse_date(s: &str) -> f64 {
+    try_parse_date(s).unwrap_or_else(|| {
+        super::js::forward(format!(
+            "date string form not reproduced (V8 legacy Date.parse): {s:?}"
+        ))
+    })
+}
+/// [`parse_date`] without forwarding: None for a form this port does not reproduce.
+pub fn try_parse_date(s: &str) -> Option<f64> {
     let b = s.as_bytes();
     let num = |r: std::ops::Range<usize>| -> Option<f64> {
         let t = b.get(r)?;
@@ -140,43 +150,60 @@ pub fn parse_date(s: &str) -> f64 {
             .then(|| std::str::from_utf8(t).ok()?.parse::<f64>().ok())
             .flatten()
     };
-    // Legacy dotted form (exact shapes, in range; anything else is decided below).
-    if b.len() >= 10 && b[4] == b'.' && b[7] == b'.' {
-        let dotted = || -> Option<f64> {
-            let (y, m, d) = (num(0..4)?, num(5..7)?, num(8..10)?);
-            // V8's legacy parser reads a year below 100 as another field or as 19xx/20xx.
-            if y < 100. {
-                return None;
-            }
-            let (h, mi) = match b.len() {
-                10 => (0., 0.),
-                // The space form, and the KMA station page form `YYYY.MM.DD.HH:MM` (S15b-2,
-                // checked against the pinned V8: same fields, same result).
-                16 if (b[10] == b' ' || b[10] == b'.') && b[13] == b':' => {
-                    (num(11..13)?, num(14..16)?)
-                }
-                _ => return None,
-            };
-            ((1. ..=12.).contains(&m)
-                && (1. ..=31.).contains(&d)
-                && mi <= 59.
-                && (h < 24. || (h == 24. && mi == 0.)))
-                .then(|| make_date_literal(y, m - 1., d, h, mi, 0.))
-        };
-        if let Some(ms) = dotted() {
-            return ms;
-        }
+    if let Some(ms) = dotted(s) {
+        return Some(ms);
     }
     if let Some(ms) = iso_date_time(b, &num) {
-        return ms;
+        return Some(ms);
     }
     let digits = b.iter().filter(|c| c.is_ascii_digit()).count();
     if digits == 0 || (digits == b.len() && digits >= 7) {
-        return f64::NAN;
+        return Some(f64::NAN);
     }
-    super::js::forward(format!(
-        "date string form not reproduced (V8 legacy Date.parse): {s:?}"
-    ))
+    None
+}
+/// The legacy dotted forms `YYYY.M[M].D[D]` and `YYYY.M[M].D[D]{ |.}H[H]:M[M]`; None for any
+/// other shape.
+fn dotted(s: &str) -> Option<f64> {
+    let b = s.as_bytes();
+    if b.len() < 8 || b.get(4) != Some(&b'.') || !b[..4].iter().all(u8::is_ascii_digit) {
+        return None;
+    }
+    // Fields of 1-2 ASCII digits split at `.`, then an optional time after ` ` or `.`.
+    let field = |t: &[u8]| -> Option<f64> {
+        ((1..=2).contains(&t.len()) && t.iter().all(u8::is_ascii_digit))
+            .then(|| std::str::from_utf8(t).ok()?.parse::<f64>().ok())
+            .flatten()
+    };
+    let rest = &b[5..];
+    let m_end = rest.iter().position(|c| *c == b'.')?;
+    let m = field(&rest[..m_end])?;
+    let rest = &rest[m_end + 1..];
+    let d_end = rest
+        .iter()
+        .position(|c| *c == b'.' || *c == b' ')
+        .unwrap_or(rest.len());
+    let d = field(&rest[..d_end])?;
+    let (h, mi) = if d_end == rest.len() {
+        (0., 0.)
+    } else {
+        let time = &rest[d_end + 1..];
+        let colon = time.iter().position(|c| *c == b':')?;
+        (field(&time[..colon])?, field(&time[colon + 1..])?)
+    };
+    let y: f64 = std::str::from_utf8(&b[..4]).ok()?.parse().ok()?;
+    let timed = d_end != rest.len();
+    let in_range = y >= 100.
+        && (1. ..=12.).contains(&m)
+        && (1. ..=31.).contains(&d)
+        && mi <= 59.
+        && (h < 24. || (h == 24. && mi == 0.));
+    // Probed: every timed form; a date-only form only in range (others are not claimed).
+    match (in_range, timed) {
+        (true, _) => Some(make_date_literal(y, m - 1., d, h, mi, 0.)),
+        (false, true) => Some(f64::NAN),
+        (false, false) => None,
+    }
 }
 /// The ISO family of [`parse_date`]; None when `b` is not of that exact shape.
 fn iso_date_time(b: &[u8], num: &dyn Fn(std::ops::Range<usize>) -> Option<f64>) -> Option<f64> {
@@ -399,6 +426,37 @@ pub fn weekday(v: &V) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// Dotted KMA page forms against `Date.parse` of the pinned Node 16.20.2 (TZ=UTC; 540 forms
+    /// probed, these are representative; `None` is `NaN`).
+    #[test]
+    fn dotted_page_dates_follow_v8() {
+        for (s, v8) in [
+            ("2026.10.15.3:00", Some(1_792_033_200_000.)),
+            ("2026.1.5.3:00", Some(1_767_582_000_000.)),
+            ("2026.01.05.03:00", Some(1_767_582_000_000.)),
+            ("2026.10.15.3:0", Some(1_792_033_200_000.)),
+            ("2026.10.15 3:00", Some(1_792_033_200_000.)),
+            ("2026.10.15.24:00", Some(1_792_108_800_000.)),
+            ("2026.1.31.0:59", Some(1_769_821_140_000.)),
+            ("2026.1.5", Some(1_767_571_200_000.)),
+            ("2026.10.32.3:00", None),
+            ("2026.13.5.3:00", None),
+            ("2026.0.5.3:00", None),
+            ("2026.10.0.3:00", None),
+            ("2026.10.15.24:59", None),
+            ("2026.10.15.25:00", None),
+            ("2026.10.15.3:60", None),
+            ("0026.10.15.3:00", None),
+        ] {
+            let got = try_parse_date(s).unwrap();
+            match v8 {
+                Some(ms) => assert_eq!(got, ms, "{s}"),
+                None => assert!(got.is_nan(), "{s}"),
+            }
+        }
+        // Unprobed shapes stay unclaimed (the assembly forwards; page parsing reads NaN).
+        assert_eq!(try_parse_date("2026.13.5"), None);
+    }
     #[test]
     fn legacy_time_helpers() {
         let now = 1_790_208_600_000.; // 2026-09-24T00:10:00Z
