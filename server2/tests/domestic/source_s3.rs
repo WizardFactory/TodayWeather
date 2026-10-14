@@ -487,8 +487,10 @@ pub fn request() -> server2::domestic::kma::KmaRequest {
     .unwrap()
 }
 fn source(peer: &Peer) -> S3Source<BoundedS3<HttpS3Transport>> {
+    // The source also starts its station loads (S15b-2): stay well below the Python S3 peer's
+    // connection limit, which drops connections under concurrency on Linux CI runners.
     S3Source::new(
-        peer.transport(),
+        peer.transport_limited(4),
         Arc::new(|| NOW),
         Arc::new(Unreachable),
         Arc::new(Unreachable),

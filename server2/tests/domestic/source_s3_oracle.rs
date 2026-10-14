@@ -78,8 +78,10 @@ fn store(peer: &Peer) -> Store {
     CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap()
 }
 fn source(peer: &Peer, now: f64) -> S3Source<BoundedS3<HttpS3Transport>> {
+    // The source also starts its station loads (S15b-2): stay well below the Python S3 peer's
+    // connection limit, which drops connections under concurrency on Linux CI runners.
     S3Source::new(
-        peer.transport(),
+        peer.transport_limited(4),
         Arc::new(move || now),
         Arc::new(Unreachable),
         Arc::new(Unreachable),
