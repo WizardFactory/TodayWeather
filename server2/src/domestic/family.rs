@@ -35,11 +35,11 @@ impl Service {
         }
     }
 }
-/// Provider time an owned acquisition allows for one page: the two HTTP attempts S08/S13
-/// permit, each with the legacy timeout. Owned work (S14 capture, S07 owners) adds its
-/// publication allowance; a request waiter never waits this long (S13d).
-pub fn owned_provider_time(attempt: Duration) -> Duration {
-    attempt.saturating_mul(2)
+/// Provider time an owned acquisition of up to `pages` pages allows: the two HTTP attempts
+/// S08/S13 permit per page, each with the legacy timeout. Owned work (S14 capture, S07 owners)
+/// adds its publication allowance; a request waiter never waits this long (S13d).
+pub fn owned_provider_time(attempt: Duration, pages: u32) -> Duration {
+    attempt.saturating_mul(2).saturating_mul(pages.max(1))
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DataGoKrFamily {

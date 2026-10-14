@@ -738,7 +738,12 @@ fn each_service_uses_its_legacy_attempt_timeout() {
     }
     assert_eq!(t::KMA_WEB, secs(30));
     // An owned acquisition allows the two funded attempts S08 permits.
-    assert_eq!(owned_provider_time(t::LIFE_INDEX), secs(60));
+    assert_eq!(owned_provider_time(t::LIFE_INDEX, 1), secs(60));
+    // Every page may need both attempts: five short-forecast pages allow 100 s.
+    assert_eq!(
+        owned_provider_time(t::TOWN_FORECAST, F::VilageFcst.max_pages()),
+        secs(100)
+    );
 }
 
 /// S13d Red -> Green: a provider that answers after 4 s failed under the former fixed 3-second

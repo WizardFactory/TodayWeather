@@ -424,7 +424,7 @@ impl<S: CaptureSource, P: Publisher, D: DemandTransport> CaptureRunner<S, P, D> 
             .map(|m| schedule::from_ms(schedule::to_ms(m) + 60_000));
         let minute = WebRequest::aws_minute(not_before);
         let deadline = Instant::now()
-            + owned_provider_time(minute.family().attempt_timeout())
+            + owned_provider_time(minute.family().attempt_timeout(), 1)
             + self.config.call_timeout;
         let acquired = self.source.acquire_web(&minute, deadline).await;
         match self.publish(acquired, deadline).await {
@@ -503,11 +503,15 @@ enum Request {
     Web(WebRequest),
 }
 impl Request {
-    /// The two legacy-timeout attempts the acquisition may spend on the provider (S13d).
+    /// The provider time the acquisition may spend (S13d): two legacy-timeout attempts for each
+    /// page it may need (a KMA web page is one page).
     fn provider_time(&self) -> Duration {
-        owned_provider_time(match self {
-            Self::Funded(q) => q.family().service().attempt_timeout(),
-            Self::Web(q) => q.family().attempt_timeout(),
-        })
+        match self {
+            Self::Funded(q) => owned_provider_time(
+                q.family().service().attempt_timeout(),
+                q.family().max_pages(),
+            ),
+            Self::Web(q) => owned_provider_time(q.family().attempt_timeout(), 1),
+        }
     }
 }

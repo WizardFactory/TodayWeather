@@ -223,6 +223,8 @@ pub struct FakeSource {
     pub minute: Mutex<Publication>,
     pub fetched_at: AtomicUsize,
     pub funding_left: Mutex<Option<usize>>,
+    /// Time left until each call's deadline when the call started (S13d).
+    pub deadlines: Mutex<Vec<(&'static str, std::time::Duration)>>,
 }
 impl FakeSource {
     pub fn new() -> Self {
@@ -232,6 +234,7 @@ impl FakeSource {
             minute: Mutex::new(p(20261013, 1200)),
             fetched_at: AtomicUsize::new(1),
             funding_left: Mutex::new(None),
+            deadlines: Mutex::new(Vec::new()),
         }
     }
     pub fn calls(&self) -> Vec<Requested> {
@@ -258,8 +261,12 @@ impl CaptureSource for FakeSource {
     async fn acquire(
         &self,
         request: &DataGoKrRequest,
-        _deadline: Instant,
+        deadline: Instant,
     ) -> Result<Acquired, DomesticError> {
+        self.deadlines.lock().unwrap().push((
+            request.family().kind(),
+            deadline.saturating_duration_since(Instant::now()),
+        ));
         let (nx, ny) = match request.target() {
             server2::domestic::family::Target::Grid { nx, ny } => (*nx, *ny),
             _ => panic!("capture requested a non-grid target"),
@@ -305,9 +312,13 @@ impl CaptureSource for FakeSource {
     async fn acquire_web(
         &self,
         request: &WebRequest,
-        _deadline: Instant,
+        deadline: Instant,
     ) -> Result<Acquired, DomesticError> {
         let kind = request.family().kind();
+        self.deadlines
+            .lock()
+            .unwrap()
+            .push((kind, deadline.saturating_duration_since(Instant::now())));
         self.calls.lock().unwrap().push(Requested::Web {
             kind,
             publication: request.publication(),

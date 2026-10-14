@@ -28,7 +28,7 @@ async fn national_station_list_is_acquired_once_for_many_cells() {
         OwnedFlights::new(OwnedConfig::default()).unwrap();
     // Two legacy attempts plus a publication allowance.
     let owned_for =
-        owned_provider_time(Service::AirKorea.attempt_timeout()) + Duration::from_secs(3);
+        owned_provider_time(Service::AirKorea.attempt_timeout(), 1) + Duration::from_secs(3);
     let key: Key = ("airkorea-station-list", 20261013);
     let started = Instant::now();
     let requests: Vec<_> = (0..24)

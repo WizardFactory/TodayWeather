@@ -28,9 +28,12 @@ use tokio::{
 /// The longest a request waits for an owned acquisition (AK: 3 s, or the remaining gateway
 /// attempt when that is shorter).
 pub const WAITER_BOUND: Duration = Duration::from_secs(3);
-/// The longest owned acquisition this primitive admits (two 30-second legacy attempts plus
-/// publication fit well inside it).
-pub const MAX_OWNED: Duration = Duration::from_secs(120);
+/// The longest owned acquisition this primitive admits: eight life-index pages with two
+/// 30-second legacy attempts each, plus publication, fit inside it.
+pub const MAX_OWNED: Duration = Duration::from_secs(600);
+/// An owned waiter ([`OwnedFlights::wait`]) waits this long past the task's own deadline, so it
+/// observes the task's outcome instead of racing its timeout.
+const OUTCOME_MARGIN: Duration = Duration::from_millis(100);
 
 #[derive(Clone, Debug)]
 pub struct OwnedConfig {
@@ -161,14 +164,30 @@ where
         Fut: Future<Output = T> + Send + 'static,
     {
         let ready_by = ready_by.min(Instant::now() + WAITER_BOUND);
-        self.wait(key, ready_by, owned_for, start).await
+        self.run(key, Some(ready_by), owned_for, start).await
     }
-    /// [`join`](Self::join) for an owned caller (for example an S07 response owner) that may
-    /// wait past [`WAITER_BOUND`]; request waiters use `join`.
-    pub async fn wait<F, Fut>(
+    /// [`join`](Self::join) for an owned caller (for example an S07 response owner): it waits
+    /// until the task it joined ends, which is at most its owner deadline. Request waiters use
+    /// `join`.
+    pub async fn wait<F, Fut>(&self, key: K, owned_for: Duration, start: F) -> Waited<T>
+    where
+        F: FnOnce(Instant) -> Fut,
+        Fut: Future<Output = T> + Send + 'static,
+    {
+        self.run(key, None, owned_for, start).await
+    }
+    /// Wait until no owned task runs (drain). Returns false at `deadline`.
+    pub async fn idle(&self, deadline: Instant) -> bool {
+        let all = self.inner.config.running as u32;
+        matches!(
+            timeout_at(deadline, self.inner.running.clone().acquire_many_owned(all)).await,
+            Ok(Ok(_))
+        )
+    }
+    async fn run<F, Fut>(
         &self,
         key: K,
-        ready_by: Instant,
+        ready_by: Option<Instant>,
         owned_for: Duration,
         start: F,
     ) -> Waited<T>
@@ -180,6 +199,7 @@ where
             Ok(entry) => entry,
             Err(waited) => return waited,
         };
+        let ready_by = ready_by.unwrap_or(owner_deadline + OUTCOME_MARGIN);
         // Inner `None`: the task ended without sending (a panic dropped its sender).
         let outcome = timeout_at(ready_by, async {
             loop {

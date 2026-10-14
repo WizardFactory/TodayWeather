@@ -157,15 +157,10 @@ async fn owner_deadline_capacity_and_panics_are_bounded() {
     let flights = flights(Duration::from_secs(1));
     // The owned task ends at its own deadline; the waiter learns it expired.
     let expired = flights
-        .wait(
-            NATIONAL,
-            Instant::now() + Duration::from_secs(2),
-            Duration::from_millis(100),
-            |_| async {
-                tokio::time::sleep(Duration::from_secs(5)).await;
-                1
-            },
-        )
+        .wait(NATIONAL, Duration::from_millis(100), |_| async {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            1
+        })
         .await;
     assert_eq!(expired, Waited::Expired);
     // Running capacity is bounded; a new key beyond it starts nothing.

@@ -2023,21 +2023,36 @@ async fn national_scope_is_acquired_once_for_many_locations() {
         .map(|l| {
             let resolver = resolver.clone();
             let r = located(l);
-            tokio::spawn(async move { resolver.resolve(r, deadline()).await })
+            tokio::spawn(async move {
+                let begun = Instant::now();
+                let result = resolver.resolve(r, deadline()).await;
+                (result.err(), begun.elapsed())
+            })
         })
         .collect();
     for w in waiters {
-        assert!(w.await.unwrap().is_err());
+        // Each request waited its own bound and timed out; none failed early.
+        let (error, waited) = w.await.unwrap();
+        assert_eq!(
+            error,
+            Some(server2::resolver::Error::Storage(
+                server2::storage::Error::Timeout
+            ))
+        );
+        assert!(waited >= Duration::from_millis(2_900), "{waited:?}");
     }
     assert!(started.elapsed() < Duration::from_millis(3_500));
     owners_idle(&resolver).await;
     assert_eq!(calls.load(Ordering::SeqCst), 1, "one national acquisition");
+    let hits = resolver.metrics().hits;
     for l in &locations {
         let served = resolver.resolve(located(l), deadline()).await.unwrap();
         let text = String::from_utf8_lossy(served.bytes()).into_owned();
         assert!(text.contains(l.as_str()) && text.contains("42"), "{text}");
     }
     assert_eq!(calls.load(Ordering::SeqCst), 1);
+    // S13D-R1-04: every owner that read after the shared publication cached its response.
+    assert_eq!(resolver.metrics().hits - hits, locations.len() as u64);
 
     // Fast: every waiter gets the data within its bound, still from one acquisition.
     let peer = Peer::new();
@@ -2055,4 +2070,119 @@ async fn national_scope_is_acquired_once_for_many_locations() {
         assert!(String::from_utf8_lossy(served.bytes()).contains("42"));
     }
     assert_eq!(calls.load(Ordering::SeqCst), 1);
+}
+/// S13d review S13D-R1-05: with the default four response owners, twelve concurrent locations
+/// admit four owners at once; the others are rejected as Capacity without a provider call, and
+/// the admitted ones still share one acquisition.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn default_owner_capacity_bounds_concurrent_locations() {
+    let peer = Peer::new();
+    let (resolver, calls) =
+        slow_resolver(&peer, Duration::from_millis(500), ResolverConfig::default());
+    let waiters: Vec<_> = (0..12)
+        .map(|i| {
+            let resolver = resolver.clone();
+            let r = located(&format!("{:.4},127.0001", 33.0 + f64::from(i) * 0.5));
+            tokio::spawn(async move { resolver.resolve(r, deadline()).await.err() })
+        })
+        .collect();
+    let mut served = 0;
+    let mut capacity = 0;
+    for w in waiters {
+        match w.await.unwrap() {
+            None => served += 1,
+            Some(server2::resolver::Error::Storage(server2::storage::Error::Capacity)) => {
+                capacity += 1
+            }
+            Some(other) => panic!("unexpected {other:?}"),
+        }
+    }
+    assert_eq!((served, capacity), (4, 8));
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert_eq!(resolver.metrics().admission_rejections, 8);
+}
+/// S13d review S13D-R1-02: drain accounts for a shared acquisition that outlives the request
+/// waiter, and returns only after its publication.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn drain_waits_for_the_shared_acquisition_after_the_waiter_left() {
+    let peer = Peer::new();
+    let (resolver, calls) = slow_resolver(
+        &peer,
+        Duration::from_millis(1_500),
+        ResolverConfig::default(),
+    );
+    let r = request("ko", ReadSelection::Latest, Duration::from_secs(30));
+    assert!(
+        resolver
+            .resolve(r.clone(), Instant::now() + Duration::from_millis(200))
+            .await
+            .is_err()
+    );
+    let early = resolver
+        .drain(Instant::now() + Duration::from_millis(100))
+        .await
+        .unwrap();
+    assert!(early.unfinished_owners + early.unfinished_acquisitions >= 1);
+    // A second drain with time left waits for the owned acquisition to finish.
+    let report = resolver
+        .drain(Instant::now() + Duration::from_secs(5))
+        .await
+        .unwrap();
+    assert_eq!(
+        (report.unfinished_owners, report.unfinished_acquisitions),
+        (0, 0)
+    );
+    assert_eq!(resolver.metrics().active_owners, 0);
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+}
+/// S13d review S13D-R1-03: the shared acquisition key ignores the order of the scope periods.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn reversed_scope_periods_share_one_acquisition() {
+    let peer = Peer::new();
+    let (resolver, calls) =
+        slow_resolver(&peer, Duration::from_millis(500), ResolverConfig::default());
+    let base = request("ko", ReadSelection::Latest, Duration::from_secs(30));
+    let first = base.scope().periods[0].clone();
+    let second = Period {
+        local_date: first.local_date,
+        slot: "1300".into(),
+    };
+    let scoped = |location: &str, periods: Vec<Period>| {
+        ResolutionRequest::new(
+            ResponseKey::new(
+                "weather/coord",
+                "v000903",
+                location,
+                "ko",
+                "C",
+                "aqi",
+                "parser-1",
+                BTreeMap::new(),
+            )
+            .unwrap(),
+            RepairScope {
+                catalog: base.scope().catalog.clone(),
+                periods,
+            },
+            ReadSelection::Latest,
+            64,
+            1024 * 1024,
+            Duration::from_secs(60),
+            Duration::from_secs(30),
+        )
+        .unwrap()
+    };
+    let a = scoped("37.5001,127.0001", vec![first.clone(), second.clone()]);
+    let b = scoped("35.1001,129.0001", vec![second, first]);
+    let (ra, rb) = (resolver.clone(), resolver.clone());
+    let _ = tokio::join!(
+        tokio::spawn(async move { ra.resolve(a, deadline()).await.is_ok() }),
+        tokio::spawn(async move { rb.resolve(b, deadline()).await.is_ok() })
+    );
+    owners_idle(&resolver).await;
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        1,
+        "one acquisition for one scope"
+    );
 }
