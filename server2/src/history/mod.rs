@@ -1,8 +1,9 @@
 //! S14 legacy history and demand-gated capture (O-1, O-11). Internal library only: it wires no
 //! route and starts no task. Durable demand lives under `state/demand/grid/`; capture uses the
-//! S13 acquirer, S08 budgets and S06 publication; coverage keeps a cell on legacy until exports
-//! and captures hold every required publication. No grid hour is invented and ASOS never
-//! substitutes for one. Parsing captured bodies into legacy rows is S15 assembly.
+//! S13 acquirer, S08 budgets and S06 publication. Coverage (corrected by AK, 2026-10-14) never
+//! forwards to legacy: missing recent publications are fetched, older current hours back to D-7
+//! take ASOS observations through the legacy #2564/#2648 history read, and older gaps stay
+//! absent. No grid hour is invented. Parsing captured bodies into legacy rows is S15 assembly.
 pub mod capture;
 pub mod coverage;
 pub mod demand;
