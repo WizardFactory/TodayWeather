@@ -946,6 +946,8 @@ mod tests {
         assert_eq!(to_json(&V::Num(f64::NAN)).unwrap().to_bytes(), b"null");
     }
     #[test]
+    // Expected values are the pinned V8 outputs printed with 17 significant digits.
+    #[allow(clippy::excessive_precision, clippy::type_complexity)]
     fn coercion_follows_javascript() {
         assert!(loose_eq(&V::Undef, &V::Null));
         assert!(loose_eq(&V::s("1500"), &V::from(1500.)));
