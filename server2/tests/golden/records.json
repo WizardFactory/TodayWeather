@@ -126,7 +126,7 @@
       "server/controllers/alert.push.controller.js": "c147cce006973c8a50ba75a59f6770c829528a39e3c28da382ab578d27563e5c",
       "server/controllers/controller.weather.desc.js": "58f8de678cd4d9e745804fcfd9b8910368dfda7b87afca4a95a5a2a64606854d",
       "server/controllers/controllerKmaStnWeather.js": "c7bd8b7848bf2f3a10c6f2b87f6dec3c6a06151da0aee8b22282254f495f5163",
-      "server/controllers/controllerManager.js": "e6cf7d61a69676d95f6d74f291c9015f402d3f0f9211a0ec20949cd32b5fe8b1",
+      "server/controllers/controllerManager.js": "b64cdffdb4bd8936d3bd1164000fad8a600e554a1c6ca5faf418d27a4f52d442",
       "server/controllers/controllerPush.js": "0ea6353917b6182bcede0307d712568a479d70bb086c098cd2dfd9f24865ac7e",
       "server/controllers/controllerTown.js": "bfe2d5eb7e405de5c9cc6a971a8dee3299f9c01d086661d4ed114688bb879396",
       "server/controllers/controllerTown24h.js": "26981e87dbff5009c7110a4e663a67af42021749e7053a3572e68f020a59137a",

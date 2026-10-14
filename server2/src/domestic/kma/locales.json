@@ -1,0 +1,84 @@
+{
+ "_provenance": {
+  "de": "legacy locales/de.json sha256 1034953a35425f75acbfb2cf8eb18453f27528388e48e43a198c680da498e01b (S02 oracle baseline f568508d)",
+  "en": "legacy locales/en.json sha256 ce8b13c40bad5f5c40e0fb3d605b60b753f37b9dbe9f9397327a045f2319dc60 (S02 oracle baseline f568508d)",
+  "ja": "legacy locales/ja.json sha256 8c8845e4a9af2251a4c09a4deb39c4bf2d5efb6c7fe329eb330704ce64ef3556 (S02 oracle baseline f568508d)",
+  "ko": "legacy locales/ko.json sha256 1b50fa20563d6986c911bdab20573c93ea1902e67d45142f09450a0a48dc8d02 (S02 oracle baseline f568508d)",
+  "zh-CN": "legacy locales/zh-CN.json sha256 68967b6063ecafb3b086fae485579216444c289c15cdbf271ac256480f7aa703 (S02 oracle baseline f568508d)",
+  "zh-TW": "legacy locales/zh-TW.json sha256 bc47e1dddfe07659f083e15b80f10472ee8ac7899db94b40d1c01df10e037dda (S02 oracle baseline f568508d)"
+ },
+ "locales": {
+  "de": {
+   "LOC_ATTENTION": "Interesse",
+   "LOC_CAUTION": "Vorsicht",
+   "LOC_E": "O",
+   "LOC_LIGHT_WIND": "Wind, leicht",
+   "LOC_MODERATE_WIND": "Wind, mittel",
+   "LOC_N": "N",
+   "LOC_S": "S",
+   "LOC_STRONG_WIND": "Wind, stark",
+   "LOC_W": "W",
+   "LOC_WARNING": "Warnung"
+  },
+  "en": {
+   "LOC_ATTENTION": "Attention",
+   "LOC_CAUTION": "Caution",
+   "LOC_E": "E",
+   "LOC_LIGHT_WIND": "Light wind",
+   "LOC_MODERATE_WIND": "Moderate wind",
+   "LOC_N": "N",
+   "LOC_S": "S",
+   "LOC_STRONG_WIND": "Strong wind",
+   "LOC_W": "W",
+   "LOC_WARNING": "Warning"
+  },
+  "ja": {
+   "LOC_ATTENTION": "関心",
+   "LOC_CAUTION": "注意",
+   "LOC_E": "東",
+   "LOC_LIGHT_WIND": "弱い風",
+   "LOC_MODERATE_WIND": "やや強い風",
+   "LOC_N": "北",
+   "LOC_S": "南",
+   "LOC_STRONG_WIND": "強風",
+   "LOC_W": "西",
+   "LOC_WARNING": "警告"
+  },
+  "ko": {
+   "LOC_ATTENTION": "관심",
+   "LOC_CAUTION": "주의",
+   "LOC_E": "동",
+   "LOC_LIGHT_WIND": "바람약함",
+   "LOC_MODERATE_WIND": "바람약간강함",
+   "LOC_N": "북",
+   "LOC_S": "남",
+   "LOC_STRONG_WIND": "바람강함",
+   "LOC_W": "서",
+   "LOC_WARNING": "경고"
+  },
+  "zh-CN": {
+   "LOC_ATTENTION": "关心",
+   "LOC_CAUTION": "注意",
+   "LOC_E": "东",
+   "LOC_LIGHT_WIND": "微风",
+   "LOC_MODERATE_WIND": "微大风",
+   "LOC_N": "北",
+   "LOC_S": "南",
+   "LOC_STRONG_WIND": "大风",
+   "LOC_W": "西",
+   "LOC_WARNING": "警告"
+  },
+  "zh-TW": {
+   "LOC_ATTENTION": "關心",
+   "LOC_CAUTION": "注意",
+   "LOC_E": "東",
+   "LOC_LIGHT_WIND": "微風",
+   "LOC_MODERATE_WIND": "微大風",
+   "LOC_N": "北",
+   "LOC_S": "南",
+   "LOC_STRONG_WIND": "大風",
+   "LOC_W": "西",
+   "LOC_WARNING": "警告"
+  }
+ }
+}

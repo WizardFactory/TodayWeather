@@ -1597,7 +1597,7 @@ task-owned test peers, and test doubles (quota, transport) live inside the tests
 
 | Concern | Setting | Default / rule |
 | --- | --- | --- |
-| Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf` | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
+| Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf`, `kma` (S15) | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
 | World versions | `SERVER2_WORLD_VERSIONS` | `v000901,v000902,v000903` |
 | S3 (shared) | `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`, `SERVER2_S3_BUCKET`, `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY` | `ap-northeast-2`; `https://s3.<region>.amazonaws.com/`; bucket and static credentials required when any family is native. One 12-request admission for weather, air and budgets. The importers use the same settings. |
 | Geocoder keys/endpoints | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY`, `GEOCODER_KAKAO_BASE_URL`, `GEOCODER_GOOGLE_BASE_URL` | Existing legacy names; `https://dapi.kakao.com`, `https://maps.googleapis.com`; the Google fingerprint rule applies to the production endpoint, as in legacy. |
@@ -1622,3 +1622,75 @@ scenarios restore from S3 with the production WAQI configuration and its transpo
 `gateway_smoke.py`, `world_smoke.py` and `deploy/smoke.sh` pass on the release binary. Live
 provider reachability, real quotas, runtime credential rotation and AWS behavior remain
 unverified; production routing still needs the #2724 limits and the cutover gates.
+
+### S15 KMA v000903 assembly and Rust checkpoint (2026-10-13)
+
+[S15](../../plans/issue-2700.md) ([spec](../../specs/issue-2700.md)) adds `server2::domestic::kma`,
+a native port of the 37-step [v000903 router list](mobile-api.md#domestic-api-middleware-in-order)
+and a `Family::Kma` handler for the S10 dispatcher. Legacy stays selected by default.
+
+- **Boundary.** The port starts where legacy controllers receive store answers. `KmaStore` has one
+  synchronous method per dependency call (town list, short/current/shortest/RSS documents for
+  DB 1.0 and 2.0, mid forecast/land/temp, forecast zone, station minute and hourly rows, area
+  numbers, life index, MFDS rows, AirKorea current air, dust forecasts, the air-provider fallback,
+  station air forecasts, KASI rise/set and warning zone rows). Answers are ordered JSON; Dates are
+  `{"$date": ms}`. A key-sorted JSON map would change the response, so the answers keep property order.
+- **Semantics.** A JavaScript value model keeps shared object references, property order (array
+  indices first), `undefined` in memory and the legacy `try`/`catch` boundaries. A legacy exception
+  is a `Thrown` unwind that only a ported `catch` stops. Store reads are asynchronous callbacks in
+  the deployed service, so an exception after a store answer escapes a `catch` entered before the
+  read and forwards (the S02 harness answers synchronously; no recording depends on this). Any
+  other Rust panic is a port defect: the backend forwards that request to legacy.
+  Precipitation bounds stay beside rows and never reach JSON, as in the legacy `WeakMap`. Shared
+  logic is reused: S12 `zonesForTown`/`specialInfoFor`, the S11 `AqiConverter`, weather strings,
+  locale selection and number/date helpers. KMA strings missing from the S11 locale subset are in
+  `domestic/kma/locales.json`. ASOS history reads are off, as on the observed production checkout.
+  `manager.MAX_CURRENT_COUNT` is 192 (the oracle harness stubs 200; the recorded value is used in tests).
+- **Forwarding.** `BackendHandler` gains a defaulted `fetch_or_forward`. When the source cannot supply
+  inputs (for example, S14 coverage `Legacy`), the handler returns `Native::Forward`. It also forwards
+  when legacy would redirect a non-Korean coordinate, geocode and save a new town, remap a `KR` region
+  remotely or throw past every handler. The dispatcher then runs the unchanged legacy hop within the
+  remaining deadline. Nothing is invented. The legacy 400 region guard maps to the legacy hop's
+  dependency error.
+- **Air.** The goldens show no AirKorea dust forecast or station list, and no AirKorea forecast or
+  station-list endpoint is called. AK decided on 2026-10-13 (#2729) that `getMinuDustFrcstDspth`
+  and `getMsrstnList` are not ported. Nearest-station selection must use ported station coordinates
+  (for example an offline export of legacy `MsrStnInfo` with provenance), never `getMsrstnList`.
+  In S15 the station list arrives inside the `arpltn` store answer. Stored dust forecasts and the provider fallback are
+  store answers.
+
+Parity uses a pinned Node 16.20.2 oracle recording ([provenance](../../server2/tests/domestic/fixtures/PROVENANCE.md)):
+76 requests through the real router and harness, with every store answer and its arguments recorded in order. They
+include the 15 S02 direct-route v000903 goldens (bodies and Express ETags), the 5 gateway domestic
+v000903 backend inputs, and supplementary DB 1.0, RSS, station, rain-category, air-list, KAQ
+forecast, fallback, life-index/MFDS/rise-set, warning, temperature, error, clock-boundary and invalid
+DB 1.0 RSS/current publication, Boolean station-time, hexadecimal area-number, malformed-escape,
+interpolated string current and signed radix cases. 74 recordings match byte for byte, with the dependency calls in legacy order. Two are declared
+forwards: a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2026-01-09, and a query
+with a malformed escape, for which legacy `decodeURI(req.originalUrl)` throws before its `try` (500). `Date.parse` is reproduced for the strict ISO, space and dotted forms (years from
+100 for the legacy forms) and digit-only strings, checked against the pinned V8; any other date
+string forwards to legacy. Numeric Date constructors map years 0-99 to 1900-1999, `parseInt` without a radix reads `0x`
+hexadecimal (power-of-two radix strings round once, ties to even, as in V8), and `Number`/`parseInt`/`parseFloat` skip JavaScript whitespace only, as in JavaScript. A store string
+with an unpaired UTF-16 surrogate (which a Rust string cannot hold) forwards instead of being replaced. The 5 gateway goldens match on
+the wire with the native switch (status, body and headers except `date`/`connection`). The legacy
+default, forward and rollback paths are tested. The recorded store is a test double: it checks each
+call's method, order and complete arguments and that every recorded call was used, forwarding on
+any difference.
+
+Routing uses the S10c list only: `kma` in `SERVER2_NATIVE_FAMILIES` registers and selects the
+v000903 KMA handler; removing it and restarting is the rollback. S15 adds no other setting or mode.
+Until the S15b input source exists the handler's source is `LegacyOnly`, so a listed `kma` forwards
+every request to legacy and reads no S3 setting; S15b will read the shared `SERVER2_S3_*` settings.
+`tools/kma_smoke.py` checks legacy -> `kma` -> legacy on the release binary (identical bytes, the
+legacy KMA hop in every phase, unknown or repeated entries refused before binding). Parsing
+S13/S13a raw records into these store answers, reading S14 history and exports, and the
+request-time RSS/mid/life acquisitions form the proposed follow-up S15b.
+
+O-2 checkpoint (Rust adoption is settled; this records correctness and cost). `kma_checkpoint`
+assembles every recorded request from memory, and `tools/kma_checkpoint.py` reads process rusage.
+On an Apple M4 release build (3,040 assemblies) the mean per assembly is 3.55 ms (p50 3.75, p95 4.04,
+p99 4.50, max 8.15 ms, including JSON encoding and store-answer conversion), CPU is 3.6 ms per request
+and peak RSS is 165 MiB, 162 MiB of which is the decoded fixture (both test views). The server2 CI entrypoint records
+the Linux values. The legacy oracle took about 7 ms per request on the same host, including loopback
+HTTP and Express. These are local fixture measurements, not production latency, concurrency or
+memory evidence. The S10 3-second native attempt and the 9-second gateway deadline are unchanged.

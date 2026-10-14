@@ -44,6 +44,12 @@ def main():
         commands.insert(2, [sys.executable, str(local_tests)])
         commands.append([sys.executable, str(local_smoke), '--binary', 'target/release/server2'])
     commands.append([sys.executable, 'tools/gateway_smoke.py', '--binary', 'target/release/server2'])
+    # S15: KMA v000903 routing entry (legacy -> kma -> legacy) on the release binary.
+    commands.append([sys.executable, 'tools/kma_smoke.py', '--binary', 'target/release/server2'])
+    # S15 O-2 checkpoint: KMA v000903 assembly time, peak RSS and CPU on this (Linux) runner.
+    commands.append(['cargo', 'build', '--locked', '--release', '--example', 'kma_checkpoint'])
+    commands.append([sys.executable, 'tools/kma_checkpoint.py', '--binary', 'target/release/examples/kma_checkpoint',
+                     '--rounds', '20', '--report', str(root/'reports/server2-kma-checkpoint/ci.json')])
     # S19: shadow tool unit tests, then the integrated release smoke (scenarios, paired
     # replay with self-check, cache-aware rollback). The two reused smokes ran above.
     commands.insert(3, [sys.executable, 'tests/integration/test_shadow.py'])

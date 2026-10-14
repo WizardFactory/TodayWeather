@@ -252,10 +252,25 @@ fn routing_list_and_required_settings_fail_closed() {
         list(" geocode , dsf ").unwrap(),
         NativeFamilies {
             geocode: true,
-            dsf: true
+            dsf: true,
+            kma: false
         }
     );
-    for bad in ["kma", "geocode,geocode", "geocode,", "mock", "native"] {
+    assert_eq!(
+        list("kma").unwrap(),
+        NativeFamilies {
+            kma: true,
+            ..NativeFamilies::default()
+        }
+    );
+    for bad in [
+        "kma,kma",
+        "KMA",
+        "geocode,geocode",
+        "geocode,",
+        "mock",
+        "native",
+    ] {
         assert!(list(bad).is_err(), "{bad}");
     }
     let complete = || {

@@ -25,6 +25,11 @@ pub enum BackendMode {
     Legacy,
     Native,
 }
+/// A native handler's answer: a served body, or a decision to use the legacy hop instead.
+pub enum Native {
+    Served(OrderedJson),
+    Forward,
+}
 pub trait BackendHandler: Send + Sync {
     fn fetch(
         &self,
@@ -32,6 +37,16 @@ pub trait BackendHandler: Send + Sync {
         lang: String,
         deadline: Instant,
     ) -> BoxFuture<'_, Result<OrderedJson, GatewayError>>;
+    /// S15: a handler that cannot supply complete inputs may forward to legacy. The default
+    /// serves `fetch` and never forwards.
+    fn fetch_or_forward(
+        &self,
+        path: String,
+        lang: String,
+        deadline: Instant,
+    ) -> BoxFuture<'_, Result<Native, GatewayError>> {
+        Box::pin(async move { self.fetch(path, lang, deadline).await.map(Native::Served) })
+    }
 }
 #[derive(Clone)]
 struct Http {
@@ -256,12 +271,17 @@ impl BackendDispatcher {
         };
         if let Some(native) = native {
             let attempt_deadline = deadline.min(Instant::now() + Duration::from_secs(3));
-            return tokio::time::timeout_at(
+            match tokio::time::timeout_at(
                 attempt_deadline,
-                native.fetch(path, lang, attempt_deadline),
+                native.fetch_or_forward(path.clone(), lang.clone(), attempt_deadline),
             )
             .await
-            .map_err(|_| GatewayError::Provider)?;
+            .map_err(|_| GatewayError::Provider)??
+            {
+                Native::Served(value) => return Ok(value),
+                // S15: forwarded requests take the unchanged legacy hop on the remaining deadline.
+                Native::Forward => (),
+            }
         }
         for attempt in 0..3 {
             let remaining = deadline.saturating_duration_since(Instant::now());

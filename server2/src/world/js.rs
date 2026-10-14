@@ -207,9 +207,56 @@ impl Val {
     }
 }
 
+/// ECMAScript WhiteSpace and LineTerminator as `Number(string)`, `parseInt` and `parseFloat`
+/// skip them (pinned V8). Rust's `char::is_whitespace` also accepts U+0085, which they do not.
+pub fn is_js_space(c: char) -> bool {
+    matches!(
+        c,
+        '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'
+            ..='\u{200a}'
+                | '\u{2028}'
+                | '\u{2029}'
+                | '\u{202f}'
+                | '\u{205f}'
+                | '\u{3000}'
+                | '\u{feff}'
+    )
+}
+/// The value of `digits` in radix `2^bits`, correctly rounded to the nearest double (ties to even,
+/// with every dropped bit as sticky), as V8 converts power-of-two radix strings; Infinity past the
+/// largest double.
+pub fn pow2_radix_value(digits: &[u32], bits: u32) -> f64 {
+    let mut value: Vec<u8> = Vec::with_capacity(digits.len() * bits as usize);
+    for d in digits {
+        for i in (0..bits).rev() {
+            let b = ((d >> i) & 1) as u8;
+            if !(value.is_empty() && b == 0) {
+                value.push(b);
+            }
+        }
+    }
+    let n = value.len();
+    let top = n.min(53);
+    let mut mantissa = value[..top]
+        .iter()
+        .fold(0u64, |a, &b| (a << 1) | u64::from(b));
+    if n <= 53 {
+        return mantissa as f64;
+    }
+    let round = value[53] == 1;
+    let sticky = value[54..].contains(&1);
+    if round && (sticky || mantissa & 1 == 1) {
+        mantissa += 1;
+    }
+    let exponent = (n - 53) as i32;
+    if exponent > 1023 {
+        return f64::INFINITY;
+    }
+    mantissa as f64 * 2f64.powi(exponent)
+}
 /// `Number(string)` for the decimal forms produced by legacy inputs.
 pub fn string_to_number(s: &str) -> f64 {
-    let t = s.trim_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
+    let t = s.trim_matches(is_js_space);
     if t.is_empty() {
         return 0.;
     }
@@ -221,7 +268,12 @@ pub fn string_to_number(s: &str) -> f64 {
     let lower = t.to_ascii_lowercase();
     for (prefix, radix) in [("0x", 16), ("0o", 8), ("0b", 2)] {
         if let Some(rest) = lower.strip_prefix(prefix) {
-            return u64::from_str_radix(rest, radix).map_or(f64::NAN, |n| n as f64);
+            // Unsigned digits only: `from_str_radix` would also accept a leading `+`.
+            if rest.is_empty() || !rest.chars().all(|c| c.is_digit(radix)) {
+                return f64::NAN;
+            }
+            let digits: Vec<u32> = rest.chars().filter_map(|c| c.to_digit(radix)).collect();
+            return pow2_radix_value(&digits, radix.trailing_zeros());
         }
     }
     let valid = t.bytes().enumerate().all(|(i, b)| {
@@ -239,7 +291,7 @@ pub fn string_to_number(s: &str) -> f64 {
 
 /// `parseFloat(string)`: longest decimal prefix after leading whitespace.
 pub fn parse_float(s: &str) -> f64 {
-    let t = s.trim_start_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
+    let t = s.trim_start_matches(is_js_space);
     for (word, value) in [
         ("Infinity", f64::INFINITY),
         ("+Infinity", f64::INFINITY),

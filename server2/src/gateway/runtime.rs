@@ -1,7 +1,7 @@
 //! Process wiring from the operator-injected environment.
 //!
 //! `SERVER2_GATEWAY_LEGACY_URL` enables the gateway. `SERVER2_NATIVE_FAMILIES` lists the
-//! families routed to the native backend (`geocode`, `dsf`); every other family stays on the
+//! families routed to the native backend (`geocode`, `dsf`, `kma`); every other family stays on the
 //! legacy origin, and an unlisted family reads none of its native settings. Removing a family
 //! from the list and restarting is the rollback.
 use super::{BackendDispatcher, Gateway, GatewayError, LegacyGeocoder};
@@ -22,6 +22,8 @@ type Var<'a> = &'a dyn Fn(&str) -> Option<String>;
 pub struct NativeFamilies {
     pub geocode: bool,
     pub dsf: bool,
+    /// S15: KMA v000903 address weather.
+    pub kma: bool,
 }
 impl NativeFamilies {
     /// Parse `SERVER2_NATIVE_FAMILIES`; unset or empty selects none. Unknown or repeated
@@ -35,6 +37,7 @@ impl NativeFamilies {
             let slot = match entry {
                 "geocode" => &mut families.geocode,
                 "dsf" => &mut families.dsf,
+                "kma" => &mut families.kma,
                 _ => return Err(GatewayError::InvalidConfiguration),
             };
             if *slot {
@@ -93,6 +96,11 @@ pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
     };
     if let (Some(s3), true) = (s3, families.dsf) {
         crate::world::runtime::select(&backend, crate::world::runtime::build(var, s3)?)?;
+    }
+    if families.kma {
+        // S15: the native assembly has no S3 input source until S15b, so the handler forwards
+        // every request to legacy and reads no settings yet.
+        crate::domestic::kma::backend::select_native(&backend)?;
     }
     Ok(Some(Arc::new(Gateway::new(geocoder, backend))))
 }
