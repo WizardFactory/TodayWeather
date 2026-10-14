@@ -14,7 +14,8 @@
     "server2/src/gateway/runtime.rs",
     "server2/tests/gateway/runtime.rs",
     "server2/tools/kma_smoke.py",
-    "server2/src/world/js.rs"
+    "server2/src/world/js.rs",
+    "server2/tests/golden/records.json"
   ],
   "outside": [
     {
@@ -38,5 +39,8 @@
       "reason": "Append the S15 KMA v000903 assembly and checkpoint section only"
     }
   ],
-  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2700#issuecomment-6145714736"
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2700#issuecomment-6145714736",
+  "path_notes": {
+    "server2/tests/golden/records.json": "golden source-hash refresh after legacy #2737/#2740; outputs unchanged (root coordinator decision 2026-10-14, option b)"
+  }
 }
