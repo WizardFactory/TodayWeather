@@ -214,7 +214,10 @@ async fn air_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
         let now = server2::history::schedule::to_ms(Publication::new(day, 1200).unwrap()) as f64;
         let now = now.max(1_791_988_320_000. + 60_000.);
         assert_eq!(kst_date(now), day);
-        let dust_reader = AirInputs::new(transport.clone(), store.clone());
+        // One reader per date, as for the observations (fewer S3 reads for the 16-slot peer).
+        let dust_reader = readers
+            .entry(now.to_bits())
+            .or_insert_with(|| AirInputs::new(transport.clone(), store.clone()));
         replayed += 1;
         let (region, city) = (text(at(q, &["region"])), text(at(q, &["city"])));
         let answers = dust_reader
