@@ -40,7 +40,8 @@ async function main() {
         '../../lib/dataGoKrRejection': rejection, '../lib/kmaTimeLib': time,
         '../config/config': {keyString: {dongnae_forecast_keys: JSON.stringify(keys)}},
         '../models/town': {}, '../models/lifeIndexKma': {}, '../models/kma/kma.lifeindex.model': {},
-        '../models/modelKasiRiseSet': {}, '../../models/kma/kma.forecast.zone.model': {}, dnscache: () => {}};
+        '../models/modelKasiRiseSet': {}, '../../models/kma/kma.forecast.zone.model': {}, dnscache: () => {},
+        fs: require('fs'), path: require('path')};
     const Life = h.load('lib/lifeIndexKmaRequester.js', dependencies, {log});
     const Warning = h.load('lib/kmaWarningRequester.js', dependencies, {log});
     const Zone = h.load('controllers/kma/kma.forecast.zone.controller.js', dependencies, {log});

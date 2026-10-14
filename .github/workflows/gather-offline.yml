@@ -34,6 +34,14 @@ jobs:
         run: |
           npm --prefix server run test:offline
           node server/test/offline/push-transport-recovery-smoke.js
+      # Fixed-date fixtures must not expire: rerun as if the real date were 400 days later.
+      - name: Repeat the offline regression with the clock 400 days ahead
+        env:
+          NODE_PATH: ${{ runner.temp }}/gather-offline/node_modules
+          TW_CLOCK_SHIFT_DAYS: '400'
+        run: |
+          export NODE_OPTIONS="--require=$PWD/server/test/offline/clock-shift.js"
+          npm --prefix server run test:offline
       - name: Run unified data.go.kr key and forecast-cycle HTTP smokes
         env:
           NODE_PATH: ${{ runner.temp }}/gather-offline/node_modules
@@ -155,6 +163,17 @@ jobs:
           node server/test/offline/current-quota-memory.test.js
           node server/test/offline/forecast-traffic.test.js
           node server/test/offline/current-collection-smoke.js
+      - name: Repeat current persistence smokes with the clock 400 days ahead
+        env:
+          TZ: UTC
+          NODE_PATH: ${{ runner.temp }}/current-offline/node_modules
+          MONGOMS_DOWNLOAD_DIR: ${{ runner.temp }}/current-mongodb
+          TW_CLOCK_SHIFT_DAYS: '400'
+        run: |
+          export NODE_OPTIONS="--require=$PWD/server/test/offline/clock-shift.js"
+          node server/test/offline/retention-anchor.test.js
+          node server/test/offline/current-cancellation-smoke.js
+          node server/test/offline/current-collection-smoke.js
 
   forecast-grid-node16:
     # Mongo4.4 retains the wire operations used by the production Mongoose5.1.2 driver.
@@ -166,7 +185,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install isolated pinned forecast test dependencies
-        run: npm install --prefix /tmp/forecast-offline --ignore-scripts --no-audit --no-fund --package-lock=false mongoose@5.1.2 async@2.6.4 request@2.88.2 xml2js@0.4.23
+        run: npm install --prefix /tmp/forecast-offline --ignore-scripts --no-audit --no-fund --package-lock=false mongoose@5.1.2 async@2.6.4 request@2.88.2 xml2js@0.4.23 mongodb-memory-server-core@10.1.4
       - name: Prepare compatible temporary Mongo binary
         run: |
           curl -fsSL https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-4.4.29.tgz -o /tmp/forecast-mongo.tgz
@@ -181,5 +200,16 @@ jobs:
           node server/test/offline/forecast-manager.test.js
           node server/test/offline/forecast-lifecycle.test.js
           node server/test/offline/forecast-late-publication.test.js
+          node server/test/offline/forecast-collection-smoke.js
+          node server/test/offline/forecast-coverage-mongo-smoke.js
+          node server/test/offline/forecast-zone-smoke.js
+      - name: Repeat forecast persistence smokes with the clock 400 days ahead
+        env:
+          TZ: UTC
+          NODE_PATH: /tmp/forecast-offline/node_modules
+          TW_MONGOD: /tmp/mongodb-linux-x86_64-ubuntu2004-4.4.29/bin/mongod
+          TW_CLOCK_SHIFT_DAYS: '400'
+        run: |
+          export NODE_OPTIONS="--require=$PWD/server/test/offline/clock-shift.js"
           node server/test/offline/forecast-collection-smoke.js
           node server/test/offline/forecast-coverage-mongo-smoke.js

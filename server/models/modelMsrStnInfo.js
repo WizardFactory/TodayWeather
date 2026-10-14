@@ -5,8 +5,9 @@
 var mongoose = require('mongoose');
 
 /**
- *   GET: http://openapi.airkorea.or.kr/openapi/services/rest/MsrstnInfoInqireSvc/getMsrstnList?
- *          pageNo=1&numOfRows=999&ServiceKey=[SERVICE_KEY]&_returnType=json
+ *   GET: https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getMsrstnList?
+ *          pageNo=1&numOfRows=100&serviceKey=[SERVICE_KEY]&returnType=json (paged, no ver)
+ *   The sample item below is from the retired legacy host; the supported service keeps the same dmX/dmY order.
     {
         "_returnType": "xml",
         "addr": "경남 창원시 의창구 두대동145번지 시설관리공단 내 실내수영장 앞(원이대로 480)",

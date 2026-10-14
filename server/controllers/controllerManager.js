@@ -1558,7 +1558,27 @@ Manager.prototype.getCurrentQueryTime = function (baseTime) {
     return dateString;
 };
 
-// Keep forecast timing/cleanup unchanged; only exact completed grids skip HTTP.
+/**
+ * KST publication {date: 'YYYYMMDD', time: 'HHMM'} -> Date, the anchor of current/short/shortest retention.
+ * The 216 h window is unchanged; its anchor moves from the wall clock to the publication being collected.
+ * For the live slot this keeps rows longer only by the publication delay (minutes to a few hours), and
+ * collecting (or testing) an older publication never deletes the rows it writes. A malformed slot keeps
+ * the previous wall-clock anchor instead of rolling over to another date.
+ */
+function publicationInstant(slot) {
+    var day = slot && /^(\d{4})(\d{2})(\d{2})$/.exec(slot.date), hm = slot && /^(\d{2})(\d{2})$/.exec(slot.time);
+    if (!day || !hm) { return new Date(); }
+    var y = Number(day[1]), mo = Number(day[2]) - 1, d = Number(day[3]), h = Number(hm[1]), mi = Number(hm[2]);
+    var instant = new Date(Date.UTC(y, mo, d, h - 9, mi));
+    var kst = new Date(instant.getTime() + 9 * 3600000);
+    if (kst.getUTCFullYear() !== y || kst.getUTCMonth() !== mo || kst.getUTCDate() !== d ||
+        kst.getUTCHours() !== h || kst.getUTCMinutes() !== mi) {
+        return new Date();
+    }
+    return instant;
+}
+
+// Keep forecast timing unchanged; only exact completed grids skip HTTP.
 Manager.prototype._getTownForecastData = function(product, dateString, key, callback) {
     var self = this, short = product === 'short';
     self._forecastCollections = self._forecastCollections || {};
@@ -1584,7 +1604,7 @@ Manager.prototype._getTownForecastData = function(product, dateString, key, call
         if (callback) { return callback(err, results); }
         if (err) { log.error(err); }
     });
-    (short ? kmaTownShort : kmaTownShortest).remove(new Date());
+    (short ? kmaTownShort : kmaTownShortest).remove(publicationInstant(dateString));
     return self;
 };
 Manager.prototype.getTownShortData = function(baseTime, key, callback) {
@@ -1621,7 +1641,7 @@ Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
         if (err) { log.error(err); }
     });
 
-    kmaTownCurrent.remove(new Date());
+    kmaTownCurrent.remove(publicationInstant(dateString));
     return this;
 };
 
@@ -1863,47 +1883,17 @@ Manager.prototype.getMidTempByForecastZone = function(gmt, key, callback) {
     async.waterfall([
             function (callback) {
                 var kmaForcastZoneCode = new KmaForecastZoneCode(dongnae_keys);
-                //C:도시
-                kmaForcastZoneCode.findForecastZoneCode({regSp:"C"})
-                    .exec(function (err, result) {
-                        if (err) {
-                            return callback(err);
-                        }
-                        result = result.map(function (obj){
-                            obj.code = obj.regId;
-                            return obj;
-                        });
-                        callback(err, result);
+                //C:도시, limited to the KMA guide land zones that getMidTa answers (#2739)
+                kmaForcastZoneCode.findMidTempZones(function (err, result) {
+                    if (err) {
+                        return callback(err);
+                    }
+                    result = result.map(function (obj){
+                        obj.code = obj.regId;
+                        return obj;
                     });
-            },
-            function (regIdList, callback) {
-                //filter invalid id;
-                var unsupportList = [
-                    {"regName":"연평도","regId":"11A00102"},
-                    {"regName":"소청도","regId":"11A00103"},
-                    {"regName":"안흥","regId":"11C20105"},
-                    {"regName":"치악","regId":"11D10403"},
-                    {"regName":"봉평","regId":"11D10504"},
-                    {"regName":"설악","regId":"11D20101"},
-                    {"regName":"진부","regId":"11D20202"},
-                    {"regName":"묵호","regId":"11D20603"},
-                    {"regName":"완도항","regId":"11F20305"},
-                    {"regName":"여수항","regId":"11F20406"},
-                    {"regName":"녹동항","regId":"11F20407"},
-                    {"regName":"제주항","regId":"11G00202"},
-                    {"regName":"하동(해안)","regId":"11H20406"},
-                    {"regName":"하동(내륙)","regId":"11H20702"},
-                    {"regName":"해남(화원)","regId":"21F20202"},
-                    {"regName":"벽파","regId":"21F20203"}];
-
-                regIdList = regIdList.filter(function (obj) {
-                    var a = unsupportList.find(function (unObj) {
-                       return unObj.regId === obj.regId;
-                    });
-                    return a == undefined ? true : false;
+                    callback(err, result);
                 });
-
-                callback(null, regIdList);
             },
             function (reqIdList, callback) {
                 var fnCheckPubDate = self._checkPubDate;

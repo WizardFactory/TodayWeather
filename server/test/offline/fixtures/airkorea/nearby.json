@@ -1,0 +1,33 @@
+{
+ "response": {
+  "body": {
+   "totalCount": 3,
+   "items": [
+    {
+     "stationCode": "111125",
+     "tm": 1.7,
+     "addr": "서울 종로구 종로 169 (종묘주차장 앞)",
+     "stationName": "종로"
+    },
+    {
+     "stationCode": "111124",
+     "tm": 2,
+     "addr": "서울 중구 청계천로 184 (청계천4가사거리 남강빌딩 앞)",
+     "stationName": "청계천로"
+    },
+    {
+     "stationCode": "111121",
+     "tm": 2,
+     "addr": "서울 중구 덕수궁길 15 시청서소문별관 3동",
+     "stationName": "중구"
+    }
+   ],
+   "pageNo": 1,
+   "numOfRows": 100
+  },
+  "header": {
+   "resultMsg": "NORMAL_CODE",
+   "resultCode": "00"
+  }
+ }
+}
