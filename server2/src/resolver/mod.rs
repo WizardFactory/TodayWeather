@@ -1,9 +1,11 @@
 //! Internal checked resolution. No routes, provider adapter or shared-instance cache is wired here.
 mod backend;
 mod flight;
+pub mod owned;
 use crate::storage::{Error as StorageError, GroupDeclaration, RawRecord};
 pub use backend::{CatalogBackend, CheckedInput, RawView, ReadSelection, ResolutionRequest};
 pub use flight::{DrainReport, Metrics, Resolver, ResolverConfig, Response};
+pub use owned::{OwnedConfig, OwnedFlights, OwnedMetrics, WAITER_BOUND, Waited};
 use std::{
     future::Future,
     sync::{

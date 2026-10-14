@@ -401,7 +401,7 @@ impl<T: CatalogTransport> CatalogBackend<T> {
         c.check()?;
         Ok(outcome)
     }
-    async fn read(
+    pub(super) async fn read(
         &self,
         r: &ResolutionRequest,
         c: &OperationContext,
@@ -527,7 +527,7 @@ impl<T: CatalogTransport> CatalogBackend<T> {
         r: &ResolutionRequest,
         a: super::Acquisition,
         c: &OperationContext,
-    ) -> Result<CheckedInput, Error> {
+    ) -> Result<(), Error> {
         c.check()?;
         a.declaration.validate(&self.limits)?;
         if a.records.is_empty() || a.records.len() != a.declaration.members.len() {
@@ -549,9 +549,10 @@ impl<T: CatalogTransport> CatalogBackend<T> {
             return Err(crate::storage::Error::Invalid("acquisition catalog ownership").into());
         }
         // S06 verifies exact ordered membership/raw bytes before its first durable publication.
+        // Every response owner reads the published scope afterwards (S13d shared acquisition).
         self.store
             .publish(a.declaration, a.records, c.deadline())
             .await?;
-        self.read(r, c).await
+        Ok(())
     }
 }

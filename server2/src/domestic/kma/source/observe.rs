@@ -40,7 +40,22 @@ use tokio::time::Instant;
 /// The longest a request waits for acquisitions (AK, 2026-10-14).
 pub const REQUEST_WAIT: Duration = Duration::from_secs(3);
 /// Deadline of one owned acquisition plus its publication (the request does not wait for it).
-const ACQUIRE_DEADLINE: Duration = Duration::from_secs(30);
+/// Publication allowance of an owned acquisition (S06 PUT and catalog).
+const PUBLISH_ALLOWANCE: Duration = Duration::from_secs(10);
+/// An owned KMA page acquisition: two attempts at the legacy `kmaScraper` timeout (S13d).
+fn page_time() -> Duration {
+    crate::domestic::family::owned_provider_time(crate::providers::legacy_timeout::KMA_WEB, 1)
+        + PUBLISH_ALLOWANCE
+}
+/// One ASOS range: up to eight pages, two attempts each at the legacy history timeout.
+fn range_time() -> Duration {
+    crate::domestic::family::owned_provider_time(
+        crate::providers::legacy_timeout::ASOS,
+        crate::domestic::asos::MAX_PAGES,
+    ) + PUBLISH_ALLOWANCE
+}
+/// S3 reads of one load (not a provider call).
+const READ_DEADLINE: Duration = Duration::from_secs(30);
 /// The hourly AWS table of HH:00 is acquired from HH:15.
 const HOURLY_READY_MINUTE: u16 = 15;
 /// `getCityHourlyList` reads 8 days of hourly rows.
@@ -132,6 +147,18 @@ enum Flight {
     /// One serialized recovery run per station (legacy station lease).
     AsosRun(String),
 }
+/// Owned acquisition keys: a national dataset and its publication, or a station's recovery run
+/// (S13d `OwnedFlights`).
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum Acq {
+    /// The minute page due at a 2-minute bucket.
+    Minute(Publication),
+    Hourly(Publication),
+    City(Publication),
+    /// The backfill pass of the window ending at this hour.
+    Backfill(Publication),
+    AsosRun(String),
+}
 #[derive(Default)]
 struct Pages {
     hourly: BTreeMap<Publication, Arc<Vec<Doc>>>,
@@ -179,9 +206,10 @@ pub struct Observations<T> {
     state: Mutex<State>,
     flights: Mutex<HashMap<Flight, watch::Receiver<bool>>>,
     attempts: Mutex<HashMap<Flight, std::time::Instant>>,
-    backfill: Arc<tokio::sync::Semaphore>,
     /// ASOS range acquisitions in flight across stations.
     asos_gate: Arc<tokio::sync::Semaphore>,
+    /// Owned request-time acquisitions: one task per key, surviving every waiter (S13d).
+    owned: crate::resolver::OwnedFlights<Acq, ()>,
 }
 fn aws_key() -> ProviderKey {
     ProviderKey::Named {
@@ -234,8 +262,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             state: Mutex::new(State::default()),
             flights: Mutex::new(HashMap::new()),
             attempts: Mutex::new(HashMap::new()),
-            backfill: Arc::new(tokio::sync::Semaphore::new(BACKFILL_CONCURRENCY)),
             asos_gate: Arc::new(tokio::sync::Semaphore::new(ASOS_CONCURRENCY)),
+            owned: crate::resolver::OwnedFlights::new(crate::resolver::OwnedConfig {
+                running: 16,
+                entries: 1024,
+                retain: Duration::from_secs(3),
+            })
+            .expect("static owned acquisition bounds"),
         }
     }
     fn state(&self) -> std::sync::MutexGuard<'_, State> {
@@ -280,6 +313,36 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         });
         Some(rx)
     }
+    /// Record an attempt of `key` unless one was made within `memo` (retry bound).
+    fn claim(&self, key: &Flight, memo: Duration) -> bool {
+        let mut attempts = self.attempts.lock().unwrap_or_else(|e| e.into_inner());
+        if attempts.get(key).is_some_and(|at| at.elapsed() < memo) {
+            return false;
+        }
+        if attempts.len() > 4096 {
+            attempts.retain(|_, at| at.elapsed() < MEMO_KEEP);
+        }
+        attempts.insert(key.clone(), std::time::Instant::now());
+        true
+    }
+    /// Join (or start) the owned acquisition `key` and wait for it until `until`; the task gets
+    /// `owned_for` and survives the waiter.
+    fn own<F>(
+        self: &Arc<Self>,
+        key: Acq,
+        owned_for: Duration,
+        until: Instant,
+        work: F,
+    ) -> BoxFuture<'static, ()>
+    where
+        F: FnOnce(Arc<Self>) -> BoxFuture<'static, ()> + Send + 'static,
+    {
+        let owned = self.owned.clone();
+        let this = self.clone();
+        Box::pin(async move {
+            let _ = owned.join(key, until, owned_for, move |_| work(this)).await;
+        })
+    }
     /// Wait for flights until `until` (late flights keep running).
     async fn wait(flights: Vec<watch::Receiver<bool>>, until: Instant) {
         for mut rx in flights {
@@ -295,16 +358,16 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     pub async fn stations(self: &Arc<Self>, now_ms: i64, until: Instant) -> Option<Arc<Folded>> {
         // What S3 already holds decides what to acquire.
         Self::wait(self.load(now_ms).into_iter().collect(), until).await;
-        let mut waits = Vec::new();
-        waits.extend(self.ensure_minute(now_ms));
+        let mut owned = Vec::new();
+        owned.extend(self.ensure_minute(now_ms, until));
         let latest = latest_hourly(now_ms);
-        waits.extend(self.ensure_hourly(latest, Duration::from_secs(600)));
-        waits.extend(self.ensure_city(latest));
+        owned.extend(self.ensure_hourly(latest, until));
+        owned.extend(self.ensure_city(latest, until));
         if let Some(previous) = latest.add_hours(-1) {
-            waits.extend(self.ensure_hourly(previous, Duration::from_secs(600)));
+            owned.extend(self.ensure_hourly(previous, until));
         }
         self.backfill_hours(now_ms);
-        Self::wait(waits, until).await;
+        crate::history::join_all(owned).await;
         // Fold; new station addresses are geocoded and folded again within the wait.
         for _ in 0..2 {
             if let Some(rx) = self.fold_if_dirty(now_ms) {
@@ -342,7 +405,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         })
     }
     async fn read_s3(self: Arc<Self>, now_ms: i64) {
-        let deadline = Instant::now() + ACQUIRE_DEADLINE;
+        let deadline = Instant::now() + READ_DEADLINE;
         let first = schedule::from_ms(now_ms - HOURLY_WINDOW_HOURS * 3_600_000 - 3_600_000);
         let today = schedule::from_ms(now_ms);
         let mut days = Vec::new();
@@ -492,74 +555,98 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             .max_by_key(|r| r.envelope.identity.fetched_at_ms)?;
         super::seed::parse(&latest.bytes).ok().map(|s| s.docs)
     }
-    fn ensure_minute(self: &Arc<Self>, now_ms: i64) -> Option<watch::Receiver<bool>> {
-        let now = schedule::from_ms(now_ms);
+    fn ensure_minute(
+        self: &Arc<Self>,
+        now_ms: i64,
+        until: Instant,
+    ) -> Option<BoxFuture<'static, ()>> {
         let latest = self.state().pages.minute.keys().next_back().copied();
-        let wanted = now
-            .add_hours(0)
-            .and_then(|p| Publication::new(p.date(), p.time()))
-            .map(|p| schedule::from_ms(schedule::to_ms(p) - MINUTE_CADENCE * 60_000))?;
+        let wanted = schedule::from_ms(now_ms - MINUTE_CADENCE * 60_000);
         if latest.is_some_and(|l| l > wanted) {
             return None;
         }
         let not_before = latest.map(|l| schedule::from_ms(schedule::to_ms(l) + 60_000));
-        self.start(Flight::Minute, MINUTE_RETRY, move |this| {
-            Box::pin(async move {
-                let deadline = Instant::now() + ACQUIRE_DEADLINE;
-                let request = WebRequest::aws_minute(not_before);
-                if let Some(records) = this.acquire_web(request, deadline).await
-                    && let Some((p, rows)) = parse_minute(&records)
-                {
-                    let mut s = this.state();
-                    s.pages.minute.insert(p, rows);
-                    let floor = schedule::from_ms(schedule::to_ms(p) - MINUTE_KEEP_MS as i64);
-                    s.pages.minute.retain(|k, _| *k > floor);
-                    s.pages.dirty = true;
-                }
-            })
-        })
+        let step = MINUTE_CADENCE * 60_000;
+        let bucket = schedule::from_ms(now_ms.div_euclid(step) * step);
+        Some(
+            self.own(Acq::Minute(bucket), page_time(), until, move |this| {
+                Box::pin(async move {
+                    if !this.claim(&Flight::Minute, MINUTE_RETRY) {
+                        return;
+                    }
+                    let request = WebRequest::aws_minute(not_before);
+                    if let Some(records) = this
+                        .acquire_web(request, Instant::now() + page_time())
+                        .await
+                        && let Some((p, rows)) = parse_minute(&records)
+                    {
+                        let mut s = this.state();
+                        s.pages.minute.insert(p, rows);
+                        let floor = schedule::from_ms(schedule::to_ms(p) - MINUTE_KEEP_MS as i64);
+                        s.pages.minute.retain(|k, _| *k > floor);
+                        s.pages.dirty = true;
+                    }
+                })
+            }),
+        )
     }
+    /// The hourly page of `hour` (the latest and previous hours; retried after 10 minutes).
     fn ensure_hourly(
         self: &Arc<Self>,
         hour: Publication,
-        memo: Duration,
-    ) -> Option<watch::Receiver<bool>> {
+        until: Instant,
+    ) -> Option<BoxFuture<'static, ()>> {
         if self.state().pages.hourly.contains_key(&hour) {
             return None;
         }
-        self.start(Flight::Hourly(hour), memo, move |this| {
-            Box::pin(async move {
-                let _permit = this.backfill.clone().acquire_owned().await;
-                if this.state().pages.hourly.contains_key(&hour) {
-                    return;
-                }
-                let deadline = Instant::now() + ACQUIRE_DEADLINE;
-                let Ok(request) = WebRequest::aws_hourly(hour) else {
-                    return;
-                };
-                if let Some(records) = this.acquire_web(request, deadline).await
-                    && let Some((p, rows, at)) = parse_hourly(&records)
-                {
-                    let mut s = this.state();
-                    s.pages.hourly.insert(p, rows);
-                    s.pages.hourly_at.insert(p, at);
-                    s.pages.dirty = true;
-                    s.pages.hourly_dirty = true;
-                }
-            })
-        })
+        Some(
+            self.own(Acq::Hourly(hour), page_time(), until, move |this| {
+                Box::pin(async move {
+                    if this.claim(&Flight::Hourly(hour), Duration::from_secs(600)) {
+                        this.hourly_page(hour).await;
+                    }
+                })
+            }),
+        )
     }
-    fn ensure_city(self: &Arc<Self>, hour: Publication) -> Option<watch::Receiver<bool>> {
+    async fn hourly_page(&self, hour: Publication) {
+        if self.state().pages.hourly.contains_key(&hour) {
+            return;
+        }
+        let Ok(request) = WebRequest::aws_hourly(hour) else {
+            return;
+        };
+        if let Some(records) = self
+            .acquire_web(request, Instant::now() + page_time())
+            .await
+            && let Some((p, rows, at)) = parse_hourly(&records)
+        {
+            let mut s = self.state();
+            s.pages.hourly.insert(p, rows);
+            s.pages.hourly_at.insert(p, at);
+            s.pages.dirty = true;
+            s.pages.hourly_dirty = true;
+        }
+    }
+    fn ensure_city(
+        self: &Arc<Self>,
+        hour: Publication,
+        until: Instant,
+    ) -> Option<BoxFuture<'static, ()>> {
         if self.state().pages.city.contains_key(&hour) {
             return None;
         }
-        self.start(Flight::City(hour), Duration::from_secs(600), move |this| {
+        Some(self.own(Acq::City(hour), page_time(), until, move |this| {
             Box::pin(async move {
-                let deadline = Instant::now() + ACQUIRE_DEADLINE;
+                if !this.claim(&Flight::City(hour), Duration::from_secs(600)) {
+                    return;
+                }
                 let Ok(request) = WebRequest::city(hour) else {
                     return;
                 };
-                if let Some(records) = this.acquire_web(request, deadline).await
+                if let Some(records) = this
+                    .acquire_web(request, Instant::now() + page_time())
+                    .await
                     && let Some((p, rows)) = parse_city_record(&records)
                 {
                     let mut s = this.state();
@@ -568,9 +655,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     s.pages.hourly_dirty = true;
                 }
             })
-        })
+        }))
     }
-    /// Missing hours of the 8-day window, newest first, at most once per hour each.
+    /// One owned backfill pass over the missing hours of the 8-day window, newest first, three
+    /// at a time (legacy `getStnPastHourlyWeather`); each hour at most once per
+    /// [`BACKFILL_RETRY`]. The request does not wait for it.
     fn backfill_hours(self: &Arc<Self>, now_ms: i64) {
         let latest = latest_hourly(now_ms);
         let missing: Vec<Publication> = {
@@ -580,9 +669,29 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 .filter(|h| !s.pages.hourly.contains_key(h))
                 .collect()
         };
-        for hour in missing {
-            let _ = self.ensure_hourly(hour, BACKFILL_RETRY);
+        if missing.is_empty() {
+            return;
         }
+        let pass = self.own(
+            Acq::Backfill(latest),
+            crate::resolver::owned::MAX_OWNED,
+            Instant::now(),
+            move |this| {
+                Box::pin(async move {
+                    let due: Vec<Publication> = missing
+                        .into_iter()
+                        .filter(|h| this.claim(&Flight::Hourly(*h), BACKFILL_RETRY))
+                        .collect();
+                    for chunk in due.chunks(BACKFILL_CONCURRENCY) {
+                        crate::history::join_all(
+                            chunk.iter().map(|h| this.hourly_page(*h)).collect(),
+                        )
+                        .await;
+                    }
+                })
+            },
+        );
+        tokio::spawn(pass);
     }
     /// Acquire and publish one KMA page; the published records, or None.
     async fn acquire_web(&self, request: WebRequest, deadline: Instant) -> Option<Vec<RawRecord>> {
@@ -809,17 +918,21 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         let station_c = station.clone();
         let folded_c = folded.clone();
         let (start_c, end_c) = (start.clone(), end.clone());
-        let rx = self.start(
-            Flight::AsosRun(station.clone()),
-            ASOS_RUN_RETRY,
+        let run_key = Flight::AsosRun(station.clone());
+        self.own(
+            Acq::AsosRun(station.clone()),
+            crate::resolver::owned::MAX_OWNED,
+            until,
             move |this| {
                 Box::pin(async move {
-                    this.recover_asos(&station_c, &folded_c, &start_c, &end_c)
-                        .await
+                    if this.claim(&run_key, ASOS_RUN_RETRY) {
+                        this.recover_asos(&station_c, &folded_c, &start_c, &end_c)
+                            .await;
+                    }
                 })
             },
-        );
-        Self::wait(rx.into_iter().collect(), until).await;
+        )
+        .await;
         let fetched = self
             .state()
             .asos
@@ -846,7 +959,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         ])
     }
     async fn load_asos(self: Arc<Self>, station: &str, now_ms: f64) {
-        let deadline = Instant::now() + ACQUIRE_DEADLINE;
+        let deadline = Instant::now() + READ_DEADLINE;
         let key = AsosRequest::record_key(station);
         // Ranges start at most 7 days before a window that starts 7 days before today.
         let months = super::records::months(now_ms - 15. * 86_400_000., now_ms);
@@ -931,7 +1044,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 continue;
             };
             let _permit = self.asos_gate.clone().acquire_owned().await;
-            let deadline = Instant::now() + ACQUIRE_DEADLINE;
+            let deadline = Instant::now() + range_time();
             let Ok(Acquired::Complete(acquisition)) =
                 self.acquire.asos(request.clone(), deadline).await
             else {

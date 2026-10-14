@@ -7,6 +7,7 @@
     "server2/Cargo.lock",
     "server2/src/domestic/",
     "server2/src/history/",
+    "server2/src/providers/transport.rs",
     "server2/src/gateway/runtime.rs",
     "server2/tests/gateway/runtime.rs",
     "server2/tests/domestic.rs",
@@ -47,6 +48,7 @@
     "server2/tests/domestic/": "stations.json.gz legacy oracle (cheerio 0.20.0, Mongoose 5.1.2 savers, controllerKmaStnWeather readers, lib/history)",
     "server2/tools/migration/": "offline kmastninfos converter (export_station_seeds.py) and importer example (station_seed_import.rs), AK 2026-10-15; the production export is a separately authorized action",
     "server2/tools/kma_smoke.py": "the kma phase gets placeholder data.go.kr settings and provider roots on the loopback origin, so no provider is reached",
-    "server2/src/gateway/runtime.rs": "kma requires SERVER2_DATA_GO_KR_KEYS and SERVER2_DATA_GO_KR_DAILY_UNITS; optional provider-root overrides (HTTPS or loopback HTTP)"
+    "server2/src/gateway/runtime.rs": "kma requires SERVER2_DATA_GO_KR_KEYS and SERVER2_DATA_GO_KR_DAILY_UNITS; optional provider-root overrides (HTTPS or loopback HTTP)",
+    "server2/src/providers/transport.rs": "the legacy ASOS attempt timeout (lib/history/provider.js 10 s) in the S13d per-service timeout table"
   }
 }

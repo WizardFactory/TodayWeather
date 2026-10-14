@@ -20,7 +20,10 @@ server2 runtime never reads them or any legacy file.
   modules are stubs that throw, the ASOS provider gets a scripted in-process transport and station
   geocoding a fixed table.
 - Database: none. Models are attached to the in-memory collection double (`fakemongo.js`, with the
-  2d `$near` order: planar distance in degrees, `$maxDistance` inclusive, ties in natural order);
+  2d `$near` order: planar distance in degrees, `$maxDistance` inclusive, ties in natural order).
+  That order is the double's assumption about MongoDB's 2d index, not a recording of MongoDB:
+  parity with the oracle shows agreement with it, and the scenarios avoid equidistant stations
+  and boundary distances;
   `lib/history/store.js` gets a native-collection double with `$exists` and upsert.
 - Inputs: synthetic AWS minute/hourly pages (EUC-KR) and city observation pages built by
   `station-fixtures.js`, two committed page fixtures, and for ASOS the live 2026-10-14 station-108

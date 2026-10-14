@@ -361,3 +361,37 @@ async fn capture_metrics_render_counts() {
     );
     assert!(text.contains("server2_history_ticks_total 1"));
 }
+
+/// S13d (review S13D-R1-01): an owned capture may spend the two legacy-timeout attempts of every
+/// page it can need, plus the publication allowance; a multi-page short forecast with a slow
+/// retried first page is therefore still published.
+#[tokio::test]
+async fn capture_deadline_covers_two_legacy_attempts_per_page() {
+    use std::time::Duration;
+    let e = env("capture-legacy-deadline", CaptureConfig::default());
+    e.demand.touch(g(60, 127), at()).await.unwrap();
+    e.runner.tick(at()).await;
+    e.runner.minute(at()).await;
+    let deadlines = e.source.deadlines.lock().unwrap().clone();
+    let allowance = CaptureConfig::default().call_timeout;
+    let close =
+        |left: Duration, want: Duration| left <= want && left + Duration::from_secs(1) >= want;
+    // VilageFcst 2.0: 10 s per attempt, two attempts on each of up to five pages.
+    for kind in ["ultra-srt-ncst", "ultra-srt-fcst", "vilage-fcst"] {
+        let left = deadlines.iter().find(|(k, _)| *k == kind).unwrap().1;
+        assert!(
+            close(left, Duration::from_secs(100) + allowance),
+            "{kind}: {left:?}"
+        );
+    }
+    // KMA web pages: 30 s per attempt, one page.
+    let left = deadlines
+        .iter()
+        .find(|(k, _)| *k == "aws-minute")
+        .unwrap()
+        .1;
+    assert!(
+        close(left, Duration::from_secs(60) + allowance),
+        "aws-minute: {left:?}"
+    );
+}

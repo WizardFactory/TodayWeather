@@ -82,6 +82,65 @@ pub trait ProviderTransport: Send + Sync {
         request: &Request,
     ) -> impl Future<Output = Result<ProviderResponse, ProviderTransportError>> + Send;
 }
+/// Connect bound shared by the provider transports; each attempt's total time is the
+/// service's legacy timeout ([`attempt_timeout`]).
+pub(crate) const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
+/// Legacy per-request timeouts (S13d, AK 2026-10-14). server2 serves user requests, but a
+/// request never waits for these: owned background acquisitions do, and a request uses what is
+/// ready within its own 3-second bound.
+pub mod legacy_timeout {
+    use std::time::Duration;
+    /// `collectTownForecast._requestPage` (VilageFcst 2.0, MidFcst) and the forecast-zone
+    /// controller (`getFcstZoneCd`).
+    pub const TOWN_FORECAST: Duration = Duration::from_secs(10);
+    /// `lifeIndexKmaRequester` (UV V5, pollen V3).
+    pub const LIFE_INDEX: Duration = Duration::from_secs(30);
+    /// `kmaWarningRequester` `TIMEOUT_MS`.
+    pub const WARNINGS: Duration = Duration::from_secs(30);
+    /// `airkoreaObservation` default `timeoutMs` (all B552584 operations).
+    pub const AIRKOREA: Duration = Duration::from_secs(5);
+    /// `kasi.riseset.controller`.
+    pub const KASI: Duration = Duration::from_secs(5);
+    /// `DsfController.fetchTimeoutMs` (the S11 world VC call budget).
+    pub const VISUAL_CROSSING: Duration = Duration::from_secs(8);
+    /// `lib/history/provider.js` `timeout` (ASOS hourly/daily ranges, S15b-2).
+    pub const ASOS: Duration = Duration::from_secs(10);
+    /// `kmaScraper` AWS/city pages; legacy town RSS had no timeout, so every KMA web page gets
+    /// the scraper value.
+    pub const KMA_WEB: Duration = Duration::from_secs(30);
+    /// A data.go.kr path that names none of the services above keeps the former bound.
+    pub const OTHER: Duration = Duration::from_secs(3);
+}
+/// The legacy timeout of one HTTP attempt to `endpoint`, chosen by the data.go.kr service
+/// named in its path (`1360000/<Service>/<operation>`, `B552584/...`, `B090041/...`).
+pub fn attempt_timeout(provider: Provider, endpoint: &reqwest::Url) -> Duration {
+    use legacy_timeout as t;
+    if provider == Provider::VisualCrossing {
+        return t::VISUAL_CROSSING;
+    }
+    let segments: Vec<&str> = endpoint
+        .path_segments()
+        .map(Iterator::collect)
+        .unwrap_or_default();
+    for (i, segment) in segments.iter().enumerate() {
+        let service = segments.get(i + 1).copied();
+        match (*segment, service) {
+            (
+                "1360000",
+                Some("VilageFcstInfoService_2.0" | "MidFcstInfoService" | "FcstZoneInfoService"),
+            ) => return t::TOWN_FORECAST,
+            ("1360000", Some("LivingWthrIdxServiceV5" | "HealthWthrIdxServiceV3")) => {
+                return t::LIFE_INDEX;
+            }
+            ("1360000", Some("WthrWrnInfoService")) => return t::WARNINGS,
+            ("1360000", Some("AsosHourlyInfoService" | "AsosDalyInfoService")) => return t::ASOS,
+            ("B552584", Some(_)) => return t::AIRKOREA,
+            ("B090041", Some(_)) => return t::KASI,
+            _ => (),
+        }
+    }
+    t::OTHER
+}
 pub struct HttpProviderTransport {
     client: reqwest::Client,
     maximum: usize,
@@ -100,8 +159,7 @@ impl HttpProviderTransport {
             .no_brotli()
             .no_deflate()
             .no_zstd()
-            .connect_timeout(Duration::from_secs(1))
-            .timeout(Duration::from_secs(3))
+            .connect_timeout(CONNECT_TIMEOUT)
             .build()
             .map_err(|_| ProviderTransportError::Transport)?;
         Ok(Self { client, maximum })
@@ -141,9 +199,11 @@ impl ProviderTransport for HttpProviderTransport {
                 | Provider::Waqi => return Err(ProviderTransportError::Invalid),
             }
         }
+        let timeout = attempt_timeout(request.provider, &request.endpoint);
         let response = self
             .client
             .get(url)
+            .timeout(timeout)
             .send()
             .await
             .map_err(|_| ProviderTransportError::Transport)?;

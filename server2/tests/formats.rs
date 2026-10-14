@@ -10,6 +10,8 @@ mod common;
 mod domestic;
 #[path = "formats/legacy_sources.rs"]
 mod legacy_sources;
+#[path = "formats/national.rs"]
+mod national;
 #[path = "formats/smoke.rs"]
 mod smoke;
 #[path = "formats/transport.rs"]

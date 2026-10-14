@@ -131,9 +131,13 @@ master `f49921b6`. Outside paths: this plan, the intent/spec records and the S15
 
 ### Calls per path
 
-AWS minute ≤ 30/h (720/day); AWS hourly 1/h plus a one-time backfill of up to 190 hours; city
-1/h (≤ 6/h while the page is stale); ASOS 2 per mapped station cold, then ≤ 2 per station and day
-plus hourly retries of incomplete ranges; station geocoding once per unseeded station address.
+Acquisitions, which also hold when a call fails; each acquisition makes at most two HTTP attempts per page:
+
+- AWS minute: at most one per 2 minutes (≤ 30/h, ≤ 720/day).
+- AWS hourly: the latest and previous hours ≤ 6/h each until acquired. The backfill acquires each missing hour of the 8-day window at most once per 6 hours: 190 once at a cold start, ≤ 190 per 6 h during an outage.
+- City: ≤ 6/h while missing.
+- ASOS: one recovery run per mapped station at most once per hour. That is 2 calls cold, then ≤ 2 per station and day, plus hourly runs while ranges stay incomplete (≤ 8 pages per range).
+- Station geocoding: once per unseeded station address.
 
 ### Scenarios
 

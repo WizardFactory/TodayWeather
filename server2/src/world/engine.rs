@@ -23,6 +23,8 @@ const FAILURE_BACKOFF_MS: f64 = 2_000.;
 const BAD_RESPONSE_BACKOFF_MS: f64 = 15. * 60_000.;
 const PROVIDER_DOWN_MS: f64 = 10. * 60_000.;
 const AIR_DEADLINE: Duration = Duration::from_millis(4_000);
+/// Time left for assembly between the weather waiter and the attempt deadline (S13d).
+const RESPONSE_MARGIN: Duration = Duration::from_millis(150);
 
 /// Request instant source (the legacy `new Date()`); tests inject a fixed clock.
 pub trait Clock: Send + Sync + 'static {
@@ -508,7 +510,13 @@ impl World {
         // falls back to `forecast` on an unfundable range, and a request behind a busy or
         // backed-off cell checks eligibility before failing.
         let forecast_only = no_yesterday;
-        let waiter = deadline.min(started + self.inner.config.response);
+        // S13d: answer from what is ready shortly before the attempt deadline, so a stored-record
+        // fallback is assembled before the dispatcher's own attempt timeout can turn it into an
+        // error. The owned fetch continues and publishes for the next request.
+        let waiter = deadline
+            .checked_sub(RESPONSE_MARGIN)
+            .unwrap_or(deadline)
+            .min(started + self.inner.config.response);
         // Leave time to turn a funding outcome into the response before the attempt ends.
         let respond_by = waiter
             .checked_sub(Duration::from_millis(50))
