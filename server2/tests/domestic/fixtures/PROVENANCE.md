@@ -1,13 +1,13 @@
 # S15 KMA v000903 oracle fixtures
 
-`oracle.json.gz` (sha256 `0d6a19aa2fdbe8f2e482b86711521234a733ce308370074003e017db76e7ae77`) holds pinned legacy-oracle recordings
+`oracle.json.gz` (sha256 `d4393ff00d583b0a37d95668a3e03eb47d28a759a85a3dafe34bafdffc5eb1bc`) holds pinned legacy-oracle recordings
 for the native KMA v000903 assembly tests. It is test data only; the server2 runtime never reads
 it or any legacy file.
 
 ## Recording
 
 - Legacy source: the S02 oracle baseline files; the sha256 of every legacy file read while
-  recording is stored in `source.files` (50 files, unchanged at `87ab79cd`).
+  recording is stored in `source.files` (50 files, as merged with master `437baccb`; responses re-recorded byte-identical after the #2737 `controllerManager.js` change).
 - Runtime: Node.js `v16.20.2` (official darwin-arm64 tarball, sha256
   `6a5c4108475871362d742b988566f3fe307f6a67ce14634eb3fbceb4f9eea88c`, matching `SHASUMS256.txt`),
   `TZ=UTC`, `NODE_ENV=production`, dependencies installed with `npm ci --ignore-scripts` from
