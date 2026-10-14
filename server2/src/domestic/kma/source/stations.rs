@@ -82,10 +82,18 @@ fn cast_set(row: &Doc) -> Option<Doc> {
     Some(set)
 }
 
-/// One station collection (`KmaStnHourly2` or `KmaStnMinute2`) in natural order.
+/// One station collection (`KmaStnHourly2` or `KmaStnMinute2`) in natural order, indexed by
+/// the upsert key `{stnId, date}`.
 #[derive(Debug, Clone, Default)]
 pub struct RowStore {
     docs: Vec<Doc>,
+    index: std::collections::HashMap<(u64, u64), usize>,
+}
+fn row_key(id: &Val, date: &Val) -> Option<(u64, u64)> {
+    match (id, date) {
+        (Val::Num(i), Val::Date(d)) => Some((i.to_bits(), d.to_bits())),
+        _ => None,
+    }
 }
 impl RowStore {
     pub fn docs(&self) -> &[Doc] {
@@ -99,11 +107,10 @@ impl RowStore {
             else {
                 continue;
             };
-            let at = self
-                .docs
-                .iter()
-                .position(|d| d.get("stnId") == Some(&id) && d.get("date") == Some(&date));
-            match at {
+            let Some(k) = row_key(&id, &date) else {
+                continue;
+            };
+            match self.index.get(&k).copied() {
                 Some(i) => {
                     for (k, v) in set.entries() {
                         self.docs[i].set(k, v.clone());
@@ -117,6 +124,7 @@ impl RowStore {
                     for (k, v) in set.entries() {
                         doc.set(k, v.clone());
                     }
+                    self.index.insert(k, self.docs.len());
                     self.docs.push(doc);
                 }
             }
@@ -149,13 +157,16 @@ impl RowStore {
         out.sort_by(|a, b| date_of(b).total_cmp(&date_of(a)));
         out
     }
-    /// Keep only the rows of these stations (memory bound of the cached collection).
-    pub fn retain_stations(&mut self, ids: &std::collections::BTreeSet<String>) {
-        self.docs.retain(|d| {
-            d.get("stnId")
-                .and_then(Val::as_num)
-                .is_some_and(|n| ids.contains(&crate::gateway::response::js_number(n)))
-        });
+    /// Remove rows dated at or before `before` (memory bound of the minute collection; the
+    /// readers never look that far back).
+    pub fn drop_before(&mut self, before: f64) {
+        self.docs.retain(|d| date_of(d) > before);
+        self.index = self
+            .docs
+            .iter()
+            .enumerate()
+            .filter_map(|(i, d)| Some((row_key(d.get("stnId")?, d.get("date")?)?, i)))
+            .collect();
     }
 }
 pub fn date_of(d: &Doc) -> f64 {
@@ -169,6 +180,7 @@ pub fn date_of(d: &Doc) -> f64 {
 #[derive(Debug, Clone, Default)]
 pub struct Registry {
     docs: Vec<Doc>,
+    index: std::collections::HashMap<String, usize>,
 }
 /// Geocoding of a station address (`_recursiveConvertGeoCode`, then the product geocoder):
 /// `[lon, lat]`, or None when it fails (the station is not registered in that run).
@@ -179,6 +191,10 @@ impl Registry {
     pub fn docs(&self) -> &[Doc] {
         &self.docs
     }
+    /// Whether station `id` is registered.
+    pub fn has(&self, id: &str) -> bool {
+        self.index.contains_key(id)
+    }
     /// `_saveStnInfo` for every row of one hourly run (`city_available` false is the legacy
     /// `cityUnavailable` run, which keeps the stored `isCityWeather`).
     pub fn apply_run(&mut self, rows: &[Doc], city_available: bool, geo: &dyn StationGeo) {
@@ -188,11 +204,7 @@ impl Registry {
                 continue;
             };
             let city = row.get("isCityWeather").cloned();
-            match self
-                .docs
-                .iter_mut()
-                .find(|d| d.get("stnId").and_then(Val::as_str) == Some(id))
-            {
+            match self.index.get(id.as_str()).map(|i| &mut self.docs[*i]) {
                 Some(saved) => {
                     if city_available && saved.get("isCityWeather") != city.as_ref() {
                         match &city {
@@ -220,6 +232,7 @@ impl Registry {
                     }
                     doc.set("geo", Val::Arr(vec![Val::num(lon), Val::num(lat)]));
                     doc.set("__v", Val::Num(0.));
+                    self.index.insert(id.clone(), self.docs.len());
                     self.docs.push(doc);
                 }
             }

@@ -309,6 +309,59 @@ impl AsosStore {
             self.save(f.kind, station, &key, &values, f.fetched_at_ms);
         }
     }
+    /// The station's row of a nationwide AWS hourly page (ongoing hours; AK 2026-10-15: the
+    /// page carries the ASOS stations). Applied like a one-key recovery: only while the hour is
+    /// not complete, with the hourly ASOS field mapping (`t1h`, `reh`, `rs1h` as `rn1` outside
+    /// November–March, `wsd`, `vec`). The document records `origin` so it is distinguishable
+    /// from a data.go.kr row; the merge reads it as an ASOS hourly record.
+    pub fn apply_national(&mut self, station: &str, row: &Doc, fetched_at: f64) {
+        let Some(Val::Date(ms)) = row.get("date") else {
+            return;
+        };
+        // Station rows store the KST wall clock in UTC fields.
+        let Some(iso) = crate::world::js::iso(*ms) else {
+            return;
+        };
+        if &iso[14..] != "00:00.000Z" {
+            return;
+        }
+        let key = iso[..16].replace(['-', 'T', ':'], "");
+        if !policy::instant(&V::s(&key)).is_finite()
+            || !self.missing(AsosKind::Hourly, station, std::slice::from_ref(&key)).contains(&key)
+        {
+            return;
+        }
+        let month: u32 = key[4..6].parse().unwrap_or(0);
+        let mut values = Doc::new();
+        for (source, field) in [
+            ("t1h", "t1h"),
+            ("reh", "reh"),
+            ("rs1h", "rn1"),
+            ("wsd", "wsd"),
+            ("vec", "vec"),
+        ] {
+            if source == "rs1h" && (month <= 3 || month >= 11) {
+                continue;
+            }
+            if let Some(Val::Num(n)) = row.get(source)
+                && valid(field, *n)
+            {
+                values.set(field, Val::num(*n));
+            }
+        }
+        if values.entries().is_empty() {
+            return;
+        }
+        let new = self.find(&id(AsosKind::Hourly, station, &key)).is_none();
+        self.save(AsosKind::Hourly, station, &key, &values, fetched_at);
+        if new && let Some(i) = self.find(&id(AsosKind::Hourly, station, &key)) {
+            let doc = &mut self.docs[i];
+            let values = doc.get("values").cloned().unwrap_or(Val::Doc(Doc::new()));
+            doc.remove("values");
+            doc.set("origin", Val::str("KMA_AWS_HOURLY_PAGE"));
+            doc.set("values", values);
+        }
+    }
     /// `Store.save(row)`.
     fn save(&mut self, kind: AsosKind, station: &str, key: &str, values: &Doc, fetched_at: f64) {
         let _id = id(kind, station, key);

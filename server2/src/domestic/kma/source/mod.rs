@@ -15,6 +15,7 @@ mod doc;
 mod grid;
 pub mod asos;
 pub mod html;
+pub mod observe;
 mod items;
 mod mid;
 pub mod pages;
