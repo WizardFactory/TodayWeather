@@ -640,9 +640,10 @@ provides the actual SDK/HTTP S3 and shared-client path. No real provider or devi
 
 `forecast-zone.test.js` (in `test:offline`) drives the zone refresh with synthetic
 `getFcstZoneCd` pages and an in-memory model: 1000+1000+5 and 1000+`03` paging,
-twenty failure shapes (307, non-`00`, `03` on page 1, malformed bodies, per-page
+twenty-four failure shapes (307, non-`00`, `03` on page 1, malformed bodies, per-page
 `totalCount`/`pageNo`/`numOfRows` mismatch, duplicate `regId`, page-2 transport
-error, page limit, optional fields of an unstorable type) with zero writes and no
+error, page limit, optional fields of an unstorable type, overflowing numeric
+strings and out-of-range coordinates) with zero writes and no
 key or URL in logs, provider codes that try to carry a URL or key, key rotation,
 retirement of absent zones, the town mapping including `대구광역시 군위군`, the
 176-zone land file and the Manager's `getMidTa` selection.
@@ -650,7 +651,8 @@ retirement of absent zones, the town mapping including `대구광역시 군위�
 `forecast-zone-smoke.js` runs the same refresh through the real `request` library
 against a loopback gateway and stores into a real mongod with Mongoose 5.1.2 and
 the real model: a 307 is not followed and writes nothing, a row whose `seq` Mongoose
-cannot cast fails before any write, a rejected key rotates,
+cannot cast and a longitude string that overflows to `Infinity` fail before any
+write, a rejected key rotates,
 1,005 zones are stored, a legacy `11H10603` row is retired and lookups run as Mongo
 queries. It needs `mongoose@5.1.2`, `async`, `request` and
 `mongodb-memory-server-core@10.1.4`; set `TW_MONGOD` to a Mongo 4.4 binary (as the

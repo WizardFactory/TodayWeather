@@ -161,7 +161,8 @@ and 255 items, and page 3 answered `03 NO_DATA`). Each page must therefore have
 `regSp` values (the aggregate `11BD0000` has `"0"`) and missing or zero coordinates
 are accepted, the latter without `geo`. Each item is reduced to the model fields and
 type-checked before any write (text fields as strings, `tmEd`/`tmSt` as digit strings,
-`seq` and coordinates as numbers); an unusable value fails the refresh. Error messages
+`seq` and coordinates as finite numbers, `geo` within longitude [-180, 180) and
+latitude [-90, 90]); an unusable value fails the refresh. Error messages
 carry provider codes only as short digit strings. A page shorter than 1000 items ends the list,
 as does `03` after a full page. A duplicate `regId`, any other code, a malformed body
 or an eleventh page fails the whole refresh before any write. A truncated page that

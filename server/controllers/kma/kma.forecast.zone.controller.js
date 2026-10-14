@@ -40,8 +40,9 @@ function normalizeZone(obj) {
     const absent = value => value === undefined || value === null;
     const digits = value => typeof value === 'number' ? Number.isInteger(value) && value >= 0 :
         typeof value === 'string' && /^\d+$/.test(value);
-    const decimal = value => typeof value === 'number' ? isFinite(value) :
-        typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value);
+    // Converted values must stay finite: a long digit string becomes Infinity.
+    const decimal = value => (typeof value === 'number' ||
+        typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value)) && isFinite(Number(value));
     for (const field of TEXT_FIELDS) {
         if (absent(obj[field])) { continue; }
         if (typeof obj[field] !== 'string' && !(typeof obj[field] === 'number' && isFinite(obj[field]))) {
@@ -64,6 +65,10 @@ function normalizeZone(obj) {
     }
     const lon = Number(obj.lon), lat = Number(obj.lat);
     if (!absent(obj.lon) && !absent(obj.lat) && lon !== 0 && lat !== 0) {
+        // The 2d index on geo accepts [-180, 180) per axis; latitude must also be a real latitude.
+        if (lon < -180 || lon >= 180 || lat < -90 || lat > 90) {
+            return undefined;
+        }
         zone.geo = [lon, lat];
     }
     return zone;

@@ -167,6 +167,11 @@ const failures = {
     'item with a non-numeric tmEd': [page([item('11B10101'), item('11B10102', {tmEd: '2100-12-31'})], 1)],
     'item with an object stnF3': [page([item('11B10101'), item('11B10102', {stnF3: {code: 1}})], 1)],
     'item with a non-numeric lat': [page([item('11B10101'), item('11B10102', {lat: 'north'})], 1)],
+    // Review Z-R2-001: converted numbers must be finite and coordinates inside the 2d index bounds.
+    'item with an overflowing lon string': [page([item('11B10101'), item('11B10102', {lon: '9'.repeat(400), lat: 37})], 1)],
+    'item with an overflowing seq string': [page([item('11B10101'), item('11B10102', {seq: '9'.repeat(400)})], 1)],
+    'item with a latitude outside -90..90': [page([item('11B10101'), item('11B10102', {lat: 95})], 1)],
+    'item with a longitude outside -180..180': [page([item('11B10101'), item('11B10102', {lon: -181})], 1)],
     'item with a non-string regUp': [page([item('11B10101'), item('11B10102', {regUp: ['11B00000']})], 1)],
     'page limit exceeded': Array.from({length: 11}, (_, i) => page(ids('1' + String.fromCharCode(65 + i), ROWS).map(id => item(id)), i + 1))
 };

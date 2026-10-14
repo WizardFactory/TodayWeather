@@ -20,4 +20,6 @@ Executions (Node v24.19.0; isolated deps: mocha 2.5.3, async 2.6.4, mongoose 5.1
 
 Review correction (PR review 1, Codex `gpt-6.1-sol`: Z-R1-001 unstorable optional fields caused partial writes; Z-R1-002 unvalidated provider codes in error messages): Red `forecast-zone.test.js` 6 of 30 failing on the rebased candidate; Green and post-refactor 30/30; `test:offline` exit 0; `data-go-kr-keys-smoke.js` PASS; `forecast-zone-smoke.js` PASS including a `seq: "bad number"` page that now fails with no rows written; live check repeated: 755 stored, 219 city, 176 mid-temperature zones, 1 request.
 
+Re-review (Codex, head `ae58a952`): Z-R1-001/002 resolved; Z-R2-001 — a numeric string overflowing to `Infinity` reached `geo` and real MongoDB rejected it after other rows were stored. Fix: finiteness after conversion and `geo` bounds. Red 4 of 34 failing (`runs4`); Green/post-refactor 34/34; `test:offline` exit 0; keys smoke PASS; `forecast-zone-smoke.js` PASS with the overflowing-longitude page writing nothing; live check repeated (755/219/176, 1 request).
+
 Limitations: no production gather run, deployment or CI-equivalent Node 22 run locally (CI runs Node 22.22.2 and the Node 16 container job). A truncated but internally consistent provider page cannot be detected. server2 S13a still targets newsky2 and is handled in a separate task.
