@@ -13,9 +13,11 @@ use std::sync::Arc;
 
 #[test]
 fn deployed_current_count_is_the_default() {
-    // `manager.MAX_CURRENT_COUNT`; the oracle harness stubs 200 and the tests use that value.
+    // `manager.MAX_CURRENT_COUNT` of the deployed controllerManager.js; the oracle recording
+    // was made with the same value (D4), so tests replay with the runtime default.
     assert_eq!(AssemblyConfig::default().max_current_count, 192);
-    assert_eq!(oracle_config().max_current_count, 200);
+    assert_eq!(oracle()["oracle"]["max_current_count"], 192);
+    assert_eq!(oracle_config(), AssemblyConfig::default());
 }
 
 /// A recording with one scenario's fields edited (keys of the edited copy are re-sorted, which

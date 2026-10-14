@@ -13,7 +13,8 @@ use crate::{
 };
 use std::sync::Arc;
 
-/// Combined in-flight S3 requests of the process (world weather, world air and budgets).
+/// Combined in-flight S3 requests of the process (world weather, world air, budgets and the KMA
+/// input source), below the 16-connection limit of the S3 test peer.
 const S3_IN_FLIGHT: usize = 12;
 type Var<'a> = &'a dyn Fn(&str) -> Option<String>;
 
@@ -85,7 +86,7 @@ pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
     };
     let families = NativeFamilies::from_vars(var)?;
     let backend = BackendDispatcher::legacy(&base)?;
-    let s3 = if families.geocode || families.dsf {
+    let s3 = if families.geocode || families.dsf || families.kma {
         Some(shared_s3(var)?)
     } else {
         None
@@ -94,13 +95,18 @@ pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
         (Some(s3), true) => Arc::new(native_geocoder(var, s3.clone())?),
         _ => Arc::new(LegacyGeocoder::new(&base)?),
     };
-    if let (Some(s3), true) = (s3, families.dsf) {
+    if let (Some(s3), true) = (s3.clone(), families.dsf) {
         crate::world::runtime::select(&backend, crate::world::runtime::build(var, s3)?)?;
     }
-    if families.kma {
-        // S15: the native assembly has no S3 input source until S15b, so the handler forwards
-        // every request to legacy and reads no settings yet.
-        crate::domestic::kma::backend::select_native(&backend)?;
+    if let (Some(s3), true) = (s3, families.kma) {
+        // S15b: the S3 input source over the shared admission. Inputs owned by later slices
+        // still forward with named reasons until S15b-4.
+        let source = crate::domestic::kma::source::S3Source::new(
+            s3,
+            crate::domestic::kma::backend::system_clock(),
+        )
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
+        crate::domestic::kma::backend::select_native(&backend, Arc::new(source))?;
     }
     Ok(Some(Arc::new(Gateway::new(geocoder, backend))))
 }

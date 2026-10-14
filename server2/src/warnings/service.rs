@@ -187,7 +187,7 @@ impl<T: CatalogTransport> WarningService<T> {
     /// the collector can still publish; a full rebuild replays everything since the seed.
     /// Memory is readable during a refresh, so a timed-out or failed refresh still serves
     /// valid memory.
-    async fn zone_state(
+    pub(crate) async fn zone_state(
         &self,
         now_ms: i64,
         deadline: Instant,

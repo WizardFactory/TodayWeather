@@ -10,7 +10,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use server2::{
     domestic::kma::{
         AssemblyConfig, KmaRequest,
-        backend::{KmaBackend, KmaSource, SourceAnswer, select_native},
+        backend::{KmaBackend, KmaSource, LegacyOnly, SourceAnswer, select_native},
     },
     gateway::{
         BackendDispatcher, BackendMode, BoxFuture, Family, Gateway, GatewayError, Geocoder, Version,
@@ -278,10 +278,10 @@ async fn native_kma_reproduces_s02_gateway_goldens_and_rolls_back() {
     );
 }
 
-/// `SERVER2_NATIVE_FAMILIES=kma` registers and selects the handler with the runtime source
-/// (`LegacyOnly` until S15b): every request reaches legacy and the goldens hold.
+/// `select_native` registers and selects the handler with the given source; a source that
+/// supplies no inputs sends every request to legacy and the goldens hold.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn runtime_default_source_forwards_everything_to_legacy() {
+async fn a_source_without_inputs_forwards_everything_to_legacy() {
     warm();
     let hits = Arc::new(AtomicUsize::new(0));
     let case: Case = Arc::new(Mutex::new(None));
@@ -291,7 +291,7 @@ async fn runtime_default_source_forwards_everything_to_legacy() {
         dispatcher.mode(Version::V000903, Family::Kma),
         BackendMode::Legacy
     );
-    select_native(&dispatcher).unwrap();
+    select_native(&dispatcher, Arc::new(LegacyOnly)).unwrap();
     assert_eq!(
         dispatcher.mode(Version::V000903, Family::Kma),
         BackendMode::Native
@@ -331,20 +331,33 @@ async fn assembly_paths_legacy_cannot_share_are_forwarded() {
     let _ = AssemblyConfig::default();
 }
 
-/// The routing list is the only switch: `kma` alone builds the gateway without S3 or provider
-/// settings while the source is `LegacyOnly`; unset keeps legacy.
+/// The routing list is the only switch (S15b-1): `kma` builds the S3 input source from the
+/// shared `SERVER2_S3_*` settings, which are then required; unset keeps legacy and reads none.
 #[test]
 fn native_families_kma_is_the_only_switch() {
     use server2::gateway::runtime::{NativeFamilies, from_vars};
-    let with = |families: Option<&'static str>| {
+    let with = |families: Option<&'static str>, s3: bool| {
         move |name: &str| match name {
             "SERVER2_GATEWAY_LEGACY_URL" => Some("http://127.0.0.1:9".to_owned()),
             "SERVER2_NATIVE_FAMILIES" => families.map(str::to_owned),
+            "SERVER2_S3_ENDPOINT" if s3 => Some("http://127.0.0.1:9/".to_owned()),
+            "SERVER2_S3_BUCKET" if s3 => Some("server2-test".to_owned()),
+            "SERVER2_S3_ACCESS_KEY_ID" if s3 => Some("test-access".to_owned()),
+            "SERVER2_S3_SECRET_ACCESS_KEY" if s3 => Some("test-secret".to_owned()),
             _ => None,
         }
     };
-    assert!(NativeFamilies::from_vars(&with(Some("kma"))).unwrap().kma);
-    assert!(!NativeFamilies::from_vars(&with(None)).unwrap().kma);
-    assert!(from_vars(&with(Some("kma"))).unwrap().is_some());
-    assert!(from_vars(&with(Some("kma,kma"))).is_err());
+    assert!(
+        NativeFamilies::from_vars(&with(Some("kma"), false))
+            .unwrap()
+            .kma
+    );
+    assert!(!NativeFamilies::from_vars(&with(None, false)).unwrap().kma);
+    assert!(from_vars(&with(Some("kma"), true)).unwrap().is_some());
+    assert!(
+        from_vars(&with(Some("kma"), false)).is_err(),
+        "kma needs the shared S3 settings"
+    );
+    assert!(from_vars(&with(None, false)).unwrap().is_some());
+    assert!(from_vars(&with(Some("kma,kma"), true)).is_err());
 }

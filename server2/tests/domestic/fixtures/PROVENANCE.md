@@ -1,6 +1,6 @@
 # S15 KMA v000903 oracle fixtures
 
-`oracle.json.gz` (sha256 `1222deec69733cd65610fd220d18b8e29e6d094b6ae123072ccb30602650b66d`) holds pinned legacy-oracle recordings
+`oracle.json.gz` (sha256 `a5069c92dd2cf4f9d5e0cd81bfe0a18e563ba368ceb841ff823c1312d3e0cc07`) holds pinned legacy-oracle recordings
 for the native KMA v000903 assembly tests. It is test data only; the server2 runtime never reads
 it or any legacy file.
 
@@ -15,9 +15,11 @@ it or any legacy file.
   task-owned loopback; HTTPS was denied.
 - Harness: the maintained legacy offline harness `server/test/offline/rss-response-smoke.js`, loaded
   as the S02 recorder loads it, with the real `/v000903/kma` router (`route.kma.v000903.js`) and i18n.
-  The harness stubs `manager.MAX_CURRENT_COUNT` as 200 (the deployed manager uses 192); tests use
-  the recorded value.
-- Driver: the script below (sha256 `7974a5b7d96a2c24bc469b58bb710de55c81f05187b03bcc2437b500d7ba5487`), run as
+  The harness stubs `manager.MAX_CURRENT_COUNT` as 200; the driver loads it with 192, the deployed
+  `controllerManager.js` value (D4, AK 2026-10-14, S15b-1 #2742). Recorded again on master `1ce314d6`
+  with 192: all 76 statuses, ETags, bodies and store calls are identical to the earlier 200 recording,
+  and tests use the runtime default.
+- Driver: the script below (sha256 `42832d5bceb622637ccda2ba0be0c44be1db66f8e77ae9471d5fb980fb6a6300`), run as
   `TZ=UTC NODE_ENV=production NODE_PATH=<deps>/node_modules node record-kma.js <repo> <out.json.gz>`.
   It is retained here as documentation rather than as an executable repository tool, because a new
   server2-located script reading legacy source would be a new placement exception; the S02 recorder
@@ -226,6 +228,8 @@ function makeDomesticHarness() {
         code = swap(code, 'exec(callback){if(failure)return callback(new Error(failure));callback(null,data());}',
             'exec(callback){if(failure){__modelCall(name,query,undefined,failure);return callback(new Error(failure));}callback(null,data());}');
         code = swap(code, "current:'202609240900'", "current:fixture.currentPub||'202609240900'");
+        // D4 (AK, 2026-10-14): the deployed manager keeps 192 current slots (controllerManager.js).
+        code = swap(code, 'MAX_CURRENT_COUNT:200', 'MAX_CURRENT_COUNT:192');
         code = swap(code, "getRegIdByTown:(r,c,cb)=>cb(null,{pointNumber:'109',cityCode:'11B10101'})",
             "getRegIdByTown:(r,c,cb)=>{const v={pointNumber:'109',cityCode:'11B10101'};__record('region_code',[r,c],v);cb(null,v);}");
         code = swap(code, '  function localRequire(id) {', '  function localRequire(id) { return __instrument(id, __innerRequire(id)); }\n  function __innerRequire(id) {');
@@ -491,7 +495,7 @@ async function run() {
     delete process.env.TW_SMOKE_NOW;
     const recordOut = {schema: 1, oracle: {node: process.version, tz: process.env.TZ, harness: 'server/test/offline/rss-response-smoke.js',
         route: 'server/routes/v000903/route.kma.v000903.js', i18n: require('i18n/package.json').version, express: require('express/package.json').version,
-        max_current_count: 200}, source: {files: Object.fromEntries(Object.entries(sourceFiles).sort())}, scenarios: out};
+        max_current_count: 192}, source: {files: Object.fromEntries(Object.entries(sourceFiles).sort())}, scenarios: out};
     const text = JSON.stringify(recordOut);
     fs.writeFileSync(outFile, zlib.gzipSync(Buffer.from(text), {level: 9, mtime: 0}));
     console.log(JSON.stringify({scenarios: out.length, bytes: text.length, sha256: sha(Buffer.from(text))}));

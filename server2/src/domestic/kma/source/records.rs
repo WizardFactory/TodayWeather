@@ -1,0 +1,174 @@
+//! S3 reads of the source: published catalogs only (an interrupted upload never counts), listed
+//! per key and KST month and read through S06 `lookup`, every complete acquisition with its pages
+//! in page order and its fetch instant.
+use crate::history::IndexListing;
+use crate::storage::{CatalogId, CatalogStore, Error, LookupOutcome, ProviderKey, sha256};
+use std::sync::Arc;
+use tokio::time::Instant;
+
+/// One complete acquisition.
+#[derive(Debug, Clone)]
+pub struct Fetched {
+    pub fetched_at_ms: u64,
+    /// The catalog partition (publication `YYYYMMDD-HHMM` or KST day).
+    pub partition: String,
+    pub pages: Vec<Arc<[u8]>>,
+}
+impl Fetched {
+    pub fn page_refs(&self) -> Vec<&[u8]> {
+        self.pages.iter().map(|p| &p[..]).collect()
+    }
+}
+/// LIST pages allowed per key and month (1,000 keys each; a month of hourly partitions is 744).
+const LIST_PAGES: usize = 4;
+/// Catalog lookups in flight at once per load (below the shared S3 admission).
+pub const LOOKUPS: usize = 8;
+
+pub struct Reader<T> {
+    pub transport: T,
+    pub store: Arc<CatalogStore<T>>,
+}
+impl<T: IndexListing + Clone> Reader<T> {
+    fn prefix(source: &str, kind: &str, key: &ProviderKey) -> Result<String, Error> {
+        Ok(format!(
+            "index/v2/{source}/{kind}/{}/",
+            sha256(&key.canonical_bytes()?)
+        ))
+    }
+    /// Published partitions of one key in the given KST months (`YYYYMM`), ascending. An
+    /// incomplete listing is an error: absence cannot be proved.
+    pub async fn partitions(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        months: &[u32],
+        deadline: Instant,
+    ) -> Result<Vec<String>, Error> {
+        let prefix = Self::prefix(source, kind, key)?;
+        let mut out = Vec::new();
+        for month in months {
+            let mut token: Option<String> = None;
+            let mut done = false;
+            for _ in 0..LIST_PAGES {
+                let page = tokio::time::timeout_at(
+                    deadline,
+                    self.transport
+                        .list_index(&format!("{prefix}{month:06}"), token.as_deref()),
+                )
+                .await
+                .map_err(|_| Error::Timeout)??;
+                for key in page.keys {
+                    if let Some(p) = key
+                        .strip_prefix(&prefix)
+                        .and_then(|k| k.strip_suffix(".json"))
+                    {
+                        out.push(p.to_owned());
+                    }
+                }
+                token = page.next;
+                if token.is_none() {
+                    done = true;
+                    break;
+                }
+            }
+            if !done {
+                return Err(Error::Capacity);
+            }
+        }
+        out.sort();
+        out.dedup();
+        Ok(out)
+    }
+    /// Every complete acquisition of one catalog; empty when the catalog does not exist.
+    pub async fn acquisitions(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        deadline: Instant,
+    ) -> Result<Vec<Fetched>, Error> {
+        let id = CatalogId {
+            source: source.into(),
+            kind: kind.into(),
+            key_sha256: sha256(&key.canonical_bytes()?),
+            partition: partition.into(),
+        };
+        id.validate()?;
+        let set = match self.store.lookup(&id, deadline).await {
+            Ok(LookupOutcome::Ready(set)) => set,
+            Ok(LookupOutcome::Incomplete) => return Err(Error::Corrupt("incomplete catalog")),
+            Err(Error::NotFound) => return Ok(Vec::new()),
+            Err(e) => return Err(e),
+        };
+        let mut out = Vec::new();
+        for a in set.acquisitions() {
+            let mut records: Vec<_> = a.records().to_vec();
+            records.sort_by_key(|r| r.envelope.pagination.as_ref().map_or(1, |p| p.page));
+            // An acquisition is complete when its last page arrived: that instant orders
+            // replays and decides whether it existed at a request instant.
+            let Some(completed) = records
+                .iter()
+                .map(|r| r.envelope.identity.fetched_at_ms)
+                .max()
+            else {
+                continue;
+            };
+            out.push(Fetched {
+                fetched_at_ms: completed,
+                partition: partition.into(),
+                pages: records.iter().map(|r| r.bytes.clone()).collect(),
+            });
+        }
+        Ok(out)
+    }
+    /// Acquisitions of many partitions of one key, at most [`LOOKUPS`] lookups at a time,
+    /// ordered by fetch instant (stable by partition).
+    pub async fn all(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partitions: &[String],
+        deadline: Instant,
+    ) -> Result<Vec<Fetched>, Error> {
+        let mut out = Vec::new();
+        for chunk in partitions.chunks(LOOKUPS) {
+            let reads = crate::history::join_all(
+                chunk
+                    .iter()
+                    .map(|p| self.acquisitions(source, kind, key, p, deadline))
+                    .collect(),
+            )
+            .await;
+            for r in reads {
+                out.extend(r?);
+            }
+        }
+        out.sort_by(|a, b| {
+            a.fetched_at_ms
+                .cmp(&b.fetched_at_ms)
+                .then_with(|| a.partition.cmp(&b.partition))
+        });
+        Ok(out)
+    }
+}
+/// KST months (`YYYYMM`) from `from_ms` through `to_ms`.
+pub fn months(from_ms: f64, to_ms: f64) -> Vec<u32> {
+    let mut out = Vec::new();
+    let mut t = from_ms;
+    loop {
+        if let Some(p) = crate::world::js::parts(t + 9. * 3_600_000.) {
+            let m = (p.year * 100 + p.month) as u32;
+            if out.last() != Some(&m) {
+                out.push(m);
+            }
+        }
+        if t >= to_ms {
+            break;
+        }
+        t = (t + 86_400_000.).min(to_ms);
+    }
+    out
+}

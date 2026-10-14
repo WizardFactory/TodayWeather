@@ -329,6 +329,17 @@ impl<T: CatalogTransport> CatalogTransport for BoundedS3<T> {
             .await
     }
 }
+/// S14 index LISTs (and S15b catalog listings) under the same admission.
+impl<T: crate::history::IndexListing + Send + Sync> crate::history::IndexListing for BoundedS3<T> {
+    async fn list_index(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+    ) -> Result<crate::storage::ListPage, Error> {
+        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        self.inner.list_index(prefix, token).await
+    }
+}
 impl<T: crate::budget::BudgetTransport> crate::budget::BudgetTransport for BoundedS3<T> {
     async fn get_budget(
         &self,
