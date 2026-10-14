@@ -515,3 +515,60 @@ fn the_short_lookback_covers_retained_slots_of_old_publications() {
     );
     let _ = grid_documents;
 }
+
+/// S15b1-R7: a list published after the memory fold but completed before the last folded one is
+/// not appended out of order: the refresh refolds, so warm memory equals a cold fold.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_late_zone_list_refolds_instead_of_being_skipped() {
+    let peer = Peer::new();
+    let store = store(&peer);
+    let t0 = 1_791_849_600_000.; // 2026-10-13 09:00 KST
+    let t1 = t0 + 3_600_000.;
+    let now = t1 + 3_600_000.;
+    // List B (without ht) is published first; list A (ht 12.5) completed earlier, published later.
+    put_zones(
+        &store,
+        20261013,
+        t1,
+        zone_list(&[("11B10101", "서울", None)]),
+    )
+    .await;
+    let s3 = source(&peer, now);
+    let warm = s3.zones(now, deadline()).await.unwrap();
+    assert!(
+        warm.find_by_name("서울특별시", "종로구")[0]
+            .get("ht")
+            .is_none()
+    );
+    put_zones(
+        &store,
+        20261013,
+        t0,
+        zone_list(&[("11B10101", "서울", Some(12.5))]),
+    )
+    .await;
+    let refreshed = s3.refresh_zones(now, deadline()).await.unwrap();
+    let cold = source(&peer, now).zones(now, deadline()).await.unwrap();
+    same(
+        &zone_docs(&refreshed),
+        &zone_docs(&cold),
+        "warm refresh equals a cold fold",
+    );
+    let found = refreshed.find_by_name("서울특별시", "종로구");
+    assert_eq!(found[0].get("ht").and_then(|v| v.as_num()), Some(12.5));
+    // A newer list in the window is appended incrementally.
+    put_zones(
+        &store,
+        20261013,
+        now - 60_000.,
+        zone_list(&[("11B20201", "인천", None)]),
+    )
+    .await;
+    let appended = s3.refresh_zones(now, deadline()).await.unwrap();
+    let cold = source(&peer, now).zones(now, deadline()).await.unwrap();
+    same(
+        &zone_docs(&appended),
+        &zone_docs(&cold),
+        "incremental append equals a cold fold",
+    );
+}

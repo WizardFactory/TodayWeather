@@ -1796,8 +1796,8 @@ An acquisition is dated by its last page.
   horizon and a trailing day.
 - **Mid** walks months back to 2026-01 until a saved document is found, as legacy keeps the last
   saved one.
-- **Forecast zones** fold every list since 2026-01 (memory applies newer lists, with a daily
-  refold).
+- **Forecast zones** fold every list since 2026-01 in completion order. A 10-minute refresh appends
+  newer lists. A late list completed earlier triggers a refold, and a daily refold catches the rest.
 The snapshot lists the matched town as `towns()`; the chain uses the list only for `_findTown`,
 which finds that town first in the full list too.
 

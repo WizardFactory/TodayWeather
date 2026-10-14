@@ -68,8 +68,11 @@ request instant.
 - **Mid** walks months newest first, back to `HISTORY_START_MONTH` (202601, before any server2
   record), until a saved document is found. Legacy keeps the last saved document without a time
   bound.
-- **Forecast zones** fold every list since that month, then newer lists every 10 minutes, with a
-  daily refold.
+- **Forecast zones** fold every list since that month, in completion order.
+  - Every 10 minutes, memory re-reads the partitions from one day before the last folded list.
+  - A new list that sorts after the last folded one is appended. A late publication that sorts
+    before it triggers a full refold, so warm memory equals a cold fold.
+  - A daily refold also catches lists published more than a day after their fetch day.
 
 Documents are derived in memory; nothing derived is stored.
 
