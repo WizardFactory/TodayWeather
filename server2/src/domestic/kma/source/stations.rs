@@ -195,6 +195,19 @@ impl Registry {
     pub fn has(&self, id: &str) -> bool {
         self.index.contains_key(id)
     }
+    /// A registry holding seeded documents (the legacy `kmastninfos` copy) in their order.
+    pub fn seeded(docs: &[Doc]) -> Self {
+        let mut out = Self::default();
+        for d in docs {
+            if let Some(Val::Str(id)) = d.get("stnId")
+                && !out.index.contains_key(id)
+            {
+                out.index.insert(id.clone(), out.docs.len());
+                out.docs.push(d.clone());
+            }
+        }
+        out
+    }
     /// `_saveStnInfo` for every row of one hourly run (`city_available` false is the legacy
     /// `cityUnavailable` run, which keeps the stored `isCityWeather`).
     pub fn apply_run(&mut self, rows: &[Doc], city_available: bool, geo: &dyn StationGeo) {

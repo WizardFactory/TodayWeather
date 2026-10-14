@@ -368,3 +368,108 @@ async fn late_acquisitions_answer_as_absent_data_and_complete_for_the_next_reque
     assert_eq!(len(get(&third.history(&town).unwrap(), "hourly")), 168);
     let _ = Unreachable;
 }
+
+fn convert_seed(input: &std::path::Path, out: &std::path::Path) -> std::process::Output {
+    std::process::Command::new("python3")
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .arg("tools/migration/export_station_seeds.py")
+        .args(["--exported-at", "2026-09-24T01:00:00.000Z", "--input"])
+        .arg(input)
+        .arg("--output")
+        .arg(out)
+        .output()
+        .unwrap()
+}
+const SEED_FIXTURE: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/domestic/fixtures/kmastninfos.jsonl"
+);
+
+#[test]
+fn station_seed_converter_keeps_export_lines_and_rejects_other_fields() {
+    let dir = std::env::temp_dir().join(format!("s15b2-seed-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let out = dir.join("seed.jsonl");
+    let o = convert_seed(std::path::Path::new(SEED_FIXTURE), &out);
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    let bytes = std::fs::read(&out).unwrap();
+    let text = String::from_utf8(bytes.clone()).unwrap();
+    let input = std::fs::read_to_string(SEED_FIXTURE).unwrap();
+    assert_eq!(
+        text.lines().skip(1).collect::<Vec<_>>(),
+        input.lines().collect::<Vec<_>>()
+    );
+    let seed = server2::domestic::kma::source::seed::parse(&bytes).unwrap();
+    assert_eq!(seed.docs.len(), 3);
+    let first = String::from_utf8(seed.docs[0].json().to_bytes()).unwrap();
+    assert_eq!(
+        first,
+        r#"{"stnId":"108","stnName":"서울","addr":"서울특별시종로구송월동","isCityWeather":true,"altitude":86,"geo":[126.9658,37.5714],"__v":0,"rnsCount":12,"rnsHit":10,"isMountain":false}"#
+    );
+    for (name, body) in [
+        (
+            "unknown field",
+            input.replacen("\"isMountain\":false", "\"isMountain\":false,\"x\":1", 1),
+        ),
+        (
+            "repeated stnId",
+            input.replacen("\"stnId\":\"400\"", "\"stnId\":\"108\"", 1),
+        ),
+        ("json array", format!("[{}]", input.lines().next().unwrap())),
+        (
+            "geo shape",
+            input.replacen("[126.9658,37.5714]", "[126.9658]", 1),
+        ),
+        (
+            "boolean",
+            input.replacen("\"isMountain\":false", "\"isMountain\":\"false\"", 1),
+        ),
+    ] {
+        let path = dir.join("bad.jsonl");
+        std::fs::write(&path, body).unwrap();
+        let o = convert_seed(&path, &dir.join("bad-seed.jsonl"));
+        assert!(!o.status.success(), "{name}");
+    }
+    // The importer side rejects a tampered seed independently.
+    let tampered = text.replacen("\"rnsHit\":1}", "\"rnsHit\":1,\"extra\":true}", 1);
+    assert!(server2::domestic::kma::source::seed::parse(tampered.as_bytes()).is_err());
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_registry_starts_from_the_imported_legacy_seed() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&store, &[]).await;
+    let dir = std::env::temp_dir().join(format!("s15b2-import-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let out = dir.join("seed.jsonl");
+    assert!(
+        convert_seed(std::path::Path::new(SEED_FIXTURE), &out)
+            .status
+            .success()
+    );
+    let bytes = std::fs::read(&out).unwrap();
+    let a = server2::domestic::kma::source::seed::acquisition(&bytes).unwrap();
+    store
+        .publish(a.declaration, a.records, deadline())
+        .await
+        .unwrap();
+    std::fs::remove_dir_all(&dir).ok();
+    // No geocoder at all: seeded stations need none.
+    let s3 = source(
+        &peer,
+        Arc::new(Scripted::new(Duration::ZERO)),
+        Arc::new(Unreachable),
+    );
+    let snap = snapshot(&s3).await;
+    let town = town(snap.as_ref());
+    let stn = snap
+        .stn_hourly_and_min_rns(&town, "202609241049", &serde_json::json!({}))
+        .unwrap();
+    // Seeded legacy fields reach the answer the way legacy copies the station document.
+    assert_eq!(get(&stn, "rnsHit").number(), Some(10.));
+    assert_eq!(get(&stn, "rnsCount").number(), Some(12.));
+    assert_eq!(get(&stn, "isMountain"), &OrderedJson::Bool(false));
+    assert_eq!(get(&stn, "altitude").number(), Some(86.));
+}

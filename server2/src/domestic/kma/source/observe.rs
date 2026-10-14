@@ -133,6 +133,8 @@ struct AsosEntry {
 #[derive(Default)]
 struct State {
     pages: Pages,
+    /// The registry seed (legacy `kmastninfos` copy), when one was imported.
+    seed: Option<Arc<Vec<Doc>>>,
     folded: Option<Arc<Folded>>,
     /// Address -> coordinates; failures are retried after an hour (legacy retries each run).
     geo: HashMap<String, (Option<(f64, f64)>, std::time::Instant)>,
@@ -356,6 +358,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             s.pages.days.insert(day, std::time::Instant::now());
             s.pages.dirty = true;
         }
+        // The newest registry seed, if one was imported.
+        if let Some(seed) = self.read_seed(now_ms, deadline).await {
+            let mut s = self.state();
+            if s.seed.as_ref().is_none_or(|old| old.len() != seed.len() || **old != *seed) {
+                s.seed = Some(Arc::new(seed));
+                s.pages.dirty = true;
+            }
+        }
         // Minute pages of the last 40 minutes, newest first.
         let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
         let mut partitions = vec![format!("{:08}", today.date())];
@@ -400,6 +410,25 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         }
         s.pages.minute_read = Some(std::time::Instant::now());
         s.pages.dirty = true;
+    }
+    async fn read_seed(&self, now_ms: i64, deadline: Instant) -> Option<Vec<Doc>> {
+        let months = super::history_months(now_ms as f64);
+        let parts = self
+            .reader
+            .partitions(super::seed::SOURCE, super::seed::KIND, &super::seed::key(), &months, deadline)
+            .await
+            .ok()?;
+        let newest = parts.last()?;
+        let acquisitions = self
+            .reader
+            .raw(super::seed::SOURCE, super::seed::KIND, &super::seed::key(), newest, deadline)
+            .await
+            .ok()?;
+        let latest = acquisitions
+            .iter()
+            .filter_map(|a| a.first())
+            .max_by_key(|r| r.envelope.identity.fetched_at_ms)?;
+        super::seed::parse(&latest.bytes).ok().map(|s| s.docs)
     }
     fn ensure_minute(self: &Arc<Self>, now_ms: i64) -> Option<watch::Receiver<bool>> {
         let now = schedule::from_ms(now_ms);
@@ -516,7 +545,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         })
     }
     async fn fold(self: Arc<Self>, now_ms: i64) {
-        let (hourly, hourly_at, city, minute, geo) = {
+        let (seed, hourly, hourly_at, city, minute, geo) = {
             let mut s = self.state();
             s.pages.dirty = false;
             let first = latest_hourly(now_ms)
@@ -531,6 +560,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 .filter_map(|(k, (v, _))| Some((k.clone(), (*v)?)))
                 .collect();
             (
+                s.seed.clone(),
                 s.pages.hourly.clone(),
                 s.pages.hourly_at.clone(),
                 s.pages.city.clone(),
@@ -539,7 +569,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             )
         };
         let folded =
-            tokio::task::spawn_blocking(move || fold(&hourly, &hourly_at, &city, &minute, &geo))
+            tokio::task::spawn_blocking(move || {
+                fold(seed.as_deref().map(Vec::as_slice), &hourly, &hourly_at, &city, &minute, &geo)
+            })
             .await
             .ok();
         let Some((folded, unresolved)) = folded else {
@@ -866,6 +898,7 @@ impl StationGeo for Table<'_> {
 /// the same hour, or a `cityUnavailable` run), then the kept minute pages. Returns the
 /// addresses of unregistered stations without coordinates.
 fn fold(
+    seed: Option<&[Doc]>,
     hourly: &BTreeMap<Publication, Arc<Vec<Doc>>>,
     hourly_at: &BTreeMap<Publication, f64>,
     city: &BTreeMap<Publication, Arc<Vec<Doc>>>,
@@ -886,7 +919,7 @@ fn fold(
         .filter(|r| r.get("isCityWeather") == Some(&Val::Bool(true)))
         .filter_map(|r| r.get("stnId").and_then(Val::as_str).map(str::to_owned))
         .collect();
-    let mut registry = Registry::default();
+    let mut registry = seed.map(Registry::seeded).unwrap_or_default();
     let mut rows = RowStore::default();
     let mut national: HashMap<String, Vec<(f64, Doc)>> = HashMap::new();
     let mut unresolved = BTreeSet::new();

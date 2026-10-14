@@ -1,0 +1,3 @@
+{"_id":{"$oid":"5703a1b2c3d4e5f601020301"},"stnId":"108","stnName":"서울","addr":"서울특별시종로구송월동","isCityWeather":true,"altitude":{"$numberInt":"86"},"geo":[126.9658,37.5714],"__v":{"$numberInt":"0"},"rnsCount":{"$numberInt":"12"},"rnsHit":{"$numberInt":"10"},"isMountain":false}
+{"_id":{"$oid":"5703a1b2c3d4e5f601020302"},"stnId":"400","stnName":"강남","addr":"서울특별시강남구일원동","altitude":42,"geo":[127.087,37.4932],"__v":0,"rnsCount":5,"rnsHit":1}
+{"_id":{"$oid":"5703a1b2c3d4e5f601020303"},"stnId":"410","stnName":"중구","addr":"서울특별시중구명동","altitude":{"$numberDouble":"38.5"},"geo":[{"$numberDouble":"126.985"},{"$numberDouble":"37.5636"}],"__v":0,"isMountain":true}

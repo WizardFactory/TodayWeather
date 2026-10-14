@@ -81,7 +81,9 @@ pub fn native_geocoder(var: Var, s3: BoundedS3<HttpS3Transport>) -> Result<Geoco
 }
 /// The KMA request-time acquirer: `SERVER2_DATA_GO_KR_KEYS` (a JSON array of data.go.kr keys,
 /// the legacy `DONGNAE_SECRET_KEYS` form) funded with `SERVER2_DATA_GO_KR_DAILY_UNITS` per key
-/// and KST day in S3 (S08); both are required with `kma`.
+/// and KST day in S3 (S08); both are required with `kma`. Provider roots are the production
+/// HTTPS roots unless `SERVER2_DATA_GO_KR_BASE_URL`, `SERVER2_KMA_BASE_URL` or
+/// `SERVER2_KMA_WEATHER_BASE_URL` name another (HTTPS, or HTTP to a loopback address).
 pub fn kma_acquirer(
     var: Var,
     s3: BoundedS3<HttpS3Transport>,
@@ -105,9 +107,22 @@ pub fn kma_acquirer(
         Arc::new(s3),
         keys,
         units,
-        crate::domestic::family::Endpoints::default(),
+        kma_endpoints(var)?,
         Arc::new(SystemClock),
         Arc::new(crate::domestic::metrics::DomesticMetrics::default()),
+    )
+    .map_err(|_| GatewayError::InvalidConfiguration)
+}
+fn kma_endpoints(var: Var) -> Result<crate::domestic::family::Endpoints, GatewayError> {
+    let root = |name: &str, default: &str| {
+        var(name)
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| default.to_owned())
+    };
+    crate::domestic::family::Endpoints::new(
+        &root("SERVER2_DATA_GO_KR_BASE_URL", "https://apis.data.go.kr/"),
+        &root("SERVER2_KMA_BASE_URL", "https://www.kma.go.kr/"),
+        &root("SERVER2_KMA_WEATHER_BASE_URL", "https://www.weather.go.kr/"),
     )
     .map_err(|_| GatewayError::InvalidConfiguration)
 }

@@ -3,8 +3,10 @@
 SERVER2_NATIVE_FAMILIES=kma -> legacy against a task-owned loopback legacy origin and the owned S06
 S3 test peer. With `kma` the S3 input source reads the shared SERVER2_S3_* settings; until S15b-4
 it forwards every request (named temporary reasons), so each phase must reach the legacy KMA
-backend with the same bytes, and the native phase must have read S3. Unknown or repeated entries,
-and `kma` without the S3 settings, must stop startup before binding."""
+backend with the same bytes, and the native phase must have read S3. S15b-2 request-time
+acquisitions use the data.go.kr key settings and provider roots pointed at the loopback origin, so
+no provider is reached. Unknown or repeated entries, and `kma` without the S3 or data.go.kr
+settings, must stop startup before binding."""
 import argparse
 import http.server
 import json
@@ -70,6 +72,13 @@ def s3_env(s3):
                 SERVER2_S3_SECRET_ACCESS_KEY='server2-local-secret')
 
 
+def kma_env(endpoint):
+    """Placeholder data.go.kr settings; every provider root is the loopback origin."""
+    root = endpoint + '/'
+    return dict(SERVER2_DATA_GO_KR_KEYS='["s15b2-local-placeholder-key"]', SERVER2_DATA_GO_KR_DAILY_UNITS='100',
+                SERVER2_DATA_GO_KR_BASE_URL=root, SERVER2_KMA_BASE_URL=root, SERVER2_KMA_WEATHER_BASE_URL=root)
+
+
 def start(binary, endpoint, families, s3=None):
     env = {k: v for k, v in os.environ.items() if k in ('PATH', 'SYSTEMROOT', 'TMPDIR')}
     env.update(SERVER2_BIND='127.0.0.1:0', SERVER2_METRICS_BIND='127.0.0.1:0', SERVER2_GATEWAY_LEGACY_URL=endpoint)
@@ -77,6 +86,7 @@ def start(binary, endpoint, families, s3=None):
         env.update(s3_env(s3))
     if families is not None:
         env['SERVER2_NATIVE_FAMILIES'] = families
+        env.update(kma_env(endpoint))
     process = subprocess.Popen([binary], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         ready, _, _ = select.select([process.stdout], [], [], 10)
@@ -119,15 +129,19 @@ def run(binary):
             finally:
                 g.stop(process)
         assert bodies[0] == bodies[1] == bodies[2], 'native forward changed the response bytes'
-        for bad, with_s3 in (('kma,kma', True), ('KMA', True), ('kma,unknown', True), ('kma', False)):
+        for bad, with_s3, with_keys in (('kma,kma', True, True), ('KMA', True, True), ('kma,unknown', True, True),
+                                        ('kma', False, True), ('kma', True, False)):
             env = {k: v for k, v in os.environ.items() if k in ('PATH', 'SYSTEMROOT', 'TMPDIR')}
             env.update(SERVER2_BIND='127.0.0.1:0', SERVER2_METRICS_BIND='127.0.0.1:0', SERVER2_GATEWAY_LEGACY_URL=endpoint,
                        SERVER2_NATIVE_FAMILIES=bad)
             if with_s3:
                 env.update(s3_env(s3))
+            if with_keys:
+                env.update(kma_env(endpoint))
             refused = subprocess.run([binary], env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=10)
             assert refused.returncode != 0 and 'server2 public=' not in refused.stdout, (bad, refused.returncode, refused.stderr)
-        print('PASS unknown or repeated routing entries, and kma without SERVER2_S3_*, stop startup before binding', flush=True)
+        print('PASS unknown or repeated routing entries, and kma without SERVER2_S3_* or SERVER2_DATA_GO_KR_*, '
+              'stop startup before binding', flush=True)
         print('PASS S15b-1 KMA routing release smoke (legacy -> kma -> legacy, identical bytes, the kma phase read '
               'the S3 test peer); loopback peers only, no provider/AWS request, no native serving claim', flush=True)
     finally:

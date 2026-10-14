@@ -19,6 +19,8 @@ pub mod observe;
 mod items;
 mod mid;
 pub mod pages;
+pub mod rnshit;
+pub mod seed;
 pub mod stations;
 pub mod stn;
 mod records;
@@ -80,7 +82,7 @@ fn lookback_ms(family: Family) -> f64 {
 /// RSS rows reach two days after their publication day; retention is 216 h before the run.
 const RSS_LOOKBACK_MS: f64 = grid::RETENTION_MS + 4. * DAY_MS;
 /// KST months (`YYYYMM`) from [`HISTORY_START_MONTH`] through `now`, ascending.
-fn history_months(now: f64) -> Vec<u32> {
+pub(crate) fn history_months(now: f64) -> Vec<u32> {
     let end = records::months(now, now)
         .last()
         .copied()
