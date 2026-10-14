@@ -17,6 +17,8 @@ pub mod html;
 mod items;
 mod mid;
 pub mod pages;
+pub mod stations;
+pub mod stn;
 mod records;
 mod reference;
 mod rss;
