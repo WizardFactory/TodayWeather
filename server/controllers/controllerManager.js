@@ -1558,7 +1558,18 @@ Manager.prototype.getCurrentQueryTime = function (baseTime) {
     return dateString;
 };
 
-// Keep forecast timing/cleanup unchanged; only exact completed grids skip HTTP.
+/**
+ * KST publication {date: 'YYYYMMDD', time: 'HHMM'} -> Date. Current/short/shortest retention is anchored
+ * to the publication being collected rather than the wall clock, so collecting (or testing) an older
+ * publication never deletes the rows it writes. For the live slot the cutoff is unchanged.
+ */
+function publicationInstant(slot) {
+    var day = slot && /^(\d{4})(\d{2})(\d{2})$/.exec(slot.date), hm = slot && /^(\d{2})(\d{2})$/.exec(slot.time);
+    if (!day || !hm) { return new Date(); }
+    return new Date(Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3]), Number(hm[1]) - 9, Number(hm[2])));
+}
+
+// Keep forecast timing unchanged; only exact completed grids skip HTTP.
 Manager.prototype._getTownForecastData = function(product, dateString, key, callback) {
     var self = this, short = product === 'short';
     self._forecastCollections = self._forecastCollections || {};
@@ -1584,7 +1595,7 @@ Manager.prototype._getTownForecastData = function(product, dateString, key, call
         if (callback) { return callback(err, results); }
         if (err) { log.error(err); }
     });
-    (short ? kmaTownShort : kmaTownShortest).remove(new Date());
+    (short ? kmaTownShort : kmaTownShortest).remove(publicationInstant(dateString));
     return self;
 };
 Manager.prototype.getTownShortData = function(baseTime, key, callback) {
@@ -1621,7 +1632,7 @@ Manager.prototype.getTownCurrentData = function(baseTime, key, callback){
         if (err) { log.error(err); }
     });
 
-    kmaTownCurrent.remove(new Date());
+    kmaTownCurrent.remove(publicationInstant(dateString));
     return this;
 };
 
