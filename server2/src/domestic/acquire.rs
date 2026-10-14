@@ -554,7 +554,9 @@ where
             .get(&request.service())
             .ok_or(DomesticError::Invalid("no key ring for service"))?;
         if request.rotates() {
-            return self.collect_pages(request, ring, None, deadline).await;
+            return self
+                .collect_pages(request, ring, None, &mut false, deadline)
+                .await;
         }
         // Legacy AirKorea `withKeys` (#2737): the last working key, otherwise the last entry,
         // then the previous entries with one wrap. A rejected credential moves to the previous
@@ -571,14 +573,20 @@ where
                 quota = true;
                 continue;
             }
+            let mut skipped = false;
             match self
-                .collect_pages(request, ring, Some(index), deadline)
+                .collect_pages(request, ring, Some(index), &mut skipped, deadline)
                 .await
             {
                 Err(DomesticError::Provider(Disposition::Auth)) => {}
                 Err(DomesticError::Provider(Disposition::Quota)) => {
                     quota = true;
-                    ring.exhaust(index, self.now_ms()? as i64);
+                    // Only a provider quota answer exhausts the key. A page recheck that found
+                    // it already exhausted by a parallel call must not move the end of that
+                    // exhaustion, for example across KST midnight (review S13C-R1).
+                    if !skipped {
+                        ring.exhaust(index, self.now_ms()? as i64);
+                    }
                 }
                 Ok(outcome) => {
                     if matches!(outcome, Acquired::Complete(_)) {
@@ -597,12 +605,14 @@ where
         }))
     }
     /// All pages of one paged request; `fixed` pins one key (legacy AirKorea), otherwise the
-    /// #2604 ring offers and settles its candidates.
+    /// #2604 ring offers and settles its candidates. `skipped` is set when the fixed key was
+    /// found exhausted before a page, so no quota answer was received for it.
     async fn collect_pages<F: Paged>(
         &self,
         request: &F,
         ring: &KeyRing<B>,
         fixed: Option<usize>,
+        skipped: &mut bool,
         deadline: Instant,
     ) -> Result<Acquired, DomesticError> {
         let incomplete = |reason| {
@@ -627,6 +637,7 @@ where
                 if !pages.is_empty() {
                     self.metrics.incomplete();
                 }
+                *skipped = true;
                 return Err(DomesticError::Provider(Disposition::Quota));
             }
             let (start, candidates) = match fixed {

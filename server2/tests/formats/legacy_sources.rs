@@ -1082,6 +1082,97 @@ async fn airkorea_quota_on_a_later_page_restarts_with_the_next_key() {
     );
 }
 
+/// Wall clock that replays scripted readings once armed, then keeps the last one.
+struct ScriptedClock {
+    now: std::sync::atomic::AtomicI64,
+    script: std::sync::Mutex<std::collections::VecDeque<i64>>,
+}
+impl server2::budget::Clock for ScriptedClock {
+    fn now_ms(&self) -> Result<i64, server2::budget::BudgetError> {
+        use std::sync::atomic::Ordering::SeqCst;
+        if let Some(v) = self.script.lock().unwrap().pop_front() {
+            self.now.store(v, SeqCst);
+        }
+        Ok(self.now.load(SeqCst))
+    }
+}
+
+/// Review S13C-R1: a page recheck that finds the key already exhausted by a parallel call must not
+/// re-mark it. Scripted readings put the recheck one millisecond before KST midnight and the next
+/// reading at midnight, where a re-mark would extend the exhaustion by a whole day.
+#[tokio::test]
+async fn airkorea_recheck_skip_never_extends_an_exhaustion_across_kst_midnight() {
+    use server2::budget::BudgetStore;
+    use server2::domestic::family::Endpoints;
+    use server2::domestic::metrics::DomesticMetrics;
+    use server2::domestic::{DomesticAcquirer, KeyRing};
+    use server2::providers::{HttpProviderTransport, HttpPublicTransport};
+    use std::sync::Arc;
+    let stub = Stub::start().await;
+    let clk = Arc::new(ScriptedClock {
+        now: std::sync::atomic::AtomicI64::new(NOW_MS),
+        script: Default::default(),
+    });
+    let wire = Arc::new(Memory::default());
+    let entries = THREE
+        .iter()
+        .map(|(k, owner)| {
+            (
+                server2::providers::ProviderKey::new((*k).into()).unwrap(),
+                Arc::new(
+                    BudgetStore::new(wire.clone(), policy(*owner, 1000), clk.clone()).unwrap(),
+                ),
+            )
+        })
+        .collect();
+    let mut rings = std::collections::BTreeMap::new();
+    rings.insert(Service::AirKorea, KeyRing::new(entries).unwrap());
+    let acquirer = DomesticAcquirer::new(
+        Arc::new(HttpProviderTransport::new(8 * 1024 * 1024).unwrap()),
+        Arc::new(HttpPublicTransport::new(8 * 1024 * 1024).unwrap()),
+        rings,
+        Endpoints::new(&stub.base, &stub.base, &stub.base).unwrap(),
+        clk.clone(),
+        Arc::new(DomesticMetrics::default()),
+        server2::storage::CatalogLimits::default(),
+    )
+    .unwrap();
+    stub.push(
+        STATION_LIST,
+        Reply::json(airkorea(stations(0, 100), 1, 100, 120)).delayed(300),
+    );
+    stub.push(
+        STATION_LIST,
+        Reply::json(airkorea(stations(0, 100), 1, 100, 120)),
+    );
+    stub.push(
+        STATION_LIST,
+        Reply::json(airkorea(stations(100, 20), 2, 100, 120)),
+    );
+    stub.push(FORECAST, live_quota());
+    stub.push(FORECAST, Reply::json(local("airkorea-forecast.json")));
+    let list = AirKoreaRequest::station_list();
+    let parallel = async {
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        // Exhausts the last key at NOW_MS: until KST midnight.
+        complete(acquirer.acquire_airkorea(&forecast(), deadline()).await);
+        // The station list then reads the clock for its first page's fetch time, for the page 2
+        // recheck and, if the key were re-marked, once more.
+        clk.script
+            .lock()
+            .unwrap()
+            .extend([KST_MIDNIGHT - 2, KST_MIDNIGHT - 1, KST_MIDNIGHT]);
+    };
+    let (stations, ()) = tokio::join!(acquirer.acquire_airkorea(&list, deadline()), parallel);
+    complete(stations);
+    let ring = acquirer.ring(Service::AirKorea).unwrap();
+    assert!(ring.exhausted(2, KST_MIDNIGHT - 1));
+    assert!(
+        !ring.exhausted(2, KST_MIDNIGHT),
+        "the exhaustion must still end at KST midnight"
+    );
+}
+
 /// An acquisition that is paging with a key stops using it once a parallel acquisition marks it
 /// exhausted, and restarts with the next key (legacy #2745 review R-1).
 #[tokio::test]

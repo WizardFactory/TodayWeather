@@ -1796,8 +1796,11 @@ budget before any HTTP (one attempt plus one transient retry); an exhausted key 
 With *n* keys and *P* pages the worst case is *n·P* page calls, *2·n·P* attempts and *2·n·P*
 reserved units, the same bound as the S13b credential failover (at most 20 pages; for example
 3 keys and the 7-page station list: 21 calls, 42 units). The usual case, quota on page 1, costs
-one extra call and two extra units per exhausted key and day per acquirer. Exhaustion is held in
-memory per acquirer, so a restart costs at most one quota answer per exhausted key.
+one extra call and two extra units per exhausted key and day per acquirer (parallel acquisitions
+already sending to the key can each receive one quota answer). Exhaustion is held in memory per
+acquirer, so after a restart each exhausted key costs one more quota answer per acquisition that
+reaches it before the first answer is recorded. Only a provider quota answer marks a key: a page
+recheck that finds the key already exhausted never moves the end of that exhaustion.
 
 Verification: the formats suite replays the exact provider body recorded live on 2026-10-14 23:56
 KST (`fixtures/airkorea-quota-429.json`, HTTP 429, `returnReasonCode "22"`) and covers rotation and
