@@ -703,3 +703,36 @@ async fn an_expired_backfill_pass_leaves_unstarted_hours_for_the_next_pass() {
         "the next pass starts where the expired one stopped"
     );
 }
+
+/// S15b2-R11: minute pages beyond the readers' reach are dropped whether or not a newer page was
+/// acquired locally, so retained pages and rebuilt minute rows stay bounded as time advances.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn minute_pages_stay_within_the_readers_reach() {
+    use server2::domestic::kma::source::observe::Observations;
+    let peer = Peer::new();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap());
+    let obs = Arc::new(Observations::new(
+        peer.transport_limited(4),
+        store,
+        Arc::new(Scripted::new(Duration::ZERO)),
+        Arc::new(Table(Mutex::new(0))),
+    ));
+    let now = NOW as i64;
+    let first = obs
+        .stations(now, Instant::now() + Duration::from_secs(3))
+        .await
+        .unwrap();
+    assert!(!first.minute.docs().is_empty(), "the 10:49 page");
+    // Two hours later no newer minute page is stored (the minute retry bound holds the next
+    // acquisition back): the 10:49 page is out of reach and dropped.
+    let later = obs
+        .stations(now + 2 * 3_600_000, Instant::now() + Duration::from_secs(3))
+        .await
+        .unwrap();
+    assert!(
+        later.minute.docs().is_empty(),
+        "{} minute rows kept",
+        later.minute.docs().len()
+    );
+}

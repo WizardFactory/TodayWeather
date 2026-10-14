@@ -368,6 +368,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         }
         self.backfill_hours(now_ms);
         crate::history::join_all(owned).await;
+        // Pages beyond the readers' reach make the collections out of date by themselves.
+        {
+            let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
+            let mut s = self.state();
+            if s.pages.minute.keys().next().is_some_and(|k| *k <= floor) {
+                s.pages.dirty = true;
+            }
+        }
         // Fold; new station addresses are geocoded and folded again within the wait.
         for _ in 0..2 {
             if let Some(rx) = self.fold_if_dirty(now_ms) {
@@ -521,6 +529,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         for (p, rows) in parsed {
             s.pages.minute.entry(p).or_insert(rows);
         }
+        s.pages.minute.retain(|k, _| *k > floor);
         s.pages.minute_read = Some(std::time::Instant::now());
         s.pages.dirty = true;
     }
@@ -739,6 +748,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             s.pages.hourly.retain(|h, _| *h >= first);
             s.pages.hourly_at.retain(|h, _| *h >= first);
             s.pages.city.retain(|h, _| *h >= first);
+            // Minute pages older than the readers' reach, however they arrived (S3 or local).
+            let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
+            s.pages.minute.retain(|k, _| *k > floor);
             let cached = s.hourly_fold.clone().filter(|_| !s.pages.hourly_dirty);
             s.pages.hourly_dirty = false;
             let inputs = cached.is_none().then(|| {
