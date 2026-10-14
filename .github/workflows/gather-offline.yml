@@ -185,7 +185,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install isolated pinned forecast test dependencies
-        run: npm install --prefix /tmp/forecast-offline --ignore-scripts --no-audit --no-fund --package-lock=false mongoose@5.1.2 async@2.6.4 request@2.88.2 xml2js@0.4.23
+        run: npm install --prefix /tmp/forecast-offline --ignore-scripts --no-audit --no-fund --package-lock=false mongoose@5.1.2 async@2.6.4 request@2.88.2 xml2js@0.4.23 mongodb-memory-server-core@10.1.4
       - name: Prepare compatible temporary Mongo binary
         run: |
           curl -fsSL https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-4.4.29.tgz -o /tmp/forecast-mongo.tgz
@@ -202,6 +202,7 @@ jobs:
           node server/test/offline/forecast-late-publication.test.js
           node server/test/offline/forecast-collection-smoke.js
           node server/test/offline/forecast-coverage-mongo-smoke.js
+          node server/test/offline/forecast-zone-smoke.js
       - name: Repeat forecast persistence smokes with the clock 400 days ahead
         env:
           TZ: UTC

@@ -5381,6 +5381,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <ul>
           <li>HTTP; reject partial pages and validate day-specific sea values.</li>
           <li>Hold hourly short activation until legacy consumers are repaired.</li>
+          <li>Startup zone refresh (#2739): getFcstZoneCd pages over HTTPS, retires absent regIds without deleting; getMidTa covers only the 176 guide land zones.</li>
         </ul>
       </div>
 
@@ -5426,7 +5427,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Unified keys — #2618 design</h3>
         </div>
         <ul>
-          <li>DONGNAE_SECRET_KEYS supplies forecast/mid, warnings, UV/pollen, KASI and forecast-zone requests.</li>
+          <li>DONGNAE_SECRET_KEYS supplies forecast/mid, warnings, UV/pollen, KASI and forecast-zone (getFcstZoneCd) requests.</li>
           <li>Auth/quota rejection stops new dispatch and tries each list key once; past rotates unfinished times, retains a successful key, and returns DB save errors.</li>
           <li>AK verifies subscriptions and gather-host runs before deployment; AirKorea and opt-in ASOS keep separate settings.</li>
         </ul>

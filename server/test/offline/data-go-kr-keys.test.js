@@ -37,7 +37,7 @@ function loadWarning(request, list = keys) {
     return new Service({keys: list, request});
 }
 function loadZone(request, list = keys) {
-    const Service = h.load('controllers/kma/kma.forecast.zone.controller.js', {request, async,
+    const Service = h.load('controllers/kma/kma.forecast.zone.controller.js', {request, async, fs: require('fs'), path: require('path'),
         '../../models/kma/kma.forecast.zone.model': {}, '../../lib/dataGoKrKeys': keyList(),
         '../../lib/dataGoKrRejection': rejection}, {log});
     return new Service(list);
@@ -59,12 +59,12 @@ for (const [name, run] of Object.entries(invoke)) {
         {status: 429, body: ''}, {status: 403, body: {response: {header: {resultCode: '03'}}}}, {body: {response: {header: {resultCode: '22'}}}}]) {
         test(name + ' rotates auth/quota to second key and stops on exhaustion ' + JSON.stringify(rejectionResponse), async () => {
             const r = fake([rejectionResponse, success]); assert.ifError(await run(r, keys));
-            assert.equal(r.calls.length, 2); assert.equal(new URL(r.calls[1]).searchParams.get(name === 'kasi' || name === 'zone' ? 'ServiceKey' : 'serviceKey'), decodeURIComponent(keys[1]));
+            assert.equal(r.calls.length, 2); assert.equal(new URL(r.calls[1]).searchParams.get(name === 'kasi' ? 'ServiceKey' : 'serviceKey'), decodeURIComponent(keys[1]));
             const denied = fake([rejectionResponse]); assert(await run(denied, keys)); assert.equal(denied.calls.length, 2);
         });
     }
     test(name + ' empty list sends no HTTP', async () => {const r = fake([success]); assert(await run(r, [])); assert.equal(r.calls.length, 0);});
-    test(name + ' non-key failure never rotates', async () => {const r = fake([{status: 500, body: '<resultCode>99</resultCode>'}]); assert(await run(r, keys)); assert(r.calls.every(u => new URL(u).searchParams.get(name === 'kasi' || name === 'zone' ? 'ServiceKey' : 'serviceKey') === decodeURIComponent(keys[0])));});
+    test(name + ' non-key failure never rotates', async () => {const r = fake([{status: 500, body: '<resultCode>99</resultCode>'}]); assert(await run(r, keys)); assert(r.calls.every(u => new URL(u).searchParams.get(name === 'kasi' ? 'ServiceKey' : 'serviceKey') === decodeURIComponent(keys[0])));});
 }
 test('config retires legacy slots and warns by name without values', () => {
     const warnings = [];

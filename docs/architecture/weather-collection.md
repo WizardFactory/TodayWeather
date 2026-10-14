@@ -144,6 +144,47 @@ The scheduled `copyKaqfsImagesToS3` Lambda is an upstream producer separate from
 
 [Read-only service EC2 inspection](ec2-internals.md) identifies ten PM2 API workers configured as `service`, so this host does not automatically start the Manager gather/scrape loops or push loops. Its KAQ bucket setting resolves to `tw-kaqfs-images`, but a matching setting is not evidence that this host runs the scheduled image consumer. The separate gather instance was not accessed. The service checkout is `5bca407` with host config/logger edits; its Manager retry budgets and KMA requester differ from the local baseline. The schedules above remain repository facts, not a claim about the gather instance's deployed code. Request-time DSF/AQI fills remain possible on the API host.
 
+## Forecast-zone codes (issue #2739)
+
+`startManager()` refreshes `kmaforecastzonecodes` once per gather/local start through
+`KmaForecastZoneController.getFromKma()`. It calls
+`https://apis.data.go.kr/1360000/FcstZoneInfoService/getFcstZoneCd` with
+`numOfRows=1000&dataType=JSON` and the `DONGNAE_SECRET_KEYS` rotation. The retired
+`newsky2.kma.go.kr` service answered every request with a 307 to a 503 page on
+2026-10-14. Redirects are not followed; a 3xx fails without retry.
+
+The provider's `totalCount` is the item count of the returned page, not a grand
+total (observed 2026-10-14: 755 zones in one 1000-row page; 500-row pages held 500
+and 255 items, and page 3 answered `03 NO_DATA`). Each page must therefore have
+`resultCode "00"`, an `items.item` array whose length equals `totalCount`, and echoed
+`pageNo`/`numOfRows`. Every item needs `regId`, `regName` and `regSp`; undocumented
+`regSp` values (the aggregate `11BD0000` has `"0"`) and missing or zero coordinates
+are accepted, the latter without `geo`. Each item is reduced to the model fields and
+type-checked before any write (text fields as strings, `tmEd`/`tmSt` as digit strings,
+`seq` and coordinates as finite numbers, `geo` within longitude [-180, 180) and
+latitude [-90, 90]); an unusable value fails the refresh. Error messages
+carry provider codes only as short digit strings. A page shorter than 1000 items ends the list,
+as does `03` after a full page. A duplicate `regId`, any other code, a malformed body
+or an eleventh page fails the whole refresh before any write. A truncated page that
+is internally consistent cannot be detected.
+
+After every upsert succeeds, stored rows whose `regId` the refresh did not return
+get `retired: true` and `retiredAt`; a returning `regId` clears them. Rows are never
+deleted. `findForecastZoneCode()` excludes retired rows, so the town mapping
+(`controllerTown._findForecastZoneByName`), mid-temperature selection and
+`midRssKmaRequester` no longer see codes such as 군위 `11H10603` (ended 2023-11-30,
+replaced by `11H10707`). Rows written before the first successful refresh have no
+flag and stay visible; a failed refresh changes nothing. `대구광역시 군위군` maps to
+the 군위 zone like `경상북도 군위군`.
+
+`getMidTempByForecastZone` requests `getMidTa` only for stored, non-retired city zones
+listed in [`server/utils/data/kma_forecast_land_zones.csv`](../../server/utils/data/kma_forecast_land_zones.csv):
+the 176 land zones of the KMA guide list "구역목록(240715)" with its 종료/신설 notes
+applied. The other 43 city zones answer `getMidTa` with `03` and cannot be told apart
+by any API field. The list replaces the former hard-coded 16-zone exclusion and must
+be updated by hand when KMA publishes a new edition; listed zones missing from the
+stored codes are logged at `warn`.
+
 ## Daily forecast validity (issue #2560)
 
 The mid-land/temperature collectors preserve available day-3–10 fields without
@@ -329,7 +370,8 @@ An empty life-index list completes its public callback with a sanitized error.
 
 UV/pollen preserve issuance/pagination and no partial saves; KASI preserves
 allKeysRejected stopping; forecast-zone keeps bounded transient retries and
-logs only the key index. Its existing endpoint availability is unverified.
+logs only the key index and page. Its endpoint is described in
+[forecast-zone codes](#forecast-zone-codes-issue-2739).
 Health-day remains removed. AirKorea and opt-in ASOS retain separate settings.
 See [configuration](../../server/CONFIGURATION.md) and the
 [migration runbook](../operations/data-go-kr-keys.md). This is repository behavior,
