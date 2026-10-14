@@ -26,11 +26,19 @@ runs, deployment, process restarts or provider subscription changes.
    then restart under the same deployment authorization. No DB migration is
    involved; accepted weather records remain compatible.
 
+2026-10-14: the local operator `DONGNAE_SECRET_KEYS` holds three keys from three
+accounts (the same keys as `AIRKOREA_SECRET_KEYS`). After AK completed the missing
+applications, read-only checks returned `00` for every key on the ultra-short
+observation and forecast, short forecast (`03` no data only for a not-yet-published
+base), all four mid-term operations, two warning operations, UV, pollen and KASI.
+The gather host's list was not observed.
+
 The issue's 2026-09-27 operator comment reports successful forecast, mid, warning,
 UV and KASI approvals on the first list entry; AirKorea approval was missing.
 That historical observation does not verify this candidate or today's approval.
-Forecast-zone still uses its existing newsky2 endpoint; endpoint migration and
-live availability are outside this key-only repair. Health-day remains removed.
+Forecast-zone still uses its existing newsky2 endpoint, which redirected every
+request to `/503.html` on 2026-10-14; the migration to `FcstZoneInfoService` is
+tracked in #2739. Health-day remains removed.
 
 Offline verification from the repository root with isolated dependencies:
 

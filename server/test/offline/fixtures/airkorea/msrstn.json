@@ -1,0 +1,42 @@
+{
+ "response": {
+  "body": {
+   "totalCount": 3,
+   "items": [
+    {
+     "dmX": "37.515336",
+     "item": "SO2, CO, O3, NO2, PM10, PM2.5",
+     "mangName": "도시대기",
+     "year": "1978",
+     "addr": "서울특별시 강남구 학동로 426 (삼성동) 강남구청 별관 1동",
+     "stationName": "강남구",
+     "dmY": "127.049357"
+    },
+    {
+     "dmX": "37.501783",
+     "item": "SO2, CO, O3, NO2, PM10, PM2.5",
+     "mangName": "도시대기",
+     "year": "1982",
+     "addr": "서울특별시 서초구 신반포로15길 16 (반포동) 서초교육복지센터",
+     "stationName": "서초구",
+     "dmY": "126.996573"
+    },
+    {
+     "dmX": "37.516083",
+     "item": "SO2, CO, O3, NO2, PM10, PM2.5",
+     "mangName": "도로변대기",
+     "year": "1995",
+     "addr": "서울 강남구 도산대로 104 신사역2번출구 앞",
+     "stationName": "도산대로",
+     "dmY": "127.019694"
+    }
+   ],
+   "pageNo": 1,
+   "numOfRows": 100
+  },
+  "header": {
+   "resultMsg": "NORMAL_CODE",
+   "resultCode": "00"
+  }
+ }
+}

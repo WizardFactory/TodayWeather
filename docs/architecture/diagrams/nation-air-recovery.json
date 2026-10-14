@@ -161,7 +161,7 @@
       "items": [
         "Base citations identify the existing integration points; issue 2636 adds the nation fallback.",
         "Implementation: lib/air/nationAir.js, tested with local Mongo and loopback providers.",
-        "Operating key is expired; scheduled AirKorea recovery awaits separate renewal and rollout."
+        "2026-10-13: one configured key is valid and collection skips rejected keys; recovery awaits gather-host rollout."
       ]
     }
   ]

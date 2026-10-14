@@ -1,0 +1,64 @@
+{
+  "scenarios": [
+    {
+      "id": "S1",
+      "user": "Gather process (scheduled station and sido collection)",
+      "goal": "Store fresh AirKorea observations although the last configured key is expired",
+      "prerequisites": "AIRKOREA_SECRET_KEYS contains at least one valid key; provider reachable",
+      "steps": ["Scheduler calls /gather/keco", "Client tries the last key and receives HTTP 401 DEADLINE_HAS_EXPIRED_ERROR", "Client logs KEY_REJECTED with key position and code", "Client retries the previous key and receives result code 00", "Collector validates and stores station rows and province aggregates"],
+      "expected": "Fresh station and province rows; later requests start with the working key",
+      "failure": "If no key is valid the province fails with NO_VALID_KEY and nothing is written",
+      "criteria": ["AC1", "AC3"]
+    },
+    {
+      "id": "S2",
+      "user": "Gather process",
+      "goal": "Respect provider quota",
+      "prerequisites": "Working key has reached its daily quota",
+      "steps": ["Collector requests a province", "Provider returns result code 22"],
+      "expected": "Request fails with PROVIDER_22 after one call; no other key is tried",
+      "failure": "Switching keys on quota would bypass the quota; the test rejects that",
+      "criteria": ["AC1"]
+    },
+    {
+      "id": "S3",
+      "user": "Operator reading collection logs",
+      "goal": "Recognize that no configured key works",
+      "prerequisites": "All configured keys expired or unregistered",
+      "steps": ["Collector requests a province", "Every key is rejected"],
+      "expected": "NO_VALID_KEY outcome and one KEY_REJECTED line per key, without key text",
+      "failure": "Key text in logs or a reported success would be a defect",
+      "criteria": ["AC1"]
+    },
+    {
+      "id": "S4",
+      "user": "Gather process at startup",
+      "goal": "Refresh station metadata from the supported service",
+      "prerequisites": "Valid key",
+      "steps": ["startManager calls getAllMsrStnInfo", "Client pages getMsrstnList until totalCount", "Stations are stored with geo [lon, lat]"],
+      "expected": "All stations stored; Seoul stations near 127E 37.5N",
+      "failure": "An incomplete page rejects the batch; startup continues and logs the code",
+      "criteria": ["AC2", "AC3"]
+    },
+    {
+      "id": "S5",
+      "user": "Gather process (kecoForecast)",
+      "goal": "Store the latest dust forecast announcement",
+      "prerequisites": "Valid key; announcement for the expected KST time published",
+      "steps": ["Collector checks the stored announcement time", "Client pages getMinuDustFrcstDspth for the date", "Rows of the expected announcement are parsed and saved", "Hourly forecast image controller runs"],
+      "expected": "Forecast documents with region grades and nine image URLs; dust forecast readable by kecoController.getDustFrcst",
+      "failure": "Partial pages (provider default 10 rows) are rejected rather than stored",
+      "criteria": ["AC2", "AC3"]
+    },
+    {
+      "id": "S6",
+      "user": "Operator",
+      "goal": "Roll out and verify on the gather host",
+      "prerequisites": "Separate deployment authorization",
+      "steps": ["Confirm the gather host key list contains the valid key", "Deploy the revision", "Observe one scheduled station/sido run and read back rows", "Check Seoul coordinate and nation responses"],
+      "expected": "Successful outcome records and fresh readback",
+      "failure": "NO_VALID_KEY or missing rows stop the rollout; rollback restores the previous revision",
+      "criteria": ["AC4"]
+    }
+  ]
+}
