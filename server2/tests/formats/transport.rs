@@ -65,7 +65,6 @@ async fn each_format_appends_its_legacy_parameters_in_legacy_order() {
             ("_type", "json"),
             false,
         ),
-        (ResponseFormat::Type, "ServiceKey", ("type", "json"), false),
     ];
     for (format, key, (name, value), key_first) in cases {
         stub.push("op", Reply::json(r#"{"ok":1}"#));
@@ -95,8 +94,7 @@ async fn a_family_query_cannot_carry_credentials_or_format_parameters() {
     for (endpoint, format) in [
         ("op?returnType=xml", ResponseFormat::ReturnType),
         ("op?_type=xml", ResponseFormat::UnderscoreType),
-        ("op?type=xml", ResponseFormat::Type),
-        ("op?ServiceKey=x", ResponseFormat::Type),
+        ("op?ServiceKey=x", ResponseFormat::ReturnType),
         ("op?SERVICEKEY=x", ResponseFormat::UnderscoreType),
         ("op?dataType=XML", ResponseFormat::ReturnType),
     ] {
@@ -119,11 +117,7 @@ fn success_codes_are_per_format_and_classify_is_unchanged() {
     let ok = |code: &str| {
         format!(r#"{{"response":{{"header":{{"resultCode":"{code}","resultMsg":"OK"}}}}}}"#)
     };
-    // newsky2 answers 0000; only the Type format accepts it.
-    assert_eq!(
-        classify_format(200, ok("0000").as_bytes(), true, true, ResponseFormat::Type),
-        Disposition::Data
-    );
+    // S13b removed the newsky2-only format: no format accepts 0000.
     for f in [
         ResponseFormat::DataType,
         ResponseFormat::ReturnType,
@@ -143,7 +137,7 @@ fn success_codes_are_per_format_and_classify_is_unchanged() {
         Disposition::Retryable
     );
     // Quota/auth precedence is the same for every format.
-    for f in [ResponseFormat::Type, ResponseFormat::ReturnType] {
+    for f in [ResponseFormat::UnderscoreType, ResponseFormat::ReturnType] {
         assert_eq!(
             classify_format(200, fixture("gateway-30.json").as_slice(), true, true, f),
             Disposition::Auth
@@ -152,6 +146,113 @@ fn success_codes_are_per_format_and_classify_is_unchanged() {
             classify_format(200, fixture("gateway-quota.xml").as_slice(), true, true, f),
             Disposition::Quota
         );
+    }
+}
+
+/// S13B-R1-03: AirKorea reads the legacy gateway markers of a 200 body that is not JSON or is
+/// the JSON gateway envelope; a regular envelope is not reinterpreted.
+#[test]
+fn airkorea_200_gateway_markers_follow_legacy_gateway_code() {
+    let r = ResponseFormat::ReturnType;
+    for (body, expected) in [
+        ("SERVICE_KEY_IS_NOT_REGISTERED_ERROR", Disposition::Auth),
+        ("<html>DEADLINE_HAS_EXPIRED_ERROR</html>", Disposition::Auth),
+        (
+            r#"{"OpenAPI_ServiceResponse":{"cmmMsgHeader":{"returnAuthMsg":"LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR"}}}"#,
+            Disposition::Quota,
+        ),
+        (
+            r#"{"response":{"header":{"resultMsg":"DEADLINE_HAS_EXPIRED_ERROR"}}}"#,
+            Disposition::Retryable,
+        ),
+        // S13B-R2: an empty, nonnumeric or `00` reason code does not hide the markers.
+        (
+            r#"{"OpenAPI_ServiceResponse":{"cmmMsgHeader":{"returnAuthMsg":"DEADLINE_HAS_EXPIRED_ERROR","returnReasonCode":""}}}"#,
+            Disposition::Auth,
+        ),
+        (
+            r#"{"OpenAPI_ServiceResponse":{"cmmMsgHeader":{"returnAuthMsg":"SERVICE_KEY_IS_NOT_REGISTERED_ERROR","returnReasonCode":"00"}}}"#,
+            Disposition::Auth,
+        ),
+        (
+            "<OpenAPI_ServiceResponse><cmmMsgHeader><returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</returnAuthMsg><returnReasonCode>x</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>",
+            Disposition::Quota,
+        ),
+    ] {
+        assert_eq!(
+            classify_format(200, body.as_bytes(), true, false, r),
+            expected,
+            "{body}"
+        );
+        // Other formats keep the S13 rule.
+        assert_eq!(
+            classify_format(200, body.as_bytes(), true, false, ResponseFormat::DataType),
+            Disposition::Retryable
+        );
+    }
+}
+
+/// S13b (legacy #2737 `rejectionCode`): an AirKorea 401/403 keeps an explicit body code, so
+/// only a credential code or a body without a code rejects the key; quota still wins.
+#[test]
+fn airkorea_401_403_keep_an_explicit_body_code() {
+    let envelope = |code: &str| {
+        format!(r#"{{"response":{{"header":{{"resultCode":"{code}","resultMsg":"synthetic"}}}}}}"#)
+    };
+    let gateway = |code: &str| {
+        format!(
+            r#"{{"OpenAPI_ServiceResponse":{{"cmmMsgHeader":{{"errMsg":"SERVICE ERROR","returnAuthMsg":"x","returnReasonCode":"{code}"}}}}}}"#
+        )
+    };
+    let xml = |code: &str| {
+        format!("<response><header><resultCode>{code}</resultCode></header></response>")
+    };
+    let r = ResponseFormat::ReturnType;
+    for status in [401, 403] {
+        for body in [
+            envelope("99"),
+            gateway("99"),
+            gateway("77"),
+            xml("99"),
+            envelope("00"),
+        ] {
+            assert_eq!(
+                classify_format(status, body.as_bytes(), true, false, r),
+                Disposition::Rejected,
+                "{status} {body}"
+            );
+            // Other formats keep the S13 rule: any 401/403 is a key rejection.
+            assert_eq!(
+                classify_format(
+                    status,
+                    body.as_bytes(),
+                    true,
+                    false,
+                    ResponseFormat::DataType
+                ),
+                Disposition::Auth
+            );
+        }
+        for code in ["20", "30", "31", "32"] {
+            for body in [envelope(code), gateway(code), xml(code)] {
+                assert_eq!(
+                    classify_format(status, body.as_bytes(), true, false, r),
+                    Disposition::Auth
+                );
+            }
+        }
+        for body in [envelope("22"), gateway("22"), xml("22")] {
+            assert_eq!(
+                classify_format(status, body.as_bytes(), true, false, r),
+                Disposition::Quota
+            );
+        }
+        for body in ["", "Unauthorized", "<html>denied</html>"] {
+            assert_eq!(
+                classify_format(status, body.as_bytes(), true, false, r),
+                Disposition::Auth
+            );
+        }
     }
 }
 

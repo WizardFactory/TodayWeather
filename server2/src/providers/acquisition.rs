@@ -236,13 +236,20 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                 Err(ProviderTransportError::Response { status }) => {
                     // Incomplete bytes never reach JSON validation or Data/NoData.
                     // Preserve only received HTTP priority, not any partial provider code.
-                    let disposition = classify_format(
-                        status,
-                        &[],
-                        self.provider == Provider::DataGoKr,
-                        false,
-                        format,
-                    );
+                    // AirKorea (S13b) decides a 401/403 from its body; an unread body is a
+                    // retryable download failure (legacy `RESPONSE_ERROR`), never a key rejection.
+                    let disposition =
+                        if format == ResponseFormat::ReturnType && matches!(status, 401 | 403) {
+                            Disposition::Retryable
+                        } else {
+                            classify_format(
+                                status,
+                                &[],
+                                self.provider == Provider::DataGoKr,
+                                false,
+                                format,
+                            )
+                        };
                     report.settle(AttemptResult::Disposition(disposition));
                     if attempt == 2 || disposition == Disposition::Rejected {
                         return Err(AcquisitionError::Provider(disposition));

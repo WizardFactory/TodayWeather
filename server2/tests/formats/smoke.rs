@@ -1,4 +1,4 @@
-//! Functional smoke: loopback provider stub + owned S3 test peer for the S13a domestic families.
+//! Functional smoke: loopback provider stub + owned S3 test peer for the S13a/S13b domestic families.
 //! Run in release mode with `cargo test --release --test formats smoke`. No AWS/provider traffic.
 use super::common::*;
 use super::support::*;
@@ -116,10 +116,7 @@ async fn smoke_new_formats_publish_and_read_back_exact_bytes() {
         Arc::new(HttpProviderTransport::new(8 * 1024 * 1024).unwrap()),
         Arc::new(HttpPublicTransport::new(8 * 1024 * 1024).unwrap()),
         rings,
-        Endpoints::new(&stub.base, &stub.base, &stub.base)
-            .unwrap()
-            .with_newsky(&stub.base)
-            .unwrap(),
+        Endpoints::new(&stub.base, &stub.base, &stub.base).unwrap(),
         clk,
         metrics.clone(),
         CatalogLimits::default(),
@@ -155,6 +152,33 @@ async fn smoke_new_formats_publish_and_read_back_exact_bytes() {
     );
     publish_and_read_back(&peer, a, &[zone]).await;
 
+    // S13b: dust forecast, station list (legacy #2737) and the data.go.kr zone list (#2740).
+    let frcst = local("airkorea-forecast.json");
+    stub.push(FORECAST, Reply::json(frcst.clone()));
+    let a = complete(
+        acquirer
+            .acquire_airkorea(
+                &AirKoreaRequest::dust_forecast(20261013).unwrap(),
+                deadline(),
+            )
+            .await,
+    );
+    assert_eq!(
+        a.records[0].envelope.identity.kind,
+        "airkorea-dust-forecast"
+    );
+    publish_and_read_back(&peer, a, &[frcst]).await;
+
+    let list = local("airkorea-station-list.json");
+    stub.push(STATION_LIST, Reply::json(list.clone()));
+    let a = complete(
+        acquirer
+            .acquire_airkorea(&AirKoreaRequest::station_list(), deadline())
+            .await,
+    );
+    assert_eq!(a.records[0].envelope.identity.kind, "airkorea-station-list");
+    publish_and_read_back(&peer, a, &[list]).await;
+
     // A rejected key produces nothing to publish.
     stub.push(STATION, Reply::json(fixture("gateway-30.json")));
     assert!(!matches!(
@@ -162,7 +186,7 @@ async fn smoke_new_formats_publish_and_read_back_exact_bytes() {
         Ok(Acquired::Complete(_))
     ));
     let m = metrics.snapshot();
-    assert_eq!(m.groups_complete, 3);
-    assert_eq!(m.funded_attempts, 5);
+    assert_eq!(m.groups_complete, 5);
+    assert_eq!(m.funded_attempts, 7);
     println!("{}", metrics.render());
 }

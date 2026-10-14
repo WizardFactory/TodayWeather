@@ -1,4 +1,4 @@
-//! Shared S13a domestic test environment over the S13 loopback stub and budget peer.
+//! Shared S13a/S13b domestic test environment over the S13 loopback stub and budget peer.
 #![allow(dead_code)]
 use super::support::*;
 use server2::domestic::family::{Endpoints, Service};
@@ -12,7 +12,12 @@ use std::{collections::BTreeMap, path::PathBuf, sync::Arc};
 pub const STATION: &str = "B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty";
 pub const SIDO: &str = "B552584/ArpltnStatsSvc/getCtprvnMesureSidoLIst";
 pub const KASI: &str = "B090041/openapi/service/RiseSetInfoService/getAreaRiseSetInfo";
-pub const ZONE: &str = "service/ForecastZoneInfoService/ForecastZoneCodeDataInfo";
+/// S13b: data.go.kr forecast-zone list (legacy #2740); the newsky2 path is removed.
+pub const ZONE: &str = "1360000/FcstZoneInfoService/getFcstZoneCd";
+/// S13b: AirKorea dust forecast and station list (legacy #2737).
+pub const FORECAST: &str = "B552584/ArpltnInforInqireSvc/getMinuDustFrcstDspth";
+pub const STATION_LIST: &str = "B552584/MsrstnInfoInqireSvc/getMsrstnList";
+pub const KEY_C: &str = "S13B_LOCAL_KEY_C+cccccccccccccccc/=";
 /// 2026-10-13 14:20 KST.
 pub const NOW_MS: i64 = 1_791_868_800_000;
 
@@ -52,10 +57,7 @@ pub async fn env_keys(airkorea: &[(&str, char)], data_go_kr: &[(&str, char)]) ->
         Arc::new(HttpProviderTransport::new(8 * 1024 * 1024).unwrap()),
         Arc::new(HttpPublicTransport::new(8 * 1024 * 1024).unwrap()),
         rings,
-        Endpoints::new(&stub.base, &stub.base, &stub.base)
-            .unwrap()
-            .with_newsky(&stub.base)
-            .unwrap(),
+        Endpoints::new(&stub.base, &stub.base, &stub.base).unwrap(),
         clk,
         metrics.clone(),
         CatalogLimits::default(),

@@ -251,33 +251,54 @@ async fn airkorea_total_zero_is_terminal_no_data_after_one_attempt() {
     assert_eq!(e.stub.calls().len(), 1);
 }
 
+/// Legacy master (#2737) `withKeys`: start with the last configured key, skip a rejected
+/// credential to the previous key, and stop on quota without changing the key.
 #[tokio::test]
-async fn airkorea_rejected_key_stops_without_rotation() {
-    for reply in [
-        Reply::with(401, "text/plain", "Unauthorized"),
-        Reply::with(200, "text/xml", fixture_s13("gateway-quota.xml")),
-        Reply::json(fixture_s13("gateway-30.json")),
+async fn airkorea_rejected_key_follows_legacy_key_selection() {
+    for (name, reply, expected, keys) in [
+        (
+            "401 text",
+            Reply::with(401, "text/plain", "Unauthorized"),
+            Disposition::Auth,
+            vec![KEY_B, KEY_A],
+        ),
+        (
+            "quota xml",
+            Reply::with(200, "text/xml", fixture_s13("gateway-quota.xml")),
+            Disposition::Quota,
+            vec![KEY_B],
+        ),
+        (
+            "gateway 30",
+            Reply::json(fixture_s13("gateway-30.json")),
+            Disposition::Auth,
+            vec![KEY_B, KEY_A],
+        ),
     ] {
         let e = env_keys(&[(KEY_A, '5'), (KEY_B, '6')], &[(KEY_A, 'a'), (KEY_B, 'b')]).await;
+        e.stub.push(STATION, reply.clone());
         e.stub.push(STATION, reply);
         let outcome = e
             .acquirer
             .acquire_airkorea(&station("서울"), deadline())
             .await;
         assert!(
-            matches!(
-                outcome,
-                Err(DomesticError::Provider(
-                    Disposition::Auth | Disposition::Quota
-                ))
-            ),
-            "{outcome:?}"
+            matches!(outcome, Err(DomesticError::Provider(d)) if d == expected),
+            "{name}: {outcome:?}"
         );
-        // Legacy uses one selected key per operation and never rotates (#2636).
-        let calls = e.stub.calls();
-        assert_eq!(calls.len(), 1);
-        assert_eq!(calls[0].get("serviceKey"), Some(KEY_A));
-        assert_eq!(e.acquirer.ring(Service::AirKorea).unwrap().current(), 0);
+        let used: Vec<String> = e
+            .stub
+            .calls()
+            .iter()
+            .map(|c| c.get("serviceKey").unwrap().to_owned())
+            .collect();
+        assert_eq!(used, keys, "{name}");
+        // Only a success is remembered.
+        assert_eq!(
+            e.acquirer.ring(Service::AirKorea).unwrap().preferred(),
+            None,
+            "{name}"
+        );
     }
 }
 
@@ -396,90 +417,6 @@ async fn rise_set_rejects_wrong_echoes_and_missing_fields() {
         e.stub.push(KASI, Reply::json(body));
         let request = RiseSetRequest::new("서울", 20261013).unwrap();
         let outcome = e.acquirer.acquire_rise_set(&request, deadline()).await;
-        assert!(not_complete(&outcome), "{name}: {outcome:?}");
-    }
-}
-
-#[tokio::test]
-async fn forecast_zone_list_is_one_exact_record_with_type_json() {
-    let e = env().await;
-    let body = local("forecast-zone.json");
-    e.stub.push(ZONE, Reply::json(body.clone()));
-    let a = complete(
-        e.acquirer
-            .acquire_zones(&ZoneRequest::new(), deadline())
-            .await,
-    );
-    let r = &a.records[0];
-    assert_eq!(&r.bytes[..], &body[..]);
-    assert_eq!(r.envelope.identity.kind, "forecast-zone");
-    // KST fetch day.
-    assert_eq!(r.envelope.identity.period.local_date, 20261013);
-    let calls = e.stub.calls();
-    assert_eq!(calls[0].path, format!("/{ZONE}"));
-    // Legacy queryParam 'pageNo=1&numOfRows=999&type=json' and ServiceKey.
-    assert_eq!(
-        sorted(pairs(&calls[0])),
-        owned(&[
-            ("pageNo", "1"),
-            ("numOfRows", "999"),
-            ("type", "json"),
-            ("ServiceKey", KEY_A),
-        ])
-    );
-}
-
-#[tokio::test]
-async fn forecast_zone_rejects_truncation_messages_and_shapes() {
-    let base: serde_json::Value = serde_json::from_slice(&local("forecast-zone.json")).unwrap();
-    let edit = |f: &dyn Fn(&mut serde_json::Value)| {
-        let mut v = base.clone();
-        f(&mut v);
-        serde_json::to_vec(&v).unwrap()
-    };
-    let cases = vec![
-        (
-            "truncated",
-            edit(&|v| v["response"]["body"]["totalCount"] = 1200.into()),
-        ),
-        (
-            "message",
-            edit(&|v| v["response"]["header"]["resultMsg"] = "SERVICE ERROR".into()),
-        ),
-        (
-            "code",
-            edit(&|v| v["response"]["header"]["resultCode"] = "0099".into()),
-        ),
-        (
-            "object item",
-            edit(&|v| {
-                v["response"]["body"]["items"]["item"] = serde_json::json!({"regId": "11B10101"})
-            }),
-        ),
-        (
-            "empty",
-            edit(&|v| v["response"]["body"]["items"]["item"] = serde_json::json!([])),
-        ),
-        (
-            "duplicate regId",
-            edit(&|v| {
-                let first = v["response"]["body"]["items"]["item"][0].clone();
-                v["response"]["body"]["items"]["item"][1] = first;
-            }),
-        ),
-        (
-            "blank regId",
-            edit(&|v| v["response"]["body"]["items"]["item"][0]["regId"] = "".into()),
-        ),
-    ];
-    for (name, body) in cases {
-        let e = env().await;
-        e.stub.push(ZONE, Reply::json(body.clone()));
-        e.stub.push(ZONE, Reply::json(body));
-        let outcome = e
-            .acquirer
-            .acquire_zones(&ZoneRequest::new(), deadline())
-            .await;
         assert!(not_complete(&outcome), "{name}: {outcome:?}");
     }
 }

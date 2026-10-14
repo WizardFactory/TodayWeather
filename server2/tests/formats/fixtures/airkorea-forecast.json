@@ -1,0 +1,87 @@
+{
+ "response": {
+  "body": {
+   "totalCount": 4,
+   "items": [
+    {
+     "actionKnack": null,
+     "informOverall": "○ 전 권역이 '좋음'∼'보통'으로 예상됩니다.",
+     "informGrade": "서울 : 좋음,제주 : 좋음,전남 : 좋음,전북 : 좋음,광주 : 좋음,경남 : 좋음,경북 : 좋음,울산 : 좋음,대구 : 좋음,부산 : 좋음,충남 : 좋음,충북 : 좋음,세종 : 좋음,대전 : 좋음,영동 : 좋음,영서 : 좋음,경기남부 : 좋음,경기북부 : 좋음,인천 : 좋음",
+     "imageUrl3": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.1hsp.2026101409.png",
+     "imageUrl2": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.1hsp.2026101403.png",
+     "imageUrl1": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.1hsp.2026101321.png",
+     "informCode": "PM10",
+     "imageUrl4": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.1hsp.2026101321.png",
+     "imageUrl5": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.1hsp.2026101403.png",
+     "informCause": "○ 대부분 중서부 지역은 아침까지 기류 수렴과 대기 정체로 전일 잔류 및 국내 발생 미세먼지가 축적되어 농도가 높았으나, 이후 북서풍을 타고 '보통' 수준의 국외 미세먼지가 유입되어 일평균 농도는 '보통'으로 예상됩니다.",
+     "imageUrl6": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.1hsp.2026101409.png",
+     "imageUrl7": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.2days.ani.gif",
+     "imageUrl8": "https://www.airkorea.or.kr/dustImage/",
+     "imageUrl9": "https://www.airkorea.or.kr/dustImage/",
+     "informData": "2026-10-13",
+     "dataTime": "2026-10-13 23시 발표"
+    },
+    {
+     "actionKnack": null,
+     "informOverall": "○ 전 권역이 '좋음'으로 예상됩니다.",
+     "informGrade": "서울 : 좋음,제주 : 좋음,전남 : 좋음,전북 : 좋음,광주 : 좋음,경남 : 좋음,경북 : 좋음,울산 : 좋음,대구 : 좋음,부산 : 좋음,충남 : 좋음,충북 : 좋음,세종 : 좋음,대전 : 좋음,영동 : 좋음,영서 : 좋음,경기남부 : 좋음,경기북부 : 좋음,인천 : 좋음",
+     "imageUrl3": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.1hsp.2026101409.png",
+     "imageUrl2": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.1hsp.2026101403.png",
+     "imageUrl1": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.1hsp.2026101321.png",
+     "informCode": "PM10",
+     "imageUrl4": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.1hsp.2026101321.png",
+     "imageUrl5": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.1hsp.2026101403.png",
+     "informCause": "○ 원활한 대기 확산으로 대기질이 청정할 것으로 예상됩니다.",
+     "imageUrl6": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.1hsp.2026101409.png",
+     "imageUrl7": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.2days.ani.gif",
+     "imageUrl8": "https://www.airkorea.or.kr/dustImage/",
+     "imageUrl9": "https://www.airkorea.or.kr/dustImage/",
+     "informData": "2026-10-14",
+     "dataTime": "2026-10-13 23시 발표"
+    },
+    {
+     "actionKnack": null,
+     "informOverall": "○ 전 권역이 '좋음'으로 예상됩니다.",
+     "informGrade": "서울 : 좋음,제주 : 좋음,전남 : 좋음,전북 : 좋음,광주 : 좋음,경남 : 좋음,경북 : 좋음,울산 : 좋음,대구 : 좋음,부산 : 좋음,충남 : 좋음,충북 : 좋음,세종 : 좋음,대전 : 좋음,영동 : 좋음,영서 : 좋음,경기남부 : 좋음,경기북부 : 좋음,인천 : 좋음",
+     "imageUrl3": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.1hsp.2026101509.png",
+     "imageUrl2": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.1hsp.2026101503.png",
+     "imageUrl1": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.1hsp.2026101421.png",
+     "informCode": "PM10",
+     "imageUrl4": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.1hsp.2026101421.png",
+     "imageUrl5": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.1hsp.2026101503.png",
+     "informCause": "○ 원활한 연직(상·하층) 확산으로 대기질이 청정할 것으로 예상됩니다.",
+     "imageUrl6": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.1hsp.2026101509.png",
+     "imageUrl7": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.2days.ani.gif",
+     "imageUrl8": "https://www.airkorea.or.kr/dustImage/",
+     "imageUrl9": "https://www.airkorea.or.kr/dustImage/",
+     "informData": "2026-10-15",
+     "dataTime": "2026-10-13 23시 발표"
+    },
+    {
+     "actionKnack": null,
+     "informOverall": "○ 전 권역이 '좋음'∼'보통'으로 예상됩니다.",
+     "informGrade": "서울 : 보통,제주 : 좋음,전남 : 좋음,전북 : 좋음,광주 : 좋음,경남 : 좋음,경북 : 좋음,울산 : 좋음,대구 : 좋음,부산 : 좋음,충남 : 좋음,충북 : 좋음,세종 : 좋음,대전 : 좋음,영동 : 좋음,영서 : 좋음,경기남부 : 보통,경기북부 : 보통,인천 : 보통",
+     "imageUrl3": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.1hsp.2026101409.png",
+     "imageUrl2": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.1hsp.2026101403.png",
+     "imageUrl1": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM10.1hsp.2026101321.png",
+     "informCode": "PM25",
+     "imageUrl4": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.1hsp.2026101321.png",
+     "imageUrl5": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.1hsp.2026101403.png",
+     "informCause": "○ 대부분 중서부 지역은 아침까지 기류 수렴과 대기 정체로 전일 잔류 및 국내 발생 미세먼지가 축적되어 농도가 높았으나, 이후 북서풍을 타고 '보통' 수준의 국외 미세먼지가 유입되어 일평균 농도는 '보통'으로 예상됩니다.",
+     "imageUrl6": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.1hsp.2026101409.png",
+     "imageUrl7": "https://www.airkorea.or.kr/dustImage/",
+     "imageUrl8": "https://www.airkorea.or.kr/dustImage/2026/10/13/23/09km/AQF.20261013.NIER_09_01.PM2P5.2days.ani.gif",
+     "imageUrl9": "https://www.airkorea.or.kr/dustImage/",
+     "informData": "2026-10-13",
+     "dataTime": "2026-10-13 23시 발표"
+    }
+   ],
+   "pageNo": 1,
+   "numOfRows": 100
+  },
+  "header": {
+   "resultMsg": "NORMAL_CODE",
+   "resultCode": "00"
+  }
+ }
+}
