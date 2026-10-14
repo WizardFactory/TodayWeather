@@ -296,6 +296,31 @@ async fn snapshot(
         SourceAnswer::Forward(r) => panic!("forwarded: {r}"),
     }
 }
+type Store = Box<dyn server2::domestic::kma::KmaStore + Send>;
+/// `first`, or a later snapshot, once its station and history inputs are complete.
+async fn settled(
+    s3: &S3Source<server2::world::BoundedS3<server2::storage::HttpS3Transport>>,
+    first: Store,
+    town: &serde_json::Value,
+) -> Store {
+    let ready = |s: &Store| {
+        s.stn_hourly_and_min_rns(town, "202609241049", &serde_json::json!({}))
+            .is_ok_and(|j| j.get("weather").is_some())
+            && s.history(town)
+                .is_ok_and(|h| h.get("hourly").is_some_and(|x| len(x) == 168))
+    };
+    if ready(&first) {
+        return first;
+    }
+    for _ in 0..40 {
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        let next = snapshot(s3).await;
+        if ready(&next) {
+            return next;
+        }
+    }
+    panic!("station and history inputs never completed");
+}
 fn get<'a>(j: &'a OrderedJson, k: &str) -> &'a OrderedJson {
     j.get(k)
         .unwrap_or_else(|| panic!("{k} in {}", String::from_utf8_lossy(&j.to_bytes())))
@@ -325,6 +350,10 @@ async fn station_and_history_inputs_are_acquired_once_published_and_answered() {
     // Two concurrent requests share every acquisition (single-flight by dataset and publication).
     let (a, b) = tokio::join!(snapshot(&s3), snapshot(&s3));
     let town = town(a.as_ref());
+    // Within the 3-second wait on a developer machine; a slower CI runner may need a later
+    // request (the late-data test pins the wait itself).
+    let a = settled(&s3, a, &town).await;
+    let b = settled(&s3, b, &town).await;
     let stn = a
         .stn_hourly_and_min_rns(&town, "202609241049", &serde_json::json!({}))
         .unwrap();
@@ -342,11 +371,24 @@ async fn station_and_history_inputs_are_acquired_once_published_and_answered() {
     // 중구 rains on the minute page; one rain station is not a local rain answer.
     assert_eq!(get(&stn, "nearStnId").string().as_deref(), Some("108"));
     assert!(stn.get("localMinAws").is_none());
+    // The request waits for the latest and previous hours; the backfill pass runs on its own
+    // (the 09-20 12:00 page arrives for a later request).
     let city = a.city_hourly(&town).unwrap();
-    assert_eq!(
-        len(&city),
-        3,
-        "09-20 12:00, 09:00 and 10:00 rows of station 108"
+    assert!(
+        (2..=3).contains(&len(&city)),
+        "09:00 and 10:00 rows of station 108 (and maybe 09-20 12:00)"
+    );
+    let mut backfilled = len(&city) == 3;
+    for _ in 0..40 {
+        if backfilled {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        backfilled = len(&snapshot(&s3).await.city_hourly(&town).unwrap()) == 3;
+    }
+    assert!(
+        backfilled,
+        "the backfilled 09-20 12:00 row reaches a later request"
     );
     let history = a.history(&town).unwrap();
     assert_eq!(
@@ -433,16 +475,15 @@ async fn late_acquisitions_answer_as_absent_data_and_complete_for_the_next_reque
             .as_deref(),
         Some("cache-read-timeout")
     );
-    // The owned acquisitions finish and publish; the next request uses them.
+    // The owned acquisitions finish and publish; later requests use them (the ASOS run starts
+    // once the station registry exists, so it completes for a later request again).
     tokio::time::sleep(Duration::from_secs(6)).await;
-    let second = snapshot(&s3).await;
-    let stn = second
+    let later = settled(&s3, snapshot(&s3).await, &town).await;
+    let stn = later
         .stn_hourly_and_min_rns(&town, "202609241049", &serde_json::json!({}))
         .unwrap();
     assert_eq!(get(&stn, "stnId").number(), Some(108.));
-    tokio::time::sleep(Duration::from_secs(6)).await;
-    let third = snapshot(&s3).await;
-    assert_eq!(len(get(&third.history(&town).unwrap(), "hourly")), 168);
+    assert_eq!(len(get(&later.history(&town).unwrap(), "hourly")), 168);
     let _ = Unreachable;
 }
 
