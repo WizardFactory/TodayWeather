@@ -246,8 +246,10 @@ ignore paging, the provider returned 10 of 28 items without `numOfRows` on
 2026-10-13, so every operation requests and verifies all pages. Item-level
 `serviceKey` echoes are removed before storage or archival.
 
-On 2026-10-13 a read-only check of the locally configured operator key list
-found one valid key (the others: one expired, three unregistered). Collection
+On 2026-10-14 the operator key lists were reduced to three keys from three
+data.go.kr accounts, and each key returned `00` for all five AirKorea operations.
+On 2026-10-13 the earlier list had one valid key (the others: one expired, three
+unregistered). Collection
 had failed because it used only the last, expired entry. An isolated run with
 that list against the real provider and an in-memory MongoDB stored fresh
 station, province, station-metadata and forecast rows that the existing read
