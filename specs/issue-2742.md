@@ -89,9 +89,14 @@ Documents are derived in memory; nothing derived is stored.
 - **RSS** (`town-rss`): `parseShortRss`, then `saveShortRssNewForm` (last write wins per
   `fcsDate`). Retention is `fcsDate <= t - 216 h` at the last hourly run (minute 2) before `t`.
 - **Mid** (`mid-fcst`, `mid-land-fcst`, `mid-ta`):
-  - `organizeForecastData` / `midForecastPolicy.parse`, then `saveMid` with `saveOnlyLastOne`: one
-    document per `regId` from the newest publication that parsed; for equal publications the
-    earlier fetch wins, because legacy skips an already stored publication.
+  - `organizeForecastData` / `midForecastPolicy.parse`, then `saveMid` with `saveOnlyLastOne`:
+    one document per `regId`, overwritten by every successful save in save order. A save is
+    skipped when the stored document already has its publication (`checkPubDate`).
+  - Save order equals publication order across months. Both legacy (`getMidForecast`,
+    `getMidLand`, `getMidTemp`) and server2 (S15b-4) request only the wall-clock target `tmFc`,
+    which never decreases. The reader therefore walks publication months newest first and folds
+    a month's acquisitions in completion order. An acquisition of an older publication completed
+    after a newer one cannot be produced; S15b-4 must keep this invariant.
   - Stored documents are read for every region. Collection eligibility only decides whether a
     missing latest publication forwards for request-time acquisition:
     - forecast `stnId` and land codes from `collectTownForecast`;

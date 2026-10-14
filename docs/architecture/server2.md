@@ -1816,7 +1816,9 @@ each captured acquisition:
   retention anchored on the family's latest requested slot.
 - **RSS:** `parseShortRss`, last write wins per `fcsDate`, a Mongoose cast error skips a row, and the
   hourly wall-clock retention.
-- **Mid:** `organizeForecastData` / `midForecastPolicy.parse` and `saveMid` with `saveOnlyLastOne`.
+- **Mid:** `organizeForecastData` / `midForecastPolicy.parse` and `saveMid` with `saveOnlyLastOne`, in
+  save order. Legacy and S15b-4 request only the non-decreasing wall-clock `tmFc`, so save order is
+  publication order across months.
   Every region's stored document is read. Collection eligibility only decides whether a missing
   latest publication must be acquired, so a retired zone keeps its document.
 

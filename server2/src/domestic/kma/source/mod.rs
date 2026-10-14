@@ -266,6 +266,11 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
     /// searched month by month back to [`HISTORY_START_MONTH`] (legacy keeps it until a newer
     /// save replaces it). A region legacy collects (`collected`) whose latest publication is not
     /// in S3 is Err (S15b-4 acquires it); any other region answers what its records hold.
+    ///
+    /// `saveMid` overwrites in save order. Legacy and the S15b-4 acquisition request only the
+    /// wall-clock target `tmFc`, which never decreases, so save order is publication order
+    /// across months: the newest publication month with a saved document holds the last save,
+    /// and its acquisitions are folded in completion order.
     pub async fn mid_answer(
         &self,
         model: MidModel,
