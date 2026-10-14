@@ -64,6 +64,35 @@ server2 applies its own captured publications in fetch order with the legacy sav
 the intended native semantics after cutover, not a shadow-parity claim. The JSON provider form
 replaces legacy XML; the oracle feeds legacy the same item values in xml2js form.
 
+# S15b-3 (air and life inputs), 2026-10-15
+
+Task: issue-2742-s15b-3; owner: Claude builder (S15b-3 worktree); base: 05c06c67 (S15b-1 merge).
+Authority: AK authorized S15b-3 on 2026-10-14 (relayed by the root coordinator), endpoint
+pre-merge, with these directions: the request waits at most 3 s and omits late parts with the
+legacy absent-data output while the owned acquisition continues; national datasets shared by all
+requests (AirKorea `sidoName=전국` once per publication hour, single-flight by dataset and hour);
+every acquisition method confirmed by small live calls with keys from `server/.env`; decisions
+cite the provider documentation, the legacy collection method and the tw_svc assembly; a
+read-only look at the production configuration for the KAQ calibration.
+
+Split (scope too large for one reviewable PR): **S15b-3a** AirKorea and the air fallback (this
+PR), **S15b-3b** area numbers, life index, KASI and MFDS, **S15b-3c** the KAQ/AirKorea image
+forecasts.
+
+S15b-3a criteria:
+- A3-1: `arpltn`, `dust_forecast` and `air_fallback` answer from server2 data with the legacy
+  readers; the documents and answers equal a pinned legacy oracle byte for byte, directly and
+  from the S3 test peer with empty memory.
+- A3-2: AirKorea data are national datasets (observations per data hour, station list, dust
+  forecast) acquired by one owned single-flight acquisition through S08 and published through S06
+  before use; nothing is fetched per request, cell or station.
+- A3-3: a request never waits past its deadline for an acquisition; it answers with the stored
+  data (the legacy output for missing data), and the acquisition finishes for the next request.
+- A3-4: settings are real configuration only (`AIRKOREA_SECRET_KEYS`,
+  `SERVER2_AIRKOREA_DAILY_UNITS`, `SERVER2_DATA_GO_KR_URL`); the KMA fallback shares the world air
+  chain; no mode or verification flag.
+- A3-5: paths match `server2/config/tasks/S15b-3.json`; outside changes are the declared documents.
+
 # Intent (S15b-2, 2026-10-15)
 
 Task: issue-2742-s15b (slice S15b-2); base: master `05c06c67`, merged with `f49921b6`. Authority: AK's

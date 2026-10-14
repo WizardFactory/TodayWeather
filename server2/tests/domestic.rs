@@ -1,3 +1,7 @@
+#[path = "domestic/air.rs"]
+mod air;
+#[path = "domestic/air_s3.rs"]
+mod air_s3;
 #[path = "domestic/asos.rs"]
 mod asos;
 #[path = "domestic/observe.rs"]

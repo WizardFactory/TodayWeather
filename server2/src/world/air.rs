@@ -47,7 +47,7 @@ fn to_date(value: &Val) -> Option<f64> {
     }
 }
 /// ISO 8601 date-time with `Z` or `+hh:mm`, as Date.parse accepts for these feeds.
-fn parse_iso_offset(s: &str) -> f64 {
+pub(crate) fn parse_iso_offset(s: &str) -> f64 {
     if s.ends_with('Z') {
         let base = s.trim_end_matches('Z');
         let (main, frac) = base.split_once('.').unwrap_or((base, ""));

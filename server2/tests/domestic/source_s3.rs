@@ -32,6 +32,12 @@ use std::{
 use tokio::time::Instant;
 
 /// The owned S06 loopback S3 fault peer (`tests/storage/catalog_peer.py`).
+/// The domestic tests that own an S3 test peer run one at a time, so small CI runners serve one
+/// peer at a time (the peer admits 16 connections and bounds each to 2 s).
+pub static S3_PEERS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+/// S3 requests in flight per test transport: below the production 12, leaving peer slots for
+/// connections whose handler thread has not released its slot yet.
+pub const TEST_PERMITS: usize = 8;
 pub struct Peer {
     child: Child,
     endpoint: String,
@@ -64,8 +70,11 @@ impl Peer {
             }
         }
     }
+    pub fn endpoint(&self) -> &str {
+        &self.endpoint
+    }
     pub fn transport(&self) -> BoundedS3<HttpS3Transport> {
-        self.transport_limited(12)
+        self.transport_limited(TEST_PERMITS)
     }
     /// A transport admitting at most `limit` requests at once (tests that run many reads
     /// concurrently stay well below the peer's connection limit on CI runners).
@@ -524,6 +533,7 @@ const SEOUL: Coord = Coord { mx: 60., my: 127. };
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap();
@@ -599,7 +609,11 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
         &OrderedJson::Array(vec![]),
         "no warning records: no active zones",
     );
-    assert_eq!(transport.available(), 12, "every S3 permit returned");
+    assert_eq!(
+        transport.available(),
+        TEST_PERMITS,
+        "every S3 permit returned"
+    );
     // Station and ASOS inputs are sourced (S15b-2, here over empty collections); the assembly
     // reaches the first input S15b-3 owns and forwards with its name.
     let outcome = assemble(
@@ -619,6 +633,7 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn missing_inputs_forward_with_named_reasons() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     async fn reason(skip: &[&str], path: Option<&str>) -> String {
         let peer = Peer::new();
         let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();

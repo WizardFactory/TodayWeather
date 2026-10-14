@@ -341,6 +341,7 @@ fn town(snapshot: &dyn server2::domestic::kma::KmaStore) -> serde_json::Value {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn station_and_history_inputs_are_acquired_once_published_and_answered() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = Peer::new();
     let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
     seed(&store, &[]).await;
@@ -450,6 +451,7 @@ async fn station_and_history_inputs_are_acquired_once_published_and_answered() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn late_acquisitions_answer_as_absent_data_and_complete_for_the_next_request() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = Peer::new();
     let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
     seed(&store, &[]).await;
@@ -556,6 +558,7 @@ fn station_seed_converter_keeps_export_lines_and_rejects_other_fields() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_registry_starts_from_the_imported_legacy_seed() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = Peer::new();
     let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
     seed(&store, &[]).await;
@@ -709,6 +712,7 @@ async fn an_expired_backfill_pass_leaves_unstarted_hours_for_the_next_pass() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn minute_pages_stay_within_the_readers_reach() {
     use server2::domestic::kma::source::observe::Observations;
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = Peer::new();
     let store =
         Arc::new(CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap());

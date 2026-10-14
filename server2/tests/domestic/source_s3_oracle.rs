@@ -99,6 +99,7 @@ const JSON: &str = "application/json";
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn grid_documents_read_from_s3_equal_the_legacy_oracle() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     for sc in items_of(at(oracle(), &["grid"])) {
         let id = text(at(sc, &["id"]));
         let now = number(at(sc, &["at"]));
@@ -139,6 +140,7 @@ async fn grid_documents_read_from_s3_equal_the_legacy_oracle() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rss_and_mid_documents_read_from_s3_equal_the_legacy_oracle() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     for sc in items_of(at(oracle(), &["rss"])) {
         let id = text(at(sc, &["id"]));
         let now = number(at(sc, &["at"]));
@@ -235,6 +237,7 @@ async fn rss_and_mid_documents_read_from_s3_equal_the_legacy_oracle() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn forecast_zones_read_from_s3_equal_the_legacy_oracle() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     // 2026-10-14 00:00 UTC, inside the record history.
     let base = 1_791_936_000_000.;
     let key = ProviderKey::Named {
@@ -305,6 +308,7 @@ fn current_page(time: &str, t1h: &str) -> Vec<u8> {
 /// S15b1-R3: an acquisition counts from the arrival of its last page.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_acquisition_completed_after_the_request_instant_does_not_apply() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     // 2026-10-14 10:50 KST; the 1000 publication is complete at 10:41.
     let now = 1_791_942_600_000.;
     let peer = Peer::new();
@@ -407,6 +411,7 @@ async fn put_zones(store: &Store, date: u32, when: f64, page: Vec<u8>) {
 /// S15b1-R4: the last stored mid document survives failed newer publications in later months.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn stored_mid_documents_outlive_retirement_and_failed_publications() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = Peer::new();
     let store = store(&peer);
     let key = ProviderKey::Named {
@@ -476,6 +481,7 @@ async fn stored_mid_documents_outlive_retirement_and_failed_publications() {
 /// S15b1-R5: fields set by an older zone list and omitted by a newer one stay (legacy `$set`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn forecast_zone_fields_from_older_months_are_kept() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = Peer::new();
     let store = store(&peer);
     put_zones(
@@ -528,6 +534,7 @@ fn the_short_lookback_covers_retained_slots_of_old_publications() {
 /// not appended out of order: the refresh refolds, so warm memory equals a cold fold.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_late_zone_list_refolds_instead_of_being_skipped() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = Peer::new();
     let store = store(&peer);
     let t0 = 1_791_849_600_000.; // 2026-10-13 09:00 KST
