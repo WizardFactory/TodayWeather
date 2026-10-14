@@ -814,3 +814,82 @@ async fn forecast_zone_rotates_a_rejected_key_like_2604() {
             .all(|c| c.get("ServiceKey").is_none() && c.get("type").is_none())
     );
 }
+
+/// S13B-R1-01: only a regular JSON `response.header.resultCode "03"` ends the zone list; a
+/// gateway or XML `03` after a full page fails the whole list.
+#[tokio::test]
+async fn forecast_zone_list_end_must_be_the_regular_03_envelope() {
+    for (name, end) in [
+        ("gateway 03", Reply::json(gateway("03"))),
+        (
+            "xml 03",
+            Reply::with(
+                200,
+                "text/xml",
+                "<response><header><resultCode>03</resultCode></header></response>",
+            ),
+        ),
+    ] {
+        let e = env().await;
+        e.stub
+            .push(ZONE, Reply::json(zone_page(&ids("11W", 1000), 1)));
+        e.stub.push(ZONE, end);
+        let outcome = e
+            .acquirer
+            .acquire_zones(&ZoneRequest::new(), deadline())
+            .await;
+        assert!(
+            matches!(outcome, Err(DomesticError::Incomplete(_))),
+            "{name}: {outcome:?}"
+        );
+    }
+}
+
+/// S13B-R1-02/03: an unread 401/403 body is a retryable download failure that keeps the key;
+/// a 200 gateway body with only the legacy expired/unregistered marker rejects the key.
+#[tokio::test]
+async fn airkorea_unread_rejections_keep_and_markers_move_the_key() {
+    let three = [(KEY_A, '5'), (KEY_B, '6'), (KEY_C, '7')];
+    let others = [(KEY_A, 'a'), (KEY_B, 'b')];
+    // A content type over the S08 bound makes the transport drop the body.
+    let unread = Reply::with(401, &"x".repeat(600), gateway("31"));
+    let e = env_keys(&three, &others).await;
+    e.stub.push(STATION_LIST, unread.clone());
+    e.stub.push(STATION_LIST, unread);
+    let outcome = e
+        .acquirer
+        .acquire_airkorea(&AirKoreaRequest::station_list(), deadline())
+        .await;
+    assert!(
+        matches!(
+            outcome,
+            Err(DomesticError::Provider(Disposition::Retryable))
+        ),
+        "{outcome:?}"
+    );
+    assert_eq!(keys_used(&e), [KEY_C, KEY_C]);
+    assert_eq!(
+        e.acquirer.ring(Service::AirKorea).unwrap().preferred(),
+        None
+    );
+
+    for marker in [
+        Reply::with(200, "text/plain", "SERVICE_KEY_IS_NOT_REGISTERED_ERROR"),
+        Reply::json(
+            r#"{"OpenAPI_ServiceResponse":{"cmmMsgHeader":{"errMsg":"SERVICE ERROR","returnAuthMsg":"DEADLINE_HAS_EXPIRED_ERROR"}}}"#,
+        ),
+    ] {
+        let e = env_keys(&three, &others).await;
+        e.stub.push(STATION_LIST, marker);
+        e.stub.push(
+            STATION_LIST,
+            Reply::json(local("airkorea-station-list.json")),
+        );
+        complete(
+            e.acquirer
+                .acquire_airkorea(&AirKoreaRequest::station_list(), deadline())
+                .await,
+        );
+        assert_eq!(keys_used(&e), [KEY_C, KEY_B]);
+    }
+}

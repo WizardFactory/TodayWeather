@@ -183,6 +183,8 @@ fn gateway_json(value: &Value) -> Option<&Value> {
         .filter(|h| h.is_object())
 }
 const QUOTA_MARKER: &[u8] = b"LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR";
+const EXPIRED_MARKER: &[u8] = b"DEADLINE_HAS_EXPIRED_ERROR";
+const UNREGISTERED_MARKER: &[u8] = b"SERVICE_KEY_IS_NOT_REGISTERED_ERROR";
 pub fn classify(status: u16, body: &[u8], data_go_kr: bool, valid: bool) -> Disposition {
     classify_format(status, body, data_go_kr, valid, ResponseFormat::DataType)
 }
@@ -201,15 +203,27 @@ pub fn classify_format(
     if status == 429 || c.as_deref() == Some("22") {
         return Disposition::Quota;
     }
-    if format == ResponseFormat::ReturnType && data_go_kr && matches!(status, 401 | 403) {
-        match c.as_deref() {
-            Some("20" | "30" | "31" | "32") => return Disposition::Auth,
-            Some(_) => return Disposition::Rejected,
-            // Legacy `gatewayCode` reads the quota marker of a gateway body without a code.
-            None if body.windows(QUOTA_MARKER.len()).any(|w| w == QUOTA_MARKER) => {
+    if format == ResponseFormat::ReturnType && data_go_kr && c.is_none() {
+        // Legacy `gatewayCode` markers of a gateway body without a numeric code: read for a
+        // 401/403 and for a 200 body that is not JSON or is the JSON gateway envelope.
+        let gateway_body = matches!(status, 401 | 403)
+            || (status == 200
+                && serde_json::from_slice::<Value>(body)
+                    .map_or(true, |v| v.get("OpenAPI_ServiceResponse").is_some()));
+        if gateway_body {
+            let has = |m: &[u8]| body.windows(m.len()).any(|w| w == m);
+            if has(EXPIRED_MARKER) || has(UNREGISTERED_MARKER) {
+                return Disposition::Auth;
+            }
+            if has(QUOTA_MARKER) {
                 return Disposition::Quota;
             }
-            None => (),
+        }
+    }
+    if format == ResponseFormat::ReturnType && data_go_kr && matches!(status, 401 | 403) {
+        match c.as_deref() {
+            Some("20" | "30" | "31" | "32") | None => return Disposition::Auth,
+            Some(_) => return Disposition::Rejected,
         }
     }
     if matches!(status, 401 | 403) || matches!(c.as_deref(), Some("20" | "30" | "31" | "32")) {

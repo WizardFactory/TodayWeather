@@ -149,6 +149,36 @@ fn success_codes_are_per_format_and_classify_is_unchanged() {
     }
 }
 
+/// S13B-R1-03: AirKorea reads the legacy gateway markers of a 200 body that is not JSON or is
+/// the JSON gateway envelope; a regular envelope is not reinterpreted.
+#[test]
+fn airkorea_200_gateway_markers_follow_legacy_gateway_code() {
+    let r = ResponseFormat::ReturnType;
+    for (body, expected) in [
+        ("SERVICE_KEY_IS_NOT_REGISTERED_ERROR", Disposition::Auth),
+        ("<html>DEADLINE_HAS_EXPIRED_ERROR</html>", Disposition::Auth),
+        (
+            r#"{"OpenAPI_ServiceResponse":{"cmmMsgHeader":{"returnAuthMsg":"LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR"}}}"#,
+            Disposition::Quota,
+        ),
+        (
+            r#"{"response":{"header":{"resultMsg":"DEADLINE_HAS_EXPIRED_ERROR"}}}"#,
+            Disposition::Retryable,
+        ),
+    ] {
+        assert_eq!(
+            classify_format(200, body.as_bytes(), true, false, r),
+            expected,
+            "{body}"
+        );
+        // Other formats keep the S13 rule.
+        assert_eq!(
+            classify_format(200, body.as_bytes(), true, false, ResponseFormat::DataType),
+            Disposition::Retryable
+        );
+    }
+}
+
 /// S13b (legacy #2737 `rejectionCode`): an AirKorea 401/403 keeps an explicit body code, so
 /// only a credential code or a body without a code rejects the key; quota still wins.
 #[test]

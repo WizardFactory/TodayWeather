@@ -33,7 +33,10 @@ the same caller deadline. When every key was rejected the call fails with `Provi
 Quota (HTTP 429, code 22), other provider codes, transport failures and invalid bodies stop
 without changing the key. A success records that key. Each page call offers one candidate, so
 the S08 executor never rotates AirKorea itself. For `ReturnType`, an HTTP 401/403 whose body
-carries an explicit code other than 20/30/31/32/22 is `Rejected` (legacy `rejectionCode`).
+carries an explicit code other than 20/30/31/32/22 is `Rejected` (legacy `rejectionCode`); an
+unread 401/403 body is a retryable download failure; a 401/403 or 200 gateway body without a
+numeric code is read for the legacy expired/unregistered (credential) and quota markers
+(review S13B-R1-02/03).
 
 ## Validation and records (AC2)
 
@@ -55,7 +58,8 @@ JSON) across the pages is invalid.
   finite number; `tmEd`/`tmSt` nonnegative integer or digit string; `seq`/`ht`/`lat`/`lon`
   finite decimals; nonzero coordinates within longitude [-180, 180) and latitude [-90, 90]);
   `regId` unique across pages. A page of 1000 items continues; a shorter page ends the list,
-  as does `03` after a full page; `03` on page 1 is NoData; a full tenth page fails. An empty
+  as does a regular JSON `response.header.resultCode "03"` after a full page (a gateway or XML
+  `03` fails the list, review S13B-R1-01); `03` on page 1 is NoData; a full tenth page fails. An empty
   list is not recorded. Period: KST fetch day.
 
 | Kind | Key (`ProviderKey::Named`) | Period | Partition |
@@ -71,6 +75,8 @@ one group per acquisition. Any later-page failure discards the whole set.
 
 At most one funded retry per page (legacy: one transient retry for AirKorea, three attempts per
 key for the zone list); a zone 3xx is retried once and other 4xx stop (legacy: the reverse).
+A zone page tries at most two keys through the #2604 ring, which does not return to its starting
+key after a failure (legacy: every key once per request, then back to the start; S13B-R1-04).
 The empty zone list (legacy would retire every zone) and a forecast without a parseable
 announcement on the search date are not recorded. Live HTTPS behavior of these services is
 unverified; fixtures are legacy offline fixtures or labelled synthetic pages.

@@ -127,6 +127,15 @@ impl Paged for ZoneRequest {
     fn paging(&self) -> Paging {
         Paging::UntilShort
     }
+    /// Legacy `_parsePage`: only a JSON `response.header` with `String(resultCode) === "03"`
+    /// ends the list; a gateway envelope or an XML body fails the refresh.
+    fn ends_list(&self, json: &Value) -> bool {
+        json.get("response")
+            .and_then(|r| r.get("header"))
+            .and_then(|h| h.get("resultCode"))
+            .and_then(Value::as_str)
+            == Some("03")
+    }
     fn per_page(&self) -> u32 {
         ROWS
     }

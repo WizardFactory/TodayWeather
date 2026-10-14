@@ -1722,10 +1722,15 @@ operation (`KeyRing::preferred`), otherwise the last configured key. Each page c
 A credential rejection (HTTP 401/403 or codes 20/30/31/32) moves to the previous key and restarts
 from page 1 within the same deadline; after every key is rejected the call fails with
 `Provider(Auth)`. Quota (429 or code 22, also inside a 401/403 body), other provider codes,
-transport failures and invalid bodies stop without changing the key. For `ReturnType`, a 401/403
-whose body carries an explicit code other than a credential or quota code is `Rejected`, as in
-legacy `rejectionCode`. This replaces the S13a single key without rotation. The zone list keeps the
-S13a #2604 ring rotation, which matches legacy rotation on quota and credential rejections.
+transport failures, unread 401/403 bodies and invalid bodies stop without changing the key. For
+`ReturnType`, a 401/403 whose body carries an explicit code other than a credential or quota code
+is `Rejected`, as in legacy `rejectionCode`; a 401/403 or 200 gateway body without a numeric code is
+read for the legacy `DEADLINE_HAS_EXPIRED_ERROR`/`SERVICE_KEY_IS_NOT_REGISTERED_ERROR` (credential)
+and `LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR` (quota) markers. This replaces the S13a
+single key without rotation. The zone list keeps the S13a #2604 ring: each page call offers the
+current key and the next one, and the ring moves to the key that answered or past every rejected
+key. Legacy instead tries every configured key once per request and, after a final failure,
+returns to the key it started with.
 
 **Checks.** AirKorea pages need `resultCode "00"`, an `items` array of objects, a digit `totalCount`
 ≤ 2,000 that is equal on every page, echoed `pageNo`/`numOfRows`, the expected item count and no
@@ -1736,7 +1741,8 @@ station item needs a nonblank `stationName`, `dmX`/`dmY` as a string (empty allo
 `addr` absent, null or a string. Zone pages need `resultCode "00"`, an `items.item` array whose length
 equals `totalCount` (the provider counts only the returned page), echoed `pageNo` and
 `numOfRows=1000`, unique `regId`, and items that legacy `normalizeZone` accepts. A full page
-continues; a shorter page, or `03` after a full page, ends the list; a full tenth page fails.
+continues; a shorter page, or a regular JSON `response.header.resultCode "03"` after a full page,
+ends the list (a gateway or XML `03` fails it); a full tenth page fails.
 
 **Records for S15b.** Source `data-go-kr`; every page of one acquisition is one record with the
 exact provider bytes and `Pagination{page, pages, complete: true}` in request order, published as one
@@ -1756,7 +1762,9 @@ announcement and splits `informGrade` at `,` and ` : `; `completeGeoMsrStnInfo` 
 retired, never deleted.
 
 Recorded differences: at most one funded retry per page (legacy: one transient AirKorea retry,
-three attempts per key for the zone list); a zone 3xx is retried once and another 4xx stops. An
+three attempts per key for the zone list); a zone 3xx is retried once and another 4xx stops; a
+zone page tries at most two keys and the ring does not return to its starting key after a
+failure (legacy: every key once, then back to the start). An
 empty zone list (legacy would retire every zone) and a forecast without an announcement on the
 search date are not recorded. Verification uses the legacy offline fixtures `frcst.json` and
 `msrstn.json` (copied byte for byte), a labelled synthetic `getFcstZoneCd` page, loopback provider

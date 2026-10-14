@@ -216,6 +216,11 @@ pub(crate) trait Paged: Clone + Send + Sync + 'static {
     fn paging(&self) -> Paging {
         Paging::Total
     }
+    /// For `Paging::UntilShort`: whether a later no-data body is the family's own end-of-list
+    /// envelope (a gateway or XML `03` is not).
+    fn ends_list(&self, _json: &serde_json::Value) -> bool {
+        false
+    }
     fn per_page(&self) -> u32;
     fn max_pages(&self) -> u32;
     fn kind(&self) -> &'static str;
@@ -597,9 +602,19 @@ where
             let body = match result {
                 Ok(AcquisitionOutcome::Data(body)) => body,
                 // `03` after a full page ends a per-page list (#2740); it is not a record.
-                Ok(AcquisitionOutcome::NoData(_))
+                Ok(AcquisitionOutcome::NoData(body))
                     if page > 1 && request.paging() == Paging::UntilShort =>
                 {
+                    let (request, bytes) = (request.clone(), body.body);
+                    let ends = self
+                        .blocking(deadline, move || {
+                            serde_json::from_slice::<serde_json::Value>(&bytes)
+                                .is_ok_and(|json| request.ends_list(&json))
+                        })
+                        .await?;
+                    if !ends {
+                        return Err(incomplete("invalid end of list"));
+                    }
                     break;
                 }
                 Ok(AcquisitionOutcome::NoData(_)) => {
