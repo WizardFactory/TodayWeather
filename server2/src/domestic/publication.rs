@@ -181,6 +181,19 @@ pub fn uv_slots(now_ms: i64) -> Option<Vec<Publication>> {
 pub fn pollen_time(now_ms: i64) -> Option<Publication> {
     Some(kst(now_ms)?.hour_start())
 }
+/// AirKorea dust forecast announcement expected now (S13b, `kecoRequester._checkDataTime` at
+/// ae21b6cc): before 05 the previous day's 23시, then 05, 11, 17 and 23시 of the KST day. The
+/// `getMinuDustFrcstDspth` search date is the announcement's date.
+pub fn dust_forecast_announcement(now_ms: i64) -> Option<Publication> {
+    let now = kst(now_ms)?;
+    match now.hour() {
+        0..=4 => at(now.add_hours(-24)?, 2300),
+        5..=10 => at(now, 500),
+        11..=16 => at(now, 1100),
+        17..=22 => at(now, 1700),
+        _ => at(now, 2300),
+    }
+}
 /// AWS hourly and city observation pages: the current KST hour.
 pub fn observation_hour(now_ms: i64) -> Option<Publication> {
     Some(kst(now_ms)?.hour_start())

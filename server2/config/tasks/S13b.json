@@ -1,0 +1,39 @@
+{
+  "task": "S13b",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2741",
+  "server2_paths": [
+    "server2/config/tasks/S13b.json",
+    "server2/src/providers/transport.rs",
+    "server2/src/providers/rejection.rs",
+    "server2/src/domestic/acquire.rs",
+    "server2/src/domestic/airkorea.rs",
+    "server2/src/domestic/family.rs",
+    "server2/src/domestic/publication.rs",
+    "server2/src/domestic/zone.rs",
+    "server2/tests/formats.rs",
+    "server2/tests/formats/"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2741.md",
+      "category": "documentation",
+      "reason": "S13b governing intent record; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2741.md",
+      "category": "documentation",
+      "reason": "S13b governing specification; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2741.md",
+      "category": "documentation",
+      "reason": "S13b execution plan and user scenarios; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S13b section (record kinds, keys and body shapes for S15b) and update the S13a/S15 sentences that say the AirKorea forecast and station list are not ported"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2741#issuecomment-6167062732"
+}

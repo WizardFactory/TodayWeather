@@ -34,10 +34,14 @@ const DATA_GO_KR: &str = "data-go-kr";
 const KMA_WEB: &str = "kma-web";
 
 /// Sticky per-service key position (#2604). Keys are secrets; budgets are their quota owners.
+/// AirKorea uses `preferred` instead (legacy `withKeys`, S13b).
 pub struct KeyRing<B> {
     entries: Vec<(ProviderKey, Arc<BudgetStore<B>>)>,
     current: AtomicUsize,
+    /// Index of the key that last completed an AirKorea operation; `NONE` before any success.
+    preferred: AtomicUsize,
 }
+const NONE: usize = usize::MAX;
 impl<B: BudgetTransport> KeyRing<B> {
     pub fn new(entries: Vec<(ProviderKey, Arc<BudgetStore<B>>)>) -> Result<Self, DomesticError> {
         let mut keys = HashSet::new();
@@ -57,10 +61,29 @@ impl<B: BudgetTransport> KeyRing<B> {
         Ok(Self {
             entries,
             current: AtomicUsize::new(0),
+            preferred: AtomicUsize::new(NONE),
         })
     }
     pub fn current(&self) -> usize {
         self.current.load(Ordering::Acquire)
+    }
+    /// AirKorea (legacy `withKeys`): the key that last completed an operation, if any.
+    pub fn preferred(&self) -> Option<usize> {
+        Some(self.preferred.load(Ordering::Acquire)).filter(|i| *i < self.entries.len())
+    }
+    /// Legacy `withKeys` start: the last working key, otherwise the last configured key.
+    fn legacy_start(&self) -> usize {
+        self.preferred().unwrap_or(self.entries.len() - 1)
+    }
+    fn remember(&self, index: usize) {
+        self.preferred.store(index, Ordering::Release);
+    }
+    /// One candidate: the key at `index` (no rotation inside the funded call).
+    fn single(&self, index: usize) -> Vec<Candidate<B>> {
+        vec![Candidate {
+            budget: self.entries[index].1.clone(),
+            key: ProviderKey(self.entries[index].0.0.clone()),
+        }]
     }
     pub fn len(&self) -> usize {
         self.entries.len()
@@ -70,13 +93,9 @@ impl<B: BudgetTransport> KeyRing<B> {
     }
     /// The current key and, when configured, the next one as the single rotation candidate.
     fn candidates(&self) -> (usize, Vec<Candidate<B>>) {
-        self.offer(true)
-    }
-    /// `candidates`, or only the current key for a service that never rotates (AirKorea).
-    fn offer(&self, rotate: bool) -> (usize, Vec<Candidate<B>>) {
         let start = self.current();
         let n = self.entries.len();
-        let picked = if n > 1 && rotate {
+        let picked = if n > 1 {
             vec![start, (start + 1) % n]
         } else {
             vec![start]
@@ -157,17 +176,27 @@ impl Validator for PageValidator {
             )
     }
 }
-/// Page facts of an S13a family page (AirKorea, KASI, forecast zone).
+/// Page facts of an S13a/S13b family page (AirKorea, KASI, forecast zone).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PageFacts {
     pub(crate) total: u32,
     pub(crate) rows: u32,
     /// Row identities used to reject duplicates across pages.
     pub(crate) row_keys: Vec<String>,
-    /// Newest publication on the page (data time, locdate or fetch day).
+    /// Newest publication on the page (data time, announcement, locdate or fetch day).
     pub(crate) publication: Publication,
-    /// At least one row carries a usable value (AirKorea concentration).
+    /// At least one row is usable (AirKorea concentration, a forecast of the searched
+    /// announcement day, any station or zone row).
     pub(crate) usable: bool,
+}
+/// How a family's pages end.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Paging {
+    /// `totalCount` counts every page; page 1 fixes the page count.
+    Total,
+    /// `totalCount` counts the returned page only (getFcstZoneCd, #2740): a full page
+    /// continues, a shorter page or `03` after a full page ends the list.
+    UntilShort,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum PageCheck {
@@ -180,8 +209,13 @@ pub(crate) enum PageCheck {
 pub(crate) trait Paged: Clone + Send + Sync + 'static {
     fn service(&self) -> Service;
     fn format(&self) -> ResponseFormat;
-    /// Whether a rejected key rotates to the next ring entry within the call (#2604).
+    /// `true`: a rejected key rotates to the next ring entry within the call (#2604).
+    /// `false`: legacy AirKorea `withKeys` (S13b): one key per call, from the last working
+    /// key or the last entry; a rejected credential restarts the call with the previous key.
     fn rotates(&self) -> bool;
+    fn paging(&self) -> Paging {
+        Paging::Total
+    }
     fn per_page(&self) -> u32;
     fn max_pages(&self) -> u32;
     fn kind(&self) -> &'static str;
@@ -437,7 +471,9 @@ where
         self.group(records, &publication.partition())
     }
 
-    /// AirKorea station or sido observations for one sido (S13a). Every page must pass.
+    /// AirKorea station or sido observations for one sido (S13a), the dust forecast of a
+    /// search date or the station list (S13b). Every page must pass; keys follow legacy
+    /// `withKeys`.
     pub async fn acquire_airkorea(
         &self,
         request: &AirKoreaRequest,
@@ -453,7 +489,7 @@ where
     ) -> Result<Acquired, DomesticError> {
         self.acquire_paged(request, deadline).await
     }
-    /// The forecast-zone code list (S13a).
+    /// The forecast-zone code list (data.go.kr `getFcstZoneCd`, S13b).
     pub async fn acquire_zones(
         &self,
         request: &ZoneRequest,
@@ -488,6 +524,40 @@ where
             .rings
             .get(&request.service())
             .ok_or(DomesticError::Invalid("no key ring for service"))?;
+        if request.rotates() {
+            return self.collect_pages(request, ring, None, deadline).await;
+        }
+        // Legacy AirKorea `withKeys` (#2737): the last working key, otherwise the last entry.
+        // A rejected credential moves to the previous key and restarts from page 1 within the
+        // same deadline; quota and every other failure stop without changing the key.
+        let n = ring.len();
+        let mut index = ring.legacy_start();
+        for _ in 0..n {
+            match self
+                .collect_pages(request, ring, Some(index), deadline)
+                .await
+            {
+                Err(DomesticError::Provider(Disposition::Auth)) => index = (index + n - 1) % n,
+                Ok(outcome) => {
+                    if matches!(outcome, Acquired::Complete(_)) {
+                        ring.remember(index);
+                    }
+                    return Ok(outcome);
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        Err(DomesticError::Provider(Disposition::Auth))
+    }
+    /// All pages of one paged request; `fixed` pins one key (legacy AirKorea), otherwise the
+    /// #2604 ring offers and settles its candidates.
+    async fn collect_pages<F: Paged>(
+        &self,
+        request: &F,
+        ring: &KeyRing<B>,
+        fixed: Option<usize>,
+        deadline: Instant,
+    ) -> Result<Acquired, DomesticError> {
         let incomplete = |reason| {
             self.metrics.incomplete();
             DomesticError::Incomplete(reason)
@@ -504,7 +574,10 @@ where
                 total,
                 now_ms: now as i64,
             });
-            let (start, candidates) = ring.offer(request.rotates());
+            let (start, candidates) = match fixed {
+                Some(index) => (index, ring.single(index)),
+                None => ring.candidates(),
+            };
             let mut guard = CallGuard::new(&self.metrics);
             let result = self
                 .funded
@@ -518,12 +591,17 @@ where
                 )
                 .await;
             let report = guard.finish(&result);
-            // A non-rotating service (AirKorea) keeps its one selected key (#2636).
-            if request.rotates() {
+            if fixed.is_none() {
                 ring.settle(start, &report);
             }
             let body = match result {
                 Ok(AcquisitionOutcome::Data(body)) => body,
+                // `03` after a full page ends a per-page list (#2740); it is not a record.
+                Ok(AcquisitionOutcome::NoData(_))
+                    if page > 1 && request.paging() == Paging::UntilShort =>
+                {
+                    break;
+                }
                 Ok(AcquisitionOutcome::NoData(_)) => {
                     if page > 1 {
                         return Err(incomplete("no data after the first page"));
@@ -548,22 +626,35 @@ where
             if facts.row_keys.iter().any(|k| !seen.insert(k.clone())) {
                 return Err(incomplete("duplicate row across pages"));
             }
-            if page == 1 {
-                count = if facts.rows == facts.total {
-                    1
-                } else {
-                    facts.total.div_ceil(request.per_page())
-                };
-                if count > request.max_pages() || count as usize > self.limits.members {
-                    return Err(incomplete("page count exceeds the family limit"));
+            match request.paging() {
+                Paging::Total if page == 1 => {
+                    count = if facts.rows == facts.total {
+                        1
+                    } else {
+                        facts.total.div_ceil(request.per_page())
+                    };
+                    total = Some(facts.total);
                 }
-                total = Some(facts.total);
+                Paging::Total => {}
+                Paging::UntilShort => {
+                    count = if facts.rows < request.per_page() {
+                        page
+                    } else if page >= request.max_pages() {
+                        // Legacy `page limit`: a full last allowed page fails the list.
+                        return Err(incomplete("page count exceeds the family limit"));
+                    } else {
+                        page + 1
+                    };
+                }
+            }
+            if count > request.max_pages() || count as usize > self.limits.members {
+                return Err(incomplete("page count exceeds the family limit"));
             }
             pages.push((body, facts, fetched));
             page += 1;
         }
         if !pages.iter().any(|(_, f, _)| f.usable) {
-            return Err(incomplete("no usable observation"));
+            return Err(incomplete("no usable row"));
         }
         let publication = pages
             .iter()

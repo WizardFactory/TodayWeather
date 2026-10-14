@@ -13,11 +13,12 @@ pub enum Service {
     MidFcst,
     LivingWthrIdx,
     HealthWthrIdx,
-    /// AirKorea B552584 observations (S13a): one selected key, never rotated (#2636).
+    /// AirKorea B552584 (S13a observations; S13b dust forecast and station list). Keys follow
+    /// legacy `airkoreaObservation.withKeys` (#2737), not the #2604 ring rotation.
     AirKorea,
     /// KASI RiseSetInfoService (S13a).
     RiseSet,
-    /// newsky2 ForecastZoneInfoService (S13a).
+    /// data.go.kr FcstZoneInfoService `getFcstZoneCd` (S13b; legacy #2740).
     ForecastZone,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -374,8 +375,6 @@ pub struct Endpoints {
     data_go_kr: Url,
     kma: Url,
     weather: Url,
-    /// newsky2 root of the forecast-zone code service (S13a; legacy HTTP, default HTTPS).
-    newsky: Url,
 }
 impl Default for Endpoints {
     fn default() -> Self {
@@ -403,18 +402,9 @@ impl Endpoints {
             data_go_kr: root(data_go_kr)?,
             kma: root(kma)?,
             weather: root(weather)?,
-            newsky: root("https://newsky2.kma.go.kr/")?,
         })
-    }
-    /// Replace the newsky2 root (tests use literal loopback HTTP).
-    pub fn with_newsky(mut self, newsky: &str) -> Result<Self, DomesticError> {
-        self.newsky = root(newsky)?;
-        Ok(self)
     }
     pub(crate) fn data_go_kr(&self) -> &Url {
         &self.data_go_kr
-    }
-    pub(crate) fn newsky(&self) -> &Url {
-        &self.newsky
     }
 }

@@ -1488,9 +1488,11 @@ valid KST data time, a nonblank identity, the requested sido, no duplicate acros
 least one numeric concentration; KASI one item that echoes the area and day and has the 12
 time fields; zone `resultMsg OK` and a complete, duplicate-free `regId` list. Records use
 source `data-go-kr` and kinds `airkorea-station`, `airkorea-sido`, `kasi-area-rise-set` and
-`forecast-zone`. AirKorea `getMinuDustFrcstDspth` and `getMsrstnList` are not ported, because
-legacy still calls them on the retired `openapi.airkorea.or.kr` host; the choice of a host is
-an open decision.
+`forecast-zone`. AirKorea `getMinuDustFrcstDspth` and `getMsrstnList` were not ported, because
+legacy then called them on the retired `openapi.airkorea.or.kr` host. [S13b](#s13b-legacy-airkorea-and-forecast-zone-sources-2026-10-14)
+follows legacy #2737/#2740: it ports both operations, gives every AirKorea operation the legacy
+`withKeys` key selection, and replaces the newsky2 zone request and the `Type` format with
+data.go.kr `getFcstZoneCd`.
 
 `world::LiveAir` is the air source of the native world (S10c removed the S13a
 `SERVER2_WORLD_AIR=live-local|restore-local` settings; a provider takes part when its key is
@@ -1653,10 +1655,10 @@ and a `Family::Kma` handler for the S10 dispatcher. Legacy stays selected by def
   remaining deadline. Nothing is invented. The legacy 400 region guard maps to the legacy hop's
   dependency error.
 - **Air.** The goldens show no AirKorea dust forecast or station list, and no AirKorea forecast or
-  station-list endpoint is called. AK decided on 2026-10-13 (#2729) that `getMinuDustFrcstDspth`
-  and `getMsrstnList` are not ported. Nearest-station selection must use ported station coordinates
-  (for example an offline export of legacy `MsrStnInfo` with provenance), never `getMsrstnList`.
-  In S15 the station list arrives inside the `arpltn` store answer. Stored dust forecasts and the provider fallback are
+  station-list endpoint is called during a request. The 2026-10-13 decision (#2729) not to port
+  `getMinuDustFrcstDspth` and `getMsrstnList` rested on the retired host; after legacy #2737,
+  [S13b](#s13b-legacy-airkorea-and-forecast-zone-sources-2026-10-14) acquires both as raw records
+  (`airkorea-dust-forecast`, `airkorea-station-list`) for S15b. In S15 the station list arrives inside the `arpltn` store answer. Stored dust forecasts and the provider fallback are
   store answers.
 
 Parity uses a pinned Node 16.20.2 oracle recording ([provenance](../../server2/tests/domestic/fixtures/PROVENANCE.md)):
@@ -1694,3 +1696,69 @@ and peak RSS is 165 MiB, 162 MiB of which is the decoded fixture (both test view
 the Linux values. The legacy oracle took about 7 ms per request on the same host, including loopback
 HTTP and Express. These are local fixture measurements, not production latency, concurrency or
 memory evidence. The S10 3-second native attempt and the 9-second gateway deadline are unchanged.
+
+### S13b legacy AirKorea and forecast-zone sources (2026-10-14)
+
+[S13b](../../plans/issue-2741.md) ([spec](../../specs/issue-2741.md)) follows two legacy master
+changes in the `server2::domestic` library: [#2737](https://github.com/WizardFactory/TodayWeather/pull/2737)
+moved the AirKorea dust forecast and station list to data.go.kr B552584, and
+[#2740](https://github.com/WizardFactory/TodayWeather/pull/2740) moved the forecast-zone list to
+data.go.kr `getFcstZoneCd`. It wires no route, scheduler or setting; S14 owns capture timing and
+S15b reads the records.
+
+| Request | Path below `https://apis.data.go.kr/` | Family query (transport adds format and key) | Pages |
+| --- | --- | --- | --- |
+| `AirKoreaRequest::dust_forecast(YYYYMMDD)` | `B552584/ArpltnInforInqireSvc/getMinuDustFrcstDspth` | `searchDate=YYYY-MM-DD`, `pageNo`, `numOfRows=100`, `ver=1.1`; `serviceKey`, `returnType=json` | ≤20, total ≤2,000 |
+| `AirKoreaRequest::station_list()` | `B552584/MsrstnInfoInqireSvc/getMsrstnList` | `pageNo`, `numOfRows=100` (no `ver`); `serviceKey`, `returnType=json` | ≤20, total ≤2,000 |
+| `ZoneRequest::new()` | `1360000/FcstZoneInfoService/getFcstZoneCd` | `numOfRows=1000`, `pageNo`; `serviceKey`, `dataType=JSON` | ≤10 |
+
+`publication::dust_forecast_announcement(now)` ports `_checkDataTime`: the expected announcement is
+05, 11, 17 or 23시 of the KST day, or the previous day's 23시 before 05:00; its date is the search
+date. The newsky2 root, `Endpoints::with_newsky` and the `ResponseFormat::Type` format (with its
+`0000` success code) are removed.
+
+**Keys.** All four AirKorea operations follow legacy `withKeys`: the key that last completed an
+operation (`KeyRing::preferred`), otherwise the last configured key. Each page call offers one key.
+A credential rejection (HTTP 401/403 or codes 20/30/31/32) moves to the previous key and restarts
+from page 1 within the same deadline; after every key is rejected the call fails with
+`Provider(Auth)`. Quota (429 or code 22, also inside a 401/403 body), other provider codes,
+transport failures and invalid bodies stop without changing the key. For `ReturnType`, a 401/403
+whose body carries an explicit code other than a credential or quota code is `Rejected`, as in
+legacy `rejectionCode`. This replaces the S13a single key without rotation. The zone list keeps the
+S13a #2604 ring rotation, which matches legacy rotation on quota and credential rejections.
+
+**Checks.** AirKorea pages need `resultCode "00"`, an `items` array of objects, a digit `totalCount`
+≤ 2,000 that is equal on every page, echoed `pageNo`/`numOfRows`, the expected item count and no
+repeated item; `totalCount 0` or `03` on page 1 is terminal NoData. An item with a non-empty
+`serviceKey` is not stored: legacy deletes this echo, but a raw record keeps the provider bytes. A
+forecast item needs nonblank `dataTime`, `informCode`, `informData` and a string `informGrade`; a
+station item needs a nonblank `stationName`, `dmX`/`dmY` as a string (empty allowed) or number and
+`addr` absent, null or a string. Zone pages need `resultCode "00"`, an `items.item` array whose length
+equals `totalCount` (the provider counts only the returned page), echoed `pageNo` and
+`numOfRows=1000`, unique `regId`, and items that legacy `normalizeZone` accepts. A full page
+continues; a shorter page, or `03` after a full page, ends the list; a full tenth page fails.
+
+**Records for S15b.** Source `data-go-kr`; every page of one acquisition is one record with the
+exact provider bytes and `Pagination{page, pages, complete: true}` in request order, published as one
+group.
+
+| Kind | Key (`ProviderKey::Named`) | Period (`local_date`/`slot`) | Catalog partition | Body (each page) |
+| --- | --- | --- | --- | --- |
+| `airkorea-dust-forecast` | `dust-forecast` | newest `YYYY-MM-DD HH시 발표` announcement on the search date (`HH00`) | search date `YYYYMMDD` | `response.body.items[]` with `dataTime`, `informCode` (for example `PM10`, `PM25`), `informData` (`YYYY-MM-DD`), `informCause`, `informOverall`, `informGrade` (`"서울 : 좋음,제주 : 좋음,..."`), `actionKnack`, `imageUrl1`-`imageUrl9`; `totalCount`, `pageNo`, `numOfRows` |
+| `airkorea-station-list` | `stations` | KST fetch day / `0000` | `YYYYMMDD` | `response.body.items[]` with `stationName`, `dmX` (latitude), `dmY` (longitude), `addr`, `item` (`"SO2, CO, ..."`), `mangName`, `year`, optional `map`, `oper`, `photo`; `totalCount`, `pageNo`, `numOfRows` |
+| `forecast-zone` | `forecast-zones` | KST fetch day / `0000` | `YYYYMMDD` | `response.body.items.item[]` with `regId`, `regName`, `regSp`, optional `regEn`, `regUp`, `stnWn`, `stnF3`, `stnFd`, `stnFw`, `tmEd`, `tmSt`, `seq`, `ht`, `lat`, `lon`; per-page `totalCount`, `pageNo`, `numOfRows`, `dataType` |
+
+Legacy consumers to port in S15b: `_parseFrcst` keeps only items whose `dataTime` equals the expected
+announcement and splits `informGrade` at `,` and ` : `; `completeGeoMsrStnInfo` swaps `dmX`/`dmY` when
+`dmX > 100` and geocodes an empty coordinate from `addr`, and `parseMsrstnList` stores
+`geo = [dmY, dmX]`; `normalizeZone` converts the zone fields and sets
+`geo = [lon, lat]` only for nonzero coordinates, and zones missing from a complete refresh are
+retired, never deleted.
+
+Recorded differences: at most one funded retry per page (legacy: one transient AirKorea retry,
+three attempts per key for the zone list); a zone 3xx is retried once and another 4xx stops. An
+empty zone list (legacy would retire every zone) and a forecast without an announcement on the
+search date are not recorded. Verification uses the legacy offline fixtures `frcst.json` and
+`msrstn.json` (copied byte for byte), a labelled synthetic `getFcstZoneCd` page, loopback provider
+stubs and the S3 test peer; the release smoke publishes and reads back each kind. Live HTTPS
+behavior of the three services, real quotas and key lists are unverified.

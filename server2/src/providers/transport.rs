@@ -3,7 +3,9 @@ use crate::budget::Provider;
 use std::{future::Future, net::IpAddr, time::Duration};
 /// Credential and response-format parameters a data.go.kr-style service declares (S13a).
 /// `DataType` is the S13 default; the others are the legacy forms of services that do not
-/// accept `dataType`. The transport appends them after the family query.
+/// accept `dataType`. The transport appends them after the family query. S13b removed the
+/// newsky2-only `type=json` form: the forecast-zone list moved to data.go.kr `getFcstZoneCd`
+/// with `dataType=JSON` (legacy #2740).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub enum ResponseFormat {
     /// `serviceKey=<key>&dataType=JSON` (VilageFcst, MidFcst, life index).
@@ -13,15 +15,13 @@ pub enum ResponseFormat {
     ReturnType,
     /// `_type=json&ServiceKey=<key>` (KASI RiseSetInfoService, `kasi.riseset.controller`).
     UnderscoreType,
-    /// `type=json&ServiceKey=<key>` (newsky2 ForecastZoneInfoService, `kma.forecast.zone`).
-    Type,
 }
 impl ResponseFormat {
     /// Credential parameter name, spelled as legacy sends it.
     pub fn key_param(self) -> &'static str {
         match self {
             Self::DataType | Self::ReturnType => "serviceKey",
-            Self::UnderscoreType | Self::Type => "ServiceKey",
+            Self::UnderscoreType => "ServiceKey",
         }
     }
     /// Format parameter name and value, spelled as legacy sends it.
@@ -30,20 +30,16 @@ impl ResponseFormat {
             Self::DataType => ("dataType", "JSON"),
             Self::ReturnType => ("returnType", "json"),
             Self::UnderscoreType => ("_type", "json"),
-            Self::Type => ("type", "json"),
         }
     }
     /// Legacy order: the credential first for the data.go.kr 2.0 and B552584 builders, last
-    /// for the KASI and newsky2 URL builders.
+    /// for the KASI URL builder.
     fn key_first(self) -> bool {
         matches!(self, Self::DataType | Self::ReturnType)
     }
-    /// Header result codes that mean success. The newsky2 services answer `0000`.
+    /// Header result codes that mean success (the same for every remaining format).
     pub fn success_codes(self) -> &'static [&'static str] {
-        match self {
-            Self::Type => &["0", "00", "0000"],
-            _ => &["0", "00"],
-        }
+        &["0", "00"]
     }
     /// The family query must not already carry a credential (any case) or format parameter.
     pub(crate) fn admits(self, url: &reqwest::Url) -> bool {

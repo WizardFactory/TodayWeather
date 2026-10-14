@@ -182,11 +182,14 @@ fn gateway_json(value: &Value) -> Option<&Value> {
         .get("cmmMsgHeader")
         .filter(|h| h.is_object())
 }
+const QUOTA_MARKER: &[u8] = b"LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR";
 pub fn classify(status: u16, body: &[u8], data_go_kr: bool, valid: bool) -> Disposition {
     classify_format(status, body, data_go_kr, valid, ResponseFormat::DataType)
 }
 /// `classify` for a service with another declared response format (S13a): the same
-/// precedence, with that format's success codes (newsky2 answers `0000`).
+/// precedence and success codes. For AirKorea (`ReturnType`, S13b) an HTTP 401/403 keeps an
+/// explicit body code, as legacy `airkoreaObservation.rejectionCode` does at ae21b6cc: only a
+/// credential code (20/30/31/32) or a body without a code rejects the key; quota still wins.
 pub fn classify_format(
     status: u16,
     body: &[u8],
@@ -197,6 +200,17 @@ pub fn classify_format(
     let c = if data_go_kr { code(body) } else { None };
     if status == 429 || c.as_deref() == Some("22") {
         return Disposition::Quota;
+    }
+    if format == ResponseFormat::ReturnType && data_go_kr && matches!(status, 401 | 403) {
+        match c.as_deref() {
+            Some("20" | "30" | "31" | "32") => return Disposition::Auth,
+            Some(_) => return Disposition::Rejected,
+            // Legacy `gatewayCode` reads the quota marker of a gateway body without a code.
+            None if body.windows(QUOTA_MARKER.len()).any(|w| w == QUOTA_MARKER) => {
+                return Disposition::Quota;
+            }
+            None => (),
+        }
     }
     if matches!(status, 401 | 403) || matches!(c.as_deref(), Some("20" | "30" | "31" | "32")) {
         return Disposition::Auth;
