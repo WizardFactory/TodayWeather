@@ -36,6 +36,8 @@ encoding_rs = "0.8"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
+# S15b-2: paused-clock tests of owned acquisition deadlines.
+tokio = { version = "1", features = ["test-util"] }
 
 [[bin]]
 name = "server2-feasibility"

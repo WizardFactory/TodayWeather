@@ -298,17 +298,24 @@ impl AsosStore {
     }
     /// Apply one acquisition as the recovery that made it (fetch order).
     pub fn apply(&mut self, station: &str, f: &AsosFetched) {
+        let allowed = self.allowed(station, f);
+        self.apply_allowed(station, f, &allowed);
+    }
+    /// The keys of `f`'s range that are not complete in this store (legacy `allowed`).
+    pub fn allowed(&self, station: &str, f: &AsosFetched) -> BTreeSet<String> {
+        let range_keys = keys_between(f.kind, &f.start, &f.end);
+        self.missing(f.kind, station, &range_keys)
+            .into_iter()
+            .collect()
+    }
+    /// Apply one acquisition with a given `allowed` key set.
+    pub fn apply_allowed(&mut self, station: &str, f: &AsosFetched, allowed: &BTreeSet<String>) {
         let Some(items) = page_items(&f.pages) else {
             return;
         };
-        let range_keys = keys_between(f.kind, &f.start, &f.end);
-        let allowed: BTreeSet<String> = self
-            .missing(f.kind, station, &range_keys)
-            .into_iter()
-            .collect();
         let mut seen = BTreeSet::new();
         for item in &items {
-            let Some((key, values)) = normalize(f.kind, item, station, &allowed) else {
+            let Some((key, values)) = normalize(f.kind, item, station, allowed) else {
                 continue;
             };
             if !seen.insert(key.clone()) {
@@ -415,4 +422,35 @@ fn text(d: &Doc, k: &str) -> String {
         .and_then(Val::as_str)
         .unwrap_or_default()
         .to_owned()
+}
+
+/// A station's `asos_history` rows from its data.go.kr acquisitions and its ongoing-hour AWS page
+/// rows, applied in fetch order. A range's `allowed` keys are the keys no earlier data.go.kr
+/// acquisition completed: legacy `Recovery.run` plans from the store before it fetches, and runs
+/// are serialized per station, so that is the plan-time set whatever ongoing page rows arrived in
+/// between (their fields stay as earlier values; the range still adds the fields they lack).
+pub fn replay(station: &str, fetched: &[AsosFetched], national: &[(f64, Doc)]) -> AsosStore {
+    enum Event<'a> {
+        Range(&'a AsosFetched),
+        Page(&'a Doc),
+    }
+    let mut events: Vec<(f64, Event)> = fetched
+        .iter()
+        .map(|f| (f.fetched_at_ms, Event::Range(f)))
+        .collect();
+    events.extend(national.iter().map(|(at, r)| (*at, Event::Page(r))));
+    events.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let mut store = AsosStore::default();
+    let mut ranges_only = AsosStore::default();
+    for (at, e) in events {
+        match e {
+            Event::Range(f) => {
+                let allowed = ranges_only.allowed(station, f);
+                ranges_only.apply_allowed(station, f, &allowed);
+                store.apply_allowed(station, f, &allowed);
+            }
+            Event::Page(r) => store.apply_national(station, r, at),
+        }
+    }
+    store
 }

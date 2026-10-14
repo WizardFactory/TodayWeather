@@ -678,11 +678,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             Instant::now(),
             move |this| {
                 Box::pin(async move {
-                    let due: Vec<Publication> = missing
-                        .into_iter()
-                        .filter(|h| this.claim(&Flight::Hourly(*h), BACKFILL_RETRY))
-                        .collect();
-                    for chunk in due.chunks(BACKFILL_CONCURRENCY) {
+                    // An hour is claimed only when its acquisition starts, so hours a pass
+                    // did not reach before its owned deadline stay due for the next pass.
+                    let mut pending = missing.into_iter();
+                    loop {
+                        let chunk: Vec<Publication> = pending
+                            .by_ref()
+                            .filter(|h| this.claim(&Flight::Hourly(*h), BACKFILL_RETRY))
+                            .take(BACKFILL_CONCURRENCY)
+                            .collect();
+                        if chunk.is_empty() {
+                            break;
+                        }
                         crate::history::join_all(
                             chunk.iter().map(|h| this.hourly_page(*h)).collect(),
                         )
@@ -1078,26 +1085,12 @@ pub fn retain_window(fetched: &mut Vec<AsosFetched>, start: &str) {
 /// The station's `asos_history` rows: its data.go.kr acquisitions and the ongoing-hour AWS page
 /// rows in fetch order.
 fn station_store(station: &str, fetched: &[AsosFetched], folded: &Folded) -> AsosStore {
-    enum Event<'a> {
-        Range(&'a AsosFetched),
-        Page(&'a Doc),
-    }
-    let mut events: Vec<(f64, Event)> = fetched
-        .iter()
-        .map(|f| (f.fetched_at_ms, Event::Range(f)))
-        .collect();
-    if let Some(rows) = folded.national.get(station) {
-        events.extend(rows.iter().map(|(at, r)| (*at, Event::Page(r))));
-    }
-    events.sort_by(|a, b| a.0.total_cmp(&b.0));
-    let mut store = AsosStore::default();
-    for (at, e) in events {
-        match e {
-            Event::Range(f) => store.apply(station, f),
-            Event::Page(r) => store.apply_national(station, r, at),
-        }
-    }
-    store
+    let national = folded
+        .national
+        .get(station)
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+    super::asos::replay(station, fetched, national)
 }
 fn asos_fetched(kind: AsosKind, start: &str, end: &str, records: &[RawRecord]) -> AsosFetched {
     AsosFetched {

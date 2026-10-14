@@ -284,3 +284,84 @@ async fn asos_acquisition_checks_pages_like_the_legacy_provider() {
     assert_eq!(call.get("dateCd"), Some("DAY"));
     assert_eq!(call.get("startHh"), None);
 }
+
+/// S15b2-R2: an ongoing-hour AWS page row that completes a D-1 hour between a run's plan and its
+/// range completion does not drop the range's item: the range still adds the fields the page row
+/// lacks, and replay gives the same rows in a fresh process (it depends only on the records).
+#[test]
+fn a_range_planned_before_an_ongoing_page_still_adds_its_missing_fields() {
+    use server2::domestic::kma::source::asos::replay;
+    use server2::domestic::kma::source::{Doc, Val};
+    let key_ms = |key: &str| {
+        // KST wall clock in UTC fields, as station rows store it.
+        let (y, m, d, h) = (
+            key[..4].parse::<i32>().unwrap(),
+            key[4..6].parse::<u8>().unwrap(),
+            key[6..8].parse::<u8>().unwrap(),
+            key[8..10].parse::<u8>().unwrap(),
+        );
+        time::PrimitiveDateTime::new(
+            time::Date::from_calendar_date(y, time::Month::try_from(m).unwrap(), d).unwrap(),
+            time::Time::from_hms(h, 0, 0).unwrap(),
+        )
+        .assume_utc()
+        .unix_timestamp() as f64
+            * 1000.
+    };
+    let row = Doc::new()
+        .with("date", Val::Date(key_ms("2026101323")))
+        .with("stnId", Val::str("108"))
+        .with("t1h", Val::Num(12.5))
+        .with("reh", Val::Num(70.))
+        .with("vec", Val::Num(90.));
+    let range = AsosFetched {
+        kind: AsosKind::Hourly,
+        start: "202610132300".into(),
+        end: "202610132300".into(),
+        fetched_at_ms: 2_000.,
+        pages: vec![std::sync::Arc::from(hourly_page(
+            &[
+                serde_json::json!({"tm": "2026-10-13 23:00", "stnId": "108", "ta": "13.0", "hm": "75", "ws": "1.0", "dc10Tca": "9"}),
+            ],
+            1,
+            1,
+        ))],
+    };
+    let page_first = replay(
+        "108",
+        std::slice::from_ref(&range),
+        &[(1_000., row.clone())],
+    );
+    let docs = page_first.read(AsosKind::Hourly, "108", "202610132300", "202610132300");
+    let values = String::from_utf8(docs[0].json().to_bytes()).unwrap();
+    // The page's values came first; the range adds `wsd` and `sky`.
+    assert!(
+        values.contains(r#""values":{"t1h":12.5,"reh":70,"vec":90,"wsd":1,"sky":4}"#),
+        "{values}"
+    );
+    assert_eq!(
+        replay(
+            "108",
+            std::slice::from_ref(&range),
+            &[(1_000., row.clone())]
+        )
+        .docs()
+        .iter()
+        .map(|d| d.json().to_bytes())
+        .collect::<Vec<_>>(),
+        page_first
+            .docs()
+            .iter()
+            .map(|d| d.json().to_bytes())
+            .collect::<Vec<_>>()
+    );
+    // Range first: the hour is complete, so the later page row adds nothing.
+    let range_first = replay("108", std::slice::from_ref(&range), &[(3_000., row)]);
+    let docs = range_first.read(AsosKind::Hourly, "108", "202610132300", "202610132300");
+    let values = String::from_utf8(docs[0].json().to_bytes()).unwrap();
+    assert!(
+        values.contains(r#""values":{"t1h":13,"reh":75,"wsd":1,"sky":4}"#),
+        "{values}"
+    );
+    assert!(!values.contains("origin"));
+}

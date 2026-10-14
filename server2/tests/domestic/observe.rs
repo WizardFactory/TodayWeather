@@ -564,3 +564,99 @@ fn asos_acquisitions_outside_the_window_are_dropped() {
     let ends: Vec<&str> = list.iter().map(|x| x.end.as_str()).collect();
     assert_eq!(ends, ["202609170000", "202609232300"]);
 }
+
+/// Hourly failures after a delay; every hourly request is logged (no S3 publication happens).
+struct SlowFail {
+    delay: Duration,
+    hours: Mutex<Vec<Publication>>,
+}
+impl Acquire for SlowFail {
+    fn web(
+        &self,
+        request: WebRequest,
+        _: Instant,
+    ) -> BoxFuture<'_, Result<Acquired, DomesticError>> {
+        Box::pin(async move {
+            if request.family() == WebFamily::AwsHourly {
+                self.hours
+                    .lock()
+                    .unwrap()
+                    .push(request.publication().unwrap());
+            }
+            tokio::time::sleep(self.delay).await;
+            Err(DomesticError::Transport)
+        })
+    }
+    fn asos(&self, _: AsosRequest, _: Instant) -> BoxFuture<'_, Result<Acquired, DomesticError>> {
+        Box::pin(async { Err(DomesticError::Transport) })
+    }
+}
+
+/// S15b2-R7: a backfill pass that reaches its owned deadline leaves the hours it did not start
+/// due for the next pass instead of suppressing them for six hours.
+#[tokio::test(start_paused = true)]
+async fn an_expired_backfill_pass_leaves_unstarted_hours_for_the_next_pass() {
+    use server2::domestic::kma::source::observe::Observations;
+    // No S3: every read fails at once (closed loopback port).
+    let transport = server2::world::BoundedS3::new(
+        server2::storage::HttpS3Transport::new(
+            "http://127.0.0.1:9",
+            "server2-local",
+            "ap-northeast-2",
+            rusty_s3::Credentials::new("server2-local", "server2-local-secret"),
+        )
+        .unwrap(),
+        12,
+    );
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let slow = Arc::new(SlowFail {
+        delay: Duration::from_secs(61),
+        hours: Mutex::new(Vec::new()),
+    });
+    let obs = Arc::new(Observations::new(
+        transport,
+        store,
+        slow.clone(),
+        Arc::new(Unreachable),
+    ));
+    let now = NOW as i64;
+    let direct = [p(20260924, 1000), p(20260924, 900)];
+    let _ = obs
+        .stations(now, Instant::now() + Duration::from_secs(3))
+        .await;
+    // The pass runs three hours per 61 s; its 600 s owned deadline ends it after about 30 hours.
+    tokio::time::sleep(Duration::from_secs(700)).await;
+    let first: Vec<Publication> = slow.hours.lock().unwrap().clone();
+    let started = first.iter().filter(|h| !direct.contains(h)).count();
+    assert!(
+        started > 10 && started < 60,
+        "first pass started {started} hours"
+    );
+    let _ = obs
+        .stations(now, Instant::now() + Duration::from_secs(3))
+        .await;
+    tokio::time::sleep(Duration::from_secs(200)).await;
+    let all: Vec<Publication> = slow.hours.lock().unwrap().clone();
+    let second = &all[first.len()..];
+    assert!(
+        second.iter().any(|h| !direct.contains(h)),
+        "the next pass resumed the backfill"
+    );
+    // The latest and previous hours are not backfill hours; every backfill hour is tried once.
+    let backfill: Vec<&Publication> = all.iter().filter(|h| !direct.contains(h)).collect();
+    let mut unique = backfill.clone();
+    unique.sort();
+    unique.dedup();
+    assert_eq!(
+        unique.len(),
+        backfill.len(),
+        "no hour retried within six hours"
+    );
+    assert!(
+        second
+            .iter()
+            .filter(|h| !direct.contains(h))
+            .all(|h| !first.contains(h)),
+        "the next pass starts where the expired one stopped"
+    );
+}

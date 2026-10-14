@@ -182,7 +182,10 @@ Legacy references are master `f49921b6`; sources followed on disagreement are na
 - ASOS: `policy.nearest` over the registry's city stations (haversine ≤ 100 km, lower ID on ties);
   the window D-7..D-1 KST; `Recovery.run` ranges of incomplete keys, each at most once per hour;
   `Provider.fetch` checks per page (`provider.js:107-142`); `policy.normalize` and `Store.save`.
-  AWS hourly rows of the station fill ongoing hours first (AK 2026-10-15).
+  AWS hourly rows of the station fill ongoing hours first (AK 2026-10-15), counted only for pages
+  fetched within 2 h of their hour. One recovery run per station at a time, at most hourly.
+  Replay is in fetch order; a range's `allowed` keys are those no earlier range completed (the
+  plan-time set under serialized runs).
 - Waiting: S3 state first, then the needed acquisitions, a fold and station geocoding, all within
   `min(deadline, 3 s)`. Late: empty station collections (legacy errors such as `Fail to find stn
   coords`) and `cache-read-timeout`; no 503 and no forward.

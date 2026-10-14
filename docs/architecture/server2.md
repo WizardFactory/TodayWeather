@@ -2014,7 +2014,11 @@ The data.go.kr ASOS form has no nationwide request (live 2026-10-14: no `stnIds`
 is not configured. So rows of the city stations on the AWS hourly page fill ongoing hours
 (`t1h`, `reh`, `rs1h`→`rn1` outside November–March, `wsd`, `vec`; marked `origin`). Only pages
 fetched within two hours of their hour count; backfilled history pages never stand for ASOS
-hours. The ranges are requested for the keys still incomplete. Funding: `SERVER2_DATA_GO_KR_KEYS` (JSON array,
+hours. The ranges are requested for the keys still incomplete. Replay applies records in fetch
+order, and a range's allowed keys are those no earlier range completed. That is the legacy
+plan-time set, because runs are serialized per station: a page row that arrived in between keeps
+its values, and the range adds the fields the row lacks. A backfill pass claims each hour only
+when that hour's acquisition starts, so hours left when its owned deadline expires stay due. Funding: `SERVER2_DATA_GO_KR_KEYS` (JSON array,
 the legacy `DONGNAE_SECRET_KEYS` form) with `SERVER2_DATA_GO_KR_DAILY_UNITS` per key and KST day
 (S08); provider roots default to production HTTPS and accept loopback overrides for tests.
 
