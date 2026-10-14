@@ -429,6 +429,12 @@ fn kma_airkorea_acquisition_settings_fail_closed() {
                 "SERVER2_S3_SECRET_ACCESS_KEY",
                 "configured-secret".to_owned(),
             ),
+            // S15b-2: kma also requires the data.go.kr key settings.
+            (
+                "SERVER2_DATA_GO_KR_KEYS",
+                r#"["configured-data-go-kr-key-0001"]"#.to_owned(),
+            ),
+            ("SERVER2_DATA_GO_KR_DAILY_UNITS", "1000".to_owned()),
         ]
     };
     assert!(gateway(&vars(base())).unwrap().is_some(), "no key");
