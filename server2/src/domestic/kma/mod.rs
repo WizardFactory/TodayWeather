@@ -18,7 +18,7 @@ mod data;
 pub mod js;
 mod mid;
 mod policy;
-mod precip;
+pub(crate) mod precip;
 mod present;
 mod short;
 pub mod source;

@@ -253,6 +253,16 @@ async fn asos_acquisition_checks_pages_like_the_legacy_provider() {
             "zero total with items",
             vec![hourly_page(&items[..1], 1, 0)],
         ),
+        // S15b2-R14: U+0085 is not JavaScript whitespace; `policy.number` rejects the total.
+        (
+            "U+0085 total",
+            vec![
+                serde_json::to_vec(&serde_json::json!({"response": {
+                    "header": {"resultCode": "00", "resultMsg": "NORMAL_SERVICE"},
+                    "body": {"items": "", "pageNo": 1, "numOfRows": 999, "totalCount": "\u{85}0\u{85}"}}}))
+                .unwrap(),
+            ],
+        ),
         (
             "xml",
             vec![b"<OpenAPI_ServiceResponse></OpenAPI_ServiceResponse>".to_vec()],
@@ -370,4 +380,22 @@ fn a_range_planned_before_an_ongoing_page_still_adds_its_missing_fields() {
         "{values}"
     );
     assert!(!values.contains("origin"));
+}
+
+/// S15b2-R14: observation values are trimmed as JavaScript trims (NBSP and BOM are whitespace,
+/// U+0085 is not), so a padded temperature is dropped as legacy drops it.
+#[test]
+fn asos_values_trim_like_javascript() {
+    use server2::domestic::kma::source::asos::normalize;
+    let allowed: std::collections::BTreeSet<String> = ["202610071000".to_owned()].into();
+    let item = |ta: &str| serde_json::json!({"tm": "2026-10-07 10:00", "stnId": "108", "ta": ta, "hm": "70"});
+    let values = |ta: &str| {
+        normalize(AsosKind::Hourly, &item(ta), "108", &allowed)
+            .map(|(_, v)| String::from_utf8(v.json().to_bytes()).unwrap())
+    };
+    assert_eq!(values("\u{85}10\u{85}").as_deref(), Some(r#"{"reh":70}"#));
+    assert_eq!(
+        values("\u{a0}10\u{feff}").as_deref(),
+        Some(r#"{"t1h":10,"reh":70}"#)
+    );
 }

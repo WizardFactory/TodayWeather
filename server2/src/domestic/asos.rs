@@ -172,7 +172,8 @@ pub fn number(value: Option<&Value>) -> Option<f64> {
     match value? {
         Value::Number(n) => n.as_f64().filter(|f| f.is_finite()),
         Value::String(s) => {
-            let t = s.trim_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
+            // `String.prototype.trim` (ECMAScript whitespace and line terminators only).
+            let t = s.trim_matches(crate::domestic::kma::precip::js_ws);
             let body = t.strip_prefix(['+', '-']).unwrap_or(t);
             let (int, frac) = body.split_once('.').unwrap_or((body, ""));
             let ok = digits(int) && digits(frac) && !(int.is_empty() && frac.is_empty());
@@ -285,5 +286,23 @@ impl Paged for AsosRequest {
             publication,
             usable: true,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn number_trims_like_javascript() {
+        let n = |s: &str| number(Some(&Value::String(s.into())));
+        assert_eq!(n("\u{a0}10\u{feff}"), Some(10.));
+        assert_eq!(n(" \t12.5\n"), Some(12.5));
+        assert_eq!(n("5."), Some(5.));
+        assert_eq!(n(".5"), Some(0.5));
+        // U+0085 is not ECMAScript whitespace: `policy.number` rejects it.
+        assert_eq!(n("\u{85}10\u{85}"), None);
+        assert_eq!(n("\u{85}0\u{85}"), None);
+        assert_eq!(n("1e3"), None);
+        assert_eq!(n(""), None);
     }
 }
