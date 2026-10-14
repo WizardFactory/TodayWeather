@@ -100,3 +100,37 @@ python3 scripts/check-artifact-policy.py --range
 
 A library and a source selected only by `kma` in `SERVER2_NATIVE_FAMILIES`. That family still
 forwards every request in S15b-1. Revert the PR to roll back.
+
+## S15b-3 (2026-10-15)
+
+Declaration: [S15b-3.json](../server2/config/tasks/S15b-3.json) (S15b-3a). Endpoint pre-merge.
+
+| PR | Content | Completion |
+| --- | --- | --- |
+| S15b-3a | Nationwide AirKorea observations, station list, dust forecast, air fallback; kma AirKorea acquisition settings; shared air chain | Oracle-equal documents and answers; single-flight acquisition; deadline release |
+| S15b-3b | Area numbers (repository data + geocoding), life index (UV V5, pollen V3 national datasets), KASI, MFDS (keyless) | Oracle-equal answers; live-confirmed requests |
+| S15b-3c | KAQ/AirKorea GIF forecasts with the deployed calibration (service host config.js L89-L174) | V37 decoder characterization; oracle-equal hourly rows |
+
+### Scenarios (S15b-3a)
+
+| ID | User and goal | Steps | Expected / failure | AC and proof |
+| --- | --- | --- | --- | --- |
+| C1 | App user in Seoul | Snapshot after nationwide datasets and a station list are stored | `arpltn` equals `getArpLtnInfo` (merged, list, three stations) | A3-1; `air::arpltn_answers_*`, `air_s3::air_inputs_restore_*` |
+| C2 | First user of the hour | No dataset of the hour; two concurrent requests | One provider call, published, both served | A3-2; `air_s3::a_missing_national_dataset_*` |
+| C3 | User while AirKorea is slow | Acquisition slower than the deadline | Request returns before its deadline with stored data; the next request is served without a new call | A3-3; `air_s3::a_slow_acquisition_*` |
+| C4 | User where no station has a value | No AirKorea data; air provider configured, or too slow | Fallback observation (evaluate), or none before the deadline | A3-1/A3-3; `air_s3::the_air_fallback_*` |
+| C5 | Widget/web asking AirKorea forecasts | `airForecastSource=airkorea` | `getDustFrcst` list or error text | A3-1; `air::dust_forecast_*`, `air_s3::the_snapshot_*` |
+| C6 | Operator enables `kma` | Key without units, bad root, placeholder keys | Refused, refused, read-only | A3-4; `gateway::runtime::kma_airkorea_*` |
+| C7 | Reviewer checks placement | Placement gate | Only declared paths | A3-5 |
+
+### Checks
+
+```
+reports/.../cargo.sh fmt --check; clippy --locked --workspace --all-targets -- -D warnings; test --locked --workspace
+python3.11 server2/tools/kma_smoke.py --binary <release>; bash server2/deploy/smoke.sh --binary <release> --skip-reused
+python3.11 server2/tools/check_placement.py --root . --declaration server2/config/tasks/S15b-3.json --base 05c06c67
+python3 scripts/check-artifact-policy.py --staged / --range
+```
+
+Rollback: revert the PR; `kma` remains off until S15b-4.
+

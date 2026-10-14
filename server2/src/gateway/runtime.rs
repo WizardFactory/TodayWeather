@@ -95,20 +95,64 @@ pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
         (Some(s3), true) => Arc::new(native_geocoder(var, s3.clone())?),
         _ => Arc::new(LegacyGeocoder::new(&base)?),
     };
-    if let (Some(s3), true) = (s3.clone(), families.dsf) {
-        crate::world::runtime::select(&backend, crate::world::runtime::build(var, s3)?)?;
+    // One process air chain for the world family and the KMA air fallback (S15b-3).
+    let air = match &s3 {
+        Some(s3) if families.dsf || families.kma => {
+            Some(crate::world::runtime::live_air(var, s3.clone())?)
+        }
+        _ => None,
+    };
+    if let (Some(s3), true, Some(air)) = (s3.clone(), families.dsf, air.clone()) {
+        crate::world::runtime::select(
+            &backend,
+            crate::world::runtime::build_with_air(var, s3, air)?,
+        )?;
     }
     if let (Some(s3), true) = (s3, families.kma) {
         // S15b: the S3 input source over the shared admission. Inputs owned by later slices
-        // still forward with named reasons until S15b-4.
+        // still forward with named reasons until S15b-4. S15b-3 adds request-time AirKorea
+        // acquisition (`AIRKOREA_SECRET_KEYS`, `SERVER2_AIRKOREA_DAILY_UNITS`) and the air
+        // fallback through the shared air chain.
+        let airkorea = kma_airkorea(var, &s3)?;
+        let air: Option<Arc<dyn crate::world::AirSource>> =
+            air.map(|a| a as Arc<dyn crate::world::AirSource>);
         let source = crate::domestic::kma::source::S3Source::new(
             s3,
             crate::domestic::kma::backend::system_clock(),
         )
-        .map_err(|_| GatewayError::InvalidConfiguration)?;
+        .map_err(|_| GatewayError::InvalidConfiguration)?
+        .with_air(airkorea, air);
         crate::domestic::kma::backend::select_native(&backend, Arc::new(source))?;
     }
     Ok(Some(Arc::new(Gateway::new(geocoder, backend))))
+}
+/// The request-time AirKorea acquirer of the KMA source; None without `AIRKOREA_SECRET_KEYS`.
+fn kma_airkorea(
+    var: Var,
+    s3: &BoundedS3<HttpS3Transport>,
+) -> Result<Option<Arc<dyn crate::domestic::kma::source::live::AirKoreaAcquire>>, GatewayError> {
+    use crate::domestic::kma::source::live::{AirKoreaSettings, LiveAirKorea};
+    let Some(settings) =
+        AirKoreaSettings::from_vars(var).map_err(|_| GatewayError::InvalidConfiguration)?
+    else {
+        return Ok(None);
+    };
+    // Legacy AirKorea body bound: 2 MiB.
+    let funded = crate::providers::HttpProviderTransport::new(2 * 1024 * 1024)
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
+    let public = crate::providers::HttpPublicTransport::new(2 * 1024 * 1024)
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
+    let store =
+        crate::storage::CatalogStore::new(s3.clone(), crate::storage::CatalogLimits::default())
+            .map_err(|_| GatewayError::InvalidConfiguration)?;
+    Ok(Some(Arc::new(LiveAirKorea::new(
+        settings,
+        Arc::new(funded),
+        Arc::new(public),
+        Arc::new(s3.clone()),
+        Arc::new(store),
+        Arc::new(SystemClock),
+    ))))
 }
 /// The process environment entrypoint.
 pub fn configured_gateway() -> Result<Option<Arc<Gateway>>, GatewayError> {

@@ -1606,6 +1606,7 @@ task-owned test peers, and test doubles (quota, transport) live inside the tests
 | Geocoder quotas | `SERVER2_GEOCODER_KAKAO_DAILY_UNITS` (per key), `SERVER2_GEOCODER_GOOGLE_DAILY_UNITS` | Required with that provider's key. One S08 window per key and UTC day, owner = domain-separated SHA-256 of the key. |
 | World weather | `VC_SECRET_KEY`, `SERVER2_WORLD_VC_DAILY_UNITS`, `SERVER2_WORLD_VC_QUOTA_ID`, `SERVER2_WORLD_VC_URL` | URL defaults to the legacy Timeline root `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/`. |
 | World air | `SERVER2_WORLD_AIR_<GOOGLE\|OPENWEATHER\|WAQI>_KEY`, `_MONTHLY_UNITS`, `_QUOTA_ID`, `_URL` | A provider takes part when its key is set (units and owner then required); URLs default to `https://airquality.googleapis.com/`, `https://api.openweathermap.org/`, `https://api.waqi.info/`. No key: legacy no-provider output. |
+| KMA AirKorea (S15b-3a) | `AIRKOREA_SECRET_KEYS` (legacy name), `SERVER2_AIRKOREA_DAILY_UNITS`, `SERVER2_DATA_GO_KR_URL` | Read only with `kma`. No usable key: stored AirKorea records only. A key needs its S08 units per key and KST day; the root defaults to `https://apis.data.go.kr/`. The `kma` air fallback uses the world air settings above through the same process air chain. |
 
 `FundedQuota` now opens one S08 budget store per key and UTC day from configured limits,
 claims at most 50 units per authority block, and still funds every possible attempt of a
@@ -1852,3 +1853,63 @@ Verification (local, test peers only):
 - The release `kma_smoke.py` passes.
 
 Live provider shapes and timing, the cold-cell latency (S15b-4) and production quotas are unverified.
+
+### S15b-3a AirKorea inputs and the air fallback (2026-10-15)
+
+S15b-3 is split into three PRs (scope): **3a** AirKorea (`arpltn`, `dust_forecast`) and the
+air-provider fallback (`air_fallback`); **3b** area numbers, life index, KASI rise/set and MFDS food
+poisoning; **3c** the KAQ/AirKorea image forecasts (`air_forecast`). The `kma` family stays off until
+S15b-4; the store methods of 3b/3c still forward with their named reason.
+
+**National datasets (AK, 2026-10-14).** AirKorea answers are built from datasets shared by every
+request, never per request, cell or station. Each is one owned, single-flight acquisition keyed by
+dataset and period (S13b `DomesticAcquirer`, funded through S08, published through S06 before use):
+
+| Dataset | Provider operation (B552584 기술문서 v1.4) | Record kind / key / partition | Freshness rule |
+| --- | --- | --- | --- |
+| Real-time observations | `ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty`, `sidoName=전국`, `numOfRows=1000`, `ver=1.3`, `returnType=json` | `airkorea-station` / `sido-nationwide` / the dataset's most common data hour `YYYYMMDD-HH00` | the request's KST hour; at most one attempt per hour every 10 minutes |
+| Station list | `MsrstnInfoInqireSvc/getMsrstnList`, 100 rows per page, no `ver` (S13b) | `airkorea-station-list` / `stations` / KST fetch day | the newest list older than 7 days (legacy: only at process start) |
+| Dust forecast | `ArpltnInforInqireSvc/getMinuDustFrcstDspth`, `searchDate`, `ver=1.1` (S13b) | `airkorea-dust-forecast` / `dust-forecast` / search date | the announcement `_checkDataTime` expects; only for `airForecastSource=airkorea` |
+
+Legacy collected real-time observations per sido (`kecoRequester._collectProvinces`, 17 calls at UTC
+minutes 3, 13, ... 53). The technical document lists `전국` among the `sidoName` values; on
+2026-10-14 one `numOfRows=1000` call returned all 672 stations in 1.85 s (`sidoName` `전남광주` for
+Jeonnam and Gwangju stations). Seven of the 672 rows had `dataTime: null`: legacy `parseRows` would
+have rejected that sido's whole batch; server2 skips such a row and keeps the dataset. AirKorea
+requests per hour: one page per national fetch, normally one to three fetches per hour while
+requests arrive (at most six), about 24-72 a day, plus 7 station-list pages a week and at most 24
+forecast pages a day (only for `airkorea` forecasts). The development quota is 500 requests a day per
+operation; legacy used about 2,450 observation calls a day. The legacy key choice is kept (S13b
+`withKeys`: the last working key, otherwise the last key; quota code 22 or HTTP 429 stops without
+another key). On 2026-10-14 the last configured key answered 429, so #2745 (move to the next key at
+quota) must be mirrored when it lands.
+
+**Legacy documents and readers.** In fetch order the source applies the legacy save rules:
+`completeGeoMsrStnInfo` (swap `dmX > 100`), `parseMsrstnList` and `saveMsrstnList` for `MsrStnInfo`
+(a station without coordinates is not stored: legacy geocodes its address; no live station lacked
+coordinates); `parseRows` (station operation, `Arpltn.getKeyList()`) and `saveRLTMCtprvn` for
+`ArpltnKeco` (upsert by station and data time); `_checkDataTime`, `_parseFrcst` and `_saveFrcst` for
+`MinuDustFrcst` (search dates `date-2..date` hold every document `getDustFrcst` returns). Documents
+keep the Mongoose 5.1.2 update form. The readers are the tw_svc ones: `getArpLtnInfo` (2d `$near`,
+`$maxDistance` 1, six stations, rows of the last 24 hours, `_mergeArpltnList` with the 8-hour check,
+the first three stations ordered by the legacy comparator with the V8 short-array sort) and
+`getDustFrcst` with `_convertDustFrcstRegion` over `region.csv`. `air_fallback` is the shared world
+`LiveAir` chain (memory, S3 records, providers) for the town coordinate, evaluated per request
+(`observation.evaluate`); the world family and the KMA fallback share one instance.
+
+**Request time (AK, 2026-10-14).** A request waits for an owned acquisition only until its own
+deadline (100 ms before the native attempt ends). Otherwise it answers with what S3 holds: the
+legacy answer for missing data (no merged observation, an empty station list, the forecast error,
+no fallback value), never 503 or a forward. The acquisition keeps running with the legacy AirKorea
+bound (30 s per call) and serves the next request; joined requests share it. Data a request waited
+for is visible to it although it completed after the request instant.
+
+Verification (local; test peers only): a pinned Node 16.20.2 + Mongoose 5.1.2 oracle
+([provenance](../../server2/tests/domestic/fixtures/AIR-PROVENANCE.md)) records the legacy
+documents and 48 `getArpLtnInfo` answers, 156 comparator orders and 84 `getDustFrcst` answers;
+the Rust fold and readers match byte for byte, directly and from the S06 S3 test peer with empty
+memory. A loopback AirKorea stub shows one acquisition for concurrent requests, publication
+before use, a request released before a slow acquisition and served by the next one, and the
+fallback answer and its deadline. Live calls on 2026-10-14 confirmed the three AirKorea operations,
+WAQI and Google Air Quality (200); the OpenWeather key answered 401. Production quotas, the
+cold-cell latency (S15b-4) and an end-to-end KMA response (after S15b-2) remain unverified.

@@ -11,9 +11,16 @@
 //! life inputs (S15b-3), request-time acquisition and unknown-town geocoding (S15b-4) are not
 //! sourced yet: the snapshot ends the assembly with a named temporary forward for them, and the
 //! `kma` family stays off until S15b-4.
+//!
+//! S15b-3a adds the AirKorea inputs (`arpltn`, `dust_forecast`) from national datasets shared
+//! by every request and the air-provider fallback (`air_fallback`), with request-time
+//! acquisition of a missing national dataset ([`air_input`], [`live`]).
+pub mod air_input;
+pub mod airkorea;
 mod doc;
 mod grid;
 mod items;
+pub mod live;
 mod mid;
 mod records;
 mod reference;
@@ -122,6 +129,8 @@ pub struct S3Source<T> {
     warnings: Arc<WarningService<T>>,
     clock: Clock,
     zones: tokio::sync::Mutex<Option<ZoneCache>>,
+    /// S15b-3: AirKorea national datasets and the air-provider fallback.
+    air: air_input::AirInputs<T>,
 }
 impl<T: IndexListing + Clone + 'static> S3Source<T> {
     pub fn new(transport: T, clock: Clock) -> Result<Self, crate::storage::Error> {
@@ -129,6 +138,7 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
         let store = Arc::new(CatalogStore::new(transport.clone(), limits.clone())?);
         let warnings = WarningStore::new(transport.clone(), limits, StoreConfig::default())?;
         Ok(Self {
+            air: air_input::AirInputs::new(transport.clone(), store.clone()),
             reader: Reader { transport, store },
             warnings: Arc::new(WarningService::new(
                 Arc::new(warnings),
@@ -138,6 +148,16 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
             clock,
             zones: tokio::sync::Mutex::new(None),
         })
+    }
+    /// S15b-3: request-time AirKorea acquisition (None: stored records only) and the shared
+    /// air-provider chain of the fallback (None: the legacy no-provider answer).
+    pub fn with_air(
+        mut self,
+        acquire: Option<Arc<dyn live::AirKoreaAcquire>>,
+        air: Option<Arc<dyn crate::world::AirSource>>,
+    ) -> Self {
+        self.air = self.air.with_acquire(acquire).with_air(air);
+        self
     }
     /// The forecast-zone collection at `now`: every complete `forecast-zone` acquisition since
     /// [`HISTORY_START_MONTH`] folded in fetch order (fields an older list set and a newer one
@@ -416,13 +436,24 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
             .then(|| crate::history::Grid::new(coord.mx as u16, coord.my as u16))
             .flatten()
             .ok_or("town grid outside the KMA grid")?;
-        let zones = self.zones(now, deadline).await?;
-        let (current, shortest, short, rss) = tokio::join!(
-            self.grid_answer(Family::Current, grid, now, deadline),
-            self.grid_answer(Family::Shortest, grid, now, deadline),
-            self.grid_answer(Family::Short, grid, now, deadline),
-            self.rss_answer(grid, now, deadline),
+        let dust_wanted = request
+            .query
+            .iter()
+            .any(|(k, v)| k == "airForecastSource" && v == "airkorea");
+        let (zones, (current, shortest, short, rss), air) = tokio::join!(
+            self.zones(now, deadline),
+            async {
+                tokio::join!(
+                    self.grid_answer(Family::Current, grid, now, deadline),
+                    self.grid_answer(Family::Shortest, grid, now, deadline),
+                    self.grid_answer(Family::Short, grid, now, deadline),
+                    self.rss_answer(grid, now, deadline),
+                )
+            },
+            self.air
+                .load(&town, &region, &city, dust_wanted, now, deadline),
         );
+        let zones = zones?;
         let mut models = HashMap::new();
         models.insert(TownModel::Current, current?);
         models.insert(TownModel::Shortest, shortest?);
@@ -465,6 +496,7 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
             mids,
             zones,
             special,
+            air,
         })
     }
 }
@@ -646,6 +678,7 @@ pub struct Snapshot {
     mids: HashMap<(MidModel, String), Vec<Doc>>,
     zones: Arc<Zones>,
     special: Arc<ZoneState>,
+    air: air_input::AirAnswers,
 }
 fn list(docs: &[Doc]) -> OrderedJson {
     OrderedJson::Array(docs.iter().map(Doc::json).collect())
@@ -717,14 +750,48 @@ impl KmaStore for Snapshot {
     fn food_poisoning(&self, _: &str, _: &str, _: &str, _: &str) -> StoreResult {
         not_sourced("food_poisoning", "S15b-3")
     }
-    fn arpltn(&self, _: &Value, _: f64) -> StoreResult {
-        not_sourced("arpltn", "S15b-3")
+    /// `getArpLtnInfo(townInfo, now)` for the snapshot's town and instant.
+    fn arpltn(&self, town: &Value, now_ms: f64) -> StoreResult {
+        let mine = self.town.get("gCoord").and_then(Val::as_doc).map(|g| {
+            (
+                g.get("lat").and_then(Val::as_num),
+                g.get("lon").and_then(Val::as_num),
+            )
+        });
+        let theirs = town.get("gCoord").map(|g| {
+            (
+                g.get("lat").and_then(Value::as_f64),
+                g.get("lon").and_then(Value::as_f64),
+            )
+        });
+        if now_ms != self.now || mine != theirs {
+            unavailable("arpltn for a town or instant the snapshot did not load");
+        }
+        self.air.arpltn.clone().map_err(StoreError)
     }
-    fn dust_forecast(&self, _: &str, _: &str, _: &str) -> StoreResult {
-        not_sourced("dust_forecast", "S15b-3")
+    /// `getDustFrcst({region, city}, date)` (loaded for `airForecastSource=airkorea`).
+    fn dust_forecast(&self, region: &str, city: &str, date: &str) -> StoreResult {
+        match &self.air.dust {
+            Some(((r, c, d), answer)) if r == region && c == city && d == date => {
+                answer.clone().map_err(StoreError)
+            }
+            _ => unavailable("dust_forecast for arguments the snapshot did not load"),
+        }
     }
-    fn air_fallback(&self, _: &Value, _: f64) -> StoreResult {
-        not_sourced("air_fallback", "S15b-3")
+    /// `AirFallback.getArpltn(gCoord, now)`: the evaluated observation or null.
+    fn air_fallback(&self, g_coord: &Value, now_ms: f64) -> StoreResult {
+        let coord = (
+            g_coord.get("lat").and_then(Value::as_f64),
+            g_coord.get("lon").and_then(Value::as_f64),
+        );
+        match &self.air.fallback {
+            Some(((lat, lon), found))
+                if now_ms == self.now && coord == (Some(*lat), Some(*lon)) =>
+            {
+                Ok(found.clone().unwrap_or(OrderedJson::Null))
+            }
+            _ => unavailable("air_fallback for a coordinate the snapshot did not load"),
+        }
     }
     fn air_forecast(&self, _: &str, _: &Value) -> StoreResult {
         not_sourced("air_forecast", "S15b-3")

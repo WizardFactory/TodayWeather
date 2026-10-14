@@ -1,0 +1,818 @@
+//! S15b-3 AIR S3: the AirKorea inputs read back from the S06 loopback S3 test peer with empty
+//! memory equal the oracle answers; a missing national dataset is acquired once (single-flight)
+//! through a loopback AirKorea stub, published before use, and a request that cannot wait for it
+//! gets the legacy answer for missing data while the acquisition finishes and serves the next
+//! request. TEST ONLY: no provider or AWS is reached.
+use super::air::{acquisitions, oracle};
+use super::source::{at, items_of, number, same, text};
+use super::source_s3::{Peer, deadline};
+use axum::{Router, extract::State, http::Uri, response::IntoResponse, routing::any};
+use serde_json::json;
+use server2::domestic::airkorea::AirKoreaRequest;
+use server2::domestic::kma::source::Doc;
+use server2::domestic::kma::source::Val;
+use server2::domestic::kma::source::air_input::{AirInputs, kst_date};
+use server2::domestic::kma::source::airkorea::{Observations, Stations, arpltn_answer};
+use server2::domestic::kma::source::live::{AirKoreaAcquire, AirKoreaSettings, LiveAirKorea};
+use server2::domestic::publication::Publication;
+use server2::gateway::{BoxFuture, OrderedJson};
+use server2::storage::{
+    CatalogId, CatalogLimits, CatalogStore, GroupDeclaration, GroupMember, HttpS3Transport,
+    Pagination, Period, ProviderKey, RawRecord,
+};
+use server2::world::BoundedS3;
+use server2::world::air::{AirOutcome, AirSource, Observation};
+use std::sync::{
+    Arc, Mutex,
+    atomic::{AtomicUsize, Ordering},
+};
+use std::time::Duration;
+use tokio::time::Instant;
+
+type Store = CatalogStore<BoundedS3<HttpS3Transport>>;
+
+/// Publish one acquisition group as the S13b acquirer does.
+async fn publish(
+    store: &Store,
+    kind: &str,
+    key: &str,
+    period: Period,
+    partition: &str,
+    fetched_at: f64,
+    pages: &[Vec<u8>],
+) {
+    let limits = CatalogLimits::default();
+    let key = ProviderKey::Named { id: key.into() };
+    let n = pages.len() as u32;
+    let mut records = Vec::new();
+    let mut members = Vec::new();
+    for (i, page) in pages.iter().enumerate() {
+        let record = RawRecord::new(
+            "data-go-kr",
+            kind,
+            &key,
+            period.clone(),
+            fetched_at as u64,
+            200,
+            "application/json",
+            Some(Pagination {
+                page: i as u32 + 1,
+                pages: n,
+                complete: true,
+            }),
+            page.clone().into(),
+            &limits.raw,
+        )
+        .unwrap();
+        members.push(GroupMember {
+            envelope: record.envelope.clone(),
+            catalogs: vec![CatalogId::for_record(&record.envelope.identity, partition).unwrap()],
+        });
+        records.push(record);
+    }
+    let declaration = GroupDeclaration::new(members, &limits).unwrap();
+    store
+        .publish(declaration, records, deadline())
+        .await
+        .unwrap();
+}
+fn kst(ms: f64) -> Publication {
+    server2::history::schedule::from_ms(ms as i64)
+}
+/// The most common KST data hour of a nationwide page (the S15b-3 dataset period).
+fn mode_hour(items: &[serde_json::Value]) -> Publication {
+    let mut hours: std::collections::BTreeMap<Publication, usize> = Default::default();
+    for i in items {
+        if let Some(t) = i.get("dataTime").and_then(|v| v.as_str()) {
+            let ms = server2::domestic::kma::source::airkorea::kst_instant(t);
+            if ms.is_finite() {
+                *hours.entry(kst(ms)).or_default() += 1;
+            }
+        }
+    }
+    *hours
+        .iter()
+        .max_by(|a, b| a.1.cmp(b.1).then(a.0.cmp(b.0)))
+        .unwrap()
+        .0
+}
+/// Publish the oracle's station lists, nationwide observations and dust forecasts.
+async fn seed_oracle(store: &Store) {
+    for (fetched, _, pages) in acquisitions(&["stations", "acquisitions"]) {
+        let day = kst(fetched).date();
+        let period = Period {
+            local_date: day,
+            slot: "0000".into(),
+        };
+        publish(
+            store,
+            "airkorea-station-list",
+            "stations",
+            period,
+            &format!("{day:08}"),
+            fetched,
+            &pages,
+        )
+        .await;
+    }
+    for (fetched, items, pages) in acquisitions(&["observations", "acquisitions"]) {
+        let hour = mode_hour(&items);
+        publish(
+            store,
+            "airkorea-station",
+            "sido-nationwide",
+            hour.period(),
+            &hour.partition(),
+            fetched,
+            &pages,
+        )
+        .await;
+    }
+    let dust = items_of(at(oracle(), &["dust", "acquisitions"]));
+    for (a, (fetched, _, pages)) in dust.iter().zip(acquisitions(&["dust", "acquisitions"])) {
+        let search = text(at(a, &["search"])).replace('-', "");
+        let day: u32 = search.parse().unwrap();
+        let period = Period {
+            local_date: day,
+            slot: "0000".into(),
+        };
+        publish(
+            store,
+            "airkorea-dust-forecast",
+            "dust-forecast",
+            period,
+            &search,
+            fetched,
+            &pages,
+        )
+        .await;
+    }
+}
+fn town(lat: f64, lon: f64) -> Doc {
+    Doc::new().with(
+        "gCoord",
+        Val::Doc(
+            Doc::new()
+                .with("lat", Val::Num(lat))
+                .with("lon", Val::Num(lon)),
+        ),
+    )
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn air_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    seed_oracle(&store).await;
+    for a in items_of(at(oracle(), &["arpltn"])) {
+        let now = number(at(a, &["now"]));
+        // Times inside the observation window (the oracle folds every earlier acquisition).
+        if !(1_791_940_000_000. ..1_791_960_000_000.).contains(&now) {
+            continue;
+        }
+        let inputs = AirInputs::new(transport.clone(), store.clone());
+        let g = at(a, &["gCoord"]);
+        let answers = inputs
+            .load(
+                &town(number(at(g, &["lat"])), number(at(g, &["lon"]))),
+                "서울특별시",
+                "종로구",
+                false,
+                now,
+                deadline(),
+            )
+            .await;
+        same(
+            &answers.arpltn.unwrap(),
+            at(a, &["result"]),
+            &format!("{} at {now}", text(at(a, &["town"]))),
+        );
+        assert!(answers.dust.is_none());
+    }
+    // Dust forecasts after the last run (10-14 23:32 KST) for that KST date.
+    let now = 1_791_988_320_000. + 60_000.;
+    assert_eq!(kst_date(now), 20261014);
+    for q in items_of(at(oracle(), &["dust", "queries"])) {
+        if text(at(q, &["date"])) != "20261014" {
+            continue;
+        }
+        let (region, city) = (text(at(q, &["region"])), text(at(q, &["city"])));
+        let inputs = AirInputs::new(transport.clone(), store.clone());
+        let answers = inputs
+            .load(&town(37.57, 126.98), &region, &city, true, now, deadline())
+            .await;
+        let (args, answer) = answers.dust.unwrap();
+        assert_eq!(args, (region.clone(), city.clone(), "20261014".to_string()));
+        match at(q, &["error"]).string() {
+            Some(e) => assert_eq!(answer.unwrap_err(), e),
+            None => same(
+                &answer.unwrap(),
+                at(q, &["result"]),
+                &format!("{region} {city}"),
+            ),
+        }
+    }
+    assert_eq!(transport.available(), 12, "every S3 permit returned");
+}
+
+// ---- request-time acquisition ----
+
+#[derive(Default)]
+struct StubState {
+    nationwide: AtomicUsize,
+    station_list: AtomicUsize,
+    delay_ms: AtomicUsize,
+    queries: Mutex<Vec<String>>,
+}
+fn now_ms() -> f64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as f64
+}
+fn kst_text(ms: f64) -> String {
+    let p = kst(ms);
+    let d = p.base_date();
+    format!("{}-{}-{} {:02}:00", &d[..4], &d[4..6], &d[6..], p.hour())
+}
+const STATIONS: [(&str, f64, f64); 3] = [
+    ("중구", 37.564263, 126.974676),
+    ("종로구", 37.572016, 127.005007),
+    ("용산구", 37.540033, 127.004850),
+];
+async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> impl IntoResponse {
+    let query = uri.query().unwrap_or("").to_owned();
+    state
+        .queries
+        .lock()
+        .unwrap()
+        .push(format!("{} {}", uri.path(), redact(&query)));
+    let pairs: Vec<(String, String)> = url_pairs(&query);
+    let get = |k: &str| pairs.iter().find(|(n, _)| n == k).map(|(_, v)| v.clone());
+    let body = if uri.path().ends_with("/getCtprvnRltmMesureDnsty") {
+        state.nationwide.fetch_add(1, Ordering::SeqCst);
+        let delay = state.delay_ms.load(Ordering::SeqCst);
+        if delay > 0 {
+            tokio::time::sleep(Duration::from_millis(delay as u64)).await;
+        }
+        assert_eq!(get("sidoName").as_deref(), Some("전국"));
+        assert_eq!(get("numOfRows").as_deref(), Some("1000"));
+        assert_eq!(get("ver").as_deref(), Some("1.3"));
+        assert_eq!(get("returnType").as_deref(), Some("json"));
+        let hour = kst_text(now_ms());
+        let items: Vec<serde_json::Value> = STATIONS
+            .iter()
+            .enumerate()
+            .map(|(i, (name, _, _))| {
+                json!({"stationName": name, "sidoName": "서울", "mangName": "도시대기",
+                       "dataTime": hour, "pm10Value": format!("{}", 20 + i), "pm25Value": "9",
+                       "khaiValue": "50", "khaiGrade": "1", "pm10Grade1h": "1", "pm25Grade1h": "1",
+                       "so2Value": "0.003", "coValue": "0.4", "o3Value": "0.03", "no2Value": "0.02"})
+            })
+            .chain(std::iter::once(json!({"stationName": "점검중", "sidoName": "서울", "dataTime": null})))
+            .collect();
+        json!({"response": {"header": {"resultCode": "00", "resultMsg": "NORMAL_CODE"},
+               "body": {"totalCount": items.len(), "items": items, "pageNo": 1, "numOfRows": 1000}}})
+    } else if uri.path().ends_with("/getMsrstnList") {
+        state.station_list.fetch_add(1, Ordering::SeqCst);
+        let items: Vec<serde_json::Value> = STATIONS
+            .iter()
+            .map(|(name, lat, lon)| {
+                json!({"stationName": name, "dmX": lat.to_string(), "dmY": lon.to_string(),
+                       "addr": "서울", "item": "PM10, PM2.5", "mangName": "도시대기", "year": "2000"})
+            })
+            .collect();
+        json!({"response": {"header": {"resultCode": "00", "resultMsg": "NORMAL_CODE"},
+               "body": {"totalCount": items.len(), "items": items, "pageNo": 1, "numOfRows": 100}}})
+    } else {
+        json!({"response": {"header": {"resultCode": "03", "resultMsg": "NO_DATA"}}})
+    };
+    ([("content-type", "application/json")], body.to_string())
+}
+fn redact(q: &str) -> String {
+    q.split('&')
+        .filter(|p| !p.starts_with("serviceKey="))
+        .collect::<Vec<_>>()
+        .join("&")
+}
+fn url_pairs(q: &str) -> Vec<(String, String)> {
+    let parsed: reqwest::Url = format!("http://127.0.0.1/?{q}").parse().unwrap();
+    parsed
+        .query_pairs()
+        .map(|(a, b)| (a.into_owned(), b.into_owned()))
+        .collect()
+}
+struct Stub {
+    base: String,
+    state: Arc<StubState>,
+    task: tokio::task::JoinHandle<()>,
+}
+impl Drop for Stub {
+    fn drop(&mut self) {
+        self.task.abort();
+    }
+}
+async fn stub() -> Stub {
+    let state = Arc::new(StubState::default());
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}/", listener.local_addr().unwrap());
+    let router = Router::new()
+        .fallback(any(handle))
+        .with_state(state.clone());
+    let task = tokio::spawn(async move {
+        axum::serve(listener, router).await.unwrap();
+    });
+    Stub { base, state, task }
+}
+fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn AirKoreaAcquire> {
+    let vars = |name: &str| -> Option<String> {
+        match name {
+            "AIRKOREA_SECRET_KEYS" => Some(r#"["S15B3_LOCAL_KEY_A+aaaaaaaaaaaaaaaa/="]"#.into()),
+            "SERVER2_AIRKOREA_DAILY_UNITS" => Some("100".into()),
+            "SERVER2_DATA_GO_KR_URL" => Some(base.into()),
+            _ => None,
+        }
+    };
+    let settings = AirKoreaSettings::from_vars(&vars).unwrap().unwrap();
+    Arc::new(LiveAirKorea::new(
+        settings,
+        Arc::new(server2::providers::HttpProviderTransport::new(2 << 20).unwrap()),
+        Arc::new(server2::providers::HttpPublicTransport::new(2 << 20).unwrap()),
+        Arc::new(peer.transport()),
+        store,
+        Arc::new(server2::budget::SystemClock),
+    ))
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_missing_national_dataset_is_acquired_once_and_published_before_use() {
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    let inputs = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
+        &peer,
+        store.clone(),
+        &stub.base,
+    )));
+    let now = now_ms();
+    let seoul = town(37.5657, 126.9769);
+    // Two concurrent requests share one acquisition of each dataset.
+    let jongno = town(37.57, 127.0);
+    let (a, b) = tokio::join!(
+        inputs.load(
+            &seoul,
+            "서울특별시",
+            "중구",
+            false,
+            now,
+            Instant::now() + Duration::from_secs(3)
+        ),
+        inputs.load(
+            &jongno,
+            "서울특별시",
+            "종로구",
+            false,
+            now,
+            Instant::now() + Duration::from_secs(3)
+        ),
+    );
+    for answer in [&a, &b] {
+        let arpltn = answer.arpltn.as_ref().unwrap();
+        let merged = arpltn.get("arpltn").unwrap_or_else(|| {
+            panic!(
+                "merged observation: {}",
+                String::from_utf8_lossy(&arpltn.to_bytes())
+            )
+        });
+        assert!(
+            merged
+                .get("pm10Value")
+                .and_then(OrderedJson::number)
+                .is_some()
+        );
+        assert_eq!(items_of(arpltn.get("stnList").unwrap()).len(), 3);
+        assert!(answer.fallback.is_none(), "AirKorea answered: no fallback");
+    }
+    assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 1);
+    assert_eq!(stub.state.station_list.load(Ordering::SeqCst), 1);
+    let queries = stub.state.queries.lock().unwrap().clone();
+    assert!(
+        queries
+            .iter()
+            .any(|q| q.starts_with("/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty"))
+    );
+    // A cold reader serves the published records without the provider.
+    let cold = AirInputs::new(transport.clone(), store.clone());
+    let again = cold
+        .load(&seoul, "서울특별시", "중구", false, now_ms(), deadline())
+        .await;
+    same(
+        again.arpltn.as_ref().unwrap(),
+        a.arpltn.as_ref().unwrap(),
+        "restored from S3",
+    );
+    assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 1);
+    assert_eq!(transport.available(), 12);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    let inputs = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
+        &peer,
+        store.clone(),
+        &stub.base,
+    )));
+    let seoul = town(37.5657, 126.9769);
+    // Warm the station list first.
+    let first = inputs
+        .load(
+            &seoul,
+            "서울특별시",
+            "중구",
+            false,
+            now_ms(),
+            Instant::now() + Duration::from_secs(3),
+        )
+        .await;
+    assert!(first.arpltn.unwrap().get("arpltn").is_some());
+    // A new process: the station list is in S3, the observation of this hour too; drop it by
+    // using a reader whose request instant is one hour later (no dataset for that hour yet).
+    stub.state.delay_ms.store(2_000, Ordering::SeqCst);
+    let later = now_ms() + 3_600_000.;
+    let inputs2 = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
+        &peer,
+        store.clone(),
+        &stub.base,
+    )));
+    let started = std::time::Instant::now();
+    let answer = inputs2
+        .load(
+            &seoul,
+            "서울특별시",
+            "중구",
+            false,
+            later,
+            Instant::now() + Duration::from_millis(800),
+        )
+        .await;
+    assert!(
+        started.elapsed() < Duration::from_millis(1_200),
+        "{:?}",
+        started.elapsed()
+    );
+    // Older than 8 hours? No: the previous hour's rows are still fresh for `later`.
+    let arpltn = answer.arpltn.unwrap();
+    assert_eq!(items_of(arpltn.get("stnList").unwrap()).len(), 3);
+    assert_eq!(
+        stub.state.nationwide.load(Ordering::SeqCst),
+        2,
+        "one owned acquisition started"
+    );
+    // The owned acquisition continues and publishes; the next request is served from S3
+    // without a further provider call (single flight, then throttled).
+    tokio::time::sleep(Duration::from_millis(2_500)).await;
+    let next = inputs2
+        .load(
+            &seoul,
+            "서울특별시",
+            "중구",
+            false,
+            later,
+            Instant::now() + Duration::from_secs(3),
+        )
+        .await;
+    assert!(next.arpltn.unwrap().get("arpltn").is_some());
+    assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 2);
+}
+
+/// An air source answering one fixed observation (the shared LiveAir chain in production).
+struct FixedAir(Observation);
+impl AirSource for FixedAir {
+    fn current(&self, _: f64, _: f64, _: f64) -> BoxFuture<'_, AirOutcome> {
+        let o = self.0.clone();
+        Box::pin(async move { AirOutcome::Observation(o) })
+    }
+}
+/// A source that never answers before the deadline.
+struct SlowAir;
+impl AirSource for SlowAir {
+    fn current(&self, _: f64, _: f64, _: f64) -> BoxFuture<'_, AirOutcome> {
+        Box::pin(async {
+            tokio::time::sleep(Duration::from_secs(30)).await;
+            AirOutcome::None
+        })
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_air_fallback_answers_when_no_station_has_a_value() {
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let now = 1_791_955_500_000.;
+    let observation = Observation {
+        provider: "aqicn".into(),
+        station_based: true,
+        observed_at: Some("2026-10-14T05:00:00Z".into()),
+        pollutants: vec![("pm10", 31.), ("pm25", 12.), ("o3", 0.021)],
+        attribution: server2::world::js::Val::Str(" WAQI ".into()),
+        station_name: Some("Jung-gu".into()),
+        station_geo: Some([37.56, 126.97]),
+    };
+    let inputs = AirInputs::new(transport.clone(), store.clone())
+        .with_air(Some(Arc::new(FixedAir(observation))));
+    let answer = inputs
+        .load(
+            &town(37.5657, 126.9769),
+            "서울특별시",
+            "중구",
+            false,
+            now,
+            deadline(),
+        )
+        .await;
+    // No station list in S3 and no key: the legacy empty answer, then the fallback.
+    same(
+        answer.arpltn.as_ref().unwrap(),
+        &OrderedJson::parse(br#"{"stnList":[]}"#).unwrap(),
+        "empty AirKorea answer",
+    );
+    let ((lat, lon), found) = answer.fallback.unwrap();
+    assert_eq!((lat, lon), (37.5657, 126.9769));
+    same(
+        &found.unwrap(),
+        &OrderedJson::parse(
+            r#"{"source":"aqicn","stationName":"Jung-gu","dataTime":"2026-10-14 14:00","attribution":"WAQI","pm10Value":31,"pm25Value":12,"o3Value":0.021}"#.as_bytes(),
+        )
+        .unwrap(),
+        "observation.evaluate",
+    );
+    // A provider that is not ready before the deadline: no fallback value (its fetch continues).
+    let slow = AirInputs::new(transport.clone(), store.clone()).with_air(Some(Arc::new(SlowAir)));
+    let started = std::time::Instant::now();
+    let answer = slow
+        .load(
+            &town(37.5657, 126.9769),
+            "서울특별시",
+            "중구",
+            false,
+            now,
+            Instant::now() + Duration::from_millis(600),
+        )
+        .await;
+    assert!(started.elapsed() < Duration::from_millis(1_000));
+    assert_eq!(answer.fallback.unwrap().1, None);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_nationwide_acquisition_is_one_published_dataset_of_its_data_hour() {
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    let acquire = live(&peer, store.clone(), &stub.base);
+    assert_eq!(
+        acquire.acquire(AirKoreaRequest::nationwide()).await,
+        Ok(true)
+    );
+    assert_eq!(
+        acquire.acquire(AirKoreaRequest::station_list()).await,
+        Ok(true)
+    );
+    let queries = stub.state.queries.lock().unwrap().clone();
+    assert_eq!(
+        queries,
+        vec![
+            "/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty sidoName=%EC%A0%84%EA%B5%AD&pageNo=1&numOfRows=1000&ver=1.3&returnType=json".to_string(),
+            "/B552584/MsrstnInfoInqireSvc/getMsrstnList pageNo=1&numOfRows=100&returnType=json".to_string(),
+        ]
+    );
+    // The dataset is one record of the national key in the partition of its data hour; the row
+    // without a data time is kept in the raw bytes and skipped by the reader.
+    let hour = kst(now_ms()).hour_start();
+    let id = CatalogId {
+        source: "data-go-kr".into(),
+        kind: "airkorea-station".into(),
+        key_sha256: server2::storage::sha256(
+            &ProviderKey::Named {
+                id: "sido-nationwide".into(),
+            }
+            .canonical_bytes()
+            .unwrap(),
+        ),
+        partition: hour.partition(),
+    };
+    match store.lookup(&id, deadline()).await.unwrap() {
+        server2::storage::LookupOutcome::Ready(set) => {
+            let records = set.acquisitions().last().unwrap().records();
+            assert_eq!(records.len(), 1);
+            let page: serde_json::Value = serde_json::from_slice(&records[0].bytes).unwrap();
+            assert_eq!(
+                page["response"]["body"]["items"].as_array().unwrap().len(),
+                4
+            );
+            assert_eq!(
+                Observations::parse(page["response"]["body"]["items"].as_array().unwrap()).len(),
+                3
+            );
+        }
+        other => panic!("not published: {other:?}"),
+    }
+}
+
+// ---- the snapshot store calls ----
+
+/// One nationwide page of `rows` (station, data time, pm10) for the snapshot test.
+fn nationwide_page(rows: &[(&str, &str, &str)]) -> Vec<u8> {
+    let items: Vec<serde_json::Value> = rows
+        .iter()
+        .map(|(name, time, pm10)| {
+            json!({"stationName": name, "sidoName": "서울", "mangName": "도시대기", "dataTime": time,
+                   "pm10Value": pm10, "pm25Value": "8", "khaiValue": "40", "khaiGrade": "1",
+                   "pm10Grade1h": "1", "pm25Grade1h": "1", "o3Value": "0.02", "no2Value": "0.01",
+                   "coValue": "0.3", "so2Value": "0.002"})
+        })
+        .collect();
+    serde_json::to_vec(
+        &json!({"response": {"header": {"resultCode": "00", "resultMsg": "NORMAL_CODE"},
+        "body": {"totalCount": items.len(), "items": items, "pageNo": 1, "numOfRows": 1000}}}),
+    )
+    .unwrap()
+}
+fn station_page() -> Vec<u8> {
+    let items: Vec<serde_json::Value> = STATIONS
+        .iter()
+        .map(|(name, lat, lon)| {
+            json!({"stationName": name, "dmX": lat.to_string(), "dmY": lon.to_string(),
+                   "addr": "서울", "item": "PM10, PM2.5", "mangName": "도시대기", "year": "2000"})
+        })
+        .collect();
+    serde_json::to_vec(
+        &json!({"response": {"header": {"resultCode": "00", "resultMsg": "NORMAL_CODE"},
+        "body": {"totalCount": items.len(), "items": items, "pageNo": 1, "numOfRows": 100}}}),
+    )
+    .unwrap()
+}
+fn dust_page() -> Vec<u8> {
+    let item = |code: &str, data: &str| {
+        json!({"dataTime": "2026-09-24 05시 발표", "informCode": code, "informData": data,
+               "informGrade": "서울 : 보통,인천 : 좋음", "informCause": "c", "informOverall": "o",
+               "actionKnack": null})
+    };
+    let items = vec![
+        item("PM10", "2026-09-24"),
+        item("PM25", "2026-09-24"),
+        item("PM10", "2026-09-25"),
+    ];
+    serde_json::to_vec(
+        &json!({"response": {"header": {"resultCode": "00", "resultMsg": "NORMAL_CODE"},
+        "body": {"totalCount": items.len(), "items": items, "pageNo": 1, "numOfRows": 100}}}),
+    )
+    .unwrap()
+}
+fn town_value(snapshot: &dyn server2::domestic::kma::KmaStore) -> serde_json::Value {
+    let towns = snapshot.towns().unwrap();
+    serde_json::from_slice::<serde_json::Value>(&towns.to_bytes()).unwrap()[0].clone()
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
+    use super::source_s3::{NOW, request, seed};
+    use server2::domestic::kma::backend::{KmaSource, SourceAnswer, parse_path};
+    use server2::domestic::kma::source::S3Source;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    seed(&store, &[]).await;
+    let day = Period {
+        local_date: 20260923,
+        slot: "0000".into(),
+    };
+    publish(
+        &store,
+        "airkorea-station-list",
+        "stations",
+        day,
+        "20260923",
+        NOW - 86_400_000.,
+        &[station_page()],
+    )
+    .await;
+    let hour = Publication::new(20260924, 1000).unwrap();
+    let rows = [
+        ("중구", "2026-09-24 10:00", "21"),
+        ("종로구", "2026-09-24 10:00", "-"),
+        ("용산구", "2026-09-24 09:00", "35"),
+    ];
+    publish(
+        &store,
+        "airkorea-station",
+        "sido-nationwide",
+        hour.period(),
+        &hour.partition(),
+        NOW - 30. * 60_000.,
+        &[nationwide_page(&rows)],
+    )
+    .await;
+    let search = Period {
+        local_date: 20260924,
+        slot: "0500".into(),
+    };
+    publish(
+        &store,
+        "airkorea-dust-forecast",
+        "dust-forecast",
+        search,
+        "20260924",
+        NOW - 4. * 3_600_000.,
+        &[dust_page()],
+    )
+    .await;
+    let observation = Observation {
+        provider: "aqicn".into(),
+        station_based: false,
+        observed_at: Some("2026-09-24T01:00:00Z".into()),
+        pollutants: vec![("pm10", 11.)],
+        attribution: server2::world::js::Val::Undef,
+        station_name: None,
+        station_geo: None,
+    };
+    let s3 = S3Source::new(transport.clone(), Arc::new(|| NOW))
+        .unwrap()
+        .with_air(None, Some(Arc::new(FixedAir(observation.clone()))));
+    let path = format!("{}?airForecastSource=airkorea", request().original_url);
+    let snapshot = match s3
+        .snapshot(&parse_path(&path, "ko").unwrap(), deadline())
+        .await
+    {
+        SourceAnswer::Snapshot(s) => s,
+        SourceAnswer::Forward(r) => panic!("forwarded: {r}"),
+    };
+    let town = town_value(snapshot.as_ref());
+    let g = &town["gCoord"];
+    let mut stations = Stations::default();
+    stations.apply(
+        &serde_json::from_slice::<serde_json::Value>(&station_page()).unwrap()["response"]["body"]
+            ["items"]
+            .as_array()
+            .unwrap()
+            .clone(),
+    );
+    let mut obs = Observations::default();
+    obs.apply(
+        &serde_json::from_slice::<serde_json::Value>(&nationwide_page(&rows)).unwrap()["response"]
+            ["body"]["items"]
+            .as_array()
+            .unwrap()
+            .clone(),
+    );
+    let expected = arpltn_answer(
+        &stations,
+        &obs,
+        Some((g["lat"].as_f64().unwrap(), g["lon"].as_f64().unwrap())),
+        NOW,
+    )
+    .unwrap();
+    let got = snapshot.arpltn(&town, NOW).unwrap();
+    same(&got, &expected, "arpltn");
+    assert_eq!(items_of(got.get("stnList").unwrap()).len(), 3);
+    let dust = snapshot
+        .dust_forecast("서울특별시", "종로구", "20260924")
+        .unwrap();
+    same(
+        &dust,
+        &OrderedJson::parse(r#"[{"date":"20260924","dustForecast":{"sido":"서울","PM10Grade":1,"PM10Str":"보통","PM25Grade":1,"PM25Str":"보통"}},{"date":"20260925","dustForecast":{"sido":"서울","PM10Grade":1,"PM10Str":"보통"}}]"#.as_bytes()).unwrap(),
+        "dust forecast",
+    );
+    // A request without AirKorea data: the fallback observation is loaded for the town.
+    let empty = Peer::new();
+    let empty_transport = empty.transport();
+    let empty_store = CatalogStore::new(empty_transport.clone(), CatalogLimits::default()).unwrap();
+    seed(&empty_store, &[]).await;
+    let s3 = S3Source::new(empty_transport, Arc::new(|| NOW))
+        .unwrap()
+        .with_air(None, Some(Arc::new(FixedAir(observation))));
+    let snapshot = match s3.snapshot(&request(), deadline()).await {
+        SourceAnswer::Snapshot(s) => s,
+        SourceAnswer::Forward(r) => panic!("forwarded: {r}"),
+    };
+    let town = town_value(snapshot.as_ref());
+    same(
+        &snapshot.arpltn(&town, NOW).unwrap(),
+        &OrderedJson::parse(br#"{"stnList":[]}"#).unwrap(),
+        "no stations",
+    );
+    same(
+        &snapshot.air_fallback(&town["gCoord"], NOW).unwrap(),
+        &OrderedJson::parse(br#"{"source":"aqicn","dataTime":"2026-09-24 10:00","pm10Value":11}"#)
+            .unwrap(),
+        "fallback",
+    );
+    assert_eq!(transport.available(), 12);
+}
