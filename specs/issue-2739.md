@@ -15,7 +15,7 @@ Per request (`_request`):
 | HTTP 401/403/429 or body code 20/30/31/32/22 | key rejection; next key, each key once per request |
 | otherwise | body passed to page validation |
 
-Page `n` (`_parsePage`) succeeds only if `response.header.resultCode === "00"`, `response.body.items.item` is an array, `totalCount` equals its length, and the echoed `pageNo`/`numOfRows` equal the request (numbers or digit strings). Every item needs nonempty string `regId`, `regName`, `regSp`; any other `regSp` value and missing coordinates are accepted. A `regId` repeated within or across pages fails the fetch.
+Page `n` (`_parsePage`) succeeds only if `response.header.resultCode === "00"`, `response.body.items.item` is an array, `totalCount` equals its length, and the echoed `pageNo`/`numOfRows` equal the request (numbers or digit strings). Every item needs nonempty string `regId`, `regName`, `regSp`; any other `regSp` value and missing coordinates are accepted. Review Z-R1-001: each item is normalized to the model fields before any write (`regEn`/`regUp`/`stn*` string or finite number → String; `tmEd`/`tmSt` non-negative integer or digit string → String; `seq`/`ht` numeric; `lat`/`lon` numeric when present); any other type fails the fetch and unknown fields are dropped. Review Z-R1-002: provider codes appear in errors only when they match `^\d{1,4}$`, otherwise as `invalid`. A `regId` repeated within or across pages fails the fetch.
 
 Paging: stop after a page with fewer than 1000 items. After a full page, request the next one; `resultCode "03"` on that next page ends the fetch. `03` on page 1, any other code, or more than 10 pages fails the fetch. A failure on any page aborts before any database write.
 

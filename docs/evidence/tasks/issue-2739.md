@@ -18,4 +18,6 @@ Executions (Node v24.19.0; isolated deps: mocha 2.5.3, async 2.6.4, mongoose 5.1
 - `rg newsky2 server --glob '!server/test/**'` → no match.
 - Archify `finalize` (validate, deliver, check, browser-check) and `visual-check` for `weather-collection` → pass; captures inspected.
 
+Review correction (PR review 1, Codex `gpt-6.1-sol`: Z-R1-001 unstorable optional fields caused partial writes; Z-R1-002 unvalidated provider codes in error messages): Red `forecast-zone.test.js` 6 of 30 failing on the rebased candidate; Green and post-refactor 30/30; `test:offline` exit 0; `data-go-kr-keys-smoke.js` PASS; `forecast-zone-smoke.js` PASS including a `seq: "bad number"` page that now fails with no rows written; live check repeated: 755 stored, 219 city, 176 mid-temperature zones, 1 request.
+
 Limitations: no production gather run, deployment or CI-equivalent Node 22 run locally (CI runs Node 22.22.2 and the Node 16 container job). A truncated but internally consistent provider page cannot be detected. server2 S13a still targets newsky2 and is handled in a separate task.

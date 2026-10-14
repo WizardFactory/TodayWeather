@@ -19,7 +19,55 @@ const ZONE_API_URL = 'https://apis.data.go.kr/1360000/FcstZoneInfoService/getFcs
 const ROWS_PER_PAGE = 1000;
 const MAX_PAGES = 10;
 const LAND_ZONE_FILE = '../../utils/data/kma_forecast_land_zones.csv';
+const TEXT_FIELDS = ['regEn', 'regUp', 'stnWn', 'stnF3', 'stnFd', 'stnFw'];
 let landZoneIds;
+
+// Provider codes appear in errors and logs only as short digit strings.
+function safeCode(value) {
+    return /^\d{1,4}$/.test(String(value)) ? String(value) : 'invalid';
+}
+
+/**
+ * Model document for one provider item, or undefined when a stored field has an unusable type.
+ * Unknown provider fields are dropped; every value is checked before any write starts.
+ */
+function normalizeZone(obj) {
+    if (!obj || typeof obj !== 'object' || ['regId', 'regName', 'regSp'].some(field =>
+            typeof obj[field] !== 'string' || !obj[field])) {
+        return undefined;
+    }
+    const zone = {regId: obj.regId, regName: obj.regName, regSp: obj.regSp};
+    const absent = value => value === undefined || value === null;
+    const digits = value => typeof value === 'number' ? Number.isInteger(value) && value >= 0 :
+        typeof value === 'string' && /^\d+$/.test(value);
+    const decimal = value => typeof value === 'number' ? isFinite(value) :
+        typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value);
+    for (const field of TEXT_FIELDS) {
+        if (absent(obj[field])) { continue; }
+        if (typeof obj[field] !== 'string' && !(typeof obj[field] === 'number' && isFinite(obj[field]))) {
+            return undefined;
+        }
+        zone[field] = String(obj[field]);
+    }
+    for (const field of ['tmEd', 'tmSt']) {
+        if (absent(obj[field])) { continue; }
+        if (!digits(obj[field])) { return undefined; }
+        zone[field] = String(obj[field]);
+    }
+    for (const field of ['seq', 'ht']) {
+        if (absent(obj[field])) { continue; }
+        if (!decimal(obj[field])) { return undefined; }
+        zone[field] = Number(obj[field]);
+    }
+    for (const field of ['lat', 'lon']) {
+        if (!absent(obj[field]) && !decimal(obj[field])) { return undefined; }
+    }
+    const lon = Number(obj.lon), lat = Number(obj.lat);
+    if (!absent(obj.lon) && !absent(obj.lat) && lon !== 0 && lat !== 0) {
+        zone.geo = [lon, lat];
+    }
+    return zone;
+}
 
 class KmaForecastZoneController {
     constructor(serviceKeys) {
@@ -80,7 +128,8 @@ class KmaForecastZoneController {
                                 String(body.OpenAPI_ServiceResponse.cmmMsgHeader.returnReasonCode) :
                             body && body.response && body.response.header ? String(body.response.header.resultCode) : undefined;
                         if (status >= 400 || rejection.isAuth(status, code) || rejection.isQuota(status, code)) {
-                            const failure = new Error('forecast zone status=' + status + ' code=' + code);
+                            const failure = new Error('forecast zone status=' + status +
+                                ' code=' + (code === undefined ? 'none' : safeCode(code)));
                             failure.statusCode = status;
                             failure.keyRejected = rejection.isAuth(status, code) || rejection.isQuota(status, code);
                             return callback(failure);
@@ -116,7 +165,7 @@ class KmaForecastZoneController {
             return null;
         }
         if (resultCode !== '00') {
-            throw fail('resultCode ' + resultCode);
+            throw fail('resultCode ' + safeCode(resultCode));
         }
         const body = rawData.response.body;
         const list = body && body.items && body.items.item;
@@ -131,12 +180,13 @@ class KmaForecastZoneController {
         if (number(body.pageNo) !== pageNo || number(body.numOfRows) !== ROWS_PER_PAGE) {
             throw fail('echo');
         }
-        list.forEach(obj => {
-            if (!obj || ['regId', 'regName', 'regSp'].some(field => typeof obj[field] !== 'string' || !obj[field])) {
+        return list.map(obj => {
+            const zone = normalizeZone(obj);
+            if (!zone) {
                 throw fail('item');
             }
+            return zone;
         });
-        return list;
     }
 
     _fetchAll() {
@@ -168,17 +218,12 @@ class KmaForecastZoneController {
         return fetchPage(1);
     }
 
-    _update(obj, callback) {
-        const fields = Object.assign({}, obj);
+    _update(zone, callback) {
         const unset = {retired: '', retiredAt: ''};
-        const lon = Number(obj.lon), lat = Number(obj.lat);
-        if (isFinite(lon) && isFinite(lat) && lon !== 0 && lat !== 0) {
-            fields.geo = [lon, lat];
-        }
-        else {
+        if (!zone.geo) {
             unset.geo = '';
         }
-        KmaForecastZoneModel.update({regId: obj.regId}, {$set: fields, $unset: unset},
+        KmaForecastZoneModel.update({regId: zone.regId}, {$set: zone, $unset: unset},
             {upsert:true},
             callback);
     }

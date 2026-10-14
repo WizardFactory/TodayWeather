@@ -25,6 +25,13 @@ const gateway = http.createServer((req, res) => {
         res.writeHead(307, {location: '/503.html'});
         return res.end();
     }
+    if (mode === 'bad-seq') {
+        // Review Z-R1-001: one storable row and one whose seq Mongoose cannot cast.
+        const list = [items[0], Object.assign({}, items[1], {seq: 'bad number'})];
+        res.writeHead(200, {'content-type': 'application/json;charset=UTF-8'});
+        return res.end(JSON.stringify({response: {header: {resultCode: '00', resultMsg: 'NORMAL_SERVICE'},
+            body: {dataType: 'JSON', items: {item: list}, pageNo: 1, numOfRows: 1000, totalCount: list.length}}}));
+    }
     if (u.searchParams.get('serviceKey') === decodeURIComponent(keys[0])) {
         res.writeHead(403, {'content-type': 'application/json'});
         return res.end(JSON.stringify({OpenAPI_ServiceResponse: {cmmMsgHeader: {errMsg: 'SERVICE_KEY_IS_NOT_REGISTERED_ERROR', returnReasonCode: '30'}}}));
@@ -57,6 +64,12 @@ async function main() {
         assert.equal(await db.Model.count({}), 1);
         assert.equal((await db.Model.findOne({regId: '11H10603'}).lean()).retired, undefined);
 
+        // 1b. A row that Mongoose cannot store fails the whole refresh before any write.
+        mode = 'bad-seq'; calls.length = 0;
+        await assert.rejects(ctrl.getFromKma(), /check=item/);
+        assert.equal(await db.Model.count({}), 1);
+        assert.equal(await db.Model.count({regId: items[0].regId}), 0);
+
         // 2. Key 1 rejected, key 2 pages 1000 + 5 items; the stored 11H10603 is retired.
         mode = 'serve'; calls.length = 0;
         await ctrl.getFromKma();
@@ -77,7 +90,7 @@ async function main() {
 
         assert(logs.every(line => keys.every(key => !line.includes(key) && !line.includes(decodeURIComponent(key)))));
         assert(logs.every(line => !line.includes(origin) && !/serviceKey=/i.test(line)));
-        console.log('PASS forecast-zone smoke: 307 not followed and no writes; key rotation; 1000+5 pages stored in mongod; ' +
+        console.log('PASS forecast-zone smoke: 307 not followed and no writes; unstorable row fails before writes; key rotation; 1000+5 pages stored in mongod; ' +
             '11H10603 retired; town mapping for ' + zoneMongo.townCases.length + ' cases; mid-temp zones ' + mid.length + '; sanitized logs');
     } finally {
         await db.stop();

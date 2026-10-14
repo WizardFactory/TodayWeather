@@ -103,7 +103,7 @@ function assertSanitized(logs) {
         for (const key of keys) {
             assert(!line.includes(key) && !line.includes(decodeURIComponent(key)), 'key in log: ' + line);
         }
-        assert(!/apis\.data\.go\.kr|serviceKey=/i.test(line), 'URL in log: ' + line);
+        assert(!/apis\.data\.go\.kr|serviceKey=|https?:/i.test(line), 'URL in log: ' + line);
     }
 }
 const query = call => new URL(call.url).searchParams;
@@ -162,6 +162,12 @@ const failures = {
     'incomplete second page': [page(ids('11A', ROWS).map(id => item(id)), 1), page([item('11B0000'), item('11B0001')], 2, {totalCount: 3})],
     'duplicate regId across pages': [page(ids('11A', ROWS).map(id => item(id)), 1), page([item('11A0000')], 2)],
     'second-page transport failure': [page(ids('11A', ROWS).map(id => item(id)), 1), {error: new Error('socket hang up')}],
+    // Review Z-R1-001: optional fields that cannot be stored must fail the whole fetch before any write.
+    'item with a non-numeric seq': [page([item('11B10101'), item('11B10102', {seq: 'bad number'})], 1)],
+    'item with a non-numeric tmEd': [page([item('11B10101'), item('11B10102', {tmEd: '2100-12-31'})], 1)],
+    'item with an object stnF3': [page([item('11B10101'), item('11B10102', {stnF3: {code: 1}})], 1)],
+    'item with a non-numeric lat': [page([item('11B10101'), item('11B10102', {lat: 'north'})], 1)],
+    'item with a non-string regUp': [page([item('11B10101'), item('11B10102', {regUp: ['11B00000']})], 1)],
     'page limit exceeded': Array.from({length: 11}, (_, i) => page(ids('1' + String.fromCharCode(65 + i), ROWS).map(id => item(id)), i + 1))
 };
 for (const [name, responses] of Object.entries(failures)) {
@@ -178,6 +184,25 @@ for (const [name, responses] of Object.entries(failures)) {
         if (name === 'page limit exceeded') { assert.equal(t.request.calls.length, 10); }
     });
 }
+
+// Review Z-R1-002: provider codes reach errors and logs only when they are short digit strings.
+test('provider result codes cannot carry URLs or keys into errors or logs', async () => {
+    const hostile = 'https://apis.data.go.kr/x?serviceKey=' + decodeURIComponent(keys[0]);
+    for (const responses of [
+        [{body: {response: {header: {resultCode: hostile}}}}],
+        [{status: 500, body: {response: {header: {resultCode: hostile}}}}],
+        [{status: 404, body: {OpenAPI_ServiceResponse: {cmmMsgHeader: {returnReasonCode: hostile}}}}],
+        [page(ids('11A', ROWS).map(id => item(id)), 1), {body: {response: {header: {resultCode: hostile}}}}]]) {
+        const t = controller(responses);
+        const {error} = await run(t.ctrl);
+        assert(error && typeof error.message === 'string');
+        // controllerManager.startManager logs the rejected error object as is.
+        t.logs.push(String(error), error.message, String(error.stack));
+        assertSanitized(t.logs);
+        assert(/code=invalid|resultCode invalid/.test(error.message), error.message);
+        assert.equal(t.model.writes, 0);
+    }
+});
 
 test('key rejection moves to the next DONGNAE_SECRET_KEYS entry', async () => {
     const denied = {status: 403, body: {OpenAPI_ServiceResponse: {cmmMsgHeader: {errMsg: 'SERVICE_KEY_IS_NOT_REGISTERED_ERROR', returnReasonCode: '30'}}}};
