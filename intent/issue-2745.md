@@ -19,4 +19,4 @@ Legacy PR: `server/lib/airkoreaObservation.js`, `server/lib/kecoRequester.js`, t
 
 ## Risks
 - Rotation spends the other keys' daily quota earlier; with three keys the daily AirKorea capacity is the sum of the three quotas instead of one.
-- Exhaustion memory is per process; a restart costs at most one quota answer per exhausted key.
+- Exhaustion memory is per process; after a restart each exhausted key costs one more quota answer per request that reaches it before the first answer is recorded.

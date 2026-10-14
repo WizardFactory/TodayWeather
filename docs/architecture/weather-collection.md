@@ -290,8 +290,9 @@ restarts with the next key instead of sending further pages. A key never receive
 second request for the same page after a quota or credential rejection. When no
 usable key remains and at least one was exhausted, the request fails with
 `QUOTA_EXHAUSTED`; only an all-credential failure is `NO_VALID_KEY`. The memory
-is per process and is lost on restart, which costs at most one quota answer per
-exhausted key. Code 23 (per-second limit) is not a daily quota and keeps
+is per process and is lost on restart; afterwards each exhausted key costs one
+more quota answer per request that reaches it before the first answer is recorded
+(parallel requests already in flight can each receive one). Code 23 (per-second limit) is not a daily quota and keeps
 stopping without a key change. Station metadata
 (`MsrstnInfoInqireSvc/getMsrstnList`, gather startup), the dust forecast
 (`ArpltnInforInqireSvc/getMinuDustFrcstDspth`, `ver=1.1`, `/gather/kecoForecast`)
