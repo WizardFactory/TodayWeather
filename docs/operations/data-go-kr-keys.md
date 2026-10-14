@@ -36,9 +36,10 @@ The gather host's list was not observed.
 The issue's 2026-09-27 operator comment reports successful forecast, mid, warning,
 UV and KASI approvals on the first list entry; AirKorea approval was missing.
 That historical observation does not verify this candidate or today's approval.
-Forecast-zone still uses its existing newsky2 endpoint, which redirected every
-request to `/503.html` on 2026-10-14; the migration to `FcstZoneInfoService` is
-tracked in #2739. Health-day remains removed.
+Forecast-zone moved from the retired newsky2 endpoint to `FcstZoneInfoService`
+in #2739 (2026-10-14 read-only probe: all three list keys entitled, 755 zones); approve
+it for the list keys, and expect one startup log line `forecast zone codes stored=<n>
+newlyRetired=<m>` on the gather host. Health-day remains removed.
 
 Offline verification from the repository root with isolated dependencies:
 

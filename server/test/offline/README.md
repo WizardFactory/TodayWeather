@@ -635,3 +635,29 @@ before a fresh alarm. It also holds three HTTP sends open beyond the watchdog an
 verifies unsent expiry/supersession while all warning physical slots remain charged.
 S3 is a memory adapter in this smoke; `push-s3-smoke.js --client`
 provides the actual SDK/HTTP S3 and shared-client path. No real provider or device.
+
+## Forecast-zone codes (#2739)
+
+`forecast-zone.test.js` (in `test:offline`) drives the zone refresh with synthetic
+`getFcstZoneCd` pages and an in-memory model: 1000+1000+5 and 1000+`03` paging,
+fifteen failure shapes (307, non-`00`, `03` on page 1, malformed bodies, per-page
+`totalCount`/`pageNo`/`numOfRows` mismatch, duplicate `regId`, page-2 transport
+error, page limit) with zero writes and no key or URL in logs, key rotation,
+retirement of absent zones, the town mapping including `대구광역시 군위군`, the
+176-zone land file and the Manager's `getMidTa` selection.
+
+`forecast-zone-smoke.js` runs the same refresh through the real `request` library
+against a loopback gateway and stores into a real mongod with Mongoose 5.1.2 and
+the real model: a 307 is not followed and writes nothing, a rejected key rotates,
+1,005 zones are stored, a legacy `11H10603` row is retired and lookups run as Mongo
+queries. It needs `mongoose@5.1.2`, `async`, `request` and
+`mongodb-memory-server-core@10.1.4`; set `TW_MONGOD` to a Mongo 4.4 binary (as the
+`forecast-grid-node16` CI job does) or let mongodb-memory-server download 4.4.29.
+Mongoose 5.1.2 cannot talk to MongoDB 5.1 or later.
+
+`forecast-zone-live-check.js` is a manual acceptance check against the real
+service: with `DONGNAE_SECRET_KEYS` in the environment it refreshes into a temporary
+mongod and checks the stored count, the retired `11H10603`, the guide codes for
+서울, 광주 (×2), 고성 (×2) and 군위 (×2), and that all 176 listed land zones are
+active city zones. It prints a JSON summary without keys or URLs. On 2026-10-14 it
+stored 755 zones with one request (219 city zones, 176 mid-temperature zones).

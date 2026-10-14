@@ -1883,47 +1883,17 @@ Manager.prototype.getMidTempByForecastZone = function(gmt, key, callback) {
     async.waterfall([
             function (callback) {
                 var kmaForcastZoneCode = new KmaForecastZoneCode(dongnae_keys);
-                //C:도시
-                kmaForcastZoneCode.findForecastZoneCode({regSp:"C"})
-                    .exec(function (err, result) {
-                        if (err) {
-                            return callback(err);
-                        }
-                        result = result.map(function (obj){
-                            obj.code = obj.regId;
-                            return obj;
-                        });
-                        callback(err, result);
+                //C:도시, limited to the KMA guide land zones that getMidTa answers (#2739)
+                kmaForcastZoneCode.findMidTempZones(function (err, result) {
+                    if (err) {
+                        return callback(err);
+                    }
+                    result = result.map(function (obj){
+                        obj.code = obj.regId;
+                        return obj;
                     });
-            },
-            function (regIdList, callback) {
-                //filter invalid id;
-                var unsupportList = [
-                    {"regName":"연평도","regId":"11A00102"},
-                    {"regName":"소청도","regId":"11A00103"},
-                    {"regName":"안흥","regId":"11C20105"},
-                    {"regName":"치악","regId":"11D10403"},
-                    {"regName":"봉평","regId":"11D10504"},
-                    {"regName":"설악","regId":"11D20101"},
-                    {"regName":"진부","regId":"11D20202"},
-                    {"regName":"묵호","regId":"11D20603"},
-                    {"regName":"완도항","regId":"11F20305"},
-                    {"regName":"여수항","regId":"11F20406"},
-                    {"regName":"녹동항","regId":"11F20407"},
-                    {"regName":"제주항","regId":"11G00202"},
-                    {"regName":"하동(해안)","regId":"11H20406"},
-                    {"regName":"하동(내륙)","regId":"11H20702"},
-                    {"regName":"해남(화원)","regId":"21F20202"},
-                    {"regName":"벽파","regId":"21F20203"}];
-
-                regIdList = regIdList.filter(function (obj) {
-                    var a = unsupportList.find(function (unObj) {
-                       return unObj.regId === obj.regId;
-                    });
-                    return a == undefined ? true : false;
+                    callback(err, result);
                 });
-
-                callback(null, regIdList);
             },
             function (reqIdList, callback) {
                 var fnCheckPubDate = self._checkPubDate;

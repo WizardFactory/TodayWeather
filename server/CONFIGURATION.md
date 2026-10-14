@@ -83,13 +83,14 @@ Required subscriptions for at least one key per used service:
 | UV | `LivingWthrIdxServiceV5` |
 | Seasonal oak/pine/weed pollen | `HealthWthrIdxServiceV3` |
 | KASI rise/set | `RiseSetInfoService` (`B090041`) |
-| Legacy forecast-zone startup refresh | `ForecastZoneInfoService` (legacy endpoint; availability unverified) |
+| Forecast-zone startup refresh | `FcstZoneInfoService` (`1360000/FcstZoneInfoService/getFcstZoneCd`) |
 | AirKorea, when the same account is used | `ArpltnInforInqireSvc` and other enabled AirKorea operations |
 
 AirKorea retains `AIRKOREA_SECRET_KEYS`; opt-in historical ASOS recovery retains
 its explicit `ASOS_HISTORY_SERVICE_KEY` subscription/rollout contract. Health-day
-and retired life-index endpoints removed by #2650 remain removed. Key approval
-does not establish that the legacy forecast-zone endpoint still works.
+and retired life-index endpoints removed by #2650 remain removed. The
+forecast-zone refresh moved from the retired legacy KMA host to
+`FcstZoneInfoService` in #2739; each list key needs that approval to serve it.
 See the [migration and verification runbook](../docs/operations/data-go-kr-keys.md).
 
 ## Push store

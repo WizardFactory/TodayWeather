@@ -20,6 +20,8 @@ var kmaForecastZoneCodeSchema = new mongoose.Schema({
     stnFd: String,      //단기예보관서
     stnFw: String,      //주간예보관서
     seq: Number,         //순번
+    retired: Boolean,   //absent from the latest complete getFcstZoneCd refresh; row kept
+    retiredAt: Date,
     geo: {
         type: [Number],     // [<longitude(dmY)>, <latitude(dmX)>]
         index: '2d'         // create the geospatial index

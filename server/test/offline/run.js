@@ -9,6 +9,7 @@ var commands = [
     [path.join(__dirname, 'payment-removal-smoke.js')],
     [path.join(__dirname, 'payment-removal-smoke.js'), 'production'],
     [path.join(__dirname, 'data-go-kr-keys.test.js')],
+    [path.join(__dirname, 'forecast-zone.test.js')],
     [path.join(__dirname, 'env-startup.test.js')],
     [require.resolve('mocha/bin/_mocha'), path.join(__dirname, 'gather-code-drift.test.js')],
     [path.join(__dirname, 'gather-smoke.js')],
