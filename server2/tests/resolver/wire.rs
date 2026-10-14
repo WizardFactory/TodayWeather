@@ -2014,17 +2014,20 @@ async fn national_scope_is_acquired_once_for_many_locations() {
     // Slow: every waiter returns at its bound; one acquisition publishes for all of them.
     let peer = Peer::new();
     let (resolver, calls) = slow_resolver(&peer, Duration::from_secs(4), config.clone());
-    // Eight concurrent owners stay below the S3 test peer's 16-connection limit.
-    let locations: Vec<String> = (0..8)
+    // Requests start 150 ms apart, all inside the 4 s acquisition, so their cold S3 reads do not
+    // burst the Python test peer's connection slots (CI saw `Transport` from it).
+    let locations: Vec<String> = (0..6)
         .map(|i| format!("{:.4},127.0001", 33.0 + f64::from(i) * 0.5))
         .collect();
     let started = Instant::now();
     let waiters: Vec<_> = locations
         .iter()
-        .map(|l| {
+        .enumerate()
+        .map(|(i, l)| {
             let resolver = resolver.clone();
             let r = located(l);
             tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(150 * i as u64)).await;
                 let begun = Instant::now();
                 let result = resolver.resolve(r, deadline()).await;
                 (result.err(), begun.elapsed())
@@ -2042,7 +2045,7 @@ async fn national_scope_is_acquired_once_for_many_locations() {
         );
         assert!(waited >= Duration::from_millis(2_900), "{waited:?}");
     }
-    assert!(started.elapsed() < Duration::from_millis(3_500));
+    assert!(started.elapsed() < Duration::from_millis(3_500 + 750));
     owners_idle(&resolver).await;
     assert_eq!(calls.load(Ordering::SeqCst), 1, "one national acquisition");
     let hits = resolver.metrics().hits;
@@ -2060,10 +2063,14 @@ async fn national_scope_is_acquired_once_for_many_locations() {
     let (resolver, calls) = slow_resolver(&peer, Duration::from_millis(300), config);
     let waiters: Vec<_> = locations
         .iter()
-        .map(|l| {
+        .enumerate()
+        .map(|(i, l)| {
             let resolver = resolver.clone();
             let r = located(l);
-            tokio::spawn(async move { resolver.resolve(r, deadline()).await })
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(40 * i as u64)).await;
+                resolver.resolve(r, deadline()).await
+            })
         })
         .collect();
     for w in waiters {
