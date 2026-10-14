@@ -111,6 +111,12 @@ pub trait KmaStore {
     -> StoreResult;
     /// `controllerKmaStnWeather.getCityHourlyList(town)`.
     fn city_hourly(&self, town: &Value) -> StoreResult;
+    /// `history.loadForTown(town)` (legacy `lib/history/service.js`): `{mapping, hourly, daily,
+    /// reason}` with ASOS records, or null when ASOS history reads are disabled (the legacy
+    /// deployment default, and every store that does not source them).
+    fn history(&self, _town: &Value) -> StoreResult {
+        Ok(OrderedJson::Null)
+    }
     /// `modelAreaNo.find({town.first, town.second, town.third}).limit(1)`.
     fn area_no(&self, first: &str, second: &str, third: &str) -> StoreResult;
     /// `modelAreaNo.find({geo: {$near: [lon, lat], $maxDistance: 0.3}}).limit(3)`.

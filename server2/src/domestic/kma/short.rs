@@ -947,8 +947,9 @@ pub fn merge_current_sky_by_shortest(cx: &mut Cx) -> Flow {
     }
     Flow::Next
 }
-/// `mergeCurrentByStnHourly`: legacy station hourly rows fill invalid grid hours. ASOS history
-/// reads are off.
+/// `mergeCurrentByStnHourly`: legacy station hourly rows fill invalid grid hours, then the
+/// ASOS history read (when the store supplies one; legacy `config.history.readEnabled`) fills
+/// the remaining invalid fields of D-7..D-1 hours.
 pub fn merge_current_by_stn_hourly(cx: &mut Cx) -> Flow {
     let Ok(town) = cx.town_info() else {
         return Flow::Next;
@@ -965,7 +966,18 @@ pub fn merge_current_by_stn_hourly(cx: &mut Cx) -> Flow {
             .ok()
             .map(|v| super::js::from_store(&v))
     };
+    // `history.loadForTown`: null when reads are disabled; a failed read keeps the default.
+    let history = match cx.store.history(&super::to_store(&town)) {
+        Ok(crate::gateway::OrderedJson::Null) => V::Undef,
+        Ok(v) => super::js::from_store(&v),
+        Err(_) => V::Obj(obj(vec![
+            ("reason", V::s("cache-read-timeout")),
+            ("hourly", V::Arr(Arr::new())),
+            ("daily", V::Arr(Arr::new())),
+        ])),
+    };
     policy::merge_legacy(&cx.req, &rows.unwrap_or_default());
+    policy::merge_hourly(&cx.req, &history);
     Flow::Next
 }
 

@@ -718,7 +718,10 @@ pub fn merge_mid_with_short(cx: &mut Cx) -> Flow {
             overlay(&daily, &rows);
         });
     }
-    // finish()
+    // finish(): the ASOS daily merge and status run before the window filter.
+    if cx.r("_history").truthy() {
+        policy::merge_daily_status(&cx.req, now);
+    }
     let mut by_date: Vec<(String, V)> = Vec::new();
     for row in mid.get("dailyData").a().items() {
         if policy::in_window(&row.get("date"), now) && policy::complete(&row) {
