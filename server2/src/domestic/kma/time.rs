@@ -128,8 +128,8 @@ pub fn new_date(v: &V) -> f64 {
 ///   form only for years from 100);
 /// - the legacy dotted `YYYY.M[M].D[D]` date, optionally followed by ` H[H]:M[M]` or
 ///   `.H[H]:M[M]` (the KMA page forms; checked against the pinned V8 for 1- and 2-digit month,
-///   day, hour and minute fields): in-range fields give the UTC fields; with a time, an
-///   out-of-range field or a year below 100 is `NaN`;
+///   day, hour and minute fields; years from 100): in-range fields give the UTC fields; with a
+///   time, an out-of-range field is `NaN`;
 /// - strings without an ASCII digit and digit-only strings of 7 or more digits (`NaN`).
 ///
 /// Any other string with digits may be accepted by V8's permissive legacy parser; the request is
@@ -192,9 +192,13 @@ fn dotted(s: &str) -> Option<f64> {
         (field(&time[..colon])?, field(&time[colon + 1..])?)
     };
     let y: f64 = std::str::from_utf8(&b[..4]).ok()?.parse().ok()?;
+    // V8's legacy parser reads a year below 100 as another field (for example `0001.09.26 09:03`
+    // is 2026-01-09 09:03): not claimed here.
+    if y < 100. {
+        return None;
+    }
     let timed = d_end != rest.len();
-    let in_range = y >= 100.
-        && (1. ..=12.).contains(&m)
+    let in_range = (1. ..=12.).contains(&m)
         && (1. ..=31.).contains(&d)
         && mi <= 59.
         && (h < 24. || (h == 24. && mi == 0.));
@@ -446,7 +450,6 @@ mod tests {
             ("2026.10.15.24:59", None),
             ("2026.10.15.25:00", None),
             ("2026.10.15.3:60", None),
-            ("0026.10.15.3:00", None),
         ] {
             let got = try_parse_date(s).unwrap();
             match v8 {
@@ -454,8 +457,17 @@ mod tests {
                 None => assert!(got.is_nan(), "{s}"),
             }
         }
-        // Unprobed shapes stay unclaimed (the assembly forwards; page parsing reads NaN).
+        // Unprobed shapes stay unclaimed (the assembly forwards; page parsing reads NaN). V8
+        // reads small years as other fields (`0001.09.26 09:03` is 2026-01-09 09:03).
         assert_eq!(try_parse_date("2026.13.5"), None);
+        for s in [
+            "0026.10.15.3:00",
+            "0001.09.26 09:03",
+            "0001.09.26.09:03",
+            "0099.1.5",
+        ] {
+            assert_eq!(try_parse_date(s), None, "{s}");
+        }
     }
     #[test]
     fn legacy_time_helpers() {
