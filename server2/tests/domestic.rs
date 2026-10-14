@@ -1,3 +1,5 @@
+#[path = "domestic/asos.rs"]
+mod asos;
 #[path = "domestic/parity.rs"]
 mod parity;
 #[path = "domestic/replay.rs"]
@@ -14,3 +16,5 @@ mod stations;
 mod support;
 #[path = "domestic/switch.rs"]
 mod switch;
+#[path = "providers/support.rs"]
+mod stub;

@@ -20,6 +20,8 @@ pub enum Service {
     RiseSet,
     /// data.go.kr FcstZoneInfoService `getFcstZoneCd` (S13b; legacy #2740).
     ForecastZone,
+    /// KMA ASOS hourly/daily observations (S15b-2; legacy #2564/#2648 history provider).
+    Asos,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DataGoKrFamily {
@@ -99,7 +101,9 @@ impl DataGoKrFamily {
             Service::MidFcst => Shape::Mid,
             Service::LivingWthrIdx | Service::HealthWthrIdx => Shape::Life,
             // Not a DataGoKrFamily service.
-            Service::AirKorea | Service::RiseSet | Service::ForecastZone => Shape::Life,
+            Service::AirKorea | Service::RiseSet | Service::ForecastZone | Service::Asos => {
+                Shape::Life
+            }
         }
     }
 }
