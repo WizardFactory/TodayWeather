@@ -1919,10 +1919,10 @@ have rejected that sido's whole batch; server2 skips such a row and keeps the da
 requests per hour: one page per national fetch, normally one to three fetches per hour while
 requests arrive (at most six), about 24-72 a day, plus 7 station-list pages a week and at most 24
 forecast pages a day (only for `airkorea` forecasts). The development quota is 500 requests a day per
-operation; legacy used about 2,450 observation calls a day. The legacy key choice is kept (S13b
-`withKeys`: the last working key, otherwise the last key; quota code 22 or HTTP 429 stops without
-another key). On 2026-10-14 the last configured key answered 429, so #2745 (move to the next key at
-quota) must be mirrored when it lands.
+operation; legacy used about 2,450 observation calls a day. Keys follow the S13b/S13c acquirer as
+is: the last working key, otherwise the last key; a quota answer (429 or code 22) exhausts that key
+until KST midnight and the call continues with the next key (#2745). The acquirer and its S08
+windows are rebuilt per KST day. On 2026-10-14 the last configured key answered 429.
 
 **Legacy documents and readers.** In fetch order the source applies the legacy save rules:
 `completeGeoMsrStnInfo` (swap `dmX > 100`), `parseMsrstnList` and `saveMsrstnList` for `MsrStnInfo`

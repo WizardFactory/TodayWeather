@@ -172,7 +172,8 @@ coordinates; server2 does not store it (none live).
   minutes (first check 10 minutes after the first request) and acquires the current nationwide hour
   once when it is neither stored nor already acquired by this process.
 - S08: one budget store per key and KST day (`SERVER2_AIRKOREA_DAILY_UNITS`, owner = domain-separated
-  SHA-256 of the key), shared by the AirKorea operations; keys follow the S13b legacy `withKeys`.
+  SHA-256 of the key), shared by the AirKorea operations; keys follow the S13b/S13c acquirer
+  (`withKeys`, a quota answer exhausts the key until KST midnight and moves to the next key).
 
 ## Answers (A3-1)
 
