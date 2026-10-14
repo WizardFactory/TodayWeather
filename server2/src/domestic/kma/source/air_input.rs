@@ -13,7 +13,7 @@ use super::airkorea::{
     expected_announcement, fallback_arpltn, has_air_value,
 };
 use super::doc::{Doc, Val};
-use super::live::{AirKoreaAcquire, Flights, wait};
+use super::live::{AirKoreaAcquire, Flights};
 use super::records::{Fetched, Reader, months};
 use crate::domestic::airkorea::AirKoreaRequest;
 use crate::domestic::publication::{self, Publication};
@@ -162,7 +162,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             reader: Reader { transport, store },
             acquire: None,
             air: None,
-            flights: Arc::new(Flights::default()),
+            flights: Arc::new(Flights::new(RETRY)),
             generation: Arc::new(AtomicU64::new(0)),
             stations: tokio::sync::Mutex::new(None),
             observations: tokio::sync::Mutex::new(None),
@@ -195,20 +195,22 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         self.air = air;
         self
     }
-    /// Start (or join) the owned acquisition of one dataset; None without a key.
-    fn flight(
-        &self,
-        id: &str,
-        request: AirKoreaRequest,
-    ) -> Option<tokio::sync::watch::Receiver<bool>> {
+    /// Start (or join) the owned acquisition of one dataset and wait for it until `ready_by`;
+    /// true when it published by then (false without a key).
+    async fn flight(&self, id: &str, request: AirKoreaRequest, ready_by: Instant) -> bool {
+        let Some(acquire) = self.acquire.clone() else {
+            return false;
+        };
         start_flight(
             &self.flights,
-            self.acquire.clone()?,
+            acquire,
             &self.generation,
             &self.capture,
             id,
             request,
+            ready_by,
         )
+        .await
     }
     /// Record demand and start the hourly capture task once (with a key).
     fn note_demand(&self) {
@@ -247,6 +249,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                     hours.contains(&hour)
                 };
                 if !done {
+                    // Start (or join) without waiting: the owned task runs on its own.
                     let _ = start_flight(
                         &flights,
                         acquire.clone(),
@@ -254,7 +257,9 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                         &capture,
                         &format!("nationwide-{hour}"),
                         AirKoreaRequest::nationwide(),
-                    );
+                        Instant::now(),
+                    )
+                    .await;
                 }
             }
         });
@@ -289,9 +294,17 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             .as_ref()
             .is_none_or(|(_, newest)| *newest < now - STATION_LIST_AGE_MS);
         if stale {
-            let rx = self.flight("station-list", AirKoreaRequest::station_list());
-            if current.is_none()
-                && wait(rx, deadline).await
+            // Without any list the request waits for the acquisition; otherwise it starts it
+            // and answers with the list it has.
+            let ready_by = if current.is_none() {
+                deadline
+            } else {
+                Instant::now()
+            };
+            if self
+                .flight("station-list", AirKoreaRequest::station_list(), ready_by)
+                .await
+                && current.is_none()
                 && let Ok(Some(found)) = bounded(
                     deadline,
                     self.station_fold(now, wall_ms().max(now), false, deadline),
@@ -472,8 +485,14 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             return Ok(folded);
         }
         let hour = hour_partition(now);
-        let rx = self.flight(&format!("nationwide-{hour}"), AirKoreaRequest::nationwide());
-        if wait(rx, deadline).await {
+        if self
+            .flight(
+                &format!("nationwide-{hour}"),
+                AirKoreaRequest::nationwide(),
+                deadline,
+            )
+            .await
+        {
             // A refresh that cannot finish keeps the data read first.
             let refreshed = bounded(
                 deadline,
@@ -648,11 +667,14 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         let Some(search) = publication::dust_forecast_announcement(now as i64) else {
             return Ok(folded);
         };
-        let rx = self.flight(
-            &format!("dust-forecast-{}", search.partition()),
-            AirKoreaRequest::dust_forecast_for(search),
-        );
-        if wait(rx, deadline).await {
+        if self
+            .flight(
+                &format!("dust-forecast-{}", search.partition()),
+                AirKoreaRequest::dust_forecast_for(search),
+                deadline,
+            )
+            .await
+        {
             let refreshed = bounded(
                 deadline,
                 self.forecast_fold(now, wall_ms().max(now), date, deadline),
@@ -892,19 +914,23 @@ pub async fn cpu_task<R: Send + 'static>(
 }
 /// Start (or join) one owned acquisition; a published nationwide hour is remembered for the
 /// capture, and any publication advances the generation so readers re-read S3.
-fn start_flight(
+async fn start_flight(
     flights: &Flights,
     acquire: Arc<dyn AirKoreaAcquire>,
     generation: &Arc<AtomicU64>,
     capture: &Arc<Capture>,
     id: &str,
     request: AirKoreaRequest,
-) -> Option<tokio::sync::watch::Receiver<bool>> {
+    ready_by: Instant,
+) -> bool {
     let (generation, capture) = (generation.clone(), capture.clone());
     let nationwide = request.sido() == Some(crate::domestic::airkorea::NATIONWIDE);
-    flights.start(id, RETRY, move || -> BoxFuture<'static, ()> {
-        Box::pin(async move {
-            if let Ok(Some(period)) = acquire.acquire(request).await {
+    flights
+        .join(id, ready_by, move || -> BoxFuture<'static, bool> {
+            Box::pin(async move {
+                let Ok(Some(period)) = acquire.acquire(request).await else {
+                    return false;
+                };
                 if nationwide {
                     capture
                         .hours
@@ -913,9 +939,10 @@ fn start_flight(
                         .insert(format!("{:08}-{}", period.local_date, period.slot));
                 }
                 generation.fetch_add(1, Ordering::AcqRel);
-            }
+                true
+            })
         })
-    })
+        .await
 }
 /// Whether `getKecoDustForecast` reads dust forecasts for this query: legacy
 /// `checkQueryValidation` sets an absent or `(null)` `airForecastSource` to `airkorea`, and the

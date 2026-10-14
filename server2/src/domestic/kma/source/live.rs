@@ -20,8 +20,9 @@ use crate::domestic::metrics::DomesticMetrics;
 use crate::domestic::{Acquired, DomesticAcquirer, KeyRing};
 use crate::gateway::BoxFuture;
 use crate::providers::{ProviderKey, ProviderTransport, PublicTransport};
+use crate::resolver::{OwnedConfig, OwnedFlights, Waited};
 use crate::storage::{CatalogLimits, CatalogStore, CatalogTransport, Period};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
@@ -29,8 +30,6 @@ use tokio::time::Instant;
 /// Legacy AirKorea client bound for one logical call (`airkoreaObservation`: 5 s per attempt,
 /// one transient retry, 30 s per call).
 pub const CALL_BUDGET: Duration = Duration::from_secs(30);
-/// Legacy AirKorea attempt bound (`airkoreaObservation`: `timeoutMs` 5,000 per attempt).
-pub const ATTEMPT_TIMEOUT: Duration = Duration::from_secs(5);
 /// S06 publication bound after a complete acquisition.
 const PUBLISH_BUDGET: Duration = Duration::from_secs(10);
 const DAY_MS: i64 = 86_400_000;
@@ -257,59 +256,69 @@ where
     }
 }
 
-/// One single-flight table: at most one owned acquisition per dataset key; a finished attempt
-/// is not repeated within its throttle.
-#[derive(Default)]
+/// The longest one owned AirKorea acquisition runs: the call budget plus publication.
+pub const OWNED_FOR: Duration =
+    Duration::from_secs(CALL_BUDGET.as_secs() + PUBLISH_BUDGET.as_secs());
+
+type EndedAt = Arc<std::sync::Mutex<HashMap<String, std::time::Instant>>>;
+/// Owned acquisitions per dataset key on the S13d [`OwnedFlights`], with the retry throttle of
+/// this source: an acquisition that ended is not started again for `throttle`. Within the owned
+/// table's retain window a late joiner still receives the outcome (it may have read the store
+/// just before the owner published).
 pub struct Flights {
-    map: std::sync::Mutex<std::collections::HashMap<String, Flight>>,
+    owned: OwnedFlights<String, bool>,
+    ended: EndedAt,
+    retain: Duration,
+    throttle: Duration,
 }
-struct Flight {
-    started: std::time::Instant,
-    done: tokio::sync::watch::Receiver<bool>,
+/// Records when an owned acquisition ended, also when its owner deadline dropped it.
+struct Ended(EndedAt, String);
+impl Drop for Ended {
+    fn drop(&mut self) {
+        let mut ended = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        ended.insert(std::mem::take(&mut self.1), std::time::Instant::now());
+    }
 }
 impl Flights {
-    /// The running flight of `key`, or a new owned one from `work` unless an attempt finished
-    /// within `throttle`; then the finished flight is returned (its result may have arrived after
-    /// the caller's read, so the caller reads again).
-    pub fn start(
+    pub fn new(throttle: Duration) -> Self {
+        let config = OwnedConfig::default();
+        let retain = config.retain;
+        Self {
+            owned: OwnedFlights::new(config).expect("default owned bounds are valid"),
+            ended: Arc::default(),
+            retain,
+            throttle,
+        }
+    }
+    /// Join the owned acquisition of `key`, starting it with `work` unless one ended within the
+    /// throttle. The caller waits until `ready_by` (at most the S13d waiter bound); true when the
+    /// acquisition published by then, so the caller reads the store again. A pending, failed,
+    /// throttled or refused (`Busy`) acquisition is false: the caller answers with what it read.
+    pub async fn join(
         &self,
         key: &str,
-        throttle: Duration,
-        work: impl FnOnce() -> BoxFuture<'static, ()>,
-    ) -> Option<tokio::sync::watch::Receiver<bool>> {
-        let mut map = self.map.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(f) = map.get(key)
-            && (!*f.done.borrow() || f.started.elapsed() < throttle)
+        ready_by: Instant,
+        work: impl FnOnce() -> BoxFuture<'static, bool>,
+    ) -> bool {
         {
-            return Some(f.done.clone());
+            let mut ended = self.ended.lock().unwrap_or_else(|e| e.into_inner());
+            ended.retain(|_, at| at.elapsed() < self.throttle);
+            if ended.get(key).is_some_and(|at| at.elapsed() >= self.retain) {
+                return false;
+            }
         }
-        // Forget finished flights older than a day so the table stays small.
-        map.retain(|_, f| !*f.done.borrow() || f.started.elapsed() < Duration::from_secs(86_400));
-        let (tx, rx) = tokio::sync::watch::channel(false);
-        let task = work();
-        tokio::spawn(async move {
-            task.await;
-            let _ = tx.send(true);
-        });
-        map.insert(
-            key.to_owned(),
-            Flight {
-                started: std::time::Instant::now(),
-                done: rx.clone(),
-            },
-        );
-        Some(rx)
+        let ended = self.ended.clone();
+        let name = key.to_owned();
+        let outcome = self
+            .owned
+            .join(key.to_owned(), ready_by, OWNED_FOR, move |_| {
+                let work = work();
+                async move {
+                    let _ended = Ended(ended, name);
+                    work.await
+                }
+            })
+            .await;
+        matches!(outcome, Waited::Ready(true))
     }
-    /// Whether a flight of `key` is running.
-    pub fn running(&self, key: &str) -> bool {
-        let map = self.map.lock().unwrap_or_else(|e| e.into_inner());
-        map.get(key).is_some_and(|f| !*f.done.borrow())
-    }
-}
-/// Wait for a flight until `deadline`; true when it finished.
-pub async fn wait(rx: Option<tokio::sync::watch::Receiver<bool>>, deadline: Instant) -> bool {
-    let Some(mut rx) = rx else { return false };
-    tokio::time::timeout_at(deadline, rx.wait_for(|done| *done))
-        .await
-        .is_ok_and(|r| r.is_ok())
 }

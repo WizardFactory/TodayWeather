@@ -21,12 +21,12 @@ use std::{
     time::Duration,
 };
 
-struct Peer {
+pub(super) struct Peer {
     child: Child,
     endpoint: String,
 }
 impl Peer {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         let mut child = Command::new("python3")
             .arg("tests/storage/catalog_peer.py")
             .current_dir(env!("CARGO_MANIFEST_DIR"))
@@ -53,7 +53,7 @@ impl Peer {
             }
         }
     }
-    fn transport(&self) -> HttpS3Transport {
+    pub(super) fn transport(&self) -> HttpS3Transport {
         HttpS3Transport::new(
             &self.endpoint,
             "server2-local",

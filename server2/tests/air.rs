@@ -16,3 +16,5 @@ mod privacy;
 mod restore;
 #[path = "air/smoke.rs"]
 mod smoke;
+#[path = "air/waiter.rs"]
+mod waiter;

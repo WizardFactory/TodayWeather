@@ -17,10 +17,10 @@
     "R1: two independent complete publications both return checked bytes",
     "R2: 17 raw scopes in 1 MiB cache do not strand a valid 200 KiB response",
     "R3: 30 complete revisions at synthetic 20 ms GET; selected cold read and idle warm zero-I/O pass",
-    "PASS local real HTTP resolver smoke (5442.77 ms); no AWS/provider/route parity claim"
+    "PASS local real HTTP resolver smoke (5414.05 ms); no AWS/provider/route parity claim"
   ],
-  "binary_sha256": "fd68b1aa3f495d1a8b0dd99d0d778483a59d1ff0408389145b34556a8a79938b",
-  "source_sha256": "1b914726d4df724e968832862f01771e89ca15a1174954cd7306ab20a7e8e8b2",
-  "pdf_sha256": "ae59d48a929ebb1455524f20306a6d31690994bcd8a3d5eedeb244e64af4537d",
-  "screenshot_sha256": "1279798f7dc252be4d5ffdf6dc4960e25080f6c5f4e8addb5a264170360d20d5"
+  "binary_sha256": "a2930911e7da064101ed08af3f5ea2476a3be21d44d1e318d8e696eacf05e184",
+  "source_sha256": "212784f9d9fc7af84e662985eff585e7ca3f736ef5bfd43c9f9ada36022df708",
+  "pdf_sha256": "0c98a1d8e687600c3157398d12c45c7f957c88d1d3dc84dc825e50e45662ee51",
+  "screenshot_sha256": "c556528d3390681fbb5daacef93d93ea24525209c00f2f9508b29e74bdeb81c2"
 }

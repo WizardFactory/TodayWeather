@@ -650,3 +650,159 @@ async fn cancelled_acquisition_still_counts_funded_units() {
             .contains("server2_domestic_attempts_unsettled_total 1\n")
     );
 }
+
+/// S13d (#2747): each HTTP attempt uses its service's legacy timeout
+/// (`collectTownForecast.js:373`, `kma.forecast.zone.controller.js:123`,
+/// `lifeIndexKmaRequester.js:431/1277/1495`, `kmaWarningRequester.js:20`,
+/// `airkoreaObservation.js:189`, `kasi.riseset.controller.js:92`, `kmaScraper.js:206/269`,
+/// `dsf.controller.js:53`).
+#[test]
+fn each_service_uses_its_legacy_attempt_timeout() {
+    use server2::budget::Provider;
+    use server2::domestic::family::{WebFamily, owned_provider_time};
+    use server2::providers::{attempt_timeout, legacy_timeout as t};
+    let root: reqwest::Url = "http://127.0.0.1:9/prefix/".parse().unwrap();
+    let at = |path: &str| attempt_timeout(Provider::DataGoKr, &root.join(path).unwrap());
+    let secs = Duration::from_secs;
+    for family in [
+        F::UltraSrtNcst,
+        F::UltraSrtFcst,
+        F::VilageFcst,
+        F::MidFcst,
+        F::MidLandFcst,
+        F::MidTa,
+        F::MidSeaFcst,
+        F::UvIdxV5,
+        F::OakPollenV3,
+        F::PinePollenV3,
+        F::WeedsPollenV3,
+    ] {
+        let expected = if family.service() == Service::LivingWthrIdx
+            || family.service() == Service::HealthWthrIdx
+        {
+            secs(30)
+        } else {
+            secs(10)
+        };
+        assert_eq!(at(family.operation()), expected, "{family:?}");
+        assert_eq!(family.service().attempt_timeout(), expected, "{family:?}");
+    }
+    for (path, expected, service) in [
+        (
+            "1360000/FcstZoneInfoService/getFcstZoneCd",
+            secs(10),
+            Some(Service::ForecastZone),
+        ),
+        (
+            "B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty",
+            secs(5),
+            Some(Service::AirKorea),
+        ),
+        (
+            "B552584/ArpltnStatsSvc/getCtprvnMesureSidoLIst",
+            secs(5),
+            Some(Service::AirKorea),
+        ),
+        (
+            "B552584/ArpltnInforInqireSvc/getMinuDustFrcstDspth",
+            secs(5),
+            Some(Service::AirKorea),
+        ),
+        (
+            "B552584/MsrstnInfoInqireSvc/getMsrstnList",
+            secs(5),
+            Some(Service::AirKorea),
+        ),
+        (
+            "B090041/openapi/service/RiseSetInfoService/getAreaRiseSetInfo",
+            secs(5),
+            Some(Service::RiseSet),
+        ),
+        ("1360000/WthrWrnInfoService/getWthrWrnList", secs(30), None),
+        ("1360000/UnknownService/getSomething", secs(3), None),
+    ] {
+        assert_eq!(at(path), expected, "{path}");
+        if let Some(service) = service {
+            assert_eq!(service.attempt_timeout(), expected, "{path}");
+        }
+    }
+    let vc: reqwest::Url = "https://weather.visualcrossing.com/x".parse().unwrap();
+    assert_eq!(attempt_timeout(Provider::VisualCrossing, &vc), secs(8));
+    for web in [
+        WebFamily::TownRss,
+        WebFamily::AwsMinute,
+        WebFamily::AwsHourly,
+        WebFamily::CityObservation,
+    ] {
+        assert_eq!(web.attempt_timeout(), t::KMA_WEB);
+    }
+    assert_eq!(t::KMA_WEB, secs(30));
+    // An owned acquisition allows the two funded attempts S08 permits.
+    assert_eq!(owned_provider_time(t::LIFE_INDEX, 1), secs(60));
+    // Every page may need both attempts: five short-forecast pages allow 100 s.
+    assert_eq!(
+        owned_provider_time(t::TOWN_FORECAST, F::VilageFcst.max_pages()),
+        secs(100)
+    );
+}
+
+/// S13d Red -> Green: a provider that answers after 4 s failed under the former fixed 3-second
+/// transport timeout; owned work now waits for it with the legacy timeout.
+#[tokio::test]
+async fn slow_town_forecast_and_kma_page_succeed_within_legacy_timeouts() {
+    let e = env().await;
+    let body = page(1, 50);
+    e.stub
+        .push(VILAGE, Reply::json(body.clone()).delayed(4_000));
+    let owned = Instant::now() + Duration::from_secs(25);
+    let started = Instant::now();
+    let a = complete(e.acquirer.acquire(&vilage(), owned).await);
+    assert!(started.elapsed() >= Duration::from_secs(4));
+    assert_eq!(&a.records[0].bytes[..], &body[..]);
+    assert_eq!(e.stub.calls().len(), 1, "one provider attempt");
+
+    let rss = fixture("town-rss.xml");
+    e.stub.push(
+        RSS,
+        Reply::with(200, "text/xml; charset=UTF-8", rss.clone()).delayed(4_000),
+    );
+    let a = complete(
+        e.acquirer
+            .acquire_web(&WebRequest::town_rss(60, 127).unwrap(), owned)
+            .await,
+    );
+    assert_eq!(&a.records[0].bytes[..], &rss[..]);
+    assert_eq!(e.stub.calls().len(), 2);
+}
+
+/// S13d (AK A-2): the live pollen V3 response carries day+3 as `twodaysaftertomorrow`; a row
+/// whose only grade is that field is index data and is stored byte for byte.
+#[tokio::test]
+async fn pollen_day_three_only_row_is_accepted_and_stored() {
+    const WEEDS: &str = "1360000/HealthWthrIdxServiceV3/getWeedsPollenRiskndxV3";
+    let e = env().await;
+    let body = envelope(
+        vec![serde_json::json!({
+            "code": "D08",
+            "areaNo": "1100000000",
+            "date": "2026101318",
+            "today": "",
+            "tomorrow": "",
+            "dayaftertomorrow": "",
+            "twodaysaftertomorrow": "2",
+        })],
+        1,
+        1000,
+        1,
+    );
+    e.stub.push(WEEDS, Reply::json(body.clone()));
+    let pollen =
+        DataGoKrRequest::new(F::WeedsPollenV3, Target::AllAreas, p(20261013, 1800)).unwrap();
+    let a = complete(e.acquirer.acquire(&pollen, deadline()).await);
+    assert_eq!(a.records.len(), 1);
+    assert_eq!(&a.records[0].bytes[..], &body[..]);
+    assert_eq!(
+        a.records[0].envelope.identity.kind.as_str(),
+        "weeds-pollen-v3"
+    );
+}

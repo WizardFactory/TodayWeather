@@ -137,14 +137,10 @@ fn kma_airkorea(
     else {
         return Ok(None);
     };
-    // Legacy AirKorea bounds: 2 MiB bodies and 5 s per attempt (the 30 s call budget and the
-    // request deadline are applied by the acquirer and the source).
-    let funded = crate::providers::HttpProviderTransport::with_attempt_timeout(
-        2 * 1024 * 1024,
-        crate::domestic::kma::source::live::ATTEMPT_TIMEOUT,
-        crate::domestic::kma::source::live::ATTEMPT_TIMEOUT,
-    )
-    .map_err(|_| GatewayError::InvalidConfiguration)?;
+    // Legacy AirKorea bounds: 2 MiB bodies; each attempt gets the S13d legacy timeout of its
+    // path (B552584: 5 s), the call its 30 s budget, and a request waits only for its own bound.
+    let funded = crate::providers::HttpProviderTransport::new(2 * 1024 * 1024)
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
     let public = crate::providers::HttpPublicTransport::new(2 * 1024 * 1024)
         .map_err(|_| GatewayError::InvalidConfiguration)?;
     let store =

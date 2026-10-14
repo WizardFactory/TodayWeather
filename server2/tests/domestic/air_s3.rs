@@ -389,14 +389,7 @@ fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn AirKoreaAcquire> 
     let settings = AirKoreaSettings::from_vars(&vars).unwrap().unwrap();
     Arc::new(LiveAirKorea::new(
         settings,
-        Arc::new(
-            server2::providers::HttpProviderTransport::with_attempt_timeout(
-                2 << 20,
-                server2::domestic::kma::source::live::ATTEMPT_TIMEOUT,
-                server2::domestic::kma::source::live::ATTEMPT_TIMEOUT,
-            )
-            .unwrap(),
-        ),
+        Arc::new(server2::providers::HttpProviderTransport::new(2 << 20).unwrap()),
         Arc::new(server2::providers::HttpPublicTransport::new(2 << 20).unwrap()),
         Arc::new(peer.transport()),
         store,

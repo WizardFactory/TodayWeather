@@ -11,7 +11,9 @@ use super::{
 use crate::budget::{BudgetTransport, Clock};
 use crate::domestic::{
     Acquired, DomesticAcquirer, DomesticError,
-    family::{DataGoKrFamily, DataGoKrRequest, Target as RequestTarget, WebRequest},
+    family::{
+        DataGoKrFamily, DataGoKrRequest, Target as RequestTarget, WebRequest, owned_provider_time,
+    },
     publication::Publication,
 };
 use crate::providers::{ProviderTransport, PublicTransport};
@@ -118,7 +120,9 @@ pub struct CaptureConfig {
     pub max_web_attempts: usize,
     /// Acquisitions in flight at once.
     pub concurrency: usize,
-    /// Deadline of one acquisition plus publication.
+    /// Publication and processing allowance of one acquisition. The deadline also adds the
+    /// two legacy-timeout provider attempts of its service (S13d), so a slow provider that
+    /// legacy waited for is still captured.
     pub call_timeout: Duration,
 }
 impl Default for CaptureConfig {
@@ -280,7 +284,7 @@ impl<S: CaptureSource, P: Publisher, D: DemandTransport> CaptureRunner<S, P, D> 
         item: Planned,
         request: Request,
     ) -> (Planned, Outcome, Option<Publication>) {
-        let deadline = Instant::now() + self.config.call_timeout;
+        let deadline = Instant::now() + request.provider_time() + self.config.call_timeout;
         let acquired = match &request {
             Request::Funded(q) => self.source.acquire(q, deadline).await,
             Request::Web(q) => self.source.acquire_web(q, deadline).await,
@@ -418,11 +422,11 @@ impl<S: CaptureSource, P: Publisher, D: DemandTransport> CaptureRunner<S, P, D> 
             .lock_index()
             .last_minute()
             .map(|m| schedule::from_ms(schedule::to_ms(m) + 60_000));
-        let deadline = Instant::now() + self.config.call_timeout;
-        let acquired = self
-            .source
-            .acquire_web(&WebRequest::aws_minute(not_before), deadline)
-            .await;
+        let minute = WebRequest::aws_minute(not_before);
+        let deadline = Instant::now()
+            + owned_provider_time(minute.family().attempt_timeout(), 1)
+            + self.config.call_timeout;
+        let acquired = self.source.acquire_web(&minute, deadline).await;
         match self.publish(acquired, deadline).await {
             (Outcome::Published, Some(observed)) => {
                 report.published = true;
@@ -497,4 +501,17 @@ impl<S: CaptureSource, P: Publisher, D: DemandTransport> CaptureRunner<S, P, D> 
 enum Request {
     Funded(DataGoKrRequest),
     Web(WebRequest),
+}
+impl Request {
+    /// The provider time the acquisition may spend (S13d): two legacy-timeout attempts for each
+    /// page it may need (a KMA web page is one page).
+    fn provider_time(&self) -> Duration {
+        match self {
+            Self::Funded(q) => owned_provider_time(
+                q.family().service().attempt_timeout(),
+                q.family().max_pages(),
+            ),
+            Self::Web(q) => owned_provider_time(q.family().attempt_timeout(), 1),
+        }
+    }
 }

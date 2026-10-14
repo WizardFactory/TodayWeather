@@ -2,6 +2,7 @@ use super::{
     AcquisitionRequest, CappedOutput, Error, FundedAcquirer, OperationContext, ResolutionRequest,
     ViewBuilder,
     backend::{CatalogBackend, ColdOutcome},
+    owned::{MAX_OWNED, OwnedConfig, OwnedFlights, WAITER_BOUND, Waited},
 };
 use crate::{
     cache::{ByteBudget, ByteLease, WeightedCache, WeightedValue},
@@ -31,7 +32,12 @@ pub struct ResolverConfig {
     pub parsed_bytes: usize,
     pub response_bytes: usize,
     pub cpu: usize,
+    /// Bound of one operation stage (cold read, or the read and assembly after an
+    /// acquisition) and of a request waiter.
     pub deadline: Duration,
+    /// Owned acquisition and publication (S13d): the provider's legacy attempts plus
+    /// publication. It continues after the request waiter returns.
+    pub acquisition: Duration,
 }
 impl Default for ResolverConfig {
     fn default() -> Self {
@@ -46,6 +52,8 @@ impl Default for ResolverConfig {
             response_bytes: 1024 * 1024,
             cpu: 2,
             deadline: Duration::from_secs(3),
+            // Two 30-second legacy life-index attempts plus a 3-second publication allowance.
+            acquisition: Duration::from_secs(63),
         }
     }
 }
@@ -66,6 +74,8 @@ impl ResolverConfig {
             || !(1..=16).contains(&self.cpu)
             || self.deadline.is_zero()
             || self.deadline > Duration::from_secs(3)
+            || self.acquisition < self.deadline
+            || self.acquisition > MAX_OWNED
         {
             return Err(StorageError::Invalid("resolver bounds").into());
         }
@@ -158,6 +168,8 @@ struct Core<T, A, V> {
     waiters: Arc<Semaphore>,
     cpu: Arc<Semaphore>,
     flights: Mutex<HashMap<String, Arc<Flight>>>,
+    /// Owned acquisitions keyed by repair scope, shared by every response that needs it.
+    acquisitions: OwnedFlights<String, Result<u64, Error>>,
     draining: AtomicBool,
     cancelled: Arc<AtomicBool>,
     epoch: AtomicU64,
@@ -166,11 +178,14 @@ struct Core<T, A, V> {
     counters: Counters,
 }
 impl<T, A, V> Core<T, A, V> {
-    fn invalidate(&self) {
+    /// Returns the epoch this invalidation created (S13d review S13D-R2-01), never a later one
+    /// that another invalidation produced in between.
+    fn invalidate(&self) -> u64 {
         // Lock poisoning cannot allow stale reuse: still advance epoch, but fail admissions.
         let _gate = self.retention_gate.lock();
-        self.epoch.fetch_add(1, Ordering::AcqRel);
+        let epoch = self.epoch.fetch_add(1, Ordering::AcqRel) + 1;
         self.responses.clear();
+        epoch
     }
     /// Called only under retention_gate. No optional cache pins may escape that gate.
     fn make_response_room(&self, weight: usize) {
@@ -231,6 +246,54 @@ impl<T, A, V> Drop for OwnerGuard<T, A, V> {
         }
     }
 }
+/// Invalidates response reuse again when a publication that may have been sent did not finish.
+struct DirtyPublication<T, A, V> {
+    core: Arc<Core<T, A, V>>,
+    armed: bool,
+}
+impl<T, A, V> Drop for DirtyPublication<T, A, V> {
+    fn drop(&mut self) {
+        if self.armed {
+            self.core.invalidate();
+        }
+    }
+}
+/// Slack between the shared acquisition's own bound and the owner stage that waits for it.
+const STAGE_MARGIN: Duration = Duration::from_millis(100);
+fn set_stage(stage: &Mutex<Instant>, until: Instant) {
+    *stage.lock().unwrap_or_else(|e| e.into_inner()) = until;
+}
+/// Run `work` until the current stage bound, which `work` may move forward; `None` on expiry.
+async fn staged<F: std::future::Future>(work: F, stage: &Mutex<Instant>) -> Option<F::Output> {
+    tokio::pin!(work);
+    loop {
+        let until = *stage.lock().unwrap_or_else(|e| e.into_inner());
+        tokio::select! {
+            biased;
+            output = &mut work => return Some(output),
+            () = tokio::time::sleep_until(until) => {
+                if *stage.lock().unwrap_or_else(|e| e.into_inner()) <= until {
+                    return None;
+                }
+            }
+        }
+    }
+}
+/// Shared acquisition identity: the repair scope (catalog and periods), not the response key,
+/// so responses for different locations, locales or units share one provider acquisition.
+fn scope_key(request: &ResolutionRequest) -> Result<String, Error> {
+    let invalid = |_| StorageError::Invalid("acquisition scope");
+    let mut periods = request
+        .scope
+        .periods
+        .iter()
+        .map(|p| serde_json::to_vec(p).map_err(invalid))
+        .collect::<Result<Vec<_>, _>>()?;
+    periods.sort();
+    periods.dedup();
+    let body = serde_json::to_vec(&(&request.scope.catalog, &periods)).map_err(invalid)?;
+    Ok(sha256(&body))
+}
 struct WaiterGuard<'a> {
     finished: bool,
     counters: &'a Counters,
@@ -248,6 +311,8 @@ impl Drop for WaiterGuard<'_> {
 pub struct DrainReport {
     pub unfinished_owners: usize,
     pub unfinished_view_jobs: usize,
+    /// Shared owned acquisitions (S13d) still running at the drain deadline.
+    pub unfinished_acquisitions: usize,
 }
 impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
     pub fn new(
@@ -286,6 +351,11 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                 waiters: Arc::new(Semaphore::new(config.waiters)),
                 cpu: Arc::new(Semaphore::new(config.cpu)),
                 flights: Mutex::new(HashMap::new()),
+                acquisitions: OwnedFlights::new(OwnedConfig {
+                    running: config.operations,
+                    entries: 1024,
+                    retain: config.deadline,
+                })?,
                 draining: AtomicBool::new(false),
                 cancelled: Arc::new(AtomicBool::new(false)),
                 epoch: AtomicU64::new(0),
@@ -299,7 +369,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
     /// Notify any known local publication. Conservative global invalidation is bounded, immediate,
     /// and includes absence dependencies. External changes are discovered at the refresh interval.
     pub fn invalidate(&self) {
-        self.core.invalidate();
+        let _ = self.core.invalidate();
     }
     pub fn is_draining(&self) -> bool {
         self.core.draining.load(Ordering::Acquire)
@@ -365,6 +435,8 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
             finished: false,
             counters: &self.core.counters,
         };
+        // S13d: a request waits at most three seconds; owned work continues after it.
+        let waiter_deadline = waiter_deadline.min(Instant::now() + WAITER_BOUND);
         if Instant::now() >= waiter_deadline {
             return Err(StorageError::Timeout.into());
         }
@@ -408,6 +480,9 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                 let flight = Arc::new(Flight { sender });
                 map.insert(key.clone(), flight.clone());
                 let deadline = Instant::now() + self.core.config.deadline;
+                // The bound of the current owner stage: the cold read, then (S13d) the shared
+                // acquisition and a second read/assembly stage. `execute` moves it forward.
+                let stage = Arc::new(Mutex::new(deadline));
                 let core = self.core.clone();
                 let publishing = Arc::new(AtomicBool::new(false));
                 let guard = OwnerGuard {
@@ -423,14 +498,18 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                         deadline,
                         cancelled: core.cancelled.clone(),
                     };
-                    let result = match timeout_at(
-                        context.deadline(),
-                        Self::execute(core, key, request, context, lease, publishing.clone()),
-                    )
-                    .await
-                    {
-                        Ok(r) => r,
-                        Err(_) => Err(if publishing.load(Ordering::Acquire) {
+                    let work = Self::execute(
+                        core,
+                        key,
+                        request,
+                        context,
+                        lease,
+                        publishing.clone(),
+                        stage.clone(),
+                    );
+                    let result = match staged(work, &stage).await {
+                        Some(r) => r,
+                        None => Err(if publishing.load(Ordering::Acquire) {
                             StorageError::Ambiguous
                         } else {
                             StorageError::Timeout
@@ -464,12 +543,13 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
         core: Arc<Core<T, A, V>>,
         key: String,
         request: ResolutionRequest,
-        context: OperationContext,
+        mut context: OperationContext,
         lease: Arc<ByteLease>,
         publishing: Arc<AtomicBool>,
+        stage: Arc<Mutex<Instant>>,
     ) -> Result<Response, Error> {
         let old = core.responses.get(&key);
-        let epoch = core.epoch.load(Ordering::Acquire);
+        let mut epoch = core.epoch.load(Ordering::Acquire);
         if let Some(old) = old
             && old.value.epoch == epoch
             && old.value.unexpired(Instant::now())
@@ -519,7 +599,6 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
             core.responses.remove(&key);
         }
         core.counters.misses.fetch_add(1, Ordering::Relaxed);
-        let mut published = false;
         let notify_core = core.clone();
         let notify_dirty = publishing.clone();
         let before_write: Arc<dyn Fn() + Send + Sync> = Arc::new(move || {
@@ -533,31 +612,49 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
             }
             ColdOutcome::Empty => {
                 context.check()?;
-                core.counters.acquisitions.fetch_add(1, Ordering::Relaxed);
-                let acquisition = core
-                    .acquirer
-                    .acquire(
-                        AcquisitionRequest {
-                            request: request.clone(),
-                        },
-                        context.clone(),
-                    )
-                    .await?;
-                context.check()?;
-                publishing.store(true, Ordering::Release);
-                // Invalidate before a possibly sent write, including cancellation/ambiguous results.
-                core.invalidate();
-                let i = core
-                    .backend
-                    .publish(&request, acquisition, &context)
-                    .await?;
-                published = true;
-                core.counters.publications.fetch_add(1, Ordering::Relaxed);
-                i
+                // S13d: one owned acquisition per repair scope, shared by every response that
+                // needs it, with the provider's legacy timeouts. This owner may wait for it; the
+                // request waiter in `resolve` returns at its own bound.
+                let scope = scope_key(&request)?;
+                let owned_for = core.config.acquisition;
+                // R1-02: this owner outlives the shared task it waits for: its stage ends after
+                // the latest possible task deadline, and `wait` returns when the task ends.
+                set_stage(&stage, Instant::now() + owned_for + STAGE_MARGIN);
+                let job = (core.clone(), request.clone(), core.cancelled.clone());
+                let waited = core
+                    .acquisitions
+                    .wait(scope, owned_for, move |owner_deadline| {
+                        let (core, request, cancelled) = job;
+                        Self::acquire_and_publish(
+                            core,
+                            request,
+                            OperationContext {
+                                deadline: owner_deadline,
+                                cancelled,
+                            },
+                        )
+                    })
+                    .await;
+                // R1-04: the shared publication is the expected epoch step for every owner that
+                // reads after it, starter or joiner; any later invalidation still prevents
+                // response-cache admission.
+                epoch = match waited {
+                    Waited::Ready(Ok(published_epoch)) => published_epoch,
+                    Waited::Ready(Err(e)) => return Err(e),
+                    Waited::Pending { .. } | Waited::Expired => {
+                        return Err(StorageError::Timeout.into());
+                    }
+                    Waited::Failed => return Err(Error::TaskFailed),
+                    Waited::Busy => return Err(StorageError::Capacity.into()),
+                };
+                context = OperationContext {
+                    deadline: Instant::now() + core.config.deadline,
+                    cancelled: core.cancelled.clone(),
+                };
+                set_stage(&stage, context.deadline());
+                core.backend.read(&request, &context).await?
             }
         };
-        let expected_epoch = epoch + u64::from(published);
-        let epoch = expected_epoch;
         let permit = timeout_at(context.deadline(), core.cpu.clone().acquire_owned())
             .await
             .map_err(|_| StorageError::Timeout)?
@@ -691,6 +788,38 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
         }; // Missing descriptor arrival is not detectable by target ETag alone.
         Ok(Response { inner: cached })
     }
+    /// The shared owned acquisition of one repair scope: S08-funded acquirer, then complete
+    /// S06 publication. A possibly sent write invalidates response reuse even when the task is
+    /// cancelled or ends ambiguously.
+    async fn acquire_and_publish(
+        core: Arc<Core<T, A, V>>,
+        request: ResolutionRequest,
+        context: OperationContext,
+    ) -> Result<u64, Error> {
+        core.counters.acquisitions.fetch_add(1, Ordering::Relaxed);
+        let acquisition = core
+            .acquirer
+            .acquire(
+                AcquisitionRequest {
+                    request: request.clone(),
+                },
+                context.clone(),
+            )
+            .await?;
+        context.check()?;
+        let mut dirty = DirtyPublication {
+            core: core.clone(),
+            armed: true,
+        };
+        // Invalidate before a possibly sent write, including cancellation/ambiguous results.
+        let published_epoch = core.invalidate();
+        core.backend
+            .publish(&request, acquisition, &context)
+            .await?;
+        dirty.armed = false;
+        core.counters.publications.fetch_add(1, Ordering::Relaxed);
+        Ok(published_epoch)
+    }
     fn schedule_maintenance(core: Arc<Core<T, A, V>>, request: ResolutionRequest) {
         // No queue and no await: admission is the same bounded owner pool as foreground work.
         let admission = (|| {
@@ -761,7 +890,8 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
             .clone()
             .acquire_many_owned(self.core.config.operations as u32);
         let owner_permit = timeout_at(deadline, owners).await;
-        if owner_permit.is_err() {
+        let acquisitions_idle = self.core.acquisitions.idle(deadline).await;
+        if owner_permit.is_err() || !acquisitions_idle {
             self.core.cancelled.store(true, Ordering::Release);
         }
         let cpu = timeout_at(
@@ -782,6 +912,11 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                 0
             } else {
                 self.core.config.cpu - self.core.cpu.available_permits()
+            },
+            unfinished_acquisitions: if acquisitions_idle {
+                0
+            } else {
+                self.core.acquisitions.running()
             },
         };
         drop(owner_permit);
