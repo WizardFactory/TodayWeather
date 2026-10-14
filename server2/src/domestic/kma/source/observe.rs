@@ -47,6 +47,19 @@ const HOURLY_READY_MINUTE: u16 = 15;
 const HOURLY_WINDOW_HOURS: i64 = 8 * 24;
 /// Legacy `getStnPastHourlyWeather` fetches past hours three at a time.
 const BACKFILL_CONCURRENCY: usize = 3;
+/// The minute page is acquired at most once per legacy cadence, whatever the outcome.
+const MINUTE_RETRY: Duration = Duration::from_secs(120);
+/// A backfill hour that could not be acquired is tried again after this long.
+const BACKFILL_RETRY: Duration = Duration::from_secs(6 * 3600);
+/// A station's ASOS recovery runs at most once per hour (legacy hourly recovery job).
+const ASOS_RUN_RETRY: Duration = Duration::from_secs(3600);
+/// A failed ASOS S3 read is retried after this long.
+const ASOS_LOAD_RETRY: Duration = Duration::from_secs(60);
+/// An AWS hourly page counts as an ongoing-hour ASOS source only when fetched within this long
+/// after its hour (AK 2026-10-15: past days come from the ASOS ranges).
+const ONGOING_MS: f64 = 2. * 3_600_000.;
+/// Memo entries older than this are dropped when the memo grows.
+const MEMO_KEEP: Duration = Duration::from_secs(7 * 3600);
 /// Minute pages kept in memory (the readers look back 20 minutes).
 const MINUTE_KEEP_MS: f64 = 40. * 60_000.;
 /// Legacy minute collection cadence.
@@ -116,7 +129,8 @@ enum Flight {
     Hourly(Publication),
     City(Publication),
     AsosLoad(String),
-    Asos(AsosRequest),
+    /// One serialized recovery run per station (legacy station lease).
+    AsosRun(String),
 }
 #[derive(Default)]
 struct Pages {
@@ -246,6 +260,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             let mut attempts = self.attempts.lock().unwrap_or_else(|e| e.into_inner());
             if attempts.get(&key).is_some_and(|at| at.elapsed() < memo) {
                 return None;
+            }
+            if attempts.len() > 4096 {
+                attempts.retain(|_, at| at.elapsed() < MEMO_KEEP);
             }
             attempts.insert(key.clone(), std::time::Instant::now());
         }
@@ -386,6 +403,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             s.pages.dirty = true;
             s.pages.hourly_dirty = true;
         }
+        self.state().pages.days.retain(|d, _| *d >= first.date());
         // The newest registry seed, if one was imported.
         if let Some(seed) = self.read_seed(now_ms, deadline).await {
             let mut s = self.state();
@@ -485,7 +503,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             return None;
         }
         let not_before = latest.map(|l| schedule::from_ms(schedule::to_ms(l) + 60_000));
-        self.start(Flight::Minute, Duration::from_secs(60), move |this| {
+        self.start(Flight::Minute, MINUTE_RETRY, move |this| {
             Box::pin(async move {
                 let deadline = Instant::now() + ACQUIRE_DEADLINE;
                 let request = WebRequest::aws_minute(not_before);
@@ -563,7 +581,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 .collect()
         };
         for hour in missing {
-            let _ = self.ensure_hourly(hour, Duration::from_secs(3600));
+            let _ = self.ensure_hourly(hour, BACKFILL_RETRY);
         }
     }
     /// Acquire and publish one KMA page; the published records, or None.
@@ -752,57 +770,63 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         let Some((start, end, _)) = policy::window(now_ms) else {
             return reason("station-unavailable", None);
         };
-        // Station state from S3, then the missing ranges.
-        let stale = {
+        // Station state from S3 (a failed read is retried after ASOS_LOAD_RETRY).
+        let (stale, failed) = {
             let s = self.state();
-            s.asos
-                .get(&station)
-                .is_none_or(|e| e.loaded.elapsed() >= ASOS_RELOAD)
+            (
+                s.asos
+                    .get(&station)
+                    .is_none_or(|e| e.loaded.elapsed() >= ASOS_RELOAD),
+                s.asos_failed
+                    .get(&station)
+                    .is_some_and(|at| at.elapsed() < ASOS_LOAD_RETRY),
+            )
         };
-        if stale {
+        if stale && !failed {
             let station_c = station.clone();
             let rx = self.start(
                 Flight::AsosLoad(station.clone()),
-                Duration::ZERO,
+                ASOS_LOAD_RETRY,
                 move |this| Box::pin(async move { this.load_asos(&station_c, now_ms).await }),
             );
             Self::wait(rx.into_iter().collect(), until).await;
         }
-        let plan = {
-            let s = self.state();
-            if s.asos_failed
+        let loaded = self.state().asos.contains_key(&station);
+        if !loaded {
+            let failed = self
+                .state()
+                .asos_failed
                 .get(&station)
-                .is_some_and(|at| at.elapsed() < ASOS_RELOAD)
-                && !s.asos.contains_key(&station)
-            {
-                return reason("cache-read-failed", Some(mapping.json()));
-            }
-            match s.asos.get(&station) {
-                Some(e) => station_store(&station, &e.fetched, folded).plan(&station, &start, &end),
-                None => return reason("cache-read-timeout", None),
-            }
-        };
-        let mut waits = Vec::new();
-        for (kind, a, b) in plan {
-            let Ok(request) = AsosRequest::new(kind, &station, &a, &b) else {
-                continue;
+                .is_some_and(|at| at.elapsed() < ASOS_LOAD_RETRY);
+            return if failed {
+                reason("cache-read-failed", Some(mapping.json()))
+            } else {
+                reason("cache-read-timeout", None)
             };
-            let station_c = station.clone();
-            let req = request.clone();
-            waits.extend(self.start(
-                Flight::Asos(request),
-                Duration::from_secs(3600),
-                move |this| Box::pin(async move { this.acquire_asos(&station_c, req).await }),
-            ));
         }
-        Self::wait(waits, until).await;
-        let store = {
-            let s = self.state();
-            let Some(entry) = s.asos.get(&station) else {
-                return reason("cache-read-timeout", None);
-            };
-            station_store(&station, &entry.fetched, folded)
-        };
+        // One recovery run per station at a time and at most once per hour (legacy lease and
+        // hourly job): it plans the incomplete ranges and acquires them in order.
+        let station_c = station.clone();
+        let folded_c = folded.clone();
+        let (start_c, end_c) = (start.clone(), end.clone());
+        let rx = self.start(
+            Flight::AsosRun(station.clone()),
+            ASOS_RUN_RETRY,
+            move |this| {
+                Box::pin(async move {
+                    this.recover_asos(&station_c, &folded_c, &start_c, &end_c)
+                        .await
+                })
+            },
+        );
+        Self::wait(rx.into_iter().collect(), until).await;
+        let fetched = self
+            .state()
+            .asos
+            .get(&station)
+            .map(|e| e.fetched.clone())
+            .unwrap_or_default();
+        let store = station_store(&station, &fetched, folded);
         let docs = |d: Vec<Doc>| OrderedJson::Array(d.iter().map(Doc::json).collect());
         object(vec![
             ("mapping", mapping.json()),
@@ -881,6 +905,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             }
         }
         fetched.sort_by(|a, b| a.fetched_at_ms.total_cmp(&b.fetched_at_ms));
+        if let Some((start, _, _)) = policy::window(now_ms) {
+            retain_window(&mut fetched, &start);
+        }
         s.asos.insert(
             station.to_owned(),
             AsosEntry {
@@ -889,40 +916,54 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             },
         );
     }
-    async fn acquire_asos(self: Arc<Self>, station: &str, request: AsosRequest) {
-        let _permit = self.asos_gate.clone().acquire_owned().await;
-        let deadline = Instant::now() + ACQUIRE_DEADLINE;
-        let Ok(Acquired::Complete(acquisition)) =
-            self.acquire.asos(request.clone(), deadline).await
-        else {
-            return;
-        };
-        let records = acquisition.records.clone();
-        if self
-            .reader
-            .store
-            .publish(acquisition.declaration, acquisition.records, deadline)
-            .await
-            .is_err()
-        {
-            return;
-        }
-        let f = asos_fetched(
-            request.asos_kind(),
-            request.start(),
-            request.end(),
-            &records,
-        );
-        if let Some(entry) = self.state().asos.get_mut(station) {
-            entry.fetched.push(f);
-            entry
-                .fetched
-                .sort_by(|a, b| a.fetched_at_ms.total_cmp(&b.fetched_at_ms));
+    /// Legacy `Recovery.run` for one station: plan the incomplete window ranges, then acquire and
+    /// publish them in order (hourly, then daily).
+    async fn recover_asos(self: Arc<Self>, station: &str, folded: &Folded, start: &str, end: &str) {
+        let fetched = self
+            .state()
+            .asos
+            .get(station)
+            .map(|e| e.fetched.clone())
+            .unwrap_or_default();
+        let plan = station_store(station, &fetched, folded).plan(station, start, end);
+        for (kind, a, b) in plan {
+            let Ok(request) = AsosRequest::new(kind, station, &a, &b) else {
+                continue;
+            };
+            let _permit = self.asos_gate.clone().acquire_owned().await;
+            let deadline = Instant::now() + ACQUIRE_DEADLINE;
+            let Ok(Acquired::Complete(acquisition)) =
+                self.acquire.asos(request.clone(), deadline).await
+            else {
+                continue;
+            };
+            let records = acquisition.records.clone();
+            if self
+                .reader
+                .store
+                .publish(acquisition.declaration, acquisition.records, deadline)
+                .await
+                .is_err()
+            {
+                continue;
+            }
+            let f = asos_fetched(kind, request.start(), request.end(), &records);
+            if let Some(entry) = self.state().asos.get_mut(station) {
+                entry.fetched.push(f);
+                entry
+                    .fetched
+                    .sort_by(|a, b| a.fetched_at_ms.total_cmp(&b.fetched_at_ms));
+                retain_window(&mut entry.fetched, start);
+            }
         }
     }
 }
-/// The station's `asos_history` rows: its data.go.kr acquisitions and the AWS hourly page rows
-/// in fetch order.
+/// Keep the acquisitions whose range reaches the window (older ones cannot change it).
+pub fn retain_window(fetched: &mut Vec<AsosFetched>, start: &str) {
+    fetched.retain(|f| f.end.get(..8).is_some_and(|d| d >= start));
+}
+/// The station's `asos_history` rows: its data.go.kr acquisitions and the ongoing-hour AWS page
+/// rows in fetch order.
 fn station_store(station: &str, fetched: &[AsosFetched], folded: &Folded) -> AsosStore {
     enum Event<'a> {
         Range(&'a AsosFetched),
@@ -1060,7 +1101,10 @@ fn fold_hourly(
         let kept: Vec<Doc> = run.iter().filter(|r| city_id(r)).cloned().collect();
         rows.save(&kept);
         let at = hourly_at.get(h).copied().unwrap_or(0.);
-        for r in aws.iter().filter(|r| city_id(r)) {
+        // Only pages acquired for the ongoing hour stand for ASOS hours; backfilled history pages
+        // do not (past days come from the per-station ranges).
+        let ongoing = at <= crate::history::schedule::to_ms(*h) as f64 + ONGOING_MS;
+        for r in aws.iter().filter(|r| ongoing && city_id(r)) {
             if let Some(id) = r.get("stnId").and_then(Val::as_str) {
                 national
                     .entry(id.trim_start_matches('0').to_owned())

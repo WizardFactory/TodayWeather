@@ -113,9 +113,11 @@ struct Scripted {
 }
 impl Scripted {
     fn new(delay: Duration) -> Self {
+        // Two ongoing hours and one backfilled history hour inside the ASOS window.
         let hourly = [
             (p(20260924, 1000), "2026.09.24.10:00"),
             (p(20260924, 900), "2026.09.24.09:00"),
+            (p(20260920, 1200), "2026.09.20.12:00"),
         ]
         .into_iter()
         .map(|(h, s)| (h, aws_page(s, false)))
@@ -339,7 +341,11 @@ async fn station_and_history_inputs_are_acquired_once_published_and_answered() {
     assert_eq!(get(&stn, "nearStnId").string().as_deref(), Some("108"));
     assert!(stn.get("localMinAws").is_none());
     let city = a.city_hourly(&town).unwrap();
-    assert_eq!(len(&city), 2, "09:00 and 10:00 rows of station 108");
+    assert_eq!(
+        len(&city),
+        3,
+        "09-20 12:00, 09:00 and 10:00 rows of station 108"
+    );
     let history = a.history(&town).unwrap();
     assert_eq!(
         get(get(&history, "mapping"), "stationId")
@@ -348,6 +354,13 @@ async fn station_and_history_inputs_are_acquired_once_published_and_answered() {
         Some("108")
     );
     assert_eq!(len(get(&history, "hourly")), 168);
+    // A backfilled history page never stands for ASOS hours: the range is still requested and
+    // every window row comes from it.
+    assert!(
+        !String::from_utf8(get(&history, "hourly").to_bytes())
+            .unwrap()
+            .contains("origin")
+    );
     assert_eq!(len(get(&history, "daily")), 7);
     assert!(history.get("reason").is_none());
     assert_eq!(b.history(&town).unwrap().to_bytes(), history.to_bytes());
@@ -534,4 +547,20 @@ async fn the_registry_starts_from_the_imported_legacy_seed() {
     assert_eq!(get(&stn, "rnsCount").number(), Some(12.));
     assert_eq!(get(&stn, "isMountain"), &OrderedJson::Bool(false));
     assert_eq!(get(&stn, "altitude").number(), Some(86.));
+}
+
+#[test]
+fn asos_acquisitions_outside_the_window_are_dropped() {
+    use server2::domestic::kma::source::asos::AsosFetched;
+    let f = |end: &str| AsosFetched {
+        kind: AsosKind::Hourly,
+        start: "202609100000".into(),
+        end: end.into(),
+        fetched_at_ms: 0.,
+        pages: Vec::new(),
+    };
+    let mut list = vec![f("202609162300"), f("202609170000"), f("202609232300")];
+    server2::domestic::kma::source::observe::retain_window(&mut list, "20260917");
+    let ends: Vec<&str> = list.iter().map(|x| x.end.as_str()).collect();
+    assert_eq!(ends, ["202609170000", "202609232300"]);
 }
