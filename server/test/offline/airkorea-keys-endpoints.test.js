@@ -422,6 +422,15 @@ test('#2745 quota on the remembered first key wraps to the last key; code 23 doe
     assert.deepEqual(perSecond.keys, ['synthetic-k2']);
 });
 
+// Review round 2 C-1: quota failover shares the one 30-second budget like credential failover (R3).
+test('#2745 quota failover shares one budget across keys', async () => {
+    const t = transport(() => Object.assign({delay: 40}, QUOTA));
+    const start = Date.now();
+    await assert.rejects(invoke(Api.create({transport: t, budgetMs: 60, now: clock(EVENING)}), 'fetchWithKeys', KEYS, '서울', Api.STATION), /COLLECTION_LIMIT|TIMEOUT/);
+    assert(Date.now() - start < 100, 'elapsed ' + (Date.now() - start));
+    assert(new Set(t.keys).size <= 2, 'keys ' + new Set(t.keys).size);
+});
+
 test('#2745 keco logs quota rotation by key position only', async () => {
     const h = harness();
     // The production constructor wires both callbacks.
