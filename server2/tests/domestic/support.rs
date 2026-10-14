@@ -65,11 +65,12 @@ pub fn clock_ms(iso: &str) -> f64 {
     let ms = server2::history::legacy::parse_iso(iso).unwrap_or_else(|| panic!("clock {iso}"));
     ms as f64
 }
-/// The oracle harness stubs `manager.MAX_CURRENT_COUNT` as 200 (the deployed manager uses 192).
+/// The recording's `manager.MAX_CURRENT_COUNT`: the driver loads the harness with the deployed
+/// 192 (D4), so recordings replay with the runtime default.
 pub fn oracle_config() -> AssemblyConfig {
-    AssemblyConfig {
-        max_current_count: oracle()["oracle"]["max_current_count"].as_u64().unwrap() as usize,
-    }
+    let recorded = oracle()["oracle"]["max_current_count"].as_u64().unwrap() as usize;
+    assert_eq!(recorded, AssemblyConfig::default().max_current_count);
+    AssemblyConfig::default()
 }
 pub fn request(sc: &Value) -> KmaRequest {
     let mut path = format!("/v000903/kma{}", sc["path"].as_str().unwrap());

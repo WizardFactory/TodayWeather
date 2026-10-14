@@ -15,11 +15,11 @@ pub enum SourceAnswer {
     /// The source cannot supply complete inputs (S14 coverage `Legacy`, absent records, ...).
     Forward(String),
 }
-/// Supplies request inputs. S15b builds them from S3 raw records and S14 history.
+/// Supplies request inputs (S15b: [`super::source::S3Source`]).
 pub trait KmaSource: Send + Sync {
     fn snapshot(&self, request: &KmaRequest, deadline: Instant) -> BoxFuture<'_, SourceAnswer>;
 }
-/// A source that keeps every request on legacy (the default until the S15b S3 source exists).
+/// A source that keeps every request on legacy (tests; the runtime uses the S3 source).
 pub struct LegacyOnly;
 impl KmaSource for LegacyOnly {
     fn snapshot(&self, _: &KmaRequest, _: Instant) -> BoxFuture<'_, SourceAnswer> {
@@ -27,11 +27,14 @@ impl KmaSource for LegacyOnly {
     }
 }
 
-/// Register the v000903 KMA handler with the current runtime source and select it
-/// (`SERVER2_NATIVE_FAMILIES` contains `kma`). The source is [`LegacyOnly`] until S15b.
-pub fn select_native(dispatcher: &BackendDispatcher) -> Result<(), GatewayError> {
+/// Register the v000903 KMA handler with `source` and select it (`SERVER2_NATIVE_FAMILIES`
+/// contains `kma`; the runtime passes the S3 source built from `SERVER2_S3_*`).
+pub fn select_native(
+    dispatcher: &BackendDispatcher,
+    source: Arc<dyn KmaSource>,
+) -> Result<(), GatewayError> {
     let backend = Arc::new(KmaBackend::new(
-        Arc::new(LegacyOnly),
+        source,
         system_clock(),
         AssemblyConfig::default(),
     ));

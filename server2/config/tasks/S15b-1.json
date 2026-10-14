@@ -1,0 +1,44 @@
+{
+  "task": "S15b-1",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-1.json",
+    "server2/src/domestic/kma/",
+    "server2/src/gateway/runtime.rs",
+    "server2/tests/gateway/runtime.rs",
+    "server2/src/world/air_store.rs",
+    "server2/src/warnings/service.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/",
+    "server2/tools/kma_smoke.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b governing intent record (S15b-1 slice); no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b governing specification (S15b-1 slice); no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b execution plan, split, user scenarios and cold-cell design; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S15b-1 KMA S3 input source section and update the S15 routing note only"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6167569187",
+  "path_notes": {
+    "server2/src/warnings/service.rs": "zone_state becomes pub(crate) so the KMA source reads the S12 zone state through the service cache",
+    "server2/src/world/air_store.rs": "IndexListing for the shared BoundedS3 admission so S14 index rebuilds stay under the process S3 bound",
+    "server2/tools/kma_smoke.py": "the kma routing entry now reads the shared SERVER2_S3_* settings; the smoke supplies a task-owned S3 test peer",
+    "server2/tests/domestic/": "includes the D4 oracle re-recording at MAX_CURRENT_COUNT 192 (fixtures/oracle.json.gz, PROVENANCE.md)"
+  }
+}

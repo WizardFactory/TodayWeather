@@ -2,6 +2,10 @@
 mod parity;
 #[path = "domestic/replay.rs"]
 mod replay;
+#[path = "domestic/source.rs"]
+mod source;
+#[path = "domestic/source_s3.rs"]
+mod source_s3;
 #[path = "domestic/support.rs"]
 mod support;
 #[path = "domestic/switch.rs"]

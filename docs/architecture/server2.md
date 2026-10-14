@@ -1599,7 +1599,7 @@ task-owned test peers, and test doubles (quota, transport) live inside the tests
 
 | Concern | Setting | Default / rule |
 | --- | --- | --- |
-| Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf`, `kma` (S15) | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
+| Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf`, `kma` (S15; reads `SERVER2_S3_*` since S15b-1) | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
 | World versions | `SERVER2_WORLD_VERSIONS` | `v000901,v000902,v000903` |
 | S3 (shared) | `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`, `SERVER2_S3_BUCKET`, `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY` | `ap-northeast-2`; `https://s3.<region>.amazonaws.com/`; bucket and static credentials required when any family is native. One 12-request admission for weather, air and budgets. The importers use the same settings. |
 | Geocoder keys/endpoints | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY`, `GEOCODER_KAKAO_BASE_URL`, `GEOCODER_GOOGLE_BASE_URL` | Existing legacy names; `https://dapi.kakao.com`, `https://maps.googleapis.com`; the Google fingerprint rule applies to the production endpoint, as in legacy. |
@@ -1647,7 +1647,8 @@ and a `Family::Kma` handler for the S10 dispatcher. Legacy stays selected by def
   logic is reused: S12 `zonesForTown`/`specialInfoFor`, the S11 `AqiConverter`, weather strings,
   locale selection and number/date helpers. KMA strings missing from the S11 locale subset are in
   `domestic/kma/locales.json`. ASOS history reads are off, as on the observed production checkout.
-  `manager.MAX_CURRENT_COUNT` is 192 (the oracle harness stubs 200; the recorded value is used in tests).
+  `manager.MAX_CURRENT_COUNT` is 192; since S15b-1 (D4) the oracle is recorded with 192 as well, and
+  all 76 recordings are identical to the earlier 200 recording.
 - **Forwarding.** `BackendHandler` gains a defaulted `fetch_or_forward`. When the source cannot supply
   inputs (for example, S14 coverage `Legacy`), the handler returns `Native::Forward`. It also forwards
   when legacy would redirect a non-Korean coordinate, geocode and save a new town, remap a `KR` region
@@ -1681,12 +1682,11 @@ any difference.
 
 Routing uses the S10c list only: `kma` in `SERVER2_NATIVE_FAMILIES` registers and selects the
 v000903 KMA handler; removing it and restarting is the rollback. S15 adds no other setting or mode.
-Until the S15b input source exists the handler's source is `LegacyOnly`, so a listed `kma` forwards
-every request to legacy and reads no S3 setting; S15b will read the shared `SERVER2_S3_*` settings.
-`tools/kma_smoke.py` checks legacy -> `kma` -> legacy on the release binary (identical bytes, the
-legacy KMA hop in every phase, unknown or repeated entries refused before binding). Parsing
-S13/S13a raw records into these store answers, reading S14 history and exports, and the
-request-time RSS/mid/life acquisitions form the proposed follow-up S15b.
+Since S15b-1 ([below](#s15b-1-kma-s3-input-source-2026-10-14)) a listed `kma` builds the S3
+input source from the shared `SERVER2_S3_*` settings, which are then required; inputs owned by
+later S15b slices still forward. `tools/kma_smoke.py` checks legacy -> `kma` -> legacy on the release
+binary (identical bytes, the legacy KMA hop in every phase, the native phase reading the S3 test
+peer, unknown or repeated entries and `kma` without S3 settings refused before binding).
 
 O-2 checkpoint (Rust adoption is settled; this records correctness and cost). `kma_checkpoint`
 assembles every recorded request from memory, and `tools/kma_checkpoint.py` reads process rusage.
@@ -1770,3 +1770,71 @@ search date are not recorded. Verification uses the legacy offline fixtures `frc
 `msrstn.json` (copied byte for byte), a labelled synthetic `getFcstZoneCd` page, loopback provider
 stubs and the S3 test peer; the release smoke publishes and reads back each kind. Live HTTPS
 behavior of the three services, real quotas and key lists are unverified.
+
+### S15b-1 KMA S3 input source (2026-10-14)
+
+[S15b](../../plans/issue-2742.md) ([spec](../../specs/issue-2742.md)) answers the S15 `KmaStore`
+calls from server2's own data. AK decided on 2026-10-14 that there is no MongoDB migration and no
+pre-collection before cutover, and that server2 must not depend on legacy, which is shut down at
+cutover. S15b is split into four PRs ([split and decisions](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6167282481)):
+
+| Slice | Content |
+| --- | --- |
+| S15b-1 | Source framework, town list, region code, forecast zone, grid/RSS/mid documents, warning zones, D4 |
+| S15b-2 | Station observations, `KmaStnInfo` from KMA pages, the legacy #2564/#2648 ASOS history composition with on-demand ASOS records |
+| S15b-3 | AirKorea stations, `arpltn`, dust forecast, area numbers, life index, KASI, MFDS, air fallback, KAQ/AirKorea image forecasts |
+| S15b-4 | Request-time acquisition, unknown-town geocoding, warm memory and exact-raw packs, the S15 declared forwards, zero legacy forwards |
+
+**Source and snapshot.** `domestic::kma::source::S3Source` implements `KmaSource` over the shared
+`BoundedS3` admission (12 in flight, below the 16-connection test peer; S14 index LISTs now hold a
+permit too). For a request it resolves the town with the legacy `_findTown` rule, loads the town's
+grid, RSS and mid inputs, the forecast-zone list and the S12 zone state, and returns a `Snapshot`,
+an in-memory DB 2.0 `KmaStore`. Only published catalogs count; listings are per key and KST month.
+The snapshot lists the matched town as `towns()`; the chain uses the list only for `_findTown`,
+which finds that town first in the full list too.
+
+**Reference data from the repository.** `part.csv`, `base.csv`, `region.csv` and
+`kma_forecast_land_zones.csv` are byte-identical copies with provenance. The town list follows
+`initTownDataToMongo` then `updateTownDataToMongo` (4,652 documents; grids by a `coordinate2xy`
+port). `region_code` is `getRegIdByTown`. Forecast zones fold every complete S13b `forecast-zone`
+acquisition with the legacy `getFromKma` rules (`_parsePage`, `normalizeZone`, upsert with `$unset`,
+retirement); `forecast_zone` is `findForecastZoneByName` over active zones.
+
+**Legacy documents from raw records.** In fetch order, the source applies the legacy collector to
+each captured acquisition:
+
+- **Grid:** the page checks, `rawItems`, the organizers, `_emitOrganizedData`, `within`, `batch` and
+  the canonical publication; then the current merge or the fenced forecast write, and the 216-hour
+  retention anchored on the family's latest requested slot.
+- **RSS:** `parseShortRss`, last write wins per `fcsDate`, a Mongoose cast error skips a row, and the
+  hourly wall-clock retention.
+- **Mid:** `organizeForecastData` / `midForecastPolicy.parse` and `saveMid` with `saveOnlyLastOne`.
+  A region legacy never collects has no document.
+
+Stored documents keep the Mongoose 5.1.2 form, including template defaults copied by its `for...in`
+clone, `strict` stripping and `__v`. Legacy requested XML; server2 stores JSON, and an item field is
+the string form of its JSON value. Documents are derived in memory; no normalized view is stored.
+Applying server2's own captures with the legacy save rules is the intended native semantics after
+cutover; it does not claim to reproduce legacy collection timing.
+
+**Temporary forwards.** Until S15b-4, the snapshot forwards with a named reason in these cases:
+
+- A latest publication is not in S3: current, ultra-short, short, RSS, mid, or the zone list.
+- The town is unknown.
+- A method owned by S15b-2 or S15b-3 is called.
+
+Older gaps are not a forward reason; S15b-2 fills history from ASOS. The `kma` family stays off until
+S15b-4.
+
+Verification (local, test peers only):
+
+- A pinned Node 16.20.2 oracle with Mongoose 5.1.2 and an in-memory collection double
+  ([provenance](../../server2/tests/domestic/fixtures/SOURCE-PROVENANCE.md)) runs the legacy
+  scripts, organizers, savers and readers on synthetic inputs.
+- The rebuilt towns, 400 grid points, region table and cases, five zone scenarios, grid outcomes and
+  documents for four scenarios, two RSS scenarios and six mid answers match byte for byte.
+- An S3 test of the snapshot reads published records with empty memory and returns the same
+  documents. Each missing input forwards with its reason.
+- The release `kma_smoke.py` passes.
+
+Live provider shapes and timing, the cold-cell latency (S15b-4) and production quotas are unverified.

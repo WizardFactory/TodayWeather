@@ -20,6 +20,7 @@ mod policy;
 mod precip;
 mod present;
 mod short;
+pub mod source;
 mod time;
 
 use crate::gateway::OrderedJson;
