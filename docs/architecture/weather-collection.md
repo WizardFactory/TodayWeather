@@ -284,7 +284,9 @@ exhausted until the end of the current KST day (the data.go.kr quota day), logs
 `KEY_QUOTA` with the operation, key position, code and the UTC end time, and
 restarts the same request with the next key in the order above. Exhausted keys
 are skipped without an HTTP call by every AirKorea operation of the process until
-their KST day ends; the next day probes them again. A key never receives a
+their KST day ends; the next day probes them again. Each page attempt rechecks the
+key, so a request that is paging when a parallel request marks its key exhausted
+restarts with the next key instead of sending further pages. A key never receives a
 second request for the same page after a quota or credential rejection. When no
 usable key remains and at least one was exhausted, the request fails with
 `QUOTA_EXHAUSTED`; only an all-credential failure is `NO_VALID_KEY`. The memory

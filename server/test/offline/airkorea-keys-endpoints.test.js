@@ -383,6 +383,45 @@ test('#2745 quota on a later page restarts the operation with the next key; no k
     assert.deepEqual(calls, ['synthetic-k2@1', 'synthetic-k2@2', 'synthetic-k1@1', 'synthetic-k1@2']);
 });
 
+// Review R-1: a request that is paging with a key stops using it once a parallel request marks it exhausted.
+test('#2745 a key exhausted by a parallel request is not used for later pages', async () => {
+    const t = transport(url => {
+        const u = new URL(url), page = Number(u.searchParams.get('pageNo')), key = keyOf(url);
+        if (u.pathname.endsWith('getMinuDustFrcstDspth')) {
+            if (key === 'synthetic-k2') return QUOTA;
+            const frcst = fixture('frcst');
+            Object.assign(frcst.response.body, {items: frcst.response.body.items.slice(0, 2), totalCount: 2, numOfRows: 2, pageNo: 1});
+            return {body: frcst};
+        }
+        const data = fixture('msrstn'); data.response.body.numOfRows = 2; data.response.body.pageNo = page;
+        data.response.body.items = data.response.body.items.slice((page - 1) * 2, page * 2);
+        // The first station page with the last key arrives after the parallel forecast saw quota.
+        return {body: data, delay: key === 'synthetic-k2' && page === 1 ? 50 : 0};
+    });
+    const api = Api.create({transport: t, pageSize: 2, now: clock(EVENING)});
+    const [stations] = await Promise.all([
+        invoke(api, 'queryWithKeys', KEYS, Api.STATION_LIST, {}),
+        invoke(api, 'queryWithKeys', KEYS, Api.FORECAST, {searchDate: '2026-10-14'})
+    ]);
+    assert.equal(stations.list.length, 3);
+    const list = t.calls.filter(url => url.includes('getMsrstnList')).map(url => keyOf(url) + '@' + new URL(url).searchParams.get('pageNo'));
+    assert.deepEqual(list, ['synthetic-k2@1', 'synthetic-k1@1', 'synthetic-k1@2']);
+});
+
+test('#2745 quota on the remembered first key wraps to the last key; code 23 does not rotate', async () => {
+    let quotaK0 = false;
+    const t = transport(url => keyOf(url) === 'synthetic-k0' && quotaK0 ? QUOTA :
+        keyOf(url) === 'synthetic-k0' ? {body: fixture('stations')} : keyOf(url) === 'synthetic-k2' ? {body: fixture('stations')} : UNREGISTERED);
+    const api = Api.create({transport: t, now: clock(EVENING)});
+    await invoke(api, 'fetchWithKeys', ['synthetic-k0'], '서울', Api.STATION);
+    quotaK0 = true;
+    await invoke(api, 'fetchWithKeys', KEYS, '서울', Api.STATION);
+    assert.deepEqual(t.keys.slice(1), ['synthetic-k0', 'synthetic-k2']);
+    const perSecond = transport(() => ({body: {response: {header: {resultCode: '23'}}}}));
+    await assert.rejects(invoke(Api.create({transport: perSecond, now: clock(EVENING)}), 'fetchWithKeys', KEYS, '서울', Api.STATION), /PROVIDER_23/);
+    assert.deepEqual(perSecond.keys, ['synthetic-k2']);
+});
+
 test('#2745 keco logs quota rotation by key position only', async () => {
     const h = harness();
     // The production constructor wires both callbacks.

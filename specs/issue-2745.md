@@ -15,7 +15,7 @@ Order is unchanged: the remembered working index, otherwise the last entry, then
    - Any other failure: return it (the single transient retry happens inside the operation as before).
 3. After every position: `QUOTA_EXHAUSTED` when any key was exhausted, otherwise `NO_VALID_KEY`. Both carry `rejected` codes and no key text.
 
-The exhaustion map is per client (one per `Keco`), keyed by key text, in memory only, and shared by all five operations. `options.now` (default `Date.now`) supplies the wall clock; budgets and timeouts keep `Date.now()`. The 30-second budget still covers the whole key search. `Keco._onKeyExhausted` logs `AIRKOREA KEY_QUOTA operation=<op> keyIndex=<i> code=<code> until=<ISO UTC>`.
+Inside the key loop, every page attempt (including the transient retry) first rechecks the key; if a parallel request marked it exhausted meanwhile, the operation stops with `KEY_EXHAUSTED` before HTTP and the loop moves to the next key without logging again (review R-1). The exhaustion map is per client (one per `Keco`), keyed by key text, in memory only, and shared by all five operations. `options.now` (default `Date.now`) supplies the wall clock; budgets and timeouts keep `Date.now()`. The 30-second budget still covers the whole key search. `Keco._onKeyExhausted` logs `AIRKOREA KEY_QUOTA operation=<op> keyIndex=<i> code=<code> until=<ISO UTC>`.
 
 ## Bounds
 Per request with n keys and P pages: each key is used for at most one pass; within a pass each page has at most two attempts (one transient retry). A key never repeats a page after a quota or credential rejection. Worst case n·P·2 attempts, the same bound as the #2737 credential failover, and still capped by the 30-second budget.

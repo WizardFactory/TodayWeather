@@ -240,7 +240,9 @@ function create(options) {
         } catch (_) { finish(failure('REQUEST_ERROR')); }
     }
     // `deadline` (epoch ms) lets key failover share one budget; it defaults to a fresh budget.
-    function query(operation, key, params, cb, deadline) {
+    // `keyed` (key failover only): stop with KEY_EXHAUSTED before any attempt once another request has
+    // marked this key exhausted, so the failover restarts with the next key (#2745 review R-1).
+    function query(operation, key, params, cb, deadline, keyed) {
         var spec = Object.prototype.hasOwnProperty.call(OPERATIONS, operation) ? OPERATIONS[operation] : null;
         if (!spec) { return cb(failure('INVALID_OPERATION')); }
         var all = [], page = 1, total, calls = 0;
@@ -252,6 +254,7 @@ function create(options) {
             catch (err) { return cb(err); }
             function request(retry) {
                 if (Date.now() >= deadline) { return cb(failure('COLLECTION_LIMIT')); }
+                if (keyed && exhausted(key)) { return cb(failure('KEY_EXHAUSTED')); }
                 calls++;
                 attempt(url, deadline - Date.now(), function (err, payload) {
                     if (err) {
@@ -273,13 +276,13 @@ function create(options) {
         }
         next();
     }
-    function fetch(sido, key, operation, cb, deadline) {
+    function fetch(sido, key, operation, cb, deadline, keyed) {
         if (operation !== STATION && operation !== SIDO) { return cb(failure('INVALID_OPERATION')); }
         query(operation, key, {sidoName: sido}, function (err, result) {
             if (err) { return cb(err); }
             result.parm = {sidoName: sido};
             cb(null, result);
-        }, deadline);
+        }, deadline, keyed);
     }
     // Index of the last key that produced a valid response; tried first next time.
     var preferred = -1;
@@ -327,6 +330,12 @@ function create(options) {
                     if (options.onKeyExhausted) { options.onKeyExhausted(operation, current, err.code, until); }
                     return attemptKey();
                 }
+                // Another request marked this key exhausted while this one was paging: no HTTP was sent.
+                if (err && err.code === 'KEY_EXHAUSTED') {
+                    rejected.push('QUOTA_EXHAUSTED');
+                    quota = true;
+                    return attemptKey();
+                }
                 if (err && INVALID_CREDENTIAL.indexOf(err.code) !== -1) {
                     rejected.push(err.code);
                     if (options.onKeyRejected) { options.onKeyRejected(operation, current, err.code); }
@@ -338,10 +347,10 @@ function create(options) {
         })();
     }
     function fetchWithKeys(keys, sido, operation, cb) {
-        withKeys(keys, operation, function (key, deadline, done) { fetch(sido, key, operation, done, deadline); }, cb);
+        withKeys(keys, operation, function (key, deadline, done) { fetch(sido, key, operation, done, deadline, true); }, cb);
     }
     function queryWithKeys(keys, operation, params, cb) {
-        withKeys(keys, operation, function (key, deadline, done) { query(operation, key, params, done, deadline); }, cb);
+        withKeys(keys, operation, function (key, deadline, done) { query(operation, key, params, done, deadline, true); }, cb);
     }
     return {fetch: fetch, query: query, fetchWithKeys: fetchWithKeys, queryWithKeys: queryWithKeys};
 }
