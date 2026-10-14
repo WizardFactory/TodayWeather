@@ -30,9 +30,9 @@ use std::time::Duration;
 use tokio::time::Instant;
 
 type Store = CatalogStore<BoundedS3<HttpS3Transport>>;
-/// The S3-peer tests of this module run one at a time: each owns a loopback peer and a provider
-/// stub, and small CI runners otherwise starve the peers of the other domestic tests.
-static SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+/// The S3-peer tests run one at a time with the other domestic S3-peer tests (see
+/// [`super::source_s3::S3_PEERS`]).
+use super::source_s3::{S3_PEERS as SERIAL, TEST_PERMITS};
 
 /// Publish one acquisition group as the S13b acquirer does.
 async fn publish(
@@ -232,7 +232,11 @@ async fn air_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
         }
     }
     assert_eq!(replayed, 4 * 14);
-    assert_eq!(transport.available(), 12, "every S3 permit returned");
+    assert_eq!(
+        transport.available(),
+        TEST_PERMITS,
+        "every S3 permit returned"
+    );
 }
 
 // ---- request-time acquisition ----
@@ -378,6 +382,19 @@ async fn stub() -> Stub {
     Stub { base, state, task }
 }
 fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn AirKoreaAcquire> {
+    live_with(
+        peer,
+        store,
+        base,
+        server2::domestic::kma::source::live::airkorea_transport().unwrap(),
+    )
+}
+fn live_with(
+    peer: &Peer,
+    store: Arc<Store>,
+    base: &str,
+    funded: server2::providers::HttpProviderTransport,
+) -> Arc<dyn AirKoreaAcquire> {
     let vars = |name: &str| -> Option<String> {
         match name {
             "AIRKOREA_SECRET_KEYS" => Some(r#"["S15B3_LOCAL_KEY_A+aaaaaaaaaaaaaaaa/="]"#.into()),
@@ -389,7 +406,7 @@ fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn AirKoreaAcquire> 
     let settings = AirKoreaSettings::from_vars(&vars).unwrap().unwrap();
     Arc::new(LiveAirKorea::new(
         settings,
-        Arc::new(server2::providers::HttpProviderTransport::new(2 << 20).unwrap()),
+        Arc::new(funded),
         Arc::new(server2::providers::HttpPublicTransport::new(2 << 20).unwrap()),
         Arc::new(peer.transport()),
         store,
@@ -467,7 +484,7 @@ async fn a_missing_national_dataset_is_acquired_once_and_published_before_use() 
         "restored from S3",
     );
     assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 1);
-    assert_eq!(transport.available(), 12);
+    assert_eq!(transport.available(), TEST_PERMITS);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -1003,7 +1020,7 @@ async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
             .0,
         r#"Fail to find dust forecast {"informData":{"$gte":"2026-09-24"}}"#
     );
-    assert_eq!(transport.available(), 12);
+    assert_eq!(transport.available(), TEST_PERMITS);
 }
 
 #[test]
@@ -1350,4 +1367,87 @@ async fn cpu_work_never_holds_a_request_past_its_deadline() {
     tokio::time::sleep(Duration::from_millis(800)).await;
     assert_eq!(finished.load(Ordering::SeqCst), 1);
     assert_eq!(admission.available_permits(), 2);
+}
+
+/// A TLS peer that accepts, reads the ClientHello and stays silent for `hold`; it records how long
+/// each client waited before giving up (None: the client was still waiting when the peer closed).
+async fn silent_tls(hold: Duration) -> (String, Arc<std::sync::Mutex<Vec<Option<Duration>>>>) {
+    use tokio::io::AsyncReadExt;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("https://{}/", listener.local_addr().unwrap());
+    let waits = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let seen = waits.clone();
+    tokio::spawn(async move {
+        while let Ok((mut socket, _)) = listener.accept().await {
+            let seen = seen.clone();
+            tokio::spawn(async move {
+                let started = std::time::Instant::now();
+                let mut buf = [0u8; 4096];
+                let gave_up = tokio::time::timeout(hold, async {
+                    loop {
+                        match socket.read(&mut buf).await {
+                            Ok(0) | Err(_) => return started.elapsed(),
+                            Ok(_) => {}
+                        }
+                    }
+                })
+                .await
+                .ok();
+                seen.lock().unwrap().push(gave_up);
+            });
+        }
+    });
+    (base, waits)
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_airkorea_connection_may_take_the_whole_legacy_attempt() {
+    use server2::providers::{HttpProviderTransport, attempt_timeout, legacy_timeout};
+    let _serial = SERIAL.lock().await;
+    // Legacy starts its 5 s timer before `https.get`, so connecting (TCP and TLS) may use it; the
+    // default provider transport gives a connection 3 s.
+    let (base, waits) = silent_tls(Duration::from_millis(4_500)).await;
+    let endpoint: reqwest::Url = format!("{base}B552584/ArpltnInforInqireSvc/x")
+        .parse()
+        .unwrap();
+    assert_eq!(
+        attempt_timeout(server2::budget::Provider::DataGoKr, &endpoint),
+        legacy_timeout::AIRKOREA
+    );
+    let peer = Peer::new();
+    let store = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+    let acquire = live(&peer, store, &base);
+    let _ = acquire.acquire(AirKoreaRequest::nationwide()).await;
+    let first = waits
+        .lock()
+        .unwrap()
+        .first()
+        .copied()
+        .expect("one connection");
+    assert!(
+        first.is_none(),
+        "the AirKorea transport still waited when the peer closed at 4.5 s: {first:?}"
+    );
+    // The default transport gives up at its 3 s connect bound (the contrast).
+    let (base, waits) = silent_tls(Duration::from_millis(4_500)).await;
+    let peer = Peer::new();
+    let store = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+    let default = live_with(
+        &peer,
+        store,
+        &base,
+        HttpProviderTransport::new(2 << 20).unwrap(),
+    );
+    let _ = default.acquire(AirKoreaRequest::nationwide()).await;
+    let first = waits
+        .lock()
+        .unwrap()
+        .first()
+        .copied()
+        .expect("one connection");
+    let gave_up = first.expect("the default transport gave up before 4.5 s");
+    assert!(
+        gave_up >= Duration::from_millis(2_800) && gave_up < Duration::from_millis(4_000),
+        "{gave_up:?}"
+    );
 }

@@ -19,7 +19,10 @@ use crate::domestic::family::{Endpoints, Service};
 use crate::domestic::metrics::DomesticMetrics;
 use crate::domestic::{Acquired, DomesticAcquirer, KeyRing};
 use crate::gateway::BoxFuture;
-use crate::providers::{ProviderKey, ProviderTransport, PublicTransport};
+use crate::providers::{
+    HttpProviderTransport, ProviderKey, ProviderTransport, ProviderTransportError, PublicTransport,
+    legacy_timeout,
+};
 use crate::resolver::{OwnedConfig, OwnedFlights, Waited};
 use crate::storage::{CatalogLimits, CatalogStore, CatalogTransport, Period};
 use std::collections::{BTreeMap, HashMap};
@@ -30,6 +33,12 @@ use tokio::time::Instant;
 /// Legacy AirKorea client bound for one logical call (`airkoreaObservation`: 5 s per attempt,
 /// one transient retry, 30 s per call).
 pub const CALL_BUDGET: Duration = Duration::from_secs(30);
+/// The AirKorea provider transport: 2 MiB bodies, and the legacy 5 s timer covers connecting
+/// too (`airkoreaObservation` starts it before `https.get`), so a connection may take the whole
+/// attempt (S13d `legacy_timeout::AIRKOREA`); the default transport connects within 3 s.
+pub fn airkorea_transport() -> Result<HttpProviderTransport, ProviderTransportError> {
+    HttpProviderTransport::with_connect_timeout(2 * 1024 * 1024, legacy_timeout::AIRKOREA)
+}
 /// S06 publication bound after a complete acquisition.
 const PUBLISH_BUDGET: Duration = Duration::from_secs(10);
 const DAY_MS: i64 = 86_400_000;

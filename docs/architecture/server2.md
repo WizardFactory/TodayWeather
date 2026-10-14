@@ -2011,7 +2011,9 @@ minutes 3, 13, ... 53). The technical document lists `전국` among the `sidoNam
 Jeonnam and Gwangju stations). Seven of the 672 rows had `dataTime: null`: legacy `parseRows` would
 have rejected that sido's whole batch; server2 skips such a row and keeps the dataset (a page of
 such rows only is not fatal either). Each AirKorea attempt gets the S13d legacy timeout of its path
-(B552584: 5 s, `airkoreaObservation` `timeoutMs`) within the 30 s call budget. AirKorea
+(B552584: 5 s, `airkoreaObservation` `timeoutMs`) within the 30 s call budget; legacy starts that
+timer before `https.get`, so the AirKorea transport lets connecting (TCP and TLS) use the whole
+attempt (`live::airkorea_transport`; other provider transports connect within 3 s). AirKorea
 requests per hour: one page per national fetch, normally one to three fetches per hour while
 requests arrive (at most six), about 24-72 a day, plus 7 station-list pages a week and at most 24
 forecast pages a day (only for requests that read AirKorea forecasts). The development quota is 500 requests a day per

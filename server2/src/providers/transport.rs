@@ -144,7 +144,21 @@ pub struct HttpProviderTransport {
 }
 impl HttpProviderTransport {
     pub fn new(maximum: usize) -> Result<Self, ProviderTransportError> {
-        if maximum == 0 || maximum > 8 * 1024 * 1024 {
+        Self::with_connect_timeout(maximum, CONNECT_TIMEOUT)
+    }
+    /// A transport whose connection (TCP and TLS) may take `connect`, for a service whose legacy
+    /// timer also covers connecting (AirKorea: `airkoreaObservation` starts its 5 s timer before
+    /// `https.get`). Each attempt keeps its [`attempt_timeout`]; `connect` is at most the
+    /// longest legacy timeout.
+    pub fn with_connect_timeout(
+        maximum: usize,
+        connect: Duration,
+    ) -> Result<Self, ProviderTransportError> {
+        if maximum == 0
+            || maximum > 8 * 1024 * 1024
+            || connect.is_zero()
+            || connect > legacy_timeout::KMA_WEB
+        {
             return Err(ProviderTransportError::Invalid);
         }
         let client = reqwest::Client::builder()
@@ -156,7 +170,7 @@ impl HttpProviderTransport {
             .no_brotli()
             .no_deflate()
             .no_zstd()
-            .connect_timeout(CONNECT_TIMEOUT)
+            .connect_timeout(connect)
             .build()
             .map_err(|_| ProviderTransportError::Transport)?;
         Ok(Self { client, maximum })
