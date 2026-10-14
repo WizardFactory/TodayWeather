@@ -57,6 +57,8 @@ const RELOAD: Duration = Duration::from_secs(300);
 const ASOS_RELOAD: Duration = Duration::from_secs(600);
 /// Concurrent station geocoding requests.
 const GEOCODE_CONCURRENCY: usize = 4;
+/// ASOS range acquisitions in flight at once (legacy recovery runs two workers).
+const ASOS_CONCURRENCY: usize = 2;
 /// Legacy ASOS mapping radius.
 const ASOS_MAX_KM: f64 = 100.;
 
@@ -127,6 +129,8 @@ struct Pages {
     minute_read: Option<std::time::Instant>,
     /// Pages changed since the last fold.
     dirty: bool,
+    /// Hourly or city pages, the seed or station coordinates changed since the last hourly fold.
+    hourly_dirty: bool,
 }
 struct AsosEntry {
     /// The station's data.go.kr acquisitions in fetch order.
@@ -143,6 +147,15 @@ struct State {
     geo: HashMap<String, (Option<(f64, f64)>, std::time::Instant)>,
     asos: HashMap<String, AsosEntry>,
     asos_failed: HashMap<String, std::time::Instant>,
+    /// The hourly part of the last fold (registry, hourly rows, national rows).
+    hourly_fold: Option<HourlyFold>,
+}
+#[derive(Clone)]
+struct HourlyFold {
+    registry: Arc<Registry>,
+    hourly: Arc<RowStore>,
+    national: Arc<HashMap<String, Vec<(f64, Doc)>>>,
+    unresolved: Vec<String>,
 }
 
 pub struct Observations<T> {
@@ -153,6 +166,8 @@ pub struct Observations<T> {
     flights: Mutex<HashMap<Flight, watch::Receiver<bool>>>,
     attempts: Mutex<HashMap<Flight, std::time::Instant>>,
     backfill: Arc<tokio::sync::Semaphore>,
+    /// ASOS range acquisitions in flight across stations.
+    asos_gate: Arc<tokio::sync::Semaphore>,
 }
 fn aws_key() -> ProviderKey {
     ProviderKey::Named {
@@ -206,6 +221,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             flights: Mutex::new(HashMap::new()),
             attempts: Mutex::new(HashMap::new()),
             backfill: Arc::new(tokio::sync::Semaphore::new(BACKFILL_CONCURRENCY)),
+            asos_gate: Arc::new(tokio::sync::Semaphore::new(ASOS_CONCURRENCY)),
         }
     }
     fn state(&self) -> std::sync::MutexGuard<'_, State> {
@@ -368,6 +384,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             }
             s.pages.days.insert(day, std::time::Instant::now());
             s.pages.dirty = true;
+            s.pages.hourly_dirty = true;
         }
         // The newest registry seed, if one was imported.
         if let Some(seed) = self.read_seed(now_ms, deadline).await {
@@ -378,6 +395,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             {
                 s.seed = Some(Arc::new(seed));
                 s.pages.dirty = true;
+                s.pages.hourly_dirty = true;
             }
         }
         // Minute pages of the last 40 minutes, newest first.
@@ -508,6 +526,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     s.pages.hourly.insert(p, rows);
                     s.pages.hourly_at.insert(p, at);
                     s.pages.dirty = true;
+                    s.pages.hourly_dirty = true;
                 }
             })
         })
@@ -528,6 +547,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     let mut s = this.state();
                     s.pages.city.insert(p, rows);
                     s.pages.dirty = true;
+                    s.pages.hourly_dirty = true;
                 }
             })
         })
@@ -576,7 +596,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         })
     }
     async fn fold(self: Arc<Self>, now_ms: i64) {
-        let (seed, hourly, hourly_at, city, minute, geo) = {
+        let (inputs, minute, cached) = {
             let mut s = self.state();
             s.pages.dirty = false;
             let first = latest_hourly(now_ms)
@@ -585,38 +605,69 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             s.pages.hourly.retain(|h, _| *h >= first);
             s.pages.hourly_at.retain(|h, _| *h >= first);
             s.pages.city.retain(|h, _| *h >= first);
-            let geo: HashMap<String, (f64, f64)> = s
-                .geo
-                .iter()
-                .filter_map(|(k, (v, _))| Some((k.clone(), (*v)?)))
-                .collect();
-            (
-                s.seed.clone(),
-                s.pages.hourly.clone(),
-                s.pages.hourly_at.clone(),
-                s.pages.city.clone(),
-                s.pages.minute.clone(),
-                geo,
-            )
+            let cached = s.hourly_fold.clone().filter(|_| !s.pages.hourly_dirty);
+            s.pages.hourly_dirty = false;
+            let inputs = cached.is_none().then(|| {
+                let geo: HashMap<String, (f64, f64)> = s
+                    .geo
+                    .iter()
+                    .filter_map(|(k, (v, _))| Some((k.clone(), (*v)?)))
+                    .collect();
+                (
+                    s.seed.clone(),
+                    s.pages.hourly.clone(),
+                    s.pages.hourly_at.clone(),
+                    s.pages.city.clone(),
+                    geo,
+                )
+            });
+            (inputs, s.pages.minute.clone(), cached)
         };
-        let folded = tokio::task::spawn_blocking(move || {
-            fold(
-                seed.as_deref().map(Vec::as_slice),
-                &hourly,
-                &hourly_at,
-                &city,
-                &minute,
-                &geo,
-            )
+        let hourly_fold = match (cached, inputs) {
+            (Some(cached), _) => cached,
+            (None, Some((seed, hourly, hourly_at, city, geo))) => {
+                let Ok((fold, reduced)) = tokio::task::spawn_blocking(move || {
+                    fold_hourly(
+                        seed.as_deref().map(Vec::as_slice),
+                        &hourly,
+                        &hourly_at,
+                        &city,
+                        &geo,
+                    )
+                })
+                .await
+                else {
+                    return;
+                };
+                let mut s = self.state();
+                // Non-city stations' hourly rows are kept as registry facts only.
+                for (h, rows) in reduced {
+                    if s.pages.hourly.contains_key(&h) {
+                        s.pages.hourly.insert(h, rows);
+                    }
+                }
+                s.hourly_fold = Some(fold.clone());
+                fold
+            }
+            (None, None) => return,
+        };
+        let minutes = tokio::task::spawn_blocking(move || {
+            let mut minutes = RowStore::default();
+            for page in minute.values() {
+                minutes.save(page);
+            }
+            minutes
         })
         .await
-        .ok();
-        let Some((folded, unresolved)) = folded else {
-            return;
-        };
-        self.state().folded = Some(Arc::new(folded));
-        if !unresolved.is_empty() {
-            self.geocode(unresolved);
+        .unwrap_or_default();
+        self.state().folded = Some(Arc::new(Folded {
+            registry: hourly_fold.registry.clone(),
+            hourly: hourly_fold.hourly.clone(),
+            minute: Arc::new(minutes),
+            national: hourly_fold.national.clone(),
+        }));
+        if !hourly_fold.unresolved.is_empty() {
+            self.geocode(hourly_fold.unresolved.clone());
         }
     }
     /// Geocode new station addresses (bounded), then fold again.
@@ -658,7 +709,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 for t in tasks {
                     let _ = t.await;
                 }
-                this.state().pages.dirty = true;
+                let mut s = this.state();
+                s.pages.dirty = true;
+                s.pages.hourly_dirty = true;
             })
         });
     }
@@ -837,6 +890,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         );
     }
     async fn acquire_asos(self: Arc<Self>, station: &str, request: AsosRequest) {
+        let _permit = self.asos_gate.clone().acquire_owned().await;
         let deadline = Instant::now() + ACQUIRE_DEADLINE;
         let Ok(Acquired::Complete(acquisition)) =
             self.acquire.asos(request.clone(), deadline).await
@@ -940,38 +994,62 @@ impl StationGeo for Table<'_> {
         self.0.get(addr).copied()
     }
 }
-/// Rebuild the collections: hourly runs in hour order (AWS rows merged with the city rows of
-/// the same hour, or a `cityUnavailable` run), then the kept minute pages. Returns the
-/// addresses of unregistered stations without coordinates.
-fn fold(
+/// Parsed rows of one page.
+type Page = Arc<Vec<Doc>>;
+/// Registry facts of a station row (the fields `_saveStnInfo` reads).
+const FACTS: [&str; 5] = ["stnId", "stnName", "addr", "altitude", "isCityWeather"];
+fn facts(row: &Doc) -> Doc {
+    let mut out = Doc::new();
+    for k in FACTS {
+        if let Some(v) = row.get(k) {
+            out.set(k, v.clone());
+        }
+    }
+    out
+}
+/// Rebuild the hourly collections: runs in hour order (AWS rows merged with the city rows of the
+/// same hour, or a `cityUnavailable` run). Hourly reads select city stations only, so rows of
+/// other stations are needed for registration only; they are returned reduced to registry facts
+/// (`reduced`) once a city page names the city stations. Also returns the addresses of
+/// unregistered stations without coordinates.
+fn fold_hourly(
     seed: Option<&[Doc]>,
     hourly: &BTreeMap<Publication, Arc<Vec<Doc>>>,
     hourly_at: &BTreeMap<Publication, f64>,
     city: &BTreeMap<Publication, Arc<Vec<Doc>>>,
-    minute: &BTreeMap<Publication, Arc<Vec<Doc>>>,
     geo: &HashMap<String, (f64, f64)>,
-) -> (Folded, Vec<String>) {
-    let runs: Vec<(Vec<Doc>, bool)> = hourly
-        .iter()
-        .map(|(h, aws)| match city.get(h) {
-            Some(c) => (merge_aws_city((**aws).clone(), c), true),
-            None => ((**aws).clone(), false),
-        })
-        .collect();
-    // Hourly reads select city stations only: keep the rows of every station a city run marks.
-    let city_ids: BTreeSet<String> = runs
-        .iter()
-        .flat_map(|(rows, _)| rows.iter())
-        .filter(|r| r.get("isCityWeather") == Some(&Val::Bool(true)))
+) -> (HourlyFold, Vec<(Publication, Page)>) {
+    let city_ids: BTreeSet<String> = city
+        .values()
+        .flat_map(|rows| rows.iter())
         .filter_map(|r| r.get("stnId").and_then(Val::as_str).map(str::to_owned))
+        .chain(seed.unwrap_or_default().iter().filter_map(|d| {
+            (d.get("isCityWeather") == Some(&Val::Bool(true)))
+                .then(|| d.get("stnId").and_then(Val::as_str).map(str::to_owned))
+                .flatten()
+        }))
         .collect();
+    let city_id = |r: &Doc| {
+        r.get("stnId")
+            .and_then(Val::as_str)
+            .is_some_and(|id| city_ids.contains(id))
+    };
     let mut registry = seed.map(Registry::seeded).unwrap_or_default();
     let mut rows = RowStore::default();
     let mut national: HashMap<String, Vec<(f64, Doc)>> = HashMap::new();
     let mut unresolved = BTreeSet::new();
+    let mut reduced = Vec::new();
     let table = Table(geo);
-    for (run, city_available) in &runs {
-        registry.apply_run(run, *city_available, &table);
+    for (h, aws) in hourly {
+        let merged;
+        let (run, city_available): (&[Doc], bool) = match city.get(h) {
+            Some(c) => {
+                merged = merge_aws_city((**aws).clone(), c);
+                (&merged, true)
+            }
+            None => (aws, false),
+        };
+        registry.apply_run(run, city_available, &table);
         for r in run {
             if let (Some(Val::Str(id)), Some(Val::Str(addr))) = (r.get("stnId"), r.get("addr"))
                 && !registry.has(id)
@@ -979,42 +1057,37 @@ fn fold(
                 unresolved.insert(addr.replace("(산간)", ""));
             }
         }
-        let kept: Vec<Doc> = run
-            .iter()
-            .filter(|r| {
-                r.get("stnId")
-                    .and_then(Val::as_str)
-                    .is_some_and(|id| city_ids.contains(id))
-            })
-            .cloned()
-            .collect();
+        let kept: Vec<Doc> = run.iter().filter(|r| city_id(r)).cloned().collect();
         rows.save(&kept);
-    }
-    for (h, aws) in hourly {
         let at = hourly_at.get(h).copied().unwrap_or(0.);
-        for r in aws.iter() {
-            if let Some(id) = r.get("stnId").and_then(Val::as_str)
-                && city_ids.contains(id)
-            {
+        for r in aws.iter().filter(|r| city_id(r)) {
+            if let Some(id) = r.get("stnId").and_then(Val::as_str) {
                 national
                     .entry(id.trim_start_matches('0').to_owned())
                     .or_default()
                     .push((at, r.clone()));
             }
         }
-    }
-    let mut minutes = RowStore::default();
-    for page in minute.values() {
-        minutes.save(page);
+        if !city_ids.is_empty()
+            && aws
+                .iter()
+                .any(|r| !city_id(r) && r.entries().len() > FACTS.len())
+        {
+            let small: Vec<Doc> = aws
+                .iter()
+                .map(|r| if city_id(r) { r.clone() } else { facts(r) })
+                .collect();
+            reduced.push((*h, Arc::new(small)));
+        }
     }
     (
-        Folded {
+        HourlyFold {
             registry: Arc::new(registry),
             hourly: Arc::new(rows),
-            minute: Arc::new(minutes),
             national: Arc::new(national),
+            unresolved: unresolved.into_iter().collect(),
         },
-        unresolved.into_iter().collect(),
+        reduced,
     )
 }
 

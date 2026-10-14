@@ -45,24 +45,31 @@ fn aws_page(publication: &str, rain_410: bool) -> Vec<u8> {
         row("410", "중구", rain_410, "서울특별시 중구 명동"),
     ];
     let mut html = String::from(
-        "<HTML><HEAD><META http-equiv=\"Content-Type\" content=\"text/html; charset=euc-kr\"></HEAD><BODY>\n",
+        r#"<HTML><HEAD><META http-equiv="Content-Type" content="text/html; charset=euc-kr"></HEAD><BODY>"#,
     );
-    html += &format!("<span class=ehead>[ 매분관측자료 ] {publication}</span>\n");
+    html += "\n";
+    html += &format!(r"<span class=ehead>[ 매분관측자료 ] {publication}</span>");
+    html += "\n";
     html += "<table border=0 cellspacing=0 cellpadding=0>\n<tr><td bgcolor=#999999>\n<table border=0 cellspacing=1 cellpadding=1>\n";
-    html += "<tr bgcolor=#AAE3FF align=center class=name><td colspan=3 nowrap>AWS 지점 / 고도</td><td>강수</td><td>강수15</td><td>강수60</td><td>강수3H</td><td>강수6H</td><td>강수12H</td><td>일강수</td><td width=40>기온</td><td colspan=2 width=60>풍향1</td><td>풍속1(m/s)</td><td colspan=2 width=60>풍향10</td><td>풍속10(m/s)</td><td>습도</td><td>해면기압</td><td>위치</td></tr>\n";
+    html += r#"<tr bgcolor=#AAE3FF align=center class=name><td colspan=3 nowrap>AWS 지점 / 고도</td><td>강수</td><td>강수15</td><td>강수60</td><td>강수3H</td><td>강수6H</td><td>강수12H</td><td>일강수</td><td width=40>기온</td><td colspan=2 width=60>풍향1</td><td>풍속1(m/s)</td><td colspan=2 width=60>풍향10</td><td>풍속10(m/s)</td><td>습도</td><td>해면기압</td><td>위치</td></tr>"#;
+    html += "\n";
     for r in rows {
         html += "<tr align=center class=text>";
         for c in r {
-            html += &format!("<td>{c}</td>");
+            html += &format!(r"<td>{c}</td>");
         }
-        html += "</tr>\n";
+        html += r#"</tr>"#;
+        html += "\n";
     }
-    html += "</table>\n</td></tr></table>\n</BODY></HTML>\n";
+    for part in [r"</table>", r"</td></tr></table>", r"</BODY></HTML>"] {
+        html += part;
+        html += "\n";
+    }
     encoding_rs::EUC_KR.encode(&html).0.into_owned()
 }
 fn city_page(publication: &str) -> Vec<u8> {
     format!(
-        "<html><head><meta charset=\"utf-8\"></head><body><div class=\"cmp-table-topinfo\"><strong>기상실황표</strong>{publication}</div><table id=\"weather_table\"><thead><tr id=\"table_header2\"><th>이름</th><th>현재일기</th><th>운량<br/>1/10</th><th>현재<br/>기온</th><th>습도<br/>%</th><th>풍향</th><th>풍속</th></tr></thead><tbody><tr><td><a href=\"city-obs.do?stn=108\">서울</a></td><td>맑음</td><td>3</td><td>18.0</td><td>60</td><td>남서</td><td>2.0</td></tr></tbody></table></body></html>"
+        r#"<html><head><meta charset="utf-8"></head><body><div class="cmp-table-topinfo"><strong>기상실황표</strong>{publication}</div><table id="weather_table"><thead><tr id="table_header2"><th>이름</th><th>현재일기</th><th>운량<br/>1/10</th><th>현재<br/>기온</th><th>습도<br/>%</th><th>풍향</th><th>풍속</th></tr></thead><tbody><tr><td><a href="city-obs.do?stn=108">서울</a></td><td>맑음</td><td>3</td><td>18.0</td><td>60</td><td>남서</td><td>2.0</td></tr></tbody></table></body></html>"#
     )
     .into_bytes()
 }
