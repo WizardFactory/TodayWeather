@@ -1,6 +1,6 @@
 # S15b-3 air store oracle fixture
 
-`air.json.gz` (sha256 `4067cdb5794e9ff6c6d0241104399b32718dce43c580e5ec75196e29de6bcca0`) holds pinned legacy-oracle results for the
+`air.json.gz` (sha256 `30ed33ec1a81865100fa2b85658e6217d5e8d6f21859bd76ccef11ce0664a97a`) holds pinned legacy-oracle results for the
 S15b-3 AirKorea input tests (`server2/tests/domestic/air.rs`, `air_s3.rs`). It is test data only;
 the server2 runtime never reads it or any legacy file.
 
@@ -69,7 +69,7 @@ const ej = L.fake.ejson;
 
 ```
 
-### `sections-air.js` (sha256 `c8834cd939e703391ac7c93ab8e967c21eb4a018f20ad7b9f69efce8a7ef5d81`)
+### `sections-air.js` (sha256 `320db2b9bd4ee9b1b332586a61806743b4c7f7b81a1aae17996c76a097b2c0ce`)
 
 ```js
 /* S15b-3 oracle sections (task evidence): legacy AirKorea station list, real-time observation and
@@ -140,7 +140,7 @@ async function air(L, {ej}) {
             const completed = await cb2p(cb => keco.completeGeoMsrStnInfo(JSON.parse(JSON.stringify(list)), cb));
             const parsed = keco.parseMsrstnList(completed.v);
             const saved = await cb2p(cb => keco.saveMsrstnList(parsed, cb));
-            stationRuns.push({fetched: a.fetched, parsed: parsed.length, error: saved.err ? saved.err.message : null});
+            stationRuns.push({fetched: a.fetched, parsed: parsed.length, error: saved.err ? String(saved.err.message).split(' for value')[0] : null});
         });
     }
     const stations = (await MsrStn.find({}, {_id: 0}).lean().exec());
@@ -242,7 +242,7 @@ module.exports = {air};
 
 ```
 
-### `air-fixtures.js` (sha256 `e5126ed5f8999d548a6e4cb4d2780f837cd958e7ca541fdaa6f4aa39a908e9a3`)
+### `air-fixtures.js` (sha256 `c6402cc2ee83a76f00e632caff30268fd7c4b25c4b3939d3186ca8d33bb254a5`)
 
 ```js
 /* Synthetic AirKorea B552584 inputs for the S15b-3 store oracle (task evidence). Shapes follow
@@ -299,6 +299,9 @@ function stationLists() {
     second.push({stationName: '숫자좌표', dmX: 37.6, dmY: 126.95, item: null, mangName: '도시대기', addr: null});
     second.push({stationName: '빈항목', dmX: '37.61', dmY: '126.96', item: 'PM10', year: 2001});
     second.push({stationName: '영좌표', dmX: '0', dmY: '126.9', item: 'PM10', mangName: '도시대기'});
+    // A coordinate that does not cast: Mongoose rejects that update, the stored station stays.
+    second.push(Object.assign(stationItem(STATIONS[1], 1, 2), {dmX: '-', mangName: '도로변대기'}));
+    second.splice(1, 1);
     return [{fetched: Date.UTC(2026, 9, 12, 0, 5), pages: [page(first, 100)]},
         {fetched: Date.UTC(2026, 9, 13, 0, 5), pages: [page(second, 100)]}];
 }
@@ -409,7 +412,7 @@ module.exports = {stationLists, nationals, forecasts, kst, STATIONS};
 
 ```
 
-### `legacy.js` (sha256 `f8f936899f49903354f193acdf1f1fa1af669903103bf994c99411c55c2a6c40`)
+### `legacy.js` (sha256 `f585045807afaa3ac01ed9c47bc29891f9f41d217b5fe38e2c5388309fc4466a`)
 
 ```js
 /* Load legacy server modules offline for the S15b store oracle (task evidence, not a repository
@@ -441,13 +444,18 @@ const stubs = {
     // S15b-3: image and AWS modules are loaded by kecoRequester but never used offline.
     'get-pixels': noNetwork,
     'aws-sdk': {S3: function () { this.upload = noNetwork; this.listObjectsV2 = noNetwork; }, config: {update() {}}},
-    axios: {get: noNetwork, post: noNetwork},
+    // S15b-3b: a section may answer GETs deterministically (the Kakao address-search stub).
+    axios: {get: (...a) => global.ORACLE_AXIOS_GET ? global.ORACLE_AXIOS_GET(...a) : noNetwork(), post: noNetwork},
 };
 const rawLoad = Module._load;
 Module._load = function (request, parent, isMain) {
     if (stubs[request]) return stubs[request];
+    // The utilities create a Winston/Logentries logger that writes files: use the silent log.
+    if (/lib\/log(\.js)?$/.test(request)) {
+        return function () { return global.log; };
+    }
     if (/config\/config(\.js)?$/.test(request)) {
-        return {db: {version: '2.0', path: '', options: {}}, keyString: {}, mode: 'service', serviceServer: {}, gather: {},
+        return {db: {version: '2.0', path: '', options: {}}, keyString: {kakao_keys: '["oracle-kakao-key"]'}, mode: 'service', serviceServer: {}, gather: {},
             image: global.ORACLE_IMAGE_CONFIG || {airkorea_korea_image: {coordi: {}, size: {}, pixel_pos: {}},
                 kaq_korea_image: {coordi: {}, size: {}, pixel_pos: {}, so2_pixel_pos: {}},
                 kaq_korea_modelimg_image: {coordi: {}, size: {}, pixel_pos: {}}}};
@@ -466,7 +474,7 @@ module.exports = {root, server, load, fake, sourceFiles};
 
 ```
 
-### `fakemongo.js` (sha256 `0b8e9beffcd351460d9663d208c7899d156b99795e9694ee00ddf70e63ef2a3e`)
+### `fakemongo.js` (sha256 `af919f3cc3c934edb3963eefde7f04dfac68a2aeaaf399be0a482bd680e78ad8`)
 
 ```js
 /* In-memory MongoDB collection double for the S15b store oracle (task evidence, not a repository
@@ -627,6 +635,12 @@ class FakeCollection {
         const targets = many ? hits : hits.slice(0, 1);
         for (const d of targets) apply(d, update, false);
         if (!targets.length && options.upsert) {
+            // S15b-3b: an upsert whose query names an existing _id is a duplicate key (E11000).
+            if (query && query._id !== undefined && this.docs.some(d => d._id === query._id)) {
+                const err = new Error('E11000 duplicate key error collection: ' + this.name);
+                err.code = 11000;
+                return {error: err};
+            }
             const doc = {_id: 'oid' + (nextId++)};
             for (const k of Object.keys(query)) {
                 if (k[0] === '$') continue;
@@ -648,7 +662,7 @@ class FakeCollection {
         if (cb) process.nextTick(() => cb(null, r));
         return Promise.resolve(r);
     }
-    updateOne(q, u, o, cb) { if (typeof o === 'function') { cb = o; o = {}; } const r = this._update(q, u, o, false); if (cb) process.nextTick(() => cb(null, r)); return Promise.resolve(r); }
+    updateOne(q, u, o, cb) { if (typeof o === 'function') { cb = o; o = {}; } const r = this._update(q, u, o, false); if (cb) process.nextTick(() => r.error ? cb(r.error) : cb(null, r)); return r.error ? Promise.reject(r.error) : Promise.resolve(r); }
     updateMany(q, u, o, cb) { if (typeof o === 'function') { cb = o; o = {}; } const r = this._update(q, u, o, true); if (cb) process.nextTick(() => cb(null, r)); return Promise.resolve(r); }
     remove(query, options, cb) {
         if (typeof options === 'function') { cb = options; options = {}; }

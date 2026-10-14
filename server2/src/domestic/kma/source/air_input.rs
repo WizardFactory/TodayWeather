@@ -140,8 +140,12 @@ pub struct AirInputs<T> {
     /// them (the readers apply the request's own freshness bounds).
     last_stations: std::sync::Mutex<Option<(Arc<Stations>, f64)>>,
     last_observations: std::sync::Mutex<Option<Arc<Observations>>>,
+    last_forecasts: std::sync::Mutex<Option<Arc<Forecasts>>>,
     capture: Arc<Capture>,
     capture_every: Duration,
+    /// Parsing, folding and reader work runs on blocking workers, two at a time, so a request
+    /// deadline can always be observed (the future waiting for them is cancellable).
+    cpu: Arc<tokio::sync::Semaphore>,
 }
 /// State of the demand-gated hourly capture.
 #[derive(Default)]
@@ -164,9 +168,19 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             observations: tokio::sync::Mutex::new(None),
             last_stations: std::sync::Mutex::new(None),
             last_observations: std::sync::Mutex::new(None),
+            last_forecasts: std::sync::Mutex::new(None),
             capture: Arc::new(Capture::default()),
             capture_every: CAPTURE_EVERY,
+            cpu: Arc::new(tokio::sync::Semaphore::new(2)),
         }
+    }
+    /// Run CPU work on a blocking worker under the CPU admission. Dropping the returned future
+    /// (a request deadline) leaves the worker to finish on its own; nothing waits for it.
+    async fn cpu<R: Send + 'static>(
+        &self,
+        work: impl FnOnce() -> R + Send + 'static,
+    ) -> Result<R, String> {
+        cpu_task(&self.cpu, work).await
     }
     /// The capture check interval (10 minutes; tests shorten it).
     pub fn with_capture_interval(mut self, every: Duration) -> Self {
@@ -225,11 +239,13 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                     continue;
                 }
                 let hour = hour_partition(now);
-                let done = capture
-                    .hours
-                    .lock()
-                    .unwrap_or_else(|e| e.into_inner())
-                    .contains(&hour);
+                let done = {
+                    let mut hours = capture.hours.lock().unwrap_or_else(|e| e.into_inner());
+                    // Hours older than the 26-hour read window are never checked again.
+                    let oldest = hour_partition(now - 26. * HOUR_MS);
+                    hours.retain(|h| *h >= oldest);
+                    hours.contains(&hour)
+                };
                 if !done {
                     let _ = start_flight(
                         &flights,
@@ -352,16 +368,26 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         fetched.retain(|f| f.fetched_at_ms as f64 <= until);
         let id = |f: &Fetched| (f.fetched_at_ms, f.partition.clone());
         if let Some(c) = cache.as_mut() {
-            let new: Vec<&Fetched> = fetched
+            let new: Vec<Fetched> = fetched
                 .iter()
                 .filter(|f| !c.seen.contains(&id(f)))
+                .cloned()
                 .collect();
-            if new.iter().all(|f| id(f) > c.last) {
-                let mut stations = (*c.stations).clone();
-                for f in new {
-                    if let Some(items) = page_items(&f.pages) {
-                        stations.apply(&items);
-                    }
+            if !new.is_empty() && new.iter().all(|f| id(f) > c.last) {
+                let base = c.stations.clone();
+                let applied = new.clone();
+                let stations = self
+                    .cpu(move || {
+                        let mut stations = (*base).clone();
+                        for f in &applied {
+                            if let Some(items) = page_items(&f.pages) {
+                                stations.apply(&items);
+                            }
+                        }
+                        stations
+                    })
+                    .await?;
+                for f in &new {
                     c.newest_ms = c.newest_ms.max(f.fetched_at_ms as f64);
                     c.seen.insert(id(f));
                     c.last = c.last.clone().max(id(f));
@@ -384,16 +410,24 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         if fetched.is_empty() {
             return Ok(None);
         }
-        let mut stations = Stations::default();
         let mut seen = HashSet::new();
         let mut newest = f64::NEG_INFINITY;
         for f in &fetched {
-            if let Some(items) = page_items(&f.pages) {
-                stations.apply(&items);
-            }
             newest = newest.max(f.fetched_at_ms as f64);
             seen.insert(id(f));
         }
+        let pages = fetched.clone();
+        let stations = self
+            .cpu(move || {
+                let mut stations = Stations::default();
+                for f in &pages {
+                    if let Some(items) = page_items(&f.pages) {
+                        stations.apply(&items);
+                    }
+                }
+                stations
+            })
+            .await?;
         let last = fetched.iter().map(id).max().expect("not empty");
         let stations = Arc::new(stations);
         *cache = Some(StationCache {
@@ -508,19 +542,19 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                 kept.entry(p.clone()).or_default();
             }
             // National pages are large (about 335 KB for 672 stations): parse off the reactor.
-            let parsed = tokio::task::spawn_blocking(move || {
-                fetched
-                    .into_iter()
-                    .map(|f| {
-                        let rows = page_items(&f.pages)
-                            .map(|items| Observations::parse(&items))
-                            .unwrap_or_default();
-                        (f.partition, f.fetched_at_ms, rows)
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .await
-            .map_err(|_| "observation parse task failed")?;
+            let parsed = self
+                .cpu(move || {
+                    fetched
+                        .into_iter()
+                        .map(|f| {
+                            let rows = page_items(&f.pages)
+                                .map(|items| Observations::parse(&items))
+                                .unwrap_or_default();
+                            (f.partition, f.fetched_at_ms, rows)
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .await?;
             for (partition, at, rows) in parsed {
                 kept.entry(partition)
                     .or_default()
@@ -547,10 +581,16 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             order.last().map(|(t, p, _)| (*t, (*p).clone())),
         ));
         if c.folded_key != folded_key {
-            let mut folded = Observations::default();
-            for (_, _, rows) in &order {
-                folded.apply_rows(rows);
-            }
+            let rows: Vec<Arc<Vec<ObsRow>>> = order.iter().map(|(_, _, r)| (*r).clone()).collect();
+            let folded = self
+                .cpu(move || {
+                    let mut folded = Observations::default();
+                    for r in &rows {
+                        folded.apply_rows(r);
+                    }
+                    folded
+                })
+                .await?;
             c.folded = Arc::new(folded);
             c.folded_key = folded_key;
         }
@@ -578,7 +618,25 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         date: u32,
         deadline: Instant,
     ) -> Result<Forecasts, String> {
-        let folded = bounded(deadline, self.forecast_fold(now, now, date, deadline)).await?;
+        let folded = match bounded(deadline, self.forecast_fold(now, now, date, deadline)).await {
+            Ok(folded) => {
+                *self
+                    .last_forecasts
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner()) = Some(Arc::new(folded.clone()));
+                folded
+            }
+            // A failed refresh answers with the last successful fold; the reader applies this
+            // request's date (`informData >= date`).
+            Err(e) => {
+                let last = self
+                    .last_forecasts
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .clone();
+                return last.map(|f| (*f).clone()).ok_or(e);
+            }
+        };
         let expected = expected_announcement(now).unwrap_or_default();
         if folded
             .docs()
@@ -600,6 +658,12 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                 self.forecast_fold(now, wall_ms().max(now), date, deadline),
             )
             .await;
+            if let Ok(f) = &refreshed {
+                *self
+                    .last_forecasts
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner()) = Some(Arc::new(f.clone()));
+            }
             return Ok(refreshed.unwrap_or(folded));
         }
         Ok(folded)
@@ -641,21 +705,28 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             fetched.extend(self.forecast_acquisitions(&k, p, deadline).await?);
         }
         fetched.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
-        let mut out = Forecasts::default();
-        for (at, _, expected, pages) in fetched.iter().filter(|f| f.0 as f64 <= until) {
-            // The record period is the announcement chosen before the call; a record without
-            // one falls back to the announcement expected when it completed.
-            let Some(expected) = expected
-                .clone()
-                .or_else(|| expected_announcement(*at as f64))
-            else {
-                continue;
-            };
-            if let Some(items) = page_items(pages) {
-                out.apply(&expected, &items);
+        let runs: Vec<ForecastAcquisition> = fetched
+            .into_iter()
+            .filter(|f| f.0 as f64 <= until)
+            .collect();
+        self.cpu(move || {
+            let mut out = Forecasts::default();
+            for (at, _, expected, pages) in &runs {
+                // The record period is the announcement chosen before the call; a record
+                // without one falls back to the announcement expected when it completed.
+                let Some(expected) = expected
+                    .clone()
+                    .or_else(|| expected_announcement(*at as f64))
+                else {
+                    continue;
+                };
+                if let Some(items) = page_items(pages) {
+                    out.apply(&expected, &items);
+                }
             }
-        }
-        Ok(out)
+            out
+        })
+        .await
     }
     /// Complete dust-forecast acquisitions of one search-date partition with their recorded
     /// announcement: (completion instant, partition, announcement text, pages in page order).
@@ -719,7 +790,12 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         deadline: Instant,
     ) -> AirAnswers {
         self.note_demand();
+        // Waits and reads end 200 ms before the deadline; the readers then have until 100 ms
+        // before it, and the assembly keeps the last 100 ms.
         let wait_until = deadline
+            .checked_sub(Duration::from_millis(200))
+            .unwrap_or(deadline);
+        let answer_until = deadline
             .checked_sub(Duration::from_millis(100))
             .unwrap_or(deadline);
         let g_coord = town
@@ -739,20 +815,37 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             }
         );
         let arpltn = match (stations, observations) {
-            (Ok(s), Ok(o)) => arpltn_answer(&s, &o, g_coord, now),
+            (Ok(s), Ok(o)) => bounded(
+                answer_until,
+                self.cpu(move || arpltn_answer(&s, &o, g_coord, now)),
+            )
+            .await
+            .and_then(|a| a),
             (Err(e), _) | (_, Err(e)) => Err(e),
         };
-        let dust = dust.map(|f| {
-            let answer = f.and_then(|f| dust_answer(&f, region, city, &format!("{date:08}")));
-            (
-                (region.to_owned(), city.to_owned(), format!("{date:08}")),
-                answer,
-            )
-        });
+        let dust = match dust {
+            None => None,
+            Some(f) => {
+                let (r, c, d) = (region.to_owned(), city.to_owned(), format!("{date:08}"));
+                let answer = match f {
+                    Ok(f) => {
+                        let (r2, c2, d2) = (r.clone(), c.clone(), d.clone());
+                        bounded(
+                            answer_until,
+                            self.cpu(move || dust_answer(&f, &r2, &c2, &d2)),
+                        )
+                        .await
+                        .and_then(|a| a)
+                    }
+                    Err(e) => Err(e),
+                };
+                Some(((r, c, d), answer))
+            }
+        };
         let needs_fallback = arpltn.as_ref().map_or(true, |a| !has_air_value(a));
         let fallback = match (needs_fallback, g_coord) {
             (true, Some((lat, lon))) => {
-                Some(((lat, lon), self.fallback(lat, lon, now, wait_until).await))
+                Some(((lat, lon), self.fallback(lat, lon, now, answer_until).await))
             }
             _ => None,
         };
@@ -779,6 +872,23 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             _ => None,
         }
     }
+}
+/// Blocking work under a CPU admission (see [`AirInputs::cpu`]).
+pub async fn cpu_task<R: Send + 'static>(
+    admission: &Arc<tokio::sync::Semaphore>,
+    work: impl FnOnce() -> R + Send + 'static,
+) -> Result<R, String> {
+    let permit = admission
+        .clone()
+        .acquire_owned()
+        .await
+        .map_err(|_| "cpu admission closed".to_owned())?;
+    tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        work()
+    })
+    .await
+    .map_err(|_| "cpu task failed".to_owned())
 }
 /// Start (or join) one owned acquisition; a published nationwide hour is remembered for the
 /// capture, and any publication advances the generation so readers re-read S3.

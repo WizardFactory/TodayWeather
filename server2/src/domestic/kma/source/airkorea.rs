@@ -220,6 +220,11 @@ impl Stations {
                 parse_float(dm_y.as_ref().expect("checked")),
                 parse_float(dm_x.as_ref().expect("checked")),
             );
+            // Mongoose casts `geo` to `[Number]`: NaN is a CastError and that row's update is
+            // not sent (an existing station keeps its document; the other rows are saved).
+            if lon.is_nan() || lat.is_nan() {
+                continue;
+            }
             doc.push(("geo".into(), Val::Arr(vec![Val::num(lon), Val::num(lat)])));
             if let Some(Value::String(s)) = o.get("item") {
                 doc.push((

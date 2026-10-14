@@ -30,6 +30,9 @@ use std::time::Duration;
 use tokio::time::Instant;
 
 type Store = CatalogStore<BoundedS3<HttpS3Transport>>;
+/// The S3-peer tests of this module run one at a time: each owns a loopback peer and a provider
+/// stub, and small CI runners otherwise starve the peers of the other domestic tests.
+static SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 /// Publish one acquisition group as the S13b acquirer does.
 async fn publish(
@@ -167,17 +170,18 @@ fn town(lat: f64, lon: f64) -> Doc {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn air_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
+    let _serial = SERIAL.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     seed_oracle(&store).await;
+    let mut readers = std::collections::HashMap::new();
     for a in items_of(at(oracle(), &["arpltn"])) {
         let now = number(at(a, &["now"]));
-        // Times inside the observation window (the oracle folds every earlier acquisition).
-        if !(1_791_940_000_000. ..1_791_960_000_000.).contains(&now) {
-            continue;
-        }
-        let inputs = AirInputs::new(transport.clone(), store.clone());
+        // One reader per instant (its memory serves the six towns), as one process would.
+        let inputs = readers
+            .entry(now.to_bits())
+            .or_insert_with(|| AirInputs::new(transport.clone(), store.clone()));
         let g = at(a, &["gCoord"]);
         let answers = inputs
             .load(
@@ -196,20 +200,28 @@ async fn air_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
         );
         assert!(answers.dust.is_none());
     }
-    // Dust forecasts after the last run (10-14 23:32 KST) for that KST date.
-    let now = 1_791_988_320_000. + 60_000.;
-    assert_eq!(kst_date(now), 20261014);
+    // Dust forecasts: the oracle queried after its last run (10-14 23:32 KST). A request reads
+    // the search dates `date-2..date` at its own KST date, so the queries for 10-14 .. 10-17 are
+    // replayed at 12:00 KST of that date (after every run); 10-12 and 10-13 would need an instant
+    // before later runs.
+    let mut replayed = 0;
     for q in items_of(at(oracle(), &["dust", "queries"])) {
-        if text(at(q, &["date"])) != "20261014" {
+        let date = text(at(q, &["date"]));
+        if date.as_str() < "20261014" {
             continue;
         }
+        let day: u32 = date.parse().unwrap();
+        let now = server2::history::schedule::to_ms(Publication::new(day, 1200).unwrap()) as f64;
+        let now = now.max(1_791_988_320_000. + 60_000.);
+        assert_eq!(kst_date(now), day);
+        let dust_reader = AirInputs::new(transport.clone(), store.clone());
+        replayed += 1;
         let (region, city) = (text(at(q, &["region"])), text(at(q, &["city"])));
-        let inputs = AirInputs::new(transport.clone(), store.clone());
-        let answers = inputs
+        let answers = dust_reader
             .load(&town(37.57, 126.98), &region, &city, true, now, deadline())
             .await;
         let (args, answer) = answers.dust.unwrap();
-        assert_eq!(args, (region.clone(), city.clone(), "20261014".to_string()));
+        assert_eq!(args, (region.clone(), city.clone(), date.clone()));
         match at(q, &["error"]).string() {
             Some(e) => assert_eq!(answer.unwrap_err(), e),
             None => same(
@@ -219,6 +231,7 @@ async fn air_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
             ),
         }
     }
+    assert_eq!(replayed, 4 * 14);
     assert_eq!(transport.available(), 12, "every S3 permit returned");
 }
 
@@ -393,6 +406,7 @@ fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn AirKoreaAcquire> 
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_missing_national_dataset_is_acquired_once_and_published_before_use() {
+    let _serial = SERIAL.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -465,6 +479,7 @@ async fn a_missing_national_dataset_is_acquired_once_and_published_before_use() 
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
+    let _serial = SERIAL.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -557,6 +572,7 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_two_page_nationwide_dataset_is_dated_by_its_overall_mode() {
+    let _serial = SERIAL.lock().await;
     let peer = Peer::new();
     let store = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
@@ -573,6 +589,7 @@ async fn a_two_page_nationwide_dataset_is_dated_by_its_overall_mode() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn every_read_ends_by_the_request_deadline() {
+    let _serial = SERIAL.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -609,6 +626,7 @@ async fn every_read_ends_by_the_request_deadline() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_hourly_capture_acquires_the_current_hour_while_demand_lasts() {
+    let _serial = SERIAL.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -678,6 +696,7 @@ impl AirSource for SlowAir {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_air_fallback_answers_when_no_station_has_a_value() {
+    let _serial = SERIAL.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -738,6 +757,7 @@ async fn the_air_fallback_answers_when_no_station_has_a_value() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_nationwide_acquisition_is_one_published_dataset_of_its_data_hour() {
+    let _serial = SERIAL.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -849,6 +869,7 @@ fn town_value(snapshot: &dyn server2::domestic::kma::KmaStore) -> serde_json::Va
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
+    let _serial = SERIAL.lock().await;
     use super::source_s3::{NOW, request, seed};
     use server2::domestic::kma::backend::{KmaSource, SourceAnswer, parse_path};
     use server2::domestic::kma::source::S3Source;
@@ -1023,6 +1044,7 @@ fn the_forecast_source_follows_legacy_query_defaults() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rows_without_a_data_time_never_reject_a_nationwide_page() {
+    let _serial = SERIAL.lock().await;
     for (shape, expected_ago) in [(2usize, 0.), (3, 0.)] {
         let peer = Peer::new();
         let store =
@@ -1041,6 +1063,7 @@ async fn rows_without_a_data_time_never_reject_a_nationwide_page() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_attempt_may_take_longer_than_three_seconds() {
+    let _serial = SERIAL.lock().await;
     // Legacy allows 5 s per AirKorea attempt; the owned acquisition has no request deadline.
     let peer = Peer::new();
     let store = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
@@ -1061,6 +1084,7 @@ async fn an_attempt_may_take_longer_than_three_seconds() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_failed_refresh_answers_with_the_last_successful_fold() {
+    let _serial = SERIAL.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1100,6 +1124,7 @@ async fn a_failed_refresh_answers_with_the_last_successful_fold() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_late_station_list_of_an_earlier_day_refolds_like_a_cold_reader() {
+    let _serial = SERIAL.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1174,6 +1199,7 @@ async fn a_late_station_list_of_an_earlier_day_refolds_like_a_cold_reader() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_forecast_run_keeps_the_announcement_chosen_before_the_call() {
+    let _serial = SERIAL.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1245,4 +1271,90 @@ async fn a_forecast_run_keeps_the_announcement_chosen_before_the_call() {
         &OrderedJson::parse(r#"[{"date":"20261014","dustForecast":{"sido":"서울","PM10Grade":2,"PM10Str":"나쁨"}}]"#.as_bytes()).unwrap(),
         "the 05시 run completed after 11:00 is applied",
     );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_failed_forecast_refresh_answers_with_the_last_successful_fold() {
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    seed_oracle(&store).await;
+    let now = 1_791_988_320_000. + 60_000.;
+    let inputs = AirInputs::new(transport.clone(), store.clone());
+    let first = inputs
+        .load(
+            &town(37.57, 126.98),
+            "서울특별시",
+            "종로구",
+            true,
+            now,
+            deadline(),
+        )
+        .await;
+    let first = first.dust.unwrap().1.unwrap();
+    reqwest::Client::new()
+        .post(format!("{}__catalog?mode=bad-list&key=x", peer.endpoint()))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    let again = inputs
+        .load(
+            &town(37.57, 126.98),
+            "서울특별시",
+            "종로구",
+            true,
+            now,
+            deadline(),
+        )
+        .await;
+    same(
+        &again.dust.unwrap().1.unwrap(),
+        &first,
+        "the last successful forecast fold",
+    );
+    // A new reader without a successful fold gets the error (legacy: no forecast).
+    let cold = AirInputs::new(transport.clone(), store.clone())
+        .load(
+            &town(37.57, 126.98),
+            "서울특별시",
+            "종로구",
+            true,
+            now,
+            deadline(),
+        )
+        .await;
+    assert!(cold.dust.unwrap().1.is_err());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cpu_work_never_holds_a_request_past_its_deadline() {
+    use server2::domestic::kma::source::air_input::cpu_task;
+    let admission = Arc::new(tokio::sync::Semaphore::new(2));
+    let started = std::time::Instant::now();
+    let finished = Arc::new(AtomicUsize::new(0));
+    let done = finished.clone();
+    // A synchronous computation of 600 ms; the request waits only 100 ms for it.
+    let outcome = tokio::time::timeout(
+        Duration::from_millis(100),
+        cpu_task(&admission, move || {
+            let end = std::time::Instant::now() + Duration::from_millis(600);
+            while std::time::Instant::now() < end {
+                std::hint::spin_loop();
+            }
+            done.store(1, Ordering::SeqCst);
+        }),
+    )
+    .await;
+    assert!(outcome.is_err(), "the deadline ends the wait");
+    assert!(
+        started.elapsed() < Duration::from_millis(300),
+        "{:?}",
+        started.elapsed()
+    );
+    // The worker finishes on its own and releases its admission.
+    tokio::time::sleep(Duration::from_millis(800)).await;
+    assert_eq!(finished.load(Ordering::SeqCst), 1);
+    assert_eq!(admission.available_permits(), 2);
 }
