@@ -1,6 +1,6 @@
 //! Keyless public-page transport (KMA web RSS/HTML). No credential, budget or retry policy here.
 use super::{ProviderResponse, ProviderTransportError, transport::read_bounded};
-use std::{future::Future, time::Duration};
+use std::future::Future;
 
 /// A validated keyless GET target. Construction rejects credentials and key parameters.
 #[derive(Debug, Clone)]
@@ -59,8 +59,9 @@ impl HttpPublicTransport {
             .no_brotli()
             .no_deflate()
             .no_zstd()
-            .connect_timeout(Duration::from_secs(1))
-            .timeout(Duration::from_secs(3))
+            .connect_timeout(super::transport::CONNECT_TIMEOUT)
+            // Legacy `kmaScraper` 30 s per page (S13d); the caller deadline still bounds a call.
+            .timeout(super::transport::legacy_timeout::KMA_WEB)
             .build()
             .map_err(|_| ProviderTransportError::Transport)?;
         Ok(Self { client, maximum })

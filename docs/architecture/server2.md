@@ -280,7 +280,9 @@ typed timeout; it cannot return the expired response as success.
 
 Owned single-flight jobs survive cancellation of one HTTP waiter, share their
 original bounded deadline and drain policy, and never extend a later waiter's
-HTTP deadline. Resolver reads retain S06 coverage: a page or targeted acquisition
+HTTP deadline. Since [S13d](#s13d-legacy-provider-timeouts-and-the-request-waiter-2026-10-14),
+the acquisition stage is one shared owned task per repair scope with the legacy
+provider timeouts, and a waiter returns after at most three seconds. Resolver reads retain S06 coverage: a page or targeted acquisition
 is not full history. Only a complete finite caller-owned repair scope can prove
 a provider miss; Incomplete, Capacity and Timeout cannot authorize acquisition.
 
@@ -777,6 +779,11 @@ owned resolution/publication and reservations; a new waiter does not blindly
 refetch providers. Keep current error/503 retry classification and at most three
 backend attempts; the provider's own allowed retry count remains separate.
 Do not extend these timeouts to make synchronous S3 publication appear faster.
+AK amended this on 2026-10-14 ([S13d](#s13d-legacy-provider-timeouts-and-the-request-waiter-2026-10-14)).
+A provider acquisition that does not finish inside the attempt continues as owned
+work with the legacy provider timeout. The request answers with the data that is
+ready and omits the rest with legacy's absent-data output. The next request uses
+the published record. The attempt cap itself is unchanged.
 
 For a new-data miss, bound the chain explicitly:
 
@@ -1375,7 +1382,9 @@ quota owner; the ring moves to the key that answered or past every rejected key.
 
 KMA web pages use a keyless transport with the S08 body/header bounds, HTTPS or literal
 loopback, same-host redirects only, and at most two attempts (transport failure, incomplete
-body or 5xx) inside the caller deadline. Legacy unbounded RSS retries and 10×1 s scrape loops
+body or 5xx) inside the caller deadline. Since S13d each attempt has the legacy per-service
+timeout instead of a fixed 3 s (KMA web pages 30 s; data.go.kr services in the S13d table).
+Legacy unbounded RSS retries and 10×1 s scrape loops
 are capture scheduling for S14, not acquisition. Aggregate `server2_domestic_*` counters cover
 funded calls, acknowledged reserved and consumed units, per-outcome attempts, funding denials,
 public attempts and complete/incomplete groups; they are not yet exposed on `/internal/metrics`.
@@ -1543,7 +1552,8 @@ the runtime owner starts `CaptureRunner::run`.
   attempted at most once per KST hour each; backfill left by a cap or funding stop carries over
   to the next tick. Calls stay under S08 budgets and per-tick HTTP attempt caps (2,560 funded,
   64 keyless; each acquisition is charged its worst case of two attempts per page before it
-  starts), four acquisitions run at a time, a funding error stops further data.go.kr launches,
+  starts), four acquisitions run at a time (each until two legacy-timeout attempts plus a 3 s
+  publication allowance since S13d), a funding error stops further data.go.kr launches,
   present publications are skipped, and a publication counts only after S06 publication. One owner per scope per process;
   multi-host capture still needs the section 9 gate. RSS, mid-range and life-index inputs are
   latest-only and stay request-time acquisitions.
@@ -1852,3 +1862,84 @@ Verification (local, test peers only):
 - The release `kma_smoke.py` passes.
 
 Live provider shapes and timing, the cold-cell latency (S15b-4) and production quotas are unverified.
+
+### S13d legacy provider timeouts and the request waiter (2026-10-14)
+
+[S13d](../../plans/issue-2747.md) ([spec](../../specs/issue-2747.md)) applies AK's 2026-10-14
+decisions. Legacy collected in the background with long per-request timeouts. server2 serves user
+requests, so a request never waits long, and a slow but working provider is still collected:
+
+- **Waiter.** A request waits at most 3 s for an acquisition, or less when the remaining gateway
+  attempt is shorter. It then answers with the data that is ready. A section whose acquisition has
+  not finished is omitted with legacy's absent-data output. S13d adds no new 503: the
+  `EWEATHERUNAVAILABLE` response stays only where legacy returns it today.
+- **Owned acquisition.** The acquisition continues as owned work with the legacy provider timeout.
+  S08 funds it before HTTP and S06 publishes its raw record, so the next request includes the data.
+  Later requests join it instead of starting another acquisition.
+
+**Timeouts per HTTP attempt** (`providers::attempt_timeout`, chosen from the service in the
+request path; the connect bound is 3 s):
+
+| Service | Timeout | Legacy source |
+| --- | ---: | --- |
+| VilageFcst 2.0, MidFcst, forecast zone | 10 s | `collectTownForecast.js:373`, `kma.forecast.zone.controller.js:123` |
+| UV V5, pollen V3 | 30 s | `lifeIndexKmaRequester.js:1277`, `:1495` |
+| Warnings | 30 s | `kmaWarningRequester.js:20` |
+| AirKorea (four B552584 operations), KASI | 5 s | `airkoreaObservation.js:183`, `kasi.riseset.controller.js:92` |
+| KMA web pages (RSS, AWS, city) | 30 s | `kmaScraper.js:206`, `:269`; legacy RSS had no timeout |
+| Visual Crossing | 8 s | `dsf.controller.js:53` (S11 already used it) |
+
+Another data.go.kr path keeps 3 s. World air providers keep the S13a 3 s (`config/air.js:49`).
+An owned acquisition may spend two attempts per page (`family::owned_provider_time`). The S14
+capture deadline is now those two attempts plus the former 3 s, which becomes the publication
+allowance. The S07 resolver's owned `acquisition` stage defaults to 63 s (two 30 s attempts plus
+3 s) and is capped at 120 s.
+
+**Shared owned acquisitions.** `resolver::OwnedFlights` runs one owned task per key. A key is a grid
+publication, or a national dataset and publication time. AirKorea, KMA scraper pages and ASOS answer
+the whole country at once, so the requests of every cell wait on the same key; S15b-2 and S15b-3 use
+this. `join` returns `Ready`, `Pending` (omit the section), `Expired`, `Failed` or `Busy` by
+`min(ready_by, now + 3 s)`. A finished outcome answers later joiners for a short retention (the
+stage bound in the resolver), so a request that read the store just before publication does not
+start a second acquisition. At most 16 tasks run by default; a full pool starts nothing.
+
+The S07 resolver uses it for its acquisition stage. The key is the repair scope (catalog and
+periods), not the response key. Responses for different locations, locales or units therefore
+share one provider call. Before S13d, every response key acquired separately: twelve locations on
+one scope made twelve provider calls. The response owner waits for the shared task, reads the
+published scope and assembles within a new stage bound. The request waiter is capped at 3 s
+(`WAITER_BOUND`).
+
+**World.** The S11 weather waiter ends 150 ms before the attempt deadline, so the legacy
+`_fallback` answer (stored current, or a stale current up to 6 h, with stored days) is assembled
+before the dispatcher's own attempt timeout. With no stored current the answer is still the legacy
+error. A slow air branch still answers `airStatus` pending. The owned VC fetch (8 s) and air task
+continue and publish.
+
+**Pollen.** The [dataset 15085289](https://www.data.go.kr/data/15085289/openapi.do) Swagger names
+the day+3 field `todaysaftertomorrow`; its manual lists no field names. Two live weeds calls on
+2026-10-15 returned `twodaysaftertomorrow` instead. Validation accepts both. Raw records keep the
+bytes, and the legacy client response is unchanged. Legacy reads only `todaysaftertomorrow`, so it
+drops day+3. A derived pollen view (S15b-3) should carry day+3.
+
+**Live check (2026-10-15 00:07 KST, one call per service, keys from the legacy configuration, never
+logged).** Pollen V3: `twodaysaftertomorrow` present in the 18시 and 06시 issues. Response times:
+VilageFcst 1.39 s (1,016 rows), MidTa 0.09 s, UV V5 1.30 s (1,000 rows), forecast zone 1.13 s,
+KASI 0.13 s, KMA RSS 0.07 s, AWS minute page 0.10 s. AirKorea station data took 0.16 s with one key.
+With another key, data.go.kr answered 504 after 30.07 s, which the legacy 5 s timeout bounds. These
+are single samples, not latency distributions.
+
+Verification (local, test peers only). These tests failed on the base tree:
+
+- a town forecast and an RSS page answering after 4 s;
+- a 4 s resolver acquisition that must publish after the waiter left;
+- one acquisition for twelve locations;
+- a pollen row with only `twodaysaftertomorrow`.
+
+These functional tests use real loopback transports:
+
+- 24 cell requests on the AirKorea station list: one provider call, then an S3 read-back;
+- the gateway with the native world family: a 4 s VC fetch gives a 200 from stored records, then
+  the legacy oracle bytes with one VC call;
+- WAQI after 2.5 s under a 2 s gateway deadline: `airStatus` pending, then the oracle bytes with
+  one WAQI call.

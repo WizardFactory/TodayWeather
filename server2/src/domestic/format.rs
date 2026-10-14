@@ -246,11 +246,14 @@ pub fn inspect_page(
                 if uv {
                     k.len() > 1 && k.starts_with('h') && k[1..].bytes().all(|b| b.is_ascii_digit())
                 } else {
+                    // The real V3 response carries day+3 as `twodaysaftertomorrow` (AK A-2,
+                    // 2026-10-14); legacy reads the absent `todaysaftertomorrow`, kept here too.
                     matches!(
                         k,
                         "today"
                             | "tomorrow"
                             | "dayaftertomorrow"
+                            | "twodaysaftertomorrow"
                             | "todaysaftertomorrow"
                             | "theDayAfterTomorrow"
                     )

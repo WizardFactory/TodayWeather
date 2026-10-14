@@ -5,6 +5,7 @@
 use super::{DomesticError, publication::Publication};
 use crate::storage::ProviderKey as RecordKey;
 use reqwest::Url;
+use std::time::Duration;
 
 /// data.go.kr service whose key position is kept independently (#2604 stickiness).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -20,6 +21,25 @@ pub enum Service {
     RiseSet,
     /// data.go.kr FcstZoneInfoService `getFcstZoneCd` (S13b; legacy #2740).
     ForecastZone,
+}
+impl Service {
+    /// Legacy timeout of one HTTP attempt (S13d). The funded transport applies the same value
+    /// from the request path ([`crate::providers::attempt_timeout`]).
+    pub fn attempt_timeout(self) -> Duration {
+        use crate::providers::legacy_timeout as t;
+        match self {
+            Self::VilageFcst | Self::MidFcst | Self::ForecastZone => t::TOWN_FORECAST,
+            Self::LivingWthrIdx | Self::HealthWthrIdx => t::LIFE_INDEX,
+            Self::AirKorea => t::AIRKOREA,
+            Self::RiseSet => t::KASI,
+        }
+    }
+}
+/// Provider time an owned acquisition allows for one page: the two HTTP attempts S08/S13
+/// permit, each with the legacy timeout. Owned work (S14 capture, S07 owners) adds its
+/// publication allowance; a request waiter never waits this long (S13d).
+pub fn owned_provider_time(attempt: Duration) -> Duration {
+    attempt.saturating_mul(2)
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DataGoKrFamily {
@@ -242,6 +262,10 @@ pub enum WebFamily {
     CityObservation,
 }
 impl WebFamily {
+    /// Legacy `kmaScraper` timeout of one page attempt (S13d).
+    pub fn attempt_timeout(self) -> Duration {
+        crate::providers::legacy_timeout::KMA_WEB
+    }
     pub fn kind(self) -> &'static str {
         match self {
             Self::TownRss => "town-rss",
