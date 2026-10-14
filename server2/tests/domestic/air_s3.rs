@@ -129,12 +129,18 @@ async fn seed_oracle(store: &Store) {
         .await;
     }
     let dust = items_of(at(oracle(), &["dust", "acquisitions"]));
-    for (a, (fetched, _, pages)) in dust.iter().zip(acquisitions(&["dust", "acquisitions"])) {
+    let runs = items_of(at(oracle(), &["dust", "runs"]));
+    for ((a, run), (fetched, _, pages)) in dust
+        .iter()
+        .zip(runs)
+        .zip(acquisitions(&["dust", "acquisitions"]))
+    {
         let search = text(at(a, &["search"])).replace('-', "");
-        let day: u32 = search.parse().unwrap();
+        // The record period is the announcement chosen before the call (`YYYY-MM-DD HH시 발표`).
+        let expected = text(at(run, &["expected"]));
         let period = Period {
-            local_date: day,
-            slot: "0000".into(),
+            local_date: expected[..10].replace('-', "").parse().unwrap(),
+            slot: format!("{}00", &expected[11..13]),
         };
         publish(
             store,
@@ -227,7 +233,9 @@ struct StubState {
     hours_ago: AtomicUsize,
     /// Added to every PM10 value (distinguishes a later acquisition).
     pm10_offset: AtomicUsize,
-    /// Answer 1,200 rows on two pages: 1,000 of the previous hour, then 200 of this hour.
+    /// 1: 1,200 rows on two pages, 1,000 of the previous hour then 200 of this hour.
+    /// 2: 1,000 rows of this hour, then 7 rows without `dataTime`.
+    /// 3: 1,000 rows without `dataTime`, then 200 rows of this hour.
     two_pages: AtomicUsize,
     queries: Mutex<Vec<String>>,
 }
@@ -269,12 +277,18 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> impl IntoRespo
         let ago = state.hours_ago.load(Ordering::SeqCst) as f64;
         let hour = kst_text(now_ms() - ago * 3_600_000.);
         let offset = state.pm10_offset.load(Ordering::SeqCst);
-        if state.two_pages.load(Ordering::SeqCst) == 1 {
+        let shape = state.two_pages.load(Ordering::SeqCst);
+        if shape > 0 {
             let page: usize = get("pageNo").unwrap().parse().unwrap();
-            let (range, time) = if page == 1 {
-                (0..1000, kst_text(now_ms() - 3_600_000.))
-            } else {
-                (1000..1200, kst_text(now_ms()))
+            let this = serde_json::Value::String(kst_text(now_ms()));
+            let previous = serde_json::Value::String(kst_text(now_ms() - 3_600_000.));
+            let (range, time, total) = match (shape, page) {
+                (1, 1) => (0..1000, previous, 1200),
+                (1, _) => (1000..1200, this, 1200),
+                (2, 1) => (0..1000, this, 1007),
+                (2, _) => (1000..1007, serde_json::Value::Null, 1007),
+                (_, 1) => (0..1000, serde_json::Value::Null, 1200),
+                (_, _) => (1000..1200, this, 1200),
             };
             let items: Vec<serde_json::Value> = range
                 .map(|i| {
@@ -283,7 +297,7 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> impl IntoRespo
                 })
                 .collect();
             let body = json!({"response": {"header": {"resultCode": "00", "resultMsg": "NORMAL_CODE"},
-                "body": {"totalCount": 1200, "items": items, "pageNo": page, "numOfRows": 1000}}});
+                "body": {"totalCount": total, "items": items, "pageNo": page, "numOfRows": 1000}}});
             return ([("content-type", "application/json")], body.to_string());
         }
         let items: Vec<serde_json::Value> = STATIONS
@@ -362,7 +376,14 @@ fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn AirKoreaAcquire> 
     let settings = AirKoreaSettings::from_vars(&vars).unwrap().unwrap();
     Arc::new(LiveAirKorea::new(
         settings,
-        Arc::new(server2::providers::HttpProviderTransport::new(2 << 20).unwrap()),
+        Arc::new(
+            server2::providers::HttpProviderTransport::with_attempt_timeout(
+                2 << 20,
+                server2::domestic::kma::source::live::ATTEMPT_TIMEOUT,
+                server2::domestic::kma::source::live::ATTEMPT_TIMEOUT,
+            )
+            .unwrap(),
+        ),
         Arc::new(server2::providers::HttpPublicTransport::new(2 << 20).unwrap()),
         Arc::new(peer.transport()),
         store,
@@ -997,5 +1018,231 @@ fn the_forecast_source_follows_legacy_query_defaults() {
             ("airForecastSource", "airkorea")
         ])),
         "a repeated key is an array"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn rows_without_a_data_time_never_reject_a_nationwide_page() {
+    for (shape, expected_ago) in [(2usize, 0.), (3, 0.)] {
+        let peer = Peer::new();
+        let store =
+            Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+        let stub = stub().await;
+        stub.state.two_pages.store(shape, Ordering::SeqCst);
+        let acquire = live(&peer, store.clone(), &stub.base);
+        let hour = kst(now_ms() - expected_ago * 3_600_000.).hour_start();
+        assert_eq!(
+            acquire.acquire(AirKoreaRequest::nationwide()).await,
+            Ok(Some(hour.period())),
+            "shape {shape}"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_attempt_may_take_longer_than_three_seconds() {
+    // Legacy allows 5 s per AirKorea attempt; the owned acquisition has no request deadline.
+    let peer = Peer::new();
+    let store = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    stub.state.delay_ms.store(4_000, Ordering::SeqCst);
+    let acquire = live(&peer, store.clone(), &stub.base);
+    let hour = kst(now_ms()).hour_start();
+    assert_eq!(
+        acquire.acquire(AirKoreaRequest::nationwide()).await,
+        Ok(Some(hour.period()))
+    );
+    assert_eq!(
+        stub.state.nationwide.load(Ordering::SeqCst),
+        1,
+        "one attempt"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_failed_refresh_answers_with_the_last_successful_fold() {
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    let inputs = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
+        &peer,
+        store.clone(),
+        &stub.base,
+    )));
+    let seoul = town(37.5657, 126.9769);
+    let deadline3 = || Instant::now() + Duration::from_secs(3);
+    let warm = inputs
+        .load(&seoul, "서울특별시", "중구", false, now_ms(), deadline3())
+        .await;
+    let warm = warm.arpltn.unwrap();
+    assert!(warm.get("arpltn").is_some());
+    // S3 listings now fail. A request of a later hour acquires that hour (publication does not
+    // list), which also invalidates the memory; its refresh then fails.
+    reqwest::Client::new()
+        .post(format!("{}__catalog?mode=bad-list&key=x", peer.endpoint()))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    let later = now_ms() + 3_600_000.;
+    let _ = inputs
+        .load(&seoul, "서울특별시", "중구", false, later, deadline3())
+        .await;
+    // The next request's refresh fails as well: it answers with the last successful folds.
+    let answer = inputs
+        .load(&seoul, "서울특별시", "중구", false, later, deadline3())
+        .await;
+    let arpltn = answer.arpltn.expect("last successful fold");
+    assert_eq!(items_of(arpltn.get("stnList").unwrap()).len(), 3);
+    assert!(arpltn.get("arpltn").is_some());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_late_station_list_of_an_earlier_day_refolds_like_a_cold_reader() {
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let list = |names: &[(&str, f64, f64)]| -> Vec<u8> {
+        let items: Vec<serde_json::Value> = names
+            .iter()
+            .map(|(n, lat, lon)| {
+                json!({"stationName": n, "dmX": lat.to_string(), "dmY": lon.to_string(),
+                       "addr": "서울", "item": "PM10", "mangName": "도시대기", "year": "2000"})
+            })
+            .collect();
+        serde_json::to_vec(&json!({"response": {"header": {"resultCode": "00"},
+            "body": {"totalCount": items.len(), "items": items, "pageNo": 1, "numOfRows": 100}}}))
+        .unwrap()
+    };
+    let day = |d: u32| Period {
+        local_date: d,
+        slot: "0000".into(),
+    };
+    let now = 1_791_955_500_000.; // 2026-10-14 14:25 KST
+    // List B of 10-14 is folded first.
+    publish(
+        &store,
+        "airkorea-station-list",
+        "stations",
+        day(20261014),
+        "20261014",
+        now - 3_600_000.,
+        &[list(&[
+            ("중구", 37.564, 126.975),
+            ("종로구", 37.572, 127.005),
+        ])],
+    )
+    .await;
+    let warm = AirInputs::new(transport.clone(), store.clone());
+    assert_eq!(
+        warm.stations(now, deadline()).await.unwrap().docs().len(),
+        2
+    );
+    // List A was fetched on 10-13 before midnight but published only now; it has a station
+    // that list B lacks.
+    publish(
+        &store,
+        "airkorea-station-list",
+        "stations",
+        day(20261013),
+        "20261013",
+        now - 15. * 3_600_000.,
+        &[list(&[
+            ("용산구", 37.540, 127.004),
+            ("중구", 37.564, 126.975),
+        ])],
+    )
+    .await;
+    let refreshed = warm
+        .refresh_stations(now, deadline())
+        .await
+        .unwrap()
+        .unwrap();
+    let cold = AirInputs::new(transport.clone(), store.clone())
+        .stations(now, deadline())
+        .await
+        .unwrap();
+    let json = |s: &Stations| OrderedJson::Array(s.docs().iter().map(|d| d.json()).collect());
+    same(
+        &json(&refreshed),
+        &json(&cold),
+        "warm refold equals the cold fold",
+    );
+    assert_eq!(cold.docs().len(), 3);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_forecast_run_keeps_the_announcement_chosen_before_the_call() {
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let page = |announce: &str, date: &str| -> Vec<u8> {
+        let items = vec![
+            json!({"dataTime": announce, "informCode": "PM10", "informData": date,
+            "informGrade": "서울 : 나쁨,인천 : 좋음", "informCause": "c", "informOverall": "o",
+            "actionKnack": null}),
+        ];
+        serde_json::to_vec(&json!({"response": {"header": {"resultCode": "00"},
+            "body": {"totalCount": 1, "items": items, "pageNo": 1, "numOfRows": 100}}}))
+        .unwrap()
+    };
+    let kst_ms = |date: u32, time: u16| {
+        server2::history::schedule::to_ms(Publication::new(date, time).unwrap()) as f64
+    };
+    // Started before 11:00 (the 05시 announcement expected), completed at 11:00:30.
+    publish(
+        &store,
+        "airkorea-dust-forecast",
+        "dust-forecast",
+        Publication::new(20261014, 500).unwrap().period(),
+        "20261014",
+        kst_ms(20261014, 1100) + 30_000.,
+        &[page("2026-10-14 05시 발표", "2026-10-14")],
+    )
+    .await;
+    // Started at 04:59 on 10-15 (the 10-14 23시 announcement), completed at 05:00:20.
+    publish(
+        &store,
+        "airkorea-dust-forecast",
+        "dust-forecast",
+        Publication::new(20261014, 2300).unwrap().period(),
+        "20261014",
+        kst_ms(20261015, 500) + 20_000.,
+        &[page("2026-10-14 23시 발표", "2026-10-15")],
+    )
+    .await;
+    let now = kst_ms(20261015, 600);
+    let answer = AirInputs::new(transport.clone(), store.clone())
+        .load(
+            &town(37.57, 126.98),
+            "서울특별시",
+            "종로구",
+            true,
+            now,
+            deadline(),
+        )
+        .await;
+    let (_, forecast) = answer.dust.unwrap();
+    same(
+        &forecast.unwrap(),
+        &OrderedJson::parse(r#"[{"date":"20261015","dustForecast":{"sido":"서울","PM10Grade":2,"PM10Str":"나쁨"}}]"#.as_bytes()).unwrap(),
+        "the 23시 run of 10-14 is applied",
+    );
+    let answer = AirInputs::new(transport.clone(), store.clone())
+        .load(
+            &town(37.57, 126.98),
+            "서울특별시",
+            "종로구",
+            true,
+            kst_ms(20261014, 1200),
+            deadline(),
+        )
+        .await;
+    let (_, forecast) = answer.dust.unwrap();
+    same(
+        &forecast.unwrap(),
+        &OrderedJson::parse(r#"[{"date":"20261014","dustForecast":{"sido":"서울","PM10Grade":2,"PM10Str":"나쁨"}}]"#.as_bytes()).unwrap(),
+        "the 05시 run completed after 11:00 is applied",
     );
 }

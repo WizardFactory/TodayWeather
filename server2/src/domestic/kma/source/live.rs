@@ -29,6 +29,8 @@ use tokio::time::Instant;
 /// Legacy AirKorea client bound for one logical call (`airkoreaObservation`: 5 s per attempt,
 /// one transient retry, 30 s per call).
 pub const CALL_BUDGET: Duration = Duration::from_secs(30);
+/// Legacy AirKorea attempt bound (`airkoreaObservation`: `timeoutMs` 5,000 per attempt).
+pub const ATTEMPT_TIMEOUT: Duration = Duration::from_secs(5);
 /// S06 publication bound after a complete acquisition.
 const PUBLISH_BUDGET: Duration = Duration::from_secs(10);
 const DAY_MS: i64 = 86_400_000;

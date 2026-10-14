@@ -658,14 +658,13 @@ impl Forecasts {
     pub fn docs(&self) -> &[Forecast] {
         &self.docs
     }
-    /// One `getMinuDustFrcstDspth` run at `fetched_ms` over the acquisition's items:
-    /// `_checkDataTime` (skip when the expected announcement is stored), `_parseFrcst` (items of
-    /// the expected announcement) and `_saveFrcst` (insert, or update the first document of the
-    /// same `informData` and `informCode`, merging grades other than `예보없음` by region).
-    pub fn apply(&mut self, fetched_ms: f64, items: &[Value]) {
-        let Some(expected) = expected_announcement(fetched_ms) else {
-            return;
-        };
+    /// One `getMinuDustFrcstDspth` run over the acquisition's items. `expected` is the
+    /// announcement `_checkDataTime` chose before the call (`YYYY-MM-DD HH시 발표`): the run is
+    /// skipped when it is stored; `_parseFrcst` keeps its items and `_saveFrcst` inserts, or
+    /// updates the first document of the same `informData` and `informCode`, merging grades
+    /// other than `예보없음` by region.
+    pub fn apply(&mut self, expected: &str, items: &[Value]) {
+        let expected = expected.to_owned();
         if self
             .docs
             .iter()
@@ -725,7 +724,12 @@ impl Forecasts {
 }
 /// `_checkDataTime`: the announcement expected at `now` (`YYYY-MM-DD HH시 발표`).
 pub fn expected_announcement(now: f64) -> Option<String> {
-    let p = crate::domestic::publication::dust_forecast_announcement(now as i64)?;
+    announcement_text(crate::domestic::publication::dust_forecast_announcement(
+        now as i64,
+    )?)
+}
+/// `YYYY-MM-DD HH시 발표` of an announcement.
+pub fn announcement_text(p: crate::domestic::publication::Publication) -> Option<String> {
     let d = p.base_date();
     Some(format!(
         "{}-{}-{} {:02}시 발표",

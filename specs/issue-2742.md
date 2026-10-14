@@ -155,14 +155,18 @@ coordinates; server2 does not store it (none live).
 
 - `AirKoreaRequest::nationwide()`: query `sidoName=전국`, `pageNo`, `numOfRows=1000`, `ver=1.3`;
   every row needs a nonblank `stationName` and is unique per station and data time; a row without
-  a valid data time is unusable; the publication is the most common data time over all pages
-  (ties: newest).
+  a valid data time is unusable, and a page of such rows only is not fatal; the publication is the
+  most common data time over all pages (ties: newest). Attempts are bounded at 5 s (legacy).
+- `AirKoreaRequest::dust_forecast_for(announcement)`: the announcement `_checkDataTime` expects
+  when the call starts is searched by its date and recorded as the record period; the fold parses
+  the items of that announcement (a record without one uses the announcement at completion).
   Record key `sido-nationwide`, kind `airkorea-station`, partition of that hour.
 - The S3 source reads published catalogs only. Observations: the hour partitions of the last 26
   hours, re-read at most every 60 s (the last 3 hours each refresh) or after an own acquisition,
   parsed rows kept per acquisition and folded in completion order. Station list: every acquisition
-  since 2026-01 in completion order, refreshed every 10 minutes. Dust forecast: search dates
-  `date-2..date`.
+  since 2026-01 in completion order, refreshed every 10 minutes from one day before the last folded
+  list (a late list of an earlier day refolds) and refolded daily. Dust forecast: search dates
+  `date-2..date`. A refresh that fails answers with the last successful fold.
 - A request starts (or joins) the acquisition of a missing current dataset: the nationwide hour
   of the request instant (one attempt per hour every 10 minutes), a station list older than 7
   days (waited for only when none exists), the expected dust announcement (only when the request

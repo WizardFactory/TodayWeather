@@ -1909,13 +1909,15 @@ dataset and period (S13b `DomesticAcquirer`, funded through S08, published throu
 | --- | --- | --- | --- |
 | Real-time observations | `ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty`, `sidoName=전국`, `numOfRows=1000`, `ver=1.3`, `returnType=json` | `airkorea-station` / `sido-nationwide` / the dataset's most common data hour `YYYYMMDD-HH00` | the request's KST hour; at most one attempt per hour every 10 minutes |
 | Station list | `MsrstnInfoInqireSvc/getMsrstnList`, 100 rows per page, no `ver` (S13b) | `airkorea-station-list` / `stations` / KST fetch day | the newest list older than 7 days (legacy: only at process start) |
-| Dust forecast | `ArpltnInforInqireSvc/getMinuDustFrcstDspth`, `searchDate`, `ver=1.1` (S13b) | `airkorea-dust-forecast` / `dust-forecast` / search date | the announcement `_checkDataTime` expects; only when the request reads AirKorea forecasts (`airForecastSource=airkorea`, or absent or `(null)`, which legacy defaults to `airkorea`; the app sends `kaq`) |
+| Dust forecast | `ArpltnInforInqireSvc/getMinuDustFrcstDspth`, `searchDate`, `ver=1.1` (S13b) | `airkorea-dust-forecast` / `dust-forecast` / search date; the record period is the announcement chosen before the call (`AirKoreaRequest::dust_forecast_for`) | the announcement `_checkDataTime` expects; only when the request reads AirKorea forecasts (`airForecastSource=airkorea`, or absent or `(null)`, which legacy defaults to `airkorea`; the app sends `kaq`) |
 
 Legacy collected real-time observations per sido (`kecoRequester._collectProvinces`, 17 calls at UTC
 minutes 3, 13, ... 53). The technical document lists `전국` among the `sidoName` values; on
 2026-10-14 one `numOfRows=1000` call returned all 672 stations in 1.85 s (`sidoName` `전남광주` for
 Jeonnam and Gwangju stations). Seven of the 672 rows had `dataTime: null`: legacy `parseRows` would
-have rejected that sido's whole batch; server2 skips such a row and keeps the dataset. AirKorea
+have rejected that sido's whole batch; server2 skips such a row and keeps the dataset (a page of
+such rows only is not fatal either). An AirKorea attempt may take 5 s (legacy `timeoutMs`), within
+the 30 s call budget. AirKorea
 requests per hour: one page per national fetch, normally one to three fetches per hour while
 requests arrive (at most six), about 24-72 a day, plus 7 station-list pages a week and at most 24
 forecast pages a day (only for requests that read AirKorea forecasts). The development quota is 500 requests a day per
@@ -1940,7 +1942,10 @@ multi-page nationwide dataset is dated by its most common data time over all pag
 
 **Request time (AK, 2026-10-14).** A request waits for an owned acquisition only until its own
 deadline (100 ms before the native attempt ends); every read, lock and parse is bounded by that
-deadline, and a re-read after the acquisition that cannot finish keeps the data read first.
+deadline, and a re-read after the acquisition that cannot finish keeps the data read first. A
+refresh that fails (S3 outage) answers with the last successful folds under the request's own
+freshness bounds. The station list is re-read from one day before the last folded list every 10
+minutes (a late list of an earlier day refolds) and refolded daily.
 Otherwise it answers with what S3 holds: the
 legacy answer for missing data (no merged observation, an empty station list, the forecast error,
 no fallback value), never 503 or a forward. The acquisition keeps running with the legacy AirKorea

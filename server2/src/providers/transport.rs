@@ -88,7 +88,21 @@ pub struct HttpProviderTransport {
 }
 impl HttpProviderTransport {
     pub fn new(maximum: usize) -> Result<Self, ProviderTransportError> {
-        if maximum == 0 || maximum > 8 * 1024 * 1024 {
+        Self::with_attempt_timeout(maximum, Duration::from_secs(1), Duration::from_secs(3))
+    }
+    /// A transport with its own connect and whole-attempt bounds (S15b-3: the legacy AirKorea
+    /// client allows 5 s per attempt). The caller's deadline still bounds every attempt.
+    pub fn with_attempt_timeout(
+        maximum: usize,
+        connect: Duration,
+        attempt: Duration,
+    ) -> Result<Self, ProviderTransportError> {
+        if maximum == 0
+            || maximum > 8 * 1024 * 1024
+            || connect.is_zero()
+            || attempt.is_zero()
+            || attempt > Duration::from_secs(30)
+        {
             return Err(ProviderTransportError::Invalid);
         }
         let client = reqwest::Client::builder()
@@ -100,8 +114,8 @@ impl HttpProviderTransport {
             .no_brotli()
             .no_deflate()
             .no_zstd()
-            .connect_timeout(Duration::from_secs(1))
-            .timeout(Duration::from_secs(3))
+            .connect_timeout(connect)
+            .timeout(attempt)
             .build()
             .map_err(|_| ProviderTransportError::Transport)?;
         Ok(Self { client, maximum })

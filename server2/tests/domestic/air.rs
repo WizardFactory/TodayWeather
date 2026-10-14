@@ -152,9 +152,11 @@ fn station_order_follows_v8_sort_for_every_three_station_pattern() {
 
 #[test]
 fn dust_forecast_fold_and_answers_equal_legacy() {
+    // Each run applies the announcement legacy `_checkDataTime` chose when it started.
     let mut f = Forecasts::default();
-    for (fetched, items, _) in acquisitions(&["dust", "acquisitions"]) {
-        f.apply(fetched, &items);
+    let runs = items_of(at(oracle(), &["dust", "runs"]));
+    for ((_, items, _), run) in acquisitions(&["dust", "acquisitions"]).iter().zip(runs) {
+        f.apply(&text(at(run, &["expected"])), items);
     }
     // Stored documents: informData, informCode, dataTime and the (region, grade) list.
     let expected = items_of(at(oracle(), &["dust", "docs"]));

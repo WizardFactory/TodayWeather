@@ -9,8 +9,8 @@
 //! flight acquisition keyed by dataset and period; the request waits for it only until its own
 //! deadline and otherwise answers with what S3 holds (the legacy output for absent data).
 use super::airkorea::{
-    Forecasts, ObsRow, Observations, Stations, arpltn_answer, dust_answer, expected_announcement,
-    fallback_arpltn, has_air_value,
+    Forecasts, ObsRow, Observations, Stations, announcement_text, arpltn_answer, dust_answer,
+    expected_announcement, fallback_arpltn, has_air_value,
 };
 use super::doc::{Doc, Val};
 use super::live::{AirKoreaAcquire, Flights, wait};
@@ -19,7 +19,7 @@ use crate::domestic::airkorea::AirKoreaRequest;
 use crate::domestic::publication::{self, Publication};
 use crate::gateway::{BoxFuture, OrderedJson};
 use crate::history::{IndexListing, schedule};
-use crate::storage::{CatalogStore, ProviderKey};
+use crate::storage::{CatalogId, CatalogStore, LookupOutcome, ProviderKey, sha256};
 use crate::world::air::{AirOutcome, AirSource, usable};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashSet};
@@ -41,6 +41,10 @@ const MEMO: Duration = Duration::from_secs(60);
 const STATION_LIST_AGE_MS: f64 = 7. * DAY_MS;
 /// Partitions of the observation dataset re-read on every refresh (late acquisitions).
 const OPEN_HOURS: f64 = 3.;
+/// The station list is refreshed every 10 minutes from one day before the last folded list
+/// (a late publication of an earlier day refolds) and refolded completely once a day.
+const STATION_REFRESH: Duration = Duration::from_secs(600);
+const STATION_REFOLD: Duration = Duration::from_secs(86_400);
 /// Demand-gated capture of the nationwide hour: while a request arrived within this window, the
 /// current hour is acquired even when no request needs it, so the 24-hour station rows have no
 /// gaps (legacy collected every 10 minutes regardless of demand).
@@ -86,6 +90,8 @@ fn hour_partition(ms: f64) -> String {
     schedule::from_ms(ms as i64).hour_start().partition()
 }
 
+/// A dust-forecast acquisition: (completion instant, partition, announcement, pages).
+type ForecastAcquisition = (u64, String, Option<String>, Vec<Arc<[u8]>>);
 /// `(region, city, date)` of a dust-forecast answer.
 pub type DustArgs = (String, String, String);
 /// Parsed observation acquisitions per hour partition: (completion instant, rows).
@@ -109,6 +115,7 @@ struct StationCache {
     seen: HashSet<(u64, String)>,
     last: (u64, String),
     refreshed: std::time::Instant,
+    folded: std::time::Instant,
     generation: u64,
 }
 struct ObsCache {
@@ -129,6 +136,10 @@ pub struct AirInputs<T> {
     generation: Arc<AtomicU64>,
     stations: tokio::sync::Mutex<Option<StationCache>>,
     observations: tokio::sync::Mutex<Option<ObsCache>>,
+    /// The last successful folds: a refresh that fails or misses the deadline answers with
+    /// them (the readers apply the request's own freshness bounds).
+    last_stations: std::sync::Mutex<Option<(Arc<Stations>, f64)>>,
+    last_observations: std::sync::Mutex<Option<Arc<Observations>>>,
     capture: Arc<Capture>,
     capture_every: Duration,
 }
@@ -151,6 +162,8 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             generation: Arc::new(AtomicU64::new(0)),
             stations: tokio::sync::Mutex::new(None),
             observations: tokio::sync::Mutex::new(None),
+            last_stations: std::sync::Mutex::new(None),
+            last_observations: std::sync::Mutex::new(None),
             capture: Arc::new(Capture::default()),
             capture_every: CAPTURE_EVERY,
         }
@@ -237,7 +250,25 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
     /// The folded station list; an absent or old list starts its acquisition, and an absent
     /// list is waited for until `deadline`.
     pub async fn stations(&self, now: f64, deadline: Instant) -> Result<Arc<Stations>, String> {
-        let current = bounded(deadline, self.station_fold(now, now, deadline)).await?;
+        let current = match bounded(deadline, self.station_fold(now, now, false, deadline)).await {
+            Ok(current) => {
+                if let Some(found) = &current {
+                    *self.last_stations.lock().unwrap_or_else(|e| e.into_inner()) =
+                        Some(found.clone());
+                }
+                current
+            }
+            // A failed refresh answers with the last successful fold (no acquisition: S3 is
+            // the failing part).
+            Err(e) => {
+                let last = self
+                    .last_stations
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .clone();
+                return last.map(|(s, _)| s).ok_or(e);
+            }
+        };
         let stale = current
             .as_ref()
             .is_none_or(|(_, newest)| *newest < now - STATION_LIST_AGE_MS);
@@ -245,16 +276,27 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             let rx = self.flight("station-list", AirKoreaRequest::station_list());
             if current.is_none()
                 && wait(rx, deadline).await
-                && let Ok(Some((s, _))) = bounded(
+                && let Ok(Some(found)) = bounded(
                     deadline,
-                    self.station_fold(now, wall_ms().max(now), deadline),
+                    self.station_fold(now, wall_ms().max(now), false, deadline),
                 )
                 .await
             {
-                return Ok(s);
+                *self.last_stations.lock().unwrap_or_else(|e| e.into_inner()) = Some(found.clone());
+                return Ok(found.0);
             }
         }
         Ok(current.map(|(s, _)| s).unwrap_or_default())
+    }
+    /// Refresh the station list now (the 10-minute refresh of [`Self::stations`]).
+    pub async fn refresh_stations(
+        &self,
+        now: f64,
+        deadline: Instant,
+    ) -> Result<Option<Arc<Stations>>, String> {
+        bounded(deadline, self.station_fold(now, now, true, deadline))
+            .await
+            .map(|found| found.map(|(s, _)| s))
     }
     /// Every station-list acquisition since 2026-01 folded in completion order, refreshed every
     /// 10 minutes (new acquisitions are appended; one completed before the last folded one
@@ -264,18 +306,28 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         &self,
         now: f64,
         until: f64,
+        force: bool,
         deadline: Instant,
     ) -> Result<Option<(Arc<Stations>, f64)>, String> {
         let generation = self.generation();
         let mut cache = self.stations.lock().await;
         if let Some(c) = cache.as_ref()
+            && !force
             && c.generation == generation
-            && c.refreshed.elapsed() < Duration::from_secs(600)
+            && c.refreshed.elapsed() < STATION_REFRESH
         {
             return Ok(Some((c.stations.clone(), c.newest_ms)));
         }
+        if cache
+            .as_ref()
+            .is_some_and(|c| c.folded.elapsed() >= STATION_REFOLD)
+        {
+            *cache = None;
+        }
         let k = key("stations");
-        let from = cache.as_ref().map(|c| c.last.1.clone());
+        // Re-read from one day before the last folded list: a list fetched before midnight and
+        // published after a later day's list is found and triggers a refold.
+        let from = cache.as_ref().map(|c| super::day_before(&c.last.1));
         let all_months = super::history_months(now);
         let wanted: Vec<u32> = all_months
             .into_iter()
@@ -319,10 +371,15 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                 c.generation = generation;
                 return Ok(Some((c.stations.clone(), c.newest_ms)));
             }
+            if new.is_empty() {
+                c.refreshed = std::time::Instant::now();
+                c.generation = generation;
+                return Ok(Some((c.stations.clone(), c.newest_ms)));
+            }
             // A late acquisition: refold from the start.
             *cache = None;
             drop(cache);
-            return Box::pin(self.station_fold(now, until, deadline)).await;
+            return Box::pin(self.station_fold(now, until, force, deadline)).await;
         }
         if fetched.is_empty() {
             return Ok(None);
@@ -345,6 +402,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             seen,
             last,
             refreshed: std::time::Instant::now(),
+            folded: std::time::Instant::now(),
             generation,
         });
         Ok(Some((stations, newest)))
@@ -358,7 +416,24 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         deadline: Instant,
     ) -> Result<Arc<Observations>, String> {
         let (folded, current) =
-            bounded(deadline, self.observation_fold(now, now, deadline)).await?;
+            match bounded(deadline, self.observation_fold(now, now, deadline)).await {
+                Ok((folded, current)) => {
+                    *self
+                        .last_observations
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner()) = Some(folded.clone());
+                    (folded, current)
+                }
+                // A failed refresh answers with the last successful fold.
+                Err(e) => {
+                    let last = self
+                        .last_observations
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .clone();
+                    return last.ok_or(e);
+                }
+            };
         if current {
             return Ok(folded);
         }
@@ -371,7 +446,16 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                 self.observation_fold(now, wall_ms().max(now), deadline),
             )
             .await;
-            return Ok(refreshed.map_or(folded, |(o, _)| o));
+            return Ok(match refreshed {
+                Ok((o, _)) => {
+                    *self
+                        .last_observations
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner()) = Some(o.clone());
+                    o
+                }
+                Err(_) => folded,
+            });
         }
         Ok(folded)
     }
@@ -506,9 +590,10 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         let Some(search) = publication::dust_forecast_announcement(now as i64) else {
             return Ok(folded);
         };
-        let rx = AirKoreaRequest::dust_forecast(search.date())
-            .ok()
-            .and_then(|r| self.flight(&format!("dust-forecast-{}", search.partition()), r));
+        let rx = self.flight(
+            &format!("dust-forecast-{}", search.partition()),
+            AirKoreaRequest::dust_forecast_for(search),
+        );
         if wait(rx, deadline).await {
             let refreshed = bounded(
                 deadline,
@@ -551,16 +636,72 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             .into_iter()
             .filter(|p| *p >= first.base_date() && *p <= day.base_date())
             .collect();
-        let fetched = self
-            .reader
-            .all(SOURCE, "airkorea-dust-forecast", &k, &parts, deadline)
-            .await
-            .map_err(|e| format!("dust-forecast read: {e}"))?;
+        let mut fetched = Vec::new();
+        for p in &parts {
+            fetched.extend(self.forecast_acquisitions(&k, p, deadline).await?);
+        }
+        fetched.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
         let mut out = Forecasts::default();
-        for f in fetched.iter().filter(|f| f.fetched_at_ms as f64 <= until) {
-            if let Some(items) = page_items(&f.pages) {
-                out.apply(f.fetched_at_ms as f64, &items);
+        for (at, _, expected, pages) in fetched.iter().filter(|f| f.0 as f64 <= until) {
+            // The record period is the announcement chosen before the call; a record without
+            // one falls back to the announcement expected when it completed.
+            let Some(expected) = expected
+                .clone()
+                .or_else(|| expected_announcement(*at as f64))
+            else {
+                continue;
+            };
+            if let Some(items) = page_items(pages) {
+                out.apply(&expected, &items);
             }
+        }
+        Ok(out)
+    }
+    /// Complete dust-forecast acquisitions of one search-date partition with their recorded
+    /// announcement: (completion instant, partition, announcement text, pages in page order).
+    async fn forecast_acquisitions(
+        &self,
+        k: &ProviderKey,
+        partition: &str,
+        deadline: Instant,
+    ) -> Result<Vec<ForecastAcquisition>, String> {
+        let id = CatalogId {
+            source: SOURCE.into(),
+            kind: "airkorea-dust-forecast".into(),
+            key_sha256: sha256(&k.canonical_bytes().map_err(|e| e.to_string())?),
+            partition: partition.into(),
+        };
+        let set = match self.reader.store.lookup(&id, deadline).await {
+            Ok(LookupOutcome::Ready(set)) => set,
+            Ok(LookupOutcome::Incomplete) => return Err("incomplete dust-forecast catalog".into()),
+            Err(crate::storage::Error::NotFound) => return Ok(Vec::new()),
+            Err(e) => return Err(format!("dust-forecast read: {e}")),
+        };
+        let mut out = Vec::new();
+        for a in set.acquisitions() {
+            let mut records: Vec<_> = a.records().to_vec();
+            records.sort_by_key(|r| r.envelope.pagination.as_ref().map_or(1, |p| p.page));
+            let Some(at) = records
+                .iter()
+                .map(|r| r.envelope.identity.fetched_at_ms)
+                .max()
+            else {
+                continue;
+            };
+            let period = &records[0].envelope.identity.period;
+            let expected = period
+                .slot
+                .parse::<u16>()
+                .ok()
+                .and_then(|t| Publication::new(period.local_date, t))
+                .filter(|p| p.minute() == 0 && [5, 11, 17, 23].contains(&p.hour()))
+                .and_then(announcement_text);
+            out.push((
+                at,
+                partition.to_owned(),
+                expected,
+                records.iter().map(|r| r.bytes.clone()).collect(),
+            ));
         }
         Ok(out)
     }

@@ -75,6 +75,9 @@ enum Target {
     },
     /// Every station of the country (`sidoName=전국`, S15b-3).
     Nation,
+    /// Dust forecasts of the announcement expected when the call starts (S15b-3; legacy
+    /// `_checkDataTime` fixes it before HTTP): searched by its date, recorded under it.
+    Announcement(Publication),
     /// The search date (time 0000).
     SearchDate(Publication),
     All,
@@ -113,6 +116,15 @@ impl AirKoreaRequest {
             target: Target::Nation,
         }
     }
+    /// Dust forecasts of `announcement` (`YYYYMMDD`, `HH00`), the announcement legacy
+    /// `_checkDataTime` expects when the call starts: searched by its date and recorded with it
+    /// as the record period, so a reader parses the items of that announcement (S15b-3).
+    pub fn dust_forecast_for(announcement: Publication) -> Self {
+        Self {
+            operation: AirKoreaOperation::DustForecast,
+            target: Target::Announcement(announcement),
+        }
+    }
     /// Dust forecasts searched by KST date `YYYYMMDD` (legacy `_getFrcst(dataDate)`); see
     /// `publication::dust_forecast_announcement` for the legacy choice of the date.
     pub fn dust_forecast(search_date: u32) -> Result<Self, DomesticError> {
@@ -148,7 +160,7 @@ impl AirKoreaRequest {
     /// Search date `YYYYMMDD` of a dust-forecast request.
     pub fn search_date(&self) -> Option<u32> {
         match self.target {
-            Target::SearchDate(day) => Some(day.date()),
+            Target::SearchDate(day) | Target::Announcement(day) => Some(day.date()),
             _ => None,
         }
     }
@@ -157,7 +169,7 @@ impl AirKoreaRequest {
         let mut out = match &self.target {
             Target::Sido { name, .. } => vec![("sidoName", (*name).to_owned())],
             Target::Nation => vec![("sidoName", NATIONWIDE.to_owned())],
-            Target::SearchDate(day) => {
+            Target::SearchDate(day) | Target::Announcement(day) => {
                 let d = day.base_date();
                 vec![(
                     "searchDate",
@@ -322,6 +334,9 @@ impl Paged for AirKoreaRequest {
     /// The nationwide dataset is dated by its most common data time over every page (ties:
     /// the newest); every other request by its newest page publication.
     fn publication(&self, pages: &[&PageFacts]) -> Option<Publication> {
+        if let Target::Announcement(expected) = self.target {
+            return (!pages.is_empty()).then_some(expected);
+        }
         if self.target != Target::Nation {
             return pages.iter().map(|f| f.publication).max();
         }
@@ -341,7 +356,7 @@ impl Paged for AirKoreaRequest {
     }
     fn partition(&self, publication: Publication) -> String {
         match (&self.target, self.operation) {
-            (Target::SearchDate(day), _) => day.base_date(),
+            (Target::SearchDate(day) | Target::Announcement(day), _) => day.base_date(),
             (_, AirKoreaOperation::StationList) => publication.base_date(),
             _ => publication.partition(),
         }
@@ -362,6 +377,10 @@ impl Paged for AirKoreaRequest {
             Target::Sido { name, .. } => self.observations(&rows, name),
             Target::Nation => nation(&rows),
             Target::SearchDate(day) => forecasts(&rows, *day),
+            Target::Announcement(expected) => {
+                let day = Publication::new(expected.date(), 0).unwrap_or(*expected);
+                forecasts(&rows, day)
+            }
             Target::All => stations(&rows, now_ms),
         };
         match facts {
@@ -492,11 +511,15 @@ pub(crate) fn nation(rows: &[&Object]) -> Rows {
                 .any(|name| row.get(*name).is_some_and(numeric));
         }
     }
+    // A page whose rows all lack a valid data time votes for no hour; the dataset's
+    // publication comes from every page's rows (`Paged::publication`).
     let publication = hours
         .iter()
         .max_by(|a, b| a.1.cmp(b.1).then(a.0.cmp(b.0)))
-        .map(|(p, _)| *p)
-        .ok_or("observation")?;
+        .map_or(
+            Publication::new(19700101, 0).ok_or("observation")?,
+            |(p, _)| *p,
+        );
     Ok((row_keys, publication, usable))
 }
 /// Identity of a whole item: a repeated item across pages means shifted pages.
