@@ -22,7 +22,7 @@ use std::{
     collections::{BTreeMap, HashSet},
     sync::{
         Arc,
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicI64, AtomicUsize, Ordering},
     },
 };
 use tokio::{
@@ -40,8 +40,17 @@ pub struct KeyRing<B> {
     current: AtomicUsize,
     /// Index of the key that last completed an AirKorea operation; `NONE` before any success.
     preferred: AtomicUsize,
+    /// Per entry: epoch ms at which the KST day ends in which AirKorea answered quota for it
+    /// (S13c, #2745); 0 before any quota answer. Shared by every AirKorea operation.
+    exhausted_until: Vec<AtomicI64>,
 }
 const NONE: usize = usize::MAX;
+const DAY_MS: i64 = 86_400_000;
+const KST_MS: i64 = 9 * 3_600_000;
+/// First instant of the KST calendar day after the one containing `now_ms` (data.go.kr quota day).
+fn kst_day_end(now_ms: i64) -> i64 {
+    (now_ms + KST_MS).div_euclid(DAY_MS) * DAY_MS + DAY_MS - KST_MS
+}
 impl<B: BudgetTransport> KeyRing<B> {
     pub fn new(entries: Vec<(ProviderKey, Arc<BudgetStore<B>>)>) -> Result<Self, DomesticError> {
         let mut keys = HashSet::new();
@@ -59,6 +68,7 @@ impl<B: BudgetTransport> KeyRing<B> {
             ));
         }
         Ok(Self {
+            exhausted_until: entries.iter().map(|_| AtomicI64::new(0)).collect(),
             entries,
             current: AtomicUsize::new(0),
             preferred: AtomicUsize::new(NONE),
@@ -70,6 +80,19 @@ impl<B: BudgetTransport> KeyRing<B> {
     /// AirKorea (legacy `withKeys`): the key that last completed an operation, if any.
     pub fn preferred(&self) -> Option<usize> {
         Some(self.preferred.load(Ordering::Acquire)).filter(|i| *i < self.entries.len())
+    }
+    /// S13c (#2745): whether entry `index` reached its daily quota in a KST day that has not
+    /// ended at `now_ms`.
+    pub fn exhausted(&self, index: usize, now_ms: i64) -> bool {
+        self.exhausted_until
+            .get(index)
+            .is_some_and(|until| now_ms < until.load(Ordering::Acquire))
+    }
+    /// Marks entry `index` exhausted until the end of the KST day containing `now_ms`.
+    fn exhaust(&self, index: usize, now_ms: i64) {
+        if let Some(until) = self.exhausted_until.get(index) {
+            until.fetch_max(kst_day_end(now_ms), Ordering::AcqRel);
+        }
     }
     /// Legacy `withKeys` start: the last working key, otherwise the last configured key.
     fn legacy_start(&self) -> usize {
@@ -211,7 +234,8 @@ pub(crate) trait Paged: Clone + Send + Sync + 'static {
     fn format(&self) -> ResponseFormat;
     /// `true`: a rejected key rotates to the next ring entry within the call (#2604).
     /// `false`: legacy AirKorea `withKeys` (S13b): one key per call, from the last working
-    /// key or the last entry; a rejected credential restarts the call with the previous key.
+    /// key or the last entry; a rejected credential or a quota answer (which also exhausts the
+    /// key until the end of its KST day, S13c) restarts the call with the previous key.
     fn rotates(&self) -> bool;
     fn paging(&self) -> Paging {
         Paging::Total
@@ -532,17 +556,30 @@ where
         if request.rotates() {
             return self.collect_pages(request, ring, None, deadline).await;
         }
-        // Legacy AirKorea `withKeys` (#2737): the last working key, otherwise the last entry.
-        // A rejected credential moves to the previous key and restarts from page 1 within the
-        // same deadline; quota and every other failure stop without changing the key.
+        // Legacy AirKorea `withKeys` (#2737): the last working key, otherwise the last entry,
+        // then the previous entries with one wrap. A rejected credential moves to the previous
+        // key for this call; a quota answer (429 or code 22) also marks the key exhausted until
+        // the end of its KST day (S13c, #2745). Either restarts from page 1 within the same
+        // deadline; every other failure stops without changing the key. An exhausted key is
+        // skipped without funding or HTTP.
         let n = ring.len();
-        let mut index = ring.legacy_start();
-        for _ in 0..n {
+        let start = ring.legacy_start();
+        let mut quota = false;
+        for step in 0..n {
+            let index = (start + n - step) % n;
+            if ring.exhausted(index, self.now_ms()? as i64) {
+                quota = true;
+                continue;
+            }
             match self
                 .collect_pages(request, ring, Some(index), deadline)
                 .await
             {
-                Err(DomesticError::Provider(Disposition::Auth)) => index = (index + n - 1) % n,
+                Err(DomesticError::Provider(Disposition::Auth)) => {}
+                Err(DomesticError::Provider(Disposition::Quota)) => {
+                    quota = true;
+                    ring.exhaust(index, self.now_ms()? as i64);
+                }
                 Ok(outcome) => {
                     if matches!(outcome, Acquired::Complete(_)) {
                         ring.remember(index);
@@ -552,7 +589,12 @@ where
                 Err(e) => return Err(e),
             }
         }
-        Err(DomesticError::Provider(Disposition::Auth))
+        // Quota clears with the next KST day; only an all-credential failure is `Auth`.
+        Err(DomesticError::Provider(if quota {
+            Disposition::Quota
+        } else {
+            Disposition::Auth
+        }))
     }
     /// All pages of one paged request; `fixed` pins one key (legacy AirKorea), otherwise the
     /// #2604 ring offers and settles its candidates.
@@ -579,6 +621,14 @@ where
                 total,
                 now_ms: now as i64,
             });
+            // A key that a parallel call marked exhausted while this one was paging is not
+            // funded or sent again; the caller restarts with the next key (S13c).
+            if fixed.is_some_and(|index| ring.exhausted(index, now as i64)) {
+                if !pages.is_empty() {
+                    self.metrics.incomplete();
+                }
+                return Err(DomesticError::Provider(Disposition::Quota));
+            }
             let (start, candidates) = match fixed {
                 Some(index) => (index, ring.single(index)),
                 None => ring.candidates(),
