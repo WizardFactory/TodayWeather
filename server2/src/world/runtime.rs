@@ -49,24 +49,10 @@ pub fn from_vars(var: Var) -> Result<Option<Configured>, GatewayError> {
     build(var, s3).map(Some)
 }
 
-/// Build the native world over a shared S3 admission (weather, air and budget requests).
-pub fn build(var: Var, s3: BoundedS3<HttpS3Transport>) -> Result<Configured, GatewayError> {
-    let units = number(var, "SERVER2_WORLD_VC_DAILY_UNITS")?;
-    // One S08 window per UTC day (the legacy usage day); FundedVc opens a fresh store per day.
-    let funding = VcFunding {
-        transport: Arc::new(s3.clone()),
-        quota_id: need(var, "SERVER2_WORLD_VC_QUOTA_ID")?,
-        daily_units: units,
-        block_units: units.clamp(1, 98),
-        clock: Arc::new(BudgetClock),
-    };
-    let provider =
-        Arc::new(HttpVcTransport::new().map_err(|_| GatewayError::InvalidConfiguration)?);
-    let vc = set(var, "SERVER2_WORLD_VC_URL").unwrap_or_else(|| VC_ENDPOINT.into());
-    let source = FundedVc::new(&vc, provider, funding, need(var, "VC_SECRET_KEY")?)
-        .map_err(|_| GatewayError::InvalidConfiguration)?;
-    let store = CatalogWorldStore::new(s3.clone(), CatalogLimits::default())
-        .map_err(|_| GatewayError::InvalidConfiguration)?;
+/// The process air chain (`LiveAir`) from `SERVER2_WORLD_AIR_*`. The world family and, since
+/// S15b-3, the KMA air fallback share one instance, so one cell is resolved once.
+pub type ProcessAir = LiveAir<BoundedS3<HttpS3Transport>>;
+pub fn live_air(var: Var, s3: BoundedS3<HttpS3Transport>) -> Result<Arc<ProcessAir>, GatewayError> {
     // A provider takes part when its key is set; its limit and quota owner are then required.
     // With no provider the air output is the legacy `no-provider` result. Stored records are
     // read before the chain on every miss, so a restart restores from S3.
@@ -91,7 +77,7 @@ pub fn build(var: Var, s3: BoundedS3<HttpS3Transport>) -> Result<Configured, Gat
         waqi: provider(waqi.0, waqi.1)?,
         ..AirConfig::default()
     };
-    let air = LiveAir::new(
+    LiveAir::new(
         config,
         Arc::new(
             CatalogAirStore::new(s3.clone(), CatalogLimits::default())
@@ -104,11 +90,40 @@ pub fn build(var: Var, s3: BoundedS3<HttpS3Transport>) -> Result<Configured, Gat
         },
         Arc::new(SystemClock),
     )
-    .map_err(|_| GatewayError::InvalidConfiguration)?;
+    .map(Arc::new)
+    .map_err(|_| GatewayError::InvalidConfiguration)
+}
+/// Build the native world over a shared S3 admission (weather, air and budget requests).
+pub fn build(var: Var, s3: BoundedS3<HttpS3Transport>) -> Result<Configured, GatewayError> {
+    let air = live_air(var, s3.clone())?;
+    build_with_air(var, s3, air)
+}
+/// [`build`] with an already built process air chain.
+pub fn build_with_air(
+    var: Var,
+    s3: BoundedS3<HttpS3Transport>,
+    air: Arc<ProcessAir>,
+) -> Result<Configured, GatewayError> {
+    let units = number(var, "SERVER2_WORLD_VC_DAILY_UNITS")?;
+    // One S08 window per UTC day (the legacy usage day); FundedVc opens a fresh store per day.
+    let funding = VcFunding {
+        transport: Arc::new(s3.clone()),
+        quota_id: need(var, "SERVER2_WORLD_VC_QUOTA_ID")?,
+        daily_units: units,
+        block_units: units.clamp(1, 98),
+        clock: Arc::new(BudgetClock),
+    };
+    let provider =
+        Arc::new(HttpVcTransport::new().map_err(|_| GatewayError::InvalidConfiguration)?);
+    let vc = set(var, "SERVER2_WORLD_VC_URL").unwrap_or_else(|| VC_ENDPOINT.into());
+    let source = FundedVc::new(&vc, provider, funding, need(var, "VC_SECRET_KEY")?)
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
+    let store = CatalogWorldStore::new(s3.clone(), CatalogLimits::default())
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
     let world = World::new(
         Arc::new(store),
         Arc::new(source),
-        Arc::new(air),
+        air,
         Arc::new(SystemClock),
         WorldConfig::default(),
     );

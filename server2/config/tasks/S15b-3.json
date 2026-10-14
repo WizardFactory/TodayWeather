@@ -1,0 +1,53 @@
+{
+  "task": "S15b-3a",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-3.json",
+    "server2/src/domestic/kma/source/",
+    "server2/src/domestic/airkorea.rs",
+    "server2/src/domestic/acquire.rs",
+    "server2/src/providers/transport.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/src/world/runtime.rs",
+    "server2/src/world/air.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/",
+    "server2/tests/gateway/runtime.rs",
+    "server2/tests/storage/catalog_peer.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b governing intent record: the S15b-3 slice, its split into 3a/3b/3c and its criteria; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b specification: the S15b-3a AirKorea inputs, national datasets and request-time acquisition; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b execution plan: S15b-3 split, scenarios, checks and live-call record; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S15b-3a AirKorea input section and the new kma settings to the S10c table"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6172254679",
+  "path_notes": {
+    "server2/src/domestic/airkorea.rs": "S13b file: adds the nationwide observation request (sidoName=전국, numOfRows=1000, one national dataset per data hour); shared with S13b owners",
+    "server2/src/gateway/runtime.rs": "kma builds the AirKorea acquirer from AIRKOREA_SECRET_KEYS and SERVER2_AIRKOREA_DAILY_UNITS and shares one air chain with dsf; shared file",
+    "server2/src/world/runtime.rs": "live_air/build_with_air so the world family and the KMA air fallback share one LiveAir; shared file",
+    "server2/src/world/air.rs": "parse_iso_offset becomes pub(crate) for observation.evaluate in the KMA fallback; shared file",
+    "server2/tests/domestic/source_s3.rs": "seed, request, NOW and Data become pub for the S15b-3 snapshot test; shared S15b-1 test file",
+    "server2/tests/domestic/": "air.rs and air_s3.rs tests, fixtures/air.json.gz (pinned legacy oracle) and fixtures/AIR-PROVENANCE.md",
+    "server2/src/domestic/acquire.rs": "Shared S13/S13c file: Paged::publication (default: newest page) so the nationwide dataset is dated by its overall mode (review S15b3-R3); other families unchanged",
+    "server2/src/providers/transport.rs": "Shared S08/S13d file: HttpProviderTransport::with_connect_timeout (new() keeps the 3 s connect bound) so the AirKorea transport may connect within the legacy 5 s attempt (review S15b3-R9); attempt timeouts unchanged",
+    "server2/tests/domestic/source_s3_oracle.rs": "Shared S15b-1 test file: its S3-peer tests take the shared domestic peer lock (CI Transport flake)",
+    "server2/tests/storage/catalog_peer.py": "Shared S06 test peer: listen backlog 128 (socketserver default 5); Linux dropped concurrent connection attempts and the S3 client connects within 1 s (CI raw storage: Transport); slots unchanged"
+  }
+}

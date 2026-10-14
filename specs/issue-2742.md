@@ -131,3 +131,73 @@ use `AssemblyConfig::default()`.
   Every request is still forwarded (S15b-1 temporary), with identical bytes.
 - **Checks:** fmt, fresh clippy, `cargo test --locked --workspace`, `deploy/smoke.sh`, the
   placement gate, `test_placement.py`, and artifact policy `--staged` and `--range`.
+
+# Specification (S15b-3a), 2026-10-15
+
+Legacy references are master `05c06c67`. "tw_svc" is the legacy service mode assembly
+(`routes/v000903/route.kma.v000903.js` L57-L58: `getKeco`, `getAirFallback`, `getKecoDustForecast`).
+
+| Source | Provider documentation | Legacy collection mirrored | tw_svc assembly fed |
+| --- | --- | --- | --- |
+| Real-time observations | B552584 대기오염정보 기술문서 v1.4 (data.go.kr 15073861): `getCtprvnRltmMesureDnsty`, `sidoName` required (`전국`, 17 sido names, `전남광주`), `numOfRows`/`pageNo`, `ver` 1.3 = PM 1-hour grades, codes 00/03/22/30-32, 500 requests a day (development) | `kecoRequester._collectProvinces` L775, `parseRLTMCtprvn` L201 → `airkoreaObservation.parseRows` L107, `saveRLTMCtprvn` L218 | `controllerTown.getKeco` L2563 → `kecoController.getArpLtnInfo` L397 (`_getArpLtnList` L129, `_checkDateTime` L214, `_mergeArpltnList` L226) |
+| Station list | 측정소정보 기술문서 v1.2: `getMsrstnList` (S13b) | `getAllMsrStnInfo` → `completeGeoMsrStnInfo` L364, `parseMsrstnList` L272, `saveMsrstnList` L323 | `getArpLtnInfo` `MsrStn.find({geo: {$near, $maxDistance: 1}}).limit(6)` |
+| Dust forecast | v1.4: `getMinuDustFrcstDspth`, `searchDate`, `ver` 1.1 (S13b) | `getMinuDustFrcstDspth` → `_checkDataTime` L472, `_parseFrcst` L525, `_saveFrcst` L570 | `controllerTown.getKecoDustForecast` L2618 → `getDustFrcst` L331, `_convertDustFrcstRegion` L267 |
+| Air fallback | provider APIs of S13a (Google, OpenWeather, WAQI) | request time only | `controllerTown24h.getAirFallback` L1075 → `airFallback.getArpltn` L146 → `observation.evaluate` L119 |
+
+Where they disagree: the documentation allows `sidoName=전국`, which legacy never used; AK chose
+the nationwide dataset, so the observation rows are the same per station but come from one call
+(followed: documentation and AK). Legacy `parseRows` rejects a province batch with one row
+without a valid `dataTime` (7 live rows on 2026-10-14); server2 skips the row (followed: keep the
+other 665 stations rather than reproduce a batch loss). Legacy geocodes a station without
+coordinates; server2 does not store it (none live).
+
+## Datasets and acquisition (A3-2, A3-3)
+
+- `AirKoreaRequest::nationwide()`: query `sidoName=전국`, `pageNo`, `numOfRows=1000`, `ver=1.3`;
+  every row needs a nonblank `stationName` and is unique per station and data time; a row without
+  a valid data time is unusable, and a page of such rows only is not fatal; the publication is the
+  most common data time over all pages (ties: newest). Attempts are bounded at 5 s (legacy).
+- `AirKoreaRequest::dust_forecast_for(announcement)`: the announcement `_checkDataTime` expects
+  when the call starts is searched by its date and recorded as the record period; the fold parses
+  the items of that announcement (a record without one uses the announcement at completion).
+  Record key `sido-nationwide`, kind `airkorea-station`, partition of that hour.
+- The S3 source reads published catalogs only. Observations: the hour partitions of the last 26
+  hours, re-read at most every 60 s (the last 3 hours each refresh) or after an own acquisition,
+  parsed rows kept per acquisition and folded in completion order. Station list: every acquisition
+  since 2026-01 in completion order, refreshed every 10 minutes from one day before the last folded
+  list (a late list of an earlier day refolds) and refolded daily. Dust forecast: search dates
+  `date-2..date`. A refresh that fails answers with the last successful fold.
+- A request starts (or joins) the acquisition of a missing current dataset: the nationwide hour
+  of the request instant (one attempt per hour every 10 minutes), a station list older than 7
+  days (waited for only when none exists), the expected dust announcement (only when the request
+  reads AirKorea forecasts: `airForecastSource` `airkorea`, or absent or `(null)` as legacy
+  `checkQueryValidation` defaults it). The request waits until 100 ms before its deadline (every
+  read, lock and parse is bounded by it; a re-read that cannot finish keeps the first result); an
+  acquisition runs with a 30 s call bound and a 10 s publication bound. A request that waited sees
+  acquisitions completed by the wall clock; otherwise only those completed by its instant.
+- Demand-gated capture: while a request arrived in the last 24 hours, the process checks every 10
+  minutes (first check 10 minutes after the first request) and acquires the current nationwide hour
+  once when it is neither stored nor already acquired by this process.
+- S08: one budget store per key and KST day (`SERVER2_AIRKOREA_DAILY_UNITS`, owner = domain-separated
+  SHA-256 of the key), shared by the AirKorea operations; keys follow the S13b/S13c acquirer
+  (`withKeys`, a quota answer exhausts the key until KST midnight and moves to the next key).
+
+## Answers (A3-1)
+
+| Method | Answer |
+| --- | --- |
+| `arpltn(town, now)` | `{arpltn?, list?, stnList}` of `getArpLtnInfo`; a town without `gCoord` is the callback error |
+| `dust_forecast(region, city, date)` | the `getDustFrcst` list or its error text (`Fail to find dust forecast ...`, `dust forecast length is zero ...`) |
+| `air_fallback(gCoord, now)` | loaded when the AirKorea answer has no value: the evaluated observation or null (no provider, unusable, or not ready by the deadline) |
+
+The snapshot answers only the arguments it loaded (the town's coordinate, the request instant, the
+request's region, city and KST date); anything else forwards with a named reason.
+
+## Verification
+
+- Oracle `server2/tests/domestic/fixtures/air.json.gz` (Node 16.20.2, Mongoose 5.1.2, collection
+  double with an emulated 2d `$near`) and tests `air.rs`, `air_s3.rs`; gateway runtime settings;
+  fmt, clippy, workspace tests, release smokes, placement and artifact policy.
+- Live (2026-10-14, keys from `server/.env`): AirKorea nationwide, station list and dust forecast;
+  WAQI, Google Air Quality, OpenWeather.
+

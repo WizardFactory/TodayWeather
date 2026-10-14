@@ -354,6 +354,59 @@ fn routing_list_and_required_settings_fail_closed() {
     assert!(gateway(&vars(https)).unwrap().is_some());
 }
 
+/// S15b-3: `kma` reads the legacy AirKorea key list; a key needs its S08 daily units, and the
+/// data.go.kr root follows the transport rule. No key: stored AirKorea records only.
+#[test]
+fn kma_airkorea_acquisition_settings_fail_closed() {
+    use server2::gateway::runtime::from_vars as gateway;
+    let base = || {
+        vec![
+            (
+                "SERVER2_GATEWAY_LEGACY_URL",
+                "http://127.0.0.1:9".to_owned(),
+            ),
+            ("SERVER2_NATIVE_FAMILIES", "kma".to_owned()),
+            ("SERVER2_S3_BUCKET", "server2-kma".to_owned()),
+            (
+                "SERVER2_S3_ACCESS_KEY_ID",
+                "configured-access-key".to_owned(),
+            ),
+            (
+                "SERVER2_S3_SECRET_ACCESS_KEY",
+                "configured-secret".to_owned(),
+            ),
+        ]
+    };
+    assert!(gateway(&vars(base())).unwrap().is_some(), "no key");
+    let keyed = || {
+        let mut v = base();
+        v.push((
+            "AIRKOREA_SECRET_KEYS",
+            r#"["configured-airkorea-key-0123456789"]"#.to_owned(),
+        ));
+        v
+    };
+    assert!(gateway(&vars(keyed())).is_err(), "a key without units");
+    let mut ok = keyed();
+    ok.push(("SERVER2_AIRKOREA_DAILY_UNITS", "400".to_owned()));
+    assert!(gateway(&vars(ok.clone())).unwrap().is_some());
+    for (name, value) in [
+        ("SERVER2_AIRKOREA_DAILY_UNITS", "0"),
+        ("SERVER2_AIRKOREA_DAILY_UNITS", "many"),
+        ("SERVER2_DATA_GO_KR_URL", "http://apis.example.test/"),
+        ("SERVER2_DATA_GO_KR_URL", "https://apis.example.test/?q=1"),
+    ] {
+        let mut changed = ok.clone();
+        changed.retain(|(k, _)| *k != name);
+        changed.push((name, value.to_owned()));
+        assert!(gateway(&vars(changed)).is_err(), "{name}={value}");
+    }
+    // A placeholder key list (legacy default `["key1", "key2"]`) is no key.
+    let mut placeholder = base();
+    placeholder.push(("AIRKOREA_SECRET_KEYS", r#"["key1", "key2"]"#.to_owned()));
+    assert!(gateway(&vars(placeholder)).unwrap().is_some());
+}
+
 #[test]
 fn real_world_configuration_builds_without_a_mode_variable() {
     let s3 = vec![

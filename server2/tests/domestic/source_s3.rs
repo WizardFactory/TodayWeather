@@ -30,6 +30,12 @@ use std::{
 use tokio::time::Instant;
 
 /// The owned S06 loopback S3 fault peer (`tests/storage/catalog_peer.py`).
+/// The domestic tests that own an S3 test peer run one at a time, so small CI runners serve one
+/// peer at a time (the peer admits 16 connections and bounds each to 2 s).
+pub static S3_PEERS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+/// S3 requests in flight per test transport: below the production 12, leaving peer slots for
+/// connections whose handler thread has not released its slot yet.
+pub const TEST_PERMITS: usize = 8;
 pub struct Peer {
     child: Child,
     endpoint: String,
@@ -62,6 +68,9 @@ impl Peer {
             }
         }
     }
+    pub fn endpoint(&self) -> &str {
+        &self.endpoint
+    }
     pub fn transport(&self) -> BoundedS3<HttpS3Transport> {
         BoundedS3::new(
             HttpS3Transport::new(
@@ -71,7 +80,7 @@ impl Peer {
                 Credentials::new("server2-local", "server2-local-secret"),
             )
             .unwrap(),
-            12,
+            TEST_PERMITS,
         )
     }
 }
@@ -86,7 +95,7 @@ pub fn deadline() -> Instant {
 }
 const HOUR: f64 = 3_600_000.;
 /// 2026-09-24 10:50 KST.
-const NOW: f64 = 1_790_214_600_000.;
+pub const NOW: f64 = 1_790_214_600_000.;
 fn kst_ms(date: u32, time: u16) -> f64 {
     server2::history::schedule::to_ms(Publication::new(date, time).unwrap()) as f64
 }
@@ -300,7 +309,7 @@ fn zone_page() -> Vec<u8> {
     .unwrap()
 }
 
-struct Data {
+pub struct Data {
     current: Vec<Fetched>,
     shortest: Vec<Fetched>,
     short: Vec<Fetched>,
@@ -318,7 +327,7 @@ fn fetched(at: f64, partition: &str, page: Vec<u8>) -> Fetched {
     }
 }
 /// Publish a complete input set at NOW, leaving out the families in `skip`.
-async fn seed(store: &CatalogStore<BoundedS3<HttpS3Transport>>, skip: &[&str]) -> Data {
+pub async fn seed(store: &CatalogStore<BoundedS3<HttpS3Transport>>, skip: &[&str]) -> Data {
     let grid = Grid::new(60, 127).unwrap().provider_key();
     let p = |d, t| Publication::new(d, t).unwrap();
     let mut data = Data {
@@ -472,7 +481,7 @@ async fn seed(store: &CatalogStore<BoundedS3<HttpS3Transport>>, skip: &[&str]) -
     }
     data
 }
-fn request() -> server2::domestic::kma::KmaRequest {
+pub fn request() -> server2::domestic::kma::KmaRequest {
     parse_path(
         "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
         "ko",
@@ -486,6 +495,7 @@ const SEOUL: Coord = Coord { mx: 60., my: 127. };
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap();
@@ -561,7 +571,11 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
         &OrderedJson::Array(vec![]),
         "no warning records: no active zones",
     );
-    assert_eq!(transport.available(), 12, "every S3 permit returned");
+    assert_eq!(
+        transport.available(),
+        TEST_PERMITS,
+        "every S3 permit returned"
+    );
     // The assembly reaches the first input S15b-2 owns and forwards with its name.
     let outcome = assemble(
         &request(),
@@ -580,6 +594,7 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn missing_inputs_forward_with_named_reasons() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
     async fn reason(skip: &[&str], path: Option<&str>) -> String {
         let peer = Peer::new();
         let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();

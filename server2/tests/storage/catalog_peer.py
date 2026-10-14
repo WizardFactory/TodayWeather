@@ -154,6 +154,10 @@ class Handler(base.Handler):
 
 def make():
     config = base.load_config(OWNED/'config/local-stack.json')
+    # Linux drops connection attempts beyond the listen backlog (socketserver default 5) and the
+    # S3 client connects within 1 s, so a few concurrent readers failed with Transport on CI.
+    # Admission stays bounded by the peer's connection slots.
+    base.Peer.request_queue_size = 128
     peer = base.Peer('s3', config, {})
     peer.RequestHandlerClass = Handler
     peer.mode, peer.fault_key, peer.pending, peer.barrier_puts = '', '', None, 0
