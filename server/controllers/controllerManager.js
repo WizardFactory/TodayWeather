@@ -1559,14 +1559,23 @@ Manager.prototype.getCurrentQueryTime = function (baseTime) {
 };
 
 /**
- * KST publication {date: 'YYYYMMDD', time: 'HHMM'} -> Date. Current/short/shortest retention is anchored
- * to the publication being collected rather than the wall clock, so collecting (or testing) an older
- * publication never deletes the rows it writes. For the live slot the cutoff is unchanged.
+ * KST publication {date: 'YYYYMMDD', time: 'HHMM'} -> Date, the anchor of current/short/shortest retention.
+ * The 216 h window is unchanged; its anchor moves from the wall clock to the publication being collected.
+ * For the live slot this keeps rows longer only by the publication delay (minutes to a few hours), and
+ * collecting (or testing) an older publication never deletes the rows it writes. A malformed slot keeps
+ * the previous wall-clock anchor instead of rolling over to another date.
  */
 function publicationInstant(slot) {
     var day = slot && /^(\d{4})(\d{2})(\d{2})$/.exec(slot.date), hm = slot && /^(\d{2})(\d{2})$/.exec(slot.time);
     if (!day || !hm) { return new Date(); }
-    return new Date(Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3]), Number(hm[1]) - 9, Number(hm[2])));
+    var y = Number(day[1]), mo = Number(day[2]) - 1, d = Number(day[3]), h = Number(hm[1]), mi = Number(hm[2]);
+    var instant = new Date(Date.UTC(y, mo, d, h - 9, mi));
+    var kst = new Date(instant.getTime() + 9 * 3600000);
+    if (kst.getUTCFullYear() !== y || kst.getUTCMonth() !== mo || kst.getUTCDate() !== d ||
+        kst.getUTCHours() !== h || kst.getUTCMinutes() !== mi) {
+        return new Date();
+    }
+    return instant;
 }
 
 // Keep forecast timing unchanged; only exact completed grids skip HTTP.

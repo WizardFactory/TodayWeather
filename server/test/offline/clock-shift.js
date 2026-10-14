@@ -9,7 +9,8 @@ if (days) {
     var shift = days * 86400000;
     var RealDate = Date;
     var ShiftedDate = function Date(a, b, c, d, e, f, g) {
-        if (!(this instanceof ShiftedDate)) { return new RealDate(RealDate.now() + shift).toString(); }
+        // A plain call (Date(), Date.call(x)) returns a string like the native function.
+        if (!new.target) { return new RealDate(RealDate.now() + shift).toString(); }
         var args = arguments.length ? Array.prototype.slice.call(arguments) : [RealDate.now() + shift];
         return new (Function.prototype.bind.apply(RealDate, [null].concat(args)))();
     };

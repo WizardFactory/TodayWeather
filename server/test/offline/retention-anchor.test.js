@@ -29,6 +29,15 @@ function run(m,method){return new Promise((resolve,reject)=>m[method](9,'dummy',
         assert(removed[product] instanceof Date||Object.prototype.toString.call(removed[product])==='[object Date]',product+' retention ran');
         assert.strictEqual(removed[product].toISOString(),expected[product],product+' retention anchors to the collected publication');
     }
+    // Review R6: a malformed slot (impossible date/time) falls back to the wall clock instead of rolling over.
+    for(const bad of [{date:'20261332',time:'0000'},{date:'20261014',time:'9900'},{date:'20260230',time:'1200'},{date:'2026101',time:'1200'}]) {
+        delete removed.current;
+        const f=mh.load(overrides);f.m.getCurrentQueryTime=()=>bad;
+        f.m._recursiveRequestData=(list,type,key,s,retries,invalid,cb)=>cb();f.m.getSaveFunc=()=>function(list,cb){cb()};
+        const before=Date.now();await run(f.m,'getTownCurrentData').catch(()=>{});
+        const at=removed.current.getTime();
+        assert(at>=before-1000&&at<=Date.now()+1000,JSON.stringify(bad)+' falls back to the current time, got '+removed.current.toISOString());
+    }
     passed=true;
     console.log('PASS retention: current/short/shortest cleanup anchored to the collected publication, not the wall clock');
 })().catch(e=>{console.error(e);process.exitCode=1});
