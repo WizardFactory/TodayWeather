@@ -38,11 +38,11 @@ pub fn items_of(j: &OrderedJson) -> &[OrderedJson] {
         other => panic!("expected array, got {other:?}"),
     }
 }
-fn text(j: &OrderedJson) -> String {
+pub fn text(j: &OrderedJson) -> String {
     j.string()
         .unwrap_or_else(|| panic!("expected string, got {j:?}"))
 }
-fn number(j: &OrderedJson) -> f64 {
+pub fn number(j: &OrderedJson) -> f64 {
     j.number()
         .unwrap_or_else(|| panic!("expected number, got {j:?}"))
 }
@@ -71,7 +71,7 @@ fn fetched(at_ms: f64, partition: &str, pages: Vec<Vec<u8>>) -> Fetched {
         pages: pages.into_iter().map(Arc::from).collect(),
     }
 }
-fn pages(run: &OrderedJson) -> Vec<Vec<u8>> {
+pub fn pages(run: &OrderedJson) -> Vec<Vec<u8>> {
     items_of(at(run, &["pages"]))
         .iter()
         .map(|p| text(p).into_bytes())
@@ -129,7 +129,7 @@ fn region_code_matches_get_reg_id_by_town() {
 }
 
 /// Stored zone documents with the run-time `retiredAt` normalized like the oracle.
-fn zone_docs(zones: &Zones) -> OrderedJson {
+pub fn zone_docs(zones: &Zones) -> OrderedJson {
     let docs: Vec<Doc> = zones
         .docs()
         .iter()

@@ -45,26 +45,63 @@ pub use records::Fetched;
 use records::Reader;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tokio::time::Instant;
 
 const DAY_MS: f64 = 86_400_000.;
-/// Days of captured grid and RSS publications read (the 216-hour retention plus the horizon of
-/// a short forecast that may still own a retained slot).
-const GRID_DAYS: f64 = 10.;
-/// Days of mid publications read (the newest parsable publication is kept).
-const MID_DAYS: f64 = 3.;
-/// Forecast-zone lists read (KST months back from now).
-const ZONE_DAYS: f64 = 62.;
-/// Memory lifetime of the folded forecast-zone list.
+const HOUR_MS: f64 = 3_600_000.;
+/// A KST month before every server2 raw record (S13 and S13b landed in October 2026). Histories
+/// legacy keeps without a time bound (the last stored mid document, forecast-zone fields) are
+/// folded from here; earlier months hold no record.
+pub const HISTORY_START_MONTH: u32 = 202601;
+/// Full forecast-zone refold interval; between refolds only newer acquisitions are applied.
+const ZONE_REFOLD: std::time::Duration = std::time::Duration::from_secs(24 * 3600);
+/// Incremental forecast-zone refresh interval.
 const ZONE_REFRESH: std::time::Duration = std::time::Duration::from_secs(600);
+
+/// How far back a family's publications can still own a retained document: the 216-hour
+/// retention plus the latest slot a publication writes (its horizon and one trailing day).
+fn lookback_ms(family: Family) -> f64 {
+    let horizon = match family {
+        Family::Current => 0.,
+        // +1..+6 h, plus a trailing row of up to one day.
+        Family::Shortest => 6. * HOUR_MS + DAY_MS,
+        // Up to the fourth midnight, one three-hourly day, then a trailing day.
+        Family::Short => 6. * DAY_MS,
+    };
+    grid::RETENTION_MS + horizon + HOUR_MS
+}
+/// RSS rows reach two days after their publication day; retention is 216 h before the run.
+const RSS_LOOKBACK_MS: f64 = grid::RETENTION_MS + 4. * DAY_MS;
+/// KST months (`YYYYMM`) from [`HISTORY_START_MONTH`] through `now`, ascending.
+fn history_months(now: f64) -> Vec<u32> {
+    let end = records::months(now, now)
+        .last()
+        .copied()
+        .unwrap_or(HISTORY_START_MONTH);
+    let mut out = Vec::new();
+    let mut m = HISTORY_START_MONTH;
+    while m <= end {
+        out.push(m);
+        m = if m % 100 == 12 { m + 89 } else { m + 1 };
+    }
+    out
+}
+
+struct ZoneCache {
+    zones: Arc<Zones>,
+    refreshed: std::time::Instant,
+    folded: std::time::Instant,
+    /// Newest applied acquisition (fetch instant, partition).
+    last: (u64, String),
+}
 
 /// The S3 source. `T` is the process S3 transport behind the shared admission.
 pub struct S3Source<T> {
     reader: Reader<T>,
     warnings: Arc<WarningService<T>>,
     clock: Clock,
-    zones: Mutex<Option<(std::time::Instant, Arc<Zones>)>>,
+    zones: tokio::sync::Mutex<Option<ZoneCache>>,
 }
 impl<T: IndexListing + Clone + 'static> S3Source<T> {
     pub fn new(transport: T, clock: Clock) -> Result<Self, crate::storage::Error> {
@@ -79,115 +116,161 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
                 ServiceConfig::default(),
             )),
             clock,
-            zones: Mutex::new(None),
+            zones: tokio::sync::Mutex::new(None),
         })
     }
-    async fn zone_state(&self, now: f64, deadline: Instant) -> Result<Arc<Zones>, String> {
-        if let Some((at, zones)) = self
-            .zones
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .as_ref()
-            && at.elapsed() < ZONE_REFRESH
+    /// The forecast-zone collection at `now`: every complete `forecast-zone` acquisition since
+    /// [`HISTORY_START_MONTH`] folded in fetch order (fields an older list set and a newer one
+    /// omits stay, as legacy `$set` keeps them). Memory applies newer acquisitions every
+    /// 10 minutes and refolds everything daily.
+    pub async fn zones(&self, now: f64, deadline: Instant) -> Result<Arc<Zones>, String> {
+        let mut cache = self.zones.lock().await;
+        if let Some(c) = cache.as_ref()
+            && c.refreshed.elapsed() < ZONE_REFRESH
         {
-            return Ok(zones.clone());
+            return Ok(c.zones.clone());
         }
         let key = ProviderKey::Named {
             id: "forecast-zones".into(),
         };
-        let months = records::months(now - ZONE_DAYS * DAY_MS, now);
-        let parts = self
+        let refold = cache
+            .as_ref()
+            .is_none_or(|c| c.folded.elapsed() >= ZONE_REFOLD);
+        let (mut zones, mut last, folded) = match cache.as_ref() {
+            Some(c) if !refold => ((*c.zones).clone(), c.last.clone(), c.folded),
+            _ => (
+                Zones::default(),
+                (0, String::new()),
+                std::time::Instant::now(),
+            ),
+        };
+        let months: Vec<u32> = history_months(now)
+            .into_iter()
+            .filter(|m| last.1.is_empty() || format!("{m:06}").as_str() >= &last.1[..6])
+            .collect();
+        let parts: Vec<String> = self
             .reader
             .partitions("data-go-kr", "forecast-zone", &key, &months, deadline)
             .await
-            .map_err(|e| format!("forecast-zone listing: {e}"))?;
+            .map_err(|e| format!("forecast-zone listing: {e}"))?
+            .into_iter()
+            .filter(|p| last.1.is_empty() || *p >= last.1)
+            .collect();
         let fetched = self
             .reader
             .all("data-go-kr", "forecast-zone", &key, &parts, deadline)
             .await
             .map_err(|e| format!("forecast-zone read: {e}"))?;
-        let zones = Arc::new(
-            zone_documents(&fetched, now)
-                .ok_or("no complete forecast-zone list in S3 (S15b-4 acquires it)")?,
-        );
-        *self.zones.lock().unwrap_or_else(|e| e.into_inner()) =
-            Some((std::time::Instant::now(), zones.clone()));
+        let since = last.0;
+        for f in fetched
+            .iter()
+            .filter(|f| f.fetched_at_ms as f64 <= now && f.fetched_at_ms > since)
+        {
+            if let Some(list) = complete_list(&f.page_refs()) {
+                zones.apply(&list, f.fetched_at_ms as f64);
+                last = (f.fetched_at_ms, f.partition.clone());
+            }
+        }
+        if last.1.is_empty() {
+            return Err("no complete forecast-zone list in S3 (S15b-4 acquires it)".into());
+        }
+        let zones = Arc::new(zones);
+        *cache = Some(ZoneCache {
+            zones: zones.clone(),
+            refreshed: std::time::Instant::now(),
+            folded,
+            last,
+        });
         Ok(zones)
     }
-    /// The grid documents of one family at `now`; Err when the latest publication is absent.
-    async fn grid(
+    /// The documents of one grid family at `now`; Err when its latest publication is absent.
+    pub async fn grid_answer(
         &self,
         family: Family,
         grid: crate::history::Grid,
-        coord: Coord,
         now: f64,
         deadline: Instant,
     ) -> Result<Vec<Doc>, String> {
+        let coord = Coord {
+            mx: f64::from(grid.nx()),
+            my: f64::from(grid.ny()),
+        };
         let sf = match family {
             Family::Current => schedule::Family::Current,
             Family::Shortest => schedule::Family::Shortest,
             Family::Short => schedule::Family::Short,
         };
         let key = grid.provider_key();
-        let months = records::months(now - GRID_DAYS * DAY_MS, now);
+        let from = now - lookback_ms(family);
+        let months = records::months(from, now);
         let parts = self
             .reader
             .partitions(sf.source(), sf.kind(), &key, &months, deadline)
             .await
             .map_err(|e| format!("{} listing: {e}", sf.kind()))?;
-        let oldest = schedule::from_ms((now - GRID_DAYS * DAY_MS) as i64).partition();
+        let oldest = schedule::from_ms(from as i64).partition();
         let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
         let latest = sf
             .latest(now as i64)
             .ok_or("clock outside the publication calendar")?;
-        if !wanted.contains(&latest.partition()) {
+        let fetched = self
+            .reader
+            .all(sf.source(), sf.kind(), &key, &wanted, deadline)
+            .await
+            .map_err(|e| format!("{} read: {e}", sf.kind()))?;
+        if !present(&fetched, &latest.partition(), now) {
             return Err(format!(
                 "{} {} not in S3 (S15b-4 acquires the latest publication)",
                 sf.kind(),
                 latest.partition()
             ));
         }
-        let fetched = self
-            .reader
-            .all(sf.source(), sf.kind(), &key, &wanted, deadline)
-            .await
-            .map_err(|e| format!("{} read: {e}", sf.kind()))?;
         Ok(grid_documents(family, coord, &fetched, now))
     }
-    async fn rss(
+    /// The short RSS documents of one grid at `now`; Err when the latest publication is absent.
+    pub async fn rss_answer(
         &self,
         grid: crate::history::Grid,
-        coord: Coord,
         now: f64,
         deadline: Instant,
     ) -> Result<Vec<Doc>, String> {
+        let coord = Coord {
+            mx: f64::from(grid.nx()),
+            my: f64::from(grid.ny()),
+        };
         let key = grid.provider_key();
-        let months = records::months(now - GRID_DAYS * DAY_MS, now);
+        let from = now - RSS_LOOKBACK_MS;
+        let months = records::months(from, now);
         let parts = self
             .reader
             .partitions("kma-web", "town-rss", &key, &months, deadline)
             .await
             .map_err(|e| format!("town-rss listing: {e}"))?;
         let latest = publication::rss_latest(now as i64).ok_or("clock")?;
-        if !parts.contains(&latest.partition()) {
-            return Err(format!(
-                "town-rss {} not in S3 (S15b-4 acquires the latest publication)",
-                latest.partition()
-            ));
-        }
-        let oldest = schedule::from_ms((now - GRID_DAYS * DAY_MS) as i64).partition();
+        let oldest = schedule::from_ms(from as i64).partition();
         let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
         let fetched = self
             .reader
             .all("kma-web", "town-rss", &key, &wanted, deadline)
             .await
             .map_err(|e| format!("town-rss read: {e}"))?;
+        if !present(&fetched, &latest.partition(), now) {
+            return Err(format!(
+                "town-rss {} not in S3 (S15b-4 acquires the latest publication)",
+                latest.partition()
+            ));
+        }
         Ok(rss_documents(coord, &fetched, now))
     }
-    async fn mid(
+    /// The stored mid document of one region at `now`: the last successfully saved acquisition,
+    /// searched month by month back to [`HISTORY_START_MONTH`] (legacy keeps it until a newer
+    /// save replaces it). A region legacy collects (`collected`) whose latest publication is not
+    /// in S3 is Err (S15b-4 acquires it); any other region answers what its records hold.
+    pub async fn mid_answer(
         &self,
         model: MidModel,
         reg_id: &str,
+        collected: bool,
         now: f64,
         deadline: Instant,
     ) -> Result<Vec<Doc>, String> {
@@ -200,25 +283,31 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
             MidModel::Temp => ("mid-ta", format!("reg-{}", reg_id.to_ascii_lowercase())),
         };
         let key = ProviderKey::Named { id: key };
-        let months = records::months(now - MID_DAYS * DAY_MS, now);
-        let parts = self
-            .reader
-            .partitions("data-go-kr", kind, &key, &months, deadline)
-            .await
-            .map_err(|e| format!("{kind} listing: {e}"))?;
         let latest = publication::mid_tm_fc(now as i64).ok_or("clock")?;
-        if !parts.contains(&latest.partition()) {
-            return Err(format!(
-                "{kind} {reg_id} {} not in S3 (S15b-4 acquires the latest publication)",
-                latest.partition()
-            ));
+        let latest_part = latest.partition();
+        for month in history_months(now).into_iter().rev() {
+            let parts = self
+                .reader
+                .partitions("data-go-kr", kind, &key, &[month], deadline)
+                .await
+                .map_err(|e| format!("{kind} listing: {e}"))?;
+            let fetched = self
+                .reader
+                .all("data-go-kr", kind, &key, &parts, deadline)
+                .await
+                .map_err(|e| format!("{kind} read: {e}"))?;
+            if collected && month == latest.date() / 100 && !present(&fetched, &latest_part, now) {
+                return Err(format!(
+                    "{kind} {reg_id} {latest_part} not in S3 (S15b-4 acquires the latest publication)"
+                ));
+            }
+            let found = mid_documents(model, reg_id, &fetched, now);
+            if !found.is_empty() {
+                return Ok(found);
+            }
         }
-        let fetched = self
-            .reader
-            .all("data-go-kr", kind, &key, &parts, deadline)
-            .await
-            .map_err(|e| format!("{kind} read: {e}"))?;
-        Ok(mid_documents(model, reg_id, &fetched, now))
+        // No acquisition was ever saved: legacy has no document either.
+        Ok(Vec::new())
     }
     async fn load(&self, request: &KmaRequest, deadline: Instant) -> SourceAnswer {
         match self.build(request, deadline).await {
@@ -254,12 +343,12 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
             .then(|| crate::history::Grid::new(coord.mx as u16, coord.my as u16))
             .flatten()
             .ok_or("town grid outside the KMA grid")?;
-        let zones = self.zone_state(now, deadline).await?;
+        let zones = self.zones(now, deadline).await?;
         let (current, shortest, short, rss) = tokio::join!(
-            self.grid(Family::Current, grid, coord, now, deadline),
-            self.grid(Family::Shortest, grid, coord, now, deadline),
-            self.grid(Family::Short, grid, coord, now, deadline),
-            self.rss(grid, coord, now, deadline),
+            self.grid_answer(Family::Current, grid, now, deadline),
+            self.grid_answer(Family::Shortest, grid, now, deadline),
+            self.grid_answer(Family::Short, grid, now, deadline),
+            self.rss_answer(grid, now, deadline),
         );
         let mut models = HashMap::new();
         models.insert(TownModel::Current, current?);
@@ -283,11 +372,10 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
             };
             wanted.push((MidModel::Temp, temp));
             for (model, reg_id) in wanted {
-                let answer = if collected(model, &reg_id, &zones) {
-                    self.mid(model, &reg_id, now, deadline).await?
-                } else {
-                    Vec::new()
-                };
+                let collected = collected(model, &reg_id, &zones);
+                let answer = self
+                    .mid_answer(model, &reg_id, collected, now, deadline)
+                    .await?;
                 mids.insert((model, reg_id), answer);
             }
         }
@@ -413,6 +501,12 @@ fn apply_grid(docs: &mut GridDocs, family: Family, coord: Coord, f: &Fetched) {
         docs.save(family, rows);
     }
 }
+/// Whether an acquisition of `partition` was complete at `now`.
+fn present(fetched: &[Fetched], partition: &str, now: f64) -> bool {
+    fetched
+        .iter()
+        .any(|f| f.partition == partition && f.fetched_at_ms as f64 <= now)
+}
 /// `YYYYMMDD-HHMM` to its publication.
 fn partition_publication(p: &str) -> Option<Publication> {
     let (d, t) = p.split_once('-')?;
@@ -431,9 +525,10 @@ fn land_area_code(city_code: &str) -> String {
         _ => format!("{}0000", head(4)),
     }
 }
-/// Whether legacy collects this mid region (`listPointNumber`, `listAreaCode`,
-/// `findMidTempZones`); an uncollected region has no document.
-fn collected(model: MidModel, reg_id: &str, zones: &Zones) -> bool {
+/// Whether legacy currently collects this mid region (`listPointNumber`, `listAreaCode`,
+/// `findMidTempZones`). It only decides whether a missing latest publication must be acquired;
+/// stored documents are read for every region.
+pub fn collected(model: MidModel, reg_id: &str, zones: &Zones) -> bool {
     match model {
         MidModel::Forecast => POINT_NUMBERS.contains(&reg_id),
         MidModel::Land => LAND_CODES.contains(&reg_id),

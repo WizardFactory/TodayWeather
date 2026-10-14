@@ -58,9 +58,20 @@ provenance: `part.csv`, `base.csv`, `region.csv` and `kma_forecast_land_zones.cs
 
 ## Raw records to legacy documents (AC3)
 
-Captured records are read per grid (S14 `CaptureIndex::rebuild` for one grid, then `read_slot` for
-each captured publication) and per mid region and RSS grid (catalog lookup of the latest
-publications). Documents are derived in memory; nothing derived is stored.
+Captured records are read from published catalogs only, listed per key and KST month. An
+acquisition is dated by its last page (complete only then), and applies only if complete at the
+request instant.
+
+- **Grid families** read the publications that can still own a retained slot: 216 h plus the
+  family's horizon and a trailing day (current 9 days, ultra-short 10, short 15).
+- **RSS** reads 13 days.
+- **Mid** walks months newest first, back to `HISTORY_START_MONTH` (202601, before any server2
+  record), until a saved document is found. Legacy keeps the last saved document without a time
+  bound.
+- **Forecast zones** fold every list since that month, then newer lists every 10 minutes, with a
+  daily refold.
+
+Documents are derived in memory; nothing derived is stored.
 
 - **Current** (`ultra-srt-ncst`, no publication check, as the DB 2.0 current collection):
   - `organizeCurrentData` on each acquisition's items. The items carry the xml2js string form of
@@ -81,8 +92,12 @@ publications). Documents are derived in memory; nothing derived is stored.
   - `organizeForecastData` / `midForecastPolicy.parse`, then `saveMid` with `saveOnlyLastOne`: one
     document per `regId` from the newest publication that parsed; for equal publications the
     earlier fetch wins, because legacy skips an already stored publication.
-  - Regions legacy never collects answer `[]`: forecast `stnId` and land codes from
-    `collectTownForecast`; temperature zones from the land-zone list and the active zone state.
+  - Stored documents are read for every region. Collection eligibility only decides whether a
+    missing latest publication forwards for request-time acquisition:
+    - forecast `stnId` and land codes from `collectTownForecast`;
+    - temperature zones from the land-zone list and the active zone state.
+
+    A retired zone keeps its stored document.
 - **Freshness:** a missing latest publication (current `current_base`, shortest
   `ultra_short_base`, short `short_base`, RSS `rss_latest`, mid `mid_tm_fc`) is a temporary forward
   until S15b-4 acquires it at request time. Older gaps are not a forward reason; S15b-2 fills

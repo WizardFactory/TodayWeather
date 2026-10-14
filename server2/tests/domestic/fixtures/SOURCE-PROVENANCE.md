@@ -1,6 +1,6 @@
 # S15b-1 store oracle fixture
 
-`source.json.gz` (sha256 `6f7dab16614b2d9f495f35716677744a081747cca8d09347ea283031011795f5`) holds pinned legacy-oracle results for the
+`source.json.gz` (sha256 `44fa135690a69e28fecdeb938fae55f3b76a0c18ebb63ff9ab0c2fb6bf4099a9`) holds pinned legacy-oracle results for the
 S15b-1 S3 input source tests (`server2/tests/domestic/source.rs`). It is test data only; the
 server2 runtime never reads it or any legacy file.
 
@@ -666,7 +666,7 @@ module.exports = {scenarios: [
 ]};
 ```
 
-### `grid-fixtures.js` (sha256 `179bd6da454012b139811a81934593ed85d55697d1a1840512927dc01528ada6`)
+### `grid-fixtures.js` (sha256 `bae43763ca21c4a43b7a76166298d038f2053c9250483ffdf4c4d08a050dfb2d`)
 
 ```js
 /* Synthetic VilageFcstInfoService_2.0 JSON pages (data.go.kr envelope) for the S15b grid oracle.
@@ -797,7 +797,7 @@ const scenarios = [];
     runs.push(at(shortest('20260924', '0930', {echo: '0730'}), 49));      // other publication: reject
     runs.push(at(shortest('20260924', '0930', {mutate: (c, a, v) => c === 'POP' && a.time === '1300' ? '120' : v}), 50)); // pop -1: complete() fails
     runs.push(at(shortest('20260924', '0930', {mutate: (c, a, v) => c === 'RN1' ? '1mm 미만' : v}), 52));
-    scenarios.push({id: 'shortest', at: instant('20260924', '1050'), runs});
+    scenarios.push({id: 'shortest', at: instant('20260924', '1030'), runs});
 }
 // Short: overlapping publications, an older publication applied later, a two-page set, rejects.
 {

@@ -106,11 +106,17 @@ impl<T: IndexListing + Clone> Reader<T> {
         for a in set.acquisitions() {
             let mut records: Vec<_> = a.records().to_vec();
             records.sort_by_key(|r| r.envelope.pagination.as_ref().map_or(1, |p| p.page));
-            let Some(first) = records.first() else {
+            // An acquisition is complete when its last page arrived: that instant orders
+            // replays and decides whether it existed at a request instant.
+            let Some(completed) = records
+                .iter()
+                .map(|r| r.envelope.identity.fetched_at_ms)
+                .max()
+            else {
                 continue;
             };
             out.push(Fetched {
-                fetched_at_ms: first.envelope.identity.fetched_at_ms,
+                fetched_at_ms: completed,
                 partition: partition.into(),
                 pages: records.iter().map(|r| r.bytes.clone()).collect(),
             });

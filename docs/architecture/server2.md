@@ -1790,6 +1790,14 @@ cutover. S15b is split into four PRs ([split and decisions](https://github.com/W
 permit too). For a request it resolves the town with the legacy `_findTown` rule, loads the town's
 grid, RSS and mid inputs, the forecast-zone list and the S12 zone state, and returns a `Snapshot`,
 an in-memory DB 2.0 `KmaStore`. Only published catalogs count; listings are per key and KST month.
+An acquisition is dated by its last page.
+
+- **Grid and RSS** read the publications that can still own a retained slot: 216 h plus the
+  horizon and a trailing day.
+- **Mid** walks months back to 2026-01 until a saved document is found, as legacy keeps the last
+  saved one.
+- **Forecast zones** fold every list since 2026-01 (memory applies newer lists, with a daily
+  refold).
 The snapshot lists the matched town as `towns()`; the chain uses the list only for `_findTown`,
 which finds that town first in the full list too.
 
@@ -1809,7 +1817,8 @@ each captured acquisition:
 - **RSS:** `parseShortRss`, last write wins per `fcsDate`, a Mongoose cast error skips a row, and the
   hourly wall-clock retention.
 - **Mid:** `organizeForecastData` / `midForecastPolicy.parse` and `saveMid` with `saveOnlyLastOne`.
-  A region legacy never collects has no document.
+  Every region's stored document is read. Collection eligibility only decides whether a missing
+  latest publication must be acquired, so a retired zone keeps its document.
 
 Stored documents keep the Mongoose 5.1.2 form, including template defaults copied by its `for...in`
 clone, `strict` stripping and `__v`. Legacy requested XML; server2 stores JSON, and an item field is
@@ -1833,8 +1842,11 @@ Verification (local, test peers only):
   scripts, organizers, savers and readers on synthetic inputs.
 - The rebuilt towns, 400 grid points, region table and cases, five zone scenarios, grid outcomes and
   documents for four scenarios, two RSS scenarios and six mid answers match byte for byte.
-- An S3 test of the snapshot reads published records with empty memory and returns the same
-  documents. Each missing input forwards with its reason.
+- The same scenarios published to the S06 S3 test peer and read back with empty memory equal the
+  oracle as well (grid, RSS, mid, zones).
+- An S3 snapshot test returns the same documents and forwards each missing input with its reason.
+- Focused tests pin completion-time dating, retired-zone documents, the last saved mid document
+  across months and zone fields inherited from older lists.
 - The release `kma_smoke.py` passes.
 
 Live provider shapes and timing, the cold-cell latency (S15b-4) and production quotas are unverified.

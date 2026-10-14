@@ -30,12 +30,12 @@ use std::{
 use tokio::time::Instant;
 
 /// The owned S06 loopback S3 fault peer (`tests/storage/catalog_peer.py`).
-struct Peer {
+pub struct Peer {
     child: Child,
     endpoint: String,
 }
 impl Peer {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let mut child = Command::new("python3")
             .arg("tests/storage/catalog_peer.py")
             .current_dir(env!("CARGO_MANIFEST_DIR"))
@@ -62,7 +62,7 @@ impl Peer {
             }
         }
     }
-    fn transport(&self) -> BoundedS3<HttpS3Transport> {
+    pub fn transport(&self) -> BoundedS3<HttpS3Transport> {
         BoundedS3::new(
             HttpS3Transport::new(
                 &self.endpoint,
@@ -81,7 +81,7 @@ impl Drop for Peer {
         let _ = self.child.wait();
     }
 }
-fn deadline() -> Instant {
+pub fn deadline() -> Instant {
     Instant::now() + Duration::from_secs(20)
 }
 const HOUR: f64 = 3_600_000.;
