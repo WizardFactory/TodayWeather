@@ -65,6 +65,11 @@ impl Peer {
         }
     }
     pub fn transport(&self) -> BoundedS3<HttpS3Transport> {
+        self.transport_limited(12)
+    }
+    /// A transport admitting at most `limit` requests at once (tests that run many reads
+    /// concurrently stay well below the peer's connection limit on CI runners).
+    pub fn transport_limited(&self, limit: usize) -> BoundedS3<HttpS3Transport> {
         BoundedS3::new(
             HttpS3Transport::new(
                 &self.endpoint,
@@ -73,7 +78,7 @@ impl Peer {
                 Credentials::new("server2-local", "server2-local-secret"),
             )
             .unwrap(),
-            12,
+            limit,
         )
     }
 }

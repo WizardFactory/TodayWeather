@@ -281,7 +281,9 @@ fn source(
     acquire: Arc<dyn Acquire>,
     locate: Arc<dyn Locate>,
 ) -> S3Source<server2::world::BoundedS3<server2::storage::HttpS3Transport>> {
-    S3Source::new(peer.transport(), Arc::new(|| NOW), acquire, locate).unwrap()
+    // Two concurrent snapshots plus their background loads: keep the peer's connections low
+    // (the Python S3 peer can drop connections under concurrency on Linux CI runners).
+    S3Source::new(peer.transport_limited(4), Arc::new(|| NOW), acquire, locate).unwrap()
 }
 async fn snapshot(
     s: &S3Source<server2::world::BoundedS3<server2::storage::HttpS3Transport>>,
