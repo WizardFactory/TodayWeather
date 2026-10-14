@@ -2,7 +2,7 @@
 
 Maintained operating checklist migrated from a dated task record. Recheck deployment and provider status before use; historical observations retain their stated dates.
 ## Current evidence and boundaries
-2026-10-14 evening ([#2745](https://github.com/WizardFactory/TodayWeather/issues/2745)): a live check reported in the issue found the third key (the one collection selects first) at its daily limit while the first and second keys answered normally. Collection stopped on quota at that time; it now moves to the next key (step 2).
+2026-10-14 evening ([#2745](https://github.com/WizardFactory/TodayWeather/issues/2745)): a live check reported in the issue found the third key (the one collection selects first) at its daily limit while the first and second keys answered normally. Collection stopped on quota at that time; it now moves to the next key (step 2). Live confirmation at 2026-10-14 23:56 KST (3 calls, local process only): the third key answered HTTP 429 with the JSON gateway envelope `OpenAPI_ServiceResponse.cmmMsgHeader` (`returnReasonCode "22"`, `errMsg LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR`); the #2745 client logged `KEY_QUOTA` for key position 2 and the second key returned 40 Seoul station rows for 23:00.
 
 2026-10-14: the operator key lists now hold three keys from three data.go.kr accounts. Unregistered and expired entries were removed, and both `AIRKOREA_SECRET_KEYS` and `DONGNAE_SECRET_KEYS` list the same three keys. After AK completed the missing service applications, read-only checks returned result code `00` for every key on all five AirKorea operations (station realtime, sido, station list, forecast, nearby). The gather host's key lists were not observed.
 
