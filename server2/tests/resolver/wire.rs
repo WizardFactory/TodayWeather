@@ -2101,8 +2101,8 @@ async fn default_owner_capacity_bounds_concurrent_locations() {
     assert_eq!(calls.load(Ordering::SeqCst), 1);
     assert_eq!(resolver.metrics().admission_rejections, 8);
 }
-/// S13d review S13D-R1-02: drain accounts for a shared acquisition that outlives the request
-/// waiter, and returns only after its publication.
+/// S13d review S13D-R1-02/R2-02: drain with time left waits for a shared acquisition that outlived
+/// the request waiter, and the acquisition publishes normally.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn drain_waits_for_the_shared_acquisition_after_the_waiter_left() {
     let peer = Peer::new();
@@ -2118,12 +2118,6 @@ async fn drain_waits_for_the_shared_acquisition_after_the_waiter_left() {
             .await
             .is_err()
     );
-    let early = resolver
-        .drain(Instant::now() + Duration::from_millis(100))
-        .await
-        .unwrap();
-    assert!(early.unfinished_owners + early.unfinished_acquisitions >= 1);
-    // A second drain with time left waits for the owned acquisition to finish.
     let report = resolver
         .drain(Instant::now() + Duration::from_secs(5))
         .await
@@ -2132,7 +2126,90 @@ async fn drain_waits_for_the_shared_acquisition_after_the_waiter_left() {
         (report.unfinished_owners, report.unfinished_acquisitions),
         (0, 0)
     );
+    assert_eq!(resolver.metrics().publications, 1);
     assert_eq!(resolver.metrics().active_owners, 0);
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    // The record was published: a fresh resolver restores it from S3 without the provider.
+    let (cold, cold_calls) = slow_resolver(
+        &peer,
+        Duration::from_millis(1_500),
+        ResolverConfig::default(),
+    );
+    let restored = cold.resolve(r, deadline()).await.unwrap();
+    assert!(String::from_utf8_lossy(restored.bytes()).contains("42"));
+    assert_eq!(cold_calls.load(Ordering::SeqCst), 0);
+}
+/// S13d review S13D-R2-02: a drain deadline that passes while a shared acquisition still runs
+/// reports it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn drain_expiry_reports_the_running_shared_acquisition() {
+    let peer = Peer::new();
+    let (resolver, _calls) = slow_resolver(
+        &peer,
+        Duration::from_millis(1_500),
+        ResolverConfig::default(),
+    );
+    let r = request("ko", ReadSelection::Latest, Duration::from_secs(30));
+    assert!(
+        resolver
+            .resolve(r, Instant::now() + Duration::from_millis(200))
+            .await
+            .is_err()
+    );
+    let report = resolver
+        .drain(Instant::now() + Duration::from_millis(100))
+        .await
+        .unwrap();
+    assert_eq!(report.unfinished_acquisitions, 1);
+    assert_eq!(report.unfinished_owners, 1);
+}
+/// S13d review S13D-R2-01: an invalidation while the shared publication is in flight keeps the
+/// resulting response out of the cache (it is still returned, uncached).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn invalidation_during_shared_publication_prevents_cache_admission() {
+    let peer = Peer::new();
+    let entered = Arc::new(Semaphore::new(0));
+    let release = Arc::new(Semaphore::new(0));
+    let r = request("ko", ReadSelection::Latest, Duration::from_secs(30));
+    let calls = Arc::new(AtomicUsize::new(0));
+    let resolver = Resolver::new(
+        CatalogBackend::new(
+            HoldCommittedWrite {
+                inner: peer.transport(),
+                key: r.scope().catalog.key(),
+                entered: entered.clone(),
+                release: release.clone(),
+            },
+            CatalogLimits::default(),
+        )
+        .unwrap(),
+        Slow {
+            calls: calls.clone(),
+            delay: Duration::ZERO,
+        },
+        Builder,
+        ResolverConfig::default(),
+    )
+    .unwrap();
+    let first = {
+        let (resolver, r) = (resolver.clone(), r.clone());
+        tokio::spawn(async move { resolver.resolve(r, deadline()).await })
+    };
+    tokio::time::timeout(Duration::from_secs(2), entered.acquire())
+        .await
+        .unwrap()
+        .unwrap()
+        .forget();
+    // Another local publication is announced while this one is committed but unacknowledged.
+    resolver.invalidate();
+    release.add_permits(1);
+    let served = first.await.unwrap().unwrap();
+    assert!(String::from_utf8_lossy(served.bytes()).contains("42"));
+    until(|| resolver.metrics().active_owners == 0).await;
+    let hits = resolver.metrics().hits;
+    release.add_permits(8);
+    resolver.resolve(r, deadline()).await.unwrap();
+    assert_eq!(resolver.metrics().hits, hits, "the response was not cached");
     assert_eq!(calls.load(Ordering::SeqCst), 1);
 }
 /// S13d review S13D-R1-03: the shared acquisition key ignores the order of the scope periods.
@@ -2175,10 +2252,14 @@ async fn reversed_scope_periods_share_one_acquisition() {
     let a = scoped("37.5001,127.0001", vec![first.clone(), second.clone()]);
     let b = scoped("35.1001,129.0001", vec![second, first]);
     let (ra, rb) = (resolver.clone(), resolver.clone());
-    let _ = tokio::join!(
-        tokio::spawn(async move { ra.resolve(a, deadline()).await.is_ok() }),
-        tokio::spawn(async move { rb.resolve(b, deadline()).await.is_ok() })
+    let (a, b) = tokio::join!(
+        tokio::spawn(async move { ra.resolve(a, deadline()).await }),
+        tokio::spawn(async move { rb.resolve(b, deadline()).await })
     );
+    for (served, location) in [(a, "37.5001"), (b, "35.1001")] {
+        let text = String::from_utf8_lossy(served.unwrap().unwrap().bytes()).into_owned();
+        assert!(text.contains(location) && text.contains("42"), "{text}");
+    }
     owners_idle(&resolver).await;
     assert_eq!(
         calls.load(Ordering::SeqCst),

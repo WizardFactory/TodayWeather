@@ -178,11 +178,14 @@ struct Core<T, A, V> {
     counters: Counters,
 }
 impl<T, A, V> Core<T, A, V> {
-    fn invalidate(&self) {
+    /// Returns the epoch this invalidation created (S13d review S13D-R2-01), never a later one
+    /// that another invalidation produced in between.
+    fn invalidate(&self) -> u64 {
         // Lock poisoning cannot allow stale reuse: still advance epoch, but fail admissions.
         let _gate = self.retention_gate.lock();
-        self.epoch.fetch_add(1, Ordering::AcqRel);
+        let epoch = self.epoch.fetch_add(1, Ordering::AcqRel) + 1;
         self.responses.clear();
+        epoch
     }
     /// Called only under retention_gate. No optional cache pins may escape that gate.
     fn make_response_room(&self, weight: usize) {
@@ -366,7 +369,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
     /// Notify any known local publication. Conservative global invalidation is bounded, immediate,
     /// and includes absence dependencies. External changes are discovered at the refresh interval.
     pub fn invalidate(&self) {
-        self.core.invalidate();
+        let _ = self.core.invalidate();
     }
     pub fn is_draining(&self) -> bool {
         self.core.draining.load(Ordering::Acquire)
@@ -809,8 +812,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
             armed: true,
         };
         // Invalidate before a possibly sent write, including cancellation/ambiguous results.
-        core.invalidate();
-        let published_epoch = core.epoch.load(Ordering::Acquire);
+        let published_epoch = core.invalidate();
         core.backend
             .publish(&request, acquisition, &context)
             .await?;
