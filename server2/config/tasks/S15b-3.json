@@ -5,6 +5,7 @@
     "server2/config/tasks/S15b-3.json",
     "server2/src/domestic/kma/source/",
     "server2/src/domestic/airkorea.rs",
+    "server2/src/domestic/acquire.rs",
     "server2/src/gateway/runtime.rs",
     "server2/src/world/runtime.rs",
     "server2/src/world/air.rs",
@@ -41,6 +42,7 @@
     "server2/src/world/runtime.rs": "live_air/build_with_air so the world family and the KMA air fallback share one LiveAir; shared file",
     "server2/src/world/air.rs": "parse_iso_offset becomes pub(crate) for observation.evaluate in the KMA fallback; shared file",
     "server2/tests/domestic/source_s3.rs": "seed, request, NOW and Data become pub for the S15b-3 snapshot test; shared S15b-1 test file",
-    "server2/tests/domestic/": "air.rs and air_s3.rs tests, fixtures/air.json.gz (pinned legacy oracle) and fixtures/AIR-PROVENANCE.md"
+    "server2/tests/domestic/": "air.rs and air_s3.rs tests, fixtures/air.json.gz (pinned legacy oracle) and fixtures/AIR-PROVENANCE.md",
+    "server2/src/domestic/acquire.rs": "Shared S13/S13c file: Paged::publication (default: newest page) so the nationwide dataset is dated by its overall mode (review S15b3-R3); other families unchanged"
   }
 }
