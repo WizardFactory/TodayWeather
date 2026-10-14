@@ -2066,3 +2066,63 @@ before use, a request released before a slow acquisition and served by the next 
 fallback answer and its deadline. Live calls on 2026-10-14 confirmed the three AirKorea operations,
 WAQI and Google Air Quality (200); the OpenWeather key answered 401. Production quotas, the
 cold-cell latency (S15b-4) and an end-to-end KMA response (after S15b-2) remain unverified.
+
+### S15b-2 station observations and ASOS history (2026-10-15)
+
+S15b-2 ([plan](../../plans/issue-2742.md#s15b-2-station-observations-and-asos-history), [spec](../../specs/issue-2742.md#specification-s15b-2)) sources `stn_hourly_and_min_rns`, `city_hourly` and the new
+`KmaStore::history` (legacy `lib/history/service.loadForTown`). AK's corrections of 2026-10-14
+and 2026-10-15 apply: no legacy forward and no pre-collection; recent current hours come from the
+KMA backfill and older hours back to D-7 from the nearest ASOS city station within 100 km
+(legacy #2564/#2648); a request waits at most 3 s and late data is answered as legacy answers
+absent data; the nationwide AWS hourly page is the ongoing-hour ASOS source.
+
+**Request-time acquisitions** (`domestic::kma::source::observe`) run as S13d `OwnedFlights`
+tasks keyed by dataset and publication (or station run). They are shared by every cell,
+survive the waiter, use the legacy timeouts (KMA pages 30 s, ASOS 10 s per attempt) and publish
+to S06 before use. Each acquisition makes at most two HTTP attempts per page (S13). The bounds
+below hold for failures too:
+
+| Dataset | When | Acquisitions |
+| --- | --- | --- |
+| AWS minute page (`nph-aws_txt_min`) | newest stored page older than 2 minutes | at most one per 2 minutes, whatever the outcome: ≤ 30/h, ≤ 720/day (keyless) |
+| AWS hourly page (`…?YYYYMMDDHH00&0&MINDB_60M&0&m`) | the latest KST hour from minute 15 and the hour before; one owned backfill pass over the missing hours of the 8-day `getCityHourlyList` window, three at a time (legacy `getStnPastHourlyWeather`) | latest/previous: each ≤ 6/h until acquired; backfill: each hour at most once per 6 h (≤ 190 per 6 h in an outage, 190 once at a cold start) |
+| City page (`currentweather.jsp?tm=`) | the latest hour; the page serves only its latest hour | ≤ 6/h while missing |
+| ASOS hourly/daily range (data.go.kr, per station) | one recovery run per mapped station at most once per hour (legacy lease and hourly job): the station's incomplete D-7..D-1 keys in contiguous ranges, as legacy `Recovery.run`; at most two stations' ranges in flight | cold 2 per station; then ≤ 2/day per mapped station, plus ≤ 1 run/h per station while ranges stay incomplete (≤ 8 pages per range) |
+
+The data.go.kr ASOS form has no nationwide request (live 2026-10-14: no `stnIds` answers `11`,
+`stnIds=0` answers `03`, two stations `02`); the KMA API허브 nationwide forms need an authKey that
+is not configured. So rows of the city stations on the AWS hourly page fill ongoing hours
+(`t1h`, `reh`, `rs1h`→`rn1` outside November–March, `wsd`, `vec`; marked `origin`). Only pages
+fetched within two hours of their hour count; backfilled history pages never stand for ASOS
+hours. The ranges are requested for the keys still incomplete. Replay applies records in fetch
+order, and a range's allowed keys are those no earlier range completed. That is the legacy
+plan-time set, because runs are serialized per station: a page row that arrived in between keeps
+its values, and the range adds the fields the row lacks. A backfill pass claims each hour only
+when that hour's acquisition starts, so hours left when its owned deadline expires stay due. Funding: `SERVER2_DATA_GO_KR_KEYS` (JSON array,
+the legacy `DONGNAE_SECRET_KEYS` form) with `SERVER2_DATA_GO_KR_DAILY_UNITS` per key and KST day
+(S08); provider roots default to production HTTPS and accept loopback overrides for tests.
+
+**Legacy collections rebuilt in memory.** Pages are parsed as cheerio 0.20.0 / htmlparser2 3.8.3
+read them (EUC-KR, entities, implied closes) and saved with the Mongoose 5.1.2 upsert rules of
+`_saveStnHourly2`/`_saveStnMinute2`. `KmaStnInfo` starts from the imported legacy `kmastninfos`
+seed (`tools/migration/export_station_seeds.py` + `station_seed_import`, offline; the production
+export is a separately authorized action) and then follows `_saveStnInfo`: a new station is
+registered once its address geocodes through the product geocoder, `isCityWeather` follows runs
+with city data. `getStnHourlyAndMinRns` and `getCityHourlyList` are ported with the 2d `$near`
+order. The ASOS store follows `Recovery.run`, `policy.normalize` and `Store.save` (first valid value
+per field), and the assembly ports `mergeHourly`, `mergeDaily`, `status` and the `historyStatus`
+response. S14 coverage no longer forwards: it lists what is fetched, what ASOS fills and what is
+absent.
+
+Verification (local, test peers only): pinned Node 16.20.2 oracles
+([stations](../../server2/tests/domestic/fixtures/STATIONS-PROVENANCE.md),
+[chain](../../server2/tests/domestic/fixtures/PROVENANCE.md)) for page parsing, savers, station
+answers, ASOS recovery over the live station-108 bodies, and 9 chain scenarios with the history
+read enabled (85 scenarios byte-identical); request-time tests over the S3 peer (single-flight,
+3-second answer, completion for the next request, a fresh process served from S3, the seeded
+registry); the release `kma_smoke.py` with provider roots on the loopback origin. Live calls are
+listed in the PR. Not reproduced: legacy re-runs of the hourly page at minutes 4/9/15/30, station
+rows of hours with no city page, `rnsHit`/`rnsCount` updates (legacy runs `_updateRnsHitRate` only
+from `/gather` against the retired `KmaStnMinute`; the rules are ported but not wired, an open
+decision), and the deployed `ASOS_HISTORY_STATIONS` allowlist (every registry city station is a
+candidate).

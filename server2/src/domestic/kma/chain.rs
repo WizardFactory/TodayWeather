@@ -207,6 +207,7 @@ impl KmaStore for Callbacks<'_> {
         forecast_zone(region: &str, city: &str);
         stn_hourly_and_min_rns(town: &Value, date_time: &str, current: &Value);
         city_hourly(town: &Value);
+        history(town: &Value);
         area_no(first: &str, second: &str, third: &str);
         area_no_near(lon_lat: &Value);
         life_index(area_no: f64);

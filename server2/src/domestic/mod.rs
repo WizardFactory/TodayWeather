@@ -3,6 +3,7 @@
 //! scheduler or response assembly (S14/S15) and never stores normalized weather values.
 mod acquire;
 pub mod airkorea;
+pub mod asos;
 pub mod family;
 pub mod format;
 pub mod keys;

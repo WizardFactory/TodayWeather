@@ -10,7 +10,7 @@ use server2::domestic::family::{Endpoints, Service};
 use server2::domestic::metrics::DomesticMetrics;
 use server2::domestic::{DomesticAcquirer, KeyRing};
 use server2::history::capture::{CaptureConfig, CaptureOwner, CaptureRunner};
-use server2::history::coverage::{ColdCell, Coverage, CoverageConfig, HistoryRequest, read_slot};
+use server2::history::coverage::{ColdCell, Coverage, HistoryRequest, read_slot};
 use server2::history::demand::{DemandChange, DemandConfig, DemandStore};
 use server2::history::index::{CaptureIndex, RebuildConfig};
 use server2::history::legacy::{self, ExportKey, LegacyKind};
@@ -213,16 +213,16 @@ async fn smoke_demand_capture_rebuild_coverage_and_legacy_import() {
         minute_anchor: None,
     };
     match schedule_coverage(&request, &index) {
-        Coverage::Legacy { cold, gaps, .. } => {
+        Coverage::Fill { cold, absent, .. } => {
             assert_eq!(cold, ColdCell::Partial);
             assert!(
-                !gaps.iter().any(|x| x.family == Family::Current),
-                "{gaps:?}"
+                !absent.iter().any(|x| x.family == Family::Current),
+                "{absent:?}"
             );
-            assert!(gaps.iter().any(|x| x.family == Family::Shortest));
-            assert!(gaps.iter().any(|x| x.family == Family::Short));
+            assert!(absent.iter().any(|x| x.family == Family::Shortest));
+            assert!(absent.iter().any(|x| x.family == Family::Short));
         }
-        other => panic!("expected legacy forwarding, got {other:?}"),
+        other => panic!("expected a fill plan, got {other:?}"),
     }
 
     // Damaged catalogs: an empty catalog for 11:00 and corrupt JSON for 10:00 never count.
@@ -274,13 +274,10 @@ async fn smoke_demand_capture_rebuild_coverage_and_legacy_import() {
     );
     // The export (state up to 12:00) would cover 10:00, but unreadable archived revisions
     // forward the request to legacy instead of letting the export hide them.
-    match schedule_coverage(&request, &damaged) {
-        Coverage::Legacy { reason, .. } => assert_eq!(
-            reason,
-            server2::history::coverage::LegacyReason::IndexIncomplete
-        ),
-        other => panic!("expected IndexIncomplete, got {other:?}"),
-    }
+    assert_eq!(
+        schedule_coverage(&request, &damaged),
+        Coverage::IndexIncomplete
+    );
 
     // Exact readback of the captured provider bytes through S06 catalogs.
     let cold = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
@@ -323,5 +320,5 @@ fn target_of(cell: server2::history::Grid) -> Target {
     Target::Cell(cell)
 }
 fn schedule_coverage(request: &HistoryRequest, index: &CaptureIndex) -> Coverage {
-    server2::history::coverage::coverage(request, index, &CoverageConfig::default())
+    server2::history::coverage::coverage(request, index)
 }

@@ -12,6 +12,8 @@ pub enum Val {
     Str(String),
     Bool(bool),
     Null,
+    /// A property set to `undefined` (kept in memory, omitted by `JSON.stringify`).
+    Undef,
     Date(f64),
     Arr(Vec<Val>),
     Doc(Doc),
@@ -48,6 +50,10 @@ impl Val {
             Self::Str(s) => OrderedJson::String(s.encode_utf16().collect()),
             Self::Bool(b) => OrderedJson::Bool(*b),
             Self::Null => OrderedJson::Null,
+            Self::Undef => OrderedJson::Object(vec![(
+                "$undefined".encode_utf16().collect(),
+                OrderedJson::Bool(true),
+            )]),
             Self::Date(ms) => OrderedJson::Object(vec![(
                 "$date".encode_utf16().collect(),
                 OrderedJson::Number(*ms),

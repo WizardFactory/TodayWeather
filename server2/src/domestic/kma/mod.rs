@@ -6,8 +6,9 @@
 //! controller receives. Building those answers from S3 raw records (S13/S13a/S14) is a separate
 //! source; nothing here calls a provider or reads legacy files.
 //!
-//! Legacy deployment facts preserved: process clock zone UTC, ASOS history reads off
-//! (`config.history.readEnabled` unset), `manager.MAX_CURRENT_COUNT` 192 (the S02 oracle harness
+//! Legacy deployment facts preserved: process clock zone UTC, ASOS history reads as the store
+//! supplies them ([`KmaStore::history`]: null is legacy `config.history.readEnabled` unset; the
+//! S15b-2 S3 source reads them, AK 2026-10-14), `manager.MAX_CURRENT_COUNT` 192 (the S02 oracle harness
 //! stubs 200; see [`AssemblyConfig`]), AirKorea dust-forecast and station-list collection not
 //! ported (their store reads return whatever a source supplies).
 mod air;
@@ -17,7 +18,7 @@ mod data;
 pub mod js;
 mod mid;
 mod policy;
-mod precip;
+pub(crate) mod precip;
 mod present;
 mod short;
 pub mod source;
@@ -111,6 +112,12 @@ pub trait KmaStore {
     -> StoreResult;
     /// `controllerKmaStnWeather.getCityHourlyList(town)`.
     fn city_hourly(&self, town: &Value) -> StoreResult;
+    /// `history.loadForTown(town)` (legacy `lib/history/service.js`): `{mapping, hourly, daily,
+    /// reason}` with ASOS records, or null when ASOS history reads are disabled (the legacy
+    /// deployment default, and every store that does not source them).
+    fn history(&self, _town: &Value) -> StoreResult {
+        Ok(OrderedJson::Null)
+    }
     /// `modelAreaNo.find({town.first, town.second, town.third}).limit(1)`.
     fn area_no(&self, first: &str, second: &str, third: &str) -> StoreResult;
     /// `modelAreaNo.find({geo: {$near: [lon, lat], $maxDistance: 0.3}}).limit(3)`.

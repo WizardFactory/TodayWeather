@@ -523,6 +523,14 @@ where
     ) -> Result<Acquired, DomesticError> {
         self.acquire_paged(request, deadline).await
     }
+    /// KMA ASOS hourly or daily observations of one station and range (S15b-2).
+    pub async fn acquire_asos(
+        &self,
+        request: &super::asos::AsosRequest,
+        deadline: Instant,
+    ) -> Result<Acquired, DomesticError> {
+        self.acquire_paged(request, deadline).await
+    }
     /// The forecast-zone code list (data.go.kr `getFcstZoneCd`, S13b).
     pub async fn acquire_zones(
         &self,

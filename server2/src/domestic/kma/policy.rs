@@ -1,5 +1,6 @@
 //! `lib/midForecastPolicy.js`, `lib/history/policy.js` and `lib/history/observations.js` as used
-//! by the v000903 chain (ASOS history reads are off; see the module docs in `mod.rs`).
+//! by the v000903 chain (the ASOS history read is enabled when the store supplies it; see
+//! `KmaStore::history`).
 use super::js::{Arr, Ob, V, gt, is_finite_number, obj, strict_eq, to_str};
 use super::time::{DAY, HOUR, make_date};
 use crate::world::js as wjs;
@@ -629,6 +630,261 @@ pub fn can_compare(current: &V, yesterday: &V) -> bool {
         || !b.get("key").truthy()
         || instant(&a.get("key")) - instant(&b.get("key")) == DAY
 }
+// ---- history/policy ASOS composition (#2564/#2648; read enabled by the S15b-2 source) ----
+
+/// `policy.limits` keys in declaration order.
+const LIMIT_FIELDS: [&str; 9] = [
+    "t1h", "t1d", "taMin", "taMax", "reh", "rn1", "wsd", "vec", "sky",
+];
+/// `policy.window(now)`: D-7..D-1 KST dates and today.
+pub fn window(now: f64) -> Option<(String, String, String)> {
+    let today = key(now, true)?;
+    Some((
+        add_days_key(&today, -7.)?,
+        add_days_key(&today, -1.)?,
+        today,
+    ))
+}
+/// `policy.range(kind, start, end, now)` for a valid window (hourly or daily keys).
+pub fn range(daily: bool, start: &str, end: &str) -> Vec<String> {
+    let (a, b) = (instant(&V::s(start)), instant(&V::s(end)));
+    if !a.is_finite() || !b.is_finite() || a > b {
+        return Vec::new();
+    }
+    let step = if daily { DAY } else { HOUR };
+    let mut out = Vec::new();
+    let mut t = a;
+    while t < b + DAY {
+        if let Some(k) = key(t, daily) {
+            out.push(k);
+        }
+        t += step;
+    }
+    out
+}
+/// `policy.complete(kind, row)` over a `values` object.
+pub fn complete_values(daily: bool, values: &V) -> bool {
+    let f = |k: &str| {
+        if values.truthy() {
+            values.get(k)
+        } else {
+            V::Undef
+        }
+    };
+    if daily {
+        valid("taMin", &f("taMin"))
+            && valid("taMax", &f("taMax"))
+            && super::js::le(&f("taMin"), &f("taMax"))
+    } else {
+        valid("t1h", &f("t1h")) && valid("reh", &f("reh"))
+    }
+}
+fn is_asos(r: &V, kind: &str) -> bool {
+    strict_eq(&r.get("source"), &V::s("KMA_ASOS"))
+        && strict_eq(&r.get("timeBasis"), &V::s("UTC"))
+        && strict_eq(&r.get("kind"), &V::s(kind))
+}
+/// `service.mergeHourly(req, data)` + `policy.mergeHourly(req, data.hourly)`.
+pub fn merge_hourly(req: &V, data: &V) {
+    if !data.truthy() {
+        return;
+    }
+    req.set("_history", data.clone());
+    let records = data.get("hourly");
+    let Some(records) = records.as_arr() else {
+        super::js::throw("records.forEach is not a function");
+    };
+    let mut by_key: Vec<(String, V)> = Vec::new();
+    for r in records.items() {
+        if is_asos(&r, "hourly") {
+            let k = to_str(&r.get("key"));
+            match by_key.iter_mut().find(|(x, _)| *x == k) {
+                Some(slot) => slot.1 = r,
+                None => by_key.push((k, r)),
+            }
+        }
+    }
+    let list = req.get("currentList");
+    let rows = list.as_arr().map(Arr::items).unwrap_or_default();
+    for row in rows {
+        let Some(s) = slot(&row) else { continue };
+        let Some((_, source)) = by_key.iter().find(|(k, _)| *k == s) else {
+            continue;
+        };
+        let values = source.get("values");
+        let mut fields = Vec::new();
+        for f in values.o().keys() {
+            let fv = values.get(&f);
+            if !valid(&f, &row.get(&f)) && valid(&f, &fv) {
+                row.set(&f, fv);
+                fields.push(f);
+            }
+        }
+        if !fields.is_empty() {
+            let refs: Vec<&str> = fields.iter().map(String::as_str).collect();
+            record(&row, source, &refs);
+        }
+    }
+}
+/// `policy.mergeDaily(req, records, now)`.
+pub fn merge_daily(req: &V, records: &V, now: f64) {
+    let Some((start, end, _)) = window(now) else {
+        return;
+    };
+    let daily = req.get("midData").get("dailyData");
+    let daily = daily.a();
+    for source in records.as_arr().map(Arr::items).unwrap_or_default() {
+        let k = source.get("key");
+        let ks = to_str(&k);
+        if !is_asos(&source, "daily")
+            || super::js::lt(&k, &V::s(&start))
+            || super::js::gt(&k, &V::s(&end))
+            || !complete_values(true, &source.get("values"))
+        {
+            continue;
+        }
+        let mut row = daily.find(|d| strict_eq(&d.get("date"), &k));
+        if row.is_undef() {
+            row = V::Obj(obj(vec![("date", V::from(ks.clone()))]));
+            daily.push(row.clone());
+        }
+        if strict_eq(&row.get("observationType"), &V::s("hourly-summary"))
+            && super::js::lt(&row.get("observationHours"), &V::Num(24.))
+        {
+            for f in LIMIT_FIELDS {
+                row.del(f);
+            }
+        }
+        let values = source.get("values");
+        let mut fields = Vec::new();
+        for f in values.o().keys() {
+            let fv = values.get(&f);
+            if !valid(&f, &row.get(&f)) && valid(&f, &fv) {
+                row.set(&f, fv);
+                fields.push(f);
+            }
+        }
+        if !fields.is_empty() {
+            row.set("observationType", "daily");
+            row.set(
+                "historyObservation",
+                V::Obj(obj(vec![
+                    ("source", source.get("source")),
+                    ("stationId", source.get("stationId")),
+                    ("key", source.get("key")),
+                    (
+                        "fields",
+                        V::Arr(Arr::from_vec(fields.iter().map(|f| V::s(f)).collect())),
+                    ),
+                ])),
+            );
+        }
+    }
+    // `daily.sort((a, b) => a.date.localeCompare(b.date))` over KST date keys.
+    for d in daily.items() {
+        if d.get("date").str().is_none() {
+            super::js::throw("a.date.localeCompare is not a function");
+        }
+    }
+    daily.sort_by(
+        |a, b| match to_str(&a.get("date")).cmp(&to_str(&b.get("date"))) {
+            std::cmp::Ordering::Less => -1.,
+            std::cmp::Ordering::Equal => 0.,
+            std::cmp::Ordering::Greater => 1.,
+        },
+    );
+}
+/// `policy.status(req, now)`.
+pub fn status(req: &V, now: f64) -> V {
+    let (start, end) = window(now).map_or_else(Default::default, |(s, e, _)| (s, e));
+    let mut hours: Vec<(String, V)> = Vec::new();
+    for r in req
+        .get("currentList")
+        .as_arr()
+        .map(Arr::items)
+        .unwrap_or_default()
+    {
+        if let Some(k) = slot(&r) {
+            match hours.iter_mut().find(|(x, _)| *x == k) {
+                Some(slot) => slot.1 = r,
+                None => hours.push((k, r)),
+            }
+        }
+    }
+    let mut days: Vec<(String, V)> = Vec::new();
+    let mid = req.get("midData");
+    if mid.truthy() {
+        for r in mid
+            .get("dailyData")
+            .as_arr()
+            .map(Arr::items)
+            .unwrap_or_default()
+        {
+            let d = to_str(&r.get("date"));
+            match days.iter_mut().find(|(x, _)| *x == d) {
+                Some(slot) => slot.1 = r,
+                None => days.push((d, r)),
+            }
+        }
+    }
+    let gaps = Arr::new();
+    let missing_hours = Arr::new();
+    for k in range(false, &start, &end) {
+        let r = hours
+            .iter()
+            .find(|(x, _)| *x == k)
+            .map_or(V::Undef, |(_, r)| r.clone());
+        let field = |f: &str| if r.truthy() { r.get(f) } else { V::Undef };
+        let missing: Vec<V> = ["t1h", "reh", "rn1", "wsd", "vec", "sky"]
+            .into_iter()
+            .filter(|f| !valid(f, &field(f)))
+            .map(V::s)
+            .collect();
+        if !missing.is_empty() {
+            gaps.push(V::Obj(obj(vec![
+                ("key", V::from(k.clone())),
+                ("fields", V::Arr(Arr::from_vec(missing))),
+            ])));
+        }
+        if !valid("t1h", &field("t1h")) || !valid("reh", &field("reh")) {
+            missing_hours.push(V::from(k));
+        }
+    }
+    let missing_days = Arr::new();
+    for k in range(true, &start, &end) {
+        let row = days
+            .iter()
+            .find(|(x, _)| *x == k)
+            .map_or(V::Undef, |(_, r)| r.clone());
+        if !complete_values(true, &row)
+            || (strict_eq(&row.get("observationType"), &V::s("hourly-summary"))
+                && super::js::lt(&row.get("observationHours"), &V::Num(24.)))
+        {
+            missing_days.push(V::from(k));
+        }
+    }
+    V::Obj(obj(vec![
+        ("startDate", V::from(start)),
+        ("endDate", V::from(end)),
+        ("timeZone", V::s("Asia/Seoul")),
+        ("missingHourlySlots", V::Arr(missing_hours)),
+        ("missingDailyDates", V::Arr(missing_days)),
+        ("hourlyFieldGaps", V::Arr(gaps)),
+    ]))
+}
+/// `service.mergeDaily(req)`: the daily merge and `historyStatus`.
+pub fn merge_daily_status(req: &V, now: f64) {
+    let data = req.get("_history");
+    if !data.truthy() {
+        return;
+    }
+    merge_daily(req, &data.get("daily"), now);
+    let st = status(req, now);
+    st.set("mapping", data.get("mapping"));
+    st.set("reason", data.get("reason"));
+    req.set("historyStatus", st);
+}
+
 /// `observations.yesterday(current, rows)`.
 pub fn yesterday(current: &V, rows: &V) -> V {
     let s = slot_v(current);

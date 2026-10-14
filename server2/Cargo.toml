@@ -31,9 +31,13 @@ chrono = { version = "0.4", default-features = false, features = ["std"] }
 chrono-tz = { version = "0.10", default-features = false, features = ["std", "case-insensitive"] }
 # S11: classify a VC connection closed before the response as the legacy ECONNRESET retry.
 hyper = { version = "1", default-features = false }
+# S15b-2: EUC-KR (KS X 1001) decoding of KMA AWS/city observation pages, as legacy iconv decodes them.
+encoding_rs = "0.8"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
+# S15b-2: paused-clock tests of owned acquisition deadlines.
+tokio = { version = "1", features = ["test-util"] }
 
 [[bin]]
 name = "server2-feasibility"
@@ -46,3 +50,7 @@ path = "tools/migration/warning_seed_import.rs"
 [[example]]
 name = "history_seed_import"
 path = "tools/migration/history_seed_import.rs"
+
+[[example]]
+name = "station_seed_import"
+path = "tools/migration/station_seed_import.rs"
