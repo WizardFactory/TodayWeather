@@ -13,7 +13,9 @@ use server2::domestic::kma::{
         towns, zone_documents,
     },
 };
+use server2::domestic::kma::source::observe::{Acquire, Locate};
 use server2::domestic::publication::Publication;
+use server2::domestic::{Acquired, DomesticError};
 use server2::gateway::OrderedJson;
 use server2::history::Grid;
 use server2::storage::{
@@ -86,7 +88,7 @@ pub fn deadline() -> Instant {
 }
 const HOUR: f64 = 3_600_000.;
 /// 2026-09-24 10:50 KST.
-const NOW: f64 = 1_790_214_600_000.;
+pub const NOW: f64 = 1_790_214_600_000.;
 fn kst_ms(date: u32, time: u16) -> f64 {
     server2::history::schedule::to_ms(Publication::new(date, time).unwrap()) as f64
 }
@@ -300,7 +302,7 @@ fn zone_page() -> Vec<u8> {
     .unwrap()
 }
 
-struct Data {
+pub struct Data {
     current: Vec<Fetched>,
     shortest: Vec<Fetched>,
     short: Vec<Fetched>,
@@ -318,7 +320,7 @@ fn fetched(at: f64, partition: &str, page: Vec<u8>) -> Fetched {
     }
 }
 /// Publish a complete input set at NOW, leaving out the families in `skip`.
-async fn seed(store: &CatalogStore<BoundedS3<HttpS3Transport>>, skip: &[&str]) -> Data {
+pub async fn seed(store: &CatalogStore<BoundedS3<HttpS3Transport>>, skip: &[&str]) -> Data {
     let grid = Grid::new(60, 127).unwrap().provider_key();
     let p = |d, t| Publication::new(d, t).unwrap();
     let mut data = Data {
@@ -472,7 +474,7 @@ async fn seed(store: &CatalogStore<BoundedS3<HttpS3Transport>>, skip: &[&str]) -
     }
     data
 }
-fn request() -> server2::domestic::kma::KmaRequest {
+pub fn request() -> server2::domestic::kma::KmaRequest {
     parse_path(
         "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
         "ko",
@@ -480,7 +482,36 @@ fn request() -> server2::domestic::kma::KmaRequest {
     .unwrap()
 }
 fn source(peer: &Peer) -> S3Source<BoundedS3<HttpS3Transport>> {
-    S3Source::new(peer.transport(), Arc::new(|| NOW)).unwrap()
+    S3Source::new(
+        peer.transport(),
+        Arc::new(|| NOW),
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+    )
+    .unwrap()
+}
+/// Request-time acquisition and geocoding doubles that never reach a provider.
+pub struct Unreachable;
+impl Acquire for Unreachable {
+    fn web(
+        &self,
+        _: server2::domestic::family::WebRequest,
+        _: Instant,
+    ) -> server2::gateway::BoxFuture<'_, Result<Acquired, DomesticError>> {
+        Box::pin(async { Err(DomesticError::Transport) })
+    }
+    fn asos(
+        &self,
+        _: server2::domestic::asos::AsosRequest,
+        _: Instant,
+    ) -> server2::gateway::BoxFuture<'_, Result<Acquired, DomesticError>> {
+        Box::pin(async { Err(DomesticError::Transport) })
+    }
+}
+impl Locate for Unreachable {
+    fn locate(&self, _: String) -> server2::gateway::BoxFuture<'_, Option<(f64, f64)>> {
+        Box::pin(async { None })
+    }
 }
 const SEOUL: Coord = Coord { mx: 60., my: 127. };
 
@@ -562,7 +593,8 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
         "no warning records: no active zones",
     );
     assert_eq!(transport.available(), 12, "every S3 permit returned");
-    // The assembly reaches the first input S15b-2 owns and forwards with its name.
+    // Station and ASOS inputs are sourced (S15b-2, here over empty collections); the assembly
+    // reaches the first input S15b-3 owns and forwards with its name.
     let outcome = assemble(
         &request(),
         snapshot.as_ref(),
@@ -571,7 +603,7 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
     );
     match outcome {
         Outcome::Legacy(reason) => assert!(
-            reason.contains("city_hourly is not sourced yet (S15b-2)"),
+            reason.contains("area_no is not sourced yet (S15b-3)"),
             "{reason}"
         ),
         other => panic!("not forwarded: {other:?}"),

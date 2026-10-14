@@ -1,5 +1,7 @@
 #[path = "domestic/asos.rs"]
 mod asos;
+#[path = "domestic/observe.rs"]
+mod observe;
 #[path = "domestic/parity.rs"]
 mod parity;
 #[path = "domestic/replay.rs"]

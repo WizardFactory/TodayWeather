@@ -79,6 +79,38 @@ pub fn native_geocoder(var: Var, s3: BoundedS3<HttpS3Transport>) -> Result<Geoco
         .map_err(|_| GatewayError::InvalidConfiguration)?
         .with_quota(Arc::new(quota)))
 }
+/// The KMA request-time acquirer: `SERVER2_DATA_GO_KR_KEYS` (a JSON array of data.go.kr keys,
+/// the legacy `DONGNAE_SECRET_KEYS` form) funded with `SERVER2_DATA_GO_KR_DAILY_UNITS` per key
+/// and KST day in S3 (S08); both are required with `kma`.
+pub fn kma_acquirer(
+    var: Var,
+    s3: BoundedS3<HttpS3Transport>,
+) -> Result<
+    crate::domestic::kma::source::observe::DailyAcquirer<
+        crate::providers::HttpProviderTransport,
+        crate::providers::HttpPublicTransport,
+        BoundedS3<HttpS3Transport>,
+    >,
+    GatewayError,
+> {
+    let keys = crate::domestic::keys::parse_keys(
+        &var("SERVER2_DATA_GO_KR_KEYS").ok_or(GatewayError::InvalidConfiguration)?,
+    );
+    let units = units(var, "SERVER2_DATA_GO_KR_DAILY_UNITS")?
+        .ok_or(GatewayError::InvalidConfiguration)?;
+    let invalid = |_| GatewayError::InvalidConfiguration;
+    crate::domestic::kma::source::observe::DailyAcquirer::new(
+        Arc::new(crate::providers::HttpProviderTransport::new(8 * 1024 * 1024).map_err(invalid)?),
+        Arc::new(crate::providers::HttpPublicTransport::new(8 * 1024 * 1024).map_err(invalid)?),
+        Arc::new(s3),
+        keys,
+        units,
+        crate::domestic::family::Endpoints::default(),
+        Arc::new(SystemClock),
+        Arc::new(crate::domestic::metrics::DomesticMetrics::default()),
+    )
+    .map_err(|_| GatewayError::InvalidConfiguration)
+}
 /// Build the gateway from injected variables. No legacy URL keeps the foundation service.
 pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
     let Some(base) = var("SERVER2_GATEWAY_LEGACY_URL") else {
@@ -100,10 +132,15 @@ pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
     }
     if let (Some(s3), true) = (s3, families.kma) {
         // S15b: the S3 input source over the shared admission. Inputs owned by later slices
-        // still forward with named reasons until S15b-4.
+        // still forward with named reasons until S15b-4. S15b-2 request-time acquisitions use
+        // the data.go.kr keys for ASOS and the product geocoder for station coordinates.
         let source = crate::domestic::kma::source::S3Source::new(
-            s3,
+            s3.clone(),
             crate::domestic::kma::backend::system_clock(),
+            Arc::new(kma_acquirer(var, s3)?),
+            Arc::new(crate::domestic::kma::source::observe::ProductGeocoder(
+                geocoder.clone(),
+            )),
         )
         .map_err(|_| GatewayError::InvalidConfiguration)?;
         crate::domestic::kma::backend::select_native(&backend, Arc::new(source))?;

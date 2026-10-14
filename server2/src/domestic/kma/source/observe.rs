@@ -250,8 +250,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// request needs until `until`. None when no fold exists yet (the readers answer as legacy
     /// does over empty collections).
     pub async fn stations(self: &Arc<Self>, now_ms: i64, until: Instant) -> Option<Arc<Folded>> {
+        // What S3 already holds decides what to acquire.
+        Self::wait(self.load(now_ms).into_iter().collect(), until).await;
         let mut waits = Vec::new();
-        waits.extend(self.load(now_ms));
         waits.extend(self.ensure_minute(now_ms));
         let latest = latest_hourly(now_ms);
         waits.extend(self.ensure_hourly(latest, Duration::from_secs(600)));
@@ -261,10 +262,27 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         }
         self.backfill_hours(now_ms);
         Self::wait(waits, until).await;
+        // Fold; new station addresses are geocoded and folded again within the wait.
+        for _ in 0..2 {
+            if let Some(rx) = self.fold_if_dirty(now_ms) {
+                Self::wait(vec![rx], until).await;
+            }
+            match self.flight(&Flight::Geocode) {
+                Some(rx) => Self::wait(vec![rx], until).await,
+                None => break,
+            }
+        }
         if let Some(rx) = self.fold_if_dirty(now_ms) {
             Self::wait(vec![rx], until).await;
         }
         self.state().folded.clone()
+    }
+    fn flight(&self, key: &Flight) -> Option<watch::Receiver<bool>> {
+        self.flights
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(key)
+            .cloned()
     }
     /// Read hourly/city day partitions of the 8-day window and the latest minute pages from S3
     /// (at start and every [`RELOAD`]).
@@ -474,17 +492,22 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         match self.acquire.web(request, deadline).await {
             Ok(Acquired::Complete(acquisition)) => {
                 let records = acquisition.records.clone();
-                self.reader
+                let r = self.reader
                     .store
                     .publish(acquisition.declaration, acquisition.records, deadline)
-                    .await
-                    .ok()?;
+                    .await;
+                        r.ok()?;
                 Some(records)
             }
             _ => None,
         }
     }
+    /// A running fold (joined even when nothing is newer: it may hold this request's pages), or
+    /// a new one when pages changed.
     fn fold_if_dirty(self: &Arc<Self>, now_ms: i64) -> Option<watch::Receiver<bool>> {
+        if let Some(rx) = self.flight(&Flight::Fold) {
+            return Some(rx);
+        }
         if !self.state().pages.dirty {
             return None;
         }
@@ -597,6 +620,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             return reason("cache-read-timeout", None);
         };
         let Some(mapping) = nearest(town, folded.registry.docs(), ASOS_MAX_KM) else {
+            // Station coordinates still being resolved are late data, not an absent station.
+            if self.flight(&Flight::Geocode).is_some() {
+                return reason("cache-read-timeout", None);
+            }
             return reason("station-unavailable", None);
         };
         let station = mapping.station.clone();
@@ -990,4 +1017,149 @@ pub fn nearest(town: &Doc, stations: &[Doc], max_km: f64) -> Option<Mapping> {
         }
     }
     best
+}
+
+/// The S13 acquirer for request-time acquisitions: KMA pages (keyless) and ASOS ranges funded by
+/// S08 per data.go.kr key and KST day (each key its own quota owner with `daily_units`; a new
+/// window opens when the KST day changes).
+pub struct DailyAcquirer<P, W, B> {
+    funded: Arc<P>,
+    public: Arc<W>,
+    budgets: Arc<B>,
+    keys: Vec<String>,
+    daily_units: u64,
+    endpoints: crate::domestic::family::Endpoints,
+    clock: Arc<dyn crate::budget::Clock>,
+    metrics: Arc<crate::domestic::metrics::DomesticMetrics>,
+    current: DailyCurrent<P, W, B>,
+}
+type DailyCurrent<P, W, B> =
+    tokio::sync::Mutex<Option<(i64, Arc<crate::domestic::DomesticAcquirer<P, W, B>>)>>;
+/// The S08 quota owner of a data.go.kr key (domain-separated SHA-256 of the key).
+pub fn data_go_kr_quota_owner(key: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hash = Sha256::new();
+    hash.update(b"server2-data-go-kr-quota-v1");
+    hash.update([0u8]);
+    hash.update(key.as_bytes());
+    hash.finalize().iter().map(|b| format!("{b:02x}")).collect()
+}
+const KST_MS: i64 = 9 * 3_600_000;
+const DAY_MS: i64 = 86_400_000;
+impl<P, W, B> DailyAcquirer<P, W, B>
+where
+    P: crate::providers::ProviderTransport + 'static,
+    W: crate::providers::PublicTransport + 'static,
+    B: crate::budget::BudgetTransport + 'static,
+{
+    #[allow(clippy::too_many_arguments)] // Explicit transports, keys, funding and endpoints.
+    pub fn new(
+        funded: Arc<P>,
+        public: Arc<W>,
+        budgets: Arc<B>,
+        keys: Vec<String>,
+        daily_units: u64,
+        endpoints: crate::domestic::family::Endpoints,
+        clock: Arc<dyn crate::budget::Clock>,
+        metrics: Arc<crate::domestic::metrics::DomesticMetrics>,
+    ) -> Result<Self, DomesticError> {
+        let this = Self {
+            funded,
+            public,
+            budgets,
+            keys,
+            daily_units,
+            endpoints,
+            clock,
+            metrics,
+            current: tokio::sync::Mutex::new(None),
+        };
+        // Validate keys and limits once with a window at the epoch.
+        this.build(0)?;
+        Ok(this)
+    }
+    fn build(
+        &self,
+        starts: i64,
+    ) -> Result<crate::domestic::DomesticAcquirer<P, W, B>, DomesticError> {
+        use crate::budget::{BudgetPolicy, BudgetStore, Provider};
+        let invalid = DomesticError::Invalid("data.go.kr key or daily units");
+        if self.keys.is_empty() || self.daily_units == 0 {
+            return Err(invalid);
+        }
+        let window_id = crate::world::js::iso((starts + KST_MS) as f64)
+            .map(|s| s[..10].to_owned())
+            .ok_or(DomesticError::Invalid("window"))?;
+        let mut entries = Vec::new();
+        for key in &self.keys {
+            let policy = BudgetPolicy {
+                provider: Provider::DataGoKr,
+                quota_id: data_go_kr_quota_owner(key),
+                window_id: window_id.clone(),
+                starts_at_ms: starts,
+                ends_at_ms: starts + DAY_MS,
+                limit: self.daily_units,
+                block_units: self.daily_units.min(50),
+            };
+            let store = BudgetStore::new(self.budgets.clone(), policy, self.clock.clone())
+                .map_err(|_| invalid.clone())?;
+            entries.push((
+                crate::providers::ProviderKey::new(key.clone()).map_err(|_| invalid.clone())?,
+                Arc::new(store),
+            ));
+        }
+        let mut rings = BTreeMap::new();
+        rings.insert(
+            crate::domestic::family::Service::Asos,
+            crate::domestic::KeyRing::new(entries)?,
+        );
+        crate::domestic::DomesticAcquirer::new(
+            self.funded.clone(),
+            self.public.clone(),
+            rings,
+            self.endpoints.clone(),
+            self.clock.clone(),
+            self.metrics.clone(),
+            crate::storage::CatalogLimits::default(),
+        )
+    }
+    async fn today(
+        &self,
+    ) -> Result<Arc<crate::domestic::DomesticAcquirer<P, W, B>>, DomesticError> {
+        let now = self
+            .clock
+            .now_ms()
+            .map_err(|_| DomesticError::Invalid("clock"))?;
+        let starts = (now + KST_MS).div_euclid(DAY_MS) * DAY_MS - KST_MS;
+        let mut current = self.current.lock().await;
+        if let Some((at, acquirer)) = current.as_ref()
+            && *at == starts
+        {
+            return Ok(acquirer.clone());
+        }
+        let acquirer = Arc::new(self.build(starts)?);
+        *current = Some((starts, acquirer.clone()));
+        Ok(acquirer)
+    }
+}
+impl<P, W, B> Acquire for DailyAcquirer<P, W, B>
+where
+    P: crate::providers::ProviderTransport + 'static,
+    W: crate::providers::PublicTransport + 'static,
+    B: crate::budget::BudgetTransport + 'static,
+{
+    fn web(
+        &self,
+        request: WebRequest,
+        deadline: Instant,
+    ) -> BoxFuture<'_, Result<Acquired, DomesticError>> {
+        Box::pin(async move { self.today().await?.acquire_web(&request, deadline).await })
+    }
+    fn asos(
+        &self,
+        request: AsosRequest,
+        deadline: Instant,
+    ) -> BoxFuture<'_, Result<Acquired, DomesticError>> {
+        Box::pin(async move { self.today().await?.acquire_asos(&request, deadline).await })
+    }
 }
