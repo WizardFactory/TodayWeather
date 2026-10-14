@@ -1,0 +1,35 @@
+{
+  "task": "S13c",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2745",
+  "server2_paths": [
+    "server2/config/tasks/S13c.json",
+    "server2/src/domestic/acquire.rs",
+    "server2/tests/formats/common.rs",
+    "server2/tests/formats/legacy_sources.rs",
+    "server2/tests/formats/domestic.rs",
+    "server2/tests/formats/fixtures/airkorea-quota-429.json",
+    "server2/tests/formats/fixtures/PROVENANCE.md"
+  ],
+  "outside": [
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Update the S13b AirKorea key paragraph for quota rotation and add the S13c note; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2745-s13c.md",
+      "category": "documentation",
+      "reason": "S13c task contract; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2745-s13c.md",
+      "category": "documentation",
+      "reason": "S13c execution plan and user scenarios; no implementation outside server2"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2745#issuecomment-6171093382",
+  "path_notes": {
+    "server2/tests/formats/fixtures/airkorea-quota-429.json": "Added before the dependent edit (https://github.com/WizardFactory/TodayWeather/issues/2745#issuecomment-6171317790): exact provider body of the 2026-10-14 live quota answer",
+    "server2/tests/formats/fixtures/PROVENANCE.md": "Provenance entry for the recorded quota body, declared in the same amendment"
+  }
+}
