@@ -735,13 +735,7 @@ fn js_parse_int(s: &str, decimal: bool) -> f64 {
         if digits.is_empty() {
             return f64::NAN;
         }
-        // Exact for up to 32 digits (one rounding to f64), as V8 rounds a power-of-two radix.
-        let value = if digits.len() <= 32 {
-            digits.iter().fold(0u128, |a, &d| (a << 4) | u128::from(d)) as f64
-        } else {
-            digits.iter().fold(0., |a, &d| a * 16. + f64::from(d))
-        };
-        return sign * value;
+        return sign * wjs::pow2_radix_value(&digits, 4);
     }
     let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
     if digits.is_empty() {
@@ -999,6 +993,131 @@ mod tests {
         ] {
             let got = wjs::string_to_number(s);
             assert!(got == want || got.is_nan() && want.is_nan(), "{s:?}: {got}");
+        }
+        // Long power-of-two radix strings round once, ties to even (S15-R20, pinned Node 16.20.2):
+        // (string, Number(s), parseInt(s), parseInt("-" + s), parseInt("  " + s + "zz")).
+        let table: &[(&str, f64, Option<f64>, Option<f64>, Option<f64>)] = &[
+            (
+                "0x100000000000008000000000000000001",
+                3.4028236692093854e38,
+                Some(3.4028236692093854e38),
+                Some(-3.4028236692093854e38),
+                Some(3.4028236692093854e38),
+            ),
+            (
+                "0x100000000000008000000000000000000",
+                3.4028236692093846e38,
+                Some(3.4028236692093846e38),
+                Some(-3.4028236692093846e38),
+                Some(3.4028236692093846e38),
+            ),
+            (
+                "0x100000000000018000000000000000000",
+                3.4028236692093861e38,
+                Some(3.4028236692093861e38),
+                Some(-3.4028236692093861e38),
+                Some(3.4028236692093861e38),
+            ),
+            (
+                "0x1fffffffffffffffffffffffffffffffff",
+                1.0889035741470031e40,
+                Some(1.0889035741470031e40),
+                Some(-1.0889035741470031e40),
+                Some(1.0889035741470031e40),
+            ),
+            (
+                "0x00000000000000000000000000000000000000001fffffffffffff8",
+                1.4411518807585587e17,
+                Some(1.4411518807585587e17),
+                Some(-1.4411518807585587e17),
+                Some(1.4411518807585587e17),
+            ),
+            (
+                "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                f64::INFINITY,
+                Some(f64::INFINITY),
+                Some(f64::NEG_INFINITY),
+                Some(f64::INFINITY),
+            ),
+            (
+                "0x20000000000001",
+                9.0071992547409920e15,
+                Some(9.0071992547409920e15),
+                Some(-9.0071992547409920e15),
+                Some(9.0071992547409920e15),
+            ),
+            (
+                "0x20000000000003",
+                9.0071992547409960e15,
+                Some(9.0071992547409960e15),
+                Some(-9.0071992547409960e15),
+                Some(9.0071992547409960e15),
+            ),
+            (
+                "0x1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                1.1235582092889474e307,
+                Some(1.1235582092889474e307),
+                Some(-1.1235582092889474e307),
+                Some(1.1235582092889474e307),
+            ),
+            (
+                "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                f64::INFINITY,
+                Some(f64::INFINITY),
+                Some(f64::NEG_INFINITY),
+                Some(f64::INFINITY),
+            ),
+            (
+                "0o777777777777777777777777777777777777777777777777777777777777",
+                1.5324955408658889e54,
+                None,
+                None,
+                None,
+            ),
+            (
+                "0o10000000000000000040000000000000000000000000000001",
+                1.7840596158824502e44,
+                None,
+                None,
+                None,
+            ),
+            (
+                "0b100000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+                2.1778071482940066e40,
+                None,
+                None,
+                None,
+            ),
+            (
+                "0b100000000000000000000000000000000000000000000000000001",
+                9.0071992547409920e15,
+                None,
+                None,
+                None,
+            ),
+            (
+                "0b100000000000000000000000000000000000000000000000000011",
+                9.0071992547409960e15,
+                None,
+                None,
+                None,
+            ),
+        ];
+        for (s, number, int, negative, padded) in table {
+            assert_eq!(wjs::string_to_number(s), *number, "Number({s})");
+            if let (Some(int), Some(negative), Some(padded)) = (int, negative, padded) {
+                assert_eq!(parse_int(&V::s(s)), *int, "parseInt({s})");
+                assert_eq!(
+                    parse_int(&V::s(&format!("-{s}"))),
+                    *negative,
+                    "parseInt(-{s})"
+                );
+                assert_eq!(
+                    parse_int(&V::s(&format!("  {s}zz"))),
+                    *padded,
+                    "parseInt(pad {s})"
+                );
+            }
         }
         // `Number`/`parseFloat` skip JavaScript whitespace only (U+0085 is not; pinned V8).
         assert!(wjs::string_to_number("\u{85}12").is_nan());

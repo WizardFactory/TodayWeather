@@ -222,6 +222,38 @@ pub fn is_js_space(c: char) -> bool {
                 | '\u{feff}'
     )
 }
+/// The value of `digits` in radix `2^bits`, correctly rounded to the nearest double (ties to even,
+/// with every dropped bit as sticky), as V8 converts power-of-two radix strings; Infinity past the
+/// largest double.
+pub fn pow2_radix_value(digits: &[u32], bits: u32) -> f64 {
+    let mut value: Vec<u8> = Vec::with_capacity(digits.len() * bits as usize);
+    for d in digits {
+        for i in (0..bits).rev() {
+            let b = ((d >> i) & 1) as u8;
+            if !(value.is_empty() && b == 0) {
+                value.push(b);
+            }
+        }
+    }
+    let n = value.len();
+    let top = n.min(53);
+    let mut mantissa = value[..top]
+        .iter()
+        .fold(0u64, |a, &b| (a << 1) | u64::from(b));
+    if n <= 53 {
+        return mantissa as f64;
+    }
+    let round = value[53] == 1;
+    let sticky = value[54..].contains(&1);
+    if round && (sticky || mantissa & 1 == 1) {
+        mantissa += 1;
+    }
+    let exponent = (n - 53) as i32;
+    if exponent > 1023 {
+        return f64::INFINITY;
+    }
+    mantissa as f64 * 2f64.powi(exponent)
+}
 /// `Number(string)` for the decimal forms produced by legacy inputs.
 pub fn string_to_number(s: &str) -> f64 {
     let t = s.trim_matches(is_js_space);
@@ -240,14 +272,8 @@ pub fn string_to_number(s: &str) -> f64 {
             if rest.is_empty() || !rest.chars().all(|c| c.is_digit(radix)) {
                 return f64::NAN;
             }
-            return u128::from_str_radix(rest, radix).map_or_else(
-                |_| {
-                    rest.chars().fold(0., |a, c| {
-                        a * f64::from(radix) + f64::from(c.to_digit(radix).unwrap_or(0))
-                    })
-                },
-                |n| n as f64,
-            );
+            let digits: Vec<u32> = rest.chars().filter_map(|c| c.to_digit(radix)).collect();
+            return pow2_radix_value(&digits, radix.trailing_zeros());
         }
     }
     let valid = t.bytes().enumerate().all(|(i, b)| {
