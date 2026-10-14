@@ -30,13 +30,11 @@ use std::{
 use tokio::time::Instant;
 
 /// The owned S06 loopback S3 fault peer (`tests/storage/catalog_peer.py`).
-/// The domestic tests that own an S3 test peer run one at a time. The peer admits 16
-/// connections and closes each one after 2 s; on small CI runners concurrent peers and test
-/// threads delay its handler threads, so a slot is released late and a new connection is
-/// refused (`raw storage: Transport`).
+/// The domestic tests that own an S3 test peer run one at a time, so small CI runners serve one
+/// peer at a time (the peer admits 16 connections and bounds each to 2 s).
 pub static S3_PEERS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-/// S3 requests in flight per test transport: below the production 12, so connections whose
-/// peer handler has not released its slot yet never exhaust the peer's 16 slots.
+/// S3 requests in flight per test transport: below the production 12, leaving peer slots for
+/// connections whose handler thread has not released its slot yet.
 pub const TEST_PERMITS: usize = 8;
 pub struct Peer {
     child: Child,
