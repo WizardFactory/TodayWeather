@@ -13,8 +13,10 @@
 //! `kma` family stays off until S15b-4.
 mod doc;
 mod grid;
+pub mod html;
 mod items;
 mod mid;
+pub mod pages;
 mod records;
 mod reference;
 mod rss;

@@ -126,7 +126,8 @@ pub fn new_date(v: &V) -> f64 {
 /// - `YYYY-MM-DD{T|t| }HH:MM[:SS[.fraction]][Z|z|+-HH:MM|+-HHMM]` (hour 24 only at exactly
 ///   midnight, offsets up to 23:59; with `T` an out-of-range field is `NaN` as in V8; the space
 ///   form only for years from 100);
-/// - the legacy dotted `YYYY.MM.DD[ HH:MM]` forms with in-range fields and years from 100;
+/// - the legacy dotted `YYYY.MM.DD[ HH:MM]` and `YYYY.MM.DD.HH:MM` forms with in-range fields and
+///   years from 100;
 /// - strings without an ASCII digit and digit-only strings of 7 or more digits (`NaN`).
 ///
 /// Any other string with digits may be accepted by V8's permissive legacy parser; the request is
@@ -149,7 +150,11 @@ pub fn parse_date(s: &str) -> f64 {
             }
             let (h, mi) = match b.len() {
                 10 => (0., 0.),
-                16 if b[10] == b' ' && b[13] == b':' => (num(11..13)?, num(14..16)?),
+                // The space form, and the KMA station page form `YYYY.MM.DD.HH:MM` (S15b-2,
+                // checked against the pinned V8: same fields, same result).
+                16 if (b[10] == b' ' || b[10] == b'.') && b[13] == b':' => {
+                    (num(11..13)?, num(14..16)?)
+                }
                 _ => return None,
             };
             ((1. ..=12.).contains(&m)

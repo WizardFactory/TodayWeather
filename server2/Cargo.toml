@@ -31,6 +31,8 @@ chrono = { version = "0.4", default-features = false, features = ["std"] }
 chrono-tz = { version = "0.10", default-features = false, features = ["std", "case-insensitive"] }
 # S11: classify a VC connection closed before the response as the legacy ECONNRESET retry.
 hyper = { version = "1", default-features = false }
+# S15b-2: EUC-KR (KS X 1001) decoding of KMA AWS/city observation pages, as legacy iconv decodes them.
+encoding_rs = "0.8"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
