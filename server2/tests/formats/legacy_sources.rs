@@ -1082,6 +1082,14 @@ async fn airkorea_quota_on_a_later_page_restarts_with_the_next_key() {
     );
 }
 
+/// Waits until the stub has received the first `path` request (the paging call's first page).
+async fn first_request(stub: &Stub, path: &str) {
+    let path = format!("/{path}");
+    while !stub.calls().iter().any(|c| c.path == path) {
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    }
+}
+
 /// Wall clock that replays scripted readings once armed, then keeps the last one.
 struct ScriptedClock {
     now: std::sync::atomic::AtomicI64,
@@ -1139,7 +1147,7 @@ async fn airkorea_recheck_skip_never_extends_an_exhaustion_across_kst_midnight()
     .unwrap();
     stub.push(
         STATION_LIST,
-        Reply::json(airkorea(stations(0, 100), 1, 100, 120)).delayed(300),
+        Reply::json(airkorea(stations(0, 100), 1, 100, 120)).delayed(1000),
     );
     stub.push(
         STATION_LIST,
@@ -1153,7 +1161,7 @@ async fn airkorea_recheck_skip_never_extends_an_exhaustion_across_kst_midnight()
     stub.push(FORECAST, Reply::json(local("airkorea-forecast.json")));
     let list = AirKoreaRequest::station_list();
     let parallel = async {
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        first_request(&stub, STATION_LIST).await;
         // Exhausts the last key at NOW_MS: until KST midnight.
         complete(acquirer.acquire_airkorea(&forecast(), deadline()).await);
         // The station list then reads the clock for its first page's fetch time, for the page 2
@@ -1180,7 +1188,7 @@ async fn airkorea_key_exhausted_by_a_parallel_call_is_not_used_for_later_pages()
     let e = env_keys(&THREE, &OTHERS).await;
     e.stub.push(
         STATION_LIST,
-        Reply::json(airkorea(stations(0, 100), 1, 100, 120)).delayed(300),
+        Reply::json(airkorea(stations(0, 100), 1, 100, 120)).delayed(1000),
     );
     e.stub.push(
         STATION_LIST,
@@ -1195,8 +1203,8 @@ async fn airkorea_key_exhausted_by_a_parallel_call_is_not_used_for_later_pages()
         .push(FORECAST, Reply::json(local("airkorea-forecast.json")));
     let list = AirKoreaRequest::station_list();
     let late = async {
-        // Let the station list send its first page before the forecast sees quota.
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        // The station list has sent its first page before the forecast sees quota.
+        first_request(&e.stub, STATION_LIST).await;
         e.acquirer.acquire_airkorea(&forecast(), deadline()).await
     };
     let (stations, forecast) = tokio::join!(e.acquirer.acquire_airkorea(&list, deadline()), late);
