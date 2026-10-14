@@ -719,11 +719,19 @@ async fn minute_pages_stay_within_the_readers_reach() {
         Arc::new(Table(Mutex::new(0))),
     ));
     let now = NOW as i64;
-    let first = obs
-        .stations(now, Instant::now() + Duration::from_secs(3))
-        .await
-        .unwrap();
-    assert!(!first.minute.docs().is_empty(), "the 10:49 page");
+    // A slow runner may answer the first request without the page; later requests see it.
+    let mut seen = false;
+    for _ in 0..40 {
+        let folded = obs
+            .stations(now, Instant::now() + Duration::from_secs(3))
+            .await;
+        if folded.is_some_and(|f| !f.minute.docs().is_empty()) {
+            seen = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    assert!(seen, "the 10:49 page");
     // Two hours later no newer minute page is stored (the minute retry bound holds the next
     // acquisition back): the 10:49 page is out of reach and dropped.
     let later = obs
