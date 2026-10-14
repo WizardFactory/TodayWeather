@@ -497,35 +497,44 @@ async fn airkorea_keys_follow_legacy_with_keys() {
         None
     );
 
-    // Quota (also with 401) and other explicit codes stop on the first key.
-    for (reply, expected) in [
-        (Reply::json(envelope_code("22")), Disposition::Quota),
+    // Quota (also with 401/403) tries each key once (S13c); other explicit codes stop on the first key.
+    for (reply, expected, keys) in [
+        (
+            Reply::json(envelope_code("22")),
+            Disposition::Quota,
+            vec![KEY_C, KEY_B, KEY_A],
+        ),
         (
             Reply::with(401, "application/json", envelope_code("22")),
             Disposition::Quota,
+            vec![KEY_C, KEY_B, KEY_A],
         ),
         (
             Reply::with(403, "application/json", gateway("22")),
             Disposition::Quota,
+            vec![KEY_C, KEY_B, KEY_A],
         ),
         (
             Reply::with(401, "application/json", envelope_code("99")),
             Disposition::Rejected,
+            vec![KEY_C],
         ),
         (
             Reply::with(429, "text/plain", "Too Many Requests"),
             Disposition::Quota,
+            vec![KEY_C, KEY_B, KEY_A],
         ),
     ] {
         let e = env_keys(&three, &others).await;
-        e.stub.push(STATION_LIST, reply.clone());
-        e.stub.push(STATION_LIST, reply);
+        for _ in 0..3 {
+            e.stub.push(STATION_LIST, reply.clone());
+        }
         let outcome = e.acquirer.acquire_airkorea(&list(), deadline()).await;
         assert!(
             matches!(outcome, Err(DomesticError::Provider(d)) if d == expected),
             "{outcome:?}"
         );
-        assert_eq!(keys_used(&e), [KEY_C]);
+        assert_eq!(keys_used(&e), keys);
     }
 
     // Station and sido operations use the same rule.
@@ -892,4 +901,334 @@ async fn airkorea_unread_rejections_keep_and_markers_move_the_key() {
         );
         assert_eq!(keys_used(&e), [KEY_C, KEY_B]);
     }
+}
+
+/// 2026-10-14 00:00 KST, the end of the KST day of `NOW_MS`.
+const KST_MIDNIGHT: i64 = 1_791_903_600_000;
+const THREE: [(&str, char); 3] = [(KEY_A, '5'), (KEY_B, '6'), (KEY_C, '7')];
+const OTHERS: [(&str, char); 2] = [(KEY_A, 'a'), (KEY_B, 'b')];
+fn seoul() -> AirKoreaRequest {
+    AirKoreaRequest::new(AirKoreaOperation::Station, "서울").unwrap()
+}
+/// The provider's answer for a key at its daily limit, recorded live on 2026-10-14 (S13c).
+fn live_quota() -> Reply {
+    Reply::with(429, "application/json", local("airkorea-quota-429.json"))
+}
+
+/// S13c (#2745): a key at its daily quota is skipped until the end of its KST day and the same
+/// request continues with the next key in the legacy order; the working key is remembered.
+#[tokio::test]
+async fn airkorea_quota_moves_to_the_next_key_and_is_remembered() {
+    let e = env_keys(&THREE, &OTHERS).await;
+    e.stub.push(STATION, live_quota());
+    e.stub
+        .push(STATION, Reply::json(local("airkorea-stations.json")));
+    complete(e.acquirer.acquire_airkorea(&seoul(), deadline()).await);
+    assert_eq!(keys_used(&e), [KEY_C, KEY_B]);
+    let ring = e.acquirer.ring(Service::AirKorea).unwrap();
+    assert_eq!(ring.preferred(), Some(1));
+    assert!(ring.exhausted(2, KST_MIDNIGHT - 1));
+    assert!(!ring.exhausted(2, KST_MIDNIGHT));
+    // Every attempt was funded before HTTP: one call per key, two units reserved per call.
+    let m = e.metrics.snapshot();
+    assert_eq!(
+        (m.funded_calls, m.funded_attempts, m.attempts_quota),
+        (2, 2, 1)
+    );
+    assert_eq!(m.reserved_units, 4);
+
+    // The remembered key serves the next operation first.
+    e.stub
+        .push(FORECAST, Reply::json(local("airkorea-forecast.json")));
+    complete(e.acquirer.acquire_airkorea(&forecast(), deadline()).await);
+    assert_eq!(keys_used(&e)[2], KEY_B);
+
+    // A later credential failure skips the exhausted key without a call and reports quota.
+    e.stub
+        .push(STATION, Reply::with(401, "application/json", gateway("31")));
+    e.stub
+        .push(STATION, Reply::with(403, "application/json", gateway("30")));
+    let outcome = e.acquirer.acquire_airkorea(&seoul(), deadline()).await;
+    assert!(
+        matches!(outcome, Err(DomesticError::Provider(Disposition::Quota))),
+        "{outcome:?}"
+    );
+    assert_eq!(&keys_used(&e)[3..], [KEY_B, KEY_A]);
+}
+
+#[tokio::test]
+async fn airkorea_every_quota_form_moves_to_the_next_key() {
+    for (name, reply) in [
+        ("live 429 gateway json", live_quota()),
+        (
+            "429 text",
+            Reply::with(429, "text/plain", "Too Many Requests"),
+        ),
+        ("200 envelope 22", Reply::json(envelope_code("22"))),
+        (
+            "401 envelope 22",
+            Reply::with(401, "application/json", envelope_code("22")),
+        ),
+        (
+            "403 gateway 22",
+            Reply::with(403, "application/json", gateway("22")),
+        ),
+        (
+            "200 gateway xml",
+            Reply::with(200, "text/xml", fixture("gateway-quota.xml")),
+        ),
+    ] {
+        let e = env_keys(&THREE, &OTHERS).await;
+        e.stub.push(STATION, reply);
+        e.stub
+            .push(STATION, Reply::json(local("airkorea-stations.json")));
+        complete(e.acquirer.acquire_airkorea(&seoul(), deadline()).await);
+        assert_eq!(keys_used(&e), [KEY_C, KEY_B], "{name}");
+    }
+    // The per-second limit (23) is not a daily quota: it stops on the first key.
+    let e = env_keys(&THREE, &OTHERS).await;
+    for _ in 0..3 {
+        e.stub.push(STATION, Reply::json(envelope_code("23")));
+    }
+    let outcome = e.acquirer.acquire_airkorea(&seoul(), deadline()).await;
+    assert!(not_complete(&outcome), "{outcome:?}");
+    assert_eq!(keys_used(&e)[0], KEY_C);
+    assert!(keys_used(&e).iter().all(|k| k == KEY_C));
+}
+
+/// Every key at quota: one call per key and `Provider(Quota)`; no HTTP or funding for the rest
+/// of the KST day; the next KST day probes again.
+#[tokio::test]
+async fn airkorea_all_keys_at_quota_wait_for_the_next_kst_day() {
+    let e = env_keys(&THREE, &OTHERS).await;
+    for _ in 0..3 {
+        e.stub.push(STATION, live_quota());
+    }
+    let outcome = e.acquirer.acquire_airkorea(&seoul(), deadline()).await;
+    assert!(
+        matches!(outcome, Err(DomesticError::Provider(Disposition::Quota))),
+        "{outcome:?}"
+    );
+    assert_eq!(keys_used(&e), [KEY_C, KEY_B, KEY_A]);
+    let ring = e.acquirer.ring(Service::AirKorea).unwrap();
+    assert_eq!(ring.preferred(), None);
+    let funded = e.metrics.snapshot().reserved_units;
+
+    e.clock
+        .0
+        .store(KST_MIDNIGHT - 1, std::sync::atomic::Ordering::SeqCst);
+    for request in [seoul(), forecast(), AirKoreaRequest::station_list()] {
+        let outcome = e.acquirer.acquire_airkorea(&request, deadline()).await;
+        assert!(
+            matches!(outcome, Err(DomesticError::Provider(Disposition::Quota))),
+            "{outcome:?}"
+        );
+    }
+    assert_eq!(e.stub.calls().len(), 3);
+    assert_eq!(e.metrics.snapshot().reserved_units, funded);
+
+    e.clock
+        .0
+        .store(KST_MIDNIGHT, std::sync::atomic::Ordering::SeqCst);
+    e.stub
+        .push(STATION, Reply::json(local("airkorea-stations.json")));
+    complete(e.acquirer.acquire_airkorea(&seoul(), deadline()).await);
+    assert_eq!(keys_used(&e)[3..], [KEY_C]);
+}
+
+/// Quota on page 2 restarts the operation with the next key; no key repeats a page.
+#[tokio::test]
+async fn airkorea_quota_on_a_later_page_restarts_with_the_next_key() {
+    let e = env_keys(&THREE, &OTHERS).await;
+    e.stub.push(
+        STATION_LIST,
+        Reply::json(airkorea(stations(0, 100), 1, 100, 120)),
+    );
+    e.stub.push(STATION_LIST, live_quota());
+    e.stub.push(
+        STATION_LIST,
+        Reply::json(airkorea(stations(0, 100), 1, 100, 120)),
+    );
+    e.stub.push(
+        STATION_LIST,
+        Reply::json(airkorea(stations(100, 20), 2, 100, 120)),
+    );
+    let a = complete(
+        e.acquirer
+            .acquire_airkorea(&AirKoreaRequest::station_list(), deadline())
+            .await,
+    );
+    assert_eq!(a.records.len(), 2);
+    let calls: Vec<String> = e
+        .stub
+        .calls()
+        .iter()
+        .map(|c| {
+            format!(
+                "{}@{}",
+                c.get("serviceKey").unwrap(),
+                c.get("pageNo").unwrap()
+            )
+        })
+        .collect();
+    assert_eq!(
+        calls,
+        [
+            format!("{KEY_C}@1"),
+            format!("{KEY_C}@2"),
+            format!("{KEY_B}@1"),
+            format!("{KEY_B}@2")
+        ]
+    );
+}
+
+/// Waits until the stub has received the first `path` request (the paging call's first page).
+async fn first_request(stub: &Stub, path: &str) {
+    let path = format!("/{path}");
+    while !stub.calls().iter().any(|c| c.path == path) {
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    }
+}
+
+/// Wall clock that replays scripted readings once armed, then keeps the last one.
+struct ScriptedClock {
+    now: std::sync::atomic::AtomicI64,
+    script: std::sync::Mutex<std::collections::VecDeque<i64>>,
+}
+impl server2::budget::Clock for ScriptedClock {
+    fn now_ms(&self) -> Result<i64, server2::budget::BudgetError> {
+        use std::sync::atomic::Ordering::SeqCst;
+        if let Some(v) = self.script.lock().unwrap().pop_front() {
+            self.now.store(v, SeqCst);
+        }
+        Ok(self.now.load(SeqCst))
+    }
+}
+
+/// Review S13C-R1: a page recheck that finds the key already exhausted by a parallel call must not
+/// re-mark it. Scripted readings put the recheck one millisecond before KST midnight and the next
+/// reading at midnight, where a re-mark would extend the exhaustion by a whole day.
+#[tokio::test]
+async fn airkorea_recheck_skip_never_extends_an_exhaustion_across_kst_midnight() {
+    use server2::budget::BudgetStore;
+    use server2::domestic::family::Endpoints;
+    use server2::domestic::metrics::DomesticMetrics;
+    use server2::domestic::{DomesticAcquirer, KeyRing};
+    use server2::providers::{HttpProviderTransport, HttpPublicTransport};
+    use std::sync::Arc;
+    let stub = Stub::start().await;
+    let clk = Arc::new(ScriptedClock {
+        now: std::sync::atomic::AtomicI64::new(NOW_MS),
+        script: Default::default(),
+    });
+    let wire = Arc::new(Memory::default());
+    let entries = THREE
+        .iter()
+        .map(|(k, owner)| {
+            (
+                server2::providers::ProviderKey::new((*k).into()).unwrap(),
+                Arc::new(
+                    BudgetStore::new(wire.clone(), policy(*owner, 1000), clk.clone()).unwrap(),
+                ),
+            )
+        })
+        .collect();
+    let mut rings = std::collections::BTreeMap::new();
+    rings.insert(Service::AirKorea, KeyRing::new(entries).unwrap());
+    let acquirer = DomesticAcquirer::new(
+        Arc::new(HttpProviderTransport::new(8 * 1024 * 1024).unwrap()),
+        Arc::new(HttpPublicTransport::new(8 * 1024 * 1024).unwrap()),
+        rings,
+        Endpoints::new(&stub.base, &stub.base, &stub.base).unwrap(),
+        clk.clone(),
+        Arc::new(DomesticMetrics::default()),
+        server2::storage::CatalogLimits::default(),
+    )
+    .unwrap();
+    stub.push(
+        STATION_LIST,
+        Reply::json(airkorea(stations(0, 100), 1, 100, 120)).delayed(1000),
+    );
+    stub.push(
+        STATION_LIST,
+        Reply::json(airkorea(stations(0, 100), 1, 100, 120)),
+    );
+    stub.push(
+        STATION_LIST,
+        Reply::json(airkorea(stations(100, 20), 2, 100, 120)),
+    );
+    stub.push(FORECAST, live_quota());
+    stub.push(FORECAST, Reply::json(local("airkorea-forecast.json")));
+    let list = AirKoreaRequest::station_list();
+    let parallel = async {
+        first_request(&stub, STATION_LIST).await;
+        // Exhausts the last key at NOW_MS: until KST midnight.
+        complete(acquirer.acquire_airkorea(&forecast(), deadline()).await);
+        // The station list then reads the clock for its first page's fetch time, for the page 2
+        // recheck and, if the key were re-marked, once more.
+        clk.script
+            .lock()
+            .unwrap()
+            .extend([KST_MIDNIGHT - 2, KST_MIDNIGHT - 1, KST_MIDNIGHT]);
+    };
+    let (stations, ()) = tokio::join!(acquirer.acquire_airkorea(&list, deadline()), parallel);
+    complete(stations);
+    let ring = acquirer.ring(Service::AirKorea).unwrap();
+    assert!(ring.exhausted(2, KST_MIDNIGHT - 1));
+    assert!(
+        !ring.exhausted(2, KST_MIDNIGHT),
+        "the exhaustion must still end at KST midnight"
+    );
+}
+
+/// An acquisition that is paging with a key stops using it once a parallel acquisition marks it
+/// exhausted, and restarts with the next key (legacy #2745 review R-1).
+#[tokio::test]
+async fn airkorea_key_exhausted_by_a_parallel_call_is_not_used_for_later_pages() {
+    let e = env_keys(&THREE, &OTHERS).await;
+    e.stub.push(
+        STATION_LIST,
+        Reply::json(airkorea(stations(0, 100), 1, 100, 120)).delayed(1000),
+    );
+    e.stub.push(
+        STATION_LIST,
+        Reply::json(airkorea(stations(0, 100), 1, 100, 120)),
+    );
+    e.stub.push(
+        STATION_LIST,
+        Reply::json(airkorea(stations(100, 20), 2, 100, 120)),
+    );
+    e.stub.push(FORECAST, live_quota());
+    e.stub
+        .push(FORECAST, Reply::json(local("airkorea-forecast.json")));
+    let list = AirKoreaRequest::station_list();
+    let late = async {
+        // The station list has sent its first page before the forecast sees quota.
+        first_request(&e.stub, STATION_LIST).await;
+        e.acquirer.acquire_airkorea(&forecast(), deadline()).await
+    };
+    let (stations, forecast) = tokio::join!(e.acquirer.acquire_airkorea(&list, deadline()), late);
+    complete(forecast);
+    assert_eq!(complete(stations).records.len(), 2);
+    let pages: Vec<String> = e
+        .stub
+        .calls()
+        .iter()
+        .filter(|c| c.path.ends_with("getMsrstnList"))
+        .map(|c| {
+            format!(
+                "{}@{}",
+                c.get("serviceKey").unwrap(),
+                c.get("pageNo").unwrap()
+            )
+        })
+        .collect();
+    assert_eq!(
+        pages,
+        [
+            format!("{KEY_C}@1"),
+            format!("{KEY_B}@1"),
+            format!("{KEY_B}@2")
+        ]
+    );
 }

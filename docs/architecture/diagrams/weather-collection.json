@@ -255,7 +255,7 @@
       "title": "AirKorea recovery design (#2636)",
       "items": [
         "All AirKorea calls (observations, station list, forecast, nearby) use supported HTTPS services; validate every page before writes.",
-        "Skip keys the provider rejects as credentials; quota never switches keys.",
+        "Skip keys the provider rejects as credentials; a key at its daily quota is skipped until KST midnight (#2745).",
         "Await station and province aggregate storage; emit sanitized UTC outcomes.",
         "Nation: retain fresh province averages; absent data uses shared global air at representative points."
       ]

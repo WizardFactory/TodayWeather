@@ -252,7 +252,7 @@ async fn airkorea_total_zero_is_terminal_no_data_after_one_attempt() {
 }
 
 /// Legacy master (#2737) `withKeys`: start with the last configured key, skip a rejected
-/// credential to the previous key, and stop on quota without changing the key.
+/// credential to the previous key. Since S13c (#2745) quota also moves to the previous key.
 #[tokio::test]
 async fn airkorea_rejected_key_follows_legacy_key_selection() {
     for (name, reply, expected, keys) in [
@@ -262,11 +262,12 @@ async fn airkorea_rejected_key_follows_legacy_key_selection() {
             Disposition::Auth,
             vec![KEY_B, KEY_A],
         ),
+        // S13c (#2745): quota moves to the next key; every key at quota fails as quota.
         (
             "quota xml",
             Reply::with(200, "text/xml", fixture_s13("gateway-quota.xml")),
             Disposition::Quota,
-            vec![KEY_B],
+            vec![KEY_B, KEY_A],
         ),
         (
             "gateway 30",
