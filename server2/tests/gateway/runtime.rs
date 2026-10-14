@@ -408,6 +408,61 @@ fn kma_airkorea_acquisition_settings_fail_closed() {
 }
 
 #[test]
+fn kma_life_acquisition_settings_fail_closed() {
+    use server2::gateway::runtime::from_vars as gateway;
+    let base = || {
+        vec![
+            (
+                "SERVER2_GATEWAY_LEGACY_URL",
+                "http://127.0.0.1:9".to_owned(),
+            ),
+            ("SERVER2_NATIVE_FAMILIES", "kma".to_owned()),
+            ("SERVER2_S3_BUCKET", "server2-kma".to_owned()),
+            (
+                "SERVER2_S3_ACCESS_KEY_ID",
+                "configured-access-key".to_owned(),
+            ),
+            (
+                "SERVER2_S3_SECRET_ACCESS_KEY",
+                "configured-secret".to_owned(),
+            ),
+        ]
+    };
+    // Without a data.go.kr key the keyless MFDS table is still acquired.
+    assert!(gateway(&vars(base())).unwrap().is_some(), "no key");
+    let keyed = || {
+        let mut v = base();
+        v.push((
+            "DONGNAE_SECRET_KEYS",
+            r#"["configured-dongnae-key-0123456789"]"#.to_owned(),
+        ));
+        v
+    };
+    assert!(gateway(&vars(keyed())).is_err(), "a key without units");
+    let mut ok = keyed();
+    ok.push(("SERVER2_DONGNAE_DAILY_UNITS", "2000".to_owned()));
+    assert!(gateway(&vars(ok.clone())).unwrap().is_some());
+    for (name, value) in [
+        ("SERVER2_DONGNAE_DAILY_UNITS", "0"),
+        ("SERVER2_DONGNAE_DAILY_UNITS", "many"),
+        ("SERVER2_MFDS_URL", "http://poisonmap.example.test/"),
+        ("SERVER2_MFDS_URL", "https://poisonmap.example.test/api"),
+        ("SERVER2_MFDS_URL", "https://poisonmap.example.test/?q=1"),
+    ] {
+        let mut changed = ok.clone();
+        changed.retain(|(k, _)| *k != name);
+        changed.push((name, value.to_owned()));
+        assert!(gateway(&vars(changed)).is_err(), "{name}={value}");
+    }
+    let mut mfds = ok;
+    mfds.push((
+        "SERVER2_MFDS_URL",
+        "https://poisonmap.example.test/".to_owned(),
+    ));
+    assert!(gateway(&vars(mfds)).unwrap().is_some());
+}
+
+#[test]
 fn real_world_configuration_builds_without_a_mode_variable() {
     let s3 = vec![
         ("SERVER2_NATIVE_FAMILIES", "dsf".to_owned()),

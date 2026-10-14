@@ -4,6 +4,7 @@ use super::airkorea::AirKoreaRequest;
 use super::family::{DataGoKrRequest, Endpoints, Service, WebRequest};
 use super::format::{Expect, PageReport, PageVerdict, WebVerdict, inspect_page, inspect_web};
 use super::metrics::{CallGuard, DomesticMetrics};
+use super::mfds::MfdsRequest;
 use super::publication::Publication;
 use super::riseset::RiseSetRequest;
 use super::zone::ZoneRequest;
@@ -787,6 +788,64 @@ where
             declaration,
             records,
         }))
+    }
+
+    /// Acquire the keyless MFDS food-poisoning table (S15b-3b): one attempt inside the legacy
+    /// 10 s deadline (`fetchRisk` has no retry), HTTP 200 only, at most 1 MiB, and a body legacy
+    /// `parse` accepts at the reception instant. Anything else is an error and no record.
+    pub async fn acquire_mfds(
+        &self,
+        request: &MfdsRequest,
+        deadline: Instant,
+    ) -> Result<Acquired, DomesticError> {
+        let deadline = deadline.min(Instant::now() + super::mfds::TIMEOUT);
+        let target = PublicRequest::new(request.endpoint().clone())
+            .map_err(|_| DomesticError::Invalid("endpoint"))?;
+        let _admission = timeout_at(deadline, self.public_admission.clone().acquire_owned())
+            .await
+            .map_err(|_| DomesticError::Deadline)?
+            .map_err(|_| DomesticError::Invalid("admission"))?;
+        self.metrics.public_attempt();
+        let response = match timeout_at(deadline, self.public.fetch(&target)).await {
+            Err(_) => return Err(DomesticError::Deadline),
+            Ok(Ok(response)) => response,
+            Ok(Err(ProviderTransportError::Invalid)) => {
+                return Err(DomesticError::Invalid("endpoint"));
+            }
+            Ok(Err(ProviderTransportError::Transport)) => return Err(DomesticError::Transport),
+            Ok(Err(_)) => return Err(DomesticError::Provider(Disposition::Rejected)),
+        };
+        if response.status != 200 {
+            return Err(DomesticError::Provider(Disposition::Rejected));
+        }
+        if response.body.len() > super::mfds::MAX_BYTES {
+            return Err(DomesticError::Invalid("mfds body size"));
+        }
+        let fetched = self.now_ms()?;
+        let bytes = Arc::<[u8]>::from(response.body);
+        let view = bytes.clone();
+        let parsed = self
+            .blocking(deadline, move || {
+                serde_json::from_slice::<serde_json::Value>(&view)
+                    .map_err(|_| "MFDS invalid JSON")
+                    .and_then(|body| super::mfds::parse(&body, fetched as f64).map(|_| ()))
+            })
+            .await?;
+        parsed.map_err(DomesticError::Invalid)?;
+        let record = RawRecord::new(
+            super::mfds::SOURCE,
+            super::mfds::KIND,
+            &MfdsRequest::provider_key(),
+            request.period(),
+            fetched,
+            response.status,
+            content_type(&response.content_type),
+            None,
+            bytes,
+            &self.limits.raw,
+        )
+        .map_err(DomesticError::Storage)?;
+        self.group(vec![record], &request.partition())
     }
 
     /// Acquire one keyless KMA web page. At most two attempts inside the deadline: only a

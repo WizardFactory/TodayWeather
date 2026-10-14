@@ -112,8 +112,10 @@ pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
         // S15b: the S3 input source over the shared admission. Inputs owned by later slices
         // still forward with named reasons until S15b-4. S15b-3 adds request-time AirKorea
         // acquisition (`AIRKOREA_SECRET_KEYS`, `SERVER2_AIRKOREA_DAILY_UNITS`) and the air
-        // fallback through the shared air chain.
+        // fallback through the shared air chain; S15b-3b the life index, KASI
+        // (`DONGNAE_SECRET_KEYS`, `SERVER2_DONGNAE_DAILY_UNITS`) and the keyless MFDS table.
         let airkorea = kma_airkorea(var, &s3)?;
+        let life = kma_life(var, &s3)?;
         let air: Option<Arc<dyn crate::world::AirSource>> =
             air.map(|a| a as Arc<dyn crate::world::AirSource>);
         let source = crate::domestic::kma::source::S3Source::new(
@@ -121,7 +123,8 @@ pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
             crate::domestic::kma::backend::system_clock(),
         )
         .map_err(|_| GatewayError::InvalidConfiguration)?
-        .with_air(airkorea, air);
+        .with_air(airkorea, air)
+        .with_life(Some(life));
         crate::domestic::kma::backend::select_native(&backend, Arc::new(source))?;
     }
     Ok(Some(Arc::new(Gateway::new(geocoder, backend))))
@@ -155,6 +158,32 @@ fn kma_airkorea(
         Arc::new(store),
         Arc::new(SystemClock),
     ))))
+}
+/// The life-index, KASI and MFDS acquirer of the KMA source. Without `DONGNAE_SECRET_KEYS` it
+/// acquires only the keyless MFDS table.
+fn kma_life(
+    var: Var,
+    s3: &BoundedS3<HttpS3Transport>,
+) -> Result<Arc<dyn crate::domestic::kma::source::life_live::LifeAcquire>, GatewayError> {
+    use crate::domestic::kma::source::life_live::{LifeSettings, LiveLife};
+    let settings = LifeSettings::from_vars(var).map_err(|_| GatewayError::InvalidConfiguration)?;
+    // 2 MiB bodies (a 1,000-row UV page is about 0.3 MB); each attempt gets the S13d legacy
+    // timeout of its path (life index 30 s, KASI 5 s) and MFDS its own 10 s deadline.
+    let funded = crate::providers::HttpProviderTransport::new(2 * 1024 * 1024)
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
+    let public = crate::providers::HttpPublicTransport::new(2 * 1024 * 1024)
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
+    let store =
+        crate::storage::CatalogStore::new(s3.clone(), crate::storage::CatalogLimits::default())
+            .map_err(|_| GatewayError::InvalidConfiguration)?;
+    Ok(Arc::new(LiveLife::new(
+        settings,
+        Arc::new(funded),
+        Arc::new(public),
+        Arc::new(s3.clone()),
+        Arc::new(store),
+        Arc::new(SystemClock),
+    )))
 }
 /// The process environment entrypoint.
 pub fn configured_gateway() -> Result<Option<Arc<Gateway>>, GatewayError> {

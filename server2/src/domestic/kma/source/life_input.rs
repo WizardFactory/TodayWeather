@@ -1,0 +1,852 @@
+//! S15b-3b: the life-index, KASI and MFDS inputs of one request.
+//!
+//! Every input is a national dataset shared by all requests (AK, 2026-10-14):
+//! - the life index: S13 `uv-idx-v5` (all areas, one issuance every three hours) and
+//!   `oak|pine|weeds-pollen-v3` (all areas, 06 and 18 KST) acquisitions of the last 14 days,
+//!   folded with the legacy save rules ([`LifeIndex`]);
+//! - MFDS food-poisoning risk: `mfds-food-poisoning` acquisitions of the last three KST days
+//!   ([`FoodPoisoning`]);
+//! - KASI rise/set: `kasi-area-rise-set` acquisitions of every area for the UTC days D-8..D+9
+//!   ([`RiseSets`]).
+//!
+//! S3 reads run as owned single-flight tasks that update the process folds; a request waits for
+//! them only until its own deadline and otherwise answers with the last folds.
+//!
+//! Freshness (owned acquisitions, S13d `OwnedFlights`, 10-minute retry per dataset key): a
+//! request whose UV fold lacks the current three-hour slot, whose pollen fold lacks the latest
+//! 06/18 KST issuance, or whose MFDS fold lacks the current 08:20/12:20/17:20 KST slot starts the
+//! acquisition and waits for it only until its deadline (then answers with what S3 holds, the
+//! legacy output for missing data). A pollen issuance the provider answers with no data (out of
+//! season, `99`) is not asked again; an MFDS slot is asked once (legacy `lastSlot`). KASI is
+//! captured while requests arrive (legacy `gatherKasiRiseSet`, hourly): every missing area/day,
+//! today's column first; requests never wait for it and answer `[]` until the first full S3 read
+//! (legacy then computes rise/set itself).
+use super::kasi::RiseSets;
+use super::life::{KINDS, LifeIndex};
+use super::life_live::{LifeAcquire, LifeOutcome, LifeRequest};
+use super::live::Flights;
+use super::mfds::FoodPoisoning;
+use super::records::{Fetched, Reader, months};
+use crate::domestic::acquire::Paged;
+use crate::domestic::family::{DataGoKrFamily, DataGoKrRequest, Target};
+use crate::domestic::mfds::{self as mfds_provider, MfdsRequest};
+
+use crate::domestic::publication::{self, Publication};
+use crate::domestic::riseset::{AREAS, RiseSetRequest};
+use crate::gateway::BoxFuture;
+use crate::history::IndexListing;
+use crate::resolver::{OwnedConfig, OwnedFlights};
+use crate::storage::{CatalogStore, ProviderKey};
+use serde_json::Value;
+use std::collections::{BTreeSet, HashSet};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
+use std::time::Duration;
+use tokio::time::Instant;
+
+const DATA_GO_KR: &str = "data-go-kr";
+const HOUR_MS: f64 = 3_600_000.;
+const DAY_MS: f64 = 86_400_000.;
+/// Acquisitions read for the life index: documents live 10 days after their date and a pollen
+/// issuance dates documents up to 3 days ahead, so 14 days cover every stored document.
+const LIFE_LOOKBACK_MS: f64 = 14. * DAY_MS;
+/// MFDS acquisitions read: a row's date is at most two days after its base date.
+const MFDS_DAYS: i64 = 3;
+/// A fold is re-read at most this often unless an own acquisition published.
+const MEMO: Duration = Duration::from_secs(60);
+/// A complete re-read of the life index (acquisitions of earlier partitions by other hosts).
+const FULL_READ: Duration = Duration::from_secs(86_400);
+/// The latest partitions of each life kind re-read on every refresh (a repeated acquisition of
+/// the previous issuance lands in its partition).
+const RECENT_PARTITIONS: usize = 3;
+/// Retry throttle of one dataset key (S15b-3a).
+const RETRY: Duration = Duration::from_secs(600);
+/// Owned S3 read tasks.
+const READ_FOR: Duration = Duration::from_secs(120);
+/// Requests in this window keep the KASI capture running.
+const DEMAND_MS: f64 = 24. * HOUR_MS;
+/// KASI capture interval (legacy `gatherKasiRiseSet` at minute 55 of every hour).
+const KASI_EVERY: Duration = Duration::from_secs(3600);
+/// KASI documents older than this many days before the window are forgotten.
+const KASI_KEEP_DAYS: f64 = 30.;
+
+/// One acquisition to apply: (kind index, completion instant, pages).
+type Run = (usize, f64, Vec<Arc<[u8]>>);
+/// The four life-index families and their legacy `indexType`.
+pub const LIFE_FAMILIES: [(DataGoKrFamily, &str); 4] = [
+    (DataGoKrFamily::UvIdxV5, KINDS[0]),
+    (DataGoKrFamily::OakPollenV3, KINDS[1]),
+    (DataGoKrFamily::PinePollenV3, KINDS[2]),
+    (DataGoKrFamily::WeedsPollenV3, KINDS[3]),
+];
+fn all_areas() -> ProviderKey {
+    ProviderKey::Named {
+        id: "all-areas".into(),
+    }
+}
+fn wall_ms() -> f64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0., |d| d.as_millis() as f64)
+}
+/// `response.body.items.item` of every page in page order (an array, or one object as KASI
+/// answers); None when a page is not an item page.
+pub fn life_items(pages: &[Arc<[u8]>]) -> Option<Vec<Value>> {
+    let mut out = Vec::new();
+    for p in pages {
+        let json: Value = serde_json::from_slice(p).ok()?;
+        match json
+            .get("response")?
+            .get("body")?
+            .get("items")?
+            .get("item")?
+        {
+            Value::Array(a) => out.extend(a.iter().cloned()),
+            item @ Value::Object(_) => out.push(item.clone()),
+            _ => return None,
+        }
+    }
+    Some(out)
+}
+/// The KST date `YYYYMMDD` of an instant.
+fn kst_date(ms: f64) -> u32 {
+    crate::world::js::parts(ms + 9. * HOUR_MS)
+        .map_or(0, |p| (p.year * 10000 + p.month * 100 + p.day) as u32)
+}
+/// The UTC date `YYYYMMDD` of an instant.
+fn utc_date(ms: f64) -> String {
+    crate::world::js::parts(ms).map_or_else(String::new, |p| {
+        format!("{:04}{:02}{:02}", p.year, p.month, p.day)
+    })
+}
+/// The pollen issuance expected at `now`: the latest 06 or 18 KST hour.
+pub fn pollen_issuance(now: f64) -> Option<Publication> {
+    let hour = publication::pollen_time(now as i64)?;
+    match hour.hour() {
+        0..=5 => Publication::new(kst_date(now - DAY_MS), 1800),
+        6..=17 => Publication::new(hour.date(), 600),
+        _ => Publication::new(hour.date(), 1800),
+    }
+}
+fn issuance10(p: Publication) -> String {
+    p.compact()[..10].to_owned()
+}
+
+/// What one request reads from the life inputs.
+#[derive(Clone)]
+pub struct LifeAnswers {
+    pub life: Arc<LifeIndex>,
+    pub mfds: Arc<FoodPoisoning>,
+    /// None until the first complete KASI read.
+    pub kasi: Option<Arc<RiseSets>>,
+}
+
+#[derive(Default)]
+struct LifeState {
+    folded: Arc<LifeIndex>,
+    /// Applied acquisitions: (kind index, partition, completion instant).
+    seen: HashSet<(usize, String, u64)>,
+    /// The order key of the last applied acquisition.
+    last: Option<(u64, &'static str, String)>,
+    /// Acquisitions completed after `cut` are not applied yet; the cut never moves back.
+    cut: f64,
+    refreshed: Option<std::time::Instant>,
+    full: Option<std::time::Instant>,
+}
+#[derive(Default)]
+struct MfdsState {
+    folded: Arc<FoodPoisoning>,
+    /// The newest applied acquisition instant.
+    newest: f64,
+    cut: f64,
+    refreshed: Option<std::time::Instant>,
+}
+#[derive(Default)]
+struct KasiState {
+    folded: Arc<RiseSets>,
+    loaded: bool,
+}
+
+struct Shared<T> {
+    reader: Reader<T>,
+    acquire: Option<Arc<dyn LifeAcquire>>,
+    flights: Flights,
+    reads: OwnedFlights<String, bool>,
+    life: std::sync::Mutex<LifeState>,
+    mfds: std::sync::Mutex<MfdsState>,
+    kasi: std::sync::Mutex<KasiState>,
+    /// Dataset keys never asked again (a no-data pollen issuance, an asked MFDS slot).
+    settled: std::sync::Mutex<HashSet<String>>,
+    demand_ms: AtomicI64,
+    /// Own publications so far: a read started before one cannot answer a request that waited
+    /// for it.
+    published: std::sync::atomic::AtomicU64,
+    kasi_started: AtomicBool,
+    /// First KASI pass after the first request, then every `kasi_every`.
+    kasi_first: Duration,
+    kasi_every: Duration,
+    cpu: Arc<tokio::sync::Semaphore>,
+}
+/// Inputs shared by every request of the process.
+pub struct LifeInputs<T> {
+    shared: Arc<Shared<T>>,
+}
+impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
+    pub fn new(transport: T, store: Arc<CatalogStore<T>>) -> Self {
+        Self::build(
+            Reader { transport, store },
+            None,
+            (Duration::ZERO, KASI_EVERY),
+        )
+    }
+    fn build(
+        reader: Reader<T>,
+        acquire: Option<Arc<dyn LifeAcquire>>,
+        (kasi_first, kasi_every): (Duration, Duration),
+    ) -> Self {
+        let reads = OwnedFlights::new(OwnedConfig {
+            running: 8,
+            entries: 64,
+            // A read that ended answers no later joiner: the memo decides when to read again.
+            retain: Duration::ZERO,
+        })
+        .expect("valid read bounds");
+        Self {
+            shared: Arc::new(Shared {
+                reader,
+                acquire,
+                flights: Flights::new(RETRY),
+                reads,
+                life: Default::default(),
+                mfds: Default::default(),
+                kasi: Default::default(),
+                settled: Default::default(),
+                demand_ms: AtomicI64::new(0),
+                published: std::sync::atomic::AtomicU64::new(0),
+                kasi_started: AtomicBool::new(false),
+                kasi_first,
+                kasi_every,
+                cpu: Arc::new(tokio::sync::Semaphore::new(2)),
+            }),
+        }
+    }
+    /// Owned acquisitions (None: stored records only).
+    pub fn with_acquire(self, acquire: Option<Arc<dyn LifeAcquire>>) -> Self {
+        let s = Arc::try_unwrap(self.shared).unwrap_or_else(|_| panic!("unshared inputs"));
+        Self::build(s.reader, acquire, (s.kasi_first, s.kasi_every))
+    }
+    /// The KASI capture schedule: the first pass `first` after the first request, then every
+    /// `every` (the runtime: at once, then hourly).
+    pub fn with_kasi_schedule(self, first: Duration, every: Duration) -> Self {
+        let s = Arc::try_unwrap(self.shared).unwrap_or_else(|_| panic!("unshared inputs"));
+        Self::build(s.reader, s.acquire, (first, every))
+    }
+    /// The life, MFDS and KASI folds for a request at `now`. Waits end 200 ms before the
+    /// deadline; whatever is not ready then is answered from the last folds.
+    pub async fn load(&self, now: f64, deadline: Instant) -> LifeAnswers {
+        let until = deadline - Duration::from_millis(200);
+        self.note_demand();
+        let (life, mfds) = tokio::join!(self.life(now, until), self.mfds(now, until));
+        LifeAnswers {
+            life,
+            mfds,
+            kasi: self.kasi(),
+        }
+    }
+    fn kasi(&self) -> Option<Arc<RiseSets>> {
+        let state = self.shared.kasi.lock().unwrap_or_else(|e| e.into_inner());
+        state.loaded.then(|| state.folded.clone())
+    }
+
+    // ---- life index ----
+
+    async fn life(&self, now: f64, until: Instant) -> Arc<LifeIndex> {
+        self.read_life(now, until, false).await;
+        let mut flights = Vec::new();
+        if let Some(acquire) = self.shared.acquire.clone().filter(|a| a.funded()) {
+            let folded = self.life_fold();
+            let mut wanted: Vec<(DataGoKrFamily, Publication, String)> = Vec::new();
+            if let Some(slot) = publication::uv_slots(now as i64).and_then(|s| s.first().copied())
+                && folded
+                    .last_issued(KINDS[0])
+                    .is_none_or(|l| l < issuance10(slot).as_str())
+            {
+                wanted.push((
+                    DataGoKrFamily::UvIdxV5,
+                    slot,
+                    format!("uv-{}", slot.compact()),
+                ));
+            }
+            if let (Some(expected), Some(time)) =
+                (pollen_issuance(now), publication::pollen_time(now as i64))
+            {
+                for (family, kind) in &LIFE_FAMILIES[1..] {
+                    if folded
+                        .last_issued(kind)
+                        .is_none_or(|l| l < issuance10(expected).as_str())
+                    {
+                        wanted.push((
+                            *family,
+                            time,
+                            format!("{}-{}", family.kind(), expected.compact()),
+                        ));
+                    }
+                }
+            }
+            for (family, time, key) in wanted {
+                let Ok(request) = DataGoKrRequest::new(family, Target::AllAreas, time) else {
+                    continue;
+                };
+                if self.is_settled(&key) {
+                    continue;
+                }
+                flights.push(self.flight(acquire.clone(), key, LifeRequest::Index(request), until));
+            }
+        }
+        let published = crate::history::join_all(flights).await;
+        if published.into_iter().any(|p| p) {
+            self.read_life(wall_ms().max(now), until, true).await;
+        }
+        self.life_fold()
+    }
+    fn life_fold(&self) -> Arc<LifeIndex> {
+        self.shared
+            .life
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .folded
+            .clone()
+    }
+    /// Join the owned S3 read of the life index (cut `now`) until `until`; `force` skips the
+    /// memo (an own acquisition published).
+    async fn read_life(&self, now: f64, until: Instant, force: bool) {
+        {
+            let state = self.shared.life.lock().unwrap_or_else(|e| e.into_inner());
+            // Read at most every MEMO (acquisitions of other hosts appear within it); an own
+            // publication forces a read.
+            if !force && state.refreshed.is_some_and(|r| r.elapsed() < MEMO) {
+                return;
+            }
+        }
+        let shared = self.shared.clone();
+        let _ = self
+            .shared
+            .reads
+            .join(
+                self.read_key("life"),
+                until,
+                READ_FOR,
+                move |deadline| async move { read_life(&shared, now, deadline).await.is_ok() },
+            )
+            .await;
+    }
+
+    // ---- MFDS ----
+
+    async fn mfds(&self, now: f64, until: Instant) -> Arc<FoodPoisoning> {
+        self.read_mfds(now, until, false).await;
+        if let (Some(acquire), Some(slot)) =
+            (self.shared.acquire.clone(), mfds_provider::slot_at(now))
+        {
+            let newest = self
+                .shared
+                .mfds
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .newest;
+            let key = format!("mfds-{}", slot.compact());
+            // Legacy `collect` marks the slot before it fetches: a failure waits for the next
+            // slot (the owned task settles the key; concurrent requests join it).
+            if newest < mfds_provider::slot_ms(slot)
+                && self
+                    .flight(acquire, key, LifeRequest::Mfds(slot), until)
+                    .await
+            {
+                self.read_mfds(wall_ms().max(now), until, true).await;
+            }
+        }
+        self.shared
+            .mfds
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .folded
+            .clone()
+    }
+    async fn read_mfds(&self, now: f64, until: Instant, force: bool) {
+        {
+            let state = self.shared.mfds.lock().unwrap_or_else(|e| e.into_inner());
+            // Read at most every MEMO (acquisitions of other hosts appear within it); an own
+            // publication forces a read.
+            if !force && state.refreshed.is_some_and(|r| r.elapsed() < MEMO) {
+                return;
+            }
+        }
+        let shared = self.shared.clone();
+        let _ = self
+            .shared
+            .reads
+            .join(
+                self.read_key("mfds"),
+                until,
+                READ_FOR,
+                move |deadline| async move { read_mfds(&shared, now, deadline).await.is_ok() },
+            )
+            .await;
+    }
+
+    // ---- owned acquisitions ----
+
+    fn is_settled(&self, key: &str) -> bool {
+        self.shared
+            .settled
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .contains(key)
+    }
+    /// The single-flight key of a read: one per dataset and own-publication count.
+    fn read_key(&self, dataset: &str) -> String {
+        format!(
+            "{dataset}-{}",
+            self.shared.published.load(Ordering::Acquire)
+        )
+    }
+    /// Start (or join) one owned acquisition and wait for it until `until`: true when it
+    /// published by then. A no-data answer settles the key.
+    async fn flight(
+        &self,
+        acquire: Arc<dyn LifeAcquire>,
+        key: String,
+        request: LifeRequest,
+        until: Instant,
+    ) -> bool {
+        let owned_for = request.owned_for();
+        let shared = self.shared.clone();
+        let name = key.clone();
+        self.shared
+            .flights
+            .join_for(
+                &key,
+                until,
+                owned_for,
+                move || -> BoxFuture<'static, bool> {
+                    Box::pin(async move {
+                        let once = matches!(request, LifeRequest::Mfds(_));
+                        if once
+                            && !shared
+                                .settled
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .insert(name.clone())
+                        {
+                            return false;
+                        }
+                        match acquire.acquire(request).await {
+                            Ok(LifeOutcome::Published) => {
+                                shared.published.fetch_add(1, Ordering::AcqRel);
+                                true
+                            }
+                            Ok(LifeOutcome::NoData) => {
+                                shared
+                                    .settled
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner())
+                                    .insert(name);
+                                false
+                            }
+                            Ok(LifeOutcome::Nothing) => false,
+                            Err(_) => false,
+                        }
+                    })
+                },
+            )
+            .await
+    }
+
+    // ---- KASI ----
+
+    /// Record demand and start the KASI capture once.
+    fn note_demand(&self) {
+        self.shared
+            .demand_ms
+            .store(wall_ms() as i64, Ordering::Release);
+        if self.shared.kasi_started.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        let shared = self.shared.clone();
+        tokio::spawn(async move {
+            let every = shared.kasi_every;
+            let mut tick = tokio::time::interval_at(Instant::now() + shared.kasi_first, every);
+            tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            loop {
+                tick.tick().await;
+                let now = wall_ms();
+                if now - shared.demand_ms.load(Ordering::Acquire) as f64 > DEMAND_MS {
+                    continue;
+                }
+                let _ = kasi_pass(&shared, now).await;
+            }
+        });
+    }
+    /// One KASI capture pass at `now` (the capture task runs it every hour; tests call it).
+    pub async fn kasi_pass(&self, now: f64) -> Result<(), String> {
+        kasi_pass(&self.shared, now).await
+    }
+}
+/// Read the life-index acquisitions up to `cut` and apply the new ones (or refold all when one
+/// completed before the last applied acquisition, and daily).
+async fn read_life<T: IndexListing + Clone + 'static>(
+    shared: &Arc<Shared<T>>,
+    now: f64,
+    deadline: Instant,
+) -> Result<(), String> {
+    let full_due = shared
+        .life
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .full
+        .is_none_or(|f| f.elapsed() >= FULL_READ);
+    if !read_life_once(shared, now, deadline, full_due).await? {
+        // An acquisition completed before the last applied one: read everything again.
+        read_life_once(shared, now, deadline, true).await?;
+    }
+    Ok(())
+}
+/// One read; false when the new acquisitions cannot be applied in order (a full read is due).
+async fn read_life_once<T: IndexListing + Clone + 'static>(
+    shared: &Arc<Shared<T>>,
+    now: f64,
+    deadline: Instant,
+    full_due: bool,
+) -> Result<bool, String> {
+    let (cut, last, seen) = {
+        let state = shared.life.lock().unwrap_or_else(|e| e.into_inner());
+        (state.cut.max(now), state.last.clone(), state.seen.clone())
+    };
+    let from = Publication::new(kst_date(cut - LIFE_LOOKBACK_MS), 0)
+        .map(Publication::partition)
+        .unwrap_or_default();
+    let window = months(cut - LIFE_LOOKBACK_MS, cut);
+    let mut found: Vec<(usize, Fetched)> = Vec::new();
+    for (k, (family, _)) in LIFE_FAMILIES.iter().enumerate() {
+        let partitions = shared
+            .reader
+            .partitions(DATA_GO_KR, family.kind(), &all_areas(), &window, deadline)
+            .await
+            .map_err(|e| format!("life listing: {e}"))?;
+        let partitions: Vec<String> = partitions.into_iter().filter(|p| *p >= from).collect();
+        let known: BTreeSet<&str> = seen
+            .iter()
+            .filter(|(kk, _, _)| *kk == k)
+            .map(|(_, p, _)| p.as_str())
+            .collect();
+        let recent = partitions.len().saturating_sub(RECENT_PARTITIONS);
+        let wanted: Vec<String> = partitions
+            .iter()
+            .enumerate()
+            .filter(|(i, p)| full_due || *i >= recent || !known.contains(p.as_str()))
+            .map(|(_, p)| p.clone())
+            .collect();
+        let fetched = shared
+            .reader
+            .all(DATA_GO_KR, family.kind(), &all_areas(), &wanted, deadline)
+            .await
+            .map_err(|e| format!("life read: {e}"))?;
+        found.extend(fetched.into_iter().map(|f| (k, f)));
+    }
+    // Acquisitions of one instant apply in legacy kind-name order (stable, any order is valid).
+    let order = |(k, f): &(usize, Fetched)| (f.fetched_at_ms, KINDS[*k], f.partition.clone());
+    let mut fresh: Vec<(usize, Fetched)> = found
+        .into_iter()
+        .filter(|(k, f)| {
+            f.fetched_at_ms as f64 <= cut
+                && (full_due || !seen.contains(&(*k, f.partition.clone(), f.fetched_at_ms)))
+        })
+        .collect();
+    fresh.sort_by_key(order);
+    if !full_due
+        && fresh
+            .iter()
+            .any(|a| last.as_ref().is_some_and(|l| order(a) <= *l))
+    {
+        return Ok(false);
+    }
+    let base = if full_due {
+        Arc::new(LifeIndex::default())
+    } else {
+        shared
+            .life
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .folded
+            .clone()
+    };
+    let applied: Vec<(usize, String, u64)> = fresh
+        .iter()
+        .map(|(k, f)| (*k, f.partition.clone(), f.fetched_at_ms))
+        .collect();
+    let newest = fresh.last().map(order);
+    let folded = if fresh.is_empty() {
+        base
+    } else {
+        let runs: Vec<Run> = fresh
+            .into_iter()
+            .map(|(k, f)| (k, f.fetched_at_ms as f64, f.pages))
+            .collect();
+        let cpu = shared.cpu.clone();
+        let work = async move {
+            super::air_input::cpu_task(&cpu, move || {
+                let mut out = (*base).clone();
+                for (k, fetched, pages) in &runs {
+                    if let Some(items) = life_items(pages) {
+                        out.apply(KINDS[*k], *fetched, &items);
+                    }
+                }
+                Arc::new(out)
+            })
+            .await
+        };
+        tokio::time::timeout_at(deadline, work)
+            .await
+            .map_err(|_| "life fold deadline".to_owned())??
+    };
+    let mut state = shared.life.lock().unwrap_or_else(|e| e.into_inner());
+    if full_due {
+        state.seen.clear();
+        state.last = None;
+        state.full = Some(std::time::Instant::now());
+    }
+    state.seen.extend(applied);
+    if newest.is_some() {
+        state.last = newest;
+    }
+    state.folded = folded;
+    state.cut = cut;
+    state.refreshed = Some(std::time::Instant::now());
+    Ok(true)
+}
+/// Read the MFDS acquisitions of the last three KST days up to `cut` and fold them.
+async fn read_mfds<T: IndexListing + Clone + 'static>(
+    shared: &Arc<Shared<T>>,
+    now: f64,
+    deadline: Instant,
+) -> Result<(), String> {
+    let cut = shared
+        .mfds
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .cut
+        .max(now);
+    let days: Vec<String> = (0..MFDS_DAYS)
+        .rev()
+        .map(|d| format!("{:08}", kst_date(cut - d as f64 * DAY_MS)))
+        .collect();
+    // Only published partitions are looked up (a missing catalog is not an empty one).
+    let listed = shared
+        .reader
+        .partitions(
+            mfds_provider::SOURCE,
+            mfds_provider::KIND,
+            &MfdsRequest::provider_key(),
+            &months(cut - (MFDS_DAYS - 1) as f64 * DAY_MS, cut),
+            deadline,
+        )
+        .await
+        .map_err(|e| format!("mfds listing: {e}"))?;
+    let days: Vec<String> = days.into_iter().filter(|d| listed.contains(d)).collect();
+    let fetched = shared
+        .reader
+        .all(
+            mfds_provider::SOURCE,
+            mfds_provider::KIND,
+            &MfdsRequest::provider_key(),
+            &days,
+            deadline,
+        )
+        .await
+        .map_err(|e| format!("mfds read: {e}"))?;
+    let runs: Vec<(f64, Vec<Arc<[u8]>>)> = fetched
+        .into_iter()
+        .filter(|f| f.fetched_at_ms as f64 <= cut)
+        .map(|f| (f.fetched_at_ms as f64, f.pages))
+        .collect();
+    let newest = runs.iter().map(|r| r.0).fold(f64::NEG_INFINITY, f64::max);
+    let cpu = shared.cpu.clone();
+    let folded = tokio::time::timeout_at(
+        deadline,
+        super::air_input::cpu_task(&cpu, move || {
+            let mut out = FoodPoisoning::default();
+            for (fetched, pages) in &runs {
+                let Some(body) = pages
+                    .first()
+                    .and_then(|p| serde_json::from_slice::<Value>(p).ok())
+                else {
+                    continue;
+                };
+                if let Ok(rows) = mfds_provider::parse(&body, *fetched) {
+                    out.apply(&rows);
+                }
+            }
+            out.expire(cut);
+            Arc::new(out)
+        }),
+    )
+    .await
+    .map_err(|_| "mfds fold deadline".to_owned())??;
+    let mut state = shared.mfds.lock().unwrap_or_else(|e| e.into_inner());
+    state.folded = folded;
+    state.newest = newest;
+    state.cut = cut;
+    state.refreshed = Some(std::time::Instant::now());
+    Ok(())
+}
+/// The legacy capture window: UTC days D-8..D+9 (`gatherAreaRiseSetFromApi`).
+fn kasi_days(now: f64) -> Vec<String> {
+    (-8..10)
+        .map(|i| utc_date(now + f64::from(i) * DAY_MS))
+        .collect()
+}
+fn kasi_key(area: &str) -> Option<ProviderKey> {
+    RiseSetRequest::new(area, 20000101)
+        .ok()
+        .map(|r| r.provider_key())
+}
+/// One KASI capture pass: read every area's stored days of the window from S3 (the fold is then
+/// loaded), then acquire the missing area/days, today's column first (legacy `mapSeries`
+/// order is per area; the stored set is the same, and every area has today early).
+async fn kasi_pass<T: IndexListing + Clone + 'static>(
+    shared: &Arc<Shared<T>>,
+    now: f64,
+) -> Result<(), String> {
+    let days = kasi_days(now);
+    let first_day = crate::world::js::parts(now - (8. + KASI_KEEP_DAYS) * DAY_MS).map_or(0., |p| {
+        crate::world::js::days_from_civil(p.year, p.month, p.day) as f64 * DAY_MS
+    });
+    let window: Vec<u32> = {
+        let mut m: Vec<u32> = days.iter().filter_map(|d| d[..6].parse().ok()).collect();
+        m.dedup();
+        m
+    };
+    let deadline = Instant::now() + Duration::from_secs(600);
+    // Read: one listing per area, then the stored days the fold lacks.
+    let mut stored: Vec<(String, Vec<String>)> = Vec::new();
+    for chunk in AREAS.chunks(8) {
+        let lists = crate::history::join_all(
+            chunk
+                .iter()
+                .map(|area| {
+                    let shared = shared.clone();
+                    let window = window.clone();
+                    async move {
+                        let key = kasi_key(area).ok_or_else(|| "kasi key".to_owned())?;
+                        shared
+                            .reader
+                            .partitions(DATA_GO_KR, "kasi-area-rise-set", &key, &window, deadline)
+                            .await
+                            .map(|p| ((*area).to_owned(), p))
+                            .map_err(|e| format!("kasi listing: {e}"))
+                    }
+                })
+                .collect(),
+        )
+        .await;
+        for l in lists {
+            stored.push(l?);
+        }
+    }
+    for (area, partitions) in &stored {
+        let missing: Vec<String> = {
+            let state = shared.kasi.lock().unwrap_or_else(|e| e.into_inner());
+            partitions
+                .iter()
+                .filter(|p| days.contains(p) && !state.folded.has(area, p))
+                .cloned()
+                .collect()
+        };
+        if missing.is_empty() {
+            continue;
+        }
+        let key = kasi_key(area).ok_or("kasi key")?;
+        let fetched = shared
+            .reader
+            .all(DATA_GO_KR, "kasi-area-rise-set", &key, &missing, deadline)
+            .await
+            .map_err(|e| format!("kasi read: {e}"))?;
+        apply_kasi(shared, area, &fetched, first_day);
+    }
+    shared.kasi.lock().unwrap_or_else(|e| e.into_inner()).loaded = true;
+    // Acquire what is still missing.
+    let Some(acquire) = shared.acquire.clone().filter(|a| a.funded()) else {
+        return Ok(());
+    };
+    let today = utc_date(now);
+    let mut order: Vec<&String> = days.iter().filter(|d| **d >= today).collect();
+    order.extend(days.iter().filter(|d| **d < today).rev());
+    let mut failed: HashSet<&str> = HashSet::new();
+    for day in order {
+        for area in AREAS {
+            if failed.contains(area) {
+                continue;
+            }
+            let have = shared
+                .kasi
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .folded
+                .has(area, day);
+            if have {
+                continue;
+            }
+            let Ok(request) = RiseSetRequest::new(area, day.parse().unwrap_or(0)) else {
+                continue;
+            };
+            let key = format!("kasi-{area}-{day}");
+            let owned_for = LifeRequest::RiseSet(request.clone()).owned_for();
+            let acquire = acquire.clone();
+            let outcome = std::sync::Arc::new(std::sync::Mutex::new(None));
+            let seen = outcome.clone();
+            let published = shared
+                .flights
+                .run(&key, owned_for, move || -> BoxFuture<'static, bool> {
+                    Box::pin(async move {
+                        let result = acquire.acquire(LifeRequest::RiseSet(request)).await;
+                        let published = matches!(result, Ok(LifeOutcome::Published));
+                        *seen.lock().unwrap_or_else(|e| e.into_inner()) = Some(result.is_ok());
+                        published
+                    })
+                })
+                .await;
+            if *outcome.lock().unwrap_or_else(|e| e.into_inner()) == Some(false) {
+                // Legacy `mapSeries` stops an area at its first failure.
+                failed.insert(area);
+                continue;
+            }
+            if published {
+                let k = kasi_key(area).ok_or("kasi key")?;
+                if let Ok(fetched) = shared
+                    .reader
+                    .acquisitions(DATA_GO_KR, "kasi-area-rise-set", &k, day, deadline)
+                    .await
+                {
+                    apply_kasi(shared, area, &fetched, first_day);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+/// Apply KASI acquisitions of one area in completion order (the first per day wins).
+fn apply_kasi<T>(shared: &Arc<Shared<T>>, area: &str, fetched: &[Fetched], first_day: f64) {
+    let mut runs: Vec<&Fetched> = fetched.iter().collect();
+    runs.sort_by_key(|f| f.fetched_at_ms);
+    let mut state = shared.kasi.lock().unwrap_or_else(|e| e.into_inner());
+    let folded = Arc::make_mut(&mut state.folded);
+    for f in runs {
+        let Some(items) = life_items(&f.pages) else {
+            continue;
+        };
+        if let Some(item) = items.first() {
+            folded.apply(area, &f.partition, item);
+        }
+    }
+    folded.forget_before(first_day);
+}

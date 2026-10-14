@@ -135,3 +135,25 @@ python3 scripts/check-artifact-policy.py --staged / --range
 
 Rollback: revert the PR; `kma` remains off until S15b-4.
 
+### Scenarios (S15b-3b)
+
+Declaration: [S15b-3b.json](../server2/config/tasks/S15b-3b.json).
+
+| ID | User and goal | Steps | Expected / failure | AC and proof |
+| --- | --- | --- | --- | --- |
+| L1 | App user in any town | Snapshot | `area_no`/`area_no_near` equal the rebuilt `areaNoList` readers | B3-1; `life::area_numbers_*`, `life_s3::the_snapshot_*` |
+| L2 | User after UV/pollen issuances | Snapshot at an instant between runs | `life_index` equals `_fromLifeIndexDb2` | B3-1; `life::life_index_*`, `life_s3::life_inputs_restore_*` |
+| L3 | First user of a UV slot | No current issuance; two requests | One acquisition, published before use, both served | B3-2; `life_s3::missing_national_*` |
+| L4 | User while UV is slow | Acquisition slower than the deadline | Request within its deadline without the issuance; next request has it | B3-3; `life_s3::a_slow_acquisition_*` |
+| L5 | Out-of-season pollen | Provider `99` | Asked once per issuance | B3-2; `life_s3::missing_national_*` |
+| L6 | MFDS outage | 503 | Slot asked once, answer without fsn | B3-2/B3-3; `life_s3::an_mfds_slot_*` |
+| L7 | Rise/set | KASI capture with failing areas | Other areas captured; answers equal `getRiseSetList` | B3-1/B3-2; `life::kasi_*`, `life_s3::the_kasi_capture_*` |
+| L8 | Pollen day+3 | Provider `twodaysaftertomorrow` | Kept in `pollen_day3`, absent from the legacy answer | B3-4; `life::pollen_day_three_*` |
+| L9 | Operator enables `kma` | Key without units, bad MFDS root | Refused | B3-5; `gateway::runtime::kma_life_*`, `life_s3::life_settings_*` |
+
+Live record (2026-10-15, keys loaded in-process from `server/.env`, nothing stored outside the
+local S3 peer): raw probes of UV, the three pollen kinds (oak and pine `99`), KASI and MFDS (with
+and without the legacy User-Agent); the server2 acquirer published UV (4 pages, about 9 s), weeds
+pollen (4 pages), KASI 서울 and MFDS into the local peer twice, oak answered no data, and the folds
+answered from them. The OpenWeather 401 of S15b-3a came from the first of two `OWM_SECRET_KEY`
+assignments; the last one (dotenv's) answers 200.

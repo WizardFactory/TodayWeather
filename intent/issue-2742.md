@@ -93,3 +93,18 @@ S15b-3a criteria:
   chain; no mode or verification flag.
 - A3-5: paths match `server2/config/tasks/S15b-3.json`; outside changes are the declared documents.
 
+S15b-3b criteria (base `7ca6f002`, after #2750; same directions, coordinator 2026-10-15):
+- B3-1: `area_no` and `area_no_near` answer from the repository area-number lists rebuilt with the
+  legacy scripts' rules; `life_index`, `rise_set` and `food_poisoning` answer from server2 records
+  with the legacy savers and readers; documents and answers equal a pinned legacy oracle byte for
+  byte, directly and from the S3 test peer with empty memory.
+- B3-2: UV V5, pollen V3, KASI and MFDS are national datasets acquired by owned single-flight
+  acquisitions (S13d `OwnedFlights`) and published through S06 before use; MFDS is a new keyless
+  acquisition with the S08 keyless transport bounds.
+- B3-3: a request never waits past its deadline (at most 3 s); it answers with the stored data
+  (the legacy output for missing data) while the acquisition finishes for the next request.
+- B3-4: the provider's pollen day+3 (`twodaysaftertomorrow`) is kept in server2 data while the
+  legacy answer stays byte-identical.
+- B3-5: settings are real configuration only (`DONGNAE_SECRET_KEYS`,
+  `SERVER2_DONGNAE_DAILY_UNITS`, `SERVER2_DATA_GO_KR_URL`, `SERVER2_MFDS_URL`); no mode or flag.
+- B3-6: paths match `server2/config/tasks/S15b-3b.json`; outside changes are the declared documents.

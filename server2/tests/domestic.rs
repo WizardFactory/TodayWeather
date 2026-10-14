@@ -2,6 +2,10 @@
 mod air;
 #[path = "domestic/air_s3.rs"]
 mod air_s3;
+#[path = "domestic/life.rs"]
+mod life;
+#[path = "domestic/life_s3.rs"]
+mod life_s3;
 #[path = "domestic/parity.rs"]
 mod parity;
 #[path = "domestic/replay.rs"]
