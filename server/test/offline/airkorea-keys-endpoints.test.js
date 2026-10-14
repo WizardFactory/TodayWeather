@@ -66,17 +66,18 @@ test('a remembered key that later expires wraps around to the remaining keys', a
     assert.deepEqual(t.keys.slice(-2), ['synthetic-k0', 'synthetic-k2']);
 });
 
-test('quota, timeout, server and payload failures never move to another key', async () => {
+// Quota moves to the next key since #2745 (see the quota tests below).
+test('timeout, server and payload failures never move to another key', async () => {
     const cases = [
-        [{body: {response: {header: {resultCode: '22', resultMsg: 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR'}}}}, /PROVIDER_22/, 1],
-        [{body: gateway('LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR', '22'), status: 429}, /HTTP_429|PROVIDER_22/, 1],
         [{status: 503}, /HTTP_503/, 2],
         [{body: {response: {header: {resultCode: '00'}, body: {items: 'bad'}}}}, /INVALID_ITEMS/, 1],
         [{hang: true}, /TIMEOUT/, 2]
     ];
     for (const [answer, pattern, calls] of cases) {
         const t = transport(() => answer);
-        await assert.rejects(invoke(Api.create({transport: t, timeoutMs: 10}), 'fetchWithKeys', KEYS, '서울', Api.STATION), pattern);
+        // Only the hanging case needs a short timeout; a cold start must not turn an answer into a retry.
+        const timeoutMs = answer.hang ? 10 : 1000;
+        await assert.rejects(invoke(Api.create({transport: t, timeoutMs}), 'fetchWithKeys', KEYS, '서울', Api.STATION), pattern);
         assert.equal(t.calls.length, calls);
         assert.deepEqual([...new Set(t.keys)], ['synthetic-k2']);
     }
@@ -202,13 +203,14 @@ test('no runtime request to the retired openapi.airkorea.or.kr host remains', ()
 });
 
 // Review round 1 (PR #2737).
-test('R1: a 401/403 with a regular JSON or XML envelope keeps its provider code; quota never switches keys', async () => {
+// #2745: quota inside a 401/403 body is still quota, so every key is tried once and the result is QUOTA_EXHAUSTED.
+test('R1: a 401/403 with a regular JSON or XML envelope keeps its provider code; quota is not a credential rejection', async () => {
     const envelope = code => ({response: {header: {resultCode: code, resultMsg: 'synthetic'}}});
     for (const [answer, pattern, calls] of [
-        [{status: 401, body: envelope('22')}, /PROVIDER_22/, 1],
-        [{status: 403, body: envelope('22')}, /PROVIDER_22/, 1],
-        [{status: 401, body: '<response><header><resultCode>22</resultCode></header></response>'}, /PROVIDER_22/, 1],
-        [{status: 403, body: gateway('LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR', '22')}, /PROVIDER_22/, 1],
+        [{status: 401, body: envelope('22')}, /QUOTA_EXHAUSTED/, 3],
+        [{status: 403, body: envelope('22')}, /QUOTA_EXHAUSTED/, 3],
+        [{status: 401, body: '<response><header><resultCode>22</resultCode></header></response>'}, /QUOTA_EXHAUSTED/, 3],
+        [{status: 403, body: gateway('LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR', '22')}, /QUOTA_EXHAUSTED/, 3],
         [{status: 403, body: envelope('30')}, /NO_VALID_KEY/, 3],
         [{status: 401, body: envelope('99')}, /PROVIDER_99/, 1],
         // Review round 2: XML and gateway-JSON bodies keep non-credential codes too.
@@ -288,4 +290,174 @@ test('R3: key failover shares one budget across keys, pages and retries', async 
     // one transient retry when its deadline-bounded timer fires a moment before Date.now() reaches it.
     assert(new Set(t.keys).size <= 2, 'keys ' + new Set(t.keys).size);
     assert(t.calls.length <= 3, 'calls ' + t.calls.length);
+});
+
+// #2745 (AK, 2026-10-14): a key at its daily quota is skipped until the end of its KST day and the
+// same request continues with the next key in the #2737 order.
+const QUOTA = {body: {response: {header: {resultCode: '22', resultMsg: 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR'}}}};
+// 2026-10-14 22:00 KST.
+const EVENING = Date.parse('2026-10-14T13:00:00Z');
+function clock(ms) { const c = () => c.ms; c.ms = ms; return c; }
+
+test('#2745 quota on the last key continues with the previous key, which is remembered', async () => {
+    const exhausted = [], rejected = [];
+    const t = transport(url => keyOf(url) === 'synthetic-k2' ? QUOTA : {body: fixture('stations')});
+    const api = Api.create({transport: t, now: clock(EVENING),
+        onKeyRejected: (...a) => rejected.push(a), onKeyExhausted: (op, index, code, until) => exhausted.push([op, index, code, until])});
+    const first = await invoke(api, 'fetchWithKeys', KEYS, '서울', Api.STATION);
+    assert.equal(first.list.length, 4);
+    assert.deepEqual(t.keys, ['synthetic-k2', 'synthetic-k1']);
+    // The key stays exhausted until 2026-10-15 00:00 KST.
+    assert.deepEqual(exhausted, [[Api.STATION, 2, 'PROVIDER_22', Date.parse('2026-10-14T15:00:00Z')]]);
+    assert.deepEqual(rejected, []);
+    await invoke(api, 'fetchWithKeys', KEYS, '부산', Api.STATION);
+    assert.deepEqual(t.keys.slice(2), ['synthetic-k1'], 'the remembered working key is tried first');
+});
+
+test('#2745 every quota form moves to the next key', async () => {
+    for (const answer of [
+        QUOTA,
+        {status: 429},
+        {status: 429, body: gateway('LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR', '22')},
+        {status: 401, body: {response: {header: {resultCode: '22'}}}},
+        {status: 403, body: gateway('LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR', '22')},
+        {body: gateway('LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR', '22')},
+        {body: '<OpenAPI_ServiceResponse><cmmMsgHeader><returnAuthMsg>LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR</returnAuthMsg></cmmMsgHeader></OpenAPI_ServiceResponse>'}
+    ]) {
+        const t = transport(url => keyOf(url) === 'synthetic-k2' ? answer : {body: fixture('stations')});
+        await invoke(Api.create({transport: t, now: clock(EVENING)}), 'fetchWithKeys', KEYS, '서울', Api.STATION);
+        assert.deepEqual(t.keys, ['synthetic-k2', 'synthetic-k1'], JSON.stringify(answer));
+    }
+});
+
+test('#2745 every key exhausted fails as quota, costs no HTTP for the rest of the KST day, then probes again', async () => {
+    const now = clock(EVENING);
+    const t = transport(() => QUOTA);
+    const api = Api.create({transport: t, now});
+    const err = await invoke(api, 'fetchWithKeys', KEYS, '서울', Api.STATION).catch(e => e);
+    assert.equal(err.code, 'QUOTA_EXHAUSTED');
+    assert.deepEqual(t.keys, ['synthetic-k2', 'synthetic-k1', 'synthetic-k0'], 'one call per key');
+    assert(!JSON.stringify({m: err.message, s: err.stack, e: err}).includes('synthetic'));
+    // Every operation shares the exhaustion: 23:59:59 KST still costs nothing.
+    now.ms = Date.parse('2026-10-14T14:59:59Z');
+    await assert.rejects(invoke(api, 'queryWithKeys', KEYS, Api.FORECAST, {searchDate: '2026-10-14'}), /QUOTA_EXHAUSTED/);
+    assert.equal(t.calls.length, 3);
+    // The next KST day starts at 15:00 UTC: each key is probed once again.
+    now.ms = Date.parse('2026-10-14T15:00:00Z');
+    await assert.rejects(invoke(api, 'fetchWithKeys', KEYS, '서울', Api.STATION), /QUOTA_EXHAUSTED/);
+    assert.equal(t.calls.length, 6);
+});
+
+test('#2745 an exhausted key is skipped by later credential failover; mixed failures report quota', async () => {
+    let k1Expired = false;
+    const t = transport(url => {
+        const key = keyOf(url);
+        if (key === 'synthetic-k2') return QUOTA;
+        if (key === 'synthetic-k1') return k1Expired ? EXPIRED : {body: fixture('stations')};
+        return UNREGISTERED;
+    });
+    const api = Api.create({transport: t, now: clock(EVENING)});
+    await invoke(api, 'fetchWithKeys', KEYS, '서울', Api.STATION);
+    k1Expired = true;
+    const err = await invoke(api, 'fetchWithKeys', KEYS, '서울', Api.STATION).catch(e => e);
+    // k1 (remembered) is expired, k0 is unregistered, k2 is skipped without a call.
+    assert.deepEqual(t.keys.slice(2), ['synthetic-k1', 'synthetic-k0']);
+    assert.equal(err.code, 'QUOTA_EXHAUSTED');
+    // Without any quota the #2737 result is unchanged.
+    const auth = transport(url => keyOf(url) === 'synthetic-k1' ? EXPIRED : UNREGISTERED);
+    await assert.rejects(invoke(Api.create({transport: auth}), 'fetchWithKeys', KEYS, '서울', Api.STATION), /NO_VALID_KEY/);
+    assert.equal(auth.calls.length, 3);
+});
+
+test('#2745 quota on a later page restarts the operation with the next key; no key repeats a page', async () => {
+    const t = transport(url => {
+        const page = Number(new URL(url).searchParams.get('pageNo'));
+        if (keyOf(url) === 'synthetic-k2' && page === 2) return QUOTA;
+        const data = fixture('msrstn'); data.response.body.numOfRows = 2; data.response.body.pageNo = page;
+        data.response.body.items = data.response.body.items.slice((page - 1) * 2, page * 2);
+        return {body: data};
+    });
+    const result = await invoke(Api.create({transport: t, pageSize: 2, now: clock(EVENING)}), 'queryWithKeys', KEYS, Api.STATION_LIST, {});
+    assert.equal(result.list.length, 3);
+    const calls = t.calls.map(url => keyOf(url) + '@' + new URL(url).searchParams.get('pageNo'));
+    assert.deepEqual(calls, ['synthetic-k2@1', 'synthetic-k2@2', 'synthetic-k1@1', 'synthetic-k1@2']);
+});
+
+// Review R-1: a request that is paging with a key stops using it once a parallel request marks it exhausted.
+test('#2745 a key exhausted by a parallel request is not used for later pages', async () => {
+    const t = transport(url => {
+        const u = new URL(url), page = Number(u.searchParams.get('pageNo')), key = keyOf(url);
+        if (u.pathname.endsWith('getMinuDustFrcstDspth')) {
+            if (key === 'synthetic-k2') return QUOTA;
+            const frcst = fixture('frcst');
+            Object.assign(frcst.response.body, {items: frcst.response.body.items.slice(0, 2), totalCount: 2, numOfRows: 2, pageNo: 1});
+            return {body: frcst};
+        }
+        const data = fixture('msrstn'); data.response.body.numOfRows = 2; data.response.body.pageNo = page;
+        data.response.body.items = data.response.body.items.slice((page - 1) * 2, page * 2);
+        // The first station page with the last key arrives after the parallel forecast saw quota.
+        return {body: data, delay: key === 'synthetic-k2' && page === 1 ? 50 : 0};
+    });
+    const api = Api.create({transport: t, pageSize: 2, now: clock(EVENING)});
+    const [stations] = await Promise.all([
+        invoke(api, 'queryWithKeys', KEYS, Api.STATION_LIST, {}),
+        invoke(api, 'queryWithKeys', KEYS, Api.FORECAST, {searchDate: '2026-10-14'})
+    ]);
+    assert.equal(stations.list.length, 3);
+    const list = t.calls.filter(url => url.includes('getMsrstnList')).map(url => keyOf(url) + '@' + new URL(url).searchParams.get('pageNo'));
+    assert.deepEqual(list, ['synthetic-k2@1', 'synthetic-k1@1', 'synthetic-k1@2']);
+});
+
+test('#2745 quota on the remembered first key wraps to the last key; code 23 does not rotate', async () => {
+    let quotaK0 = false;
+    const t = transport(url => keyOf(url) === 'synthetic-k0' && quotaK0 ? QUOTA :
+        keyOf(url) === 'synthetic-k0' ? {body: fixture('stations')} : keyOf(url) === 'synthetic-k2' ? {body: fixture('stations')} : UNREGISTERED);
+    const api = Api.create({transport: t, now: clock(EVENING)});
+    await invoke(api, 'fetchWithKeys', ['synthetic-k0'], '서울', Api.STATION);
+    quotaK0 = true;
+    await invoke(api, 'fetchWithKeys', KEYS, '서울', Api.STATION);
+    assert.deepEqual(t.keys.slice(1), ['synthetic-k0', 'synthetic-k2']);
+    const perSecond = transport(() => ({body: {response: {header: {resultCode: '23'}}}}));
+    await assert.rejects(invoke(Api.create({transport: perSecond, now: clock(EVENING)}), 'fetchWithKeys', KEYS, '서울', Api.STATION), /PROVIDER_23/);
+    assert.deepEqual(perSecond.keys, ['synthetic-k2']);
+});
+
+// Review round 2 C-1: quota failover shares the one 30-second budget like credential failover (R3).
+test('#2745 quota failover shares one budget across keys', async () => {
+    const t = transport(() => Object.assign({delay: 40}, QUOTA));
+    const start = Date.now();
+    await assert.rejects(invoke(Api.create({transport: t, budgetMs: 60, now: clock(EVENING)}), 'fetchWithKeys', KEYS, '서울', Api.STATION), /COLLECTION_LIMIT|TIMEOUT/);
+    assert(Date.now() - start < 100, 'elapsed ' + (Date.now() - start));
+    assert(new Set(t.keys).size <= 2, 'keys ' + new Set(t.keys).size);
+});
+
+// Review round 3 C-1: the transient retry is not sent with a key a parallel request exhausted meanwhile.
+test('#2745 a transient retry does not reuse a key exhausted by a parallel request', async () => {
+    const t = transport(url => {
+        const forecast = new URL(url).pathname.endsWith('getMinuDustFrcstDspth'), key = keyOf(url);
+        if (forecast) return key === 'synthetic-k2' ? QUOTA : {body: fixture('frcst')};
+        return key === 'synthetic-k2' ? {hang: true} : {body: fixture('stations')};
+    });
+    const api = Api.create({transport: t, timeoutMs: 50, now: clock(EVENING)});
+    const [stations] = await Promise.all([
+        invoke(api, 'fetchWithKeys', KEYS, '서울', Api.STATION),
+        invoke(api, 'queryWithKeys', KEYS, Api.FORECAST, {searchDate: '2026-10-14'}).catch(() => {})
+    ]);
+    assert.equal(stations.list.length, 4);
+    const station = t.calls.filter(url => url.includes('getCtprvnRltmMesureDnsty')).map(keyOf);
+    assert.deepEqual(station, ['synthetic-k2', 'synthetic-k1'], 'the timed-out key is not retried');
+});
+
+test('#2745 keco logs quota rotation by key position only', async () => {
+    const h = harness();
+    // The production constructor wires both callbacks.
+    assert.equal(typeof h.keco._onKeyExhausted, 'function');
+    const t = transport(url => keyOf(url) === 'synthetic-k2' ? QUOTA : {body: fixture('stations')});
+    h.keco._observationApi = Api.create({transport: t, onKeyRejected: h.keco._onKeyRejected, onKeyExhausted: h.keco._onKeyExhausted});
+    h.keco.setServiceKeys(KEYS); h.keco._sidoList = ['서울'];
+    await invoke(h.keco, 'cbKecoProcess', h.keco);
+    assert.equal(h.stationWrites.length, 3);
+    const logs = JSON.stringify(h.logs);
+    assert(logs.includes('KEY_QUOTA') && logs.includes('keyIndex=2') && logs.includes('PROVIDER_22'), logs);
+    assert(!logs.includes('synthetic'));
 });

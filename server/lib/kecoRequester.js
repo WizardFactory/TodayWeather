@@ -35,7 +35,8 @@ var dnscache = require('dnscache')({
  */
 function Keco() {
     this._svcKeys = [];
-    this._observationApi = observationApi.create({onKeyRejected: this._onKeyRejected});
+    this._observationApi = observationApi.create({onKeyRejected: this._onKeyRejected,
+        onKeyExhausted: this._onKeyExhausted});
     this._collectionRunning = {};
     this._sidoList = [];
     this._currentRltmIndex = 0;
@@ -68,6 +69,14 @@ Keco.prototype._collectionOutcome = function (operation, sido, err, rows, aggreg
  */
 Keco.prototype._onKeyRejected = function (operation, index, code) {
     log.warn('AIRKOREA KEY_REJECTED operation=' + operation + ' keyIndex=' + index + ' code=' + code);
+};
+
+/**
+ * Logs a key that reached its daily quota (#2745) by position only; it is skipped until `until` (KST day end).
+ */
+Keco.prototype._onKeyExhausted = function (operation, index, code, until) {
+    log.warn('AIRKOREA KEY_QUOTA operation=' + operation + ' keyIndex=' + index + ' code=' + code +
+        ' until=' + new Date(until).toISOString());
 };
 
 Keco.prototype.setKakaoApiKeys = function (keys) {

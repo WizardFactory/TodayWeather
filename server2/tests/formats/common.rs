@@ -33,6 +33,8 @@ pub struct Env {
     pub stub: Stub,
     pub acquirer: DomesticAcquirer<HttpProviderTransport, HttpPublicTransport, Memory>,
     pub metrics: Arc<DomesticMetrics>,
+    /// The acquirer and budget wall clock (S13c: quota days).
+    pub clock: Arc<TestClock>,
 }
 /// Rings: AirKorea gets its own owners; KASI and zone rotate over two keys.
 pub async fn env_keys(airkorea: &[(&str, char)], data_go_kr: &[(&str, char)]) -> Env {
@@ -58,7 +60,7 @@ pub async fn env_keys(airkorea: &[(&str, char)], data_go_kr: &[(&str, char)]) ->
         Arc::new(HttpPublicTransport::new(8 * 1024 * 1024).unwrap()),
         rings,
         Endpoints::new(&stub.base, &stub.base, &stub.base).unwrap(),
-        clk,
+        clk.clone(),
         metrics.clone(),
         CatalogLimits::default(),
     )
@@ -67,6 +69,7 @@ pub async fn env_keys(airkorea: &[(&str, char)], data_go_kr: &[(&str, char)]) ->
         stub,
         acquirer,
         metrics,
+        clock: clk,
     }
 }
 pub async fn env() -> Env {

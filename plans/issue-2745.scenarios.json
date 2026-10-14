@@ -1,0 +1,54 @@
+{
+  "scenarios": [
+    {
+      "id": "S1",
+      "user": "Gather process (scheduled station, sido, forecast or station-list request)",
+      "goal": "Collect AirKorea data although the first selected key is at its daily quota",
+      "prerequisites": "AIRKOREA_SECRET_KEYS has three keys; the last one has used its daily quota",
+      "steps": ["Client tries the last key and receives code 22 or HTTP 429", "Client logs KEY_QUOTA with key position, code and UTC end time", "Client restarts the request with the previous key", "Previous key answers 00; rows are validated and stored"],
+      "expected": "Fresh rows; the previous key is remembered; the exhausted key costs no call until KST midnight",
+      "failure": "If the previous key also fails, the next key is tried; nothing is written until a key completes every page",
+      "criteria": ["AC1", "AC3"]
+    },
+    {
+      "id": "S2",
+      "user": "Gather process",
+      "goal": "Stop spending calls when no key has quota left",
+      "prerequisites": "Every configured key has used its daily quota",
+      "steps": ["Request tries each key once and receives quota", "Later requests the same KST day", "First request after KST midnight"],
+      "expected": "QUOTA_EXHAUSTED after one call per key; later requests that day make no HTTP call; after midnight each key is probed again",
+      "failure": "Repeated calls to exhausted keys on the same day would be a defect",
+      "criteria": ["AC1", "AC2"]
+    },
+    {
+      "id": "S3",
+      "user": "Gather process",
+      "goal": "Keep the #2737 credential behavior when quota and credential failures mix",
+      "prerequisites": "One key exhausted, the others expired or unregistered",
+      "steps": ["Request skips the exhausted key without HTTP", "Credential rejections move through the remaining keys"],
+      "expected": "QUOTA_EXHAUSTED (some key will recover after midnight); an all-credential list still ends with NO_VALID_KEY",
+      "failure": "Reporting NO_VALID_KEY while a key is only exhausted would mislead the operator",
+      "criteria": ["AC2", "AC3"]
+    },
+    {
+      "id": "S4",
+      "user": "Gather process (multi-page station list)",
+      "goal": "Recover from quota reached mid-pagination",
+      "prerequisites": "The selected key reaches its quota on page 2",
+      "steps": ["Page 1 succeeds with the last key", "Page 2 answers code 22", "Request restarts at page 1 with the previous key"],
+      "expected": "Complete list from the previous key; no key requests the same page twice",
+      "failure": "Mixing partial pages or retrying the exhausted key would be a defect",
+      "criteria": ["AC1", "AC3"]
+    },
+    {
+      "id": "S5",
+      "user": "Operator reading the gather log",
+      "goal": "See which key position is exhausted and until when",
+      "prerequisites": "S1 or S2 happened",
+      "steps": ["Read KEY_QUOTA and outcome lines"],
+      "expected": "Key position, code and UTC end time only; no key text",
+      "failure": "Key text in logs is a defect",
+      "criteria": ["AC3", "AC4"]
+    }
+  ]
+}

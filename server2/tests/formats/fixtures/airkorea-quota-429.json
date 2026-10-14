@@ -1,0 +1,9 @@
+{
+  "OpenAPI_ServiceResponse": {
+    "cmmMsgHeader": {
+      "errMsg": "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR",
+      "returnAuthMsg": "일일 서비스 요청제한 횟수 초과 에러",
+      "returnReasonCode": "22"
+    }
+  }
+}
