@@ -41,6 +41,12 @@ const MEMO: Duration = Duration::from_secs(60);
 const STATION_LIST_AGE_MS: f64 = 7. * DAY_MS;
 /// Partitions of the observation dataset re-read on every refresh (late acquisitions).
 const OPEN_HOURS: f64 = 3.;
+/// Demand-gated capture of the nationwide hour: while a request arrived within this window, the
+/// current hour is acquired even when no request needs it, so the 24-hour station rows have no
+/// gaps (legacy collected every 10 minutes regardless of demand).
+const DEMAND_MS: i64 = 24 * 3_600_000;
+/// Capture check interval (legacy collected at UTC minutes 3, 13, ... 53).
+const CAPTURE_EVERY: Duration = Duration::from_secs(600);
 
 fn key(id: &str) -> ProviderKey {
     ProviderKey::Named { id: id.into() }
@@ -114,6 +120,17 @@ pub struct AirInputs<T> {
     generation: Arc<AtomicU64>,
     stations: tokio::sync::Mutex<Option<StationCache>>,
     observations: tokio::sync::Mutex<Option<ObsCache>>,
+    capture: Arc<Capture>,
+    capture_every: Duration,
+}
+/// State of the demand-gated hourly capture.
+#[derive(Default)]
+struct Capture {
+    /// Wall-clock ms of the last request (0: none yet).
+    demand_ms: std::sync::atomic::AtomicI64,
+    /// Nationwide hour partitions this process published.
+    hours: std::sync::Mutex<HashSet<String>>,
+    started: std::sync::atomic::AtomicBool,
 }
 impl<T: IndexListing + Clone + 'static> AirInputs<T> {
     pub fn new(transport: T, store: Arc<CatalogStore<T>>) -> Self {
@@ -125,7 +142,14 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             generation: Arc::new(AtomicU64::new(0)),
             stations: tokio::sync::Mutex::new(None),
             observations: tokio::sync::Mutex::new(None),
+            capture: Arc::new(Capture::default()),
+            capture_every: CAPTURE_EVERY,
         }
+    }
+    /// The capture check interval (10 minutes; tests shorten it).
+    pub fn with_capture_interval(mut self, every: Duration) -> Self {
+        self.capture_every = every;
+        self
     }
     pub fn with_acquire(mut self, acquire: Option<Arc<dyn AirKoreaAcquire>>) -> Self {
         self.acquire = acquire;
@@ -135,22 +159,67 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         self.air = air;
         self
     }
-    /// Start (or join) the owned acquisition of one dataset; None when throttled or no key.
+    /// Start (or join) the owned acquisition of one dataset; None without a key.
     fn flight(
         &self,
         id: &str,
         request: AirKoreaRequest,
     ) -> Option<tokio::sync::watch::Receiver<bool>> {
-        let acquire = self.acquire.clone()?;
-        let generation = self.generation.clone();
-        self.flights
-            .start(id, RETRY, move || -> BoxFuture<'static, ()> {
-                Box::pin(async move {
-                    if let Ok(true) = acquire.acquire(request).await {
-                        generation.fetch_add(1, Ordering::AcqRel);
-                    }
-                })
-            })
+        start_flight(
+            &self.flights,
+            self.acquire.clone()?,
+            &self.generation,
+            &self.capture,
+            id,
+            request,
+        )
+    }
+    /// Record demand and start the hourly capture task once (with a key).
+    fn note_demand(&self) {
+        let Some(acquire) = self.acquire.clone() else {
+            return;
+        };
+        self.capture
+            .demand_ms
+            .store(wall_ms() as i64, Ordering::Release);
+        if self.capture.started.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        let (flights, generation, capture, every) = (
+            self.flights.clone(),
+            self.generation.clone(),
+            self.capture.clone(),
+            self.capture_every,
+        );
+        tokio::spawn(async move {
+            // The first check is one interval after the first request (that request already
+            // acquires a missing hour itself).
+            let mut tick = tokio::time::interval_at(Instant::now() + every, every);
+            tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            loop {
+                tick.tick().await;
+                let now = wall_ms();
+                if now as i64 - capture.demand_ms.load(Ordering::Acquire) > DEMAND_MS {
+                    continue;
+                }
+                let hour = hour_partition(now);
+                let done = capture
+                    .hours
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .contains(&hour);
+                if !done {
+                    let _ = start_flight(
+                        &flights,
+                        acquire.clone(),
+                        &generation,
+                        &capture,
+                        &format!("nationwide-{hour}"),
+                        AirKoreaRequest::nationwide(),
+                    );
+                }
+            }
+        });
     }
     fn generation(&self) -> u64 {
         self.generation.load(Ordering::Acquire)
@@ -389,6 +458,14 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             .parts
             .get(&current_hour)
             .is_some_and(|a| a.iter().any(|(t, _)| *t as f64 <= until));
+        if present {
+            // Stored already (by this or another process): the capture skips this hour.
+            self.capture
+                .hours
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .insert(current_hour);
+        }
         Ok((c.folded.clone(), present))
     }
 
@@ -469,7 +546,8 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         Ok(out)
     }
 
-    /// All AirKorea and fallback answers of one request. S3 or provider failures give the
+    /// All AirKorea and fallback answers of one request (it also records demand for the hourly
+    /// capture). S3 or provider failures give the
     /// legacy answer for missing data, never a forward.
     pub async fn load(
         &self,
@@ -480,6 +558,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         now: f64,
         deadline: Instant,
     ) -> AirAnswers {
+        self.note_demand();
         let wait_until = deadline
             .checked_sub(Duration::from_millis(100))
             .unwrap_or(deadline);
@@ -540,6 +619,33 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             _ => None,
         }
     }
+}
+/// Start (or join) one owned acquisition; a published nationwide hour is remembered for the
+/// capture, and any publication advances the generation so readers re-read S3.
+fn start_flight(
+    flights: &Flights,
+    acquire: Arc<dyn AirKoreaAcquire>,
+    generation: &Arc<AtomicU64>,
+    capture: &Arc<Capture>,
+    id: &str,
+    request: AirKoreaRequest,
+) -> Option<tokio::sync::watch::Receiver<bool>> {
+    let (generation, capture) = (generation.clone(), capture.clone());
+    let nationwide = request.sido() == Some(crate::domestic::airkorea::NATIONWIDE);
+    flights.start(id, RETRY, move || -> BoxFuture<'static, ()> {
+        Box::pin(async move {
+            if let Ok(Some(period)) = acquire.acquire(request).await {
+                if nationwide {
+                    capture
+                        .hours
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .insert(format!("{:08}-{}", period.local_date, period.slot));
+                }
+                generation.fetch_add(1, Ordering::AcqRel);
+            }
+        })
+    })
 }
 /// The KST date `YYYYMMDD` of an instant (`_getCurrentTimeValue(+9).date`).
 pub fn kst_date(now: f64) -> u32 {

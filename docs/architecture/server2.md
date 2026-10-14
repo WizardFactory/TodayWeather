@@ -1902,7 +1902,10 @@ deadline (100 ms before the native attempt ends). Otherwise it answers with what
 legacy answer for missing data (no merged observation, an empty station list, the forecast error,
 no fallback value), never 503 or a forward. The acquisition keeps running with the legacy AirKorea
 bound (30 s per call) and serves the next request; joined requests share it. Data a request waited
-for is visible to it although it completed after the request instant.
+for is visible to it although it completed after the request instant. While a request arrived in the
+last 24 hours, a process capture checks every 10 minutes and acquires the current nationwide hour
+once if it is not stored, so the 24-hour station rows have no hourly gaps (legacy collected every
+10 minutes regardless of demand); that is at most 24 nationwide calls a day.
 
 Verification (local; test peers only): a pinned Node 16.20.2 + Mongoose 5.1.2 oracle
 ([provenance](../../server2/tests/domestic/fixtures/AIR-PROVENANCE.md)) records the legacy

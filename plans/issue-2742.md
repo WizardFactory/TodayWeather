@@ -118,6 +118,7 @@ Declaration: [S15b-3.json](../server2/config/tasks/S15b-3.json) (S15b-3a). Endpo
 | C1 | App user in Seoul | Snapshot after nationwide datasets and a station list are stored | `arpltn` equals `getArpLtnInfo` (merged, list, three stations) | A3-1; `air::arpltn_answers_*`, `air_s3::air_inputs_restore_*` |
 | C2 | First user of the hour | No dataset of the hour; two concurrent requests | One provider call, published, both served | A3-2; `air_s3::a_missing_national_dataset_*` |
 | C3 | User while AirKorea is slow | Acquisition slower than the deadline | Request returns before its deadline with stored data; the next request is served without a new call | A3-3; `air_s3::a_slow_acquisition_*` |
+| C3b | Users across hours | A request once in the last 24 h; no request in the next hour | The capture acquires that hour once; the next request reads it from S3 | A3-2; `air_s3::the_hourly_capture_*` |
 | C4 | User where no station has a value | No AirKorea data; air provider configured, or too slow | Fallback observation (evaluate), or none before the deadline | A3-1/A3-3; `air_s3::the_air_fallback_*` |
 | C5 | Widget/web asking AirKorea forecasts | `airForecastSource=airkorea` | `getDustFrcst` list or error text | A3-1; `air::dust_forecast_*`, `air_s3::the_snapshot_*` |
 | C6 | Operator enables `kma` | Key without units, bad root, placeholder keys | Refused, refused, read-only | A3-4; `gateway::runtime::kma_airkorea_*` |

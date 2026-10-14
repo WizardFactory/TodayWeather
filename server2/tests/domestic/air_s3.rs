@@ -223,6 +223,8 @@ struct StubState {
     nationwide: AtomicUsize,
     station_list: AtomicUsize,
     delay_ms: AtomicUsize,
+    /// Data hour of the nationwide rows, in hours before now.
+    hours_ago: AtomicUsize,
     queries: Mutex<Vec<String>>,
 }
 fn now_ms() -> f64 {
@@ -260,7 +262,8 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> impl IntoRespo
         assert_eq!(get("numOfRows").as_deref(), Some("1000"));
         assert_eq!(get("ver").as_deref(), Some("1.3"));
         assert_eq!(get("returnType").as_deref(), Some("json"));
-        let hour = kst_text(now_ms());
+        let ago = state.hours_ago.load(Ordering::SeqCst) as f64;
+        let hour = kst_text(now_ms() - ago * 3_600_000.);
         let items: Vec<serde_json::Value> = STATIONS
             .iter()
             .enumerate()
@@ -491,6 +494,56 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
     assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 2);
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_hourly_capture_acquires_the_current_hour_while_demand_lasts() {
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    let inputs = AirInputs::new(transport.clone(), store.clone())
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
+        .with_capture_interval(Duration::from_millis(300));
+    // A request for an instant three hours ago acquires that hour; it is demand.
+    stub.state.hours_ago.store(3, Ordering::SeqCst);
+    let past = now_ms() - 3. * 3_600_000.;
+    let answer = inputs
+        .load(
+            &town(37.5657, 126.9769),
+            "서울특별시",
+            "중구",
+            false,
+            past,
+            Instant::now() + Duration::from_secs(3),
+        )
+        .await;
+    assert!(answer.arpltn.unwrap().get("arpltn").is_some());
+    assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 1);
+    // The capture then acquires the current hour once, without a request needing it.
+    stub.state.hours_ago.store(0, Ordering::SeqCst);
+    tokio::time::sleep(Duration::from_millis(1_500)).await;
+    assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 2);
+    tokio::time::sleep(Duration::from_millis(900)).await;
+    assert_eq!(
+        stub.state.nationwide.load(Ordering::SeqCst),
+        2,
+        "one capture per hour"
+    );
+    // The captured hour serves a request of that hour from S3.
+    let cold = AirInputs::new(transport.clone(), store.clone());
+    let now = cold
+        .load(
+            &town(37.5657, 126.9769),
+            "서울특별시",
+            "중구",
+            false,
+            now_ms(),
+            deadline(),
+        )
+        .await;
+    assert!(now.arpltn.unwrap().get("arpltn").is_some());
+    assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 2);
+}
+
 /// An air source answering one fixed observation (the shared LiveAir chain in production).
 struct FixedAir(Observation);
 impl AirSource for FixedAir {
@@ -577,14 +630,15 @@ async fn the_nationwide_acquisition_is_one_published_dataset_of_its_data_hour() 
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
     let acquire = live(&peer, store.clone(), &stub.base);
+    let hour = kst(now_ms()).hour_start();
     assert_eq!(
         acquire.acquire(AirKoreaRequest::nationwide()).await,
-        Ok(true)
+        Ok(Some(hour.period()))
     );
-    assert_eq!(
+    assert!(matches!(
         acquire.acquire(AirKoreaRequest::station_list()).await,
-        Ok(true)
-    );
+        Ok(Some(_))
+    ));
     let queries = stub.state.queries.lock().unwrap().clone();
     assert_eq!(
         queries,
@@ -595,7 +649,6 @@ async fn the_nationwide_acquisition_is_one_published_dataset_of_its_data_hour() 
     );
     // The dataset is one record of the national key in the partition of its data hour; the row
     // without a data time is kept in the raw bytes and skipped by the reader.
-    let hour = kst(now_ms()).hour_start();
     let id = CatalogId {
         source: "data-go-kr".into(),
         kind: "airkorea-station".into(),

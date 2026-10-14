@@ -20,7 +20,7 @@ use crate::domestic::metrics::DomesticMetrics;
 use crate::domestic::{Acquired, DomesticAcquirer, KeyRing};
 use crate::gateway::BoxFuture;
 use crate::providers::{ProviderKey, ProviderTransport, PublicTransport};
-use crate::storage::{CatalogLimits, CatalogStore, CatalogTransport};
+use crate::storage::{CatalogLimits, CatalogStore, CatalogTransport, Period};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -36,9 +36,13 @@ const KST_MS: i64 = 9 * 3_600_000;
 
 /// Acquire and publish one AirKorea dataset.
 pub trait AirKoreaAcquire: Send + Sync + 'static {
-    /// Ok(true): a new complete group was published; Ok(false): the provider had nothing new
-    /// (no data, not published, or an older publication); Err: a failure (no record).
-    fn acquire(&self, request: AirKoreaRequest) -> BoxFuture<'static, Result<bool, String>>;
+    /// Ok(Some(period)): a new complete group of that record period was published; Ok(None):
+    /// the provider had nothing new (no data, not published, or an older publication); Err: a
+    /// failure (no record).
+    fn acquire(
+        &self,
+        request: AirKoreaRequest,
+    ) -> BoxFuture<'static, Result<Option<Period>, String>>;
 }
 
 /// Static provider settings of the AirKorea acquirer.
@@ -213,7 +217,7 @@ where
         *day = Some((window, acquirer.clone()));
         Ok(acquirer)
     }
-    async fn run(&self, request: AirKoreaRequest) -> Result<bool, String> {
+    async fn run(&self, request: AirKoreaRequest) -> Result<Option<Period>, String> {
         let acquirer = self.acquirer().await?;
         let outcome = acquirer
             .acquire_airkorea(&request, Instant::now() + CALL_BUDGET)
@@ -221,13 +225,17 @@ where
             .map_err(|e| e.to_string())?;
         match outcome {
             Acquired::Complete(a) => {
+                let period = a
+                    .records
+                    .first()
+                    .map(|r| r.envelope.identity.period.clone());
                 self.store
                     .publish(a.declaration, a.records, Instant::now() + PUBLISH_BUDGET)
                     .await
                     .map_err(|e| format!("publication: {e}"))?;
-                Ok(true)
+                Ok(period)
             }
-            Acquired::NotPublished | Acquired::NoData | Acquired::Stale(_) => Ok(false),
+            Acquired::NotPublished | Acquired::NoData | Acquired::Stale(_) => Ok(None),
         }
     }
 }
@@ -238,7 +246,10 @@ where
     B: BudgetTransport + 'static,
     T: CatalogTransport + 'static,
 {
-    fn acquire(&self, request: AirKoreaRequest) -> BoxFuture<'static, Result<bool, String>> {
+    fn acquire(
+        &self,
+        request: AirKoreaRequest,
+    ) -> BoxFuture<'static, Result<Option<Period>, String>> {
         let inner = self.inner.clone();
         Box::pin(async move { inner.run(request).await })
     }

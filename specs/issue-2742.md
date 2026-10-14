@@ -168,6 +168,9 @@ coordinates; server2 does not store it (none live).
   `airForecastSource=airkorea`). The request waits until 100 ms before its deadline; an
   acquisition runs with a 30 s call bound and a 10 s publication bound. A request that waited sees
   acquisitions completed by the wall clock; otherwise only those completed by its instant.
+- Demand-gated capture: while a request arrived in the last 24 hours, the process checks every 10
+  minutes (first check 10 minutes after the first request) and acquires the current nationwide hour
+  once when it is neither stored nor already acquired by this process.
 - S08: one budget store per key and KST day (`SERVER2_AIRKOREA_DAILY_UNITS`, owner = domain-separated
   SHA-256 of the key), shared by the AirKorea operations; keys follow the S13b legacy `withKeys`.
 
