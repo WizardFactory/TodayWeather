@@ -120,7 +120,7 @@ impl InstanceRole {
             Ok(fetched) => {
                 // Rotated credentials need no early attempt. Not rotated yet: use them, but do
                 // not ask again on every request.
-                if fetched.expires_ms > now.saturating_add(REFRESH_BEFORE_MS) {
+                if fetched.expires_ms > now_ms()?.saturating_add(REFRESH_BEFORE_MS) {
                     *next = None;
                 }
                 let credentials = fetched.credentials.clone();
@@ -332,12 +332,13 @@ mod tests {
             if !authorized(&h) {
                 return (StatusCode::UNAUTHORIZED, String::new());
             }
+            // Built first, answered after the delay: the expiry ages in transit.
+            let n = s.documents.fetch_add(1, Ordering::AcqRel) + 1;
+            let (status, body) = (s.document.lock().unwrap())(n);
             let delay = s.delay_ms.load(Ordering::Acquire);
             if delay > 0 {
                 tokio::time::sleep(Duration::from_millis(delay)).await;
             }
-            let n = s.documents.fetch_add(1, Ordering::AcqRel) + 1;
-            let (status, body) = (s.document.lock().unwrap())(n);
             (StatusCode::from_u16(status).unwrap(), body)
         }
         let app = Router::new()
@@ -480,6 +481,22 @@ mod tests {
         d.delay_ms.store(2500, Ordering::Release);
         elapse(&role).await;
         assert_eq!(role.credentials().await.err(), Some(Error::Transport));
+    }
+
+    /// S10F-R2-F1: credentials that enter the refresh window while the refresh is in transit
+    /// keep the retry spacing.
+    #[tokio::test]
+    async fn credentials_that_age_into_the_refresh_window_in_transit_are_not_polled() {
+        let (d, role) = double().await;
+        set(&d, success(301));
+        d.delay_ms.store(1500, Ordering::Release);
+        assert_eq!(role.credentials().await.unwrap().key(), "role-key-1");
+        assert_eq!(role.credentials().await.unwrap().key(), "role-key-1");
+        assert_eq!(
+            d.requests.load(Ordering::Acquire),
+            3,
+            "no immediate new attempt"
+        );
     }
 
     /// Concurrent first callers share one refresh; during a refresh, callers holding a usable

@@ -2259,7 +2259,7 @@ Removed: `SERVER2_BIND`, `SERVER2_METRICS_BIND` (metrics listen on loopback at t
 or an ephemeral port with port 0), `SERVER2_WORKER_THREADS`, `SERVER2_BLOCKING_THREADS`,
 `SERVER2_CPU_LIMIT`, `SERVER2_INFLIGHT_LIMIT`, `SERVER2_CACHE_BYTES`, `SERVER2_CONNECTION_LIMIT`,
 `SERVER2_CONNECTION_SECONDS` (built-in defaults 2, 4, 2, 40, 16 MiB, 128 and 9 s, 12 s with the
-gateway; no documented operation needs another value), `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`,
+gateway; no documented operation needs another value), `SERVER2_S3_REGION` (read again since S10f as the server2 bucket region), `SERVER2_S3_ENDPOINT`,
 `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY`, `SERVER2_DATA_GO_KR_KEYS`,
 `SERVER2_DATA_GO_KR_DAILY_UNITS`, `SERVER2_DATA_GO_KR_URL`, `SERVER2_DATA_GO_KR_BASE_URL`,
 `SERVER2_KMA_BASE_URL`, `SERVER2_KMA_WEATHER_BASE_URL`, `SERVER2_AIRKOREA_DAILY_UNITS`,
@@ -2319,7 +2319,12 @@ error before any S3 request; an IMDS status is never reported as an S3 status, s
 not look like a missing object. Every S3 caller (raw and catalog stores, budgets, warnings, world
 weather and air, the KMA input source, demand state and the seed importers) draws credentials from
 the transport's `RefreshableCredentials` handle; the gateway shares one transport, so the process
-keeps one credential cache. Credential values have no Debug output and are never logged or printed.
+keeps one credential cache. The raw store and catalog publication and repair obtain credentials
+before their first write (`ObjectTransport::ready`), so a credential failure there is a definite
+`Transport`/`Timeout`, not an ambiguous write. This supersedes the S05
+[records guide](../operations/server2-records.md) statement that callers own instance-role
+acquisition; `RefreshableCredentials::new` and `replace` remain the caller-managed static path.
+Credential values have no Debug output and are never logged or printed.
 Tests reach a loopback IMDS double only through the test-only builders
 `S3Settings::from_vars_with` and `Builtins::instance_metadata`; no variable selects the IMDS root.
 

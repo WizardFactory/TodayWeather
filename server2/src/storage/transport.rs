@@ -208,6 +208,9 @@ impl HttpS3Transport {
     }
 }
 impl ObjectTransport for HttpS3Transport {
+    async fn ready(&self) -> Result<(), Error> {
+        self.credentials.snapshot().await.map(|_| ())
+    }
     async fn put(&self, record: &PreparedRecord) -> Result<u16, Error> {
         let credentials = self.credentials.snapshot().await?;
         let mut action = self.bucket.put_object(Some(&credentials), &record.key);

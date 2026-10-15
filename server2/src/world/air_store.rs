@@ -297,6 +297,10 @@ impl<T: crate::storage::ObjectTransport> crate::storage::ObjectTransport for Bou
         let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
         self.inner.get(key, maximum).await
     }
+    /// Credentials only; no S3 request, so no admission permit.
+    async fn ready(&self) -> Result<(), Error> {
+        self.inner.ready().await
+    }
 }
 impl<T: CatalogTransport> CatalogTransport for BoundedS3<T> {
     async fn get_control(

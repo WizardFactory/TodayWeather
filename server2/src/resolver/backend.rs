@@ -215,6 +215,9 @@ impl<T: ObjectTransport> ObjectTransport for SharedTransport<T> {
         self.count();
         self.inner.get(k, m).await
     }
+    async fn ready(&self) -> Result<(), crate::storage::Error> {
+        self.inner.ready().await
+    }
 }
 impl<T: CatalogTransport> CatalogTransport for SharedTransport<T> {
     async fn get_control(&self, k: &str, m: usize) -> Result<ControlObject, crate::storage::Error> {

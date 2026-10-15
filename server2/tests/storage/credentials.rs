@@ -237,4 +237,22 @@ mod role {
         assert!(peer.state.lock().unwrap().calls.is_empty());
         assert_eq!(CREDENTIAL_RETRY_AFTER, std::time::Duration::from_secs(10));
     }
+
+    /// S10F GROK-1: without credentials no PUT is sent, so publication fails definitely
+    /// (`Transport`), not as an ambiguous write that must be reconciled.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_credential_failure_before_the_put_is_not_an_ambiguous_write() {
+        let peer = Peer::new();
+        let imds = Imds::start("server2-local-role", true).await;
+        imds.state.status.store(404, Ordering::Release);
+        let store = RawRecordStore::new(
+            settings(&peer, &imds, None).transport().unwrap(),
+            Limits::default(),
+        )
+        .unwrap();
+        assert_eq!(store.publish(record()).await, Err(Error::Transport));
+        assert_eq!(store.publish(record()).await, Err(Error::Transport));
+        assert_eq!(imds.requests(), 3, "spaced, not repeated per publication");
+        assert!(peer.state.lock().unwrap().calls.is_empty());
+    }
 }
