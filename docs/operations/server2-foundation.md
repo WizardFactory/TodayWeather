@@ -40,15 +40,15 @@ origin's (for example `PORT=3002` in the process environment, metrics 3003).
 Process limits are built in; no setting changes them (the S04 `SERVER2_*` overrides were removed
 in S10e because legacy has no equivalent and no documented operation needs another value):
 
-| Limit | Value |
-| --- | --- |
-| Worker threads | 2 |
-| Blocking threads | 4 |
-| CPU permits | 2 |
-| In-flight requests | 40 |
-| Volatile cache bytes | 16777216 |
-| Public connections | 128 |
-| Connection lifetime | 9 seconds; 12 with the gateway enabled |
+| Limit | Built-in value | Removed S04 variable |
+| --- | --- | --- |
+| Worker threads | 2 | SERVER2_WORKER_THREADS |
+| Blocking threads | 4 | SERVER2_BLOCKING_THREADS |
+| CPU permits | 2 | SERVER2_CPU_LIMIT |
+| In-flight requests | 40 | SERVER2_INFLIGHT_LIMIT |
+| Volatile cache bytes | 16777216 | SERVER2_CACHE_BYTES |
+| Public connections | 128 | SERVER2_CONNECTION_LIMIT |
+| Connection lifetime | 9 seconds; 12 with the gateway enabled | SERVER2_CONNECTION_SECONDS |
 
 Metrics connections have a separate fixed limit 16. Socket limits bound slow headers
 and body draining; a connection expires at its maximum age even with keep-alive.

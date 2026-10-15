@@ -120,23 +120,22 @@ These are local loopback fixtures. Timings, counts and RSS do not represent prod
 
 ## Recorded local verification
 
-The 2026-10-13 run of `smoke.sh` against the macOS release binary of the S10c change passed every stage. The S19 stages started at 15:00:42 UTC.
+The 2026-10-15 run of `smoke.sh` against the macOS release binary and `loopback_server` example of the S10e change passed every stage. The S19 stages started at 02:14:47 UTC.
 
-- Reused foundation and S10 smokes passed.
+- Reused foundation and S10 smokes passed with the S10e names in empty working directories.
 - All eight gateway scenarios passed. Peer totals for the scenario run were backend 52, Kakao 76, Google 2 and S3 158 requests; the S3 peer held only `budgets/v2/kakao|google/` quota records.
-- Quota exhaustion: with a 64-unit daily quota per key, 64 of 65 lookups were funded, and the rejected lookup made no provider call. RSS was 9,360 KiB before and 12,736 KiB after.
+- Quota exhaustion: with a 64-unit test daily quota per key, 64 of 65 lookups were funded, and the rejected lookup made no provider call. RSS was 9,728 KiB before and 13,792 KiB after.
 - Admission pressure: while backend replies were held, 40 requests were admitted and 8 were rejected with 503.
-- SIGTERM drain: the held in-flight request completed and the process stopped 213 ms after the signal.
-- Paired replay over 15 requests and two passes: every request matched its acquisition plan. There were 0 unexplained differences. On each side, 12 S02 oracle checks and 10 weather merge-oracle checks found 0 mismatches. Observed declared differences were `D-TRANSPORT`, `D-ACQ-GEOCODER` and `D-ACQ-WARM-CACHE`. The perturbed self-check found 30 unexplained differences.
+- SIGTERM drain: the held in-flight request completed and the process stopped 227 ms after the signal.
+- Paired replay over 15 requests and two passes: there were 0 unexplained differences. On each side, 12 S02 oracle checks and 10 weather merge-oracle checks found 0 mismatches. Observed declared differences were `D-TRANSPORT`, `D-ACQ-GEOCODER` and `D-ACQ-WARM-CACHE`. The perturbed self-check found 30 unexplained differences.
 - Replay p95 (nearest rank) for the baseline and the candidate:
 
 | Group | Baseline | Candidate |
 | --- | --- | --- |
-| `cold_pass` (n=15) | 1.19 ms | 3.38 ms |
-| `cold_miss` | 1.19 ms (n=11) | 3.38 ms (n=4) |
-| `warm_pass` (n=15) | 0.88 ms | 0.88 ms |
+| `cold_pass` (n=15) | 126.34 ms | 13.63 ms |
+| `cold_miss` | 126.34 ms (n=11) | 10.26 ms (n=4) |
+| `warm_pass` (n=15) | 2.55 ms | 7.33 ms |
 
-- Rollback: every cross-switch ETag revalidated with 304 (4/4 per switch). With the default gateway lifetime, the stalled backend gave the legacy 501 at 9,004 ms (native phase) and 9,003 ms (second legacy phase) after three attempts. Stalled Kakao gave 501 at 3,002 ms, and the stalled legacy geocoder gave 501 at 5,004 ms. The gateway with `SERVER2_CONNECTION_SECONDS=9` exited with status 1 before binding.
+- Rollback: every cross-switch ETag revalidated with 304 (4/4 per switch). With the built-in gateway lifetime, the stalled backend gave the legacy 501 at 9,003 ms (native phase) and 9,003 ms (second legacy phase) after three attempts. Stalled Kakao gave 501 at 3,006 ms, and the stalled legacy geocoder gave 501 at 5,004 ms. The release `server2` binary with native geocode and no `SERVER2_S3_BUCKET` exited with status 1 before binding.
 
-The [actual terminal capture](../evidence/tasks/server2-smoke-shadow/usage.png) is rendered from that execution log; `docs/evidence/tasks/server2-smoke-shadow/manifest.json` records its hashes. These are synthetic loopback timings, not production latency.
-
+The [actual terminal capture](../evidence/tasks/server2-smoke-shadow/usage.png) is rendered from that execution log; `docs/evidence/tasks/server2-smoke-shadow/manifest.json` records its hashes. These are synthetic loopback timings, not production latency; a single slow first request dominates the baseline p95.
