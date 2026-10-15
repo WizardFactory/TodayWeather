@@ -257,38 +257,18 @@ impl BackendDispatcher {
                     && !listed.contains(&name.to_owned())
             })
             .collect();
-        let (status, legacy_headers, body) = if self.http.base.starts_with("http://") {
-            // Review S17B-R2-F1: the loopback legacy origin receives the path exactly as
-            // requested (a URL parser would resolve `..` and `%2e` segments).
-            tokio::time::timeout(
-                timeout,
-                self.http1_verbatim(method, path_and_query, &forwarded),
-            )
-            .await
-            .map_err(|_| GatewayError::Provider)??
-        } else {
-            let method = reqwest::Method::from_bytes(method.as_str().as_bytes())
-                .map_err(|_| GatewayError::Provider)?;
-            let mut request = self
-                .http
-                .client
-                .request(method, format!("{}{path_and_query}", self.http.base))
-                .timeout(timeout);
-            for (name, value) in &forwarded {
-                request = request.header(name.as_str(), value.as_bytes());
-            }
-            let mut response = request.send().await.map_err(|_| GatewayError::Provider)?;
-            let status = response.status().as_u16();
-            let headers = response.headers().clone();
-            let mut bytes = Vec::new();
-            while let Some(chunk) = response.chunk().await.map_err(|_| GatewayError::Provider)? {
-                if bytes.len().saturating_add(chunk.len()) > PROXY_MAX_BODY {
-                    return Err(GatewayError::Provider);
-                }
-                bytes.extend_from_slice(&chunk);
-            }
-            (status, headers, bytes)
-        };
+        // Review S17B-R2-F1/R3-F1: the legacy origin receives the path exactly as requested (a
+        // URL parser would resolve `..` and `%2e` segments). Direct routes run beside the
+        // loopback legacy origin only (`DirectRoutes` requires a plain-HTTP loopback base).
+        if !self.legacy_is_plain_http() {
+            return Err(GatewayError::InvalidConfiguration);
+        }
+        let (status, legacy_headers, body) = tokio::time::timeout(
+            timeout,
+            self.http1_verbatim(method, path_and_query, &forwarded),
+        )
+        .await
+        .map_err(|_| GatewayError::Provider)??;
         let listed = connection_tokens(&legacy_headers);
         let mut out = axum::http::HeaderMap::new();
         for (name, value) in &legacy_headers {
@@ -297,6 +277,10 @@ impl BackendDispatcher {
             }
         }
         Ok((status, out, body))
+    }
+    /// Whether the legacy origin is plain HTTP (`Http::new` admits plain HTTP only on loopback).
+    pub fn legacy_is_plain_http(&self) -> bool {
+        self.http.base.starts_with("http://")
     }
     /// One HTTP/1.1 exchange with the `http://` legacy origin that writes the request target
     /// verbatim.

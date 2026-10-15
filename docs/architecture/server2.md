@@ -2544,8 +2544,8 @@ S17b serves the legacy direct public routes, which reach Express through nginx r
   cookie (S12 precedent).
 - **Forwards.** Outcomes legacy must answer (the S15b input forwards until S15b-4, the S15
   `next(err)` forwards, including the v000705 `/short`, `/shortest`, `/current` 500s) take the
-  legacy hop unchanged (`BackendDispatcher::proxy`: verbatim request target to the loopback
-  origin, hop-by-hop and `Connection`-listed headers dropped, 30-second CloudFront origin timeout).
+  legacy hop unchanged (`BackendDispatcher::proxy`: verbatim request target to the plain-HTTP
+  loopback origin, which direct entries require at startup, hop-by-hop and `Connection`-listed headers dropped, 30-second CloudFront origin timeout).
 
 Verification (local): a town oracle (86 recordings; 58 v000803, 25 v000705, 3 v000901 usage and
 mixed-case; 1,214 store answers; S17a driver with the router, mount, path, method and scenario

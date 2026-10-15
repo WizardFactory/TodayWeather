@@ -403,6 +403,17 @@ fn town_entry_and_direct_claims_follow_the_routing_list() {
         from_vars(&with("town", false)).is_err(),
         "town needs the shared S3 settings"
     );
+    // Review S17B-R3-F1: direct routes need the plain-HTTP loopback legacy origin, whose hop
+    // keeps the request target verbatim; an HTTPS legacy origin is refused at startup.
+    let https = |families: &'static str| {
+        move |name: &str| match name {
+            "SERVER2_GATEWAY_LEGACY_URL" => Some("https://legacy.example/".to_owned()),
+            other => with(families, true)(other),
+        }
+    };
+    assert!(from_vars(&https("town")).is_err());
+    assert!(from_vars(&https("kma")).is_err());
+    assert!(from_vars(&https("kma-v000902")).unwrap().is_some());
 }
 
 /// Review S17B-R1: the recorded usage roots (with and without the trailing slash), HEAD replies

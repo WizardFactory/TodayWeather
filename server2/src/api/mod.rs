@@ -57,6 +57,8 @@ pub struct DirectRoutes {
     legacy: BackendDispatcher,
 }
 impl DirectRoutes {
+    /// `legacy` must be the plain-HTTP loopback legacy origin (the runtime refuses others): its
+    /// hop keeps the request target verbatim.
     pub fn new(kma: Arc<KmaBackend>, families: DirectFamilies, legacy: BackendDispatcher) -> Self {
         Self {
             kma,

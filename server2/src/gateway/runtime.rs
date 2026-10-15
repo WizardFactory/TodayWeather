@@ -305,6 +305,11 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
             &families.kma_versions(),
         )?;
         if families.direct().any() {
+            // S17b: the direct routes forward to the loopback legacy origin with the request
+            // target verbatim, which only the plain-HTTP loopback hop provides.
+            if !backend.legacy_is_plain_http() {
+                return Err(GatewayError::InvalidConfiguration);
+            }
             direct = Some(Arc::new(crate::api::DirectRoutes::new(
                 kma,
                 families.direct(),
