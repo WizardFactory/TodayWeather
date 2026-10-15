@@ -280,25 +280,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     ) -> Option<Fetched> {
         let acquire = self.forecast.clone()?;
         let owned_for = request.owned_for();
-        let attempts = self.attempts.clone();
-        let claim = key.clone();
-        let waited = self
-            .owned
-            .join(key, until, owned_for, move |_| {
-                let fresh = attempts.claim(&claim, memo);
-                async move {
-                    if !fresh {
-                        return None;
-                    }
-                    tokio::spawn(acquire.acquire(request))
-                        .await
-                        .ok()?
-                        .ok()
-                        .flatten()
-                        .and_then(|records| fetched_of(&records))
-                }
-            })
-            .await;
+        let start = publication_flight(acquire, self.attempts.clone(), key.clone(), memo, request);
+        let waited = self.owned.join(key, until, owned_for, start).await;
         match waited {
             crate::resolver::Waited::Ready(f) => f,
             _ => None,
@@ -536,7 +519,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 && let Some(request) = grid_request(sf, grid, latest)
                 && let Some(f) = self
                     .acquire(
-                        format!("{}/{}/{}", sf.kind(), grid_key(grid), latest.partition()),
+                        grid_flight(sf, grid, latest),
                         fetch::ForecastRequest::DataGoKr(request),
                         LATEST_RETRY,
                         until,
@@ -546,34 +529,48 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 fetched.push(visible(f, now));
             }
             if !backfill.is_empty() {
-                self.backfill(sf, grid, backfill).await;
+                self.backfill(sf, grid, latest, backfill).await;
             }
         }
         Ok(grid_documents(family, coord, &fetched, now))
     }
-    /// One owned pass over the missing backfill publications of a cell and family, newest first,
-    /// at most once per [`BACKFILL_RETRY`] (claimed when the pass starts; a failed or unfinished
-    /// publication is asked again by the next pass). Each acquisition runs in its own task with
-    /// its own provider and publication bounds, so the pass's owned bound never cancels one that
-    /// started. The request does not wait.
+    /// One owned pass over the missing backfill publications of a cell and family when its latest
+    /// publication is `latest` (at most once per [`BACKFILL_RETRY`]), newest first, 3 in flight.
+    /// Each publication joins the same owned flight and retry bound a latest acquisition of it
+    /// uses: a publication that is still being acquired is joined, and one attempted within
+    /// [`LATEST_RETRY`] (also a failure) is not asked again. A publication still missing is asked
+    /// by the next pass. The flights run in their own tasks, so the pass's owned bound never
+    /// cancels one that started. The request does not wait.
     async fn backfill(
         &self,
         sf: schedule::Family,
         grid: crate::history::Grid,
+        latest: Publication,
         missing: Vec<Publication>,
     ) {
         let Some(acquire) = self.forecast.clone() else {
             return;
         };
-        let requests: Vec<fetch::ForecastRequest> = missing
+        let publications: Vec<(String, fetch::ForecastRequest)> = missing
             .into_iter()
-            .filter_map(|p| Some(fetch::ForecastRequest::DataGoKr(grid_request(sf, grid, p)?)))
+            .filter_map(|p| {
+                Some((
+                    grid_flight(sf, grid, p),
+                    fetch::ForecastRequest::DataGoKr(grid_request(sf, grid, p)?),
+                ))
+            })
             .collect();
-        if requests.is_empty() {
+        if publications.is_empty() {
             return;
         }
-        let key = format!("backfill/{}/{}", sf.kind(), grid_key(grid));
+        let key = format!(
+            "backfill/{}/{}/{}",
+            sf.kind(),
+            grid_key(grid),
+            latest.partition()
+        );
         let attempts = self.attempts.clone();
+        let owned = self.owned.clone();
         let claim = key.clone();
         let _ = self
             .passes
@@ -587,12 +584,24 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                         if !fresh {
                             return None;
                         }
-                        for chunk in requests.chunks(BACKFILL_CONCURRENCY) {
-                            let started: Vec<_> = chunk
+                        for chunk in publications.chunks(BACKFILL_CONCURRENCY) {
+                            let flights: Vec<_> = chunk
                                 .iter()
-                                .map(|r| tokio::spawn(acquire.acquire(r.clone())))
+                                .map(|(key, request)| {
+                                    owned.wait(
+                                        key.clone(),
+                                        request.owned_for(),
+                                        publication_flight(
+                                            acquire.clone(),
+                                            attempts.clone(),
+                                            key.clone(),
+                                            LATEST_RETRY,
+                                            request.clone(),
+                                        ),
+                                    )
+                                })
                                 .collect();
-                            crate::history::join_all(started).await;
+                            crate::history::join_all(flights).await;
                         }
                         None
                     }
@@ -1070,6 +1079,36 @@ fn fetch_reach(sf: schedule::Family) -> usize {
 }
 fn grid_key(grid: crate::history::Grid) -> String {
     format!("{}-{}", grid.nx(), grid.ny())
+}
+/// The flight and retry key of one grid publication (shared by latest and backfill).
+fn grid_flight(sf: schedule::Family, grid: crate::history::Grid, p: Publication) -> String {
+    format!("{}/{}/{}", sf.kind(), grid_key(grid), p.partition())
+}
+/// The start of a publication's owned acquisition. The retry bound `memo` of `key` is claimed by
+/// the creator of the flight (`OwnedFlights` calls this under its map lock), so a concurrent
+/// caller joins the real acquisition; the provider call and its publication run in their own
+/// task, which no owned bound cancels.
+fn publication_flight(
+    acquire: Arc<dyn fetch::ForecastAcquire>,
+    attempts: Arc<Attempts>,
+    key: String,
+    memo: std::time::Duration,
+    request: fetch::ForecastRequest,
+) -> impl FnOnce(Instant) -> BoxFuture<'static, Option<Fetched>> {
+    move |_| {
+        let fresh = attempts.claim(&key, memo);
+        Box::pin(async move {
+            if !fresh {
+                return None;
+            }
+            tokio::spawn(acquire.acquire(request))
+                .await
+                .ok()?
+                .ok()
+                .flatten()
+                .and_then(|records| fetched_of(&records))
+        })
+    }
 }
 /// The S13 request of a grid publication (ultra-short asks for HH30 of a canonical HH00).
 fn grid_request(

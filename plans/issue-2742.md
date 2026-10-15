@@ -326,19 +326,20 @@ key and KST day, shared by every service of these keys). An acquisition retries 
 | Path | Calls when it succeeds at once | Worst case | Retry bound |
 | --- | --- | --- | --- |
 | Missing latest grid publication | 1 page per family and cell (the live `getVilageFcst` answer, 980 rows, fits one 999-row page) | 5 pages × 2 attempts | 5 minutes per publication |
-| Grid backfill | ≤23 current + 23 ultra-short + 7 short pages for a cold cell, 3 in flight per pass, 8 passes per process | the same × 2 attempts × pages | 1 hour per cell and family; a publication still missing is asked by the next pass |
+| Grid backfill | ≤23 current + 23 ultra-short + 7 short pages for a cold cell, 3 in flight per pass, 8 passes per process | the same × 2 attempts × pages | one pass per cell, family and latest publication (at most hourly). Each publication shares the latest acquisition's flight and 5-minute retry bound, so a running one is joined and a recent failure is not asked again. A publication still missing is asked by the next pass. |
 | Missing latest RSS | 1 keyless GET per cell | 2 attempts | 5 minutes |
 | Missing latest mid publication | 1 page per collected region (3 regions per town, shared by every town of the region) | × 2 attempts | 5 minutes |
 | Forecast-zone list | 1 page (755 zones live) once per process | 10 pages × 2 | once per process |
-| Warning cycle | the legacy cycle: ≥5 pages (status, zone days, three bulletins), shared by every request | up to 10 zone days on a bootstrap, each key tried once on auth or quota errors | one cycle per 3 minutes while requests arrive, never two at once |
+| Warning cycle | Unchanged cycle: 4 calls (`getPwnStatus` and the three bulletin lists; `collector.rs:130-138`, `:373-386`). Shared by every request. | Plus a zone sync (`getPwnCd` per planned day, 10 days at most per sync) hourly, on a new announcement or on bootstrap; announcement documents; pagination (20 pages at most per list); each key tried once on auth or quota errors | one cycle per 3 minutes while requests arrive, never two at once |
 
 **Baseline per active cell and KST day** (successful single-page answers): 24 current + 24
 ultra-short + 8 short = 56 units, plus 8 keyless `queryDFS` acquisitions: one per RSS
 publication (`rss_latest`, every 3 hours), where legacy polls hourly. A cold cell adds up to 53 units
 once. On top of that, the same budgets fund:
 
-- shared work: mid regions (6 units a day per region), warning cycles (≥5 units every 3 minutes
-  of demand, about 2,400 a day under continuous demand) and the zone list;
+- shared work: mid regions (6 units a day per region), the zone list, and warning cycles. Under
+  continuous demand an unchanged cycle costs 4 units every 3 minutes (1,920 a day), plus the hourly
+  zone sync, announcement work, the bootstrap and pagination;
 - the other S15b consumers of these keys: ASOS (S15b-2), UV, pollen and KASI (S15b-3b);
 - retries and extra pages.
 
@@ -354,6 +355,7 @@ once. On top of that, the same budgets fund:
 | Q6 | Warning cycle with rejected keys | Keys A and B not registered, C valid | A, B, then C once around the list; later requests start with C (legacy `kmaWarningRequester.get`) | `source_s3::warning_requests_rotate_through_every_key_and_keep_the_one_that_answered` (before: A, B repeated) |
 | Q7 | A collected mid region with no record and no acquirer | Snapshot | Legacy's empty answer | `source_s3_oracle` (11D10000) |
 | Q8 | Operator enables `kma` | No new setting | The `kma` phase answers natively from S3; its acquisitions reach only the loopback provider roots | `tools/kma_smoke.py` |
+| Q9 | First user of a new hour while the previous latest publication is still being acquired, or just failed | The 10:00 acquisition is slow (4 s) or fails; the clock moves to 11:50 | The new backfill pass joins the running 10:00 flight or skips the recent failure; 10:00 is asked once (before: twice) | `source_s3::a_backfill_pass_joins_a_publication_a_latest_acquisition_is_still_asking`, `source_s3::a_backfill_pass_skips_a_publication_a_latest_acquisition_just_failed` |
 
 ### Open decisions and limitations (S15b-4a)
 

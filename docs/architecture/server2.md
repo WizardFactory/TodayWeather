@@ -2375,7 +2375,7 @@ concurrent request joins the real acquisition. Failures count against the same b
 | Input | When the request acquires it | Retry bound |
 | --- | --- | --- |
 | Latest grid publication (`getUltraSrtNcst`, `getUltraSrtFcst` at HH30, `getVilageFcst`) | Not in S3 for the cell | 5 minutes |
-| Grid backfill (earlier publications: 23 current, 23 ultra-short, 7 short; S14 `schedule`) | Missing publications, in one owned pass per cell and family (3 acquisitions in flight, 8 passes in their own pool); the request does not wait | 1 hour per pass |
+| Grid backfill (earlier publications: 23 current, 23 ultra-short, 7 short; S14 `schedule`) | Missing publications, in one owned pass per cell, family and latest publication (3 acquisitions in flight, 8 passes in their own pool); the request does not wait | Each pass at most hourly. Each publication shares the latest acquisition's flight and 5-minute retry bound. |
 | Latest short RSS (`wid/queryDFS.jsp`) | Not in S3 for the cell | 5 minutes |
 | Latest mid publications (`getMidFcst`, `getMidLandFcst`, `getMidTa` at the 06/18 `tmFc`) | A region legacy collects lacks the latest publication | 5 minutes |
 | Forecast-zone list (`getFcstZoneCd`) | Once per process, like legacy's `getFromKma()` at start; a published list replaces the memory | per process |
@@ -2423,6 +2423,7 @@ spend the same budgets. The open quota decision is in the
 | Every forecast acquisition takes 6 s | The request returns within the shared 3 s bound (before: 15.2 s) |
 | Forecast, life and AirKorea acquisitions take 6 s under a 3 s gateway attempt | Answered natively before the attempt ends, also through `KmaBackend` under the gateway's timeout (before: forwarded on a mid read timeout) |
 | Two unregistered keys | The warning requests reach the third key and keep it (before: the first two keys repeated) |
+| New hour while the previous latest publication is still being acquired or just failed | The backfill pass joins or skips it; one acquisition (before: two) |
 
 The release `kma_smoke.py` answers natively in its `kma` phase. The provider calls were confirmed
 live on 2026-10-15; see the plan for the list. The remaining forward reasons (unknown towns, a grid

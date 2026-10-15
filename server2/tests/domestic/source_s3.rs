@@ -1105,3 +1105,115 @@ async fn the_kma_backend_serves_within_the_gateway_attempt_while_every_acquisiti
     .unwrap();
     assert!(matches!(served, Native::Served(_)), "forwarded");
 }
+
+/// The R9 boundary: at 10:50 every backfill hour of the current family is stored and only the
+/// latest publication (10:00) is acquired; at 11:50 the new pass holds 10:00 as backfill. `slow`:
+/// 10:00 is still being acquired (4 s); otherwise it failed at once. Returns the current
+/// publications asked for.
+async fn backfill_boundary(slow: bool) -> Vec<String> {
+    use server2::domestic::family::DataGoKrFamily;
+    use server2::domestic::kma::source::fetch::{ForecastAcquire, ForecastRequest, Published};
+    use std::sync::atomic::{AtomicU64, Ordering::SeqCst};
+    struct Provider {
+        slow: bool,
+        log: std::sync::Mutex<Vec<String>>,
+    }
+    impl ForecastAcquire for Provider {
+        fn acquire(
+            &self,
+            request: ForecastRequest,
+        ) -> server2::gateway::BoxFuture<'static, Result<Published, String>> {
+            let ForecastRequest::DataGoKr(r) = request else {
+                return Box::pin(async { Ok(None) });
+            };
+            if r.family() != DataGoKrFamily::UltraSrtNcst {
+                return Box::pin(async { Ok(None) });
+            }
+            let partition = r.publication().partition();
+            self.log.lock().unwrap().push(partition.clone());
+            let slow = self.slow;
+            Box::pin(async move {
+                if partition != "20260924-1000" {
+                    return Ok(None);
+                }
+                if slow {
+                    tokio::time::sleep(Duration::from_secs(4)).await;
+                    Ok(None)
+                } else {
+                    Err("provider failure".into())
+                }
+            })
+        }
+    }
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(
+        &store,
+        &["current", "shortest", "short", "rss", "mid", "zone"],
+    )
+    .await;
+    let grid = Grid::new(60, 127).unwrap().provider_key();
+    for back in 1..=23 {
+        let p = Publication::new(20260924, 1000)
+            .unwrap()
+            .add_hours(-back)
+            .unwrap();
+        publish(
+            &store,
+            "data-go-kr",
+            "ultra-srt-ncst",
+            &grid,
+            p.period(),
+            &p.partition(),
+            kst_ms(p.date(), p.time()) + 40. * 60_000.,
+            &[current_page(
+                &format!("{:08}", p.date()),
+                &format!("{:04}", p.time()),
+                "20.0",
+            )],
+            "application/json",
+        )
+        .await;
+    }
+    let provider = Arc::new(Provider {
+        slow,
+        log: std::sync::Mutex::new(Vec::new()),
+    });
+    let clock = Arc::new(AtomicU64::new(NOW.to_bits()));
+    let read = clock.clone();
+    let s3 = S3Source::new(
+        peer.transport_limited(4),
+        Arc::new(move || f64::from_bits(read.load(SeqCst))),
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+    )
+    .unwrap()
+    .with_forecast(Some(provider.clone()));
+    let _ = s3.snapshot(&request(), deadline()).await;
+    clock.store((NOW + HOUR).to_bits(), SeqCst);
+    let _ = s3.snapshot(&request(), deadline()).await;
+    tokio::time::sleep(Duration::from_secs(3)).await;
+    provider.log.lock().unwrap().clone()
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_backfill_pass_joins_a_publication_a_latest_acquisition_is_still_asking() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let log = backfill_boundary(true).await;
+    let count = |w: &str| log.iter().filter(|l| *l == w).count();
+    assert_eq!(count("20260924-1100"), 1, "{log:?}");
+    assert_eq!(
+        count("20260924-1000"),
+        1,
+        "the running flight is joined: {log:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_backfill_pass_skips_a_publication_a_latest_acquisition_just_failed() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let log = backfill_boundary(false).await;
+    let count = |w: &str| log.iter().filter(|l| *l == w).count();
+    assert_eq!(count("20260924-1100"), 1, "{log:?}");
+    assert_eq!(count("20260924-1000"), 1, "within the retry bound: {log:?}");
+}
