@@ -172,14 +172,32 @@ fn aws_page(publication: &str) -> Vec<u8> {
     let mut html = String::from(
         r#"<HTML><HEAD><META http-equiv="Content-Type" content="text/html; charset=euc-kr"></HEAD><BODY>"#,
     );
-    html += &format!("\n<span class=ehead>[ 매분관측자료 ] {publication}</span>\n");
-    html += "<table border=0 cellspacing=0 cellpadding=0>\n<tr><td bgcolor=#999999>\n<table border=0 cellspacing=1 cellpadding=1>\n";
+    html.push('\n');
+    html += &format!(r"<span class=ehead>[ 매분관측자료 ] {publication}</span>");
+    html.push('\n');
+    for part in [
+        r"<table border=0 cellspacing=0 cellpadding=0>",
+        r"<tr><td bgcolor=#999999>",
+        r"<table border=0 cellspacing=1 cellpadding=1>",
+    ] {
+        html += part;
+        html.push('\n');
+    }
     html += r#"<tr bgcolor=#AAE3FF align=center class=name><td colspan=3 nowrap>AWS 지점 / 고도</td><td>강수</td><td>강수15</td><td>강수60</td><td>강수3H</td><td>강수6H</td><td>강수12H</td><td>일강수</td><td width=40>기온</td><td colspan=2 width=60>풍향1</td><td>풍속1(m/s)</td><td colspan=2 width=60>풍향10</td><td>풍속10(m/s)</td><td>습도</td><td>해면기압</td><td>위치</td></tr>"#;
-    html += "\n<tr align=center class=text>";
+    html.push('\n');
+    html += r"<tr align=center class=text>";
     for c in cells {
         html += &format!(r"<td>{c}</td>");
     }
-    html += "</tr>\n</table>\n</td></tr></table>\n</BODY></HTML>\n";
+    for part in [
+        r"</tr>",
+        r"</table>",
+        r"</td></tr></table>",
+        r"</BODY></HTML>",
+    ] {
+        html += part;
+        html.push('\n');
+    }
     encoding_rs::EUC_KR.encode(&html).0.into_owned()
 }
 
