@@ -87,20 +87,20 @@ module.exports = {
     image:{
         airkorea_korea_image:{
             coordi: {
-                top_lat: (process.env.AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT || '0'),
-                bottom_lat: (process.env.AIRKOREA_KOREA_IMAGE_COORDI_BOTTOM_LAT || '0'),
-                left_lon: (process.env.AIRKOREA_KOREA_IMAGE_COORDI_LEFT_LON || '0'),
-                right_lon: (process.env.AIRKOREA_KOREA_IMAGE_COORDI_RIGHT_LON || '0')
+                top_lat: (process.env.AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT || '39.3769'),
+                bottom_lat: (process.env.AIRKOREA_KOREA_IMAGE_COORDI_BOTTOM_LAT || '32.6942'),
+                left_lon: (process.env.AIRKOREA_KOREA_IMAGE_COORDI_LEFT_LON || '123.9523'),
+                right_lon: (process.env.AIRKOREA_KOREA_IMAGE_COORDI_RIGHT_LON || '130.6741')
             },
             size: {
-                width: (process.env.AIRKOREA_KOREA_IMAGE_SIZE_WIDTH || '0'),
-                height: (process.env.AIRKOREA_KOREA_IMAGE_SIZE_HEIGHT || '0')
+                width: (process.env.AIRKOREA_KOREA_IMAGE_SIZE_WIDTH || '820'),
+                height: (process.env.AIRKOREA_KOREA_IMAGE_SIZE_HEIGHT || '820')
             },
             pixel_pos: {
-                left: (process.env.AIRKOREA_KOREA_IMAGE_MAP_LEFT || '0'),
-                right: (process.env.AIRKOREA_KOREA_IMAGE_MAP_RIGHT || '0'),
-                top: (process.env.AIRKOREA_KOREA_IMAGE_MAP_TOP || '0'),
-                bottom: (process.env.AIRKOREA_KOREA_IMAGE_MAP_BOTTOM || '0')
+                left: (process.env.AIRKOREA_KOREA_IMAGE_MAP_LEFT || '77'),
+                right: (process.env.AIRKOREA_KOREA_IMAGE_MAP_RIGHT || '663'),
+                top: (process.env.AIRKOREA_KOREA_IMAGE_MAP_TOP || '75'),
+                bottom: (process.env.AIRKOREA_KOREA_IMAGE_MAP_BOTTOM || '794')
             }
         },
         kaq_korea_image:{
