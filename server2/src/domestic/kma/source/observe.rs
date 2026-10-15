@@ -1354,11 +1354,13 @@ pub fn nearest(town: &Doc, stations: &[Doc], max_km: f64) -> Option<Mapping> {
     best
 }
 
-/// S08 units per data.go.kr key (`DONGNAE_SECRET_KEYS`) and KST day for the ASOS ranges: the
-/// documented development-account traffic of the ASOS hourly and daily services, "개발계정 :
-/// 10,000" (<https://www.data.go.kr/data/15057210/openapi.do>,
-/// <https://www.data.go.kr/data/15059093/openapi.do>, read 2026-10-15). One budget spans both
-/// services. Built in (S10e): legacy has no data.go.kr call budget setting.
+/// S08 units per data.go.kr key (`DONGNAE_SECRET_KEYS`) and KST day: the documented
+/// development-account traffic of a KMA data.go.kr service, "개발계정 : 10,000" (ASOS hourly and
+/// daily, <https://www.data.go.kr/data/15057210/openapi.do>,
+/// <https://www.data.go.kr/data/15059093/openapi.do>, read 2026-10-15). The data.go.kr limit is
+/// per service; one budget spans every service of this acquirer (ASOS, UV V5, pollen V3, KASI),
+/// so it never exceeds a single service's allowance. Built in (S10e): legacy has no data.go.kr
+/// call budget setting.
 pub const DATA_GO_KR_DAILY_UNITS: u64 = 10_000;
 /// The S13 acquirer for request-time acquisitions: KMA pages (keyless) and ASOS ranges funded by
 /// S08 per data.go.kr key and KST day (each key its own quota owner with `daily_units`; a new
@@ -1431,7 +1433,7 @@ where
         let window_id = crate::world::js::iso((starts + KST_MS) as f64)
             .map(|s| s[..10].to_owned())
             .ok_or(DomesticError::Invalid("window"))?;
-        let mut entries = Vec::new();
+        let mut stores = Vec::new();
         for key in &self.keys {
             let policy = BudgetPolicy {
                 provider: Provider::DataGoKr,
@@ -1444,16 +1446,29 @@ where
             };
             let store = BudgetStore::new(self.budgets.clone(), policy, self.clock.clone())
                 .map_err(|_| invalid.clone())?;
-            entries.push((
-                crate::providers::ProviderKey::new(key.clone()).map_err(|_| invalid.clone())?,
-                Arc::new(store),
-            ));
+            stores.push(Arc::new(store));
         }
+        // One quota owner per key and KST day across the services server2 calls with these keys
+        // (S15b-2 ASOS; S15b-3b UV V5, pollen V3 and KASI); each service keeps its own key ring.
         let mut rings = BTreeMap::new();
-        rings.insert(
+        for service in [
             crate::domestic::family::Service::Asos,
-            crate::domestic::KeyRing::new(entries)?,
-        );
+            crate::domestic::family::Service::LivingWthrIdx,
+            crate::domestic::family::Service::HealthWthrIdx,
+            crate::domestic::family::Service::RiseSet,
+        ] {
+            let entries = self
+                .keys
+                .iter()
+                .zip(&stores)
+                .map(|(key, store)| {
+                    crate::providers::ProviderKey::new(key.clone())
+                        .map(|k| (k, store.clone()))
+                        .map_err(|_| invalid.clone())
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            rings.insert(service, crate::domestic::KeyRing::new(entries)?);
+        }
         crate::domestic::DomesticAcquirer::new(
             self.funded.clone(),
             self.public.clone(),
@@ -1464,7 +1479,8 @@ where
             crate::storage::CatalogLimits::default(),
         )
     }
-    async fn today(
+    /// The acquirer of the current KST day (S08 windows are per day).
+    pub async fn today(
         &self,
     ) -> Result<Arc<crate::domestic::DomesticAcquirer<P, W, B>>, DomesticError> {
         let now = self

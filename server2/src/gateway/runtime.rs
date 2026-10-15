@@ -3,8 +3,9 @@
 //! `SERVER2_GATEWAY_LEGACY_URL` enables the gateway. `SERVER2_NATIVE_FAMILIES` lists the
 //! families routed to the native backend (`geocode`, `dsf`, `kma`); every other family stays on the
 //! legacy origin, and an unlisted family reads none of its native settings. Removing a family
-//! from the list and restarting is the rollback. These two and `SERVER2_WORLD_VERSIONS` are the
-//! only `SERVER2_*` settings: coexistence routing, removed with legacy retirement.
+//! from the list and restarting is the rollback. These two and `SERVER2_WORLD_VERSIONS` are
+//! coexistence routing, removed with legacy retirement; with `SERVER2_S3_BUCKET` (the server2
+//! raw-record bucket) they are the only `SERVER2_*` settings.
 //!
 //! S10e (AK, 2026-10-15): every provider and storage setting is the legacy `server/.env` name
 //! with its legacy value (`server/config/config.js`). Quotas without a legacy setting and every
@@ -34,6 +35,8 @@ pub struct Builtins {
     pub data_go_kr: String,
     pub kma: String,
     pub kma_weather: String,
+    /// MFDS food-poisoning root (S15b-3b, keyless; legacy `lib/foodPoisoning.js` `ENDPOINT`).
+    pub mfds: String,
     /// Visual Crossing Timeline root.
     pub vc: String,
     pub google_air: String,
@@ -54,6 +57,7 @@ impl Builtins {
             data_go_kr: "https://apis.data.go.kr/".into(),
             kma: "https://www.kma.go.kr/".into(),
             kma_weather: "https://www.weather.go.kr/".into(),
+            mfds: crate::domestic::mfds::DEFAULT_ROOT.into(),
             vc: crate::world::runtime::VC_ENDPOINT.into(),
             google_air: google.1.into(),
             openweather: openweather.1.into(),
@@ -216,20 +220,25 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         // still forward with named reasons until S15b-4. S15b-2 request-time acquisitions use
         // the data.go.kr keys for ASOS and the product geocoder for station coordinates.
         // S15b-3 adds request-time AirKorea
-        // acquisition (`AIRKOREA_SECRET_KEYS`) and the air fallback through the shared air chain.
+        // acquisition (`AIRKOREA_SECRET_KEYS`) and the air fallback through the shared air chain;
+        // S15b-3b the life index and KASI on the same data.go.kr acquirer and the keyless MFDS
+        // table (production endpoint, no setting).
         let airkorea = kma_airkorea(var, &s3, builtins)?;
+        let daily = Arc::new(kma_acquirer(var, s3.clone(), builtins)?);
+        let life = kma_life(&s3, daily.clone(), builtins)?;
         let air: Option<Arc<dyn crate::world::AirSource>> =
             air.map(|a| a as Arc<dyn crate::world::AirSource>);
         let source = crate::domestic::kma::source::S3Source::new(
             s3.clone(),
             crate::domestic::kma::backend::system_clock(),
-            Arc::new(kma_acquirer(var, s3, builtins)?),
+            daily,
             Arc::new(crate::domestic::kma::source::observe::ProductGeocoder(
                 geocoder.clone(),
             )),
         )
         .map_err(|_| GatewayError::InvalidConfiguration)?
-        .with_air(airkorea, air);
+        .with_air(airkorea, air)
+        .with_life(Some(life));
         crate::domestic::kma::backend::select_native(&backend, Arc::new(source))?;
     }
     Ok(Some(Arc::new(Gateway::new(geocoder, backend))))
@@ -264,4 +273,38 @@ fn kma_airkorea(
         Arc::new(store),
         Arc::new(SystemClock),
     ))))
+}
+/// The life-index, KASI and MFDS acquirer of the KMA source on the process data.go.kr acquirer
+/// (each attempt gets the S13d legacy timeout of its path: life index 30 s, KASI 5 s; MFDS its
+/// own 10 s deadline).
+type DailyKma = crate::domestic::kma::source::observe::DailyAcquirer<
+    crate::providers::HttpProviderTransport,
+    crate::providers::HttpPublicTransport,
+    BoundedS3<HttpS3Transport>,
+>;
+fn kma_life(
+    s3: &BoundedS3<HttpS3Transport>,
+    daily: Arc<DailyKma>,
+    builtins: &Builtins,
+) -> Result<Arc<dyn crate::domestic::kma::source::life_live::LifeAcquire>, GatewayError> {
+    use crate::domestic::kma::source::life_live::{LifeSettings, LiveLife};
+    let settings = LifeSettings::with_mfds_root(&builtins.mfds)
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
+    let store =
+        crate::storage::CatalogStore::new(s3.clone(), crate::storage::CatalogLimits::default())
+            .map_err(|_| GatewayError::InvalidConfiguration)?;
+    let mfds = crate::domestic::kma::source::life_live::mfds_acquirer(
+        Arc::new(
+            crate::providers::HttpProviderTransport::new(1024 * 1024)
+                .map_err(|_| GatewayError::InvalidConfiguration)?,
+        ),
+        Arc::new(SystemClock),
+    )
+    .map_err(|_| GatewayError::InvalidConfiguration)?;
+    Ok(Arc::new(LiveLife::new(
+        settings,
+        daily,
+        Arc::new(mfds),
+        Arc::new(store),
+    )))
 }

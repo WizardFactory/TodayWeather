@@ -15,6 +15,10 @@
 //! S15b-3a adds the AirKorea inputs (`arpltn`, `dust_forecast`) from national datasets shared
 //! by every request and the air-provider fallback (`air_fallback`), with request-time
 //! acquisition of a missing national dataset ([`air_input`], [`live`]).
+//!
+//! S15b-3b adds the area numbers (repository data), the life index, KASI rise/set and MFDS food
+//! poisoning from national datasets with owned acquisitions ([`life`], [`kasi`], [`mfds`],
+//! [`life_input`], [`life_live`]). The image forecasts (`air_forecast`, S15b-3c) still forward.
 pub mod air_input;
 pub mod airkorea;
 pub mod asos;
@@ -22,7 +26,12 @@ mod doc;
 mod grid;
 pub mod html;
 mod items;
+pub mod kasi;
+pub mod life;
+pub mod life_input;
+pub mod life_live;
 pub mod live;
+pub mod mfds;
 mod mid;
 pub mod observe;
 pub mod pages;
@@ -140,6 +149,8 @@ pub struct S3Source<T> {
     observations: Arc<observe::Observations<T>>,
     /// S15b-3: AirKorea national datasets and the air-provider fallback.
     air: air_input::AirInputs<T>,
+    /// S15b-3b: life index, MFDS food poisoning and KASI rise/set national datasets.
+    life: life_input::LifeInputs<T>,
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// `acquire` makes the request-time acquisitions (S15b-2 station pages and ASOS ranges);
@@ -162,6 +173,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         Ok(Self {
             observations,
             air: air_input::AirInputs::new(transport.clone(), store.clone()),
+            life: life_input::LifeInputs::new(transport.clone(), store.clone()),
             reader: Reader { transport, store },
             warnings: Arc::new(WarningService::new(
                 Arc::new(warnings),
@@ -180,6 +192,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         air: Option<Arc<dyn crate::world::AirSource>>,
     ) -> Self {
         self.air = self.air.with_acquire(acquire).with_air(air);
+        self
+    }
+    /// S15b-3b: owned life-index, KASI and MFDS acquisitions (None: stored records only).
+    pub fn with_life(mut self, acquire: Option<Arc<dyn life_live::LifeAcquire>>) -> Self {
+        self.life = self.life.with_acquire(acquire);
         self
     }
     /// The forecast-zone collection at `now`: every complete `forecast-zone` acquisition since
@@ -519,6 +536,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .zone_state(now as i64, deadline)
             .await
             .map_err(|e| format!("warning zone state unavailable: {}", e.message()))?;
+        // S15b-3b: the life inputs are loaded (and their owned acquisitions started) only for a
+        // request the snapshot will serve; a forwarded request starts none.
+        let life = self.life.load(now, deadline).await;
         Ok(Snapshot {
             now,
             town,
@@ -530,6 +550,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             stations,
             history,
             air,
+            life,
         })
     }
 }
@@ -716,6 +737,7 @@ pub struct Snapshot {
     /// `history.loadForTown` for the snapshot's town.
     history: OrderedJson,
     air: air_input::AirAnswers,
+    life: life_input::LifeAnswers,
 }
 fn list(docs: &[Doc]) -> OrderedJson {
     OrderedJson::Array(docs.iter().map(Doc::json).collect())
@@ -796,17 +818,28 @@ impl KmaStore for Snapshot {
     fn history(&self, _: &Value) -> StoreResult {
         Ok(self.history.clone())
     }
-    fn area_no(&self, _: &str, _: &str, _: &str) -> StoreResult {
-        not_sourced("area_no", "S15b-3")
+    /// `modelAreaNo.find({town}).limit(1)` over the repository area-number list.
+    fn area_no(&self, first: &str, second: &str, third: &str) -> StoreResult {
+        Ok(life::areas().by_town(first, second, third))
     }
-    fn area_no_near(&self, _: &Value) -> StoreResult {
-        not_sourced("area_no_near", "S15b-3")
+    /// `modelAreaNo.find({geo: {$near: [lon, lat], $maxDistance: 0.3}}).limit(3)`; a point
+    /// MongoDB cannot use is a query error.
+    fn area_no_near(&self, lon_lat: &Value) -> StoreResult {
+        match (
+            lon_lat.get(0).and_then(Value::as_f64),
+            lon_lat.get(1).and_then(Value::as_f64),
+        ) {
+            (Some(lon), Some(lat)) => Ok(life::areas().near(lon, lat)),
+            _ => Err(StoreError("area_no_near: invalid point".into())),
+        }
     }
-    fn life_index(&self, _: f64) -> StoreResult {
-        not_sourced("life_index", "S15b-3")
+    /// `LifeIndexKma2.find({areaNo})` over the national life-index fold.
+    fn life_index(&self, area_no: f64) -> StoreResult {
+        Ok(self.life.life.by_area(area_no))
     }
-    fn food_poisoning(&self, _: &str, _: &str, _: &str, _: &str) -> StoreResult {
-        not_sourced("food_poisoning", "S15b-3")
+    /// `FoodPoisoning.find({sd, sgg: {$in: [sgg, '']}, date: {$gte, $lte}})`.
+    fn food_poisoning(&self, sd: &str, sgg: &str, start: &str, end: &str) -> StoreResult {
+        Ok(self.life.mfds.find(sd, sgg, start, end))
     }
     /// `getArpLtnInfo(townInfo, now)` for the snapshot's town and instant.
     fn arpltn(&self, town: &Value, now_ms: f64) -> StoreResult {
@@ -854,8 +887,14 @@ impl KmaStore for Snapshot {
     fn air_forecast(&self, _: &str, _: &Value) -> StoreResult {
         not_sourced("air_forecast", "S15b-3")
     }
-    fn rise_set(&self, _: &Value, _: &[String]) -> StoreResult {
-        not_sourced("rise_set", "S15b-3")
+    /// `kasiRiseSet.getRiseSetList(geocode, dates)` from the stored documents; `[]` until the
+    /// first complete KASI read (legacy then computes rise/set itself).
+    fn rise_set(&self, geocode: &Value, dates: &[String]) -> StoreResult {
+        Ok(self
+            .life
+            .kasi
+            .as_ref()
+            .map_or(OrderedJson::Array(Vec::new()), |k| k.answer(geocode, dates)))
     }
     fn special_zones(&self, area_codes: &[String]) -> StoreResult {
         Ok(list(&special_zone_docs(&self.special, area_codes)))

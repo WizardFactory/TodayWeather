@@ -302,25 +302,64 @@ impl Flights {
         ready_by: Instant,
         work: impl FnOnce() -> BoxFuture<'static, bool>,
     ) -> bool {
-        {
-            let mut ended = self.ended.lock().unwrap_or_else(|e| e.into_inner());
-            ended.retain(|_, at| at.elapsed() < self.throttle);
-            if ended.get(key).is_some_and(|at| at.elapsed() >= self.retain) {
-                return false;
-            }
+        self.join_for(key, ready_by, OWNED_FOR, work).await
+    }
+    /// [`join`](Self::join) for an acquisition owned for `owned_for` (at most the S13d
+    /// `MAX_OWNED`).
+    pub async fn join_for(
+        &self,
+        key: &str,
+        ready_by: Instant,
+        owned_for: Duration,
+        work: impl FnOnce() -> BoxFuture<'static, bool>,
+    ) -> bool {
+        if self.throttled(key) {
+            return false;
         }
+        let start = self.start(key, work);
+        matches!(
+            self.owned
+                .join(key.to_owned(), ready_by, owned_for, start)
+                .await,
+            Waited::Ready(true)
+        )
+    }
+    /// Run (or join) the owned acquisition of `key` and wait until it ends (a background
+    /// capture, never a request): true when it published.
+    pub async fn run(
+        &self,
+        key: &str,
+        owned_for: Duration,
+        work: impl FnOnce() -> BoxFuture<'static, bool>,
+    ) -> bool {
+        if self.throttled(key) {
+            return false;
+        }
+        let start = self.start(key, work);
+        matches!(
+            self.owned.wait(key.to_owned(), owned_for, start).await,
+            Waited::Ready(true)
+        )
+    }
+    /// An acquisition of `key` ended within the throttle (and past the retain window).
+    fn throttled(&self, key: &str) -> bool {
+        let mut ended = self.ended.lock().unwrap_or_else(|e| e.into_inner());
+        ended.retain(|_, at| at.elapsed() < self.throttle);
+        ended.get(key).is_some_and(|at| at.elapsed() >= self.retain)
+    }
+    fn start(
+        &self,
+        key: &str,
+        work: impl FnOnce() -> BoxFuture<'static, bool>,
+    ) -> impl FnOnce(Instant) -> BoxFuture<'static, bool> {
         let ended = self.ended.clone();
         let name = key.to_owned();
-        let outcome = self
-            .owned
-            .join(key.to_owned(), ready_by, OWNED_FOR, move |_| {
-                let work = work();
-                async move {
-                    let _ended = Ended(ended, name);
-                    work.await
-                }
+        move |_| {
+            let work = work();
+            Box::pin(async move {
+                let _ended = Ended(ended, name);
+                work.await
             })
-            .await;
-        matches!(outcome, Waited::Ready(true))
+        }
     }
 }

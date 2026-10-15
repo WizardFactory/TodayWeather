@@ -8,7 +8,7 @@
 //! command line; a root that is not given is an unreachable loopback address, so no provider
 //! can be called by accident.
 //!
-//! Usage: loopback_server --s3 URL [--data-go-kr URL] [--kma URL] [--kma-weather URL]
+//! Usage: loopback_server --s3 URL [--data-go-kr URL] [--kma URL] [--kma-weather URL] [--mfds URL]
 //!        [--vc URL] [--google-air URL] [--openweather URL] [--waqi URL]
 //!        [--kakao URL] [--google URL] [--geocoder-daily-units N]   (per Kakao key and Google key; default: built in)
 use server2::{
@@ -23,7 +23,7 @@ const UNREACHABLE: &str = "http://127.0.0.1:9/";
 
 fn usage() -> ! {
     eprintln!(
-        "usage: loopback_server --s3 URL [--data-go-kr URL] [--kma URL] [--kma-weather URL] \
+        "usage: loopback_server --s3 URL [--data-go-kr URL] [--kma URL] [--kma-weather URL] [--mfds URL] \
          [--vc URL] [--google-air URL] [--openweather URL] [--waqi URL] \
          [--kakao URL] [--google URL] [--geocoder-daily-units N]"
     );
@@ -36,6 +36,7 @@ fn builtins(args: &[String]) -> Builtins {
         data_go_kr: UNREACHABLE.into(),
         kma: UNREACHABLE.into(),
         kma_weather: UNREACHABLE.into(),
+        mfds: UNREACHABLE.into(),
         vc: UNREACHABLE.into(),
         google_air: UNREACHABLE.into(),
         openweather: UNREACHABLE.into(),
@@ -53,6 +54,7 @@ fn builtins(args: &[String]) -> Builtins {
             "--data-go-kr" => builtins.data_go_kr = value,
             "--kma" => builtins.kma = value,
             "--kma-weather" => builtins.kma_weather = value,
+            "--mfds" => builtins.mfds = value,
             "--vc" => builtins.vc = value,
             "--google-air" => builtins.google_air = value,
             "--openweather" => builtins.openweather = value,

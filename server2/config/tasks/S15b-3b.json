@@ -1,0 +1,48 @@
+{
+  "task": "S15b-3b",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-3b.json",
+    "server2/src/domestic/kma/source/",
+    "server2/src/domestic/mfds.rs",
+    "server2/src/domestic/mod.rs",
+    "server2/src/domestic/acquire.rs",
+    "server2/src/providers/public.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/",
+    "server2/tests/gateway/runtime.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b governing intent record: the S15b-3b slice and its criteria; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b specification: S15b-3b area numbers, life index, KASI rise/set and MFDS food poisoning; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b execution plan: S15b-3b scenarios, checks and live-call record; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S15b-3b section and the new kma settings to the S10c table"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6175506942",
+  "path_notes": {
+    "server2/src/domestic/kma/source/": "new life.rs (area numbers, life index), kasi.rs (rise/set), mfds.rs (food poisoning), life_input.rs and life_live.rs (national datasets, owned acquisitions); data/ gains the legacy area-number lists with provenance; mod.rs and live.rs wiring; observe.rs (S15b-2) DailyAcquirer adds key rings for the life index and KASI under the same quota owners and exposes today()",
+    "server2/src/domestic/mfds.rs": "new keyless MFDS risk.do acquisition (legacy lib/foodPoisoning.js fetch/parse) on the S08 public transport bounds",
+    "server2/src/domestic/mod.rs": "shared: registers the mfds module",
+    "server2/src/domestic/acquire.rs": "shared S13 file: DomesticAcquirer::acquire_mfds (one attempt inside the legacy 10 s deadline)",
+    "server2/src/gateway/runtime.rs": "shared: kma builds one S15b-2 data.go.kr acquirer for ASOS and the life index/KASI, and the MFDS acquirer (production endpoint, no new setting)",
+    "server2/tests/domestic/": "life.rs and life_s3.rs tests, fixtures/life.json.gz (pinned legacy oracle) and fixtures/LIFE-PROVENANCE.md",
+    "server2/src/providers/public.rs": "Shared S08 file: HttpPublicTransport::without_redirects (new() unchanged) for the MFDS acquisition (legacy fetchRisk accepts only a direct 200; review S15b3b-R4)"
+  }
+}
