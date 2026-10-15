@@ -1217,3 +1217,98 @@ async fn a_backfill_pass_skips_a_publication_a_latest_acquisition_just_failed() 
     assert_eq!(count("20260924-1100"), 1, "{log:?}");
     assert_eq!(count("20260924-1000"), 1, "within the retry bound: {log:?}");
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn stored_acquisitions_legacy_would_not_keep_are_acquired_again() {
+    use server2::domestic::kma::source::fetch::{ForecastAcquire, ForecastRequest, Published};
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    struct Provider {
+        log: std::sync::Mutex<Vec<String>>,
+    }
+    impl ForecastAcquire for Provider {
+        fn acquire(
+            &self,
+            request: ForecastRequest,
+        ) -> server2::gateway::BoxFuture<'static, Result<Published, String>> {
+            if let ForecastRequest::DataGoKr(r) = &request {
+                self.log.lock().unwrap().push(format!(
+                    "{} {}",
+                    r.family().kind(),
+                    r.publication().partition()
+                ));
+            }
+            Box::pin(async { Ok(None) })
+        }
+    }
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(
+        &store,
+        &["current", "shortest", "short", "rss", "mid", "zone"],
+    )
+    .await;
+    let grid = Grid::new(60, 127).unwrap().provider_key();
+    // Current 10:00 (latest) and 09:00 carry legacy's recovery sentinel `t1h` -50; the other
+    // backfill hours are valid.
+    for back in 0..=23 {
+        let p = Publication::new(20260924, 1000)
+            .unwrap()
+            .add_hours(-back)
+            .unwrap();
+        let t1h = if back <= 1 { "-50" } else { "20.0" };
+        publish(
+            &store,
+            "data-go-kr",
+            "ultra-srt-ncst",
+            &grid,
+            p.period(),
+            &p.partition(),
+            kst_ms(p.date(), p.time()) + 40. * 60_000.,
+            &[current_page(
+                &format!("{:08}", p.date()),
+                &format!("{:04}", p.time()),
+                t1h,
+            )],
+            "application/json",
+        )
+        .await;
+    }
+    // The latest short publication (08:00) is stored incomplete: legacy's `invalidForecast`.
+    let short = Publication::new(20260924, 800).unwrap();
+    publish(
+        &store,
+        "data-go-kr",
+        "vilage-fcst",
+        &grid,
+        short.period(),
+        &short.partition(),
+        kst_ms(20260924, 810),
+        &[envelope(vec![
+            json!({"baseDate": "20260924", "baseTime": "0800",
+            "category": "TMP", "fcstDate": "20260924", "fcstTime": "0900", "fcstValue": "20",
+            "nx": 60, "ny": 127}),
+        ])],
+        "application/json",
+    )
+    .await;
+    let provider = Arc::new(Provider {
+        log: std::sync::Mutex::new(Vec::new()),
+    });
+    let s3 = source(&peer).with_forecast(Some(provider.clone()));
+    let _ = s3.snapshot(&request(), deadline()).await;
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    let log = provider.log.lock().unwrap().clone();
+    let count = |w: &str| log.iter().filter(|l| *l == w).count();
+    assert_eq!(count("ultra-srt-ncst 20260924-1000"), 1, "latest: {log:?}");
+    assert_eq!(
+        count("ultra-srt-ncst 20260924-0900"),
+        1,
+        "backfill: {log:?}"
+    );
+    assert_eq!(count("ultra-srt-ncst 20260924-0800"), 0, "valid: {log:?}");
+    assert_eq!(
+        count("vilage-fcst 20260924-0800"),
+        1,
+        "invalid forecast: {log:?}"
+    );
+}

@@ -355,6 +355,7 @@ once. On top of that, the same budgets fund:
 | Q6 | Warning cycle with rejected keys | Keys A and B not registered, C valid | A, B, then C once around the list; later requests start with C (legacy `kmaWarningRequester.get`) | `source_s3::warning_requests_rotate_through_every_key_and_keep_the_one_that_answered` (before: A, B repeated) |
 | Q7 | A collected mid region with no record and no acquirer | Snapshot | Legacy's empty answer | `source_s3_oracle` (11D10000) |
 | Q8 | Operator enables `kma` | No new setting | The `kma` phase answers natively from S3; its acquisitions reach only the loopback provider roots | `tools/kma_smoke.py` |
+| Q10 | User of a cell whose stored grid records legacy would not keep | Current 10:00 and 09:00 stored with `t1h` -50; short 08:00 stored incomplete | All three are acquired again, under the same bounded retries (`PastConditionGather.js:80-90`, `controllerManager.js:1212-1215`); valid stored hours are not (before: none were) | `source_s3::stored_acquisitions_legacy_would_not_keep_are_acquired_again` |
 | Q9 | First user of a new hour while the previous latest publication is still being acquired, or just failed | The 10:00 acquisition is slow (4 s) or fails; the clock moves to 11:50 | The new backfill pass joins the running 10:00 flight or skips the recent failure; 10:00 is asked once (before: twice) | `source_s3::a_backfill_pass_joins_a_publication_a_latest_acquisition_is_still_asking`, `source_s3::a_backfill_pass_skips_a_publication_a_latest_acquisition_just_failed` |
 
 ### Open decisions and limitations (S15b-4a)

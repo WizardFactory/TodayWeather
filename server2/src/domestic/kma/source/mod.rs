@@ -504,7 +504,17 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .await
             .map_err(|e| format!("{} read: {e}", sf.kind()))?;
         if let Some(latest) = sf.latest(now as i64) {
-            let missing = |p: &Publication| !present(&fetched, &p.partition(), now);
+            // A stored acquisition legacy would not keep (an invalid forecast, a current
+            // observation with a recovery sentinel) leaves its publication missing, so it stays
+            // eligible for the bounded retries.
+            let missing = |p: &Publication| {
+                let partition = p.partition();
+                !fetched.iter().any(|f| {
+                    f.partition == partition
+                        && f.fetched_at_ms as f64 <= now
+                        && usable(family, coord, f)
+                })
+            };
             let reach = fetch_reach(sf);
             let required = sf.required(now as i64);
             let backfill: Vec<Publication> = required
@@ -1041,20 +1051,36 @@ pub fn zone_documents(fetched: &[Fetched], now: f64) -> Option<Zones> {
     applied.then_some(zones)
 }
 fn apply_grid(docs: &mut GridDocs, family: Family, coord: Coord, f: &Fetched) {
-    let Some(p) = partition_publication(&f.partition) else {
-        return;
-    };
+    if let Some(Organized::Rows(rows)) = organized(family, coord, f) {
+        docs.save(family, rows);
+    }
+}
+/// The legacy collector steps over one stored grid acquisition (None: unreadable).
+fn organized(family: Family, coord: Coord, f: &Fetched) -> Option<Organized> {
+    let p = partition_publication(&f.partition)?;
     let slot_pub = match family {
         Family::Shortest => schedule::Family::Shortest.request_publication(p),
         _ => p,
     };
     let compact = slot_pub.compact();
     let slot = Slot::new(&compact[..8], &compact[8..]);
-    let Some(list) = items(&f.page_refs()) else {
-        return;
-    };
-    if let Organized::Rows(rows) = collect(family, &list, &slot, coord) {
-        docs.save(family, rows);
+    let list = items(&f.page_refs())?;
+    Some(collect(family, &list, &slot, coord))
+}
+/// Whether legacy collection keeps a stored grid acquisition: the collector saves its rows
+/// (`invalidForecast` stays pending, `controllerManager.js:1212-1215`), and a current
+/// observation carries no recovery sentinel (`t1h` -50 or `reh` -1 is collected again,
+/// `PastConditionGather._isInvalid`, `PastConditionGather.js:80-90`).
+fn usable(family: Family, coord: Coord, f: &Fetched) -> bool {
+    match organized(family, coord, f) {
+        Some(Organized::Rows(rows)) => {
+            !rows.is_empty()
+                && (family != Family::Current
+                    || rows
+                        .iter()
+                        .all(|r| r.num("t1h") != -50. && r.num("reh") != -1.))
+        }
+        _ => false,
     }
 }
 /// Retry bound of a missing latest publication (legacy re-walks late grids near +5 and +10

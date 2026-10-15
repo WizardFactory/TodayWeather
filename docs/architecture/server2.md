@@ -2370,7 +2370,10 @@ The provider calls, publications and warning cycles run in their own tasks, with
 provider timeouts. An owned bound (at most 600 s) stops tracking them but never cancels them.
 
 The retry bound is claimed by whoever creates the flight, under the flight map's lock, so a
-concurrent request joins the real acquisition. Failures count against the same bounds.
+concurrent request joins the real acquisition. Failures count against the same bounds. A grid publication counts as stored only when legacy
+collection would keep it. The collector must save its rows (an `invalidForecast` stays pending), and
+a current observation must carry no recovery sentinel (`t1h` -50 or `reh` -1 is collected again,
+`PastConditionGather._isInvalid`). Any other stored record stays eligible for the bounded retries.
 
 | Input | When the request acquires it | Retry bound |
 | --- | --- | --- |
@@ -2424,6 +2427,7 @@ spend the same budgets. The open quota decision is in the
 | Forecast, life and AirKorea acquisitions take 6 s under a 3 s gateway attempt | Answered natively before the attempt ends, also through `KmaBackend` under the gateway's timeout (before: forwarded on a mid read timeout) |
 | Two unregistered keys | The warning requests reach the third key and keep it (before: the first two keys repeated) |
 | New hour while the previous latest publication is still being acquired or just failed | The backfill pass joins or skips it; one acquisition (before: two) |
+| Stored current hours with `t1h` -50 and an incomplete short publication | Acquired again; valid hours are not (before: none were) |
 
 The release `kma_smoke.py` answers natively in its `kma` phase. The provider calls were confirmed
 live on 2026-10-15; see the plan for the list. The remaining forward reasons (unknown towns, a grid
