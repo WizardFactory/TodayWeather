@@ -568,8 +568,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         // The newest registry seed, if one was imported.
         let seed = self.read_seed(now_ms, deadline).await;
         // S16: a failed seed read leaves the registry unproven (the previous seed stays in use).
-        self.state().seed_failed = seed.is_err();
-        if let Ok(Some(seed)) = seed {
+        self.state().seed_failed = !matches!(seed, Ok((_, false)));
+        if let Ok((Some(seed), _)) = seed {
             let mut s = self.state();
             if s.seed
                 .as_ref()
@@ -629,8 +629,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// The newest imported seed that parses and was exported after the carried one: partitions
     /// (export days) newest first, acquisitions newest first; a corrupt or older import is
     /// skipped. None keeps the seed in use (the carried one when nothing qualifies).
-    async fn read_seed(&self, now_ms: i64, deadline: Instant) -> Result<Option<Vec<Doc>>, ()> {
+    /// Also reports whether a listed seed import was excluded by S06 (S16 completeness).
+    async fn read_seed(
+        &self,
+        now_ms: i64,
+        deadline: Instant,
+    ) -> Result<(Option<Vec<Doc>>, bool), ()> {
         use super::seed;
+        let mut partial = false;
         let carried = seed::embedded().exported_at_ms;
         let months = super::history_months(now_ms as f64);
         let parts = self
@@ -639,11 +645,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             .await
             .map_err(|_| ())?;
         for partition in parts.iter().rev() {
-            let mut acquisitions = self
+            let (mut acquisitions, excluded) = self
                 .reader
-                .raw(seed::SOURCE, seed::KIND, &seed::key(), partition, deadline)
+                .raw_counted(seed::SOURCE, seed::KIND, &seed::key(), partition, deadline)
                 .await
                 .map_err(|_| ())?;
+            // A seed import S06 excluded (raw body missing): the seed used may not be the newest.
+            partial |= excluded > 0;
             acquisitions.sort_by_key(|a| {
                 std::cmp::Reverse(a.first().map_or(0, |r| r.envelope.identity.fetched_at_ms))
             });
@@ -653,11 +661,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     .and_then(|r| seed::parse(&r.bytes).ok())
                     .filter(|s| s.exported_at_ms > carried)
                 {
-                    return Ok(Some(parsed.docs));
+                    return Ok((Some(parsed.docs), partial));
                 }
             }
         }
-        Ok(None)
+        Ok((None, partial))
     }
     fn ensure_minute(
         self: &Arc<Self>,

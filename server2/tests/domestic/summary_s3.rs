@@ -550,42 +550,51 @@ async fn only_the_current_fold_of_a_complete_read_is_settled() {
     assert!(!observations.settled(now, &Arc::new(Folded::default())));
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_failed_registry_seed_read_is_not_settled() {
+/// Publish registry seed imports (fetch instants `ats`) on a fresh peer, apply `fault` to the
+/// catalog (`corrupt`) or to the newest import's raw body (`forget`), and report whether the
+/// station state is settled.
+async fn seed_settled(ats: &[f64], fault: &str) -> bool {
     use server2::domestic::kma::source::observe::Observations;
-    let _peers = S3_PEERS.lock().await;
     let peer = Peer::new();
     let transport = peer.transport_limited(4);
     let catalogs =
         Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
-    // A published registry seed import whose catalog then reads corrupt.
     let at = p(20260924, 0);
-    let seed = acquisition(
-        "legacy-mongo",
-        "kma-stn-info",
-        &server2::domestic::kma::source::seed::key(),
-        at.period(),
-        "20260924",
-        NOW - 3_600_000.,
-        b"{}".to_vec(),
-        "application/json",
-    );
-    let catalog = CatalogId::for_record(&seed.records[0].envelope.identity, "20260924")
-        .unwrap()
-        .key();
-    catalogs
-        .publish(seed.declaration, seed.records, deadline())
-        .await
-        .unwrap();
-    reqwest::Client::new()
-        .post(format!(
-            "{}__catalog?mode=corrupt&key={catalog}",
-            peer.endpoint()
-        ))
-        .header("X-Server2-Test-Key", "server2-local")
-        .send()
-        .await
-        .unwrap();
+    let mut target = String::new();
+    for fetched_at in ats {
+        let seed = acquisition(
+            "legacy-mongo",
+            "kma-stn-info",
+            &server2::domestic::kma::source::seed::key(),
+            at.period(),
+            "20260924",
+            *fetched_at,
+            b"{}".to_vec(),
+            "application/json",
+        );
+        target = if fault == "corrupt" {
+            CatalogId::for_record(&seed.records[0].envelope.identity, "20260924")
+                .unwrap()
+                .key()
+        } else {
+            seed.records[0].envelope.identity.object_key().unwrap()
+        };
+        catalogs
+            .publish(seed.declaration, seed.records, deadline())
+            .await
+            .unwrap();
+    }
+    if !fault.is_empty() {
+        reqwest::Client::new()
+            .post(format!(
+                "{}__catalog?mode={fault}&key={target}",
+                peer.endpoint()
+            ))
+            .header("X-Server2-Test-Key", "server2-local")
+            .send()
+            .await
+            .unwrap();
+    }
     let observations = Arc::new(Observations::new(
         transport,
         catalogs,
@@ -594,10 +603,18 @@ async fn a_failed_registry_seed_read_is_not_settled() {
     ));
     let now = NOW as i64;
     let folded = observations.stations(now, deadline()).await.unwrap();
-    assert!(
-        !observations.settled(now, &folded),
-        "the registry seed could not be read"
-    );
+    observations.settled(now, &folded)
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_failed_or_partial_registry_seed_read_is_not_settled() {
+    let _peers = S3_PEERS.lock().await;
+    // Readable imports (not parseable, so the carried seed stays): settled.
+    assert!(seed_settled(&[NOW - 7_200_000., NOW - 3_600_000.], "").await);
+    // The seed catalog reads corrupt.
+    assert!(!seed_settled(&[NOW - 3_600_000.], "corrupt").await);
+    // The newest import's raw body is missing: S06 excludes it, the older import still reads.
+    assert!(!seed_settled(&[NOW - 7_200_000., NOW - 3_600_000.], "forget").await);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
