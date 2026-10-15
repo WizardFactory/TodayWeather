@@ -105,6 +105,8 @@ pub struct AirAnswers {
     /// `getDustFrcst({region, city}, date)` for the request's region, city and KST date, when
     /// the request asks for AirKorea forecasts.
     pub dust: Option<(DustArgs, Result<OrderedJson, String>)>,
+    /// S15b-3c: the AirKorea image hourly forecast, when the request reads it.
+    pub hourly: Option<Arc<super::air_forecast::HourlyForecasts>>,
     /// `AirFallback.getArpltn(gCoord, now)` when the AirKorea answer has no value.
     pub fallback: Option<((f64, f64), Option<OrderedJson>)>,
 }
@@ -146,6 +148,8 @@ pub struct AirInputs<T> {
     /// Parsing, folding and reader work runs on blocking workers, two at a time, so a request
     /// deadline can always be observed (the future waiting for them is cancellable).
     cpu: Arc<tokio::sync::Semaphore>,
+    /// S15b-3c: the AirKorea image hourly forecast.
+    images: super::forecast_input::ImageForecasts<T>,
 }
 /// State of the demand-gated hourly capture.
 #[derive(Default)]
@@ -159,6 +163,11 @@ struct Capture {
 impl<T: IndexListing + Clone + 'static> AirInputs<T> {
     pub fn new(transport: T, store: Arc<CatalogStore<T>>) -> Self {
         Self {
+            images: super::forecast_input::ImageForecasts::new(
+                transport.clone(),
+                store.clone(),
+                super::air_forecast::Calibration::defaults(),
+            ),
             reader: Reader { transport, store },
             acquire: None,
             air: None,
@@ -193,6 +202,15 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
     }
     pub fn with_air(mut self, air: Option<Arc<dyn AirSource>>) -> Self {
         self.air = air;
+        self
+    }
+    /// S15b-3c: the image calibration (the legacy `AIRKOREA_KOREA_IMAGE_*` settings).
+    pub fn with_calibration(mut self, calibration: super::air_forecast::Calibration) -> Self {
+        self.images = super::forecast_input::ImageForecasts::new(
+            self.reader.transport.clone(),
+            self.reader.store.clone(),
+            calibration,
+        );
         self
     }
     /// Start (or join) the owned acquisition of one dataset and wait for it until `ready_by`;
@@ -802,12 +820,14 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
     /// All AirKorea and fallback answers of one request (it also records demand for the hourly
     /// capture). S3 or provider failures give the
     /// legacy answer for missing data, never a forward.
+    #[allow(clippy::too_many_arguments)] // The town, its region and the request's choices.
     pub async fn load(
         &self,
         town: &Doc,
         region: &str,
         city: &str,
         dust_wanted: bool,
+        image_wanted: bool,
         now: f64,
         deadline: Instant,
     ) -> AirAnswers {
@@ -829,13 +849,31 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             self.stations(now, wait_until),
             self.observations(now, wait_until),
             async {
-                if dust_wanted {
+                // The image forecast needs the announcement's documents (`imageUrl`) too.
+                if dust_wanted || image_wanted {
                     Some(self.forecasts(now, date, wait_until).await)
                 } else {
                     None
                 }
             }
         );
+        let hourly = match (image_wanted, &stations) {
+            (true, Ok(s)) => Some(
+                self.images
+                    .load(
+                        now,
+                        s.clone(),
+                        dust.as_ref().and_then(|f| f.as_ref().ok()),
+                        self.acquire.clone(),
+                        &self.flights,
+                        &self.generation,
+                        wait_until,
+                    )
+                    .await,
+            ),
+            _ => None,
+        };
+        let dust = if dust_wanted { dust } else { None };
         let arpltn = match (stations, observations) {
             (Ok(s), Ok(o)) => bounded(
                 answer_until,
@@ -875,6 +913,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             arpltn,
             dust,
             fallback,
+            hourly,
         }
     }
     /// `AirFallback.getArpltn`: the shared air chain (memory, S3, providers) for the town's
@@ -943,6 +982,22 @@ async fn start_flight(
             })
         })
         .await
+}
+/// Whether `AirForecastList` reads the AirKorea image forecast for this query: the source
+/// `airkorea` (a missing or `(null)` value, which `checkQueryValidation` makes `airkorea`), and
+/// `kaq`, which is answered with the AirKorea forecast while no KAQ forecast exists (AK
+/// 2026-10-15). A repeated key is an array: an unknown source (no forecast).
+pub fn image_forecast_requested(query: &[(String, String)]) -> bool {
+    let values: Vec<&str> = query
+        .iter()
+        .filter(|(k, _)| k == "airForecastSource")
+        .map(|(_, v)| v.as_str())
+        .collect();
+    match values.as_slice() {
+        [] => true,
+        [one] => matches!(*one, "(null)" | "airkorea" | "kaq"),
+        _ => false,
+    }
 }
 /// Whether `getKecoDustForecast` reads dust forecasts for this query: legacy
 /// `checkQueryValidation` sets an absent or `(null)` `airForecastSource` to `airkorea`, and the
