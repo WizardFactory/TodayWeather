@@ -635,32 +635,149 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn missing_inputs_forward_with_named_reasons() {
+async fn missing_inputs_are_acquired_at_request_time_and_never_forwarded() {
+    use server2::domestic::family::DataGoKrFamily;
+    use server2::domestic::kma::source::fetch::{ForecastAcquire, ForecastRequest, Published};
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    async fn reason(skip: &[&str], path: Option<&str>) -> String {
-        let peer = Peer::new();
-        let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
-        seed(&store, skip).await;
-        let request = match path {
-            Some(p) => parse_path(p, "ko").unwrap(),
-            None => request(),
-        };
-        match source(&peer).snapshot(&request, deadline()).await {
-            SourceAnswer::Forward(reason) => reason,
-            SourceAnswer::Snapshot(_) => panic!("{skip:?} served"),
+    /// Serves the 10:00 current publication (publishing it like S13 + S06); every other
+    /// acquisition answers "nothing new". Every request is logged.
+    struct Provider {
+        store: Arc<CatalogStore<BoundedS3<HttpS3Transport>>>,
+        log: std::sync::Mutex<Vec<String>>,
+    }
+    impl ForecastAcquire for Provider {
+        fn acquire(
+            &self,
+            request: ForecastRequest,
+        ) -> server2::gateway::BoxFuture<'static, Result<Published, String>> {
+            let label = match &request {
+                ForecastRequest::DataGoKr(r) => {
+                    format!("{} {}", r.family().kind(), r.publication().partition())
+                }
+                ForecastRequest::Rss(_) => "town-rss".into(),
+                ForecastRequest::Zones => "zones".into(),
+                ForecastRequest::Warnings => "warnings".into(),
+            };
+            self.log.lock().unwrap().push(label);
+            let store = self.store.clone();
+            Box::pin(async move {
+                let ForecastRequest::DataGoKr(r) = request else {
+                    return Ok(None);
+                };
+                if r.family() != DataGoKrFamily::UltraSrtNcst {
+                    return Ok(None);
+                }
+                let limits = CatalogLimits::default();
+                let p = r.publication();
+                let record = RawRecord::new(
+                    "data-go-kr",
+                    "ultra-srt-ncst",
+                    &Grid::new(60, 127).unwrap().provider_key(),
+                    p.period(),
+                    kst_ms(20260924, 1040) as u64,
+                    200,
+                    "application/json",
+                    Some(Pagination {
+                        page: 1,
+                        pages: 1,
+                        complete: true,
+                    }),
+                    current_page("20260924", "1000", "21.5").into(),
+                    &limits.raw,
+                )
+                .unwrap();
+                let member = GroupMember {
+                    envelope: record.envelope.clone(),
+                    catalogs: vec![
+                        CatalogId::for_record(&record.envelope.identity, &p.partition()).unwrap(),
+                    ],
+                };
+                store
+                    .publish(
+                        GroupDeclaration::new(vec![member], &limits).unwrap(),
+                        vec![record.clone()],
+                        deadline(),
+                    )
+                    .await
+                    .unwrap();
+                Ok(Some(vec![record]))
+            })
         }
     }
-    for (skip, needle) in [
-        (&["current"][..], "ultra-srt-ncst 20260924-1000 not in S3"),
-        (&["shortest"][..], "ultra-srt-fcst 20260924-1000 not in S3"),
-        (&["short"][..], "vilage-fcst 20260924-0800 not in S3"),
-        (&["rss"][..], "town-rss 20260924-0800 not in S3"),
-        (&["mid"][..], "mid-fcst 109 20260924-0600 not in S3"),
-        (&["zone"][..], "no complete forecast-zone list"),
-    ] {
-        let r = reason(skip, None).await;
-        assert!(r.contains(needle), "{skip:?}: {r}");
+    let peer = Peer::new();
+    let store = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+    seed(
+        &store,
+        &["current", "shortest", "short", "rss", "mid", "zone"],
+    )
+    .await;
+    let provider = Arc::new(Provider {
+        store: store.clone(),
+        log: std::sync::Mutex::new(Vec::new()),
+    });
+    let s3 = source(&peer).with_forecast(Some(provider.clone()));
+    let snapshot = match s3.snapshot(&request(), deadline()).await {
+        SourceAnswer::Snapshot(s) => s,
+        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+    };
+    // The acquired 10:00 current publication is used by the same request.
+    let current = snapshot
+        .town_model(TownModel::Current, &json!(60), &json!(127))
+        .unwrap();
+    let text = String::from_utf8(current.to_bytes()).unwrap();
+    assert!(text.contains("21.5"), "{text}");
+    // Nothing else is stored: legacy's answers for empty collections.
+    for model in [TownModel::Shortest, TownModel::Short, TownModel::ShortRss] {
+        assert_eq!(
+            snapshot
+                .town_model(model, &json!(60), &json!(127))
+                .unwrap()
+                .to_bytes(),
+            b"[]"
+        );
     }
-    let r = reason(&[], Some("/v000903/kma/addr/%EC%97%86%EB%8A%94%EB%8F%84")).await;
-    assert!(r.contains("town absent from the town list"), "{r}");
+    assert_eq!(
+        snapshot
+            .forecast_zone("서울특별시", "종로구")
+            .unwrap()
+            .to_bytes(),
+        b"[]"
+    );
+    let log = provider.log.lock().unwrap().clone();
+    for wanted in [
+        "ultra-srt-ncst 20260924-1000",
+        "ultra-srt-fcst 20260924-1030",
+        "vilage-fcst 20260924-0800",
+        "town-rss",
+        "zones",
+        "warnings",
+        "mid-fcst 20260924-0600",
+        "mid-land-fcst 20260924-0600",
+    ] {
+        assert!(log.iter().any(|l| l == wanted), "{wanted}: {log:?}");
+    }
+    // The assembly answers without a legacy forward.
+    let outcome = assemble(
+        &request(),
+        snapshot.as_ref(),
+        NOW,
+        AssemblyConfig::default(),
+    );
+    assert!(!matches!(outcome, Outcome::Legacy(_)), "forwarded");
+    // A second request does not repeat the acquisitions (retry bounds), and the backfill pass
+    // asked for the earlier current hours once.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    let _ = s3.snapshot(&request(), deadline()).await;
+    let log = provider.log.lock().unwrap().clone();
+    let count = |w: &str| log.iter().filter(|l| *l == w).count();
+    assert_eq!(count("ultra-srt-ncst 20260924-1000"), 1, "{log:?}");
+    assert_eq!(count("zones"), 1, "{log:?}");
+    assert_eq!(count("ultra-srt-ncst 20260924-0900"), 1, "{log:?}");
+    assert_eq!(
+        log.iter()
+            .filter(|l| l.starts_with("ultra-srt-ncst "))
+            .count(),
+        24,
+        "latest + 23 backfill hours: {log:?}"
+    );
 }

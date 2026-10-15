@@ -18,12 +18,18 @@
 //!
 //! S15b-3b adds the area numbers (repository data), the life index, KASI rise/set and MFDS food
 //! poisoning from national datasets with owned acquisitions ([`life`], [`kasi`], [`mfds`],
-//! [`life_input`], [`life_live`]). The image forecasts (`air_forecast`, S15b-3c) still forward.
+//! [`life_input`], [`life_live`]); S15b-3c the image forecasts.
+//!
+//! S15b-4a acquires missing forecast inputs at request time ([`fetch`]): the latest grid, RSS and
+//! mid publications (waiting at most 3 s), legacy's grid backfill in one owned pass per cell, the
+//! forecast-zone list once per process and the 3-minute warning cycle. A missing input is no
+//! longer a forward reason: the snapshot answers what is stored, as legacy answers absent data.
 pub mod air_forecast;
 pub mod air_input;
 pub mod airkorea;
 pub mod asos;
 mod doc;
+pub mod fetch;
 pub mod forecast_input;
 pub mod gif;
 mod grid;
@@ -154,6 +160,12 @@ pub struct S3Source<T> {
     air: air_input::AirInputs<T>,
     /// S15b-3b: life index, MFDS food poisoning and KASI rise/set national datasets.
     life: life_input::LifeInputs<T>,
+    /// S15b-4: request-time forecast acquisitions (None: stored records only).
+    forecast: Option<Arc<dyn fetch::ForecastAcquire>>,
+    /// Owned forecast acquisitions, keyed by dataset and publication (S13d).
+    owned: crate::resolver::OwnedFlights<String, Option<Fetched>>,
+    /// Last attempt of each acquisition key (retry bounds, failures included).
+    attempts: std::sync::Mutex<HashMap<String, std::time::Instant>>,
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// `acquire` makes the request-time acquisitions (S15b-2 station pages and ASOS ranges);
@@ -185,7 +197,70 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             )),
             clock,
             zones: tokio::sync::Mutex::new(None),
+            forecast: None,
+            owned: crate::resolver::OwnedFlights::new(crate::resolver::OwnedConfig {
+                running: 16,
+                entries: 4096,
+                retain: std::time::Duration::from_secs(3),
+            })
+            .expect("static owned acquisition bounds"),
+            attempts: std::sync::Mutex::new(HashMap::new()),
         })
+    }
+    /// S15b-4: request-time grid, RSS, mid, forecast-zone and warning acquisitions.
+    pub fn with_forecast(mut self, acquire: Option<Arc<dyn fetch::ForecastAcquire>>) -> Self {
+        self.forecast = acquire;
+        self
+    }
+    /// Record an attempt of `key` unless one was made within `memo`.
+    fn claim(&self, key: &str, memo: std::time::Duration) -> bool {
+        let mut attempts = self.attempts.lock().unwrap_or_else(|e| e.into_inner());
+        if attempts.get(key).is_some_and(|at| at.elapsed() < memo) {
+            return false;
+        }
+        if attempts.len() > 16_384 {
+            attempts.retain(|_, at| at.elapsed() < std::time::Duration::from_secs(24 * 3600));
+        }
+        attempts.insert(key.to_owned(), std::time::Instant::now());
+        true
+    }
+    /// Join (or start) the owned acquisition `key` and wait for it until `until`; the published
+    /// records as one [`Fetched`], or None (not ready, nothing new, or no acquirer).
+    async fn acquire(
+        &self,
+        key: String,
+        request: fetch::ForecastRequest,
+        memo: std::time::Duration,
+        until: Instant,
+    ) -> Option<Fetched> {
+        let acquire = self.forecast.clone()?;
+        if !self.claim(&key, memo) {
+            // Attempted recently: join a running acquisition only.
+            return match self
+                .owned
+                .join(key, until, request.owned_for(), |_| async { None })
+                .await
+            {
+                crate::resolver::Waited::Ready(f) => f,
+                _ => None,
+            };
+        }
+        let owned_for = request.owned_for();
+        match self
+            .owned
+            .join(key, until, owned_for, move |_| async move {
+                acquire
+                    .acquire(request)
+                    .await
+                    .ok()
+                    .flatten()
+                    .and_then(|records| fetched_of(&records))
+            })
+            .await
+        {
+            crate::resolver::Waited::Ready(f) => f,
+            _ => None,
+        }
     }
     /// S15b-3: request-time AirKorea acquisition (None: stored records only) and the shared
     /// air-provider chain of the fallback (None: the legacy no-provider answer).
@@ -213,6 +288,21 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// omits stay, as legacy `$set` keeps them). Memory applies newer acquisitions every
     /// 10 minutes and refolds everything daily.
     pub async fn zones(&self, now: f64, deadline: Instant) -> Result<Arc<Zones>, String> {
+        // Legacy fetches the list once at process start: one owned refresh per process, which a
+        // request waits for only when no list is stored yet.
+        if self.forecast.is_some() && self.claim("forecast-zones/process", ZONE_PROCESS) {
+            let started = self
+                .acquire(
+                    "forecast-zones".into(),
+                    fetch::ForecastRequest::Zones,
+                    ZONE_PROCESS,
+                    Instant::now(),
+                )
+                .await;
+            if started.is_some() {
+                self.zones.lock().await.take();
+            }
+        }
         {
             let cache = self.zones.lock().await;
             if let Some(c) = cache.as_ref()
@@ -277,7 +367,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             last = Some(id);
         }
         let (true, Some(last)) = (applied, last) else {
-            return Err("no complete forecast-zone list in S3 (S15b-4 acquires it)".into());
+            // No list stored: legacy's empty collection (`findForecastZoneByName` finds nothing).
+            return Ok(Arc::new(Zones::default()));
         };
         let zones = Arc::new(zones);
         *cache = Some(ZoneCache {
@@ -320,7 +411,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         fetched.sort_by_key(identity);
         Ok(fetched)
     }
-    /// The documents of one grid family at `now`; Err when its latest publication is absent.
+    /// The documents of one grid family at `now`. A missing latest publication is acquired
+    /// (waiting until `until`); the earlier publications legacy's backfill keeps (current and
+    /// ultra-short 23, short 7) are acquired by one owned pass the request does not wait for.
+    /// Err only when S3 cannot be read.
     pub async fn grid_answer(
         &self,
         family: Family,
@@ -347,24 +441,102 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .map_err(|e| format!("{} listing: {e}", sf.kind()))?;
         let oldest = schedule::from_ms(from as i64).partition();
         let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
-        let latest = sf
-            .latest(now as i64)
-            .ok_or("clock outside the publication calendar")?;
-        let fetched = self
+        let mut fetched = self
             .reader
             .all(sf.source(), sf.kind(), &key, &wanted, deadline)
             .await
             .map_err(|e| format!("{} read: {e}", sf.kind()))?;
-        if !present(&fetched, &latest.partition(), now) {
-            return Err(format!(
-                "{} {} not in S3 (S15b-4 acquires the latest publication)",
-                sf.kind(),
-                latest.partition()
-            ));
+        if let Some(latest) = sf.latest(now as i64) {
+            let missing = |p: &Publication| !present(&fetched, &p.partition(), now);
+            let reach = fetch_reach(sf);
+            let required = sf.required(now as i64);
+            let backfill: Vec<Publication> = required
+                .iter()
+                .rev()
+                .skip(1)
+                .take(reach)
+                .copied()
+                .filter(|p| missing(p))
+                .collect();
+            let until = deadline.min(Instant::now() + observe::REQUEST_WAIT);
+            if missing(&latest)
+                && let Some(request) = grid_request(sf, grid, latest)
+                && let Some(f) = self
+                    .acquire(
+                        format!("{}/{}/{}", sf.kind(), grid_key(grid), latest.partition()),
+                        fetch::ForecastRequest::DataGoKr(request),
+                        LATEST_RETRY,
+                        until,
+                    )
+                    .await
+            {
+                fetched.push(visible(f, now));
+            }
+            if !backfill.is_empty() {
+                self.backfill(sf, grid, latest, backfill);
+            }
         }
         Ok(grid_documents(family, coord, &fetched, now))
     }
-    /// The short RSS documents of one grid at `now`; Err when the latest publication is absent.
+    /// One owned pass over the missing backfill publications of a cell, newest first, each at
+    /// most once per [`BACKFILL_RETRY`] (claimed when its acquisition starts).
+    fn backfill(
+        &self,
+        sf: schedule::Family,
+        grid: crate::history::Grid,
+        latest: Publication,
+        missing: Vec<Publication>,
+    ) {
+        let Some(acquire) = self.forecast.clone() else {
+            return;
+        };
+        let attempts: Vec<(String, fetch::ForecastRequest)> = missing
+            .into_iter()
+            .filter_map(|p| {
+                let key = format!("{}/{}/{}", sf.kind(), grid_key(grid), p.partition());
+                if !self.claim(&key, BACKFILL_RETRY) {
+                    return None;
+                }
+                Some((
+                    key,
+                    fetch::ForecastRequest::DataGoKr(grid_request(sf, grid, p)?),
+                ))
+            })
+            .collect();
+        if attempts.is_empty() {
+            return;
+        }
+        let owned = self.owned.clone();
+        let key = format!(
+            "backfill/{}/{}/{}",
+            sf.kind(),
+            grid_key(grid),
+            latest.partition()
+        );
+        tokio::spawn(async move {
+            let _ = owned
+                .join(
+                    key,
+                    Instant::now(),
+                    crate::resolver::owned::MAX_OWNED,
+                    move |_| async move {
+                        for chunk in attempts.chunks(BACKFILL_CONCURRENCY) {
+                            crate::history::join_all(
+                                chunk
+                                    .iter()
+                                    .map(|(_, r)| acquire.acquire(r.clone()))
+                                    .collect(),
+                            )
+                            .await;
+                        }
+                        None
+                    },
+                )
+                .await;
+        });
+    }
+    /// The short RSS documents of one grid at `now`; a missing latest publication is acquired
+    /// (waiting at most 3 s). Err only when S3 cannot be read.
     pub async fn rss_answer(
         &self,
         grid: crate::history::Grid,
@@ -386,23 +558,31 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let latest = publication::rss_latest(now as i64).ok_or("clock")?;
         let oldest = schedule::from_ms(from as i64).partition();
         let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
-        let fetched = self
+        let mut fetched = self
             .reader
             .all("kma-web", "town-rss", &key, &wanted, deadline)
             .await
             .map_err(|e| format!("town-rss read: {e}"))?;
-        if !present(&fetched, &latest.partition(), now) {
-            return Err(format!(
-                "town-rss {} not in S3 (S15b-4 acquires the latest publication)",
-                latest.partition()
-            ));
+        if !present(&fetched, &latest.partition(), now)
+            && let Ok(request) = crate::domestic::family::WebRequest::town_rss(grid.nx(), grid.ny())
+                .and_then(|r| r.not_before(latest))
+            && let Some(f) = self
+                .acquire(
+                    format!("town-rss/{}/{}", grid_key(grid), latest.partition()),
+                    fetch::ForecastRequest::Rss(request),
+                    LATEST_RETRY,
+                    deadline.min(Instant::now() + observe::REQUEST_WAIT),
+                )
+                .await
+        {
+            fetched.push(visible(f, now));
         }
         Ok(rss_documents(coord, &fetched, now))
     }
     /// The stored mid document of one region at `now`: the last successfully saved acquisition,
     /// searched month by month back to [`HISTORY_START_MONTH`] (legacy keeps it until a newer
     /// save replaces it). A region legacy collects (`collected`) whose latest publication is not
-    /// in S3 is Err (S15b-4 acquires it); any other region answers what its records hold.
+    /// in S3 is acquired (waiting at most 3 s); any other region answers what its records hold.
     ///
     /// `saveMid` overwrites in save order. Legacy and the S15b-4 acquisition request only the
     /// wall-clock target `tmFc`, which never decreases, so save order is publication order
@@ -433,15 +613,25 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .partitions("data-go-kr", kind, &key, &[month], deadline)
                 .await
                 .map_err(|e| format!("{kind} listing: {e}"))?;
-            let fetched = self
+            let mut fetched = self
                 .reader
                 .all("data-go-kr", kind, &key, &parts, deadline)
                 .await
                 .map_err(|e| format!("{kind} read: {e}"))?;
-            if collected && month == latest.date() / 100 && !present(&fetched, &latest_part, now) {
-                return Err(format!(
-                    "{kind} {reg_id} {latest_part} not in S3 (S15b-4 acquires the latest publication)"
-                ));
+            if collected
+                && month == latest.date() / 100
+                && !present(&fetched, &latest_part, now)
+                && let Some(request) = mid_request(model, reg_id, latest)
+                && let Some(f) = self
+                    .acquire(
+                        format!("{kind}/{}/{latest_part}", reg_id.to_ascii_lowercase()),
+                        fetch::ForecastRequest::DataGoKr(request),
+                        LATEST_RETRY,
+                        deadline.min(Instant::now() + observe::REQUEST_WAIT),
+                    )
+                    .await
+            {
+                fetched.push(visible(f, now));
             }
             let found = mid_documents(model, reg_id, &fetched, now);
             if !found.is_empty() {
@@ -548,11 +738,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 mids.insert((model, reg_id), answer);
             }
         }
-        let special = self
-            .warnings
-            .zone_state(now as i64, deadline)
-            .await
-            .map_err(|e| format!("warning zone state unavailable: {}", e.message()))?;
+        // The legacy warning cycle runs every 3 minutes; a request waits for a due cycle at most
+        // 3 s. A failed read is the legacy store error (`getSpecialInfo` skips the section).
+        self.warning_cycle(deadline.min(Instant::now() + observe::REQUEST_WAIT))
+            .await;
+        let special = self.warnings.zone_state(now as i64, deadline).await.ok();
         // S15b-3b: the life inputs are loaded (and their owned acquisitions started) only for a
         // request the snapshot will serve; a forwarded request starts none.
         let life = self.life.load(now, deadline).await;
@@ -569,6 +759,33 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             air,
             life,
         })
+    }
+}
+impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
+    async fn warning_cycle(&self, until: Instant) {
+        let Some(acquire) = self.forecast.clone() else {
+            return;
+        };
+        let key = format!(
+            "warnings/{}",
+            ((self.clock)() as i64).div_euclid(fetch::WARNING_CYCLE.as_millis() as i64)
+        );
+        if !self.claim("warnings", fetch::WARNING_CYCLE) {
+            return;
+        }
+        let request = fetch::ForecastRequest::Warnings;
+        let owned_for = request.owned_for();
+        let warnings = self.warnings.clone();
+        let _ = self
+            .owned
+            .join(key, until, owned_for, move |_| async move {
+                if acquire.acquire(request).await.is_ok() {
+                    // New rows are read again (the service memory holds the previous state).
+                    warnings.clear_memory().await;
+                }
+                None
+            })
+            .await;
     }
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> {
@@ -677,6 +894,84 @@ fn apply_grid(docs: &mut GridDocs, family: Family, coord: Coord, f: &Fetched) {
         docs.save(family, rows);
     }
 }
+/// Retry bound of a missing latest publication (legacy re-walks late grids near +5 and +10
+/// minutes, #2676).
+const LATEST_RETRY: std::time::Duration = std::time::Duration::from_secs(5 * 60);
+/// Retry bound of a backfill publication (legacy's past-condition pass runs hourly).
+const BACKFILL_RETRY: std::time::Duration = std::time::Duration::from_secs(3600);
+/// Backfill acquisitions in flight per pass.
+const BACKFILL_CONCURRENCY: usize = 3;
+/// One forecast-zone refresh per process (legacy start).
+const ZONE_PROCESS: std::time::Duration = std::time::Duration::from_secs(365 * 24 * 3600);
+/// Earlier publications legacy's backfill keeps per family (S14 `schedule`).
+fn fetch_reach(sf: schedule::Family) -> usize {
+    match sf {
+        schedule::Family::Current => schedule::BACKFILL_CURRENT,
+        schedule::Family::Shortest => schedule::BACKFILL_SHORTEST,
+        schedule::Family::Short => schedule::BACKFILL_SHORT,
+        _ => 0,
+    }
+}
+fn grid_key(grid: crate::history::Grid) -> String {
+    format!("{}-{}", grid.nx(), grid.ny())
+}
+/// The S13 request of a grid publication (ultra-short asks for HH30 of a canonical HH00).
+fn grid_request(
+    sf: schedule::Family,
+    grid: crate::history::Grid,
+    p: Publication,
+) -> Option<crate::domestic::family::DataGoKrRequest> {
+    use crate::domestic::family::{DataGoKrFamily as F, DataGoKrRequest, Target};
+    let family = match sf {
+        schedule::Family::Current => F::UltraSrtNcst,
+        schedule::Family::Shortest => F::UltraSrtFcst,
+        schedule::Family::Short => F::VilageFcst,
+        _ => return None,
+    };
+    DataGoKrRequest::new(
+        family,
+        Target::Grid {
+            nx: grid.nx(),
+            ny: grid.ny(),
+        },
+        sf.request_publication(p),
+    )
+    .ok()
+}
+/// The S13 request of a mid publication.
+fn mid_request(
+    model: MidModel,
+    reg_id: &str,
+    p: Publication,
+) -> Option<crate::domestic::family::DataGoKrRequest> {
+    use crate::domestic::family::{DataGoKrFamily as F, DataGoKrRequest, Target};
+    let (family, target) = match model {
+        MidModel::Forecast => (F::MidFcst, Target::Station(reg_id.to_owned())),
+        MidModel::Land => (F::MidLandFcst, Target::Region(reg_id.to_owned())),
+        MidModel::Temp => (F::MidTa, Target::Region(reg_id.to_owned())),
+    };
+    DataGoKrRequest::new(family, target, p).ok()
+}
+/// Published records as one acquisition (pages in order, dated by its last page).
+fn fetched_of(records: &[crate::storage::RawRecord]) -> Option<Fetched> {
+    let mut records = records.to_vec();
+    records.sort_by_key(|r| r.envelope.pagination.as_ref().map_or(1, |p| p.page));
+    let first = records.first()?;
+    let period = &first.envelope.identity.period;
+    Some(Fetched {
+        fetched_at_ms: records
+            .iter()
+            .map(|r| r.envelope.identity.fetched_at_ms)
+            .max()?,
+        partition: format!("{:08}-{}", period.local_date, period.slot),
+        pages: records.iter().map(|r| r.bytes.clone()).collect(),
+    })
+}
+/// An acquisition made for this request is visible to it (it completed while the request ran).
+fn visible(mut f: Fetched, now: f64) -> Fetched {
+    f.fetched_at_ms = f.fetched_at_ms.min(now as u64);
+    f
+}
 /// Whether an acquisition of `partition` was complete at `now`.
 fn present(fetched: &[Fetched], partition: &str, now: f64) -> bool {
     fetched
@@ -748,7 +1043,8 @@ pub struct Snapshot {
     models: HashMap<TownModel, Vec<Doc>>,
     mids: HashMap<(MidModel, String), Vec<Doc>>,
     zones: Arc<Zones>,
-    special: Arc<ZoneState>,
+    /// None: the warning state could not be read (legacy's store error).
+    special: Option<Arc<ZoneState>>,
     /// Station collections (None before the first fold: answered over empty collections).
     stations: Option<Arc<observe::Folded>>,
     /// `history.loadForTown` for the snapshot's town.
@@ -928,7 +1224,10 @@ impl KmaStore for Snapshot {
             .map_or(OrderedJson::Array(Vec::new()), |k| k.answer(geocode, dates)))
     }
     fn special_zones(&self, area_codes: &[String]) -> StoreResult {
-        Ok(list(&special_zone_docs(&self.special, area_codes)))
+        match &self.special {
+            Some(state) => Ok(list(&special_zone_docs(state, area_codes))),
+            None => Err(StoreError("warning zone state unavailable".into())),
+        }
     }
     fn as_of_ms(&self) -> Option<f64> {
         Some(self.now)
