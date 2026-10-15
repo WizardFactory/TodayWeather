@@ -1,6 +1,6 @@
 # S15b-3b life store oracle fixture
 
-`life.json.gz` (sha256 `ce0a6ae7ad8df3d0cd85f90ca8c5fbf91991ae29375ead379f1e97402a29bfad`) holds pinned legacy-oracle results for the
+`life.json.gz` (sha256 `6e39bf1281badaa8d88972fb7c9cb0c24e64ce434a952c427fb63225ec61a2fa`) holds pinned legacy-oracle results for the
 S15b-3b tests (`server2/tests/domestic/life.rs`, `life_s3.rs`). It is test data only; the server2
 runtime never reads it or any legacy file.
 
@@ -25,10 +25,10 @@ runtime never reads it or any legacy file.
   `utils/update.areano.to.db.js` run unchanged over the 2018 list (104 new towns
   asked Kakao; every one threw at `x.toFixed`, so none was stored); the final `areaNoList`
   documents, 6 `findAreaNo` answers and 5 `findNearAreaNo` answers.
-- `life`: 61 UV and pollen acquisitions through the `taskUltrvV5`/`taskPollenV3` steps
+- `life`: 173 UV and pollen acquisitions through the `taskUltrvV5`/`taskPollenV3` steps
   (`lastIssued` skip, `_removeOldData`, `convertUvItemsV5`, `convertPollenItemsV3`,
-  `saveLifeIndex2`), the stored `lifeIndexKma2` documents (131) and
-  21 `_fromLifeIndexDb2` answers at three instants between the runs.
+  `saveLifeIndex2`), the stored `lifeIndexKma2` documents (228) and
+  28 `_fromLifeIndexDb2` answers at three instants between the runs.
 - `kasi`: 108 area/day acquisitions through `updateAreaRiseSetFromApi` (a stored day is
   skipped), the `kasiRiseSet` documents (102) and 12
   `getRiseSetList` answers.
@@ -139,7 +139,7 @@ module.exports = {area};
 
 ```
 
-### `sections-life.js` (sha256 `ce3e9f4b8cf5baede7a876a3e94a16b46fa3d695da1294583e439832af7fe478`)
+### `sections-life.js` (sha256 `a2333bbabf771d78841d6a1207942d15213e5a6f00b50cd3f0e0c130f3be3749`)
 
 ```js
 /* S15b-3b oracle section (task evidence): legacy life-index collection (lifeIndexKmaRequester
@@ -175,7 +175,7 @@ async function life(L, {ej}) {
     const last = {};
     const outcomes = [];
     const queries = [];
-    const queryTimes = [base - 50 * 3600000, base - 3600000, base + 3600000];
+    const queryTimes = [base - 11 * 86400000, base - 50 * 3600000, base - 3600000, base + 3600000];
     let q = 0;
     const answer = async (t) => {
         for (const area of F.AREAS.concat(['9999999999'])) {
@@ -187,9 +187,10 @@ async function life(L, {ej}) {
     for (const a of runs) {
         while (q < queryTimes.length && queryTimes[q] < a.fetched) await answer(queryTimes[q++]);
         await withClock(a.fetched, async () => {
-            // taskUltrvV5 / taskPollenV3: skip an issuance not newer than the last saved one.
-            if (last[a.kind] && a.issued <= last[a.kind]) { outcomes.push({kind: a.kind, issued: a.issued, skipped: true}); return; }
+            // taskLifeIndex2 removes old documents before it runs the UV task; taskUltrvV5 /
+            // taskPollenV3 then skip an issuance not newer than the last saved one.
             if (a.kind === 'ultrv') svc._removeOldData();
+            if (last[a.kind] && a.issued <= last[a.kind]) { outcomes.push({kind: a.kind, issued: a.issued, skipped: true}); return; }
             const rows = a.kind === 'ultrv' ? svc.convertUvItemsV5(a.items) : svc.convertPollenItemsV3(a.kind, a.items);
             if (!rows.length) { outcomes.push({kind: a.kind, issued: a.issued, rows: 0}); return; }
             const saved = await cb2p(cb => svc.saveLifeIndex2(a.kind, rows, cb));
@@ -205,7 +206,7 @@ module.exports = {life};
 
 ```
 
-### `life-fixtures.js` (sha256 `d412c121a7cb3959f9cebbc21c5eee6a04a6efcda854389d13bb4f55104bcf1c`)
+### `life-fixtures.js` (sha256 `873777e6f774f349932c94e5c00d4dfdd1d0fc0455791c3e81ceb58e23a5a65f`)
 
 ```js
 /* Synthetic life-index inputs for the S15b-3b store oracle (task evidence). Shapes follow the
@@ -238,10 +239,11 @@ function pollenItem(area, issued, k, type) {
     if (k % 3 === 2) it.today = '';
     return it;
 }
-/** UV acquisitions every 3 hours from base - 4 days through base (issuance order, one skipped repeat). */
+/** UV acquisitions every 3 hours from base - 12 days through base (issuance order, one skipped repeat):
+ * the run that saves base-2 days removes the documents dated before base-12 days. */
 function uv(base) {
     const out = [];
-    for (let h = -96; h <= 0; h += 3) {
+    for (let h = -288; h <= 0; h += 3) {
         const ms = base + h * 3600000;
         const issued = issuance(ms);
         out.push({fetched: ms + 40 * 60000, issued, items: AREAS.map((a, i) => uvItem(a, issued, i + h))});
@@ -251,7 +253,7 @@ function uv(base) {
 }
 function pollen(base, type) {
     const out = [];
-    for (let d = -4; d <= 0; d++) {
+    for (let d = -12; d <= 0; d++) {
         [6, 18].forEach(hh => {
             // KST midnight of the base day, plus d days and the publication hour.
             const kstMidnight = Math.floor((base + 9 * 3600000) / 86400000) * 86400000 - 9 * 3600000;

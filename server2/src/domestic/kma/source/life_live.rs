@@ -23,8 +23,8 @@ use tokio::time::Instant;
 
 /// Legacy `fetchRisk` `maxBytes`.
 pub const MFDS_MAX_BYTES: usize = crate::domestic::mfds::MAX_BYTES;
-/// The MFDS acquirer: no key ring, a keyless transport without redirects that stops reading at
-/// 1 MiB. `funded` is never used by it.
+/// The MFDS acquirer: no key ring, a keyless transport without redirects that may connect
+/// within the legacy 10 s deadline and stops reading at 1 MiB. `funded` is never used by it.
 pub fn mfds_acquirer<P: ProviderTransport + 'static, B: BudgetTransport + 'static>(
     funded: Arc<P>,
     clock: Arc<dyn crate::budget::Clock>,
@@ -32,8 +32,12 @@ pub fn mfds_acquirer<P: ProviderTransport + 'static, B: BudgetTransport + 'stati
     DomesticAcquirer<P, crate::providers::HttpPublicTransport, B>,
     crate::domestic::DomesticError,
 > {
-    let public = crate::providers::HttpPublicTransport::without_redirects(MFDS_MAX_BYTES)
-        .map_err(|_| crate::domestic::DomesticError::Invalid("mfds transport"))?;
+    // Legacy `fetchRisk`: one absolute 10 s deadline, connecting included.
+    let public = crate::providers::HttpPublicTransport::without_redirects(
+        MFDS_MAX_BYTES,
+        crate::domestic::mfds::TIMEOUT,
+    )
+    .map_err(|_| crate::domestic::DomesticError::Invalid("mfds transport"))?;
     let endpoints = crate::domestic::family::Endpoints::new(
         "https://apis.data.go.kr/",
         "https://www.kma.go.kr/",

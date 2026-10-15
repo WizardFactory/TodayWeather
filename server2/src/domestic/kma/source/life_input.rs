@@ -204,6 +204,9 @@ struct Shared<T> {
     /// Own publications so far: a read started before one cannot answer a request that waited
     /// for it.
     published: std::sync::atomic::AtomicU64,
+    /// Wall-clock ms when the last own publication completed: a fold whose cut is earlier does
+    /// not contain it, whatever count it read.
+    published_at: AtomicI64,
     kasi_started: AtomicBool,
     /// First KASI pass after the first request, then every `kasi_every`.
     kasi_first: Duration,
@@ -248,6 +251,7 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
                 settled: Default::default(),
                 demand_ms: AtomicI64::new(0),
                 published: std::sync::atomic::AtomicU64::new(0),
+                published_at: AtomicI64::new(0),
                 kasi_started: AtomicBool::new(false),
                 kasi_first,
                 kasi_every,
@@ -366,7 +370,9 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
     async fn read_life(&self, now: f64, until: Instant) {
         {
             let state = self.shared.life.lock().unwrap_or_else(|e| e.into_inner());
+            // An own publication completed after the fold's cut is not in it yet.
             if state.published == self.shared.published.load(Ordering::Acquire)
+                && state.cut >= self.shared.published_at.load(Ordering::Acquire) as f64
                 && state.refreshed.is_some_and(|r| r.elapsed() < MEMO)
             {
                 return;
@@ -425,7 +431,9 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
     async fn read_mfds(&self, now: f64, until: Instant) {
         {
             let state = self.shared.mfds.lock().unwrap_or_else(|e| e.into_inner());
+            // An own publication completed after the fold's cut is not in it yet.
             if state.published == self.shared.published.load(Ordering::Acquire)
+                && state.cut >= self.shared.published_at.load(Ordering::Acquire) as f64
                 && state.refreshed.is_some_and(|r| r.elapsed() < MEMO)
             {
                 return;
@@ -503,6 +511,9 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
                         for request in requests {
                             match acquire.acquire(request).await {
                                 Ok(LifeOutcome::Published) => {
+                                    shared
+                                        .published_at
+                                        .fetch_max(wall_ms() as i64, Ordering::AcqRel);
                                     shared.published.fetch_add(1, Ordering::AcqRel);
                                     return true;
                                 }

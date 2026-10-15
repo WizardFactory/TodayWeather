@@ -2189,7 +2189,8 @@ Verification (local; test peers only): a pinned Node 16.20.2 + Mongoose 5.1.2 or
 ([provenance](../../server2/tests/domestic/fixtures/LIFE-PROVENANCE.md)) runs the legacy savers
 and readers on synthetic inputs shaped like the live answers. The rebuilt `areaNoList` (3,703
 documents), its 6 `findAreaNo` and 5 `findNearAreaNo` answers, the `lifeIndexKma2` documents and
-21 `_fromLifeIndexDb2` answers, the `kasiRiseSet` documents and 12 `getRiseSetList` answers, and
+28 `_fromLifeIndexDb2` answers over 12 days of issuances (crossing the 10-day removal, with
+`_removeOldData` before each UV run as `taskLifeIndex2` orders it), the `kasiRiseSet` documents and 12 `getRiseSetList` answers, and
 the MFDS rows and 7 reader queries match byte for byte; read back from the S06 S3 test peer with
 empty memory the life answers, the 5 MFDS queries from the current date and the KASI answers match
 too (KASI documents in another natural order: the capture reads areas in `getAreaList` order).

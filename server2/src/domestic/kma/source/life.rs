@@ -239,6 +239,13 @@ impl LifeIndex {
         let Some(issued) = items.first().and_then(|i| i.get("date")).map(js_string) else {
             return;
         };
+        // taskLifeIndex2 removes old documents before it runs the UV task, whatever the task
+        // then does. (An attempt that stored nothing is not a record and removes nothing here:
+        // it could only remove a document dated 10 days back a few hours early, a day the
+        // response never shows.)
+        if k == 0 {
+            self.remove_old(fetched);
+        }
         // taskUltrvV5 / taskPollenV3: an issuance not newer than the last saved one is skipped.
         if self.last[k as usize]
             .as_deref()
@@ -247,8 +254,6 @@ impl LifeIndex {
             return;
         }
         let rows = if k == 0 {
-            // taskLifeIndex2 removes old documents before the UV task saves.
-            self.remove_old(fetched);
             convert_uv(items)
         } else {
             self.keep_day3(k, items);

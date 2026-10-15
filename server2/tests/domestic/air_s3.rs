@@ -1384,7 +1384,7 @@ async fn cpu_work_never_holds_a_request_past_its_deadline() {
 
 /// A TLS peer that accepts, reads the ClientHello and stays silent for `hold`; it records how long
 /// each client waited before giving up (None: the client was still waiting when the peer closed).
-async fn silent_tls(hold: Duration) -> (String, Arc<std::sync::Mutex<Vec<Option<Duration>>>>) {
+pub async fn silent_tls(hold: Duration) -> (String, Arc<std::sync::Mutex<Vec<Option<Duration>>>>) {
     use tokio::io::AsyncReadExt;
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("https://{}/", listener.local_addr().unwrap());

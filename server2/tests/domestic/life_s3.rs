@@ -9,7 +9,7 @@ use super::source_s3::{Peer, S3_PEERS as SERIAL, deadline};
 use axum::{Router, extract::State, http::Uri, response::IntoResponse, routing::any};
 use serde_json::json;
 use server2::domestic::kma::source::life_input::LifeInputs;
-use server2::domestic::kma::source::life_live::{LifeAcquire, LifeSettings, LiveLife};
+use server2::domestic::kma::source::life_live::{LifeAcquire, LifeRequest, LifeSettings, LiveLife};
 use server2::domestic::publication::Publication;
 use server2::gateway::OrderedJson;
 use server2::storage::{
@@ -843,4 +843,64 @@ async fn an_old_nearest_location_still_decides_rise_set_after_a_cold_read() {
     );
     let suwon = kasi.answer(&json!({"lat": 37.27, "lon": 127.02}), &[day(0.)]);
     assert_eq!(items_of(&suwon).len(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_publication_after_a_request_instant_is_read_by_a_later_request() {
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    stub.state.uv_delay_ms.store(4_000, Ordering::SeqCst);
+    let inputs = LifeInputs::new(transport.clone(), store.clone())
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
+        .with_kasi_schedule(HOLD, HOLD);
+    let uv_rows = |a: &server2::domestic::kma::source::life_input::LifeAnswers| {
+        serde_json::from_slice::<serde_json::Value>(&a.life.by_area(1_100_000_000.).to_bytes())
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|d| d["indexType"] == "ultrv")
+            .count()
+    };
+    // The first request starts the UV acquisition, which publishes about 4 s later.
+    let earlier = now_ms() - 60_000.;
+    assert_eq!(uv_rows(&inputs.load(earlier, short_deadline()).await), 0);
+    tokio::time::sleep(Duration::from_millis(9_000)).await;
+    // A request whose instant precedes that publication reads after it: the records are
+    // beyond its cut, so they are not in its answer, and the fold must not count them as read.
+    assert_eq!(uv_rows(&inputs.load(earlier, short_deadline()).await), 0);
+    // A later request (after the flight outcome expired, within the read memo) sees them.
+    let later = inputs.load(now_ms(), short_deadline()).await;
+    assert!(uv_rows(&later) > 0, "the completed publication is visible");
+    assert_eq!(stub.state.uv.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_mfds_connection_may_take_the_legacy_ten_seconds() {
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    // A TLS peer that stays silent for 4.5 s after the ClientHello: legacy `fetchRisk` keeps
+    // waiting (one absolute 10 s deadline); the default keyless transport gives up at 3 s.
+    let (base, waits) = super::air_s3::silent_tls(Duration::from_millis(4_500)).await;
+    let acquire = live(&peer, store, &base);
+    let slot = server2::domestic::mfds::slot_at(request_now()).unwrap();
+    let started = std::time::Instant::now();
+    let result = acquire.acquire(LifeRequest::Mfds(slot)).await;
+    assert!(result.is_err());
+    assert!(started.elapsed() < Duration::from_secs(10));
+    let first = waits
+        .lock()
+        .unwrap()
+        .first()
+        .copied()
+        .expect("one connection");
+    assert!(
+        first.is_none(),
+        "the MFDS transport still waited when the peer closed at 4.5 s: {first:?}"
+    );
 }

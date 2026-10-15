@@ -112,7 +112,28 @@ fn life_index_fold_and_reader_equal_legacy() {
         }
         checked += 1;
     }
-    assert_eq!(checked, 21);
+    assert_eq!(checked, 28);
+    // The 12-day fixture crosses the retention boundary: documents an early answer holds are
+    // removed by later UV runs (`_removeOldData`), in the fold as in legacy.
+    let early = number(at(&items_of(at(l, &["queries"]))[0], &["now"]));
+    let before =
+        serde_json::from_slice::<serde_json::Value>(&life_at(early).json().to_bytes()).unwrap();
+    let after = serde_json::from_slice::<serde_json::Value>(&all.json().to_bytes()).unwrap();
+    let key = |d: &serde_json::Value| {
+        (
+            d["date"]["$date"].as_f64().unwrap() as i64,
+            d["areaNo"].as_f64().unwrap() as i64,
+            d["indexType"].as_str().unwrap().to_owned(),
+        )
+    };
+    let kept: std::collections::HashSet<_> = after.as_array().unwrap().iter().map(key).collect();
+    let removed = before
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| !kept.contains(&key(d)))
+        .count();
+    assert!(removed > 0, "documents removed at the retention boundary");
     // A repeated issuance is skipped (lastIssued) and the last issuance per kind is kept.
     assert_eq!(all.last_issued("ultrv"), Some("2026101412"));
 }

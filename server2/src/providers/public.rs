@@ -32,14 +32,25 @@ pub struct HttpPublicTransport {
 }
 impl HttpPublicTransport {
     pub fn new(maximum: usize) -> Result<Self, ProviderTransportError> {
-        Self::build(maximum, true)
+        Self::build(maximum, true, super::transport::CONNECT_TIMEOUT)
     }
     /// A keyless transport that never follows a redirect (the answer of the first request is
-    /// final), for providers whose legacy client accepted only a direct 200 (S15b-3b MFDS).
-    pub fn without_redirects(maximum: usize) -> Result<Self, ProviderTransportError> {
-        Self::build(maximum, false)
+    /// final) and may connect within `connect`, for providers whose legacy client accepted only
+    /// a direct 200 under one absolute deadline (S15b-3b MFDS: 10 s).
+    pub fn without_redirects(
+        maximum: usize,
+        connect: std::time::Duration,
+    ) -> Result<Self, ProviderTransportError> {
+        if connect.is_zero() || connect > super::transport::legacy_timeout::KMA_WEB {
+            return Err(ProviderTransportError::Invalid);
+        }
+        Self::build(maximum, false, connect)
     }
-    fn build(maximum: usize, follow: bool) -> Result<Self, ProviderTransportError> {
+    fn build(
+        maximum: usize,
+        follow: bool,
+        connect: std::time::Duration,
+    ) -> Result<Self, ProviderTransportError> {
         if maximum == 0 || maximum > 8 * 1024 * 1024 {
             return Err(ProviderTransportError::Invalid);
         }
@@ -72,7 +83,7 @@ impl HttpPublicTransport {
             .no_brotli()
             .no_deflate()
             .no_zstd()
-            .connect_timeout(super::transport::CONNECT_TIMEOUT)
+            .connect_timeout(connect)
             // Legacy `kmaScraper` 30 s per page (S13d); the caller deadline still bounds a call.
             .timeout(super::transport::legacy_timeout::KMA_WEB)
             .build()
