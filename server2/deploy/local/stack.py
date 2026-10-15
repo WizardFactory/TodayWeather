@@ -90,10 +90,11 @@ def run(args):
         for thread in threads:thread.start()
         endpoints = dict(zip(['s3_endpoint','provider_endpoint'],['http://127.0.0.1:'+str(p.server_port) for p in peers]))
         # Do not inherit AWS/provider keys, proxy settings, Node modes or collector flags.
-        env = {'PATH':os.defpath,'SERVER2_BIND':'127.0.0.1:0','SERVER2_METRICS_BIND':'127.0.0.1:0','SERVER2_WORKER_THREADS':'2','SERVER2_BLOCKING_THREADS':'4',
-               'SERVER2_S3_ENDPOINT':endpoints['s3_endpoint'],'SERVER2_PROVIDER_ENDPOINT':endpoints['provider_endpoint'],
-               'AWS_ACCESS_KEY_ID':config['test_access_key'],'AWS_SECRET_ACCESS_KEY':config['test_secret_key'],'AWS_REGION':'us-east-1','AWS_EC2_METADATA_DISABLED':'true'}
-        child = subprocess.Popen([str(binary)],cwd=OWNED,env=env,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+        # S10e: the legacy PORT=0 selects ephemeral loopback listeners; an empty working directory
+        # keeps a real server2/.env out of the foundation process. The foundation reads no S3 or
+        # provider setting; the peers are published for the stack's clients.
+        env = {'PATH':os.defpath,'PORT':'0','AWS_EC2_METADATA_DISABLED':'true'}
+        child = subprocess.Popen([str(binary)],cwd=tempfile.mkdtemp(prefix='server2-local-stack-'),env=env,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
         def read_output():
             for line in child.stdout:lines.put(line.strip())
         reader=threading.Thread(target=read_output,daemon=True);reader.start()

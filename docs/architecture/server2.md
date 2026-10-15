@@ -729,7 +729,7 @@ the legacy 501. Zone state for `specialInfo` is the newest zone seed plus every
 without one), replayed in memory by an owned refresh task; cold replay cost grows with
 time since the seed. Discovery scans back to 1970, so no stored bulletin ages out. Seeds come from the
 offline `server2/tools/migration/` converter and an importer that uses the shared
-`SERVER2_S3_*` settings (S10c). Newly
+shared S3 settings (S10c; the S10e names since 2026-10-15). Newly
 collected documents use the S02 seed key order, which S19 shadow comparison must
 confirm against production bytes; the Express session cookie and the shared S08
 classification of status-200 JSON gateway envelopes are recorded differences.
@@ -1607,6 +1607,10 @@ stays everywhere: HTTPS, or plain HTTP only to a loopback address. No replacemen
 flag or dry-run path exists; tests and smokes give the real settings values that point at
 task-owned test peers, and test doubles (quota, transport) live inside the tests.
 
+S10e (2026-10-15) replaced the settings in this table with the legacy `server/.env` names, built-in
+endpoints and quotas, and `server2/.env`; see [S10e legacy settings](#s10e-legacy-settings-and-server2env-2026-10-15).
+The table records the S10c state.
+
 | Concern | Setting | Default / rule |
 | --- | --- | --- |
 | Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf`, `kma` (S15; reads `SERVER2_S3_*` since S15b-1) | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
@@ -1695,7 +1699,7 @@ any difference.
 Routing uses the S10c list only: `kma` in `SERVER2_NATIVE_FAMILIES` registers and selects the
 v000903 KMA handler; removing it and restarting is the rollback. S15 adds no other setting or mode.
 Since S15b-1 ([below](#s15b-1-kma-s3-input-source-2026-10-14)) a listed `kma` builds the S3
-input source from the shared `SERVER2_S3_*` settings, which are then required; inputs owned by
+input source from the shared S3 settings (S10e names), which are then required; inputs owned by
 later S15b slices still forward. `tools/kma_smoke.py` checks legacy -> `kma` -> legacy on the release
 binary (identical bytes, the legacy KMA hop in every phase, the native phase reading the S3 test
 peer, unknown or repeated entries and `kma` without S3 settings refused before binding).
@@ -2101,9 +2105,9 @@ hours. The ranges are requested for the keys still incomplete. Replay applies re
 order, and a range's allowed keys are those no earlier range completed. That is the legacy
 plan-time set, because runs are serialized per station: a page row that arrived in between keeps
 its values, and the range adds the fields the row lacks. A backfill pass claims each hour only
-when that hour's acquisition starts, so hours left when its owned deadline expires stay due. Funding: `SERVER2_DATA_GO_KR_KEYS` (JSON array,
-the legacy `DONGNAE_SECRET_KEYS` form) with `SERVER2_DATA_GO_KR_DAILY_UNITS` per key and KST day
-(S08); provider roots default to production HTTPS and accept loopback overrides for tests.
+when that hour's acquisition starts, so hours left when its owned deadline expires stay due. Funding: the legacy `DONGNAE_SECRET_KEYS` list
+(S10e; S15b-2 named it `SERVER2_DATA_GO_KR_KEYS`) with the built-in 10,000 units per key and KST day
+(S08); provider roots are the built-in production HTTPS roots, and only tests build loopback roots.
 
 **Legacy collections rebuilt in memory.** Pages are parsed as cheerio 0.20.0 / htmlparser2 3.8.3
 read them (EUC-KR, entities, implied closes) and saved with the Mongoose 5.1.2 upsert rules of
@@ -2217,3 +2221,68 @@ UV acquisition releasing the request and serving the next one, out-of-season pol
 an MFDS slot asked once after a failure, and the KASI capture continuing past failing areas. Live
 on 2026-10-15 the server2 acquirer published UV (four pages), weeds pollen, KASI 서울 and the MFDS
 table into the local peer, oak pollen answered no data, and the folds answered from them.
+
+### S10e legacy settings and server2/.env (2026-10-15)
+
+[S10e](../../plans/issue-2753.md) ([spec](../../specs/issue-2753.md), #2753) applies AK's decisions of
+2026-10-15: server2 reads the same variables and values as legacy `server/.env` and
+`server/config/config.js`, from a copy at `server2/.env`; values that legacy does not have may be
+few, clearly named server2 variables there. The rules of S10c still hold: no runtime mode or
+verification flag, and no endpoint override for tests. Tests and smokes build other endpoints in
+test code (`gateway::runtime::Builtins`, `S3Settings::from_vars_at`, `GeocoderConfig::from_vars_at`
+and the test-only `loopback_server` example, which takes them as arguments).
+
+**Loading.** The `server2` binary and the seed importers read `.env` from the working directory
+(start them from `server2/`) with the rules of the legacy loader, `dotenv` 10.0.0: one `KEY=value`
+per line, comments and `export` lines ignored, matching quotes removed (`\n` expanded inside double
+quotes), other values trimmed, with the JavaScript whitespace set (a byte order mark is skipped), the last duplicate wins (the production file lists `OWM_SECRET_KEY`
+twice), and a variable present in the process environment wins over the file. A missing file means
+environment only; another read error stops startup without file contents. server2 never reads
+`server/.env` or another legacy file. [server2/.env.example](../../server2/.env.example) lists every
+variable server2 reads. Paseo copies `server2/.env` from the source checkout into a new worktree
+([paseo.json](../../paseo.json); symlinks refused, existing files kept, mode 600, Git ignore
+ensured). Smokes and tests run processes in an empty working directory and never read a real
+`.env`.
+
+| Concern | Variable | Rule |
+| --- | --- | --- |
+| Listener | `OPENSHIFT_NODEJS_IP`, `OPENSHIFT_NODEJS_PORT`, `PORT` (legacy) | As `config.js`: address default `127.0.0.1`, port `OPENSHIFT_NODEJS_PORT`, else `PORT`, else `3000`; an empty value is unset. Give server2 another port than the legacy origin during coexistence. |
+| S3 | `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `TWA_S3_REGION` (legacy); `SERVER2_S3_BUCKET` (server2) | Region default `ap-northeast-2`; endpoint built in (`https://s3.<region>.amazonaws.com/`); bucket and credentials required when any family is native. The importers use the same settings. |
+| data.go.kr | `DONGNAE_SECRET_KEYS` (legacy) | Required with `kma` (ASOS ranges; since S15b-3b also UV, pollen and KASI). Built in: 10,000 units per key and KST day across those services (ASOS hourly/daily development traffic "개발계정 : 10,000", data.go.kr 15057210/15059093). |
+| AirKorea | `AIRKOREA_SECRET_KEYS` (legacy) | Read with `kma`; no usable key: stored records only. Built in: 500 units per key and KST day ("개발계정 : 500", data.go.kr 15073861). |
+| Geocoder | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY` (legacy) | Kakao keys parsed as legacy `keys.parseKeys` (nonempty strings of a JSON array; anything else gives no key). Endpoints built in; legacy's test-only `GEOCODER_*_BASE_URL` are not read. Built in: Kakao 100,000 units per key and UTC day (Kakao quota page, 100,000건 per day), Google 322 per UTC day (Google documents no daily quota; 10,000 free Geocoding events a month ÷ 31). |
+| Visual Crossing | `VC_SECRET_KEY`, `VC_DAILY_RECORD_LIMIT` (legacy) | Read as JavaScript `Number` (`50.0`, `5e1` are 50); a positive finite limit admits `floor(limit)` records a day (at least 1). 0, unset, not a number or `Infinity` is "no budget" in legacy, here the documented free plan, 1,000 records a day. Quota owner derived from the key. |
+| World air | `GOOGLE_SECRET_KEY`, `OWM_SECRET_KEY`, `WAQI_SECRET_KEY`, `AIR_GOOGLE_MONTHLY_CAP`, `AIR_OWM_MONTHLY_CAP` (legacy) | Legacy chain keys and free caps (defaults 10,000 and 1,000,000; whole numbers or startup fails, as `config/air.js`); a provider takes part with a legacy-valid key; calls stop at 95 % of the cap, so a cap of 0 leaves it out. WAQI: 1,000 requests a second over 31 days (aqicn.org/api). Quota owners derived from the keys; endpoints built in. |
+| Coexistence | `SERVER2_GATEWAY_LEGACY_URL`, `SERVER2_NATIVE_FAMILIES`, `SERVER2_WORLD_VERSIONS` (server2) | Unchanged S10/S10c/S15 routing; temporary, removed with legacy retirement. |
+
+Removed: `SERVER2_BIND`, `SERVER2_METRICS_BIND` (metrics listen on loopback at the public port + 1,
+or an ephemeral port with port 0), `SERVER2_WORKER_THREADS`, `SERVER2_BLOCKING_THREADS`,
+`SERVER2_CPU_LIMIT`, `SERVER2_INFLIGHT_LIMIT`, `SERVER2_CACHE_BYTES`, `SERVER2_CONNECTION_LIMIT`,
+`SERVER2_CONNECTION_SECONDS` (built-in defaults 2, 4, 2, 40, 16 MiB, 128 and 9 s, 12 s with the
+gateway; no documented operation needs another value), `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`,
+`SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY`, `SERVER2_DATA_GO_KR_KEYS`,
+`SERVER2_DATA_GO_KR_DAILY_UNITS`, `SERVER2_DATA_GO_KR_URL`, `SERVER2_DATA_GO_KR_BASE_URL`,
+`SERVER2_KMA_BASE_URL`, `SERVER2_KMA_WEATHER_BASE_URL`, `SERVER2_AIRKOREA_DAILY_UNITS`,
+`SERVER2_GEOCODER_KAKAO_DAILY_UNITS`, `SERVER2_GEOCODER_GOOGLE_DAILY_UNITS`,
+`SERVER2_WORLD_VC_DAILY_UNITS`, `SERVER2_WORLD_VC_QUOTA_ID`, `SERVER2_WORLD_VC_URL` and
+`SERVER2_WORLD_AIR_<P>_KEY|MONTHLY_UNITS|QUOTA_ID|URL`. The S10b rule that refused a configured
+lifetime at or below the 9-second deadline has no input left; the built-in gateway lifetime is 12 s.
+
+Quota owners changed with the settings: Visual Crossing and air owners are now domain-separated
+SHA-256 values of the keys (`server2-world-quota-v1`), so an S08 window started under a configured
+owner is not continued. The built-in quotas are documented provider limits, not measured demand
+(#2724 still owns geocoder measurements).
+
+Open questions for AK: whether `SERVER2_S3_BUCKET` should name a new server2 bucket or reuse the
+legacy weather-data bucket `TWA_S3_WEATHER_DATA_BUCKET_NAME` (no legacy consumer; server2 keys use
+their own `raw/v2/`, `index/v2/`, `budgets/v2/` prefixes, but mutable catalogs need bucket
+Versioning); whether the legacy CloudFront credentials `AWS_ACCESS_KEY`/`AWS_SECRET_KEY` hold the S3
+permissions server2 needs; and the Google geocoder and unset-`VC_DAILY_RECORD_LIMIT` built-ins,
+which are stricter than legacy (no budget).
+
+Verification (local, test peers only): a test builds every native family from legacy names plus
+the coexistence entries and `SERVER2_S3_BUCKET`, and asserts no other `SERVER2_*` name is read; the
+dotenv parser follows dotenv 10.0.0 cases; the release binary reads `.env` from its working
+directory with process precedence; the release smokes run with the new names in empty working
+directories; and the configuration built in-process from the operator's `server2/.env` resolved
+every provider key without printing values.

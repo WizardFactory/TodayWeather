@@ -1,13 +1,23 @@
 //! Per-key upfront geocoder funding using S08 durable range ownership.
 //!
-//! Each configured key is its own quota owner with a configured daily limit. One S08 window
-//! covers one UTC day; a new budget store is opened when the day changes (never restored).
+//! Each configured key is its own quota owner with a daily limit. One S08 window covers one UTC
+//! day; a new budget store is opened when the day changes (never restored). The process limits
+//! are built in (S10e): legacy has no geocoder call budget setting.
 use super::{GeoProvider, GeocodeError, GeocoderConfig, ProviderDemand, Quota};
 use crate::budget::{BudgetPolicy, BudgetStore, BudgetTransport, Clock, Provider};
 use std::{future::Future, pin::Pin, sync::Arc, time::Duration};
 use tokio::{sync::Mutex as AsyncMutex, time::Instant};
 
 const DAY_MS: i64 = 86_400_000;
+/// Units per Kakao key and UTC day: the documented 카카오맵 REST API daily quota, "좌표로
+/// 행정구역정보 변환 100,000건" and the same for 좌표로 주소 변환 / 주소로 좌표 변환
+/// (<https://developers.kakao.com/docs/latest/ko/getting-started/quota>, read 2026-10-15).
+pub const KAKAO_DAILY_UNITS: u64 = 100_000;
+/// Units of the Google key per UTC day. Google documents no default daily quota for the
+/// Geocoding API, only a free usage cap of 10,000 events per month for the Essentials
+/// "Geocoding" SKU (<https://developers.google.com/maps/billing-and-pricing/pricing>, read
+/// 2026-10-15); a 31-day share of it keeps every month inside that cap.
+pub const GOOGLE_DAILY_UNITS: u64 = 10_000 / 31;
 /// Units claimed from the S08 authority at a time (bounded by the daily limit).
 const BLOCK_UNITS: u64 = 50;
 

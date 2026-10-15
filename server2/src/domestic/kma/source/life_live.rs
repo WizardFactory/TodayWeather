@@ -2,9 +2,8 @@
 //!
 //! UV V5 and pollen V3 (all areas, S13 `DataGoKrRequest`), KASI area rise/set (S13a
 //! `RiseSetRequest`) and the keyless MFDS table ([`crate::domestic::mfds`]). The funded requests
-//! use the process data.go.kr acquirer of the KMA source (S15b-2 [`DailyAcquirer`]:
-//! `SERVER2_DATA_GO_KR_KEYS`, the legacy `DONGNAE_SECRET_KEYS` list, with one S08 quota owner per
-//! key and KST day); each complete group is published through S06 before any request uses it.
+//! use the process data.go.kr acquirer of the KMA source (S15b-2 [`DailyAcquirer`]: the legacy
+//! `DONGNAE_SECRET_KEYS` list (S10e), with one S08 quota owner per key and KST day); each complete group is published through S06 before any request uses it.
 //!
 //! No new setting: MFDS is the production endpoint legacy hard-codes.
 use super::observe::DailyAcquirer;

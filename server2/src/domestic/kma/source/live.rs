@@ -9,10 +9,10 @@
 //! Settings (read only when `kma` is in `SERVER2_NATIVE_FAMILIES`):
 //! - `AIRKOREA_SECRET_KEYS`: the legacy key list (a JSON array, `dataGoKrKeys.parse` rules).
 //!   Without a key no AirKorea acquisition runs; stored records are still read.
-//! - `SERVER2_AIRKOREA_DAILY_UNITS`: S08 units per key and KST day across the AirKorea
-//!   operations server2 calls; required with a key. The provider's own limit is per operation
-//!   (500 requests a day for a development account).
-//! - `SERVER2_DATA_GO_KR_URL`: data.go.kr root, default `https://apis.data.go.kr/`.
+//!
+//! Built in (S10e, AK 2026-10-15: no server2-only settings): [`AIRKOREA_DAILY_UNITS`] S08 units
+//! per key and KST day across the AirKorea operations server2 calls, and the production
+//! data.go.kr root (`gateway::runtime::Builtins`).
 use crate::budget::{BudgetPolicy, BudgetStore, BudgetTransport, Clock, Provider};
 use crate::domestic::airkorea::AirKoreaRequest;
 use crate::domestic::family::{Endpoints, Service};
@@ -39,6 +39,11 @@ pub const CALL_BUDGET: Duration = Duration::from_secs(30);
 pub fn airkorea_transport() -> Result<HttpProviderTransport, ProviderTransportError> {
     HttpProviderTransport::with_connect_timeout(2 * 1024 * 1024, legacy_timeout::AIRKOREA)
 }
+/// S08 units per AirKorea key and KST day: the documented development-account traffic of
+/// `B552584/ArpltnInforInqireSvc`, "개발계정 : 500" per operation
+/// (<https://www.data.go.kr/data/15073861/openapi.do>, read 2026-10-15). One budget spans every
+/// AirKorea operation server2 calls, so it never exceeds a single operation's allowance.
+pub const AIRKOREA_DAILY_UNITS: u64 = 500;
 /// S06 publication bound after a complete acquisition.
 const PUBLISH_BUDGET: Duration = Duration::from_secs(10);
 const DAY_MS: i64 = 86_400_000;
@@ -84,34 +89,22 @@ impl std::fmt::Debug for AirKoreaSettings {
     }
 }
 impl AirKoreaSettings {
-    /// `AIRKOREA_SECRET_KEYS`, `SERVER2_AIRKOREA_DAILY_UNITS`, `SERVER2_DATA_GO_KR_URL`.
-    /// None without a usable key; Err for an invalid setting.
-    pub fn from_vars(var: &dyn Fn(&str) -> Option<String>) -> Result<Option<Self>, String> {
+    /// `AIRKOREA_SECRET_KEYS` (legacy name) with the built-in [`AIRKOREA_DAILY_UNITS`], at the
+    /// given provider roots (production: `gateway::runtime::Builtins::production`). None without a
+    /// usable key.
+    pub fn from_vars(
+        var: &dyn Fn(&str) -> Option<String>,
+        endpoints: Endpoints,
+    ) -> Result<Option<Self>, String> {
         let keys = var("AIRKOREA_SECRET_KEYS")
             .map(|v| crate::domestic::keys::parse_keys(&v))
             .unwrap_or_default();
         if keys.is_empty() {
             return Ok(None);
         }
-        let daily_units = var("SERVER2_AIRKOREA_DAILY_UNITS")
-            .filter(|v| !v.is_empty())
-            .ok_or("SERVER2_AIRKOREA_DAILY_UNITS is required with AIRKOREA_SECRET_KEYS")?
-            .parse::<u64>()
-            .ok()
-            .filter(|u| *u > 0)
-            .ok_or("SERVER2_AIRKOREA_DAILY_UNITS must be a positive integer")?;
-        let root = var("SERVER2_DATA_GO_KR_URL")
-            .filter(|v| !v.is_empty())
-            .unwrap_or_else(|| "https://apis.data.go.kr/".into());
-        let endpoints = Endpoints::new(
-            &root,
-            "https://www.kma.go.kr/",
-            "https://www.weather.go.kr/",
-        )
-        .map_err(|_| "SERVER2_DATA_GO_KR_URL must be an HTTPS (or loopback HTTP) root")?;
         Ok(Some(Self {
             keys,
-            daily_units,
+            daily_units: AIRKOREA_DAILY_UNITS,
             endpoints,
         }))
     }

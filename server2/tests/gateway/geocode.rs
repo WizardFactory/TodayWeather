@@ -564,20 +564,24 @@ fn configured_kakao_env_child() {
             result.unwrap().kakao_keys,
             vec!["synthetic-kakao-a", "synthetic-kakao-b"]
         ),
+        "one" => assert_eq!(result.unwrap().kakao_keys, vec!["synthetic"]),
         "absent" => assert!(result.unwrap().kakao_keys.is_empty()),
         _ => panic!("invalid test setup"),
     }
 }
+/// S10e (S10E-R3) replaces the S10 review008 strict parse with legacy `keys.parseKeys`: the
+/// nonempty strings of a JSON array; anything else gives no key (as legacy).
 #[test]
-fn review008_configured_kakao_env_rejects_present_invalid_entries() {
+fn configured_kakao_env_follows_legacy_parse_keys() {
     let executable = std::env::current_exe().unwrap();
     for (value, expected) in [
-        (Some("not-json"), "invalid"),
-        (Some(""), "invalid"),
-        (Some("{}"), "invalid"),
-        (Some("null"), "invalid"),
-        (Some("[\"synthetic\",3]"), "invalid"),
-        (Some("[\"\"]"), "invalid"),
+        (Some("not-json"), "absent"),
+        (Some(""), "absent"),
+        (Some("{}"), "absent"),
+        (Some("null"), "absent"),
+        (Some("[\"synthetic\",3]"), "one"),
+        (Some("[\"\", null, \"synthetic\"]"), "one"),
+        (Some("[\"\"]"), "absent"),
         (
             Some("[\"synthetic-kakao-a\",\"synthetic-kakao-b\"]"),
             "valid",
@@ -599,7 +603,7 @@ fn review008_configured_kakao_env_rejects_present_invalid_entries() {
         let output = command.output().unwrap();
         assert!(
             output.status.success(),
-            "strict configured env child failed: {}",
+            "configured env child failed: {}",
             String::from_utf8_lossy(&output.stdout)
         );
     }

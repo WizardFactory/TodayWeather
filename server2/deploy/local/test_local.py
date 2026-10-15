@@ -286,7 +286,9 @@ class StagingContract(unittest.TestCase):
             self.assertIsNone(plan[key])
         self.assertFalse(plan['host_candidate']['measured_target'])
         self.assertFalse(plan['bucket']['lifecycle_deletes'])
-        self.assertTrue(plan['provider_keys']['separate_from_legacy'])
+        # S10e (AK 2026-10-15): server2 reads the legacy names and values from server2/.env.
+        self.assertFalse(plan['provider_keys']['separate_from_legacy'])
+        self.assertFalse(any(n.startswith('SERVER2_') for n in plan['provider_keys']['required_secret_names']))
         self.assertFalse(plan['provider_keys']['values_in_git'])
         gate=plan['readiness']['missing_key_iam_validation']
         self.assertIn('unverified',gate['status'])

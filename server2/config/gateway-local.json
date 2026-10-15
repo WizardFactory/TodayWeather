@@ -1,21 +1,21 @@
 {
-  "scope": "operator-injected environment; setting names only, no credential values",
+  "scope": "process environment, then server2/.env in the working directory (legacy dotenv rules); setting names only, no credential values",
   "opt_in": "SERVER2_GATEWAY_LEGACY_URL",
-  "native_routing": "SERVER2_NATIVE_FAMILIES: comma list of geocode and dsf; unset keeps every family on legacy",
+  "native_routing": "SERVER2_NATIVE_FAMILIES: comma list of geocode, dsf and kma; unset keeps every family on legacy",
   "geocoder_settings": [
     "GEOCODER_KAKAO_KEYS",
-    "GEOCODER_GOOGLE_KEY",
-    "GEOCODER_KAKAO_BASE_URL (default https://dapi.kakao.com)",
-    "GEOCODER_GOOGLE_BASE_URL (default https://maps.googleapis.com)",
-    "SERVER2_GEOCODER_KAKAO_DAILY_UNITS (per key, required with Kakao keys)",
-    "SERVER2_GEOCODER_GOOGLE_DAILY_UNITS (required with a Google key)"
+    "GEOCODER_GOOGLE_KEY"
+  ],
+  "geocoder_builtins": [
+    "endpoints https://dapi.kakao.com and https://maps.googleapis.com",
+    "100000 units per Kakao key and UTC day",
+    "322 units for the Google key per UTC day"
   ],
   "s3_settings": [
-    "SERVER2_S3_REGION (default ap-northeast-2)",
-    "SERVER2_S3_ENDPOINT (default https://s3.<region>.amazonaws.com/)",
-    "SERVER2_S3_BUCKET",
-    "SERVER2_S3_ACCESS_KEY_ID",
-    "SERVER2_S3_SECRET_ACCESS_KEY"
+    "SERVER2_S3_BUCKET (server2-only)",
+    "AWS_ACCESS_KEY",
+    "AWS_SECRET_KEY",
+    "TWA_S3_REGION (default ap-northeast-2; endpoint https://s3.<region>.amazonaws.com/ built in)"
   ],
   "weather_family_routing": "legacy HTTP unless the family is listed; SERVER2_WORLD_VERSIONS selects dsf versions",
   "gateway_seconds": 9,

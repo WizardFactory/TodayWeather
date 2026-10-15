@@ -1,11 +1,13 @@
 """Gateway/geocode family: scenarios, paired replay sides and cache-aware rollback.
 
-The release binary runs against three task-owned loopback peers: recorded Kakao/Google
-providers, a frozen legacy origin (geocoder plus weather backends) and the S03 local
-S3-compatible peer. Both sides use the production setting names. The legacy side has no
-routing entry and reads no native setting; the native side lists `geocode` in
-SERVER2_NATIVE_FAMILIES and funds every provider attempt from configured daily quotas whose
-S08 budget objects live in the S3 peer. Scenarios assert that S3 holds budget objects only.
+The release `loopback_server` example (the server2 process with its S3 root on the peer; S10e:
+roots and quotas are built in, not settings) runs against three task-owned loopback peers:
+recorded Kakao/Google providers, a frozen legacy origin (geocoder plus weather backends) and the
+S03 local S3-compatible peer. Both sides use the production setting names (legacy server/.env
+names plus SERVER2_S3_BUCKET). The legacy side has no routing entry and reads no native setting;
+the native side lists `geocode` in SERVER2_NATIVE_FAMILIES and funds every provider attempt
+from per-key daily quotas whose S08 budget objects live in the S3 peer. Scenarios assert that
+S3 holds budget objects only. The release `server2` binary runs the configuration refusal.
 """
 import base64
 import concurrent.futures
@@ -173,27 +175,31 @@ class Peers:
             peer.close()
 
 
-def gateway_env(peers, mode, keys=1, legacy=None, daily_units=100000, key_prefix='local-dummy-'):
-    """Real-format configuration; `mode` is the routing choice ('legacy' or 'native')."""
+def gateway_env(peers, mode, keys=1, legacy=None, key_prefix='local-dummy-'):
+    """The real setting names (S10e: legacy server/.env names plus SERVER2_S3_BUCKET); `mode` is
+    the routing choice ('legacy' or 'native'). The S3 and geocoder roots and the geocoder daily
+    units are not settings: see `peer_args`."""
     config = peers.s3.config_values
     env = {
         'SERVER2_GATEWAY_LEGACY_URL': legacy or peers.legacy.base,
-        'GEOCODER_KAKAO_BASE_URL': peers.providers.base,
-        'GEOCODER_GOOGLE_BASE_URL': peers.providers.base,
         'GEOCODER_KAKAO_KEYS': json.dumps([key_prefix + str(i) for i in range(keys)]),
         'GEOCODER_GOOGLE_KEY': key_prefix + 'google',
-        'SERVER2_GEOCODER_KAKAO_DAILY_UNITS': str(daily_units),
-        'SERVER2_GEOCODER_GOOGLE_DAILY_UNITS': str(daily_units),
-        'SERVER2_S3_ENDPOINT': peers.s3.base,
         'SERVER2_S3_BUCKET': config['bucket'],
-        'SERVER2_S3_ACCESS_KEY_ID': config['test_access_key'],
-        'SERVER2_S3_SECRET_ACCESS_KEY': config['test_secret_key'],
+        'AWS_ACCESS_KEY': config['test_access_key'],
+        'AWS_SECRET_KEY': config['test_secret_key'],
     }
     if mode == 'native':
         env['SERVER2_NATIVE_FAMILIES'] = 'geocode'
     elif mode != 'legacy':
         raise ValueError('unknown routing: ' + mode)
     return env
+
+
+def peer_args(peers, daily_units=100000):
+    """`loopback_server` arguments: S3 and the geocoder roots on the task-owned peers and the
+    per-key geocoder units."""
+    return ['--s3', peers.s3.base, '--kakao', peers.providers.base, '--google', peers.providers.base,
+            '--geocoder-daily-units', str(daily_units)]
 
 
 def s3_budget_only(peers):
@@ -211,9 +217,9 @@ class Context:
         self.peers = Peers(frozen)
 
     def process(self, mode, keys=1, legacy=None, extra=None, daily_units=100000, key_prefix='local-dummy-'):
-        env = gateway_env(self.peers, mode, keys, legacy, daily_units, key_prefix)
+        env = gateway_env(self.peers, mode, keys, legacy, key_prefix)
         env.update(extra or {})
-        return harness.Server2(self.binary, env)
+        return harness.Server2(harness.peer_binary(self.binary), env, peer_args(self.peers, daily_units))
 
     def observe(self, process):
         return process.metrics(), self.peers.counts()
@@ -608,7 +614,7 @@ def replay_side(binary, fixture, side, perturb=False):
     peers = Peers(frozen)
     records, acquisitions = [], {}
     try:
-        with harness.Server2(binary, gateway_env(peers, mode)) as process:
+        with harness.Server2(harness.peer_binary(binary), gateway_env(peers, mode), peer_args(peers)) as process:
             for pass_name in ('cold', 'warm'):
                 etags = {}
                 start = peers.counts()
@@ -642,7 +648,7 @@ def replay_side(binary, fixture, side, perturb=False):
 # 12s, so the deadline probe runs the default configuration and expects the S02 legacy 501.
 DEADLINE_ORACLE = 'gateway-deadline'
 TRANSPORT_HEADERS = ('date', 'connection', 'keep-alive')
-LIFETIME_REFUSAL = 'SERVER2_CONNECTION_SECONDS must exceed the 9-second gateway deadline'
+CONFIGURATION_REFUSAL = 'invalid gateway configuration'
 
 
 def legacy_deadline_mismatches(reply):
@@ -662,21 +668,24 @@ def legacy_deadline_mismatches(reply):
     return problems
 
 
-def lifetime_refusal(ctx):
-    """Gateway enabled with a 9s lifetime: configuration error before any listener is bound."""
-    env = {'PATH': os.defpath, 'SERVER2_BIND': '127.0.0.1:0', 'SERVER2_METRICS_BIND': '127.0.0.1:0'}
-    env.update(gateway_env(ctx.peers, 'legacy'), SERVER2_CONNECTION_SECONDS='9')
+def configuration_refusal(ctx):
+    """The release `server2` binary with native geocode and no SERVER2_S3_BUCKET: configuration
+    error before any listener is bound (S10e; the connection lifetime is built in since S10e)."""
+    env = {'PATH': os.defpath, 'PORT': '0', 'SERVER2_NATIVE_FAMILIES': 'geocode'}
+    env.update(gateway_env(ctx.peers, 'legacy'))
+    del env['SERVER2_S3_BUCKET']
     started = time.monotonic()
     try:
-        out = subprocess.run([str(ctx.binary)], env=env, stdin=subprocess.DEVNULL,
+        out = subprocess.run([str(ctx.binary)], env=env, cwd=harness.EMPTY_CWD, stdin=subprocess.DEVNULL,
                              capture_output=True, text=True, timeout=10)
     except subprocess.TimeoutExpired as error:
         output = error.stdout.decode() if isinstance(error.stdout, bytes) else str(error.stdout)
-        raise AssertionError('gateway with SERVER2_CONNECTION_SECONDS=9 kept running: ' + output.strip())
+        raise AssertionError('native geocode without SERVER2_S3_BUCKET kept running: ' + output.strip())
     elapsed = (time.monotonic() - started) * 1000
-    expect(out.returncode != 0 and 'server2 public=' not in out.stdout and LIFETIME_REFUSAL in out.stderr,
-           'gateway with SERVER2_CONNECTION_SECONDS=9 is refused before binding', [out.returncode, out.stdout, out.stderr])
-    return {'connection_seconds': 9, 'exit_code': out.returncode, 'elapsed_ms': round(elapsed, 2), 'message': LIFETIME_REFUSAL}
+    expect(out.returncode != 0 and 'server2 public=' not in out.stdout and CONFIGURATION_REFUSAL in out.stderr,
+           'native geocode without SERVER2_S3_BUCKET is refused before binding', [out.returncode, out.stdout, out.stderr])
+    return {'missing': 'SERVER2_S3_BUCKET', 'exit_code': out.returncode, 'elapsed_ms': round(elapsed, 2),
+            'message': CONFIGURATION_REFUSAL}
 
 
 def deadline_probe(ctx, mode):
@@ -763,14 +772,15 @@ def rollback(binary, deadlines=True):
                 expect(invalid.status == 400 and invalid.header('cache-control') == 'no-store', 'error no-store contract')
                 expect(p.stop() == 0, 'phase stopped cleanly')
             if number == 1:
-                phase['lifetime_refusal'] = lifetime_refusal(ctx)
+                phase['configuration_refusal'] = configuration_refusal(ctx)
             if deadlines and number > 1:
                 phase['deadlines_ms'] = deadline_probe(ctx, mode)
             phases.append(phase)
             line = 'PASS rollback phase %d %s: cold peers[%s] warm peers[%s]' % (
                 number, mode, peers_text(phase['cold']['peers']), peers_text(phase['warm']['peers']))
-            if 'lifetime_refusal' in phase:
-                line += '; 9s lifetime refused before binding (exit %d)' % phase['lifetime_refusal']['exit_code']
+            if 'configuration_refusal' in phase:
+                line += '; release server2 without SERVER2_S3_BUCKET refused before binding (exit %d)' % (
+                    phase['configuration_refusal']['exit_code'])
             if 'revalidation_with_previous_etag' in phase:
                 hits = sum(1 for v in phase['revalidation_with_previous_etag'].values() if v['status'] == 304)
                 line += '; previous-phase ETag 304=%d/%d' % (hits, len(REHEARSAL))

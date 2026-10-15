@@ -1,7 +1,8 @@
 //! S12 seed importer: publishes a canonical seed file into the S3 bucket named by the
-//! `SERVER2_S3_*` settings (the same settings as the server2 runtime). The endpoint follows the
-//! transport rule: HTTPS, or plain HTTP only to a loopback address. Running it against a
-//! production bucket is a separately authorized operator action.
+//! S3 settings of the server2 runtime (`SERVER2_S3_BUCKET`;
+//! `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `TWA_S3_REGION` from legacy) at the regional AWS
+//! endpoint, read from the process environment and `server2/.env` in the working directory.
+//! Running it against a production bucket is a separately authorized operator action.
 //!
 //! Usage: warning_seed_import SEED_FILE
 use server2::{
@@ -14,18 +15,27 @@ use std::time::Duration;
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        eprintln!("usage: warning_seed_import SEED_FILE (S3 from SERVER2_S3_* settings)");
+        eprintln!(
+            "usage: warning_seed_import SEED_FILE (S3 from AWS_ACCESS_KEY, AWS_SECRET_KEY, TWA_S3_REGION, SERVER2_S3_BUCKET)"
+        );
         std::process::exit(2);
     }
-    let transport = match S3Settings::from_vars(&|name: &str| std::env::var(name).ok())
-        .and_then(|s| s.transport())
-    {
-        Ok(t) => t,
+    // The process environment, then `server2/.env` in the working directory (as server2).
+    let env = match server2::dotenv::DotEnv::load(std::path::Path::new(server2::dotenv::FILE)) {
+        Ok(env) => env,
         Err(e) => {
-            eprintln!("warning_seed_import: invalid S3 settings: {e}");
+            eprintln!("warning_seed_import: {e}");
             std::process::exit(2);
         }
     };
+    let transport =
+        match S3Settings::from_vars(&|name: &str| env.var(name)).and_then(|s| s.transport()) {
+            Ok(t) => t,
+            Err(e) => {
+                eprintln!("warning_seed_import: invalid S3 settings: {e}");
+                std::process::exit(2);
+            }
+        };
     let bytes = match std::fs::read(&args[1]) {
         Ok(b) => b,
         Err(e) => {

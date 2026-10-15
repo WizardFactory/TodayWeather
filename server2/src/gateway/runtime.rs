@@ -3,7 +3,13 @@
 //! `SERVER2_GATEWAY_LEGACY_URL` enables the gateway. `SERVER2_NATIVE_FAMILIES` lists the
 //! families routed to the native backend (`geocode`, `dsf`, `kma`); every other family stays on the
 //! legacy origin, and an unlisted family reads none of its native settings. Removing a family
-//! from the list and restarting is the rollback.
+//! from the list and restarting is the rollback. These two and `SERVER2_WORLD_VERSIONS` are
+//! coexistence routing, removed with legacy retirement; with `SERVER2_S3_BUCKET` (the server2
+//! raw-record bucket) they are the only `SERVER2_*` settings.
+//!
+//! S10e (AK, 2026-10-15): every provider and storage setting is the legacy `server/.env` name
+//! with its legacy value (`server/config/config.js`). Quotas without a legacy setting and every
+//! provider and S3 endpoint are built in ([`Builtins`]); only tests build other values.
 use super::{BackendDispatcher, Gateway, GatewayError, LegacyGeocoder};
 use crate::{
     budget::SystemClock,
@@ -17,6 +23,64 @@ use std::sync::Arc;
 /// input source), below the 16-connection limit of the S3 test peer.
 const S3_IN_FLIGHT: usize = 12;
 type Var<'a> = &'a dyn Fn(&str) -> Option<String>;
+
+/// Built-in provider and S3 roots and geocoder limits. Production uses
+/// [`Builtins::production`]: the legacy production endpoints and the documented quotas; no
+/// setting changes them. Tests and the test-only `loopback_server` example build other values
+/// to reach loopback test peers (and, for the geocoder, to exhaust a small quota).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Builtins {
+    /// S3 endpoint; `None` is the regional AWS endpoint of `TWA_S3_REGION`.
+    pub s3: Option<String>,
+    pub data_go_kr: String,
+    pub kma: String,
+    pub kma_weather: String,
+    /// MFDS food-poisoning root (S15b-3b, keyless; legacy `lib/foodPoisoning.js` `ENDPOINT`).
+    pub mfds: String,
+    /// Visual Crossing Timeline root.
+    pub vc: String,
+    pub google_air: String,
+    pub openweather: String,
+    pub waqi: String,
+    /// Geocoder roots (`https://dapi.kakao.com`, `https://maps.googleapis.com`).
+    pub kakao: String,
+    pub google: String,
+    /// Units per Kakao key and per Google key and UTC day
+    /// ([`crate::geocode::budget::KAKAO_DAILY_UNITS`], [`crate::geocode::budget::GOOGLE_DAILY_UNITS`]).
+    pub geocoder_daily_units: [u64; 2],
+}
+impl Builtins {
+    pub fn production() -> Self {
+        let [google, openweather, waqi] = crate::world::runtime::AIR_ENDPOINTS;
+        Self {
+            s3: None,
+            data_go_kr: "https://apis.data.go.kr/".into(),
+            kma: "https://www.kma.go.kr/".into(),
+            kma_weather: "https://www.weather.go.kr/".into(),
+            mfds: crate::domestic::mfds::DEFAULT_ROOT.into(),
+            vc: crate::world::runtime::VC_ENDPOINT.into(),
+            google_air: google.1.into(),
+            openweather: openweather.1.into(),
+            waqi: waqi.1.into(),
+            kakao: crate::geocode::KAKAO_ENDPOINT.into(),
+            google: crate::geocode::GOOGLE_ENDPOINT.into(),
+            geocoder_daily_units: [
+                crate::geocode::budget::KAKAO_DAILY_UNITS,
+                crate::geocode::budget::GOOGLE_DAILY_UNITS,
+            ],
+        }
+    }
+    /// The KMA family roots (data.go.kr, kma.go.kr, weather.go.kr).
+    pub fn kma_endpoints(&self) -> Result<crate::domestic::family::Endpoints, GatewayError> {
+        crate::domestic::family::Endpoints::new(&self.data_go_kr, &self.kma, &self.kma_weather)
+            .map_err(|_| GatewayError::InvalidConfiguration)
+    }
+}
+impl Default for Builtins {
+    fn default() -> Self {
+        Self::production()
+    }
+}
 
 /// Families routed to the native backend.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -49,44 +113,49 @@ impl NativeFamilies {
         Ok(families)
     }
 }
-/// The process S3 client from `SERVER2_S3_*`, behind one bounded admission.
-pub fn shared_s3(var: Var) -> Result<BoundedS3<HttpS3Transport>, GatewayError> {
-    let settings = S3Settings::from_vars(var).map_err(|_| GatewayError::InvalidConfiguration)?;
+/// The process S3 client from the legacy S3 settings ([`S3Settings`]), behind one bounded
+/// admission.
+pub fn shared_s3(
+    var: Var,
+    builtins: &Builtins,
+) -> Result<BoundedS3<HttpS3Transport>, GatewayError> {
+    let settings = S3Settings::from_vars_at(var, builtins.s3.as_deref())
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
     let transport = settings
         .transport()
         .map_err(|_| GatewayError::InvalidConfiguration)?;
     Ok(BoundedS3::new(transport, S3_IN_FLIGHT))
 }
-fn units(var: Var, name: &str) -> Result<Option<u64>, GatewayError> {
-    var(name)
-        .filter(|v| !v.is_empty())
-        .map(|v| v.parse().map_err(|_| GatewayError::InvalidConfiguration))
-        .transpose()
-}
-/// The native geocoder: existing `GEOCODER_*` keys and endpoints, and per-key daily limits
-/// `SERVER2_GEOCODER_KAKAO_DAILY_UNITS` / `SERVER2_GEOCODER_GOOGLE_DAILY_UNITS` funded in S3.
-pub fn native_geocoder(var: Var, s3: BoundedS3<HttpS3Transport>) -> Result<Geocoder, GatewayError> {
-    let config = GeocoderConfig::from_vars(var).map_err(|_| GatewayError::InvalidConfiguration)?;
+/// The native geocoder: existing `GEOCODER_*` keys, the built-in endpoints and per-key
+/// daily limits ([`Builtins::geocoder_daily_units`]) funded in S3.
+pub fn native_geocoder(
+    var: Var,
+    s3: BoundedS3<HttpS3Transport>,
+    builtins: &Builtins,
+) -> Result<Geocoder, GatewayError> {
+    let [kakao_units, google_units] = builtins.geocoder_daily_units;
+    let config = GeocoderConfig::from_vars_at(var, &builtins.kakao, &builtins.google)
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
     let quota = FundedQuota::for_keys(
         Arc::new(s3),
         Arc::new(SystemClock),
         &config,
-        units(var, "SERVER2_GEOCODER_KAKAO_DAILY_UNITS")?,
-        units(var, "SERVER2_GEOCODER_GOOGLE_DAILY_UNITS")?,
+        Some(kakao_units),
+        Some(google_units),
     )
     .map_err(|_| GatewayError::InvalidConfiguration)?;
     Ok(Geocoder::new(config)
         .map_err(|_| GatewayError::InvalidConfiguration)?
         .with_quota(Arc::new(quota)))
 }
-/// The KMA request-time acquirer: `SERVER2_DATA_GO_KR_KEYS` (a JSON array of data.go.kr keys,
-/// the legacy `DONGNAE_SECRET_KEYS` form) funded with `SERVER2_DATA_GO_KR_DAILY_UNITS` per key
-/// and KST day in S3 (S08); both are required with `kma`. Provider roots are the production
-/// HTTPS roots unless `SERVER2_DATA_GO_KR_BASE_URL`, `SERVER2_KMA_BASE_URL` or
-/// `SERVER2_KMA_WEATHER_BASE_URL` name another (HTTPS, or HTTP to a loopback address).
+/// The KMA request-time acquirer: the legacy data.go.kr key list `DONGNAE_SECRET_KEYS` (a JSON
+/// array, required with `kma`), funded with the built-in
+/// [`crate::domestic::kma::source::observe::DATA_GO_KR_DAILY_UNITS`] per key and KST day in S3
+/// (S08), at the given builtins.
 pub fn kma_acquirer(
     var: Var,
     s3: BoundedS3<HttpS3Transport>,
+    builtins: &Builtins,
 ) -> Result<
     crate::domestic::kma::source::observe::DailyAcquirer<
         crate::providers::HttpProviderTransport,
@@ -96,10 +165,9 @@ pub fn kma_acquirer(
     GatewayError,
 > {
     let keys = crate::domestic::keys::parse_keys(
-        &var("SERVER2_DATA_GO_KR_KEYS").ok_or(GatewayError::InvalidConfiguration)?,
+        &var("DONGNAE_SECRET_KEYS").ok_or(GatewayError::InvalidConfiguration)?,
     );
-    let units =
-        units(var, "SERVER2_DATA_GO_KR_DAILY_UNITS")?.ok_or(GatewayError::InvalidConfiguration)?;
+    let units = crate::domestic::kma::source::observe::DATA_GO_KR_DAILY_UNITS;
     let invalid = |_| GatewayError::InvalidConfiguration;
     crate::domestic::kma::source::observe::DailyAcquirer::new(
         Arc::new(crate::providers::HttpProviderTransport::new(8 * 1024 * 1024).map_err(invalid)?),
@@ -107,52 +175,44 @@ pub fn kma_acquirer(
         Arc::new(s3),
         keys,
         units,
-        kma_endpoints(var)?,
+        builtins.kma_endpoints()?,
         Arc::new(SystemClock),
         Arc::new(crate::domestic::metrics::DomesticMetrics::default()),
     )
     .map_err(|_| GatewayError::InvalidConfiguration)
 }
-fn kma_endpoints(var: Var) -> Result<crate::domestic::family::Endpoints, GatewayError> {
-    let root = |name: &str, default: &str| {
-        var(name)
-            .filter(|v| !v.is_empty())
-            .unwrap_or_else(|| default.to_owned())
-    };
-    crate::domestic::family::Endpoints::new(
-        &root("SERVER2_DATA_GO_KR_BASE_URL", "https://apis.data.go.kr/"),
-        &root("SERVER2_KMA_BASE_URL", "https://www.kma.go.kr/"),
-        &root("SERVER2_KMA_WEATHER_BASE_URL", "https://www.weather.go.kr/"),
-    )
-    .map_err(|_| GatewayError::InvalidConfiguration)
-}
-/// Build the gateway from injected variables. No legacy URL keeps the foundation service.
+/// Build the gateway from injected variables at the production builtins. No legacy URL keeps the
+/// foundation service.
 pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
+    from_vars_at(var, &Builtins::production())
+}
+/// [`from_vars`] at the given builtins (tests and the test-only `loopback_server` example).
+pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>>, GatewayError> {
     let Some(base) = var("SERVER2_GATEWAY_LEGACY_URL") else {
         return Ok(None);
     };
     let families = NativeFamilies::from_vars(var)?;
     let backend = BackendDispatcher::legacy(&base)?;
     let s3 = if families.geocode || families.dsf || families.kma {
-        Some(shared_s3(var)?)
+        Some(shared_s3(var, builtins)?)
     } else {
         None
     };
     let geocoder: Arc<dyn super::Geocoder> = match (&s3, families.geocode) {
-        (Some(s3), true) => Arc::new(native_geocoder(var, s3.clone())?),
+        (Some(s3), true) => Arc::new(native_geocoder(var, s3.clone(), builtins)?),
         _ => Arc::new(LegacyGeocoder::new(&base)?),
     };
     // One process air chain for the world family and the KMA air fallback (S15b-3).
     let air = match &s3 {
         Some(s3) if families.dsf || families.kma => {
-            Some(crate::world::runtime::live_air(var, s3.clone())?)
+            Some(crate::world::runtime::live_air(var, s3.clone(), builtins)?)
         }
         _ => None,
     };
     if let (Some(s3), true, Some(air)) = (s3.clone(), families.dsf, air.clone()) {
         crate::world::runtime::select(
             &backend,
-            crate::world::runtime::build_with_air(var, s3, air)?,
+            crate::world::runtime::build_with_air(var, s3, air, builtins)?,
         )?;
     }
     if let (Some(s3), true) = (s3, families.kma) {
@@ -160,12 +220,12 @@ pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
         // still forward with named reasons until S15b-4. S15b-2 request-time acquisitions use
         // the data.go.kr keys for ASOS and the product geocoder for station coordinates.
         // S15b-3 adds request-time AirKorea
-        // acquisition (`AIRKOREA_SECRET_KEYS`, `SERVER2_AIRKOREA_DAILY_UNITS`) and the air
-        // fallback through the shared air chain; S15b-3b the life index and KASI on the same
-        // data.go.kr acquirer and the keyless MFDS table (production endpoint, no setting).
-        let airkorea = kma_airkorea(var, &s3)?;
-        let daily = Arc::new(kma_acquirer(var, s3.clone())?);
-        let life = kma_life(&s3, daily.clone())?;
+        // acquisition (`AIRKOREA_SECRET_KEYS`) and the air fallback through the shared air chain;
+        // S15b-3b the life index and KASI on the same data.go.kr acquirer and the keyless MFDS
+        // table (production endpoint, no setting).
+        let airkorea = kma_airkorea(var, &s3, builtins)?;
+        let daily = Arc::new(kma_acquirer(var, s3.clone(), builtins)?);
+        let life = kma_life(&s3, daily.clone(), builtins)?;
         let air: Option<Arc<dyn crate::world::AirSource>> =
             air.map(|a| a as Arc<dyn crate::world::AirSource>);
         let source = crate::domestic::kma::source::S3Source::new(
@@ -190,10 +250,11 @@ pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
 fn kma_airkorea(
     var: Var,
     s3: &BoundedS3<HttpS3Transport>,
+    builtins: &Builtins,
 ) -> Result<Option<Arc<dyn crate::domestic::kma::source::live::AirKoreaAcquire>>, GatewayError> {
     use crate::domestic::kma::source::live::{AirKoreaSettings, LiveAirKorea};
-    let Some(settings) =
-        AirKoreaSettings::from_vars(var).map_err(|_| GatewayError::InvalidConfiguration)?
+    let Some(settings) = AirKoreaSettings::from_vars(var, builtins.kma_endpoints()?)
+        .map_err(|_| GatewayError::InvalidConfiguration)?
     else {
         return Ok(None);
     };
@@ -228,9 +289,11 @@ type DailyKma = crate::domestic::kma::source::observe::DailyAcquirer<
 fn kma_life(
     s3: &BoundedS3<HttpS3Transport>,
     daily: Arc<DailyKma>,
+    builtins: &Builtins,
 ) -> Result<Arc<dyn crate::domestic::kma::source::life_live::LifeAcquire>, GatewayError> {
     use crate::domestic::kma::source::life_live::{LifeSettings, LiveLife};
-    let settings = LifeSettings::default();
+    let settings = LifeSettings::with_mfds_root(&builtins.mfds)
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
     let store =
         crate::storage::CatalogStore::new(s3.clone(), crate::storage::CatalogLimits::default())
             .map_err(|_| GatewayError::InvalidConfiguration)?;
@@ -248,8 +311,4 @@ fn kma_life(
         Arc::new(mfds),
         Arc::new(store),
     )))
-}
-/// The process environment entrypoint.
-pub fn configured_gateway() -> Result<Option<Arc<Gateway>>, GatewayError> {
-    from_vars(&|name: &str| std::env::var_os(name).map(|v| v.to_string_lossy().into_owned()))
 }
