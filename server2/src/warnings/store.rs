@@ -107,6 +107,9 @@ impl<T: ObjectTransport> ObjectTransport for Shared<T> {
     async fn get(&self, key: &str, maximum: usize) -> Result<Object, Error> {
         self.0.get(key, maximum).await
     }
+    async fn ready(&self) -> Result<(), Error> {
+        self.0.ready().await
+    }
 }
 impl<T: CatalogTransport> CatalogTransport for Shared<T> {
     async fn get_control(&self, key: &str, maximum: usize) -> Result<ControlObject, Error> {

@@ -13,9 +13,8 @@
   ],
   "s3_settings": [
     "SERVER2_S3_BUCKET (server2-only)",
-    "AWS_ACCESS_KEY",
-    "AWS_SECRET_KEY",
-    "TWA_S3_REGION (default ap-northeast-2; endpoint https://s3.<region>.amazonaws.com/ built in)"
+    "SERVER2_S3_REGION (server2-only; default ap-northeast-2; endpoint https://s3.<region>.amazonaws.com/ built in)",
+    "AWS_ACCESS_KEY and AWS_SECRET_KEY (legacy; both unset or the config.js placeholder: EC2 instance role through IMDSv2)"
   ],
   "weather_family_routing": "legacy HTTP unless the family is listed; SERVER2_WORLD_VERSIONS selects dsf versions",
   "gateway_seconds": 9,

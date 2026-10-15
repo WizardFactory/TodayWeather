@@ -2247,7 +2247,7 @@ ensured). Smokes and tests run processes in an empty working directory and never
 | Concern | Variable | Rule |
 | --- | --- | --- |
 | Listener | `OPENSHIFT_NODEJS_IP`, `OPENSHIFT_NODEJS_PORT`, `PORT` (legacy) | As `config.js`: address default `127.0.0.1`, port `OPENSHIFT_NODEJS_PORT`, else `PORT`, else `3000`; an empty value is unset. Give server2 another port than the legacy origin during coexistence. |
-| S3 | `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `TWA_S3_REGION` (legacy); `SERVER2_S3_BUCKET` (server2) | Region default `ap-northeast-2`; endpoint built in (`https://s3.<region>.amazonaws.com/`); bucket and credentials required when any family is native. The importers use the same settings. |
+| S3 | `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `TWA_S3_REGION` (legacy); `SERVER2_S3_BUCKET` (server2) | Region default `ap-northeast-2`; endpoint built in (`https://s3.<region>.amazonaws.com/`); bucket and credentials required when any family is native. The importers use the same settings. Superseded by [S10f](#s10f-instance-role-credentials-and-the-server2-s3-region-2026-10-15): `SERVER2_S3_REGION` replaces `TWA_S3_REGION`, and unset keys select the EC2 instance role. |
 | data.go.kr | `DONGNAE_SECRET_KEYS` (legacy) | Required with `kma` (ASOS ranges; since S15b-3b also UV, pollen and KASI). Built in: 10,000 units per key and KST day across those services (ASOS hourly/daily development traffic "개발계정 : 10,000", data.go.kr 15057210/15059093). |
 | AirKorea | `AIRKOREA_SECRET_KEYS` (legacy) | Read with `kma`; no usable key: stored records only. Built in: 500 units per key and KST day ("개발계정 : 500", data.go.kr 15073861). |
 | Geocoder | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY` (legacy) | Kakao keys parsed as legacy `keys.parseKeys` (nonempty strings of a JSON array; anything else gives no key). Endpoints built in; legacy's test-only `GEOCODER_*_BASE_URL` are not read. Built in: Kakao 100,000 units per key and UTC day (Kakao quota page, 100,000건 per day), Google 322 per UTC day (Google documents no daily quota; 10,000 free Geocoding events a month ÷ 31). |
@@ -2259,7 +2259,7 @@ Removed: `SERVER2_BIND`, `SERVER2_METRICS_BIND` (metrics listen on loopback at t
 or an ephemeral port with port 0), `SERVER2_WORKER_THREADS`, `SERVER2_BLOCKING_THREADS`,
 `SERVER2_CPU_LIMIT`, `SERVER2_INFLIGHT_LIMIT`, `SERVER2_CACHE_BYTES`, `SERVER2_CONNECTION_LIMIT`,
 `SERVER2_CONNECTION_SECONDS` (built-in defaults 2, 4, 2, 40, 16 MiB, 128 and 9 s, 12 s with the
-gateway; no documented operation needs another value), `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`,
+gateway; no documented operation needs another value), `SERVER2_S3_REGION` (read again since S10f as the server2 bucket region), `SERVER2_S3_ENDPOINT`,
 `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY`, `SERVER2_DATA_GO_KR_KEYS`,
 `SERVER2_DATA_GO_KR_DAILY_UNITS`, `SERVER2_DATA_GO_KR_URL`, `SERVER2_DATA_GO_KR_BASE_URL`,
 `SERVER2_KMA_BASE_URL`, `SERVER2_KMA_WEATHER_BASE_URL`, `SERVER2_AIRKOREA_DAILY_UNITS`,
@@ -2286,3 +2286,73 @@ dotenv parser follows dotenv 10.0.0 cases; the release binary reads `.env` from 
 directory with process precedence; the release smokes run with the new names in empty working
 directories; and the configuration built in-process from the operator's `server2/.env` resolved
 every provider key without printing values.
+
+### S10f instance-role credentials and the server2 S3 region (2026-10-15)
+
+[S10f](../../plans/issue-2759.md) ([spec](../../specs/issue-2759.md), #2759) applies AK's decisions
+of 2026-10-15: server2 has its own Seoul bucket with Versioning and signs S3 requests with an EC2
+instance role instead of static keys. The account root created the bucket
+`tw-server2-141248341265-apne2` (Versioning, SSE-S3 AES256, Block Public Access, BucketOwnerEnforced,
+the [bucket policy template](../../server2/deploy/staging/bucket-policy.template.json)) and the role and
+instance profile `tw-server2-runtime` (trust `ec2.amazonaws.com`; inline policy
+`tw-server2-runtime-s3` = the [role policy template](../../server2/deploy/staging/role-policy.template.json),
+which now includes `geocode/address/v1/*`). Both templates equal the live policies (read back
+2026-10-15). The role is not attached to an instance yet;
+[prerequisites.json](../../server2/deploy/staging/prerequisites.json) records the ARNs.
+
+| Concern | Variable | Rule |
+| --- | --- | --- |
+| Credentials | `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` (legacy) | Each is unset when absent, empty or the legacy `config.js` placeholder `You have to set key of AWS` (the value in the operator's `server/.env`). Both unset: EC2 instance role. Both set: static keys, as before. One without the other: configuration error before binding. |
+| Region | `SERVER2_S3_REGION` (server2) | Default `ap-northeast-2`; selects `https://s3.<region>.amazonaws.com/`. The legacy `TWA_S3_REGION` (`us-east-1`, the 2018 `twa-weather-data` bucket) is not read. |
+| Bucket | `SERVER2_S3_BUCKET` (server2) | Unchanged; `tw-server2-141248341265-apne2` in the operator's `server2/.env`. |
+
+**Instance role.** The built-in IMDSv2 root is `http://169.254.169.254`. A refresh is three requests:
+`PUT /latest/api/token` (`X-aws-ec2-metadata-token-ttl-seconds: 21600`), the role name from
+`/latest/meta-data/iam/security-credentials/`, and that role's credentials document (`Code`
+`Success`, key, secret, session token, `Expiration`). Credentials are fetched on the first S3
+operation, not at startup, and cached; they are refreshed when they expire within five minutes (EC2
+publishes new role credentials at least five minutes before expiry). A failed refresh keeps
+unexpired credentials; refresh attempts after a failure (including one cancelled by a caller's
+deadline), or after credentials that were not rotated yet, are at least 10 s apart. Each IMDS
+request has a 1 s connect and 2 s total timeout, and one refresh takes at most 3 s. Without usable credentials an S3 operation fails as a storage transport
+error before any S3 request; an IMDS status is never reported as an S3 status, so a missing role does
+not look like a missing object. Every S3 caller (raw and catalog stores, budgets, warnings, world
+weather and air, the KMA input source, demand state and the seed importers) draws credentials from
+the transport's `RefreshableCredentials` handle; the gateway shares one transport, so the process
+keeps one credential cache. The raw store and catalog publication and repair obtain credentials
+before their first write (`ObjectTransport::ready`), so a credential failure there is a definite
+`Transport`/`Timeout`, not an ambiguous write. Every PUT then signs with a cached credential
+that outlives its 30-second signed URL by 5 s, without a refresh, so a started write does not
+wait for IMDS (with nothing cached, it obtains credentials like a read). This supersedes the S05
+[records guide](../operations/server2-records.md) statement that callers own instance-role
+acquisition; `RefreshableCredentials::new` and `replace` remain the caller-managed static path.
+Credential values have no Debug output and are never logged or printed.
+Tests reach a loopback IMDS double only through the test-only builders
+`S3Settings::from_vars_with` and `Builtins::instance_metadata`; no variable selects the IMDS root.
+
+**Conditional writes.** Every server2 write already sends the conditions the bucket policy
+requires: raw records `If-None-Match: *`; catalogs and group descriptors `If-None-Match` or
+`If-Match`; `state/demand/grid` and `budgets/v2` documents `If-None-Match` or `If-Match`. Geocode
+address projections (`geocode/address/v1/`) are unconditional PUTs; the bucket policy does not
+require a condition there, and the runtime does not construct that store yet.
+
+**Readiness check.** `cargo run --locked --release --example s3_readiness -- LABEL` (from `server2/`)
+runs server2's real stores against the configured bucket: 404 for HEAD/GET of absent `raw/v2` and
+`index/v2` keys, a conditional raw create and reconciled repeat, two catalog revisions and a cold
+lookup, conditional create, refused repeat (412) and CAS update of `budgets/v2` and
+`state/demand/grid` documents, and, with the instance role, 403 outside the server2 prefixes. It
+writes under source/prefix `s10f-live/LABEL` (plus content-addressed group descriptors), prints
+statuses and keys only, and deletes nothing.
+
+Verification: the Red test `s3_credentials_and_region_follow_s10f` failed on the base (the endpoint
+followed `TWA_S3_REGION`; absent keys were a configuration error). Unit tests run the IMDSv2 client
+against a loopback double (token header, role listing, session token, refresh window, failure and
+cancellation spacing, invalid documents); integration tests write and read a raw record and serve
+the S02 geocode golden with budgets through the S3 test peers with role credentials, and show that
+an IMDS 404 sends no S3 request and is not an absent object. The live check on 2026-10-15 ran
+`s3_readiness` with the operator IAM user against `tw-server2-141248341265-apne2`: 404 for HEAD/GET of
+absent `raw/v2` and `index/v2` keys, conditional raw create and repeat, two catalog revisions with
+two retained versions, budget and demand create/412 repeat/CAS update, and 403 (explicit bucket
+policy deny) for an unconditional `raw/v2` PUT; see the
+[sanitized evidence](../evidence/aws/server2-s3-readiness-2026-10-15.json). Not verified: the real
+IMDS on EC2 and the runtime role's 404/403 statuses, which the same tool checks at deployment.

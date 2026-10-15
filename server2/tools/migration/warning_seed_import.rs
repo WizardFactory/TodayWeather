@@ -1,7 +1,7 @@
 //! S12 seed importer: publishes a canonical seed file into the S3 bucket named by the
-//! S3 settings of the server2 runtime (`SERVER2_S3_BUCKET`;
-//! `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `TWA_S3_REGION` from legacy) at the regional AWS
-//! endpoint, read from the process environment and `server2/.env` in the working directory.
+//! S3 settings of the server2 runtime (`SERVER2_S3_BUCKET`,
+//! `SERVER2_S3_REGION`; `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` from legacy, or the EC2 instance role
+//! when both are unset) at the regional AWS endpoint, read from the process environment and `server2/.env` in the working directory.
 //! Running it against a production bucket is a separately authorized operator action.
 //!
 //! Usage: warning_seed_import SEED_FILE
@@ -16,7 +16,7 @@ async fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
         eprintln!(
-            "usage: warning_seed_import SEED_FILE (S3 from AWS_ACCESS_KEY, AWS_SECRET_KEY, TWA_S3_REGION, SERVER2_S3_BUCKET)"
+            "usage: warning_seed_import SEED_FILE (S3 from SERVER2_S3_BUCKET, SERVER2_S3_REGION; AWS_ACCESS_KEY, AWS_SECRET_KEY or the EC2 instance role)"
         );
         std::process::exit(2);
     }

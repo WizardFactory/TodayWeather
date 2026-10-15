@@ -54,3 +54,7 @@ path = "tools/migration/history_seed_import.rs"
 [[example]]
 name = "station_seed_import"
 path = "tools/migration/station_seed_import.rs"
+
+[[example]]
+name = "s3_readiness"
+path = "tools/s3_readiness.rs"

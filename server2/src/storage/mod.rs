@@ -3,6 +3,7 @@ mod catalog;
 mod catalog_model;
 mod catalog_transport;
 mod codec;
+mod credentials;
 mod settings;
 pub use catalog::{
     CatalogStore, CompleteAcquisition, CompletePage, CompleteSet, DependencyToken, LookupOutcome,
@@ -20,6 +21,7 @@ pub use codec::{
     Envelope, FetchGroupRef, Pagination, Period, PreparedRecord, ProviderKey, RawRecord, RecordId,
     decode, sha256,
 };
+pub use credentials::{METADATA_ROOT, RETRY_AFTER as CREDENTIAL_RETRY_AFTER};
 pub use settings::S3Settings;
 use std::fmt;
 pub use store::{ObjectTransport, PublishOutcome, RawRecordStore};
