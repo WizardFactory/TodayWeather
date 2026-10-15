@@ -143,6 +143,20 @@ fn fixture_urls(set: char) -> [String; 2] {
     };
     [image_url("pm10", day), image_url("pm25", day)]
 }
+/// Image URLs of a cycle (`YYYY/MM/DD`, `HH`).
+fn cycle_urls(day: &str, cycle: &str) -> [String; 2] {
+    ["PM10", "PM2P5"].map(|kind| {
+        format!(
+            "https://www.airkorea.or.kr/dustImage/{day}/{cycle}/09km/AQF.{}.NIER_09_01.{kind}.2days.ani.gif",
+            day.replace('/', "")
+        )
+    })
+}
+/// The URLs a 2026-09-24 05시 or 11시 announcement names: the previous day's 23-cycle (frames from
+/// 09-24 00:00 KST).
+fn near_urls() -> [String; 2] {
+    cycle_urls("2026/09/23", "23")
+}
 /// The pages of one image acquisition: the GIFs of fixture set `set` and the manifest naming
 /// `urls` (their path dates the frames).
 fn image_pages(set: char, urls: &[String; 2]) -> Vec<(Vec<u8>, &'static str)> {
@@ -230,10 +244,10 @@ async fn the_snapshot_answers_the_stored_image_forecast_and_rejects_kaq() {
         announcement.period(),
         "20260924",
         fetched,
-        &image_pages('A', &fixture_urls('A')),
+        &image_pages('A', &near_urls()),
     )
     .await;
-    let urls = fixture_urls('A');
+    let urls = near_urls();
     let expected = expected_fold(&[("2026-09-24 05:00", fetched, 'A', &urls)], NOW);
     let s3 = S3Source::new(
         transport.clone(),
@@ -1016,7 +1030,7 @@ async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
         at05.period(),
         "20260924",
         a_at,
-        &image_pages('A', &fixture_urls('A')),
+        &image_pages('A', &near_urls()),
     )
     .await;
     let all = station_fold(&[]);
@@ -1033,7 +1047,7 @@ async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
         |f| has_rows(&f.by_station("중구")),
     )
     .await;
-    let expected_a = expected_fold(&[("2026-09-24 05:00", a_at, 'A', &fixture_urls('A'))], NOW);
+    let expected_a = expected_fold(&[("2026-09-24 05:00", a_at, 'A', &near_urls())], NOW);
     for n in &names {
         same(&first.by_station(n), &expected_a.by_station(n), n);
     }
@@ -1046,7 +1060,7 @@ async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
         at11.period(),
         "20260924",
         b_at,
-        &image_pages('B', &fixture_urls('B')),
+        &image_pages('B', &cycle_urls("2026/09/24", "05")),
     )
     .await;
     let later = NOW + 30. * 60_000.;
@@ -1065,10 +1079,10 @@ async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
         at23.period(),
         "20260923",
         c_at,
-        &image_pages('B', &fixture_urls('A')),
+        &image_pages('B', &near_urls()),
     )
     .await;
-    let (urls_a, urls_b) = (fixture_urls('A'), fixture_urls('B'));
+    let (urls_a, urls_b) = (near_urls(), cycle_urls("2026/09/24", "05"));
     let expected = expected_fold(
         &[
             ("2026-09-24 05:00", a_at, 'A', &urls_a),
@@ -1127,10 +1141,10 @@ async fn a_new_station_list_decodes_everything_again_at_once() {
         Publication::new(20260924, 500).unwrap().period(),
         "20260924",
         a_at,
-        &image_pages('A', &fixture_urls('A')),
+        &image_pages('A', &near_urls()),
     )
     .await;
-    let expected = expected_fold(&[("2026-09-24 05:00", a_at, 'A', &fixture_urls('A'))], NOW);
+    let expected = expected_fold(&[("2026-09-24 05:00", a_at, 'A', &near_urls())], NOW);
     let names: Vec<String> = stations().into_iter().map(|s| s.0).collect();
     let (seoul_only, all) = (station_fold(&["중구"]), station_fold(&[]));
     let flights = Flights::new(Duration::from_secs(600));
@@ -1226,9 +1240,8 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
     let all = station_fold(&[]);
     // 11:20 KST: the 11시 announcement is expected.
     let now = NOW + 30. * 60_000.;
-    let [pm10, pm25] = fixture_urls('A').map(Some);
-    let cycle12 =
-        || fixture_urls('A').map(|u| Some(u.replace("/2026/10/14/23/", "/2026/10/14/12/")));
+    let [pm10, pm25] = near_urls().map(Some);
+    let cycle12 = || near_urls().map(|u| Some(u.replace("/2026/09/23/23/", "/2026/09/23/12/")));
     let docs = |text: &'static str, urls: [Option<String>; 2]| {
         let [a, b] = urls;
         (text, a, b)
@@ -1300,7 +1313,7 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
         Publication::new(20260924, 500).unwrap().period(),
         "20260924",
         NOW - 4. * 3_600_000.,
-        &image_pages('A', &fixture_urls('A')),
+        &image_pages('A', &near_urls()),
     )
     .await;
     let recorder = Arc::new(Recorder::default());
@@ -1412,7 +1425,7 @@ async fn acquisitions_completed_in_the_same_millisecond_are_both_read() {
     let kind = ("airkorea-image", "airkorea-forecast-image");
     let at = NOW - 4. * 3_600_000.;
     // Non-overlapping dates, so the order of the two does not matter.
-    let (first, second) = (fixture_urls('A'), urls_for("2026/10/20"));
+    let (first, second) = (urls_for("2026/09/21"), urls_for("2026/09/24"));
     publish(
         &store,
         kind,
@@ -1555,5 +1568,79 @@ async fn a_long_animation_is_read_until_its_last_rows_expire() {
         )
         .await;
     }
+    assert_eq!(transport.available(), TEST_PERMITS);
+}
+
+/// An announcement cannot name a later cycle: an image starting after the announcement's next
+/// day 00:00 KST is neither acquired nor folded (server2 safety bound; the read window relies on
+/// it, review S15b3c-R7).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_image_dated_after_its_announcement_is_not_used() {
+    use server2::domestic::airkorea_image::{AirKoreaImageRequest, start_allowed};
+    use server2::domestic::kma::source::air_forecast::Calibration;
+    use server2::domestic::kma::source::forecast_input::ImageForecasts;
+    use server2::domestic::kma::source::live::Flights;
+    use std::sync::atomic::AtomicU64;
+    let at05 = Publication::new(20260924, 500).unwrap();
+    let later = urls_for("2026/09/25");
+    for (urls, allowed) in [
+        (near_urls(), true),
+        (urls_for("2026/09/24"), true),
+        (later.clone(), false),
+    ] {
+        assert_eq!(
+            AirKoreaImageRequest::new(at05, &urls[0], &urls[1], Calibration::defaults()).is_ok(),
+            allowed,
+            "{urls:?}"
+        );
+        assert_eq!(
+            start_allowed(frame_start(&urls[0], "PM10").unwrap(), 20260924),
+            allowed
+        );
+    }
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = store_for(&transport);
+    let at = NOW - 4. * 3_600_000.;
+    publish(
+        &store,
+        ("airkorea-image", "airkorea-forecast-image"),
+        ProviderKey::Named {
+            id: "national".into(),
+        },
+        at05.period(),
+        "20260924",
+        at,
+        &image_pages('A', &later),
+    )
+    .await;
+    // An allowed 11시 acquisition completes later; once it is folded, the rejected one is absent.
+    let b_at = NOW + 20. * 60_000.;
+    publish(
+        &store,
+        ("airkorea-image", "airkorea-forecast-image"),
+        ProviderKey::Named {
+            id: "national".into(),
+        },
+        Publication::new(20260924, 1100).unwrap().period(),
+        "20260924",
+        b_at,
+        &image_pages('B', &near_urls()),
+    )
+    .await;
+    let later = NOW + 30. * 60_000.;
+    let expected = expected_fold(&[("2026-09-24 11:00", b_at, 'B', &near_urls())], later);
+    let all = station_fold(&[]);
+    let flights = Flights::new(Duration::from_secs(600));
+    let generation = Arc::new(AtomicU64::new(0));
+    let images = ImageForecasts::new(transport.clone(), store.clone(), Calibration::defaults());
+    let fold = until(
+        || image_load(&images, later, &all, &flights, &generation),
+        |f| f.has("2026-09-24 11:00"),
+    )
+    .await;
+    assert!(!fold.has("2026-09-24 05:00"));
+    assert_eq!(fold.json(), expected.json());
     assert_eq!(transport.available(), TEST_PERMITS);
 }

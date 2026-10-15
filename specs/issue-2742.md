@@ -307,7 +307,10 @@ assembly: `controllerTown24h` `checkQueryValidation` L68 (absent or `(null)` →
 Where they disagree: `kaq` — legacy answers no forecast; server2 answers AirKorea labelled
 `airkorea` when the store has no KAQ forecast at all (AK). Legacy fetches the provider URL as
 given; server2 fetches its validated path on the built-in root (the same resource). Legacy decodes
-any GIF; server2 bounds the frame descriptors first.
+any GIF; server2 bounds the frame descriptors first. Legacy accepts an image of any date for an
+announcement; server2 rejects (before download, and in the fold) an image whose first frame is
+after the announcement's next day 00:00 KST, which the eight-day read window relies on (parity
+exception, safety bound; review S15b3c-R7).
 
 - Acquisition: keyless `airkorea-image` / `airkorea-forecast-image` / key `national`, period and
   partition of the announcement; both URLs must pass `frameStart` (six-hour cycles 05/11/17/23)

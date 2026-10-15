@@ -41,8 +41,9 @@ use tokio::time::Instant;
 
 const DAY_MS: f64 = 86_400_000.;
 const HOUR_MS: f64 = 3_600_000.;
-/// Image acquisitions read: an announcement of day D names an image of day D (or D-1) whose first
-/// frame is at the latest D+1 00:00 KST and whose last frame at most `MAX_FRAMES - 1` hours later;
+/// Image acquisitions read: an announcement of day D names an image whose first frame is at the
+/// latest D+1 00:00 KST (enforced, `airkorea_image::start_allowed`) and whose last frame at most
+/// `MAX_FRAMES - 1` hours later;
 /// a row lives one more day. So every announcement of the last `ceil(MAX_FRAMES / 24) + 3` KST days
 /// (eight) can still hold rows, and older ones cannot (review S15b3c-R7).
 const DAYS: i64 = (super::gif::MAX_FRAMES as i64 + 23) / 24 + 3;
@@ -457,6 +458,7 @@ async fn read<T: IndexListing + Clone + 'static>(
                 continue;
             }
             let pub_date = stored_pub_date(&records);
+            let date = records[0].envelope.identity.period.local_date;
             let (calibration, coords) = (calibration.clone(), coords.clone());
             let decode = move || {
                 // `getDustImage`: both paths dated by `frameStart`, both images through the
@@ -467,12 +469,20 @@ async fn read<T: IndexListing + Clone + 'static>(
                 for (((code, kind, _), record), url) in
                     CODES.iter().zip(&records).zip(urls.iter().flatten())
                 {
-                    match frame_start(url, kind).and_then(|start| {
-                        Ok((
-                            start,
-                            decode_gif(&record.bytes, &calibration, kind, &coords)?,
-                        ))
-                    }) {
+                    // An image starting after the announcement's next day is not folded (the read
+                    // window would not keep it; see `airkorea_image::start_allowed`).
+                    match frame_start(url, kind)
+                        .and_then(|start| {
+                            image::start_allowed(start, date)
+                                .then_some(start)
+                                .ok_or_else(|| "image after its announcement".to_owned())
+                        })
+                        .and_then(|start| {
+                            Ok((
+                                start,
+                                decode_gif(&record.bytes, &calibration, kind, &coords)?,
+                            ))
+                        }) {
                         Ok((start, v)) => values.push((code, start, v)),
                         Err(_) => failed = true,
                     }

@@ -2249,7 +2249,11 @@ characterized colour's neighbourhood: a largest-channel distance below half the 
 nearest other band); both image URLs must name a six-hour cycle
 `/dustImage/YYYY/MM/DD/HH/09km/AQF.YYYYMMDD.NIER_09_01.{PM10|PM2P5}.2days.ani.gif` (HH 05, 11, 17
 or 23, a real calendar date), whose first frame is HH + 1 KST, and each pollutant keeps its own
-frame count and start (live: 48 frames for the 23-cycle, 54 for the 17-cycle). A station outside
+frame count and start (live: 48 frames for the 23-cycle, 54 for the 17-cycle). **Parity
+exception (server2 safety bound, review S15b3c-R7):** an image whose first frame is after the
+announcement's next day 00:00 KST is rejected before download and never folded (legacy accepts
+any date relationship; live announcements name the previous day's 23-cycle or a same-day cycle,
+which pass). The fold's eight-day read window relies on this bound. A station outside
 the geographic box (`lat <= bottom`, `lon >= right` included) is skipped; otherwise its pixel and
 then rings up to three pixels away inside the map rectangle are searched, and an opaque pixel
 matching that frame's legend exactly, or nearest to one band inside that band's neighbourhood in
@@ -2292,7 +2296,7 @@ forecast that exists keeps priority, including a station it has no rows for.
 **Request time.** A request that reads the forecast (`airForecastSource` absent, `(null)`,
 `airkorea` or `kaq`) loads the station list and the dust forecast and reads the image fold. The
 fold replays the image acquisitions of the last eight KST days (an announcement of day D names an
-image whose first frame is at the latest D+1 00:00 KST, with at most 120 hourly frames, and a row
+image whose first frame is at the latest D+1 00:00 KST, enforced above, with at most 120 hourly frames, and a row
 lives one more day) in completion order as legacy `do` runs; acquisitions completed in the same
 millisecond are told apart by their fetch group. A refresh reads the eight day catalogs (small control objects, no record body) and downloads only the acquisitions it does not
 know, one S06 lookup each (a whole-day lookup would pass the 32 MiB read bound with three
@@ -2331,7 +2335,7 @@ acquisitions (also a late one of the previous day) folded in completion order eq
 without a publication count change, a 23시 announcement kept until its rows expire, two
 acquisitions completed in one millisecond both read, a new station list decoded at once, rejected
 paths (another host, a 12 cycle, a missing PM2.5 path) never fetched and a failed download storing
-nothing, GIFs beyond the decoding bounds and a cyclic LZW stream refused, and the three
+nothing, an image starting after its announcement's next day neither acquired nor folded, GIFs beyond the decoding bounds and a cyclic LZW stream refused, and the three
 `kaq`/`airkorea` cases above.
 
 Live on 2026-10-15 (settings from the operator's `server2/.env` read in-process, never printed;

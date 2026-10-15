@@ -26,19 +26,29 @@ pub struct AirKoreaImageRequest {
     urls: [String; 2],
     calibration: Calibration,
 }
+/// Whether an image whose first frame is `start` (KST wall time in UTC fields) may belong to an
+/// announcement of KST day `date` (`YYYYMMDD`): it starts by the next day 00:00 KST. An
+/// announcement cannot name a later cycle, and the image fold's read window relies on it.
+/// server2 safety bound (legacy accepts any date; such a pair stores nothing here).
+pub fn start_allowed(start: f64, date: u32) -> bool {
+    let (y, m, d) = (date / 10000, date / 100 % 100, date % 100);
+    let day = crate::world::js::days_from_civil(i64::from(y), i64::from(m), i64::from(d));
+    start <= (day + 1) as f64 * 86_400_000.
+}
 impl AirKoreaImageRequest {
     /// Both URLs must be characterized animation paths of their pollutant (`frameStart`); legacy
-    /// rejects the pair otherwise, before any download.
+    /// rejects the pair otherwise, before any download. Each image must start by the day after the
+    /// announcement ([`start_allowed`]).
     pub fn new(
         announcement: Publication,
         pm10: &str,
         pm25: &str,
         calibration: Calibration,
     ) -> Result<Self, super::DomesticError> {
-        if announcement.minute() != 0
-            || frame_start(pm10, "PM10").is_err()
-            || frame_start(pm25, "PM25").is_err()
-        {
+        let dated = |url: &str, kind: &str| {
+            frame_start(url, kind).is_ok_and(|start| start_allowed(start, announcement.date()))
+        };
+        if announcement.minute() != 0 || !dated(pm10, "PM10") || !dated(pm25, "PM25") {
             return Err(super::DomesticError::Invalid("image path"));
         }
         Ok(Self {
