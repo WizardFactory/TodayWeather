@@ -4,10 +4,10 @@
 //!
 //! Per (source, key, date) memory keeps the last examined input digest and the newest stored
 //! revision it saw. An input set already examined costs nothing. A new one lists the date in S3
-//! (another process may have written a newer revision) and writes a revision only when its values
-//! differ from the newest stored revision and its newest input is not older (late inputs
-//! recompute; an older input set never supersedes a newer one). Record work is serialized in a
-//! process and the remembered newest revision never moves back.
+//! (another process may have written a newer revision) and writes a revision when its newest
+//! input is newer than the stored newest revision's (also with equal values, so the stored order
+//! follows the inputs), or as new as it with other values. An older input set never supersedes a
+//! newer one. Record work is serialized in a process and the remembered newest never moves back.
 use super::grid::{self, GridInputs};
 use super::store::SummaryStore;
 use super::transport::SummaryTransport;
@@ -141,8 +141,12 @@ impl<T: SummaryTransport> Recorder<T> {
                 continue;
             };
             let values = s.values_sha256();
+            // Newer inputs are always recorded (also with equal values), so the stored newest
+            // revision carries the newest input time and an older input set, from this or
+            // another process, can never supersede it.
             let keep = newest.as_ref().is_some_and(|(name, digest)| {
-                *digest == values || name.latest > s.inputs.latest_fetched_ms
+                name.latest > s.inputs.latest_fetched_ms
+                    || (name.latest == s.inputs.latest_fetched_ms && *digest == values)
             });
             let newest = if keep {
                 report.unchanged += 1;

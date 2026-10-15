@@ -85,9 +85,9 @@ async fn recorder_writes_late_revisions_and_never_supersedes_newer_inputs() {
     let again = record(&recorder, 100, 20.).await;
     assert_eq!((again.written.len(), again.unchanged), (0, 1));
     assert_eq!(t.calls(), calls);
-    // A late input that leaves the values unchanged writes nothing.
+    // A late input with unchanged values is recorded too: the newest input time is stored.
     let same = record(&recorder, 150, 20.).await;
-    assert_eq!(same.written.len(), 0);
+    assert_eq!(same.written.len(), 1);
     // A late input that changes the values writes a newer revision.
     let late = record(&recorder, 200, 23.).await;
     assert_eq!(late.written.len(), 1);
@@ -103,13 +103,13 @@ async fn recorder_writes_late_revisions_and_never_supersedes_newer_inputs() {
     // An older input set with other values never supersedes it.
     let older = record(&recorder, 120, 25.).await;
     assert_eq!(older.written.len(), 0);
-    // A cold process reads the newest revision first and writes nothing for equal values.
+    // A cold process reads the newest revision first: the same inputs write nothing.
     let cold = Recorder::new(t.clone());
     let puts = t.puts.load(Ordering::SeqCst);
-    let report = record(&cold, 300, 23.).await;
+    let report = record(&cold, 200, 23.).await;
     assert_eq!(report.written.len(), 0);
     assert_eq!(t.puts.load(Ordering::SeqCst), puts);
-    assert_eq!(t.keys().len(), 2, "two revisions retained, none deleted");
+    assert_eq!(t.keys().len(), 3, "every revision retained, none deleted");
 }
 
 #[tokio::test]
@@ -209,4 +209,40 @@ async fn a_revision_written_by_another_recorder_is_seen_before_skipping() {
         .unwrap();
     assert_eq!(newest.name.latest, 400, "{x:?} {y:?}");
     assert_eq!(newest.summary.value("taMax"), Some(21.));
+}
+
+#[tokio::test]
+async fn newer_inputs_with_equal_values_keep_older_inputs_from_superseding() {
+    let now = kst(20261015, 1200);
+    let candidates = |fetched: u64, ta_max: f64| -> Vec<server2::summary::Summary> {
+        Recorder::<Arc<MemorySummaries>>::candidates(
+            &inputs_at(fetched),
+            &[day_row("20261014", 24., ta_max, 10.)],
+            now,
+        )
+    };
+    let key = server2::summary::SummaryKey::Grid { town: town() };
+    // One recorder, and two recorders (another process with an older view).
+    for split in [false, true] {
+        let t = Arc::new(MemorySummaries::new());
+        let (a, b) = (Recorder::new(t.clone()), Recorder::new(t.clone()));
+        let late = if split { &b } else { &a };
+        a.record_now(candidates(100, 20.), now, deadline()).await;
+        // Newer inputs, same values X: recorded, so the newest input time is stored.
+        let x = a.record_now(candidates(400, 20.), now, deadline()).await;
+        assert_eq!(x.written.len(), 1);
+        // An older input set (t300) with other values Y processed afterwards never wins.
+        let y = late.record_now(candidates(300, 25.), now, deadline()).await;
+        assert_eq!(y.written.len(), 0, "split={split}");
+        let newest = a
+            .store()
+            .newest(&key, 20261014, deadline())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (newest.name.latest, newest.summary.value("taMax")),
+            (400, Some(20.))
+        );
+    }
 }

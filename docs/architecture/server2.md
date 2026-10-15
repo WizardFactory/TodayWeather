@@ -2530,8 +2530,9 @@ the history answer is built also blocks recording. After a natively served respo
 (a JSON copy taken before later steps mutate them; the response is unchanged) to the recorder, which
 runs outside the request (two tasks, serialized, 30 s each; more are dropped and repeated by a later
 request). Per source, key and date it skips an input digest it already examined; a new digest lists
-the date in S3 (another process may have written), and a new revision is written only when the values
-differ from the newest stored revision and its newest input is not older. A late
+the date in S3 (another process may have written), and a new revision is written when its newest
+input is newer than the stored newest revision's (also with equal values, so the stored order follows
+the inputs) or as new with other values. An older input set never supersedes a newer one. A late
 input therefore recomputes the day; an older input set never supersedes a newer one.
 
 S16 also changes one S15b-2 behavior: a station-page day whose `aws-hourly` or `city-obs` catalog
@@ -2548,10 +2549,10 @@ when newer records give other values; the VC provider is never called). The firs
 wins. A failed S3 read, a provider failure or another lookup's unfinished acquisition at the deadline
 returns an error rather than a lower-priority answer; `03` means absent.
 
-**Load (estimates, not measured).** A town request with new inputs examines at most 12 candidates;
-a cold process lists and reads at most one revision per candidate. A town-day typically changes its
-values when its `2400` hour, late station pages and the ASOS fill arrive, so a few revisions of
-about 1 KiB each: 2,000 requested towns at 3 revisions a day give about 2.2 M objects and 2.2 GB a
+**Load (estimates, not measured).** A town request with new inputs examines at most 12 candidates,
+each with one LIST and at most one GET. After a day ends, only a few new inputs concern it (its
+`2400` hour, late station pages, ASOS ranges, a registry change; a process start also restarts the
+registry instant), so a few revisions of about 1 KiB each: 2,000 requested towns at 3 revisions a day give about 2.2 M objects and 2.2 GB a
 year. Unit prices are not assumed. An on-demand ASOS range is one data.go.kr call under the S08
 `DONGNAE_SECRET_KEYS` budget. S16 uses no local disk (the 2026-10-15 disk-cache rule is not
 needed): the recorder keeps at most 65,536 memory entries of a few hundred bytes (about 15 MiB at
