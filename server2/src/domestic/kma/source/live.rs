@@ -53,7 +53,19 @@ pub trait AirKoreaAcquire: Send + Sync + 'static {
         &self,
         request: AirKoreaRequest,
     ) -> BoxFuture<'static, Result<Option<Period>, String>>;
+    /// S15b-3c: the two forecast images of one announcement (keyless). Ok(Some(period)): the
+    /// group was published.
+    fn acquire_images(
+        &self,
+        request: crate::domestic::airkorea_image::AirKoreaImageRequest,
+    ) -> BoxFuture<'static, Result<Option<Period>, String>> {
+        let _ = request;
+        Box::pin(async { Ok(None) })
+    }
 }
+/// The longest owned image acquisition: two legacy-unbounded GETs (the keyless transport bounds
+/// each attempt at 30 s) and the publication of about 10 MB.
+pub const IMAGE_CALL_BUDGET: Duration = Duration::from_secs(60);
 
 /// Static provider settings of the AirKorea acquirer.
 #[derive(Clone)]
@@ -227,6 +239,27 @@ where
         *day = Some((window, acquirer.clone()));
         Ok(acquirer)
     }
+    async fn run_images(
+        &self,
+        request: crate::domestic::airkorea_image::AirKoreaImageRequest,
+    ) -> Result<Option<Period>, String> {
+        let acquirer = self.acquirer().await?;
+        let outcome = acquirer
+            .acquire_airkorea_images(&request, Instant::now() + IMAGE_CALL_BUDGET)
+            .await
+            .map_err(|e| e.to_string())?;
+        match outcome {
+            Acquired::Complete(a) => {
+                let period = request.period();
+                self.store
+                    .publish(a.declaration, a.records, Instant::now() + PUBLISH_BUDGET)
+                    .await
+                    .map_err(|e| format!("publication: {e}"))?;
+                Ok(Some(period))
+            }
+            Acquired::NotPublished | Acquired::NoData | Acquired::Stale(_) => Ok(None),
+        }
+    }
     async fn run(&self, request: AirKoreaRequest) -> Result<Option<Period>, String> {
         let acquirer = self.acquirer().await?;
         let outcome = acquirer
@@ -262,6 +295,13 @@ where
     ) -> BoxFuture<'static, Result<Option<Period>, String>> {
         let inner = self.inner.clone();
         Box::pin(async move { inner.run(request).await })
+    }
+    fn acquire_images(
+        &self,
+        request: crate::domestic::airkorea_image::AirKoreaImageRequest,
+    ) -> BoxFuture<'static, Result<Option<Period>, String>> {
+        let inner = self.inner.clone();
+        Box::pin(async move { inner.run_images(request).await })
     }
 }
 

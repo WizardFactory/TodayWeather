@@ -178,6 +178,9 @@ pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
         )
         .map_err(|_| GatewayError::InvalidConfiguration)?
         .with_air(airkorea, air)
+        .with_image_calibration(
+            crate::domestic::kma::source::air_forecast::Calibration::from_vars(var),
+        )
         .with_life(Some(life));
         crate::domestic::kma::backend::select_native(&backend, Arc::new(source))?;
     }
@@ -199,7 +202,8 @@ fn kma_airkorea(
     // only for its own bound.
     let funded = crate::domestic::kma::source::live::airkorea_transport()
         .map_err(|_| GatewayError::InvalidConfiguration)?;
-    let public = crate::providers::HttpPublicTransport::new(2 * 1024 * 1024)
+    // The keyless transport fetches the forecast GIFs (about 5 MB each, S15b-3c).
+    let public = crate::providers::HttpPublicTransport::new(8 * 1024 * 1024)
         .map_err(|_| GatewayError::InvalidConfiguration)?;
     let store =
         crate::storage::CatalogStore::new(s3.clone(), crate::storage::CatalogLimits::default())

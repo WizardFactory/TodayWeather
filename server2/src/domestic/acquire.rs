@@ -1,6 +1,7 @@
 //! Funded data.go.kr page acquisition and keyless KMA web acquisition into one checked
 //! `resolver::Acquisition`. Publication through S06 (O-9) remains the caller's step.
 use super::airkorea::AirKoreaRequest;
+use super::airkorea_image::AirKoreaImageRequest;
 use super::family::{DataGoKrRequest, Endpoints, Service, WebRequest};
 use super::format::{Expect, PageReport, PageVerdict, WebVerdict, inspect_page, inspect_web};
 use super::metrics::{CallGuard, DomesticMetrics};
@@ -796,6 +797,78 @@ where
             declaration,
             records,
         }))
+    }
+
+    /// Acquire the two AirKorea forecast images of one announcement (S15b-3c): keyless GETs of
+    /// the provider's image URLs, HTTP 200 only, each a GIF of the accepted logical screen. Both
+    /// form one group (page 1 PM10, page 2 PM2.5); a failure of either stores nothing (legacy
+    /// `getDustImage` stops at the first error).
+    pub async fn acquire_airkorea_images(
+        &self,
+        request: &AirKoreaImageRequest,
+        deadline: Instant,
+    ) -> Result<Acquired, DomesticError> {
+        let mut bodies = Vec::new();
+        for url in request.urls() {
+            let target =
+                PublicRequest::new(url.clone()).map_err(|_| DomesticError::Invalid("endpoint"))?;
+            let _admission = timeout_at(deadline, self.public_admission.clone().acquire_owned())
+                .await
+                .map_err(|_| DomesticError::Deadline)?
+                .map_err(|_| DomesticError::Invalid("admission"))?;
+            self.metrics.public_attempt();
+            let response = match timeout_at(deadline, self.public.fetch(&target)).await {
+                Err(_) => return Err(DomesticError::Deadline),
+                Ok(Ok(response)) => response,
+                Ok(Err(ProviderTransportError::Invalid)) => {
+                    return Err(DomesticError::Invalid("endpoint"));
+                }
+                Ok(Err(ProviderTransportError::Transport)) => {
+                    return Err(DomesticError::Transport);
+                }
+                Ok(Err(_)) => return Err(DomesticError::Provider(Disposition::Rejected)),
+            };
+            if response.status != 200 {
+                return Err(DomesticError::Provider(Disposition::Rejected));
+            }
+            let bytes = Arc::<[u8]>::from(response.body);
+            let (view, size) = (bytes.clone(), request.size());
+            let valid = self
+                .blocking(deadline, move || {
+                    super::airkorea_image::valid_image(&view, size)
+                })
+                .await?;
+            if !valid {
+                return Err(DomesticError::Invalid("INVALID_IMAGE"));
+            }
+            bodies.push((bytes, response.status, response.content_type));
+        }
+        let fetched = self.now_ms()?;
+        let pages = bodies.len() as u32;
+        let records = bodies
+            .into_iter()
+            .enumerate()
+            .map(|(i, (bytes, status, content))| {
+                RawRecord::new(
+                    super::airkorea_image::SOURCE,
+                    super::airkorea_image::KIND,
+                    &AirKoreaImageRequest::provider_key(),
+                    request.period(),
+                    fetched,
+                    status,
+                    content_type(&content),
+                    Some(Pagination {
+                        page: i as u32 + 1,
+                        pages,
+                        complete: true,
+                    }),
+                    bytes,
+                    &self.limits.raw,
+                )
+                .map_err(DomesticError::Storage)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        self.group(records, &request.partition())
     }
 
     /// Acquire the keyless MFDS food-poisoning table (S15b-3b): one attempt inside the legacy

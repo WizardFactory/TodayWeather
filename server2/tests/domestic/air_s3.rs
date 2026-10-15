@@ -189,6 +189,7 @@ async fn air_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
                 "서울특별시",
                 "종로구",
                 false,
+                false,
                 now,
                 deadline(),
             )
@@ -221,7 +222,15 @@ async fn air_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
         replayed += 1;
         let (region, city) = (text(at(q, &["region"])), text(at(q, &["city"])));
         let answers = dust_reader
-            .load(&town(37.57, 126.98), &region, &city, true, now, deadline())
+            .load(
+                &town(37.57, 126.98),
+                &region,
+                &city,
+                true,
+                false,
+                now,
+                deadline(),
+            )
             .await;
         let (args, answer) = answers.dust.unwrap();
         assert_eq!(args, (region.clone(), city.clone(), date.clone()));
@@ -445,6 +454,7 @@ async fn a_missing_national_dataset_is_acquired_once_and_published_before_use() 
             "서울특별시",
             "중구",
             false,
+            false,
             now,
             Instant::now() + Duration::from_secs(3)
         ),
@@ -452,6 +462,7 @@ async fn a_missing_national_dataset_is_acquired_once_and_published_before_use() 
             &jongno,
             "서울특별시",
             "종로구",
+            false,
             false,
             now,
             Instant::now() + Duration::from_secs(3)
@@ -485,7 +496,15 @@ async fn a_missing_national_dataset_is_acquired_once_and_published_before_use() 
     // A cold reader serves the published records without the provider.
     let cold = AirInputs::new(transport.clone(), store.clone());
     let again = cold
-        .load(&seoul, "서울특별시", "중구", false, now_ms(), deadline())
+        .load(
+            &seoul,
+            "서울특별시",
+            "중구",
+            false,
+            false,
+            now_ms(),
+            deadline(),
+        )
         .await;
     same(
         again.arpltn.as_ref().unwrap(),
@@ -516,6 +535,7 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
             "서울특별시",
             "중구",
             false,
+            false,
             now_ms(),
             Instant::now() + Duration::from_secs(3),
         )
@@ -538,6 +558,7 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
             &seoul,
             "서울특별시",
             "중구",
+            false,
             false,
             later,
             Instant::now() + Duration::from_millis(800),
@@ -571,6 +592,7 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
             "서울특별시",
             "중구",
             false,
+            false,
             later,
             Instant::now() + Duration::from_secs(3),
         )
@@ -584,7 +606,15 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
     // A fresh reader serves the published value as well.
     let cold = AirInputs::new(transport.clone(), store.clone());
     let restored = cold
-        .load(&seoul, "서울특별시", "중구", false, later, deadline())
+        .load(
+            &seoul,
+            "서울특별시",
+            "중구",
+            false,
+            false,
+            later,
+            deadline(),
+        )
         .await;
     assert_eq!(pm10(restored.arpltn.as_ref().unwrap()), Some(70.));
 }
@@ -628,6 +658,7 @@ async fn every_read_ends_by_the_request_deadline() {
             "서울특별시",
             "중구",
             true,
+            false,
             1_791_955_500_000.,
             Instant::now() + Duration::from_millis(300),
         )
@@ -664,6 +695,7 @@ async fn the_hourly_capture_acquires_the_current_hour_while_demand_lasts() {
             &town(37.5657, 126.9769),
             "서울특별시",
             "중구",
+            false,
             false,
             past,
             deadline(),
@@ -721,6 +753,7 @@ async fn cold_answer(
             "서울특별시",
             "중구",
             false,
+            false,
             now_ms(),
             deadline(),
         )
@@ -771,6 +804,7 @@ async fn the_air_fallback_answers_when_no_station_has_a_value() {
             "서울특별시",
             "중구",
             false,
+            false,
             now,
             deadline(),
         )
@@ -799,6 +833,7 @@ async fn the_air_fallback_answers_when_no_station_has_a_value() {
             &town(37.5657, 126.9769),
             "서울특별시",
             "중구",
+            false,
             false,
             now,
             Instant::now() + Duration::from_millis(600),
@@ -1160,7 +1195,15 @@ async fn a_failed_refresh_answers_with_the_last_successful_fold() {
     let seoul = town(37.5657, 126.9769);
     let deadline3 = || Instant::now() + Duration::from_secs(3);
     let warm = inputs
-        .load(&seoul, "서울특별시", "중구", false, now_ms(), deadline3())
+        .load(
+            &seoul,
+            "서울특별시",
+            "중구",
+            false,
+            false,
+            now_ms(),
+            deadline3(),
+        )
         .await;
     let warm = warm.arpltn.unwrap();
     assert!(warm.get("arpltn").is_some());
@@ -1174,11 +1217,27 @@ async fn a_failed_refresh_answers_with_the_last_successful_fold() {
         .unwrap();
     let later = now_ms() + 3_600_000.;
     let _ = inputs
-        .load(&seoul, "서울특별시", "중구", false, later, deadline3())
+        .load(
+            &seoul,
+            "서울특별시",
+            "중구",
+            false,
+            false,
+            later,
+            deadline3(),
+        )
         .await;
     // The next request's refresh fails as well: it answers with the last successful folds.
     let answer = inputs
-        .load(&seoul, "서울특별시", "중구", false, later, deadline3())
+        .load(
+            &seoul,
+            "서울특별시",
+            "중구",
+            false,
+            false,
+            later,
+            deadline3(),
+        )
         .await;
     let arpltn = answer.arpltn.expect("last successful fold");
     assert_eq!(items_of(arpltn.get("stnList").unwrap()).len(), 3);
@@ -1308,6 +1367,7 @@ async fn a_forecast_run_keeps_the_announcement_chosen_before_the_call() {
             "서울특별시",
             "종로구",
             true,
+            false,
             now,
             deadline(),
         )
@@ -1324,6 +1384,7 @@ async fn a_forecast_run_keeps_the_announcement_chosen_before_the_call() {
             "서울특별시",
             "종로구",
             true,
+            false,
             kst_ms(20261014, 1200),
             deadline(),
         )
@@ -1351,6 +1412,7 @@ async fn a_failed_forecast_refresh_answers_with_the_last_successful_fold() {
             "서울특별시",
             "종로구",
             true,
+            false,
             now,
             deadline(),
         )
@@ -1368,6 +1430,7 @@ async fn a_failed_forecast_refresh_answers_with_the_last_successful_fold() {
             "서울특별시",
             "종로구",
             true,
+            false,
             now,
             deadline(),
         )
@@ -1384,6 +1447,7 @@ async fn a_failed_forecast_refresh_answers_with_the_last_successful_fold() {
             "서울특별시",
             "종로구",
             true,
+            false,
             now,
             deadline(),
         )

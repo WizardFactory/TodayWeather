@@ -1,0 +1,45 @@
+{
+  "task": "S15b-3c",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-3c.json",
+    "server2/src/domestic/kma/source/",
+    "server2/src/domestic/airkorea_image.rs",
+    "server2/src/domestic/mod.rs",
+    "server2/src/domestic/acquire.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b governing intent record: the S15b-3c slice and the AK decisions of 2026-10-15; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b specification: S15b-3c AirKorea image forecast; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b execution plan: S15b-3c scenarios, checks and live-call record; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S15b-3c section"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6183405303",
+  "path_notes": {
+    "server2/src/domestic/kma/source/": "new gif.rs (omggif GifReader port, as get-pixels 3.3.2 decodes), air_forecast.rs (calibration, colour tables from the live legend, getDustInfo, ArpltnHourlyForecast fold and reader); airkorea.rs keeps imageUrl1..9 of the dust forecast; air_input.rs/live.rs acquire the images; mod.rs answers air_forecast",
+    "server2/src/domestic/airkorea_image.rs": "new keyless AirKorea forecast-image acquisition (the two GIFs of one announcement as one group)",
+    "server2/src/domestic/mod.rs": "shared: registers the airkorea_image module",
+    "server2/src/domestic/acquire.rs": "shared S13 file: DomesticAcquirer::acquire_airkorea_images",
+    "server2/src/gateway/runtime.rs": "shared: the image calibration from the legacy AIRKOREA_KOREA_IMAGE_* names (deployed values as defaults)",
+    "server2/tests/domestic/": "air_forecast.rs and air_forecast_s3.rs tests, fixtures/air_forecast.json.gz (pinned legacy oracle with synthetic GIFs) and fixtures/AIR-FORECAST-PROVENANCE.md"
+  }
+}

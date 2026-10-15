@@ -19,10 +19,13 @@
 //! S15b-3b adds the area numbers (repository data), the life index, KASI rise/set and MFDS food
 //! poisoning from national datasets with owned acquisitions ([`life`], [`kasi`], [`mfds`],
 //! [`life_input`], [`life_live`]). The image forecasts (`air_forecast`, S15b-3c) still forward.
+pub mod air_forecast;
 pub mod air_input;
 pub mod airkorea;
 pub mod asos;
 mod doc;
+pub mod forecast_input;
+pub mod gif;
 mod grid;
 pub mod html;
 mod items;
@@ -192,6 +195,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         air: Option<Arc<dyn crate::world::AirSource>>,
     ) -> Self {
         self.air = self.air.with_acquire(acquire).with_air(air);
+        self
+    }
+    /// S15b-3c: the AirKorea image calibration (the legacy `AIRKOREA_KOREA_IMAGE_*` settings with
+    /// the deployed values as defaults).
+    pub fn with_image_calibration(mut self, calibration: air_forecast::Calibration) -> Self {
+        self.air = self.air.with_calibration(calibration);
         self
     }
     /// S15b-3b: owned life-index, KASI and MFDS acquisitions (None: stored records only).
@@ -487,6 +496,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             (folded, history)
         };
         let dust_wanted = air_input::airkorea_forecast_requested(&request.query);
+        let image_wanted = air_input::image_forecast_requested(&request.query);
         let (zones, (current, shortest, short, rss), (stations, history), air) = tokio::join!(
             self.zones(now, deadline),
             async {
@@ -498,8 +508,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 )
             },
             observations,
-            self.air
-                .load(&town, &region, &city, dust_wanted, now, deadline),
+            self.air.load(
+                &town,
+                &region,
+                &city,
+                dust_wanted,
+                image_wanted,
+                now,
+                deadline
+            ),
         );
         let zones = zones?;
         let mut models = HashMap::new();
@@ -745,9 +762,6 @@ fn list(docs: &[Doc]) -> OrderedJson {
 fn number(v: &Value) -> Option<f64> {
     v.as_f64()
 }
-fn not_sourced(method: &str, slice: &str) -> ! {
-    unavailable(format!("{method} is not sourced yet ({slice})"))
-}
 impl KmaStore for Snapshot {
     fn db_version(&self) -> DbVersion {
         DbVersion::V2
@@ -884,8 +898,25 @@ impl KmaStore for Snapshot {
             _ => unavailable("air_fallback for a coordinate the snapshot did not load"),
         }
     }
-    fn air_forecast(&self, _: &str, _: &Value) -> StoreResult {
-        not_sourced("air_forecast", "S15b-3")
+    /// `getForecast(stationName)` of the AirKorea image forecast; KAQ has no forecast (its source
+    /// is gone, issue #2742), so `kaq` is the legacy rejection [`crate::domestic::kma::NO_KAQ_FORECAST`].
+    fn air_forecast(&self, source: &str, station: &Value) -> StoreResult {
+        match source {
+            "kaq" => Err(StoreError(crate::domestic::kma::NO_KAQ_FORECAST.into())),
+            "airkorea" => {
+                let Some(hourly) = self.air.hourly.as_ref() else {
+                    unavailable("air_forecast for a request that did not load it");
+                };
+                // `find({stationName})`: Mongoose casts a number to its string.
+                let name = match station {
+                    Value::String(s) => s.clone(),
+                    Value::Number(n) => n.to_string(),
+                    _ => return Ok(OrderedJson::Array(Vec::new())),
+                };
+                Ok(hourly.by_station(&name))
+            }
+            _ => unavailable("air_forecast for an unknown source"),
+        }
     }
     /// `kasiRiseSet.getRiseSetList(geocode, dates)` from the stored documents; `[]` until the
     /// first complete KASI read (legacy then computes rise/set itself).
