@@ -624,7 +624,17 @@ fn summary_inputs(
         None | Some("station-unavailable") => {}
         Some(_) => return None,
     }
-    for page in folded?.pages.iter() {
+    let folded = folded?;
+    // The station registry decides station selection and the ASOS mapping of every date.
+    let (registry, since) = folded.registry_id.clone()?;
+    ids.push(InputId {
+        family: "station-registry".into(),
+        start_ms: i64::MIN / 2,
+        end_ms: i64::MAX / 2,
+        fetched_at_ms: since.max(0.) as u64,
+        content_sha256: registry,
+    });
+    for page in folded.pages.iter() {
         let t = schedule::to_ms(page.hour);
         ids.push(InputId {
             family: page.kind.to_owned(),

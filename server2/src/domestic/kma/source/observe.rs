@@ -136,6 +136,10 @@ pub struct Folded {
     pub national: Arc<HashMap<String, Vec<(f64, Doc)>>>,
     /// S16: the hourly and city pages this fold applied (input identities).
     pub pages: Arc<Vec<PageId>>,
+    /// S16: the registry's content hash and the instant it first appeared in this process (the
+    /// seed, every window page and the station geocodes decide station selection and the ASOS
+    /// mapping of every date).
+    pub registry_id: Option<(String, f64)>,
 }
 /// One station page a fold applied: its kind (`aws-hourly`, `city-obs`), hour, fetch instant and
 /// raw SHA-256.
@@ -218,6 +222,10 @@ struct State {
     asos_failed: HashMap<String, std::time::Instant>,
     /// Stations with a recovery run in progress (S16 completeness).
     asos_running: std::collections::HashSet<String>,
+    /// The latest registry seed read failed (S16 completeness).
+    seed_failed: bool,
+    /// Content hash of the last folded registry and the request instant it first appeared.
+    registry_id: Option<(String, f64)>,
     /// The hourly part of the last fold (registry, hourly rows, national rows).
     hourly_fold: Option<HourlyFold>,
 }
@@ -550,7 +558,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             s.pages.failed_days.retain(|d| *d >= first.date());
         }
         // The newest registry seed, if one was imported.
-        if let Some(seed) = self.read_seed(now_ms, deadline).await {
+        let seed = self.read_seed(now_ms, deadline).await;
+        // S16: a failed seed read leaves the registry unproven (the previous seed stays in use).
+        self.state().seed_failed = seed.is_err();
+        if let Ok(Some(seed)) = seed {
             let mut s = self.state();
             if s.seed
                 .as_ref()
@@ -610,7 +621,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// The newest imported seed that parses and was exported after the carried one: partitions
     /// (export days) newest first, acquisitions newest first; a corrupt or older import is
     /// skipped. None keeps the seed in use (the carried one when nothing qualifies).
-    async fn read_seed(&self, now_ms: i64, deadline: Instant) -> Option<Vec<Doc>> {
+    async fn read_seed(&self, now_ms: i64, deadline: Instant) -> Result<Option<Vec<Doc>>, ()> {
         use super::seed;
         let carried = seed::embedded().exported_at_ms;
         let months = super::history_months(now_ms as f64);
@@ -618,13 +629,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             .reader
             .partitions(seed::SOURCE, seed::KIND, &seed::key(), &months, deadline)
             .await
-            .ok()?;
+            .map_err(|_| ())?;
         for partition in parts.iter().rev() {
             let mut acquisitions = self
                 .reader
                 .raw(seed::SOURCE, seed::KIND, &seed::key(), partition, deadline)
                 .await
-                .ok()?;
+                .map_err(|_| ())?;
             acquisitions.sort_by_key(|a| {
                 std::cmp::Reverse(a.first().map_or(0, |r| r.envelope.identity.fetched_at_ms))
             });
@@ -634,11 +645,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     .and_then(|r| seed::parse(&r.bytes).ok())
                     .filter(|s| s.exported_at_ms > carried)
                 {
-                    return Some(parsed.docs);
+                    return Ok(Some(parsed.docs));
                 }
             }
         }
-        None
+        Ok(None)
     }
     fn ensure_minute(
         self: &Arc<Self>,
@@ -889,13 +900,29 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         })
         .await
         .unwrap_or_default();
-        self.state().folded = Some(Arc::new(Folded {
+        let digest = {
+            let mut bytes = Vec::new();
+            for d in hourly_fold.registry.docs() {
+                bytes.extend_from_slice(&d.json().to_bytes());
+                bytes.push(b'\n');
+            }
+            crate::storage::sha256(&bytes)
+        };
+        let mut s = self.state();
+        let registry_id = match &s.registry_id {
+            Some((hash, since)) if *hash == digest => (digest, *since),
+            _ => (digest, now_ms as f64),
+        };
+        s.registry_id = Some(registry_id.clone());
+        s.folded = Some(Arc::new(Folded {
             registry: hourly_fold.registry.clone(),
             hourly: hourly_fold.hourly.clone(),
             minute: Arc::new(minutes),
             national: hourly_fold.national.clone(),
             pages: hourly_fold.pages.clone(),
+            registry_id: Some(registry_id),
         }));
+        drop(s);
         if !hourly_fold.unresolved.is_empty() {
             self.geocode(hourly_fold.unresolved.clone());
         }
@@ -1260,6 +1287,7 @@ impl<T> Observations<T> {
         // The snapshot's fold must be the current one: a newer fold or newer pages are inputs
         // the snapshot did not use.
         if s.pages.dirty
+            || s.seed_failed
             || s.pages.minute_read.is_none()
             || !s.folded.as_ref().is_some_and(|f| Arc::ptr_eq(f, folded))
         {

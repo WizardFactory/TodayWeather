@@ -59,7 +59,9 @@ from published S06 catalogs (otherwise the request forwards anyway); the station
 used is still current, every day of the page window was read and its latest read did not fail, and
 no S3 load, fold, geocoding or unfolded page is pending; the history answer has no `cache-read-*`
 reason; and the ASOS acquisitions it used were read under the same lock as "no recovery run in
-flight, no failed read". Station pages are identified by kind, hour, fetch time and raw hash.
+flight, no failed read"; the latest registry seed read did not fail. Station pages are identified
+by kind, hour, fetch time and raw hash; the station registry (an input of every date) by its
+content hash and the instant it first appeared in the process.
 Inputs relevant to KST date D: grid acquisitions published in `[D 00:00 - 24 h, D+1 00:00]`,
 station pages for hours `(D 00:00, D+1 00:00]`, ASOS ranges covering D.
 

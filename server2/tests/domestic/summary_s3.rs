@@ -295,6 +295,11 @@ async fn served_requests_record_complete_grid_days_and_late_revisions() {
     assert_eq!(d23.summary.grid, Some((60, 127)));
     // The station page read from S3 is an input of 09-23 only (with its fetch time and hash).
     assert_eq!(d23.summary.inputs.families.get("aws-hourly"), Some(&1));
+    // The station registry (seed, window pages, geocodes) is an input of every date.
+    assert_eq!(
+        d23.summary.inputs.families.get("station-registry"),
+        Some(&1)
+    );
     let d21 = store
         .newest(&town(), 20260921, deadline())
         .await
@@ -543,4 +548,54 @@ async fn only_the_current_fold_of_a_complete_read_is_settled() {
     );
     // A fold the snapshot did not take (an older or newer one) is not settled.
     assert!(!observations.settled(now, &Arc::new(Folded::default())));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_failed_registry_seed_read_is_not_settled() {
+    use server2::domestic::kma::source::observe::Observations;
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport_limited(4);
+    let catalogs =
+        Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    // A published registry seed import whose catalog then reads corrupt.
+    let at = p(20260924, 0);
+    let seed = acquisition(
+        "legacy-mongo",
+        "kma-stn-info",
+        &server2::domestic::kma::source::seed::key(),
+        at.period(),
+        "20260924",
+        NOW - 3_600_000.,
+        b"{}".to_vec(),
+        "application/json",
+    );
+    let catalog = CatalogId::for_record(&seed.records[0].envelope.identity, "20260924")
+        .unwrap()
+        .key();
+    catalogs
+        .publish(seed.declaration, seed.records, deadline())
+        .await
+        .unwrap();
+    reqwest::Client::new()
+        .post(format!(
+            "{}__catalog?mode=corrupt&key={catalog}",
+            peer.endpoint()
+        ))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    let observations = Arc::new(Observations::new(
+        transport,
+        catalogs,
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+    ));
+    let now = NOW as i64;
+    let folded = observations.stations(now, deadline()).await.unwrap();
+    assert!(
+        !observations.settled(now, &folded),
+        "the registry seed could not be read"
+    );
 }
