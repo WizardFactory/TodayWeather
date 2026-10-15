@@ -23,7 +23,10 @@ original `url`, `publication`, `sha256`, `expectedFrames`, `expectedStart` and
 `expectedEnd` (`YYYY-MM-DD HH:mm`, KST). Count the GIF frames independently and
 inspect the visible first/last labels before filling these oracles; do not derive
 them from the implementation under test. Legacy date-only `expectedStart` still
-means midnight and omitted `expectedFrames` uses the decoded count. New evidence
+means midnight and omitted `expectedFrames` uses the decoded count. That legacy
+check proves decode/readback count consistency, not an independently expected
+source length; omitting `expectedEnd` also omits the final-time oracle. Treat
+legacy replay as compatibility/start-time evidence only. New evidence
 should supply all three independent count/time oracles.
 Downloaded provider GIFs and execution output belong in ignored reports.
 

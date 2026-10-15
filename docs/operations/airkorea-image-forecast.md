@@ -42,6 +42,16 @@ are matched against that frame's validated palette, searching the center before
 nearby pixels up to three pixels away. Ambiguous or unmatched pixels omit the
 value; a malformed legend rejects the image pair before station writes.
 
+The boundary varies by band; it is not a uniform ±4 or ±7.5 RGB allowance.
+The nominal legend's largest neighbourhood radius is 24.5, with a strict
+less-than comparison. Station matching recomputes the radius from each actual
+frame's palette; the sampled files reach a strict radius of 25. Its bound can
+vary with GIF rounding. Wider neighbourhoods
+can accept antialiased pixels or coloured overlays as a concentration band.
+They establish a unique colour match, not independent numeric model accuracy.
+The [sampled palette comparison](../evidence/tasks/issue-2756/variable-frames.md#sampled-palette-comparison)
+records the observed effect and its limits.
+
 Values are quantized **lower thresholds** of the displayed 36-band legend; the
 top band is capped at its lowest labelled threshold and the bottom band is zero.
 These estimates can understate a concentration within a band and are not exact
@@ -92,6 +102,13 @@ labels. Replay all four characterized cycles with both pollutants and verify
 that each pollutant keeps its own decoded length and expected final hour. A PASS
 proves local decoding/storage/readback, not scheduled production
 collection, public API delivery or a device display.
+
+Current characterization manifests supply `expectedFrames`, `expectedStart`
+and `expectedEnd` independently from the inspected image. A legacy manifest
+without `expectedFrames` falls back to the decoded count; without `expectedEnd`
+it omits the final-label assertion. That fallback checks decode/readback
+coherence and the start hour, not an independent count or final hour. Do not use
+it as equivalent evidence for a new cycle.
 
 ## Authorized rollout and readback
 

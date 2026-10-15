@@ -131,3 +131,19 @@ test('observed yellow-band delta7 is recognized and delta8 crosses the boundary'
         else{await assert.rejects(pipeline(h));assert.equal(h.rows.length,0);}
     }
 });
+
+test('station pixels exactly between legend bands stay missing',async()=>{
+    const p=pixels();const original=p.get;
+    p.get=(f,x,y,c)=>c===3||x===680?original(f,x,y,c):[0,128,0][c];
+    const h=harness({pixels:p});
+    const rows=await pipeline(h);assert.equal(rows.length,0);
+});
+
+test('station-only rounding uses the frame palette beyond a fixed four-level tolerance',async()=>{
+    const p=pixels();const original=p.get;
+    p.get=(f,x,y,c)=>c===3||x===680?original(f,x,y,c):[107,107,0][c];
+    const h=harness({pixels:p});const rows=await pipeline(h);
+    assert.equal(rows.length,96);
+    assert.equal(rows.find(r=>r.code==='pm10').val,143);
+    assert.equal(rows.find(r=>r.code==='pm25').val,70);
+});
