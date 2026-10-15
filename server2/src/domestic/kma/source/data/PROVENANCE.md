@@ -56,7 +56,7 @@ altitude, coordinates (`geo`, `[longitude, latitude]` geocoded by legacy), `isCi
 | Export | one-time read-only export authorized by AK on 2026-10-15 (`find` on `kmastninfos` only; the connection URL was read in-process from `server/.env` and never printed or stored) |
 | Database | production `twonlyone` |
 | Exported at | `2026-10-15T00:34:30.549Z` |
-| Documents | 776 (97 `isCityWeather`, 38 `isMountain`, 695 with `rnsHit`/`rnsCount`; `stnId` `965` and `989` appear twice, as legacy holds them) |
+| Documents | 776 (97 `isCityWeather`, 38 `isMountain`, 695 with `rnsHit`/`rnsCount`; `stnId` `965` and `989` each appear three times (772 distinct ids), as legacy holds them) |
 | Raw export sha256 | `fe82638edb21696c0e8a737cd1fd19e8a0b0ae70c36e7083e6f9dd7c8e06c568` (the raw file was deleted after conversion) |
 | Seed sha256 | `bbc199e3405345b14c70f4b3a6a4f7032b34d7011c327f0aefce78b2dacc3ae7` |
 

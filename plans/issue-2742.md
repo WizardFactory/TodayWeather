@@ -206,8 +206,8 @@ AK authorized a one-time read-only export of the legacy `kmastninfos` on 2026-10
 776 documents at `2026-10-15T00:34:30.549Z`. Converted by `export_station_seeds.py`, the seed is
 carried as provenance-labelled static data (`domestic/kma/source/data/kmastninfos.seed.jsonl`;
 public station facts only). The registry starts from it before any page arrives, so seeded
-stations need no geocoding and keep `rnsHit`, `rnsCount` and `isMountain`. A repeated `stnId` (two
-in the export) is kept as legacy holds it. A newer export published by `station_seed_import`
+stations need no geocoding and keep `rnsHit`, `rnsCount` and `isMountain`. A repeated `stnId` is kept as legacy
+holds it (`965` and `989` appear three times each in the export). A newer export published by `station_seed_import`
 replaces the carried one.
 
 Cutover steps (AK 2026-10-15):

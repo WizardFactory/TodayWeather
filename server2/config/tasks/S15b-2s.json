@@ -22,6 +22,6 @@
   "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6181782805",
   "path_notes": {
     "server2/src/domestic/kma/source/": "data/kmastninfos.seed.jsonl (the 2026-10-15 read-only legacy export, provenance in data/PROVENANCE.md), the carried seed in seed.rs and observe.rs, repeated stnId rows kept in stations.rs",
-    "server2/tools/migration/export_station_seeds.py": "keeps a repeated stnId (the production export holds two)"
+    "server2/tools/migration/export_station_seeds.py": "keeps a repeated stnId (the production export holds 965 and 989 three times each)"
   }
 }

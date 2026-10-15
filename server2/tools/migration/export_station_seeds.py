@@ -13,7 +13,8 @@ of the legacy `KmaStnInfo` model (`server/models/modelKmaStnInfo.js`, collection
 `altitude`, `rnsHit`, `rnsCount` (finite numbers), `geo` (`[longitude, latitude]` finite numbers
 within the 2d index bounds) and `__v` (integer); any other field rejects the whole file. A
 repeated `stnId` is kept: legacy `_saveStnInfo` can insert one twice (concurrent first sightings;
-the 2026-10-15 export holds two), reads the first and `$near` sees both. Documents keep export
+the 2026-10-15 export holds two ids three times each), reads the first and `$near` sees
+every copy. Documents keep export
 order (export with `sort({_id: 1})`, the insertion order).
 
 Output (JSON Lines, `\\n`): a manifest line

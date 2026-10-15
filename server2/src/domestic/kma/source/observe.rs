@@ -534,40 +534,38 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         s.pages.minute_read = Some(std::time::Instant::now());
         s.pages.dirty = true;
     }
+    /// The newest imported seed that parses and was exported after the carried one: partitions
+    /// (export days) newest first, acquisitions newest first; a corrupt or older import is
+    /// skipped. None keeps the seed in use (the carried one when nothing qualifies).
     async fn read_seed(&self, now_ms: i64, deadline: Instant) -> Option<Vec<Doc>> {
+        use super::seed;
+        let carried = seed::embedded().exported_at_ms;
         let months = super::history_months(now_ms as f64);
         let parts = self
             .reader
-            .partitions(
-                super::seed::SOURCE,
-                super::seed::KIND,
-                &super::seed::key(),
-                &months,
-                deadline,
-            )
+            .partitions(seed::SOURCE, seed::KIND, &seed::key(), &months, deadline)
             .await
             .ok()?;
-        let newest = parts.last()?;
-        let acquisitions = self
-            .reader
-            .raw(
-                super::seed::SOURCE,
-                super::seed::KIND,
-                &super::seed::key(),
-                newest,
-                deadline,
-            )
-            .await
-            .ok()?;
-        let latest = acquisitions
-            .iter()
-            .filter_map(|a| a.first())
-            .max_by_key(|r| r.envelope.identity.fetched_at_ms)?;
-        // A published export replaces the carried one only when it is newer.
-        super::seed::parse(&latest.bytes)
-            .ok()
-            .filter(|s| s.exported_at_ms > super::seed::embedded().exported_at_ms)
-            .map(|s| s.docs)
+        for partition in parts.iter().rev() {
+            let mut acquisitions = self
+                .reader
+                .raw(seed::SOURCE, seed::KIND, &seed::key(), partition, deadline)
+                .await
+                .ok()?;
+            acquisitions.sort_by_key(|a| {
+                std::cmp::Reverse(a.first().map_or(0, |r| r.envelope.identity.fetched_at_ms))
+            });
+            for a in &acquisitions {
+                if let Some(parsed) = a
+                    .first()
+                    .and_then(|r| seed::parse(&r.bytes).ok())
+                    .filter(|s| s.exported_at_ms > carried)
+                {
+                    return Some(parsed.docs);
+                }
+            }
+        }
+        None
     }
     fn ensure_minute(
         self: &Arc<Self>,
