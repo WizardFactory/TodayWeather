@@ -197,56 +197,59 @@ async fn exhausted_admission_is_503_with_public_cors_and_private_metrics_remain_
     assert_eq!(recovered.status(), StatusCode::OK);
 }
 
-/// S10b (#2730) lifetime selection table: (gateway, configured lifetime) -> result.
+/// S10b (#2730) lifetime selection, S10e (#2753) built-in values: (gateway, lifetime) -> result.
 #[test]
 fn connection_lifetime_selection_tracks_the_gateway_deadline() {
-    let select = |gateway: bool, configured: Option<usize>| {
-        let mut c = Config::default();
-        if let Some(seconds) = configured {
-            c.connection_seconds = seconds;
-        }
-        c.select_connection_lifetime(gateway, configured.is_some())
+    let select = |gateway: bool, seconds: usize| {
+        let mut c = Config {
+            connection_seconds: seconds,
+            ..Config::default()
+        };
+        c.select_connection_lifetime(gateway)
             .map(|()| c.connection_seconds)
     };
     // Gateway disabled: the foundation default and any validated value stay unchanged.
-    assert_eq!(select(false, None), Ok(9));
-    assert_eq!(select(false, Some(2)), Ok(2));
-    assert_eq!(select(false, Some(9)), Ok(9));
-    // Gateway enabled: 12 s default; explicit values must exceed the 9 s deadline.
-    assert_eq!(select(true, None), Ok(server2::GATEWAY_CONNECTION_SECONDS));
+    assert_eq!(Config::default().connection_seconds, 9);
+    assert_eq!(select(false, 9), Ok(9));
+    assert_eq!(select(false, 2), Ok(2));
+    // Gateway enabled: the built-in 12 s, above the 9 s deadline.
     assert_eq!(server2::GATEWAY_CONNECTION_SECONDS, 12);
-    assert_eq!(select(true, Some(10)), Ok(10));
-    assert_eq!(select(true, Some(30)), Ok(30));
-    for seconds in [1, 8, 9] {
-        let error = select(true, Some(seconds)).unwrap_err();
-        assert!(
-            error.contains("SERVER2_CONNECTION_SECONDS must exceed the 9-second gateway deadline"),
-            "{error}"
+    for seconds in [2, 9, 30] {
+        assert_eq!(
+            select(true, seconds),
+            Ok(server2::GATEWAY_CONNECTION_SECONDS)
         );
     }
     assert_eq!(server2::gateway::PUBLIC_DEADLINE.as_secs(), 9);
 }
 
-/// Starts the actual binary with the gateway enabled in a restricted environment.
-/// Returns its exit status if it exited within five seconds, plus its captured output.
+/// Starts the actual binary with the gateway enabled in a restricted environment that holds
+/// only legacy listener settings (S10e). Returns its exit status if it exited within five
+/// seconds, plus its captured output.
 fn start_gateway_process(
-    bind: &str,
-    lifetime: Option<&str>,
+    settings: &[(&str, &str)],
+) -> (Option<std::process::ExitStatus>, String, String) {
+    // An empty working directory: the process never sees a real server2/.env (S10e).
+    let cwd = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("s10e-no-dotenv");
+    std::fs::create_dir_all(&cwd).unwrap();
+    let _ = std::fs::remove_file(cwd.join(".env"));
+    start_gateway_process_in(&cwd, settings)
+}
+fn start_gateway_process_in(
+    cwd: &std::path::Path,
+    settings: &[(&str, &str)],
 ) -> (Option<std::process::ExitStatus>, String, String) {
     use std::process::{Command, Stdio};
     use std::time::{Duration, Instant};
     let mut command = Command::new(env!("CARGO_BIN_EXE_server2"));
     command
+        .current_dir(cwd)
         .env_clear()
-        .env("SERVER2_BIND", bind)
-        .env("SERVER2_METRICS_BIND", "127.0.0.1:0")
         .env("SERVER2_GATEWAY_LEGACY_URL", "http://127.0.0.1:9")
+        .envs(settings.iter().copied())
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    if let Some(seconds) = lifetime {
-        command.env("SERVER2_CONNECTION_SECONDS", seconds);
-    }
     let mut child = command.spawn().unwrap();
     let deadline = Instant::now() + Duration::from_secs(5);
     let status = loop {
@@ -269,39 +272,69 @@ fn start_gateway_process(
     )
 }
 
-/// S10b (#2730): with the gateway enabled, a connection lifetime that cannot outlive
-/// the 9-second deadline is a configuration error before any listener is bound.
+/// S10e: the process binds where legacy `config.js` would (`OPENSHIFT_NODEJS_IP`, then
+/// `OPENSHIFT_NODEJS_PORT` or `PORT`). An invalid listener setting is a configuration error
+/// before any listener is bound; the removed `SERVER2_BIND`/`SERVER2_METRICS_BIND` are not read.
 #[test]
-fn gateway_lifetime_at_or_below_deadline_is_refused_before_binding() {
-    // An occupied public address: a bind attempt would fail with AddrInUse, so the
-    // lifetime message proves the configuration check runs before any bind.
+fn gateway_process_binds_the_legacy_port_and_refuses_invalid_settings_before_binding() {
+    // An occupied public address: a bind attempt would fail with AddrInUse, so a configuration
+    // message proves the check runs before any bind.
     let occupied = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-    let occupied = occupied.local_addr().unwrap().to_string();
-    for seconds in ["9", "1"] {
-        let (status, stdout, stderr) = start_gateway_process(&occupied, Some(seconds));
+    let port = occupied.local_addr().unwrap().port().to_string();
+    for bad in [
+        ("PORT", "http"),
+        ("OPENSHIFT_NODEJS_PORT", "-1"),
+        ("OPENSHIFT_NODEJS_IP", "localhost"),
+    ] {
+        let (status, stdout, stderr) = start_gateway_process(&[("PORT", &port), bad]);
         assert!(
             status.is_some_and(|status| !status.success()),
-            "lifetime {seconds}: expected a startup failure, got {status:?} {stdout}"
+            "{bad:?}: expected a startup failure, got {status:?} {stdout}"
         );
         assert!(
             !stdout.contains("server2 public="),
-            "lifetime {seconds} bound: {stdout}"
+            "{bad:?} bound: {stdout}"
         );
         assert!(
-            stderr.contains("SERVER2_CONNECTION_SECONDS must exceed the 9-second gateway deadline"),
-            "lifetime {seconds}: {stderr}"
+            stderr.contains(&format!("invalid {}", bad.0)),
+            "{bad:?}: {stderr}"
         );
     }
-    // Control: a valid lifetime reaches the bind and fails on the occupied address.
-    let (status, _, stderr) = start_gateway_process(&occupied, Some("10"));
+    // Control: valid settings reach the bind and fail on the occupied address.
+    let (status, _, stderr) = start_gateway_process(&[("PORT", &port)]);
     assert!(
         status.is_some_and(|status| !status.success()) && stderr.contains("AddrInUse"),
         "{status:?} {stderr}"
     );
-    // Controls: the default and a lifetime above the deadline start and announce listeners.
-    for lifetime in [None, Some("10")] {
-        let (status, stdout, stderr) = start_gateway_process("127.0.0.1:0", lifetime);
-        assert!(status.is_none(), "lifetime {lifetime:?} exited: {stderr}");
-        assert!(stdout.starts_with("server2 public=127.0.0.1:"), "{stdout}");
-    }
+    // Port 0 starts on ephemeral loopback ports; stale server2-only settings change nothing.
+    let (status, stdout, stderr) = start_gateway_process(&[
+        ("PORT", "0"),
+        ("SERVER2_BIND", "0.0.0.0:1"),
+        ("SERVER2_METRICS_BIND", "0.0.0.0:2"),
+        ("SERVER2_CONNECTION_SECONDS", "1"),
+    ]);
+    assert!(status.is_none(), "exited: {stderr}");
+    assert!(stdout.starts_with("server2 public=127.0.0.1:"), "{stdout}");
+    assert!(stdout.contains(" metrics=127.0.0.1:"), "{stdout}");
+}
+
+/// S10e: the binary reads `.env` from its working directory with the legacy dotenv rules, and
+/// the process environment wins over the file.
+#[test]
+fn the_working_directory_env_file_is_read_and_the_process_environment_wins() {
+    let cwd = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("s10e-dotenv");
+    std::fs::create_dir_all(&cwd).unwrap();
+    std::fs::write(
+        cwd.join(".env"),
+        "# test copy\nPORT=http\nOPENSHIFT_NODEJS_IP='127.0.0.1'\n",
+    )
+    .unwrap();
+    let (status, stdout, stderr) = start_gateway_process_in(&cwd, &[]);
+    assert!(
+        status.is_some_and(|status| !status.success()) && stderr.contains("invalid PORT"),
+        "the file value was not read: {status:?} {stdout} {stderr}"
+    );
+    let (status, stdout, stderr) = start_gateway_process_in(&cwd, &[("PORT", "0")]);
+    assert!(status.is_none(), "exited: {stderr}");
+    assert!(stdout.starts_with("server2 public=127.0.0.1:"), "{stdout}");
 }

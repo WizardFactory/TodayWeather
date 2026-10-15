@@ -58,6 +58,14 @@ class PlacementTests(unittest.TestCase):
         self.d['outside'].append(dict(path='config/server2.json',category='documentation',reason='pretend docs'));self.assertTrue(self.errors())
     def test_exact_exception_required(self):
         self.d['outside'][0]['path']='docs/';self.assertTrue(self.errors())
+    def test_workspace_setup_is_paseo_json_only(self):
+        # S10e: the Paseo worktree setup copies the private server2/.env; exact path only.
+        self.d['outside'].append(dict(path='paseo.json',category='workspace-setup',reason='copy server2/.env'))
+        self.write('paseo.json','{}\n');self.assertEqual([],self.errors())
+        self.d['outside'][-1]=dict(path='paseo.json',category='documentation',reason='pretend docs')
+        self.assertTrue(self.errors())
+        self.d['outside'][-1]=dict(path='config/setup.json',category='workspace-setup',reason='other root file')
+        self.assertTrue(self.errors())
     def test_shared_workflow_wiring_only(self):
         self.d['outside'].append(dict(path='.github/workflows/server2.yml',category='ci-wiring',reason='shared CI'))
         self.write('.github/workflows/server2.yml','timeout-minutes: 30\ndefaults:\n  run:\n    working-directory: server2\nsteps:\n  - uses: actions/checkout@v4\n    with:\n      fetch-depth: 0\n  - run: bash tools/ci.sh\n');self.assertEqual([],self.errors())

@@ -172,7 +172,7 @@ def main():
             'replay': {'unexplained': len(replay['unexplained_differences']), 'self_check': replay['self_check'],
                        'percentiles_ms': {side: replay['sides'][side]['percentiles_ms'] for side in replay['sides']},
                        'revision': replay['revision'], 'workload_sha256': replay['workload']['sha256']},
-            'rollback_lifetime_refusal': [p['lifetime_refusal'] for p in rollback['phases'] if 'lifetime_refusal' in p],
+            'rollback_configuration_refusal': [p['configuration_refusal'] for p in rollback['phases'] if 'configuration_refusal' in p],
             'rollback_default_lifetime_deadlines_ms': {p['mode'] + '-' + str(p['phase']): p['deadlines_ms']
                                                        for p in rollback['phases'] if 'deadlines_ms' in p},
         },

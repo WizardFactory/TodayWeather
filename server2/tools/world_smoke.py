@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """S11/S13a release-binary smoke: native world weather and air with real-format configuration.
 
-Starts the actual release binary with the production setting names (routing list, S3, Visual
-Crossing and WAQI keys, quotas and endpoints) pointing at task-owned loopback peers: the S06 S3
-test peer, a legacy geocoder/backend fixture, a synthetic Visual Crossing Timeline stub and a
-synthetic WAQI geo feed. Checks the legacy default, the routed native world, one funded fetch
+Starts the release `loopback_server` example (the server2 process; S10e: its S3, Visual
+Crossing and WAQI roots are not settings, so they are given on its command line) with the
+production setting names (routing list, SERVER2_S3_BUCKET, the legacy AWS credentials and the
+legacy VC_SECRET_KEY / WAQI_SECRET_KEY; quotas and owners are built in) and task-owned loopback
+peers: the S06 S3 test peer, a legacy geocoder/backend fixture, a synthetic Visual Crossing
+Timeline stub and a synthetic WAQI geo feed. Processes run in an empty working directory, so no
+real server2/.env is read. Checks the legacy default, the routed native world, one funded fetch
 per cell, air from the funded chain, restore of weather and air from S3 with the providers down,
 cell-only storage and rollback. No live provider, AWS or quota claim.
 """
@@ -20,6 +23,7 @@ from pathlib import Path
 import re
 import select
 import subprocess
+import tempfile
 import threading
 import time
 import urllib.error
@@ -126,8 +130,11 @@ def request(base, path, headers=None):
         return response.status, response.read()
 
 
-def start(binary, env):
-    process = subprocess.Popen([binary], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+CWD = tempfile.mkdtemp(prefix='server2-world-smoke-')
+
+
+def start(command, env):
+    process = subprocess.Popen(command, env=env, cwd=CWD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     ready, _, _ = select.select([process.stdout], [], [], 10)
     assert ready, 'startup timeout'
     line = process.stdout.readline().strip()
@@ -174,7 +181,7 @@ def dump(endpoint):
     return objects
 
 
-def run(binary):
+def run(peer_binary):
     print('execution started UTC ' + datetime.now(timezone.utc).isoformat(timespec='seconds'), flush=True)
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Fixture)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -183,12 +190,10 @@ def run(binary):
     peer, s3 = s3_peer()
     base_env = {k: v for k, v in os.environ.items() if k in ('PATH', 'SYSTEMROOT', 'TMPDIR')}
     # Every native setting is present in both configurations; only the routing list differs.
-    base_env.update(SERVER2_BIND='127.0.0.1:0', SERVER2_METRICS_BIND='127.0.0.1:0', SERVER2_GATEWAY_LEGACY_URL=fixture,
-                    SERVER2_S3_ENDPOINT=s3, SERVER2_S3_BUCKET='server2-local', SERVER2_S3_ACCESS_KEY_ID='server2-local',
-                    SERVER2_S3_SECRET_ACCESS_KEY='server2-local-secret', SERVER2_WORLD_VC_URL=fixture + '/timeline/',
-                    SERVER2_WORLD_VC_DAILY_UNITS='1000', SERVER2_WORLD_VC_QUOTA_ID='a' * 64, VC_SECRET_KEY='local-dummy-vc-key',
-                    SERVER2_WORLD_AIR_WAQI_URL=fixture + '/', SERVER2_WORLD_AIR_WAQI_KEY='local-dummy-waqi-key',
-                    SERVER2_WORLD_AIR_WAQI_MONTHLY_UNITS='1000', SERVER2_WORLD_AIR_WAQI_QUOTA_ID='c' * 64)
+    base_env.update(PORT='0', SERVER2_GATEWAY_LEGACY_URL=fixture, SERVER2_S3_BUCKET='server2-local',
+                    AWS_ACCESS_KEY='server2-local', AWS_SECRET_KEY='server2-local-secret', VC_SECRET_KEY='local-dummy-vc-key',
+                    VC_DAILY_RECORD_LIMIT='1000', WAQI_SECRET_KEY='local-dummy-waqi-key')
+    binary = [peer_binary, '--s3', s3, '--vc', fixture + '/timeline/', '--waqi', fixture + '/']
     native_env = dict(base_env, SERVER2_NATIVE_FAMILIES='dsf')
     path = '/weather/v000903/coord/51.507,-0.128?' + QUERY
     headers = {'Accept-Language': 'ko-KR'}
@@ -255,7 +260,7 @@ def run(binary):
             stop(process)
         print('PASS rollback: restart without dsf in SERVER2_NATIVE_FAMILIES returns to the legacy world backend', flush=True)
         print('observed: vc_calls=%d air_calls=%d legacy_world_hops=%d' % (len(Fixture.vc_paths), len(Fixture.air_paths), Fixture.legacy), flush=True)
-        print('PASS S11/S13a release smoke with real-format configuration on test peers; no live provider, AWS, quota or cutover claim', flush=True)
+        print('PASS S11/S13a release smoke with the real setting names on test peers; no live provider, AWS, quota or cutover claim', flush=True)
     finally:
         peer.terminate()
         peer.wait(timeout=5)
@@ -266,6 +271,8 @@ def run(binary):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--binary', required=True)
+    p.add_argument('--binary', required=True, help='release server2 binary')
+    p.add_argument('--peer-binary', help='release loopback_server example (default: examples/loopback_server beside --binary)')
     a = p.parse_args()
-    run(str(Path(a.binary).resolve()))
+    binary = Path(a.binary).resolve()
+    run(str(Path(a.peer_binary or binary.parent / 'examples/loopback_server').resolve()))

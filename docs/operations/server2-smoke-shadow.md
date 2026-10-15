@@ -1,6 +1,6 @@
 # server2 integrated smoke, paired replay and rollback rehearsal
 
-S19 adds one repeatable local verification path per server2 family. This first increment covers the gateway/geocode family. Every check runs the actual release binary against task-owned loopback peers: recorded Kakao/Google providers, a frozen legacy origin (legacy geocoder plus weather backends) and the S03 local S3-compatible peer. Since S10c ([#2736](https://github.com/WizardFactory/TodayWeather/issues/2736)) both sides use the real runtime configuration: the legacy side has no routing entry, and the native side sets `SERVER2_NATIVE_FAMILIES=geocode` with the existing geocoder keys, configured daily quotas and the `SERVER2_S3_*` settings, all pointing at the test peers. Nothing reads an operator `.env`, calls a live provider, creates AWS resources, deploys or mirrors traffic.
+S19 adds one repeatable local verification path per server2 family. This first increment covers the gateway/geocode family. Every check runs the actual release build against task-owned loopback peers: recorded Kakao/Google providers, a frozen legacy origin (legacy geocoder plus weather backends) and the S03 local S3-compatible peer. Since S10c ([#2736](https://github.com/WizardFactory/TodayWeather/issues/2736)) both sides use the real runtime configuration, and since S10e ([#2753](https://github.com/WizardFactory/TodayWeather/issues/2753)) its real names: the legacy `server/.env` names plus `SERVER2_S3_BUCKET` and the coexistence routing entries. The legacy side has no routing entry, and the native side sets `SERVER2_NATIVE_FAMILIES=geocode`. S3 and provider endpoints and the geocoder daily units are built in, not settings, so processes that need the peers run the release `loopback_server` example: the same server2 process with those values given as arguments. The configuration refusal runs the release `server2` binary. Every process runs in an empty working directory with `PORT=0`; nothing reads an operator `.env`, calls a live provider, creates AWS resources, deploys or mirrors traffic.
 
 See the [server2 contract](../architecture/server2.md), the [gateway guide](server2-gateway.md), the [S19 specification](../../specs/issue-2704.md) and the [path declaration](../../server2/config/tasks/S19.json).
 
@@ -9,13 +9,13 @@ See the [server2 contract](../architecture/server2.md), the [gateway guide](serv
 Build the release binary, then run the integrated smoke from the repository root:
 
 ```sh
-cd server2 && cargo build --locked --release && cd ..
+cd server2 && cargo build --locked --release && cargo build --locked --release --example loopback_server && cd ..
 bash server2/deploy/smoke.sh --binary server2/target/release/server2
 ```
 
 | Option | Effect |
 | --- | --- |
-| `--binary PATH` | Release binary. The default is `target/release/server2` under `server2/`. A missing binary exits 2. |
+| `--binary PATH` | Release binary. The default is `target/release/server2` under `server2/`. A missing binary, or a missing `examples/loopback_server` beside it, exits 2. |
 | `--out DIR` | Report directory. The default is `reports/server2-smoke/<UTC stamp>`, which Git ignores. |
 | `--family NAME` | Family to verify; repeatable. The default is every ready family (currently `gateway`). |
 | `--skip-reused` | Skip the existing foundation (`tools/smoke.py`) and S10 (`tools/gateway_smoke.py`) smokes. CI uses this because it already runs them. |
@@ -57,7 +57,7 @@ Each scenario compares these deltas with independent peer counters. The S3 peer 
 | GW-SINGLE-FLIGHT | 16 same-key cold callers share one flight and one Kakao call. |
 | GW-CANCEL | A disconnected initiator does not cancel or duplicate the owned lookup or backend work; a later waiter joins. |
 | GW-OUTAGE | Provider HTTP 500 gives 501 no-store, one attempt per key, and the failure is not cached. Backend 500 gives exactly three attempts and 501. An S3 outage does not affect warm lookups or weather backends; new native lookups fail closed once the owned quota block is spent. With an unreachable legacy origin, both routes fail fast with legacy routing; native routing still serves geocode. |
-| GW-BUDGET | 16 dummy Kakao keys plus Google, each with a configured daily quota of 64 units: every Korean lookup reserves one unit of each key before HTTP, so 64 lookups are funded. The next lookup fails closed with no provider request. Warm keys still serve. RSS growth stays below 64 MiB. The scenario uses its own keys because S08 keeps one policy per quota owner and UTC day. |
+| GW-BUDGET | 16 dummy Kakao keys plus Google, each with a test daily quota of 64 units (a `loopback_server` argument; production uses the built-in limits): every Korean lookup reserves one unit of each key before HTTP, so 64 lookups are funded. The next lookup fails closed with no provider request. Warm keys still serve. RSS growth stays below 64 MiB. The scenario uses its own keys because S08 keeps one policy per quota owner and UTC day. |
 | GW-PRESSURE | 48 concurrent requests while backend replies are held: the 40-slot admission serves 40 and rejects 8 with 503, `Retry-After: 5` and no-store. Rejected requests do no work. |
 | GW-DRAIN | SIGTERM during an in-flight request: the request completes with 200, the process exits 0 within the 5s drain, and no retry occurs. |
 
@@ -68,7 +68,7 @@ Partial group publication, publication hashes and summary/state cases require S3
 `replay.py` runs a frozen 15-request workload (`server2/tests/integration/fixtures/gateway-replay.json`) twice per side, first cold and then warm, each side in a fresh process:
 
 - Baseline: no `SERVER2_NATIVE_FAMILIES` (legacy routing) against the frozen legacy origin. Its geocode replies are derived from S02 legacy records, and a unit test checks every derivation.
-- Candidate: `SERVER2_NATIVE_FAMILIES=geocode` (the native geocoder with configured daily quotas in the S3 peer) against the recorded provider fixtures and the same backend bodies.
+- Candidate: `SERVER2_NATIVE_FAMILIES=geocode` (the native geocoder with per-key daily quotas in the S3 peer) against the recorded provider fixtures and the same backend bodies.
 
 The comparator checks status, body bytes, every header and the dependency hops. A difference passes only when a declared entry names it:
 
@@ -108,11 +108,11 @@ To add a family, put a module next to `gateway_family.py` that provides the same
 - Empty-memory re-acquisition cost: cold and warm peer deltas.
 - An ETag issued before the switch revalidates with 304 after it when the bodies are identical, so client and CloudFront validators stay usable.
 - Deadlines, probed with the default gateway configuration in the native and second legacy phases: a stalled backend gives the legacy 501 at about 9s after three attempts. Its status, body bytes and functional headers must match the S02 `gateway-deadline` record; only `date`, `connection` and `keep-alive` are excluded as transport headers. A stalled Kakao call gives 501 at about 3s; a stalled legacy geocoder gives 501 at about 5s.
-- Lifetime refusal, checked in the first phase: the release binary with the gateway enabled and `SERVER2_CONNECTION_SECONDS=9` must exit nonzero with the configuration message before announcing its listeners.
+- Configuration refusal, checked in the first phase: the release `server2` binary with native geocode and no `SERVER2_S3_BUCKET` must exit nonzero with `invalid gateway configuration` before announcing its listeners. (S10e removed `SERVER2_CONNECTION_SECONDS`; the gateway lifetime is the built-in 12 seconds, so the earlier lifetime refusal has no input.)
 
 ### Closed gap S19-GAP-1
 
-S19 found that the foundation's 9s absolute connection lifetime closed the client socket just before the gateway wrote its 9s deadline `501 Not Implemented`. AK chose the fix on 2026-10-13, and S10b ([#2730](https://github.com/WizardFactory/TodayWeather/issues/2730)) implemented it. With `SERVER2_GATEWAY_LEGACY_URL` set, the connection lifetime defaults to 12s, and a configured `SERVER2_CONNECTION_SECONDS` of 9 or less fails startup. The rehearsal no longer pins the gap; it fails if the default configuration does not deliver the legacy 501. The 501 guarantee covers a request that starts within lifetime minus 9s of the connection being accepted; a later keep-alive request on the same connection can still outlive it. The [S19 plan](../../plans/issue-2704.md#open-decision) keeps the original options as history.
+S19 found that the foundation's 9s absolute connection lifetime closed the client socket just before the gateway wrote its 9s deadline `501 Not Implemented`. AK chose the fix on 2026-10-13, and S10b ([#2730](https://github.com/WizardFactory/TodayWeather/issues/2730)) implemented it. With `SERVER2_GATEWAY_LEGACY_URL` set, the connection lifetime is 12s (built in since S10e). The rehearsal no longer pins the gap; it fails if the default configuration does not deliver the legacy 501. The 501 guarantee covers a request that starts within lifetime minus 9s of the connection being accepted; a later keep-alive request on the same connection can still outlive it. The [S19 plan](../../plans/issue-2704.md#open-decision) keeps the original options as history.
 
 ## Limitations
 

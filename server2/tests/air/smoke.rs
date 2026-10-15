@@ -4,6 +4,7 @@
 //! air settings. No AWS or provider traffic.
 use super::common::{Peer, ScriptedVc, body, deadline, expect_calls, matches, ms, path, scenario};
 use super::support::{Linked, Reply, Stub, WAQI, restarted, waqi_only};
+use server2::gateway::runtime::Builtins;
 use server2::storage::CatalogLimits;
 use server2::world::{
     AirFunding, AirStore, CatalogAirStore, FixedClock, HttpAirTransport, LiveAir, World,
@@ -89,14 +90,7 @@ async fn smoke_live_air_with_s3_budgets_then_s3_only_restore() {
 }
 
 fn vars(extra: &[(&'static str, &'static str)]) -> impl Fn(&str) -> Option<String> {
-    let mut all = vec![
-        ("SERVER2_WORLD_VC_DAILY_UNITS", "1000"),
-        (
-            "SERVER2_WORLD_VC_QUOTA_ID",
-            "abababababababababababababababababababababababababababababababab",
-        ),
-        ("VC_SECRET_KEY", "S13A_LOCAL_VC_KEY"),
-    ];
+    let mut all = vec![("VC_SECRET_KEY", "S13A_LOCAL_VC_KEY")];
     all.extend_from_slice(extra);
     move |name: &str| {
         all.iter()
@@ -109,31 +103,23 @@ fn vars(extra: &[(&'static str, &'static str)]) -> impl Fn(&str) -> Option<Strin
 async fn smoke_runtime_air_settings_are_real_configuration() {
     let peer = super::common::Peer::new();
     let s3 = || server2::world::BoundedS3::new(peer.transport(), 12);
-    const WAQI_VARS: [(&str, &str); 3] = [
-        ("SERVER2_WORLD_AIR_WAQI_KEY", "S13A_LOCAL_WAQI_KEY"),
-        (
-            "SERVER2_WORLD_AIR_WAQI_QUOTA_ID",
-            "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
-        ),
-        ("SERVER2_WORLD_AIR_WAQI_MONTHLY_UNITS", "100000"),
-    ];
-    // No air key: the legacy no-provider output. A key with its limit and owner: the funded
-    // chain at the production endpoint root, or at a configured endpoint.
-    assert!(build(&vars(&[]), s3()).is_ok());
-    assert!(build(&vars(&WAQI_VARS), s3()).is_ok());
-    let mut configured = WAQI_VARS.to_vec();
-    configured.push(("SERVER2_WORLD_AIR_WAQI_URL", "https://waqi.example.test/"));
-    assert!(build(&vars(&configured), s3()).is_ok());
-    // A provider key without its limit or owner, or an endpoint outside the transport rule,
-    // is a configuration error.
-    for i in 1..WAQI_VARS.len() {
-        let mut partial = WAQI_VARS.to_vec();
-        partial.remove(i);
-        assert!(build(&vars(&partial), s3()).is_err(), "{i}");
-    }
-    let mut plain = WAQI_VARS.to_vec();
-    plain.push(("SERVER2_WORLD_AIR_WAQI_URL", "http://waqi.example.test/"));
-    assert!(build(&vars(&plain), s3()).is_err());
+    const WAQI_VARS: [(&str, &str); 1] = [("WAQI_SECRET_KEY", "S13A_LOCAL_WAQI_KEY")];
+    let production = Builtins::production();
+    // No air key: the legacy no-provider output. The legacy key alone: the funded chain with
+    // the built-in limit and key-derived owner (S10e), at the production root or a test root.
+    assert!(build(&vars(&[]), s3(), &production).is_ok());
+    assert!(build(&vars(&WAQI_VARS), s3(), &production).is_ok());
+    let https = Builtins {
+        waqi: "https://waqi.example.test/".into(),
+        ..Builtins::production()
+    };
+    assert!(build(&vars(&WAQI_VARS), s3(), &https).is_ok());
+    // A root outside the transport rule is a configuration error.
+    let plain = Builtins {
+        waqi: "http://waqi.example.test/".into(),
+        ..Builtins::production()
+    };
+    assert!(build(&vars(&WAQI_VARS), s3(), &plain).is_err());
     // Removed settings select nothing: the routing list alone selects the native world.
     assert!(
         server2::world::runtime::from_vars(&vars(&[("SERVER2_WORLD_AIR", "live-local")]))

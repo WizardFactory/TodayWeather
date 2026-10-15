@@ -1338,6 +1338,12 @@ pub fn nearest(town: &Doc, stations: &[Doc], max_km: f64) -> Option<Mapping> {
     best
 }
 
+/// S08 units per data.go.kr key (`DONGNAE_SECRET_KEYS`) and KST day for the ASOS ranges: the
+/// documented development-account traffic of the ASOS hourly and daily services, "개발계정 :
+/// 10,000" (<https://www.data.go.kr/data/15057210/openapi.do>,
+/// <https://www.data.go.kr/data/15059093/openapi.do>, read 2026-10-15). One budget spans both
+/// services. Built in (S10e): legacy has no data.go.kr call budget setting.
+pub const DATA_GO_KR_DAILY_UNITS: u64 = 10_000;
 /// The S13 acquirer for request-time acquisitions: KMA pages (keyless) and ASOS ranges funded by
 /// S08 per data.go.kr key and KST day (each key its own quota owner with `daily_units`; a new
 /// window opens when the KST day changes).

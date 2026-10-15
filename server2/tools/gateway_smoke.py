@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
-"""Actual gateway release HTTP smoke: legacy -> native geocoder -> legacy with real-format
-configuration (keys, endpoints, daily quotas, S3) pointing at task-owned loopback test peers."""
+"""Actual gateway release HTTP smoke: legacy -> native geocoder -> legacy with the real
+configuration names (S10e: legacy server/.env names plus SERVER2_S3_BUCKET) and task-owned
+loopback test peers. The first legacy phase and the refusal run the release `server2` binary;
+phases that need the S3 test peer run the release `loopback_server` example, the same process
+with its S3 root on the peer (roots are not settings). Processes run in an empty working
+directory, so no real server2/.env is read."""
 import argparse
 import concurrent.futures
 from datetime import datetime, timezone
@@ -11,6 +15,7 @@ from pathlib import Path
 import re
 import select
 import subprocess
+import tempfile
 import threading
 import time
 import urllib.error
@@ -55,13 +60,17 @@ def s3_keys(s3):
     with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(req,timeout=10) as r:text=r.read().decode()
     assert '<IsTruncated>false</IsTruncated>' in text
     return re.findall(r'<Key>([^<]+)</Key>',text)
-def start(binary,endpoint,family,s3):
+CWD=tempfile.mkdtemp(prefix='server2-gateway-smoke-')
+def settings(endpoint):
     env={k:v for k,v in os.environ.items() if k in ('PATH','SYSTEMROOT','TMPDIR')}
-    env.update(SERVER2_BIND='127.0.0.1:0',SERVER2_METRICS_BIND='127.0.0.1:0',SERVER2_GATEWAY_LEGACY_URL=endpoint,GEOCODER_KAKAO_KEYS='["local-dummy"]',GEOCODER_GOOGLE_KEY='local-dummy',GEOCODER_KAKAO_BASE_URL=endpoint,GEOCODER_GOOGLE_BASE_URL=endpoint,
-               SERVER2_GEOCODER_KAKAO_DAILY_UNITS='1000',SERVER2_GEOCODER_GOOGLE_DAILY_UNITS='1000',SERVER2_S3_ENDPOINT=s3,SERVER2_S3_BUCKET='server2-local',SERVER2_S3_ACCESS_KEY_ID='server2-local',SERVER2_S3_SECRET_ACCESS_KEY='server2-local-secret')
+    env.update(PORT='0',SERVER2_GATEWAY_LEGACY_URL=endpoint,GEOCODER_KAKAO_KEYS='["local-dummy"]',GEOCODER_GOOGLE_KEY='local-dummy',
+               SERVER2_S3_BUCKET='server2-local',AWS_ACCESS_KEY='server2-local',AWS_SECRET_KEY='server2-local-secret')
+    return env
+def start(command,endpoint,family):
+    env=settings(endpoint)
     # Only the routing list differs between phases; legacy reads none of the native settings.
     if family=='native':env['SERVER2_NATIVE_FAMILIES']='geocode'
-    process=subprocess.Popen([binary],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    process=subprocess.Popen(command,env=env,cwd=CWD,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     try:
         ready,_,_=select.select([process.stdout],[],[],10);assert ready,'startup timeout'
         line=process.stdout.readline().strip();match=re.fullmatch(r'server2 public=(127\.0\.0\.1:\d+) metrics=(127\.0\.0\.1:\d+)',line)
@@ -74,15 +83,16 @@ def stop(process):
         try: assert process.wait(timeout=8)==0
         except subprocess.TimeoutExpired: process.kill();process.wait(timeout=5);raise
     process.stdout.close();process.stderr.close()
-def run(binary):
+def run(binary,peer_binary):
     print('execution started UTC '+datetime.now(timezone.utc).isoformat(timespec='seconds'),flush=True)
     Peer.fixtures=json.loads(FIXTURES.read_text());http.server.ThreadingHTTPServer.request_queue_size=128;server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Peer)
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start();endpoint='http://127.0.0.1:'+str(server.server_port)
     peer,s3=s3_peer()
     try:
         objects=[]
-        for mode in ('legacy','native','legacy'):
-            process,base=start(binary,endpoint,mode,s3)
+        on_peer=[peer_binary,'--s3',s3,'--kakao',endpoint,'--google',endpoint,'--geocoder-daily-units','1000']
+        for command,mode in (([binary],'legacy'),(on_peer,'native'),(on_peer,'legacy')):
+            process,base=start(command,endpoint,mode)
             try:
                 assert request(base,'/health')[2]==b'OK'
                 status,h,b=request(base,'/weather/coord/37.566,126.978',headers={'Accept-Language':'ko-KR'});assert status==200,(status,b)
@@ -113,12 +123,10 @@ def run(binary):
             finally: stop(process)
             objects.append(len(s3_keys(s3)))
         assert objects[0]==0 and objects[1]>0 and objects[2]==objects[1],objects
-        env={k:v for k,v in os.environ.items() if k in ('PATH','SYSTEMROOT','TMPDIR')}
-        env.update(SERVER2_BIND='127.0.0.1:0',SERVER2_METRICS_BIND='127.0.0.1:0',SERVER2_GATEWAY_LEGACY_URL=endpoint,SERVER2_NATIVE_FAMILIES='geocode',
-                   GEOCODER_KAKAO_KEYS='["local-dummy"]',SERVER2_S3_ENDPOINT=s3,SERVER2_S3_BUCKET='server2-local',SERVER2_S3_ACCESS_KEY_ID='server2-local',SERVER2_S3_SECRET_ACCESS_KEY='server2-local-secret')
-        refused=subprocess.run([binary],env=env,stdin=subprocess.DEVNULL,capture_output=True,text=True,timeout=10)
+        env=settings(endpoint);env['SERVER2_NATIVE_FAMILIES']='geocode';del env['SERVER2_S3_BUCKET']
+        refused=subprocess.run([binary],env=env,cwd=CWD,stdin=subprocess.DEVNULL,capture_output=True,text=True,timeout=10)
         assert refused.returncode!=0 and 'server2 public=' not in refused.stdout and 'invalid gateway configuration' in refused.stderr,(refused.returncode,refused.stderr)
-        print('PASS native geocode without SERVER2_GEOCODER_KAKAO_DAILY_UNITS is refused before binding (exit %d)'%refused.returncode,flush=True)
+        print('PASS release server2 with native geocode and no SERVER2_S3_BUCKET is refused before binding (exit %d)'%refused.returncode,flush=True)
         print('PASS legacy -> native -> legacy restart rollback; legacy phases added no S3 object (S3 objects per phase %s); all owned processes stopped'%objects,flush=True)
         print('observed peer counters: '+json.dumps(Peer.counts,sort_keys=True),flush=True)
         print('PASS S10 actual local release smoke; no live provider/AWS/quota or cutover claim',flush=True)
@@ -126,4 +134,7 @@ def run(binary):
         peer.terminate();peer.wait(timeout=5)
         server.shutdown();server.server_close();thread.join(timeout=2)
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--binary',required=True);a=p.parse_args();run(str(Path(a.binary).resolve()))
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--binary',required=True)
+    p.add_argument('--peer-binary',help='release loopback_server example (default: examples/loopback_server beside --binary)')
+    a=p.parse_args();binary=Path(a.binary).resolve()
+    run(str(binary),str(Path(a.peer_binary or binary.parent/'examples/loopback_server').resolve()))

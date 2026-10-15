@@ -1,6 +1,8 @@
 //! HTTP foundation and immutable raw storage; no provider or weather-route cutover.
 pub mod cache;
+pub mod dotenv;
 pub mod listener;
+pub mod process;
 pub mod resolver;
 pub mod storage;
 use axum::{
@@ -13,7 +15,6 @@ use axum::{
     routing::get,
 };
 use std::{
-    env,
     net::SocketAddr,
     sync::{
         Arc, Mutex,
@@ -40,8 +41,8 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            public_addr: "127.0.0.1:3002".parse().unwrap(),
-            metrics_addr: "127.0.0.1:3003".parse().unwrap(),
+            public_addr: "127.0.0.1:3000".parse().unwrap(),
+            metrics_addr: "127.0.0.1:3001".parse().unwrap(),
             worker_threads: 2,
             blocking_threads: 4,
             cpu_limit: 2,
@@ -53,54 +54,58 @@ impl Default for Config {
     }
 }
 impl Config {
-    pub fn from_env() -> Result<Self, String> {
+    /// S10e: the listener follows legacy `server/config/config.js`: address
+    /// `OPENSHIFT_NODEJS_IP` (default `127.0.0.1`), port `OPENSHIFT_NODEJS_PORT`, else `PORT`
+    /// (default `3000`); an empty value counts as unset, as JavaScript `||` does. Metrics listen
+    /// on loopback at the next port (an ephemeral port when the public port is `0`). Every other
+    /// process setting is built in; legacy has no equivalent setting for them.
+    pub fn from_vars(var: &dyn Fn(&str) -> Option<String>) -> Result<Self, String> {
+        let set = |name: &str| var(name).filter(|v| !v.is_empty());
         let mut c = Self::default();
-        macro_rules! value {
-            ($name:literal, $field:ident) => {
-                match env::var($name) {
-                    Ok(v) => c.$field = v.parse().map_err(|_| format!("invalid {}", $name))?,
-                    Err(env::VarError::NotPresent) => (),
-                    Err(_) => return Err(format!("invalid {}", $name)),
-                }
-            };
-        }
-        value!("SERVER2_BIND", public_addr);
-        value!("SERVER2_METRICS_BIND", metrics_addr);
-        value!("SERVER2_WORKER_THREADS", worker_threads);
-        value!("SERVER2_BLOCKING_THREADS", blocking_threads);
-        value!("SERVER2_CPU_LIMIT", cpu_limit);
-        value!("SERVER2_INFLIGHT_LIMIT", inflight_limit);
-        value!("SERVER2_CACHE_BYTES", cache_bytes);
-        value!("SERVER2_CONNECTION_LIMIT", connection_limit);
-        value!("SERVER2_CONNECTION_SECONDS", connection_seconds);
+        let ip: std::net::IpAddr = match set("OPENSHIFT_NODEJS_IP") {
+            Some(v) => v
+                .parse()
+                .map_err(|_| "invalid OPENSHIFT_NODEJS_IP".to_string())?,
+            None => std::net::Ipv4Addr::LOCALHOST.into(),
+        };
+        let port: u16 = match set("OPENSHIFT_NODEJS_PORT")
+            .map(|v| ("OPENSHIFT_NODEJS_PORT", v))
+            .or_else(|| set("PORT").map(|v| ("PORT", v)))
+        {
+            Some((name, v)) => v.parse().map_err(|_| format!("invalid {name}"))?,
+            None => 3000,
+        };
+        let metrics_port = match port {
+            0 => 0,
+            p => p
+                .checked_add(1)
+                .ok_or_else(|| "the port leaves no metrics port".to_string())?,
+        };
+        let loopback: std::net::IpAddr = if ip.is_ipv6() {
+            std::net::Ipv6Addr::LOCALHOST.into()
+        } else {
+            std::net::Ipv4Addr::LOCALHOST.into()
+        };
+        c.public_addr = SocketAddr::new(ip, port);
+        c.metrics_addr = SocketAddr::new(loopback, metrics_port);
         c.validate()?;
-        // Same presence test as `gateway::runtime::configured_gateway`.
-        c.select_connection_lifetime(
-            env::var_os("SERVER2_GATEWAY_LEGACY_URL").is_some(),
-            env::var_os("SERVER2_CONNECTION_SECONDS").is_some(),
-        )?;
+        // Same presence test as `gateway::runtime::from_vars`.
+        c.select_connection_lifetime(var("SERVER2_GATEWAY_LEGACY_URL").is_some())?;
         Ok(c)
     }
     /// The absolute connection lifetime must outlive the gateway deadline so its
     /// legacy `501` is written before the socket closes (#2730). With the gateway
-    /// enabled, an unset lifetime becomes `GATEWAY_CONNECTION_SECONDS` and a
-    /// configured lifetime at or below the deadline is rejected. Without the
-    /// gateway the foundation value is kept unchanged.
-    pub fn select_connection_lifetime(
-        &mut self,
-        gateway_enabled: bool,
-        lifetime_configured: bool,
-    ) -> Result<(), String> {
+    /// enabled the lifetime is `GATEWAY_CONNECTION_SECONDS`; a lifetime at or below the
+    /// deadline is rejected. Without the gateway the foundation value is kept unchanged.
+    pub fn select_connection_lifetime(&mut self, gateway_enabled: bool) -> Result<(), String> {
         if !gateway_enabled {
             return Ok(());
         }
-        if !lifetime_configured {
-            self.connection_seconds = GATEWAY_CONNECTION_SECONDS;
-        }
+        self.connection_seconds = GATEWAY_CONNECTION_SECONDS;
         let deadline = gateway::PUBLIC_DEADLINE.as_secs();
         if self.connection_seconds as u64 <= deadline {
             return Err(format!(
-                "SERVER2_CONNECTION_SECONDS must exceed the {deadline}-second gateway deadline when SERVER2_GATEWAY_LEGACY_URL is set"
+                "the connection lifetime must exceed the {deadline}-second gateway deadline"
             ));
         }
         Ok(())

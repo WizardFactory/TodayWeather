@@ -16,6 +16,7 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -24,6 +25,14 @@ from urllib.parse import urlsplit
 SERVER2 = Path(__file__).resolve().parents[2]
 ROOT = SERVER2.parent
 LISTENERS = re.compile(r'server2 public=(127\.0\.0\.1:\d+) metrics=(127\.0\.0\.1:\d+)')
+# Child processes run in an empty working directory, so no real server2/.env is read (S10e).
+EMPTY_CWD = tempfile.mkdtemp(prefix='server2-shadow-')
+
+
+def peer_binary(binary):
+    """The release `loopback_server` example beside the release binary (S10e): the same server2
+    process with its S3 root (not a setting) on the task-owned S3 peer."""
+    return str(Path(binary).resolve().parent / 'examples' / 'loopback_server')
 
 
 def loopback(url):
@@ -204,16 +213,18 @@ def s3_peer():
 
 
 class Server2:
-    """The actual release binary in a restricted child environment."""
+    """The actual release process in a restricted child environment (legacy PORT=0 selects
+    ephemeral loopback listeners)."""
 
-    def __init__(self, binary, env):
+    def __init__(self, binary, env, args=()):
         self.binary = str(Path(binary).resolve())
-        self.env = {'PATH': os.defpath, 'SERVER2_BIND': '127.0.0.1:0', 'SERVER2_METRICS_BIND': '127.0.0.1:0'}
+        self.args = [str(a) for a in args]
+        self.env = {'PATH': os.defpath, 'PORT': '0'}
         self.env.update(env)
         self.process = None
 
     def __enter__(self):
-        self.process = subprocess.Popen([self.binary], env=self.env, stdin=subprocess.DEVNULL,
+        self.process = subprocess.Popen([self.binary] + self.args, env=self.env, cwd=EMPTY_CWD, stdin=subprocess.DEVNULL,
                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         ready, _, _ = select.select([self.process.stdout], [], [], 10)
         if not ready:

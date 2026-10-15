@@ -96,18 +96,25 @@ fn converter_rejects_invalid_documents_without_output() {
 #[test]
 fn importer_settings_follow_the_transport_rule_and_seed_files_are_validated() {
     use server2::storage::S3Settings;
-    let settings = |endpoint: Option<&'static str>| {
+    // S10e: the legacy `server/.env` names; the endpoint is not a setting.
+    let settings = |region: Option<&'static str>| {
         move |name: &str| match name {
-            "SERVER2_S3_ENDPOINT" => endpoint.map(str::to_owned),
+            "TWA_S3_REGION" => region.map(str::to_owned),
             "SERVER2_S3_BUCKET" => Some("server2-seeds".to_owned()),
-            "SERVER2_S3_ACCESS_KEY_ID" => Some("configured-access-key".to_owned()),
-            "SERVER2_S3_SECRET_ACCESS_KEY" => Some("configured-secret".to_owned()),
+            "AWS_ACCESS_KEY" => Some("configured-access-key".to_owned()),
+            "AWS_SECRET_KEY" => Some("configured-secret".to_owned()),
+            // Removed server2-only names are not read.
+            "SERVER2_S3_ENDPOINT" => Some("http://10.0.0.5:9000/".to_owned()),
             _ => None,
         }
     };
-    // The real regional endpoint is the default; any HTTPS or loopback HTTP endpoint is accepted.
+    // The regional AWS endpoint of `TWA_S3_REGION` (default ap-northeast-2) is built in.
     let default = S3Settings::from_vars(&settings(None)).unwrap();
     assert_eq!(default.endpoint, "https://s3.ap-northeast-2.amazonaws.com/");
+    assert_eq!(default.bucket, "server2-seeds");
+    let region = S3Settings::from_vars(&settings(Some("us-east-1"))).unwrap();
+    assert_eq!(region.endpoint, "https://s3.us-east-1.amazonaws.com/");
+    // Tests choose another endpoint through the test builder: any HTTPS or loopback HTTP one.
     for endpoint in [
         "https://s3.ap-northeast-2.amazonaws.com/",
         "https://s3.example.test/",
@@ -115,7 +122,7 @@ fn importer_settings_follow_the_transport_rule_and_seed_files_are_validated() {
         "http://[::1]:9000/",
     ] {
         assert!(
-            S3Settings::from_vars(&settings(Some(endpoint))).is_ok(),
+            S3Settings::from_vars_at(&settings(None), Some(endpoint)).is_ok(),
             "{endpoint}"
         );
     }
@@ -127,16 +134,14 @@ fn importer_settings_follow_the_transport_rule_and_seed_files_are_validated() {
         "not a url",
     ] {
         assert!(
-            S3Settings::from_vars(&settings(Some(endpoint))).is_err(),
+            S3Settings::from_vars_at(&settings(None), Some(endpoint)).is_err(),
             "{endpoint}"
         );
     }
-    let no_bucket = |name: &str| {
-        (name != "SERVER2_S3_BUCKET")
-            .then(|| settings(None)(name))
-            .flatten()
-    };
-    assert!(S3Settings::from_vars(&no_bucket).is_err());
+    for missing in ["SERVER2_S3_BUCKET", "AWS_ACCESS_KEY", "AWS_SECRET_KEY"] {
+        let partial = |name: &str| (name != missing).then(|| settings(None)(name)).flatten();
+        assert!(S3Settings::from_vars(&partial).is_err(), "{missing}");
+    }
     assert!(seed::parse(br#"{"schema":2,"exportedAt":"2026-10-12T00:00:00.000Z"}"#).is_err());
     assert!(seed::parse(br#"{"schema":1,"exportedAt":"2026-10-12T00:00:00.000Z","special":[{"type":5,"announcement":"2026-09-20T09:10:00.000Z"}]}"#).is_err());
     assert!(

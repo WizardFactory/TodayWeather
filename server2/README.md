@@ -34,13 +34,18 @@ Computed filesystem paths still require human review. Existing unrelated legacy
 maintenance remains allowed; this checker is for server2 tasks.
 
 No local serving persistence or shared-instance cache is introduced. The runtime has
-no verification-only mode: `SERVER2_NATIVE_FAMILIES` routes `geocode` and `dsf` to the
-native backends, which use the real settings (keys, endpoints with production defaults,
-daily/monthly quotas and `SERVER2_S3_*`); without it every family stays on legacy. See the
-[gateway operations guide](../docs/operations/server2-gateway.md). The smokes give the
-release binary real-format configuration that points at owned loopback test peers:
+no verification-only mode: `SERVER2_NATIVE_FAMILIES` routes `geocode`, `dsf` and `kma` to
+the native backends; without it every family stays on legacy. Since S10e the settings are the
+legacy `server/.env` names and values, read from `server2/.env` in the working directory (a
+private copy of the legacy file; see [.env.example](.env.example) for every variable), plus
+the server2-only `SERVER2_S3_BUCKET` and coexistence routing. Endpoints and quotas without a
+legacy setting are built in. See the
+[gateway operations guide](../docs/operations/server2-gateway.md). The smokes run the release
+`loopback_server` example (the same process with its roots on owned loopback test peers) and
+the release binary in empty working directories:
 
 ```sh
+cargo build --locked --release --example loopback_server
 python3 tools/gateway_smoke.py --binary target/release/server2
 python3 tools/world_smoke.py --binary target/release/server2
 ```

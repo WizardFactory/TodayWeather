@@ -18,45 +18,53 @@ cargo build --locked --release
 python3 tools/smoke.py --binary target/release/server2
 ```
 
-The smoke starts two sequential release processes on ephemeral loopback ports. It
-checks GET/HEAD health, rejects public metrics, reads private counters, tests a
-2-second incomplete-header timeout with elapsed bounds, socket-cap rejection/recovery,
-and both idle and partial-header SIGTERM shutdown. It also verifies that
-nonloopback metrics configuration fails startup. No legacy collectors run.
+The smoke starts two sequential release processes on ephemeral loopback ports (`PORT=0`)
+in an empty working directory, so no real `server2/.env` is read. It checks GET/HEAD health,
+rejects public metrics, reads private counters, tests the built-in 9-second incomplete-header
+timeout with elapsed bounds, socket-cap (128) rejection/recovery, and both idle and
+partial-header SIGTERM shutdown. It also verifies that an invalid legacy `PORT` fails startup.
+No legacy collectors run.
 
 ## Configure and operate
 
-Start `server2/target/release/server2`. Startup prints the two bound socket addresses.
-The default public listener is 127.0.0.1:3002; private metrics is 127.0.0.1:3003.
-Set SERVER2_BIND to change the public address. SERVER2_METRICS_BIND must stay loopback,
-including IPv6 ::1 if used. Invalid values and listener collisions fail startup.
+Start `server2/target/release/server2` from the `server2/` directory. S10e (#2753): the process
+reads its environment and then `.env` in the working directory (a copy of the legacy
+`server/.env`, see [server2/.env.example](../../server2/.env.example)) with the legacy dotenv
+rules; a process variable wins over the file. The listener follows legacy `config.js`: address
+`OPENSHIFT_NODEJS_IP` (default 127.0.0.1), port `OPENSHIFT_NODEJS_PORT`, else `PORT`, else 3000.
+Private metrics listen on the loopback address at the next port (an ephemeral port with port 0).
+Startup prints the two bound socket addresses. Invalid values and listener collisions fail
+startup. During coexistence on the legacy host, give server2 a port other than the legacy
+origin's (for example `PORT=3002` in the process environment, metrics 3003).
 
-| Environment variable | Default | Allowed |
-| --- | --- | --- |
-| SERVER2_WORKER_THREADS | 2 | 1..64 |
-| SERVER2_BLOCKING_THREADS | 4 | 1..64 |
-| SERVER2_CPU_LIMIT | 2 | 1..blocking threads |
-| SERVER2_INFLIGHT_LIMIT | 40 | 1..1024 |
-| SERVER2_CACHE_BYTES | 16777216 | 1..1073741824 |
-| SERVER2_CONNECTION_LIMIT | 128 | 1..1024 public connections |
-| SERVER2_CONNECTION_SECONDS | 9; 12 with the gateway enabled | 1..30 seconds maximum connection age; 10..30 with the gateway enabled |
+Process limits are built in; no setting changes them (the S04 `SERVER2_*` overrides were removed
+in S10e because legacy has no equivalent and no documented operation needs another value):
+
+| Limit | Value |
+| --- | --- |
+| Worker threads | 2 |
+| Blocking threads | 4 |
+| CPU permits | 2 |
+| In-flight requests | 40 |
+| Volatile cache bytes | 16777216 |
+| Public connections | 128 |
+| Connection lifetime | 9 seconds; 12 with the gateway enabled |
 
 Metrics connections have a separate fixed limit 16. Socket limits bound slow headers
 and body draining; a connection expires at its maximum age even with keep-alive.
 This is an absolute connection lifetime, distinct from the S10 per-request
-9-second gateway deadline. When `SERVER2_GATEWAY_LEGACY_URL` is set, the default lifetime
-is 12 seconds, and a configured value of 9 or less fails startup before any listener binds.
-This keeps the deadline `501` inside the connection lifetime
+9-second gateway deadline. When `SERVER2_GATEWAY_LEGACY_URL` is set, the lifetime
+is 12 seconds, which keeps the deadline `501` inside the connection lifetime
 ([#2730](https://github.com/WizardFactory/TodayWeather/issues/2730)). The guarantee covers a
 request that starts within lifetime minus 9 seconds of the connection being accepted; a later
-keep-alive request can still outlive its connection. Without the gateway the 9-second default
+keep-alive request can still outlive its connection. Without the gateway the 9-second lifetime
 and socket behavior are unchanged.
 The volatile cache is a single byte-bounded slot; keyed/sharded cache algorithms
 are S07. CPU permits remain reserved until blocking work ends after caller cancellation.
 
 ```sh
-curl -i http://127.0.0.1:3002/health
-curl -i http://127.0.0.1:3003/internal/metrics
+curl -i http://127.0.0.1:3000/health
+curl -i http://127.0.0.1:3001/internal/metrics
 ```
 
 Health returns 200 with exact body OK, text/html; charset=utf-8 and CORS *. HEAD returns 200,

@@ -147,10 +147,13 @@ start. Do not reuse the local dummy keys outside tests.
   [conditional-write policy enforcement](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes-enforce.html).
   The runtime role does not change versioning/policies. Operator approval covers
   installation and a deny-case test with the actual role, including attempted delete.
-- Provider/quota owner prepares separate server2 data.go.kr keys during coexistence
-  and the secret names `SERVER2_DATA_GO_KR_KEYS`, `SERVER2_VC_KEY`, `SERVER2_WAQI_KEY`,
-  `SERVER2_KAKAO_KEY`, `SERVER2_GOOGLE_KEY`. These are prerequisite names, not claims
-  that unfinished adapters read them. Values stay outside Git/logs. Confirm daily
+- Provider/quota owner: since S10e ([#2753](https://github.com/WizardFactory/TodayWeather/issues/2753),
+  AK 2026-10-15) server2 uses the legacy keys under their legacy names, from `server2/.env`, a
+  private copy of the legacy `server/.env`: `DONGNAE_SECRET_KEYS`, `AIRKOREA_SECRET_KEYS`,
+  `VC_SECRET_KEY`, `WAQI_SECRET_KEY`, `OWM_SECRET_KEY`, `GOOGLE_SECRET_KEY`,
+  `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY`, `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`; the
+  server2-only `SERVER2_S3_BUCKET` is added there. Server2 and legacy then share each key's
+  provider quota. Values stay outside Git/logs. Confirm daily
   and peak calls/records for warm-up, cold geocoding, hourly/2-minute demand capture
   and required legacy collectors. Count data.go.kr calls and VC provider records,
   not logical requests; keep remaining legacy collection quota/cost visible.
