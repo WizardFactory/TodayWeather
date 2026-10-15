@@ -42,6 +42,7 @@ var commands = [
     [path.join(__dirname, 'air-freshness.test.js')],
     [path.join(__dirname, 'airkorea-collection.test.js')],
     [path.join(__dirname, 'airkorea-keys-endpoints.test.js')],
+    [path.join(__dirname, 'airkorea-image.test.js')],
     [path.join(__dirname, 'retention-anchor.test.js')],
     [path.join(__dirname, 'nation-air.test.js')],
     [path.join(__dirname, 'air-freshness-route.test.js')],

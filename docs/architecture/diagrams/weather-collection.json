@@ -99,7 +99,7 @@
       "id": "scrape",
       "type": "backend",
       "label": "Scrape timer",
-      "sublabel": "scrape/local · gather opt-in",
+      "sublabel": "scrape/local \u00b7 gather opt-in",
       "pos": [
         35,
         440
@@ -244,20 +244,21 @@
     },
     {
       "dot": "amber",
-      "title": "RSS fallback — issue #2554 local change",
+      "title": "RSS fallback \u2014 issue #2554 local change",
       "items": [
-        "Collector stores wdEn; service maps ws to wsd and wd × 45 to vec.",
+        "Collector stores wdEn; service maps ws to wsd and wd \u00d7 45 to vec.",
         "Newer RSS replaces valid source fields; equal fills gaps; older is skipped."
       ]
     },
     {
       "dot": "cyan",
-      "title": "AirKorea recovery design (#2636)",
+      "title": "AirKorea recovery (#2636, #2756 candidate)",
       "items": [
         "All AirKorea calls (observations, station list, forecast, nearby) use supported HTTPS services; validate every page before writes.",
         "Skip keys the provider rejects as credentials; a key at its daily quota is skipped until KST midnight (#2745).",
         "Await station and province aggregate storage; emit sanitized UTC outcomes.",
-        "Nation: retain fresh province averages; absent data uses shared global air at representative points."
+        "Nation: retain fresh province averages; absent data uses shared global air at representative points.",
+        "Local #2756 image candidate: 820x820 / 48 frames; validate legend, derive KST dates from the observed 23-cycle, store UTC instants. Private gather calibration still needs rollout."
       ]
     },
     {
@@ -265,13 +266,13 @@
       "title": "LifeIndex collection (#2599, #2650)",
       "items": [
         "UV V5 and oak/pine/weeds V3 at /gather/lifeindex. Pollen: year-round queries; provider decides no-data. Startup catch-up then 06:10/18:10 KST; failure/old issuance retries.",
-        "HealthWthrIdxServiceV3: getOakPollenRiskIdxV3 / getPinePollenRiskIdxV3 / getWeedsPollenRiskndxV3; today, tomorrow, dayaftertomorrow, todaysaftertomorrow. Valid grades 0–3 in lifeIndexKma2.",
+        "HealthWthrIdxServiceV3: getOakPollenRiskIdxV3 / getPinePollenRiskIdxV3 / getWeedsPollenRiskndxV3; today, tomorrow, dayaftertomorrow, todaysaftertomorrow. Valid grades 0\u20133 in lifeIndexKma2.",
         "Legacy healthday was removed by #2650. Existing flowerWoody / flowerPine / flowerWeeds index types remain."
       ]
     },
     {
       "dot": "cyan",
-      "title": "Unified keys — #2618 design",
+      "title": "Unified keys \u2014 #2618 design",
       "items": [
         "DONGNAE_SECRET_KEYS supplies forecast/mid, warnings, UV/pollen, KASI and forecast-zone (getFcstZoneCd) requests.",
         "Auth/quota rejection stops new dispatch and tries each list key once; past rotates unfinished times, retains a successful key, and returns DB save errors.",

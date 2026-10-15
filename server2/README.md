@@ -40,8 +40,12 @@ no verification-only mode: `SERVER2_NATIVE_FAMILIES` routes `geocode`, `dsf` and
 the native backends; without it every family stays on legacy. Since S10e the settings are the
 legacy `server/.env` names and values, read from `server2/.env` in the working directory (a
 private copy of the legacy file; see [.env.example](.env.example) for every variable), plus
-the server2-only `SERVER2_S3_BUCKET` and coexistence routing. Endpoints and quotas without a
-legacy setting are built in. See the
+the server2-only `SERVER2_S3_BUCKET`, `SERVER2_S3_REGION` and coexistence routing. Endpoints and
+quotas without a legacy setting are built in. Since S10f, when `AWS_ACCESS_KEY` and
+`AWS_SECRET_KEY` are unset or the legacy placeholder, S3 requests are signed with EC2
+instance-role credentials (IMDSv2, cached and refreshed before expiry); the operator check
+`cargo run --locked --release --example s3_readiness -- LABEL` (from `server2/`) proves the bucket
+writes and absent-key reads with the configured credentials. See the
 [gateway operations guide](../docs/operations/server2-gateway.md). The smokes run the release
 `loopback_server` example (the same process with its roots on owned loopback test peers) and
 the release binary in empty working directories:

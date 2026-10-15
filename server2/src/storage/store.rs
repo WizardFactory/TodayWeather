@@ -9,6 +9,11 @@ pub trait ObjectTransport: Send + Sync + 'static {
     fn put(&self, record: &PreparedRecord) -> impl Future<Output = Result<u16, Error>> + Send;
     fn head(&self, key: &str) -> impl Future<Output = Result<Object, Error>> + Send;
     fn get(&self, key: &str, maximum: usize) -> impl Future<Output = Result<Object, Error>> + Send;
+    /// Make request credentials available before a write whose outcome must be classified (S10f:
+    /// an instance-role refresh). A failure means no request was sent.
+    fn ready(&self) -> impl Future<Output = Result<(), Error>> + Send {
+        std::future::ready(Ok(()))
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PublishOutcome {
@@ -110,6 +115,8 @@ impl<T: ObjectTransport> RawRecordStore<T> {
             let expected = record.envelope.clone();
             let limits = self.limits.clone();
             let prepared = self.cpu(move || record.prepare(&limits)).await?;
+            // S10F GROK-1: a credential failure before the first PUT is definite, not ambiguous.
+            self.transport.ready().await?;
             let mut uncertain_put = false;
             for attempt in 0..2 {
                 put_started = true;

@@ -1,9 +1,33 @@
 {
-  "status": "approval-ready proposal, not provisioned",
-  "account_id": null,
-  "region": null,
-  "bucket_name": null,
-  "runtime_role_arn": null,
+  "status": "provisioned: bucket, runtime role and instance profile (role not yet attached to an instance)",
+  "provisioned": {
+    "observed_at": "2026-10-15",
+    "source": "AK decision 2026-10-15; created by the account root; read back with the AWS CLI (S10f #2759)",
+    "attached_instances": []
+  },
+  "account_id": "141248341265",
+  "region": "ap-northeast-2",
+  "bucket_name": "tw-server2-141248341265-apne2",
+  "runtime_role_arn": "arn:aws:iam::141248341265:role/tw-server2-runtime",
+  "runtime_instance_profile_arn": "arn:aws:iam::141248341265:instance-profile/tw-server2-runtime",
+  "runtime_role_policy": {
+    "name": "tw-server2-runtime-s3",
+    "type": "inline",
+    "template": "server2/deploy/staging/role-policy.template.json",
+    "trust": "ec2.amazonaws.com (sts:AssumeRole)",
+    "prefixes": [
+      "raw/v2/",
+      "index/v2/",
+      "packs/v2/",
+      "summary/v2/",
+      "state/v2/",
+      "state/demand/grid/",
+      "budgets/v2/",
+      "geocode/address/v1/"
+    ],
+    "not_granted": "DeleteObject, other prefixes, other buckets, bucket administration"
+  },
+  "bucket_policy_template": "server2/deploy/staging/bucket-policy.template.json",
   "monthly_spend_ceiling_usd": null,
   "owners": {
     "infrastructure": null,
@@ -17,7 +41,11 @@
     "block_public_access": true,
     "lifecycle_deletes": false,
     "lifecycle_transitions": "none until S09 cost/retrieval assessment",
-    "same_region_as_origin": true
+    "same_region_as_origin": true,
+    "blocked_encryption_types": [
+      "SSE-C"
+    ],
+    "lifecycle_configuration": "none"
   },
   "host_candidate": {
     "instance_families": [
@@ -50,15 +78,14 @@
       "OWM_SECRET_KEY",
       "GOOGLE_SECRET_KEY",
       "GEOCODER_KAKAO_KEYS",
-      "GEOCODER_GOOGLE_KEY",
-      "AWS_ACCESS_KEY",
-      "AWS_SECRET_KEY"
+      "GEOCODER_GOOGLE_KEY"
     ],
-    "source": "server2/.env, a private copy of the legacy server/.env (AK decision 2026-10-15, S10e #2753); server2-only values such as SERVER2_S3_BUCKET are added there",
+    "source": "server2/.env, a private copy of the legacy server/.env (AK decision 2026-10-15, S10e #2753); the server2-only values SERVER2_S3_BUCKET and SERVER2_S3_REGION are added there",
     "values_in_git": false,
     "separate_from_legacy": false,
     "quota_units": "data.go.kr calls; VC records; geocoder chain calls",
-    "coexistence_legacy_capture_cost_included": true
+    "coexistence_legacy_capture_cost_included": true,
+    "s3_credentials": "EC2 instance role tw-server2-runtime through IMDSv2 when AWS_ACCESS_KEY/AWS_SECRET_KEY are unset or the legacy placeholder (S10f #2759); real static keys only when the operator sets both"
   },
   "network": {
     "public_ingress": "existing origin routing only after approved family gates",
@@ -70,11 +97,12 @@
     "foundation": "health only, not cold-store/weather readiness",
     "future_gate": "S3 read/auth test, required config/keys, family switch, budget admission, bounded cold warm-up",
     "missing_key_iam_validation": {
-      "status": "unverified; S09 actual staging gate",
+      "status": "operator-user statuses observed 2026-10-15 (S10f); the runtime-role check remains for the EC2 deployment",
       "risk": "Prefix-conditioned ListBucket may not establish missing-key 404 semantics for HEAD/GET; local peer 404 is not IAM evidence.",
       "required_check": "With actual runtime role HEAD and GET known-absent raw/v2 and index/v2 keys: require 404/NoSuchKey; separately require 403 on unauthorized reads.",
-      "evidence": "Sanitized statuses, role/policy revision, region and timestamp; no secrets.",
-      "failure": "Block readiness and review policy/error classification; never infer absence from 403 or automatically widen permissions."
+      "evidence": "Sanitized statuses, role/policy revision, region and timestamp; no secrets. Operator-user run: docs/evidence/aws/server2-s3-readiness-2026-10-15.json",
+      "failure": "Block readiness and review policy/error classification; never infer absence from 403 or automatically widen permissions.",
+      "tool": "server2/tools/s3_readiness.rs: from server2/, cargo run --locked --release --example s3_readiness -- LABEL; with the instance role it also requires 403 outside the server2 prefixes"
     }
   },
   "drain": {

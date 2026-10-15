@@ -834,6 +834,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
         let mut started = false;
         let result = timeout_at(self.deadline(deadline), async {
             let _admission = self.admit().await?;
+            // S10F GROK-1: credentials before the first write; a failure here is definite.
+            self.transport.ready().await?;
             let l = self.limits.clone();
             let d = declaration.clone();
             let (reference, body, records) = self
@@ -1180,6 +1182,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
         let mut started = false;
         match timeout_at(self.deadline(deadline), async {
             let _admission = self.admit().await?;
+            // S10F GROK-1: credentials before the first write; a failure here is definite.
+            self.transport.ready().await?;
             self.repair_inner(scope, &mut Context::new(), &mut started, materialize)
                 .await
         })

@@ -212,7 +212,7 @@ impl CatalogTransport for HttpS3Transport {
             WriteCondition::Match(_) => return Err(Error::Invalid("control etag")),
         };
         let md5 = STANDARD.encode(Md5::digest(body));
-        let credentials = self.credentials.snapshot().await?;
+        let credentials = self.credentials.signing().await?;
         let mut action = self.bucket.put_object(Some(&credentials), key);
         action.headers_mut().insert(name, value);
         action.headers_mut().insert("content-md5", md5.as_str());

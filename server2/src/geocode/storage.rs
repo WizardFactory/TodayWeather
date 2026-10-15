@@ -137,7 +137,7 @@ impl AddressStore for S3AddressStore {
             let credentials = self
                 .transport
                 .credentials
-                .snapshot()
+                .signing()
                 .await
                 .map_err(|_| GeocodeError::Provider)?;
             let digest = STANDARD.encode(Md5::digest(&bytes));

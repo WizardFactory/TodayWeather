@@ -23,6 +23,13 @@ class AirkoreaHourlyForecastController extends ImgHourlyForecastController {
         this.pollutants = ['pm10', 'pm25'];
     }
 
+    _makeHourForecast(stationName, code, pubDate, hourData) {
+        var row = super._makeHourForecast(stationName,code,pubDate,hourData);
+        // AirKorea frame text is a KST wall time, regardless of the writer host zone.
+        row.date = new Date(hourData.date.replace(' ','T')+':00+09:00');
+        return row;
+    }
+
     /**
      * 특정 Stn의 예보를 가지고 와서 디비에 저장한다.
      * @param stn
@@ -92,7 +99,7 @@ class AirkoreaHourlyForecastController extends ImgHourlyForecastController {
         });
     }
 
-    do(dataTime) {
+    do(dataTime, done) {
 
         async.waterfall(
             [
@@ -123,6 +130,7 @@ class AirkoreaHourlyForecastController extends ImgHourlyForecastController {
                 log.info("Finish update airkorea hourly forecast");
                 delete this.airkoreaDustImageMgr;
                 this._removeOldData();
+                if (done) done(err === 'skip' ? null : err);
             });
     }
 }

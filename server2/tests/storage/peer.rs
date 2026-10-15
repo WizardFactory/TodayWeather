@@ -38,6 +38,8 @@ pub struct PeerState {
     pub calls: Vec<(String, String)>,
     pub fault: Fault,
     pub credential_ids: Vec<String>,
+    /// Per signed request: whether it carried a session token (S10f), never its value.
+    pub session_tokens: Vec<bool>,
     pub get_inflight: usize,
     pub max_get_inflight: usize,
 }
@@ -156,6 +158,10 @@ fn serve(mut stream: TcpStream, state: Arc<Mutex<PeerState>>) {
     let mut s = state.lock().unwrap();
     s.calls.push((method.clone(), key.clone()));
     // Keep only the dummy access-key ID, never the signed URL or session credential material.
+    if target.contains("X-Amz-Credential=") {
+        s.session_tokens
+            .push(target.contains("X-Amz-Security-Token="));
+    }
     if let Some(credential) = target.split("X-Amz-Credential=").nth(1) {
         s.credential_ids.push(
             credential

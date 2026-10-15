@@ -96,10 +96,11 @@ fn converter_rejects_invalid_documents_without_output() {
 #[test]
 fn importer_settings_follow_the_transport_rule_and_seed_files_are_validated() {
     use server2::storage::S3Settings;
-    // S10e: the legacy `server/.env` names; the endpoint is not a setting.
+    // S10e: the legacy `server/.env` names; the endpoint is not a setting. S10f: the
+    // server2-only `SERVER2_S3_REGION`.
     let settings = |region: Option<&'static str>| {
         move |name: &str| match name {
-            "TWA_S3_REGION" => region.map(str::to_owned),
+            "SERVER2_S3_REGION" => region.map(str::to_owned),
             "SERVER2_S3_BUCKET" => Some("server2-seeds".to_owned()),
             "AWS_ACCESS_KEY" => Some("configured-access-key".to_owned()),
             "AWS_SECRET_KEY" => Some("configured-secret".to_owned()),
@@ -108,7 +109,7 @@ fn importer_settings_follow_the_transport_rule_and_seed_files_are_validated() {
             _ => None,
         }
     };
-    // The regional AWS endpoint of `TWA_S3_REGION` (default ap-northeast-2) is built in.
+    // The regional AWS endpoint of `SERVER2_S3_REGION` (default ap-northeast-2) is built in.
     let default = S3Settings::from_vars(&settings(None)).unwrap();
     assert_eq!(default.endpoint, "https://s3.ap-northeast-2.amazonaws.com/");
     assert_eq!(default.bucket, "server2-seeds");
@@ -138,10 +139,18 @@ fn importer_settings_follow_the_transport_rule_and_seed_files_are_validated() {
             "{endpoint}"
         );
     }
+    // A missing bucket, or one real key without the other, is refused.
     for missing in ["SERVER2_S3_BUCKET", "AWS_ACCESS_KEY", "AWS_SECRET_KEY"] {
         let partial = |name: &str| (name != missing).then(|| settings(None)(name)).flatten();
         assert!(S3Settings::from_vars(&partial).is_err(), "{missing}");
     }
+    // S10f: without both keys the importers use the EC2 instance role.
+    let role = |name: &str| {
+        (!name.starts_with("AWS_"))
+            .then(|| settings(None)(name))
+            .flatten()
+    };
+    assert!(S3Settings::from_vars(&role).unwrap().uses_instance_role());
     assert!(seed::parse(br#"{"schema":2,"exportedAt":"2026-10-12T00:00:00.000Z"}"#).is_err());
     assert!(seed::parse(br#"{"schema":1,"exportedAt":"2026-10-12T00:00:00.000Z","special":[{"type":5,"announcement":"2026-09-20T09:10:00.000Z"}]}"#).is_err());
     assert!(

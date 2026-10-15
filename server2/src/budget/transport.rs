@@ -130,7 +130,7 @@ impl BudgetTransport for HttpS3Transport {
         };
         let credentials = self
             .credentials
-            .snapshot()
+            .signing()
             .await
             .map_err(|_| BudgetError::Transport)?;
         let digest = STANDARD.encode(Md5::digest(body));

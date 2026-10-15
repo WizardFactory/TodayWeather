@@ -136,6 +136,31 @@ The older `controllerCollector` supports WU and DSF collection (its DSF requests
 - Current, short, station and air products can have different publication times. Read-time merges may produce partial or differently-aged responses.
 - The historical provider URLs, external geocoder and release environment need separate integration verification before operating this code.
 
+## AirKorea image-derived hourly recovery (#2756)
+
+The local recovery candidate supports the characterized 820×820 NIER 09km,
+48-frame PM10/PM2P5 animation. The gather worker's 820×830 private setting caused
+repeated `INVALID_IMAGE` failures on 2026-10-15; the image hourly store had zero
+rows while original forecasts and observations were current. This is dated
+runtime evidence, not production recovery. [Evidence and local replay](../evidence/tasks/issue-2756/verification.md).
+
+After original forecast collection, the image controller validates both source
+paths and every frame's shape, calibration and 36-band legend before station
+upserts. It reads actual per-frame legend colours with a four-level GIF rounding
+allowance and returns quantized lower-threshold concentrations. Unknown colours
+omit values; unsupported geometry, legend or cycles are rejected. Frame dates
+come from the characterized 23-cycle image path (next-day 00 KST through the
+following day 23 KST), independent of the original publication's later reuse and
+the host clock. Only that observed cycle is supported; 11-cycle behavior remains
+unvalidated and fails closed. AirKorea BSON dates now encode the KST hours as UTC
+instants; the shared KAQ writer is unchanged.
+
+The inherited geographic box remains an approximate rectangular projection;
+current raster map bounds are defaults and explicit environment overrides remain
+validated. The repository change does not override a private host config that
+still hardcodes height 830. [Calibration, rollout and rollback](../operations/airkorea-image-forecast.md).
+The shared app's `airForecastSource=kaq` selection is unchanged.
+
 ## AWS KAQ producer versus repository consumer
 
 The scheduled `copyKaqfsImagesToS3` Lambda is an upstream producer separate from the Express collector. Its deployed code OCRs KAQ publication dates and writes animation GIFs to `tw-kaqfs-images`. The repository consumer lists configured S3 prefixes and decodes the GIFs into station hourly pollutant forecasts, then upserts forecast and map-case records. EventBridge runs at UTC minute 5 with final hour 23; repository manager runs the consumer at minute 7 with final hour 13. Live consumer mode/bucket/revision remain unverified. The observed producer had 24 errors from 24 invocations in the recorded 24-hour window; sampled logs point to missing OCR `description` in `_getDate`, without establishing why OCR data was absent. See [AWS/code correlation](aws-code-correlation.md) and [KAQ pipeline](diagrams/kaq-image-pipeline.html) for provenance and the unverified deployment link.

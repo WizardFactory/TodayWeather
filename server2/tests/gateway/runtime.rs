@@ -169,12 +169,14 @@ async fn body(gateway: &server2::gateway::Gateway, path: &str) -> (u16, Vec<u8>)
 }
 
 /// The only `SERVER2_*` names server2 reads (S10e): coexistence routing (temporary until
-/// legacy retirement) and the raw-record bucket, a value legacy does not have.
-const SERVER2_ONLY: [&str; 4] = [
+/// legacy retirement) and the raw-record bucket and its region (S10f), values legacy does not
+/// have.
+const SERVER2_ONLY: [&str; 5] = [
     "SERVER2_GATEWAY_LEGACY_URL",
     "SERVER2_NATIVE_FAMILIES",
     "SERVER2_WORLD_VERSIONS",
     "SERVER2_S3_BUCKET",
+    "SERVER2_S3_REGION",
 ];
 
 /// S10e (#2753, AK 2026-10-15): a legacy `server/.env`, plus the coexistence routing entries
@@ -184,15 +186,18 @@ const SERVER2_ONLY: [&str; 4] = [
 #[test]
 fn legacy_env_alone_builds_every_native_family() {
     let legacy = [
-        // Coexistence routing (temporary until legacy retirement) and the server2 bucket.
+        // Coexistence routing (temporary until legacy retirement), the server2 bucket and its
+        // region.
         ("SERVER2_GATEWAY_LEGACY_URL", "http://127.0.0.1:9"),
         ("SERVER2_NATIVE_FAMILIES", "geocode,dsf,kma"),
         ("SERVER2_S3_BUCKET", "server2-raw-records"),
+        ("SERVER2_S3_REGION", "ap-northeast-2"),
         // Legacy server/.env names (config.js) with placeholder values.
         ("OPENSHIFT_NODEJS_IP", "127.0.0.1"),
         ("PORT", "3000"),
         ("OPENSHIFT_NODEJS_PORT", "3000"),
-        ("TWA_S3_REGION", "ap-northeast-2"),
+        // The legacy region of the unrelated 2018 bucket; not read since S10f.
+        ("TWA_S3_REGION", "us-east-1"),
         ("TWA_S3_WEATHER_DATA_BUCKET_NAME", "legacy-weather-data"),
         ("AWS_ACCESS_KEY", "legacy-access-key"),
         ("AWS_SECRET_KEY", "legacy-secret-key"),
@@ -249,7 +254,7 @@ fn legacy_env_alone_builds_every_native_family() {
         "SERVER2_S3_BUCKET",
         "AWS_ACCESS_KEY",
         "AWS_SECRET_KEY",
-        "TWA_S3_REGION",
+        "SERVER2_S3_REGION",
         "GEOCODER_KAKAO_KEYS",
         "DONGNAE_SECRET_KEYS",
         "AIRKOREA_SECRET_KEYS",
@@ -262,6 +267,61 @@ fn legacy_env_alone_builds_every_native_family() {
     ] {
         assert!(read.iter().any(|n| n == name), "{name} not read");
     }
+    // S10f: the legacy region of the unrelated 2018 bucket is not read.
+    assert!(!read.iter().any(|n| n == "TWA_S3_REGION"));
+}
+
+/// S10f (#2759): the copied legacy `.env` holds the `config.js` placeholder AWS keys. The gateway
+/// then signs S3 requests with EC2 instance-role credentials (IMDSv2 loopback double) and serves
+/// the S02 geocode golden with its budgets in the S3 test peer.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn gateway_without_keys_uses_the_instance_role() {
+    let providers = stub(
+        vec![(200, fixture("kakao.coord.seoul"), Duration::ZERO)],
+        vec![(200, fixture("google.coord.seoul.en"), Duration::ZERO)],
+    )
+    .await;
+    let peer = S3Peer::start();
+    // The S3 test peer accepts its one test access key ID.
+    let imds = super::imds::Imds::start("server2-local", false).await;
+    let settings = vec![
+        ("SERVER2_S3_BUCKET", "server2-local".to_owned()),
+        ("AWS_ACCESS_KEY", "You have to set key of AWS".to_owned()),
+        ("AWS_SECRET_KEY", "You have to set key of AWS".to_owned()),
+        (
+            "SERVER2_GATEWAY_LEGACY_URL",
+            "http://127.0.0.1:9".to_owned(),
+        ),
+        ("SERVER2_NATIVE_FAMILIES", "geocode".to_owned()),
+        ("GEOCODER_KAKAO_KEYS", r#"["synthetic-kakao"]"#.to_owned()),
+        ("GEOCODER_GOOGLE_KEY", "synthetic-google".to_owned()),
+    ];
+    let builtins = Builtins {
+        kakao: providers.base.clone(),
+        google: providers.base.clone(),
+        geocoder_daily_units: [10, 10],
+        instance_metadata: Some(imds.root.clone()),
+        ..peer_builtins(&peer)
+    };
+    let gateway = server2::gateway::runtime::from_vars_at(&vars(settings), &builtins)
+        .unwrap()
+        .expect("gateway enabled");
+    assert_eq!(imds.requests(), 0, "configuration does not contact IMDS");
+    let (status, bytes) = body(&gateway, "/geocode/v000903/coord/37.5663,126.9779").await;
+    assert_eq!(status, 200);
+    assert_eq!(bytes, golden("geocode-v000903-coord"));
+    assert_eq!(
+        imds.requests(),
+        3,
+        "one IMDSv2 refresh for every S3 request"
+    );
+    assert!(
+        peer.keys()
+            .await
+            .iter()
+            .any(|k| k.starts_with("budgets/v2/")),
+        "budgets written with role credentials"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -479,7 +539,7 @@ fn routing_list_and_required_settings_fail_closed() {
         // Legacy `config/air.js` throws on a cap that is not a whole number.
         ("AIR_GOOGLE_MONTHLY_CAP", "many"),
         ("AIR_OWM_MONTHLY_CAP", "-1"),
-        ("TWA_S3_REGION", "bad/region"),
+        ("SERVER2_S3_REGION", "bad/region"),
     ] {
         let mut changed = complete();
         changed.retain(|(k, _)| *k != name);

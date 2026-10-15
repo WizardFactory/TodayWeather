@@ -1,5 +1,34 @@
 # Isolated weather checks
 
+## AirKorea image hourly forecasts (#2756)
+
+`airkorea-image.test.js` covers the current 820×820, 48-frame layout, per-frame
+legend matching, explicit calibration, invalid geometry/legend/path rejection,
+missing pixels, original-record lookup through the hourly job, KST frame dates
+and UTC storage instants. It uses synthetic pixel arrays and memory models;
+it never starts the app or calls a provider/database. Included in `test:offline`.
+
+```sh
+NODE_PATH=<isolated-dependencies>/node_modules TZ=UTC node server/test/offline/airkorea-image.test.js
+NODE_PATH=<isolated-dependencies>/node_modules TZ=America/Los_Angeles node server/test/offline/airkorea-image.test.js
+```
+
+The separate `airkorea-image-smoke.js` uses real `get-pixels` decoding of local
+GIFs, actual image/station/hourly controllers and AQI grading, and an isolated
+memory store/readback. It requires `async` and `get-pixels` (existing server
+dependencies), and permits no network URL to reach the decoder. Pass a JSON
+array of two manifest entries with `code` (`PM10`, `PM25`), local `file`, public
+original `url`, `publication`, `sha256` and `expectedStart` (`YYYY-MM-DD`, KST).
+Verify `expectedStart` against the visible first-frame label before replay.
+Downloaded provider GIFs and execution output belong in ignored reports.
+
+```sh
+NODE_PATH=<isolated-dependencies>/node_modules TZ=UTC node server/test/offline/airkorea-image-smoke.js <manifest.json>
+```
+
+See [calibration and rollout](../../../docs/operations/airkorea-image-forecast.md)
+and [dated verification](../../../docs/evidence/tasks/issue-2756/verification.md).
+
 ## Credential-free controller loading (#2589)
 
 `credential-free-load.test.js` is included in `test:offline`. It loads the complete
