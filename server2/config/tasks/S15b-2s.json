@@ -5,7 +5,8 @@
     "server2/config/tasks/S15b-2s.json",
     "server2/src/domestic/kma/source/",
     "server2/tools/migration/export_station_seeds.py",
-    "server2/tests/domestic/observe.rs"
+    "server2/tests/domestic/observe.rs",
+    "server2/tests/domestic/stations.rs"
   ],
   "outside": [
     {
