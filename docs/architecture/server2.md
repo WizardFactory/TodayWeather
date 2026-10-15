@@ -1701,8 +1701,14 @@ v000903 KMA handler; removing it and restarting is the rollback. S15 adds no oth
 Since S15b-1 ([below](#s15b-1-kma-s3-input-source-2026-10-14)) a listed `kma` builds the S3
 input source from the shared S3 settings (S10e names), which are then required; inputs owned by
 later S15b slices still forward. `tools/kma_smoke.py` checks legacy -> `kma` -> legacy on the release
-binary (identical bytes, the legacy KMA hop in every phase, the native phase reading the S3 test
-peer, unknown or repeated entries and `kma` without S3 settings refused before binding).
+binary, covering:
+
+- identical bytes in the legacy phases;
+- the native phase reading the S3 test peer;
+- unknown or repeated entries, and `kma` without S3 settings, refused before binding.
+
+Since S15b-4a the `kma` phase answers natively, with no legacy KMA hop. It acquires the missing
+forecast inputs from the loopback provider roots.
 
 O-2 checkpoint (Rust adoption is settled; this records correctness and cost). `kma_checkpoint`
 assembles every recorded request from memory, and `tools/kma_checkpoint.py` reads process rusage.

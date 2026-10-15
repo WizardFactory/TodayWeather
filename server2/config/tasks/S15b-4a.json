@@ -6,7 +6,8 @@
     "server2/src/domestic/kma/source/",
     "server2/src/gateway/runtime.rs",
     "server2/tests/domestic/source_s3.rs",
-    "server2/tests/domestic/source_s3_oracle.rs"
+    "server2/tests/domestic/source_s3_oracle.rs",
+    "server2/tools/kma_smoke.py"
   ],
   "outside": [
     {

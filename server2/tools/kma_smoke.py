@@ -2,9 +2,11 @@
 """S15/S15b-1 release HTTP smoke for the KMA v000903 routing entry: legacy ->
 SERVER2_NATIVE_FAMILIES=kma -> legacy against a task-owned loopback legacy origin and the owned S06
 S3 test peer. With `kma` the S3 input source reads the shared S3 settings (S10e: SERVER2_S3_BUCKET,
-AWS_ACCESS_KEY, AWS_SECRET_KEY); until S15b-4 it forwards every request (named temporary
-reasons), so each phase must reach the legacy KMA backend with the same bytes, and the native
-phase must have read S3. S15b-2 request-time acquisitions use the legacy DONGNAE_SECRET_KEYS list.
+AWS_ACCESS_KEY, AWS_SECRET_KEY). The legacy phases reach the legacy KMA backend with the same bytes.
+Since S15b-4a a missing forecast input is acquired at request time instead of forwarded, so the
+`kma` phase answers natively without a legacy KMA hop, must have read S3, and its acquisitions reach
+only the loopback provider roots (the origin answers them with no data). S15b-2 and S15b-4a
+request-time acquisitions use the legacy DONGNAE_SECRET_KEYS list.
 The phases run the release `loopback_server` example (the server2 process with its S3 and
 provider roots on the loopback peers; roots are not settings), so no provider is reached. The
 refusals run the release `server2` binary: unknown or repeated entries, and `kma` without the S3
@@ -126,18 +128,29 @@ def run(binary, peer_binary):
                 status, headers, body = g.request(base, '/weather/v000903/coord/37.566,126.978', headers={'Accept-Language': 'ko-KR'})
                 assert status == 200, (status, body)
                 hops = Origin.paths[before:]
-                assert any(p.startswith('/v000903/kma/addr/') for p in hops), hops
-                bodies.append(body)
+                legacy_kma = any(p.startswith('/v000903/kma/addr/') for p in hops)
                 s3_read = s3_requests(s3) - s3_before
                 if families == 'kma':
+                    assert not legacy_kma, ('the kma phase forwarded', hops)
                     assert s3_read > 0, 'the kma S3 input source read nothing'
+                    json.loads(body)
+                    # The acquisitions reached the loopback data.go.kr and KMA roots with the
+                    # placeholder key only.
+                    acquired = [p for p in hops if not p.startswith('/geocode/')]
+                    assert any(p.startswith('/1360000/VilageFcstInfoService_2.0/') for p in acquired), hops
+                    assert any(p.startswith('/wid/queryDFS.jsp') for p in acquired), hops
+                    assert any(p.startswith('/1360000/MidFcstInfoService/') for p in acquired), hops
+                    print('PASS SERVER2_NATIVE_FAMILIES=kma: v000903 KMA request answered natively from S3 '
+                          'with %d loopback provider requests so far, no legacy KMA hop' % len(acquired), flush=True)
                 else:
+                    assert legacy_kma, hops
                     assert s3_read == 0, ('legacy phase read S3', s3_read)
-                print('PASS %s: v000903 KMA request reached the legacy KMA backend (%s)'
-                      % ('SERVER2_NATIVE_FAMILIES=' + families if families else 'routing list unset', ', '.join(hops)), flush=True)
+                    bodies.append(body)
+                    print('PASS routing list unset: v000903 KMA request reached the legacy KMA backend (%s)'
+                          % ', '.join(hops), flush=True)
             finally:
                 g.stop(process)
-        assert bodies[0] == bodies[1] == bodies[2], 'native forward changed the response bytes'
+        assert bodies[0] == bodies[1], 'the rollback changed the legacy response bytes'
         for bad, with_s3, with_keys in (('kma,kma', True, True), ('KMA', True, True), ('kma,unknown', True, True),
                                         ('kma', False, True), ('kma', True, False)):
             env = {k: v for k, v in os.environ.items() if k in ('PATH', 'SYSTEMROOT', 'TMPDIR')}
@@ -150,8 +163,9 @@ def run(binary, peer_binary):
             assert refused.returncode != 0 and 'server2 public=' not in refused.stdout, (bad, refused.returncode, refused.stderr)
         print('PASS release server2: unknown or repeated routing entries, and kma without the S3 settings or '
               'DONGNAE_SECRET_KEYS, stop startup before binding', flush=True)
-        print('PASS S15b-1 KMA routing release smoke (legacy -> kma -> legacy, identical bytes, the kma phase read '
-              'the S3 test peer); loopback peers only, no provider/AWS request, no native serving claim', flush=True)
+        print('PASS S15b-4a KMA routing release smoke (legacy -> kma native -> legacy with identical legacy bytes, '
+              'the kma phase read the S3 test peer and acquired from loopback roots); loopback peers only, no '
+              'provider/AWS request, no parity claim', flush=True)
     finally:
         peer.terminate()
         peer.wait(timeout=5)
