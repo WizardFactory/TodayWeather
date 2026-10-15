@@ -275,6 +275,13 @@ impl KmaStore for RecordedStore {
     fn city_hourly(&self, town: &Value) -> StoreResult {
         self.answer("city_hourly", json!([town]))
     }
+    fn history(&self, town: &Value) -> StoreResult {
+        if !self.calls.iter().any(|c| c.method == "history") {
+            // Recorded with ASOS history reads disabled: legacy makes no read.
+            return Ok(OrderedJson::Null);
+        }
+        self.answer("history", json!([town]))
+    }
     fn area_no(&self, a: &str, b: &str, c: &str) -> StoreResult {
         self.answer("area_no", json!([a, b, c]))
     }

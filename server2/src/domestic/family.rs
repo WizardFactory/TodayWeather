@@ -21,6 +21,8 @@ pub enum Service {
     RiseSet,
     /// data.go.kr FcstZoneInfoService `getFcstZoneCd` (S13b; legacy #2740).
     ForecastZone,
+    /// KMA ASOS hourly/daily observations (S15b-2; legacy #2564/#2648 history provider).
+    Asos,
 }
 impl Service {
     /// Legacy timeout of one HTTP attempt (S13d). The funded transport applies the same value
@@ -32,6 +34,7 @@ impl Service {
             Self::LivingWthrIdx | Self::HealthWthrIdx => t::LIFE_INDEX,
             Self::AirKorea => t::AIRKOREA,
             Self::RiseSet => t::KASI,
+            Self::Asos => t::ASOS,
         }
     }
 }
@@ -119,7 +122,9 @@ impl DataGoKrFamily {
             Service::MidFcst => Shape::Mid,
             Service::LivingWthrIdx | Service::HealthWthrIdx => Shape::Life,
             // Not a DataGoKrFamily service.
-            Service::AirKorea | Service::RiseSet | Service::ForecastZone => Shape::Life,
+            Service::AirKorea | Service::RiseSet | Service::ForecastZone | Service::Asos => {
+                Shape::Life
+            }
         }
     }
 }

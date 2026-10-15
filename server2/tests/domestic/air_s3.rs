@@ -943,9 +943,14 @@ async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
         station_name: None,
         station_geo: None,
     };
-    let s3 = S3Source::new(transport.clone(), Arc::new(|| NOW))
-        .unwrap()
-        .with_air(None, Some(Arc::new(FixedAir(observation.clone()))));
+    let s3 = S3Source::new(
+        transport.clone(),
+        Arc::new(|| NOW),
+        Arc::new(super::source_s3::Unreachable),
+        Arc::new(super::source_s3::Unreachable),
+    )
+    .unwrap()
+    .with_air(None, Some(Arc::new(FixedAir(observation.clone()))));
     let path = format!("{}?airForecastSource=airkorea", request().original_url);
     let snapshot = match s3
         .snapshot(&parse_path(&path, "ko").unwrap(), deadline())
@@ -995,9 +1000,14 @@ async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
     let empty_transport = empty.transport();
     let empty_store = CatalogStore::new(empty_transport.clone(), CatalogLimits::default()).unwrap();
     seed(&empty_store, &[]).await;
-    let s3 = S3Source::new(empty_transport, Arc::new(|| NOW))
-        .unwrap()
-        .with_air(None, Some(Arc::new(FixedAir(observation))));
+    let s3 = S3Source::new(
+        empty_transport,
+        Arc::new(|| NOW),
+        Arc::new(super::source_s3::Unreachable),
+        Arc::new(super::source_s3::Unreachable),
+    )
+    .unwrap()
+    .with_air(None, Some(Arc::new(FixedAir(observation))));
     let snapshot = match s3.snapshot(&request(), deadline()).await {
         SourceAnswer::Snapshot(s) => s,
         SourceAnswer::Forward(r) => panic!("forwarded: {r}"),

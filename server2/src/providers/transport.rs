@@ -103,6 +103,8 @@ pub mod legacy_timeout {
     pub const KASI: Duration = Duration::from_secs(5);
     /// `DsfController.fetchTimeoutMs` (the S11 world VC call budget).
     pub const VISUAL_CROSSING: Duration = Duration::from_secs(8);
+    /// `lib/history/provider.js` `timeout` (ASOS hourly/daily ranges, S15b-2).
+    pub const ASOS: Duration = Duration::from_secs(10);
     /// `kmaScraper` AWS/city pages; legacy town RSS had no timeout, so every KMA web page gets
     /// the scraper value.
     pub const KMA_WEB: Duration = Duration::from_secs(30);
@@ -131,6 +133,7 @@ pub fn attempt_timeout(provider: Provider, endpoint: &reqwest::Url) -> Duration 
                 return t::LIFE_INDEX;
             }
             ("1360000", Some("WthrWrnInfoService")) => return t::WARNINGS,
+            ("1360000", Some("AsosHourlyInfoService" | "AsosDalyInfoService")) => return t::ASOS,
             ("B552584", Some(_)) => return t::AIRKOREA,
             ("B090041", Some(_)) => return t::KASI,
             _ => (),

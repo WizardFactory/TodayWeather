@@ -5,6 +5,7 @@
 use super::source::{docs_json, same};
 use rusty_s3::Credentials;
 use serde_json::json;
+use server2::domestic::kma::source::observe::{Acquire, Locate};
 use server2::domestic::kma::{
     AssemblyConfig, MidModel, Outcome, TownModel, assemble,
     backend::{KmaSource, SourceAnswer, parse_path},
@@ -14,6 +15,7 @@ use server2::domestic::kma::{
     },
 };
 use server2::domestic::publication::Publication;
+use server2::domestic::{Acquired, DomesticError};
 use server2::gateway::OrderedJson;
 use server2::history::Grid;
 use server2::storage::{
@@ -72,6 +74,11 @@ impl Peer {
         &self.endpoint
     }
     pub fn transport(&self) -> BoundedS3<HttpS3Transport> {
+        self.transport_limited(TEST_PERMITS)
+    }
+    /// A transport admitting at most `limit` requests at once (tests that run many reads
+    /// concurrently stay well below the peer's connection limit on CI runners).
+    pub fn transport_limited(&self, limit: usize) -> BoundedS3<HttpS3Transport> {
         BoundedS3::new(
             HttpS3Transport::new(
                 &self.endpoint,
@@ -80,7 +87,7 @@ impl Peer {
                 Credentials::new("server2-local", "server2-local-secret"),
             )
             .unwrap(),
-            TEST_PERMITS,
+            limit,
         )
     }
 }
@@ -489,7 +496,38 @@ pub fn request() -> server2::domestic::kma::KmaRequest {
     .unwrap()
 }
 fn source(peer: &Peer) -> S3Source<BoundedS3<HttpS3Transport>> {
-    S3Source::new(peer.transport(), Arc::new(|| NOW)).unwrap()
+    // The source also starts its station loads (S15b-2): stay well below the Python S3 peer's
+    // connection limit, which drops connections under concurrency on Linux CI runners.
+    S3Source::new(
+        peer.transport_limited(4),
+        Arc::new(|| NOW),
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+    )
+    .unwrap()
+}
+/// Request-time acquisition and geocoding doubles that never reach a provider.
+pub struct Unreachable;
+impl Acquire for Unreachable {
+    fn web(
+        &self,
+        _: server2::domestic::family::WebRequest,
+        _: Instant,
+    ) -> server2::gateway::BoxFuture<'_, Result<Acquired, DomesticError>> {
+        Box::pin(async { Err(DomesticError::Transport) })
+    }
+    fn asos(
+        &self,
+        _: server2::domestic::asos::AsosRequest,
+        _: Instant,
+    ) -> server2::gateway::BoxFuture<'_, Result<Acquired, DomesticError>> {
+        Box::pin(async { Err(DomesticError::Transport) })
+    }
+}
+impl Locate for Unreachable {
+    fn locate(&self, _: String) -> server2::gateway::BoxFuture<'_, Option<(f64, f64)>> {
+        Box::pin(async { None })
+    }
 }
 const SEOUL: Coord = Coord { mx: 60., my: 127. };
 
@@ -576,7 +614,9 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
         TEST_PERMITS,
         "every S3 permit returned"
     );
-    // The assembly reaches the first input S15b-2 owns and forwards with its name.
+    // Station and ASOS inputs (S15b-2) and the air and life inputs (S15b-3a/3b) are sourced,
+    // here over empty collections: the assembly answers natively (no AirKorea station, so the
+    // image forecasts of S15b-3c are not asked).
     let outcome = assemble(
         &request(),
         snapshot.as_ref(),
@@ -584,11 +624,13 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
         AssemblyConfig::default(),
     );
     match outcome {
-        Outcome::Legacy(reason) => assert!(
-            reason.contains("city_hourly is not sourced yet (S15b-2)"),
-            "{reason}"
-        ),
-        other => panic!("not forwarded: {other:?}"),
+        Outcome::Json(body) => {
+            for key in ["regionName", "cityName", "townName", "short", "midData"] {
+                assert!(body.get(key).is_some(), "{key}");
+            }
+        }
+        Outcome::Legacy(reason) => panic!("forwarded: {reason}"),
+        other => panic!("unexpected: {:?}", std::mem::discriminant(&other)),
     }
 }
 

@@ -1,0 +1,54 @@
+{
+  "task": "S15b-2",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-2.json",
+    "server2/Cargo.toml",
+    "server2/Cargo.lock",
+    "server2/src/domestic/",
+    "server2/src/history/",
+    "server2/src/providers/transport.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/tests/gateway/runtime.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/",
+    "server2/tests/history/",
+    "server2/tests/history.rs",
+    "server2/tools/kma_smoke.py",
+    "server2/tools/migration/"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b governing intent record (S15b-2 slice); no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b governing specification (S15b-2 slice); no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b-2 plan: station acquisition, ASOS history fill, sources followed and request counts; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S15b-2 station and ASOS history section only"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6173095881",
+  "path_notes": {
+    "server2/Cargo.toml": "encoding_rs for the EUC-KR KMA observation pages (legacy iconv EUC-KR decoding)",
+    "server2/src/domestic/": "KMA observation page parsers, station registry and row stores, station answers, ASOS history store and request-time acquisitions (kma/source/), ASOS data.go.kr families (family.rs, acquire.rs)",
+    "server2/src/history/": "coverage no longer forwards on ASOS reads; ASOS fills older hours per legacy #2564/#2648 (AK correction 2026-10-14)",
+    "server2/tests/history/": "replaces coverage_never_substitutes_station_or_asos_data_for_grid_hours with the corrected fill rule",
+    "server2/tests/domestic/": "stations.json.gz legacy oracle (cheerio 0.20.0, Mongoose 5.1.2 savers, controllerKmaStnWeather readers, lib/history)",
+    "server2/tools/migration/": "offline kmastninfos converter (export_station_seeds.py) and importer example (station_seed_import.rs), AK 2026-10-15; the production export is a separately authorized action",
+    "server2/tools/kma_smoke.py": "the kma phase gets placeholder data.go.kr settings and provider roots on the loopback origin, so no provider is reached",
+    "server2/src/gateway/runtime.rs": "kma requires SERVER2_DATA_GO_KR_KEYS and SERVER2_DATA_GO_KR_DAILY_UNITS; optional provider-root overrides (HTTPS or loopback HTTP)",
+    "server2/src/providers/transport.rs": "the legacy ASOS attempt timeout (lib/history/provider.js 10 s) in the S13d per-service timeout table"
+  }
+}

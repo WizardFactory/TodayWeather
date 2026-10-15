@@ -263,7 +263,7 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
     async fn life(&self, now: f64, until: Instant) -> Arc<LifeIndex> {
         self.read_life(now, until, false).await;
         let mut flights = Vec::new();
-        if let Some(acquire) = self.shared.acquire.clone().filter(|a| a.funded()) {
+        if let Some(acquire) = self.shared.acquire.clone() {
             let folded = self.life_fold();
             let mut wanted: Vec<(DataGoKrFamily, Publication, String)> = Vec::new();
             if let Some(slot) = publication::uv_slots(now as i64).and_then(|s| s.first().copied())
@@ -775,7 +775,7 @@ async fn kasi_pass<T: IndexListing + Clone + 'static>(
     }
     shared.kasi.lock().unwrap_or_else(|e| e.into_inner()).loaded = true;
     // Acquire what is still missing.
-    let Some(acquire) = shared.acquire.clone().filter(|a| a.funded()) else {
+    let Some(acquire) = shared.acquire.clone() else {
         return Ok(());
     };
     let today = utc_date(now);

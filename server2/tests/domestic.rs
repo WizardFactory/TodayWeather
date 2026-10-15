@@ -2,10 +2,14 @@
 mod air;
 #[path = "domestic/air_s3.rs"]
 mod air_s3;
+#[path = "domestic/asos.rs"]
+mod asos;
 #[path = "domestic/life.rs"]
 mod life;
 #[path = "domestic/life_s3.rs"]
 mod life_s3;
+#[path = "domestic/observe.rs"]
+mod observe;
 #[path = "domestic/parity.rs"]
 mod parity;
 #[path = "domestic/replay.rs"]
@@ -16,6 +20,10 @@ mod source;
 mod source_s3;
 #[path = "domestic/source_s3_oracle.rs"]
 mod source_s3_oracle;
+#[path = "domestic/stations.rs"]
+mod stations;
+#[path = "providers/support.rs"]
+mod stub;
 #[path = "domestic/support.rs"]
 mod support;
 #[path = "domestic/switch.rs"]

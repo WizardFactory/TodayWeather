@@ -396,25 +396,25 @@ async fn stub() -> Stub {
     });
     Stub { base, state, task }
 }
-fn live(peer: &Peer, store: Arc<Store>, base: &str, keys: bool) -> Arc<dyn LifeAcquire> {
-    let vars = |name: &str| -> Option<String> {
-        match name {
-            "DONGNAE_SECRET_KEYS" if keys => {
-                Some(r#"["S15B3B_LOCAL_KEY_A+aaaaaaaaaaaaaaaa/="]"#.into())
-            }
-            "SERVER2_DONGNAE_DAILY_UNITS" => Some("5000".into()),
-            "SERVER2_DATA_GO_KR_URL" | "SERVER2_MFDS_URL" => Some(base.into()),
-            _ => None,
-        }
-    };
-    let settings = LifeSettings::from_vars(&vars).unwrap();
-    Arc::new(LiveLife::new(
-        settings,
+/// The life acquirer on the KMA source's data.go.kr acquirer (S15b-2), against the stub.
+fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn LifeAcquire> {
+    let vars =
+        |name: &str| -> Option<String> { (name == "SERVER2_MFDS_BASE_URL").then(|| base.into()) };
+    let daily = server2::domestic::kma::source::observe::DailyAcquirer::new(
         Arc::new(server2::providers::HttpProviderTransport::new(2 << 20).unwrap()),
         Arc::new(server2::providers::HttpPublicTransport::new(2 << 20).unwrap()),
         Arc::new(peer.transport()),
-        store,
+        vec!["S15B3B_LOCAL_KEY_A+aaaaaaaaaaaaaaaa/=".into()],
+        5000,
+        server2::domestic::family::Endpoints::new(base, base, base).unwrap(),
         Arc::new(server2::budget::SystemClock),
+        Arc::new(server2::domestic::metrics::DomesticMetrics::default()),
+    )
+    .unwrap();
+    Arc::new(LiveLife::new(
+        LifeSettings::from_vars(&vars).unwrap(),
+        Arc::new(daily),
+        store,
     ))
 }
 /// A request instant at or after an MFDS slot of today (or yesterday's last slot).
@@ -443,7 +443,7 @@ async fn missing_national_datasets_are_acquired_once_and_published_before_use() 
     let stub = stub().await;
     let inputs = Arc::new(
         LifeInputs::new(transport.clone(), store.clone())
-            .with_acquire(Some(live(&peer, store.clone(), &stub.base, true)))
+            .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
             .with_kasi_schedule(HOLD, HOLD),
     );
     let now = request_now();
@@ -506,7 +506,7 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
     let stub = stub().await;
     stub.state.uv_delay_ms.store(4_000, Ordering::SeqCst);
     let inputs = LifeInputs::new(transport.clone(), store.clone())
-        .with_acquire(Some(live(&peer, store.clone(), &stub.base, true)))
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_kasi_schedule(HOLD, HOLD);
     let now = request_now();
     let started = std::time::Instant::now();
@@ -543,20 +543,14 @@ async fn an_mfds_slot_is_asked_once_even_when_it_fails() {
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
     stub.state.mfds_status.store(503, Ordering::SeqCst);
-    // Without data.go.kr keys only the keyless MFDS table is acquired.
     let inputs = LifeInputs::new(transport.clone(), store.clone())
-        .with_acquire(Some(live(&peer, store.clone(), &stub.base, false)))
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_kasi_schedule(HOLD, HOLD);
     let now = request_now();
     let first = inputs.load(now, short_deadline()).await;
     assert!(first.mfds.is_empty());
     inputs.load(now, short_deadline()).await;
     assert_eq!(stub.state.mfds.load(Ordering::SeqCst), 1, "legacy lastSlot");
-    assert_eq!(
-        stub.state.uv.load(Ordering::SeqCst),
-        0,
-        "no key: no UV call"
-    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -567,7 +561,7 @@ async fn the_kasi_capture_acquires_missing_days_and_a_failing_area_does_not_stop
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
     let inputs = LifeInputs::new(transport.clone(), store.clone())
-        .with_acquire(Some(live(&peer, store.clone(), &stub.base, true)))
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_kasi_schedule(HOLD, HOLD);
     let now = now_ms();
     inputs.kasi_pass(now).await.unwrap();
@@ -637,7 +631,13 @@ async fn the_snapshot_answers_the_life_store_calls() {
         &[body.to_string().into_bytes()],
     )
     .await;
-    let s3 = S3Source::new(transport.clone(), Arc::new(|| NOW)).unwrap();
+    let s3 = S3Source::new(
+        transport.clone(),
+        Arc::new(|| NOW),
+        Arc::new(super::source_s3::Unreachable),
+        Arc::new(super::source_s3::Unreachable),
+    )
+    .unwrap();
     let snapshot = match s3.snapshot(&request(), deadline()).await {
         SourceAnswer::Snapshot(s) => s,
         SourceAnswer::Forward(r) => panic!("forwarded: {r}"),
@@ -663,38 +663,19 @@ async fn the_snapshot_answers_the_life_store_calls() {
     assert!(items_of(&rs).is_empty());
 }
 
-fn vars(pairs: Vec<(&'static str, &'static str)>) -> impl Fn(&str) -> Option<String> {
-    move |name: &str| {
-        pairs
-            .iter()
-            .find(|(k, _)| *k == name)
-            .map(|(_, v)| (*v).to_owned())
-    }
-}
-
 #[test]
 fn life_settings_fail_closed() {
-    let keys = r#"["S15B3B_LOCAL_KEY_A+aaaaaaaaaaaaaaaa/="]"#;
-    assert!(
-        LifeSettings::from_vars(&vars(vec![])).is_ok(),
-        "no key: MFDS only"
-    );
-    assert!(LifeSettings::from_vars(&vars(vec![("DONGNAE_SECRET_KEYS", keys)])).is_err());
-    assert!(
-        LifeSettings::from_vars(&vars(vec![
-            ("DONGNAE_SECRET_KEYS", keys),
-            ("SERVER2_DONGNAE_DAILY_UNITS", "0")
-        ]))
-        .is_err()
-    );
-    assert!(
-        LifeSettings::from_vars(&vars(vec![("SERVER2_MFDS_URL", "http://example.com/")])).is_err()
-    );
-    let s = LifeSettings::from_vars(&vars(vec![
-        ("DONGNAE_SECRET_KEYS", keys),
-        ("SERVER2_DONGNAE_DAILY_UNITS", "100"),
-    ]))
-    .unwrap();
-    assert_eq!(s.keys.len(), 1);
-    assert!(!format!("{s:?}").contains("aaaa"), "keys never printed");
+    let root =
+        |v: &'static str| move |name: &str| (name == "SERVER2_MFDS_BASE_URL").then(|| v.to_owned());
+    let default = LifeSettings::from_vars(&|_: &str| None).unwrap();
+    assert_eq!(default.mfds_root.as_str(), "https://poisonmap.mfds.go.kr/");
+    for bad in [
+        "http://poisonmap.example.test/",
+        "https://poisonmap.example.test/api",
+        "https://poisonmap.example.test/?q=1",
+        "not a url",
+    ] {
+        assert!(LifeSettings::from_vars(&root(bad)).is_err(), "{bad}");
+    }
+    assert!(LifeSettings::from_vars(&root("http://127.0.0.1:9/")).is_ok());
 }

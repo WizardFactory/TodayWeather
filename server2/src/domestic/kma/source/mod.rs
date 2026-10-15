@@ -21,8 +21,10 @@
 //! [`life_input`], [`life_live`]). The image forecasts (`air_forecast`, S15b-3c) still forward.
 pub mod air_input;
 pub mod airkorea;
+pub mod asos;
 mod doc;
 mod grid;
+pub mod html;
 mod items;
 pub mod kasi;
 pub mod life;
@@ -31,9 +33,15 @@ pub mod life_live;
 pub mod live;
 pub mod mfds;
 mod mid;
+pub mod observe;
+pub mod pages;
 mod records;
 mod reference;
+pub mod rnshit;
 mod rss;
+pub mod seed;
+pub mod stations;
+pub mod stn;
 mod zone;
 
 pub use doc::{Doc, Val};
@@ -90,7 +98,7 @@ fn lookback_ms(family: Family) -> f64 {
 /// RSS rows reach two days after their publication day; retention is 216 h before the run.
 const RSS_LOOKBACK_MS: f64 = grid::RETENTION_MS + 4. * DAY_MS;
 /// KST months (`YYYYMM`) from [`HISTORY_START_MONTH`] through `now`, ascending.
-fn history_months(now: f64) -> Vec<u32> {
+pub(crate) fn history_months(now: f64) -> Vec<u32> {
     let end = records::months(now, now)
         .last()
         .copied()
@@ -138,17 +146,32 @@ pub struct S3Source<T> {
     warnings: Arc<WarningService<T>>,
     clock: Clock,
     zones: tokio::sync::Mutex<Option<ZoneCache>>,
+    observations: Arc<observe::Observations<T>>,
     /// S15b-3: AirKorea national datasets and the air-provider fallback.
     air: air_input::AirInputs<T>,
     /// S15b-3b: life index, MFDS food poisoning and KASI rise/set national datasets.
     life: life_input::LifeInputs<T>,
 }
-impl<T: IndexListing + Clone + 'static> S3Source<T> {
-    pub fn new(transport: T, clock: Clock) -> Result<Self, crate::storage::Error> {
+impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
+    /// `acquire` makes the request-time acquisitions (S15b-2 station pages and ASOS ranges);
+    /// `locate` geocodes new station addresses.
+    pub fn new(
+        transport: T,
+        clock: Clock,
+        acquire: Arc<dyn observe::Acquire>,
+        locate: Arc<dyn observe::Locate>,
+    ) -> Result<Self, crate::storage::Error> {
         let limits = CatalogLimits::default();
         let store = Arc::new(CatalogStore::new(transport.clone(), limits.clone())?);
         let warnings = WarningStore::new(transport.clone(), limits, StoreConfig::default())?;
+        let observations = Arc::new(observe::Observations::new(
+            transport.clone(),
+            store.clone(),
+            acquire,
+            locate,
+        ));
         Ok(Self {
+            observations,
             air: air_input::AirInputs::new(transport.clone(), store.clone()),
             life: life_input::LifeInputs::new(transport.clone(), store.clone()),
             reader: Reader { transport, store },
@@ -453,8 +476,18 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
             .then(|| crate::history::Grid::new(coord.mx as u16, coord.my as u16))
             .flatten()
             .ok_or("town grid outside the KMA grid")?;
+        // Station observations and ASOS history: at most REQUEST_WAIT for late acquisitions.
+        let until = deadline.min(Instant::now() + observe::REQUEST_WAIT);
+        let observations = async {
+            let folded = self.observations.stations(now as i64, until).await;
+            let history = self
+                .observations
+                .history(&town, folded.as_deref(), now, until)
+                .await;
+            (folded, history)
+        };
         let dust_wanted = air_input::airkorea_forecast_requested(&request.query);
-        let (zones, (current, shortest, short, rss), air, life) = tokio::join!(
+        let (zones, (current, shortest, short, rss), (stations, history), air, life) = tokio::join!(
             self.zones(now, deadline),
             async {
                 tokio::join!(
@@ -464,6 +497,7 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
                     self.rss_answer(grid, now, deadline),
                 )
             },
+            observations,
             self.air
                 .load(&town, &region, &city, dust_wanted, now, deadline),
             self.life.load(now, deadline),
@@ -511,12 +545,14 @@ impl<T: IndexListing + Clone + 'static> S3Source<T> {
             mids,
             zones,
             special,
+            stations,
+            history,
             air,
             life,
         })
     }
 }
-impl<T: IndexListing + Clone + 'static> KmaSource for S3Source<T> {
+impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> {
     fn snapshot(&self, request: &KmaRequest, deadline: Instant) -> BoxFuture<'_, SourceAnswer> {
         let request = request.clone();
         Box::pin(async move { self.load(&request, deadline).await })
@@ -694,6 +730,10 @@ pub struct Snapshot {
     mids: HashMap<(MidModel, String), Vec<Doc>>,
     zones: Arc<Zones>,
     special: Arc<ZoneState>,
+    /// Station collections (None before the first fold: answered over empty collections).
+    stations: Option<Arc<observe::Folded>>,
+    /// `history.loadForTown` for the snapshot's town.
+    history: OrderedJson,
     air: air_input::AirAnswers,
     life: life_input::LifeAnswers,
 }
@@ -749,11 +789,32 @@ impl KmaStore for Snapshot {
     fn forecast_zone(&self, region: &str, city: &str) -> StoreResult {
         Ok(list(&self.zones.find_by_name(region, city)))
     }
-    fn stn_hourly_and_min_rns(&self, _: &Value, _: &str, _: &Value) -> StoreResult {
-        not_sourced("stn_hourly_and_min_rns", "S15b-2")
+    fn stn_hourly_and_min_rns(&self, town: &Value, date_time: &str, _: &Value) -> StoreResult {
+        let empty = observe::Folded::default();
+        let f = self.stations.as_deref().unwrap_or(&empty);
+        stn::Stations {
+            registry: &f.registry,
+            hourly: &f.hourly,
+            minute: &f.minute,
+        }
+        .hourly_and_min_rns(town, date_time)
+        .map(|d| d.json())
+        .map_err(|e| StoreError(e.0))
     }
-    fn city_hourly(&self, _: &Value) -> StoreResult {
-        not_sourced("city_hourly", "S15b-2")
+    fn city_hourly(&self, town: &Value) -> StoreResult {
+        let empty = observe::Folded::default();
+        let f = self.stations.as_deref().unwrap_or(&empty);
+        stn::Stations {
+            registry: &f.registry,
+            hourly: &f.hourly,
+            minute: &f.minute,
+        }
+        .city_hourly(town, self.now)
+        .map(|rows| list(&rows))
+        .map_err(|e| StoreError(e.0))
+    }
+    fn history(&self, _: &Value) -> StoreResult {
+        Ok(self.history.clone())
     }
     /// `modelAreaNo.find({town}).limit(1)` over the repository area-number list.
     fn area_no(&self, first: &str, second: &str, third: &str) -> StoreResult {

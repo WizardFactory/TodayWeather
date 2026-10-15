@@ -135,6 +135,70 @@ python3 scripts/check-artifact-policy.py --staged / --range
 
 Rollback: revert the PR; `kma` remains off until S15b-4.
 
+## S15b-2 station observations and ASOS history
+
+Declaration: [S15b-2.json](../server2/config/tasks/S15b-2.json). Base `05c06c67`, merged with
+master `f49921b6`. Outside paths: this plan, the intent/spec records and the S15b-2 section of
+`docs/architecture/server2.md`.
+
+### Sources and which was followed
+
+| Topic | Provider documentation | Legacy collection | Deployed assembly | Followed |
+| --- | --- | --- | --- | --- |
+| AWS minute/hourly, city pages | KMA web pages, no API document; live shapes 2026-10-14 | `kmaScraper.js` `getAWSWeather`/`getCityWeather`/`_parseStnMinInfo` ([K8](../docs/rewrite/external-providers.md)); cadence in [weather collection](../docs/architecture/weather-collection.md) | `controllerKmaStnWeather.js:784-1240` | legacy code; the city page ignores `tm` (live) |
+| Station registry | — | `_saveStnInfo` ([data model](../docs/rewrite/data-model-reference.md)) | `getStnList` 2d `$near` | legacy code, seeded from the `kmastninfos` copy (AK 2026-10-15) |
+| ASOS ranges | data.go.kr ASOS: `stnIds` required, D-1 only, dev quota 10,000/day; live: no nationwide form | `lib/history/{provider,recovery,policy,store}.js` ([H1](../docs/rewrite/external-providers.md#historical-observations-asos), [lifecycle](../docs/rewrite/server-data-lifecycle.md)) | `controllerTown.js:1288-1320`, `:2796-2803` ([assembly items 10/20](../docs/rewrite/server-response-assembly.md), [mobile API](../docs/architecture/mobile-api.md)) | legacy code; read budget 250 ms in code vs 3 s in `configuration-inventory.md` (code followed; server2 waits AK's 3 s) |
+| Ongoing ASOS hours | API허브 nationwide forms need an authKey (not configured) | — | — | AK 2026-10-15: AWS hourly page rows |
+| Recent grid hours | `getUltraSrtNcst` −23 h `00`, −24 h `10` (live) | `PastConditionGather` 23 slots ([gather reconciliation](../docs/architecture/gather-source-reconciliation.md)) | — | KMA backfill 23 h, ASOS older (AK 2026-10-14) |
+
+### Live confirmation (2026-10-14 23:56–23:58 KST; keys loaded in-process, never printed)
+
+| Call | Result |
+| --- | --- |
+| `GET https://www.weather.go.kr/cgi-bin/aws/nph-aws_txt_min` | 200 `text/html` EUC-KR, 467,734 B, 745 stations, page 2026.10.14.23:54 |
+| `…/nph-aws_txt_min?202610142200&0&MINDB_60M&0&m` | 200, 745 rows of 22:00 |
+| `…/weather/observation/currentweather.jsp?tm=2026.10.14.22:00` | 200 `text/html;charset=UTF-8`, 97 rows, page 23:00 (latest only) |
+| ASOS hourly `stnIds=108`, 20261007 00 – 20261013 23 | `00`, 168 items, one page |
+| ASOS daily `stnIds=108`, 20261007 – 20261013 | `00`, 7 items |
+| ASOS hourly without `stnIds` / `stnIds=0` / `stnIds=108,112` | `11` / `03` / `02` |
+| `getUltraSrtNcst` 60,127 at −23 h / −24 h | `00` 8 items / `10` "최근 1일 간의 자료만 제공합니다." |
+
+### Calls per path
+
+Acquisitions, which also hold when a call fails; each acquisition makes at most two HTTP attempts per page:
+
+- AWS minute: at most one per 2 minutes (≤ 30/h, ≤ 720/day).
+- AWS hourly: the latest and previous hours ≤ 6/h each until acquired. The backfill acquires each missing hour of the 8-day window at most once per 6 hours: 190 once at a cold start, ≤ 190 per 6 h during an outage.
+- City: ≤ 6/h while missing.
+- ASOS: one recovery run per mapped station at most once per hour. That is 2 calls cold, then ≤ 2 per station and day, plus hourly runs while ranges stay incomplete (≤ 8 pages per range).
+- Station geocoding: once per unseeded station address.
+
+### Scenarios
+
+| ID | Goal | Proof |
+| --- | --- | --- |
+| C1 | Pages parse like cheerio | `stations::observation_pages_parse_like_legacy`, merge test |
+| C2 | Savers, registry and station answers | `stations::station_store_saves_and_answers_like_legacy` (5 oracle scenarios) |
+| C3 | ASOS store and plan like `Recovery.run` | `asos::asos_history_store_rebuilds_like_legacy_recovery` (live 108 bodies, December, rejections) |
+| C4 | ASOS provider page checks | `asos::asos_acquisition_checks_pages_like_the_legacy_provider` (loopback stub) |
+| C5 | Chain with the read enabled | `parity::all_oracle_scenarios_match_legacy_bytes` (85, 9 new) |
+| C6 | Single-flight, publish, fresh process from S3 | `observe::station_and_history_inputs_are_acquired_once_published_and_answered` |
+| C7 | 3-second answer, completion for the next request | `observe::late_acquisitions_answer_as_absent_data_and_complete_for_the_next_request` |
+| C8 | Seed converter and importer | `observe::station_seed_converter_keeps_export_lines_and_rejects_other_fields`, `observe::the_registry_starts_from_the_imported_legacy_seed` |
+| C9 | Coverage never forwards | `coverage::coverage_fills_recent_hours_from_kma_and_older_hours_from_asos` and the reworked suite |
+| C10 | Settings fail closed, no provider in the smoke | `runtime::kma_requires_data_go_kr_keys_daily_units_and_valid_provider_roots`, `kma_smoke.py` |
+
+### Open decisions and limitations
+
+- `_updateRnsHitRate` is ported but not wired: legacy runs it only from `/gather` against the
+  retired `KmaStnMinute`, and v000903 applies neither the 0.5 rule nor the mountain filter.
+  Wiring it would change answers legacy serves (decision pending).
+- Not reproduced: legacy hourly re-runs at minutes 4/9/15/30 (one acquisition from minute 15),
+  city fields of backfilled hours, registration timing of unseeded stations (first fold, page
+  order), and the `ASOS_HISTORY_STATIONS` allowlist (every registry city station is a candidate).
+- AWS-page rows used for ASOS hours are labelled `KMA_ASOS` in provenance (with `origin` stored).
+- The `kmastninfos` export and import against production are separately authorized actions.
+
 ### Scenarios (S15b-3b)
 
 Declaration: [S15b-3b.json](../server2/config/tasks/S15b-3b.json).
@@ -149,7 +213,7 @@ Declaration: [S15b-3b.json](../server2/config/tasks/S15b-3b.json).
 | L6 | MFDS outage | 503 | Slot asked once, answer without fsn | B3-2/B3-3; `life_s3::an_mfds_slot_*` |
 | L7 | Rise/set | KASI capture with failing areas | Other areas captured; answers equal `getRiseSetList` | B3-1/B3-2; `life::kasi_*`, `life_s3::the_kasi_capture_*` |
 | L8 | Pollen day+3 | Provider `twodaysaftertomorrow` | Kept in `pollen_day3`, absent from the legacy answer | B3-4; `life::pollen_day_three_*` |
-| L9 | Operator enables `kma` | Key without units, bad MFDS root | Refused | B3-5; `gateway::runtime::kma_life_*`, `life_s3::life_settings_*` |
+| L9 | Operator enables `kma` | Bad MFDS root (keys and units: S15b-2) | Refused | B3-5; `gateway::runtime::kma_requires_*`, `life_s3::life_settings_*` |
 
 Live record (2026-10-15, keys loaded in-process from `server/.env`, nothing stored outside the
 local S3 peer): raw probes of UV, the three pollen kinds (oak and pine `99`), KASI and MFDS (with

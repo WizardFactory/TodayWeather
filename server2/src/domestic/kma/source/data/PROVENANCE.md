@@ -21,6 +21,28 @@ master `1ce314d6`; the files last changed in `8899b60a`.
 Towns legacy added later by request-time geocoding are not in these files; S15b-4 geocodes and
 stores them natively.
 
+## `html-entities.json` (S15b-2)
+
+A byte-identical copy of `maps/entities.json` from the npm package `entities` 1.0.0 (the copy
+`htmlparser2` 3.8.3 bundles under its own `node_modules`, which legacy cheerio 0.20.0 uses), sha256
+`faeaf228b74fa90547cccf84c939924eca20eb54315095af7397e959f584ff80`, 2,125 names. `server2::domestic::kma::source::html` decodes
+semicolon-terminated named entities with it, as htmlparser2's `_parseNamedEntityStrict` does.
+License of the `entities` package:
+
+```
+Copyright (c) Felix Böhm
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+THIS IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
 ## Area numbers (S15b-3b)
 
 Byte-identical copies, copied at master `7ca6f002`; `20160704_AreaNoResutl` last changed in

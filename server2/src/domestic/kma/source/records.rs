@@ -2,7 +2,10 @@
 //! per key and KST month and read through S06 `lookup`, every complete acquisition with its pages
 //! in page order and its fetch instant.
 use crate::history::IndexListing;
-use crate::storage::{CatalogId, CatalogStore, Error, LookupOutcome, ProviderKey, sha256};
+use crate::storage::{
+    CatalogId, CatalogStore, Error, LookupOutcome, PageOutcome, ProviderKey, RawRecord, ReadCursor,
+    ReadOrder, sha256,
+};
 use std::sync::Arc;
 use tokio::time::Instant;
 
@@ -27,6 +30,35 @@ pub const LOOKUPS: usize = 8;
 pub struct Reader<T> {
     pub transport: T,
     pub store: Arc<CatalogStore<T>>,
+}
+impl<T: Clone> Clone for Reader<T> {
+    fn clone(&self) -> Self {
+        Self {
+            transport: self.transport.clone(),
+            store: self.store.clone(),
+        }
+    }
+}
+fn catalog(
+    source: &str,
+    kind: &str,
+    key: &ProviderKey,
+    partition: &str,
+) -> Result<CatalogId, Error> {
+    let id = CatalogId {
+        source: source.into(),
+        kind: kind.into(),
+        key_sha256: sha256(&key.canonical_bytes()?),
+        partition: partition.into(),
+    };
+    id.validate()?;
+    Ok(id)
+}
+/// Records of one acquisition in page order.
+fn ordered(records: &[RawRecord]) -> Vec<RawRecord> {
+    let mut records = records.to_vec();
+    records.sort_by_key(|r| r.envelope.pagination.as_ref().map_or(1, |p| p.page));
+    records
 }
 impl<T: IndexListing + Clone> Reader<T> {
     fn prefix(source: &str, kind: &str, key: &ProviderKey) -> Result<String, Error> {
@@ -122,6 +154,62 @@ impl<T: IndexListing + Clone> Reader<T> {
             });
         }
         Ok(out)
+    }
+    /// Every complete acquisition of one catalog as raw records (envelopes kept), in catalog
+    /// order; empty when the catalog does not exist.
+    pub async fn raw(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        deadline: Instant,
+    ) -> Result<Vec<Vec<RawRecord>>, Error> {
+        let id = catalog(source, kind, key, partition)?;
+        match self.store.lookup(&id, deadline).await {
+            Ok(LookupOutcome::Ready(set)) => Ok(set
+                .acquisitions()
+                .iter()
+                .map(|a| ordered(a.records()))
+                .collect()),
+            Ok(LookupOutcome::Incomplete) => Err(Error::Corrupt("incomplete catalog")),
+            Err(Error::NotFound) => Ok(Vec::new()),
+            Err(e) => Err(e),
+        }
+    }
+    /// The newest acquisitions of one catalog, latest first, read in pages of `page` until
+    /// `enough` holds for the acquisitions read so far (or the catalog ends).
+    #[allow(clippy::too_many_arguments)] // One catalog identity plus paging and a stop rule.
+    pub async fn latest_raw(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        page: usize,
+        mut enough: impl FnMut(&[Vec<RawRecord>]) -> bool,
+        deadline: Instant,
+    ) -> Result<Vec<Vec<RawRecord>>, Error> {
+        let id = catalog(source, kind, key, partition)?;
+        let mut out = Vec::new();
+        let mut cursor: Option<ReadCursor> = None;
+        loop {
+            let found = match self
+                .store
+                .lookup_page(&id, ReadOrder::LatestFirst, cursor.as_ref(), page, deadline)
+                .await
+            {
+                Ok(PageOutcome::Ready(found)) => found,
+                Ok(PageOutcome::Incomplete) => return Err(Error::Corrupt("incomplete catalog")),
+                Err(Error::NotFound) => return Ok(out),
+                Err(e) => return Err(e),
+            };
+            out.extend(found.acquisitions().iter().map(|a| ordered(a.records())));
+            match found.next() {
+                Some(next) if !enough(&out) => cursor = Some(next.clone()),
+                _ => return Ok(out),
+            }
+        }
     }
     /// Acquisitions of many partitions of one key, at most [`LOOKUPS`] lookups at a time,
     /// ordered by fetch instant (stable by partition).

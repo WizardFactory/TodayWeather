@@ -3,7 +3,7 @@
 //! fetch-time filters included), plus the store behaviors review round 1 pinned
 //! (S15b1-R1..R5). TEST ONLY.
 use super::source::{at, docs_json, items_of, number, oracle, pages, same, text, zone_docs};
-use super::source_s3::{Peer, deadline};
+use super::source_s3::{Peer, Unreachable, deadline};
 use serde_json::json;
 use server2::domestic::kma::MidModel;
 use server2::domestic::kma::source::{
@@ -78,7 +78,15 @@ fn store(peer: &Peer) -> Store {
     CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap()
 }
 fn source(peer: &Peer, now: f64) -> S3Source<BoundedS3<HttpS3Transport>> {
-    S3Source::new(peer.transport(), Arc::new(move || now)).unwrap()
+    // The source also starts its station loads (S15b-2): stay well below the Python S3 peer's
+    // connection limit, which drops connections under concurrency on Linux CI runners.
+    S3Source::new(
+        peer.transport_limited(4),
+        Arc::new(move || now),
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+    )
+    .unwrap()
 }
 fn family(name: &str) -> (Family, &'static str) {
     match name {

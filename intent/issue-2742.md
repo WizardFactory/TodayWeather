@@ -93,6 +93,29 @@ S15b-3a criteria:
   chain; no mode or verification flag.
 - A3-5: paths match `server2/config/tasks/S15b-3.json`; outside changes are the declared documents.
 
+# Intent (S15b-2, 2026-10-15)
+
+Task: issue-2742-s15b (slice S15b-2); base: master `05c06c67`, merged with `f49921b6`. Authority: AK's
+corrections of 2026-10-14 (ASOS per legacy #2564/#2648, on-demand acquisition through S08 as raw
+records, the fill rule, the 3-second request wait without 503 or forward, nationwide datasets
+single-flight per publication) and the decisions of 2026-10-15 (the AWS hourly page as the
+ongoing-hour source; the station registry seeded from a one-time `kmastninfos` copy, built here
+as offline tools only), relayed by the root coordinator.
+
+- AC7: KMA AWS minute/hourly and city observation pages parse as legacy `KmaScraper` reads them
+  and rebuild `KmaStnInfo`, `KmaStnHourly2` and `KmaStnMinute2` with the legacy saver rules;
+  `stn_hourly_and_min_rns` and `city_hourly` answer as `controllerKmaStnWeather` does.
+- AC8: the assembly composes ASOS history as legacy does with `readEnabled` (`mergeHourly`,
+  `mergeDaily`, `status`, `historyStatus`, comparison eligibility) from a new `KmaStore::history`;
+  stores without it keep the legacy default (no read).
+- AC9: the S3 source acquires the pages and the mapped station's ASOS ranges on demand,
+  single-flight per dataset and publication, publishes them as raw records, waits at most 3 s and
+  answers late data as legacy answers absent data; the next request uses the completed records.
+- AC10: S14 coverage never forwards to legacy; the replaced test pins the fill rule.
+- AC11: offline `kmastninfos` converter and importer; the registry starts from the imported seed.
+- AC12: placement per `server2/config/tasks/S15b-2.json`; every acquisition path confirmed by a
+  small number of live calls whose results are recorded in the PR.
+
 S15b-3b criteria (base `7ca6f002`, after #2750; same directions, coordinator 2026-10-15):
 - B3-1: `area_no` and `area_no_near` answer from the repository area-number lists rebuilt with the
   legacy scripts' rules; `life_index`, `rise_set` and `food_poisoning` answer from server2 records
@@ -105,6 +128,7 @@ S15b-3b criteria (base `7ca6f002`, after #2750; same directions, coordinator 202
   (the legacy output for missing data) while the acquisition finishes for the next request.
 - B3-4: the provider's pollen day+3 (`twodaysaftertomorrow`) is kept in server2 data while the
   legacy answer stays byte-identical.
-- B3-5: settings are real configuration only (`DONGNAE_SECRET_KEYS`,
-  `SERVER2_DONGNAE_DAILY_UNITS`, `SERVER2_DATA_GO_KR_URL`, `SERVER2_MFDS_URL`); no mode or flag.
+- B3-5: settings are real configuration only: the S15b-2 data.go.kr keys and units
+  (`SERVER2_DATA_GO_KR_KEYS`, `SERVER2_DATA_GO_KR_DAILY_UNITS`, one quota owner per key) and
+  `SERVER2_MFDS_BASE_URL`; no mode or flag.
 - B3-6: paths match `server2/config/tasks/S15b-3b.json`; outside changes are the declared documents.

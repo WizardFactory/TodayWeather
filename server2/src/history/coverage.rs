@@ -1,7 +1,15 @@
-//! Coverage decision for a cell's history inputs (cold-cell clarification). A publication is
-//! covered by a captured complete group or by a legacy export snapshot taken after it; anything
-//! else keeps the request on legacy with the gaps named. ASOS and station data never cover a
-//! grid hour, and no hour is synthesized.
+//! Coverage decision for a cell's history inputs (cold-cell clarification, corrected by AK on
+//! 2026-10-14). A publication is covered by a captured complete group or by a legacy export
+//! snapshot taken after it. A missing publication never forwards the request to legacy:
+//! - grid publications within the KMA backfill reach (the latest one plus 23 earlier current or
+//!   ultra-short slots, 7 earlier short runs; data.go.kr serves about one day) and the station
+//!   pages a request-time acquisition can still obtain are fetched;
+//! - older current hours back to D-7 (KST) take the nearest ASOS city station's observations
+//!   through the legacy #2564/#2648 history read (invalid or missing fields at exact hourly keys,
+//!   with provenance and `historyStatus`);
+//! - anything older has no source and stays absent, as legacy answers absent data.
+//!
+//! No grid hour is invented.
 use super::{
     Grid,
     index::CaptureIndex,
@@ -30,11 +38,6 @@ pub struct HistoryRequest {
     pub at_ms: i64,
     /// Legacy `_getStnMinute2` anchor; `None` skips the minute window.
     pub minute_anchor: Option<Publication>,
-}
-#[derive(Debug, Clone, Default)]
-pub struct CoverageConfig {
-    /// Legacy `ASOS_HISTORY_READ_ENABLED`: ASOS-merged fields cannot be reproduced here.
-    pub legacy_asos_read: bool,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SlotInput {
@@ -69,12 +72,6 @@ pub enum ColdCell {
     /// Per-cell history is complete; the gap is elsewhere (national pages, minute window).
     NotCold,
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LegacyReason {
-    Gaps,
-    AsosRead,
-    IndexIncomplete,
-}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Gap {
     pub family: Family,
@@ -85,17 +82,25 @@ pub struct Gap {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Coverage {
     Complete(HistoryPlan),
-    /// Only the newest per-cell publications are missing; a request-time fetch may supply them.
+    /// Only publications a request-time acquisition can obtain are missing (grid slots within
+    /// the KMA backfill reach, station pages): fetch them, then the inputs are complete.
     NeedsLatest {
         plan: HistoryPlan,
         missing: Vec<(Family, Publication)>,
     },
-    /// Forward to legacy.
-    Legacy {
-        reason: LegacyReason,
+    /// Older inputs are missing: the request is still served (no legacy forward) with
+    /// `fetch` acquired, the `asos` hours left to the ASOS history read and `absent` gaps
+    /// answered as legacy answers absent data.
+    Fill {
+        plan: HistoryPlan,
         cold: ColdCell,
-        gaps: Vec<Gap>,
+        fetch: Vec<(Family, Publication)>,
+        asos: Vec<Publication>,
+        absent: Vec<Gap>,
     },
+    /// A listing could not be read completely, so presence cannot be decided; the caller
+    /// re-reads the index (and serves from what it holds meanwhile).
+    IndexIncomplete,
 }
 
 fn export_kinds(family: Family) -> &'static [LegacyKind] {
@@ -155,23 +160,36 @@ fn gaps_of(family: Family, slots: &[SlotInput]) -> Vec<Gap> {
     gaps
 }
 
-/// Decide whether `request` can be served from S3 inputs or must stay on legacy.
-pub fn coverage(
-    request: &HistoryRequest,
-    index: &CaptureIndex,
-    config: &CoverageConfig,
-) -> Coverage {
-    let legacy = |reason, cold, gaps| Coverage::Legacy { reason, cold, gaps };
-    if config.legacy_asos_read {
-        return legacy(LegacyReason::AsosRead, ColdCell::NotCold, Vec::new());
+/// How many publications before the latest a request-time acquisition can still obtain.
+fn fetch_reach(family: Family) -> usize {
+    match family {
+        Family::Current => schedule::BACKFILL_CURRENT,
+        Family::Shortest => schedule::BACKFILL_SHORTEST,
+        Family::Short => schedule::BACKFILL_SHORT,
+        // The AWS hourly table serves past hours; the city page serves only its latest hour.
+        Family::AwsHourly => schedule::CURRENT_SLOTS - 1,
+        Family::CityObs | Family::AwsMinute => 0,
     }
+}
+/// First hour of the ASOS history window (D-7 00:00 KST at `at_ms`).
+pub fn asos_start(at_ms: i64) -> Publication {
+    let today = schedule::from_ms(at_ms);
+    Publication::new(today.date(), 0)
+        .and_then(|d| d.add_hours(-7 * 24))
+        .expect("calendar day")
+}
+
+/// Classify `request`'s history inputs (see the module docs; never a legacy forward).
+pub fn coverage(request: &HistoryRequest, index: &CaptureIndex) -> Coverage {
     let at = request.at_ms;
     let mut families = BTreeMap::new();
-    let mut gaps = Vec::new();
-    let mut latest_missing = Vec::new();
+    let mut absent = Vec::new();
+    let mut fetch = Vec::new();
+    let mut asos = Vec::new();
     let mut cell_present = 0usize;
     let mut cell_missing = 0usize;
     let station = request.station.map(ExportKey::Station);
+    let asos_from = asos_start(at);
     for family in Family::PER_CELL.into_iter().chain(Family::NATIONAL_HOURLY) {
         let required = family.required(at);
         let (target, key) = if family.per_cell() {
@@ -189,7 +207,7 @@ pub fn coverage(
                     .iter()
                     .any(|k| index.is_incomplete(k.kind(), p.date()))
         }) {
-            return legacy(LegacyReason::IndexIncomplete, ColdCell::NotCold, Vec::new());
+            return Coverage::IndexIncomplete;
         }
         let slots: Vec<SlotInput> = required
             .iter()
@@ -199,21 +217,39 @@ pub fn coverage(
                 exports: covering_exports(index, family, key, *p),
             })
             .collect();
-        let mut family_gaps = gaps_of(family, &slots);
-        if family.per_cell() {
-            let missing: usize = family_gaps.iter().map(|g| g.missing).sum();
-            cell_missing += missing;
-            cell_present += slots.len() - missing;
-            // Only the newest publication missing: a request-time fetch may supply it.
-            if let [only] = family_gaps.as_slice()
-                && only.missing == 1
-                && Some(only.last) == required.last().copied()
-            {
-                latest_missing.push((family, only.last));
-                family_gaps.clear();
+        let reach = fetch_reach(family);
+        let mut unfilled = Vec::new();
+        for (i, s) in slots.iter().enumerate() {
+            let missing = !s.captured && s.exports.is_empty();
+            if family.per_cell() {
+                if missing {
+                    cell_missing += 1;
+                } else {
+                    cell_present += 1;
+                }
+            }
+            if !missing {
+                continue;
+            }
+            let from_latest = slots.len() - 1 - i;
+            if from_latest <= reach {
+                fetch.push((family, s.publication));
+            } else if family == Family::Current && s.publication >= asos_from {
+                asos.push(s.publication);
+            } else {
+                unfilled.push(s.clone());
             }
         }
-        gaps.extend(family_gaps);
+        // Gaps of the unfilled slots only (consecutive in the required order).
+        let marks: Vec<SlotInput> = slots
+            .iter()
+            .map(|s| SlotInput {
+                publication: s.publication,
+                captured: !unfilled.iter().any(|u| u.publication == s.publication),
+                exports: Vec::new(),
+            })
+            .collect();
+        absent.extend(gaps_of(family, &marks));
         families.insert(family, slots);
     }
     if let Some(anchor) = request.minute_anchor {
@@ -222,7 +258,7 @@ pub fn coverage(
             index.is_incomplete(Family::AwsMinute.kind(), *d)
                 || (station.is_some() && index.is_incomplete(LegacyKind::StnMinute2.kind(), *d))
         }) {
-            return legacy(LegacyReason::IndexIncomplete, ColdCell::NotCold, Vec::new());
+            return Coverage::IndexIncomplete;
         }
     }
     let minute = request.minute_anchor.map(|anchor| {
@@ -255,7 +291,9 @@ pub fn coverage(
     let minute = match minute {
         Some((plan, continuous)) => {
             if plan.exports.is_empty() && !continuous {
-                gaps.push(Gap {
+                // The latest minute page can be fetched; earlier pages of the window cannot.
+                fetch.push((Family::AwsMinute, plan.through));
+                absent.push(Gap {
                     family: Family::AwsMinute,
                     first: plan.after,
                     last: plan.through,
@@ -272,23 +310,29 @@ pub fn coverage(
         yesterday: schedule::yesterday(schedule::hour_of(at)),
         minute,
     };
-    if !gaps.is_empty() {
-        let cold = if cell_present == 0 {
-            ColdCell::NeverCaptured
-        } else if cell_missing > latest_missing.len() {
-            ColdCell::Partial
+    if absent.is_empty() && asos.is_empty() {
+        return if fetch.is_empty() {
+            Coverage::Complete(plan)
         } else {
-            ColdCell::NotCold
+            Coverage::NeedsLatest {
+                plan,
+                missing: fetch,
+            }
         };
-        return legacy(LegacyReason::Gaps, cold, gaps);
     }
-    if latest_missing.is_empty() {
-        Coverage::Complete(plan)
+    let cold = if cell_present == 0 {
+        ColdCell::NeverCaptured
+    } else if cell_missing > 0 {
+        ColdCell::Partial
     } else {
-        Coverage::NeedsLatest {
-            plan,
-            missing: latest_missing,
-        }
+        ColdCell::NotCold
+    };
+    Coverage::Fill {
+        plan,
+        cold,
+        fetch,
+        asos,
+        absent,
     }
 }
 /// Captured minutes reach back to the window start, never step more than 3 minutes, and the
