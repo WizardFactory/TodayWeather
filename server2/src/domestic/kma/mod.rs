@@ -168,10 +168,12 @@ impl Default for AssemblyConfig {
     }
 }
 
-/// A v000903 address request after Express routing.
+/// An address request (`/v000901/kma/addr`, `/v000902/kma/addr`, `/v000903/kma/addr`) after
+/// Express routing.
 #[derive(Debug, Clone)]
 pub struct KmaRequest {
-    /// First path segment of the mount (`req.baseUrl`), e.g. `v000903`.
+    /// First path segment of the mount (`req.baseUrl`), e.g. `v000903`; it selects the router
+    /// list (S17a).
     pub version: String,
     pub region: Option<String>,
     pub city: Option<String>,
@@ -197,7 +199,12 @@ pub enum Outcome {
 
 /// The v000903 router list in legacy order.
 pub fn middleware() -> Vec<&'static str> {
-    chain::names()
+    chain::names("v000903")
+}
+/// The router list of an address version (`v000901`, `v000902`, `v000903`) in legacy order;
+/// empty for a version without a native list.
+pub fn middleware_of(version: &str) -> Vec<&'static str> {
+    chain::names(version)
 }
 /// Assemble one request. `now_ms` is the request instant (`Date.now()`).
 pub fn assemble(

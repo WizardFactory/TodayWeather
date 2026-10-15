@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""S15/S15b-1 release HTTP smoke for the KMA v000903 routing entry: legacy ->
+"""S15/S15b-1/S17a release HTTP smoke for the KMA routing entries (kma: v000903; S17a kma-v000901,
+kma-v000902: the unversioned and v000901/v000902 gateway backends): legacy ->
 SERVER2_NATIVE_FAMILIES=kma -> legacy against a task-owned loopback legacy origin and the owned S06
 S3 test peer. With `kma` the S3 input source reads the shared S3 settings (S10e: SERVER2_S3_BUCKET,
 AWS_ACCESS_KEY, AWS_SECRET_KEY); until S15b-4 it forwards every request (named temporary
@@ -117,29 +118,43 @@ def run(binary, peer_binary):
     endpoint = 'http://127.0.0.1:' + str(server.server_port)
     peer, s3 = s3_peer()
     try:
-        bodies = []
-        for families in (None, 'kma', None):
-            process, base = start(peer_command(peer_binary, endpoint, s3), endpoint, families)
-            try:
-                before = len(Origin.paths)
-                s3_before = s3_requests(s3)
-                status, headers, body = g.request(base, '/weather/v000903/coord/37.566,126.978', headers={'Accept-Language': 'ko-KR'})
-                assert status == 200, (status, body)
-                hops = Origin.paths[before:]
-                assert any(p.startswith('/v000903/kma/addr/') for p in hops), hops
-                bodies.append(body)
-                s3_read = s3_requests(s3) - s3_before
-                if families == 'kma':
-                    assert s3_read > 0, 'the kma S3 input source read nothing'
-                else:
-                    assert s3_read == 0, ('legacy phase read S3', s3_read)
-                print('PASS %s: v000903 KMA request reached the legacy KMA backend (%s)'
-                      % ('SERVER2_NATIVE_FAMILIES=' + families if families else 'routing list unset', ', '.join(hops)), flush=True)
-            finally:
-                g.stop(process)
-        assert bodies[0] == bodies[1] == bodies[2], 'native forward changed the response bytes'
+        # S17a: the v000901 entry also serves the unversioned default (the 70.72% path) and the
+        # v000902 entry /weather/v000902; each switch leaves the other versions on legacy.
+        for native, cases in (
+                ('kma', [('/weather/v000903/coord/37.566,126.978', '/v000903/kma/addr/', True)]),
+                # The unlisted v000903 request runs first, before a native request starts any
+                # background acquisition, so its zero S3 reads are its own.
+                ('kma-v000901,kma-v000902', [('/weather/v000903/coord/37.566,126.978', '/v000903/kma/addr/', False),
+                                             ('/weather/coord/37.566,126.978', '/v000901/kma/addr/', True),
+                                             ('/weather/v000902/coord/37.566,126.978', '/v000902/kma/addr/', True)])):
+            bodies = {}
+            for families in (None, native, None):
+                process, base = start(peer_command(peer_binary, endpoint, s3), endpoint, families)
+                try:
+                    for path, hop, listed in cases:
+                        before = len(Origin.paths)
+                        s3_before = s3_requests(s3)
+                        status, headers, body = g.request(base, path, headers={'Accept-Language': 'ko-KR'})
+                        assert status == 200, (status, body)
+                        hops = Origin.paths[before:]
+                        assert any(p.startswith(hop) for p in hops), hops
+                        bodies.setdefault(path, []).append(body)
+                        s3_read = s3_requests(s3) - s3_before
+                        if families and listed:
+                            assert s3_read > 0, 'the %s S3 input source read nothing' % families
+                        else:
+                            assert s3_read == 0, ('legacy request read S3', path, s3_read)
+                        print('PASS %s: %s reached the legacy KMA backend (%s)'
+                              % ('SERVER2_NATIVE_FAMILIES=' + families if families else 'routing list unset', path,
+                                 ', '.join(hops)), flush=True)
+                finally:
+                    g.stop(process)
+            for path, phases in bodies.items():
+                assert phases[0] == phases[1] == phases[2], ('native forward changed the response bytes', path)
         for bad, with_s3, with_keys in (('kma,kma', True, True), ('KMA', True, True), ('kma,unknown', True, True),
-                                        ('kma', False, True), ('kma', True, False)):
+                                        ('kma', False, True), ('kma', True, False),
+                                        ('kma-v000901,kma-v000901', True, True), ('kma-v000903', True, True),
+                                        ('kma-v000902', False, True), ('kma-v000901', True, False)):
             env = {k: v for k, v in os.environ.items() if k in ('PATH', 'SYSTEMROOT', 'TMPDIR')}
             env.update(PORT='0', SERVER2_GATEWAY_LEGACY_URL=endpoint, SERVER2_NATIVE_FAMILIES=bad)
             if with_s3:
@@ -148,9 +163,9 @@ def run(binary, peer_binary):
                 env.update(kma_env())
             refused = subprocess.run([binary], env=env, cwd=CWD, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=10)
             assert refused.returncode != 0 and 'server2 public=' not in refused.stdout, (bad, refused.returncode, refused.stderr)
-        print('PASS release server2: unknown or repeated routing entries, and kma without the S3 settings or '
+        print('PASS release server2: unknown or repeated routing entries, and kma or kma-v000901/kma-v000902 without the S3 settings or '
               'DONGNAE_SECRET_KEYS, stop startup before binding', flush=True)
-        print('PASS S15b-1 KMA routing release smoke (legacy -> kma -> legacy, identical bytes, the kma phase read '
+        print('PASS S15b-1/S17a KMA routing release smoke (legacy -> kma | kma-v000901,kma-v000902 -> legacy, identical bytes, listed versions read '
               'the S3 test peer); loopback peers only, no provider/AWS request, no native serving claim', flush=True)
     finally:
         peer.terminate()

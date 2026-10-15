@@ -1613,7 +1613,7 @@ The table records the S10c state.
 
 | Concern | Setting | Default / rule |
 | --- | --- | --- |
-| Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf`, `kma` (S15; reads `SERVER2_S3_*` since S15b-1) | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
+| Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf`, `kma` (S15; reads `SERVER2_S3_*` since S15b-1), `kma-v000901`, `kma-v000902` (S17a) | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
 | World versions | `SERVER2_WORLD_VERSIONS` | `v000901,v000902,v000903` |
 | S3 (shared) | `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`, `SERVER2_S3_BUCKET`, `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY` | `ap-northeast-2`; `https://s3.<region>.amazonaws.com/`; bucket and static credentials required when any family is native. One 12-request admission for weather, air and budgets. The importers use the same settings. |
 | Geocoder keys/endpoints | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY`, `GEOCODER_KAKAO_BASE_URL`, `GEOCODER_GOOGLE_BASE_URL` | Existing legacy names; `https://dapi.kakao.com`, `https://maps.googleapis.com`; the Google fingerprint rule applies to the production endpoint, as in legacy. |
@@ -2356,3 +2356,39 @@ two retained versions, budget and demand create/412 repeat/CAS update, and 403 (
 policy deny) for an unconditional `raw/v2` PUT; see the
 [sanitized evidence](../evidence/aws/server2-s3-readiness-2026-10-15.json). Not verified: the real
 IMDS on EC2 and the runtime role's 404/403 statuses, which the same tool checks at deployment.
+
+### S17a KMA v000901 and v000902 address weather (2026-10-15)
+
+[S17](../../plans/issue-2702.md) ([spec](../../specs/issue-2702.md)) ports the used older weather
+versions, nation and town in three PRs: S17a (this section), S17b (direct `/v000901/kma/addr`,
+`/v000803/town`, `/v000705/town`) and S17c (`/v000903/nation/KR`, failed-only `/v000901/nation/KR`).
+S17a covers the gateway backends of unversioned `/weather/coord` (70.72% of the accepted report's
+product requests; the gateway default is v000901), `/weather/v000901/coord` and
+`/weather/v000902/coord`.
+
+- **Assembly.** The S15 chain selects the legacy router list by the request version. v000901 and
+  v000902 share the first 23 v000903 steps (through `getKeco`) and then run
+  `getKecoDustForecast, getRiseSetInfo, insertIndex, makeAirInfo, AirForecast, insertSkyIcon
+  (v000901) | insertSkyIconLowCase (v000902), setYesterday, convertUnits, insertStrForData,
+  getSummaryAfterUnitConverter, makeResult, sendResult`. They have no air fallback and no
+  `specialInfo` step. `makeAirInfo` builds one `airInfo` from the first station's fresh rows and
+  the dust forecasts; `AirForecast` creates `{source: "airkorea"}` when absent and adds the station
+  forecast. v000903 is unchanged.
+- **Inputs.** The S15b S3 input source is version independent, so all three versions read the same
+  snapshot and share its temporary forwards until S15b-4. History coverage is the S14/S15b-2
+  coverage of v000903; no version-specific history exists.
+- **Routing.** `kma-v000901` and `kma-v000902` in `SERVER2_NATIVE_FAMILIES` select those gateway
+  backends; `kma` stays v000903. Any of them builds the one S3 input source (S3 settings and
+  `DONGNAE_SECRET_KEYS` required). Each version switches and rolls back alone.
+
+Verification (local, test peers only): a pinned Node 16.20.2 oracle runs both legacy routers through
+the S15 harness and driver (only the router, mount and scenario list differ;
+[provenance](../../server2/tests/legacy_versions/fixtures/PROVENANCE.md)). All 123 recordings (94
+v000901, 29 v000902; 2,307 store answers) replay to the legacy bytes and ETags with every call in
+order, except the two S15 declared forwards. The S02 goldens `domestic-v000901(-db1)` and
+`domestic-v000902(-db1)` equal their recordings, and the gateway goldens `gateway-default-domestic`,
+`gateway-v000901-domestic` and `gateway-v000902-domestic` match on the wire with the native switch,
+the legacy default, a one-version switch and the rollback. The release `kma_smoke.py` runs
+legacy -> `kma-v000901,kma-v000902` -> legacy with identical bytes, S3 reads only for listed
+versions, and refuses repeated or unknown entries and missing settings. Live provider data and
+production latency are not claimed.

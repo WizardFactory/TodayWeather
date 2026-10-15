@@ -1,7 +1,8 @@
 //! Process wiring from the operator-injected environment.
 //!
 //! `SERVER2_GATEWAY_LEGACY_URL` enables the gateway. `SERVER2_NATIVE_FAMILIES` lists the
-//! families routed to the native backend (`geocode`, `dsf`, `kma`); every other family stays on the
+//! families routed to the native backend (`geocode`, `dsf`, `kma`, and the S17a KMA versions
+//! `kma-v000901`, `kma-v000902`); every other family stays on the
 //! legacy origin, and an unlisted family reads none of its native settings. Removing a family
 //! from the list and restarting is the rollback. These two and `SERVER2_WORLD_VERSIONS` are
 //! coexistence routing, removed with legacy retirement; with `SERVER2_S3_BUCKET` and
@@ -97,6 +98,25 @@ pub struct NativeFamilies {
     pub dsf: bool,
     /// S15: KMA v000903 address weather.
     pub kma: bool,
+    /// S17a: KMA v000901 address weather (`kma-v000901`), the backend of unversioned
+    /// `/weather/coord` and `/weather/v000901/coord`.
+    pub kma_v000901: bool,
+    /// S17a: KMA v000902 address weather (`kma-v000902`), the backend of `/weather/v000902/coord`.
+    pub kma_v000902: bool,
+}
+impl NativeFamilies {
+    /// The address versions whose KMA backend is native; the shared S3 input source is built
+    /// when any is listed.
+    pub fn kma_versions(&self) -> Vec<super::Version> {
+        [
+            (self.kma_v000901, super::Version::V000901),
+            (self.kma_v000902, super::Version::V000902),
+            (self.kma, super::Version::V000903),
+        ]
+        .into_iter()
+        .filter_map(|(on, v)| on.then_some(v))
+        .collect()
+    }
 }
 impl NativeFamilies {
     /// Parse `SERVER2_NATIVE_FAMILIES`; unset or empty selects none. Unknown or repeated
@@ -111,6 +131,8 @@ impl NativeFamilies {
                 "geocode" => &mut families.geocode,
                 "dsf" => &mut families.dsf,
                 "kma" => &mut families.kma,
+                "kma-v000901" => &mut families.kma_v000901,
+                "kma-v000902" => &mut families.kma_v000902,
                 _ => return Err(GatewayError::InvalidConfiguration),
             };
             if *slot {
@@ -205,7 +227,7 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
     };
     let families = NativeFamilies::from_vars(var)?;
     let backend = BackendDispatcher::legacy(&base)?;
-    let s3 = if families.geocode || families.dsf || families.kma {
+    let s3 = if families.geocode || families.dsf || !families.kma_versions().is_empty() {
         Some(shared_s3(var, builtins)?)
     } else {
         None
@@ -216,7 +238,7 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
     };
     // One process air chain for the world family and the KMA air fallback (S15b-3).
     let air = match &s3 {
-        Some(s3) if families.dsf || families.kma => {
+        Some(s3) if families.dsf || !families.kma_versions().is_empty() => {
             Some(crate::world::runtime::live_air(var, s3.clone(), builtins)?)
         }
         _ => None,
@@ -227,7 +249,7 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
             crate::world::runtime::build_with_air(var, s3, air, builtins)?,
         )?;
     }
-    if let (Some(s3), true) = (s3, families.kma) {
+    if let (Some(s3), false) = (s3, families.kma_versions().is_empty()) {
         // S15b: the S3 input source over the shared admission. Inputs owned by later slices
         // still forward with named reasons until S15b-4. S15b-2 request-time acquisitions use
         // the data.go.kr keys for ASOS and the product geocoder for station coordinates.
@@ -251,7 +273,11 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         .map_err(|_| GatewayError::InvalidConfiguration)?
         .with_air(airkorea, air)
         .with_life(Some(life));
-        crate::domestic::kma::backend::select_native(&backend, Arc::new(source))?;
+        crate::domestic::kma::backend::select_native_versions(
+            &backend,
+            Arc::new(source),
+            &families.kma_versions(),
+        )?;
     }
     Ok(Some(Arc::new(Gateway::new(geocoder, backend))))
 }

@@ -215,28 +215,81 @@ pub fn insert_index(cx: &mut Cx) -> Flow {
 
 // ---- sky icons ----
 
-fn sky_icon_low_case(sky: &V, pty: &V, lgt: &V, night: bool) -> String {
+/// Sky icon spelling: `_parseSkyStateLowCase` (v000902/v000903) or `_parseSkyState` (v000901
+/// and the town routes).
+#[derive(Clone, Copy)]
+pub enum IconCase {
+    Lower,
+    Upper,
+}
+impl IconCase {
+    /// Moon, sun, small cloud, big cloud, cloud, rain, rain/snow, snow, lightning.
+    fn tokens(self) -> [&'static str; 9] {
+        match self {
+            Self::Lower => [
+                "moon",
+                "sun",
+                "_smallcloud",
+                "_bigcloud",
+                "cloud",
+                "_rain",
+                "_rainsnow",
+                "_snow",
+                "_lightning",
+            ],
+            Self::Upper => [
+                "Moon",
+                "Sun",
+                "SmallCloud",
+                "BigCloud",
+                "Cloud",
+                "Rain",
+                "RainSnow",
+                "Snow",
+                "Lightning",
+            ],
+        }
+    }
+    fn name(self) -> &'static str {
+        match self {
+            Self::Lower => "insertSkyIconLowCase",
+            Self::Upper => "insertSkyIcon",
+        }
+    }
+}
+fn sky_icon(case: IconCase, sky: &V, pty: &V, lgt: &V, night: bool) -> String {
+    let [
+        moon,
+        sun,
+        small,
+        big,
+        cloud,
+        rain,
+        rain_snow,
+        snow,
+        lightning,
+    ] = case.tokens();
     let mut name = if night {
-        "moon".to_owned()
+        moon.to_owned()
     } else {
-        "sun".to_owned()
+        sun.to_owned()
     };
     match sky {
         V::Num(x) if *x == 1. => (),
-        V::Num(x) if *x == 2. => name.push_str("_smallcloud"),
-        V::Num(x) if *x == 3. => name.push_str("_bigcloud"),
-        V::Num(x) if *x == 4. => name = "cloud".into(),
+        V::Num(x) if *x == 2. => name.push_str(small),
+        V::Num(x) if *x == 3. => name.push_str(big),
+        V::Num(x) if *x == 4. => name = cloud.into(),
         _ => (),
     }
     match pty {
         V::Num(x) if *x == 0. => (),
-        V::Num(x) if *x == 1. => name.push_str("_rain"),
-        V::Num(x) if *x == 2. => name.push_str("_rainsnow"),
-        V::Num(x) if *x == 3. => name.push_str("_snow"),
+        V::Num(x) if *x == 1. => name.push_str(rain),
+        V::Num(x) if *x == 2. => name.push_str(rain_snow),
+        V::Num(x) if *x == 3. => name.push_str(snow),
         _ => (),
     }
     if strict_eq(lgt, &n(1.)) {
-        name.push_str("_lightning");
+        name.push_str(lightning);
     }
     name
 }
@@ -256,6 +309,13 @@ fn is_night(days: &V, date: &V, tm: &V) -> bool {
     !(le(&sunrise, tm) && le(tm, &sunset))
 }
 pub fn insert_sky_icon_low_case(cx: &mut Cx) -> Flow {
+    insert_sky_icon_as(cx, IconCase::Lower)
+}
+/// `insertSkyIcon` (ControllerTown24h): the v000901 spelling.
+pub fn insert_sky_icon(cx: &mut Cx) -> Flow {
+    insert_sky_icon_as(cx, IconCase::Upper)
+}
+fn insert_sky_icon_as(cx: &mut Cx, case: IconCase) -> Flow {
     let r = catch(|| {
         let days = || cx.r("midData").get("dailyData");
         for key in ["short", "shortest"] {
@@ -266,7 +326,7 @@ pub fn insert_sky_icon_low_case(cx: &mut Cx) -> Flow {
                     d.set("night", night);
                     d.set(
                         "skyIcon",
-                        sky_icon_low_case(&d.get("sky"), &d.get("pty"), &d.get("lgt"), night),
+                        sky_icon(case, &d.get("sky"), &d.get("pty"), &d.get("lgt"), night),
                     );
                 }
             }
@@ -283,7 +343,8 @@ pub fn insert_sky_icon_low_case(cx: &mut Cx) -> Flow {
             current.set("night", night);
             current.set(
                 "skyIcon",
-                sky_icon_low_case(
+                sky_icon(
+                    case,
                     &current.get("sky"),
                     &current.get("pty"),
                     &current.get("lgt"),
@@ -297,19 +358,31 @@ pub fn insert_sky_icon_low_case(cx: &mut Cx) -> Flow {
                 if d.get("sky").truthy() {
                     d.set(
                         "skyIcon",
-                        sky_icon_low_case(&d.get("sky"), &d.get("pty"), &d.get("lgt"), false),
+                        sky_icon(case, &d.get("sky"), &d.get("pty"), &d.get("lgt"), false),
                     );
                 }
                 if d.get("skyAm").truthy() {
                     d.set(
                         "skyAmIcon",
-                        sky_icon_low_case(&d.get("skyAm"), &d.get("ptyAm"), &d.get("lgtAm"), false),
+                        sky_icon(
+                            case,
+                            &d.get("skyAm"),
+                            &d.get("ptyAm"),
+                            &d.get("lgtAm"),
+                            false,
+                        ),
                     );
                 }
                 if d.get("skyPm").truthy() {
                     d.set(
                         "skyPmIcon",
-                        sky_icon_low_case(&d.get("skyPm"), &d.get("ptyPm"), &d.get("lgtPm"), false),
+                        sky_icon(
+                            case,
+                            &d.get("skyPm"),
+                            &d.get("ptyPm"),
+                            &d.get("lgtPm"),
+                            false,
+                        ),
                     );
                 }
             }
@@ -318,7 +391,7 @@ pub fn insert_sky_icon_low_case(cx: &mut Cx) -> Flow {
     match r {
         Ok(()) => Flow::Next,
         // next(err): Express error page.
-        Err(t) => super::js::forward(format!("insertSkyIconLowCase error {}", t.0)),
+        Err(t) => super::js::forward(format!("{} error {}", case.name(), t.0)),
     }
 }
 
