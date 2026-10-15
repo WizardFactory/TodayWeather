@@ -267,3 +267,27 @@ Legacy references are master `f49921b6`; sources followed on disagreement are na
 `Fill {fetch, asos, absent}` or `IndexIncomplete`; there is no legacy reason. Fetch reach: current
 and ultra-short latest + 23, short latest + 7, AWS hourly the window, city and minute latest only.
 `asos`: missing current hours from D-7 00:00 KST. `absent`: the rest.
+
+# Specification (S15b-3b), 2026-10-15
+
+Legacy references are master `7ca6f002`; tw_svc readers are those of `controllerTown`
+(`getLifeIndexKma` L2390, `getRiseSetInfo` L3345, `foodPoisoning.append` call L2544).
+
+| Store call | Provider documentation / live shape | Legacy collection mirrored | tw_svc reader |
+| --- | --- | --- | --- |
+| `area_no`, `area_no_near` | Repository data (no provider) | `utils/updateAreaNo.js` 2016 upsert; `utils/update.areano.to.db.js` 2018 `$set {areaNo: parseInt, updatedAt}` on an existing town (a new town's Kakao geocode throws at `x.toFixed`) | `findAreaNo` L2410 `find({town}).limit(1)`; `findNearAreaNo` L2451 `$near` 0.3, limit 3 |
+| `life_index` | 기상청 생활기상지수 V5 `getUVIdxV5` (3,851 areas, `hN`); 보건기상지수 V3 `getOak/Pine/WeedsPollen…V3` (`99` outside the provision period; day+3 as `twodaysaftertomorrow`) | `convertUvItemsV5` L1209, `convertPollenItemsV3` L1446, `saveLifeIndex2` L1027, `_removeOldData` L1045, `lastIssued` L1331/L1588 | `_fromLifeIndexDb2` L267 via `appendData2` L336 |
+| `rise_set` | 한국천문연구원 출몰시각 `getAreaRiseSetInfo` (one item per area/day) | `gatherAreaRiseSetFromApi` L771, `updateAreaRiseSetFromApi` L674, `_apiRaw2modelKasiRiseSet` L623, `_updateKasiRiseSet` L646 | `getRiseSetList` L582 (`_findRiseSetByGeo` L511, `_findKasiRiseSetList` L460, `_model2RiseSet` L486) |
+| `food_poisoning` | MFDS `poisonmap.mfds.go.kr/api/risk.do` (keyless, no published API document; 267 rows live) | `lib/foodPoisoning.js` `fetchRisk` L60, `slot`/`due` L127/L136, `parse` L22, `collect` L141 | `append` L178 |
+
+Where they disagree: the pollen V3 response carries day+3 as `twodaysaftertomorrow` while legacy
+reads `todaysaftertomorrow` (followed: legacy for the answer, the provider for server2 data). The
+KASI capture asks today's column first instead of legacy's per-area order (same stored set).
+
+- Folds: life index over the acquisitions of the last 14 days (incremental; a refold when an
+  acquisition completed before the last applied one, and daily); MFDS over the last three KST
+  days with the TTL applied; KASI over the window UTC D-8..D+9 kept 30 days.
+- Request time: owned S3 reads (single-flight per dataset and own-publication count), owned
+  acquisitions for the current UV slot, the latest pollen issuance and the current MFDS slot, each
+  waited for until the request deadline; a no-data pollen issuance and an asked MFDS slot are not
+  asked again; KASI captured while requests arrive and answered `[]` until first read.

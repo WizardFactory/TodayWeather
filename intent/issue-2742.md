@@ -115,3 +115,20 @@ as offline tools only), relayed by the root coordinator.
 - AC11: offline `kmastninfos` converter and importer; the registry starts from the imported seed.
 - AC12: placement per `server2/config/tasks/S15b-2.json`; every acquisition path confirmed by a
   small number of live calls whose results are recorded in the PR.
+
+S15b-3b criteria (base `7ca6f002`, after #2750; same directions, coordinator 2026-10-15):
+- B3-1: `area_no` and `area_no_near` answer from the repository area-number lists rebuilt with the
+  legacy scripts' rules; `life_index`, `rise_set` and `food_poisoning` answer from server2 records
+  with the legacy savers and readers; documents and answers equal a pinned legacy oracle byte for
+  byte, directly and from the S3 test peer with empty memory.
+- B3-2: UV V5, pollen V3, KASI and MFDS are national datasets acquired by owned single-flight
+  acquisitions (S13d `OwnedFlights`) and published through S06 before use; MFDS is a new keyless
+  acquisition with the S08 keyless transport bounds.
+- B3-3: a request never waits past its deadline (at most 3 s); it answers with the stored data
+  (the legacy output for missing data) while the acquisition finishes for the next request.
+- B3-4: the provider's pollen day+3 (`twodaysaftertomorrow`) is kept in server2 data while the
+  legacy answer stays byte-identical.
+- B3-5: no new setting (AK 2026-10-15: server2 uses the legacy configuration; S10e converts the
+  existing `SERVER2_*` provider settings): the life index and KASI use the S15b-2 data.go.kr
+  acquirer (one quota owner per key), MFDS the endpoint legacy hard-codes; no mode or flag.
+- B3-6: paths match `server2/config/tasks/S15b-3b.json`; outside changes are the declared documents.

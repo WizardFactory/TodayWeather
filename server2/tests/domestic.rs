@@ -4,6 +4,10 @@ mod air;
 mod air_s3;
 #[path = "domestic/asos.rs"]
 mod asos;
+#[path = "domestic/life.rs"]
+mod life;
+#[path = "domestic/life_s3.rs"]
+mod life_s3;
 #[path = "domestic/observe.rs"]
 mod observe;
 #[path = "domestic/parity.rs"]

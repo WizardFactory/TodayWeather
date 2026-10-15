@@ -161,20 +161,24 @@ pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
         // the data.go.kr keys for ASOS and the product geocoder for station coordinates.
         // S15b-3 adds request-time AirKorea
         // acquisition (`AIRKOREA_SECRET_KEYS`, `SERVER2_AIRKOREA_DAILY_UNITS`) and the air
-        // fallback through the shared air chain.
+        // fallback through the shared air chain; S15b-3b the life index and KASI on the same
+        // data.go.kr acquirer and the keyless MFDS table (production endpoint, no setting).
         let airkorea = kma_airkorea(var, &s3)?;
+        let daily = Arc::new(kma_acquirer(var, s3.clone())?);
+        let life = kma_life(&s3, daily.clone())?;
         let air: Option<Arc<dyn crate::world::AirSource>> =
             air.map(|a| a as Arc<dyn crate::world::AirSource>);
         let source = crate::domestic::kma::source::S3Source::new(
             s3.clone(),
             crate::domestic::kma::backend::system_clock(),
-            Arc::new(kma_acquirer(var, s3)?),
+            daily,
             Arc::new(crate::domestic::kma::source::observe::ProductGeocoder(
                 geocoder.clone(),
             )),
         )
         .map_err(|_| GatewayError::InvalidConfiguration)?
-        .with_air(airkorea, air);
+        .with_air(airkorea, air)
+        .with_life(Some(life));
         crate::domestic::kma::backend::select_native(&backend, Arc::new(source))?;
     }
     Ok(Some(Arc::new(Gateway::new(geocoder, backend))))
@@ -208,6 +212,38 @@ fn kma_airkorea(
         Arc::new(store),
         Arc::new(SystemClock),
     ))))
+}
+/// The life-index, KASI and MFDS acquirer of the KMA source on the process data.go.kr acquirer
+/// (each attempt gets the S13d legacy timeout of its path: life index 30 s, KASI 5 s; MFDS its
+/// own 10 s deadline).
+type DailyKma = crate::domestic::kma::source::observe::DailyAcquirer<
+    crate::providers::HttpProviderTransport,
+    crate::providers::HttpPublicTransport,
+    BoundedS3<HttpS3Transport>,
+>;
+fn kma_life(
+    s3: &BoundedS3<HttpS3Transport>,
+    daily: Arc<DailyKma>,
+) -> Result<Arc<dyn crate::domestic::kma::source::life_live::LifeAcquire>, GatewayError> {
+    use crate::domestic::kma::source::life_live::{LifeSettings, LiveLife};
+    let settings = LifeSettings::default();
+    let store =
+        crate::storage::CatalogStore::new(s3.clone(), crate::storage::CatalogLimits::default())
+            .map_err(|_| GatewayError::InvalidConfiguration)?;
+    let mfds = crate::domestic::kma::source::life_live::mfds_acquirer(
+        Arc::new(
+            crate::providers::HttpProviderTransport::new(1024 * 1024)
+                .map_err(|_| GatewayError::InvalidConfiguration)?,
+        ),
+        Arc::new(SystemClock),
+    )
+    .map_err(|_| GatewayError::InvalidConfiguration)?;
+    Ok(Arc::new(LiveLife::new(
+        settings,
+        daily,
+        Arc::new(mfds),
+        Arc::new(store),
+    )))
 }
 /// The process environment entrypoint.
 pub fn configured_gateway() -> Result<Option<Arc<Gateway>>, GatewayError> {

@@ -251,6 +251,8 @@ struct StubState {
     delay_ms: AtomicUsize,
     /// Data hour of the nationwide rows, in hours before now.
     hours_ago: AtomicUsize,
+    /// `hours_ago` applies to the next nationwide call only (later calls answer this hour).
+    hours_ago_once: std::sync::atomic::AtomicBool,
     /// Added to every PM10 value (distinguishes a later acquisition).
     pm10_offset: AtomicUsize,
     /// 1: 1,200 rows on two pages, 1,000 of the previous hour then 200 of this hour.
@@ -294,7 +296,11 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> impl IntoRespo
         assert_eq!(get("numOfRows").as_deref(), Some("1000"));
         assert_eq!(get("ver").as_deref(), Some("1.3"));
         assert_eq!(get("returnType").as_deref(), Some("json"));
-        let ago = state.hours_ago.load(Ordering::SeqCst) as f64;
+        let ago = if state.hours_ago_once.load(Ordering::SeqCst) {
+            state.hours_ago.swap(0, Ordering::SeqCst) as f64
+        } else {
+            state.hours_ago.load(Ordering::SeqCst) as f64
+        };
         let hour = kst_text(now_ms() - ago * 3_600_000.);
         let offset = state.pm10_offset.load(Ordering::SeqCst);
         let shape = state.two_pages.load(Ordering::SeqCst);
@@ -648,7 +654,10 @@ async fn the_hourly_capture_acquires_the_current_hour_while_demand_lasts() {
         .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_capture_interval(Duration::from_millis(300));
     // A request for an instant three hours ago acquires that hour; it is demand.
+    // Only the request's own call answers that earlier hour; any later call (a capture check
+    // that runs while the request waits, or after it) answers the current hour.
     stub.state.hours_ago.store(3, Ordering::SeqCst);
+    stub.state.hours_ago_once.store(true, Ordering::SeqCst);
     let past = now_ms() - 3. * 3_600_000.;
     let answer = inputs
         .load(
@@ -657,24 +666,56 @@ async fn the_hourly_capture_acquires_the_current_hour_while_demand_lasts() {
             "중구",
             false,
             past,
-            Instant::now() + Duration::from_secs(3),
+            deadline(),
         )
         .await;
     assert!(answer.arpltn.unwrap().get("arpltn").is_some());
-    assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 1);
-    // The capture then acquires the current hour once, without a request needing it.
-    stub.state.hours_ago.store(0, Ordering::SeqCst);
-    tokio::time::sleep(Duration::from_millis(1_500)).await;
-    assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 2);
-    tokio::time::sleep(Duration::from_millis(900)).await;
-    assert_eq!(
-        stub.state.nationwide.load(Ordering::SeqCst),
-        2,
-        "one capture per hour"
-    );
-    // The captured hour serves a request of that hour from S3.
+    // The request acquired its hour; a capture check (300 ms apart here) may already have run
+    // while it waited.
+    let before = stub.state.nationwide.load(Ordering::SeqCst);
+    assert!((1..=2).contains(&before), "{before}");
+    // The capture then acquires the current hour once, without a request needing it. Wait
+    // for the outcome (not for a runner-dependent time): the acquisition and its S3
+    // publication take as long as the runner needs.
+    let hour = kst(now_ms()).hour_start();
+    let captured = std::time::Instant::now();
+    while stub.state.nationwide.load(Ordering::SeqCst) < 2 {
+        assert!(
+            captured.elapsed() < Duration::from_secs(30),
+            "no capture within 30 s"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    // The captured hour is published and remembered: ten further capture checks (300 ms
+    // apart) ask nothing more in that hour.
+    while cold_answer(&transport, &store).await.is_none() {
+        assert!(
+            captured.elapsed() < Duration::from_secs(60),
+            "the captured hour reached S3"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    let captured_calls = stub.state.nationwide.load(Ordering::SeqCst);
+    tokio::time::sleep(Duration::from_millis(3_000)).await;
+    if kst(now_ms()).hour_start() == hour {
+        assert_eq!(
+            stub.state.nationwide.load(Ordering::SeqCst),
+            captured_calls,
+            "one capture per hour"
+        );
+    }
+    // The captured hour serves a request of that hour from S3 (no new call).
+    let calls = stub.state.nationwide.load(Ordering::SeqCst);
+    assert!(cold_answer(&transport, &store).await.is_some());
+    assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), calls);
+}
+/// The merged observation a cold reader without an acquirer answers now (None: missing data).
+async fn cold_answer(
+    transport: &BoundedS3<HttpS3Transport>,
+    store: &Arc<Store>,
+) -> Option<OrderedJson> {
     let cold = AirInputs::new(transport.clone(), store.clone());
-    let now = cold
+    let answer = cold
         .load(
             &town(37.5657, 126.9769),
             "서울특별시",
@@ -684,8 +725,7 @@ async fn the_hourly_capture_acquires_the_current_hour_while_demand_lasts() {
             deadline(),
         )
         .await;
-    assert!(now.arpltn.unwrap().get("arpltn").is_some());
-    assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 2);
+    answer.arpltn.ok()?.get("arpltn").cloned()
 }
 
 /// An air source answering one fixed observation (the shared LiveAir chain in production).
@@ -1384,7 +1424,7 @@ async fn cpu_work_never_holds_a_request_past_its_deadline() {
 
 /// A TLS peer that accepts, reads the ClientHello and stays silent for `hold`; it records how long
 /// each client waited before giving up (None: the client was still waiting when the peer closed).
-async fn silent_tls(hold: Duration) -> (String, Arc<std::sync::Mutex<Vec<Option<Duration>>>>) {
+pub async fn silent_tls(hold: Duration) -> (String, Arc<std::sync::Mutex<Vec<Option<Duration>>>>) {
     use tokio::io::AsyncReadExt;
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("https://{}/", listener.local_addr().unwrap());

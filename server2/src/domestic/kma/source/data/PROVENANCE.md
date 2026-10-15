@@ -63,3 +63,21 @@ altitude, coordinates (`geo`, `[longitude, latitude]` geocoded by legacy), `isCi
 `server2::domestic::kma::source::seed::embedded()` carries this file. A later export published by
 `station_seed_import` replaces it when it is newer. The final read-only export at cutover is a
 cutover step.
+
+## Area numbers (S15b-3b)
+
+Byte-identical copies, copied at master `7ca6f002`; `20160704_AreaNoResutl` last changed in
+`a8daad6f` and `20180119_kma_lifeindex_areano.csv` in `e6828d13`.
+
+| File | Origin | sha256 |
+| --- | --- | --- |
+| `20160704_AreaNoResutl` | `server/utils/data/20160704_AreaNoResutl` | `3ec05e31b76d76fa3dc1222ee014179f6a25715357e7c70426c532e30a7964d5` |
+| `20180119_kma_lifeindex_areano.csv` | `server/utils/data/20180119_kma_lifeindex_areano.csv` | `f44d6fa89b201655b479ffbc3ab2208ba1142838a9f7b6340961494ad5429581` |
+
+- `20160704_AreaNoResutl` is the geocoded list `utils/updateAreaNo.js` saved to `areaNoList`
+  (`update({town}, {areaNo, town, geo}, {upsert})`).
+- `20180119_kma_lifeindex_areano.csv` is the list `utils/update.areano.to.db.js` applied: an
+  existing town gets `$set {areaNo, updatedAt: "20180119"}`. A town missing from the 2016 list
+  needed a Kakao geocode, and the script calls `toFixed` on the string coordinates Kakao returns,
+  so no new town was stored. `areaNoList` is therefore these two files only.
+

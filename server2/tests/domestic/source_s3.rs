@@ -614,8 +614,9 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
         TEST_PERMITS,
         "every S3 permit returned"
     );
-    // Station and ASOS inputs are sourced (S15b-2, here over empty collections); the assembly
-    // reaches the first input S15b-3 owns and forwards with its name.
+    // Station and ASOS inputs (S15b-2) and the air and life inputs (S15b-3a/3b) are sourced,
+    // here over empty collections: the assembly answers natively (no AirKorea station, so the
+    // image forecasts of S15b-3c are not asked).
     let outcome = assemble(
         &request(),
         snapshot.as_ref(),
@@ -623,11 +624,13 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
         AssemblyConfig::default(),
     );
     match outcome {
-        Outcome::Legacy(reason) => assert!(
-            reason.contains("area_no is not sourced yet (S15b-3)"),
-            "{reason}"
-        ),
-        other => panic!("not forwarded: {other:?}"),
+        Outcome::Json(body) => {
+            for key in ["regionName", "cityName", "townName", "short", "midData"] {
+                assert!(body.get(key).is_some(), "{key}");
+            }
+        }
+        Outcome::Legacy(reason) => panic!("forwarded: {reason}"),
+        other => panic!("unexpected: {:?}", std::mem::discriminant(&other)),
     }
 }
 

@@ -1425,7 +1425,7 @@ where
         let window_id = crate::world::js::iso((starts + KST_MS) as f64)
             .map(|s| s[..10].to_owned())
             .ok_or(DomesticError::Invalid("window"))?;
-        let mut entries = Vec::new();
+        let mut stores = Vec::new();
         for key in &self.keys {
             let policy = BudgetPolicy {
                 provider: Provider::DataGoKr,
@@ -1438,16 +1438,29 @@ where
             };
             let store = BudgetStore::new(self.budgets.clone(), policy, self.clock.clone())
                 .map_err(|_| invalid.clone())?;
-            entries.push((
-                crate::providers::ProviderKey::new(key.clone()).map_err(|_| invalid.clone())?,
-                Arc::new(store),
-            ));
+            stores.push(Arc::new(store));
         }
+        // One quota owner per key and KST day across the services server2 calls with these keys
+        // (S15b-2 ASOS; S15b-3b UV V5, pollen V3 and KASI); each service keeps its own key ring.
         let mut rings = BTreeMap::new();
-        rings.insert(
+        for service in [
             crate::domestic::family::Service::Asos,
-            crate::domestic::KeyRing::new(entries)?,
-        );
+            crate::domestic::family::Service::LivingWthrIdx,
+            crate::domestic::family::Service::HealthWthrIdx,
+            crate::domestic::family::Service::RiseSet,
+        ] {
+            let entries = self
+                .keys
+                .iter()
+                .zip(&stores)
+                .map(|(key, store)| {
+                    crate::providers::ProviderKey::new(key.clone())
+                        .map(|k| (k, store.clone()))
+                        .map_err(|_| invalid.clone())
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            rings.insert(service, crate::domestic::KeyRing::new(entries)?);
+        }
         crate::domestic::DomesticAcquirer::new(
             self.funded.clone(),
             self.public.clone(),
@@ -1458,7 +1471,8 @@ where
             crate::storage::CatalogLimits::default(),
         )
     }
-    async fn today(
+    /// The acquirer of the current KST day (S08 windows are per day).
+    pub async fn today(
         &self,
     ) -> Result<Arc<crate::domestic::DomesticAcquirer<P, W, B>>, DomesticError> {
         let now = self
