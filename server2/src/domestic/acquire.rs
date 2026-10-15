@@ -1,6 +1,7 @@
 //! Funded data.go.kr page acquisition and keyless KMA web acquisition into one checked
 //! `resolver::Acquisition`. Publication through S06 (O-9) remains the caller's step.
 use super::airkorea::AirKoreaRequest;
+use super::airkorea_image::AirKoreaImageRequest;
 use super::family::{DataGoKrRequest, Endpoints, Service, WebRequest};
 use super::format::{Expect, PageReport, PageVerdict, WebVerdict, inspect_page, inspect_web};
 use super::metrics::{CallGuard, DomesticMetrics};
@@ -796,6 +797,86 @@ where
             declaration,
             records,
         }))
+    }
+
+    /// Acquire the AirKorea forecast images of one announcement (S15b-3c, legacy master
+    /// `getDustImage`): keyless GETs of the two validated image paths on the built-in image root,
+    /// HTTP 200 only, each a GIF of the characterized shape (820x820, 48 frames; the legend is
+    /// checked when it is decoded). They form one group with a manifest of the two URLs (page 1
+    /// PM10, page 2 PM2.5, page 3 the manifest); a failure of either image stores nothing.
+    pub async fn acquire_airkorea_images(
+        &self,
+        request: &AirKoreaImageRequest,
+        deadline: Instant,
+    ) -> Result<Acquired, DomesticError> {
+        let targets = request.paths().map(|path| {
+            self.endpoints
+                .image_url(path)
+                .and_then(|u| PublicRequest::new(u).map_err(|_| DomesticError::Invalid("endpoint")))
+        });
+        let mut bodies = Vec::new();
+        for target in targets {
+            let target = target?;
+            let _admission = timeout_at(deadline, self.public_admission.clone().acquire_owned())
+                .await
+                .map_err(|_| DomesticError::Deadline)?
+                .map_err(|_| DomesticError::Invalid("admission"))?;
+            self.metrics.public_attempt();
+            let response = match timeout_at(deadline, self.public.fetch(&target)).await {
+                Err(_) => return Err(DomesticError::Deadline),
+                Ok(Ok(response)) => response,
+                Ok(Err(ProviderTransportError::Invalid)) => {
+                    return Err(DomesticError::Invalid("endpoint"));
+                }
+                Ok(Err(ProviderTransportError::Transport)) => {
+                    return Err(DomesticError::Transport);
+                }
+                Ok(Err(_)) => return Err(DomesticError::Provider(Disposition::Rejected)),
+            };
+            if response.status != 200 {
+                return Err(DomesticError::Provider(Disposition::Rejected));
+            }
+            let bytes = Arc::<[u8]>::from(response.body);
+            let (view, check) = (bytes.clone(), request.clone());
+            let valid = self
+                .blocking(deadline, move || check.shape_ok(&view))
+                .await?;
+            if !valid {
+                return Err(DomesticError::Invalid("INVALID_IMAGE"));
+            }
+            bodies.push((bytes, response.status, response.content_type));
+        }
+        bodies.push((
+            Arc::<[u8]>::from(request.manifest()),
+            200,
+            "application/json".to_owned(),
+        ));
+        let fetched = self.now_ms()?;
+        let pages = bodies.len() as u32;
+        let records = bodies
+            .into_iter()
+            .enumerate()
+            .map(|(i, (bytes, status, content))| {
+                RawRecord::new(
+                    super::airkorea_image::SOURCE,
+                    super::airkorea_image::KIND,
+                    &AirKoreaImageRequest::provider_key(),
+                    request.period(),
+                    fetched,
+                    status,
+                    content_type(&content),
+                    Some(Pagination {
+                        page: i as u32 + 1,
+                        pages,
+                        complete: true,
+                    }),
+                    bytes,
+                    &self.limits.raw,
+                )
+                .map_err(DomesticError::Storage)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        self.group(records, &request.partition())
     }
 
     /// Acquire the keyless MFDS food-poisoning table (S15b-3b): one attempt inside the legacy

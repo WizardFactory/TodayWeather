@@ -44,6 +44,9 @@ pub struct Builtins {
     pub kma_weather: String,
     /// MFDS food-poisoning root (S15b-3b, keyless; legacy `lib/foodPoisoning.js` `ENDPOINT`).
     pub mfds: String,
+    /// The origin of the AirKorea forecast images (S15b-3c, keyless; the dust forecast's
+    /// `imageUrl1..9` must be on it).
+    pub airkorea_images: String,
     /// Visual Crossing Timeline root.
     pub vc: String,
     pub google_air: String,
@@ -66,6 +69,7 @@ impl Builtins {
             kma: "https://www.kma.go.kr/".into(),
             kma_weather: "https://www.weather.go.kr/".into(),
             mfds: crate::domestic::mfds::DEFAULT_ROOT.into(),
+            airkorea_images: crate::domestic::family::AIRKOREA_IMAGES.into(),
             vc: crate::world::runtime::VC_ENDPOINT.into(),
             google_air: google.1.into(),
             openweather: openweather.1.into(),
@@ -81,6 +85,7 @@ impl Builtins {
     /// The KMA family roots (data.go.kr, kma.go.kr, weather.go.kr).
     pub fn kma_endpoints(&self) -> Result<crate::domestic::family::Endpoints, GatewayError> {
         crate::domestic::family::Endpoints::new(&self.data_go_kr, &self.kma, &self.kma_weather)
+            .and_then(|e| e.with_airkorea_images(&self.airkorea_images))
             .map_err(|_| GatewayError::InvalidConfiguration)
     }
 }
@@ -250,6 +255,9 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         )
         .map_err(|_| GatewayError::InvalidConfiguration)?
         .with_air(airkorea, air)
+        .with_image_calibration(
+            crate::domestic::kma::source::air_forecast::Calibration::from_vars(var),
+        )
         .with_life(Some(life));
         // S16: daily summaries of natively served towns, written after the response through
         // the same S3 admission.
@@ -280,7 +288,8 @@ fn kma_airkorea(
     // only for its own bound.
     let funded = crate::domestic::kma::source::live::airkorea_transport()
         .map_err(|_| GatewayError::InvalidConfiguration)?;
-    let public = crate::providers::HttpPublicTransport::new(2 * 1024 * 1024)
+    // The keyless transport fetches the forecast GIFs (about 5 MB each, S15b-3c).
+    let public = crate::providers::HttpPublicTransport::new(8 * 1024 * 1024)
         .map_err(|_| GatewayError::InvalidConfiguration)?;
     let store =
         crate::storage::CatalogStore::new(s3.clone(), crate::storage::CatalogLimits::default())

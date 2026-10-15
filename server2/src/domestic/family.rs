@@ -404,7 +404,11 @@ pub struct Endpoints {
     data_go_kr: Url,
     kma: Url,
     weather: Url,
+    /// S15b-3c: the root the AirKorea forecast image paths are fetched from.
+    airkorea_images: Url,
 }
+/// The AirKorea forecast-image root (`imageUrl1..9` of `getMinuDustFrcstDspth`).
+pub const AIRKOREA_IMAGES: &str = "https://www.airkorea.or.kr/";
 impl Default for Endpoints {
     fn default() -> Self {
         Self::new(
@@ -431,7 +435,28 @@ impl Endpoints {
             data_go_kr: root(data_go_kr)?,
             kma: root(kma)?,
             weather: root(weather)?,
+            airkorea_images: root(AIRKOREA_IMAGES)?,
         })
+    }
+    /// The root forecast-image paths are fetched from (a test-built root may be literal loopback).
+    pub fn with_airkorea_images(mut self, images: &str) -> Result<Self, DomesticError> {
+        self.airkorea_images = root(images)?;
+        Ok(self)
+    }
+    /// The URL of a forecast-image path (`/dustImage/…`, validated by the request) on the image
+    /// root: a provider-supplied URL is never fetched as given.
+    pub fn image_url(&self, path: &str) -> Result<Url, DomesticError> {
+        let path = path
+            .strip_prefix('/')
+            .ok_or(DomesticError::Invalid("image path"))?;
+        let url = self
+            .airkorea_images
+            .join(path)
+            .map_err(|_| DomesticError::Invalid("image path"))?;
+        if url.origin() != self.airkorea_images.origin() || url.query().is_some() {
+            return Err(DomesticError::Invalid("image path"));
+        }
+        Ok(url)
     }
     pub(crate) fn data_go_kr(&self) -> &Url {
         &self.data_go_kr
