@@ -784,16 +784,13 @@ fn apply_grid(docs: &mut GridDocs, family: Family, coord: Coord, f: &Fetched) {
         docs.save(family, rows);
     }
 }
-/// The S16 input identity of one grid acquisition: its publication through the last hour it
-/// can write (current: the slot; ultra-short: six hours; short: four days).
-fn grid_input_id(family: Family, kind: &str, f: &Fetched) -> Option<InputId> {
+/// The S16 input identity of one grid acquisition: its publication through the last row it can
+/// write, the horizons of [`lookback_ms`] (current: the slot; ultra-short: six hours plus a
+/// trailing day; short: six days).
+pub fn grid_input_id(family: Family, kind: &str, f: &Fetched) -> Option<InputId> {
     let p = partition_publication(&f.partition)?;
     let start = schedule::to_ms(p);
-    let horizon = match family {
-        Family::Current => 0.,
-        Family::Shortest => 6. * HOUR_MS,
-        Family::Short => 4. * DAY_MS,
-    };
+    let horizon = lookback_ms(family) - grid::RETENTION_MS - HOUR_MS;
     Some(InputId {
         family: kind.to_owned(),
         start_ms: start,

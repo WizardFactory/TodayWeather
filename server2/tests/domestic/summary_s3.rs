@@ -660,3 +660,103 @@ async fn a_partial_grid_read_records_nothing() {
         "partial read: nothing stored"
     );
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_partial_vc_read_stores_no_vc_day() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport_limited(4);
+    let world =
+        Arc::new(CatalogWorldStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let cell = Cell {
+        lat: 37.57,
+        lon: 126.97,
+    };
+    let start = 1_760_367_600_i64; // 2025-10-14 00:00 KST
+    let body = |temp: f64| {
+        let hours: Vec<serde_json::Value> = (0..24)
+            .map(|i| json!({"datetimeEpoch": start + i * 3600, "temp": temp}))
+            .collect();
+        serde_json::to_vec(&json!({"timezone": "Asia/Seoul", "tzoffset": 9.0,
+            "days": [{"datetime": "2025-10-14", "hours": hours}]}))
+        .unwrap()
+    };
+    let mut newest = String::new();
+    for (i, temp) in [59., 68.].into_iter().enumerate() {
+        let bytes = body(temp);
+        let fetched_at = (start as u64 + 86_400 + 3_600 * (i as u64 + 1)) * 1000;
+        let record = RawRecord::new(
+            "vc",
+            "timeline",
+            &server2::storage::ProviderKey::WorldCell {
+                lat_hundredths: 3757,
+                lon_hundredths: 12697,
+            },
+            server2::storage::Period {
+                local_date: 20251014,
+                slot: "recent".into(),
+            },
+            fetched_at,
+            200,
+            "application/json",
+            None,
+            bytes.clone().into(),
+            &CatalogLimits::default().raw,
+        )
+        .unwrap();
+        newest = record.envelope.identity.object_key().unwrap();
+        world
+            .publish(
+                cell,
+                RawFetch {
+                    fetched_at_ms: fetched_at,
+                    range: Range::Recent,
+                    first_date: 20251014,
+                    sha256: server2::storage::sha256(&bytes),
+                    body: Arc::from(bytes),
+                },
+                deadline(),
+            )
+            .await
+            .unwrap();
+    }
+    // The newest body is missing: S06 excludes its group and the read is partial.
+    reqwest::Client::new()
+        .post(format!(
+            "{}__catalog?mode=forget&key={newest}",
+            peer.endpoint()
+        ))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    let lookup = Lookup::new(
+        transport.clone(),
+        None,
+        Some(world.clone() as Arc<dyn VcRecords>),
+    );
+    let vc_only = Target {
+        town: None,
+        station: None,
+        cell: Some((3757, 12697)),
+    };
+    assert!(
+        lookup
+            .last_year(&vc_only, 20261015, deadline())
+            .await
+            .is_err(),
+        "a partial VC read is an error, not the older body's day"
+    );
+    let stored = SummaryKey::Vc {
+        lat: 3757,
+        lon: 12697,
+    };
+    assert!(
+        lookup
+            .store()
+            .names(&stored, 20251014, deadline())
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}

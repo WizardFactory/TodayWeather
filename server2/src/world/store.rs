@@ -150,22 +150,16 @@ impl<T: CatalogTransport + 'static> CatalogWorldStore<T> {
         for &date in first_dates {
             for range in [Range::Combined, Range::Recent, Range::Forecast] {
                 let id = catalog(cell, date, range).map_err(StoreError::Storage)?;
-                // A group S06 excluded (not eligible, raw body missing) makes the read partial.
-                match self
-                    .catalogs
-                    .lookup(&id, deadline)
-                    .await
-                    .map_err(StoreError::Storage)?
-                {
-                    LookupOutcome::Ready(set) if set.excluded_groups() == 0 => {
-                        out.extend(fetches(&set))
-                    }
-                    LookupOutcome::Ready(_) => return Err(StoreError::Incomplete),
-                    LookupOutcome::Incomplete => out.extend(
-                        load_partition(self.catalogs.clone(), id, period(date, range), deadline)
-                            .await?,
-                    ),
-                }
+                out.extend(
+                    load_partition(
+                        self.catalogs.clone(),
+                        id,
+                        period(date, range),
+                        deadline,
+                        true,
+                    )
+                    .await?,
+                );
             }
         }
         out.sort_by(|a, b| (a.fetched_at_ms, &a.sha256).cmp(&(b.fetched_at_ms, &b.sha256)));
@@ -177,13 +171,23 @@ async fn load_partition<T: CatalogTransport>(
     id: CatalogId,
     period: Period,
     deadline: Instant,
+    strict: bool,
 ) -> Result<Vec<RawFetch>, StoreError> {
+    // S16 (`strict`): a group S06 excluded (not eligible, raw body missing) makes the read
+    // partial; world serving keeps the eligible groups.
+    let take = |set: &crate::storage::CompleteSet| {
+        if strict && set.excluded_groups() > 0 {
+            Err(StoreError::Incomplete)
+        } else {
+            Ok(fetches(set))
+        }
+    };
     match store
         .lookup(&id, deadline)
         .await
         .map_err(StoreError::Storage)?
     {
-        LookupOutcome::Ready(set) => return Ok(fetches(&set)),
+        LookupOutcome::Ready(set) => return take(&set),
         LookupOutcome::Incomplete => (),
     }
     let scope = RepairScope {
@@ -195,14 +199,14 @@ async fn load_partition<T: CatalogTransport>(
         .await
         .map_err(StoreError::Storage)?
     {
-        RepairOutcome::Complete(set) => Ok(fetches(&set)),
+        RepairOutcome::Complete(set) => take(&set),
         RepairOutcome::CompleteEmpty { .. } => Ok(Vec::new()),
         RepairOutcome::Indexed { .. } => match store
             .lookup(&id, deadline)
             .await
             .map_err(StoreError::Storage)?
         {
-            LookupOutcome::Ready(set) => Ok(fetches(&set)),
+            LookupOutcome::Ready(set) => take(&set),
             LookupOutcome::Incomplete => Err(StoreError::Incomplete),
         },
         RepairOutcome::Incomplete => Err(StoreError::Incomplete),
@@ -227,7 +231,7 @@ impl<T: CatalogTransport + 'static> WorldStore for CatalogWorldStore<T> {
                         .acquire_owned()
                         .await
                         .map_err(|_| StoreError::Incomplete)?;
-                    load_partition(store, id, period(date, range), deadline).await
+                    load_partition(store, id, period(date, range), deadline, false).await
                 });
             }
             let mut out = Vec::new();

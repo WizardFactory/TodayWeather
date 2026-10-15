@@ -8,6 +8,31 @@ use server2::summary::{Source, SummaryKey, asos, grid, kst_midnight_ms, vc};
 use server2::world::{Cell, Range, RawFetch};
 use std::sync::Arc;
 
+#[test]
+fn grid_acquisitions_concern_every_date_their_rows_can_reach() {
+    use server2::domestic::kma::source::{Family, Fetched, grid_input_id};
+    let fetched = |partition: &str| Fetched {
+        fetched_at_ms: 1,
+        partition: partition.into(),
+        pages: vec![Arc::from(b"{}".to_vec())],
+    };
+    // An ultra-short publication of D-1 12:00 can keep a trailing row of D (sky repair).
+    let shortest = grid_input_id(
+        Family::Shortest,
+        "ultra-srt-fcst",
+        &fetched("20261013-1200"),
+    )
+    .unwrap();
+    assert!(shortest.concerns(20261014));
+    assert!(!shortest.concerns(20261016));
+    // A short publication reaches six days ahead; a current one only its own slot.
+    let short = grid_input_id(Family::Short, "vilage-fcst", &fetched("20261010-2300")).unwrap();
+    assert!(short.concerns(20261015));
+    let current =
+        grid_input_id(Family::Current, "ultra-srt-ncst", &fetched("20261014-0000")).unwrap();
+    assert!(current.concerns(20261013) && !current.concerns(20261014));
+}
+
 fn inputs(ids: Vec<server2::summary::InputId>) -> GridInputs {
     GridInputs {
         town: town(),
