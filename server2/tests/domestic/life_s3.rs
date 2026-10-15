@@ -904,3 +904,50 @@ async fn an_mfds_connection_may_take_the_legacy_ten_seconds() {
         "the MFDS transport still waited when the peer closed at 4.5 s: {first:?}"
     );
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_mfds_slot_is_known_by_its_period_not_by_its_reception_time() {
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    // A KST date whose 12:30 is past: today, or yesterday before 12:30 KST.
+    let wall = now_ms();
+    let today = kst(wall);
+    let date = if today.time() >= 1230 {
+        today.date()
+    } else {
+        kst(wall - DAY).date()
+    };
+    let at =
+        |time: u16| server2::history::schedule::to_ms(Publication::new(date, time).unwrap()) as f64;
+    // The 08:20 slot's acquisition was received at 12:20:04 (after the 12:20 slot began).
+    let base = format!("{date:08}");
+    let reg = format!("{}-{}-{}0700", &base[..4], &base[4..6], &base[6..]);
+    let body = json!({"success": true, "data": [{"locationId": 1, "sd": "서울특별시", "sgg": "종로구",
+        "todayRisk": 0.5, "tomorrowRisk": 0.7, "afterTomorrowRisk": 0.9, "baseDate": base,
+        "regDatetime": reg}]});
+    let slot = Publication::new(date, 820).unwrap();
+    publish(
+        &store,
+        "mfds",
+        "mfds-food-poisoning",
+        named("nation"),
+        slot.period(),
+        &base,
+        at(1220) + 4_000.,
+        &[body.to_string().into_bytes()],
+    )
+    .await;
+    // A cold process at 12:30: the 12:20 slot was never collected, so it is acquired.
+    let inputs = LifeInputs::new(transport.clone(), store.clone())
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
+        .with_kasi_schedule(HOLD, HOLD);
+    inputs.load(at(1230), deadline()).await;
+    assert_eq!(
+        stub.state.mfds.load(Ordering::SeqCst),
+        1,
+        "the 12:20 slot is acquired"
+    );
+}

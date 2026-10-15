@@ -137,6 +137,11 @@ fn issuance10(p: Publication) -> String {
     p.compact()[..10].to_owned()
 }
 
+/// The single-flight key of a read at `now` after `published` own publications, the last
+/// completed at `published_at`.
+fn read_key(dataset: &str, published: u64, published_at: f64, now: f64) -> String {
+    format!("{dataset}-{published}-{}", u8::from(now >= published_at))
+}
 /// Which outcome of an owned acquisition settles its key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Settle {
@@ -173,8 +178,9 @@ struct LifeState {
 #[derive(Default)]
 struct MfdsState {
     folded: Arc<FoodPoisoning>,
-    /// The newest applied acquisition instant.
-    newest: f64,
+    /// Collection slots (`YYYYMMDDHHMM`) with an applied acquisition (the record period chosen
+    /// before the call, as legacy `collect` keeps the queued time for slot identity).
+    slots: HashSet<String>,
     cut: f64,
     refreshed: Option<std::time::Instant>,
     published: u64,
@@ -383,7 +389,7 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
             .shared
             .reads
             .join(
-                self.read_key("life"),
+                self.read_key("life", now),
                 until,
                 READ_FOR,
                 move |deadline| async move { read_life(&shared, now, deadline).await.is_ok() },
@@ -398,16 +404,17 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
         if let (Some(acquire), Some(slot)) =
             (self.shared.acquire.clone(), mfds_provider::slot_at(now))
         {
-            let newest = self
+            let collected = self
                 .shared
                 .mfds
                 .lock()
                 .unwrap_or_else(|e| e.into_inner())
-                .newest;
+                .slots
+                .contains(&slot.compact());
             let key = format!("mfds-{}", slot.compact());
             // Legacy `collect` marks the slot before it fetches: a failure waits for the next
             // slot (the owned task settles the key; concurrent requests join it).
-            if newest < mfds_provider::slot_ms(slot)
+            if !collected
                 && self
                     .flight(
                         acquire,
@@ -444,7 +451,7 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
             .shared
             .reads
             .join(
-                self.read_key("mfds"),
+                self.read_key("mfds", now),
                 until,
                 READ_FOR,
                 move |deadline| async move { read_mfds(&shared, now, deadline).await.is_ok() },
@@ -463,11 +470,15 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
         settled.retain(|_, at| at.elapsed() < SETTLED_FOR);
         settled.contains_key(key)
     }
-    /// The single-flight key of a read: one per dataset and own-publication count.
-    fn read_key(&self, dataset: &str) -> String {
-        format!(
-            "{dataset}-{}",
-            self.shared.published.load(Ordering::Acquire)
+    /// The single-flight key of a read: one per dataset, own-publication count and whether the
+    /// read's cut reaches the last own publication. A request never joins a read whose cut
+    /// excludes a publication its own cut includes.
+    fn read_key(&self, dataset: &str, now: f64) -> String {
+        read_key(
+            dataset,
+            self.shared.published.load(Ordering::Acquire),
+            self.shared.published_at.load(Ordering::Acquire) as f64,
+            now,
         )
     }
     /// Start (or join) one owned acquisition and wait for it until `until`: true when it
@@ -734,23 +745,41 @@ async fn read_mfds<T: IndexListing + Clone + 'static>(
         .await
         .map_err(|e| format!("mfds listing: {e}"))?;
     let days: Vec<String> = days.into_iter().filter(|d| listed.contains(d)).collect();
-    let fetched = shared
-        .reader
-        .all(
-            mfds_provider::SOURCE,
-            mfds_provider::KIND,
-            &MfdsRequest::provider_key(),
-            &days,
-            deadline,
-        )
-        .await
-        .map_err(|e| format!("mfds read: {e}"))?;
-    let runs: Vec<(f64, Vec<Arc<[u8]>>)> = fetched
-        .into_iter()
-        .filter(|f| f.fetched_at_ms as f64 <= cut)
-        .map(|f| (f.fetched_at_ms as f64, f.pages))
-        .collect();
-    let newest = runs.iter().map(|r| r.0).fold(f64::NEG_INFINITY, f64::max);
+    // Raw records keep the envelope period: the slot the acquisition was made for.
+    let mut runs: Vec<(f64, Vec<Arc<[u8]>>)> = Vec::new();
+    let mut slots = HashSet::new();
+    for day in &days {
+        let acquisitions = shared
+            .reader
+            .raw(
+                mfds_provider::SOURCE,
+                mfds_provider::KIND,
+                &MfdsRequest::provider_key(),
+                day,
+                deadline,
+            )
+            .await
+            .map_err(|e| format!("mfds read: {e}"))?;
+        for records in acquisitions {
+            let Some(completed) = records
+                .iter()
+                .map(|r| r.envelope.identity.fetched_at_ms)
+                .max()
+            else {
+                continue;
+            };
+            if completed as f64 > cut {
+                continue;
+            }
+            let period = &records[0].envelope.identity.period;
+            slots.insert(format!("{:08}{}", period.local_date, period.slot));
+            runs.push((
+                completed as f64,
+                records.iter().map(|r| r.bytes.clone()).collect(),
+            ));
+        }
+    }
+    runs.sort_by(|a, b| a.0.total_cmp(&b.0));
     let cpu = shared.cpu.clone();
     let folded = tokio::time::timeout_at(
         deadline,
@@ -775,7 +804,7 @@ async fn read_mfds<T: IndexListing + Clone + 'static>(
     .map_err(|_| "mfds fold deadline".to_owned())??;
     let mut state = shared.mfds.lock().unwrap_or_else(|e| e.into_inner());
     state.folded = folded;
-    state.newest = newest;
+    state.slots = slots;
     state.cut = cut;
     state.published = published;
     state.refreshed = Some(std::time::Instant::now());
@@ -956,4 +985,23 @@ fn apply_kasi<T>(shared: &Arc<Shared<T>>, area: &str, fetched: &[Fetched], first
         }
     }
     folded.forget_before(first_day);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::read_key;
+
+    /// A request whose cut reaches the last own publication never joins a read whose cut does
+    /// not (that read cannot contain the publication), and requests on the same side share one.
+    #[test]
+    fn reads_are_shared_only_by_cuts_on_the_same_side_of_the_last_publication() {
+        let published_at = 1_000.;
+        let before = read_key("life", 3, published_at, 999.);
+        let after = read_key("life", 3, published_at, 1_000.);
+        assert_ne!(before, after);
+        assert_eq!(after, read_key("life", 3, published_at, 5_000.));
+        assert_eq!(before, read_key("life", 3, published_at, 10.));
+        assert_ne!(after, read_key("life", 4, published_at, 5_000.));
+        assert_ne!(after, read_key("mfds", 3, published_at, 5_000.));
+    }
 }
