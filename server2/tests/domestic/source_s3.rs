@@ -781,3 +781,42 @@ async fn missing_inputs_are_acquired_at_request_time_and_never_forwarded() {
         "latest + 23 backfill hours: {log:?}"
     );
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_request_waits_for_late_acquisitions_once_within_three_seconds() {
+    use server2::domestic::kma::source::fetch::{ForecastAcquire, ForecastRequest, Published};
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    /// Every acquisition takes 6 s and then has nothing new.
+    struct Slow;
+    impl ForecastAcquire for Slow {
+        fn acquire(
+            &self,
+            _: ForecastRequest,
+        ) -> server2::gateway::BoxFuture<'static, Result<Published, String>> {
+            Box::pin(async {
+                tokio::time::sleep(Duration::from_secs(6)).await;
+                Ok(None)
+            })
+        }
+    }
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&store, &["current", "shortest", "short", "rss", "mid"]).await;
+    let s3 = source(&peer).with_forecast(Some(Arc::new(Slow)));
+    let started = Instant::now();
+    // The grid, RSS, three mid and warning waits share one 3-second bound instead of adding up.
+    let snapshot = match s3.snapshot(&request(), deadline()).await {
+        SourceAnswer::Snapshot(s) => s,
+        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+    };
+    let waited = started.elapsed();
+    assert!(waited < Duration::from_millis(4500), "waited {waited:?}");
+    // The late sections are legacy's answers for absent data.
+    assert_eq!(
+        snapshot
+            .town_model(TownModel::Current, &json!(60), &json!(127))
+            .unwrap()
+            .to_bytes(),
+        b"[]"
+    );
+}

@@ -412,7 +412,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         Ok(fetched)
     }
     /// The documents of one grid family at `now`. A missing latest publication is acquired
-    /// (waiting until `until`); the earlier publications legacy's backfill keeps (current and
+    /// (waiting at most 3 s); the earlier publications legacy's backfill keeps (current and
     /// ultra-short 23, short 7) are acquired by one owned pass the request does not wait for.
     /// Err only when S3 cannot be read.
     pub async fn grid_answer(
@@ -421,6 +421,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         grid: crate::history::Grid,
         now: f64,
         deadline: Instant,
+    ) -> Result<Vec<Doc>, String> {
+        self.grid_answer_by(family, grid, now, deadline, wait_bound(deadline))
+            .await
+    }
+    /// [`Self::grid_answer`] waiting for an acquisition only until `until` (the request's bound).
+    async fn grid_answer_by(
+        &self,
+        family: Family,
+        grid: crate::history::Grid,
+        now: f64,
+        deadline: Instant,
+        until: Instant,
     ) -> Result<Vec<Doc>, String> {
         let coord = Coord {
             mx: f64::from(grid.nx()),
@@ -458,7 +470,6 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .copied()
                 .filter(|p| missing(p))
                 .collect();
-            let until = deadline.min(Instant::now() + observe::REQUEST_WAIT);
             if missing(&latest)
                 && let Some(request) = grid_request(sf, grid, latest)
                 && let Some(f) = self
@@ -543,6 +554,17 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         deadline: Instant,
     ) -> Result<Vec<Doc>, String> {
+        self.rss_answer_by(grid, now, deadline, wait_bound(deadline))
+            .await
+    }
+    /// [`Self::rss_answer`] waiting for an acquisition only until `until`.
+    async fn rss_answer_by(
+        &self,
+        grid: crate::history::Grid,
+        now: f64,
+        deadline: Instant,
+        until: Instant,
+    ) -> Result<Vec<Doc>, String> {
         let coord = Coord {
             mx: f64::from(grid.nx()),
             my: f64::from(grid.ny()),
@@ -571,7 +593,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     format!("town-rss/{}/{}", grid_key(grid), latest.partition()),
                     fetch::ForecastRequest::Rss(request),
                     LATEST_RETRY,
-                    deadline.min(Instant::now() + observe::REQUEST_WAIT),
+                    until,
                 )
                 .await
         {
@@ -595,6 +617,26 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         collected: bool,
         now: f64,
         deadline: Instant,
+    ) -> Result<Vec<Doc>, String> {
+        self.mid_answer_by(
+            model,
+            reg_id,
+            collected,
+            now,
+            deadline,
+            wait_bound(deadline),
+        )
+        .await
+    }
+    /// [`Self::mid_answer`] waiting for an acquisition only until `until`.
+    async fn mid_answer_by(
+        &self,
+        model: MidModel,
+        reg_id: &str,
+        collected: bool,
+        now: f64,
+        deadline: Instant,
+        until: Instant,
     ) -> Result<Vec<Doc>, String> {
         let (kind, key) = match model {
             MidModel::Forecast => ("mid-fcst", format!("stn-{}", reg_id.to_ascii_lowercase())),
@@ -627,7 +669,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                         format!("{kind}/{}/{latest_part}", reg_id.to_ascii_lowercase()),
                         fetch::ForecastRequest::DataGoKr(request),
                         LATEST_RETRY,
-                        deadline.min(Instant::now() + observe::REQUEST_WAIT),
+                        until,
                     )
                     .await
             {
@@ -675,8 +717,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .then(|| crate::history::Grid::new(coord.mx as u16, coord.my as u16))
             .flatten()
             .ok_or("town grid outside the KMA grid")?;
-        // Station observations and ASOS history: at most REQUEST_WAIT for late acquisitions.
-        let until = deadline.min(Instant::now() + observe::REQUEST_WAIT);
+        // One wait bound for the whole request (at most REQUEST_WAIT, 3 s): station observations,
+        // ASOS history and the forecast acquisitions all stop waiting at `until`, so the waits
+        // never add up; late parts are answered as legacy answers absent data.
+        let until = wait_bound(deadline);
         let observations = async {
             let folded = self.observations.stations(now as i64, until).await;
             let history = self
@@ -687,14 +731,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         };
         let dust_wanted = air_input::airkorea_forecast_requested(&request.query);
         let image_wanted = air_input::image_forecast_requested(&request.query);
-        let (zones, (current, shortest, short, rss), (stations, history), air) = tokio::join!(
+        let (zones, (current, shortest, short, rss), (stations, history), air, ()) = tokio::join!(
             self.zones(now, deadline),
             async {
                 tokio::join!(
-                    self.grid_answer(Family::Current, grid, now, deadline),
-                    self.grid_answer(Family::Shortest, grid, now, deadline),
-                    self.grid_answer(Family::Short, grid, now, deadline),
-                    self.rss_answer(grid, now, deadline),
+                    self.grid_answer_by(Family::Current, grid, now, deadline, until),
+                    self.grid_answer_by(Family::Shortest, grid, now, deadline, until),
+                    self.grid_answer_by(Family::Short, grid, now, deadline, until),
+                    self.rss_answer_by(grid, now, deadline, until),
                 )
             },
             observations,
@@ -707,6 +751,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 now,
                 deadline
             ),
+            // The legacy warning cycle runs every 3 minutes; a due cycle is waited for until
+            // `until` at most.
+            self.warning_cycle(until),
         );
         let zones = zones?;
         let mut models = HashMap::new();
@@ -730,18 +777,22 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 _ => row.city_code.clone(),
             };
             wanted.push((MidModel::Temp, temp));
-            for (model, reg_id) in wanted {
-                let collected = collected(model, &reg_id, &zones);
-                let answer = self
-                    .mid_answer(model, &reg_id, collected, now, deadline)
-                    .await?;
-                mids.insert((model, reg_id), answer);
+            // The three regions concurrently, under the request's wait bound.
+            let answers = crate::history::join_all(
+                wanted
+                    .iter()
+                    .map(|(model, reg_id)| {
+                        let collected = collected(*model, reg_id, &zones);
+                        self.mid_answer_by(*model, reg_id, collected, now, deadline, until)
+                    })
+                    .collect(),
+            )
+            .await;
+            for ((model, reg_id), answer) in wanted.into_iter().zip(answers) {
+                mids.insert((model, reg_id), answer?);
             }
         }
-        // The legacy warning cycle runs every 3 minutes; a request waits for a due cycle at most
-        // 3 s. A failed read is the legacy store error (`getSpecialInfo` skips the section).
-        self.warning_cycle(deadline.min(Instant::now() + observe::REQUEST_WAIT))
-            .await;
+        // A failed read is the legacy store error (`getSpecialInfo` skips the section).
         let special = self.warnings.zone_state(now as i64, deadline).await.ok();
         // S15b-3b: the life inputs are loaded (and their owned acquisitions started) only for a
         // request the snapshot will serve; a forwarded request starts none.
@@ -971,6 +1022,10 @@ fn fetched_of(records: &[crate::storage::RawRecord]) -> Option<Fetched> {
 fn visible(mut f: Fetched, now: f64) -> Fetched {
     f.fetched_at_ms = f.fetched_at_ms.min(now as u64);
     f
+}
+/// The latest instant a request waits for late inputs (S13d: at most 3 s, within `deadline`).
+fn wait_bound(deadline: Instant) -> Instant {
+    deadline.min(Instant::now() + observe::REQUEST_WAIT)
 }
 /// Whether an acquisition of `partition` was complete at `now`.
 fn present(fetched: &[Fetched], partition: &str, now: f64) -> bool {
