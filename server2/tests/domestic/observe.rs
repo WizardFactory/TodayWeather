@@ -424,10 +424,11 @@ async fn station_and_history_inputs_are_acquired_once_published_and_answered() {
             "{once}: {calls:?}"
         );
     }
+    // The carried legacy seed registers these stations: nothing to geocode.
     assert_eq!(
         *locate.0.lock().unwrap(),
-        3,
-        "each station address geocoded once"
+        0,
+        "seeded stations need no geocoding"
     );
     // A new process (empty memory) answers from the published records alone.
     let fresh = Arc::new(Scripted::new(Duration::ZERO));
@@ -455,31 +456,36 @@ async fn late_acquisitions_answer_as_absent_data_and_complete_for_the_next_reque
     let peer = Peer::new();
     let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
     seed(&store, &[]).await;
-    let slow = Arc::new(Scripted::new(Duration::from_secs(5)));
+    let slow = Arc::new(Scripted::new(Duration::from_secs(10)));
     let s3 = source(&peer, slow.clone(), Arc::new(Table(Mutex::new(0))));
     let started = std::time::Instant::now();
     let first = snapshot(&s3).await;
     assert!(
-        started.elapsed() < Duration::from_millis(4500),
+        started.elapsed() < Duration::from_secs(8),
         "{:?}",
         started.elapsed()
     );
     let town = town(first.as_ref());
-    // No station pages within the wait: legacy's answers for an empty station collection and
-    // an expired history read.
+    // No station pages within the wait: the seeded station has no minute row (legacy's error),
+    // and the history read has no rows yet (the mapping, or legacy's expired read).
     let err = first
         .stn_hourly_and_min_rns(&town, "202609241049", &serde_json::json!({}))
         .unwrap_err();
-    assert!(err.0.starts_with("Fail to find stn coords"), "{}", err.0);
-    assert_eq!(
-        get(&first.history(&town).unwrap(), "reason")
-            .string()
-            .as_deref(),
-        Some("cache-read-timeout")
+    assert!(
+        err.0.starts_with("Fail to find stn Weather info"),
+        "{}",
+        err.0
     );
-    // The owned acquisitions finish and publish; later requests use them (the ASOS run starts
-    // once the station registry exists, so it completes for a later request again).
-    tokio::time::sleep(Duration::from_secs(6)).await;
+    let history = first.history(&town).unwrap();
+    assert!(
+        history.get("mapping").is_some()
+            || get(&history, "reason").string().as_deref() == Some("cache-read-timeout"),
+        "{}",
+        String::from_utf8_lossy(&history.to_bytes())
+    );
+    assert_eq!(len(get(&history, "hourly")), 0);
+    // The owned acquisitions finish and publish; later requests use them.
+    tokio::time::sleep(Duration::from_secs(11)).await;
     let later = settled(&s3, snapshot(&s3).await, &town).await;
     let stn = later
         .stn_hourly_and_min_rns(&town, "202609241049", &serde_json::json!({}))
@@ -490,10 +496,17 @@ async fn late_acquisitions_answer_as_absent_data_and_complete_for_the_next_reque
 }
 
 fn convert_seed(input: &std::path::Path, out: &std::path::Path) -> std::process::Output {
+    convert_seed_at(input, out, "2026-09-24T01:00:00.000Z")
+}
+fn convert_seed_at(
+    input: &std::path::Path,
+    out: &std::path::Path,
+    exported_at: &str,
+) -> std::process::Output {
     std::process::Command::new("python3")
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .arg("tools/migration/export_station_seeds.py")
-        .args(["--exported-at", "2026-09-24T01:00:00.000Z", "--input"])
+        .args(["--exported-at", exported_at, "--input"])
         .arg(input)
         .arg("--output")
         .arg(out)
@@ -531,10 +544,6 @@ fn station_seed_converter_keeps_export_lines_and_rejects_other_fields() {
             "unknown field",
             input.replacen("\"isMountain\":false", "\"isMountain\":false,\"x\":1", 1),
         ),
-        (
-            "repeated stnId",
-            input.replacen("\"stnId\":\"400\"", "\"stnId\":\"108\"", 1),
-        ),
         ("json array", format!("[{}]", input.lines().next().unwrap())),
         (
             "geo shape",
@@ -550,6 +559,18 @@ fn station_seed_converter_keeps_export_lines_and_rejects_other_fields() {
         let o = convert_seed(&path, &dir.join("bad-seed.jsonl"));
         assert!(!o.status.success(), "{name}");
     }
+    // A repeated stnId is kept, as legacy holds it (965 and 989 three times each in the 2026-10-15 export).
+    let path = dir.join("repeated.jsonl");
+    std::fs::write(
+        &path,
+        input.replacen("\"stnId\":\"400\"", "\"stnId\":\"108\"", 1),
+    )
+    .unwrap();
+    let out = dir.join("repeated-seed.jsonl");
+    assert!(convert_seed(&path, &out).status.success());
+    let repeated =
+        server2::domestic::kma::source::seed::parse(&std::fs::read(&out).unwrap()).unwrap();
+    assert_eq!(repeated.docs.len(), 3);
     // The importer side rejects a tampered seed independently.
     let tampered = text.replacen("\"rnsHit\":1}", "\"rnsHit\":1,\"extra\":true}", 1);
     assert!(server2::domestic::kma::source::seed::parse(tampered.as_bytes()).is_err());
@@ -557,18 +578,21 @@ fn station_seed_converter_keeps_export_lines_and_rejects_other_fields() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn the_registry_starts_from_the_imported_legacy_seed() {
+async fn a_newer_imported_seed_replaces_the_carried_one() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = Peer::new();
-    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
-    seed(&store, &[]).await;
+    let store = CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap();
     let dir = std::env::temp_dir().join(format!("s15b2-import-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let out = dir.join("seed.jsonl");
     assert!(
-        convert_seed(std::path::Path::new(SEED_FIXTURE), &out)
-            .status
-            .success()
+        convert_seed_at(
+            std::path::Path::new(SEED_FIXTURE),
+            &out,
+            "2026-10-16T00:00:00.000Z"
+        )
+        .status
+        .success()
     );
     let bytes = std::fs::read(&out).unwrap();
     let a = server2::domestic::kma::source::seed::acquisition(&bytes).unwrap();
@@ -577,22 +601,38 @@ async fn the_registry_starts_from_the_imported_legacy_seed() {
         .await
         .unwrap();
     std::fs::remove_dir_all(&dir).ok();
-    // No geocoder at all: seeded stations need none.
-    let s3 = source(
-        &peer,
+    // A process after the import (2026-10-17) reads it: the newer export replaces the carried
+    // one; no geocoder at all, seeded stations need none.
+    use server2::domestic::kma::source::Val;
+    use server2::domestic::kma::source::observe::Observations;
+    let obs = Arc::new(Observations::new(
+        peer.transport_limited(4),
+        Arc::new(store),
         Arc::new(Scripted::new(Duration::ZERO)),
         Arc::new(Unreachable),
-    );
-    let snap = snapshot(&s3).await;
-    let town = town(snap.as_ref());
-    let stn = snap
-        .stn_hourly_and_min_rns(&town, "202609241049", &serde_json::json!({}))
+    ));
+    let now = server2::history::schedule::to_ms(p(20261017, 1000));
+    let mut registry = None;
+    for _ in 0..40 {
+        let folded = obs
+            .stations(now, Instant::now() + Duration::from_secs(3))
+            .await
+            .unwrap();
+        if folded.registry.docs().len() == 3 {
+            registry = Some(folded.registry.clone());
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    let registry = registry.expect("the imported seed replaces the carried one");
+    let seoul = registry
+        .docs()
+        .iter()
+        .find(|d| d.get("stnId") == Some(&Val::str("108")))
         .unwrap();
-    // Seeded legacy fields reach the answer the way legacy copies the station document.
-    assert_eq!(get(&stn, "rnsHit").number(), Some(10.));
-    assert_eq!(get(&stn, "rnsCount").number(), Some(12.));
-    assert_eq!(get(&stn, "isMountain"), &OrderedJson::Bool(false));
-    assert_eq!(get(&stn, "altitude").number(), Some(86.));
+    assert_eq!(seoul.get("rnsHit"), Some(&Val::Num(10.)));
+    assert_eq!(seoul.get("rnsCount"), Some(&Val::Num(12.)));
+    assert_eq!(seoul.get("isMountain"), Some(&Val::Bool(false)));
 }
 
 #[test]
@@ -747,4 +787,167 @@ async fn minute_pages_stay_within_the_readers_reach() {
         "{} minute rows kept",
         later.minute.docs().len()
     );
+}
+
+/// The carried 2026-10-15 export (`data/kmastninfos.seed.jsonl`) parses with its recorded
+/// counts, and an older imported export does not replace it.
+#[test]
+fn the_carried_station_seed_is_the_2026_10_15_export() {
+    let seed = server2::domestic::kma::source::seed::embedded();
+    assert_eq!(seed.docs.len(), 776);
+    let flag = |k: &str| {
+        seed.docs
+            .iter()
+            .filter(|d| d.get(k) == Some(&server2::domestic::kma::source::Val::Bool(true)))
+            .count()
+    };
+    assert_eq!(flag("isCityWeather"), 97);
+    assert_eq!(flag("isMountain"), 38);
+    assert_eq!(seed.docs.iter().filter(|d| d.has("rnsHit")).count(), 695);
+    assert_eq!(seed.exported_at_ms, 1_792_024_470_549);
+    let mut ids: Vec<&str> = seed
+        .docs
+        .iter()
+        .filter_map(|d| {
+            d.get("stnId")
+                .and_then(server2::domestic::kma::source::Val::as_str)
+        })
+        .collect();
+    ids.sort_unstable();
+    let total = ids.len();
+    ids.dedup();
+    assert_eq!(
+        (total, ids.len()),
+        (776, 772),
+        "965 and 989 three times each"
+    );
+}
+
+/// Publish raw seed bytes as `station_seed_import` does, without validating them (a corrupt
+/// import must be survivable).
+async fn publish_seed(
+    store: &CatalogStore<server2::world::BoundedS3<server2::storage::HttpS3Transport>>,
+    bytes: Vec<u8>,
+    day: u32,
+    fetched_at_ms: u64,
+) {
+    use server2::domestic::kma::source::seed;
+    let limits = CatalogLimits::default();
+    let record = RawRecord::new(
+        seed::SOURCE,
+        seed::KIND,
+        &seed::key(),
+        server2::storage::Period {
+            local_date: day,
+            slot: "0000".into(),
+        },
+        fetched_at_ms,
+        200,
+        "application/x-ndjson",
+        None,
+        bytes.into(),
+        &limits.raw,
+    )
+    .unwrap();
+    let member = GroupMember {
+        envelope: record.envelope.clone(),
+        catalogs: vec![
+            CatalogId::for_record(&record.envelope.identity, &format!("{day:08}")).unwrap(),
+        ],
+    };
+    store
+        .publish(
+            GroupDeclaration::new(vec![member], &limits).unwrap(),
+            vec![record],
+            deadline(),
+        )
+        .await
+        .unwrap();
+}
+fn fixture_seed(exported_at: &str) -> Vec<u8> {
+    let dir = std::env::temp_dir().join(format!(
+        "s15b2s-{}-{}",
+        std::process::id(),
+        exported_at.replace(':', "")
+    ));
+    std::fs::create_dir_all(&dir).unwrap();
+    let out = dir.join("seed.jsonl");
+    assert!(
+        convert_seed_at(std::path::Path::new(SEED_FIXTURE), &out, exported_at)
+            .status
+            .success()
+    );
+    let bytes = std::fs::read(&out).unwrap();
+    std::fs::remove_dir_all(&dir).ok();
+    bytes
+}
+/// The registry size a process at 2026-10-17 settles on with the S3 peer's imports.
+async fn settled_registry(
+    peer: &Peer,
+    store: CatalogStore<server2::world::BoundedS3<server2::storage::HttpS3Transport>>,
+) -> usize {
+    use server2::domestic::kma::source::observe::Observations;
+    let obs = Arc::new(Observations::new(
+        peer.transport_limited(4),
+        Arc::new(store),
+        Arc::new(Scripted::new(Duration::ZERO)),
+        Arc::new(Unreachable),
+    ));
+    let now = server2::history::schedule::to_ms(p(20261017, 1000));
+    let mut size = 0;
+    for _ in 0..6 {
+        size = obs
+            .stations(now, Instant::now() + Duration::from_secs(3))
+            .await
+            .unwrap()
+            .registry
+            .docs()
+            .len();
+        tokio::time::sleep(Duration::from_millis(300)).await;
+    }
+    size
+}
+
+/// S15b2s-R1: an import replaces the carried seed only when it is newer and valid; older or
+/// same-time imports keep the carried seed, and a corrupt newest import is skipped in favor of
+/// the newest valid newer one.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn only_a_newer_valid_import_replaces_the_carried_seed() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let carried = server2::domestic::kma::source::seed::embedded().docs.len();
+    // Older and same-time imports: the carried seed stays.
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap();
+    publish_seed(
+        &store,
+        fixture_seed("2026-10-01T00:00:00.000Z"),
+        20261001,
+        1,
+    )
+    .await;
+    publish_seed(
+        &store,
+        fixture_seed("2026-10-15T00:34:30.549Z"),
+        20261015,
+        2,
+    )
+    .await;
+    assert_eq!(settled_registry(&peer, store).await, carried);
+    // A newer valid import, then a newer corrupt one: the valid one is used.
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap();
+    publish_seed(
+        &store,
+        fixture_seed("2026-10-16T00:00:00.000Z"),
+        20261016,
+        3,
+    )
+    .await;
+    publish_seed(&store, b"not a seed\n".to_vec(), 20261017, 4).await;
+    assert_eq!(settled_registry(&peer, store).await, 3);
+    // Only a corrupt import: the carried seed stays.
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap();
+    publish_seed(&store, b"not a seed\n".to_vec(), 20261017, 5).await;
+    assert_eq!(settled_registry(&peer, store).await, carried);
 }
