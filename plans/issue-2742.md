@@ -241,3 +241,30 @@ and without the legacy User-Agent); the server2 acquirer published UV (4 pages, 
 pollen (4 pages), KASI 서울 and MFDS into the local peer twice, oak answered no data, and the folds
 answered from them. The OpenWeather 401 of S15b-3a came from the first of two `OWM_SECRET_KEY`
 assignments; the last one (dotenv's) answers 200.
+
+### Scenarios (S15b-3c)
+
+Declaration: [S15b-3c.json](../server2/config/tasks/S15b-3c.json). Base: master `0997d702`.
+
+| ID | User and goal | Steps | Expected / failure | AC and proof |
+| --- | --- | --- | --- | --- |
+| F1 | Decoder | Seven synthetic GIFs | Every frame equals get-pixels 3.3.2 | C3-1; `air_forecast::gif_frames_equal_get_pixels` |
+| F2 | Forecast rows | Five `do` runs, six stations | Rows and `getForecast` answers equal the oracle | C3-1; `air_forecast::hourly_forecast_rows_*` |
+| F3 | App user (`kaq`) without KAQ data | Replay of `air-kaq-forecast` with KAQ hidden | `forecastSource` `airkorea`, the hourly rows and AQI, no KAQ-only days | C3-3; `air_forecast_s3::a_kaq_request_without_*` |
+| F4 | App user (`kaq`) with KAQ data | Parity replay | Legacy bytes | C3-3; `parity::all_oracle_scenarios_*`, `air_forecast_s3::a_kaq_request_without_*` |
+| F5 | Widget/web (`airkorea`) and the store | S3 snapshot | `airkorea` rows from S3, `kaq` rejected with the legacy error | C3-1/C3-3; `air_forecast_s3::the_snapshot_answers_*` |
+| F6 | First users of an announcement | Two concurrent requests, loopback provider | One acquisition, published before use, both served | C3-4; `air_forecast_s3::a_missing_image_forecast_*` |
+| F7 | User while the images are slow | 2 s per image | Request within its deadline without the forecast; a later one has it | C3-4; `air_forecast_s3::a_slow_image_*` |
+| F8 | Process across announcements | A later acquisition by another host; a new station list | Incremental read equals a cold read; everything decoded again | C3-4; `air_forecast_s3::later_acquisitions_*` |
+| F9 | Unpublished announcement | Expected documents missing | The previous announcement is acquired unless stored | C3-4; `air_forecast_s3::the_expected_announcement_*` |
+| F10 | Provider data naming another host | Image URL off the origin | Never fetched | C3-4; `air_forecast_s3::an_image_off_*`, `the_production_image_origin_*` |
+| F11 | Operator | Legacy calibration names | Deployed values when unset or empty | C3-2/C3-5; `air_forecast::the_calibration_reads_*` |
+
+Live record (2026-10-15; settings read in-process from `server2/.env`, never printed; records
+only in a local S06 test peer started with room for the GIFs): one `getMinuDustFrcstDspth` per
+run, the station list (7 pages), the nationwide hour, and two GIF downloads per announcement. The
+`11시 발표` GIFs (5.1/4.9 MB) gave the legend and the miss rates (legacy table 9.4%/19.4%, live
+table 2.4%/0.0% of a 0.1° grid); at 17:15 KST the `17시 발표` GIFs were acquired through the
+request path and the fold answered 670 stations (95 rows for 중구, PM10 12-35, PM2.5 6-21). Some
+provider calls were slow or timed out (raw station-list pages took over 30 s for two keys, then
+0.2-0.4 s); the downloaded images were deleted after the check.

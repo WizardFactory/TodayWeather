@@ -404,7 +404,11 @@ pub struct Endpoints {
     data_go_kr: Url,
     kma: Url,
     weather: Url,
+    /// S15b-3c: the origin the AirKorea forecast images may come from.
+    airkorea_images: Url,
 }
+/// The AirKorea forecast-image root (`imageUrl1..9` of `getMinuDustFrcstDspth`).
+pub const AIRKOREA_IMAGES: &str = "https://www.airkorea.or.kr/";
 impl Default for Endpoints {
     fn default() -> Self {
         Self::new(
@@ -431,7 +435,17 @@ impl Endpoints {
             data_go_kr: root(data_go_kr)?,
             kma: root(kma)?,
             weather: root(weather)?,
+            airkorea_images: root(AIRKOREA_IMAGES)?,
         })
+    }
+    /// The origin forecast-image URLs must have (a test-built root may be literal loopback).
+    pub fn with_airkorea_images(mut self, images: &str) -> Result<Self, DomesticError> {
+        self.airkorea_images = root(images)?;
+        Ok(self)
+    }
+    /// Whether a forecast-image URL from provider data is on the image origin.
+    pub fn image_allowed(&self, url: &Url) -> bool {
+        url.origin() == self.airkorea_images.origin()
     }
     pub(crate) fn data_go_kr(&self) -> &Url {
         &self.data_go_kr

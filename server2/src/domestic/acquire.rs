@@ -808,6 +808,13 @@ where
         request: &AirKoreaImageRequest,
         deadline: Instant,
     ) -> Result<Acquired, DomesticError> {
+        if !request
+            .urls()
+            .iter()
+            .all(|u| self.endpoints.image_allowed(u))
+        {
+            return Err(DomesticError::Invalid("image url"));
+        }
         let mut bodies = Vec::new();
         for url in request.urls() {
             let target =

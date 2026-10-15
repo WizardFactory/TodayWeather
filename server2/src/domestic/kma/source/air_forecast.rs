@@ -61,6 +61,8 @@ impl Calibration {
     /// through `parseInt` as the parser reads them.
     pub fn from_vars(var: &dyn Fn(&str) -> Option<String>) -> Self {
         let d = Self::deployed();
+        // `process.env.X || default`: an empty value is unset.
+        let var = |name: &str| var(name).filter(|v| !v.is_empty());
         let float = |name: &str, default: f64| {
             var(name).map_or(default, |v| crate::world::js::parse_float(&v))
         };
@@ -209,57 +211,57 @@ pub fn decode_points(
     if !calibration.valid_size(reader.width, reader.height) {
         return Err("INVALID_IMAGE".into());
     }
-    let (w, h) = (reader.width as isize, reader.height as isize);
-    let pixels: Vec<Option<(f64, f64)>> = points
+    let candidates: Vec<Option<Vec<usize>>> = points
         .iter()
-        .map(|(lat, lon)| calibration.pixel(*lat, *lon))
+        .map(|(lat, lon)| {
+            calibration
+                .pixel(*lat, *lon)
+                .map(|(x, y)| candidate_pixels(reader.width, reader.height, x, y))
+        })
         .collect();
-    let mut out: Vec<Option<Vec<f64>>> = pixels
+    let mut out: Vec<Option<Vec<f64>>> = candidates
         .iter()
-        .map(|p| p.map(|_| Vec::with_capacity(reader.num_frames())))
+        .map(|c| c.as_ref().map(|_| Vec::with_capacity(reader.num_frames())))
         .collect();
     let mut frame = vec![0u8; reader.width * reader.height * 4];
     for f in 0..reader.num_frames() {
         frame.iter_mut().for_each(|b| *b = 0);
         reader.decode_and_blit_rgba(f, &mut frame)?;
-        for (i, pixel) in pixels.iter().enumerate() {
-            let Some((x, y)) = pixel else {
-                continue;
-            };
-            if let Some(values) = out[i].as_mut() {
-                values.push(value_at(&frame, w, h, *x, *y, table));
+        for (values, pixels) in out.iter_mut().zip(&candidates) {
+            if let (Some(values), Some(pixels)) = (values.as_mut(), pixels) {
+                let value = pixels.iter().find_map(|&p| {
+                    let rgb = (frame[p * 4], frame[p * 4 + 1], frame[p * 4 + 2]);
+                    table.iter().find(|(c, _)| *c == rgb).map(|(_, v)| *v)
+                });
+                values.push(value.unwrap_or(-1.));
             }
         }
     }
     Ok(out)
 }
-/// The centre, then the 8x8 block (-4..+3) in row-major order: the first pixel whose RGB is a
-/// table colour gives that colour's first value. `pixels.get(i, x, y, c)` reads the frame at
-/// `y * width + x`; a NaN or out-of-frame position never matches (a read outside every frame is
-/// `undefined`; one into another frame never happens for points inside the map rectangle).
-fn value_at(frame: &[u8], w: isize, h: isize, x: f64, y: f64, table: &[Color]) -> f64 {
+/// The pixels `getDustInfo` tries in order: the centre, then the 8x8 block (-4..+3) in
+/// row-major order. `pixels.get(i, x, y, c)` reads the frame at `y * width + x` (an `x` past a
+/// row edge reads the next row); a NaN position or one outside the buffer never matches (a read
+/// outside every frame is `undefined`; one into another frame never happens for points inside
+/// the map rectangle).
+fn candidate_pixels(width: usize, height: usize, x: f64, y: f64) -> Vec<usize> {
     if !x.is_finite() || !y.is_finite() {
-        return -1.;
+        return Vec::new();
     }
+    let (w, h) = (width as isize, height as isize);
     let (x, y) = (x as isize, y as isize);
-    for j in 0..64isize {
-        let (dx, dy) = if j == 0 {
-            (0, 0)
-        } else {
-            (j / 8 - 4, j % 8 - 4)
-        };
-        let (px, py) = (x + dx, y + dy);
-        let idx = (py * w + px) * 4;
-        if py < 0 || py >= h || idx < 0 || (idx as usize + 2) >= frame.len() {
-            continue;
-        }
-        let i = idx as usize;
-        let rgb = (frame[i], frame[i + 1], frame[i + 2]);
-        if let Some((_, v)) = table.iter().find(|(c, _)| *c == rgb) {
-            return *v;
-        }
-    }
-    -1.
+    (0..64isize)
+        .filter_map(|j| {
+            let (dx, dy) = if j == 0 {
+                (0, 0)
+            } else {
+                (j / 8 - 4, j % 8 - 4)
+            };
+            let (px, py) = (x.checked_add(dx)?, y.checked_add(dy)?);
+            let p = py.checked_mul(w)?.checked_add(px)?;
+            (py >= 0 && py < h && p >= 0 && (p as usize) < width * height).then_some(p as usize)
+        })
+        .collect()
 }
 
 /// `'YYYY-MM-DD HH:MM'` of a time value (the process's local time is UTC).

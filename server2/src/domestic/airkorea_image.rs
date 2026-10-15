@@ -10,8 +10,6 @@ use reqwest::Url;
 
 pub const SOURCE: &str = "airkorea-image";
 pub const KIND: &str = "airkorea-forecast-image";
-/// The provider host of the images (`imageUrl1..9` of `getMinuDustFrcstDspth`).
-pub const HOST: &str = "www.airkorea.or.kr";
 
 /// The two images of one dust-forecast announcement.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -22,15 +20,11 @@ pub struct AirKoreaImageRequest {
     /// The GIF logical screen the decoder accepts (`isValidImage`).
     size: (usize, usize),
 }
-/// An image URL from the provider: HTTPS on the AirKorea host, or a loopback test peer.
+/// An image URL from the provider. The acquirer fetches it only on its built-in image origin
+/// ([`crate::domestic::family::Endpoints::image_allowed`]).
 fn image_url(text: &str) -> Result<Url, super::DomesticError> {
     let url = Url::parse(text).map_err(|_| super::DomesticError::Invalid("image url"))?;
-    let loopback = url
-        .host_str()
-        .and_then(|h| h.trim_matches(['[', ']']).parse::<std::net::IpAddr>().ok())
-        .is_some_and(|ip| ip.is_loopback());
-    let production = url.scheme() == "https" && url.host_str() == Some(HOST);
-    if !(production || loopback) || crate::providers::PublicRequest::new(url.clone()).is_err() {
+    if crate::providers::PublicRequest::new(url.clone()).is_err() {
         return Err(super::DomesticError::Invalid("image url"));
     }
     Ok(url)

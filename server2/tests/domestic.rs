@@ -2,6 +2,8 @@
 mod air;
 #[path = "domestic/air_forecast.rs"]
 mod air_forecast;
+#[path = "domestic/air_forecast_s3.rs"]
+mod air_forecast_s3;
 #[path = "domestic/air_s3.rs"]
 mod air_s3;
 #[path = "domestic/asos.rs"]

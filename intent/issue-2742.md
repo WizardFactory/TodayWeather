@@ -132,3 +132,24 @@ S15b-3b criteria (base `7ca6f002`, after #2750; same directions, coordinator 202
   existing `SERVER2_*` provider settings): the life index and KASI use the S15b-2 data.go.kr
   acquirer (one quota owner per key), MFDS the endpoint legacy hard-codes; no mode or flag.
 - B3-6: paths match `server2/config/tasks/S15b-3b.json`; outside changes are the declared documents.
+
+S15b-3c criteria (base master `0997d702` after #2752 and S10e #2755; AK decisions of 2026-10-15,
+relayed by the root coordinator: the colour table from the live legend, the deployed calibration
+with the 820×820 GIF size, and the `kaq` → `airkorea` mapping when no KAQ forecast exists):
+- C3-1: `air_forecast("airkorea")` answers the legacy `getForecast` rows of the AirKorea image
+  forecast rebuilt from stored GIFs (the get-pixels frames, `getDustInfo`, the 48-hour timeline,
+  the upsert and the one-day removal); frames, documents and answers equal a pinned legacy oracle
+  byte for byte, directly and from the S3 test peer with empty memory.
+- C3-2: the colour tables are read from the live legend (a behaviour change), with the before and
+  after share of map points without a value recorded; the calibration reads the legacy
+  `AIRKOREA_KOREA_IMAGE_*` names with the deployed values and the 820×820 size as defaults.
+- C3-3: a `kaq` request when no KAQ forecast exists is answered with the AirKorea forecast and
+  `forecastSource: "airkorea"`, shaped as `_insertForecastPollutants` shapes `airkorea`; KAQ data
+  keeps priority (an AK-approved difference from legacy, with the client evidence cited).
+- C3-4: the two images of an announcement are one owned single-flight acquisition (S13d
+  `OwnedFlights`) published through S06 before use, fetched only on the built-in image origin; a
+  request never waits past its deadline (at most 3 s) and answers with the legacy output for
+  missing data while the acquisition and decoding finish.
+- C3-5: no new `SERVER2_*` setting, endpoint override, mode or flag (S10e model: the image origin is
+  a built-in, tests build a loopback one).
+- C3-6: paths match `server2/config/tasks/S15b-3c.json`; outside changes are the declared documents.

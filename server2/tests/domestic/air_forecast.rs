@@ -141,3 +141,62 @@ fn hourly_forecast_rows_and_answers_equal_legacy() {
         }
     }
 }
+
+/// The legacy `AIRKOREA_KOREA_IMAGE_*` names (`config.js` L89-L105) with the deployed values as
+/// defaults: `parseFloat` / `parseInt` of a set value, an empty value is unset.
+#[test]
+fn the_calibration_reads_the_legacy_names() {
+    let deployed = Calibration::deployed();
+    assert_eq!(
+        [
+            deployed.top_lat,
+            deployed.bottom_lat,
+            deployed.left_lon,
+            deployed.right_lon
+        ],
+        [39.3769, 32.6942, 123.9523, 130.6741]
+    );
+    assert_eq!(
+        [
+            deployed.width,
+            deployed.height,
+            deployed.left,
+            deployed.right,
+            deployed.top,
+            deployed.bottom
+        ],
+        [820., 820., 78., 663., 80., 798.]
+    );
+    let none = Calibration::from_vars(&|_| None);
+    assert_eq!(none, deployed);
+    let empty = Calibration::from_vars(&|_| Some(String::new()));
+    assert_eq!(empty, deployed);
+    let set = Calibration::from_vars(&|name| {
+        Some(
+            match name {
+                "AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT" => "39.5x",
+                "AIRKOREA_KOREA_IMAGE_COORDI_BOTTOM_LAT" => "32.5",
+                "AIRKOREA_KOREA_IMAGE_COORDI_LEFT_LON" => "124",
+                "AIRKOREA_KOREA_IMAGE_COORDI_RIGHT_LON" => "131.25",
+                "AIRKOREA_KOREA_IMAGE_SIZE_WIDTH" => "830px",
+                "AIRKOREA_KOREA_IMAGE_SIZE_HEIGHT" => "830.9",
+                "AIRKOREA_KOREA_IMAGE_MAP_LEFT" => "76",
+                "AIRKOREA_KOREA_IMAGE_MAP_RIGHT" => "abc",
+                "AIRKOREA_KOREA_IMAGE_MAP_TOP" => "73",
+                "AIRKOREA_KOREA_IMAGE_MAP_BOTTOM" => "794",
+                other => panic!("{other}"),
+            }
+            .into(),
+        )
+    });
+    assert_eq!(
+        [set.top_lat, set.bottom_lat, set.left_lon, set.right_lon],
+        [39.5, 32.5, 124., 131.25]
+    );
+    assert_eq!(
+        [set.width, set.height, set.left, set.top, set.bottom],
+        [830., 830., 76., 73., 794.]
+    );
+    assert!(set.right.is_nan());
+    assert!(set.valid_size(830, 830) && !set.valid_size(820, 820));
+}
