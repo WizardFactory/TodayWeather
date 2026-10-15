@@ -15,7 +15,8 @@ function pixels(options = {}) {
             return nominal[band][channel]+(options.paletteDelta && band === 21 && channel === 1 ? options.paletteDelta : 0);
         }
         if (options.unknown) return 0;
-        return nominal[options.band === undefined ? 31 : options.band][channel];
+        const band = options.band === undefined ? 31 : options.band;
+        return nominal[band][channel]+(options.paletteDelta && band === 21 && channel === 1 ? options.paletteDelta : 0);
     }};
 }
 function imagePath(code = 'pm10', day = '2026/10/14', hour = '23') {

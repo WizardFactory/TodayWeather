@@ -138,22 +138,35 @@ The older `controllerCollector` supports WU and DSF collection (its DSF requests
 
 ## AirKorea image-derived hourly recovery (#2756)
 
-The local recovery candidate supports the characterized 820×820 NIER 09km,
-48-frame PM10/PM2P5 animation. The gather worker's 820×830 private setting caused
-repeated `INVALID_IMAGE` failures on 2026-10-15; the image hourly store had zero
-rows while original forecasts and observations were current. This is dated
-runtime evidence, not production recovery. [Evidence and local replay](../evidence/tasks/issue-2756/verification.md).
+The local recovery candidate supports the characterized 820×820 NIER 09km
+PM10/PM2P5 animation with a positive integer frame count taken independently from
+each decoded pollutant. The initial #2756 replay covered one 48-frame 23-cycle
+pair; subsequent actual inputs contain 42, 36 and 54 frames for the 05, 11 and
+17 cycles. Those counts are dated observations, not parser constants.
+[Variable-frame evidence](../evidence/tasks/issue-2756/variable-frames.md).
+
+The gather worker's 820×830 private setting caused repeated `INVALID_IMAGE`
+failures on 2026-10-15; the image hourly store had zero rows while original
+forecasts and observations were current. The follow-up issue comment reports a
+17-cycle rejection after the initial fix and a separate original-acquisition
+timeout. Those later production observations were not independently rechecked.
+[Initial runtime evidence and replay](../evidence/tasks/issue-2756/verification.md).
 
 After original forecast collection, the image controller validates both source
-paths and every frame's shape, calibration and 36-band legend before station
-upserts. It reads actual per-frame legend colours with a four-level GIF rounding
-allowance and returns quantized lower-threshold concentrations. Unknown colours
-omit values; unsupported geometry, legend or cycles are rejected. Frame dates
-come from the characterized 23-cycle image path (next-day 00 KST through the
-following day 23 KST), independent of the original publication's later reuse and
-the host clock. Only that observed cycle is supported; 11-cycle behavior remains
-unvalidated and fails closed. AirKorea BSON dates now encode the KST hours as UTC
-instants; the shared KAQ writer is unchanged.
+paths and every decoded frame's shape, calibration and 36-band legend before
+station upserts. The characterized 05/11/17/23 cycle schedule supplies the first
+hour as image date plus cycle hour plus one hour in KST; frame count determines
+the final hour. Directory and model dates must agree. Calendar rollover uses UTC
+fields as KST wall-clock fields, independently of original-publication reuse or
+the host clock. BSON dates encode those KST hours as UTC instants; the shared KAQ
+writer is unchanged.
+
+Each frame's legend colours must match the nominal band sequence within unique,
+non-overlapping neighbourhoods derived from palette spacing, replacing
+the fixed four-level rounding allowance. Station colours use the validated
+palette of that frame and yield quantized lower-threshold concentrations.
+Ambiguous or unmatched station colours omit values; unsupported geometry,
+malformed legends and uncharacterized cycle times reject the image pair.
 
 The inherited geographic box remains an approximate rectangular projection;
 current raster map bounds are defaults and explicit environment overrides remain

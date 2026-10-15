@@ -1,4 +1,4 @@
-/** Characterized NIER 09km, 48-hour AirKorea animation layout (2026-10-15). */
+/** Characterized NIER 09km, AirKorea animation layout (2026-10-15). */
 'use strict';
 var colours = [[105,0,0],[130,0,0],[155,0,0],[180,0,0],[205,0,0],[230,0,0],[255,0,0],
     [255,60,60],[255,90,90],[255,120,120],[255,150,150],[100,100,0],[115,115,0],[131,131,0],
@@ -24,33 +24,57 @@ function geometry(config) {
         g.top_lat <= g.bottom_lat || g.left_lon >= g.right_lon) throw invalid();
     return {pos:p,geo:g};
 }
+// Distinct bands define their own non-overlapping quantization neighborhoods.
+function distance(a,b) {
+    return Math.max(Math.abs(a[0]-b[0]),Math.abs(a[1]-b[1]),Math.abs(a[2]-b[2]));
+}
+function bandLimits(table) {
+    return table.map(function(colour,i) {
+        var nearest = Infinity;
+        table.forEach(function(other,j) {if (i !== j) nearest = Math.min(nearest,distance(colour,other));});
+        return nearest/2;
+    });
+}
+var nominalLimits = bandLimits(colours);
+function colourIndex(rgb,table) {
+    if (!rgb.every(function(v) {return Number.isInteger(v) && v >= 0 && v <= 255;})) return -1;
+    var best = -1, nearest = Infinity;
+    for (var i=0; i<table.length; i++) {
+        var delta = distance(rgb,table[i]);
+        if (delta === 0) return i;
+        if (delta < nearest) {nearest = delta; best = i;}
+    }
+    return best !== -1 && nearest < table.limits[best] ? best : -1;
+}
 function validate(pixels,config) {
     var s = pixels && pixels.shape;
-    if (!s || s.length !== 4 || s[0] !== 48 || s[1] !== 820 || s[2] !== 820 || s[3] !== 4 ||
+    if (!s || s.length !== 4 || !Number.isInteger(s[0]) || s[0] <= 0 || s[1] !== 820 || s[2] !== 820 || s[3] !== 4 ||
         s[1] !== number(config.size.width) || s[2] !== number(config.size.height)) throw invalid();
     geometry(config);
     var legends = [];
-    for (var f=0; f<48; f++) {
+    for (var f=0; f<s[0]; f++) {
         var table = [];
         for (var i=0; i<36; i++) {
             var y = Math.floor(74 + (i+0.5)*701/36);
             var rgb = [0,1,2].map(function(c) {return pixels.get(f,680,y,c);});
-            if (pixels.get(f,680,y,3) !== 255 || !rgb.every(function(v,c) {
-                return Number.isInteger(v) && v >= 0 && v <= 255 && Math.abs(v-colours[i][c]) <= 4;
-            })) throw invalid();
+            if (pixels.get(f,680,y,3) !== 255 || !rgb.every(function(v) {return Number.isInteger(v) && v >= 0 && v <= 255;}) ||
+                distance(rgb,colours[i]) >= nominalLimits[i]) throw invalid();
             table.push(rgb);
         }
+        table.limits = bandLimits(table);
         legends.push(table);
     }
     return legends;
 }
 function frameStart(path,type) {
-    // Only the observed 23-cycle has frame-label evidence. Unknown cycles fail closed.
-    var m = typeof path === 'string' && /^https?:\/\/www\.airkorea\.or\.kr\/dustImage\/(\d{4})\/(\d{2})\/(\d{2})\/23\/09km\/AQF\.(\d{8})\.NIER_09_01\.(PM10|PM2P5)\.2days\.ani\.gif$/.exec(path);
-    if (!m || m[4] !== m[1]+m[2]+m[3] || (type === 'PM10' ? m[5] !== 'PM10' : type !== 'PM25' || m[5] !== 'PM2P5')) throw invalid();
+    // Characterized six-hour cycles begin at cycle hour + 1 KST; count comes from the GIF.
+    var m = typeof path === 'string' && /^https?:\/\/www\.airkorea\.or\.kr\/dustImage\/(\d{4})\/(\d{2})\/(\d{2})\/(\d{2})\/09km\/AQF\.(\d{8})\.NIER_09_01\.(PM10|PM2P5)\.2days\.ani\.gif$/.exec(path);
+    if (!m || m[5] !== m[1]+m[2]+m[3] || (type === 'PM10' ? m[6] !== 'PM10' : type !== 'PM25' || m[6] !== 'PM2P5')) throw invalid();
+    var hour = Number(m[4]);
+    if (hour > 23 || (hour+1)%6 !== 0) throw invalid();
     var date = new Date(Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3])));
     if (date.toISOString().slice(0,10) !== m[1]+'-'+m[2]+'-'+m[3]) throw invalid();
-    date.setUTCDate(date.getUTCDate()+1);
+    date.setUTCHours(hour+1);
     return date.getTime(); // Calendar arithmetic below uses UTC fields as KST wall-clock fields.
 }
 function station(map,coordinate,lat,lon,type) {
@@ -65,20 +89,18 @@ function station(map,coordinate,lat,lon,type) {
     for (var r=1; r<=3; r++) for (var dx=-r; dx<=r; dx++) for (var dy=-r; dy<=r; dy++) {
         if (Math.max(Math.abs(dx),Math.abs(dy)) === r) offsets.push([dx,dy]);
     }
+    var count = map.image_count;
+    if (!Number.isInteger(count) || count <= 0 || count !== map.pixels.shape[0] || map.legends.length !== count ||
+        !Number.isFinite(start+(count-1)*3600000) || !Number.isFinite(new Date(start+(count-1)*3600000).getTime())) throw invalid();
     var hourly = [];
-    for (var f=0; f<48; f++) {
+    for (var f=0; f<count; f++) {
         var row = {date:new Date(start+f*3600000).toISOString().slice(0,16).replace('T',' ')};
         for (var j=0; j<offsets.length; j++) {
             var px=x+offsets[j][0], py=y+offsets[j][1];
             if (px < map.map_area.left || px >= map.map_area.right || py < map.map_area.top || py >= map.map_area.bottom ||
                 map.pixels.get(f,px,py,3) !== 255) continue;
-            var match = map.legends[f].findIndex(function(rgb) {
-                return rgb.every(function(v,c) {return v === map.pixels.get(f,px,py,c);});
-            });
-            // GIF palettes can quantize the same source shade differently (observed delta <= 4).
-            if (match === -1) match = map.legends[f].findIndex(function(rgb) {
-                return rgb.every(function(v,c) {return Math.abs(v-map.pixels.get(f,px,py,c)) <= 4;});
-            });
+            var rgb = [0,1,2].map(function(c) {return map.pixels.get(f,px,py,c);});
+            var match = colourIndex(rgb,map.legends[f]);
             if (match !== -1) {row.val = thresholds[type][match]; break;}
         }
         hourly.push(row);

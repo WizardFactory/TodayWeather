@@ -258,7 +258,7 @@
         "Skip keys the provider rejects as credentials; a key at its daily quota is skipped until KST midnight (#2745).",
         "Await station and province aggregate storage; emit sanitized UTC outcomes.",
         "Nation: retain fresh province averages; absent data uses shared global air at representative points.",
-        "Local #2756 image candidate: 820x820 / 48 frames; validate legend, derive KST dates from the observed 23-cycle, store UTC instants. Private gather calibration still needs rollout."
+        "Local #2756 candidate: 820x820; each GIF supplies its own frame count. Characterized 05/11/17/23 cycles start one hour later in KST; validate each frame palette and store UTC instants. No production recovery claim."
       ]
     },
     {
