@@ -61,7 +61,7 @@ test('image cycle, not current clock or later publication, determines dates acro
 });
 for (const code of ['pm10','pm25']) {
     const other = code === 'pm10' ? 'pm25' : 'pm10';
-    for (const path of [imagePath(code,'2026/02/30'),imagePath(code).replace('/23/','/05/'),imagePath(code).replace('/23/','/11/'),imagePath(other),'https://www.airkorea.or.kr/dustImage/']) {
+    for (const path of [imagePath(code,'2026/02/30'),imagePath(code).replace('AQF.20261014','AQF.20261013'),imagePath(code).replace('/23/','/05/'),imagePath(code).replace('/23/','/11/'),imagePath(other),'https://www.airkorea.or.kr/dustImage/']) {
         test('invalid '+code+' date/path or pollutant mismatch with valid counterpart does not write: '+path, async () => {
             const h = harness();
             await assert.rejects(pipeline(h,{pubDate:'2026-10-15 11:00',[code]:path,[other]:imagePath(other)}));
