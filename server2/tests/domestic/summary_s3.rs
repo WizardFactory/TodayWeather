@@ -64,6 +64,7 @@ fn current_page(date: &str, time: &str, t1h: &str) -> Vec<u8> {
                  "totalCount": 8}}}))
     .unwrap()
 }
+#[allow(clippy::too_many_arguments)] // One record identity, its body and content type.
 fn acquisition(
     source: &str,
     kind: &str,
@@ -72,6 +73,7 @@ fn acquisition(
     partition: &str,
     fetched_at: f64,
     body: Vec<u8>,
+    content_type: &str,
 ) -> Acquisition {
     let limits = CatalogLimits::default();
     let record = RawRecord::new(
@@ -81,7 +83,7 @@ fn acquisition(
         period,
         fetched_at as u64,
         200,
-        "application/json",
+        content_type,
         None,
         body.into(),
         &limits.raw,
@@ -117,6 +119,7 @@ async fn current(
             &format!("{time:04}"),
             &t1h.to_string(),
         ),
+        "application/json",
     );
     store
         .publish(a.declaration, a.records, deadline())
@@ -140,6 +143,44 @@ async fn day(
         )
         .await;
     }
+}
+
+/// A national AWS hourly table (`nph-aws_txt_min`, EUC-KR) with the Seoul city station.
+fn aws_page(publication: &str) -> Vec<u8> {
+    let cells = [
+        "108",
+        "서울",
+        "12m",
+        "<font color=red>○</font>",
+        "0",
+        "0.5",
+        "0",
+        "0",
+        "0",
+        "0",
+        "18.4",
+        "270.1",
+        "W",
+        "1.2",
+        "265.0",
+        "WSW",
+        "1.4",
+        "61",
+        "1013.2",
+        "서울특별시 종로구 송월동",
+    ];
+    let mut html = String::from(
+        r#"<HTML><HEAD><META http-equiv="Content-Type" content="text/html; charset=euc-kr"></HEAD><BODY>"#,
+    );
+    html += &format!("\n<span class=ehead>[ 매분관측자료 ] {publication}</span>\n");
+    html += "<table border=0 cellspacing=0 cellpadding=0>\n<tr><td bgcolor=#999999>\n<table border=0 cellspacing=1 cellpadding=1>\n";
+    html += r#"<tr bgcolor=#AAE3FF align=center class=name><td colspan=3 nowrap>AWS 지점 / 고도</td><td>강수</td><td>강수15</td><td>강수60</td><td>강수3H</td><td>강수6H</td><td>강수12H</td><td>일강수</td><td width=40>기온</td><td colspan=2 width=60>풍향1</td><td>풍속1(m/s)</td><td colspan=2 width=60>풍향10</td><td>풍속10(m/s)</td><td>습도</td><td>해면기압</td><td>위치</td></tr>"#;
+    html += "\n<tr align=center class=text>";
+    for c in cells {
+        html += &format!(r"<td>{c}</td>");
+    }
+    html += "</tr>\n</table>\n</td></tr></table>\n</BODY></HTML>\n";
+    encoding_rs::EUC_KR.encode(&html).0.into_owned()
 }
 
 /// An ASOS acquirer that answers after `delay` with a failure (the history stays empty).
@@ -204,6 +245,25 @@ async fn served_requests_record_complete_grid_days_and_late_revisions() {
     day(&catalogs, 20260923, 1..=24).await;
     day(&catalogs, 20260922, 1..=17).await;
     day(&catalogs, 20260921, 1..=23).await;
+    // One AWS hourly table of 09-23 12:00 in S3: an input of 09-23 only.
+    let hour = p(20260923, 1200);
+    let page_at = kst_ms(20260923, 1220);
+    let page = acquisition(
+        "kma-web",
+        "aws-hourly",
+        &server2::storage::ProviderKey::Named {
+            id: "aws-national".into(),
+        },
+        hour.period(),
+        &hour.base_date(),
+        page_at,
+        aws_page("2026.09.23.12:00"),
+        "text/html",
+    );
+    catalogs
+        .publish(page.declaration, page.records, deadline())
+        .await
+        .unwrap();
     let (backend, recorder) = backend(&peer, Arc::new(Unreachable));
     serve(&backend).await;
     assert!(recorder.idle(deadline()).await);
@@ -215,6 +275,8 @@ async fn served_requests_record_complete_grid_days_and_late_revisions() {
         .expect("09-23 stored");
     assert_eq!(d23.summary.value("observationHours"), Some(24.));
     assert_eq!(d23.summary.grid, Some((60, 127)));
+    // The station page read from S3 is an input of 09-23 only (with its fetch time and hash).
+    assert_eq!(d23.summary.inputs.families.get("aws-hourly"), Some(&1));
     let d21 = store
         .newest(&town(), 20260921, deadline())
         .await
@@ -222,6 +284,7 @@ async fn served_requests_record_complete_grid_days_and_late_revisions() {
         .expect("09-21 stored");
     assert_eq!(d21.summary.value("observationHours"), Some(23.));
     assert_eq!(d21.summary.value("taMax"), Some(19.));
+    assert_eq!(d21.summary.inputs.families.get("aws-hourly"), None);
     assert!(
         store
             .newest(&town(), 20260922, deadline())
@@ -323,6 +386,7 @@ impl Acquire for LiveAsos {
                 &request.range_partition(),
                 NOW - 1_000.,
                 body,
+                "application/json",
             )))
         })
     }
@@ -437,4 +501,28 @@ async fn lookup_acquires_asos_once_and_derives_vc_from_stored_records() {
         .unwrap()
         .unwrap();
     assert_eq!(stored.summary, found.summary, "the VC day is stored");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn only_the_current_fold_of_a_complete_read_is_settled() {
+    use server2::domestic::kma::source::observe::{Folded, Observations};
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport_limited(4);
+    let catalogs =
+        Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let observations = Arc::new(Observations::new(
+        transport,
+        catalogs,
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+    ));
+    let now = NOW as i64;
+    let folded = observations.stations(now, deadline()).await.unwrap();
+    assert!(
+        observations.settled(now, &folded),
+        "every window day read, fold current"
+    );
+    // A fold the snapshot did not take (an older or newer one) is not settled.
+    assert!(!observations.settled(now, &Arc::new(Folded::default())));
 }

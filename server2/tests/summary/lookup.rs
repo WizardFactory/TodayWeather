@@ -41,12 +41,17 @@ fn dates_are_same_day_then_nearest_earlier_first() {
 struct FakeAsos {
     calls: Mutex<Vec<(String, u32, u32)>>,
     answer: Mutex<Option<Result<bool, ()>>>,
+    delay: std::time::Duration,
 }
 impl FakeAsos {
     fn new(answer: Result<bool, ()>) -> Arc<Self> {
+        Self::slow(answer, std::time::Duration::ZERO)
+    }
+    fn slow(answer: Result<bool, ()>, delay: std::time::Duration) -> Arc<Self> {
         Arc::new(Self {
             calls: Mutex::new(Vec::new()),
             answer: Mutex::new(Some(answer)),
+            delay,
         })
     }
     fn calls(&self) -> Vec<(String, u32, u32)> {
@@ -63,6 +68,7 @@ impl AsosOnDemand for FakeAsos {
     ) -> BoxFuture<'_, Result<Option<Vec<AsosFetched>>, LookupError>> {
         Box::pin(async move {
             self.calls.lock().unwrap().push((station, start, end));
+            tokio::time::sleep(self.delay).await;
             match (*self.answer.lock().unwrap()).unwrap() {
                 Err(()) => Err(LookupError::Provider),
                 Ok(false) => Ok(None),
@@ -298,4 +304,110 @@ async fn nothing_stored_and_no_sources_is_none() {
             .unwrap()
             .is_none()
     );
+}
+
+#[tokio::test]
+async fn concurrent_lookups_share_one_asos_acquisition_and_cancellation_releases_it() {
+    let asos_only = target(false, true, false);
+    let t = Arc::new(MemorySummaries::new());
+    let fake = FakeAsos::slow(Ok(true), std::time::Duration::from_millis(200));
+    let lookup = Arc::new(Lookup::new(
+        t.clone(),
+        Some(fake.clone() as Arc<dyn AsosOnDemand>),
+        None,
+    ));
+    let (a, b) = tokio::join!(
+        lookup.last_year(&asos_only, 20261015, deadline()),
+        lookup.last_year(&asos_only, 20261015, deadline()),
+    );
+    assert_eq!(a.unwrap().unwrap().source, Source::Asos);
+    assert_eq!(b.unwrap().unwrap().source, Source::Asos);
+    assert_eq!(fake.calls().len(), 1, "one acquisition for both lookups");
+
+    // A waiter whose deadline passes first reports Pending, not a lower-priority answer.
+    let t2 = Arc::new(MemorySummaries::new());
+    let slow = FakeAsos::slow(Ok(true), std::time::Duration::from_millis(400));
+    let lookup = Arc::new(Lookup::new(
+        t2.clone(),
+        Some(slow.clone() as Arc<dyn AsosOnDemand>),
+        None,
+    ));
+    let short = tokio::time::Instant::now() + std::time::Duration::from_millis(100);
+    let (owner, waiter) = tokio::join!(lookup.last_year(&asos_only, 20261015, deadline()), async {
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        lookup.last_year(&asos_only, 20261015, short).await
+    },);
+    assert!(owner.unwrap().is_some());
+    assert_eq!(waiter.unwrap_err(), LookupError::Pending);
+
+    // A cancelled acquisition releases its claim: the next lookup acquires again.
+    let t3 = Arc::new(MemorySummaries::new());
+    let slow = FakeAsos::slow(Ok(true), std::time::Duration::from_millis(300));
+    let lookup = Lookup::new(
+        t3.clone(),
+        Some(slow.clone() as Arc<dyn AsosOnDemand>),
+        None,
+    );
+    let cancelled = tokio::time::timeout(
+        std::time::Duration::from_millis(50),
+        lookup.last_year(&asos_only, 20261015, deadline()),
+    )
+    .await;
+    assert!(cancelled.is_err());
+    let found = lookup
+        .last_year(&asos_only, 20261015, deadline())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(found.source, Source::Asos);
+    assert_eq!(slow.calls().len(), 2);
+}
+
+#[tokio::test]
+async fn a_stored_vc_day_is_revised_by_newer_raw_records() {
+    let t = Arc::new(MemorySummaries::new());
+    let start = 1_760_367_600_i64; // 2025-10-14 00:00 KST
+    let first = seoul_vc_day("2025-10-14", start);
+    let vc = Arc::new(FakeVc(vec![first.clone()], Mutex::new(0)));
+    let lookup = Lookup::new(t.clone(), None, Some(vc as Arc<dyn VcRecords>));
+    let target = target(false, false, true);
+    let found = lookup
+        .last_year(&target, 20261014, deadline())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(found.summary.value("taMax"), Some(15.));
+    // A later body with other observations replaces it as a new revision; the old one stays.
+    let hours: Vec<serde_json::Value> = (0..24)
+        .map(|i| serde_json::json!({"datetimeEpoch": start + i * 3600, "temp": 68.0}))
+        .collect();
+    let body = serde_json::to_vec(&serde_json::json!({"timezone": "Asia/Seoul",
+        "tzoffset": 9.0, "days": [{"datetime": "2025-10-14", "hours": hours}]}))
+    .unwrap();
+    let later = RawFetch {
+        fetched_at_ms: first.fetched_at_ms + 3_600_000,
+        range: Range::Recent,
+        first_date: 0,
+        sha256: server2::storage::sha256(&body),
+        body: Arc::from(body),
+    };
+    let vc = Arc::new(FakeVc(vec![first.clone(), later], Mutex::new(0)));
+    let lookup = Lookup::new(t.clone(), None, Some(vc as Arc<dyn VcRecords>));
+    let found = lookup
+        .last_year(&target, 20261014, deadline())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(found.summary.value("taMax"), Some(20.));
+    assert_eq!(t.keys().len(), 2);
+    // An older set of records never replaces the newer revision.
+    let vc = Arc::new(FakeVc(vec![first], Mutex::new(0)));
+    let lookup = Lookup::new(t.clone(), None, Some(vc as Arc<dyn VcRecords>));
+    let found = lookup
+        .last_year(&target, 20261014, deadline())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(found.summary.value("taMax"), Some(20.));
+    assert_eq!(t.keys().len(), 2);
 }

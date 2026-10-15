@@ -55,9 +55,11 @@ Incomplete summaries are not stored.
 ## Complete published inputs and late revisions
 
 The snapshot records summary inputs only when its reads were complete: every grid family read
-from published S06 catalogs (otherwise the request forwards anyway), the station page window read
-for every day with no S3 load, fold or geocoding in flight, the history answer without a
-`cache-read-*` reason, and the mapped station's ASOS state loaded with no recovery run in flight.
+from published S06 catalogs (otherwise the request forwards anyway); the station fold the answer
+used is still current, every day of the page window was read and its latest read did not fail, and
+no S3 load, fold, geocoding or unfolded page is pending; the history answer has no `cache-read-*`
+reason; and the ASOS acquisitions it used were read under the same lock as "no recovery run in
+flight, no failed read". Station pages are identified by kind, hour, fetch time and raw hash.
 Inputs relevant to KST date D: grid acquisitions published in `[D 00:00 - 24 h, D+1 00:00]`,
 station pages for hours `(D 00:00, D+1 00:00]`, ASOS ranges covering D.
 
@@ -72,8 +74,11 @@ at once (more are dropped and repeated by a later request); memory keeps at most
 `summary::Lookup::last_year(target, today, deadline)`: base date `(Y-1, M, D)` (Feb 29 →
 Feb 28); offsets 0, -1, +1, -2, +2, -3, +3. At each date: the stored grid summary of the town, then
 ASOS (stored; when missing, one on-demand acquisition of `[base-3, base+3]` for the mapped
-station through the S15b-2 funded acquirer, published to S06, its complete days stored), then
-VC (stored; when missing, derived from stored raw VC records of that date, never from the VC
-provider). The first complete summary wins. A failed S3 read or provider failure returns
-`Incomplete` instead of a lower-priority answer; `03`/empty means absent. Nothing exposes the
+station through the S15b-2 funded acquirer, published to S06, its complete days stored; a
+concurrent lookup waits for it, a cancelled or failed one releases the range, a finished one is
+not repeated for 24 h), then VC (derived from the stored raw VC records of that date each time;
+a new revision is stored when newer records give other values; never from the VC provider). The
+first complete summary wins. A failed S3 read, a provider failure or an unfinished concurrent
+acquisition at the deadline returns an error instead of a lower-priority answer; `03`/empty means
+absent. Nothing exposes the
 result in a response (O-13).

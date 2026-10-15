@@ -2383,10 +2383,13 @@ counts). The newest revision is the greatest name whose body verifies; a later n
 later.
 
 **Complete inputs and late revisions.** The KMA snapshot records summary inputs only when its
-reads were complete: grid families read from published catalogs (otherwise the request forwards),
-the 8-day station page window read for every day with no S3 load, fold or geocoding in flight, the
-history answer without a `cache-read-*` reason, and the mapped station's ASOS state loaded with no
-recovery run in flight. After a natively served response the backend hands the `getPastMid` rows
+reads were complete: grid families read from published catalogs (otherwise the request forwards);
+the station fold the answer used is still the current one, every day of the 8-day page window was
+read and its latest read did not fail, and no S3 load, fold, geocoding or unfolded page is pending;
+the history answer has no `cache-read-*` reason; and the ASOS acquisitions it answered from were
+read under the same lock as "no recovery run in flight, no failed read". Input identities are the
+acquisitions themselves: grid publications and ASOS ranges with their fetch time and content hash,
+and the station pages the fold applied with their fetch time and raw hash. After a natively served response the backend hands the `getPastMid` rows
 (a JSON copy taken before later steps mutate them; the response is unchanged) to the recorder, which
 runs outside the request (two tasks, 30 s each; more are dropped and repeated by a later request).
 Per source, key and date it skips an input digest it already examined, and writes a new revision only
@@ -2401,8 +2404,10 @@ day without city pages never loaded its hourly pages from S3 and was read again 
 earlier (Feb 29 → Feb 28), then ±1..±3, earlier first. At each date: the town's grid summary, then
 the station's ASOS summary (when missing, one data.go.kr daily range `[base-3, base+3]` through the
 funded S15b-2 acquirer, published to S06, its complete days stored; at most once per station and
-range a day), then the cell's VC summary (when missing, derived from stored raw VC records; the VC
-provider is never called). The first complete summary wins. A failed S3 read or provider failure
+range a day; a concurrent lookup waits for that acquisition and a cancelled one releases it), then
+the cell's VC summary (derived from the stored raw VC records each time and stored as a new revision
+when newer records give other values; the VC provider is never called). The first complete summary
+wins. A failed S3 read, a provider failure or another lookup's unfinished acquisition at the deadline
 returns an error rather than a lower-priority answer; `03` means absent.
 
 **Load (estimates, not measured).** A town request with new inputs examines at most 12 candidates;
@@ -2410,7 +2415,9 @@ a cold process lists and reads at most one revision per candidate. A town-day ty
 values when its `2400` hour, late station pages and the ASOS fill arrive, so a few revisions of
 about 1 KiB each: 2,000 requested towns at 3 revisions a day give about 2.2 M objects and 2.2 GB a
 year. Unit prices are not assumed. An on-demand ASOS range is one data.go.kr call under the S08
-`DONGNAE_SECRET_KEYS` budget.
+`DONGNAE_SECRET_KEYS` budget. S16 uses no local disk (the 2026-10-15 disk-cache rule is not
+needed): the recorder keeps at most 65,536 memory entries of a few hundred bytes (about 15 MiB at
+most), and S3 stays the only store.
 
 Verification (local, test peers only): unit tests for keys, bodies, names, input relevance,
 completeness (17/18 grid hours; inverted, missing and sentinel ASOS extremes; 23/24/25-hour New York

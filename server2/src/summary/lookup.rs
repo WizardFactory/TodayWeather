@@ -4,11 +4,13 @@
 //! earlier first on a tie. At each date the sources are tried in order: the stored grid summary
 //! of the town; the station's ASOS summary (when missing, one on-demand data.go.kr daily range
 //! `[base-3, base+3]` is acquired through the funded S15b-2 acquirer, published to S06 and its
-//! complete days stored); the VC summary of the cell (when missing, derived from stored raw VC
-//! records of that date, never from the VC provider). The first complete summary wins.
+//! complete days stored; concurrent lookups share it); the VC summary of the cell (derived from
+//! the stored raw VC records of that date, stored as a new revision when newer records give other
+//! values; never from the VC provider). The first complete summary wins.
 //!
-//! A failed S3 read or provider failure returns an error instead of a lower-priority answer, so
-//! the chosen source and date are deterministic for the stored data.
+//! A failed S3 read, a provider failure or another lookup's unfinished acquisition at the deadline
+//! returns an error instead of a lower-priority answer, so the chosen source and date are
+//! deterministic for the stored data.
 use super::store::SummaryStore;
 use super::transport::SummaryTransport;
 use super::{Source, Summary, SummaryKey, add_days};
@@ -22,6 +24,7 @@ use crate::world::{CatalogWorldStore, Cell, RawFetch};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use tokio::sync::watch;
 use tokio::time::Instant;
 
 /// An on-demand ASOS range of a station is not acquired again within this long.
@@ -51,6 +54,8 @@ pub enum LookupError {
     Storage(Error),
     /// The on-demand ASOS acquisition failed (not "no data").
     Provider,
+    /// Another lookup's acquisition of the same range did not finish by the deadline.
+    Pending,
     Invalid,
 }
 
@@ -160,7 +165,45 @@ pub struct Lookup<T> {
     store: SummaryStore<T>,
     asos: Option<Arc<dyn AsosOnDemand>>,
     vc: Option<Arc<dyn VcRecords>>,
-    attempted: Mutex<HashMap<(String, u32), std::time::Instant>>,
+    attempted: Mutex<HashMap<(String, u32), Slot>>,
+}
+/// An on-demand ASOS range: running (its end is signalled) or finished at an instant.
+enum Slot {
+    Running(watch::Receiver<bool>),
+    Done(std::time::Instant),
+}
+enum Claim<'a> {
+    Mine(ClaimGuard<'a>),
+    /// Another lookup is acquiring the range.
+    Running(watch::Receiver<bool>),
+    /// Acquired within [`ASOS_RETRY`] (its days are stored, or the provider had none).
+    Recent,
+}
+/// Holds a running claim; dropping it (also when the lookup is cancelled) releases the range
+/// unless it finished, and wakes the waiters.
+struct ClaimGuard<'a> {
+    slots: &'a Mutex<HashMap<(String, u32), Slot>>,
+    key: (String, u32),
+    done: watch::Sender<bool>,
+    finished: bool,
+}
+impl Drop for ClaimGuard<'_> {
+    fn drop(&mut self) {
+        let mut slots = self.slots.lock().unwrap_or_else(|e| e.into_inner());
+        if self.finished {
+            slots.insert(self.key.clone(), Slot::Done(std::time::Instant::now()));
+        } else {
+            slots.remove(&self.key);
+        }
+        let _ = self.done.send(true);
+    }
+}
+/// What the on-demand step found.
+enum OnDemand {
+    Acquired(Vec<Summary>),
+    /// Nothing new from this call: another call stored the days, the provider had none, or no
+    /// acquirer is configured. Stored summaries are read again.
+    Nothing,
 }
 impl<T: SummaryTransport> Lookup<T> {
     pub fn new(
@@ -190,58 +233,110 @@ impl<T: SummaryTransport> Lookup<T> {
             .map(|s| s.map(|s| s.summary))
             .map_err(LookupError::Storage)
     }
-    /// Claim the on-demand range of `station` around `base` (once per [`ASOS_RETRY`]).
-    fn claim(&self, station: &str, base: u32) -> bool {
-        let mut attempted = self.attempted.lock().unwrap_or_else(|e| e.into_inner());
-        attempted.retain(|_, at| at.elapsed() < ASOS_RETRY);
-        let key = (station.to_owned(), base);
-        if attempted.contains_key(&key) {
-            return false;
+    /// Claim the on-demand range of `station` starting at `start`.
+    fn claim(&self, station: &str, start: u32) -> Claim<'_> {
+        let mut slots = self.attempted.lock().unwrap_or_else(|e| e.into_inner());
+        slots.retain(|_, slot| match slot {
+            Slot::Done(at) => at.elapsed() < ASOS_RETRY,
+            Slot::Running(_) => true,
+        });
+        let key = (station.to_owned(), start);
+        match slots.get(&key) {
+            Some(Slot::Running(rx)) => return Claim::Running(rx.clone()),
+            Some(Slot::Done(_)) => return Claim::Recent,
+            None => {}
         }
-        attempted.insert(key, std::time::Instant::now());
-        true
+        let (done, rx) = watch::channel(false);
+        slots.insert(key.clone(), Slot::Running(rx));
+        Claim::Mine(ClaimGuard {
+            slots: &self.attempted,
+            key,
+            done,
+            finished: false,
+        })
     }
-    /// Acquire `[base-3, base+3]` for `station` and store its complete days.
+    /// Acquire `[base-3, base+3]` for `station` once and store its complete days; wait for
+    /// another lookup acquiring the same range.
     async fn asos_on_demand(
         &self,
         station: &str,
         dates: &[u32],
         deadline: Instant,
-    ) -> Result<Vec<Summary>, LookupError> {
+    ) -> Result<OnDemand, LookupError> {
         let Some(asos) = &self.asos else {
-            return Ok(Vec::new());
+            return Ok(OnDemand::Nothing);
         };
         let (Some(start), Some(end)) = (dates.iter().min(), dates.iter().max()) else {
-            return Ok(Vec::new());
+            return Ok(OnDemand::Nothing);
         };
-        if !self.claim(station, *start) {
-            return Ok(Vec::new());
-        }
-        let result = async {
-            let Some(fetched) = asos
-                .daily(station.to_owned(), *start, *end, deadline)
-                .await?
-            else {
-                return Ok(Vec::new());
-            };
-            let summaries = super::asos::summaries(station, &fetched, dates);
-            for s in &summaries {
-                self.store
-                    .publish(s, deadline)
-                    .await
-                    .map_err(LookupError::Storage)?;
+        let mut guard = match self.claim(station, *start) {
+            Claim::Mine(guard) => guard,
+            Claim::Recent => return Ok(OnDemand::Nothing),
+            Claim::Running(mut rx) => {
+                return match tokio::time::timeout_at(deadline, rx.wait_for(|done| *done)).await {
+                    Ok(_) => Ok(OnDemand::Nothing),
+                    Err(_) => Err(LookupError::Pending),
+                };
             }
-            Ok(summaries)
+        };
+        let Some(fetched) = asos
+            .daily(station.to_owned(), *start, *end, deadline)
+            .await?
+        else {
+            guard.finished = true;
+            return Ok(OnDemand::Nothing);
+        };
+        let summaries = super::asos::summaries(station, &fetched, dates);
+        for s in &summaries {
+            self.store
+                .publish(s, deadline)
+                .await
+                .map_err(LookupError::Storage)?;
         }
-        .await;
-        if result.is_err() {
-            // A failure is not "absent": a later lookup may try the range again.
-            self.attempted
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .remove(&(station.to_owned(), *start));
+        guard.finished = true;
+        Ok(OnDemand::Acquired(summaries))
+    }
+    /// The VC summary of `cell` for `date`: the stored newest revision, replaced by a new
+    /// revision when the stored raw records now give other values from newer inputs.
+    async fn vc_summary(
+        &self,
+        lat: i16,
+        lon: i16,
+        date: u32,
+        deadline: Instant,
+    ) -> Result<Option<Summary>, LookupError> {
+        let key = SummaryKey::Vc { lat, lon };
+        let stored = self
+            .store
+            .newest(&key, date, deadline)
+            .await
+            .map_err(LookupError::Storage)?;
+        let Some(vc) = &self.vc else {
+            return Ok(stored.map(|s| s.summary));
+        };
+        let cell = Cell {
+            lat: f64::from(lat) / 100.,
+            lon: f64::from(lon) / 100.,
+        };
+        let first_dates = [-2, -1, 0]
+            .iter()
+            .filter_map(|d| add_days(date, *d))
+            .collect();
+        let fetches = vc.fetches(cell, first_dates, deadline).await?;
+        let Some(derived) = super::vc::summary(cell, date, &fetches) else {
+            return Ok(stored.map(|s| s.summary));
+        };
+        if let Some(stored) = stored
+            && (stored.summary.values_sha256() == derived.values_sha256()
+                || stored.name.latest > derived.inputs.latest_fetched_ms)
+        {
+            return Ok(Some(stored.summary));
         }
-        result
+        self.store
+            .publish(&derived, deadline)
+            .await
+            .map_err(LookupError::Storage)?;
+        Ok(Some(derived))
     }
     /// The last-year summary for `target` on `today` (`YYYYMMDD`, KST), or None.
     pub async fn last_year(
@@ -283,36 +378,27 @@ impl<T: SummaryTransport> Lookup<T> {
                     return found(Source::Asos, offset, date, s);
                 }
                 if acquired.is_none() {
-                    let a = self.asos_on_demand(station, &dates, deadline).await?;
-                    if let Some(s) = a.iter().find(|s| s.date == date).cloned() {
-                        return found(Source::Asos, offset, date, s);
+                    match self.asos_on_demand(station, &dates, deadline).await? {
+                        OnDemand::Acquired(a) => {
+                            if let Some(s) = a.iter().find(|s| s.date == date).cloned() {
+                                return found(Source::Asos, offset, date, s);
+                            }
+                            acquired = Some(a);
+                        }
+                        OnDemand::Nothing => {
+                            // Another lookup may have stored the range meanwhile.
+                            if let Some(s) = self.stored(&key, date, deadline).await? {
+                                return found(Source::Asos, offset, date, s);
+                            }
+                            acquired = Some(Vec::new());
+                        }
                     }
-                    acquired = Some(a);
                 }
             }
-            if let Some((lat, lon)) = target.cell {
-                let key = SummaryKey::Vc { lat, lon };
-                if let Some(s) = self.stored(&key, date, deadline).await? {
-                    return found(Source::Vc, offset, date, s);
-                }
-                if let Some(vc) = &self.vc {
-                    let cell = Cell {
-                        lat: f64::from(lat) / 100.,
-                        lon: f64::from(lon) / 100.,
-                    };
-                    let first_dates = [-2, -1, 0]
-                        .iter()
-                        .filter_map(|d| add_days(date, *d))
-                        .collect();
-                    let fetches = vc.fetches(cell, first_dates, deadline).await?;
-                    if let Some(s) = super::vc::summary(cell, date, &fetches) {
-                        self.store
-                            .publish(&s, deadline)
-                            .await
-                            .map_err(LookupError::Storage)?;
-                        return found(Source::Vc, offset, date, s);
-                    }
-                }
+            if let Some((lat, lon)) = target.cell
+                && let Some(s) = self.vc_summary(lat, lon, date, deadline).await?
+            {
+                return found(Source::Vc, offset, date, s);
             }
         }
         Ok(None)

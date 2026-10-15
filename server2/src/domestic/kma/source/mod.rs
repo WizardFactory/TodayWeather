@@ -498,14 +498,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let until = deadline.min(Instant::now() + observe::REQUEST_WAIT);
         let observations = async {
             let folded = self.observations.stations(now as i64, until).await;
-            let history = self
+            let (history, asos) = self
                 .observations
-                .history(&town, folded.as_deref(), now, until)
+                .history_with_inputs(&town, folded.as_deref(), now, until)
                 .await;
-            (folded, history)
+            // S16: completeness of the station state these answers came from, judged at once.
+            let settled = folded
+                .as_ref()
+                .is_some_and(|f| self.observations.settled(now as i64, f));
+            (folded, (history, asos, settled))
         };
         let dust_wanted = air_input::airkorea_forecast_requested(&request.query);
-        let (zones, (current, shortest, short, rss), (stations, history), air) = tokio::join!(
+        let (zones, (current, shortest, short, rss), (stations, (history, asos, settled)), air) = tokio::join!(
             self.zones(now, deadline),
             async {
                 tokio::join!(
@@ -562,7 +566,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // S15b-3b: the life inputs are loaded (and their owned acquisitions started) only for a
         // request the snapshot will serve; a forwarded request starts none.
         let life = self.life.load(now, deadline).await;
-        let summary = self.summary_inputs(&town, grid, &history, ids, now);
+        let summary = settled
+            .then(|| summary_inputs(&town, grid, &history, ids, stations.as_deref(), asos))
+            .flatten();
         Ok(Snapshot {
             summary,
             now,
@@ -579,73 +585,60 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         })
     }
 }
-impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
-    /// S16: the summary inputs of a snapshot, or None when a station or ASOS read was not
-    /// complete (the history answer still loading or failed, a fold or load in flight, an ASOS
-    /// recovery run in progress). Grid families that could not be read forward the request
-    /// before this point.
-    fn summary_inputs(
-        &self,
-        town: &Doc,
-        grid: crate::history::Grid,
-        history: &OrderedJson,
-        mut ids: Vec<InputId>,
-        now: f64,
-    ) -> Option<GridInputs> {
-        let names = town.get("town").and_then(Val::as_doc)?;
-        let name = |k: &str| names.get(k).and_then(Val::as_str).map(str::to_owned);
-        let town_key = [name("first")?, name("second")?, name("third")?];
-        match history
-            .get("reason")
-            .and_then(OrderedJson::string)
-            .as_deref()
-        {
-            None | Some("station-unavailable") => {}
-            Some(_) => return None,
-        }
-        if !self.observations.settled(now as i64) {
-            return None;
-        }
-        let (hourly, city) = self.observations.page_inventory();
-        for (hour, at) in hourly {
-            let t = schedule::to_ms(hour);
-            ids.push(InputId {
-                family: "aws-hourly".into(),
-                start_ms: t,
-                end_ms: t,
-                fetched_at_ms: at.max(0.) as u64,
-                content_sha256: "-".into(),
-            });
-        }
-        for hour in city {
-            let t = schedule::to_ms(hour);
-            ids.push(InputId {
-                family: "city-obs".into(),
-                start_ms: t,
-                end_ms: t,
-                fetched_at_ms: 0,
-                content_sha256: "-".into(),
-            });
-        }
-        let station = history
-            .get("mapping")
-            .and_then(|m| m.get("stationId"))
-            .and_then(OrderedJson::string);
-        let asos = match station {
-            Some(station) => {
-                let fetched = self.observations.asos_settled(&station)?;
-                ids.extend(fetched.iter().filter_map(crate::summary::asos::input_id));
-                Some(AsosInputs { station, fetched })
-            }
-            None => None,
-        };
-        Some(GridInputs {
-            town: town_key,
-            grid: (grid.nx(), grid.ny()),
-            ids,
-            asos,
-        })
+/// S16: the summary inputs of a snapshot whose station state was read completely, or None
+/// (the history answer still loading or failed, an ASOS recovery run in flight or a failed ASOS
+/// read). Grid families that could not be read forward the request before this point.
+fn summary_inputs(
+    town: &Doc,
+    grid: crate::history::Grid,
+    history: &OrderedJson,
+    mut ids: Vec<InputId>,
+    folded: Option<&observe::Folded>,
+    asos: Option<observe::AsosView>,
+) -> Option<GridInputs> {
+    let names = town.get("town").and_then(Val::as_doc)?;
+    let name = |k: &str| names.get(k).and_then(Val::as_str).map(str::to_owned);
+    let town_key = [name("first")?, name("second")?, name("third")?];
+    match history
+        .get("reason")
+        .and_then(OrderedJson::string)
+        .as_deref()
+    {
+        None | Some("station-unavailable") => {}
+        Some(_) => return None,
     }
+    for page in folded?.pages.iter() {
+        let t = schedule::to_ms(page.hour);
+        ids.push(InputId {
+            family: page.kind.to_owned(),
+            start_ms: t,
+            end_ms: t,
+            fetched_at_ms: page.fetched_at_ms.max(0.) as u64,
+            content_sha256: page.sha256.clone(),
+        });
+    }
+    let asos = match asos {
+        Some(view) if view.settled => {
+            ids.extend(
+                view.fetched
+                    .iter()
+                    .filter_map(crate::summary::asos::input_id),
+            );
+            Some(AsosInputs {
+                station: view.station,
+                fetched: view.fetched,
+            })
+        }
+        Some(_) => return None,
+        // No mapped station within 100 km (`station-unavailable`).
+        None => None,
+    };
+    Some(GridInputs {
+        town: town_key,
+        grid: (grid.nx(), grid.ny()),
+        ids,
+        asos,
+    })
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> {
     fn snapshot(&self, request: &KmaRequest, deadline: Instant) -> BoxFuture<'_, SourceAnswer> {
