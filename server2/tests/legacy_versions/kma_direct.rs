@@ -484,13 +484,18 @@ async fn the_legacy_hop_drops_connection_listed_headers_both_ways() {
         let mut buf = vec![0u8; 8192];
         let n = socket.read(&mut buf).await.unwrap();
         *record.lock().unwrap() = String::from_utf8_lossy(&buf[..n]).to_lowercase();
-        socket
-            .write_all(
-                b"HTTP/1.1 200 OK\r\nConnection: close, x-resp\r\nX-Resp: secret\r\n\
-                  Keep-Alive: timeout=5\r\nX-Kept: yes\r\nContent-Length: 2\r\n\r\nok",
-            )
-            .await
-            .unwrap();
+        let reply = [
+            "HTTP/1.1 200 OK",
+            "Connection: close, x-resp",
+            "X-Resp: secret",
+            "Keep-Alive: timeout=5",
+            "X-Kept: yes",
+            "Content-Length: 2",
+            "",
+            "ok",
+        ]
+        .join("\r\n");
+        socket.write_all(reply.as_bytes()).await.unwrap();
         socket.shutdown().await.unwrap();
     });
     // A source without inputs: the direct request takes the legacy hop.
