@@ -32,6 +32,11 @@ const REFRESH_BEFORE_MS: u64 = 5 * 60 * 1000;
 /// Credentials are usable while they expire later than this (milliseconds); a signed S3 URL
 /// lives 30 seconds.
 const USABLE_FOR_MS: u64 = 60 * 1000;
+/// A write signs with any cached credential that outlives this (milliseconds), without a
+/// refresh: the 30-second signed URL plus a margin. Writers obtain credentials with
+/// [`InstanceRole::credentials`] (at least [`USABLE_FOR_MS`]) before the operation, so within
+/// an operation deadline (at most 9 seconds) signing a PUT never needs IMDS.
+const SIGNING_FOR_MS: u64 = 35 * 1000;
 /// Minimum spacing of refresh attempts after a failure or an unrotated credential.
 pub const RETRY_AFTER: Duration = Duration::from_secs(10);
 /// Bound of one refresh, and of the wait for a running refresh when no usable credential is
@@ -86,6 +91,14 @@ impl InstanceRole {
         held.as_ref()
             .filter(|c| c.expires_ms > now_ms.saturating_add(margin_ms))
             .map(|c| c.credentials.clone())
+    }
+    /// Credentials for signing a write (S10F-R3-F1): a cached credential that outlives the
+    /// signed URL, without a refresh; otherwise [`InstanceRole::credentials`].
+    pub(crate) async fn signing(&self) -> Result<Credentials, Error> {
+        match self.cached(now_ms()?, SIGNING_FOR_MS) {
+            Some(cached) => Ok(cached),
+            None => self.credentials().await,
+        }
     }
     /// Current credentials: cached, or refreshed through IMDSv2.
     pub(crate) async fn credentials(&self) -> Result<Credentials, Error> {
@@ -481,6 +494,30 @@ mod tests {
         d.delay_ms.store(2500, Ordering::Release);
         elapse(&role).await;
         assert_eq!(role.credentials().await.err(), Some(Error::Transport));
+    }
+
+    /// S10F-R3-F1: a write signs with the credential obtained before the operation even when it
+    /// aged below the refresh lifetime meanwhile and the refresh fails; no IMDS request.
+    #[tokio::test]
+    async fn a_write_signs_with_the_credential_obtained_before_the_operation() {
+        let (d, role) = double().await;
+        set(&d, success(62));
+        assert_eq!(role.credentials().await.unwrap().key(), "role-key-1");
+        set(&d, |_| (500, String::new()));
+        tokio::time::sleep(Duration::from_millis(2100)).await;
+        let requests = d.requests.load(Ordering::Acquire);
+        assert_eq!(role.signing().await.unwrap().key(), "role-key-1");
+        assert_eq!(
+            d.requests.load(Ordering::Acquire),
+            requests,
+            "no refresh to sign"
+        );
+        // A read needs the full lifetime and the refresh fails.
+        assert_eq!(role.credentials().await.err(), Some(Error::Transport));
+        // Nothing cached: signing obtains credentials like a read.
+        let (d, role) = double().await;
+        assert_eq!(role.signing().await.unwrap().key(), "role-key-1");
+        assert_eq!(d.requests.load(Ordering::Acquire), 3);
     }
 
     /// S10F-R2-F1: credentials that enter the refresh window while the refresh is in transit

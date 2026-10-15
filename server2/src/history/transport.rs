@@ -306,7 +306,7 @@ impl DemandTransport for HttpS3Transport {
         };
         let credentials = self
             .credentials
-            .snapshot()
+            .signing()
             .await
             .map_err(|_| DemandError::Transport)?;
         let digest = STANDARD.encode(Md5::digest(payload));

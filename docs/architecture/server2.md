@@ -2321,7 +2321,9 @@ weather and air, the KMA input source, demand state and the seed importers) draw
 the transport's `RefreshableCredentials` handle; the gateway shares one transport, so the process
 keeps one credential cache. The raw store and catalog publication and repair obtain credentials
 before their first write (`ObjectTransport::ready`), so a credential failure there is a definite
-`Transport`/`Timeout`, not an ambiguous write. This supersedes the S05
+`Transport`/`Timeout`, not an ambiguous write. Every PUT then signs with a cached credential
+that outlives its 30-second signed URL by 5 s, without a refresh, so a started write does not
+wait for IMDS (with nothing cached, it obtains credentials like a read). This supersedes the S05
 [records guide](../operations/server2-records.md) statement that callers own instance-role
 acquisition; `RefreshableCredentials::new` and `replace` remain the caller-managed static path.
 Credential values have no Debug output and are never logged or printed.

@@ -45,6 +45,15 @@ impl RefreshableCredentials {
             Source::InstanceRole(role) => role.credentials().await,
         }
     }
+    /// The snapshot that signs a write. Instance-role writes use credentials obtained before the
+    /// operation without a new refresh, so a write is not left unsent after it started
+    /// (S10F-R3-F1). Static credentials: [`RefreshableCredentials::snapshot`].
+    pub(crate) async fn signing(&self) -> Result<Credentials, Error> {
+        match &self.0 {
+            Source::Held(_) => self.snapshot().await,
+            Source::InstanceRole(role) => role.signing().await,
+        }
+    }
 }
 /// SigV4 HTTP adapter. Credentials come from its [`RefreshableCredentials`] handle.
 /// No Debug implementation: neither credentials nor signed URLs belong in diagnostics.
@@ -212,7 +221,7 @@ impl ObjectTransport for HttpS3Transport {
         self.credentials.snapshot().await.map(|_| ())
     }
     async fn put(&self, record: &PreparedRecord) -> Result<u16, Error> {
-        let credentials = self.credentials.snapshot().await?;
+        let credentials = self.credentials.signing().await?;
         let mut action = self.bucket.put_object(Some(&credentials), &record.key);
         action.headers_mut().insert("if-none-match", "*");
         action
