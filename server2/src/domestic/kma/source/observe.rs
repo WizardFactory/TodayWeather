@@ -389,7 +389,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         if let Some(rx) = self.fold_if_dirty(now_ms) {
             Self::wait(vec![rx], until).await;
         }
-        self.state().folded.clone()
+        // Before the first fold the carried seed alone is the registry (no pages yet).
+        Some(self.state().folded.clone().unwrap_or_else(seed_only))
     }
     fn flight(&self, key: &Flight) -> Option<watch::Receiver<bool>> {
         self.flights
@@ -562,7 +563,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             .iter()
             .filter_map(|a| a.first())
             .max_by_key(|r| r.envelope.identity.fetched_at_ms)?;
-        super::seed::parse(&latest.bytes).ok().map(|s| s.docs)
+        // A published export replaces the carried one only when it is newer.
+        super::seed::parse(&latest.bytes)
+            .ok()
+            .filter(|s| s.exported_at_ms > super::seed::embedded().exported_at_ms)
+            .map(|s| s.docs)
     }
     fn ensure_minute(
         self: &Arc<Self>,
@@ -760,7 +765,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     .filter_map(|(k, (v, _))| Some((k.clone(), (*v)?)))
                     .collect();
                 (
-                    s.seed.clone(),
+                    s.seed
+                        .clone()
+                        .or_else(|| Some(Arc::new(super::seed::embedded().docs.clone()))),
                     s.pages.hourly.clone(),
                     s.pages.hourly_at.clone(),
                     s.pages.city.clone(),
@@ -1253,6 +1260,17 @@ fn fold_hourly(
     )
 }
 
+/// The collections before any page: the carried seed's registry.
+fn seed_only() -> Arc<Folded> {
+    static ONLY: std::sync::OnceLock<Arc<Folded>> = std::sync::OnceLock::new();
+    ONLY.get_or_init(|| {
+        Arc::new(Folded {
+            registry: Arc::new(Registry::seeded(&super::seed::embedded().docs)),
+            ..Folded::default()
+        })
+    })
+    .clone()
+}
 /// `policy.nearest(town, stations, maxKm)` over the registry's city stations.
 pub struct Mapping {
     pub station: String,

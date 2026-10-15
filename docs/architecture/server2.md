@@ -2126,3 +2126,21 @@ rows of hours with no city page, `rnsHit`/`rnsCount` updates (legacy runs `_upda
 from `/gather` against the retired `KmaStnMinute`; the rules are ported but not wired, an open
 decision), and the deployed `ASOS_HISTORY_STATIONS` allowlist (every registry city station is a
 candidate).
+
+### S15b-2s station registry seed (2026-10-15)
+
+AK authorized a one-time read-only export of the legacy `kmastninfos` on 2026-10-15. It ran with
+`find` only, and the connection URL was loaded in-process and never printed or stored. It returned
+776 documents at `2026-10-15T00:34:30.549Z`. Converted by `export_station_seeds.py`, the seed is
+carried as provenance-labelled static data (`domestic/kma/source/data/kmastninfos.seed.jsonl`;
+public station facts only). The registry starts from it before any page arrives, so seeded
+stations need no geocoding and keep `rnsHit`, `rnsCount` and `isMountain`. A repeated `stnId` (two
+in the export) is kept as legacy holds it. A newer export published by `station_seed_import`
+replaces the carried one.
+
+Cutover steps (AK 2026-10-15):
+
+1. A final read-only export is imported at cutover.
+2. Once legacy is retired, server2 takes over updating `rnsHit`/`rnsCount` with the ported
+   `_updateRnsHitRate` (`source/rnshit.rs`). It stays unwired while legacy runs, as legacy
+   behaves on the v000903 path, with no runtime flag.
