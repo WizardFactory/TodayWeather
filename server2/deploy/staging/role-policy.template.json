@@ -17,7 +17,8 @@
             "summary/v2/*",
             "state/v2/*",
             "state/demand/grid/*",
-            "budgets/v2/*"
+            "budgets/v2/*",
+            "geocode/address/v1/*"
           ]
         }
       }
@@ -36,7 +37,8 @@
         "arn:aws:s3:::${BucketName}/summary/v2/*",
         "arn:aws:s3:::${BucketName}/state/v2/*",
         "arn:aws:s3:::${BucketName}/state/demand/grid/*",
-        "arn:aws:s3:::${BucketName}/budgets/v2/*"
+        "arn:aws:s3:::${BucketName}/budgets/v2/*",
+        "arn:aws:s3:::${BucketName}/geocode/address/v1/*"
       ]
     },
     {

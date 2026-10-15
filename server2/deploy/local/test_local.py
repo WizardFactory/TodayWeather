@@ -280,10 +280,20 @@ class StagingContract(unittest.TestCase):
                 self.assertNotIn('*',statement['Condition']['StringLike']['s3:prefix'])
             else:self.assertTrue(all(not x.endswith('${BucketName}/*') for x in resources))
 
-    def test_no_resource_or_secret_is_silently_selected(self):
+    def test_provisioned_resources_are_recorded_and_no_secret_is_selected(self):
         plan=json.loads((OWNED/'deploy/staging/prerequisites.json').read_text())
-        for key in ['account_id','region','bucket_name','runtime_role_arn','monthly_spend_ceiling_usd']:
-            self.assertIsNone(plan[key])
+        # S10f (#2759): AK provisioned the bucket and runtime role on 2026-10-15; the spend
+        # ceiling is still unselected.
+        self.assertEqual(plan['account_id'],'141248341265')
+        self.assertEqual(plan['region'],'ap-northeast-2')
+        self.assertEqual(plan['bucket_name'],'tw-server2-141248341265-apne2')
+        self.assertEqual(plan['runtime_role_arn'],'arn:aws:iam::141248341265:role/tw-server2-runtime')
+        self.assertEqual(plan['runtime_instance_profile_arn'],'arn:aws:iam::141248341265:instance-profile/tw-server2-runtime')
+        self.assertIsNone(plan['monthly_spend_ceiling_usd'])
+        role=json.loads((OWNED/'deploy/staging/role-policy.template.json').read_text())
+        listed=next(s for s in role['Statement'] if s['Sid']=='ListServingPrefixes')['Condition']['StringLike']['s3:prefix']
+        self.assertEqual([p.rstrip('*') for p in listed],plan['runtime_role_policy']['prefixes'])
+        self.assertNotIn('AWS_ACCESS_KEY',plan['provider_keys']['required_secret_names'])
         self.assertFalse(plan['host_candidate']['measured_target'])
         self.assertFalse(plan['bucket']['lifecycle_deletes'])
         # S10e (AK 2026-10-15): server2 reads the legacy names and values from server2/.env.
@@ -291,7 +301,7 @@ class StagingContract(unittest.TestCase):
         self.assertFalse(any(n.startswith('SERVER2_') for n in plan['provider_keys']['required_secret_names']))
         self.assertFalse(plan['provider_keys']['values_in_git'])
         gate=plan['readiness']['missing_key_iam_validation']
-        self.assertIn('unverified',gate['status'])
+        self.assertIn('runtime-role check remains',gate['status'])
         self.assertIn('404',gate['required_check']);self.assertIn('403',gate['required_check'])
         self.assertIn('Block readiness',gate['failure'])
         policy=json.loads((OWNED/'deploy/staging/bucket-policy.template.json').read_text())

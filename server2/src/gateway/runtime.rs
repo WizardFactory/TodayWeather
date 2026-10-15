@@ -4,12 +4,15 @@
 //! families routed to the native backend (`geocode`, `dsf`, `kma`); every other family stays on the
 //! legacy origin, and an unlisted family reads none of its native settings. Removing a family
 //! from the list and restarting is the rollback. These two and `SERVER2_WORLD_VERSIONS` are
-//! coexistence routing, removed with legacy retirement; with `SERVER2_S3_BUCKET` (the server2
-//! raw-record bucket) they are the only `SERVER2_*` settings.
+//! coexistence routing, removed with legacy retirement; with `SERVER2_S3_BUCKET` and
+//! `SERVER2_S3_REGION` (the server2 raw-record bucket and its region) they are the only
+//! `SERVER2_*` settings.
 //!
 //! S10e (AK, 2026-10-15): every provider and storage setting is the legacy `server/.env` name
 //! with its legacy value (`server/config/config.js`). Quotas without a legacy setting and every
 //! provider and S3 endpoint are built in ([`Builtins`]); only tests build other values.
+//! S10f (#2759): without real AWS keys, S3 requests are signed with EC2 instance-role
+//! credentials ([`S3Settings`]).
 use super::{BackendDispatcher, Gateway, GatewayError, LegacyGeocoder};
 use crate::{
     budget::SystemClock,
@@ -30,8 +33,12 @@ type Var<'a> = &'a dyn Fn(&str) -> Option<String>;
 /// to reach loopback test peers (and, for the geocoder, to exhaust a small quota).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Builtins {
-    /// S3 endpoint; `None` is the regional AWS endpoint of `TWA_S3_REGION`.
+    /// S3 endpoint; `None` is the regional AWS endpoint of `SERVER2_S3_REGION`.
     pub s3: Option<String>,
+    /// Instance metadata (IMDSv2) root for instance-role S3 credentials (S10f); `None` is the
+    /// EC2 instance metadata service ([`crate::storage::METADATA_ROOT`]). Tests only: a loopback
+    /// IMDS double.
+    pub instance_metadata: Option<String>,
     pub data_go_kr: String,
     pub kma: String,
     pub kma_weather: String,
@@ -54,6 +61,7 @@ impl Builtins {
         let [google, openweather, waqi] = crate::world::runtime::AIR_ENDPOINTS;
         Self {
             s3: None,
+            instance_metadata: None,
             data_go_kr: "https://apis.data.go.kr/".into(),
             kma: "https://www.kma.go.kr/".into(),
             kma_weather: "https://www.weather.go.kr/".into(),
@@ -113,14 +121,18 @@ impl NativeFamilies {
         Ok(families)
     }
 }
-/// The process S3 client from the legacy S3 settings ([`S3Settings`]), behind one bounded
-/// admission.
+/// The process S3 client from the S3 settings ([`S3Settings`]), behind one bounded admission.
+/// With the instance role the one transport holds the process credential cache.
 pub fn shared_s3(
     var: Var,
     builtins: &Builtins,
 ) -> Result<BoundedS3<HttpS3Transport>, GatewayError> {
-    let settings = S3Settings::from_vars_at(var, builtins.s3.as_deref())
-        .map_err(|_| GatewayError::InvalidConfiguration)?;
+    let settings = S3Settings::from_vars_with(
+        var,
+        builtins.s3.as_deref(),
+        builtins.instance_metadata.as_deref(),
+    )
+    .map_err(|_| GatewayError::InvalidConfiguration)?;
     let transport = settings
         .transport()
         .map_err(|_| GatewayError::InvalidConfiguration)?;

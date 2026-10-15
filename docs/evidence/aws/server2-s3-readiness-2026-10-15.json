@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "task": "S10f",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2759",
+  "authority": "AK 2026-10-15: live verification authorized, read/write only inside the new bucket, no deletion",
+  "started_at_utc": "2026-10-15T10:04:02Z",
+  "finished_at_utc": "2026-10-15T10:04:27Z",
+  "account": "141248341265",
+  "region": "ap-northeast-2",
+  "bucket": "tw-server2-141248341265-apne2",
+  "bucket_policy": "server2/deploy/staging/bucket-policy.template.json (equal to the live policy, read back 2026-10-15)",
+  "role_policy": "server2/deploy/staging/role-policy.template.json (equal to the live inline policy tw-server2-runtime-s3, read back 2026-10-15)",
+  "principal": "operator IAM user of AWS profile 141248341265 (long-term keys passed to server2 as AWS_ACCESS_KEY/AWS_SECRET_KEY in the process environment; values not printed or stored); not the runtime role",
+  "environment": "macOS, release build of the server2 example s3_readiness from the S10f branch, label s10f-20261015, empty working directory",
+  "command": "s3_readiness s10f-20261015 (cargo run --locked --release --example s3_readiness -- s10f-20261015 from server2/)",
+  "checks": [
+    {"step": "HEAD absent raw/v2 key", "key": "raw/v2/s10f-live/absent/s10f-20261015.raw.gz", "status": 404},
+    {"step": "GET absent raw/v2 key", "key": "raw/v2/s10f-live/absent/s10f-20261015.raw.gz", "status": 404},
+    {"step": "HEAD absent index/v2 key", "key": "index/v2/s10f-live/absent/s10f-20261015.json", "status": 404},
+    {"step": "GET absent index/v2 key", "key": "index/v2/s10f-live/absent/s10f-20261015.json", "status": 404},
+    {"step": "raw/v2 conditional create (If-None-Match: *) and repeat", "outcome": "Created, then AlreadyPresent (conditional repeat reconciled)"},
+    {"step": "index/v2 catalog publication, two revisions (group descriptors If-None-Match, catalog If-None-Match then If-Match)", "outcome": "both published; cold lookup found 2 acquisitions; 2 catalog versions retained"},
+    {"step": "budgets/v2 create (If-None-Match), repeat, update (If-Match)", "statuses": [200, 412, 200]},
+    {"step": "state/demand/grid create (If-None-Match), repeat, update (If-Match)", "statuses": [200, 412, 200]},
+    {"step": "HEAD outside the server2 prefixes", "key": "s10f-live/s10f-20261015.outside", "status": 404, "note": "operator user may list the bucket; the runtime role must get 403 (checked by the tool only with the instance role)"},
+    {"step": "unconditional raw/v2 PUT with the AWS CLI (no If-None-Match)", "key": "raw/v2/s10f-live/unconditional/s10f-20261015.txt", "status": 403, "error": "AccessDenied: explicit deny in a resource-based policy (RequireConditionalRawCreate)", "object_written": false}
+  ],
+  "catalog_versions": {
+    "key": "index/v2/s10f-live/readiness/b18471ee504fd925909b448e7565042ceb20330e9ce3f3210bdb417ad867eaa6/readiness.json",
+    "versions": ["wnAl6u68M5mgKGFauc4OC0M954twcFF9 (latest)", "grpm4.fqedI1KzPiHqCpylNQcEEUNc4Z"]
+  },
+  "objects_written": [
+    "raw/v2/s10f-live/readiness/2026/10/15/0000/b18471ee504fd925909b448e7565042ceb20330e9ce3f3210bdb417ad867eaa6/1792058644125-6729d5f03b21060dfcb600ec46082c8310d5e51706e4e193dbefbe8690e1e79b.raw.gz",
+    "raw/v2/s10f-live/readiness/2026/10/15/0000/b18471ee504fd925909b448e7565042ceb20330e9ce3f3210bdb417ad867eaa6/1792058644316-d05a214191a4a4c35288b7120c18bf9f1525f14aa5f4d71c69cde88dd3bda4d1.raw.gz",
+    "raw/v2/s10f-live/readiness/2026/10/15/0000/b18471ee504fd925909b448e7565042ceb20330e9ce3f3210bdb417ad867eaa6/1792058644661-235c84b125155d7cefbd47c8fa6f3ae18fa23190598933d063fc6c2bbe4f7155.raw.gz",
+    "index/v2/groups/0046bc193c83d61b4f95bc7ac7382b4732848720b43a8bf609825960351266f7.json",
+    "index/v2/groups/6fd429f25bc8d575d7b12a1e595fc2b6261e50e7c793b3ea1826cfce713a6073.json",
+    "index/v2/s10f-live/readiness/b18471ee504fd925909b448e7565042ceb20330e9ce3f3210bdb417ad867eaa6/readiness.json (2 versions)",
+    "budgets/v2/s10f-live/s10f-20261015.json (2 versions)",
+    "state/demand/grid/s10f-live/s10f-20261015.json (2 versions)"
+  ],
+  "objects_deleted": [],
+  "limitations": "Operator-user credentials, not the runtime role: role-specific 404 semantics for absent keys under the prefix-conditioned ListBucket grant and 403 outside the prefixes remain for the EC2 deployment run. The instance-role (IMDSv2) path ran only against a loopback IMDS double; a Mac run without keys failed with a transport error before any S3 request, as designed."
+}

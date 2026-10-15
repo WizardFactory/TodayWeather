@@ -112,10 +112,13 @@ No fault endpoint exists in the production runtime.
 
 ## Staging approval worksheet
 
-The [prerequisites JSON](../../server2/deploy/staging/prerequisites.json) leaves
-actual account, region, bucket, role, owners and monthly ceiling unset. Fill them
-in a reviewed deployment plan before any resource operation. S03 does not contain
-an apply/provision command. Resource approval is separate from this PR or local
+The [prerequisites JSON](../../server2/deploy/staging/prerequisites.json) records
+the resources the account root provisioned on 2026-10-15 at AK's decision (S10f,
+[#2759](https://github.com/WizardFactory/TodayWeather/issues/2759)): account
+`141248341265`, region `ap-northeast-2`, bucket `tw-server2-141248341265-apne2` and
+the role and instance profile `tw-server2-runtime`, not yet attached to an
+instance. Owners and the monthly ceiling remain unset. S03 does not contain an
+apply/provision command. Resource approval is separate from this PR or local
 start. Do not reuse the local dummy keys outside tests.
 
 - Infrastructure owner confirms the origin region/account and private bucket in
@@ -128,15 +131,24 @@ start. Do not reuse the local dummy keys outside tests.
   ListBucketVersions. HEAD uses GetObject authorization. There are no DeleteObject,
   delete-version, bucket-admin, EC2-write or broad AWS permissions in the
   [role template](../../server2/deploy/staging/role-policy.template.json).
-  Placeholder substitution and IAM evaluation against real resources remain
-  unexecuted. Encryption with customer KMS keys would require a new least-privilege
+  The provisioned inline policy `tw-server2-runtime-s3` equals this template with
+  the bucket name substituted, including `geocode/address/v1/*` (read back on
+  2026-10-15); the provisioned bucket policy equals the bucket template. AK's IAM
+  policy simulation allowed the server2 prefixes and denied delete, other prefixes,
+  other buckets and bucket administration. Encryption with customer KMS keys would require a new least-privilege
   review; it is not silently covered by this template.
   **Unverified IAM risk:** the ListBucket grant has an s3:prefix condition.
   AWS documents that missing-key reads return 404 when ListBucket is permitted,
   otherwise 403; whether this conditional grant suffices for HEAD/GET is not
   established by local tests. S09 must use the actual runtime role to HEAD and
   GET a known-absent raw key and catalog key and require 404/NoSuchKey, while
-  separately proving that unauthorized reads return 403. Record sanitized status,
+  separately proving that unauthorized reads return 403. The
+  `s3_readiness` example (`cargo run --locked --release --example s3_readiness --
+  LABEL` from `server2/`) performs these reads, the conditional writes and, with
+  the instance role, the 403 check outside the server2 prefixes. Its 2026-10-15
+  run used the operator IAM user, not the role
+  ([sanitized evidence](../evidence/aws/server2-s3-readiness-2026-10-15.json));
+  the runtime-role run remains for the EC2 deployment. Record sanitized status,
   role/policy revision, region and time; a mismatch blocks readiness and requires
   reviewed policy/error-classification correction. Do not treat 403 as absence
   or widen permissions from this plan. See the
@@ -151,8 +163,11 @@ start. Do not reuse the local dummy keys outside tests.
   AK 2026-10-15) server2 uses the legacy keys under their legacy names, from `server2/.env`, a
   private copy of the legacy `server/.env`: `DONGNAE_SECRET_KEYS`, `AIRKOREA_SECRET_KEYS`,
   `VC_SECRET_KEY`, `WAQI_SECRET_KEY`, `OWM_SECRET_KEY`, `GOOGLE_SECRET_KEY`,
-  `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY`, `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`; the
-  server2-only `SERVER2_S3_BUCKET` is added there. Server2 and legacy then share each key's
+  `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY`; the server2-only `SERVER2_S3_BUCKET`
+  and `SERVER2_S3_REGION` are added there. S3 credentials come from the EC2
+  instance role through IMDSv2 while `AWS_ACCESS_KEY`/`AWS_SECRET_KEY` are unset or
+  the legacy placeholder (the operator's file holds the placeholder); the legacy
+  `TWA_S3_REGION` is not read. Server2 and legacy then share each key's
   provider quota. Values stay outside Git/logs. Confirm daily
   and peak calls/records for warm-up, cold geocoding, hourly/2-minute demand capture
   and required legacy collectors. Count data.go.kr calls and VC provider records,
@@ -218,5 +233,8 @@ and [manifest](../evidence/tasks/server2-infrastructure/manifest.json) bind the
 actual test output and release binary. Editable source is this document; the
 [PDF manual](server2-infrastructure.pdf) includes the same operational boundaries.
 Unit tests cover wire boundaries separately from integrated process smoke.
-No live AWS access, provider request, traffic replay, IAM application, musl Linux
-run, real Spot interruption, weather parity or latency/cost measurement was performed.
+The local smoke performs no live AWS access, provider request, traffic replay, IAM
+application, musl Linux run, real Spot interruption, weather parity or latency/cost
+measurement. The separately authorized S10f bucket check with the operator IAM user
+is recorded in its [sanitized evidence](../evidence/aws/server2-s3-readiness-2026-10-15.json);
+the instance-role path itself has run only against a loopback IMDS double.

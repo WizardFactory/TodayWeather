@@ -1,32 +1,52 @@
+use super::credentials::InstanceRole;
 use super::{Error, Object, ObjectTransport, PreparedRecord};
 use reqwest::{Client, Method, redirect::Policy};
 use rusty_s3::{Bucket, Credentials, S3Action, UrlStyle};
 use std::{collections::BTreeMap, net::IpAddr, sync::Arc, time::Duration};
 use tokio::{sync::RwLock, time::timeout};
-/// Caller-managed credential handle. No discovery, refresh task, Debug or credential diagnostics.
-/// Replace before expiry; each request uses one coherent snapshot. In-flight requests retain it.
+/// The credential handle of a transport. Either caller-managed static credentials (replace
+/// before expiry; each request uses one coherent snapshot, in-flight requests retain it) or the
+/// EC2 instance role (S10f): IMDSv2 credentials cached and refreshed on use. No Debug or
+/// credential diagnostics.
 #[derive(Clone)]
-pub struct RefreshableCredentials(Arc<RwLock<Credentials>>);
+pub struct RefreshableCredentials(Source);
+#[derive(Clone)]
+enum Source {
+    Held(Arc<RwLock<Credentials>>),
+    InstanceRole(Arc<InstanceRole>),
+}
 impl RefreshableCredentials {
     pub fn new(credentials: Credentials) -> Self {
-        Self(Arc::new(RwLock::new(credentials)))
+        Self(Source::Held(Arc::new(RwLock::new(credentials))))
+    }
+    pub(crate) fn instance_role(role: InstanceRole) -> Self {
+        Self(Source::InstanceRole(Arc::new(role)))
     }
     /// Async wait is bounded; callers must await replacement before relying on new credentials.
+    /// Instance-role credentials refresh themselves and cannot be replaced.
     pub async fn replace(&self, credentials: Credentials) -> Result<(), Error> {
-        let mut held = timeout(Duration::from_secs(3), self.0.write())
+        let Source::Held(lock) = &self.0 else {
+            return Err(Error::Invalid("instance role credentials"));
+        };
+        let mut held = timeout(Duration::from_secs(3), lock.write())
             .await
             .map_err(|_| Error::Timeout)?;
         *held = credentials;
         Ok(())
     }
     pub(crate) async fn snapshot(&self) -> Result<Credentials, Error> {
-        let held = timeout(Duration::from_secs(3), self.0.read())
-            .await
-            .map_err(|_| Error::Timeout)?;
-        Ok(held.clone())
+        match &self.0 {
+            Source::Held(lock) => {
+                let held = timeout(Duration::from_secs(3), lock.read())
+                    .await
+                    .map_err(|_| Error::Timeout)?;
+                Ok(held.clone())
+            }
+            Source::InstanceRole(role) => role.credentials().await,
+        }
     }
 }
-/// SigV4 HTTP adapter. Credentials are supplied/refreshed by the caller; never discovered here.
+/// SigV4 HTTP adapter. Credentials come from its [`RefreshableCredentials`] handle.
 /// No Debug implementation: neither credentials nor signed URLs belong in diagnostics.
 pub struct HttpS3Transport {
     pub(crate) client: Client,
@@ -231,11 +251,17 @@ impl ObjectTransport for HttpS3Transport {
 #[cfg(test)]
 mod credential_review_regressions {
     use super::*;
+    fn held(credentials: &RefreshableCredentials) -> Arc<RwLock<Credentials>> {
+        match &credentials.0 {
+            Source::Held(lock) => lock.clone(),
+            Source::InstanceRole(_) => unreachable!("static test credentials"),
+        }
+    }
     #[tokio::test]
     async fn snapshot_waits_for_coherent_rotation() {
         let credentials =
             RefreshableCredentials::new(Credentials::new("server2-local", "server2-local-secret"));
-        let held = credentials.0.clone().write_owned().await;
+        let held = held(&credentials).write_owned().await;
         let c = credentials.clone();
         let task = tokio::spawn(async move { c.snapshot().await });
         tokio::time::sleep(Duration::from_millis(40)).await;
@@ -254,7 +280,7 @@ mod credential_review_regressions {
     async fn credential_wait_obeys_caller_deadline_without_blocking_worker() {
         let credentials =
             RefreshableCredentials::new(Credentials::new("server2-local", "server2-local-secret"));
-        let held = credentials.0.clone().write_owned().await;
+        let held = held(&credentials).write_owned().await;
         assert!(
             timeout(Duration::from_millis(20), credentials.snapshot())
                 .await
