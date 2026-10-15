@@ -294,14 +294,14 @@ KASI capture asks today's column first instead of legacy's per-area order (same 
 
 # Specification (S15b-3c), 2026-10-15
 
-Legacy references are master `e76202a3` (#2757 merged at `91c77fcb`; the parity target, AK). tw_svc
+Legacy references are master `1d60f728` (#2757 at `91c77fcb` and #2762; the parity target, AK). tw_svc
 assembly: `controllerTown24h` `checkQueryValidation` L68 (absent or `(null)` → `airkorea`),
 `_insertForecastPollutants` L690, `_getAirForecast` L1196, `AirForecastList` L1264;
 `controllerTown.getKecoDustForecast` L2618 (skipped unless `airkorea`, L2627).
 
 | Store call | Provider / live shape | Legacy collection mirrored | tw_svc reader |
 | --- | --- | --- | --- |
-| `air_forecast("airkorea", station)` | `getMinuDustFrcstDspth` `imageUrl7` (PM10) and `imageUrl8` (PM2.5): animated GIFs on `https://www.airkorea.or.kr/dustImage/…`; the `11시 발표` documents of 2026-10-15 named the previous day's 23-cycle (820×820, 48 frames of 673×795 at (66,10), 5.1/4.9 MB), the `17시 발표` ones a 17-cycle (54 frames) | `kecoRequester.getMinuDustFrcstDspth` L649-703 → `AirkoreaHourlyForecastController.do` L95 (`_checkHourlyForecast` L127, `_getImgPaths` L67, `getDustImage` with `airkoreaImageLayout.frameStart`, `getPixelMap` with `layout.validate`, `getDustInfo` with `layout.station`, `_makeHourForecast` override, `_updateDb` L28, `_removeOldData` L116) | `getForecast` (`img.hourly.forecast.controller` L149) |
+| `air_forecast("airkorea", station)` | `getMinuDustFrcstDspth` `imageUrl7` (PM10) and `imageUrl8` (PM2.5): animated GIFs on `https://www.airkorea.or.kr/dustImage/…`; the `11시 발표` documents of 2026-10-15 named the previous day's 23-cycle (820×820, 48 frames of 673×795 at (66,10), 5.1/4.9 MB), the `17시 발표` ones the 17-cycle (54 frames, 6.2/5.9 MB) | `kecoRequester.getMinuDustFrcstDspth` L649-703 → `AirkoreaHourlyForecastController.do` L95 (`_checkHourlyForecast` L127, `_getImgPaths` L67, `getDustImage` with `airkoreaImageLayout.frameStart`, `getPixelMap` with `layout.validate`, `getDustInfo` with `layout.station`, `_makeHourForecast` override, `_updateDb` L28, `_removeOldData` L116) | `getForecast` (`img.hourly.forecast.controller` L149) |
 | `air_forecast("kaq", station)` | none (KAQ source gone) | — | `KaqHourlyForecastController.getForecast` L469 → `_findLatestMapCase` L231-239 (`Fail to get map case`) |
 
 Where they disagree: `kaq` — legacy answers no forecast; server2 answers AirKorea labelled
@@ -310,16 +310,18 @@ given; server2 fetches its validated path on the built-in root (the same resourc
 any GIF; server2 bounds the frame descriptors first.
 
 - Acquisition: keyless `airkorea-image` / `airkorea-forecast-image` / key `national`, period and
-  partition of the announcement; both URLs must pass `frameStart` before any download; page 1
-  PM10, page 2 PM2.5 (status 200, a GIF of 48 frames on the 820×820 canvas within the decoding
-  bounds), page 3 a manifest of the two URLs; paths fetched on `https://www.airkorea.or.kr/`;
+  partition of the announcement; both URLs must pass `frameStart` (six-hour cycles 05/11/17/23)
+  before any download; page 1 PM10, page 2 PM2.5 (status 200, a GIF with frames on the 820×820
+  canvas within the decoding bounds), page 3 a manifest of the two URLs; paths fetched on
+  `https://www.airkorea.or.kr/`;
   8 MiB per image; 60 s call budget.
-- Fold: the acquisitions of the last three KST days in completion order as `do` runs (a stored
-  `pubDate` with both codes is skipped; an image that fails the layout stores nothing; rows
-  older than one day are removed at each run and at the cut). Refresh: the three day catalogs'
-  control objects list the acquisitions; unknown ones are read one lookup each and decoded once
-  per station list; at most every minute, at once for a new station list or after an own
-  acquisition ended.
+- Fold: the acquisitions of the last four KST days in completion order (ties by fetch group) as
+  `do` runs (a stored `pubDate` with both codes is skipped; an image that fails the layout stores
+  nothing; rows older than one day are removed at each run and at the cut). Refresh: the four day
+  catalogs' control objects list the acquisitions; unknown ones are read one lookup each and
+  decoded before the next is read, once per station list; at most every minute, at once for a new
+  station list or after an own acquisition ended. Decoding: frame descriptors bounded, an LZW code
+  chain longer than the table is an error.
 - Request time: a request reading the forecast (`airForecastSource` absent, `(null)`, `airkorea`
   or `kaq`) loads the station list and the dust forecast, reads the fold and, when the fold lacks
   the expected announcement, starts one owned acquisition of its images (of the previous

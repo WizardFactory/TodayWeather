@@ -1,7 +1,8 @@
-//! S15b-3c: the AirKorea image hourly forecast (`ArpltnHourlyForecast`), as legacy master
-//! `91c77fcb` (#2757, "Restore AirKorea image-derived hourly forecasts") collects it.
+//! S15b-3c: the AirKorea image hourly forecast (`ArpltnHourlyForecast`), as legacy master after
+//! #2757 ("Restore AirKorea image-derived hourly forecasts") and #2762 (variable frames and cycle
+//! times, `1d60f728`) collects it.
 //!
-//! Legacy references (master `91c77fcb`):
+//! Legacy references (master `1d60f728`):
 //! - collection: `kecoRequester.getMinuDustFrcstDspth` (L649-703) runs
 //!   `AirkoreaHourlyForecastController.do(dataTime)` (L694) after every forecast run:
 //!   `_checkHourlyForecast` (skip a `pubDate` with rows of both codes), `_getImgPaths` (the first
@@ -10,12 +11,13 @@
 //!   [`super::gif`], and `layout.validate` checks it), `_updateHourlyForecast` over every
 //!   `MsrStnInfo` station (PM10 then PM2.5; `layout.station`), `_removeOldData` (rows dated
 //!   before now - 1 day);
-//! - `lib/airkoreaImageLayout.js`: the characterized NIER 09km 48-hour animation: an 820x820
-//!   RGBA canvas of exactly 48 frames, the 36-band legend at x 680 within four levels per channel
-//!   of the characterized colours in every frame, only the `/dustImage/YYYY/MM/DD/23/09km/` cycle
-//!   (its first frame is the next day 00:00 KST), station pixels matched exactly and then within
-//!   four levels against that frame's legend, searching the centre and rings up to three pixels
-//!   inside the map rectangle, values the band's lower threshold;
+//! - `lib/airkoreaImageLayout.js` (with #2762, master `1d60f728`): the characterized NIER 09km
+//!   animation: an 820x820 RGBA canvas of any positive frame count, in every frame the 36-band
+//!   legend at x 680 inside each characterized colour's neighbourhood (half the distance to the
+//!   nearest other band), the `/dustImage/YYYY/MM/DD/HH/09km/` six-hour cycles (HH 05, 11, 17,
+//!   23; the first frame is HH + 1 KST), station pixels matched exactly and then to the nearest
+//!   band of that frame's legend inside its neighbourhood, searching the centre and rings up to
+//!   three pixels inside the map rectangle, values the band's lower threshold;
 //! - `config.js` `image.airkorea_korea_image` (the `AIRKOREA_KOREA_IMAGE_*` names with the
 //!   characterized defaults), `airkorea.finedust.image.parser` (`getImagePos` with `parseInt`,
 //!   `getDefaultCoordi` with `parseFloat`, degree per pixel);
@@ -29,8 +31,6 @@ use std::collections::HashMap;
 
 const DAY_MS: f64 = 86_400_000.;
 const HOUR_MS: f64 = 3_600_000.;
-/// Frames of the characterized animation (48 hours).
-pub const FRAMES: usize = 48;
 /// The characterized canvas.
 pub const CANVAS: usize = 820;
 /// The characterized legend colours, top band first (`airkoreaImageLayout.colours`).
@@ -195,9 +195,10 @@ impl Calibration {
     }
 }
 
-/// `layout.frameStart(path, type)`: the first frame instant of a characterized 23-cycle
-/// animation URL, with the KST wall time held in UTC fields (the next day 00:00); anything else
-/// fails closed. `kind` is the image type (`PM10` or `PM25`).
+/// `layout.frameStart(path, type)`: the first frame instant of a characterized six-hour-cycle
+/// animation URL (cycle hour 05, 11, 17 or 23; the first frame is the cycle hour + 1 KST), with the
+/// KST wall time held in UTC fields; anything else fails closed. `kind` is the image type (`PM10`
+/// or `PM25`).
 pub fn frame_start(path: &str, kind: &str) -> Result<f64, String> {
     let invalid = || INVALID_IMAGE.to_owned();
     let rest = path
@@ -213,14 +214,24 @@ pub fn frame_start(path: &str, kind: &str) -> Result<f64, String> {
     let (month, rest) = rest.split_at_checked(2).ok_or_else(invalid)?;
     let rest = rest.strip_prefix('/').ok_or_else(invalid)?;
     let (day, rest) = rest.split_at_checked(2).ok_or_else(invalid)?;
-    let rest = rest.strip_prefix("/23/09km/AQF.").ok_or_else(invalid)?;
+    let rest = rest.strip_prefix('/').ok_or_else(invalid)?;
+    let (cycle, rest) = rest.split_at_checked(2).ok_or_else(invalid)?;
+    let rest = rest.strip_prefix("/09km/AQF.").ok_or_else(invalid)?;
     let (model, rest) = rest.split_at_checked(8).ok_or_else(invalid)?;
     let rest = rest.strip_prefix(".NIER_09_01.").ok_or_else(invalid)?;
     let pollutant = rest.strip_suffix(".2days.ani.gif").ok_or_else(invalid)?;
-    if !(digits(year, 4) && digits(month, 2) && digits(day, 2) && digits(model, 8))
+    if !(digits(year, 4)
+        && digits(month, 2)
+        && digits(day, 2)
+        && digits(cycle, 2)
+        && digits(model, 8))
         || model != format!("{year}{month}{day}")
         || !matches!((kind, pollutant), ("PM10", "PM10") | ("PM25", "PM2P5"))
     {
+        return Err(invalid());
+    }
+    let hour: i64 = cycle.parse().map_err(|_| invalid())?;
+    if hour > 23 || (hour + 1) % 6 != 0 {
         return Err(invalid());
     }
     let (y, m, d): (i64, i64, i64) = (
@@ -234,7 +245,7 @@ pub fn frame_start(path: &str, kind: &str) -> Result<f64, String> {
     if y < 100 || (back.year, back.month, back.day) != (y, m, d) {
         return Err(invalid());
     }
-    Ok((days + 1) as f64 * DAY_MS)
+    Ok(days as f64 * DAY_MS + (hour + 1) as f64 * HOUR_MS)
 }
 
 /// get-pixels frames (`pixels.get(frame, x, y, channel)`), one frame at a time.
@@ -280,6 +291,42 @@ impl Pixels for GifPixels<'_> {
     }
 }
 
+/// `layout.distance`: the largest channel difference.
+fn distance(a: [i32; 3], b: [i32; 3]) -> i32 {
+    (0..3).map(|c| (a[c] - b[c]).abs()).max().unwrap_or(0)
+}
+/// `layout.bandLimits`: half the distance from each colour to its nearest other band (the bands'
+/// non-overlapping quantization neighbourhoods).
+fn band_limits(table: &[[i32; 3]; 36]) -> [f64; 36] {
+    std::array::from_fn(|i| {
+        let nearest = (0..36)
+            .filter(|&j| j != i)
+            .map(|j| distance(table[i], table[j]))
+            .min()
+            .unwrap_or(i32::MAX);
+        f64::from(nearest) / 2.
+    })
+}
+/// `layout.colourIndex`: an exact band, else the nearest band (the first of equals) when closer
+/// than its limit; -1 (None) otherwise.
+fn colour_index(rgb: [i32; 3], table: &[[i32; 3]; 36], limits: &[f64; 36]) -> Option<usize> {
+    if !rgb.iter().all(|v| (0..=255).contains(v)) {
+        return None;
+    }
+    let mut best = None;
+    let mut nearest = i32::MAX;
+    for (i, band) in table.iter().enumerate() {
+        let delta = distance(rgb, *band);
+        if delta == 0 {
+            return Some(i);
+        }
+        if delta < nearest {
+            nearest = delta;
+            best = Some(i);
+        }
+    }
+    best.filter(|&b| f64::from(nearest) < limits[b])
+}
 /// The search order of `layout.station`: the centre, then rings up to three pixels away
 /// (`dx` outer, `dy` inner).
 fn offsets() -> Vec<(i64, i64)> {
@@ -312,10 +359,10 @@ pub fn decode_points<P: Pixels>(
         .find(|(_, k, _)| *k == kind)
         .map(|(_, _, t)| *t)
         .ok_or(INVALID_IMAGE)?;
-    // `layout.validate`: the shape, the size settings, the geometry.
+    // `layout.validate`: the shape (any positive frame count), the size settings, the geometry.
     let shape = pixels.shape();
     if shape.len() != 4
-        || shape[0] != FRAMES
+        || shape[0] == 0
         || shape[3] != 4
         || !calibration.canvas_ok(shape[1], shape[2])
         || !calibration.geometry_ok()
@@ -354,27 +401,29 @@ pub fn decode_points<P: Pixels>(
             )
         })
         .collect();
+    let count = shape[0];
+    let nominal_limits = band_limits(&COLOURS);
     let mut out: StationValues = candidates
         .iter()
-        .map(|c| c.as_ref().map(|_| Vec::with_capacity(FRAMES)))
+        .map(|c| c.as_ref().map(|_| Vec::with_capacity(count)))
         .collect();
-    for f in 0..FRAMES {
+    for f in 0..count {
         pixels.select(f)?;
-        // The frame's legend: 36 bands at x 680, each opaque and within four levels.
+        // The frame's legend: 36 bands at x 680, each opaque and inside its characterized
+        // colour's neighbourhood.
         let mut legend = [[0i32; 3]; 36];
         for (i, band) in legend.iter_mut().enumerate() {
             let y = (74. + (i as f64 + 0.5) * 701. / 36.).floor() as usize;
             let rgb = [0, 1, 2].map(|c| pixels.get(680, y, c));
             if pixels.get(680, y, 3) != 255
-                || !rgb
-                    .iter()
-                    .zip(COLOURS[i])
-                    .all(|(v, n)| (0..=255).contains(v) && (v - n).abs() <= 4)
+                || !rgb.iter().all(|v| (0..=255).contains(v))
+                || f64::from(distance(rgb, COLOURS[i])) >= nominal_limits[i]
             {
                 return Err(INVALID_IMAGE.into());
             }
             *band = rgb;
         }
+        let limits = band_limits(&legend);
         for (values, pixel_list) in out.iter_mut().zip(&candidates) {
             let (Some(values), Some(pixel_list)) = (values.as_mut(), pixel_list) else {
                 continue;
@@ -385,14 +434,7 @@ pub fn decode_points<P: Pixels>(
                     continue;
                 }
                 let rgb = [0, 1, 2].map(|c| pixels.get(px, py, c));
-                let exact = legend.iter().position(|band| *band == rgb);
-                // GIF palettes can quantize the same source shade differently (<= 4 levels).
-                let near = || {
-                    legend
-                        .iter()
-                        .position(|band| band.iter().zip(rgb).all(|(v, p)| (v - p).abs() <= 4))
-                };
-                if let Some(band) = exact.or_else(near) {
+                if let Some(band) = colour_index(rgb, &legend, &limits) {
                     found = Some(thresholds[band]);
                     break;
                 }
@@ -412,10 +454,10 @@ pub fn decode_gif(
     decode_points(&mut GifPixels::new(gif)?, calibration, kind, points)
 }
 /// Whether an acquired image is the characterized animation shape (cheap: the logical screen
-/// and the frame count; `layout.validate` checks the legend when it is decoded).
+/// and at least one frame; `layout.validate` checks the legends when it is decoded).
 pub fn image_shape_ok(gif: &[u8], calibration: &Calibration) -> bool {
     GifReader::new(gif)
-        .is_ok_and(|r| r.num_frames() == FRAMES && calibration.canvas_ok(r.width, r.height))
+        .is_ok_and(|r| r.num_frames() > 0 && calibration.canvas_ok(r.width, r.height))
 }
 
 /// `'YYYY-MM-DD HH:MM'` of the UTC fields of a time value (`toISOString().slice(0,16)`).

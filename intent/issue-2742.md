@@ -135,14 +135,15 @@ S15b-3b criteria (base `7ca6f002`, after #2750; same directions, coordinator 202
 
 S15b-3c criteria (base master `0997d702` after #2752 and S10e #2755, merged with `e76202a3`; AK
 decisions of 2026-10-15, relayed by the root coordinator: the `kaq` → `airkorea` mapping when no KAQ
-forecast exists, and, once legacy #2757 merged, legacy master as the parity target for the decoder,
+forecast exists, and, once legacy #2757 and #2762 merged, legacy master as the parity target for the decoder,
 calibration, legend, dates and failure rules instead of the earlier legend-table/calibration
 choices):
 - C3-1: `air_forecast("airkorea")` answers the legacy master `getForecast` rows of the AirKorea
   image forecast rebuilt from stored GIFs (the get-pixels frames, `airkoreaImageLayout` validate,
-  frameStart and station, the KST-instant rows, the upsert and the one-day removal); frames,
-  documents, errors and answers equal a pinned legacy oracle and the #2757 regression cases byte
-  for byte, directly and from the S3 test peer with empty memory, and the live 23-cycle images.
+  frameStart and station with #2762's variable frames and cycles, the KST-instant rows, the
+  upsert and the one-day removal); frames, documents, errors and answers equal a pinned legacy
+  oracle and the #2757/#2762 regression cases byte for byte, directly and from the S3 test peer
+  with empty memory, and the live 23- and 17-cycle images.
 - C3-2: the calibration reads the legacy `AIRKOREA_KOREA_IMAGE_*` names with the master defaults
   (820×820, map 77/663/75/794) as legacy reads them; the difference from the earlier decisions is
   reported.

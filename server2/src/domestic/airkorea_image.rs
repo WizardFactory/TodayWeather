@@ -1,8 +1,8 @@
-//! S15b-3c: the keyless AirKorea forecast-image acquisition, as legacy master `91c77fcb` (#2757)
+//! S15b-3c: the keyless AirKorea forecast-image acquisition, as legacy master `1d60f728` (#2757, #2762)
 //! collects the images. `AirkoreaHourlyForecastController._getImgPaths` (L67-L93) takes the
 //! announcement's first PM10 document's `imageUrl[6]` and first PM2.5 document's `imageUrl[7]`;
 //! `getDustImage` (`airkorea.dust.image.controller` L256-L305) requires both to pass
-//! `airkoreaImageLayout.frameStart` (the characterized `/dustImage/YYYY/MM/DD/23/09km/` cycle) and
+//! `airkoreaImageLayout.frameStart` (the characterized six-hour `/dustImage/YYYY/MM/DD/HH/09km/` cycles, #2762) and
 //! has get-pixels fetch both; any failure stores nothing for the run.
 //!
 //! The provider-supplied URLs are never fetched as given: their validated path is fetched on the

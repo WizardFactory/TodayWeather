@@ -144,7 +144,7 @@ fn hourly_forecast_rows_and_answers_equal_legacy() {
             })
             .collect();
     let runs = items_of(at(f, &["runs"]));
-    assert_eq!(runs.len(), 9);
+    assert_eq!(runs.len(), 10);
     let mut fold = HourlyForecasts::default();
     for run in runs {
         let data_time = text(at(run, &["dataTime"]));
@@ -233,44 +233,62 @@ const NOMINAL: [[i32; 3]; 36] = [
     [135, 192, 232],
     [152, 201, 228],
 ];
-/// The harness's synthetic `pixels(options)`: the legend column at x 680, every other pixel one
-/// colour (band 31 unless `band`), opaque everywhere.
+/// The harness's synthetic `pixels(options)` (master `1d60f728`): the legend column at x 680,
+/// every other pixel one colour (band 31 unless `band`; band 21 with `paletteDelta` added to green
+/// in the legend and the map), opaque everywhere; plus the test file's custom pixel functions
+/// (`finalWhite`, `yellowDelta`, `stationRgb`, recorded by the oracle driver).
 #[derive(Default, Clone)]
 struct Harness {
+    /// The frame count; None for a shape get-pixels never yields (a negative, fractional or NaN
+    /// count, or a non-4D shape): rejected as legacy rejects it.
     shape: Option<Vec<usize>>,
     bad_legend: bool,
     palette_delta: Option<i32>,
     unknown: bool,
     band: Option<usize>,
+    final_white: Option<usize>,
+    yellow_delta: Option<i32>,
+    station_rgb: Option<[i32; 3]>,
     frame: usize,
 }
 impl Harness {
     fn from_json(v: &OrderedJson) -> Self {
         let num = |k: &str| v.get(k).and_then(OrderedJson::number);
+        let shape = match v.get("shape") {
+            None if v.get("shapeNaN").is_some() => Some(None),
+            None => None,
+            Some(s) => {
+                let dims: Vec<f64> = items_of(s).iter().map(|n| n.number().unwrap()).collect();
+                let valid = dims.iter().all(|d| *d >= 0. && d.fract() == 0.);
+                Some(valid.then(|| dims.iter().map(|d| *d as usize).collect()))
+            }
+        };
         Self {
-            shape: v.get("shape").map(|s| {
-                items_of(s)
-                    .iter()
-                    .map(|n| n.number().unwrap() as usize)
-                    .collect()
-            }),
+            shape: match shape {
+                None => Some(vec![48, 820, 820, 4]),
+                Some(s) => s,
+            },
             bad_legend: v.get("badLegend").is_some(),
             palette_delta: num("paletteDelta").map(|d| d as i32),
             unknown: v.get("unknown").is_some(),
             band: num("band").map(|b| b as usize),
+            final_white: num("finalWhite").map(|f| f as usize),
+            yellow_delta: num("yellowDelta").map(|d| d as i32),
+            station_rgb: v.get("stationRgb").map(|c| {
+                let c: Vec<i32> = items_of(c)
+                    .iter()
+                    .map(|n| n.number().unwrap() as i32)
+                    .collect();
+                [c[0], c[1], c[2]]
+            }),
             frame: 0,
         }
     }
-}
-impl Pixels for Harness {
-    fn shape(&self) -> Vec<usize> {
-        self.shape.clone().unwrap_or(vec![48, 820, 820, 4])
+    fn with_shape(mut self, frames: usize) -> Self {
+        self.shape = Some(vec![frames, 820, 820, 4]);
+        self
     }
-    fn select(&mut self, f: usize) -> Result<(), String> {
-        self.frame = f;
-        Ok(())
-    }
-    fn get(&self, x: usize, y: usize, c: usize) -> i32 {
+    fn original(&self, x: usize, y: usize, c: usize) -> i32 {
         if c == 3 {
             return 255;
         }
@@ -288,16 +306,49 @@ impl Pixels for Harness {
         if self.unknown {
             return 0;
         }
-        NOMINAL[self.band.unwrap_or(31)][c]
+        let band = self.band.unwrap_or(31);
+        let delta = match self.palette_delta {
+            Some(d) if band == 21 && c == 1 => d,
+            _ => 0,
+        };
+        NOMINAL[band][c] + delta
+    }
+}
+impl Pixels for Harness {
+    fn shape(&self) -> Vec<usize> {
+        // A shape legacy rejects for its count: no frames.
+        self.shape.clone().unwrap_or(vec![0, 820, 820, 4])
+    }
+    fn select(&mut self, f: usize) -> Result<(), String> {
+        self.frame = f;
+        Ok(())
+    }
+    fn get(&self, x: usize, y: usize, c: usize) -> i32 {
+        if self.final_white == Some(self.frame) && x == 680 && c != 3 {
+            return 255;
+        }
+        if let Some(d) = self.yellow_delta {
+            let legend = x == 680 && y == (74f64 + 11.5 * 701. / 36.).floor() as usize;
+            if c < 2 && (legend || x != 680) {
+                return 100 + d;
+            }
+        }
+        if let Some(rgb) = self.station_rgb
+            && c != 3
+            && x != 680
+        {
+            return rgb[c];
+        }
+        self.original(x, y, c)
     }
 }
 
-/// Every #2757 regression case, run through the server2 decoder over the same synthetic pixels,
-/// stores the rows legacy stored (or rejects as legacy did).
+/// Every #2757/#2762 regression case, run through the server2 decoder over the same synthetic
+/// pixels, stores the rows legacy stored (or rejects as legacy did).
 #[test]
 fn the_legacy_image_regression_cases_store_the_same_rows() {
     let cases = items_of(at(oracle(), &["harness", "cases"]));
-    assert_eq!(cases.len(), 29);
+    assert_eq!(cases.len(), 46);
     let station = [("synthetic-seoul".to_owned(), 37.5665, 126.978)];
     for case in cases {
         let name = text(at(case, &["name"]));
@@ -327,7 +378,19 @@ fn the_legacy_image_regression_cases_store_the_same_rows() {
         let pixels = setup
             .get("pixels")
             .map(Harness::from_json)
-            .unwrap_or_default();
+            .unwrap_or_else(|| Harness::default().with_shape(48));
+        // `independent-lengths`: the image of each URL has its own frame count.
+        let by_url = |url: &str| match setup.get("pixelsByUrl") {
+            Some(m) => {
+                let key = if url.contains("PM2P5") {
+                    "PM2P5"
+                } else {
+                    "PM10"
+                };
+                Harness::from_json(m.get(key).unwrap())
+            }
+            None => pixels.clone(),
+        };
         let (pub_date, pm10, pm25) = match setup.get("paths") {
             Some(p) => (
                 text(p.get("pubDate").unwrap()),
@@ -352,8 +415,8 @@ fn the_legacy_image_regression_cases_store_the_same_rows() {
             ];
             let points = [(station[0].1, station[0].2)];
             let mut out = Vec::new();
-            for ((code, kind, _), start) in CODES.iter().zip(starts) {
-                let values = decode_points(&mut pixels.clone(), &calibration, kind, &points)?;
+            for (((code, kind, _), start), url) in CODES.iter().zip(starts).zip(&urls) {
+                let values = decode_points(&mut by_url(url), &calibration, kind, &points)?;
                 out.push((*code, start, values));
             }
             Ok(out)
@@ -443,6 +506,10 @@ fn the_calibration_reads_the_legacy_names() {
 /// A GIF file: an 820x820 screen with a two-colour palette and `frames` image descriptors of the
 /// given size (one LZW sub-block each; never decoded here).
 fn gif_with_frames(frames: usize, width: u16, height: u16) -> Vec<u8> {
+    gif_with_data(frames, width, height, &[0x44, 0x01])
+}
+/// [`gif_with_frames`] with the given LZW bytes (minimum code size 2, one sub-block).
+fn gif_with_data(frames: usize, width: u16, height: u16, data: &[u8]) -> Vec<u8> {
     let mut g = b"GIF89a".to_vec();
     g.extend_from_slice(&820u16.to_le_bytes());
     g.extend_from_slice(&820u16.to_le_bytes());
@@ -452,7 +519,9 @@ fn gif_with_frames(frames: usize, width: u16, height: u16) -> Vec<u8> {
         for v in [0u16, 0, width, height] {
             g.extend_from_slice(&v.to_le_bytes());
         }
-        g.extend_from_slice(&[0, 2, 2, 0x44, 0x01, 0]);
+        g.extend_from_slice(&[0, 2, data.len() as u8]);
+        g.extend_from_slice(data);
+        g.push(0);
     }
     g.push(0x3b);
     g
@@ -466,8 +535,13 @@ fn gifs_beyond_the_decoding_bounds_are_refused_before_allocation() {
     let live = gif_with_frames(48, 673, 795);
     assert_eq!(GifReader::new(&live).unwrap().num_frames(), 48);
     assert!(image_shape_ok(&live, &Calibration::defaults()));
-    assert!(!image_shape_ok(
+    // #2762: any positive frame count (the 17-cycle has 54); none is refused.
+    assert!(image_shape_ok(
         &gif_with_frames(54, 673, 795),
+        &Calibration::defaults()
+    ));
+    assert!(!image_shape_ok(
+        &gif_with_frames(0, 673, 795),
         &Calibration::defaults()
     ));
     for (frames, width, height) in [
@@ -494,4 +568,38 @@ fn gifs_beyond_the_decoding_bounds_are_refused_before_allocation() {
         ))
         .is_ok()
     );
+}
+
+/// Review S15b3c-R6: an LZW stream whose code chain cycles (`fc 7f` with minimum code size 2
+/// makes code 7 its own prefix) fails instead of looping, and decoding goes on afterwards.
+#[test]
+fn a_cyclic_lzw_stream_fails_instead_of_looping() {
+    let cyclic = gif_with_data(48, 820, 820, &[0xfc, 0x7f]);
+    assert!(image_shape_ok(&cyclic, &Calibration::defaults()));
+    let reader = GifReader::new(&cyclic).unwrap();
+    let mut frame = vec![0u8; 820 * 820 * 4];
+    assert!(reader.decode_and_blit_rgba(0, &mut frame).is_err());
+    assert!(decode_gif(&cyclic, &Calibration::defaults(), "PM10", &[(37.5, 127.)]).is_err());
+    // A valid image still decodes.
+    let url = image_url("pm10", "2026/10/14");
+    assert!(
+        decode_gif(
+            image_at(&url).unwrap(),
+            &Calibration::defaults(),
+            "PM10",
+            &[(37.5, 127.)]
+        )
+        .is_ok()
+    );
+}
+
+/// #2762's six-hour-cycle arithmetic (leap day, year rollover) equals legacy `frameStart`.
+#[test]
+fn cycle_starts_equal_legacy() {
+    let starts = items_of(at(oracle(), &["harness", "starts"]));
+    assert_eq!(starts.len(), 2);
+    for s in starts {
+        let start = frame_start(&text(at(s, &["url"])), "PM10").unwrap();
+        assert_eq!(iso(start), text(at(s, &["start"])));
+    }
 }

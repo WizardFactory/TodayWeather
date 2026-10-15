@@ -825,7 +825,7 @@ async fn rejected_image_paths_are_never_fetched_and_a_failed_download_stores_not
     let _serial = SERIAL.lock().await;
     let seoul = town(37.5665, 126.978);
     let three = || Instant::now() + Duration::from_secs(3);
-    for case in ["another host", "17 cycle", "no PM2.5 path", "PM10 404"] {
+    for case in ["another host", "12 cycle", "no PM2.5 path", "PM10 404"] {
         let peer = Peer::new();
         let transport = peer.transport();
         let store = store_for(&transport);
@@ -834,7 +834,7 @@ async fn rejected_image_paths_are_never_fetched_and_a_failed_download_stores_not
             "another host" => {
                 *stub.state.image_host.lock().unwrap() = Some("https://evil.example".into())
             }
-            "17 cycle" => *stub.state.cycle.lock().unwrap() = Some("17".into()),
+            "12 cycle" => *stub.state.cycle.lock().unwrap() = Some("12".into()),
             "no PM2.5 path" => stub.state.pm25_absent.store(true, Ordering::SeqCst),
             _ => stub.state.pm10_missing.store(true, Ordering::SeqCst),
         }
@@ -928,7 +928,7 @@ fn image_paths_are_fetched_on_the_builtin_root() {
             image_url("pm25", "2026/10/14"),
         ),
         (
-            path.replace("/23/", "/11/"),
+            path.replace("/23/", "/12/"),
             image_url("pm25", "2026/10/14"),
         ),
     ] {
@@ -1227,8 +1227,8 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
     // 11:20 KST: the 11시 announcement is expected.
     let now = NOW + 30. * 60_000.;
     let [pm10, pm25] = fixture_urls('A').map(Some);
-    let cycle17 =
-        || fixture_urls('A').map(|u| Some(u.replace("/2026/10/14/23/", "/2026/10/14/17/")));
+    let cycle12 =
+        || fixture_urls('A').map(|u| Some(u.replace("/2026/10/14/23/", "/2026/10/14/12/")));
     let docs = |text: &'static str, urls: [Option<String>; 2]| {
         let [a, b] = urls;
         (text, a, b)
@@ -1250,11 +1250,12 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
             vec![docs("2026-09-23 23시 발표", [pm10.clone(), pm25.clone()])],
             None,
         ),
-        // The expected documents name a 17-cycle (rejected) or no PM2.5 image: the previous.
+        // The expected documents name a 12 cycle (not a six-hour cycle) or no PM2.5 image: the
+        // previous.
         (
             vec![
                 docs("2026-09-24 05시 발표", [pm10.clone(), pm25.clone()]),
-                docs("2026-09-24 11시 발표", cycle17()),
+                docs("2026-09-24 11시 발표", cycle12()),
             ],
             Some(500),
         ),
@@ -1329,5 +1330,140 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
         "{:?}",
         recorder.0.lock().unwrap()
     );
+    assert_eq!(transport.available(), TEST_PERMITS);
+}
+
+/// The 23-cycle image URLs of a day (`YYYY/MM/DD`).
+fn urls_for(day: &str) -> [String; 2] {
+    [image_url("pm10", day), image_url("pm25", day)]
+}
+
+/// A 23시 announcement's rows outlive three calendar days: its partition is still read on the
+/// fourth (review S15b3c-R7), by a warm and a cold reader alike.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_late_announcement_stays_until_its_rows_expire() {
+    use server2::domestic::kma::source::air_forecast::Calibration;
+    use server2::domestic::kma::source::forecast_input::ImageForecasts;
+    use server2::domestic::kma::source::live::Flights;
+    use std::sync::atomic::AtomicU64;
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = store_for(&transport);
+    // 09-24 23시 over the 09/24/23 animation: rows 09-25 00:00 .. 09-26 23:00 KST.
+    let urls = urls_for("2026/09/24");
+    let at = NOW + 12. * 3_600_000.;
+    publish(
+        &store,
+        ("airkorea-image", "airkorea-forecast-image"),
+        ProviderKey::Named {
+            id: "national".into(),
+        },
+        Publication::new(20260924, 2300).unwrap().period(),
+        "20260924",
+        at,
+        &image_pages('A', &urls),
+    )
+    .await;
+    let all = station_fold(&[]);
+    let flights = Flights::new(Duration::from_secs(600));
+    let generation = Arc::new(AtomicU64::new(0));
+    let reader = || {
+        ImageForecasts::new(transport.clone(), store.clone(), Calibration::defaults())
+            .with_refresh_interval(Duration::ZERO)
+    };
+    let warm = reader();
+    until(
+        || image_load(&warm, at, &all, &flights, &generation),
+        |f| f.has("2026-09-24 23:00"),
+    )
+    .await;
+    // 09-27 10:50 KST: the 09-26 rows from 11:00 KST are still kept.
+    let later = NOW + 3. * 86_400_000.;
+    let expected = expected_fold(&[("2026-09-24 23:00", at, 'A', &urls)], later);
+    assert!(has_rows(&expected.by_station("중구")));
+    let fresh = reader();
+    for (name, images) in [("warm", &warm), ("cold", &fresh)] {
+        let fold = until(
+            || image_load(images, later, &all, &flights, &generation),
+            |f| f.json() == expected.json(),
+        )
+        .await;
+        assert!(has_rows(&fold.by_station("중구")), "{name}");
+    }
+    assert_eq!(transport.available(), TEST_PERMITS);
+}
+
+/// Two acquisitions completed in the same millisecond of one day are both folded, also when the
+/// second appears after the first was read (review S15b3c-R9).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn acquisitions_completed_in_the_same_millisecond_are_both_read() {
+    use server2::domestic::kma::source::air_forecast::Calibration;
+    use server2::domestic::kma::source::forecast_input::ImageForecasts;
+    use server2::domestic::kma::source::live::Flights;
+    use std::sync::atomic::AtomicU64;
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = store_for(&transport);
+    let key = || ProviderKey::Named {
+        id: "national".into(),
+    };
+    let kind = ("airkorea-image", "airkorea-forecast-image");
+    let at = NOW - 4. * 3_600_000.;
+    // Non-overlapping dates, so the order of the two does not matter.
+    let (first, second) = (fixture_urls('A'), urls_for("2026/10/20"));
+    publish(
+        &store,
+        kind,
+        key(),
+        Publication::new(20260924, 500).unwrap().period(),
+        "20260924",
+        at,
+        &image_pages('A', &first),
+    )
+    .await;
+    let all = station_fold(&[]);
+    let flights = Flights::new(Duration::from_secs(600));
+    let generation = Arc::new(AtomicU64::new(0));
+    let reader = || {
+        ImageForecasts::new(transport.clone(), store.clone(), Calibration::defaults())
+            .with_refresh_interval(Duration::ZERO)
+    };
+    let warm = reader();
+    until(
+        || image_load(&warm, NOW, &all, &flights, &generation),
+        |f| f.has("2026-09-24 05:00"),
+    )
+    .await;
+    publish(
+        &store,
+        kind,
+        key(),
+        Publication::new(20260924, 1100).unwrap().period(),
+        "20260924",
+        at,
+        &image_pages('B', &second),
+    )
+    .await;
+    let mut expected = expected_fold(&[("2026-09-24 05:00", at, 'A', &first)], NOW);
+    expected.apply(&Processed {
+        pub_date: "2026-09-24 11:00".into(),
+        now: at,
+        stations: &stations(),
+        values: values('B', &second),
+    });
+    expected.remove_old(NOW);
+    let fresh = reader();
+    for images in [&warm, &fresh] {
+        let fold = until(
+            || image_load(images, NOW, &all, &flights, &generation),
+            |f| f.has("2026-09-24 11:00"),
+        )
+        .await;
+        for (n, _, _) in stations() {
+            same(&fold.by_station(&n), &expected.by_station(&n), &n);
+        }
+    }
     assert_eq!(transport.available(), TEST_PERMITS);
 }

@@ -7,7 +7,8 @@
 //! placed at its offset; interlaced rows follow omggif's pass arithmetic; a short stream leaves
 //! index 0; writes outside the frame's buffer are dropped (a typed-array store) and a palette
 //! read past the file is 0 (`undefined` stored in a `Uint8Array`); index stores past a frame's
-//! index buffer are dropped too. This module is a direct port.
+//! index buffer are dropped too. This module is a direct port, except that a malformed stream
+//! whose code chain cycles (omggif never returns on it) is an error.
 //!
 //! Decoding bounds (server2 only; legacy has none and a hostile image would exhaust its memory):
 //! the frame descriptors are checked before any buffer exists. A GIF beyond them is an error, so
@@ -315,6 +316,11 @@ fn lzw_output_index_stream(stream: &[u8], mut p: usize, output: &mut [u8]) -> Re
             }
             chase = Some(code_table[(c & 4095) as usize] >> 8);
             chase_length += 1;
+            // A code string is at most the table size long; a longer chain is a cycle of a
+            // malformed stream, on which omggif never returns (review S15b3c-R6).
+            if chase_length > 4096 {
+                return Err("GIF LZW code cycle".into());
+            }
         }
         // `k = chase`: a null chase stores 0 into the Uint8Array.
         let k = chase.map_or(0, |c| (c & 0xff) as u8);

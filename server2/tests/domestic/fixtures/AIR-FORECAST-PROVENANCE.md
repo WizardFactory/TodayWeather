@@ -1,9 +1,10 @@
 # S15b-3c AirKorea image forecast oracle fixture
 
-`air_forecast.json.gz` (sha256 `619e9c5a9c22d5dac07c7806c0961514f3a69085fceeb2ec2b8ae7629b64e593`) holds pinned legacy-oracle results for
+`air_forecast.json.gz` (sha256 `1d2d09318cea1db1f630bfb1f9bcb3d0fc5e0b1bbb4929c8e082038c0a2fd28f`) holds pinned legacy-oracle results for
 the S15b-3c tests (`server2/tests/domestic/air_forecast.rs`, `air_forecast_s3.rs`). It is test
 data only; the server2 runtime never reads it or any legacy file. The parity target is legacy
-master `91c77fcb` and later (#2757, "Restore AirKorea image-derived hourly forecasts").
+master `1d60f728` (#2757, "Restore AirKorea image-derived hourly forecasts", and #2762, variable
+frames and cycle times).
 
 ## Recording
 
@@ -20,21 +21,21 @@ master `91c77fcb` and later (#2757, "Restore AirKorea image-derived hourly forec
 | `server/controllers/airkorea.hourly.forecast.controller.js` | `d18c7e99d807be929af352e434c05004b12e2da467f219307d1a09f2fa6d9bdf` |
 | `server/controllers/img.hourly.forecast.controller.js` | `1c343d20e535179487db98f93fd9e15f2d30a2f1535ec8a3370c4466c9bf0c9a` |
 | `server/lib/airkorea.finedust.image.parser.js` | `341254133c009169e4bf2d8582b53d12a2472c29dddcf9715ef89a79f3b0915b` |
-| `server/lib/airkoreaImageLayout.js` | `2a673a81f138494928af6491669192358d0a197e3d9ed927ff1c1d5b2e31ad8c` |
+| `server/lib/airkoreaImageLayout.js` | `5501b312f60df61a7362bba061222e5b0e1ccd33f4b9a697d44735e6458711ce` |
 | `server/lib/aqi.converter.js` | `75755a5e87941c0d6f0f3675b85cc70d8d252342dcc14f4b6a7232e61ddf0a73` |
 | `server/lib/kmaTimeLib.js` | `e17dc2941e7e03701cebbe05b4cb077d771d9ed022af8a618057a99bb1b5ec61` |
 | `server/models/arpltn.hourly.forecast.js` | `673fdec0cec3532acd0deeae431c2eeaa49ec0318ebc5ff64ba21fb93585936c` |
 | `server/models/modelMinuDustFrcst.js` | `d2db8cb416e26db18f3caf55ab391c3accc0d8311ba7e6c34c11d3355441dfe4` |
 | `server/models/modelMsrStnInfo.js` | `b927f78a17d54fb930bb2400d6730bd711000a6846dea7bd639a799a927ff040` |
 | `server/test/offline/air-harness.js` | `10681bd1b9b52148fdf6460ea15231a385dbba13153ebc44e555ff8d2bb81c9d` |
-| `server/test/offline/airkorea-image-harness.js` | `cfbc4fd4afcfb48bb12c22c179551914ec5f398d22e245c919535935508f4bc5` |
-| `server/test/offline/airkorea-image.test.js` | `1f6436439721f84a613adf11f4b1deb36d13b06b7b5e4fc5c3ca6229fbe633a5` |
+| `server/test/offline/airkorea-image-harness.js` | `8efb3375b3f7cf4f567d53c20edab3920a550c9d241cdaa816eba01746bcc0e9` |
+| `server/test/offline/airkorea-image.test.js` | `1e7324b08d2f6e48d02a6ed4d7c22d6f22de51018cb9c06386d73a55b34ec3c0` |
 
 - Inputs: synthetic GIFs written with omggif's `GifWriter` (one by hand, from review
   S15b3c-R2); no live image or value is copied. The forecast GIFs have the characterized layout
-  (an 820×820 canvas, 48 frames of 673×795 at (66,10), the 36-band legend at x 680) and are
-  served to get-pixels for their 23-cycle URLs; `config.image.airkorea_korea_image` is the master
-  `config.js` default with no `AIRKOREA_KOREA_IMAGE_*` set. The regression cases use the #2757
+  (an 820×820 canvas, 47-54 frames of 673×795 at (66,10), the 36-band legend at x 680) and are
+  served to get-pixels for their cycle URLs; `config.image.airkorea_korea_image` is the master
+  `config.js` default with no `AIRKOREA_KOREA_IMAGE_*` set. The regression cases use the #2757/#2762
   harness itself (`server/test/offline/airkorea-image-harness.js`: synthetic pixels and memory
   models).
 - Run: `run.sh record-gif.js`, `oracle/run.sh record-forecast.js`, `oracle/run.sh
@@ -46,16 +47,19 @@ master `91c77fcb` and later (#2757, "Restore AirKorea image-derived hourly forec
   returns.
 - `forecast`: 8 stations (exact colours, a ring search, tolerance matches and
   misses, a per-frame legend shade, two outside the box, the map's top-left corner),
-  6 images (a broken-legend and a 47-frame one among them),
-  7 announcements and 9 `getMinuDustFrcstDspth` →
+  8 images (a broken-legend, a 47-frame and two 54-frame ones among them),
+  8 announcements and 10 `getMinuDustFrcstDspth` →
   `AirkoreaHourlyForecastController.do` runs (a stored announcement, its skip, a second
-  announcement over the same images, a 17-cycle path, the next 23-cycle images, a missing PM2.5
-  path, a broken legend frame, a 47-frame image, a removal run without documents): after each run
+  announcement over the same images, a 54-frame 17-cycle, the next 23-cycle images, a missing
+  PM2.5 path, a broken legend frame, a 47-frame image, a 12 cycle, a removal run without
+  documents): after each run
   the legacy error (if any), the `arpltnhourlyforecasts` documents
-  (528, 528, 528, 528, 792, 726, 660, 594, 396) and the `getForecast` answer of every station.
-- `harness`: the 29 cases of `server/test/offline/airkorea-image.test.js` (each
-  invalid or missing path, shape, legend, calibration and palette case, the month rollover and the
-  `do` skip), each with the rows stored or the rejection.
+  (528, 528, 528, 792, 792, 726, 660, 1117, 1051, 919) and the `getForecast` answer of every station.
+- `harness`: the 46 cases of `server/test/offline/airkorea-image.test.js` (each
+  invalid or missing path, shape, frame count, cycle, legend, calibration and palette case, the
+  month rollover and the `do` skip; the test file's custom pixel functions described by
+  `setup.pixels` fields), each with the rows stored or the rejection, and the 2
+  `frameStart` results of its leap-day and year-rollover check.
 
 ## Driver source
 
@@ -178,14 +182,14 @@ const out = {schema: 1, oracle: {node: process.version, getPixels: require('get-
 
 ```
 
-### `oracle/record-forecast.js` (sha256 `a9eefff227b1d4d18e82c5927a3f784f1d1b7544d07f303939852341007be8dd`)
+### `oracle/record-forecast.js` (sha256 `3647db9be9f281de15b608bf712ead591ca5e6573419d06caa65ee11e7c5c4b3`)
 
 ```js
-/* S15b-3c AirKorea image forecast oracle, legacy master after #2757 (task evidence, not a
+/* S15b-3c AirKorea image forecast oracle, legacy master after #2757 and #2762 (task evidence, not a
  * repository tool). No network. Legacy `AirkoreaHourlyForecastController.do(dataTime)` (Mongoose
  * 5.1.2 over the in-memory collection double) runs over synthetic GIFs of the characterized layout
- * (omggif GifWriter: an 820x820 canvas, 48 frames of 673x795 at (66,10), the 36-band legend at
- * x 680) served to the real get-pixels 3.3.2 for their 23-cycle URLs, with the config.js defaults.
+ * (omggif GifWriter: an 820x820 canvas, 47-54 frames of 673x795 at (66,10), the 36-band legend at
+ * x 680) served to the real get-pixels 3.3.2 for their cycle URLs, with the config.js defaults.
  * Records every run's collection and the `getForecast` answer of every station.
  * Run: run.sh record-forecast.js <out.json> */
 'use strict';
@@ -228,12 +232,12 @@ const NOMINAL = [[105,0,0],[130,0,0],[155,0,0],[180,0,0],[205,0,0],[230,0,0],[25
     [0,118,0],[0,138,0],[0,157,0],[0,177,0],[0,195,0],[0,216,0],[0,234,0],[0,254,0],
     [100,254,100],[149,254,149],[53,150,249],[76,162,244],[100,175,240],[135,192,232],[152,201,228]];
 // Palette: background, a non-legend grey, the legend, band 21 four levels greener (a legend
-// shade of frame 14 and a station colour), band 31 four levels redder (a tolerance match), band 5
-// five levels off (no match), white (a broken legend band).
-const COLORS = [[240,240,240],[200,200,200]].concat(NOMINAL, [[0,122,0],[57,150,249],[235,0,0],[255,255,255]]);
+// shade of frame 14 and a station colour), band 31 four levels redder (a neighbourhood match),
+// exactly between bands 21 and 22 (no match), white (a broken legend band).
+const COLORS = [[240,240,240],[200,200,200]].concat(NOMINAL, [[0,122,0],[57,150,249],[0,128,0],[255,255,255]]);
 while (COLORS.length < 64) COLORS.push([1, 2, COLORS.length]);
 const PALETTE = COLORS.map(([r, g, b]) => r << 16 | g << 8 | b);
-const BAND = i => 2 + i, GREEN21 = 38, RED31 = 39, OFF5 = 40, WHITE = 41;
+const BAND = i => 2 + i, GREEN21 = 38, RED31 = 39, BETWEEN = 40, WHITE = 41;
 
 // Stations: exact colours, a ring search, tolerance matches with misses, a per-frame legend
 // shade, outside the box (two: east of it and on its southern edge), the map's top-left corner.
@@ -271,7 +275,7 @@ function gif(code, set, options = {}) {
         put(x - 2, y + 1, BAND((f + set + shift) % 36));
         put(x + 2, y + 2, BAND((f + set + 7) % 36));
         [x, y] = at('제주');
-        block(x, y, f % 2 === 0 ? RED31 : OFF5);
+        block(x, y, f % 2 === 0 ? RED31 : BETWEEN);
         [x, y] = at('대전');
         block(x, y, GREEN21);
         [x, y] = at('백령도');
@@ -289,10 +293,11 @@ const url = (code, day, hour = '23') => 'https://www.airkorea.or.kr/dustImage/' 
 
 (async () => {
     const images = [gif('pm10', 0), gif('pm25', 0), gif('pm10', 1), gif('pm25', 1),
-        gif('pm10', 1, {badLegend: true}), gif('pm10', 0, {frames: 47})];
+        gif('pm10', 1, {badLegend: true}), gif('pm10', 0, {frames: 47}), gif('pm10', 1, {frames: 54}), gif('pm25', 1, {frames: 54})];
     const byUrl = {[url('pm10', '2026/10/14')]: 0, [url('pm25', '2026/10/14')]: 1, [url('pm10', '2026/10/15')]: 2,
         [url('pm25', '2026/10/15')]: 3, [url('pm10', '2026/10/16')]: 4, [url('pm25', '2026/10/16')]: 1,
-        [url('pm10', '2026/10/17')]: 5, [url('pm25', '2026/10/17')]: 1};
+        [url('pm10', '2026/10/17')]: 5, [url('pm25', '2026/10/17')]: 1,
+        [url('pm10', '2026/10/15', '17')]: 6, [url('pm25', '2026/10/15', '17')]: 7};
     for (const [u, i] of Object.entries(byUrl)) files[u] = images[i];
     const MsrStn = L.load('models/modelMsrStnInfo.js');
     L.fake.attach(MsrStn);
@@ -311,7 +316,8 @@ const url = (code, day, hour = '23') => 'https://www.airkorea.or.kr/dustImage/' 
         ['2026-10-15 23시 발표', url('pm10', '2026/10/15'), url('pm25', '2026/10/15')],
         ['2026-10-16 05시 발표', url('pm10', '2026/10/15'), null],
         ['2026-10-16 11시 발표', url('pm10', '2026/10/16'), url('pm25', '2026/10/16')],
-        ['2026-10-16 17시 발표', url('pm10', '2026/10/17'), url('pm25', '2026/10/17')]];
+        ['2026-10-16 17시 발표', url('pm10', '2026/10/17'), url('pm25', '2026/10/17')],
+        ['2026-10-16 23시 발표', url('pm10', '2026/10/16', '12'), url('pm25', '2026/10/16', '12')]];
     for (const [dataTime, pm10, pm25] of announce) {
         const pm10Urls = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', pm10, 'u8', 'u9'];
         const pm25Urls = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7'].concat(pm25 ? [pm25, 'u9'] : []);
@@ -320,14 +326,15 @@ const url = (code, day, hour = '23') => 'https://www.airkorea.or.kr/dustImage/' 
     }
     const Ctrl = L.load('controllers/airkorea.hourly.forecast.controller.js');
     const Base = L.load('controllers/img.hourly.forecast.controller.js');
-    // Runs (UTC instants): 05시 stored, its repeat skipped, 11시 over the same images, a 17-cycle
-    // rejected, 23시 over the next images, a pair missing PM2.5, a broken legend frame, a 47-frame
-    // image, then a removal run for an announcement without documents.
+    // Runs (UTC instants): 05시 stored, its repeat skipped, 11시 over the same images, a 54-frame
+    // 17-cycle, 23시 over the next images, a pair missing PM2.5, a broken legend frame, a 47-frame
+    // image, a 12 cycle (not a six-hour cycle), then a removal run for an announcement without
+    // documents.
     const runs = [['2026-10-15 05시 발표', Date.UTC(2026, 9, 14, 20, 30)], ['2026-10-15 05시 발표', Date.UTC(2026, 9, 14, 21, 30)],
         ['2026-10-15 11시 발표', Date.UTC(2026, 9, 15, 2, 30)], ['2026-10-15 17시 발표', Date.UTC(2026, 9, 15, 8, 30)],
         ['2026-10-15 23시 발표', Date.UTC(2026, 9, 15, 14, 30)], ['2026-10-16 05시 발표', Date.UTC(2026, 9, 15, 20, 30)],
         ['2026-10-16 11시 발표', Date.UTC(2026, 9, 16, 2, 30)], ['2026-10-16 17시 발표', Date.UTC(2026, 9, 16, 8, 30)],
-        ['2026-10-17 11시 발표', Date.UTC(2026, 9, 17, 2, 30)]];
+        ['2026-10-16 23시 발표', Date.UTC(2026, 9, 16, 14, 30)], ['2026-10-17 11시 발표', Date.UTC(2026, 9, 17, 2, 30)]];
     const config = path.join(process.env.TW_REPO, 'server/config/config.js');
     const out = {schema: 2, oracle: {node: process.version, tz: process.env.TZ, mongoose: '5.1.2', getPixels: '3.3.2'},
         calibration: global.ORACLE_IMAGE_CONFIG.airkorea_korea_image, stations: STATIONS,
@@ -361,14 +368,15 @@ const url = (code, day, hour = '23') => 'https://www.airkorea.or.kr/dustImage/' 
 
 ```
 
-### `oracle/record-harness.js` (sha256 `207b94241eb405124b02f6f75e1fcc9ae77965286cc4ab5d793bf50c7cd9f707`)
+### `oracle/record-harness.js` (sha256 `1be2acb171242901ad45c95d22ad55411f7ac765825e3bb78c421ffe55ff8d0b`)
 
 ```js
-/* S15b-3c: the legacy #2757 image regression cases (server/test/offline/airkorea-image.test.js)
- * recorded with their own harness (task evidence, not a repository tool). No network. Each case
- * runs the master controllers over the harness's synthetic pixels and memory models; the stored
- * rows (or the rejection) are recorded for the server2 port of the same cases.
- * Run: run.sh record-harness.js <out.json> */
+/* S15b-3c: the legacy #2757/#2762 image regression cases (server/test/offline/
+ * airkorea-image.test.js) recorded with their own harness (task evidence, not a repository tool).
+ * No network. Each case runs the master controllers over the harness's synthetic pixels and memory
+ * models; the stored rows (or the rejection) are recorded for the server2 port of the same cases.
+ * Custom pixel functions of the test file are described by `setup.pixels` fields the port
+ * reproduces. Run: run.sh record-harness.js <out.json> */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -388,17 +396,32 @@ async function outcome(fn) {
         return {error: String(error && error.message || error)};
     }
 }
+/** The test file's custom pixel functions, from their descriptions. */
+function custom(d) {
+    const p = pixels(d);
+    const original = p.get;
+    if (d.finalWhite !== undefined) p.get = (f, x, y, c) => f === d.finalWhite && x === 680 && c !== 3 ? 255 : original(f, x, y, c);
+    if (d.yellowDelta !== undefined) p.get = (f, x, y, c) => {
+        const legend = x === 680 && y === Math.floor(74 + 11.5 * 701 / 36);
+        if (c < 2 && (legend || x !== 680)) return 100 + d.yellowDelta;
+        return original(f, x, y, c);
+    };
+    if (d.stationRgb) p.get = (f, x, y, c) => c === 3 || x === 680 ? original(f, x, y, c) : d.stationRgb[c];
+    return p;
+}
 (async () => {
     const cases = [];
-    const add = async (name, setup, run) => {
-        const h = harness(setup.options || {});
+    const add = async (name, describe, run, options) => {
+        const opts = options || {};
+        if (describe.env) opts.env = describe.env;
+        if (describe.pixels && !opts.getPixels) opts.pixels = custom(describe.pixels);
+        const h = harness(opts);
         const result = await outcome(() => run(h));
-        cases.push(Object.assign({name, setup: setup.describe}, result, {stored: h.rows.map(rowJson)}));
+        cases.push(Object.assign({name, setup: describe}, result, {stored: h.rows.map(rowJson)}));
     };
-    const std = {pubDate: '2026-10-15 11:00', pm10: imagePath(), pm25: imagePath('pm25')};
-    await add('current-calibration', {describe: {}}, h => pipeline(h));
-    await add('height-830', {options: {env: {AIRKOREA_KOREA_IMAGE_SIZE_HEIGHT: '830'}}, describe: {env: {AIRKOREA_KOREA_IMAGE_SIZE_HEIGHT: '830'}}}, h => pipeline(h));
-    await add('hourly-do-twice', {describe: {do: '2026-10-15 11시 발표'}}, async h => {
+    await add('current-calibration', {}, h => pipeline(h));
+    await add('height-830', {env: {AIRKOREA_KOREA_IMAGE_SIZE_HEIGHT: '830'}}, h => pipeline(h));
+    await add('hourly-do-twice', {do: '2026-10-15 11시 발표'}, async h => {
         await invoke(h.hourly, 'do', '2026-10-15 11시 발표');
         await invoke(h.hourly, 'do', '2026-10-15 11시 발표');
         return invoke(h.hourly, 'getForecast', 'synthetic-seoul');
@@ -410,40 +433,74 @@ async function outcome(fn) {
         cases.push({name: 'explicit-calibration', setup: {env}, map: {left: h.parser.getImagePos().left,
             left_lon: h.parser.getDefaultCoordi().top_left.lon, map_width: map.map_width,
             map_pixel_distance_width: map.map_pixel_distance_width}});
-        await add('explicit-calibration-rows', {options: {env}, describe: {env}}, h2 => pipeline(h2));
+        await add('explicit-calibration-rows', {env}, h2 => pipeline(h2));
     }
-    for (const [name, options, describe] of [
-        ['unknown-canvas', {pixels: pixels({shape: [48, 821, 820, 4]})}, {pixels: {shape: [48, 821, 820, 4]}}],
-        ['missing-frame', {pixels: pixels({shape: [47, 820, 820, 4]})}, {pixels: {shape: [47, 820, 820, 4]}}],
-        ['static-image', {pixels: pixels({shape: [820, 820, 4]})}, {pixels: {shape: [820, 820, 4]}}],
-        ['last-frame-bad-legend', {pixels: pixels({badLegend: true})}, {pixels: {badLegend: true}}],
-        ['map-bottom-900', {env: {AIRKOREA_KOREA_IMAGE_MAP_BOTTOM: '900'}}, {env: {AIRKOREA_KOREA_IMAGE_MAP_BOTTOM: '900'}}],
-        ['top-lat-32', {env: {AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT: '32'}}, {env: {AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT: '32'}}],
-        ['unknown-colours', {pixels: pixels({unknown: true})}, {pixels: {unknown: true}}],
-        ['palette-delta-4', {pixels: pixels({band: 21, paletteDelta: 4})}, {pixels: {band: 21, paletteDelta: 4}}],
-        ['palette-delta-5', {pixels: pixels({paletteDelta: 5})}, {pixels: {paletteDelta: 5}}]
-    ]) await add(name, {options, describe}, h => pipeline(h));
+    for (const [name, describe] of [
+        ['unknown-canvas', {pixels: {shape: [48, 821, 820, 4]}}],
+        ['empty-animation', {pixels: {shape: [0, 820, 820, 4]}}],
+        ['static-image', {pixels: {shape: [820, 820, 4]}}],
+        ['last-frame-bad-legend', {pixels: {badLegend: true}}],
+        ['map-bottom-900', {env: {AIRKOREA_KOREA_IMAGE_MAP_BOTTOM: '900'}}],
+        ['top-lat-32', {env: {AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT: '32'}}],
+        ['unknown-colours', {pixels: {unknown: true}}],
+        ['palette-delta-4', {pixels: {band: 21, paletteDelta: 4}}],
+        ['palette-delta-5', {pixels: {band: 21, paletteDelta: 5}}],
+        ['palette-delta-7', {pixels: {band: 21, paletteDelta: 7}}],
+        ['palette-delta-10', {pixels: {paletteDelta: 10}}],
+        ['between-bands', {pixels: {stationRgb: [0, 128, 0]}}],
+        ['station-rounding', {pixels: {stationRgb: [107, 107, 0]}}],
+        ['yellow-delta-6', {pixels: {band: 11, yellowDelta: 6}}],
+        ['yellow-delta-7', {pixels: {band: 11, yellowDelta: 7}}],
+        ['yellow-delta-8', {pixels: {band: 11, yellowDelta: 8}}]
+    ]) await add(name, describe, h => pipeline(h));
+    for (const count of [-1, 1.5]) {
+        await add('invalid-count-' + count, {pixels: {shape: [count, 820, 820, 4]}}, h => pipeline(h));
+    }
+    {
+        // NaN is not JSON: the description says so and the port reproduces it.
+        const h = harness({pixels: pixels({shape: [NaN, 820, 820, 4]})});
+        const result = await outcome(() => pipeline(h));
+        cases.push(Object.assign({name: 'invalid-count-NaN', setup: {pixels: {shapeNaN: true}}}, result, {stored: h.rows.map(rowJson)}));
+    }
     {
         const paths = {pubDate: '2026-02-01 05:00', pm10: imagePath('pm10', '2026/01/31'), pm25: imagePath('pm25', '2026/01/31')};
-        await add('month-rollover', {describe: {paths}}, h => pipeline(h, paths));
+        await add('month-rollover', {paths}, h => pipeline(h, paths));
+    }
+    for (const [cycle, count] of [['05', 42], ['11', 36], ['17', 54], ['23', 47], ['05', 1]]) {
+        const paths = {pubDate: '2026-10-15 23:00', pm10: imagePath('pm10', '2026/10/15', cycle), pm25: imagePath('pm25', '2026/10/15', cycle)};
+        await add('cycle-' + cycle + '-count-' + count, {pixels: {shape: [count, 820, 820, 4]}, paths}, h => pipeline(h, paths));
+    }
+    {
+        const paths = {pubDate: '2026-10-15 17:00', pm10: imagePath('pm10', '2026/10/15', '11'), pm25: imagePath('pm25', '2026/10/15', '17')};
+        const describe = {pixelsByUrl: {PM10: {shape: [36, 820, 820, 4]}, PM2P5: {shape: [54, 820, 820, 4]}}, paths};
+        await add('independent-lengths', describe, h => pipeline(h, paths),
+            {getPixels(url, type, cb) { cb(null, pixels({shape: [url.includes('PM2P5') ? 54 : 36, 820, 820, 4]})); }});
+    }
+    {
+        const paths = {pubDate: '2026-10-15 17:00', pm10: imagePath('pm10', '2026/10/15', '17'), pm25: imagePath('pm25', '2026/10/15', '17')};
+        await add('final-frame-legend', {pixels: {shape: [54, 820, 820, 4], finalWhite: 53}, paths}, h => pipeline(h, paths));
     }
     for (const code of ['pm10', 'pm25']) {
         const other = code === 'pm10' ? 'pm25' : 'pm10';
         for (const p of [imagePath(code, '2026/02/30'), imagePath(code).replace('AQF.20261014', 'AQF.20261013'),
-            imagePath(code).replace('/23/', '/05/'), imagePath(code).replace('/23/', '/11/'), imagePath(other),
+            imagePath(code).replace('/23/', '/24/'), imagePath(code).replace('/23/', '/12/'), imagePath(other),
             'https://www.airkorea.or.kr/dustImage/']) {
             const paths = {pubDate: '2026-10-15 11:00', [code]: p, [other]: imagePath(other)};
-            await add('invalid-' + code + ':' + p, {describe: {paths}}, h => pipeline(h, paths));
+            await add('invalid-' + code + ':' + p, {paths}, h => pipeline(h, paths));
         }
         const paths = {pubDate: '2026-10-15 11:00', [other]: imagePath(other)};
-        await add('missing-' + code, {describe: {paths}}, h => pipeline(h, paths));
+        await add('missing-' + code, {paths}, h => pipeline(h, paths));
     }
+    // `frameStart` arithmetic (the test's leap day and year rollover).
+    const layout = require(path.join(root, 'server/lib/airkoreaImageLayout.js'));
+    const starts = [['2028/02/29', '17'], ['2026/12/31', '23']].map(([day, cycle]) =>
+        ({url: imagePath('pm10', day, cycle), start: new Date(layout.frameStart(imagePath('pm10', day, cycle), 'PM10')).toISOString()}));
     const files = ['server/test/offline/airkorea-image-harness.js', 'server/test/offline/airkorea-image.test.js',
         'server/test/offline/air-harness.js', 'server/lib/airkoreaImageLayout.js', 'server/lib/airkorea.finedust.image.parser.js',
         'server/controllers/airkorea.dust.image.controller.js', 'server/controllers/airkorea.hourly.forecast.controller.js',
         'server/controllers/img.hourly.forecast.controller.js', 'server/config/config.js'];
     const source = Object.fromEntries(files.map(f => [f, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, f))).digest('hex')]));
-    fs.writeFileSync(process.argv[2], JSON.stringify({schema: 1, oracle: {node: process.version, tz: process.env.TZ}, source, cases}));
+    fs.writeFileSync(process.argv[2], JSON.stringify({schema: 2, oracle: {node: process.version, tz: process.env.TZ}, source, cases, starts}));
     console.log('cases', cases.length, cases.map(c => c.name + ':' + (c.error || (c.rows ? c.rows.length : 'map'))).join(' '));
 })().catch(e => { console.error(e); process.exit(1); });
 

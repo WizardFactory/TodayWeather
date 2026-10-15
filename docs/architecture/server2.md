@@ -2227,8 +2227,8 @@ table into the local peer, oak pollen answered no data, and the folds answered f
 The `kma` snapshot now answers `air_forecast`, the last store call S15b-3 owed, so a request no
 longer forwards for it. The KAQ source is gone (#2742), so only the AirKorea image forecast is
 rebuilt. Its parity target is legacy master after #2757 ("Restore AirKorea image-derived hourly
-forecasts", `91c77fcb`; AK, relayed 2026-10-15), with one AK-approved difference: the `kaq`
-mapping below.
+forecasts", `91c77fcb`) and #2762 ("decode variable AirKorea forecast frames and cycle times",
+`1d60f728`) (AK, relayed 2026-10-15), with one AK-approved difference: the `kaq` mapping below.
 
 | Store call | Data | Legacy collection mirrored | tw_svc reader |
 | --- | --- | --- | --- |
@@ -2239,17 +2239,21 @@ mapping below.
 get-pixels 3.3.2 uses (every frame its own zeroed RGBA buffer, transparency and interlace as
 omggif, index stores past a frame's buffer dropped as typed-array stores are). Unlike legacy, the
 frame descriptors are bounded before any buffer exists (at most 240 frames, 4 Mi pixels in a frame
-and 64 Mi in all); a GIF beyond them stores nothing, as one legacy cannot decode.
+and 64 Mi in all), and an LZW code chain longer than the code table (a cycle, on which omggif never
+returns) is an error; such a GIF stores nothing, as one legacy cannot decode.
 `source/air_forecast.rs` ports the layout: only the characterized NIER 09km animation is accepted
-(an 820×820 canvas of exactly 48 frames equal to the size settings, the map and geographic
-settings valid, and in every frame the 36 legend bands at x 680 opaque and within four levels per
-channel of the characterized colours); both image URLs must name the characterized
-`/dustImage/YYYY/MM/DD/23/09km/AQF.YYYYMMDD.NIER_09_01.{PM10|PM2P5}.2days.ani.gif` cycle (a real
-calendar date), whose first frame is the next day 00:00 KST. A station outside the geographic box
-(`lat <= bottom`, `lon >= right` included) is skipped; otherwise its pixel and then rings up to
-three pixels away inside the map rectangle are searched, an opaque pixel matching that frame's
-legend exactly or within four levels gives the band's lower threshold (the top band capped at 320
-for PM10 and 200 for PM2.5, the bottom band 0), and an hour without a match stores nothing. Rows
+(an 820×820 canvas equal to the size settings with any positive number of frames, the map and
+geographic settings valid, and in every frame the 36 legend bands at x 680 opaque and inside each
+characterized colour's neighbourhood: a largest-channel distance below half the distance to the
+nearest other band); both image URLs must name a six-hour cycle
+`/dustImage/YYYY/MM/DD/HH/09km/AQF.YYYYMMDD.NIER_09_01.{PM10|PM2P5}.2days.ani.gif` (HH 05, 11, 17
+or 23, a real calendar date), whose first frame is HH + 1 KST, and each pollutant keeps its own
+frame count and start (live: 48 frames for the 23-cycle, 54 for the 17-cycle). A station outside
+the geographic box (`lat <= bottom`, `lon >= right` included) is skipped; otherwise its pixel and
+then rings up to three pixels away inside the map rectangle are searched, and an opaque pixel
+matching that frame's legend exactly, or nearest to one band inside that band's neighbourhood in
+the frame's own legend, gives the band's lower threshold (the top band capped at 320 for PM10 and
+200 for PM2.5, the bottom band 0); an hour without a match stores nothing. Rows
 carry `dataTime` as the KST text and `date` as that hour's UTC instant, upserted by station, date
 and code; rows older than one day are removed. A missing or rejected path, an image that does not
 download or does not pass the layout stores nothing for the run (legacy no longer stores one
@@ -2266,11 +2270,10 @@ a degenerate box rejects every image).
 **Difference from the earlier S15b-3c decisions (reported 2026-10-15).** Before #2757 this PR
 decoded with the deployed calibration (map 78/663/80/798), a colour table rebuilt from the live
 legend with each band's upper label as its value (PM10 top band 600) and the legacy 48-hour
-timeline from the processing day, and stored one pollutant when the other had no image. #2757 is
-followed instead: its map bounds, a per-frame legend validated against the characterized colours,
-lower thresholds, dates from the image path (only the 23-cycle; the 11- and 17-cycle images the
-`11시`/`17시` documents name otherwise are rejected), KST hours as UTC instants and both paths
-required. With the legacy table the current images left 9.4% (PM10) and 19.4% (PM2.5) of a 0.1°
+timeline from the processing day, and stored one pollutant when the other had no image. #2757 and
+#2762 are followed instead: their map bounds, a per-frame legend validated against the
+characterized colours, lower thresholds, dates and frame counts from the image (six-hour cycles),
+KST hours as UTC instants and both paths required. With the legacy table the current images left 9.4% (PM10) and 19.4% (PM2.5) of a 0.1°
 map grid without a value; that was the reason for the earlier decision and is resolved by #2757's
 legend handling.
 
@@ -2287,10 +2290,13 @@ forecast that exists keeps priority, including a station it has no rows for.
 
 **Request time.** A request that reads the forecast (`airForecastSource` absent, `(null)`,
 `airkorea` or `kaq`) loads the station list and the dust forecast and reads the image fold. The
-fold replays the image acquisitions of the last three KST days in completion order as legacy `do`
-runs. A refresh reads the three day catalogs (small control objects, no record body) and downloads
-only the acquisitions it does not know, one S06 lookup each (a whole-day lookup would pass the 32
-MiB read bound with three acquisitions); each is decoded once per station list. Refreshes are owned
+fold replays the image acquisitions of the last four KST days (a 23시 announcement of day D covers
+D+1 and D+2 and a row lives one more day) in completion order as legacy `do` runs; acquisitions
+completed in the same millisecond are told apart by their fetch group. A refresh reads the four day
+catalogs (small control objects, no record body) and downloads only the acquisitions it does not
+know, one S06 lookup each (a whole-day lookup would pass the 32 MiB read bound with three
+acquisitions), decoding each before the next is read so at most one pair of raw images is held;
+each is decoded once per station list. Refreshes are owned
 tasks, at most every minute, and at once when the station list changed or an image acquisition of
 this process ended (a failed S3 write may still have committed). A late acquisition of an earlier
 announcement or day is therefore folded in completion order within a minute, as a cold reader
@@ -2312,27 +2318,30 @@ Verification (local; test peers only): a pinned Node 16.20.2 oracle
 3.3.2 frames of nine synthetic GIFs (a global palette, a sub-rectangle, a local palette with
 transparency, interlace, a short stream, two streams longer than their frame, a full code table
 and an 820×820 offset frame); the legacy master controllers' `arpltnhourlyforecasts` documents,
-errors and `getForecast` answers over nine runs of characterized synthetic animations (a store,
-its skip, a second announcement, a 17-cycle path, the next images, a missing PM2.5 path, a broken
-legend frame, a 47-frame image, a removal) for eight stations, with Mongoose 5.1.2 over the
-in-memory collection double; and the 29 #2757 regression cases with their own harness. The Rust
+errors and `getForecast` answers over ten runs of characterized synthetic animations (a store,
+its skip, a second announcement, a 54-frame 17-cycle, the next images, a missing PM2.5 path, a
+broken legend frame, a 47-frame image, a 12 cycle, a removal) for eight stations, with Mongoose
+5.1.2 over the in-memory collection double; and the 46 #2757/#2762 regression cases with their
+own harness, plus its cycle-start arithmetic. The Rust
 frames, rows, errors and answers equal them byte for byte. Read back from the S3 test peer with
 empty memory the answers are the same; loopback stubs show one image acquisition for concurrent
 requests published before use, a slow acquisition releasing the request, another host's
 acquisitions (also a late one of the previous day) folded in completion order equal to a cold read
-without a publication count change, a new station list decoded at once, rejected paths (another
-host, a 17-cycle, a missing PM2.5 path) never fetched and a failed download storing nothing, GIFs
-beyond the decoding bounds refused, and the three `kaq`/`airkorea` cases above.
+without a publication count change, a 23시 announcement kept until its rows expire, two
+acquisitions completed in one millisecond both read, a new station list decoded at once, rejected
+paths (another host, a 12 cycle, a missing PM2.5 path) never fetched and a failed download storing
+nothing, GIFs beyond the decoding bounds and a cyclic LZW stream refused, and the three
+`kaq`/`airkorea` cases above.
 
 Live on 2026-10-15 (settings from the operator's `server2/.env` read in-process, never printed;
 records only in a local S06 test peer with room for the GIFs): the server2 acquirer fetched the
-characterized pair the `11시 발표` documents named
-(`/dustImage/2026/10/14/23/09km/AQF.20261014.NIER_09_01.{PM10,PM2P5}.2days.ani.gif`, 5.1/4.9 MB,
-sha256 `d2193d68…` and `26dba4f5…`, the #2757 evidence hashes) and published it with its manifest;
-the server2 decoder and the legacy master controllers (real get-pixels, the #2757 smoke harness)
-stored the same 384 rows for the four smoke reference points (Seoul, Daejeon, Busan, Jeju: 48 hours
-per pollutant from 2026-10-15 00:00 KST, PM10 0-75 and PM2.5 0-27). The `17시 발표` documents
-named a 17-cycle animation (54 frames), which both reject. On the loaded test machine a 6 MB write
+pairs the `11시 발표` documents named
+(`/dustImage/2026/10/14/23/…`, 48 frames, 5.1/4.9 MB, sha256 `d2193d68…`/`26dba4f5…`, the #2757
+evidence hashes) and the `17시 발표` documents named (`/dustImage/2026/10/15/17/…`, 54 frames,
+6.2/5.9 MB, sha256 `638105c1…`/`2fdc6c7c…`) and published them with their manifests; the server2
+decoder and the legacy master controllers (real get-pixels, the #2757 smoke harness) stored the
+same 384 rows (from 2026-10-15 00:00 KST) and 432 rows (from 2026-10-15 18:00 KST) for the four
+smoke reference points (Seoul, Daejeon, Busan, Jeju). On the loaded test machine a 6 MB write
 to the Python peer outlasted the 3-second S3 operation bound (an ambiguous write); the check used
 the 9-second maximum for the peer.
 
