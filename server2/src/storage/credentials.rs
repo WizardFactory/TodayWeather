@@ -113,7 +113,7 @@ impl InstanceRole {
         // Spaced before the attempt, so an attempt cancelled by the caller's deadline also
         // counts; the whole refresh is bounded.
         *next = Some(Instant::now() + RETRY_AFTER);
-        let fetched = timeout(WAIT, self.fetch(now))
+        let fetched = timeout(WAIT, self.fetch())
             .await
             .unwrap_or(Err(Error::Transport));
         match fetched {
@@ -127,10 +127,11 @@ impl InstanceRole {
                 *self.cached.lock().unwrap_or_else(|e| e.into_inner()) = Some(fetched);
                 Ok(credentials)
             }
-            Err(error) => usable.ok_or(error),
+            // Re-checked now: the cached credential may have aged during the attempt.
+            Err(error) => self.cached(now_ms()?, USABLE_FOR_MS).ok_or(error),
         }
     }
-    async fn fetch(&self, now: u64) -> Result<Cached, Error> {
+    async fn fetch(&self) -> Result<Cached, Error> {
         let token = self
             .document(Method::PUT, "/latest/api/token", None)
             .await?;
@@ -169,7 +170,8 @@ impl InstanceRole {
                 .map_err(|_| Error::Transport)?;
         let expires_ms =
             u64::try_from(parsed.expiration().as_millisecond()).map_err(|_| Error::Transport)?;
-        if expires_ms <= now.saturating_add(USABLE_FOR_MS)
+        // Usable from now, after the requests, not from the start of the attempt.
+        if expires_ms <= now_ms()?.saturating_add(USABLE_FOR_MS)
             || parsed.key().is_empty()
             || parsed.secret().is_empty()
             || parsed.token().is_empty()
@@ -465,6 +467,56 @@ mod tests {
             );
             assert_eq!(d.documents.load(Ordering::Acquire), 0);
         }
+    }
+
+    /// S10F-R1-F1: a cached credential that ages below the usable lifetime while a refresh
+    /// fails is not returned.
+    #[tokio::test]
+    async fn a_credential_that_ages_during_a_failed_refresh_is_not_used() {
+        let (d, role) = double().await;
+        set(&d, success(62));
+        assert_eq!(role.credentials().await.unwrap().key(), "role-key-1");
+        set(&d, |_| (500, String::new()));
+        d.delay_ms.store(2500, Ordering::Release);
+        elapse(&role).await;
+        assert_eq!(role.credentials().await.err(), Some(Error::Transport));
+    }
+
+    /// Concurrent first callers share one refresh; during a refresh, callers holding a usable
+    /// credential do not wait for it.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn concurrent_callers_share_one_refresh() {
+        let (d, role) = double().await;
+        let role = Arc::new(role);
+        d.delay_ms.store(200, Ordering::Release);
+        let callers: Vec<_> = (0..8)
+            .map(|_| {
+                let role = role.clone();
+                tokio::spawn(async move { role.credentials().await })
+            })
+            .collect();
+        for caller in callers {
+            assert_eq!(caller.await.unwrap().unwrap().key(), "role-key-1");
+        }
+        assert_eq!(d.documents.load(Ordering::Acquire), 1);
+        // Inside the refresh window but usable: the refreshing caller waits for IMDS, the
+        // others return the cached credential at once.
+        set(&d, success(240));
+        elapse(&role).await;
+        *role.cached.lock().unwrap() = None;
+        assert_eq!(role.credentials().await.unwrap().key(), "role-key-2");
+        set(&d, success(6 * 3600));
+        elapse(&role).await;
+        d.delay_ms.store(1000, Ordering::Release);
+        let refreshing = {
+            let role = role.clone();
+            tokio::spawn(async move { role.credentials().await })
+        };
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        let started = std::time::Instant::now();
+        assert_eq!(role.credentials().await.unwrap().key(), "role-key-2");
+        assert!(started.elapsed() < Duration::from_millis(500));
+        assert_eq!(refreshing.await.unwrap().unwrap().key(), "role-key-3");
     }
 
     #[tokio::test]
