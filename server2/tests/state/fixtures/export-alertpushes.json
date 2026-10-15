@@ -1,0 +1,2 @@
+[{"_id":{"$oid":"5a1f00000000000000000101"},"type":"ios","fcmToken":"tok-a","cityIndex":0,"id":0,"startTime":82800,"endTime":46800,"reverseTime":true,"enable":true,"geo":[127.1,37.5],"lang":"ko","source":"KMA","units":{"airUnit":"airkorea"},"airAlertsBreakPoint":3,"precipAlerts":{"lastState":0,"pushTime":{"$date":"2026-10-14T03:00:00Z"}},"airAlerts":{"lastGrade":2,"lastCode":"pm10"},"updatedAt":{"$date":"2026-10-02T00:00:00.000Z"},"__v":0},
+{"_id":{"$oid":"5a1f00000000000000000102"},"type":"ios","fcmToken":"tok-a","cityIndex":1,"id":1,"airAlerts":{"lastGrade":"bad"}}]
