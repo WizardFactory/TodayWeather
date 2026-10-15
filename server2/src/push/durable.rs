@@ -154,9 +154,10 @@ pub fn entry_bytes(seq: u64, next_n: u64, nonce: &str, changes: &[Change]) -> Ve
         match &change.record {
             Some(r) => ejson::write_record(change.coll, change.n, r, &mut s),
             None => s.push_str(&format!(
-                "{{\"c\":\"{}\",\"n\":{},\"removed\":true}}",
+                "{{\"c\":\"{}\",\"n\":{},\"_id\":\"{}\",\"removed\":true}}",
                 change.coll.collection(),
-                change.n
+                change.n,
+                super::store::oid_hex(&change.oid)
             )),
         }
         s.push('\n');
@@ -205,9 +206,15 @@ fn parse_entry(seq: u64, body: &[u8]) -> Result<Option<(u64, Vec<Change>)>, Stat
                 .get("n")
                 .and_then(OrderedJson::number)
                 .ok_or(StateError::Corrupt("journal removal"))? as u64;
+            let oid = item
+                .get("_id")
+                .and_then(OrderedJson::string)
+                .and_then(|s| super::store::parse_oid(&s))
+                .ok_or(StateError::Corrupt("journal removal"))?;
             changes.push(Change {
                 coll,
                 n,
+                oid,
                 record: None,
             });
         } else {
@@ -215,6 +222,7 @@ fn parse_entry(seq: u64, body: &[u8]) -> Result<Option<(u64, Vec<Change>)>, Stat
             changes.push(Change {
                 coll,
                 n,
+                oid: record.oid,
                 record: Some(record),
             });
         }
@@ -342,8 +350,22 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
                 for line in it {
                     let r = OrderedJson::parse(line)
                         .map_err(|_| StateError::Corrupt("snapshot record json"))?;
-                    let (c, n, record) = ejson::read_record(&r)?;
-                    state.coll_mut(c).put(n, record);
+                    if r.get("removed") == Some(&OrderedJson::Bool(true)) {
+                        let c = r
+                            .get("c")
+                            .and_then(OrderedJson::string)
+                            .and_then(|c| Coll::parse(&c))
+                            .ok_or(StateError::Corrupt("snapshot removal"))?;
+                        let oid = r
+                            .get("_id")
+                            .and_then(OrderedJson::string)
+                            .and_then(|s| super::store::parse_oid(&s))
+                            .ok_or(StateError::Corrupt("snapshot removal"))?;
+                        state.coll_mut(c).mark_deleted(oid);
+                    } else {
+                        let (c, n, record) = ejson::read_record(&r)?;
+                        state.coll_mut(c).put(n, record);
+                    }
                     seen += 1;
                 }
                 if seen != count {
@@ -577,9 +599,25 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
                 current.clear();
                 parts.push((key, body, std::mem::take(count)));
             };
-        for (n, c, oid, doc) in all {
-            let mut line = String::new();
-            ejson::write_encoded(c, n, oid, doc, &mut line);
+        let removed: Vec<(Coll, Oid)> = [Coll::Alarm, Coll::Alert]
+            .into_iter()
+            .flat_map(|c| state.coll(c).deleted().into_iter().map(move |o| (c, o)))
+            .collect();
+        let lines = all
+            .into_iter()
+            .map(|(n, c, oid, doc)| {
+                let mut line = String::new();
+                ejson::write_encoded(c, n, oid, doc, &mut line);
+                line
+            })
+            .chain(removed.iter().map(|(c, oid)| {
+                format!(
+                    "{{\"c\":\"{}\",\"_id\":\"{}\",\"removed\":true}}",
+                    c.collection(),
+                    super::store::oid_hex(oid)
+                )
+            }));
+        for line in lines {
             if count > 0 && current.len() + line.len() + 64 > self.config.part_bytes {
                 flush(&mut current, &mut count, &mut parts);
             }

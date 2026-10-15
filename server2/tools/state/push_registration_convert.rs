@@ -7,6 +7,8 @@
 //! authorized read-only operator action. The report holds counts, positions and reasons only:
 //! no field values or device tokens.
 //!
+//! The import file must not exist yet; it is created owner-only (0600).
+//!
 //! Usage: push_registration_convert PUSHES_EXPORT ALERTPUSHES_EXPORT IMPORT_FILE REPORT_FILE
 use server2::push::{Coll, migrate};
 
@@ -50,11 +52,13 @@ fn main() {
     );
 }
 
-/// The import file holds device tokens: owner-only permissions where the platform has them.
+/// The import file holds device tokens: it must be a new file (an existing file or symbolic
+/// link is refused, so no wider permission or other target is reused), owner-only where the
+/// platform has modes.
 fn write_private(path: &str, bytes: &[u8]) -> std::io::Result<()> {
     use std::io::Write;
     let mut options = std::fs::OpenOptions::new();
-    options.write(true).create(true).truncate(true);
+    options.write(true).create_new(true);
     #[cfg(unix)]
     {
         use std::os::unix::fs::OpenOptionsExt;

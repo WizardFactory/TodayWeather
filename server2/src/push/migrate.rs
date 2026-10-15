@@ -214,9 +214,12 @@ pub struct ImportCounts {
     pub unchanged: usize,
     /// Records server2 changed after the legacy copy (newer `updatedAt`); left as they are.
     pub kept: usize,
+    /// Records server2 removed after an earlier copy; not re-created.
+    pub deleted: usize,
 }
 
-/// The changes that merge `records` into `state` by `_id`.
+/// The changes that merge `records` into `state` by `_id`. A record server2 removed after an
+/// earlier copy stays removed.
 pub fn plan_import(state: &State, records: &[(Coll, Record)]) -> (Vec<Change>, u64, ImportCounts) {
     let mut by_oid: HashMap<(Coll, Oid), (u64, &[u8])> = HashMap::new();
     for c in [Coll::Alarm, Coll::Alert] {
@@ -230,11 +233,16 @@ pub fn plan_import(state: &State, records: &[(Coll, Record)]) -> (Vec<Change>, u
     for (c, record) in records {
         let mut encoded = String::new();
         ejson::write_obj(&record.doc, &mut encoded);
+        if state.coll(*c).is_deleted(&record.oid) {
+            counts.deleted += 1;
+            continue;
+        }
         match by_oid.get(&(*c, record.oid)) {
             None => {
                 changes.push(Change {
                     coll: *c,
                     n: next_n,
+                    oid: record.oid,
                     record: Some(record.clone()),
                 });
                 next_n += 1;
@@ -252,6 +260,7 @@ pub fn plan_import(state: &State, records: &[(Coll, Record)]) -> (Vec<Change>, u
                     changes.push(Change {
                         coll: *c,
                         n: *n,
+                        oid: record.oid,
                         record: Some(record.clone()),
                     });
                     counts.updated += 1;

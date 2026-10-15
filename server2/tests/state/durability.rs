@@ -266,6 +266,72 @@ async fn a_concurrent_writer_entry_is_caught_up_before_planning_again() {
 }
 
 #[tokio::test]
+async fn two_writers_racing_for_the_same_sequences_converge() {
+    let s3 = MemS3::new();
+    let a = start(&s3, FixedClock::at(T0), fast_config()).await;
+    let b = start(&s3, FixedClock::at(T0), fast_config()).await;
+    let mut tasks = Vec::new();
+    for i in 0..10u32 {
+        for (name, service) in [("a", a.clone()), ("b", b.clone())] {
+            tasks.push(tokio::spawn(async move {
+                let token = format!("{name}-{i}");
+                call(
+                    &service,
+                    "POST",
+                    "/v000902/push-list",
+                    serde_json::json!([alarm(&token, i)]),
+                )
+                .await
+            }));
+        }
+    }
+    for t in tasks {
+        let (status, body) = t.await.unwrap();
+        // A writer that loses three races in a row answers the store error; never a false success.
+        assert!(
+            status == 200 && body.contains("upserted") || body == "[null]",
+            "{status} {body}"
+        );
+    }
+    let restored = start(&s3, FixedClock::at(T0), fast_config()).await;
+    let shared = restored.state();
+    {
+        let state = shared.read().unwrap();
+        let mut seen = std::collections::BTreeSet::new();
+        for s in 1..=state.seq {
+            let entry = String::from_utf8(s3.body(&journal_key(s)).unwrap()).unwrap();
+            assert!(!entry.contains("\"void\""), "no ambiguity in this race");
+            seen.insert(s);
+        }
+        assert_eq!(seen.len() as u64, state.seq, "contiguous journal");
+        // Every acknowledged registration is in the restored state, each once.
+        let tokens = tokens(&state, Coll::Alarm);
+        let unique: std::collections::BTreeSet<_> = tokens.iter().collect();
+        assert_eq!(unique.len(), tokens.len());
+        assert!(tokens.len() >= 18, "{tokens:?}");
+    }
+    // Both writers converge on the same state when they next plan.
+    call(
+        &a,
+        "PUT",
+        "/v000902/push",
+        serde_json::json!({"newToken": "x", "oldToken": "none"}),
+    )
+    .await;
+    call(
+        &b,
+        "PUT",
+        "/v000902/push",
+        serde_json::json!({"newToken": "x", "oldToken": "none"}),
+    )
+    .await;
+    assert_eq!(
+        records(&a.state().read().unwrap(), Coll::Alarm),
+        records(&b.state().read().unwrap(), Coll::Alarm)
+    );
+}
+
+#[tokio::test]
 async fn concurrent_requests_are_ordered_and_every_acknowledged_change_survives() {
     let s3 = MemS3::new();
     let service = start(&s3, FixedClock::at(T0), fast_config()).await;

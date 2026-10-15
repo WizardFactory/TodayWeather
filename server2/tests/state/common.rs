@@ -280,6 +280,7 @@ pub async fn seed(s3: &MemS3, records: &[(Coll, Record)]) {
         .map(|(n, (c, r))| Change {
             coll: *c,
             n: n as u64,
+            oid: r.oid,
             record: Some(r.clone()),
         })
         .collect();

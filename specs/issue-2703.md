@@ -29,7 +29,9 @@ Task: issue-2703-s18a; source: [intent](../intent/issue-2703.md); base 1d60f728;
   update, as `Model.update` passes it). The S3 failure message is `push state storage unavailable`.
 - Deliberate differences: update operators in bodies are dropped; operator query values are cast
   errors; a castable body `_id` is ignored; duplicate keys inside one `push-list` apply in order; no
-  session cookie; replica-set reply metadata is not reproduced.
+  session cookie; replica-set reply metadata is not reproduced; date strings follow the ECMAScript
+  date-time format and Mongoose's millisecond rule, while V8's legacy free-form date text is a cast
+  error (only client-supplied `precipAlerts`/`airAlerts.pushTime`, which the app never sends).
 
 ## State and durability
 
@@ -42,8 +44,10 @@ Task: issue-2703-s18a; source: [intent](../intent/issue-2703.md); base 1d60f728;
   200 committed (apply, answer); 409/412 conflict (apply the other entries, plan again, at most 3
   attempts); other 4xx or credential failure rejected; transport/timeout/5xx read back (ours:
   committed; absent: void entry, failure; undecided: unsettled, failure until settled).
-- Bounds: S3 operation 2 s; request wait 9 s; queue 64; snapshot every 1,024 entries in 2 MiB parts;
-  restore reads at most 8 objects at once and retries every 5 s while unready.
+- Removals keep the record `_id` (journal line, snapshot line); the importer never re-creates it.
+- Bounds: S3 operation 2 s (snapshot part upload 8 s); request wait 9 s; queue 64; snapshot every
+  1,024 entries in 2 MiB parts (retried after the next commit while failing); restore reads at most
+  8 objects at once and retries every 5 s while unready.
 - No local-disk copy of state or tokens; no logs with tokens (counters only).
 
 ## One-time copy
@@ -52,5 +56,7 @@ Task: issue-2703-s18a; source: [intent](../intent/issue-2703.md); base 1d60f728;
   `$numberInt`, `$numberLong`, `$numberDouble`. Malformed: not JSON, no ObjectId `_id`, duplicate
   `_id`, model field of the wrong kind, unsupported type, no token. Report: counts, positions,
   reasons; import file mode 0600.
-- Importer: restore; merge by `_id` (insert / unchanged / newer legacy `updatedAt` replaces / server2
-  kept); 1 MiB journal entries; re-plan after a conflict or void; snapshot when anything changed.
+- Importer: restore; merge by `_id` (insert / unchanged / newer legacy `updatedAt` replaces / removed
+  in server2 stays removed / server2 kept); 1 MiB journal entries; re-plan after a conflict or void;
+  snapshot when anything changed. The converter refuses an existing output path (no reused
+  permissions or symbolic-link targets) and creates the import file 0600.

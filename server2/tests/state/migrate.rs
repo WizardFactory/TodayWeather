@@ -100,8 +100,14 @@ async fn import_is_idempotent_and_restores_with_the_registration_api() {
     let s3 = MemS3::new();
     let first = import(&s3, &records, 600).await;
     assert_eq!(
-        (first.inserted, first.updated, first.unchanged, first.kept),
-        (4, 0, 0, 0)
+        (
+            first.inserted,
+            first.updated,
+            first.unchanged,
+            first.kept,
+            first.deleted
+        ),
+        (4, 0, 0, 0, 0)
     );
     let entries = s3.keys("index/v2/push/state/journal/").len();
     assert!(entries >= 2, "bounded journal entries: {entries}");
@@ -109,8 +115,14 @@ async fn import_is_idempotent_and_restores_with_the_registration_api() {
     // A re-run changes nothing and writes no journal entry.
     let again = import(&s3, &records, 600).await;
     assert_eq!(
-        (again.inserted, again.updated, again.unchanged, again.kept),
-        (0, 0, 4, 0)
+        (
+            again.inserted,
+            again.updated,
+            again.unchanged,
+            again.kept,
+            again.deleted
+        ),
+        (0, 0, 4, 0, 0)
     );
     assert_eq!(s3.keys("index/v2/push/state/journal/").len(), entries);
     // The imported registrations restore from S3 with every field and serve the existing API.
@@ -143,8 +155,14 @@ async fn import_is_idempotent_and_restores_with_the_registration_api() {
     // Server2's change is newer than the legacy copy: a re-run keeps it.
     let rerun = import(&s3, &records, 600).await;
     assert_eq!(
-        (rerun.inserted, rerun.updated, rerun.unchanged, rerun.kept),
-        (0, 0, 2, 2)
+        (
+            rerun.inserted,
+            rerun.updated,
+            rerun.unchanged,
+            rerun.kept,
+            rerun.deleted
+        ),
+        (0, 0, 2, 2, 0)
     );
     // A newer legacy record (later updatedAt) replaces the server2 copy.
     let mut newer = records.clone();
@@ -156,6 +174,43 @@ async fn import_is_idempotent_and_restores_with_the_registration_api() {
     let update = import(&s3, &newer, 600).await;
     assert_eq!(update.updated, 1);
     assert!(s3.body(&journal_key(1)).is_some());
+    // A registration the user removed through the API stays removed when the copy is re-run,
+    // also after a restore from the journal and from a snapshot.
+    let service = start(
+        &s3,
+        FixedClock::at("2026-10-15T03:00:00.000Z"),
+        fast_config(),
+    )
+    .await;
+    let body = serde_json::to_vec(&serde_json::json!({"fcmToken": "tok-c"})).unwrap();
+    let request = Request::builder()
+        .method("DELETE")
+        .uri("/v000902/push")
+        .header("content-type", "application/json")
+        .header("content-length", body.len())
+        .body(HttpBody::from(body))
+        .unwrap();
+    let response = service.handle(request).await.unwrap();
+    assert_eq!(
+        String::from_utf8(super::common::body(response).await).unwrap(),
+        r#"[{"n":0,"ok":1},{"n":1,"ok":1}]"#
+    );
+    let after_delete = import(&s3, &newer, 600).await;
+    assert_eq!(
+        (after_delete.inserted, after_delete.deleted),
+        (0, 1),
+        "an acknowledged removal is not revived"
+    );
+    let mut durable = Durable::new(
+        Arc::new(s3.clone()),
+        DurableConfig::default(),
+        Arc::new(Counters::default()),
+    );
+    let state = durable.restore().await.unwrap();
+    let plan = durable.prepare_snapshot(&state);
+    durable.write_snapshot(plan).await.unwrap();
+    let from_snapshot = import(&s3, &newer, 600).await;
+    assert_eq!((from_snapshot.inserted, from_snapshot.deleted), (0, 1));
 }
 
 fn records_of(state: &server2::push::State) -> Vec<(Coll, server2::push::Record)> {

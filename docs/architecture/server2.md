@@ -2517,8 +2517,12 @@ metadata (`opTime`, `electionId`, `$clusterTime`) is not reproduced and the app 
 query values (`{"$ne": ...}`) are cast errors, so a body cannot run MongoDB operators (legacy
 passed them through). A castable `_id` in a body is ignored (MongoDB refuses to change `_id`; an
 upsert would take a client-chosen id). Items of one `push-list` request that target the same key
-apply in list order (legacy ran them concurrently and could duplicate an alert). The session
-cookie is not set (as S12).
+apply in list order (legacy ran them concurrently and could duplicate an alert). Date strings in
+date fields follow Mongoose (`new Date(string)`) for the ECMAScript date-time format and the
+millisecond rule; V8's legacy free-form forms (`Oct 1 2020`, ` 2020`, `2020-02-30`, unsigned
+six-digit years) are cast errors. Only `precipAlerts`/`airAlerts.pushTime` can carry a client date
+(`updatedAt` is set by the server) and the app never sends them. The session cookie is not set
+(as S12).
 
 **State.** Records keep the legacy document shape (field names, BSON kinds, `_id`, natural
 order), so the copied registrations and new ones are one data set. Memory holds each record as
@@ -2541,11 +2545,14 @@ transport error, 5xx) is read back: our body means committed; absent means a `vo
 written conditionally so the original can never commit later; if that cannot be decided, the
 writer accepts no further change until it can (a later read that finds the entry applies it,
 durable though never acknowledged). A 4xx refusal and a credential failure before sending are
-not commits. Restore reads the head, its parts (at most 8 reads at once, digests and counts
+not commits. A removal entry keeps the record's `_id`, and snapshots keep removed `_id`s, so a
+registration removed through the API is never re-created by a later import. Restore reads the head, its parts (at most 8 reads at once, digests and counts
 checked) and the journal after it until the first absent sequence; a failed restore leaves the
-service unready and retries every 5 s. A snapshot is written after 1,024 entries; its failure
-leaves the journal authoritative. S3 operations have a 2 s bound; a request waits at most 9 s
-(the app's timeout is 10 s). State is memory and S3 only: no local-disk copy is made, so device
+service unready and retries every 5 s. A snapshot is written after 1,024 entries (each part
+upload bounded to 8 s); a failed snapshot leaves the journal authoritative and is retried after
+the next commit, so while snapshots keep failing the journal to replay grows beyond 1,024
+entries. Other S3 operations have a 2 s bound; a request waits at most 9 s (the app's timeout is
+10 s). State is memory and S3 only: no local-disk copy is made, so device
 tokens are not written to disk (AK's 2026-10-15 disk-cache rule changes nothing here).
 
 When the change cannot be made durable in time (S3 refusal, void, unready state, full queue or
@@ -2562,7 +2569,8 @@ ObjectId `_id`, repeats an `_id`, has a model field of the wrong BSON kind, uses
 Extended JSON type, or has neither `fcmToken` nor `registrationId`; fields the model does not
 declare are kept. `push_registration_import IMPORT` (server2 S3 settings, as the S12 importer)
 restores the state, merges by `_id` (absent: insert in export order; identical: unchanged; a
-newer legacy `updatedAt`: replace; otherwise the server2 change is kept), commits 1 MiB journal
+newer legacy `updatedAt`: replace; removed in server2: stays removed; otherwise the server2 change
+is kept), commits 1 MiB journal
 entries, re-plans after another writer's entry and writes a snapshot. A re-run with the same file
 writes nothing. The final run before cutover is an S20 operator step.
 
@@ -2571,7 +2579,8 @@ writes nothing. The final run before cutover is an S20 operator step.
 5.1.2 over an in-memory collection double; synthetic data); server2 matches status, body bytes,
 headers (except date, connection and the session cookie) and both collections after every
 request, and the final state after an empty-memory restore. Fault tests cover refused, lost,
-committed-but-lost and unreadable writes, a concurrent writer, 24 concurrent requests (contiguous
+committed-but-lost and unreadable writes, a concurrent writer, two writers racing for the same
+sequences (no false success, contiguous journal, converged state), 24 concurrent requests (contiguous
 journal, identical restore), multi-part snapshots, a corrupt snapshot (unready, legacy store
 errors) and a hanging store (answer within the wait, nothing acknowledged late); one test runs
 the journal over `HttpS3Transport` and the owned S3 peer with injected `commit500`,

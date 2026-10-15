@@ -180,8 +180,9 @@ fn cast_bool(v: &Val, path: &str) -> CastResult<Val> {
         _ => Err(CastError::new("boolean", v, path)),
     }
 }
-/// `SchemaDate.prototype.cast`. Strings parse as ISO 8601 instants (the forms `Date` itself
-/// writes); other free-form date strings are rejected (documented subset).
+/// `SchemaDate.prototype.cast`: a numeric string at or beyond year 275760 is milliseconds;
+/// any other string goes through `new Date(string)` ([`date_string`]); arrays and objects
+/// through their primitive value.
 fn cast_date(v: &Val, path: &str) -> CastResult<Val> {
     let fail = || CastError::new("date", v, path);
     let ms = match v {
@@ -192,13 +193,14 @@ fn cast_date(v: &Val, path: &str) -> CastResult<Val> {
         Val::Num(n) => *n,
         Val::Str(s) => {
             let n = crate::world::js::string_to_number(s);
-            if !n.is_nan() {
+            if !n.is_nan() && !(-271820. ..275761.).contains(&n) {
                 n
             } else {
-                crate::warnings::js::parse_iso(s).map_or(f64::NAN, |ms| ms as f64)
+                date_string(s)
             }
         }
-        Val::Arr(_) | Val::Obj(_) => f64::NAN,
+        // `new Date(value.valueOf())`: an array or object is converted to its primitive string.
+        Val::Arr(_) | Val::Obj(_) => date_string(&super::js::to_string(v)),
     };
     if ms.is_finite() && ms.abs() <= 8.64e15 {
         Ok(Val::Date(ms.trunc()))
@@ -206,6 +208,110 @@ fn cast_date(v: &Val, path: &str) -> CastResult<Val> {
         Err(fail())
     }
 }
+/// `new Date(string).getTime()` for the ECMAScript date-time string format (`YYYY`,
+/// `YYYY-MM`, `YYYY-MM-DD`, optional `THH:mm`, `:ss`, `.sss`, `Z` or `±HH:mm`, and the `±YYYYYY`
+/// extended year): date-only forms are UTC; date-times without an offset are local time, taken
+/// as UTC like every server2 port (S02 oracle normalization; the service host's effective zone
+/// is unrecorded). Other text (V8's legacy free-form parser) casts as an invalid date: a
+/// recorded difference for fields the app never sends (`precipAlerts`/`airAlerts.pushTime`).
+pub fn date_string(s: &str) -> f64 {
+    let b = s.as_bytes();
+    let mut i = 0;
+    let digits = |i: &mut usize, n: usize| -> Option<i64> {
+        let part = s.get(*i..*i + n)?;
+        if !part.bytes().all(|c| c.is_ascii_digit()) {
+            return None;
+        }
+        *i += n;
+        part.parse().ok()
+    };
+    let mut parse = || -> Option<f64> {
+        let year = match b.first()? {
+            b'+' | b'-' => {
+                let sign = if b[0] == b'-' { -1 } else { 1 };
+                i = 1;
+                let y = digits(&mut i, 6)?;
+                if sign == -1 && y == 0 {
+                    return None;
+                }
+                sign * y
+            }
+            _ => digits(&mut i, 4)?,
+        };
+        let (mut month, mut day) = (1, 1);
+        if b.get(i) == Some(&b'-') {
+            i += 1;
+            month = digits(&mut i, 2)?;
+            if b.get(i) == Some(&b'-') {
+                i += 1;
+                day = digits(&mut i, 2)?;
+            }
+        }
+        let (mut h, mut mi, mut sec, mut ms) = (0, 0, 0, 0);
+        let mut offset: Option<i64> = Some(0);
+        if b.get(i) == Some(&b'T') {
+            i += 1;
+            h = digits(&mut i, 2)?;
+            if b.get(i) != Some(&b':') {
+                return None;
+            }
+            i += 1;
+            mi = digits(&mut i, 2)?;
+            if b.get(i) == Some(&b':') {
+                i += 1;
+                sec = digits(&mut i, 2)?;
+                if b.get(i) == Some(&b'.') {
+                    i += 1;
+                    let start = i;
+                    while b.get(i).is_some_and(u8::is_ascii_digit) {
+                        i += 1;
+                    }
+                    if i == start {
+                        return None;
+                    }
+                    ms = format!("{:0<3}", &s[start..i])[..3].parse().ok()?;
+                }
+            }
+            // A date-time without an offset is local time (UTC on the legacy host).
+            offset = Some(0);
+            match b.get(i) {
+                Some(b'Z') => i += 1,
+                Some(b'+' | b'-') => {
+                    let sign = if b[i] == b'-' { -1 } else { 1 };
+                    i += 1;
+                    let oh = digits(&mut i, 2)?;
+                    if b.get(i) != Some(&b':') {
+                        return None;
+                    }
+                    i += 1;
+                    let om = digits(&mut i, 2)?;
+                    if oh > 23 || om > 59 {
+                        return None;
+                    }
+                    offset = Some(sign * (oh * 60 + om));
+                }
+                _ => (),
+            }
+        }
+        if i != b.len()
+            || !(1..=12).contains(&month)
+            || day < 1
+            || day > crate::world::js::days_in_month(year, month)
+            || h > 24
+            || mi > 59
+            || sec > 59
+            || (h == 24 && (mi, sec, ms) != (0, 0, 0))
+        {
+            return None;
+        }
+        let days = crate::world::js::days_from_civil(year, month, day);
+        let local = days * 86_400_000 + h * 3_600_000 + mi * 60_000 + sec * 1000 + ms;
+        let t = (local - offset? * 60_000) as f64;
+        (t.abs() <= 8.64e15).then_some(t)
+    };
+    parse().unwrap_or(f64::NAN)
+}
+
 /// `SchemaArray.prototype.cast` for `[Number]`/`[Boolean]` with a document or query context:
 /// the 2d-index special case makes an empty `geo` array `undefined`.
 fn cast_array(ty: Ty, v: &Val, path: &str) -> CastResult<Val> {
@@ -520,5 +626,35 @@ mod tests {
             cast_string(&Val::Arr(vec![Val::Num(1.), Val::Null]), "x").unwrap(),
             Val::Str("1,".into())
         );
+    }
+    /// Expected values from Mongoose 5.1.2 `SchemaDate` on Node 16.20.2 (`TZ=UTC`), probed with
+    /// the pinned S18 oracle runtime.
+    #[test]
+    fn date_casts_match_mongoose() {
+        let s = |v: &str| Val::Str(v.into());
+        for (value, expected) in [
+            (s("2020"), Some(1_577_836_800_000.)),
+            (s("2020-10"), Some(1_601_510_400_000.)),
+            (s("2020-10-01"), Some(1_601_510_400_000.)),
+            (s("2020-10-01T00:00"), Some(1_601_510_400_000.)),
+            (s("2020-10-01T09:30:15.5+09:00"), Some(1_601_512_215_500.)),
+            (s("+002020-01-01T00:00:00Z"), Some(1_577_836_800_000.)),
+            (s("275761"), Some(275_761.)),
+            (s("-271821"), Some(-271_821.)),
+            (s("1600000000000"), Some(1_600_000_000_000.)),
+            (s("2020-10-01T24:00"), Some(1_601_596_800_000.)),
+            (Val::Arr(vec![s("2020")]), Some(1_577_836_800_000.)),
+            (Val::Num(1_600_000_000_000.), Some(1_600_000_000_000.)),
+            (Val::Obj(Obj::new()), None),
+            (Val::Bool(true), None),
+        ] {
+            let got = cast_date(&value, "airAlerts.pushTime").ok();
+            assert_eq!(got, expected.map(Val::Date), "{value:?}");
+        }
+        // V8's legacy free-form parser is not ported (recorded difference): these are cast
+        // errors here, while Mongoose stores 2020-10-01, 2020-01-01, +275760-01-01, 2020-03-01.
+        for text in ["Oct 1 2020", " 2020", "275760", "2020-02-30"] {
+            assert!(cast_date(&s(text), "p").is_err(), "{text}");
+        }
     }
 }

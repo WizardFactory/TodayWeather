@@ -3,7 +3,7 @@
 //! semantics the legacy store relies on, and a transaction overlay that plans one request's
 //! changes without touching the shared state until the change is durable.
 use crate::world::js::{Obj, Val};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 /// A 12-byte MongoDB ObjectId.
 pub type Oid = [u8; 12];
@@ -118,6 +118,8 @@ impl Stored {
 pub struct Collection {
     records: BTreeMap<u64, Stored>,
     tokens: [HashMap<String, BTreeSet<u64>>; 2],
+    /// `_id`s of removed records (the import never re-creates an acknowledged removal).
+    deleted: HashSet<Oid>,
 }
 impl Collection {
     pub fn len(&self) -> usize {
@@ -165,6 +167,19 @@ impl Collection {
         if let Some(old) = self.records.remove(&n) {
             self.index(n, &old, false);
         }
+    }
+    /// Record an acknowledged removal of `oid`.
+    pub fn mark_deleted(&mut self, oid: Oid) {
+        self.deleted.insert(oid);
+    }
+    pub fn is_deleted(&self, oid: &Oid) -> bool {
+        self.deleted.contains(oid)
+    }
+    /// Removed `_id`s, sorted (snapshots).
+    pub fn deleted(&self) -> Vec<Oid> {
+        let mut out: Vec<Oid> = self.deleted.iter().copied().collect();
+        out.sort_unstable();
+        out
     }
     fn matches(&self, n: u64, query: &[(String, Cond)]) -> bool {
         let Some(stored) = self.records.get(&n) else {
@@ -227,7 +242,11 @@ impl State {
         for change in changes {
             match &change.record {
                 Some(r) => self.coll_mut(change.coll).put(change.n, r.clone()),
-                None => self.coll_mut(change.coll).remove(change.n),
+                None => {
+                    let coll = self.coll_mut(change.coll);
+                    coll.remove(change.n);
+                    coll.mark_deleted(change.oid);
+                }
             }
             self.next_n = self.next_n.max(change.n + 1);
         }
@@ -239,6 +258,8 @@ impl State {
 pub struct Change {
     pub coll: Coll,
     pub n: u64,
+    /// The record's `_id` (kept for a removal, so a re-run import cannot revive it).
+    pub oid: Oid,
     pub record: Option<Record>,
 }
 
@@ -322,6 +343,7 @@ pub trait OidSource: Send {
 pub struct Txn<'a> {
     base: &'a State,
     changes: BTreeMap<(Coll, u64), Option<Record>>,
+    removed: HashMap<(Coll, u64), Oid>,
     next_n: u64,
     pub now_ms: f64,
     ids: &'a mut dyn OidSource,
@@ -331,6 +353,7 @@ impl<'a> Txn<'a> {
         Self {
             base,
             changes: BTreeMap::new(),
+            removed: HashMap::new(),
             next_n: base.next_n,
             now_ms,
             ids,
@@ -374,6 +397,9 @@ impl<'a> Txn<'a> {
         self.changes.insert((c, n), Some(record));
     }
     pub fn remove(&mut self, c: Coll, n: u64) {
+        if let Some(oid) = self.get(c, n).map(|r| r.oid) {
+            self.removed.insert((c, n), oid);
+        }
         self.changes.insert((c, n), None);
     }
     pub fn insert(&mut self, c: Coll, record: Record) -> u64 {
@@ -390,6 +416,9 @@ impl<'a> Txn<'a> {
             .map(|((c, n), r)| Change {
                 coll: *c,
                 n: *n,
+                oid: r
+                    .as_ref()
+                    .map_or_else(|| self.removed[&(*c, *n)], |r| r.oid),
                 record: r.clone(),
             })
             .collect()

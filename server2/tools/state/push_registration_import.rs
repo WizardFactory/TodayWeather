@@ -57,12 +57,13 @@ async fn main() {
     );
     match migrate::import(&mut durable, &records).await {
         Ok(c) => println!(
-            "records={} inserted={} updated={} unchanged={} kept={}",
+            "records={} inserted={} updated={} unchanged={} kept={} deleted={}",
             records.len(),
             c.inserted,
             c.updated,
             c.unchanged,
-            c.kept
+            c.kept,
+            c.deleted
         ),
         Err(e) => {
             eprintln!("push_registration_import: {e}");
