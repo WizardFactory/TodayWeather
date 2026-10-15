@@ -2,8 +2,9 @@
 
 ## AirKorea image hourly forecasts (#2756)
 
-`airkorea-image.test.js` covers the current 820×820, 48-frame layout, per-frame
-legend matching, explicit calibration, invalid geometry/legend/path rejection,
+`airkorea-image.test.js` covers the current 820×820 variable-frame layout, per-frame
+cycle-derived first hours, independent pollutant lengths, spacing-derived palette
+neighborhoods, explicit calibration, invalid geometry/legend/path rejection,
 missing pixels, original-record lookup through the hourly job, KST frame dates
 and UTC storage instants. It uses synthetic pixel arrays and memory models;
 it never starts the app or calls a provider/database. Included in `test:offline`.
@@ -18,8 +19,15 @@ GIFs, actual image/station/hourly controllers and AQI grading, and an isolated
 memory store/readback. It requires `async` and `get-pixels` (existing server
 dependencies), and permits no network URL to reach the decoder. Pass a JSON
 array of two manifest entries with `code` (`PM10`, `PM25`), local `file`, public
-original `url`, `publication`, `sha256` and `expectedStart` (`YYYY-MM-DD`, KST).
-Verify `expectedStart` against the visible first-frame label before replay.
+original `url`, `publication`, `sha256`, `expectedFrames`, `expectedStart` and
+`expectedEnd` (`YYYY-MM-DD HH:mm`, KST). Count the GIF frames independently and
+inspect the visible first/last labels before filling these oracles; do not derive
+them from the implementation under test. Legacy date-only `expectedStart` still
+means midnight and omitted `expectedFrames` uses the decoded count. That legacy
+check proves decode/readback count consistency, not an independently expected
+source length; omitting `expectedEnd` also omits the final-time oracle. Treat
+legacy replay as compatibility/start-time evidence only. New evidence
+should supply all three independent count/time oracles.
 Downloaded provider GIFs and execution output belong in ignored reports.
 
 ```sh
@@ -27,7 +35,26 @@ NODE_PATH=<isolated-dependencies>/node_modules TZ=UTC node server/test/offline/a
 ```
 
 See [calibration and rollout](../../../docs/operations/airkorea-image-forecast.md)
-and [dated verification](../../../docs/evidence/tasks/issue-2756/verification.md).
+and [original dated verification](../../../docs/evidence/tasks/issue-2756/verification.md)
+plus [multi-cycle evidence and hashes](../../../docs/evidence/tasks/issue-2756/variable-frames.md).
+
+Replay each of the characterized 05/11/17/23 cycle pairs separately; current
+observations are 42/36/54/48 frames respectively, with first KST hours
+06:00/12:00/18:00/next-day 00:00. These are evidence, not a runtime count table.
+Example manifest entry (include the matching PM25 entry in the same array):
+
+```json
+{
+  "code": "PM10",
+  "file": "17-pm10.gif",
+  "url": "https://www.airkorea.or.kr/dustImage/2026/10/15/17/09km/AQF.20261015.NIER_09_01.PM10.2days.ani.gif",
+  "publication": "2026-10-15 17시 발표",
+  "sha256": "638105c136da0df823c6cc675c2ecdb7254cfc4af8d1e0cd1b2c017bf4ee7a46",
+  "expectedFrames": 54,
+  "expectedStart": "2026-10-15 18:00",
+  "expectedEnd": "2026-10-17 23:00"
+}
+```
 
 ## Credential-free controller loading (#2589)
 
