@@ -2162,7 +2162,7 @@ and the test-only `loopback_server` example, which takes them as arguments).
 **Loading.** The `server2` binary and the seed importers read `.env` from the working directory
 (start them from `server2/`) with the rules of the legacy loader, `dotenv` 10.0.0: one `KEY=value`
 per line, comments and `export` lines ignored, matching quotes removed (`\n` expanded inside double
-quotes), other values trimmed, the last duplicate wins (the production file lists `OWM_SECRET_KEY`
+quotes), other values trimmed, with the JavaScript whitespace set (a byte order mark is skipped), the last duplicate wins (the production file lists `OWM_SECRET_KEY`
 twice), and a variable present in the process environment wins over the file. A missing file means
 environment only; another read error stops startup without file contents. server2 never reads
 `server/.env` or another legacy file. [server2/.env.example](../../server2/.env.example) lists every
@@ -2177,8 +2177,8 @@ ensured). Smokes and tests run processes in an empty working directory and never
 | S3 | `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `TWA_S3_REGION` (legacy); `SERVER2_S3_BUCKET` (server2) | Region default `ap-northeast-2`; endpoint built in (`https://s3.<region>.amazonaws.com/`); bucket and credentials required when any family is native. The importers use the same settings. |
 | data.go.kr | `DONGNAE_SECRET_KEYS` (legacy) | Required with `kma` (ASOS ranges). Built in: 10,000 units per key and KST day (ASOS hourly/daily development traffic "개발계정 : 10,000", data.go.kr 15057210/15059093). |
 | AirKorea | `AIRKOREA_SECRET_KEYS` (legacy) | Read with `kma`; no usable key: stored records only. Built in: 500 units per key and KST day ("개발계정 : 500", data.go.kr 15073861). |
-| Geocoder | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY` (legacy) | Endpoints built in; legacy's test-only `GEOCODER_*_BASE_URL` are not read. Built in: Kakao 100,000 units per key and UTC day (Kakao quota page, 100,000건 per day), Google 322 per UTC day (Google documents no daily quota; 10,000 free Geocoding events a month ÷ 31). |
-| Visual Crossing | `VC_SECRET_KEY`, `VC_DAILY_RECORD_LIMIT` (legacy) | A positive limit is the daily record budget; 0, unset or not a number is "no budget" in legacy, here the documented free plan, 1,000 records a day. Quota owner derived from the key. |
+| Geocoder | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY` (legacy) | Kakao keys parsed as legacy `keys.parseKeys` (nonempty strings of a JSON array; anything else gives no key). Endpoints built in; legacy's test-only `GEOCODER_*_BASE_URL` are not read. Built in: Kakao 100,000 units per key and UTC day (Kakao quota page, 100,000건 per day), Google 322 per UTC day (Google documents no daily quota; 10,000 free Geocoding events a month ÷ 31). |
+| Visual Crossing | `VC_SECRET_KEY`, `VC_DAILY_RECORD_LIMIT` (legacy) | Read as JavaScript `Number` (`50.0`, `5e1` are 50); a positive finite limit admits `floor(limit)` records a day (at least 1). 0, unset, not a number or `Infinity` is "no budget" in legacy, here the documented free plan, 1,000 records a day. Quota owner derived from the key. |
 | World air | `GOOGLE_SECRET_KEY`, `OWM_SECRET_KEY`, `WAQI_SECRET_KEY`, `AIR_GOOGLE_MONTHLY_CAP`, `AIR_OWM_MONTHLY_CAP` (legacy) | Legacy chain keys and free caps (defaults 10,000 and 1,000,000; whole numbers or startup fails, as `config/air.js`); a provider takes part with a legacy-valid key; calls stop at 95 % of the cap, so a cap of 0 leaves it out. WAQI: 1,000 requests a second over 31 days (aqicn.org/api). Quota owners derived from the keys; endpoints built in. |
 | Coexistence | `SERVER2_GATEWAY_LEGACY_URL`, `SERVER2_NATIVE_FAMILIES`, `SERVER2_WORLD_VERSIONS` (server2) | Unchanged S10/S10c/S15 routing; temporary, removed with legacy retirement. |
 

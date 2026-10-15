@@ -18,8 +18,10 @@ python3 tools/smoke.py --binary target/release/server2
 python3 tools/check_placement.py --root .. --declaration config/tasks/S04.json --base <exact-task-base>
 ```
 
-Start the foundation with `target/release/server2`; defaults are public loopback3002
-and metrics loopback3003. Use the [foundation operator manual](../docs/operations/server2-foundation.md)
+Start the foundation with `target/release/server2` from `server2/`; the listener follows the
+legacy `config.js` rule (`OPENSHIFT_NODEJS_IP`, `OPENSHIFT_NODEJS_PORT` or `PORT`; default
+127.0.0.1:3000) and metrics listen on loopback at the next port (3001 by default). During
+coexistence set another port, for example `PORT=3002` as in `.env.example` (metrics 3003). Use the [foundation operator manual](../docs/operations/server2-foundation.md)
 for listener/runtime settings. By default only health is mounted and weather paths
 return404. For the opt-in gateway, injected existing geocoder environment,
 local mock verification and legacy rollback, follow the

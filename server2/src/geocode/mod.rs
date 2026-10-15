@@ -190,8 +190,7 @@ impl GeocoderConfig {
             ..Self::default()
         };
         if let Some(value) = var("GEOCODER_KAKAO_KEYS") {
-            config.kakao_keys = serde_json::from_str::<Vec<String>>(&value)
-                .map_err(|_| GeocodeError::InvalidConfiguration)?;
+            config.kakao_keys = legacy_kakao_keys(&value);
         }
         config.google_key = var("GEOCODER_GOOGLE_KEY").filter(|v| !v.is_empty());
         config.validate()?;
@@ -229,6 +228,20 @@ impl GeocoderConfig {
             }
         }
         Ok(())
+    }
+}
+/// Legacy `lib/geocoder/keys.parseKeys` (S10e: the same values as legacy): a JSON array; its
+/// nonempty strings in order. Unparseable or non-array values and other elements give no key.
+fn legacy_kakao_keys(value: &str) -> Vec<String> {
+    match serde_json::from_str::<serde_json::Value>(value) {
+        Ok(serde_json::Value::Array(items)) => items
+            .into_iter()
+            .filter_map(|item| match item {
+                serde_json::Value::String(key) if !key.is_empty() => Some(key),
+                _ => None,
+            })
+            .collect(),
+        _ => Vec::new(),
     }
 }
 /// The transport rule: HTTPS, or plain HTTP only to a loopback address; a root path and no

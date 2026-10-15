@@ -4,7 +4,9 @@
 //!
 //! Rules (dotenv 10.0.0 `parse` and `config`):
 //! - one `KEY=value` per line (`\n`, `\r` or `\r\n`); a line matches
-//!   `^\s*([\w.-]+)\s*=\s*(.*)?\s*$`, every other line (comments, `export KEY=...`) is ignored;
+//!   `^\s*([\w.-]+)\s*=\s*(.*)?\s*$`, every other line (comments, `export KEY=...`) is ignored.
+//!   `\s` and `trim` are the ECMAScript sets (they include U+FEFF, so a byte order mark before the
+//!   first key is skipped), and `.` stops at U+2028/U+2029;
 //! - a value enclosed in matching single or double quotes loses them, and inside double quotes
 //!   `\n` becomes a newline; any other value is trimmed;
 //! - a repeated key keeps its last value;
@@ -65,27 +67,40 @@ impl DotEnv {
     }
 }
 
+use crate::world::js::is_js_space;
+
 fn is_key_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-')
 }
-/// One line: `^\s*([\w.-]+)\s*=\s*(.*)?\s*$`, then the quote or trim rule.
+/// One line: `^\s*([\w.-]+)\s*=\s*(.*)?\s*$` (JavaScript semantics), then the quote or trim
+/// rule.
 fn parse_line(line: &str) -> Option<(&str, String)> {
-    let rest = line.trim_start();
+    let rest = line.trim_start_matches(is_js_space);
     let end = rest.find(|c: char| !is_key_char(c)).unwrap_or(rest.len());
     if end == 0 {
         return None;
     }
     let (key, rest) = rest.split_at(end);
-    let rest = rest.trim_start().strip_prefix('=')?;
-    // `\s*(.*)?\s*$`: leading blanks go; the greedy `.*` keeps trailing blanks.
-    let value = rest.trim_start();
+    let rest = rest
+        .trim_start_matches(is_js_space)
+        .strip_prefix('=')?
+        .trim_start_matches(is_js_space);
+    // `(.*)?` stops at U+2028/U+2029 (the other line terminators already split lines); the
+    // greedy `.*` keeps blanks before it, and `\s*$` must consume everything after it.
+    let (value, tail) = match rest.find(['\u{2028}', '\u{2029}']) {
+        Some(at) => rest.split_at(at),
+        None => (rest, ""),
+    };
+    if !tail.chars().all(is_js_space) {
+        return None;
+    }
     let quoted = |q: char| value.len() >= 2 && value.starts_with(q) && value.ends_with(q);
     let value = if quoted('"') {
         value[1..value.len() - 1].replace("\\n", "\n")
     } else if quoted('\'') {
         value[1..value.len() - 1].to_owned()
     } else {
-        value.trim().to_owned()
+        value.trim_matches(is_js_space).to_owned()
     };
     Some((key, value))
 }
@@ -127,6 +142,24 @@ mod tests {
         assert_eq!(get("DUP").as_deref(), Some("last"));
         assert_eq!(get("dotted.key-1").as_deref(), Some("x"));
         assert_eq!(get("# comment line"), None);
+    }
+
+    /// S10E-R1: JavaScript `\s`/`trim` (U+FEFF yes, U+0085 no) and `.` (stops at U+2028).
+    #[test]
+    fn javascript_whitespace_and_line_terminators() {
+        let env = DotEnv::parse(concat!(
+            "\u{feff}FIRST=after a byte order mark\n",
+            "PADDED=\u{feff}\u{a0}value\u{3000}\n",
+            "NEL=\u{85}value\u{85}\n",
+            "SEPARATED=value \u{2028} \n",
+            "BROKEN=value\u{2028}more\n",
+        ));
+        let get = |k: &str| env.file_var(k);
+        assert_eq!(get("FIRST").as_deref(), Some("after a byte order mark"));
+        assert_eq!(get("PADDED").as_deref(), Some("value"));
+        assert_eq!(get("NEL").as_deref(), Some("\u{85}value\u{85}"));
+        assert_eq!(get("SEPARATED").as_deref(), Some("value"));
+        assert_eq!(get("BROKEN"), None);
     }
 
     #[test]

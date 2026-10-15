@@ -30,7 +30,7 @@ The binary reads the process environment and then `.env` in its working director
 | --- | --- |
 | `SERVER2_GATEWAY_LEGACY_URL` | Explicit opt-in origin for legacy geocoding and weather HTTP (server2 coexistence setting). If absent, the foundation health/metrics service remains selected and the gateway is not enabled. HTTP origins must be loopback; origins must not contain credentials, a query or a fragment. |
 | `SERVER2_NATIVE_FAMILIES` | Comma-separated families routed to the native backend: `geocode`, `dsf` (native world weather and air) and `kma`. Unset or empty keeps every family on legacy. An unknown or repeated entry fails configuration. |
-| `GEOCODER_KAKAO_KEYS` | Legacy JSON-array key setting. A present value must be a JSON array of nonempty strings; malformed values fail configuration instead of silently dropping keys. |
+| `GEOCODER_KAKAO_KEYS` | Legacy JSON-array key setting, parsed as legacy `keys.parseKeys`: the nonempty strings of a JSON array, in order; an unparseable or non-array value gives no Kakao key (S10e). |
 | `GEOCODER_GOOGLE_KEY` | Legacy single-key setting. Against the production Google endpoint only the key with the legacy fingerprint `ecd5fdb1` is used, as in legacy. |
 | Geocoder endpoints | Built in: `https://dapi.kakao.com`, `https://maps.googleapis.com`. Legacy's test-only `GEOCODER_KAKAO_BASE_URL` / `GEOCODER_GOOGLE_BASE_URL` are not read. |
 | Geocoder daily units | Built in: 100,000 per Kakao key and UTC day (the documented Kakao daily quota) and 322 for the Google key (Google documents no daily quota; 10,000 free Geocoding events a month ÷ 31). Every possible attempt of a lookup is funded before HTTP. |

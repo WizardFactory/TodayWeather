@@ -74,10 +74,10 @@ pub fn quota_owner(provider: &str, key: &str) -> String {
 /// Legacy `config/air.js` `integer(env, name, default, 0)`: unset or blank is the default;
 /// otherwise trimmed decimal digits up to `Number.MAX_SAFE_INTEGER`, anything else an error.
 fn air_cap(var: Var, name: &str, default: u64) -> Result<u64, GatewayError> {
-    let Some(raw) = var(name).filter(|v| !v.trim().is_empty()) else {
+    let trim = |v: &str| v.trim_matches(super::js::is_js_space).to_owned();
+    let Some(text) = var(name).map(|v| trim(&v)).filter(|v| !v.is_empty()) else {
         return Ok(default);
     };
-    let text = raw.trim();
     if !text.bytes().all(|b| b.is_ascii_digit()) {
         return Err(GatewayError::InvalidConfiguration);
     }
@@ -91,13 +91,24 @@ fn air_cap(var: Var, name: &str, default: u64) -> Result<u64, GatewayError> {
 fn reserve(cap: u64) -> u64 {
     cap - cap / 20
 }
-/// Legacy `Number(VC_DAILY_RECORD_LIMIT) || 0`: a positive whole number is the budget; zero,
-/// unset or not a number is "no budget" in legacy, here the documented free plan.
+/// Legacy `Number(VC_DAILY_RECORD_LIMIT) || 0` (JavaScript `Number`: `50.0`, `5e1` and `0x32`
+/// are 50). Legacy denies a fetch when `records + cost > limit` with whole records, so a positive
+/// finite limit admits `floor(limit)` records; it is never raised to the free plan. Zero, unset,
+/// not a number and `Infinity` are "no budget" in legacy, here the documented free plan. A
+/// negative limit, or one below 1, denies every fetch once the day has usage in legacy; here it is
+/// the smallest budget, 1 record.
 fn vc_daily_records(var: Var) -> u64 {
-    var("VC_DAILY_RECORD_LIMIT")
-        .and_then(|v| v.trim().parse::<u64>().ok())
-        .filter(|v| *v > 0)
-        .unwrap_or(VC_FREE_DAILY_RECORDS)
+    let limit = var("VC_DAILY_RECORD_LIMIT")
+        .map(|v| super::js::string_to_number(&v))
+        .unwrap_or(0.);
+    if limit.is_nan() || limit == 0. || limit == f64::INFINITY {
+        return VC_FREE_DAILY_RECORDS;
+    }
+    if limit < 1. {
+        return 1;
+    }
+    // `as` saturates at u64::MAX for huge finite limits.
+    limit.floor() as u64
 }
 
 /// Build the native world when the routing list selects it, with the shared S3 settings, at
@@ -246,8 +257,15 @@ mod tests {
         assert_eq!(vc_daily_records(&|_: &str| None), VC_FREE_DAILY_RECORDS);
         assert_eq!(records("2500"), 2500);
         assert_eq!(records(" 2500 "), 2500);
-        for none in ["", "0", "many", "-5"] {
+        // S10E-R2: JavaScript `Number` forms of a valid limit keep that limit.
+        for fifty in ["50.0", "5e1", "0x32", "50.9", "\u{feff}50\u{a0}"] {
+            assert_eq!(records(fifty), 50, "{fifty}");
+        }
+        for none in ["", "0", "-0", "many", "Infinity", "1_000"] {
             assert_eq!(records(none), VC_FREE_DAILY_RECORDS, "{none}");
+        }
+        for tiny in ["-5", "0.5", "-Infinity"] {
+            assert_eq!(records(tiny), 1, "{tiny}");
         }
     }
 
@@ -259,6 +277,7 @@ mod tests {
         assert_eq!(air_cap(&|_: &str| None, name, 7).ok(), Some(7));
         assert_eq!(cap(" ").ok(), Some(7));
         assert_eq!(cap(" 2000 ").ok(), Some(2000));
+        assert_eq!(cap("\u{feff}2000\u{3000}").ok(), Some(2000));
         assert_eq!(cap("0").ok(), Some(0));
         assert_eq!(cap("9007199254740991").ok(), Some(9_007_199_254_740_991));
         for bad in ["-1", "1.5", "1e3", "many", "9007199254740992"] {
