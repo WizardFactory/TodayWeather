@@ -294,39 +294,33 @@ KASI capture asks today's column first instead of legacy's per-area order (same 
 
 # Specification (S15b-3c), 2026-10-15
 
-Legacy references are master `0997d702` (the image controllers are byte-identical to the service
-host's checkout, read-only check of 2026-10-14). tw_svc assembly: `controllerTown24h`
-`checkQueryValidation` L68 (absent or `(null)` → `airkorea`), `_insertForecastPollutants` L690,
-`_getAirForecast` L1196, `AirForecastList` L1264; `controllerTown.getKecoDustForecast` L2618
-(skipped unless `airkorea`, L2627).
+Legacy references are master `e76202a3` (#2757 merged at `91c77fcb`; the parity target, AK). tw_svc
+assembly: `controllerTown24h` `checkQueryValidation` L68 (absent or `(null)` → `airkorea`),
+`_insertForecastPollutants` L690, `_getAirForecast` L1196, `AirForecastList` L1264;
+`controllerTown.getKecoDustForecast` L2618 (skipped unless `airkorea`, L2627).
 
 | Store call | Provider / live shape | Legacy collection mirrored | tw_svc reader |
 | --- | --- | --- | --- |
-| `air_forecast("airkorea", station)` | `getMinuDustFrcstDspth` `imageUrl7` (PM10) and `imageUrl8` (PM2.5) of the announcement: animated GIFs on `https://www.airkorea.or.kr/dustImage/…`, 820×820 screen, one 673×795 frame per hour at (66,10) (48 frames at 11시, 54 at 17시 on 2026-10-15), about 5-6 MB each | `kecoRequester.getMinuDustFrcstDspth` L649-703 → `AirkoreaHourlyForecastController.do` L95 (`_checkHourlyForecast` L127, `_getImgPaths` L67, `getDustImage` L405, `getDustInfo` L151, `_makeHourForecast` L35, `_updateDb` L28, `_removeOldData` L116) | `getForecast` (`img.hourly.forecast.controller` L149) |
+| `air_forecast("airkorea", station)` | `getMinuDustFrcstDspth` `imageUrl7` (PM10) and `imageUrl8` (PM2.5): animated GIFs on `https://www.airkorea.or.kr/dustImage/…`; the `11시 발표` documents of 2026-10-15 named the previous day's 23-cycle (820×820, 48 frames of 673×795 at (66,10), 5.1/4.9 MB), the `17시 발표` ones a 17-cycle (54 frames) | `kecoRequester.getMinuDustFrcstDspth` L649-703 → `AirkoreaHourlyForecastController.do` L95 (`_checkHourlyForecast` L127, `_getImgPaths` L67, `getDustImage` with `airkoreaImageLayout.frameStart`, `getPixelMap` with `layout.validate`, `getDustInfo` with `layout.station`, `_makeHourForecast` override, `_updateDb` L28, `_removeOldData` L116) | `getForecast` (`img.hourly.forecast.controller` L149) |
 | `air_forecast("kaq", station)` | none (KAQ source gone) | — | `KaqHourlyForecastController.getForecast` L469 → `_findLatestMapCase` L231-239 (`Fail to get map case`) |
 
-Where the sources disagree:
-- Colour table: the legacy tables (`airkorea.dust.image.controller` L14-76) no longer match the
-  legend of the current images; the live legend (column x 686, 36 bands, upper labels as values)
-  is followed (AK).
-- Size: the deployed `config.js` size 820×830 rejects every current GIF; 820×820 is followed (AK).
-- `kaq`: legacy answers no forecast; server2 answers AirKorea labelled `airkorea` when the store
-  has no KAQ forecast at all (AK).
+Where they disagree: `kaq` — legacy answers no forecast; server2 answers AirKorea labelled
+`airkorea` when the store has no KAQ forecast at all (AK). Legacy fetches the provider URL as
+given; server2 fetches its validated path on the built-in root (the same resource). Legacy decodes
+any GIF; server2 bounds the frame descriptors first.
 
 - Acquisition: keyless `airkorea-image` / `airkorea-forecast-image` / key `national`, period and
-  partition of the announcement; page 1 PM10, page 2 PM2.5 (a pollutant whose document names no
-  image: an empty record with status 204, legacy skips it); status 200 and a GIF of the
-  calibration size within the decoding bounds (240 frames, 4 Mi pixels a frame, 64 Mi in all;
-  else `INVALID_IMAGE`, nothing stored); the image URLs must be on the built-in origin
-  `https://www.airkorea.or.kr/`; 8 MiB per image; 60 s call budget.
+  partition of the announcement; both URLs must pass `frameStart` before any download; page 1
+  PM10, page 2 PM2.5 (status 200, a GIF of 48 frames on the 820×820 canvas within the decoding
+  bounds), page 3 a manifest of the two URLs; paths fetched on `https://www.airkorea.or.kr/`;
+  8 MiB per image; 60 s call budget.
 - Fold: the acquisitions of the last three KST days in completion order as `do` runs (a stored
-  `pubDate` with both codes is skipped; an image that does not decode stores nothing; a skipped
-  pollutant stores the other one; rows older than one day are removed at each run and at the
-  cut). Refresh: the three day catalogs' control objects list the acquisitions; unknown ones are
-  read one lookup each and decoded once per station list; at most every minute, at once for a new
-  station list or after an own acquisition ended.
+  `pubDate` with both codes is skipped; an image that fails the layout stores nothing; rows
+  older than one day are removed at each run and at the cut). Refresh: the three day catalogs'
+  control objects list the acquisitions; unknown ones are read one lookup each and decoded once
+  per station list; at most every minute, at once for a new station list or after an own
+  acquisition ended.
 - Request time: a request reading the forecast (`airForecastSource` absent, `(null)`, `airkorea`
   or `kaq`) loads the station list and the dust forecast, reads the fold and, when the fold lacks
   the expected announcement, starts one owned acquisition of its images (of the previous
-  announcement while the expected one has no dust forecast documents yet), waiting only until
-  its deadline.
+  announcement while the expected one names no acceptable pair), waiting only until its deadline.

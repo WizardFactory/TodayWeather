@@ -2226,43 +2226,53 @@ table into the local peer, oak pollen answered no data, and the folds answered f
 
 The `kma` snapshot now answers `air_forecast`, the last store call S15b-3 owed, so a request no
 longer forwards for it. The KAQ source is gone (#2742), so only the AirKorea image forecast is
-rebuilt; it follows legacy except for the colour table and the `kaq` mapping that AK approved.
+rebuilt. Its parity target is legacy master after #2757 ("Restore AirKorea image-derived hourly
+forecasts", `91c77fcb`; AK, relayed 2026-10-15), with one AK-approved difference: the `kaq`
+mapping below.
 
 | Store call | Data | Legacy collection mirrored | tw_svc reader |
 | --- | --- | --- | --- |
-| `air_forecast("airkorea", station)` | New keyless `airkorea-image`/`airkorea-forecast-image` acquisition: the PM10 and PM2.5 GIFs of one announcement as one group (page 1 PM10, page 2 PM2.5; a pollutant whose document names no image is an empty record with status 204, as `getDustImage` skips it), dated by the announcement, from the first PM10 document's `imageUrl7` and the first PM2.5 document's `imageUrl8` of the stored dust forecast | `kecoRequester.getMinuDustFrcstDspth` L649-703 calls `AirkoreaHourlyForecastController.do` (L694): `_checkHourlyForecast` (`img.hourly.forecast.controller` L127), `_getImgPaths` (L67), `getDustImage` (`airkorea.dust.image.controller` L405), `getDustInfo` (L151, `_isValidGeocode` L142), `_updateHourlyForecast`/`_makeHourForecast`/`_updateDb` (L106/L35/L28), `_removeOldData` (L116) | `controllerTown24h._getAirForecast` L1196 → `getForecast` (`img.hourly.forecast.controller` L149, `find({stationName}).sort({date: 1})`), `_insertForecastPollutants` L690 via `AirForecastList` L1264 |
+| `air_forecast("airkorea", station)` | New keyless `airkorea-image`/`airkorea-forecast-image` acquisition: the two GIFs of one announcement as one group (page 1 PM10, page 2 PM2.5, page 3 a JSON manifest of the two URLs, whose path dates the frames), dated by the announcement, from the first PM10 document's `imageUrl7` and the first PM2.5 document's `imageUrl8` of the stored dust forecast | `kecoRequester.getMinuDustFrcstDspth` L649-703 calls `AirkoreaHourlyForecastController.do` (L694): `_checkHourlyForecast` (`img.hourly.forecast.controller` L127), `_getImgPaths` (L67), `getDustImage` (`airkorea.dust.image.controller` L256: both paths through `airkoreaImageLayout.frameStart`), `getPixelMap` (`airkorea.finedust.image.parser`: `layout.validate`), `getDustInfo` (L89: `layout.station`), `_updateHourlyForecast`/`_makeHourForecast` (with the AirKorea date override)/`_updateDb`, `_removeOldData` (L116) | `controllerTown24h._getAirForecast` L1196 → `getForecast` (`img.hourly.forecast.controller` L149, `find({stationName}).sort({date: 1})`), `_insertForecastPollutants` L690 via `AirForecastList` L1264 |
 | `air_forecast("kaq", station)` | none | — | `KaqHourlyForecastController.getForecast` L469 → `_findLatestMapCase` L231-239: no map case rejects with `Fail to get map case` |
 
-**Decoder.** `source/gif.rs` ports the omggif 1.0.9 reader that get-pixels 3.3.2 uses: every frame
-gets its own zeroed RGBA buffer of the logical screen (no compositing or disposal), a transparent
-index stays zero, interlaced rows follow omggif's pass arithmetic, and index stores past a frame's
-buffer are dropped as typed-array stores are. Unlike legacy, the frame descriptors are bounded
-before any buffer exists (at most 240 frames, 4 Mi pixels in a frame and 64 Mi in all; the live
-GIFs have 48-54 frames and about 29 Mi pixels): a GIF beyond them stores nothing, as one legacy
-cannot decode. An image of one pollutant that does not decode stores nothing for the run;
-a pollutant without an image is skipped and the other one stored. `source/air_forecast.rs` maps a
-station to a pixel with the calibration, tries the centre and then the 8×8 block (-4..+3, row
-order), takes the first exact table colour and stores nothing for an hour without one (-1). The
-timeline is 48 hours from the processing day's KST midnight (the next day for an announcement at
-17시 or later on the same day), and rows are stored as legacy stores them: `date` is the KST wall
-time read as UTC, upserted by station, date and code, and rows older than one day are removed.
+**Decoder (`lib/airkoreaImageLayout.js`).** `source/gif.rs` ports the omggif 1.0.9 reader that
+get-pixels 3.3.2 uses (every frame its own zeroed RGBA buffer, transparency and interlace as
+omggif, index stores past a frame's buffer dropped as typed-array stores are). Unlike legacy, the
+frame descriptors are bounded before any buffer exists (at most 240 frames, 4 Mi pixels in a frame
+and 64 Mi in all); a GIF beyond them stores nothing, as one legacy cannot decode.
+`source/air_forecast.rs` ports the layout: only the characterized NIER 09km animation is accepted
+(an 820×820 canvas of exactly 48 frames equal to the size settings, the map and geographic
+settings valid, and in every frame the 36 legend bands at x 680 opaque and within four levels per
+channel of the characterized colours); both image URLs must name the characterized
+`/dustImage/YYYY/MM/DD/23/09km/AQF.YYYYMMDD.NIER_09_01.{PM10|PM2P5}.2days.ani.gif` cycle (a real
+calendar date), whose first frame is the next day 00:00 KST. A station outside the geographic box
+(`lat <= bottom`, `lon >= right` included) is skipped; otherwise its pixel and then rings up to
+three pixels away inside the map rectangle are searched, an opaque pixel matching that frame's
+legend exactly or within four levels gives the band's lower threshold (the top band capped at 320
+for PM10 and 200 for PM2.5, the bottom band 0), and an hour without a match stores nothing. Rows
+carry `dataTime` as the KST text and `date` as that hour's UTC instant, upserted by station, date
+and code; rows older than one day are removed. A missing or rejected path, an image that does not
+download or does not pass the layout stores nothing for the run (legacy no longer stores one
+pollutant without the other).
 
-**Calibration (AK 2026-10-15).** The legacy names `AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT`,
-`_BOTTOM_LAT`, `_LEFT_LON`, `_RIGHT_LON`, `_SIZE_WIDTH`, `_SIZE_HEIGHT`, `_MAP_LEFT`, `_RIGHT`,
-`_TOP`, `_BOTTOM` (`config.js` L89-105) are read with `parseFloat`/`parseInt`; unset or empty uses
-the deployed values: 39.3769/32.6942/123.9523/130.6741, map 78/663/80/798. The size is 820×820,
-the current GIF screen (the deployed 820×830 rejects every current image as `INVALID_IMAGE`). The
-live map frame lines are at x 76/663 and y 73/794; the deployed values are kept.
+**Calibration.** The legacy names `AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT`, `_BOTTOM_LAT`,
+`_LEFT_LON`, `_RIGHT_LON`, `_SIZE_WIDTH`, `_SIZE_HEIGHT`, `_MAP_LEFT`, `_RIGHT`, `_TOP`, `_BOTTOM`
+(master `config.js` L89-105) are read as legacy reads them: an unset or empty value takes the
+default (39.3769/32.6942/123.9523/130.6741, 820×820, map x 77..663 and y 75..794, ends exclusive),
+the map through `parseInt` and the box through `parseFloat` for the pixel arithmetic, and the
+layout checks through `Number` (a size other than 820×820, a non-integer or out-of-canvas map or
+a degenerate box rejects every image).
 
-**Colour table (AK 2026-10-15, behaviour change).** The legacy exact-match table no longer matches
-the images: most legend colours changed by one or two levels, and the PM10 labels read 151/81/31
-where the table had 150/80/30. The new tables are the 36 bands of the live legend column (x 686 of
-the `11시 발표` GIFs of 2026-10-15), each with its upper label as the value (top band 600 for PM10,
-500 for PM2.5). On a 0.1° grid inside the map (every sixth frame, deployed calibration), points
-without a value with the legacy table → with the live-legend table: PM10 9.4% (1,464 of 15,552)
-→ 2.4% (371), PM2.5 19.4% (3,021) → 0.0% (1), legacy decoding in the pinned Node and the server2
-decoder giving the same counts. On the `17시 발표` GIFs the live-legend table leaves 0.4% (PM10)
-and 1.7% (PM2.5) of those points without a value.
+**Difference from the earlier S15b-3c decisions (reported 2026-10-15).** Before #2757 this PR
+decoded with the deployed calibration (map 78/663/80/798), a colour table rebuilt from the live
+legend with each band's upper label as its value (PM10 top band 600) and the legacy 48-hour
+timeline from the processing day, and stored one pollutant when the other had no image. #2757 is
+followed instead: its map bounds, a per-frame legend validated against the characterized colours,
+lower thresholds, dates from the image path (only the 23-cycle; the 11- and 17-cycle images the
+`11시`/`17시` documents name otherwise are rejected), KST hours as UTC instants and both paths
+required. With the legacy table the current images left 9.4% (PM10) and 19.4% (PM2.5) of a 0.1°
+map grid without a value; that was the reason for the earlier decision and is resolved by #2757's
+legend handling.
 
 **`kaq` requests (AK 2026-10-15, intended difference from legacy).** The app always asks
 `airForecastSource=kaq` (`client/www/js/service.weatherutil.js:87`, `web/src/direct-api.ts:173`)
@@ -2285,44 +2295,46 @@ tasks, at most every minute, and at once when the station list changed or an ima
 this process ended (a failed S3 write may still have committed). A late acquisition of an earlier
 announcement or day is therefore folded in completion order within a minute, as a cold reader
 folds it. A request whose fold lacks the expected announcement (or, while that one's documents
-name no image yet, the previous announcement, which legacy processed when it was expected) starts
-one owned acquisition of its images (S13d `OwnedFlights`, 10-minute retry, 60 s call budget, 8
-MiB per image) and waits only until its deadline; until the images are published and
-decoded it gets the legacy output for missing data. The acquisitions are demand-gated like the
-other S15b-3 inputs: an announcement no request asked for while it was expected (or previous,
-before the next one's documents appeared) is never stored. The
-GIFs are raw records of about 5-6 MB: regional S3 takes them within the S06 3-second operation
-bound, while the shared local stack's test peer caps objects at 1 MiB and cannot hold one. The image URLs come
-from provider data, so the acquirer fetches them only on the built-in image origin
-`https://www.airkorea.or.kr/` (`gateway::runtime::Builtins::airkorea_images`; tests build a
-loopback origin). Load: two GIF downloads (about 5 MB each) per announcement, four a day.
+name no acceptable pair, the previous announcement, which legacy processed when it was expected)
+starts one owned acquisition of its images (S13d `OwnedFlights`, 10-minute retry, 60 s call
+budget, 8 MiB per image) and waits only until its deadline; until the images are published and
+decoded it gets the legacy output for missing data. A pair `getDustImage` rejects is never
+fetched. The provider-supplied URLs are never fetched as given: their validated path is fetched on
+the built-in image root `https://www.airkorea.or.kr/` (`gateway::runtime::Builtins::
+airkorea_images`; tests build a loopback root). The acquisitions are demand-gated like the other
+S15b-3 inputs: an announcement no request asked for while it was expected (or previous, before the
+next one's documents appeared) is never stored. The GIFs are raw records of about 5-6 MB: regional
+S3 takes them within the S06 3-second operation bound, while the shared local stack's test peer
+caps objects at 1 MiB and cannot hold one. Load: two GIF downloads per accepted announcement.
 
 Verification (local; test peers only): a pinned Node 16.20.2 oracle
 ([provenance](../../server2/tests/domestic/fixtures/AIR-FORECAST-PROVENANCE.md)) records get-pixels
 3.3.2 frames of nine synthetic GIFs (a global palette, a sub-rectangle, a local palette with
 transparency, interlace, a short stream, two streams longer than their frame, a full code table
-and an 820×820 offset frame) and the `arpltnhourlyforecasts` documents and `getForecast` answers
-of the legacy controller over nine runs (a skip, a run after midnight, a PM10-only announcement
-twice, a PM2.5-only one, a broken PM10 image, the one-day removal, a missing announcement) for six
-stations, with Mongoose 5.1.2 over the in-memory collection double and the live-legend tables. The
-Rust frames and the rows and answers equal the oracle byte for byte. Read back from the S3 test
-peer with empty memory the answers are the same; loopback stubs show one image acquisition for
-concurrent requests published before use, a slow acquisition releasing the request, another
-host's acquisitions (also a late one of the previous day) folded in completion order equal to a
-cold read without a publication count change, a new station list decoded at once, a pollutant
-without an image skipped and a failed download storing nothing, an image URL off the built-in
-origin never fetched, GIFs beyond the decoding bounds refused, and the three `kaq`/`airkorea`
-cases above.
+and an 820×820 offset frame); the legacy master controllers' `arpltnhourlyforecasts` documents,
+errors and `getForecast` answers over nine runs of characterized synthetic animations (a store,
+its skip, a second announcement, a 17-cycle path, the next images, a missing PM2.5 path, a broken
+legend frame, a 47-frame image, a removal) for eight stations, with Mongoose 5.1.2 over the
+in-memory collection double; and the 29 #2757 regression cases with their own harness. The Rust
+frames, rows, errors and answers equal them byte for byte. Read back from the S3 test peer with
+empty memory the answers are the same; loopback stubs show one image acquisition for concurrent
+requests published before use, a slow acquisition releasing the request, another host's
+acquisitions (also a late one of the previous day) folded in completion order equal to a cold read
+without a publication count change, a new station list decoded at once, rejected paths (another
+host, a 17-cycle, a missing PM2.5 path) never fetched and a failed download storing nothing, GIFs
+beyond the decoding bounds refused, and the three `kaq`/`airkorea` cases above.
+
 Live on 2026-10-15 (settings from the operator's `server2/.env` read in-process, never printed;
-records only in a local S06 test peer with room for the GIFs): the `11시 발표` images, then at
-17:15 KST the `17시 발표` images (6.2 and 5.9 MB, 54 frames; legacy uses the first 48) were acquired
-through the request path and published; the third request answered from the fold: 63,205 rows for
-670 of the 672 stations (two outside the map), 95 rows for 중구 from 2026-10-16 00:00 (an
-announcement at 17시 starts the next day), PM10 mostly 12-35 and PM2.5 6-21 µg/m³, and 1.5%
-(PM10) and 3.1% (PM2.5) of station-hours without a value. On the loaded test machine a 6 MB write
+records only in a local S06 test peer with room for the GIFs): the server2 acquirer fetched the
+characterized pair the `11시 발표` documents named
+(`/dustImage/2026/10/14/23/09km/AQF.20261014.NIER_09_01.{PM10,PM2P5}.2days.ani.gif`, 5.1/4.9 MB,
+sha256 `d2193d68…` and `26dba4f5…`, the #2757 evidence hashes) and published it with its manifest;
+the server2 decoder and the legacy master controllers (real get-pixels, the #2757 smoke harness)
+stored the same 384 rows for the four smoke reference points (Seoul, Daejeon, Busan, Jeju: 48 hours
+per pollutant from 2026-10-15 00:00 KST, PM10 0-75 and PM2.5 0-27). The `17시 발표` documents
+named a 17-cycle animation (54 frames), which both reject. On the loaded test machine a 6 MB write
 to the Python peer outlasted the 3-second S3 operation bound (an ambiguous write); the check used
-the 9-second maximum for the peer, and a failed or ambiguous acquisition now makes the next request
-read the catalogs again.
+the 9-second maximum for the peer.
 
 ### S10e legacy settings and server2/.env (2026-10-15)
 
@@ -2352,7 +2364,7 @@ ensured). Smokes and tests run processes in an empty working directory and never
 | S3 | `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `TWA_S3_REGION` (legacy); `SERVER2_S3_BUCKET` (server2) | Region default `ap-northeast-2`; endpoint built in (`https://s3.<region>.amazonaws.com/`); bucket and credentials required when any family is native. The importers use the same settings. Superseded by [S10f](#s10f-instance-role-credentials-and-the-server2-s3-region-2026-10-15): `SERVER2_S3_REGION` replaces `TWA_S3_REGION`, and unset keys select the EC2 instance role. |
 | data.go.kr | `DONGNAE_SECRET_KEYS` (legacy) | Required with `kma` (ASOS ranges; since S15b-3b also UV, pollen and KASI). Built in: 10,000 units per key and KST day across those services (ASOS hourly/daily development traffic "개발계정 : 10,000", data.go.kr 15057210/15059093). |
 | AirKorea | `AIRKOREA_SECRET_KEYS` (legacy) | Read with `kma`; no usable key: stored records only. Built in: 500 units per key and KST day ("개발계정 : 500", data.go.kr 15073861). |
-| AirKorea forecast images (S15b-3c) | `AIRKOREA_KOREA_IMAGE_COORDI_*`, `AIRKOREA_KOREA_IMAGE_SIZE_*`, `AIRKOREA_KOREA_IMAGE_MAP_*` (legacy) | Read with `kma` as `config.js` L89-105 (`parseFloat`/`parseInt`); unset or empty: the deployed calibration with the 820×820 GIF size. The image origin is built in (`https://www.airkorea.or.kr/`); the images are keyless. |
+| AirKorea forecast images (S15b-3c) | `AIRKOREA_KOREA_IMAGE_COORDI_*`, `AIRKOREA_KOREA_IMAGE_SIZE_*`, `AIRKOREA_KOREA_IMAGE_MAP_*` (legacy) | Read with `kma` as master `config.js` L89-105 and `airkoreaImageLayout` read them; unset or empty: the characterized defaults (820×820, map 77/663/75/794). The image root is built in (`https://www.airkorea.or.kr/`); the images are keyless. |
 | Geocoder | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY` (legacy) | Kakao keys parsed as legacy `keys.parseKeys` (nonempty strings of a JSON array; anything else gives no key). Endpoints built in; legacy's test-only `GEOCODER_*_BASE_URL` are not read. Built in: Kakao 100,000 units per key and UTC day (Kakao quota page, 100,000건 per day), Google 322 per UTC day (Google documents no daily quota; 10,000 free Geocoding events a month ÷ 31). |
 | Visual Crossing | `VC_SECRET_KEY`, `VC_DAILY_RECORD_LIMIT` (legacy) | Read as JavaScript `Number` (`50.0`, `5e1` are 50); a positive finite limit admits `floor(limit)` records a day (at least 1). 0, unset, not a number or `Infinity` is "no budget" in legacy, here the documented free plan, 1,000 records a day. Quota owner derived from the key. |
 | World air | `GOOGLE_SECRET_KEY`, `OWM_SECRET_KEY`, `WAQI_SECRET_KEY`, `AIR_GOOGLE_MONTHLY_CAP`, `AIR_OWM_MONTHLY_CAP` (legacy) | Legacy chain keys and free caps (defaults 10,000 and 1,000,000; whole numbers or startup fails, as `config/air.js`); a provider takes part with a legacy-valid key; calls stop at 95 % of the cap, so a cap of 0 leaves it out. WAQI: 1,000 requests a second over 31 days (aqicn.org/api). Quota owners derived from the keys; endpoints built in. |

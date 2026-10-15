@@ -1,22 +1,27 @@
-//! S15b-3c: the AirKorea image hourly forecast (`ArpltnHourlyForecast`).
+//! S15b-3c: the AirKorea image hourly forecast (`ArpltnHourlyForecast`), as legacy master
+//! `91c77fcb` (#2757, "Restore AirKorea image-derived hourly forecasts") collects it.
 //!
-//! Legacy references (master `1ed4fbf1`):
+//! Legacy references (master `91c77fcb`):
 //! - collection: `kecoRequester.getMinuDustFrcstDspth` (L649-703) runs
 //!   `AirkoreaHourlyForecastController.do(dataTime)` (L694) after every forecast run:
-//!   `_checkHourlyForecast` (skip a stored `pubDate`), `_getImgPaths` (the first PM10 document's
-//!   `imageUrl[6]` and PM2.5 `imageUrl[7]` of that announcement), `getDustImage` (get-pixels
-//!   3.3.2, [`super::gif`]), `_updateHourlyForecast` over every `MsrStnInfo` station (PM10 then
-//!   PM2.5), `_removeOldData` (rows dated before now - 1 day);
-//! - decoding: `airkorea.finedust.image.parser` (`isValidImage`, the map rectangle and degree per
-//!   pixel) and `airkorea.dust.image.controller.getDustInfo` (L213-299): the station pixel, then the
-//!   8x8 block around it, the first exact colour-table match per frame, -1 otherwise; 48 hourly
-//!   rows from the processing day (the next day for a 17시/23시 announcement processed that day);
-//! - storage and reader: `img.hourly.forecast.controller` (`_makeHourForecast`, `_updateDb`
-//!   upsert by station, date and code; `getForecast`: `find({stationName}).sort({date: 1})`).
-//!
-//! Intended differences (AK, 2026-10-15): the GIF screen is now 820x820 (the deployed
-//! configuration expected 820x830 and rejected every current image), and the colour tables are
-//! read from the current legend (see [`COLORS_PM10`]); the calibration is the deployed one.
+//!   `_checkHourlyForecast` (skip a `pubDate` with rows of both codes), `_getImgPaths` (the first
+//!   PM10 document's `imageUrl[6]` and PM2.5 `imageUrl[7]` of that announcement), `getDustImage`
+//!   (both paths must pass `airkoreaImageLayout.frameStart`, then get-pixels 3.3.2 decodes each,
+//!   [`super::gif`], and `layout.validate` checks it), `_updateHourlyForecast` over every
+//!   `MsrStnInfo` station (PM10 then PM2.5; `layout.station`), `_removeOldData` (rows dated
+//!   before now - 1 day);
+//! - `lib/airkoreaImageLayout.js`: the characterized NIER 09km 48-hour animation: an 820x820
+//!   RGBA canvas of exactly 48 frames, the 36-band legend at x 680 within four levels per channel
+//!   of the characterized colours in every frame, only the `/dustImage/YYYY/MM/DD/23/09km/` cycle
+//!   (its first frame is the next day 00:00 KST), station pixels matched exactly and then within
+//!   four levels against that frame's legend, searching the centre and rings up to three pixels
+//!   inside the map rectangle, values the band's lower threshold;
+//! - `config.js` `image.airkorea_korea_image` (the `AIRKOREA_KOREA_IMAGE_*` names with the
+//!   characterized defaults), `airkorea.finedust.image.parser` (`getImagePos` with `parseInt`,
+//!   `getDefaultCoordi` with `parseFloat`, degree per pixel);
+//! - storage and reader: `img.hourly.forecast.controller` (`_makeHourForecast` with the AirKorea
+//!   override storing the KST hour as its UTC instant, `_updateDb` upsert by station, date and
+//!   code; `getForecast`: `find({stationName}).sort({date: 1})`).
 use super::doc::{Doc, Val};
 use super::gif::GifReader;
 use crate::gateway::OrderedJson;
@@ -24,247 +29,396 @@ use std::collections::HashMap;
 
 const DAY_MS: f64 = 86_400_000.;
 const HOUR_MS: f64 = 3_600_000.;
+/// Frames of the characterized animation (48 hours).
+pub const FRAMES: usize = 48;
+/// The characterized canvas.
+pub const CANVAS: usize = 820;
+/// The characterized legend colours, top band first (`airkoreaImageLayout.colours`).
+const COLOURS: [[i32; 3]; 36] = [
+    [105, 0, 0],
+    [130, 0, 0],
+    [155, 0, 0],
+    [180, 0, 0],
+    [205, 0, 0],
+    [230, 0, 0],
+    [255, 0, 0],
+    [255, 60, 60],
+    [255, 90, 90],
+    [255, 120, 120],
+    [255, 150, 150],
+    [100, 100, 0],
+    [115, 115, 0],
+    [131, 131, 0],
+    [146, 146, 0],
+    [162, 162, 0],
+    [177, 177, 0],
+    [193, 193, 0],
+    [208, 208, 0],
+    [224, 224, 0],
+    [240, 240, 0],
+    [0, 118, 0],
+    [0, 138, 0],
+    [0, 157, 0],
+    [0, 177, 0],
+    [0, 195, 0],
+    [0, 216, 0],
+    [0, 234, 0],
+    [0, 254, 0],
+    [100, 254, 100],
+    [149, 254, 149],
+    [53, 150, 249],
+    [76, 162, 244],
+    [100, 175, 240],
+    [135, 192, 232],
+    [152, 201, 228],
+];
+/// The lower threshold of each band (`airkoreaImageLayout.thresholds.PM10`; the unbounded top
+/// band capped at its lowest labelled threshold).
+pub const THRESHOLDS_PM10: [f64; 36] = [
+    320., 280., 260., 240., 220., 200., 190., 180., 170., 160., 151., 143., 136., 129., 122., 115.,
+    108., 101., 94., 87., 81., 75., 70., 65., 60., 55., 50., 45., 40., 35., 31., 24., 18., 12., 6.,
+    0.,
+];
+/// `airkoreaImageLayout.thresholds.PM25`.
+pub const THRESHOLDS_PM25: [f64; 36] = [
+    200., 170., 160., 150., 140., 120., 110., 100., 90., 80., 76., 70., 65., 60., 55., 50., 46.,
+    42., 39., 37., 36., 33., 31., 29., 27., 25., 23., 21., 19., 17., 16., 12., 9., 6., 3., 0.,
+];
+/// The pollutants (`this.pollutants`): the stored code, the image type and its thresholds.
+pub const CODES: [(&str, &str, &[f64; 36]); 2] = [
+    ("pm10", "PM10", &THRESHOLDS_PM10),
+    ("pm25", "PM25", &THRESHOLDS_PM25),
+];
+/// The `INVALID_IMAGE` error of the layout checks.
+pub const INVALID_IMAGE: &str = "INVALID_IMAGE";
 
-/// The map calibration (`config.image.airkorea_korea_image`).
+/// `airkoreaImageLayout.number`: an empty value is NaN, otherwise `Number(value)`.
+fn number(value: &str) -> f64 {
+    if value.is_empty() {
+        f64::NAN
+    } else {
+        crate::world::js::string_to_number(value)
+    }
+}
+
+/// The map calibration (`config.image.airkorea_korea_image`): the setting texts as `config.js`
+/// holds them (`process.env.X || default`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Calibration {
-    pub top_lat: f64,
-    pub bottom_lat: f64,
-    pub left_lon: f64,
-    pub right_lon: f64,
-    pub width: f64,
-    pub height: f64,
-    pub left: f64,
-    pub right: f64,
-    pub top: f64,
-    pub bottom: f64,
+    /// `coordi`: top_lat, bottom_lat, left_lon, right_lon.
+    coordi: [String; 4],
+    /// `size`: width, height.
+    size: [String; 2],
+    /// `pixel_pos`: left, right, top, bottom.
+    pos: [String; 4],
 }
+const COORDI_NAMES: [&str; 4] = [
+    "AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT",
+    "AIRKOREA_KOREA_IMAGE_COORDI_BOTTOM_LAT",
+    "AIRKOREA_KOREA_IMAGE_COORDI_LEFT_LON",
+    "AIRKOREA_KOREA_IMAGE_COORDI_RIGHT_LON",
+];
+const SIZE_NAMES: [&str; 2] = [
+    "AIRKOREA_KOREA_IMAGE_SIZE_WIDTH",
+    "AIRKOREA_KOREA_IMAGE_SIZE_HEIGHT",
+];
+const POS_NAMES: [&str; 4] = [
+    "AIRKOREA_KOREA_IMAGE_MAP_LEFT",
+    "AIRKOREA_KOREA_IMAGE_MAP_RIGHT",
+    "AIRKOREA_KOREA_IMAGE_MAP_TOP",
+    "AIRKOREA_KOREA_IMAGE_MAP_BOTTOM",
+];
 impl Calibration {
-    /// The service host's `config.js` values (read-only, 2026-10-14, L89-105) with the GIF
-    /// screen the provider sends now (AK, 2026-10-15: 820x820 instead of 820x830).
-    pub fn deployed() -> Self {
+    /// The `config.js` defaults of legacy master (L89-105): the characterized 820x820 canvas, map
+    /// x 77..663 and y 75..794 (exclusive ends), the inherited geographic box.
+    pub fn defaults() -> Self {
         Self {
-            top_lat: 39.3769,
-            bottom_lat: 32.6942,
-            left_lon: 123.9523,
-            right_lon: 130.6741,
-            width: 820.,
-            height: 820.,
-            left: 78.,
-            right: 663.,
-            top: 80.,
-            bottom: 798.,
+            coordi: ["39.3769", "32.6942", "123.9523", "130.6741"].map(String::from),
+            size: ["820", "820"].map(String::from),
+            pos: ["77", "663", "75", "794"].map(String::from),
         }
     }
-    /// The legacy setting names (`AIRKOREA_KOREA_IMAGE_*`, `config.js` L88-105) with the
-    /// deployed values for an unset name; coordinates through `parseFloat`, pixels and sizes
-    /// through `parseInt` as the parser reads them.
+    /// The legacy setting names; an unset or empty value takes the default (`||`).
     pub fn from_vars(var: &dyn Fn(&str) -> Option<String>) -> Self {
-        let d = Self::deployed();
-        // `process.env.X || default`: an empty value is unset.
-        let var = |name: &str| var(name).filter(|v| !v.is_empty());
-        let float = |name: &str, default: f64| {
-            var(name).map_or(default, |v| crate::world::js::parse_float(&v))
-        };
-        let int = |name: &str, default: f64| {
-            var(name).map_or(default, |v| {
-                crate::domestic::kma::js::parse_int(&crate::domestic::kma::js::V::s(&v))
-            })
+        let d = Self::defaults();
+        let pick = |name: &str, default: &String| {
+            var(name)
+                .filter(|v| !v.is_empty())
+                .unwrap_or_else(|| default.clone())
         };
         Self {
-            top_lat: float("AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT", d.top_lat),
-            bottom_lat: float("AIRKOREA_KOREA_IMAGE_COORDI_BOTTOM_LAT", d.bottom_lat),
-            left_lon: float("AIRKOREA_KOREA_IMAGE_COORDI_LEFT_LON", d.left_lon),
-            right_lon: float("AIRKOREA_KOREA_IMAGE_COORDI_RIGHT_LON", d.right_lon),
-            width: int("AIRKOREA_KOREA_IMAGE_SIZE_WIDTH", d.width),
-            height: int("AIRKOREA_KOREA_IMAGE_SIZE_HEIGHT", d.height),
-            left: int("AIRKOREA_KOREA_IMAGE_MAP_LEFT", d.left),
-            right: int("AIRKOREA_KOREA_IMAGE_MAP_RIGHT", d.right),
-            top: int("AIRKOREA_KOREA_IMAGE_MAP_TOP", d.top),
-            bottom: int("AIRKOREA_KOREA_IMAGE_MAP_BOTTOM", d.bottom),
+            coordi: std::array::from_fn(|i| pick(COORDI_NAMES[i], &d.coordi[i])),
+            size: std::array::from_fn(|i| pick(SIZE_NAMES[i], &d.size[i])),
+            pos: std::array::from_fn(|i| pick(POS_NAMES[i], &d.pos[i])),
         }
     }
-    /// `isValidImage(width, height)`.
-    pub fn valid_size(&self, width: usize, height: usize) -> bool {
-        self.width == width as f64 && self.height == height as f64
+    /// `getImagePos`: left, right, top, bottom through `parseInt`.
+    pub fn image_pos(&self) -> [f64; 4] {
+        self.pos
+            .clone()
+            .map(|v| crate::domestic::kma::js::parse_int(&crate::domestic::kma::js::V::s(&v)))
     }
-    /// The station pixel (`getDustInfo`), or None for a geocode outside the box
-    /// (`_isValidGeocode`); NaN coordinates pass the box and give NaN pixels.
-    fn pixel(&self, lat: f64, lon: f64) -> Option<(f64, f64)> {
-        if lat > self.top_lat
-            || lat < self.bottom_lat
-            || lon < self.left_lon
-            || lon > self.right_lon
-        {
-            return None;
+    /// `getDefaultCoordi`: top_lat, bottom_lat, left_lon, right_lon through `parseFloat`.
+    pub fn coordinate(&self) -> [f64; 4] {
+        self.coordi
+            .clone()
+            .map(|v| crate::world::js::parse_float(&v))
+    }
+    /// `layout.geometry`: integer map bounds inside the canvas and a finite, ordered box.
+    fn geometry_ok(&self) -> bool {
+        let p = self.pos.clone().map(|v| number(&v));
+        let g = self.coordi.clone().map(|v| number(&v));
+        let [left, right, top, bottom] = p;
+        let [top_lat, bottom_lat, left_lon, right_lon] = g;
+        p.iter().all(|v| v.is_finite() && v.fract() == 0.)
+            && left >= 0.
+            && top >= 0.
+            && right <= CANVAS as f64
+            && bottom <= CANVAS as f64
+            && left < right
+            && top < bottom
+            && g.iter().all(|v| v.is_finite())
+            && top_lat <= 90.
+            && bottom_lat >= -90.
+            && left_lon >= -180.
+            && right_lon <= 180.
+            && top_lat > bottom_lat
+            && left_lon < right_lon
+    }
+    /// The canvas `layout.validate` accepts: the characterized 820x820, equal to the size
+    /// settings (another size setting rejects every image).
+    pub fn canvas_ok(&self, width: usize, height: usize) -> bool {
+        width == CANVAS
+            && height == CANVAS
+            && width as f64 == number(&self.size[0])
+            && height as f64 == number(&self.size[1])
+    }
+}
+
+/// `layout.frameStart(path, type)`: the first frame instant of a characterized 23-cycle
+/// animation URL, with the KST wall time held in UTC fields (the next day 00:00); anything else
+/// fails closed. `kind` is the image type (`PM10` or `PM25`).
+pub fn frame_start(path: &str, kind: &str) -> Result<f64, String> {
+    let invalid = || INVALID_IMAGE.to_owned();
+    let rest = path
+        .strip_prefix("https://")
+        .or_else(|| path.strip_prefix("http://"))
+        .ok_or_else(invalid)?;
+    let rest = rest
+        .strip_prefix("www.airkorea.or.kr/dustImage/")
+        .ok_or_else(invalid)?;
+    let digits = |s: &str, n: usize| s.len() == n && s.bytes().all(|b| b.is_ascii_digit());
+    let (year, rest) = rest.split_at_checked(4).ok_or_else(invalid)?;
+    let rest = rest.strip_prefix('/').ok_or_else(invalid)?;
+    let (month, rest) = rest.split_at_checked(2).ok_or_else(invalid)?;
+    let rest = rest.strip_prefix('/').ok_or_else(invalid)?;
+    let (day, rest) = rest.split_at_checked(2).ok_or_else(invalid)?;
+    let rest = rest.strip_prefix("/23/09km/AQF.").ok_or_else(invalid)?;
+    let (model, rest) = rest.split_at_checked(8).ok_or_else(invalid)?;
+    let rest = rest.strip_prefix(".NIER_09_01.").ok_or_else(invalid)?;
+    let pollutant = rest.strip_suffix(".2days.ani.gif").ok_or_else(invalid)?;
+    if !(digits(year, 4) && digits(month, 2) && digits(day, 2) && digits(model, 8))
+        || model != format!("{year}{month}{day}")
+        || !matches!((kind, pollutant), ("PM10", "PM10") | ("PM25", "PM2P5"))
+    {
+        return Err(invalid());
+    }
+    let (y, m, d): (i64, i64, i64) = (
+        year.parse().map_err(|_| invalid())?,
+        month.parse().map_err(|_| invalid())?,
+        day.parse().map_err(|_| invalid())?,
+    );
+    // `Date.UTC` maps years 0-99 to 1900+; the ISO date must read back unchanged.
+    let days = crate::world::js::days_from_civil(y, m, d);
+    let back = crate::world::js::parts(days as f64 * DAY_MS).ok_or_else(invalid)?;
+    if y < 100 || (back.year, back.month, back.day) != (y, m, d) {
+        return Err(invalid());
+    }
+    Ok((days + 1) as f64 * DAY_MS)
+}
+
+/// get-pixels frames (`pixels.get(frame, x, y, channel)`), one frame at a time.
+pub trait Pixels {
+    /// The ndarray shape: `[frames, width, height, 4]` for an animation.
+    fn shape(&self) -> Vec<usize>;
+    /// Make frame `f` current.
+    fn select(&mut self, f: usize) -> Result<(), String>;
+    /// `pixels.get(f, x, y, c)` of the current frame.
+    fn get(&self, x: usize, y: usize, c: usize) -> i32;
+}
+/// The frames of a GIF as get-pixels gives them: each its own zeroed RGBA buffer.
+pub struct GifPixels<'a> {
+    reader: GifReader<'a>,
+    frame: Vec<u8>,
+}
+impl<'a> GifPixels<'a> {
+    pub fn new(gif: &'a [u8]) -> Result<Self, String> {
+        let reader = GifReader::new(gif)?;
+        // A GIF without frames: get-pixels decodes frame 0, which fails.
+        if reader.num_frames() == 0 {
+            return Err("Frame index out of range.".into());
         }
-        let dw = (self.right_lon - self.left_lon) / (self.right - self.left);
-        let dh = (self.top_lat - self.bottom_lat) / (self.bottom - self.top);
-        Some((
-            js_parse_int_number((lon - self.left_lon) / dw) + self.left,
-            js_parse_int_number((self.top_lat - lat) / dh) + self.top,
-        ))
+        let frame = vec![0u8; reader.width * reader.height * 4];
+        Ok(Self { reader, frame })
     }
 }
-/// `parseInt(number)`: the number's string form parsed as an integer.
-fn js_parse_int_number(n: f64) -> f64 {
-    crate::domestic::kma::js::parse_int(&crate::domestic::kma::js::V::Num(n))
+impl Pixels for GifPixels<'_> {
+    fn shape(&self) -> Vec<usize> {
+        vec![
+            self.reader.num_frames(),
+            self.reader.width,
+            self.reader.height,
+            4,
+        ]
+    }
+    fn select(&mut self, f: usize) -> Result<(), String> {
+        self.frame.iter_mut().for_each(|b| *b = 0);
+        self.reader.decode_and_blit_rgba(f, &mut self.frame)
+    }
+    fn get(&self, x: usize, y: usize, c: usize) -> i32 {
+        i32::from(self.frame[(y * self.reader.width + x) * 4 + c])
+    }
 }
 
-/// One legend colour and the value legacy stores for it.
-pub type Color = ((u8, u8, u8), f64);
-/// PM10 colours of the current AirKorea legend (the `11시 발표` GIFs of 2026-10-15, legend column
-/// x = 686, top to bottom) with the band's upper label as the value, as legacy assigns them (the
-/// band above the top label keeps legacy's 600). AK 2026-10-15: replaces legacy `colorTable_pm10`.
-pub const COLORS_PM10: [Color; 36] = [
-    ((105, 0, 0), 600.),
-    ((130, 0, 0), 320.),
-    ((155, 0, 0), 280.),
-    ((180, 0, 0), 260.),
-    ((205, 0, 0), 240.),
-    ((230, 0, 0), 220.),
-    ((255, 0, 0), 200.),
-    ((255, 60, 60), 190.),
-    ((255, 90, 90), 180.),
-    ((255, 120, 120), 170.),
-    ((255, 150, 150), 160.),
-    ((100, 100, 0), 151.),
-    ((115, 115, 0), 143.),
-    ((131, 131, 0), 136.),
-    ((146, 146, 0), 129.),
-    ((162, 162, 0), 122.),
-    ((177, 177, 0), 115.),
-    ((193, 193, 0), 108.),
-    ((208, 208, 0), 101.),
-    ((224, 224, 0), 94.),
-    ((240, 240, 0), 87.),
-    ((0, 118, 0), 81.),
-    ((0, 138, 0), 75.),
-    ((0, 157, 0), 70.),
-    ((0, 177, 0), 65.),
-    ((0, 195, 0), 60.),
-    ((0, 216, 0), 55.),
-    ((0, 234, 0), 50.),
-    ((0, 254, 0), 45.),
-    ((100, 254, 100), 40.),
-    ((149, 254, 149), 35.),
-    ((53, 150, 249), 31.),
-    ((75, 162, 244), 24.),
-    ((100, 175, 240), 18.),
-    ((135, 192, 232), 12.),
-    ((152, 201, 228), 6.),
-];
-/// PM2.5 colours of the current legend (same source), the band's upper label as the value (the
-/// band above the top label keeps legacy's 500). Replaces legacy `colorTable_pm25`.
-pub const COLORS_PM25: [Color; 36] = [
-    ((105, 0, 0), 500.),
-    ((130, 0, 0), 200.),
-    ((155, 0, 0), 170.),
-    ((180, 0, 0), 160.),
-    ((205, 0, 0), 150.),
-    ((230, 0, 0), 140.),
-    ((255, 0, 0), 120.),
-    ((255, 60, 60), 110.),
-    ((255, 90, 90), 100.),
-    ((255, 120, 120), 90.),
-    ((255, 150, 150), 80.),
-    ((100, 100, 0), 76.),
-    ((115, 115, 0), 70.),
-    ((131, 131, 0), 65.),
-    ((146, 146, 0), 60.),
-    ((162, 162, 0), 55.),
-    ((177, 177, 0), 50.),
-    ((193, 193, 0), 46.),
-    ((208, 208, 0), 42.),
-    ((224, 224, 0), 39.),
-    ((240, 240, 0), 37.),
-    ((0, 118, 0), 36.),
-    ((0, 138, 0), 33.),
-    ((0, 157, 0), 31.),
-    ((0, 177, 0), 29.),
-    ((0, 195, 0), 27.),
-    ((0, 216, 0), 25.),
-    ((0, 234, 0), 23.),
-    ((0, 254, 0), 21.),
-    ((100, 254, 100), 19.),
-    ((149, 254, 149), 17.),
-    ((53, 150, 249), 16.),
-    ((76, 162, 244), 12.),
-    ((100, 175, 240), 9.),
-    ((135, 192, 232), 6.),
-    ((152, 201, 228), 3.),
-];
+/// The search order of `layout.station`: the centre, then rings up to three pixels away
+/// (`dx` outer, `dy` inner).
+fn offsets() -> Vec<(i64, i64)> {
+    let mut out = vec![(0, 0)];
+    for r in 1..=3i64 {
+        for dx in -r..=r {
+            for dy in -r..=r {
+                if dx.abs().max(dy.abs()) == r {
+                    out.push((dx, dy));
+                }
+            }
+        }
+    }
+    out
+}
 
-/// The pollutant codes (`this.pollutants`) with their colour tables.
-pub const CODES: [(&str, &[Color]); 2] = [("pm10", &COLORS_PM10), ("pm25", &COLORS_PM25)];
-
-/// Per point, the value `getDustInfo` reads in every frame (-1: no colour found), or None for a
-/// point outside the map box (`_isValidGeocode`: the station is skipped). Frames are decoded one
-/// at a time into one zeroed RGBA buffer, as get-pixels gives each frame its own.
-pub fn decode_points(
-    gif: &[u8],
+/// Per station, the value `layout.station` reads in each of the 48 frames (None: no legend
+/// colour found), or None for a station outside the geographic box (`INVALID_STATION_COORDINATE`:
+/// the station is skipped). The image must pass `layout.validate`; anything else is an error and
+/// nothing is stored for the run.
+pub type StationValues = Vec<Option<Vec<Option<f64>>>>;
+pub fn decode_points<P: Pixels>(
+    pixels: &mut P,
     calibration: &Calibration,
-    table: &[Color],
+    kind: &str,
     points: &[(f64, f64)],
-) -> Result<Vec<Option<Vec<f64>>>, String> {
-    let reader = GifReader::new(gif)?;
-    if !calibration.valid_size(reader.width, reader.height) {
-        return Err("INVALID_IMAGE".into());
-    }
-    let candidates: Vec<Option<Vec<usize>>> = points
+) -> Result<StationValues, String> {
+    let thresholds = CODES
         .iter()
-        .map(|(lat, lon)| {
-            calibration
-                .pixel(*lat, *lon)
-                .map(|(x, y)| candidate_pixels(reader.width, reader.height, x, y))
+        .find(|(_, k, _)| *k == kind)
+        .map(|(_, _, t)| *t)
+        .ok_or(INVALID_IMAGE)?;
+    // `layout.validate`: the shape, the size settings, the geometry.
+    let shape = pixels.shape();
+    if shape.len() != 4
+        || shape[0] != FRAMES
+        || shape[3] != 4
+        || !calibration.canvas_ok(shape[1], shape[2])
+        || !calibration.geometry_ok()
+    {
+        return Err(INVALID_IMAGE.into());
+    }
+    let [left, right, top, bottom] = calibration.image_pos();
+    let [top_lat, bottom_lat, left_lon, right_lon] = calibration.coordinate();
+    let dw = (right_lon - left_lon) / (right - left);
+    let dh = (top_lat - bottom_lat) / (bottom - top);
+    let offsets = offsets();
+    // Per station the candidate pixels in search order, inside the map rectangle.
+    let candidates: Vec<Option<Vec<(usize, usize)>>> = points
+        .iter()
+        .map(|&(lat, lon)| {
+            if !lat.is_finite()
+                || !lon.is_finite()
+                || lat > top_lat
+                || lat <= bottom_lat
+                || lon < left_lon
+                || lon >= right_lon
+            {
+                return None;
+            }
+            let x = ((lon - left_lon) / dw).floor() + left;
+            let y = ((top_lat - lat) / dh).floor() + top;
+            Some(
+                offsets
+                    .iter()
+                    .filter_map(|&(dx, dy)| {
+                        let (px, py) = (x + dx as f64, y + dy as f64);
+                        (px >= left && px < right && py >= top && py < bottom)
+                            .then_some((px as usize, py as usize))
+                    })
+                    .collect(),
+            )
         })
         .collect();
-    let mut out: Vec<Option<Vec<f64>>> = candidates
+    let mut out: StationValues = candidates
         .iter()
-        .map(|c| c.as_ref().map(|_| Vec::with_capacity(reader.num_frames())))
+        .map(|c| c.as_ref().map(|_| Vec::with_capacity(FRAMES)))
         .collect();
-    let mut frame = vec![0u8; reader.width * reader.height * 4];
-    for f in 0..reader.num_frames() {
-        frame.iter_mut().for_each(|b| *b = 0);
-        reader.decode_and_blit_rgba(f, &mut frame)?;
-        for (values, pixels) in out.iter_mut().zip(&candidates) {
-            if let (Some(values), Some(pixels)) = (values.as_mut(), pixels) {
-                let value = pixels.iter().find_map(|&p| {
-                    let rgb = (frame[p * 4], frame[p * 4 + 1], frame[p * 4 + 2]);
-                    table.iter().find(|(c, _)| *c == rgb).map(|(_, v)| *v)
-                });
-                values.push(value.unwrap_or(-1.));
+    for f in 0..FRAMES {
+        pixels.select(f)?;
+        // The frame's legend: 36 bands at x 680, each opaque and within four levels.
+        let mut legend = [[0i32; 3]; 36];
+        for (i, band) in legend.iter_mut().enumerate() {
+            let y = (74. + (i as f64 + 0.5) * 701. / 36.).floor() as usize;
+            let rgb = [0, 1, 2].map(|c| pixels.get(680, y, c));
+            if pixels.get(680, y, 3) != 255
+                || !rgb
+                    .iter()
+                    .zip(COLOURS[i])
+                    .all(|(v, n)| (0..=255).contains(v) && (v - n).abs() <= 4)
+            {
+                return Err(INVALID_IMAGE.into());
             }
+            *band = rgb;
+        }
+        for (values, pixel_list) in out.iter_mut().zip(&candidates) {
+            let (Some(values), Some(pixel_list)) = (values.as_mut(), pixel_list) else {
+                continue;
+            };
+            let mut found = None;
+            for &(px, py) in pixel_list {
+                if pixels.get(px, py, 3) != 255 {
+                    continue;
+                }
+                let rgb = [0, 1, 2].map(|c| pixels.get(px, py, c));
+                let exact = legend.iter().position(|band| *band == rgb);
+                // GIF palettes can quantize the same source shade differently (<= 4 levels).
+                let near = || {
+                    legend
+                        .iter()
+                        .position(|band| band.iter().zip(rgb).all(|(v, p)| (v - p).abs() <= 4))
+                };
+                if let Some(band) = exact.or_else(near) {
+                    found = Some(thresholds[band]);
+                    break;
+                }
+            }
+            values.push(found);
         }
     }
     Ok(out)
 }
-/// The pixels `getDustInfo` tries in order: the centre, then the 8x8 block (-4..+3) in
-/// row-major order. `pixels.get(i, x, y, c)` reads the frame at `y * width + x` (an `x` past a
-/// row edge reads the next row); a NaN position or one outside the buffer never matches (a read
-/// outside every frame is `undefined`; one into another frame never happens for points inside
-/// the map rectangle).
-fn candidate_pixels(width: usize, height: usize, x: f64, y: f64) -> Vec<usize> {
-    if !x.is_finite() || !y.is_finite() {
-        return Vec::new();
-    }
-    let (w, h) = (width as isize, height as isize);
-    let (x, y) = (x as isize, y as isize);
-    (0..64isize)
-        .filter_map(|j| {
-            let (dx, dy) = if j == 0 {
-                (0, 0)
-            } else {
-                (j / 8 - 4, j % 8 - 4)
-            };
-            let (px, py) = (x.checked_add(dx)?, y.checked_add(dy)?);
-            let p = py.checked_mul(w)?.checked_add(px)?;
-            (py >= 0 && py < h && p >= 0 && (p as usize) < width * height).then_some(p as usize)
-        })
-        .collect()
+/// [`decode_points`] of a GIF file.
+pub fn decode_gif(
+    gif: &[u8],
+    calibration: &Calibration,
+    kind: &str,
+    points: &[(f64, f64)],
+) -> Result<StationValues, String> {
+    decode_points(&mut GifPixels::new(gif)?, calibration, kind, points)
+}
+/// Whether an acquired image is the characterized animation shape (cheap: the logical screen
+/// and the frame count; `layout.validate` checks the legend when it is decoded).
+pub fn image_shape_ok(gif: &[u8], calibration: &Calibration) -> bool {
+    GifReader::new(gif)
+        .is_ok_and(|r| r.num_frames() == FRAMES && calibration.canvas_ok(r.width, r.height))
 }
 
-/// `'YYYY-MM-DD HH:MM'` of a time value (the process's local time is UTC).
+/// `'YYYY-MM-DD HH:MM'` of the UTC fields of a time value (`toISOString().slice(0,16)`).
 fn minute_text(ms: f64) -> Option<String> {
     let p = crate::world::js::parts(ms)?;
     Some(format!(
@@ -272,38 +426,8 @@ fn minute_text(ms: f64) -> Option<String> {
         p.year, p.month, p.day, p.hour, p.minute
     ))
 }
-/// `new Date('YYYY-MM-DD HH:MM')` in the UTC process.
-fn parse_minute(text: &str) -> Option<f64> {
-    let ms = crate::domestic::kma::time::new_date(&crate::domestic::kma::js::V::s(text));
-    ms.is_finite().then_some(ms)
-}
-/// The 48 row times `getDustInfo` assigns at processing time `now` to a `pubDate`
-/// (`YYYY-MM-DD HH:00`): from the processing day (KST as local), the next day for a 17시 or
-/// later announcement processed on its own day.
-pub fn timeline(pub_date: &str, now: f64) -> Option<Vec<String>> {
-    let pub_ms = parse_minute(pub_date)?;
-    let pub_parts = crate::world::js::parts(pub_ms)?;
-    let mut forecast = now + 9. * HOUR_MS;
-    let today = crate::world::js::parts(forecast)?;
-    if pub_parts.hour >= 17 && pub_parts.day == today.day {
-        forecast += DAY_MS;
-    }
-    let mut out = Vec::with_capacity(48);
-    for i in 0..48 {
-        if i == 24 {
-            forecast += DAY_MS;
-        }
-        let p = crate::world::js::parts(forecast)?;
-        // setHours(i % 24); setMinutes(0): the seconds stay, the text shows minutes only.
-        let day_start = crate::world::js::days_from_civil(p.year, p.month, p.day) as f64 * DAY_MS;
-        forecast =
-            day_start + f64::from(i % 24) * HOUR_MS + (forecast - day_start).rem_euclid(60_000.);
-        out.push(minute_text(forecast)?);
-    }
-    Some(out)
-}
 
-/// One stored row (`_makeHourForecast`).
+/// One stored row (`_makeHourForecast` with the AirKorea date override).
 #[derive(Debug, Clone, PartialEq)]
 struct Row {
     station: String,
@@ -319,14 +443,14 @@ pub struct HourlyForecasts {
     rows: Vec<Row>,
     index: HashMap<(String, u64, &'static str), usize>,
 }
-/// One processed announcement: its `pubDate`, the processing instant and, per code, the decoded
-/// values of every station (None: the station is outside the map box).
+/// One processed announcement: its `pubDate`, the processing instant and, per code, the first
+/// frame instant of its image and the decoded values of every station.
 pub struct Processed<'a> {
     pub pub_date: String,
     pub now: f64,
     pub stations: &'a [(String, f64, f64)],
-    /// `(code, per station values per frame)` in `this.pollutants` order.
-    pub values: Vec<(&'static str, Vec<Option<Vec<f64>>>)>,
+    /// `(code, frame start, per station values per frame)` in `this.pollutants` order.
+    pub values: Vec<(&'static str, f64, StationValues)>,
 }
 impl HourlyForecasts {
     pub fn len(&self) -> usize {
@@ -343,32 +467,30 @@ impl HourlyForecasts {
                 .any(|r| r.code == *code && r.pub_date == pub_date)
         })
     }
-    /// One `do` that reached `_updateHourlyForecast`: every station's 48 rows per code (an hour
-    /// without a value is not stored), then `_removeOldData` at `now`.
+    /// One `do` that reached `_updateHourlyForecast`: every station's rows per code (an hour
+    /// without a value is not stored; a station outside the box is skipped), then
+    /// `_removeOldData` at `now`.
     pub fn apply(&mut self, p: &Processed) {
-        for (code, per_station) in &p.values {
+        for (code, start, per_station) in &p.values {
             for ((station, _, _), values) in p.stations.iter().zip(per_station) {
-                // `_isValidGeocode` failed: the station is skipped.
                 let Some(values) = values else {
                     continue;
                 };
-                let Some(times) = timeline(&p.pub_date, p.now) else {
-                    continue;
-                };
-                for (i, time) in times.iter().enumerate() {
-                    // `result[i]`: missing for a GIF with fewer frames, -1 without a colour.
-                    let Some(val) = values.get(i).copied().filter(|v| *v != -1.) else {
+                for (f, value) in values.iter().enumerate() {
+                    let Some(val) = *value else {
                         continue;
                     };
-                    let Some(date) = parse_minute(time) else {
+                    let wall = start + f as f64 * HOUR_MS;
+                    let Some(data_time) = minute_text(wall) else {
                         continue;
                     };
+                    // `new Date(dataTime + ':00+09:00')`: the KST hour as its instant.
                     self.upsert(Row {
                         station: station.clone(),
-                        date,
+                        date: wall - 9. * HOUR_MS,
                         code,
                         val,
-                        data_time: time.clone(),
+                        data_time,
                         pub_date: p.pub_date.clone(),
                     });
                 }
@@ -386,8 +508,7 @@ impl HourlyForecasts {
             }
         }
     }
-    /// `_removeOldData` at `now`: rows dated before now - 1 day (`date` holds the KST wall time
-    /// as a UTC instant, compared with the real instant as legacy does).
+    /// `_removeOldData` at `now`: rows dated before now - 1 day.
     pub fn remove_old(&mut self, now: f64) {
         let limit = now - DAY_MS;
         if self.rows.iter().all(|r| r.date >= limit) {

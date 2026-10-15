@@ -799,37 +799,24 @@ where
         }))
     }
 
-    /// Acquire the AirKorea forecast images of one announcement (S15b-3c): keyless GETs of the
-    /// provider's image URLs on the built-in image origin, HTTP 200 only, each a GIF of the
-    /// accepted logical screen. They form one group (page 1 PM10, page 2 PM2.5; a pollutant
-    /// without a URL is an empty record with status 204, as legacy skips it); a failure of either
-    /// image stores nothing (legacy `getDustImage` stops at the first error).
+    /// Acquire the AirKorea forecast images of one announcement (S15b-3c, legacy master
+    /// `getDustImage`): keyless GETs of the two validated image paths on the built-in image root,
+    /// HTTP 200 only, each a GIF of the characterized shape (820x820, 48 frames; the legend is
+    /// checked when it is decoded). They form one group with a manifest of the two URLs (page 1
+    /// PM10, page 2 PM2.5, page 3 the manifest); a failure of either image stores nothing.
     pub async fn acquire_airkorea_images(
         &self,
         request: &AirKoreaImageRequest,
         deadline: Instant,
     ) -> Result<Acquired, DomesticError> {
-        if !request
-            .urls()
-            .iter()
-            .flatten()
-            .all(|u| self.endpoints.image_allowed(u))
-        {
-            return Err(DomesticError::Invalid("image url"));
-        }
+        let targets = request.paths().map(|path| {
+            self.endpoints
+                .image_url(path)
+                .and_then(|u| PublicRequest::new(u).map_err(|_| DomesticError::Invalid("endpoint")))
+        });
         let mut bodies = Vec::new();
-        for url in request.urls() {
-            // A pollutant without an image URL is skipped: an empty record marks it.
-            let Some(url) = url else {
-                bodies.push((
-                    Arc::<[u8]>::from(Vec::new()),
-                    super::airkorea_image::SKIPPED,
-                    "image/gif".to_owned(),
-                ));
-                continue;
-            };
-            let target =
-                PublicRequest::new(url.clone()).map_err(|_| DomesticError::Invalid("endpoint"))?;
+        for target in targets {
+            let target = target?;
             let _admission = timeout_at(deadline, self.public_admission.clone().acquire_owned())
                 .await
                 .map_err(|_| DomesticError::Deadline)?
@@ -850,17 +837,20 @@ where
                 return Err(DomesticError::Provider(Disposition::Rejected));
             }
             let bytes = Arc::<[u8]>::from(response.body);
-            let (view, size) = (bytes.clone(), request.size());
+            let (view, check) = (bytes.clone(), request.clone());
             let valid = self
-                .blocking(deadline, move || {
-                    super::airkorea_image::valid_image(&view, size)
-                })
+                .blocking(deadline, move || check.shape_ok(&view))
                 .await?;
             if !valid {
                 return Err(DomesticError::Invalid("INVALID_IMAGE"));
             }
             bodies.push((bytes, response.status, response.content_type));
         }
+        bodies.push((
+            Arc::<[u8]>::from(request.manifest()),
+            200,
+            "application/json".to_owned(),
+        ));
         let fetched = self.now_ms()?;
         let pages = bodies.len() as u32;
         let records = bodies

@@ -1,8 +1,9 @@
 # S15b-3c AirKorea image forecast oracle fixture
 
-`air_forecast.json.gz` (sha256 `f8e2204592105e8b1e7113127a948d97219e55469b8bc1bea539927304ca4cf1`) holds pinned legacy-oracle results for
+`air_forecast.json.gz` (sha256 `619e9c5a9c22d5dac07c7806c0961514f3a69085fceeb2ec2b8ae7629b64e593`) holds pinned legacy-oracle results for
 the S15b-3c tests (`server2/tests/domestic/air_forecast.rs`, `air_forecast_s3.rs`). It is test
-data only; the server2 runtime never reads it or any legacy file.
+data only; the server2 runtime never reads it or any legacy file. The parity target is legacy
+master `91c77fcb` and later (#2757, "Restore AirKorea image-derived hourly forecasts").
 
 ## Recording
 
@@ -10,26 +11,51 @@ data only; the server2 runtime never reads it or any legacy file.
   omggif `1.0.9` (the versions of the legacy lockfile, installed by
   `install-pixels.sh`), and for the forecast the S15b-3a oracle (`AIR-PROVENANCE.md`): Mongoose
   5.1.2 over the in-memory collection double.
-- Legacy source: the repository `server/` files the forecast driver loads; their sha256 are stored
-  in `forecast.source.files` (9 files).
-- Inputs: synthetic GIFs written with omggif's `GifWriter` (one by hand, from review S15b3c-R2); no live image or value is copied. The
-  colour tables are the live-legend tables of `server2/src/domestic/kma/source/air_forecast.rs`
-  (AK 2026-10-15), handed to the legacy controller in place of its own tables
-  (`ORACLE_DUST_TABLES`); the calibration is the deployed one with the 820×820 size.
-- Run: `run.sh record-gif.js`, `oracle/run.sh record-forecast.js`, then `make_fixture.py`.
+- Legacy source (sha256 of each file the drivers load or name):
+
+| File | sha256 |
+| --- | --- |
+| `server/config/config.js` | `3977339b7e62ecf94de7647b5c57ca0d6160cda2ab86df26c1b3e3eb9f65e11d` |
+| `server/controllers/airkorea.dust.image.controller.js` | `2ae64ea3ae7ce5c4c9bcf03f3df09285dbffd603c57cf67adcf43536a20b524a` |
+| `server/controllers/airkorea.hourly.forecast.controller.js` | `d18c7e99d807be929af352e434c05004b12e2da467f219307d1a09f2fa6d9bdf` |
+| `server/controllers/img.hourly.forecast.controller.js` | `1c343d20e535179487db98f93fd9e15f2d30a2f1535ec8a3370c4466c9bf0c9a` |
+| `server/lib/airkorea.finedust.image.parser.js` | `341254133c009169e4bf2d8582b53d12a2472c29dddcf9715ef89a79f3b0915b` |
+| `server/lib/airkoreaImageLayout.js` | `2a673a81f138494928af6491669192358d0a197e3d9ed927ff1c1d5b2e31ad8c` |
+| `server/lib/aqi.converter.js` | `75755a5e87941c0d6f0f3675b85cc70d8d252342dcc14f4b6a7232e61ddf0a73` |
+| `server/lib/kmaTimeLib.js` | `e17dc2941e7e03701cebbe05b4cb077d771d9ed022af8a618057a99bb1b5ec61` |
+| `server/models/arpltn.hourly.forecast.js` | `673fdec0cec3532acd0deeae431c2eeaa49ec0318ebc5ff64ba21fb93585936c` |
+| `server/models/modelMinuDustFrcst.js` | `d2db8cb416e26db18f3caf55ab391c3accc0d8311ba7e6c34c11d3355441dfe4` |
+| `server/models/modelMsrStnInfo.js` | `b927f78a17d54fb930bb2400d6730bd711000a6846dea7bd639a799a927ff040` |
+| `server/test/offline/air-harness.js` | `10681bd1b9b52148fdf6460ea15231a385dbba13153ebc44e555ff8d2bb81c9d` |
+| `server/test/offline/airkorea-image-harness.js` | `cfbc4fd4afcfb48bb12c22c179551914ec5f398d22e245c919535935508f4bc5` |
+| `server/test/offline/airkorea-image.test.js` | `1f6436439721f84a613adf11f4b1deb36d13b06b7b5e4fc5c3ca6229fbe633a5` |
+
+- Inputs: synthetic GIFs written with omggif's `GifWriter` (one by hand, from review
+  S15b3c-R2); no live image or value is copied. The forecast GIFs have the characterized layout
+  (an 820×820 canvas, 48 frames of 673×795 at (66,10), the 36-band legend at x 680) and are
+  served to get-pixels for their 23-cycle URLs; `config.image.airkorea_korea_image` is the master
+  `config.js` default with no `AIRKOREA_KOREA_IMAGE_*` set. The regression cases use the #2757
+  harness itself (`server/test/offline/airkorea-image-harness.js`: synthetic pixels and memory
+  models).
+- Run: `run.sh record-gif.js`, `oracle/run.sh record-forecast.js`, `oracle/run.sh
+  record-harness.js`, then `make_fixture.py`.
 
 ## What is recorded
 
 - `gif`: 9 synthetic GIFs (`global-palette`, `sub-rectangle`, `local-palette-transparent`, `interlaced`, `short-stream`, `full-code-table`, `offset-frame-820`, `overlong-one-pixel`, `overlong-stream`): shape and the sha256 of every frame get-pixels
   returns.
-- `forecast`: 6 stations (one outside the map box), 2 image sets
-  (820×820, one 673×795 frame per hour at (66,10) as the live images; the second set's PM2.5 has 30
-  frames), 6 announcements and 9 `getMinuDustFrcstDspth` →
-  `AirkoreaHourlyForecastController.do` runs (a stored announcement skipped, a 23시 run after
-  midnight, a PM10-only announcement twice, a PM2.5-only one, one with a broken PM10 image, the
-  one-day removal, an announcement without forecast documents): after each run the
-  `arpltnhourlyforecasts` documents (432, 432, 432, 432, 432, 432, 540, 540, 514) and the
-  `getForecast` answer of every station.
+- `forecast`: 8 stations (exact colours, a ring search, tolerance matches and
+  misses, a per-frame legend shade, two outside the box, the map's top-left corner),
+  6 images (a broken-legend and a 47-frame one among them),
+  7 announcements and 9 `getMinuDustFrcstDspth` →
+  `AirkoreaHourlyForecastController.do` runs (a stored announcement, its skip, a second
+  announcement over the same images, a 17-cycle path, the next 23-cycle images, a missing PM2.5
+  path, a broken legend frame, a 47-frame image, a removal run without documents): after each run
+  the legacy error (if any), the `arpltnhourlyforecasts` documents
+  (528, 528, 528, 528, 792, 726, 660, 594, 396) and the `getForecast` answer of every station.
+- `harness`: the 29 cases of `server/test/offline/airkorea-image.test.js` (each
+  invalid or missing path, shape, legend, calibration and palette case, the month rollover and the
+  `do` skip), each with the rows stored or the rejection.
 
 ## Driver source
 
@@ -152,50 +178,39 @@ const out = {schema: 1, oracle: {node: process.version, getPixels: require('get-
 
 ```
 
-### `oracle/record-forecast.js` (sha256 `7ae266be78d4836145a651e21a6902591adf58cba07cac74ab4ea8f5efdf4d9a`)
+### `oracle/record-forecast.js` (sha256 `a9eefff227b1d4d18e82c5927a3f784f1d1b7544d07f303939852341007be8dd`)
 
 ```js
-/* S15b-3c AirKorea image forecast oracle (task evidence, not a repository tool). No network.
- * Legacy `AirkoreaHourlyForecastController.do(dataTime)` (master code, Mongoose 5.1.2 over the
- * in-memory collection double) decodes synthetic 820x820 GIFs (omggif GifWriter; local files given
- * to the real get-pixels 3.3.2 as `imageUrl[6]`/`[7]`) with the deployed calibration and the colour
- * tables read from the current legend (AK 2026-10-15). Records every run's collection and the
- * `getForecast` answer of every station.
+/* S15b-3c AirKorea image forecast oracle, legacy master after #2757 (task evidence, not a
+ * repository tool). No network. Legacy `AirkoreaHourlyForecastController.do(dataTime)` (Mongoose
+ * 5.1.2 over the in-memory collection double) runs over synthetic GIFs of the characterized layout
+ * (omggif GifWriter: an 820x820 canvas, 48 frames of 673x795 at (66,10), the 36-band legend at
+ * x 680) served to the real get-pixels 3.3.2 for their 23-cycle URLs, with the config.js defaults.
+ * Records every run's collection and the `getForecast` answer of every station.
  * Run: run.sh record-forecast.js <out.json> */
 'use strict';
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 const assert = require('assert');
 if (process.version !== 'v16.20.2') throw new Error('Pinned oracle Node v16.20.2 required');
 if (process.env.TZ !== 'UTC') throw new Error('TZ=UTC required');
 assert.strictEqual(require('mongoose/package.json').version, '5.1.2');
 assert.strictEqual(require('get-pixels/package.json').version, '3.3.2');
 const {GifWriter} = require('omggif');
+const getPixels = require('get-pixels');
 
-global.ORACLE_GET_PIXELS = require('get-pixels');
+// The images by URL: get-pixels receives the bytes (no network); an unknown URL fails as a 404.
+const files = {};
+global.ORACLE_GET_PIXELS = (url, type, cb) => files[url] ? getPixels(files[url], type, cb) : cb(new Error('HTTP 404'));
+// `config.image.airkorea_korea_image` of master config.js with no AIRKOREA_KOREA_IMAGE_* set.
 global.ORACLE_IMAGE_CONFIG = {airkorea_korea_image: {
     coordi: {top_lat: '39.3769', bottom_lat: '32.6942', left_lon: '123.9523', right_lon: '130.6741'},
     size: {width: '820', height: '820'},
-    pixel_pos: {left: '78', right: '663', top: '80', bottom: '798'}},
+    pixel_pos: {left: '77', right: '663', top: '75', bottom: '794'}},
     kaq_korea_image: {coordi: {}, size: {}, pixel_pos: {}, so2_pixel_pos: {}},
     kaq_korea_modelimg_image: {coordi: {}, size: {}, pixel_pos: {}}};
-// The legend colours and values (server2 COLORS_PM10 / COLORS_PM25).
-const PM10 = [[105,0,0,600],[130,0,0,320],[155,0,0,280],[180,0,0,260],[205,0,0,240],[230,0,0,220],[255,0,0,200],
-    [255,60,60,190],[255,90,90,180],[255,120,120,170],[255,150,150,160],[100,100,0,151],[115,115,0,143],[131,131,0,136],
-    [146,146,0,129],[162,162,0,122],[177,177,0,115],[193,193,0,108],[208,208,0,101],[224,224,0,94],[240,240,0,87],
-    [0,118,0,81],[0,138,0,75],[0,157,0,70],[0,177,0,65],[0,195,0,60],[0,216,0,55],[0,234,0,50],[0,254,0,45],
-    [100,254,100,40],[149,254,149,35],[53,150,249,31],[75,162,244,24],[100,175,240,18],[135,192,232,12],[152,201,228,6]];
-const PM25 = [[105,0,0,500],[130,0,0,200],[155,0,0,170],[180,0,0,160],[205,0,0,150],[230,0,0,140],[255,0,0,120],
-    [255,60,60,110],[255,90,90,100],[255,120,120,90],[255,150,150,80],[100,100,0,76],[115,115,0,70],[131,131,0,65],
-    [146,146,0,60],[162,162,0,55],[177,177,0,50],[193,193,0,46],[208,208,0,42],[224,224,0,39],[240,240,0,37],
-    [0,118,0,36],[0,138,0,33],[0,157,0,31],[0,177,0,29],[0,195,0,27],[0,216,0,25],[0,234,0,23],[0,254,0,21],
-    [100,254,100,19],[149,254,149,17],[53,150,249,16],[76,162,244,12],[100,175,240,9],[135,192,232,6],[152,201,228,3]];
-const table = t => t.map(([r, g, b, val]) => ({r, g, b, val}));
-global.ORACLE_DUST_TABLES = {pm10: table(PM10), pm25: table(PM25)};
-
 const L = require('./legacy');
-// kmaTimeLib formatting uses the Manager's leadingZeros (a global in the legacy process).
 global.manager = {leadingZeros: (n, digits) => { n = n.toString(); return n.length < digits ? '0'.repeat(digits - n.length) + n : n; }};
 const ej = L.fake.ejson;
 const RealDate = Date;
@@ -206,63 +221,79 @@ class FakeDate extends RealDate {
 }
 const cb2p = fn => new Promise(resolve => fn((err, v) => resolve({err, v})));
 
-// Stations: inside the map (exact colour, a neighbour colour, alternating misses), outside the
-// box, and one at the map's top-left corner region.
+// `airkoreaImageLayout.colours` (the characterized legend).
+const NOMINAL = [[105,0,0],[130,0,0],[155,0,0],[180,0,0],[205,0,0],[230,0,0],[255,0,0],
+    [255,60,60],[255,90,90],[255,120,120],[255,150,150],[100,100,0],[115,115,0],[131,131,0],
+    [146,146,0],[162,162,0],[177,177,0],[193,193,0],[208,208,0],[224,224,0],[240,240,0],
+    [0,118,0],[0,138,0],[0,157,0],[0,177,0],[0,195,0],[0,216,0],[0,234,0],[0,254,0],
+    [100,254,100],[149,254,149],[53,150,249],[76,162,244],[100,175,240],[135,192,232],[152,201,228]];
+// Palette: background, a non-legend grey, the legend, band 21 four levels greener (a legend
+// shade of frame 14 and a station colour), band 31 four levels redder (a tolerance match), band 5
+// five levels off (no match), white (a broken legend band).
+const COLORS = [[240,240,240],[200,200,200]].concat(NOMINAL, [[0,122,0],[57,150,249],[235,0,0],[255,255,255]]);
+while (COLORS.length < 64) COLORS.push([1, 2, COLORS.length]);
+const PALETTE = COLORS.map(([r, g, b]) => r << 16 | g << 8 | b);
+const BAND = i => 2 + i, GREEN21 = 38, RED31 = 39, OFF5 = 40, WHITE = 41;
+
+// Stations: exact colours, a ring search, tolerance matches with misses, a per-frame legend
+// shade, outside the box (two: east of it and on its southern edge), the map's top-left corner.
 const STATIONS = [['중구', 37.5665, 126.978], ['부산진구', 35.1796, 129.0756], ['제주', 33.4996, 126.5312],
-    ['울릉도', 37.4845, 130.9057], ['대전', 36.35, 127.38], ['백령도', 37.97, 124.71]];
-const CAL = {top_lat: 39.3769, bottom_lat: 32.6942, left_lon: 123.9523, right_lon: 130.6741, left: 78, right: 663, top: 80, bottom: 798};
+    ['울릉도', 37.4845, 130.9057], ['대전', 36.35, 127.38], ['백령도', 37.97, 124.71],
+    ['남쪽끝', 32.6942, 127.0], ['모서리', 39.3769, 123.9523]];
+const CAL = {top_lat: 39.3769, bottom_lat: 32.6942, left_lon: 123.9523, right_lon: 130.6741, left: 77, right: 663, top: 75, bottom: 794};
 function pixel(lat, lon) {
     const dw = (CAL.right_lon - CAL.left_lon) / (CAL.right - CAL.left), dh = (CAL.top_lat - CAL.bottom_lat) / (CAL.bottom - CAL.top);
-    return [parseInt((lon - CAL.left_lon) / dw) + CAL.left, parseInt((CAL.top_lat - lat) / dh) + CAL.top];
+    return [Math.floor((lon - CAL.left_lon) / dw) + CAL.left, Math.floor((CAL.top_lat - lat) / dh) + CAL.top];
 }
-// Palette: index 0 background grey, 1 a non-table grey, then the PM10 and PM2.5 legend colours.
-const COLORS = [[240, 240, 240], [200, 200, 200]];
-for (const [r, g, b] of PM10.concat(PM25)) if (!COLORS.some(c => c[0] === r && c[1] === g && c[2] === b)) COLORS.push([r, g, b]);
-while (COLORS.length < 128) COLORS.push([1, 2, COLORS.length]);
-const PALETTE = COLORS.map(([r, g, b]) => r << 16 | g << 8 | b);
-const colorIndex = ([r, g, b]) => COLORS.findIndex(c => c[0] === r && c[1] === g && c[2] === b);
 
-/** An 820x820 GIF with one 673x795 frame at (66,10) per hour, as the live images. */
-function gif(code, set, frames) {
-    const T = code === 'pm10' ? PM10 : PM25;
+/** A characterized animation: `frames` frames of 673x795 at (66,10) on an 820x820 canvas. */
+function gif(code, set, options = {}) {
+    const frames = options.frames || 48, shift = code === 'pm10' ? 0 : 3;
     const [fx, fy, fw, fh] = [66, 10, 673, 795];
     const buf = Buffer.alloc(820 * 820 * frames * 2 + (1 << 20));
     const gw = new GifWriter(buf, 820, 820, {palette: PALETTE, loop: 0});
     for (let f = 0; f < frames; f++) {
         const px = new Array(fw * fh).fill(0);
         const put = (x, y, idx) => { if (x >= fx && x < fx + fw && y >= fy && y < fy + fh) px[(y - fy) * fw + (x - fx)] = idx; };
-        const block = (x, y, idx) => { for (let dy = -5; dy <= 5; dy++) for (let dx = -5; dx <= 5; dx++) put(x + dx, y + dy, idx); };
-        const [ax, ay] = pixel(STATIONS[0][1], STATIONS[0][2]);
-        block(ax, ay, colorIndex(T[(f * 3 + set * 5) % 36]));
-        // 부산진구: a non-table centre block with one table pixel at the j = 10 offset (-3, -2).
-        const [bx, by] = pixel(STATIONS[1][1], STATIONS[1][2]);
-        block(bx, by, 1);
-        put(bx - 3, by - 2, colorIndex(T[(f + set) % 36]));
-        // 제주: no table colour in even frames (the hour is not stored).
-        const [cx, cy] = pixel(STATIONS[2][1], STATIONS[2][2]);
-        block(cx, cy, f % 2 === 0 ? 1 : colorIndex(T[((35 - f) % 36 + 36) % 36]));
-        const [dx, dy] = pixel(STATIONS[4][1], STATIONS[4][2]);
-        block(dx, dy, colorIndex(T[(f * 7 + set) % 36]));
-        const [ex, ey] = pixel(STATIONS[5][1], STATIONS[5][2]);
-        block(ex, ey, colorIndex(T[(set * 11 + 2) % 36]));
+        const block = (x, y, idx) => { for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) put(x + dx, y + dy, idx); };
+        for (let y = 74; y < 775; y++) {
+            const band = Math.min(35, Math.floor((y - 74) * 36 / 701));
+            let idx = BAND(band);
+            if (f === 14 && band === 21) idx = GREEN21;
+            if (options.badLegend && f === 47 && band === 10) idx = WHITE;
+            for (let x = 678; x <= 682; x++) put(x, y, idx);
+        }
+        const at = name => pixel(...STATIONS.find(s => s[0] === name).slice(1));
+        let [x, y] = at('중구');
+        block(x, y, BAND((f * 3 + set * 5 + shift) % 36));
+        [x, y] = at('부산진구');
+        block(x, y, 1);
+        put(x - 2, y + 1, BAND((f + set + shift) % 36));
+        put(x + 2, y + 2, BAND((f + set + 7) % 36));
+        [x, y] = at('제주');
+        block(x, y, f % 2 === 0 ? RED31 : OFF5);
+        [x, y] = at('대전');
+        block(x, y, GREEN21);
+        [x, y] = at('백령도');
+        block(x, y, BAND((set * 11 + 2 + shift) % 36));
+        [x, y] = at('모서리');
+        put(x, y, 1);
+        put(x - 1, y - 1, BAND(0));
+        put(x + 1, y + 1, BAND(f % 36));
         gw.addFrame(fx, fy, fw, fh, px, {delay: 50});
     }
     return Buffer.from(buf.slice(0, gw.end()));
 }
+const url = (code, day, hour = '23') => 'https://www.airkorea.or.kr/dustImage/' + day + '/' + hour + '/09km/AQF.' +
+    day.replace(/\//g, '') + '.NIER_09_01.' + (code === 'pm25' ? 'PM2P5' : 'PM10') + '.2days.ani.gif';
 
 (async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's15b3c-'));
-    const sets = [];
-    for (const set of [0, 1]) {
-        // PM2.5 of the second set has fewer frames than hours (the later hours are not stored).
-        const files = {pm10: gif('pm10', set, 48), pm25: gif('pm25', set, set === 1 ? 30 : 48)};
-        const paths = {};
-        for (const code of ['pm10', 'pm25']) {
-            paths[code] = path.join(dir, `set${set}-${code}.gif`);
-            fs.writeFileSync(paths[code], files[code]);
-        }
-        sets.push({files, paths});
-    }
+    const images = [gif('pm10', 0), gif('pm25', 0), gif('pm10', 1), gif('pm25', 1),
+        gif('pm10', 1, {badLegend: true}), gif('pm10', 0, {frames: 47})];
+    const byUrl = {[url('pm10', '2026/10/14')]: 0, [url('pm25', '2026/10/14')]: 1, [url('pm10', '2026/10/15')]: 2,
+        [url('pm25', '2026/10/15')]: 3, [url('pm10', '2026/10/16')]: 4, [url('pm25', '2026/10/16')]: 1,
+        [url('pm10', '2026/10/17')]: 5, [url('pm25', '2026/10/17')]: 1};
+    for (const [u, i] of Object.entries(byUrl)) files[u] = images[i];
     const MsrStn = L.load('models/modelMsrStnInfo.js');
     L.fake.attach(MsrStn);
     const Frcst = L.load('models/modelMinuDustFrcst.js');
@@ -272,52 +303,46 @@ function gif(code, set, frames) {
     for (const [stationName, lat, lon] of STATIONS) {
         await cb2p(cb => new MsrStn({stationName, geo: [lon, lat], addr: stationName}).save(cb));
     }
-    // Announcements with the state of each image (review S15b3c-R5): `image`, `absent` (the
-    // document has no image URL: `getDustImage` skips that pollutant), `nodoc` (no document of that
-    // code) or `broken` (a URL get-pixels cannot read: the whole run stores nothing).
-    const announce = [['2026-10-14 17시 발표', 0, 'image', 'image'], ['2026-10-14 23시 발표', 1, 'image', 'image'],
-        ['2026-10-15 05시 발표', 0, 'image', 'image'], ['2026-10-15 11시 발표', 1, 'image', 'absent'],
-        ['2026-10-15 17시 발표', 0, 'nodoc', 'image'], ['2026-10-15 23시 발표', 1, 'broken', 'image']];
-    const missing = path.join(dir, 'missing.gif');
-    for (const [dataTime, set, pm10, pm25] of announce) {
-        for (const [code, state] of [['PM10', pm10], ['PM25', pm25]]) {
-            if (state === 'nodoc') continue;
-            const url = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6'];
-            const own = state === 'broken' ? missing : sets[set].paths[code.toLowerCase()];
-            if (code === 'PM10') {
-                if (state !== 'absent') url.push(own, sets[set].paths.pm25, 'u9');
-            } else {
-                url.push(sets[set].paths.pm10);
-                if (state !== 'absent') url.push(own, 'u9');
-            }
-            await cb2p(cb => new Frcst({dataTime, informCode: code, informData: dataTime.slice(0, 10), imageUrl: url}).save(cb));
-        }
+    // Announcements with the URLs their documents name (null: the document has no image URL).
+    const announce = [
+        ['2026-10-15 05시 발표', url('pm10', '2026/10/14'), url('pm25', '2026/10/14')],
+        ['2026-10-15 11시 발표', url('pm10', '2026/10/14'), url('pm25', '2026/10/14')],
+        ['2026-10-15 17시 발표', url('pm10', '2026/10/15', '17'), url('pm25', '2026/10/15', '17')],
+        ['2026-10-15 23시 발표', url('pm10', '2026/10/15'), url('pm25', '2026/10/15')],
+        ['2026-10-16 05시 발표', url('pm10', '2026/10/15'), null],
+        ['2026-10-16 11시 발표', url('pm10', '2026/10/16'), url('pm25', '2026/10/16')],
+        ['2026-10-16 17시 발표', url('pm10', '2026/10/17'), url('pm25', '2026/10/17')]];
+    for (const [dataTime, pm10, pm25] of announce) {
+        const pm10Urls = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', pm10, 'u8', 'u9'];
+        const pm25Urls = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7'].concat(pm25 ? [pm25, 'u9'] : []);
+        await cb2p(cb => new Frcst({dataTime, informCode: 'PM10', informData: dataTime.slice(0, 10), imageUrl: pm10Urls}).save(cb));
+        await cb2p(cb => new Frcst({dataTime, informCode: 'PM25', informData: dataTime.slice(0, 10), imageUrl: pm25Urls}).save(cb));
     }
     const Ctrl = L.load('controllers/airkorea.hourly.forecast.controller.js');
     const Base = L.load('controllers/img.hourly.forecast.controller.js');
-    // Runs (KST): a 17시 announcement processed that day, its repeat (skipped), the 23시 one after
-    // midnight, the 05시 one with the first images again, the PM10-only 11시 one twice (not
-    // skipped: no PM2.5 rows), the PM2.5-only 17시 one, the 23시 one with a broken PM10 image, then
-    // a later run removing old rows for an announcement without forecast documents.
-    const runs = [['2026-10-14 17시 발표', Date.UTC(2026, 9, 14, 8, 2)], ['2026-10-14 17시 발표', Date.UTC(2026, 9, 14, 9, 2)],
-        ['2026-10-14 23시 발표', Date.UTC(2026, 9, 14, 15, 30)], ['2026-10-15 05시 발표', Date.UTC(2026, 9, 14, 20, 2)],
-        ['2026-10-15 11시 발표', Date.UTC(2026, 9, 15, 2, 2)], ['2026-10-15 11시 발표', Date.UTC(2026, 9, 15, 3, 2)],
-        ['2026-10-15 17시 발표', Date.UTC(2026, 9, 15, 8, 2)], ['2026-10-15 23시 발표', Date.UTC(2026, 9, 15, 14, 30)],
-        ['2026-10-16 11시 발표', Date.UTC(2026, 9, 16, 2, 2)]];
-    const out = {schema: 1, oracle: {node: process.version, tz: process.env.TZ, mongoose: '5.1.2', getPixels: '3.3.2'},
+    // Runs (UTC instants): 05시 stored, its repeat skipped, 11시 over the same images, a 17-cycle
+    // rejected, 23시 over the next images, a pair missing PM2.5, a broken legend frame, a 47-frame
+    // image, then a removal run for an announcement without documents.
+    const runs = [['2026-10-15 05시 발표', Date.UTC(2026, 9, 14, 20, 30)], ['2026-10-15 05시 발표', Date.UTC(2026, 9, 14, 21, 30)],
+        ['2026-10-15 11시 발표', Date.UTC(2026, 9, 15, 2, 30)], ['2026-10-15 17시 발표', Date.UTC(2026, 9, 15, 8, 30)],
+        ['2026-10-15 23시 발표', Date.UTC(2026, 9, 15, 14, 30)], ['2026-10-16 05시 발표', Date.UTC(2026, 9, 15, 20, 30)],
+        ['2026-10-16 11시 발표', Date.UTC(2026, 9, 16, 2, 30)], ['2026-10-16 17시 발표', Date.UTC(2026, 9, 16, 8, 30)],
+        ['2026-10-17 11시 발표', Date.UTC(2026, 9, 17, 2, 30)]];
+    const config = path.join(process.env.TW_REPO, 'server/config/config.js');
+    const out = {schema: 2, oracle: {node: process.version, tz: process.env.TZ, mongoose: '5.1.2', getPixels: '3.3.2'},
         calibration: global.ORACLE_IMAGE_CONFIG.airkorea_korea_image, stations: STATIONS,
-        sets: sets.map(s => ({pm10: s.files.pm10.toString('base64'), pm25: s.files.pm25.toString('base64')})),
-        announcements: announce, runs: []};
+        images: images.map(b => b.toString('base64')), urls: byUrl, announcements: announce, runs: []};
     for (const [dataTime, now] of runs) {
         NOW = now;
         global.Date = FakeDate;
-        await new Promise(resolve => {
+        const error = await new Promise(resolve => {
+            let result;
             const ctrl = new Ctrl();
             ctrl._removeOldData = function () {
                 Base.prototype._removeOldData.call(this);
-                setTimeout(resolve, 100);
+                setTimeout(() => resolve(result), 100);
             };
-            ctrl.do(dataTime);
+            ctrl.do(dataTime, err => { result = err ? String(err.message || err) : null; });
         });
         global.Date = RealDate;
         const answers = [];
@@ -325,18 +350,106 @@ function gif(code, set, frames) {
             const r = await cb2p(cb => (new Ctrl()).getForecast(stationName, cb));
             answers.push({stationName, result: ej(r.v.map(d => { const o = Object.assign({}, d); delete o._id; return o; }))});
         }
-        out.runs.push({dataTime, now, docs: ej(coll.docs.map(d => { const o = Object.assign({}, d); delete o._id; return o; })), answers});
-        console.log('run', dataTime, new RealDate(now).toISOString(), 'rows', coll.docs.length);
+        out.runs.push({dataTime, now, error, docs: ej(coll.docs.map(d => { const o = Object.assign({}, d); delete o._id; return o; })), answers});
+        console.log('run', dataTime, new RealDate(now).toISOString(), 'error', error, 'rows', coll.docs.length);
     }
-    out.source = {files: Object.fromEntries(Object.entries(L.sourceFiles).sort())};
+    out.source = {files: Object.assign(Object.fromEntries(Object.entries(L.sourceFiles).sort()),
+        {'server/config/config.js': crypto.createHash('sha256').update(fs.readFileSync(config)).digest('hex')})};
     fs.writeFileSync(process.argv[2], JSON.stringify(out));
-    fs.rmSync(dir, {recursive: true});
     process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
 
 ```
 
-### `oracle/legacy.js` (sha256 `66a02c93a20b6beaeaa0efbf68873ad21d8a44de835f45bfcbf22688b71af31d`)
+### `oracle/record-harness.js` (sha256 `207b94241eb405124b02f6f75e1fcc9ae77965286cc4ab5d793bf50c7cd9f707`)
+
+```js
+/* S15b-3c: the legacy #2757 image regression cases (server/test/offline/airkorea-image.test.js)
+ * recorded with their own harness (task evidence, not a repository tool). No network. Each case
+ * runs the master controllers over the harness's synthetic pixels and memory models; the stored
+ * rows (or the rejection) are recorded for the server2 port of the same cases.
+ * Run: run.sh record-harness.js <out.json> */
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+if (process.version !== 'v16.20.2') throw new Error('Pinned oracle Node v16.20.2 required');
+const root = process.env.TW_REPO;
+const H = require(path.join(root, 'server/test/offline/airkorea-image-harness.js'));
+const {harness, pixels, imagePath, invoke, pipeline} = H;
+
+const rowJson = r => ({stationName: r.stationName, date: r.date.toISOString(), code: r.code, val: r.val,
+    dataTime: r.dataTime, pubDate: r.pubDate});
+async function outcome(fn) {
+    try {
+        const rows = await fn();
+        return {rows: rows.map(rowJson)};
+    } catch (error) {
+        return {error: String(error && error.message || error)};
+    }
+}
+(async () => {
+    const cases = [];
+    const add = async (name, setup, run) => {
+        const h = harness(setup.options || {});
+        const result = await outcome(() => run(h));
+        cases.push(Object.assign({name, setup: setup.describe}, result, {stored: h.rows.map(rowJson)}));
+    };
+    const std = {pubDate: '2026-10-15 11:00', pm10: imagePath(), pm25: imagePath('pm25')};
+    await add('current-calibration', {describe: {}}, h => pipeline(h));
+    await add('height-830', {options: {env: {AIRKOREA_KOREA_IMAGE_SIZE_HEIGHT: '830'}}, describe: {env: {AIRKOREA_KOREA_IMAGE_SIZE_HEIGHT: '830'}}}, h => pipeline(h));
+    await add('hourly-do-twice', {describe: {do: '2026-10-15 11시 발표'}}, async h => {
+        await invoke(h.hourly, 'do', '2026-10-15 11시 발표');
+        await invoke(h.hourly, 'do', '2026-10-15 11시 발표');
+        return invoke(h.hourly, 'getForecast', 'synthetic-seoul');
+    });
+    {
+        const env = {AIRKOREA_KOREA_IMAGE_MAP_LEFT: '80', AIRKOREA_KOREA_IMAGE_COORDI_LEFT_LON: '124'};
+        const h = harness({env});
+        const map = await invoke(h.parser, 'getPixelMap', imagePath(), 'image/gif', h.dust.coordinate);
+        cases.push({name: 'explicit-calibration', setup: {env}, map: {left: h.parser.getImagePos().left,
+            left_lon: h.parser.getDefaultCoordi().top_left.lon, map_width: map.map_width,
+            map_pixel_distance_width: map.map_pixel_distance_width}});
+        await add('explicit-calibration-rows', {options: {env}, describe: {env}}, h2 => pipeline(h2));
+    }
+    for (const [name, options, describe] of [
+        ['unknown-canvas', {pixels: pixels({shape: [48, 821, 820, 4]})}, {pixels: {shape: [48, 821, 820, 4]}}],
+        ['missing-frame', {pixels: pixels({shape: [47, 820, 820, 4]})}, {pixels: {shape: [47, 820, 820, 4]}}],
+        ['static-image', {pixels: pixels({shape: [820, 820, 4]})}, {pixels: {shape: [820, 820, 4]}}],
+        ['last-frame-bad-legend', {pixels: pixels({badLegend: true})}, {pixels: {badLegend: true}}],
+        ['map-bottom-900', {env: {AIRKOREA_KOREA_IMAGE_MAP_BOTTOM: '900'}}, {env: {AIRKOREA_KOREA_IMAGE_MAP_BOTTOM: '900'}}],
+        ['top-lat-32', {env: {AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT: '32'}}, {env: {AIRKOREA_KOREA_IMAGE_COORDI_TOP_LAT: '32'}}],
+        ['unknown-colours', {pixels: pixels({unknown: true})}, {pixels: {unknown: true}}],
+        ['palette-delta-4', {pixels: pixels({band: 21, paletteDelta: 4})}, {pixels: {band: 21, paletteDelta: 4}}],
+        ['palette-delta-5', {pixels: pixels({paletteDelta: 5})}, {pixels: {paletteDelta: 5}}]
+    ]) await add(name, {options, describe}, h => pipeline(h));
+    {
+        const paths = {pubDate: '2026-02-01 05:00', pm10: imagePath('pm10', '2026/01/31'), pm25: imagePath('pm25', '2026/01/31')};
+        await add('month-rollover', {describe: {paths}}, h => pipeline(h, paths));
+    }
+    for (const code of ['pm10', 'pm25']) {
+        const other = code === 'pm10' ? 'pm25' : 'pm10';
+        for (const p of [imagePath(code, '2026/02/30'), imagePath(code).replace('AQF.20261014', 'AQF.20261013'),
+            imagePath(code).replace('/23/', '/05/'), imagePath(code).replace('/23/', '/11/'), imagePath(other),
+            'https://www.airkorea.or.kr/dustImage/']) {
+            const paths = {pubDate: '2026-10-15 11:00', [code]: p, [other]: imagePath(other)};
+            await add('invalid-' + code + ':' + p, {describe: {paths}}, h => pipeline(h, paths));
+        }
+        const paths = {pubDate: '2026-10-15 11:00', [other]: imagePath(other)};
+        await add('missing-' + code, {describe: {paths}}, h => pipeline(h, paths));
+    }
+    const files = ['server/test/offline/airkorea-image-harness.js', 'server/test/offline/airkorea-image.test.js',
+        'server/test/offline/air-harness.js', 'server/lib/airkoreaImageLayout.js', 'server/lib/airkorea.finedust.image.parser.js',
+        'server/controllers/airkorea.dust.image.controller.js', 'server/controllers/airkorea.hourly.forecast.controller.js',
+        'server/controllers/img.hourly.forecast.controller.js', 'server/config/config.js'];
+    const source = Object.fromEntries(files.map(f => [f, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, f))).digest('hex')]));
+    fs.writeFileSync(process.argv[2], JSON.stringify({schema: 1, oracle: {node: process.version, tz: process.env.TZ}, source, cases}));
+    console.log('cases', cases.length, cases.map(c => c.name + ':' + (c.error || (c.rows ? c.rows.length : 'map'))).join(' '));
+})().catch(e => { console.error(e); process.exit(1); });
+
+```
+
+### `oracle/legacy.js` (sha256 `d4317568c6fb7383dd06258c251f492d23bc69aaf8ddf15aa78aba9978075432`)
 
 ```js
 /* Load legacy server modules offline for the S15b store oracle (task evidence, not a repository
@@ -390,23 +503,6 @@ Module._load = function (request, parent, isMain) {
         sourceFiles[path.relative(root, resolved)] = crypto.createHash('sha256').update(rawRead.call(fs, resolved)).digest('hex');
     }
     const loaded = rawLoad.apply(this, arguments);
-    // S15b-3c: the colour tables of the image controller replaced (AK 2026-10-15) when a section
-    // provides them; everything else of the controller runs unchanged.
-    if (global.ORACLE_DUST_TABLES && resolved.endsWith(path.join('controllers', 'airkorea.dust.image.controller.js'))) {
-        if (!loaded.__oraclePatched) {
-            const Patched = function () {
-                loaded.call(this);
-                this.colorTable_pm10 = global.ORACLE_DUST_TABLES.pm10;
-                this.colorTable_pm25 = global.ORACLE_DUST_TABLES.pm25;
-                return this;
-            };
-            Patched.prototype = loaded.prototype;
-            Patched.__oraclePatched = true;
-            loaded.__patched = Patched;
-            loaded.__oraclePatched = true;
-        }
-        return loaded.__patched;
-    }
     return loaded;
 };
 const silent = () => {};
@@ -661,16 +757,16 @@ npm ls --depth=1
 
 ```
 
-### `make_fixture.py` (sha256 `2e2a5b7fd4f4a42fdcf4717642e3c9e94f56267e2720ddeb552cfda897f5c7fc`)
+### `make_fixture.py` (sha256 `ae4ce5a506c18cbe4891332bc2902b93b034b86a31543fbfb1f10a6a2497abec`)
 
 ```python
 """Combine the S15b-3c oracle outputs into server2/tests/domestic/fixtures/air_forecast.json.gz."""
 import gzip, json, os
 W = '/Users/ak/paseo/TodayWeather/.claude/worktrees/agent-a7c6632304cb7b2fc/'
 O = W + 'reports/sdlc/issue-2742-s15b3c/out/'
-d = {'schema': 1, 'gif': json.load(open(O + 'gif.json'))}
-if os.path.exists(O + 'forecast.json'):
-    d['forecast'] = json.load(open(O + 'forecast.json'))
+d = {'schema': 2, 'gif': json.load(open(O + 'gif.json'))}
+d['forecast'] = json.load(open(O + 'forecast.json'))
+d['harness'] = json.load(open(O + 'harness.json'))
 raw = json.dumps(d, ensure_ascii=False, separators=(',', ':')).encode()
 open(W + 'server2/tests/domestic/fixtures/air_forecast.json.gz', 'wb').write(gzip.compress(raw, mtime=0))
 print('fixture', len(raw), 'bytes', sorted(d))

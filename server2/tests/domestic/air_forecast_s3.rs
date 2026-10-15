@@ -5,7 +5,7 @@
 //! loopback stub (the dust forecast's `imageUrl[6]`/`[7]`), published before use, and a request
 //! that cannot wait gets the legacy answer for missing data. TEST ONLY: no provider or AWS is
 //! reached.
-use super::air_forecast::{decoded, set_gifs, stations};
+use super::air_forecast::{decoded, image_at, image_url, stations};
 use super::source::same;
 use super::source_s3::{NOW, Peer, deadline, request, seed};
 use super::support::{clock_ms, oracle_config, replay, scenarios};
@@ -13,7 +13,9 @@ use axum::{Router, extract::State, http::Uri, response::IntoResponse, routing::a
 use serde_json::{Value, json};
 use server2::domestic::kma::backend::{KmaSource, SourceAnswer, parse_path};
 use server2::domestic::kma::source::S3Source;
-use server2::domestic::kma::source::air_forecast::{HourlyForecasts, Processed};
+use server2::domestic::kma::source::air_forecast::{
+    HourlyForecasts, Processed, StationValues, frame_start,
+};
 use server2::domestic::kma::source::air_input::AirInputs;
 use server2::domestic::kma::source::airkorea::expected_announcement;
 use server2::domestic::kma::source::forecast_input::pub_date;
@@ -132,22 +134,58 @@ fn station_page() -> Vec<u8> {
     )
     .unwrap()
 }
-/// The legacy fold after one stored run of oracle set 0 for `announcement`, at `fetched`, read
-/// at `cut`.
-fn expected_fold(announcement: &str, fetched: f64, cut: f64) -> HourlyForecasts {
+/// The oracle's 23-cycle image URLs of set `A` (2026/10/14) or `B` (2026/10/15).
+fn fixture_urls(set: char) -> [String; 2] {
+    let day = if set == 'A' {
+        "2026/10/14"
+    } else {
+        "2026/10/15"
+    };
+    [image_url("pm10", day), image_url("pm25", day)]
+}
+/// The pages of one image acquisition: the GIFs of fixture set `set` and the manifest naming
+/// `urls` (their path dates the frames).
+fn image_pages(set: char, urls: &[String; 2]) -> Vec<(Vec<u8>, &'static str)> {
+    let f = fixture_urls(set);
+    vec![
+        (image_at(&f[0]).unwrap().to_vec(), "image/gif"),
+        (image_at(&f[1]).unwrap().to_vec(), "image/gif"),
+        (
+            serde_json::to_vec(&json!({"pm10": urls[0], "pm25": urls[1]})).unwrap(),
+            "application/json",
+        ),
+    ]
+}
+/// The decoded values of fixture set `set`, dated by `urls`.
+fn values(set: char, urls: &[String; 2]) -> Vec<(&'static str, f64, StationValues)> {
+    let f = fixture_urls(set);
+    decoded(&f[0], &f[1])
+        .unwrap()
+        .into_iter()
+        .zip(urls)
+        .zip(["PM10", "PM25"])
+        .map(|(((code, _, v), url), kind)| (code, frame_start(url, kind).unwrap(), v))
+        .collect()
+}
+/// One stored acquisition: `pubDate`, completion, fixture set, URLs.
+type Run<'a> = (&'a str, f64, char, &'a [String; 2]);
+/// The legacy fold after `runs` in completion order, read at `cut`.
+fn expected_fold(runs: &[Run], cut: f64) -> HourlyForecasts {
     let mut fold = HourlyForecasts::default();
-    fold.apply(&Processed {
-        pub_date: pub_date(announcement),
-        now: fetched,
-        stations: &stations(),
-        values: decoded(0),
-    });
+    for (pub_date, at, set, urls) in runs {
+        if fold.has(pub_date) {
+            fold.remove_old(*at);
+        } else {
+            fold.apply(&Processed {
+                pub_date: (*pub_date).into(),
+                now: *at,
+                stations: &stations(),
+                values: values(*set, urls),
+            });
+        }
+    }
     fold.remove_old(cut);
     fold
-}
-fn images(set: usize) -> Vec<(Vec<u8>, &'static str)> {
-    let [pm10, pm25] = set_gifs(set);
-    vec![(pm10, "image/gif"), (pm25, "image/gif")]
 }
 fn town(lat: f64, lon: f64) -> Doc {
     Doc::new().with(
@@ -192,10 +230,11 @@ async fn the_snapshot_answers_the_stored_image_forecast_and_rejects_kaq() {
         announcement.period(),
         "20260924",
         fetched,
-        &images(0),
+        &image_pages('A', &fixture_urls('A')),
     )
     .await;
-    let expected = expected_fold("2026-09-24 05시 발표", fetched, NOW);
+    let urls = fixture_urls('A');
+    let expected = expected_fold(&[("2026-09-24 05:00", fetched, 'A', &urls)], NOW);
     let s3 = S3Source::new(
         transport.clone(),
         Arc::new(|| NOW),
@@ -400,8 +439,10 @@ fn a_kaq_request_without_kaq_forecasts_gets_the_airkorea_forecast() {
 #[derive(Default)]
 struct StubState {
     base: Mutex<String>,
-    /// The origin the dust forecast's image URLs name (default: this stub).
-    image_base: Mutex<Option<String>>,
+    /// The host the dust forecast's image URLs name (default `https://www.airkorea.or.kr`).
+    image_host: Mutex<Option<String>>,
+    /// The image cycle the URLs name (default `23`, the characterized one).
+    cycle: Mutex<Option<String>>,
     gifs: AtomicUsize,
     dust: AtomicUsize,
     delay_ms: AtomicUsize,
@@ -416,35 +457,57 @@ fn now_ms() -> f64 {
         .unwrap()
         .as_millis() as f64
 }
+/// The image URLs the documents name at `now`: the previous KST day's animation (its frames
+/// start today 00:00 KST, as the live `11시 발표` documents of 2026-10-15 named the 10-14 one).
+fn served_urls(host: &str, cycle: &str, now: f64) -> [String; 2] {
+    let p = server2::world::js::parts(now + 9. * 3_600_000. - 86_400_000.).unwrap();
+    let day = format!("{:04}/{:02}/{:02}", p.year, p.month, p.day);
+    ["PM10", "PM2P5"].map(|kind| {
+        format!(
+            "{host}/dustImage/{day}/{cycle}/09km/AQF.{}.NIER_09_01.{kind}.2days.ani.gif",
+            day.replace('/', "")
+        )
+    })
+}
+fn default_urls(now: f64) -> [String; 2] {
+    served_urls("https://www.airkorea.or.kr", "23", now)
+}
 async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> axum::response::Response {
     let path = uri.path().to_owned();
-    if let Some(name) = path.strip_prefix("/dustImage/") {
+    if path.starts_with("/dustImage/") {
         state.gifs.fetch_add(1, Ordering::SeqCst);
         let delay = state.delay_ms.load(Ordering::SeqCst);
         if delay > 0 {
             tokio::time::sleep(Duration::from_millis(delay as u64)).await;
         }
-        let [pm10, pm25] = set_gifs(0);
-        let gif = match name {
-            "pm10.gif" if state.pm10_missing.load(Ordering::SeqCst) => {
-                return (axum::http::StatusCode::NOT_FOUND, "").into_response();
-            }
-            "pm10.gif" => pm10,
-            "pm25.gif" => pm25,
-            _ => return (axum::http::StatusCode::NOT_FOUND, "").into_response(),
+        // Fixture set A for any date (the documents name the current one).
+        let [pm10, pm25] = fixture_urls('A');
+        let gif = if path.contains(".PM2P5.") {
+            image_at(&pm25).unwrap()
+        } else if state.pm10_missing.load(Ordering::SeqCst) {
+            return (axum::http::StatusCode::NOT_FOUND, "").into_response();
+        } else {
+            image_at(&pm10).unwrap()
         };
-        return ([("content-type", "image/gif")], gif).into_response();
+        return ([("content-type", "image/gif")], gif.to_vec()).into_response();
     }
     let body = if path.ends_with("/getMsrstnList") {
         String::from_utf8(station_page()).unwrap()
     } else if path.ends_with("/getMinuDustFrcstDspth") {
         state.dust.fetch_add(1, Ordering::SeqCst);
-        let base = state
-            .image_base
+        let host = state
+            .image_host
             .lock()
             .unwrap()
             .clone()
-            .unwrap_or_else(|| state.base.lock().unwrap().clone());
+            .unwrap_or_else(|| "https://www.airkorea.or.kr".into());
+        let cycle = state
+            .cycle
+            .lock()
+            .unwrap()
+            .clone()
+            .unwrap_or_else(|| "23".into());
+        let urls = served_urls(&host, &cycle, now_ms());
         let data_time = expected_announcement(now_ms()).unwrap();
         let item = |code: &str| {
             let mut o = json!({"dataTime": data_time, "informCode": code,
@@ -455,12 +518,11 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> axum::response
                 if code == "PM25" && i == 8 && state.pm25_absent.load(Ordering::SeqCst) {
                     continue;
                 }
-                let file = match i {
-                    7 => "pm10.gif".to_owned(),
-                    8 => "pm25.gif".to_owned(),
-                    _ => format!("other{i}.gif"),
+                o[format!("imageUrl{i}")] = match i {
+                    7 => json!(urls[0]),
+                    8 => json!(urls[1]),
+                    _ => json!(format!("{host}/dustImage/other{i}.gif")),
                 };
-                o[format!("imageUrl{i}")] = json!(format!("{base}dustImage/{file}"));
             }
             o
         };
@@ -496,7 +558,7 @@ async fn stub() -> Stub {
     });
     Stub { base, state, task }
 }
-/// The live acquirer with test-built roots: data.go.kr and the image origin are the stub.
+/// The live acquirer with test-built roots: data.go.kr and the image root are the stub.
 fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn AirKoreaAcquire> {
     let vars = |name: &str| -> Option<String> {
         match name {
@@ -562,14 +624,14 @@ where
 fn has_rows(answer: &OrderedJson) -> bool {
     matches!(answer, OrderedJson::Array(r) if !r.is_empty())
 }
-/// The fold one acquisition between `before` and `after` gives (a KST day change between them
-/// is the only way they differ).
+/// The fold one acquisition of the served images between `before` and `after` gives (a KST day
+/// change between them is the only way they differ).
 fn acquired(before: f64, after: f64, answer: &OrderedJson, name: &str) {
     let announcement = expected_announcement(before).unwrap();
-    let candidates = [
-        expected_fold(&announcement, before, before).by_station(name),
-        expected_fold(&announcement, after, after).by_station(name),
-    ];
+    let candidates = [before, after].map(|at| {
+        let urls = default_urls(at);
+        expected_fold(&[(&pub_date(&announcement), at, 'A', &urls)], at).by_station(name)
+    });
     assert!(
         candidates.iter().any(|c| c == answer),
         "{name}: {}",
@@ -755,68 +817,131 @@ async fn a_slow_image_acquisition_releases_the_request_and_serves_the_next_one()
     assert_eq!(transport.available(), TEST_PERMITS);
 }
 
+/// Documents naming images the legacy layout rejects (another host, a non-characterized cycle,
+/// a missing PM2.5 path) start no download; a failed download stores nothing (legacy master
+/// `getDustImage` requires both characterized paths and both images).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn an_image_off_the_builtin_origin_is_never_fetched() {
+async fn rejected_image_paths_are_never_fetched_and_a_failed_download_stores_nothing() {
     let _serial = SERIAL.lock().await;
-    let peer = Peer::new();
-    let transport = peer.transport();
-    let store = store_for(&transport);
-    let other = stub().await;
-    let stub = stub().await;
-    // The images are named on another loopback server (another origin than the built-in root).
-    *stub.state.image_base.lock().unwrap() = Some(other.base.clone());
-    let inputs = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
-        &peer,
-        store.clone(),
-        &stub.base,
-    )));
     let seoul = town(37.5665, 126.978);
     let three = || Instant::now() + Duration::from_secs(3);
-    // The station list and the dust forecast naming the images are stored first.
-    until(
-        || inputs.load(&seoul, "서울특별시", "중구", true, false, now_ms(), three()),
-        |a| matches!(&a.dust, Some((_, Ok(_)))) && a.arpltn.is_ok(),
-    )
-    .await;
-    let answer = inputs
-        .load(
-            &seoul,
-            "서울특별시",
-            "중구",
-            false,
-            true,
-            now_ms(),
-            deadline(),
+    for case in ["another host", "17 cycle", "no PM2.5 path", "PM10 404"] {
+        let peer = Peer::new();
+        let transport = peer.transport();
+        let store = store_for(&transport);
+        let stub = stub().await;
+        match case {
+            "another host" => {
+                *stub.state.image_host.lock().unwrap() = Some("https://evil.example".into())
+            }
+            "17 cycle" => *stub.state.cycle.lock().unwrap() = Some("17".into()),
+            "no PM2.5 path" => stub.state.pm25_absent.store(true, Ordering::SeqCst),
+            _ => stub.state.pm10_missing.store(true, Ordering::SeqCst),
+        }
+        let inputs = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
+            &peer,
+            store.clone(),
+            &stub.base,
+        )));
+        // The station list and the dust forecast naming the images are stored first.
+        until(
+            || inputs.load(&seoul, "서울특별시", "중구", true, false, now_ms(), three()),
+            |a| matches!(&a.dust, Some((_, Ok(_)))) && a.arpltn.is_ok(),
         )
         .await;
-    assert!(answer.hourly.is_some(), "the image forecast was read");
-    same(
-        &rows(&answer, "중구"),
-        &OrderedJson::Array(Vec::new()),
-        "no forecast",
-    );
-    assert_eq!(stub.state.dust.load(Ordering::SeqCst), 1);
-    assert_eq!(other.state.gifs.load(Ordering::SeqCst), 0);
-    assert_eq!(stub.state.gifs.load(Ordering::SeqCst), 0);
+        let answer = inputs
+            .load(
+                &seoul,
+                "서울특별시",
+                "중구",
+                false,
+                true,
+                now_ms(),
+                deadline(),
+            )
+            .await;
+        assert!(
+            answer.hourly.is_some(),
+            "{case}: the image forecast was read"
+        );
+        same(
+            &rows(&answer, "중구"),
+            &OrderedJson::Array(Vec::new()),
+            case,
+        );
+        let fetched = stub.state.gifs.load(Ordering::SeqCst);
+        if case == "PM10 404" {
+            assert!(fetched >= 1, "{case}");
+        } else {
+            assert_eq!(fetched, 0, "{case}: never fetched");
+        }
+        // Nothing was published.
+        let cold = AirInputs::new(transport.clone(), store.clone());
+        let answer = cold
+            .load(
+                &seoul,
+                "서울특별시",
+                "중구",
+                false,
+                true,
+                now_ms(),
+                deadline(),
+            )
+            .await;
+        same(
+            &rows(&answer, "중구"),
+            &OrderedJson::Array(Vec::new()),
+            case,
+        );
+    }
 }
 
+/// An image path is fetched on the built-in image root only (a provider URL is never fetched as
+/// given).
 #[test]
-fn the_production_image_origin_is_https_airkorea_only() {
+fn image_paths_are_fetched_on_the_builtin_root() {
     let endpoints = server2::gateway::runtime::Builtins::production()
         .kma_endpoints()
         .unwrap();
-    let allowed = |u: &str| endpoints.image_allowed(&u.parse().unwrap());
-    assert!(allowed(
-        "https://www.airkorea.or.kr/dustImage/2026/10/15/AQF.20261015.NIER_09_01.PM10.1hsp.2026101511.gif"
-    ));
-    for u in [
-        "http://www.airkorea.or.kr/dustImage/a.gif",
-        "https://www.airkorea.or.kr:8443/dustImage/a.gif",
-        "https://airkorea.or.kr/dustImage/a.gif",
-        "https://evil.example/dustImage/a.gif",
-        "http://127.0.0.1:8080/dustImage/a.gif",
+    let path = "/dustImage/2026/10/14/23/09km/AQF.20261014.NIER_09_01.PM10.2days.ani.gif";
+    assert_eq!(
+        endpoints.image_url(path).unwrap().as_str(),
+        format!("https://www.airkorea.or.kr{path}")
+    );
+    assert!(endpoints.image_url("dustImage/a.gif").is_err());
+    // The request keeps only the path of a characterized URL, http or https.
+    let request = server2::domestic::airkorea_image::AirKoreaImageRequest::new(
+        Publication::new(20261015, 1100).unwrap(),
+        &format!("http://www.airkorea.or.kr{path}"),
+        &image_url("pm25", "2026/10/14"),
+        server2::domestic::kma::source::air_forecast::Calibration::defaults(),
+    )
+    .unwrap();
+    assert_eq!(request.paths()[0], path);
+    for (pm10, pm25) in [
+        (
+            format!("https://evil.example{path}"),
+            image_url("pm25", "2026/10/14"),
+        ),
+        (
+            image_url("pm25", "2026/10/14"),
+            image_url("pm25", "2026/10/14"),
+        ),
+        (
+            path.replace("/23/", "/11/"),
+            image_url("pm25", "2026/10/14"),
+        ),
     ] {
-        assert!(!allowed(u), "{u}");
+        assert!(
+            server2::domestic::airkorea_image::AirKoreaImageRequest::new(
+                Publication::new(20261015, 1100).unwrap(),
+                &pm10,
+                &pm25,
+                server2::domestic::kma::source::air_forecast::Calibration::defaults(),
+            )
+            .is_err(),
+            "{pm10}"
+        );
     }
 }
 
@@ -891,7 +1016,7 @@ async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
         at05.period(),
         "20260924",
         a_at,
-        &images(0),
+        &image_pages('A', &fixture_urls('A')),
     )
     .await;
     let all = station_fold(&[]);
@@ -899,7 +1024,7 @@ async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
     let flights = Flights::new(Duration::from_secs(600));
     let generation = Arc::new(AtomicU64::new(0));
     let reader = || {
-        ImageForecasts::new(transport.clone(), store.clone(), Calibration::deployed())
+        ImageForecasts::new(transport.clone(), store.clone(), Calibration::defaults())
             .with_refresh_interval(Duration::ZERO)
     };
     let warm = reader();
@@ -908,7 +1033,7 @@ async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
         |f| has_rows(&f.by_station("중구")),
     )
     .await;
-    let expected_a = expected_fold("2026-09-24 05시 발표", a_at, NOW);
+    let expected_a = expected_fold(&[("2026-09-24 05:00", a_at, 'A', &fixture_urls('A'))], NOW);
     for n in &names {
         same(&first.by_station(n), &expected_a.by_station(n), n);
     }
@@ -921,7 +1046,7 @@ async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
         at11.period(),
         "20260924",
         b_at,
-        &images(1),
+        &image_pages('B', &fixture_urls('B')),
     )
     .await;
     let later = NOW + 30. * 60_000.;
@@ -940,19 +1065,18 @@ async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
         at23.period(),
         "20260923",
         c_at,
-        &images(1),
+        &image_pages('B', &fixture_urls('A')),
     )
     .await;
-    let mut expected = expected_fold("2026-09-24 05시 발표", a_at, a_at);
-    for (pub_date, at) in [("2026-09-23 23:00", c_at), ("2026-09-24 11:00", b_at)] {
-        expected.apply(&Processed {
-            pub_date: pub_date.into(),
-            now: at,
-            stations: &stations(),
-            values: decoded(1),
-        });
-    }
-    expected.remove_old(later);
+    let (urls_a, urls_b) = (fixture_urls('A'), fixture_urls('B'));
+    let expected = expected_fold(
+        &[
+            ("2026-09-24 05:00", a_at, 'A', &urls_a),
+            ("2026-09-23 23:00", c_at, 'B', &urls_a),
+            ("2026-09-24 11:00", b_at, 'B', &urls_b),
+        ],
+        later,
+    );
     let warm_fold = until(
         || image_load(&warm, later, &all, &flights, &generation),
         |f| f.json() == expected.json(),
@@ -1003,16 +1127,16 @@ async fn a_new_station_list_decodes_everything_again_at_once() {
         Publication::new(20260924, 500).unwrap().period(),
         "20260924",
         a_at,
-        &images(0),
+        &image_pages('A', &fixture_urls('A')),
     )
     .await;
-    let expected = expected_fold("2026-09-24 05시 발표", a_at, NOW);
+    let expected = expected_fold(&[("2026-09-24 05:00", a_at, 'A', &fixture_urls('A'))], NOW);
     let names: Vec<String> = stations().into_iter().map(|s| s.0).collect();
     let (seoul_only, all) = (station_fold(&["중구"]), station_fold(&[]));
     let flights = Flights::new(Duration::from_secs(600));
     let generation = Arc::new(AtomicU64::new(0));
     // Without a station-list change nothing would refresh within the test.
-    let images = ImageForecasts::new(transport.clone(), store.clone(), Calibration::deployed())
+    let images = ImageForecasts::new(transport.clone(), store.clone(), Calibration::defaults())
         .with_refresh_interval(Duration::from_secs(3600));
     let seoul = until(
         || image_load(&images, NOW, &seoul_only, &flights, &generation),
@@ -1060,21 +1184,28 @@ impl AirKoreaAcquire for Recorder {
         Box::pin(async { Ok(None) })
     }
 }
-/// The dust forecast documents of announcements (`YYYY-MM-DD HH시 발표`), each naming its images.
-fn dust_documents(announcements: &[&str]) -> server2::domestic::kma::source::airkorea::Forecasts {
+/// The dust forecast documents of announcements (`YYYY-MM-DD HH시 발표`) naming image URLs
+/// (None: the document names no image).
+fn dust_documents(
+    announcements: &[(&str, Option<String>, Option<String>)],
+) -> server2::domestic::kma::source::airkorea::Forecasts {
     let mut f = server2::domestic::kma::source::airkorea::Forecasts::default();
-    for (i, text) in announcements.iter().enumerate() {
-        let item = |code: &str| {
+    for (i, (text, pm10, pm25)) in announcements.iter().enumerate() {
+        let item = |code: &str, at: usize, url: &Option<String>| {
             let mut o = json!({"dataTime": text, "informCode": code,
                 "informData": format!("2026-09-2{}", 4 + i), "informGrade": "서울 : 보통"});
             for n in 1..=9 {
-                o[format!("imageUrl{n}")] = json!(format!(
-                    "https://www.airkorea.or.kr/dustImage/{i}/{code}{n}.gif"
-                ));
+                o[format!("imageUrl{n}")] = json!(format!("https://www.airkorea.or.kr/u{n}.gif"));
+            }
+            match url {
+                Some(u) => o[format!("imageUrl{at}")] = json!(u),
+                None => {
+                    o.as_object_mut().unwrap().remove(&format!("imageUrl{at}"));
+                }
             }
             o
         };
-        f.apply(text, &[item("PM10"), item("PM25")]);
+        f.apply(text, &[item("PM10", 7, pm10), item("PM25", 8, pm25)]);
     }
     f
 }
@@ -1095,18 +1226,50 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
     let all = station_fold(&[]);
     // 11:20 KST: the 11시 announcement is expected.
     let now = NOW + 30. * 60_000.;
-    let cases: [(&[&str], Option<u16>); 3] = [
+    let [pm10, pm25] = fixture_urls('A').map(Some);
+    let cycle17 =
+        || fixture_urls('A').map(|u| Some(u.replace("/2026/10/14/23/", "/2026/10/14/17/")));
+    let docs = |text: &'static str, urls: [Option<String>; 2]| {
+        let [a, b] = urls;
+        (text, a, b)
+    };
+    type Documents<'a> = Vec<(&'a str, Option<String>, Option<String>)>;
+    let cases: Vec<(Documents, Option<u16>)> = vec![
         (
-            &["2026-09-24 05시 발표", "2026-09-24 11시 발표"],
+            vec![
+                docs("2026-09-24 05시 발표", [pm10.clone(), pm25.clone()]),
+                docs("2026-09-24 11시 발표", [pm10.clone(), pm25.clone()]),
+            ],
             Some(1100),
         ),
-        (&["2026-09-24 05시 발표"], Some(500)),
-        (&["2026-09-23 23시 발표"], None),
+        (
+            vec![docs("2026-09-24 05시 발표", [pm10.clone(), pm25.clone()])],
+            Some(500),
+        ),
+        (
+            vec![docs("2026-09-23 23시 발표", [pm10.clone(), pm25.clone()])],
+            None,
+        ),
+        // The expected documents name a 17-cycle (rejected) or no PM2.5 image: the previous.
+        (
+            vec![
+                docs("2026-09-24 05시 발표", [pm10.clone(), pm25.clone()]),
+                docs("2026-09-24 11시 발표", cycle17()),
+            ],
+            Some(500),
+        ),
+        (
+            vec![
+                docs("2026-09-24 05시 발표", [pm10.clone(), pm25.clone()]),
+                docs("2026-09-24 11시 발표", [pm10.clone(), None]),
+            ],
+            Some(500),
+        ),
     ];
     for (announcements, expected) in cases {
         let recorder = Arc::new(Recorder::default());
-        let images = ImageForecasts::new(transport.clone(), store.clone(), Calibration::deployed());
-        let documents = dust_documents(announcements);
+        let images = ImageForecasts::new(transport.clone(), store.clone(), Calibration::defaults());
+        let documents = dust_documents(&announcements);
         let generation = Arc::new(AtomicU64::new(0));
         images
             .load(
@@ -1136,12 +1299,12 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
         Publication::new(20260924, 500).unwrap().period(),
         "20260924",
         NOW - 4. * 3_600_000.,
-        &images(0),
+        &image_pages('A', &fixture_urls('A')),
     )
     .await;
     let recorder = Arc::new(Recorder::default());
-    let images = ImageForecasts::new(transport.clone(), store.clone(), Calibration::deployed());
-    let documents = dust_documents(&["2026-09-24 05시 발표"]);
+    let images = ImageForecasts::new(transport.clone(), store.clone(), Calibration::defaults());
+    let documents = dust_documents(&[("2026-09-24 05시 발표", pm10, pm25)]);
     let generation = Arc::new(AtomicU64::new(0));
     let flights = Flights::new(Duration::from_secs(600));
     // The fold is read first (decoding may outlast one request's wait).
@@ -1167,128 +1330,4 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
         recorder.0.lock().unwrap()
     );
     assert_eq!(transport.available(), TEST_PERMITS);
-}
-
-/// A pollutant without an image URL is skipped and the other one is stored (legacy
-/// `getDustImage` L412/L429 and the station updater); a failed download stores nothing (review
-/// S15b3c-R5).
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn a_pollutant_without_an_image_is_skipped_and_a_failed_download_stores_nothing() {
-    let _serial = SERIAL.lock().await;
-    let seoul = town(37.5665, 126.978);
-    let three = || Instant::now() + Duration::from_secs(3);
-    // PM2.5 names no image: one GIF is fetched and only PM10 rows are stored.
-    {
-        let peer = Peer::new();
-        let transport = peer.transport();
-        let store = store_for(&transport);
-        let stub = stub().await;
-        stub.state.pm25_absent.store(true, Ordering::SeqCst);
-        let inputs = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
-            &peer,
-            store.clone(),
-            &stub.base,
-        )));
-        until(
-            || inputs.load(&seoul, "서울특별시", "중구", true, false, now_ms(), three()),
-            |a| matches!(&a.dust, Some((_, Ok(_)))) && a.arpltn.is_ok(),
-        )
-        .await;
-        let before = now_ms();
-        let answer = until_for(
-            Duration::from_secs(240),
-            || inputs.load(&seoul, "서울특별시", "중구", false, true, now_ms(), three()),
-            |a| has_rows(&rows(a, "중구")),
-        )
-        .await;
-        let after = now_ms();
-        let OrderedJson::Array(got) = rows(&answer, "중구") else {
-            panic!("rows");
-        };
-        assert!(
-            got.iter()
-                .all(|r| r.get("code").and_then(|c| c.string()).as_deref() == Some("pm10"))
-        );
-        assert_eq!(
-            stub.state.gifs.load(Ordering::SeqCst),
-            1,
-            "only the PM10 image"
-        );
-        // The rows are the PM10 half of the legacy fold.
-        let announcement = expected_announcement(before).unwrap();
-        let pm10_only = |at: f64| {
-            let mut fold = HourlyForecasts::default();
-            fold.apply(&Processed {
-                pub_date: pub_date(&announcement),
-                now: at,
-                stations: &stations(),
-                values: decoded(0).into_iter().take(1).collect(),
-            });
-            fold.remove_old(at);
-            fold.by_station("중구")
-        };
-        assert!(
-            [pm10_only(before), pm10_only(after)].contains(&rows(&answer, "중구")),
-            "PM10 rows"
-        );
-        assert!(
-            !answer
-                .hourly
-                .as_ref()
-                .unwrap()
-                .has(&pub_date(&announcement))
-        );
-    }
-    // The PM10 image fails: nothing is stored or published.
-    {
-        let peer = Peer::new();
-        let transport = peer.transport();
-        let store = store_for(&transport);
-        let stub = stub().await;
-        stub.state.pm10_missing.store(true, Ordering::SeqCst);
-        let inputs = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
-            &peer,
-            store.clone(),
-            &stub.base,
-        )));
-        until(
-            || inputs.load(&seoul, "서울특별시", "중구", true, false, now_ms(), three()),
-            |a| matches!(&a.dust, Some((_, Ok(_)))) && a.arpltn.is_ok(),
-        )
-        .await;
-        let answer = inputs
-            .load(
-                &seoul,
-                "서울특별시",
-                "중구",
-                false,
-                true,
-                now_ms(),
-                deadline(),
-            )
-            .await;
-        same(
-            &rows(&answer, "중구"),
-            &OrderedJson::Array(Vec::new()),
-            "nothing",
-        );
-        assert!(stub.state.gifs.load(Ordering::SeqCst) >= 1);
-        let cold = AirInputs::new(transport.clone(), store.clone());
-        let answer = cold
-            .load(
-                &seoul,
-                "서울특별시",
-                "중구",
-                false,
-                true,
-                now_ms(),
-                deadline(),
-            )
-            .await;
-        same(
-            &rows(&answer, "중구"),
-            &OrderedJson::Array(Vec::new()),
-            "nothing stored",
-        );
-    }
 }

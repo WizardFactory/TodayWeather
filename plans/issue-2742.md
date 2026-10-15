@@ -249,7 +249,8 @@ Declaration: [S15b-3c.json](../server2/config/tasks/S15b-3c.json). Base: master 
 | ID | User and goal | Steps | Expected / failure | AC and proof |
 | --- | --- | --- | --- | --- |
 | F1 | Decoder | Nine synthetic GIFs (two streams longer than their frame) | Every frame equals get-pixels 3.3.2 | C3-1; `air_forecast::gif_frames_equal_get_pixels` |
-| F2 | Forecast rows | Nine `do` runs (PM10-only, PM2.5-only, a broken image), six stations | Rows and `getForecast` answers equal the oracle | C3-1; `air_forecast::hourly_forecast_rows_*` |
+| F2 | Forecast rows | Nine `do` runs of characterized animations (skip, 17-cycle, missing PM2.5 path, broken legend, 47 frames), eight stations | Rows, errors and `getForecast` answers equal legacy master | C3-1; `air_forecast::hourly_forecast_rows_*` |
+| F2b | #2757 regression cases | The 29 harness cases | Same rows or rejection | C3-1/C3-2; `air_forecast::the_legacy_image_regression_cases_*` |
 | F3 | App user (`kaq`) without KAQ data | Replay of `air-kaq-forecast` with KAQ hidden | `forecastSource` `airkorea`, the hourly rows and AQI, no KAQ-only days | C3-3; `air_forecast_s3::a_kaq_request_without_*` |
 | F4 | App user (`kaq`) with KAQ data | Parity replay | Legacy bytes | C3-3; `parity::all_oracle_scenarios_*`, `air_forecast_s3::a_kaq_request_without_*` |
 | F5 | Widget/web (`airkorea`) and the store | S3 snapshot | `airkorea` rows from S3, `kaq` rejected with the legacy error | C3-1/C3-3; `air_forecast_s3::the_snapshot_answers_*` |
@@ -257,17 +258,16 @@ Declaration: [S15b-3c.json](../server2/config/tasks/S15b-3c.json). Base: master 
 | F7 | User while the images are slow | 2 s per image | Request within its deadline without the forecast; a later one has it | C3-4; `air_forecast_s3::a_slow_image_*` |
 | F8 | Process across announcements | Another host's acquisitions, one late of the previous day, no publication count change | Folded in completion order within a minute, equal to a cold read | C3-4; `air_forecast_s3::other_hosts_acquisitions_*` |
 | F8b | New station list | Overlapping requests with the old and new list | Decoded at once for the new list | C3-4; `air_forecast_s3::a_new_station_list_*` |
-| F9 | Unpublished announcement | Expected documents missing | The previous announcement is acquired unless stored | C3-4; `air_forecast_s3::the_expected_announcement_*` |
-| F10 | Provider data naming another host | Image URL off the origin | Never fetched | C3-4; `air_forecast_s3::an_image_off_*`, `the_production_image_origin_*` |
+| F9 | Unpublished or rejected announcement | Expected documents missing, 17-cycle or without PM2.5 | The previous announcement is acquired unless stored | C3-4; `air_forecast_s3::the_expected_announcement_*` |
+| F10 | Provider data legacy rejects | Another host, a 17-cycle, no PM2.5 path; a 404 | Never fetched; nothing stored | C3-4; `air_forecast_s3::rejected_image_paths_*`, `image_paths_are_fetched_*` |
 | F11 | Operator | Legacy calibration names | Deployed values when unset or empty | C3-2/C3-5; `air_forecast::the_calibration_reads_*` |
-| F12 | Partial announcement | PM2.5 names no image; a PM10 download fails | PM10 rows only; nothing stored | C3-1/C3-4; `air_forecast_s3::a_pollutant_without_*` |
 | F13 | Hostile image | Huge frames, too many frames | Refused before allocation | C3-4; `air_forecast::gifs_beyond_the_decoding_bounds_*` |
 
 Live record (2026-10-15; settings read in-process from `server2/.env`, never printed; records
-only in a local S06 test peer started with room for the GIFs): one `getMinuDustFrcstDspth` per
-run, the station list (7 pages), the nationwide hour, and two GIF downloads per announcement. The
-`11시 발표` GIFs (5.1/4.9 MB) gave the legend and the miss rates (legacy table 9.4%/19.4%, live
-table 2.4%/0.0% of a 0.1° grid); at 17:15 KST the `17시 발표` GIFs were acquired through the
-request path and the fold answered 670 stations (95 rows for 중구, PM10 12-35, PM2.5 6-21). Some
-provider calls were slow or timed out (raw station-list pages took over 30 s for two keys, then
-0.2-0.4 s); the downloaded images were deleted after the check.
+only in a local S06 test peer started with room for the GIFs): dust forecast, station list and
+nationwide calls through the request path; the server2 acquirer fetched the 23-cycle pair the
+`11시 발표` documents named (sha256 equal to the #2757 evidence) and the server2 decoder and the
+legacy master controllers stored the same 384 rows for the four smoke reference points; the
+`17시 발표` documents named a 17-cycle animation (54 frames), which both reject. Some provider calls
+were slow or timed out (raw station-list pages took over 30 s for two keys, then 0.2-0.4 s); the
+downloaded images were deleted after the check.

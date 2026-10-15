@@ -166,7 +166,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             images: super::forecast_input::ImageForecasts::new(
                 transport.clone(),
                 store.clone(),
-                super::air_forecast::Calibration::deployed(),
+                super::air_forecast::Calibration::defaults(),
             ),
             reader: Reader { transport, store },
             acquire: None,

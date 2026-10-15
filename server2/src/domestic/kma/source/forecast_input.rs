@@ -1,10 +1,10 @@
 //! S15b-3c: the AirKorea image hourly forecast of one request.
 //!
 //! The `airkorea-forecast-image` acquisitions of the last three KST days (one group per
-//! announcement: the PM10 and PM2.5 GIFs, an empty record for a pollutant without an image) are
-//! replayed in completion order as legacy `do` runs: a stored `pubDate` is skipped, otherwise
-//! every station of the current station list is decoded for each image, then rows older than one
-//! day are removed.
+//! announcement: the PM10 and PM2.5 GIFs and the manifest of their URLs) are replayed in
+//! completion order as legacy master `do` runs: a stored `pubDate` is skipped, otherwise every
+//! station of the current station list is decoded from both images (nothing is stored when either
+//! fails the layout), then rows older than one day are removed.
 //!
 //! A refresh reads the three day catalogs (small control objects) and downloads only the
 //! acquisitions it does not know, one at a time; each is decoded once per station list, and a new
@@ -18,7 +18,9 @@
 //! while that one has no dust forecast documents naming an image yet, the previous announcement)
 //! starts one owned acquisition of its images (S13d `OwnedFlights`, 10-minute retry) from the
 //! dust forecast documents' `imageUrl[6]`/`[7]` and waits for it only until its deadline.
-use super::air_forecast::{CODES, Calibration, HourlyForecasts, Processed, decode_points};
+use super::air_forecast::{
+    CODES, Calibration, HourlyForecasts, Processed, StationValues, decode_gif, frame_start,
+};
 use super::airkorea::{Forecasts, Stations, announcement_text, expected_announcement};
 use super::doc::Val;
 use super::live::{AirKoreaAcquire, Flights};
@@ -47,10 +49,10 @@ const REFRESH: Duration = Duration::from_secs(60);
 /// Owned S3 reads with decoding.
 const READ_FOR: Duration = Duration::from_secs(300);
 
-/// The per-station values of one acquisition, per code with an image.
-type Decoded = Vec<(&'static str, Vec<Option<Vec<f64>>>)>;
-/// One known acquisition: its `pubDate` and values (None: an image did not decode, so legacy
-/// `getDustImage` failed and nothing was stored).
+/// The per-station values of one acquisition, per code with its first frame instant.
+type Decoded = Vec<(&'static str, f64, StationValues)>;
+/// One known acquisition: its `pubDate` and values (None: an image did not pass the layout, so
+/// legacy `getDustImage` failed and nothing was stored).
 #[derive(Clone)]
 struct Known {
     pub_date: String,
@@ -258,9 +260,11 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
         until: Instant,
     ) -> Arc<HourlyForecasts> {
         self.read(now, stations.clone(), generation, until).await;
-        // The expected announcement, or while its documents name no image yet the previous one:
-        // legacy ran `do` for every announcement when it was expected (each
-        // `getMinuDustFrcstDspth` run, `kecoRequester` L694), so its rows exist there.
+        // The expected announcement, or while its documents name no characterized pair yet
+        // the previous one: legacy ran `do` for every announcement when it was expected (each
+        // `getMinuDustFrcstDspth` run, `kecoRequester` L694), so its rows exist there. A pair
+        // `getDustImage` rejects (a path missing or not the characterized cycle) is never
+        // fetched.
         let target = forecasts.and_then(|f| {
             let expected = expected_announcement(now)?;
             let previous = announcement(&expected)?
@@ -269,23 +273,23 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
             [Some(expected), previous]
                 .into_iter()
                 .flatten()
-                .find_map(|text| match image_paths(f, &text) {
-                    (None, None) => None,
-                    (pm10, pm25) => Some((text, pm10, pm25)),
+                .find_map(|text| {
+                    let (Some(pm10), Some(pm25)) = image_paths(f, &text) else {
+                        return None;
+                    };
+                    let at = announcement(&text)?;
+                    let request = AirKoreaImageRequest::new(
+                        at,
+                        &pm10,
+                        &pm25,
+                        self.shared.calibration.clone(),
+                    )
+                    .ok()?;
+                    Some((text, at, request))
                 })
         });
-        if let (Some((text, pm10, pm25)), Some(acquire)) = (target, acquire)
+        if let (Some((text, at, request)), Some(acquire)) = (target, acquire)
             && !self.fold().has(&pub_date(&text))
-            && let Some(at) = announcement(&text)
-            && let Ok(request) = AirKoreaImageRequest::new(
-                at,
-                pm10.as_deref(),
-                pm25.as_deref(),
-                (
-                    self.shared.calibration.width as usize,
-                    self.shared.calibration.height as usize,
-                ),
-            )
         {
             let counter = generation.clone();
             let shared = self.shared.clone();
@@ -434,7 +438,8 @@ async fn read<T: IndexListing + Clone + 'static>(
             };
             let mut records = acquisition.records().to_vec();
             records.sort_by_key(|r| r.envelope.pagination.as_ref().map_or(1, |p| p.page));
-            if records.len() != CODES.len() {
+            // The two images and their manifest.
+            if records.len() != CODES.len() + 1 {
                 continue;
             }
             fresh.push((key, stored_pub_date(&records), records));
@@ -447,15 +452,20 @@ async fn read<T: IndexListing + Clone + 'static>(
         known.retain(|(_, p), _| days.contains(p));
         let coords: Vec<(f64, f64)> = points.iter().map(|(_, lat, lon)| (*lat, *lon)).collect();
         for (key, pub_date, records) in fresh {
+            // `getDustImage`: both paths dated by `frameStart`, both images through the layout.
+            let urls = image::manifest_urls(&records[CODES.len()].bytes);
             let mut values: Decoded = Vec::new();
-            let mut failed = false;
-            for ((code, table), record) in CODES.iter().zip(&records) {
-                // `imgPaths.pm10 == undefined`: that pollutant is skipped.
-                if record.envelope.status == image::SKIPPED && record.bytes.is_empty() {
-                    continue;
-                }
-                match decode_points(&record.bytes, &calibration, table, &coords) {
-                    Ok(v) => values.push((code, v)),
+            let mut failed = urls.is_none();
+            for (((code, kind, _), record), url) in
+                CODES.iter().zip(&records).zip(urls.iter().flatten())
+            {
+                match frame_start(url, kind).and_then(|start| {
+                    Ok((
+                        start,
+                        decode_gif(&record.bytes, &calibration, kind, &coords)?,
+                    ))
+                }) {
+                    Ok((start, v)) => values.push((code, start, v)),
                     Err(_) => failed = true,
                 }
             }

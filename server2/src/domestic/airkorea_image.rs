@@ -1,64 +1,73 @@
-//! S15b-3c: the keyless AirKorea forecast-image acquisition. Legacy
-//! `AirkoreaHourlyForecastController._getImgPaths` (L64-L88) takes the announcement's first PM10
-//! document's `imageUrl[6]` and first PM2.5 document's `imageUrl[7]`, and `getDustImage`
-//! (`airkorea.dust.image.controller` L405-L455) has get-pixels fetch both; an image that does not
-//! decode or has another size is an error and nothing is stored (`INVALID_IMAGE`). A document
-//! without its image URL skips that pollutant (`imgPaths.pm10 == undefined`, L412/L429) while the
-//! other one is stored. One acquisition is the pair as one group (page 1 PM10, page 2 PM2.5),
-//! dated by the announcement; a skipped pollutant is an empty record with status 204.
+//! S15b-3c: the keyless AirKorea forecast-image acquisition, as legacy master `91c77fcb` (#2757)
+//! collects the images. `AirkoreaHourlyForecastController._getImgPaths` (L67-L93) takes the
+//! announcement's first PM10 document's `imageUrl[6]` and first PM2.5 document's `imageUrl[7]`;
+//! `getDustImage` (`airkorea.dust.image.controller` L256-L305) requires both to pass
+//! `airkoreaImageLayout.frameStart` (the characterized `/dustImage/YYYY/MM/DD/23/09km/` cycle) and
+//! has get-pixels fetch both; any failure stores nothing for the run.
+//!
+//! The provider-supplied URLs are never fetched as given: their validated path is fetched on the
+//! built-in image origin ([`crate::domestic::family::Endpoints::image_url`]). One acquisition is
+//! one group dated by the announcement: page 1 the PM10 GIF, page 2 the PM2.5 GIF, page 3 a JSON
+//! manifest of the two URLs (their path dates the frames).
+use super::kma::source::air_forecast::{Calibration, frame_start, image_shape_ok};
 use super::publication::Publication;
 use crate::storage::{Period, ProviderKey};
-use reqwest::Url;
 
 pub const SOURCE: &str = "airkorea-image";
 pub const KIND: &str = "airkorea-forecast-image";
+/// The host part the characterized image URLs carry.
+const PREFIXES: [&str; 2] = ["https://www.airkorea.or.kr", "http://www.airkorea.or.kr"];
 
-/// The images of one dust-forecast announcement (at least one).
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// The two images of one dust-forecast announcement.
+#[derive(Debug, Clone, PartialEq)]
 pub struct AirKoreaImageRequest {
     announcement: Publication,
-    pm10: Option<Url>,
-    pm25: Option<Url>,
-    /// The GIF logical screen the decoder accepts (`isValidImage`).
-    size: (usize, usize),
-}
-/// An image URL from the provider. The acquirer fetches it only on its built-in image origin
-/// ([`crate::domestic::family::Endpoints::image_allowed`]).
-fn image_url(text: &str) -> Result<Url, super::DomesticError> {
-    let url = Url::parse(text).map_err(|_| super::DomesticError::Invalid("image url"))?;
-    if crate::providers::PublicRequest::new(url.clone()).is_err() {
-        return Err(super::DomesticError::Invalid("image url"));
-    }
-    Ok(url)
+    /// PM10 then PM2.5, as the documents name them.
+    urls: [String; 2],
+    calibration: Calibration,
 }
 impl AirKoreaImageRequest {
-    /// `pm10`/`pm25`: the image URL, or None when the document names none (that pollutant is
-    /// skipped). At least one is required.
+    /// Both URLs must be characterized animation paths of their pollutant (`frameStart`); legacy
+    /// rejects the pair otherwise, before any download.
     pub fn new(
         announcement: Publication,
-        pm10: Option<&str>,
-        pm25: Option<&str>,
-        size: (usize, usize),
+        pm10: &str,
+        pm25: &str,
+        calibration: Calibration,
     ) -> Result<Self, super::DomesticError> {
-        if announcement.minute() != 0 || (pm10.is_none() && pm25.is_none()) {
-            return Err(super::DomesticError::Invalid("announcement"));
+        if announcement.minute() != 0
+            || frame_start(pm10, "PM10").is_err()
+            || frame_start(pm25, "PM25").is_err()
+        {
+            return Err(super::DomesticError::Invalid("image path"));
         }
         Ok(Self {
             announcement,
-            pm10: pm10.map(image_url).transpose()?,
-            pm25: pm25.map(image_url).transpose()?,
-            size,
+            urls: [pm10.to_owned(), pm25.to_owned()],
+            calibration,
         })
     }
     pub fn announcement(&self) -> Publication {
         self.announcement
     }
-    /// PM10 then PM2.5 (None: skipped).
-    pub fn urls(&self) -> [Option<&Url>; 2] {
-        [self.pm10.as_ref(), self.pm25.as_ref()]
+    /// The URLs as the documents name them, PM10 then PM2.5.
+    pub fn urls(&self) -> [&str; 2] {
+        [&self.urls[0], &self.urls[1]]
     }
-    pub fn size(&self) -> (usize, usize) {
-        self.size
+    /// The URL paths (`/dustImage/…`) fetched on the built-in origin, PM10 then PM2.5.
+    pub fn paths(&self) -> [&str; 2] {
+        self.urls
+            .each_ref()
+            .map(|u| PREFIXES.iter().find_map(|p| u.strip_prefix(p)).unwrap_or(u))
+    }
+    /// The image shape the decoder accepts.
+    pub fn shape_ok(&self, gif: &[u8]) -> bool {
+        image_shape_ok(gif, &self.calibration)
+    }
+    /// The manifest record body: `{"pm10": url, "pm25": url}`.
+    pub fn manifest(&self) -> Vec<u8> {
+        serde_json::to_vec(&serde_json::json!({"pm10": self.urls[0], "pm25": self.urls[1]}))
+            .expect("JSON of two strings")
     }
     pub fn provider_key() -> ProviderKey {
         ProviderKey::Named {
@@ -73,11 +82,11 @@ impl AirKoreaImageRequest {
         self.announcement.base_date()
     }
 }
-/// The status of the empty record of a skipped pollutant.
-pub const SKIPPED: u16 = 204;
-/// Whether `bytes` is a GIF of the accepted logical screen (legacy `isValidImage` after
-/// get-pixels decoded it).
-pub fn valid_image(bytes: &[u8], size: (usize, usize)) -> bool {
-    crate::domestic::kma::source::gif::GifReader::new(bytes)
-        .is_ok_and(|r| (r.width, r.height) == size && r.num_frames() > 0)
+/// The two URLs of a stored manifest record, PM10 then PM2.5.
+pub fn manifest_urls(body: &[u8]) -> Option<[String; 2]> {
+    let v: serde_json::Value = serde_json::from_slice(body).ok()?;
+    Some([
+        v.get("pm10")?.as_str()?.to_owned(),
+        v.get("pm25")?.as_str()?.to_owned(),
+    ])
 }

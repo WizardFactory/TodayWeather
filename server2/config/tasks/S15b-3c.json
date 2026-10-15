@@ -40,13 +40,13 @@
   "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6183405303",
   "declaration_update": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6188289164",
   "path_notes": {
-    "server2/src/domestic/kma/source/": "new gif.rs (omggif GifReader port, as get-pixels 3.3.2 decodes), air_forecast.rs (calibration, colour tables from the live legend, getDustInfo, ArpltnHourlyForecast fold and reader); airkorea.rs keeps imageUrl1..9 of the dust forecast; air_input.rs/live.rs acquire the images; mod.rs answers air_forecast",
-    "server2/src/domestic/airkorea_image.rs": "new keyless AirKorea forecast-image acquisition (the two GIFs of one announcement as one group)",
+    "server2/src/domestic/kma/source/": "new gif.rs (omggif GifReader port, as get-pixels 3.3.2 decodes, with decoding bounds) and air_forecast.rs (legacy master #2757 airkoreaImageLayout: calibration from the legacy names, layout validation, frameStart, station sampling, the ArpltnHourlyForecast fold and reader); forecast_input.rs (the image fold from S3 catalogs and the request-time acquisition); airkorea.rs keeps imageUrl1..9 of the dust forecast; air_input.rs/live.rs acquire the images; mod.rs answers air_forecast",
+    "server2/src/domestic/airkorea_image.rs": "new keyless AirKorea forecast-image acquisition request (both paths validated by frameStart; the two GIFs and a manifest of their URLs as one group)",
     "server2/src/domestic/mod.rs": "shared: registers the airkorea_image module",
     "server2/src/domestic/acquire.rs": "shared S13 file: DomesticAcquirer::acquire_airkorea_images",
     "server2/src/gateway/runtime.rs": "shared: the image calibration from the legacy AIRKOREA_KOREA_IMAGE_* names (deployed values as defaults), the built-in image root in Builtins, an 8 MiB keyless AirKorea transport for the GIFs",
-    "server2/tests/domestic/": "air_forecast.rs and air_forecast_s3.rs tests, fixtures/air_forecast.json.gz (pinned legacy oracle with synthetic GIFs) and fixtures/AIR-FORECAST-PROVENANCE.md",
-    "server2/src/domestic/family.rs": "shared: Endpoints carries the built-in AirKorea image root (production https://www.airkorea.or.kr/, loopback only through a test-built Builtins)",
+    "server2/tests/domestic/": "air_forecast.rs and air_forecast_s3.rs tests, fixtures/air_forecast.json.gz (pinned legacy master oracle: synthetic GIFs, forecast runs and the #2757 regression cases) and fixtures/AIR-FORECAST-PROVENANCE.md",
+    "server2/src/domestic/family.rs": "shared: Endpoints carries the built-in AirKorea image root (production https://www.airkorea.or.kr/, loopback only through a test-built Builtins); a validated image path is fetched on it",
     "server2/src/domestic/kma/mod.rs": "shared: NO_KAQ_FORECAST, the legacy KAQ rejection when no KAQ forecast exists",
     "server2/src/domestic/kma/air.rs": "shared: AirForecastList answers kaq with the AirKorea image forecast and forecastSource airkorea when no KAQ forecast exists (AK-approved difference, 2026-10-15)",
     "server2/.env.example": "shared S10e list of every variable server2 reads: the legacy AIRKOREA_KOREA_IMAGE_* calibration names (commented, deployed values)"
