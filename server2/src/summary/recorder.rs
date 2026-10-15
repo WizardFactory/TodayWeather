@@ -3,14 +3,15 @@
 //! of its mapped station. It never delays a response: the work runs as a bounded background task.
 //!
 //! Per (source, key, date) memory keeps the last examined input digest and the newest stored
-//! revision. An input set already examined costs nothing; a new one writes a revision only when
-//! its values differ from the newest stored revision and its newest input is not older (late
-//! inputs recompute; an older input set never supersedes a newer one). A cold process reads the
-//! newest stored revision first.
+//! revision it saw. An input set already examined costs nothing. A new one lists the date in S3
+//! (another process may have written a newer revision) and writes a revision only when its values
+//! differ from the newest stored revision and its newest input is not older (late inputs
+//! recompute; an older input set never supersedes a newer one). Record work is serialized in a
+//! process and the remembered newest revision never moves back.
 use super::grid::{self, GridInputs};
 use super::store::SummaryStore;
 use super::transport::SummaryTransport;
-use super::{Source, Summary, add_days, kst_date};
+use super::{ObjectName, Source, Summary, add_days, kst_date};
 use crate::gateway::OrderedJson;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -45,8 +46,8 @@ pub struct RecordReport {
 #[derive(Debug, Clone, Default)]
 struct Entry {
     examined: Option<String>,
-    /// (newest input time, values digest) of the newest stored revision.
-    newest: Option<(u64, String)>,
+    /// (object name, values digest) of the newest stored revision seen.
+    newest: Option<(ObjectName, String)>,
 }
 type MemoryKey = (Source, String, u32);
 
@@ -55,6 +56,8 @@ struct Inner<T> {
     memory: Mutex<HashMap<MemoryKey, Entry>>,
     tasks: Arc<Semaphore>,
     dropped: AtomicU64,
+    /// Serializes record work, so revisions of one key and date are decided in order.
+    serial: tokio::sync::Mutex<()>,
 }
 /// Cheap to clone.
 pub struct Recorder<T> {
@@ -78,6 +81,7 @@ impl<T: SummaryTransport> Recorder<T> {
                 memory: Mutex::new(HashMap::new()),
                 tasks: Arc::new(Semaphore::new(TASKS)),
                 dropped: AtomicU64::new(0),
+                serial: tokio::sync::Mutex::new(()),
             }),
         }
     }
@@ -111,6 +115,7 @@ impl<T: SummaryTransport> Recorder<T> {
         now_ms: f64,
         deadline: Instant,
     ) -> RecordReport {
+        let _serial = self.inner.serial.lock().await;
         let mut report = RecordReport::default();
         for s in candidates {
             let key = memory_key(&s);
@@ -119,19 +124,25 @@ impl<T: SummaryTransport> Recorder<T> {
                 report.unchanged += 1;
                 continue;
             }
-            let newest = match entry.newest {
-                Some(n) => Some(n),
-                None => match self.inner.store.newest(&s.key, s.date, deadline).await {
-                    Ok(found) => found.map(|f| (f.name.latest, f.summary.values_sha256())),
-                    Err(_) => {
-                        report.failed += 1;
-                        continue;
-                    }
+            // The newest stored revision now: another process may have written one.
+            let store = &self.inner.store;
+            let newest = match store.names(&s.key, s.date, deadline).await {
+                Ok(names) => match (names.first(), entry.newest) {
+                    (Some((_, first)), Some(known)) if *first == known.0 => Ok(Some(known)),
+                    _ => store
+                        .newest_of(&s.key, s.date, names, deadline)
+                        .await
+                        .map(|f| f.map(|f| (f.name, f.summary.values_sha256()))),
                 },
+                Err(e) => Err(e),
+            };
+            let Ok(newest) = newest else {
+                report.failed += 1;
+                continue;
             };
             let values = s.values_sha256();
-            let keep = newest.as_ref().is_some_and(|(latest, digest)| {
-                *digest == values || *latest > s.inputs.latest_fetched_ms
+            let keep = newest.as_ref().is_some_and(|(name, digest)| {
+                *digest == values || name.latest > s.inputs.latest_fetched_ms
             });
             let newest = if keep {
                 report.unchanged += 1;
@@ -140,7 +151,13 @@ impl<T: SummaryTransport> Recorder<T> {
                 match self.inner.store.publish(&s, deadline).await {
                     Ok(()) => {
                         report.written.push(s.object_key());
-                        Some((s.inputs.latest_fetched_ms, values))
+                        let written = ObjectName::parse(&s.object_name());
+                        // Never move back: keep the greater of the written and the known newest.
+                        match (written, newest) {
+                            (Some(w), Some(n)) if n.0 > w => Some(n),
+                            (Some(w), _) => Some((w, values)),
+                            (None, n) => n,
+                        }
                     }
                     Err(_) => {
                         report.failed += 1;

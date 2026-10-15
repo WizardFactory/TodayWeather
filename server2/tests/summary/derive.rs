@@ -50,6 +50,12 @@ fn grid_keeps_complete_days_of_today_minus_six_to_minus_one() {
         grid::dates(now),
         vec![20261009, 20261010, 20261011, 20261012, 20261013, 20261014]
     );
+    // Before 01:00 yesterday's 2400 hour is today's live 00:00 row (minute page): not stored.
+    assert_eq!(
+        grid::dates(kst(20261015, 30)),
+        vec![20261009, 20261010, 20261011, 20261012, 20261013]
+    );
+    assert_eq!(grid::dates(kst(20261015, 100)).last(), Some(&20261014));
     let start = kst_midnight_ms(20261014).unwrap();
     let ids = vec![
         input("ultra-srt-ncst", start + 3_600_000, start + 3_600_000, 10),

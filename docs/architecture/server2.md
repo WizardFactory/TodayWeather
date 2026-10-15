@@ -2496,7 +2496,7 @@ derives at `getPastMid`, so S16 adds storage, not a new computation.
 
 | Source | Values | Complete when | Written by |
 | --- | --- | --- | --- |
-| `grid` (key: the town) | The `_getDaySummaryList` row `getPastMid` merges (`controllerTown.js:2697`, `:5530`): `taMax`, `taMin`, `t1d`, `reh`, `rn1`, `sky`, `pty`, `lgt`, `wsd`, AM/PM fields, `observationHours` | at least 18 valid `t1h` hours; the `00:00` hour counts for the previous day (`:5539`) | the recorder, for KST today-6..today-1 |
+| `grid` (key: the town) | The `_getDaySummaryList` row `getPastMid` merges (`controllerTown.js:2697`, `:5530`): `taMax`, `taMin`, `t1d`, `reh`, `rn1`, `sky`, `pty`, `lgt`, `wsd`, AM/PM fields, `observationHours` | at least 18 valid `t1h` hours; the `00:00` hour counts for the previous day (`:5539`) | the recorder, for KST today-6..today-1 (today-2 before 01:00, while yesterday's `2400` hour is still the live minute-updated row) |
 | `asos` (key: station) | The `policy.normalize` daily row (`taMin`, `taMax`, `t1d`, `reh`, `rn1`, `wsd`) | `taMin`, `taMax` valid and ordered; rain optional | the recorder (S15b-2 ranges) and the lookup (on demand) |
 | `vc` (key: 0.02-degree cell) | `taMin`, `taMax`, `t1d` (°C), optional `rn1` (mm), `observationHours`, `localHours` from a body fetched after the local day ended | temperature in at least 75 % of the local hours (23/24/25, IANA zone) | the lookup, from stored raw VC records |
 
@@ -2528,9 +2528,10 @@ page acquired for an hour (one acquisition per hour); a later acquisition of the
 applied by the assembly, so it is not a summary input either. An ASOS S3 reload still running when
 the history answer is built also blocks recording. After a natively served response the backend hands the `getPastMid` rows
 (a JSON copy taken before later steps mutate them; the response is unchanged) to the recorder, which
-runs outside the request (two tasks, 30 s each; more are dropped and repeated by a later request).
-Per source, key and date it skips an input digest it already examined, and writes a new revision only
-when the values differ from the newest stored revision and its newest input is not older. A late
+runs outside the request (two tasks, serialized, 30 s each; more are dropped and repeated by a later
+request). Per source, key and date it skips an input digest it already examined; a new digest lists
+the date in S3 (another process may have written), and a new revision is written only when the values
+differ from the newest stored revision and its newest input is not older. A late
 input therefore recomputes the day; an older input set never supersedes a newer one.
 
 S16 also changes one S15b-2 behavior: a station-page day whose `aws-hourly` or `city-obs` catalog

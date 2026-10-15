@@ -6,7 +6,7 @@
 //! city corrections and the ASOS history recovery (`:1252`, `:1290`). The native assembly hands
 //! a JSON copy of those rows to the recorder ([`crate::domestic::kma::assemble_capturing`]);
 //! this module keeps the complete days.
-use super::{GRID_MIN_HOURS, InputId, Inputs, Source, Summary, SummaryKey, add_days, kst_date};
+use super::{GRID_MIN_HOURS, InputId, Inputs, Source, Summary, SummaryKey, add_days};
 use crate::domestic::kma::source::asos::AsosFetched;
 use crate::gateway::OrderedJson;
 
@@ -28,9 +28,17 @@ pub struct GridInputs {
 
 /// The KST dates stored at `now_ms`: today-6 through today-1. Each has ended, and the 192-slot
 /// current window, the 8-day station pages and the ASOS D-7..D-1 window cover all its hours.
+/// Before 01:00 KST yesterday is left out: its `2400` hour is today's live `00:00` row, which
+/// `getKmaStnMinuteWeather` still updates from the minute page (`short.rs`), so minute pages are
+/// never a summary input.
 pub fn dates(now_ms: f64) -> Vec<u32> {
-    let today = kst_date(now_ms);
-    (1..=6).rev().filter_map(|d| add_days(today, -d)).collect()
+    let now = crate::history::schedule::from_ms(now_ms as i64);
+    let today = now.date();
+    let last = if now.hour() == 0 { 2 } else { 1 };
+    (last..=6)
+        .rev()
+        .filter_map(|d| add_days(today, -d))
+        .collect()
 }
 
 /// Complete grid summaries among the `getPastMid` day rows.

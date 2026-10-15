@@ -68,8 +68,19 @@ impl<T: SummaryTransport> SummaryStore<T> {
         date: u32,
         deadline: Instant,
     ) -> Result<Option<Stored>, Error> {
+        let names = self.names(key, date, deadline).await?;
+        self.newest_of(key, date, names, deadline).await
+    }
+    /// [`Self::newest`] over already listed names (greatest first).
+    pub async fn newest_of(
+        &self,
+        key: &SummaryKey,
+        date: u32,
+        names: Vec<(String, ObjectName)>,
+        deadline: Instant,
+    ) -> Result<Option<Stored>, Error> {
         let prefix = key.date_prefix(date);
-        for (name, parsed) in self.names(key, date, deadline).await? {
+        for (name, parsed) in names {
             let body = timeout_at(
                 deadline,
                 self.transport.get_summary(&format!("{prefix}{name}")),

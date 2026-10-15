@@ -155,3 +155,58 @@ async fn sink_records_in_the_background() {
     assert_eq!(t.calls(), calls);
     assert_eq!(recorder.dropped(), 0);
 }
+
+#[tokio::test]
+async fn a_revision_written_by_another_recorder_is_seen_before_skipping() {
+    let t = Arc::new(MemorySummaries::new());
+    let (a, b) = (Recorder::new(t.clone()), Recorder::new(t.clone()));
+    let now = kst(20261015, 1200);
+    let candidates = |fetched: u64, ta_max: f64| -> Vec<server2::summary::Summary> {
+        Recorder::<Arc<MemorySummaries>>::candidates(
+            &inputs_at(fetched),
+            &[day_row("20261014", 24., ta_max, 10.)],
+            now,
+        )
+    };
+    // A writes values X (t100); B, another process, writes values Y from newer inputs (t200).
+    assert_eq!(
+        a.record_now(candidates(100, 20.), now, deadline())
+            .await
+            .written
+            .len(),
+        1
+    );
+    assert_eq!(
+        b.record_now(candidates(200, 23.), now, deadline())
+            .await
+            .written
+            .len(),
+        1
+    );
+    // A's newest inputs (t300) give X again: A's memory says X is newest, S3 says Y. X must be
+    // written again so the newest revision has the newest inputs' values.
+    let report = a.record_now(candidates(300, 20.), now, deadline()).await;
+    assert_eq!(report.written.len(), 1);
+    let key = server2::summary::SummaryKey::Grid { town: town() };
+    let newest = a
+        .store()
+        .newest(&key, 20261014, deadline())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(newest.summary.value("taMax"), Some(20.));
+    assert_eq!(newest.name.latest, 300);
+    // Concurrent record calls are serialized and the remembered newest never moves back.
+    let (x, y) = tokio::join!(
+        a.record_now(candidates(400, 21.), now, deadline()),
+        a.record_now(candidates(350, 22.), now, deadline()),
+    );
+    let newest = a
+        .store()
+        .newest(&key, 20261014, deadline())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(newest.name.latest, 400, "{x:?} {y:?}");
+    assert_eq!(newest.summary.value("taMax"), Some(21.));
+}
