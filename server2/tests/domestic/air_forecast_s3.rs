@@ -8,7 +8,10 @@
 use super::air_forecast::{decoded, image_at, image_url, stations};
 use super::source::same;
 use super::source_s3::{NOW, Peer, deadline, request, seed};
-use super::support::{clock_ms, oracle_config, replay, scenarios};
+use super::support::{
+    FIXED_NOW, KST_BOUNDARIES, TestClock, TestInstant, clock_ms, fixed_now, oracle_config, replay,
+    scenarios,
+};
 use axum::{Router, extract::State, http::Uri, response::IntoResponse, routing::any};
 use serde_json::{Value, json};
 use server2::domestic::kma::backend::{KmaSource, SourceAnswer, parse_path};
@@ -40,7 +43,7 @@ use std::time::Duration;
 use tokio::time::Instant;
 
 type Store = CatalogStore<BoundedS3<HttpS3Transport>>;
-use super::source_s3::{S3_PEERS as SERIAL, TEST_PERMITS};
+use super::source_s3::TEST_PERMITS;
 
 /// The S3 store of these tests: the S06 per-operation bound at its 9 s maximum, so the image
 /// groups written and read on a loaded test machine do not time out (production keeps 3 s).
@@ -214,7 +217,7 @@ fn town(lat: f64, lon: f64) -> Doc {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_snapshot_answers_the_stored_image_forecast_and_rejects_kaq() {
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -465,11 +468,14 @@ struct StubState {
     /// The PM10 image answers 404 (a failed download).
     pm10_missing: std::sync::atomic::AtomicBool,
 }
+/// This module's fixed test instant (S15b-3d).
+static INSTANT: TestInstant = TestInstant::new();
 fn now_ms() -> f64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as f64
+    INSTANT.get()
+}
+/// The inputs' and acquirers' wall clock: the fixed test instant.
+fn test_clock() -> Arc<TestClock> {
+    Arc::new(TestClock(&INSTANT))
 }
 /// The image URLs the documents name at `now`: the previous KST day's animation (its frames
 /// start today 00:00 KST, as the live `11시 발표` documents of 2026-10-15 named the 10-14 one).
@@ -523,9 +529,20 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> axum::response
             .unwrap_or_else(|| "23".into());
         let urls = served_urls(&host, &cycle, now_ms());
         let data_time = expected_announcement(now_ms()).unwrap();
-        let item = |code: &str| {
+        // Like the provider's, the announcement's documents cover its day and the next (and the
+        // day after from the 17시 one): at 00:00-04:59 KST the expected announcement is the
+        // previous day's 23시, whose documents still answer today (`informData >= today`).
+        let announced =
+            server2::domestic::publication::dust_forecast_announcement(now_ms() as i64).unwrap();
+        let days: Vec<String> = (0..if announced.hour() >= 17 { 3 } else { 2 })
+            .map(|i| {
+                let d = announced.add_hours(24 * i).unwrap().base_date();
+                format!("{}-{}-{}", &d[..4], &d[4..6], &d[6..])
+            })
+            .collect();
+        let item = |code: &str, day: &str| {
             let mut o = json!({"dataTime": data_time, "informCode": code,
-                "informData": &data_time[..10], "informGrade": "서울 : 보통",
+                "informData": day, "informGrade": "서울 : 보통",
                 "informCause": "c", "informOverall": "o", "actionKnack": null});
             // `imageUrl7` is the PM10 image and `imageUrl8` the PM2.5 image (`imageUrl[6]`/`[7]`).
             for i in 1..=9 {
@@ -540,7 +557,10 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> axum::response
             }
             o
         };
-        let items = vec![item("PM10"), item("PM25")];
+        let items: Vec<Value> = ["PM10", "PM25"]
+            .iter()
+            .flat_map(|code| days.iter().map(|day| item(code, day)))
+            .collect();
         json!({"response": {"header": {"resultCode": "00", "resultMsg": "NORMAL_CODE"},
             "body": {"totalCount": items.len(), "items": items, "pageNo": 1, "numOfRows": 100}}})
         .to_string()
@@ -596,7 +616,7 @@ fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn AirKoreaAcquire> 
         Arc::new(server2::providers::HttpPublicTransport::new(8 << 20).unwrap()),
         Arc::new(peer.transport()),
         store,
-        Arc::new(server2::budget::SystemClock),
+        test_clock(),
     ))
 }
 fn rows(
@@ -655,16 +675,28 @@ fn acquired(before: f64, after: f64, answer: &OrderedJson, name: &str) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_missing_image_forecast_is_acquired_once_and_published_before_use() {
-    let _serial = SERIAL.lock().await;
+    missing_image_forecast_at(FIXED_NOW).await;
+}
+/// S15b-3d: the request-time image tests at fixed instants around the KST boundaries (slow:
+/// `--ignored across_kst_boundaries`).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "slow sweep; run with --ignored"]
+async fn image_acquisition_across_kst_boundaries() {
+    for at in KST_BOUNDARIES {
+        eprintln!("image acquisition at {at}");
+        missing_image_forecast_at(at).await;
+        rejected_image_paths_at(at).await;
+    }
+}
+async fn missing_image_forecast_at(at: &str) {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, at).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = store_for(&transport);
     let stub = stub().await;
-    let inputs = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
-        &peer,
-        store.clone(),
-        &stub.base,
-    )));
+    let inputs = AirInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)));
     let seoul = town(37.5665, 126.978);
     let busan = town(35.1796, 129.0756);
     let three = || Instant::now() + Duration::from_secs(3);
@@ -726,7 +758,7 @@ async fn a_missing_image_forecast_is_acquired_once_and_published_before_use() {
     );
     assert_eq!(stub.state.gifs.load(Ordering::SeqCst), 2, "one acquisition");
     // A cold reader without an acquirer restores the published images from S3.
-    let cold = AirInputs::new(transport.clone(), store.clone());
+    let cold = AirInputs::new(transport.clone(), store.clone()).with_clock(test_clock());
     let restored = until(
         || cold.load(&seoul, "서울특별시", "중구", false, true, now_ms(), three()),
         |a| has_rows(&rows(a, "중구")),
@@ -758,16 +790,14 @@ async fn a_missing_image_forecast_is_acquired_once_and_published_before_use() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_slow_image_acquisition_releases_the_request_and_serves_the_next_one() {
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = store_for(&transport);
     let stub = stub().await;
-    let inputs = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
-        &peer,
-        store.clone(),
-        &stub.base,
-    )));
+    let inputs = AirInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)));
     let seoul = town(37.5665, 126.978);
     // The station list and the dust forecast (with its image URLs) are acquired first.
     let warm = inputs
@@ -836,7 +866,10 @@ async fn a_slow_image_acquisition_releases_the_request_and_serves_the_next_one()
 /// `getDustImage` requires both characterized paths and both images).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn rejected_image_paths_are_never_fetched_and_a_failed_download_stores_nothing() {
-    let _serial = SERIAL.lock().await;
+    rejected_image_paths_at(FIXED_NOW).await;
+}
+async fn rejected_image_paths_at(at: &str) {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, at).await;
     let seoul = town(37.5665, 126.978);
     let three = || Instant::now() + Duration::from_secs(3);
     for case in ["another host", "12 cycle", "no PM2.5 path", "PM10 404"] {
@@ -852,11 +885,9 @@ async fn rejected_image_paths_are_never_fetched_and_a_failed_download_stores_not
             "no PM2.5 path" => stub.state.pm25_absent.store(true, Ordering::SeqCst),
             _ => stub.state.pm10_missing.store(true, Ordering::SeqCst),
         }
-        let inputs = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
-            &peer,
-            store.clone(),
-            &stub.base,
-        )));
+        let inputs = AirInputs::new(transport.clone(), store.clone())
+            .with_clock(test_clock())
+            .with_acquire(Some(live(&peer, store.clone(), &stub.base)));
         // The station list and the dust forecast naming the images are stored first.
         until(
             || inputs.load(&seoul, "서울특별시", "중구", true, false, now_ms(), three()),
@@ -890,7 +921,7 @@ async fn rejected_image_paths_are_never_fetched_and_a_failed_download_stores_not
             assert_eq!(fetched, 0, "{case}: never fetched");
         }
         // Nothing was published.
-        let cold = AirInputs::new(transport.clone(), store.clone());
+        let cold = AirInputs::new(transport.clone(), store.clone()).with_clock(test_clock());
         let answer = cold
             .load(
                 &seoul,
@@ -1007,7 +1038,7 @@ async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1127,7 +1158,7 @@ async fn a_new_station_list_decodes_everything_again_at_once() {
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1233,7 +1264,7 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1359,7 +1390,7 @@ async fn a_late_announcement_stays_until_its_rows_expire() {
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1415,7 +1446,7 @@ async fn acquisitions_completed_in_the_same_millisecond_are_both_read() {
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1490,7 +1521,7 @@ async fn a_long_animation_is_read_until_its_last_rows_expire() {
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = store_for(&transport);
@@ -1598,7 +1629,7 @@ async fn an_image_dated_after_its_announcement_is_not_used() {
             allowed
         );
     }
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = store_for(&transport);

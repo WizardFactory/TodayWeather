@@ -60,6 +60,60 @@ pub fn golden_body(id: &str) -> String {
     )
     .unwrap()
 }
+/// S15b-3d: a test's fixed "now" (ms). The request-time S3 tests fix it instead of reading the
+/// system clock: neither the KST hour a run starts at nor a KST day change during a run may change
+/// what they expect (their wall-clock versions failed from 2026-10-16 00:00 KST on). Set under the
+/// S3 peer lock by [`fixed_now`]; the stubs and the acquirers' [`TestClock`] read it.
+pub struct TestInstant(std::sync::atomic::AtomicU64);
+impl TestInstant {
+    pub const fn new() -> Self {
+        Self(std::sync::atomic::AtomicU64::new(0))
+    }
+    pub fn set(&self, ms: f64) {
+        self.0
+            .store(ms.to_bits(), std::sync::atomic::Ordering::SeqCst);
+    }
+    pub fn get(&self) -> f64 {
+        let ms = f64::from_bits(self.0.load(std::sync::atomic::Ordering::SeqCst));
+        assert!(ms > 0., "no fixed test instant");
+        ms
+    }
+}
+/// The acquirers' wall clock in tests: the fixed test instant.
+pub struct TestClock(pub &'static TestInstant);
+impl server2::budget::Clock for TestClock {
+    fn now_ms(&self) -> Result<i64, server2::budget::BudgetError> {
+        Ok(self.0.get() as i64)
+    }
+}
+/// Take `lock` (the S3 test peers') and fix `instant` at `at` (ISO) for the test holding the
+/// guard.
+pub async fn fixed_now(
+    lock: &'static tokio::sync::Mutex<()>,
+    instant: &'static TestInstant,
+    at: &str,
+) -> tokio::sync::MutexGuard<'static, ()> {
+    let guard = lock.lock().await;
+    instant.set(clock_ms(at));
+    guard
+}
+/// The instant the request-time tests run at by default: 2026-10-16 00:00:30 KST, just after the
+/// KST day change at which their wall-clock versions failed.
+pub const FIXED_NOW: &str = "2026-10-15T15:00:30.000Z";
+/// The instants the ignored `*_across_kst_boundaries` sweeps run at (KST): around the day change,
+/// the 05시 dust-forecast announcement, the first MFDS slot (08:20), midday, the 17:21 slot and the
+/// 23시 announcement.
+pub const KST_BOUNDARIES: [&str; 9] = [
+    "2026-10-15T14:59:59.000Z", // 10-15 23:59:59
+    "2026-10-15T15:00:00.500Z", // 10-16 00:00:00.5
+    "2026-10-15T19:59:59.000Z", // 10-16 04:59:59
+    "2026-10-15T20:00:00.500Z", // 10-16 05:00:00.5
+    "2026-10-15T23:19:59.000Z", // 10-16 08:19:59
+    "2026-10-15T23:20:00.500Z", // 10-16 08:20:00.5
+    "2026-10-16T03:00:00.000Z", // 10-16 12:00
+    "2026-10-16T08:21:00.000Z", // 10-16 17:21
+    "2026-10-16T14:00:30.000Z", // 10-16 23:00:30
+];
 /// `Date.parse` of the recorded ISO clock.
 pub fn clock_ms(iso: &str) -> f64 {
     let ms = server2::history::legacy::parse_iso(iso).unwrap_or_else(|| panic!("clock {iso}"));

@@ -2336,7 +2336,14 @@ without a publication count change, a 23시 announcement kept until its rows exp
 acquisitions completed in one millisecond both read, a new station list decoded at once, rejected
 paths (another host, a 12 cycle, a missing PM2.5 path) never fetched and a failed download storing
 nothing, an image starting after its announcement's next day neither acquired nor folded, GIFs beyond the decoding bounds and a cyclic LZW stream refused, and the three
-`kaq`/`airkorea` cases above.
+`kaq`/`airkorea` cases above. The request-time tests here and S15b-3b's slow life acquisition
+run at fixed instants (S15b-3d, 2026-10-16), not on the system clock: their stubs, the
+acquirers' clock and the inputs' wall clock (`AirInputs`, `ImageForecasts` and `LifeInputs`
+`with_clock`, the system clock by default) read the test instant (by default 2026-10-16 00:00:30 KST; the life test also at
+12:30 KST), and the dust-forecast stub answers the announcement's day and the next ones as the
+provider does (before 05:00 KST the expected announcement is the previous day's 23시). An
+ignored sweep (`cargo test --test domestic -- --ignored across_kst_boundaries`) runs them at
+23:59:59, 00:00:00.5, 04:59:59, 05:00:00.5, 08:19:59, 08:20:00.5, 12:00, 17:21 and 23:00:30 KST.
 
 Live on 2026-10-15 (settings from the operator's `server2/.env` read in-process, never printed;
 records only in a local S06 test peer with room for the GIFs): the server2 acquirer fetched the
