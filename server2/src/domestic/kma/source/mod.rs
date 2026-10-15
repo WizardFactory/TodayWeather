@@ -490,7 +490,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         Ok(grid_documents(family, coord, &fetched, now))
     }
     /// One owned pass over the missing backfill publications of a cell, newest first, each at
-    /// most once per [`BACKFILL_RETRY`] (claimed when its acquisition starts).
+    /// most once per [`BACKFILL_RETRY`]. Publications are claimed when the pass is planned, so a
+    /// pass cut short by its owned bound leaves the rest for the next hour.
     fn backfill(
         &self,
         sf: schedule::Family,
