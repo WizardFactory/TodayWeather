@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "captured_at_utc": "2026-10-15T02:45:40+00:00",
+  "captured_at_utc": "2026-10-15T10:18:13+00:00",
   "capture_kind": "terminal result rendered from actual isolated release execution",
   "environment": "macOS, release binary, synthetic loopback provider/backend/legacy-geocoder peers",
   "command": "python3 server2/tools/gateway_smoke.py --binary server2/target/release/server2",
@@ -12,12 +12,12 @@
       "legacy_geo": 8
     }
   },
-  "execution_log_sha256": "63acf20552ed5684de20c9ca491643aa8599fda4de43887791cc996b4b3075a9",
-  "binary_sha256": "7cf73bbc2c09eb30e8f3f9b5edb94e08910551485eba08aa3c7dc5b4cd6ddcfa",
-  "pdf_link_revision": "be5017923317aa8bb62b6d7e31b7f3e3a6d1a38a",
+  "execution_log_sha256": "2518615897b022bdd0ecf617c35f7758a4d1808abe5930f12a1e8e9293f3a593",
+  "binary_sha256": "9c3f938c0ae57cbffc95ab55a1a420801e71285d085ee34df004d988eb269895",
+  "pdf_link_revision": "2a4da408c1847ee120aa21076058b97425bb54e3",
   "new_file_link_policy": "Repository-relative references rendered as text when absent from the pinned commit; Markdown keeps local clickable links",
-  "source_sha256": "625b43213700db56df8b7d1cc05ef949faf302f47d3ed1b003f889c7ae397cec",
-  "pdf_sha256": "59eeef24e88df945937695afad0e11ef0df4e15a276c4806a18bf244e4599b60",
-  "screenshot_sha256": "ccea296ca3a5441265f5a79892c23b4d0d0fa6bb520b9a1637dc171559e643ec",
+  "source_sha256": "c8814f88a9e84da929fe9c0cf1970718e68c7c722a2acd26a72cb7b586b5ce5c",
+  "pdf_sha256": "8f20e486409baeaa0daeccb46fed04ad5d127c9eabda36449289f302a63a680d",
+  "screenshot_sha256": "887b25e978f5f8a2997d7dc6a24bbb74ecbee0338df535884b08cd93b3e09525",
   "limitations": "Synthetic loopback fixtures only; no live AWS/provider quota/production latency/cutover proof"
 }

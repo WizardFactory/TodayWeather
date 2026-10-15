@@ -1,7 +1,8 @@
 # server2 infrastructure preparation (S03)
 
-Status: reproducible local test environment and approval-ready staging plan;
-**no AWS resources or routing changed**. S01/S04 are integrated. The foundation
+Status: reproducible local test environment and staging plan. S03 changed **no AWS
+resources or routing**; the account root provisioned the staging bucket and runtime
+role on 2026-10-15 (S10f, see the worksheet below). S01/S04 are integrated. The foundation
 binary serves health and loopback metrics, without weather/S3/provider runtime
 routes. [Architecture](../architecture/server2.md) and
 [S03 contract](../../specs/issue-2688.md) describe the boundaries.
