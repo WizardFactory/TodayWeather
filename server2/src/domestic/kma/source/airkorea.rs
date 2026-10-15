@@ -650,6 +650,9 @@ pub struct Forecast {
     pub inform_data: Option<String>,
     /// `informGrade` entries `(region, grade)`; a missing grade is None.
     pub grades: Vec<(Option<String>, Option<String>)>,
+    /// `imageUrl1..9` (`_parseFrcst`), replaced by a later run as legacy `_saveFrcst` copies
+    /// every field but `informGrade` (S15b-3c reads `imageUrl[6]`/`[7]`).
+    pub image_urls: Vec<Option<String>>,
 }
 /// The `MinuDustFrcst` collection in natural order.
 #[derive(Debug, Clone, Default)]
@@ -698,6 +701,9 @@ impl Forecasts {
                         )
                     })
                     .collect(),
+                image_urls: (1..=9)
+                    .map(|i| opt_str(o.get(&format!("imageUrl{i}"))))
+                    .collect(),
             })
             .collect();
         // async.map: every lookup sees the collection before this run's saves.
@@ -713,6 +719,7 @@ impl Forecasts {
                     d.data_time = f.data_time;
                     d.inform_code = f.inform_code;
                     d.inform_data = f.inform_data;
+                    d.image_urls = f.image_urls;
                     for (region, grade) in f.grades {
                         if grade.as_deref() == Some("예보없음") {
                             continue;

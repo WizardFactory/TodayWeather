@@ -83,6 +83,9 @@ impl MidModel {
     }
 }
 
+/// The error legacy `KaqHourlyForecastController.getForecast` rejects with when no KAQ map case
+/// exists, that is, when there is no KAQ forecast at all (L239).
+pub const NO_KAQ_FORECAST: &str = "Fail to get map case";
 /// One synchronous method per legacy dependency call of the v000903 chain. Values are the
 /// legacy results as JSON with Dates as `{"$date": ms}`; `Err` is the callback error.
 /// Implementations must answer from a snapshot already in memory. A snapshot that cannot answer
@@ -132,7 +135,8 @@ pub trait KmaStore {
     fn dust_forecast(&self, region: &str, city: &str, date: &str) -> StoreResult;
     /// `AirFallback.getArpltn(gCoord, now)`: an observation or null (no provider is called here).
     fn air_fallback(&self, g_coord: &Value, now_ms: f64) -> StoreResult;
-    /// KAQ (`kaq`) or AirKorea (`airkorea`) hourly forecast rows of a station.
+    /// KAQ (`kaq`) or AirKorea (`airkorea`) hourly forecast rows of a station. A store without
+    /// any KAQ forecast answers `kaq` with the error [`NO_KAQ_FORECAST`].
     fn air_forecast(&self, source: &str, station: &Value) -> StoreResult;
     /// `kasiRiseSet.getRiseSetList(geocode, dates)`.
     fn rise_set(&self, geocode: &Value, dates: &[String]) -> StoreResult;

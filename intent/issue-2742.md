@@ -132,3 +132,29 @@ S15b-3b criteria (base `7ca6f002`, after #2750; same directions, coordinator 202
   existing `SERVER2_*` provider settings): the life index and KASI use the S15b-2 data.go.kr
   acquirer (one quota owner per key), MFDS the endpoint legacy hard-codes; no mode or flag.
 - B3-6: paths match `server2/config/tasks/S15b-3b.json`; outside changes are the declared documents.
+
+S15b-3c criteria (base master `0997d702` after #2752 and S10e #2755, merged with `e76202a3`; AK
+decisions of 2026-10-15, relayed by the root coordinator: the `kaq` → `airkorea` mapping when no KAQ
+forecast exists, and, once legacy #2757 and #2762 merged, legacy master as the parity target for the decoder,
+calibration, legend, dates and failure rules instead of the earlier legend-table/calibration
+choices):
+- C3-1: `air_forecast("airkorea")` answers the legacy master `getForecast` rows of the AirKorea
+  image forecast rebuilt from stored GIFs (the get-pixels frames, `airkoreaImageLayout` validate,
+  frameStart and station with #2762's variable frames and cycles, the KST-instant rows, the
+  upsert and the one-day removal); frames, documents, errors and answers equal a pinned legacy
+  oracle and the #2757/#2762 regression cases byte for byte, directly and from the S3 test peer
+  with empty memory, and the live 23- and 17-cycle images.
+- C3-2: the calibration reads the legacy `AIRKOREA_KOREA_IMAGE_*` names with the master defaults
+  (820×820, map 77/663/75/794) as legacy reads them; the difference from the earlier decisions is
+  reported.
+- C3-3: a `kaq` request when no KAQ forecast exists is answered with the AirKorea forecast and
+  `forecastSource: "airkorea"`, shaped as `_insertForecastPollutants` shapes `airkorea`; KAQ data
+  keeps priority (an AK-approved difference from legacy, with the client evidence cited).
+- C3-4: the two images of an announcement are one owned single-flight acquisition (S13d
+  `OwnedFlights`) published through S06 before use, their validated paths fetched only on the
+  built-in image root; a pair legacy rejects is never fetched; a
+  request never waits past its deadline (at most 3 s) and answers with the legacy output for
+  missing data while the acquisition and decoding finish.
+- C3-5: no new `SERVER2_*` setting, endpoint override, mode or flag (S10e model: the image origin is
+  a built-in, tests build a loopback one).
+- C3-6: paths match `server2/config/tasks/S15b-3c.json`; outside changes are the declared documents.
