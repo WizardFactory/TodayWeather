@@ -599,3 +599,47 @@ async fn a_failed_registry_seed_read_is_not_settled() {
         "the registry seed could not be read"
     );
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_partial_grid_read_records_nothing() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let catalogs = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&catalogs, &[]).await;
+    day(&catalogs, 20260923, 1..=24).await;
+    // A second acquisition of 09-23 12:00 whose raw body is then missing: S06 excludes the
+    // group, so the read is partial.
+    let publication = p(20260923, 1200);
+    let late = acquisition(
+        "data-go-kr",
+        "ultra-srt-ncst",
+        &Grid::new(60, 127).unwrap().provider_key(),
+        publication.period(),
+        &publication.partition(),
+        NOW - 120_000.,
+        current_page("20260923", "1200", "25"),
+        "application/json",
+    );
+    let raw_key = late.records[0].envelope.identity.object_key().unwrap();
+    catalogs
+        .publish(late.declaration, late.records, deadline())
+        .await
+        .unwrap();
+    reqwest::Client::new()
+        .post(format!(
+            "{}__catalog?mode=forget&key={raw_key}",
+            peer.endpoint()
+        ))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    let (backend, recorder) = backend(&peer, Arc::new(Unreachable));
+    serve(&backend).await;
+    assert!(recorder.idle(deadline()).await);
+    assert_eq!(
+        names(&recorder, 20260923).await,
+        0,
+        "partial read: nothing stored"
+    );
+}

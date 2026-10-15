@@ -2512,7 +2512,9 @@ counts). The newest revision is the greatest name whose body verifies; a later n
 later.
 
 **Complete inputs and late revisions.** The KMA snapshot records summary inputs only when its
-reads were complete: grid families read from published catalogs (otherwise the request forwards);
+reads were complete; a listed group that S06 excludes (not eligible, or a raw body missing) makes a
+grid, station-page, ASOS or VC read partial. Grid families are read from published catalogs
+(otherwise the request forwards);
 the station fold the answer used is still the current one, every day of the 8-day page window was
 read and its latest read did not fail, and no S3 load, fold, geocoding or unfolded page is pending;
 the history answer has no `cache-read-*` reason; and the ASOS acquisitions it answered from were

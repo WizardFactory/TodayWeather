@@ -150,10 +150,22 @@ impl<T: CatalogTransport + 'static> CatalogWorldStore<T> {
         for &date in first_dates {
             for range in [Range::Combined, Range::Recent, Range::Forecast] {
                 let id = catalog(cell, date, range).map_err(StoreError::Storage)?;
-                out.extend(
-                    load_partition(self.catalogs.clone(), id, period(date, range), deadline)
-                        .await?,
-                );
+                // A group S06 excluded (not eligible, raw body missing) makes the read partial.
+                match self
+                    .catalogs
+                    .lookup(&id, deadline)
+                    .await
+                    .map_err(StoreError::Storage)?
+                {
+                    LookupOutcome::Ready(set) if set.excluded_groups() == 0 => {
+                        out.extend(fetches(&set))
+                    }
+                    LookupOutcome::Ready(_) => return Err(StoreError::Incomplete),
+                    LookupOutcome::Incomplete => out.extend(
+                        load_partition(self.catalogs.clone(), id, period(date, range), deadline)
+                            .await?,
+                    ),
+                }
             }
         }
         out.sort_by(|a, b| (a.fetched_at_ms, &a.sha256).cmp(&(b.fetched_at_ms, &b.sha256)));

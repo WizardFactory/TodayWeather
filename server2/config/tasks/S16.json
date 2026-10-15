@@ -19,7 +19,8 @@
     "server2/tests/summary/",
     "server2/src/history/mod.rs",
     "server2/tests/domestic.rs",
-    "server2/tests/domestic/summary_s3.rs"
+    "server2/tests/domestic/summary_s3.rs",
+    "server2/src/domestic/kma/source/records.rs"
   ],
   "outside": [
     {
@@ -58,6 +59,7 @@
     "server2/src/gateway/runtime.rs": "shared: the kma family builds the summary recorder on the shared S3 admission",
     "server2/src/history/mod.rs": "shared S14 file: the transport module becomes pub(crate) so the summary transport reuses its LIST helpers",
     "server2/tests/domestic/summary_s3.rs": "S16 end-to-end test over the S06 loopback S3 peer: the native KMA backend records grid summaries, late inputs, incomplete reads, and the lookup's on-demand ASOS and VC paths; reuses the S15b source_s3 seed helpers",
-    "server2/tests/domestic.rs": "registers summary_s3"
+    "server2/tests/domestic.rs": "registers summary_s3",
+    "server2/src/domestic/kma/source/records.rs": "shared S15b-1 reader: counted raw/all variants report groups excluded by S06 eligibility (S16-R4-F1); existing methods unchanged"
   }
 }

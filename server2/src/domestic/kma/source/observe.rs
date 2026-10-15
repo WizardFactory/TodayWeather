@@ -222,6 +222,8 @@ struct State {
     asos_failed: HashMap<String, std::time::Instant>,
     /// Stations with a recovery run in progress (S16 completeness).
     asos_running: std::collections::HashSet<String>,
+    /// Stations whose latest S3 read had a group S06 excluded (S16 completeness).
+    asos_partial: std::collections::HashSet<String>,
     /// The latest registry seed read failed (S16 completeness).
     seed_failed: bool,
     /// Content hash of the last folded registry and the request instant it first appeared.
@@ -500,26 +502,28 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 async {
                     if want_hourly {
                         self.reader
-                            .raw("kma-web", "aws-hourly", &aws, &partition, deadline)
+                            .raw_counted("kma-web", "aws-hourly", &aws, &partition, deadline)
                             .await
                     } else {
-                        Ok(Vec::new())
+                        Ok((Vec::new(), 0))
                     }
                 },
                 async {
                     if want_city {
                         self.reader
-                            .raw("kma-web", "city-obs", &city_k, &partition, deadline)
+                            .raw_counted("kma-web", "city-obs", &city_k, &partition, deadline)
                             .await
                     } else {
-                        Ok(Vec::new())
+                        Ok((Vec::new(), 0))
                     }
                 },
             );
-            let (Ok(hourly), Ok(city)) = (hourly, city) else {
+            let (Ok((hourly, hourly_excluded)), Ok((city, city_excluded))) = (hourly, city) else {
                 self.state().pages.failed_days.insert(day);
                 continue;
             };
+            // S16: a group S06 excluded makes the day's read partial.
+            let partial = hourly_excluded + city_excluded > 0;
             let parsed = tokio::task::spawn_blocking(move || {
                 (
                     hourly
@@ -548,7 +552,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 }
             }
             s.pages.days.insert(day, std::time::Instant::now());
-            s.pages.failed_days.remove(&day);
+            if partial {
+                s.pages.failed_days.insert(day);
+            } else {
+                s.pages.failed_days.remove(&day);
+            }
             s.pages.dirty = true;
             s.pages.hourly_dirty = true;
         }
@@ -1089,6 +1097,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     .unwrap_or_default(),
                 !reloading
                     && !s.asos_running.contains(&station)
+                    && !s.asos_partial.contains(&station)
                     && !s.asos_failed.contains_key(&station),
             )
         };
@@ -1123,6 +1132,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         // Ranges start at most 7 days before a window that starts 7 days before today.
         let months = super::records::months(now_ms - 15. * 86_400_000., now_ms);
         let mut fetched: Vec<AsosFetched> = Vec::new();
+        let mut partial = false;
         for kind in [AsosKind::Hourly, AsosKind::Daily] {
             let parts = match self
                 .reader
@@ -1143,10 +1153,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 };
                 match self
                     .reader
-                    .raw("data-go-kr", kind.kind(), &key, &partition, deadline)
+                    .raw_counted("data-go-kr", kind.kind(), &key, &partition, deadline)
                     .await
                 {
-                    Ok(acquisitions) => {
+                    Ok((acquisitions, excluded)) => {
+                        partial |= excluded > 0;
                         for records in acquisitions {
                             fetched.push(asos_fetched(kind, &start, &end, &records));
                         }
@@ -1163,6 +1174,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         fetched.sort_by(|a, b| a.fetched_at_ms.total_cmp(&b.fetched_at_ms));
         let mut s = self.state();
         s.asos_failed.remove(station);
+        if partial {
+            s.asos_partial.insert(station.to_owned());
+        } else {
+            s.asos_partial.remove(station);
+        }
         // Keep acquisitions this process published after the read started.
         let mine: Vec<AsosFetched> = s
             .asos

@@ -333,14 +333,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .await
             .map(|(docs, _)| docs)
     }
-    /// [`Self::grid_answer`] with the identities of the acquisitions it folded (S16).
+    /// [`Self::grid_answer`] with the identities of the acquisitions it folded (S16), or `None`
+    /// for them when S06 excluded a listed group (a partial read).
     async fn grid_inputs(
         &self,
         family: Family,
         grid: crate::history::Grid,
         now: f64,
         deadline: Instant,
-    ) -> Result<(Vec<Doc>, Vec<InputId>), String> {
+    ) -> Result<(Vec<Doc>, Option<Vec<InputId>>), String> {
         let coord = Coord {
             mx: f64::from(grid.nx()),
             my: f64::from(grid.ny()),
@@ -363,9 +364,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let latest = sf
             .latest(now as i64)
             .ok_or("clock outside the publication calendar")?;
-        let fetched = self
+        let (fetched, excluded) = self
             .reader
-            .all(sf.source(), sf.kind(), &key, &wanted, deadline)
+            .all_counted(sf.source(), sf.kind(), &key, &wanted, deadline)
             .await
             .map_err(|e| format!("{} read: {e}", sf.kind()))?;
         if !present(&fetched, &latest.partition(), now) {
@@ -375,11 +376,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 latest.partition()
             ));
         }
-        let ids = fetched
-            .iter()
-            .filter(|f| f.fetched_at_ms as f64 <= now)
-            .filter_map(|f| grid_input_id(family, sf.kind(), f))
-            .collect();
+        let ids = (excluded == 0).then(|| {
+            fetched
+                .iter()
+                .filter(|f| f.fetched_at_ms as f64 <= now)
+                .filter_map(|f| grid_input_id(family, sf.kind(), f))
+                .collect()
+        });
         Ok((grid_documents(family, coord, &fetched, now), ids))
     }
     /// The short RSS documents of one grid at `now`; Err when the latest publication is absent.
@@ -541,11 +544,16 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             ),
         );
         let zones = zones?;
-        let (current, mut ids) = current?;
+        let (current, current_ids) = current?;
         let (shortest, shortest_ids) = shortest?;
         let (short, short_ids) = short?;
-        ids.extend(shortest_ids);
-        ids.extend(short_ids);
+        // S16: None when any grid family read was partial.
+        let ids: Option<Vec<InputId>> = [current_ids, shortest_ids, short_ids]
+            .into_iter()
+            .try_fold(Vec::new(), |mut all, part| {
+                all.extend(part?);
+                Some(all)
+            });
         let mut models = HashMap::new();
         models.insert(TownModel::Current, current);
         models.insert(TownModel::Shortest, shortest);
@@ -583,9 +591,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // S15b-3b: the life inputs are loaded (and their owned acquisitions started) only for a
         // request the snapshot will serve; a forwarded request starts none.
         let life = self.life.load(now, deadline).await;
-        let summary = settled
-            .then(|| summary_inputs(&town, grid, &history, ids, stations.as_deref(), asos))
-            .flatten();
+        let summary = match (settled, ids) {
+            (true, Some(ids)) => {
+                summary_inputs(&town, grid, &history, ids, stations.as_deref(), asos)
+            }
+            _ => None,
+        };
         Ok(Snapshot {
             summary,
             now,
