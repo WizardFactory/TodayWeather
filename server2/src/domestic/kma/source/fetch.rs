@@ -51,8 +51,13 @@ pub enum ForecastRequest {
     Warnings,
 }
 impl ForecastRequest {
-    /// Provider time (two legacy attempts per page) plus publication.
+    /// Provider time (two legacy attempts per page) plus publication. A warning cycle is tracked
+    /// for at most [`MAX_OWNED`](crate::resolver::owned::MAX_OWNED): it runs in its own task and
+    /// each of its steps carries the collector's 30 s deadline, so the bound never cancels it.
     pub fn owned_for(&self) -> Duration {
+        if matches!(self, Self::Warnings) {
+            return crate::resolver::owned::MAX_OWNED;
+        }
         let provider = match self {
             Self::DataGoKr(r) => owned_provider_time(
                 r.family().service().attempt_timeout(),
@@ -63,8 +68,7 @@ impl ForecastRequest {
                 crate::domestic::family::Service::ForecastZone.attempt_timeout(),
                 10,
             ),
-            // Legacy steps run in sequence; the collector bounds each step itself.
-            Self::Warnings => Duration::from_secs(150),
+            Self::Warnings => Duration::ZERO,
         };
         provider + PUBLISH_BUDGET
     }
@@ -78,11 +82,16 @@ pub trait ForecastAcquire: Send + Sync + 'static {
     fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>>;
 }
 
-/// A warning source on the KST-day budgets of the process data.go.kr acquirer (legacy
-/// `kmaWarningRequester` uses the same `DONGNAE_SECRET_KEYS`, rotating on quota or auth).
+/// A warning source on the KST-day budgets of the process data.go.kr acquirer. Legacy
+/// `kmaWarningRequester.get` (`server/lib/kmaWarningRequester.js:122-155`) uses the same
+/// `DONGNAE_SECRET_KEYS`: it starts at the last successful key, moves to the next key on an
+/// auth or quota error once around the list, and remembers the key that answered. Each attempt
+/// here is funded by its key's S08 budget; an exhausted budget moves on like a quota error.
 struct DailyWarnings<P, W, B> {
     daily: Arc<DailyAcquirer<P, W, B>>,
     base: String,
+    /// Legacy `keyIndex`: the key that answered last.
+    key_index: std::sync::atomic::AtomicUsize,
 }
 impl<P, W, B> WarningSource for DailyWarnings<P, W, B>
 where
@@ -97,17 +106,37 @@ where
         deadline: Instant,
     ) -> BoxFuture<'a, Result<Option<Page>, crate::warnings::provider::FetchError>> {
         use crate::warnings::provider::FetchError;
+        use std::sync::atomic::Ordering::SeqCst;
         Box::pin(async move {
             let day = self.daily.day().await.map_err(|_| FetchError::Invalid)?;
-            // The executor offers at most two candidates (the current key and one rotation).
-            let candidates = day.budgets.iter().take(2).cloned().collect();
-            let source = FundedSource::new(
-                self.daily.funded_transport(),
-                &self.base,
-                candidates,
-                self.daily.clock(),
-            )?;
-            source.fetch(operation, params, deadline).await
+            let count = day.budgets.len();
+            if count == 0 {
+                return Err(FetchError::Invalid);
+            }
+            let start = self.key_index.load(SeqCst) % count;
+            let mut last = FetchError::Invalid;
+            for offset in 0..count {
+                let index = (start + offset) % count;
+                let source = FundedSource::new(
+                    self.daily.funded_transport(),
+                    &self.base,
+                    vec![day.budgets[index].clone()],
+                    self.daily.clock(),
+                )?;
+                match source.fetch(operation, params.clone(), deadline).await {
+                    Ok(page) => {
+                        self.key_index.store(index, SeqCst);
+                        return Ok(page);
+                    }
+                    // Auth, quota, or this key's S08 budget refused (reported as Invalid before
+                    // any provider call): the next key.
+                    Err(e @ (FetchError::Auth | FetchError::Quota | FetchError::Invalid)) => {
+                        last = e;
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+            Err(last)
         })
     }
 }
@@ -142,6 +171,7 @@ where
                     format!("{data_go_kr}/")
                 }
             ),
+            key_index: std::sync::atomic::AtomicUsize::new(0),
         });
         let clock = daily.clock();
         Self {

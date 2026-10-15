@@ -820,3 +820,258 @@ async fn a_request_waits_for_late_acquisitions_once_within_three_seconds() {
         b"[]"
     );
 }
+
+/// Every forecast, life and AirKorea acquisition takes 6 s and then fails.
+struct SlowEverything;
+impl server2::domestic::kma::source::fetch::ForecastAcquire for SlowEverything {
+    fn acquire(
+        &self,
+        _: server2::domestic::kma::source::fetch::ForecastRequest,
+    ) -> server2::gateway::BoxFuture<
+        'static,
+        Result<server2::domestic::kma::source::fetch::Published, String>,
+    > {
+        Box::pin(async {
+            tokio::time::sleep(Duration::from_secs(6)).await;
+            Err("slow".into())
+        })
+    }
+}
+impl server2::domestic::kma::source::life_live::LifeAcquire for SlowEverything {
+    fn acquire(
+        &self,
+        _: server2::domestic::kma::source::life_live::LifeRequest,
+    ) -> server2::gateway::BoxFuture<
+        'static,
+        Result<server2::domestic::kma::source::life_live::LifeOutcome, String>,
+    > {
+        Box::pin(async {
+            tokio::time::sleep(Duration::from_secs(6)).await;
+            Err("slow".into())
+        })
+    }
+}
+impl server2::domestic::kma::source::live::AirKoreaAcquire for SlowEverything {
+    fn acquire(
+        &self,
+        _: server2::domestic::airkorea::AirKoreaRequest,
+    ) -> server2::gateway::BoxFuture<'static, Result<Option<Period>, String>> {
+        Box::pin(async {
+            tokio::time::sleep(Duration::from_secs(6)).await;
+            Err("slow".into())
+        })
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_request_answers_within_the_gateway_attempt_while_every_acquisition_is_slow() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&store, &["current", "shortest", "short", "rss", "mid"]).await;
+    let slow = Arc::new(SlowEverything);
+    let s3 = source(&peer)
+        .with_forecast(Some(slow.clone()))
+        .with_life(Some(slow.clone()))
+        .with_air(Some(slow), None);
+    // The gateway's native attempt (`gateway::backend`: at most 3 s): forecast, mid, warning,
+    // station, air and life waits all end before it, leaving time for the assembly.
+    let started = Instant::now();
+    let attempt = started + Duration::from_secs(3);
+    let snapshot = match s3.snapshot(&request(), attempt).await {
+        SourceAnswer::Snapshot(s) => s,
+        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+    };
+    let waited = started.elapsed();
+    assert!(waited < Duration::from_millis(2_900), "waited {waited:?}");
+    let outcome = assemble(
+        &request(),
+        snapshot.as_ref(),
+        NOW,
+        AssemblyConfig::default(),
+    );
+    assert!(!matches!(outcome, Outcome::Legacy(_)), "forwarded");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_first_requests_share_one_acquisition_per_publication() {
+    use server2::domestic::family::DataGoKrFamily;
+    use server2::domestic::kma::source::fetch::{ForecastAcquire, ForecastRequest, Published};
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    /// Publishes the 10:00 current publication after 300 ms; counts every request.
+    struct Provider {
+        store: Arc<CatalogStore<BoundedS3<HttpS3Transport>>>,
+        current: std::sync::atomic::AtomicUsize,
+    }
+    impl ForecastAcquire for Provider {
+        fn acquire(
+            &self,
+            request: ForecastRequest,
+        ) -> server2::gateway::BoxFuture<'static, Result<Published, String>> {
+            let store = self.store.clone();
+            let ForecastRequest::DataGoKr(r) = request else {
+                return Box::pin(async { Ok(None) });
+            };
+            if r.family() != DataGoKrFamily::UltraSrtNcst
+                || r.publication().partition() != "20260924-1000"
+            {
+                return Box::pin(async { Ok(None) });
+            }
+            self.current
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Box::pin(async move {
+                tokio::time::sleep(Duration::from_millis(300)).await;
+                let limits = CatalogLimits::default();
+                let p = r.publication();
+                let record = RawRecord::new(
+                    "data-go-kr",
+                    "ultra-srt-ncst",
+                    &Grid::new(60, 127).unwrap().provider_key(),
+                    p.period(),
+                    kst_ms(20260924, 1040) as u64,
+                    200,
+                    "application/json",
+                    Some(Pagination {
+                        page: 1,
+                        pages: 1,
+                        complete: true,
+                    }),
+                    current_page("20260924", "1000", "21.5").into(),
+                    &limits.raw,
+                )
+                .unwrap();
+                let member = GroupMember {
+                    envelope: record.envelope.clone(),
+                    catalogs: vec![
+                        CatalogId::for_record(&record.envelope.identity, &p.partition()).unwrap(),
+                    ],
+                };
+                store
+                    .publish(
+                        GroupDeclaration::new(vec![member], &limits).unwrap(),
+                        vec![record.clone()],
+                        deadline(),
+                    )
+                    .await
+                    .unwrap();
+                Ok(Some(vec![record]))
+            })
+        }
+    }
+    let peer = Peer::new();
+    let store = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+    seed(&store, &["current", "shortest", "short", "rss", "mid"]).await;
+    let provider = Arc::new(Provider {
+        store: store.clone(),
+        current: std::sync::atomic::AtomicUsize::new(0),
+    });
+    let s3 = Arc::new(source(&peer).with_forecast(Some(provider.clone())));
+    // Six requests at once: whoever creates the flight claims the retry bound, the others join
+    // that flight and get its records.
+    let requests: Vec<_> = (0..6)
+        .map(|_| {
+            let s3 = s3.clone();
+            tokio::spawn(async move {
+                match s3.snapshot(&request(), deadline()).await {
+                    SourceAnswer::Snapshot(s) => {
+                        let current = s
+                            .town_model(TownModel::Current, &json!(60), &json!(127))
+                            .unwrap();
+                        String::from_utf8(current.to_bytes()).unwrap()
+                    }
+                    SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+                }
+            })
+        })
+        .collect();
+    for r in requests {
+        let text = r.await.unwrap();
+        assert!(text.contains("21.5"), "{text}");
+    }
+    assert_eq!(
+        provider.current.load(std::sync::atomic::Ordering::SeqCst),
+        1
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn warning_requests_rotate_through_every_key_and_keep_the_one_that_answered() {
+    use axum::{Router, extract::State, http::Uri, response::IntoResponse, routing::any};
+    use server2::domestic::kma::source::fetch::{ForecastAcquire, ForecastRequest, LiveForecast};
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    /// Keys A and B are not registered; key C answers "no data". Every key used is logged.
+    async fn handle(
+        State(keys): State<Arc<std::sync::Mutex<Vec<char>>>>,
+        uri: Uri,
+    ) -> impl IntoResponse {
+        let query: reqwest::Url = format!("http://127.0.0.1/?{}", uri.query().unwrap_or(""))
+            .parse()
+            .unwrap();
+        let key = query
+            .query_pairs()
+            .find(|(k, _)| k == "serviceKey")
+            .map(|(_, v)| v.into_owned())
+            .unwrap_or_default();
+        let which = key
+            .split("_KEY_")
+            .nth(1)
+            .and_then(|s| s.chars().next())
+            .unwrap_or('?');
+        keys.lock().unwrap().push(which);
+        let body = if which == 'C' {
+            json!({"response": {"header": {"resultCode": "03", "resultMsg": "NO_DATA"}}})
+        } else {
+            json!({"response": {"header": {"resultCode": "30",
+                "resultMsg": "SERVICE_KEY_IS_NOT_REGISTERED_ERROR"}}})
+        };
+        (
+            axum::http::StatusCode::OK,
+            [("content-type", "application/json")],
+            body.to_string(),
+        )
+    }
+    let keys = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}/", listener.local_addr().unwrap());
+    let router = Router::new().fallback(any(handle)).with_state(keys.clone());
+    let server = tokio::spawn(async move {
+        axum::serve(listener, router).await.unwrap();
+    });
+    let peer = Peer::new();
+    let daily = server2::domestic::kma::source::observe::DailyAcquirer::new(
+        Arc::new(server2::providers::HttpProviderTransport::new(2 << 20).unwrap()),
+        Arc::new(server2::providers::HttpPublicTransport::new(2 << 20).unwrap()),
+        Arc::new(peer.transport()),
+        ["A", "B", "C"]
+            .iter()
+            .map(|k| format!("S15B4A_LOCAL_KEY_{k}+aaaaaaaaaaaaaaaa/="))
+            .collect(),
+        5000,
+        server2::domestic::family::Endpoints::new(&base, &base, &base).unwrap(),
+        Arc::new(server2::budget::SystemClock),
+        Arc::new(server2::domestic::metrics::DomesticMetrics::default()),
+    )
+    .unwrap();
+    let limits = CatalogLimits::default();
+    let live = LiveForecast::new(
+        Arc::new(daily),
+        Arc::new(CatalogStore::new(peer.transport(), limits.clone()).unwrap()),
+        Arc::new(
+            server2::warnings::store::WarningStore::new(
+                peer.transport(),
+                limits,
+                server2::warnings::store::StoreConfig::default(),
+            )
+            .unwrap(),
+        ),
+        &base,
+    );
+    let _ = live.acquire(ForecastRequest::Warnings).await;
+    let used = keys.lock().unwrap().clone();
+    server.abort();
+    // Legacy `get`: the first request goes once around the list to the key that answers…
+    assert_eq!(used.get(..3), Some(&['A', 'B', 'C'][..]), "{used:?}");
+    // …and every later request starts with that key.
+    assert!(used.len() > 3, "{used:?}");
+    assert!(used[3..].iter().all(|k| *k == 'C'), "{used:?}");
+}
