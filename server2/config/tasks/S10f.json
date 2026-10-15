@@ -12,6 +12,7 @@
     "server2/tests/",
     "server2/tools/s3_readiness.rs",
     "server2/tools/migration/",
+    "server2/tools/render_gateway_manual.py",
     "server2/deploy/local/test_local.py",
     "server2/deploy/staging/prerequisites.json",
     "server2/deploy/staging/role-policy.template.json"
@@ -89,6 +90,7 @@
     "server2/src/gateway/runtime.rs": "Builtins gains the test-only instance metadata root (None = built-in IMDS endpoint)",
     "server2/tools/s3_readiness.rs": "operator readiness check (example target): server2's real S3 stores write a tiny labelled object set and probe absent keys; prints statuses and keys only, never credentials",
     "server2/tools/migration/": "usage text names SERVER2_S3_REGION and the instance-role fallback",
-    "server2/deploy/local/test_local.py": "the staging contract test now expects the provisioned account, region, bucket, role and instance profile"
+    "server2/tools/render_gateway_manual.py": "accepts the S10f task receipt directory (reports/sdlc/issue-2759-s10f), as S10e added its own",
+    "server2/deploy/local/test_local.py":"the staging contract test now expects the provisioned account, region, bucket, role and instance profile"
   }
 }
