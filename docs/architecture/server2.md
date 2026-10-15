@@ -2133,8 +2133,9 @@ candidate).
 ### S15b-3b life index, KASI rise/set, MFDS food poisoning and area numbers (2026-10-15)
 
 The `kma` snapshot now answers `area_no`, `area_no_near`, `life_index`, `rise_set` and
-`food_poisoning` from server2 data; only `air_forecast` (S15b-3c) and the S15b-2 inputs still
-forward with their named reason. Every input is a national dataset shared by all requests (AK,
+`food_poisoning` from server2 data; with S15b-2 only `air_forecast` (S15b-3c, asked only for a
+town with an AirKorea station) still forwards with its named reason, and the S3 snapshot test
+assembles a native answer. Every input is a national dataset shared by all requests (AK,
 2026-10-14), read through S06 and folded with the legacy save rules:
 
 | Store call | Data | Legacy collection mirrored | tw_svc reader |
