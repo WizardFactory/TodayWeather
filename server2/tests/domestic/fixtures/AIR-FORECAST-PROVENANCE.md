@@ -1,6 +1,6 @@
 # S15b-3c AirKorea image forecast oracle fixture
 
-`air_forecast.json.gz` (sha256 `1d2d09318cea1db1f630bfb1f9bcb3d0fc5e0b1bbb4929c8e082038c0a2fd28f`) holds pinned legacy-oracle results for
+`air_forecast.json.gz` (sha256 `645c2db87b0f7b50085ab38187c2e367019acb5bae14b9a186a87a861b0b92ff`) holds pinned legacy-oracle results for
 the S15b-3c tests (`server2/tests/domestic/air_forecast.rs`, `air_forecast_s3.rs`). It is test
 data only; the server2 runtime never reads it or any legacy file. The parity target is legacy
 master `1d60f728` (#2757, "Restore AirKorea image-derived hourly forecasts", and #2762, variable
@@ -47,7 +47,7 @@ frames and cycle times).
   returns.
 - `forecast`: 8 stations (exact colours, a ring search, tolerance matches and
   misses, a per-frame legend shade, two outside the box, the map's top-left corner),
-  8 images (a broken-legend, a 47-frame and two 54-frame ones among them),
+  10 images (a broken-legend, a 47-frame, two 54-frame and two 96-frame ones among them; the 96-frame pair is used by the S3 read-window test only),
   8 announcements and 10 `getMinuDustFrcstDspth` →
   `AirkoreaHourlyForecastController.do` runs (a stored announcement, its skip, a second
   announcement over the same images, a 54-frame 17-cycle, the next 23-cycle images, a missing
@@ -182,7 +182,7 @@ const out = {schema: 1, oracle: {node: process.version, getPixels: require('get-
 
 ```
 
-### `oracle/record-forecast.js` (sha256 `3647db9be9f281de15b608bf712ead591ca5e6573419d06caa65ee11e7c5c4b3`)
+### `oracle/record-forecast.js` (sha256 `cf8facd1ce89d098890f82e5ff56bb1afa0a8e6bf6f619a4f87a385a3f24624b`)
 
 ```js
 /* S15b-3c AirKorea image forecast oracle, legacy master after #2757 and #2762 (task evidence, not a
@@ -293,11 +293,14 @@ const url = (code, day, hour = '23') => 'https://www.airkorea.or.kr/dustImage/' 
 
 (async () => {
     const images = [gif('pm10', 0), gif('pm25', 0), gif('pm10', 1), gif('pm25', 1),
-        gif('pm10', 1, {badLegend: true}), gif('pm10', 0, {frames: 47}), gif('pm10', 1, {frames: 54}), gif('pm25', 1, {frames: 54})];
+        gif('pm10', 1, {badLegend: true}), gif('pm10', 0, {frames: 47}), gif('pm10', 1, {frames: 54}), gif('pm25', 1, {frames: 54}),
+        gif('pm10', 0, {frames: 96}), gif('pm25', 0, {frames: 96})];
     const byUrl = {[url('pm10', '2026/10/14')]: 0, [url('pm25', '2026/10/14')]: 1, [url('pm10', '2026/10/15')]: 2,
         [url('pm25', '2026/10/15')]: 3, [url('pm10', '2026/10/16')]: 4, [url('pm25', '2026/10/16')]: 1,
         [url('pm10', '2026/10/17')]: 5, [url('pm25', '2026/10/17')]: 1,
-        [url('pm10', '2026/10/15', '17')]: 6, [url('pm25', '2026/10/15', '17')]: 7};
+        [url('pm10', '2026/10/15', '17')]: 6, [url('pm25', '2026/10/15', '17')]: 7,
+        // A 96-frame pair (no run uses it; the S3 read-window tests do).
+        [url('pm10', '2026/10/18')]: 8, [url('pm25', '2026/10/18')]: 9};
     for (const [u, i] of Object.entries(byUrl)) files[u] = images[i];
     const MsrStn = L.load('models/modelMsrStnInfo.js');
     L.fake.attach(MsrStn);

@@ -315,13 +315,14 @@ any GIF; server2 bounds the frame descriptors first.
   canvas within the decoding bounds), page 3 a manifest of the two URLs; paths fetched on
   `https://www.airkorea.or.kr/`;
   8 MiB per image; 60 s call budget.
-- Fold: the acquisitions of the last four KST days in completion order (ties by fetch group) as
+- Fold: the acquisitions of the last eight KST days (the longest accepted animation, 120 frames,
+  plus a day of row life) in completion order (ties by fetch group) as
   `do` runs (a stored `pubDate` with both codes is skipped; an image that fails the layout stores
-  nothing; rows older than one day are removed at each run and at the cut). Refresh: the four day
+  nothing; rows older than one day are removed at each run and at the cut). Refresh: the eight day
   catalogs' control objects list the acquisitions; unknown ones are read one lookup each and
   decoded before the next is read, once per station list; at most every minute, at once for a new
-  station list or after an own acquisition ended. Decoding: frame descriptors bounded, an LZW code
-  chain longer than the table is an error.
+  station list or after an own acquisition ended. Decoding: frame descriptors bounded (120 frames,
+  4 Mi pixels a frame, 64 Mi in all), an LZW code chain longer than the table is an error.
 - Request time: a request reading the forecast (`airForecastSource` absent, `(null)`, `airkorea`
   or `kaq`) loads the station list and the dust forecast, reads the fold and, when the fold lacks
   the expected announcement, starts one owned acquisition of its images (of the previous

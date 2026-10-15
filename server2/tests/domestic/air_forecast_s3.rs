@@ -1467,3 +1467,93 @@ async fn acquisitions_completed_in_the_same_millisecond_are_both_read() {
     }
     assert_eq!(transport.available(), TEST_PERMITS);
 }
+
+/// A longer animation keeps an older announcement's rows alive for longer: a 96-frame 23-cycle
+/// image of 09-24 runs to 09-28 23:00 KST, so on 09-29 its partition is still read, by a warm and
+/// a cold reader alike (review S15b3c-R7, reopened for #2762's variable frame counts).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_long_animation_is_read_until_its_last_rows_expire() {
+    use server2::domestic::kma::source::air_forecast::Calibration;
+    use server2::domestic::kma::source::forecast_input::ImageForecasts;
+    use server2::domestic::kma::source::live::Flights;
+    use std::sync::atomic::AtomicU64;
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = store_for(&transport);
+    // The oracle's 96-frame pair, dated by the 09/24/23 path.
+    let long = urls_for("2026/10/18");
+    let urls = urls_for("2026/09/24");
+    let pages = vec![
+        (image_at(&long[0]).unwrap().to_vec(), "image/gif"),
+        (image_at(&long[1]).unwrap().to_vec(), "image/gif"),
+        (
+            serde_json::to_vec(&json!({"pm10": urls[0], "pm25": urls[1]})).unwrap(),
+            "application/json",
+        ),
+    ];
+    let at = NOW + 12. * 3_600_000.;
+    publish(
+        &store,
+        ("airkorea-image", "airkorea-forecast-image"),
+        ProviderKey::Named {
+            id: "national".into(),
+        },
+        Publication::new(20260924, 2300).unwrap().period(),
+        "20260924",
+        at,
+        &pages,
+    )
+    .await;
+    let points: Vec<(f64, f64)> = stations().iter().map(|(_, a, b)| (*a, *b)).collect();
+    let values: Vec<(&'static str, f64, StationValues)> =
+        server2::domestic::kma::source::air_forecast::CODES
+            .iter()
+            .zip(&long)
+            .zip(&urls)
+            .map(|((&(code, kind, _), image), url)| {
+                let v = server2::domestic::kma::source::air_forecast::decode_gif(
+                    image_at(image).unwrap(),
+                    &Calibration::defaults(),
+                    kind,
+                    &points,
+                )
+                .unwrap();
+                assert_eq!(v.iter().flatten().next().unwrap().len(), 96);
+                (code, frame_start(url, kind).unwrap(), v)
+            })
+            .collect();
+    // 09-29 10:50 KST: the 09-28 rows from 11:00 KST are still kept.
+    let later = NOW + 5. * 86_400_000.;
+    let mut expected = HourlyForecasts::default();
+    expected.apply(&Processed {
+        pub_date: "2026-09-24 23:00".into(),
+        now: at,
+        stations: &stations(),
+        values,
+    });
+    expected.remove_old(later);
+    assert!(has_rows(&expected.by_station("중구")));
+    let all = station_fold(&[]);
+    let flights = Flights::new(Duration::from_secs(600));
+    let generation = Arc::new(AtomicU64::new(0));
+    let reader = || {
+        ImageForecasts::new(transport.clone(), store.clone(), Calibration::defaults())
+            .with_refresh_interval(Duration::ZERO)
+    };
+    let warm = reader();
+    until(
+        || image_load(&warm, at, &all, &flights, &generation),
+        |f| f.has("2026-09-24 23:00"),
+    )
+    .await;
+    let fresh = reader();
+    for images in [&warm, &fresh] {
+        until(
+            || image_load(images, later, &all, &flights, &generation),
+            |f| f.json() == expected.json(),
+        )
+        .await;
+    }
+    assert_eq!(transport.available(), TEST_PERMITS);
+}

@@ -2235,10 +2235,11 @@ forecasts", `91c77fcb`) and #2762 ("decode variable AirKorea forecast frames and
 | `air_forecast("airkorea", station)` | New keyless `airkorea-image`/`airkorea-forecast-image` acquisition: the two GIFs of one announcement as one group (page 1 PM10, page 2 PM2.5, page 3 a JSON manifest of the two URLs, whose path dates the frames), dated by the announcement, from the first PM10 document's `imageUrl7` and the first PM2.5 document's `imageUrl8` of the stored dust forecast | `kecoRequester.getMinuDustFrcstDspth` L649-703 calls `AirkoreaHourlyForecastController.do` (L694): `_checkHourlyForecast` (`img.hourly.forecast.controller` L127), `_getImgPaths` (L67), `getDustImage` (`airkorea.dust.image.controller` L256: both paths through `airkoreaImageLayout.frameStart`), `getPixelMap` (`airkorea.finedust.image.parser`: `layout.validate`), `getDustInfo` (L89: `layout.station`), `_updateHourlyForecast`/`_makeHourForecast` (with the AirKorea date override)/`_updateDb`, `_removeOldData` (L116) | `controllerTown24h._getAirForecast` L1196 → `getForecast` (`img.hourly.forecast.controller` L149, `find({stationName}).sort({date: 1})`), `_insertForecastPollutants` L690 via `AirForecastList` L1264 |
 | `air_forecast("kaq", station)` | none | — | `KaqHourlyForecastController.getForecast` L469 → `_findLatestMapCase` L231-239: no map case rejects with `Fail to get map case` |
 
-**Decoder (`lib/airkoreaImageLayout.js`).** `source/gif.rs` ports the omggif 1.0.9 reader that
+**Decoder (`lib/airkoreaImageLayout.js`).** `source/gif.rs` ports (with omggif's MIT notice) the omggif 1.0.9 reader that
 get-pixels 3.3.2 uses (every frame its own zeroed RGBA buffer, transparency and interlace as
 omggif, index stores past a frame's buffer dropped as typed-array stores are). Unlike legacy, the
-frame descriptors are bounded before any buffer exists (at most 240 frames, 4 Mi pixels in a frame
+frame descriptors are bounded before any buffer exists (at most 120 frames, five days and about
+twice the longest characterized animation, 4 Mi pixels in a frame
 and 64 Mi in all), and an LZW code chain longer than the code table (a cycle, on which omggif never
 returns) is an error; such a GIF stores nothing, as one legacy cannot decode.
 `source/air_forecast.rs` ports the layout: only the characterized NIER 09km animation is accepted
@@ -2290,10 +2291,10 @@ forecast that exists keeps priority, including a station it has no rows for.
 
 **Request time.** A request that reads the forecast (`airForecastSource` absent, `(null)`,
 `airkorea` or `kaq`) loads the station list and the dust forecast and reads the image fold. The
-fold replays the image acquisitions of the last four KST days (a 23시 announcement of day D covers
-D+1 and D+2 and a row lives one more day) in completion order as legacy `do` runs; acquisitions
-completed in the same millisecond are told apart by their fetch group. A refresh reads the four day
-catalogs (small control objects, no record body) and downloads only the acquisitions it does not
+fold replays the image acquisitions of the last eight KST days (an announcement of day D names an
+image whose first frame is at the latest D+1 00:00 KST, with at most 120 hourly frames, and a row
+lives one more day) in completion order as legacy `do` runs; acquisitions completed in the same
+millisecond are told apart by their fetch group. A refresh reads the eight day catalogs (small control objects, no record body) and downloads only the acquisitions it does not
 know, one S06 lookup each (a whole-day lookup would pass the 32 MiB read bound with three
 acquisitions), decoding each before the next is read so at most one pair of raw images is held;
 each is decoded once per station list. Refreshes are owned

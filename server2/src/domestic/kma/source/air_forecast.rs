@@ -347,7 +347,8 @@ fn offsets() -> Vec<(i64, i64)> {
 /// colour found), or None for a station outside the geographic box (`INVALID_STATION_COORDINATE`:
 /// the station is skipped). The image must pass `layout.validate`; anything else is an error and
 /// nothing is stored for the run.
-pub type StationValues = Vec<Option<Vec<Option<f64>>>>;
+/// Values are the integer thresholds, held compactly.
+pub type StationValues = Vec<Option<Vec<Option<u16>>>>;
 pub fn decode_points<P: Pixels>(
     pixels: &mut P,
     calibration: &Calibration,
@@ -435,7 +436,7 @@ pub fn decode_points<P: Pixels>(
                 }
                 let rgb = [0, 1, 2].map(|c| pixels.get(px, py, c));
                 if let Some(band) = colour_index(rgb, &legend, &limits) {
-                    found = Some(thresholds[band]);
+                    found = Some(thresholds[band] as u16);
                     break;
                 }
             }
@@ -531,7 +532,7 @@ impl HourlyForecasts {
                         station: station.clone(),
                         date: wall - 9. * HOUR_MS,
                         code,
-                        val,
+                        val: f64::from(val),
                         data_time,
                         pub_date: p.pub_date.clone(),
                     });

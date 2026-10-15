@@ -1,5 +1,30 @@
 //! S15b-3c: GIF frames as legacy reads them.
 //!
+//! The reader and the LZW decoder are a Rust port of omggif 1.0.9 (`omggif.js`), whose notice
+//! follows:
+//!
+//! > (c) Dean McNamee <dean@gmail.com>, 2013.
+//! >
+//! > https://github.com/deanm/omggif
+//! >
+//! > Permission is hereby granted, free of charge, to any person obtaining a copy
+//! > of this software and associated documentation files (the "Software"), to
+//! > deal in the Software without restriction, including without limitation the
+//! > rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+//! > sell copies of the Software, and to permit persons to whom the Software is
+//! > furnished to do so, subject to the following conditions:
+//! >
+//! > The above copyright notice and this permission notice shall be included in
+//! > all copies or substantial portions of the Software.
+//! >
+//! > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//! > IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//! > FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//! > AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//! > LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//! > FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+//! > IN THE SOFTWARE.
+//!
 //! Legacy `get-pixels` 3.3.2 (`node-pixels.js` `handleGIF`) gives every frame its own zeroed
 //! RGBA buffer of the logical screen and blits the frame into it with omggif 1.0.9
 //! `GifReader.decodeAndBlitFrameRGBA` (`omggif.js` L366-L660, LZW L662-L804): no compositing with
@@ -15,8 +40,9 @@
 //! nothing is stored for it, as for any image legacy could not decode. The AirKorea forecast GIFs
 //! of 2026-10-15 have 48-54 frames of 673×795 pixels (at most about 29 million in all).
 
-/// At most this many frames.
-pub const MAX_FRAMES: usize = 240;
+/// At most this many frames: five days of hourly frames, about twice the longest characterized
+/// animation (54 frames on 2026-10-15). The image fold's read window follows from it.
+pub const MAX_FRAMES: usize = 120;
 /// At most this many pixels in one frame rectangle (its index buffer).
 pub const MAX_FRAME_PIXELS: usize = 4 * 1024 * 1024;
 /// At most this many frame pixels in all (the LZW work of a whole decode).
