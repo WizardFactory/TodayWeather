@@ -775,7 +775,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // before the deadline): station observations, ASOS history, the forecast, air and life
         // acquisitions all stop waiting at `until`, so the waits never add up; late parts are
         // answered as legacy answers absent data. The air and life inputs end their waits 200 ms
-        // before the deadline they are given, so they get `until` + 200 ms.
+        // before the deadline they are given, so they get `until` + 200 ms (`section`), which
+        // also bounds the warning-state read; the assembly keeps the last 300 ms.
         let until = wait_bound(deadline);
         let section = (until + std::time::Duration::from_millis(200)).min(deadline);
         let observations = async {
@@ -797,7 +798,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .await?;
             Ok::<_, String>((zones, mids))
         };
-        let (zones_and_mids, (current, shortest, short, rss), (stations, history), air, (), life) = tokio::join!(
+        let (
+            zones_and_mids,
+            (current, shortest, short, rss),
+            (stations, history),
+            air,
+            special,
+            life,
+        ) = tokio::join!(
             zones_and_mids,
             async {
                 tokio::join!(
@@ -818,8 +826,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 section
             ),
             // The legacy warning cycle runs every 3 minutes; a due cycle is waited for until
-            // `until` at most.
-            self.warning_cycle(until),
+            // `until` at most, and the warning state is read by `section` (its refresh continues
+            // as an owned task). A failed or late read is the legacy store error
+            // (`getSpecialInfo` skips the section).
+            async {
+                self.warning_cycle(until).await;
+                self.warnings.zone_state(now as i64, section).await.ok()
+            },
             // S15b-3b life inputs (their owned acquisitions start for every request that reaches
             // this point).
             self.life.load(now, section),
@@ -830,8 +843,6 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         models.insert(TownModel::Shortest, shortest?);
         models.insert(TownModel::Short, short?);
         models.insert(TownModel::ShortRss, rss?);
-        // A failed read is the legacy store error (`getSpecialInfo` skips the section).
-        let special = self.warnings.zone_state(now as i64, deadline).await.ok();
         Ok(Snapshot {
             now,
             town,
@@ -1047,7 +1058,7 @@ const BACKFILL_CONCURRENCY: usize = 3;
 /// Backfill passes running at once (each with [`BACKFILL_CONCURRENCY`] acquisitions).
 const BACKFILL_PASSES: usize = 8;
 /// Time kept after a request's waits for the remaining S3 reads and the assembly.
-const ANSWER_RESERVE: std::time::Duration = std::time::Duration::from_millis(300);
+const ANSWER_RESERVE: std::time::Duration = std::time::Duration::from_millis(500);
 /// Earlier publications legacy's backfill keeps per family (S14 `schedule`).
 fn fetch_reach(sf: schedule::Family) -> usize {
     match sf {

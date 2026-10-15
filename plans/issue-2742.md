@@ -333,7 +333,8 @@ key and KST day, shared by every service of these keys). An acquisition retries 
 | Warning cycle | the legacy cycle: ≥5 pages (status, zone days, three bulletins), shared by every request | up to 10 zone days on a bootstrap, each key tried once on auth or quota errors | one cycle per 3 minutes while requests arrive, never two at once |
 
 **Baseline per active cell and KST day** (successful single-page answers): 24 current + 24
-ultra-short + 8 short = 56 units, plus one `queryDFS` per hour. A cold cell adds up to 53 units
+ultra-short + 8 short = 56 units, plus 8 keyless `queryDFS` acquisitions: one per RSS
+publication (`rss_latest`, every 3 hours), where legacy polls hourly. A cold cell adds up to 53 units
 once. On top of that, the same budgets fund:
 
 - shared work: mid regions (6 units a day per region), warning cycles (≥5 units every 3 minutes
@@ -348,7 +349,7 @@ once. On top of that, the same budgets fund:
 | Q1 | First user of a cell with no stored forecast | Snapshot with every grid, RSS, mid and zone input missing | No forward; the acquired current publication is used in the same request; the others answer legacy's empty collections; `forecast_zone` answers `[]` (legacy's empty `find`, `controllerTown.js:4505-4514`) | `source_s3::missing_inputs_are_acquired_at_request_time_and_never_forwarded` |
 | Q2 | Next user of the cell | Second request | No repeated acquisition (retry bounds); one backfill pass of 23 current hours | same test |
 | Q3 | User while every forecast provider is slow | Every forecast acquisition takes 6 s; 20 s deadline | The request waits once, at most 3 s, for all of them (15.2 s before the shared bound) | `source_s3::a_request_waits_for_late_acquisitions_once_within_three_seconds` |
-| Q4 | User while every provider is slow, through the gateway | Forecast, life and AirKorea acquisitions take 6 s; the gateway's 3 s native attempt | Answered natively before the attempt ends, with the assembly reserve (before: forwarded on a mid read timeout) | `source_s3::a_request_answers_within_the_gateway_attempt_while_every_acquisition_is_slow` |
+| Q4 | User while every provider is slow, through the gateway | Forecast, life and AirKorea acquisitions take 6 s; the gateway's 3 s native attempt | Answered natively before the attempt ends. Waits stop 500 ms before the deadline. The warning state and the air and life reads stop 300 ms before it, which leaves the assembly its time. Before this fix the request was forwarded on a mid read timeout. | `source_s3::a_request_answers_within_the_gateway_attempt_while_every_acquisition_is_slow`, `source_s3::the_kma_backend_serves_within_the_gateway_attempt_while_every_acquisition_is_slow` (`KmaBackend` under the gateway's `timeout_at`) |
 | Q5 | Six first users of a cell at once | Concurrent snapshots | One acquisition of the latest publication, used by all six | `source_s3::concurrent_first_requests_share_one_acquisition_per_publication` |
 | Q6 | Warning cycle with rejected keys | Keys A and B not registered, C valid | A, B, then C once around the list; later requests start with C (legacy `kmaWarningRequester.get`) | `source_s3::warning_requests_rotate_through_every_key_and_keep_the_one_that_answered` (before: A, B repeated) |
 | Q7 | A collected mid region with no record and no acquirer | Snapshot | Legacy's empty answer | `source_s3_oracle` (11D10000) |

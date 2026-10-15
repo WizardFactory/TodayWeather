@@ -1075,3 +1075,33 @@ async fn warning_requests_rotate_through_every_key_and_keep_the_one_that_answere
     assert!(used.len() > 3, "{used:?}");
     assert!(used[3..].iter().all(|k| *k == 'C'), "{used:?}");
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_kma_backend_serves_within_the_gateway_attempt_while_every_acquisition_is_slow() {
+    use server2::domestic::kma::backend::KmaBackend;
+    use server2::gateway::BackendHandler;
+    use server2::gateway::backend::Native;
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&store, &["current", "shortest", "short", "rss", "mid"]).await;
+    let slow = Arc::new(SlowEverything);
+    let s3 = source(&peer)
+        .with_forecast(Some(slow.clone()))
+        .with_life(Some(slow.clone()))
+        .with_air(Some(slow), None);
+    let backend = KmaBackend::new(Arc::new(s3), Arc::new(|| NOW), AssemblyConfig::default());
+    // `gateway::backend` gives the native attempt at most 3 s and drops it at that instant: the
+    // waits (forecast, mid, warning cycle and state, station, air, life) and the assembly must
+    // all fit.
+    let attempt = Instant::now() + Duration::from_secs(3);
+    let path = "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99".to_owned();
+    let served = tokio::time::timeout_at(
+        attempt,
+        backend.fetch_or_forward(path, "ko".into(), attempt),
+    )
+    .await
+    .expect("the native attempt outlived the gateway deadline")
+    .unwrap();
+    assert!(matches!(served, Native::Served(_)), "forwarded");
+}

@@ -2386,7 +2386,8 @@ new acquisitions are skipped and S3 answers as stored.
 
 **Request wait.** A request waits once for every late input: these acquisitions, the S15b-2
 station observations and the S15b-3 AirKorea and life acquisitions. The shared bound is
-`REQUEST_WAIT` (3 s), and it ends 300 ms before the request deadline. The gateway's native attempt
+`REQUEST_WAIT` (3 s), and it ends 500 ms before the request deadline. The warning-state read and
+the air and life reads stop 300 ms before the deadline. The gateway's native attempt
 ends at most 3 s after the request starts (`gateway::backend`), so the reads that remain and the
 assembly still fit. The mid regions start as soon as the zone list is read. The grids, RSS, warning
 cycle, air and life inputs run concurrently.
@@ -2406,7 +2407,8 @@ refuses. Each attempt is funded by its own key.
 The data.go.kr root is built in (`gateway::runtime::Builtins`). There is no new setting.
 
 **Load baseline** (successful single-page answers): 56 units per active cell and KST day (24
-current, 24 ultra-short, 8 short) and 24 keyless RSS GETs. A cold cell adds up to 53 backfill units
+current, 24 ultra-short, 8 short) and 8 keyless RSS acquisitions, one per RSS publication
+(legacy polls hourly). A cold cell adds up to 53 backfill units
 once. Mid regions, warning cycles, the zone list, other S15b consumers, retries and extra pages
 spend the same budgets. The open quota decision is in the
 [plan](../../plans/issue-2742.md#open-decisions-and-limitations-s15b-4a).
@@ -2419,7 +2421,7 @@ spend the same budgets. The open quota decision is in the
 | Next request | Repeats no acquisition; the backfill asks for 23 earlier hours once |
 | Six concurrent first requests | Share one acquisition |
 | Every forecast acquisition takes 6 s | The request returns within the shared 3 s bound (before: 15.2 s) |
-| Forecast, life and AirKorea acquisitions take 6 s under a 3 s gateway attempt | Answered natively before the attempt ends (before: forwarded on a mid read timeout) |
+| Forecast, life and AirKorea acquisitions take 6 s under a 3 s gateway attempt | Answered natively before the attempt ends, also through `KmaBackend` under the gateway's timeout (before: forwarded on a mid read timeout) |
 | Two unregistered keys | The warning requests reach the third key and keep it (before: the first two keys repeated) |
 
 The release `kma_smoke.py` answers natively in its `kma` phase. The provider calls were confirmed
