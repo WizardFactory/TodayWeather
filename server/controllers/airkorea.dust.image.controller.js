@@ -265,9 +265,6 @@ AirkoreaDustImageController.prototype.getDustImage = function (imgPaths, callbac
     async.applyEach(
         [
             function(cb){
-                if (imgPaths.pm10 == undefined) {
-                    return cb();
-                }
                 log.info("pm10 path: "+imgPaths.pm10);
                 self.parseMapImage(imgPaths.pm10, 'image/gif', function(err, pixelMap){
                     if(err){
@@ -282,9 +279,6 @@ AirkoreaDustImageController.prototype.getDustImage = function (imgPaths, callbac
                 });
             },
             function(cb){
-                if (imgPaths.pm25 == undefined) {
-                    return cb();
-                }
                 log.info("pm25 path: "+imgPaths.pm25);
                 self.parseMapImage(imgPaths.pm25, 'image/gif', function(err, pixelMap){
                     if(err){

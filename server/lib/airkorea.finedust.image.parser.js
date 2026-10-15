@@ -46,15 +46,6 @@ AirkoreaImageParser.prototype.getDefaultCoordi = function(){
     };
 };
 
-AirkoreaImageParser.prototype.isValidImage = function(width, height){
-    var size = {
-        width : parseInt(airkoreaDustImage.size.width),
-        height: parseInt(airkoreaDustImage.size.height)
-    };
-
-    return (width === 820 && height === 820 && size.width === width && size.height === height);
-};
-
 AirkoreaImageParser.prototype.getPixelMap = function(path, type, coordnate, cb){
     var self = this;
 

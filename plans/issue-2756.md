@@ -38,3 +38,5 @@ The riskiest part is accepting a geometrically valid image with incorrect colour
 Roll back the scoped code and private operator configuration through the existing deployment procedure. Do not delete production rows automatically. Existing valid observations/original forecasts and KAQ behavior remain independent.
 
 Execution ledger: `.planning/2026-10-15-airkorea-image-runtime/`; generated runs: `reports/airkorea-runtime-20261015/`. These local paths are recovery metadata, not maintained dependencies.
+
+Review correction: apply REQ-1 (valid counterpart in both invalid-path loops and missing-path cases), REQ-2 (document paired rejection and remove dead guards), and REQ-3 (clarify characterized size and remove unused parser helper). Preserve existing runtime behavior; renew regression, mutation-oracle check, real-GIF smoke and independent review.

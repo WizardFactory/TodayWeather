@@ -55,12 +55,14 @@ reference points (Seoul, Daejeon, Busan, Jeju) each produced 48 rows per polluta
 384 stored/read rows, first `2026-10-15 00:00` KST / `2026-10-14T15:00:00Z`, last
 `2026-10-16 23:00` KST, all concentrations finite and nonnegative.
 
+Independent review recommended stronger path-test isolation, explicit paired-image failure documentation and removal of dead guards/helper. All three were applied: each invalid-path case now has a valid counterpart, both missing-path cases assert zero writes, and size overrides are documented as limited to the characterized canvas. An isolated mutation removing the pollutant comparison fails exactly the two mirrored mismatch tests (23 pass, 2 fail), confirming that those tests exercise the intended check.
+
 Final checks:
 
 | Check | Result |
 | --- | --- |
-| Image regression, Node 16.20.2 / UTC | 18 passed |
-| Image regression, Node 24.19.0 / America/Los_Angeles | 18 passed |
+| Image regression, Node 16.20.2 / UTC | 25 passed |
+| Image regression, Node 24.19.0 / America/Los_Angeles | 25 passed |
 | Existing AirKorea collection/key endpoints, data.go.kr key config, gather policy (Node 16) | All four test files passed |
 | Real GIF decoder/controller/AQI + memory store/readback, Node 16 / Asia/Seoul | 384 rows, PASS |
 | Earlier current-GIF replay, UTC and Asia/Seoul | 384 rows each, PASS |

@@ -25,9 +25,19 @@ legend; the top band is capped at its lowest labelled threshold and the bottom
 band is zero. These estimates can understate a concentration within a band and
 are not exact model values.
 
+Both PM10 and PM2.5 paths are required for each collection attempt. A missing or
+invalid path rejects the pair before station writes, so even the available
+pollutant has a coverage gap until a later scheduled attempt has both supported
+images. This deliberately replaces the old missing-path partial collection.
+Existing stored rows are retained; this does not make separate Mongo upserts
+transactional or guarantee rollback after a storage failure.
+
 ## Calibration
 
-All `AIRKOREA_KOREA_IMAGE_*` environment overrides remain supported and validated.
+Map and geographic `AIRKOREA_KOREA_IMAGE_*` overrides are honored and validated.
+Size overrides must equal the characterized 820×820 canvas; another size fails
+closed even if the image matches the override. A new canvas needs decoder and
+legend recharacterization, not just a size setting.
 The repository defaults are:
 
 | Suffix | Default |

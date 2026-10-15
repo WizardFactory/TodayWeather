@@ -59,9 +59,19 @@ test('image cycle, not current clock or later publication, determines dates acro
     assert.equal(rows[0].dataTime,'2026-02-01 00:00');
     assert.equal(rows[47].dataTime,'2026-02-02 23:00');
 });
-for (const path of [imagePath('pm10','2026/02/30'),imagePath().replace('/23/','/05/'),imagePath().replace('/23/','/11/'),imagePath('pm25'),'https://www.airkorea.or.kr/dustImage/']) {
-    test('invalid image date/path or pollutant mismatch does not write: '+path, async () => {
-        const h = harness(); await assert.rejects(pipeline(h,{pubDate:'2026-10-15 11:00',pm10:path})); assert.equal(h.rows.length,0);
+for (const code of ['pm10','pm25']) {
+    const other = code === 'pm10' ? 'pm25' : 'pm10';
+    for (const path of [imagePath(code,'2026/02/30'),imagePath(code).replace('/23/','/05/'),imagePath(code).replace('/23/','/11/'),imagePath(other),'https://www.airkorea.or.kr/dustImage/']) {
+        test('invalid '+code+' date/path or pollutant mismatch with valid counterpart does not write: '+path, async () => {
+            const h = harness();
+            await assert.rejects(pipeline(h,{pubDate:'2026-10-15 11:00',[code]:path,[other]:imagePath(other)}));
+            assert.equal(h.rows.length,0);
+        });
+    }
+    test('missing '+code+' rejects the pair before station writes', async () => {
+        const h = harness();
+        await assert.rejects(pipeline(h,{pubDate:'2026-10-15 11:00',[other]:imagePath(other)}));
+        assert.equal(h.rows.length,0);
     });
 }
 test('observed four-level GIF palette rounding preserves the legend value; five levels reject', async () => {
