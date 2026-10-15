@@ -485,9 +485,10 @@ The pollen popup also binds `LOC_POLLEN_{OAK,PINE,WEEDS}_INFO` and `LOC_POLLEN_A
 
 When `airForecastSource=airkorea` selects stored image forecasts, `dataTime` and
 `pubDate` remain KST display strings. New AirKorea BSON `date` fields encode the
-KST frame hours as UTC instants; dates derive from the characterized 23-cycle
-image, including when a later original forecast reuses it. Unsupported cycles
-are rejected during collection. The app's default KAQ selection and KAQ writer
+KST frame hours as UTC instants. The characterized 05/11/17/23 image cycles start
+at cycle hour plus one in KST; each pollutant uses its own decoded frame count.
+Later original publications can reuse images without relabelling their dates.
+Malformed or uncharacterized cycle times are rejected during collection. The app's default KAQ selection and KAQ writer
 are unchanged. Local decoder/storage replay is not public API or device recovery.
 See [collection](weather-collection.md#airkorea-image-derived-hourly-recovery-2756)
 and [operations](../operations/airkorea-image-forecast.md).
