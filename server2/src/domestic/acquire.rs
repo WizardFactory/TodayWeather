@@ -799,10 +799,11 @@ where
         }))
     }
 
-    /// Acquire the two AirKorea forecast images of one announcement (S15b-3c): keyless GETs of
-    /// the provider's image URLs, HTTP 200 only, each a GIF of the accepted logical screen. Both
-    /// form one group (page 1 PM10, page 2 PM2.5); a failure of either stores nothing (legacy
-    /// `getDustImage` stops at the first error).
+    /// Acquire the AirKorea forecast images of one announcement (S15b-3c): keyless GETs of the
+    /// provider's image URLs on the built-in image origin, HTTP 200 only, each a GIF of the
+    /// accepted logical screen. They form one group (page 1 PM10, page 2 PM2.5; a pollutant
+    /// without a URL is an empty record with status 204, as legacy skips it); a failure of either
+    /// image stores nothing (legacy `getDustImage` stops at the first error).
     pub async fn acquire_airkorea_images(
         &self,
         request: &AirKoreaImageRequest,
@@ -811,12 +812,22 @@ where
         if !request
             .urls()
             .iter()
+            .flatten()
             .all(|u| self.endpoints.image_allowed(u))
         {
             return Err(DomesticError::Invalid("image url"));
         }
         let mut bodies = Vec::new();
         for url in request.urls() {
+            // A pollutant without an image URL is skipped: an empty record marks it.
+            let Some(url) = url else {
+                bodies.push((
+                    Arc::<[u8]>::from(Vec::new()),
+                    super::airkorea_image::SKIPPED,
+                    "image/gif".to_owned(),
+                ));
+                continue;
+            };
             let target =
                 PublicRequest::new(url.clone()).map_err(|_| DomesticError::Invalid("endpoint"))?;
             let _admission = timeout_at(deadline, self.public_admission.clone().acquire_owned())

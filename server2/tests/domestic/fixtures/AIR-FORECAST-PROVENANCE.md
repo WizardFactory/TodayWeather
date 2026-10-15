@@ -1,6 +1,6 @@
 # S15b-3c AirKorea image forecast oracle fixture
 
-`air_forecast.json.gz` (sha256 `af56213c8e6e02dbaa299b655d22004888c87e289178f247f5e20bdc69b2097f`) holds pinned legacy-oracle results for
+`air_forecast.json.gz` (sha256 `f8e2204592105e8b1e7113127a948d97219e55469b8bc1bea539927304ca4cf1`) holds pinned legacy-oracle results for
 the S15b-3c tests (`server2/tests/domestic/air_forecast.rs`, `air_forecast_s3.rs`). It is test
 data only; the server2 runtime never reads it or any legacy file.
 
@@ -12,7 +12,7 @@ data only; the server2 runtime never reads it or any legacy file.
   5.1.2 over the in-memory collection double.
 - Legacy source: the repository `server/` files the forecast driver loads; their sha256 are stored
   in `forecast.source.files` (9 files).
-- Inputs: synthetic GIFs written with omggif's `GifWriter`; no live image or value is copied. The
+- Inputs: synthetic GIFs written with omggif's `GifWriter` (one by hand, from review S15b3c-R2); no live image or value is copied. The
   colour tables are the live-legend tables of `server2/src/domestic/kma/source/air_forecast.rs`
   (AK 2026-10-15), handed to the legacy controller in place of its own tables
   (`ORACLE_DUST_TABLES`); the calibration is the deployed one with the 820×820 size.
@@ -20,19 +20,20 @@ data only; the server2 runtime never reads it or any legacy file.
 
 ## What is recorded
 
-- `gif`: 7 synthetic GIFs (`global-palette`, `sub-rectangle`, `local-palette-transparent`, `interlaced`, `short-stream`, `full-code-table`, `offset-frame-820`): shape and the sha256 of every frame get-pixels
+- `gif`: 9 synthetic GIFs (`global-palette`, `sub-rectangle`, `local-palette-transparent`, `interlaced`, `short-stream`, `full-code-table`, `offset-frame-820`, `overlong-one-pixel`, `overlong-stream`): shape and the sha256 of every frame get-pixels
   returns.
 - `forecast`: 6 stations (one outside the map box), 2 image sets
   (820×820, one 673×795 frame per hour at (66,10) as the live images; the second set's PM2.5 has 30
-  frames), 3 announcements and 5 `getMinuDustFrcstDspth` →
+  frames), 6 announcements and 9 `getMinuDustFrcstDspth` →
   `AirkoreaHourlyForecastController.do` runs (a stored announcement skipped, a 23시 run after
-  midnight, the one-day removal, an announcement without forecast documents): after each run the
-  `arpltnhourlyforecasts` documents (432, 432, 432, 432, 406) and the
+  midnight, a PM10-only announcement twice, a PM2.5-only one, one with a broken PM10 image, the
+  one-day removal, an announcement without forecast documents): after each run the
+  `arpltnhourlyforecasts` documents (432, 432, 432, 432, 432, 432, 540, 540, 514) and the
   `getForecast` answer of every station.
 
 ## Driver source
 
-### `record-gif.js` (sha256 `94d2d0d7527b772cc52596e7d53f735f87fa06259d33e73e8306e1d2579c7e05`)
+### `record-gif.js` (sha256 `13797a19ac3c059452436a5265471fb84498f464113c2b68cc642f2f49eae807`)
 
 ```js
 /* S15b-3c GIF decoder oracle (task evidence): synthetic GIFs (omggif 1.0.9 GifWriter, then
@@ -119,6 +120,16 @@ cases.push(['full-code-table', writer(160, 120, {palette: palette(256, 7)},
 // 7. Map-like frames: an 820x820 screen with a 673x795 frame at (66,10), as the live GIFs.
 cases.push(['offset-frame-820', writer(820, 820, {palette: palette(64, 8)},
     [{x: 66, y: 10, w: 673, h: 795, pixels: indices(673 * 795, 64, i => (Math.floor((i % 673) / 40) + Math.floor(i / 673 / 50)) % 64)}])]);
+// 8. A one-pixel frame whose stream is longer than the frame (review S15b3c-R2): omggif drops the
+//    store past the index buffer (a typed-array write) and stops at the next longer code.
+cases.push(['overlong-one-pixel', Buffer.from('47494638396134033403800000000000ffffff2c0000000001000100000202440a003b', 'hex')]);
+// 9. A stream longer than its frame: the descriptor promises 10x6 for 10x10 of data.
+{
+    const b = writer(10, 10, {palette: palette(8, 9)}, [{x: 0, y: 0, w: 10, h: 10, pixels: indices(100, 8, i => (i * 7) % 8)}]);
+    const d = descriptor(b, 0);
+    b[d + 7] = 6;
+    cases.push(['overlong-stream', b]);
+}
 
 const out = {schema: 1, oracle: {node: process.version, getPixels: require('get-pixels/package.json').version,
     omggif: require('omggif/package.json').version}, cases: []};
@@ -141,7 +152,7 @@ const out = {schema: 1, oracle: {node: process.version, getPixels: require('get-
 
 ```
 
-### `oracle/record-forecast.js` (sha256 `ee9705d32475aa0d933d88c57457c91d4d51d200f319f6eff4acb437041febba`)
+### `oracle/record-forecast.js` (sha256 `7ae266be78d4836145a651e21a6902591adf58cba07cac74ab4ea8f5efdf4d9a`)
 
 ```js
 /* S15b-3c AirKorea image forecast oracle (task evidence, not a repository tool). No network.
@@ -261,20 +272,37 @@ function gif(code, set, frames) {
     for (const [stationName, lat, lon] of STATIONS) {
         await cb2p(cb => new MsrStn({stationName, geo: [lon, lat], addr: stationName}).save(cb));
     }
-    const announce = [['2026-10-14 17시 발표', 0], ['2026-10-14 23시 발표', 1], ['2026-10-15 05시 발표', 0]];
-    for (const [dataTime, set] of announce) {
-        for (const code of ['PM10', 'PM25']) {
-            const url = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', sets[set].paths.pm10, sets[set].paths.pm25, 'u9'];
+    // Announcements with the state of each image (review S15b3c-R5): `image`, `absent` (the
+    // document has no image URL: `getDustImage` skips that pollutant), `nodoc` (no document of that
+    // code) or `broken` (a URL get-pixels cannot read: the whole run stores nothing).
+    const announce = [['2026-10-14 17시 발표', 0, 'image', 'image'], ['2026-10-14 23시 발표', 1, 'image', 'image'],
+        ['2026-10-15 05시 발표', 0, 'image', 'image'], ['2026-10-15 11시 발표', 1, 'image', 'absent'],
+        ['2026-10-15 17시 발표', 0, 'nodoc', 'image'], ['2026-10-15 23시 발표', 1, 'broken', 'image']];
+    const missing = path.join(dir, 'missing.gif');
+    for (const [dataTime, set, pm10, pm25] of announce) {
+        for (const [code, state] of [['PM10', pm10], ['PM25', pm25]]) {
+            if (state === 'nodoc') continue;
+            const url = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6'];
+            const own = state === 'broken' ? missing : sets[set].paths[code.toLowerCase()];
+            if (code === 'PM10') {
+                if (state !== 'absent') url.push(own, sets[set].paths.pm25, 'u9');
+            } else {
+                url.push(sets[set].paths.pm10);
+                if (state !== 'absent') url.push(own, 'u9');
+            }
             await cb2p(cb => new Frcst({dataTime, informCode: code, informData: dataTime.slice(0, 10), imageUrl: url}).save(cb));
         }
     }
     const Ctrl = L.load('controllers/airkorea.hourly.forecast.controller.js');
     const Base = L.load('controllers/img.hourly.forecast.controller.js');
     // Runs (KST): a 17시 announcement processed that day, its repeat (skipped), the 23시 one after
-    // midnight, the 05시 one with the first images again, then a later run removing old rows and
-    // one for an announcement without forecast documents.
+    // midnight, the 05시 one with the first images again, the PM10-only 11시 one twice (not
+    // skipped: no PM2.5 rows), the PM2.5-only 17시 one, the 23시 one with a broken PM10 image, then
+    // a later run removing old rows for an announcement without forecast documents.
     const runs = [['2026-10-14 17시 발표', Date.UTC(2026, 9, 14, 8, 2)], ['2026-10-14 17시 발표', Date.UTC(2026, 9, 14, 9, 2)],
         ['2026-10-14 23시 발표', Date.UTC(2026, 9, 14, 15, 30)], ['2026-10-15 05시 발표', Date.UTC(2026, 9, 14, 20, 2)],
+        ['2026-10-15 11시 발표', Date.UTC(2026, 9, 15, 2, 2)], ['2026-10-15 11시 발표', Date.UTC(2026, 9, 15, 3, 2)],
+        ['2026-10-15 17시 발표', Date.UTC(2026, 9, 15, 8, 2)], ['2026-10-15 23시 발표', Date.UTC(2026, 9, 15, 14, 30)],
         ['2026-10-16 11시 발표', Date.UTC(2026, 9, 16, 2, 2)]];
     const out = {schema: 1, oracle: {node: process.version, tz: process.env.TZ, mongoose: '5.1.2', getPixels: '3.3.2'},
         calibration: global.ORACLE_IMAGE_CONFIG.airkorea_korea_image, stations: STATIONS,

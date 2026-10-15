@@ -6,7 +6,20 @@
 //! earlier frames and no disposal; a transparent index leaves the pixel zero; a frame rectangle is
 //! placed at its offset; interlaced rows follow omggif's pass arithmetic; a short stream leaves
 //! index 0; writes outside the frame's buffer are dropped (a typed-array store) and a palette
-//! read past the file is 0 (`undefined` stored in a `Uint8Array`). This module is a direct port.
+//! read past the file is 0 (`undefined` stored in a `Uint8Array`); index stores past a frame's
+//! index buffer are dropped too. This module is a direct port.
+//!
+//! Decoding bounds (server2 only; legacy has none and a hostile image would exhaust its memory):
+//! the frame descriptors are checked before any buffer exists. A GIF beyond them is an error, so
+//! nothing is stored for it, as for any image legacy could not decode. The AirKorea forecast GIFs
+//! of 2026-10-15 have 48-54 frames of 673×795 pixels (at most about 29 million in all).
+
+/// At most this many frames.
+pub const MAX_FRAMES: usize = 240;
+/// At most this many pixels in one frame rectangle (its index buffer).
+pub const MAX_FRAME_PIXELS: usize = 4 * 1024 * 1024;
+/// At most this many frame pixels in all (the LZW work of a whole decode).
+pub const MAX_TOTAL_PIXELS: usize = 64 * 1024 * 1024;
 
 /// One frame descriptor (`frames[]` of the reader).
 #[derive(Debug, Clone)]
@@ -57,6 +70,7 @@ impl<'a> GifReader<'a> {
             p += (1usize << ((pf0 & 7) + 1)) * 3;
         }
         let mut frames = Vec::new();
+        let mut total_pixels = 0usize;
         let mut transparent: Option<u8> = None;
         loop {
             // `while (no_eof && p < buf.length)`.
@@ -121,6 +135,13 @@ impl<'a> GifReader<'a> {
                         Ok(usize::from(b(p + i)?) | usize::from(b(p + i + 1)?) << 8)
                     };
                     let (x, y, w, h) = (w16(0)?, w16(2)?, w16(4)?, w16(6)?);
+                    total_pixels += w * h;
+                    if frames.len() >= MAX_FRAMES
+                        || w * h > MAX_FRAME_PIXELS
+                        || total_pixels > MAX_TOTAL_PIXELS
+                    {
+                        return Err("GIF beyond the decoding bounds".into());
+                    }
                     let pf2 = b(p + 8)?;
                     p += 9;
                     let mut palette = global_palette;
@@ -302,19 +323,27 @@ fn lzw_output_index_stream(stream: &[u8], mut p: usize, output: &mut [u8]) -> Re
         if op_end > output_length {
             return Ok(());
         }
-        output[op] = k;
+        // Typed-array stores: a store past the index buffer is dropped (the length check above
+        // admits `op_end == output_length`, so the first store can fall one past the end).
+        if let Some(slot) = output.get_mut(op) {
+            *slot = k;
+        }
         op += 1;
         op += chase_length;
         let mut b = op;
         if emit_extra {
-            output[op] = k;
+            if let Some(slot) = output.get_mut(op) {
+                *slot = k;
+            }
             op += 1;
         }
         let mut chase = chase_code;
         for _ in 0..chase_length {
             let entry = code_table[(chase.unwrap_or(0) & 4095) as usize];
             b -= 1;
-            output[b] = (entry & 0xff) as u8;
+            if let Some(slot) = output.get_mut(b) {
+                *slot = (entry & 0xff) as u8;
+            }
             chase = Some(entry >> 8);
         }
         if let Some(prev) = prev_code

@@ -405,6 +405,10 @@ struct StubState {
     gifs: AtomicUsize,
     dust: AtomicUsize,
     delay_ms: AtomicUsize,
+    /// The PM2.5 document names no image (`imageUrl8` absent).
+    pm25_absent: std::sync::atomic::AtomicBool,
+    /// The PM10 image answers 404 (a failed download).
+    pm10_missing: std::sync::atomic::AtomicBool,
 }
 fn now_ms() -> f64 {
     std::time::SystemTime::now()
@@ -422,6 +426,9 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> axum::response
         }
         let [pm10, pm25] = set_gifs(0);
         let gif = match name {
+            "pm10.gif" if state.pm10_missing.load(Ordering::SeqCst) => {
+                return (axum::http::StatusCode::NOT_FOUND, "").into_response();
+            }
             "pm10.gif" => pm10,
             "pm25.gif" => pm25,
             _ => return (axum::http::StatusCode::NOT_FOUND, "").into_response(),
@@ -445,6 +452,9 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> axum::response
                 "informCause": "c", "informOverall": "o", "actionKnack": null});
             // `imageUrl7` is the PM10 image and `imageUrl8` the PM2.5 image (`imageUrl[6]`/`[7]`).
             for i in 1..=9 {
+                if code == "PM25" && i == 8 && state.pm25_absent.load(Ordering::SeqCst) {
+                    continue;
+                }
                 let file = match i {
                     7 => "pm10.gif".to_owned(),
                     8 => "pm25.gif".to_owned(),
@@ -526,7 +536,15 @@ fn rows(
 /// Repeat a request until `ready` holds: a cold read with decoding may outlast one request's
 /// wait (that request gets the legacy answer for missing data and the owned read continues).
 /// Decoding a 48-frame 820x820 GIF takes seconds in an unoptimized test build.
-async fn until<T, F, Fut>(mut load: F, ready: impl Fn(&T) -> bool) -> T
+async fn until<T, F, Fut>(load: F, ready: impl Fn(&T) -> bool) -> T
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = T>,
+{
+    until_for(Duration::from_secs(600), load, ready).await
+}
+/// [`until`] within `cap`.
+async fn until_for<T, F, Fut>(cap: Duration, mut load: F, ready: impl Fn(&T) -> bool) -> T
 where
     F: FnMut() -> Fut,
     Fut: std::future::Future<Output = T>,
@@ -537,7 +555,7 @@ where
         if ready(&answer) {
             return answer;
         }
-        assert!(started.elapsed() < Duration::from_secs(600), "never ready");
+        assert!(started.elapsed() < cap, "never ready");
         tokio::time::sleep(Duration::from_millis(200)).await;
     }
 }
@@ -839,12 +857,13 @@ async fn image_load(
         .await
 }
 
-/// A process that holds a fold reads only the acquisitions completed since (latest first, up to
-/// the first one it knows) and folds them after the known ones, as legacy `do` runs in
-/// completion order; a new station list decodes every acquisition again. Both equal a cold
-/// reader of the same S3 records.
+/// A process that holds a fold lists the day catalogs at each refresh and reads only the
+/// acquisitions it does not know, also when it holds the expected announcement and when a late
+/// acquisition of an earlier announcement and day appears (review S15b3c-R3); the fold replays
+/// them in completion order, as a cold reader does. No publication count changes here: the
+/// acquisitions come from another host.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn later_acquisitions_are_read_incrementally_and_a_new_station_list_rereads_all() {
+async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
     use server2::domestic::kma::source::air_forecast::Calibration;
     use server2::domestic::kma::source::forecast_input::ImageForecasts;
     use server2::domestic::kma::source::live::Flights;
@@ -857,7 +876,13 @@ async fn later_acquisitions_are_read_incrementally_and_a_new_station_list_reread
         id: "national".into(),
     };
     let kind = ("airkorea-image", "airkorea-forecast-image");
-    let (a_at, b_at) = (NOW - 4. * 3_600_000., NOW + 20. * 60_000.);
+    // 05시 at 06:50 KST; the previous day's 23시 completed at 07:50 but published late; 11시 at
+    // 11:10.
+    let (a_at, c_at, b_at) = (
+        NOW - 4. * 3_600_000.,
+        NOW - 3. * 3_600_000.,
+        NOW + 20. * 60_000.,
+    );
     let at05 = Publication::new(20260924, 500).unwrap();
     publish(
         &store,
@@ -873,7 +898,10 @@ async fn later_acquisitions_are_read_incrementally_and_a_new_station_list_reread
     let names: Vec<String> = stations().into_iter().map(|s| s.0).collect();
     let flights = Flights::new(Duration::from_secs(600));
     let generation = Arc::new(AtomicU64::new(0));
-    let reader = || ImageForecasts::new(transport.clone(), store.clone(), Calibration::deployed());
+    let reader = || {
+        ImageForecasts::new(transport.clone(), store.clone(), Calibration::deployed())
+            .with_refresh_interval(Duration::ZERO)
+    };
     let warm = reader();
     let first = until(
         || image_load(&warm, NOW, &all, &flights, &generation),
@@ -884,8 +912,7 @@ async fn later_acquisitions_are_read_incrementally_and_a_new_station_list_reread
     for n in &names {
         same(&first.by_station(n), &expected_a.by_station(n), n);
     }
-    // Another host acquires the 11시 announcement (oracle set 1); this process learns of it at
-    // its next refresh (here forced by a publication count change).
+    // Another host publishes the 11시 announcement (oracle set 1).
     let at11 = Publication::new(20260924, 1100).unwrap();
     publish(
         &store,
@@ -898,20 +925,39 @@ async fn later_acquisitions_are_read_incrementally_and_a_new_station_list_reread
     )
     .await;
     let later = NOW + 30. * 60_000.;
-    generation.fetch_add(1, Ordering::AcqRel);
-    let second = until(
+    until(
         || image_load(&warm, later, &all, &flights, &generation),
         |f| f.has("2026-09-24 11:00"),
     )
     .await;
-    let mut expected_ab = expected_fold("2026-09-24 05시 발표", a_at, a_at);
-    expected_ab.apply(&Processed {
-        pub_date: "2026-09-24 11:00".into(),
-        now: b_at,
-        stations: &stations(),
-        values: decoded(1),
-    });
-    expected_ab.remove_old(later);
+    // While the fold holds the expected 11시 announcement, a late acquisition of the previous
+    // day's 23시 announcement (set 1, partition 20260923) appears; it completed before 11시.
+    let at23 = Publication::new(20260923, 2300).unwrap();
+    publish(
+        &store,
+        kind,
+        key(),
+        at23.period(),
+        "20260923",
+        c_at,
+        &images(1),
+    )
+    .await;
+    let mut expected = expected_fold("2026-09-24 05시 발표", a_at, a_at);
+    for (pub_date, at) in [("2026-09-23 23:00", c_at), ("2026-09-24 11:00", b_at)] {
+        expected.apply(&Processed {
+            pub_date: pub_date.into(),
+            now: at,
+            stations: &stations(),
+            values: decoded(1),
+        });
+    }
+    expected.remove_old(later);
+    let warm_fold = until(
+        || image_load(&warm, later, &all, &flights, &generation),
+        |f| f.json() == expected.json(),
+    )
+    .await;
     let fresh = reader();
     let cold = until(
         || image_load(&fresh, later, &all, &flights, &generation),
@@ -920,38 +966,79 @@ async fn later_acquisitions_are_read_incrementally_and_a_new_station_list_reread
     .await;
     for n in &names {
         same(
-            &second.by_station(n),
-            &expected_ab.by_station(n),
-            &format!("incremental {n}"),
+            &warm_fold.by_station(n),
+            &expected.by_station(n),
+            &format!("warm {n}"),
         );
         same(
             &cold.by_station(n),
-            &expected_ab.by_station(n),
+            &expected.by_station(n),
             &format!("cold {n}"),
         );
     }
-    // A process that decoded one station only decodes everything again for a new list.
-    let partial = reader();
-    let seoul_only = station_fold(&["중구"]);
+    assert_eq!(generation.load(Ordering::SeqCst), 0);
+    assert_eq!(transport.available(), TEST_PERMITS);
+}
+
+/// A new station list is decoded at once, without a publication count change and within the
+/// refresh interval, also when requests with the old and the new list overlap (review
+/// S15b3c-R4).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_new_station_list_decodes_everything_again_at_once() {
+    use server2::domestic::kma::source::air_forecast::Calibration;
+    use server2::domestic::kma::source::forecast_input::ImageForecasts;
+    use server2::domestic::kma::source::live::Flights;
+    use std::sync::atomic::AtomicU64;
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = store_for(&transport);
+    let a_at = NOW - 4. * 3_600_000.;
+    publish(
+        &store,
+        ("airkorea-image", "airkorea-forecast-image"),
+        ProviderKey::Named {
+            id: "national".into(),
+        },
+        Publication::new(20260924, 500).unwrap().period(),
+        "20260924",
+        a_at,
+        &images(0),
+    )
+    .await;
+    let expected = expected_fold("2026-09-24 05시 발표", a_at, NOW);
+    let names: Vec<String> = stations().into_iter().map(|s| s.0).collect();
+    let (seoul_only, all) = (station_fold(&["중구"]), station_fold(&[]));
+    let flights = Flights::new(Duration::from_secs(600));
+    let generation = Arc::new(AtomicU64::new(0));
+    // Without a station-list change nothing would refresh within the test.
+    let images = ImageForecasts::new(transport.clone(), store.clone(), Calibration::deployed())
+        .with_refresh_interval(Duration::from_secs(3600));
     let seoul = until(
-        || image_load(&partial, NOW, &seoul_only, &flights, &generation),
+        || image_load(&images, NOW, &seoul_only, &flights, &generation),
         |f| has_rows(&f.by_station("중구")),
     )
     .await;
     assert!(!has_rows(&seoul.by_station("대전")));
-    generation.fetch_add(1, Ordering::AcqRel);
-    let full = until(
-        || image_load(&partial, later, &all, &flights, &generation),
+    // Overlapping requests with the old and the new list, then the new list.
+    let _ = tokio::join!(
+        image_load(&images, NOW, &seoul_only, &flights, &generation),
+        image_load(&images, NOW, &all, &flights, &generation),
+    );
+    let full = until_for(
+        Duration::from_secs(240),
+        || image_load(&images, NOW, &all, &flights, &generation),
         |f| has_rows(&f.by_station("대전")),
     )
     .await;
     for n in &names {
         same(
             &full.by_station(n),
-            &expected_ab.by_station(n),
+            &expected.by_station(n),
             &format!("new list {n}"),
         );
     }
+    assert_eq!(generation.load(Ordering::SeqCst), 0);
     assert_eq!(transport.available(), TEST_PERMITS);
 }
 
@@ -1080,4 +1167,128 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
         recorder.0.lock().unwrap()
     );
     assert_eq!(transport.available(), TEST_PERMITS);
+}
+
+/// A pollutant without an image URL is skipped and the other one is stored (legacy
+/// `getDustImage` L412/L429 and the station updater); a failed download stores nothing (review
+/// S15b3c-R5).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_pollutant_without_an_image_is_skipped_and_a_failed_download_stores_nothing() {
+    let _serial = SERIAL.lock().await;
+    let seoul = town(37.5665, 126.978);
+    let three = || Instant::now() + Duration::from_secs(3);
+    // PM2.5 names no image: one GIF is fetched and only PM10 rows are stored.
+    {
+        let peer = Peer::new();
+        let transport = peer.transport();
+        let store = store_for(&transport);
+        let stub = stub().await;
+        stub.state.pm25_absent.store(true, Ordering::SeqCst);
+        let inputs = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
+            &peer,
+            store.clone(),
+            &stub.base,
+        )));
+        until(
+            || inputs.load(&seoul, "서울특별시", "중구", true, false, now_ms(), three()),
+            |a| matches!(&a.dust, Some((_, Ok(_)))) && a.arpltn.is_ok(),
+        )
+        .await;
+        let before = now_ms();
+        let answer = until_for(
+            Duration::from_secs(240),
+            || inputs.load(&seoul, "서울특별시", "중구", false, true, now_ms(), three()),
+            |a| has_rows(&rows(a, "중구")),
+        )
+        .await;
+        let after = now_ms();
+        let OrderedJson::Array(got) = rows(&answer, "중구") else {
+            panic!("rows");
+        };
+        assert!(
+            got.iter()
+                .all(|r| r.get("code").and_then(|c| c.string()).as_deref() == Some("pm10"))
+        );
+        assert_eq!(
+            stub.state.gifs.load(Ordering::SeqCst),
+            1,
+            "only the PM10 image"
+        );
+        // The rows are the PM10 half of the legacy fold.
+        let announcement = expected_announcement(before).unwrap();
+        let pm10_only = |at: f64| {
+            let mut fold = HourlyForecasts::default();
+            fold.apply(&Processed {
+                pub_date: pub_date(&announcement),
+                now: at,
+                stations: &stations(),
+                values: decoded(0).into_iter().take(1).collect(),
+            });
+            fold.remove_old(at);
+            fold.by_station("중구")
+        };
+        assert!(
+            [pm10_only(before), pm10_only(after)].contains(&rows(&answer, "중구")),
+            "PM10 rows"
+        );
+        assert!(
+            !answer
+                .hourly
+                .as_ref()
+                .unwrap()
+                .has(&pub_date(&announcement))
+        );
+    }
+    // The PM10 image fails: nothing is stored or published.
+    {
+        let peer = Peer::new();
+        let transport = peer.transport();
+        let store = store_for(&transport);
+        let stub = stub().await;
+        stub.state.pm10_missing.store(true, Ordering::SeqCst);
+        let inputs = AirInputs::new(transport.clone(), store.clone()).with_acquire(Some(live(
+            &peer,
+            store.clone(),
+            &stub.base,
+        )));
+        until(
+            || inputs.load(&seoul, "서울특별시", "중구", true, false, now_ms(), three()),
+            |a| matches!(&a.dust, Some((_, Ok(_)))) && a.arpltn.is_ok(),
+        )
+        .await;
+        let answer = inputs
+            .load(
+                &seoul,
+                "서울특별시",
+                "중구",
+                false,
+                true,
+                now_ms(),
+                deadline(),
+            )
+            .await;
+        same(
+            &rows(&answer, "중구"),
+            &OrderedJson::Array(Vec::new()),
+            "nothing",
+        );
+        assert!(stub.state.gifs.load(Ordering::SeqCst) >= 1);
+        let cold = AirInputs::new(transport.clone(), store.clone());
+        let answer = cold
+            .load(
+                &seoul,
+                "서울특별시",
+                "중구",
+                false,
+                true,
+                now_ms(),
+                deadline(),
+            )
+            .await;
+        same(
+            &rows(&answer, "중구"),
+            &OrderedJson::Array(Vec::new()),
+            "nothing stored",
+        );
+    }
 }

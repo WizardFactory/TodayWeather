@@ -314,16 +314,17 @@ Where the sources disagree:
   has no KAQ forecast at all (AK).
 
 - Acquisition: keyless `airkorea-image` / `airkorea-forecast-image` / key `national`, period and
-  partition of the announcement; page 1 PM10, page 2 PM2.5; status 200 and a GIF of the
-  calibration size (else `INVALID_IMAGE`, nothing stored); the image URLs must be on the built-in
-  origin `https://www.airkorea.or.kr/`; 8 MiB per image; 60 s call budget.
+  partition of the announcement; page 1 PM10, page 2 PM2.5 (a pollutant whose document names no
+  image: an empty record with status 204, legacy skips it); status 200 and a GIF of the
+  calibration size within the decoding bounds (240 frames, 4 Mi pixels a frame, 64 Mi in all;
+  else `INVALID_IMAGE`, nothing stored); the image URLs must be on the built-in origin
+  `https://www.airkorea.or.kr/`; 8 MiB per image; 60 s call budget.
 - Fold: the acquisitions of the last three KST days in completion order as `do` runs (a stored
-  `pubDate` with both codes is skipped; a GIF that does not decode stores nothing; rows older
-  than one day are removed at each run and at the cut). Each acquisition is decoded once per
-  station list. Refresh: nothing when the fold holds the expected announcement; otherwise
-  incremental from the newest known day, latest first, up to the first known acquisition;
-  complete daily and when the station list changes; at most every 10 minutes unless this process
-  published an image acquisition.
+  `pubDate` with both codes is skipped; an image that does not decode stores nothing; a skipped
+  pollutant stores the other one; rows older than one day are removed at each run and at the
+  cut). Refresh: the three day catalogs' control objects list the acquisitions; unknown ones are
+  read one lookup each and decoded once per station list; at most every minute, at once for a new
+  station list or after an own acquisition ended.
 - Request time: a request reading the forecast (`airForecastSource` absent, `(null)`, `airkorea`
   or `kaq`) loads the station list and the dust forecast, reads the fold and, when the fold lacks
   the expected announcement, starts one owned acquisition of its images (of the previous

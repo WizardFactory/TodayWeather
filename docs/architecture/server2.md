@@ -2230,12 +2230,17 @@ rebuilt; it follows legacy except for the colour table and the `kaq` mapping tha
 
 | Store call | Data | Legacy collection mirrored | tw_svc reader |
 | --- | --- | --- | --- |
-| `air_forecast("airkorea", station)` | New keyless `airkorea-image`/`airkorea-forecast-image` acquisition: the PM10 and PM2.5 GIFs of one announcement as one group (page 1 PM10, page 2 PM2.5), dated by the announcement, from the first PM10 document's `imageUrl7` and the first PM2.5 document's `imageUrl8` of the stored dust forecast | `kecoRequester.getMinuDustFrcstDspth` L649-703 calls `AirkoreaHourlyForecastController.do` (L694): `_checkHourlyForecast` (`img.hourly.forecast.controller` L127), `_getImgPaths` (L67), `getDustImage` (`airkorea.dust.image.controller` L405), `getDustInfo` (L151, `_isValidGeocode` L142), `_updateHourlyForecast`/`_makeHourForecast`/`_updateDb` (L106/L35/L28), `_removeOldData` (L116) | `controllerTown24h._getAirForecast` L1196 → `getForecast` (`img.hourly.forecast.controller` L149, `find({stationName}).sort({date: 1})`), `_insertForecastPollutants` L690 via `AirForecastList` L1264 |
+| `air_forecast("airkorea", station)` | New keyless `airkorea-image`/`airkorea-forecast-image` acquisition: the PM10 and PM2.5 GIFs of one announcement as one group (page 1 PM10, page 2 PM2.5; a pollutant whose document names no image is an empty record with status 204, as `getDustImage` skips it), dated by the announcement, from the first PM10 document's `imageUrl7` and the first PM2.5 document's `imageUrl8` of the stored dust forecast | `kecoRequester.getMinuDustFrcstDspth` L649-703 calls `AirkoreaHourlyForecastController.do` (L694): `_checkHourlyForecast` (`img.hourly.forecast.controller` L127), `_getImgPaths` (L67), `getDustImage` (`airkorea.dust.image.controller` L405), `getDustInfo` (L151, `_isValidGeocode` L142), `_updateHourlyForecast`/`_makeHourForecast`/`_updateDb` (L106/L35/L28), `_removeOldData` (L116) | `controllerTown24h._getAirForecast` L1196 → `getForecast` (`img.hourly.forecast.controller` L149, `find({stationName}).sort({date: 1})`), `_insertForecastPollutants` L690 via `AirForecastList` L1264 |
 | `air_forecast("kaq", station)` | none | — | `KaqHourlyForecastController.getForecast` L469 → `_findLatestMapCase` L231-239: no map case rejects with `Fail to get map case` |
 
 **Decoder.** `source/gif.rs` ports the omggif 1.0.9 reader that get-pixels 3.3.2 uses: every frame
 gets its own zeroed RGBA buffer of the logical screen (no compositing or disposal), a transparent
-index stays zero, interlaced rows follow omggif's pass arithmetic. `source/air_forecast.rs` maps a
+index stays zero, interlaced rows follow omggif's pass arithmetic, and index stores past a frame's
+buffer are dropped as typed-array stores are. Unlike legacy, the frame descriptors are bounded
+before any buffer exists (at most 240 frames, 4 Mi pixels in a frame and 64 Mi in all; the live
+GIFs have 48-54 frames and about 29 Mi pixels): a GIF beyond them stores nothing, as one legacy
+cannot decode. An image of one pollutant that does not decode stores nothing for the run;
+a pollutant without an image is skipped and the other one stored. `source/air_forecast.rs` maps a
 station to a pixel with the calibration, tries the centre and then the 8×8 block (-4..+3, row
 order), takes the first exact table colour and stores nothing for an hour without one (-1). The
 timeline is 48 hours from the processing day's KST midnight (the next day for an announcement at
@@ -2273,15 +2278,16 @@ forecast that exists keeps priority, including a station it has no rows for.
 **Request time.** A request that reads the forecast (`airForecastSource` absent, `(null)`,
 `airkorea` or `kaq`) loads the station list and the dust forecast and reads the image fold. The
 fold replays the image acquisitions of the last three KST days in completion order as legacy `do`
-runs; each acquisition is downloaded and decoded once per station list. While the fold holds the
-announcement expected now, a refresh only removes old rows; otherwise it reads the catalogs from
-the newest known day on, latest first, and stops at the first known acquisition; everything is
-read again daily and when the station list changes. Reads are owned tasks, at most every 10
-minutes unless an image acquisition of this process ended (a failed S3 write may still have
-committed). A request whose fold lacks the expected announcement (or, while that one has no dust
-forecast documents yet, the previous announcement, which legacy processed when it was expected)
-starts one owned acquisition of its two images (S13d `OwnedFlights`, 10-minute retry, 60 s call
-budget, 8 MiB per image) and waits only until its deadline; until the images are published and
+runs. A refresh reads the three day catalogs (small control objects, no record body) and downloads
+only the acquisitions it does not know, one S06 lookup each (a whole-day lookup would pass the 32
+MiB read bound with three acquisitions); each is decoded once per station list. Refreshes are owned
+tasks, at most every minute, and at once when the station list changed or an image acquisition of
+this process ended (a failed S3 write may still have committed). A late acquisition of an earlier
+announcement or day is therefore folded in completion order within a minute, as a cold reader
+folds it. A request whose fold lacks the expected announcement (or, while that one's documents
+name no image yet, the previous announcement, which legacy processed when it was expected) starts
+one owned acquisition of its images (S13d `OwnedFlights`, 10-minute retry, 60 s call budget, 8
+MiB per image) and waits only until its deadline; until the images are published and
 decoded it gets the legacy output for missing data. The acquisitions are demand-gated like the
 other S15b-3 inputs: an announcement no request asked for while it was expected (or previous,
 before the next one's documents appeared) is never stored. The
@@ -2293,15 +2299,20 @@ loopback origin). Load: two GIF downloads (about 5 MB each) per announcement, fo
 
 Verification (local; test peers only): a pinned Node 16.20.2 oracle
 ([provenance](../../server2/tests/domestic/fixtures/AIR-FORECAST-PROVENANCE.md)) records get-pixels
-3.3.2 frames of seven synthetic GIFs (a global palette, a sub-rectangle, a local palette with
-transparency, interlace, a short stream, a full code table and an 820×820 offset frame) and the `arpltnhourlyforecasts` documents and `getForecast` answers of the
-legacy controller over five runs (a skip, a run after midnight, the one-day removal, a missing
-announcement) for six stations, with Mongoose 5.1.2 over the in-memory collection double and the
-live-legend tables. The Rust frames and the rows and answers equal the oracle byte for byte.
-Read back from the S3 test peer with empty memory the answers are the same; loopback stubs show
-one image acquisition for concurrent requests published before use, a slow acquisition releasing
-the request, incremental reads equal to a cold read, a new station list decoding everything again,
-an image URL off the built-in origin never fetched, and the three `kaq`/`airkorea` cases above.
+3.3.2 frames of nine synthetic GIFs (a global palette, a sub-rectangle, a local palette with
+transparency, interlace, a short stream, two streams longer than their frame, a full code table
+and an 820×820 offset frame) and the `arpltnhourlyforecasts` documents and `getForecast` answers
+of the legacy controller over nine runs (a skip, a run after midnight, a PM10-only announcement
+twice, a PM2.5-only one, a broken PM10 image, the one-day removal, a missing announcement) for six
+stations, with Mongoose 5.1.2 over the in-memory collection double and the live-legend tables. The
+Rust frames and the rows and answers equal the oracle byte for byte. Read back from the S3 test
+peer with empty memory the answers are the same; loopback stubs show one image acquisition for
+concurrent requests published before use, a slow acquisition releasing the request, another
+host's acquisitions (also a late one of the previous day) folded in completion order equal to a
+cold read without a publication count change, a new station list decoded at once, a pollutant
+without an image skipped and a failed download storing nothing, an image URL off the built-in
+origin never fetched, GIFs beyond the decoding bounds refused, and the three `kaq`/`airkorea`
+cases above.
 Live on 2026-10-15 (settings from the operator's `server2/.env` read in-process, never printed;
 records only in a local S06 test peer with room for the GIFs): the `11시 발표` images, then at
 17:15 KST the `17시 발표` images (6.2 and 5.9 MB, 54 frames; legacy uses the first 48) were acquired

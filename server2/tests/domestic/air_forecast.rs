@@ -38,7 +38,7 @@ fn sha256(bytes: &[u8]) -> String {
 #[test]
 fn gif_frames_equal_get_pixels() {
     let cases = items_of(at(oracle(), &["gif", "cases"]));
-    assert_eq!(cases.len(), 7);
+    assert_eq!(cases.len(), 9);
     for case in cases {
         let name = text(at(case, &["name"]));
         let bytes = base64(&text(at(case, &["gif"])));
@@ -104,26 +104,46 @@ fn decode_set(set: usize) -> Decoded {
 fn hourly_forecast_rows_and_answers_equal_legacy() {
     let f = at(oracle(), &["forecast"]);
     let stations = stations();
-    let announcements: Vec<(String, usize)> = items_of(at(f, &["announcements"]))
+    // `[dataTime, set, pm10 state, pm25 state]`: `image`, `absent` (no URL), `nodoc` (no document)
+    // or `broken` (an image get-pixels cannot read).
+    let announcements: Vec<(String, usize, [String; 2])> = items_of(at(f, &["announcements"]))
         .iter()
         .map(|a| {
             let a = items_of(a);
-            (text(&a[0]), a[1].number().unwrap() as usize)
+            (
+                text(&a[0]),
+                a[1].number().unwrap() as usize,
+                [text(&a[2]), text(&a[3])],
+            )
         })
         .collect();
+    assert_eq!(announcements.len(), 6);
     let mut fold = HourlyForecasts::default();
     for run in items_of(at(f, &["runs"])) {
         let data_time = text(at(run, &["dataTime"]));
         let now = at(run, &["now"]).number().unwrap();
         let pub_date = format!("{}:00", &data_time[..13]);
-        match announcements.iter().find(|(d, _)| *d == data_time) {
-            Some((_, set)) if !fold.has(&pub_date) => fold.apply(&Processed {
-                pub_date: pub_date.clone(),
-                now,
-                stations: &stations,
-                values: decoded(*set),
-            }),
-            // `_checkHourlyForecast` skip, or no forecast documents: only `_removeOldData`.
+        match announcements.iter().find(|(d, _, _)| *d == data_time) {
+            // A broken image fails `getDustImage`: nothing is stored.
+            Some((_, set, states))
+                if !fold.has(&pub_date) && !states.contains(&"broken".into()) =>
+            {
+                // A pollutant without an image is skipped; the other one is stored.
+                let values = decoded(*set)
+                    .into_iter()
+                    .zip(states)
+                    .filter(|(_, state)| *state == "image")
+                    .map(|(v, _)| v)
+                    .collect();
+                fold.apply(&Processed {
+                    pub_date: pub_date.clone(),
+                    now,
+                    stations: &stations,
+                    values,
+                })
+            }
+            // `_checkHourlyForecast` skip, a broken image, or no forecast documents: only
+            // `_removeOldData`.
             _ => fold.remove_old(now),
         }
         super::source::same(
@@ -199,4 +219,70 @@ fn the_calibration_reads_the_legacy_names() {
     );
     assert!(set.right.is_nan());
     assert!(set.valid_size(830, 830) && !set.valid_size(820, 820));
+}
+
+/// A GIF file: an 820x820 screen with a two-colour palette and `frames` image descriptors of the
+/// given size (one LZW sub-block each; never decoded here).
+fn gif_with_frames(frames: usize, width: u16, height: u16) -> Vec<u8> {
+    let mut g = b"GIF89a".to_vec();
+    g.extend_from_slice(&820u16.to_le_bytes());
+    g.extend_from_slice(&820u16.to_le_bytes());
+    g.extend_from_slice(&[0x80, 0, 0, 0, 0, 0, 255, 255, 255]);
+    for _ in 0..frames {
+        g.push(0x2c);
+        for v in [0u16, 0, width, height] {
+            g.extend_from_slice(&v.to_le_bytes());
+        }
+        g.extend_from_slice(&[0, 2, 2, 0x44, 0x01, 0]);
+    }
+    g.push(0x3b);
+    g
+}
+
+/// Review S15b3c-R1: frame descriptors are bounded before any buffer exists (legacy has no bound;
+/// a hostile image would exhaust its memory). The live forecast shape stays well inside.
+#[test]
+fn gifs_beyond_the_decoding_bounds_are_refused_before_allocation() {
+    use server2::domestic::kma::source::gif::{MAX_FRAME_PIXELS, MAX_FRAMES, MAX_TOTAL_PIXELS};
+    let live = gif_with_frames(54, 673, 795);
+    assert_eq!(GifReader::new(&live).unwrap().num_frames(), 54);
+    assert!(server2::domestic::airkorea_image::valid_image(
+        &live,
+        (820, 820)
+    ));
+    for (frames, width, height) in [
+        (1, 65535, 65535),
+        (1, 2049, 2048),
+        (MAX_FRAMES + 1, 1, 1),
+        (MAX_TOTAL_PIXELS / MAX_FRAME_PIXELS + 1, 2048, 2048),
+    ] {
+        let hostile = gif_with_frames(frames, width, height);
+        assert!(
+            GifReader::new(&hostile).is_err(),
+            "{frames} x {width}x{height}"
+        );
+        assert!(!server2::domestic::airkorea_image::valid_image(
+            &hostile,
+            (820, 820)
+        ));
+        assert!(
+            decode_points(
+                &hostile,
+                &Calibration::deployed(),
+                CODES[0].1,
+                &[(37.5, 127.)]
+            )
+            .is_err()
+        );
+    }
+    // At the bounds.
+    assert!(GifReader::new(&gif_with_frames(MAX_FRAMES, 1, 1)).is_ok());
+    assert!(
+        GifReader::new(&gif_with_frames(
+            MAX_TOTAL_PIXELS / MAX_FRAME_PIXELS,
+            2048,
+            2048
+        ))
+        .is_ok()
+    );
 }

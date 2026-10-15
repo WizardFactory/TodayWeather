@@ -1,22 +1,23 @@
 //! S15b-3c: the AirKorea image hourly forecast of one request.
 //!
 //! The `airkorea-forecast-image` acquisitions of the last three KST days (one group per
-//! announcement: the PM10 and PM2.5 GIFs) are replayed in completion order as legacy `do` runs:
-//! a stored `pubDate` is skipped, otherwise every station of the current station list is decoded,
-//! then rows older than one day are removed.
+//! announcement: the PM10 and PM2.5 GIFs, an empty record for a pollutant without an image) are
+//! replayed in completion order as legacy `do` runs: a stored `pubDate` is skipped, otherwise
+//! every station of the current station list is decoded for each image, then rows older than one
+//! day are removed.
 //!
-//! Each acquisition is downloaded and decoded once (its values kept for the station list). While
-//! the fold holds the announcement expected now, a refresh only removes old rows; otherwise it
-//! reads the catalogs from the newest known day on, latest first, and stops at the first
-//! acquisition it knows. Everything is read again when the station list changes and daily. S3
-//! reads and decoding run as owned single-flight tasks that update the process fold; a request
-//! waits for them only until its own deadline.
+//! A refresh reads the three day catalogs (small control objects) and downloads only the
+//! acquisitions it does not know, one at a time; each is decoded once per station list, and a new
+//! station list decodes everything again. A fold is refreshed at most every minute, at once when
+//! the station list changed or an image acquisition of this process ended. S3 reads and decoding
+//! run as owned single-flight tasks that update the process fold; a request waits for them only
+//! until its own deadline.
 //!
 //! A request that reads the forecast (`airForecastSource` `airkorea`, or `kaq` mapped to it when
 //! no KAQ forecast exists, AK 2026-10-15) and finds the announcement expected now missing (or,
-//! while that one has no dust forecast documents yet, the previous announcement) starts one owned
-//! acquisition of its two images (S13d `OwnedFlights`, 10-minute retry) from the dust forecast
-//! documents' `imageUrl[6]`/`[7]` and waits for it only until its deadline.
+//! while that one has no dust forecast documents naming an image yet, the previous announcement)
+//! starts one owned acquisition of its images (S13d `OwnedFlights`, 10-minute retry) from the
+//! dust forecast documents' `imageUrl[6]`/`[7]` and waits for it only until its deadline.
 use super::air_forecast::{CODES, Calibration, HourlyForecasts, Processed, decode_points};
 use super::airkorea::{Forecasts, Stations, announcement_text, expected_announcement};
 use super::doc::Val;
@@ -27,7 +28,9 @@ use crate::domestic::publication::Publication;
 use crate::gateway::BoxFuture;
 use crate::history::IndexListing;
 use crate::resolver::{OwnedConfig, OwnedFlights};
-use crate::storage::{CatalogStore, RawRecord};
+use crate::storage::{
+    Catalog, CatalogId, CatalogLimits, CatalogStore, Envelope, PageOutcome, RawRecord,
+};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
@@ -38,17 +41,15 @@ const DAY_MS: f64 = 86_400_000.;
 const HOUR_MS: f64 = 3_600_000.;
 /// Image acquisitions read (a row lives one day; a forecast covers two).
 const DAYS: i64 = 3;
-/// A fold is refreshed at most this often unless this process published an image acquisition
-/// (another host's acquisition appears within this bound).
-const MEMO: Duration = Duration::from_secs(600);
-/// Everything is read again this often (an acquisition completed after a newer known one).
-const FULL_READ: Duration = Duration::from_secs(86_400);
+/// A fold is refreshed at most this often (the AirKorea folds' bound) unless the station list
+/// changed or an image acquisition of this process ended.
+const REFRESH: Duration = Duration::from_secs(60);
 /// Owned S3 reads with decoding.
 const READ_FOR: Duration = Duration::from_secs(300);
 
-/// The per-station values of one acquisition, per code.
+/// The per-station values of one acquisition, per code with an image.
 type Decoded = Vec<(&'static str, Vec<Option<Vec<f64>>>)>;
-/// One known acquisition: its `pubDate` and values (None: a GIF did not decode, so legacy
+/// One known acquisition: its `pubDate` and values (None: an image did not decode, so legacy
 /// `getDustImage` failed and nothing was stored).
 #[derive(Clone)]
 struct Known {
@@ -63,7 +64,6 @@ struct State {
     known: KnownSet,
     /// The station list `known` was decoded for.
     stations: u64,
-    full: Option<std::time::Instant>,
     refreshed: Option<std::time::Instant>,
     generation: u64,
     /// The fold's cut: acquisitions completed later are not in it.
@@ -72,6 +72,7 @@ struct State {
 struct Shared<T> {
     reader: Reader<T>,
     calibration: Calibration,
+    refresh_every: Duration,
     reads: OwnedFlights<String, bool>,
     state: std::sync::Mutex<State>,
     refresh: tokio::sync::Mutex<()>,
@@ -106,7 +107,8 @@ fn announcement(text: &str) -> Option<Publication> {
     Publication::new(date, hour * 100)
 }
 /// The image URLs legacy `_getImgPaths` takes: the first PM10 document's `imageUrl[6]` and the
-/// first PM2.5 document's `imageUrl[7]` of the announcement.
+/// first PM2.5 document's `imageUrl[7]` of the announcement (None: no such document or URL, and
+/// `getDustImage` skips that pollutant).
 pub fn image_paths(forecasts: &Forecasts, data_time: &str) -> (Option<String>, Option<String>) {
     let (mut pm10, mut pm25) = (None, None);
     let (mut found10, mut found25) = (false, false);
@@ -162,11 +164,52 @@ fn stored_pub_date(records: &[RawRecord]) -> String {
         period.slot.get(..2).unwrap_or("00")
     )
 }
-fn completed(records: &[RawRecord]) -> Option<u64> {
-    records
-        .iter()
-        .map(|r| r.envelope.identity.fetched_at_ms)
-        .max()
+fn image_catalog(day: &str) -> Result<CatalogId, String> {
+    let key = AirKoreaImageRequest::provider_key()
+        .canonical_bytes()
+        .map_err(|e| e.to_string())?;
+    Ok(CatalogId {
+        source: image::SOURCE.into(),
+        kind: image::KIND.into(),
+        key_sha256: crate::storage::sha256(&key),
+        partition: day.into(),
+    })
+}
+/// The acquisitions one day catalog lists: (completion instant, a member envelope), from the
+/// catalog control object alone (no record body is read).
+async fn listed_acquisitions<T: IndexListing>(
+    transport: &T,
+    id: &CatalogId,
+    deadline: Instant,
+) -> Result<Vec<(u64, Envelope)>, String> {
+    let limits = CatalogLimits::default();
+    let object = match tokio::time::timeout_at(
+        deadline,
+        transport.get_control(&id.key(), limits.control_bytes),
+    )
+    .await
+    {
+        Err(_) => return Err("image catalog deadline".into()),
+        Ok(Err(crate::storage::Error::NotFound)) => return Ok(Vec::new()),
+        Ok(Err(e)) => return Err(format!("image catalog: {e}")),
+        Ok(Ok(object)) => object,
+    };
+    let catalog = Catalog::from_bytes(&object.body, id, &limits)
+        .map_err(|e| format!("image catalog: {e}"))?;
+    // One acquisition per fetch group; its completion is its members' latest fetch instant.
+    let mut groups: BTreeMap<String, (u64, Envelope)> = BTreeMap::new();
+    for e in catalog.entries {
+        let group = match &e.fetch_group {
+            Some(g) => g.descriptor_key().map_err(|e| e.to_string())?,
+            None => e.identity.raw_sha256.clone(),
+        };
+        let fetched = e.identity.fetched_at_ms;
+        groups
+            .entry(group)
+            .and_modify(|(f, _)| *f = (*f).max(fetched))
+            .or_insert((fetched, e));
+    }
+    Ok(groups.into_values().collect())
 }
 
 impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
@@ -175,6 +218,7 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
             shared: Arc::new(Shared {
                 reader: Reader { transport, store },
                 calibration,
+                refresh_every: REFRESH,
                 reads: OwnedFlights::new(OwnedConfig {
                     running: 2,
                     entries: 16,
@@ -188,12 +232,20 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
             }),
         }
     }
+    /// A shorter refresh interval (tests; as `AirInputs::with_capture_interval`).
+    pub fn with_refresh_interval(self, every: Duration) -> Self {
+        let mut shared = Arc::into_inner(self.shared).expect("not shared yet");
+        shared.refresh_every = every;
+        Self {
+            shared: Arc::new(shared),
+        }
+    }
     pub fn calibration(&self) -> &Calibration {
         &self.shared.calibration
     }
     /// The forecast fold for a request at `now`; `generation` is the AirKorea publication count
-    /// (a publication invalidates the memo). Starts the expected announcement's image
-    /// acquisition when it is missing and waits for it until `until`.
+    /// (a publication invalidates the memo). Starts the missing announcement's image acquisition
+    /// and waits for it until `until`.
     #[allow(clippy::too_many_arguments)] // The request, its inputs and the shared acquirer.
     pub async fn load(
         &self,
@@ -206,8 +258,8 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
         until: Instant,
     ) -> Arc<HourlyForecasts> {
         self.read(now, stations.clone(), generation, until).await;
-        // The expected announcement, or while its documents are not published yet the previous
-        // one: legacy ran `do` for every announcement when it was expected (each
+        // The expected announcement, or while its documents name no image yet the previous one:
+        // legacy ran `do` for every announcement when it was expected (each
         // `getMinuDustFrcstDspth` run, `kecoRequester` L694), so its rows exist there.
         let target = forecasts.and_then(|f| {
             let expected = expected_announcement(now)?;
@@ -218,8 +270,8 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
                 .into_iter()
                 .flatten()
                 .find_map(|text| match image_paths(f, &text) {
-                    (Some(pm10), Some(pm25)) => Some((text, pm10, pm25)),
-                    _ => None,
+                    (None, None) => None,
+                    (pm10, pm25) => Some((text, pm10, pm25)),
                 })
         });
         if let (Some((text, pm10, pm25)), Some(acquire)) = (target, acquire)
@@ -227,8 +279,8 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
             && let Some(at) = announcement(&text)
             && let Ok(request) = AirKoreaImageRequest::new(
                 at,
-                &pm10,
-                &pm25,
+                pm10.as_deref(),
+                pm25.as_deref(),
                 (
                     self.shared.calibration.width as usize,
                     self.shared.calibration.height as usize,
@@ -286,11 +338,15 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
     ) {
         let current = generation.load(Ordering::Acquire);
         let published_at = self.shared.published_at.load(Ordering::Acquire) as f64;
+        let skey = stations_key(&station_points(&stations));
         {
             let state = self.shared.state.lock().unwrap_or_else(|e| e.into_inner());
             if state.generation == current
+                && state.stations == skey
                 && state.cut >= published_at
-                && state.refreshed.is_some_and(|r| r.elapsed() < MEMO)
+                && state
+                    .refreshed
+                    .is_some_and(|r| r.elapsed() < self.shared.refresh_every)
             {
                 return;
             }
@@ -300,7 +356,7 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
             .shared
             .reads
             .join(
-                format!("images-{current}-{}", now >= published_at),
+                format!("images-{current}-{skey}-{}", now >= published_at),
                 until,
                 READ_FOR,
                 move |deadline| async move {
@@ -312,8 +368,9 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
             .await;
     }
 }
-/// Bring the fold up to `now`: read the image acquisitions completed by then that are not known
-/// yet (all of the last three KST days on a complete read), decode them, and refold.
+/// Bring the fold up to `now`: list the image acquisitions of the last three KST days from their
+/// catalogs, download and decode those completed by then that are not known yet (all of them for
+/// a new station list), and refold.
 async fn read<T: IndexListing + Clone + 'static>(
     shared: &Arc<Shared<T>>,
     now: f64,
@@ -326,46 +383,26 @@ async fn read<T: IndexListing + Clone + 'static>(
         .map_err(|_| "image refresh deadline".to_owned())?;
     let points = station_points(&stations);
     let skey = stations_key(&points);
-    let (cut, known, full, quiet) = {
+    let (cut, known) = {
         let state = shared.state.lock().unwrap_or_else(|e| e.into_inner());
-        // A fold never goes back in time.
-        let cut = state.cut.max(now);
-        let full = state.stations != skey
-            || state.known.is_empty()
-            || state.full.is_none_or(|f| f.elapsed() >= FULL_READ);
-        // Holding the announcement expected now, no newer one can have been acquired.
-        let quiet =
-            !full && expected_announcement(cut).is_some_and(|e| state.folded.has(&pub_date(&e)));
-        let known = if full {
-            KnownSet::new()
-        } else {
+        // A fold never goes back in time; a new station list decodes everything again.
+        let known = if state.stations == skey {
             state.known.clone()
+        } else {
+            KnownSet::new()
         };
-        let quiet = quiet.then(|| state.folded.clone());
-        (cut, known, full, quiet)
+        (state.cut.max(now), known)
     };
-    if let Some(folded) = quiet {
-        let mut fold = (*folded).clone();
-        fold.remove_old(cut);
-        let mut state = shared.state.lock().unwrap_or_else(|e| e.into_inner());
-        state.folded = Arc::new(fold);
-        state.generation = generation;
-        state.cut = cut;
-        state.refreshed = Some(std::time::Instant::now());
-        return Ok(());
-    }
     let days: Vec<String> = (0..DAYS)
         .rev()
         .map(|d| format!("{:08}", kst_date(cut - d as f64 * DAY_MS)))
         .collect();
-    let newest_known = known.keys().map(|(_, p)| p.clone()).max();
-    let key = AirKoreaImageRequest::provider_key();
     let listed = shared
         .reader
         .partitions(
             image::SOURCE,
             image::KIND,
-            &key,
+            &AirKoreaImageRequest::provider_key(),
             &months(cut - (DAYS - 1) as f64 * DAY_MS, cut),
             deadline,
         )
@@ -373,39 +410,34 @@ async fn read<T: IndexListing + Clone + 'static>(
         .map_err(|e| format!("image listing: {e}"))?;
     let mut fresh = Vec::new();
     for day in days.iter().filter(|d| listed.contains(d)) {
-        let acquisitions = match &newest_known {
-            None => {
-                shared
-                    .reader
-                    .raw(image::SOURCE, image::KIND, &key, day, deadline)
-                    .await
+        let id = image_catalog(day)?;
+        for (fetched, member) in
+            listed_acquisitions(&shared.reader.transport, &id, deadline).await?
+        {
+            let key = (fetched, day.clone());
+            if fetched as f64 > cut || known.contains_key(&key) {
+                continue;
             }
-            // New acquisitions land in the newest days; an older day is read completely again
-            // by the next complete read.
-            Some(newest) if day < newest => continue,
-            Some(_) => {
-                let seen = |read: &[Vec<RawRecord>]| {
-                    read.last()
-                        .and_then(|r| completed(r))
-                        .is_some_and(|f| known.contains_key(&(f, day.clone())))
-                };
-                shared
-                    .reader
-                    .latest_raw(image::SOURCE, image::KIND, &key, day, 1, seen, deadline)
-                    .await
-            }
-        }
-        .map_err(|e| format!("image read: {e}"))?;
-        for records in acquisitions {
-            let Some(fetched) = completed(&records) else {
+            // One acquisition per lookup (each holds two images of about 5-6 MB).
+            let page = shared
+                .reader
+                .store
+                .lookup_acquisition(&id, &member.identity, deadline)
+                .await
+                .map_err(|e| format!("image read: {e}"))?;
+            // Not complete yet: asked again at the next refresh.
+            let PageOutcome::Ready(page) = page else {
                 continue;
             };
-            let id = (fetched, day.clone());
-            if fetched as f64 > cut || records.len() != CODES.len() || known.contains_key(&id) {
+            let Some(acquisition) = page.acquisitions().first() else {
+                continue;
+            };
+            let mut records = acquisition.records().to_vec();
+            records.sort_by_key(|r| r.envelope.pagination.as_ref().map_or(1, |p| p.page));
+            if records.len() != CODES.len() {
                 continue;
             }
-            let gifs: Vec<Arc<[u8]>> = records.iter().map(|r| r.bytes.clone()).collect();
-            fresh.push((id, stored_pub_date(&records), gifs));
+            fresh.push((key, stored_pub_date(&records), records));
         }
     }
     let calibration = shared.calibration.clone();
@@ -414,17 +446,21 @@ async fn read<T: IndexListing + Clone + 'static>(
         let mut known = known;
         known.retain(|(_, p), _| days.contains(p));
         let coords: Vec<(f64, f64)> = points.iter().map(|(_, lat, lon)| (*lat, *lon)).collect();
-        for (id, pub_date, gifs) in fresh {
+        for (key, pub_date, records) in fresh {
             let mut values: Decoded = Vec::new();
             let mut failed = false;
-            for ((code, table), gif) in CODES.iter().zip(&gifs) {
-                match decode_points(gif, &calibration, table, &coords) {
+            for ((code, table), record) in CODES.iter().zip(&records) {
+                // `imgPaths.pm10 == undefined`: that pollutant is skipped.
+                if record.envelope.status == image::SKIPPED && record.bytes.is_empty() {
+                    continue;
+                }
+                match decode_points(&record.bytes, &calibration, table, &coords) {
                     Ok(v) => values.push((code, v)),
                     Err(_) => failed = true,
                 }
             }
             let values = (!failed).then(|| Arc::new(values));
-            known.insert(id, Known { pub_date, values });
+            known.insert(key, Known { pub_date, values });
         }
         let mut fold = HourlyForecasts::default();
         for ((fetched, _), k) in &known {
@@ -451,9 +487,6 @@ async fn read<T: IndexListing + Clone + 'static>(
     state.folded = Arc::new(fold);
     state.known = known;
     state.stations = skey;
-    if full {
-        state.full = Some(std::time::Instant::now());
-    }
     state.generation = generation;
     state.cut = cut;
     state.refreshed = Some(std::time::Instant::now());
