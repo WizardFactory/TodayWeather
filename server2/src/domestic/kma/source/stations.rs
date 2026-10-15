@@ -195,14 +195,14 @@ impl Registry {
     pub fn has(&self, id: &str) -> bool {
         self.index.contains_key(id)
     }
-    /// A registry holding seeded documents (the legacy `kmastninfos` copy) in their order.
+    /// A registry holding seeded documents (the legacy `kmastninfos` copy) in their order. A
+    /// repeated `stnId` stays (legacy `$near` sees every copy); `_saveStnInfo` updates the first
+    /// one (`stnList[0]`).
     pub fn seeded(docs: &[Doc]) -> Self {
         let mut out = Self::default();
         for d in docs {
-            if let Some(Val::Str(id)) = d.get("stnId")
-                && !out.index.contains_key(id)
-            {
-                out.index.insert(id.clone(), out.docs.len());
+            if let Some(Val::Str(id)) = d.get("stnId") {
+                out.index.entry(id.clone()).or_insert(out.docs.len());
                 out.docs.push(d.clone());
             }
         }

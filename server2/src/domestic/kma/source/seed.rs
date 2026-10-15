@@ -1,8 +1,10 @@
-//! The station registry seed (AK, 2026-10-15): a one-time copy of legacy `kmastninfos`
-//! converted by `tools/migration/export_station_seeds.py` and published by the
-//! `station_seed_import` tool as one raw record (source `legacy-mongo`, kind `kma-stn-info`).
-//! The registry starts from the seed's documents (legacy fields such as `rnsHit`, `rnsCount` and
-//! `isMountain` included) and the station pages then apply the legacy saver rules on top.
+//! The station registry seed (AK, 2026-10-15): a copy of legacy `kmastninfos` converted by
+//! `tools/migration/export_station_seeds.py`. The repository carries the read-only export of
+//! 2026-10-15 as static data (`data/kmastninfos.seed.jsonl`, see `data/PROVENANCE.md`); a later
+//! export (the final one at cutover) is published by `station_seed_import` as one raw record
+//! (source `legacy-mongo`, kind `kma-stn-info`) and replaces it when it is newer. The registry
+//! starts from the seed's documents (legacy fields such as `rnsHit`, `rnsCount` and `isMountain`
+//! included) and the station pages then apply the legacy saver rules on top.
 use super::doc::{Doc, Val};
 use crate::gateway::OrderedJson;
 use crate::resolver::Acquisition;
@@ -28,7 +30,7 @@ impl std::fmt::Display for SeedError {
 impl std::error::Error for SeedError {}
 
 /// A parsed seed: the export instant and the registry documents in export order (`_id`
-/// dropped; the readers project it away).
+/// dropped; the readers project it away). A repeated `stnId` is kept as legacy holds it.
 #[derive(Debug, Clone)]
 pub struct StationSeed {
     pub exported_at_ms: u64,
@@ -98,7 +100,6 @@ pub fn parse(bytes: &[u8]) -> Result<StationSeed, SeedError> {
         .ok_or(SeedError("sourceSha256"))?
         .to_owned();
     let mut docs = Vec::new();
-    let mut seen = std::collections::BTreeSet::new();
     for line in lines {
         let doc = OrderedJson::parse(line).map_err(|_| SeedError("document"))?;
         let OrderedJson::Object(entries) = &doc else {
@@ -117,9 +118,6 @@ pub fn parse(bytes: &[u8]) -> Result<StationSeed, SeedError> {
                     let s = v.string().ok_or(SeedError("stnId"))?;
                     if s.is_empty() || s.len() > 8 || !s.bytes().all(|b| b.is_ascii_digit()) {
                         return Err(SeedError("stnId"));
-                    }
-                    if !seen.insert(s.clone()) {
-                        return Err(SeedError("repeated stnId"));
                     }
                     Val::str(s)
                 }
@@ -155,6 +153,13 @@ pub fn parse(bytes: &[u8]) -> Result<StationSeed, SeedError> {
         exported_at_ms,
         source_sha256,
         docs,
+    })
+}
+/// The seed carried with server2 (`data/kmastninfos.seed.jsonl`, the 2026-10-15 export).
+pub fn embedded() -> &'static StationSeed {
+    static SEED: std::sync::OnceLock<StationSeed> = std::sync::OnceLock::new();
+    SEED.get_or_init(|| {
+        parse(include_bytes!("data/kmastninfos.seed.jsonl")).expect("validated static seed")
     })
 }
 /// The raw-record acquisition of a validated seed file (partition: the export's KST day).

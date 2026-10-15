@@ -11,8 +11,11 @@ of the legacy `KmaStnInfo` model (`server/models/modelKmaStnInfo.js`, collection
 `--jsonArray` output is rejected. Every document must match the legacy schema: `_id`, `stnId`
 (text, 1-8 digits), `stnName`, `addr` (text), `isCityWeather`, `isMountain` (boolean),
 `altitude`, `rnsHit`, `rnsCount` (finite numbers), `geo` (`[longitude, latitude]` finite numbers
-within the 2d index bounds) and `__v` (integer); any other field rejects the whole file, as does
-a repeated `stnId`.
+within the 2d index bounds) and `__v` (integer); any other field rejects the whole file. A
+repeated `stnId` is kept: legacy `_saveStnInfo` can insert one twice (concurrent first sightings;
+the 2026-10-15 export holds two ids three times each), reads the first and `$near` sees
+every copy. Documents keep export
+order (export with `sort({_id: 1})`, the insertion order).
 
 Output (JSON Lines, `\\n`): a manifest line
   {"schema":1,"tool":"export_station_seeds","collection":"kmastninfos",
@@ -114,7 +117,6 @@ def convert(exported, source):
         raise Invalid('--jsonArray output is not accepted')
     if b'\r' in source:
         raise Invalid('CR line endings')
-    seen = set()
     documents = []
     for number_, line in enumerate(source.split(b'\n'), 1):
         if not line.strip():
@@ -125,9 +127,6 @@ def convert(exported, source):
             stn = validate(doc)
         except (UnicodeDecodeError, json.JSONDecodeError, Invalid) as error:
             raise Invalid(f'line {number_}: {error}') from error
-        if stn in seen:
-            raise Invalid(f'line {number_}: repeated stnId {stn}')
-        seen.add(stn)
         documents.append(text)
     if not documents:
         raise Invalid('input holds no documents')

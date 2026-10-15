@@ -217,3 +217,73 @@ fn station_store_saves_and_answers_like_legacy() {
         }
     }
 }
+
+/// S15b2s-R2: a seeded registry keeps repeated station ids as legacy `kmastninfos` holds them:
+/// `_saveStnInfo` updates only the first (`stnList[0]`), `$near` returns every copy by distance
+/// with the `{_id: 0, __v: 0}` projection, and a known id is never registered again.
+#[test]
+fn seeded_registry_keeps_repeated_station_ids_like_legacy() {
+    use server2::domestic::kma::source::Val;
+    let doc = |lon: f64, city: Option<bool>, hits: f64| {
+        let mut d = Doc::new()
+            .with("stnId", Val::str("965"))
+            .with("stnName", Val::str("중복"))
+            .with("addr", Val::str("주소"));
+        if let Some(c) = city {
+            d.set("isCityWeather", Val::Bool(c));
+        }
+        d.with("geo", Val::Arr(vec![Val::Num(lon), Val::Num(37.5)]))
+            .with("__v", Val::Num(0.))
+            .with("rnsHit", Val::Num(hits))
+    };
+    let mut registry = Registry::seeded(&[
+        doc(127.3, None, 1.),
+        doc(127.1, Some(true), 2.),
+        doc(127.2, None, 3.),
+    ]);
+    struct NoGeo;
+    impl StationGeo for NoGeo {
+        fn locate(&self, _: &str) -> Option<(f64, f64)> {
+            panic!("a known station is not geocoded again")
+        }
+    }
+    let row = Doc::new()
+        .with("stnId", Val::str("965"))
+        .with("addr", Val::str("주소"))
+        .with("isCityWeather", Val::Bool(true));
+    registry.apply_run(&[row], true, &NoGeo);
+    let docs = registry.docs();
+    assert_eq!(docs.len(), 3);
+    assert_eq!(
+        docs[0].get("isCityWeather"),
+        Some(&Val::Bool(true)),
+        "first copy updated"
+    );
+    assert_eq!(
+        docs[2].get("isCityWeather"),
+        None,
+        "other copies kept as stored"
+    );
+    assert_eq!(docs[0].get("rnsHit"), Some(&Val::Num(1.)));
+    // A run without a city flag unsets it on the first copy only.
+    let plain = Doc::new()
+        .with("stnId", Val::str("965"))
+        .with("addr", Val::str("주소"));
+    registry.apply_run(&[plain], true, &NoGeo);
+    assert_eq!(registry.docs()[0].get("isCityWeather"), None);
+    assert_eq!(
+        registry.docs()[1].get("isCityWeather"),
+        Some(&Val::Bool(true))
+    );
+    // `$near` sees every copy, nearest first, without `__v`.
+    let near = registry.near(127.0, 37.5, Some(1.), false, 5);
+    let hits: Vec<_> = near.iter().map(|d| d.get("rnsHit").cloned()).collect();
+    assert_eq!(
+        hits,
+        [Some(Val::Num(2.)), Some(Val::Num(3.)), Some(Val::Num(1.))]
+    );
+    assert!(near.iter().all(|d| !d.has("__v") && !d.has("_id")));
+    let city = registry.near(127.0, 37.5, Some(1.), true, 5);
+    assert_eq!(city.len(), 1);
+    assert_eq!(city[0].get("rnsHit"), Some(&Val::Num(2.)));
+}
