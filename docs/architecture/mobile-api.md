@@ -480,3 +480,14 @@ and [design diagram](diagrams/food-poisoning.html).
 MFDS reads defensively choose the newest publication within the district or province scope, retaining district priority. Incheon old 중구/동구/서구 requests without an exact provider row use the province row; split districts are not inferred from these names alone.
 
 The pollen popup also binds `LOC_POLLEN_{OAK,PINE,WEEDS}_INFO` and `LOC_POLLEN_ADVICE_0` through `_3` according to each present type's grade, with `LOC_POLLEN_SOURCE` attribution. These client descriptions add no response fields. All keys exist in the six client and server locales.
+
+## AirKorea image forecast dates (#2756 local candidate)
+
+When `airForecastSource=airkorea` selects stored image forecasts, `dataTime` and
+`pubDate` remain KST display strings. New AirKorea BSON `date` fields encode the
+KST frame hours as UTC instants; dates derive from the characterized 23-cycle
+image, including when a later original forecast reuses it. Unsupported cycles
+are rejected during collection. The app's default KAQ selection and KAQ writer
+are unchanged. Local decoder/storage replay is not public API or device recovery.
+See [collection](weather-collection.md#airkorea-image-derived-hourly-recovery-2756)
+and [operations](../operations/airkorea-image-forecast.md).

@@ -90,3 +90,4 @@ docs/architecture/diagrams/food-poisoning.*.json
 
 # Local Archify 3.0 delivery provenance; keep for browser/recovery gates.
 /docs/architecture/diagrams/mobile-weather-request.delivery.json
+/docs/architecture/diagrams/weather-collection.delivery.json

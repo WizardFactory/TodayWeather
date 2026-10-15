@@ -4,6 +4,7 @@
 "use strict";
 
 var getPixels = require('get-pixels');
+var layout = require('./airkoreaImageLayout');
 //var fs = require('fs');
 var airkoreaDustImage = require('../config/config').image.airkorea_korea_image;
 
@@ -51,7 +52,7 @@ AirkoreaImageParser.prototype.isValidImage = function(width, height){
         height: parseInt(airkoreaDustImage.size.height)
     };
 
-    return (size.width === width && size.height === height);
+    return (width === 820 && height === 820 && size.width === width && size.height === height);
 };
 
 AirkoreaImageParser.prototype.getPixelMap = function(path, type, coordnate, cb){
@@ -66,9 +67,11 @@ AirkoreaImageParser.prototype.getPixelMap = function(path, type, coordnate, cb){
             return;
         }
 
-        if(!self.isValidImage(pixels.shape[1], pixels.shape[2])){
-            log.error('ImgParser> Invalid Image size :', pixels.shape[1], pixels.shape[2]);
-            return cb('INVALID_IMAGE');
+        var legends;
+        try {legends = layout.validate(pixels,airkoreaDustImage);}
+        catch (error) {
+            log.error('ImgParser> Unsupported AirKorea image layout');
+            return cb(error);
         }
 
         var map_area = self.getImagePos();
@@ -81,47 +84,12 @@ AirkoreaImageParser.prototype.getPixelMap = function(path, type, coordnate, cb){
             map_pixel_distance_width: 0.0,
             map_pixel_distance_height: 0.0,
             map_area: map_area,
-            pixels: pixels
+            pixels: pixels,
+            legends: legends,
+            sourcePath: path
         };
 
         log.info('image count : ', pixels.shape[0]);
-
-        /*
-        // set total image pixel
-        for(var i = 0 ; i < result.image_count ; i++){
-            var images = [];
-            for(var y = 0 ; y < result.image_height ; y++){
-                var vertical = [];
-                for(var x = 0 ; x < result.image_width ; x++){
-                    var rgba = [];
-                    for(var z = 0 ; z < 3 ; z++){
-                        rgba.push(pixels.get(i, x, y, z));
-                    }
-                    var val = (rgba[0] << 16) & 0xFF0000 | (rgba[1] << 8) & 0xFF00 |rgba[2] & 0xFF;
-                    //log.info(val.toString(16), JSON.stringify(rgba));
-                    vertical.push(val);
-                }
-                images.push(vertical);
-            }
-            //log.info('push image #', i);
-            imagePixels.push(images);
-        }
-        log.info('got image pixels');
-
-        // extract map pixels from image pixels
-        // width : 78 ~ 663, Height : 80 ~ 798
-        for(i=0 ; i < result.image_count ; i++) {
-            var map = [];
-            for(var y = map_area.top ; y < map_area.bottom ; y++){
-                var vertical = [];
-                for(var x = map_area.left ; x < map_area.right ; x++){
-                    vertical.push(imagePixels[i][y][x]);
-                }
-                map.push(vertical);
-            }
-            result.mapPixels.push(map);
-        }
-        */
 
         var default_coordinate = self.getDefaultCoordi();
         // map's width&height (count of pixels)
