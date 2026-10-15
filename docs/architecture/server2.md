@@ -357,7 +357,7 @@ raw/v2/{source}/{kind}/{YYYY}/{MM}/{DD}/{period}/{key_sha256}/
   {fetched_at_ms}-{raw_sha256}.raw.gz
 index/v2/{source}/{kind}/{key_sha256}/{partition}.json
 packs/v2/{source}/{kind}/{key_sha256}/{date}/{pack_sha256}.pack
-summary/v2/{source}/{key_sha256}/{date}/{revision_sha256}.json
+summary/v2/{source}/{key_sha256}/{date}/{latest_fetched_ms}-{count}-{revision_sha256}.json
 state/v2/...
 budgets/v2/...
 ```
@@ -743,7 +743,8 @@ future late records cannot arrive. Recompute when later inputs become published;
 do not finalize a summary after partial repair. Last-year lookup remains same
 date, then nearest +/-1..3 days; at each date grid → ASOS → VC. ASOS missing
 data may require on-demand provider calls, so that path is outside the no-provider
-latency examples. Product exposure remains O-13.
+latency examples. Product exposure remains O-13. S16 implements this contract
+([below](#s16-daily-summaries-and-the-last-year-lookup-2026-10-15)).
 
 Push/purchase/notice state is separate from weather raw bodies. Follow the
 [S3 notice handoff](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-5882199479)
@@ -2356,3 +2357,67 @@ two retained versions, budget and demand create/412 repeat/CAS update, and 403 (
 policy deny) for an unconditional `raw/v2` PUT; see the
 [sanitized evidence](../evidence/aws/server2-s3-readiness-2026-10-15.json). Not verified: the real
 IMDS on EC2 and the runtime role's 404/403 statuses, which the same tool checks at deployment.
+
+### S16 daily summaries and the last-year lookup (2026-10-15)
+
+[S16](../../plans/issue-2701.md) ([spec](../../specs/issue-2701.md), #2701) adds `server2::summary`. Per
+O-13 it stores daily summaries and an internal last-year fallback only; no response field, API
+version or UI changes. Legacy stores no summary: the grid values are the rows the tw_svc assembly
+derives at `getPastMid`, so S16 adds storage, not a new computation.
+
+| Source | Values | Complete when | Written by |
+| --- | --- | --- | --- |
+| `grid` (key: the town) | The `_getDaySummaryList` row `getPastMid` merges (`controllerTown.js:2697`, `:5530`): `taMax`, `taMin`, `t1d`, `reh`, `rn1`, `sky`, `pty`, `lgt`, `wsd`, AM/PM fields, `observationHours` | at least 18 valid `t1h` hours; the `00:00` hour counts for the previous day (`:5539`) | the recorder, for KST today-6..today-1 |
+| `asos` (key: station) | The `policy.normalize` daily row (`taMin`, `taMax`, `t1d`, `reh`, `rn1`, `wsd`) | `taMin`, `taMax` valid and ordered; rain optional | the recorder (S15b-2 ranges) and the lookup (on demand) |
+| `vc` (key: 0.02-degree cell) | `taMin`, `taMax`, `t1d` (°C), optional `rn1` (mm), `observationHours`, `localHours` from a body fetched after the local day ended | temperature in at least 75 % of the local hours (23/24/25, IANA zone) | the lookup, from stored raw VC records |
+
+Grid summaries are keyed by town, not grid: `mergeCurrentByStnHourly` corrects a town's rows with
+its own stations and ASOS mapping, so towns of one grid can differ.
+
+**Objects.** `summary/v2/{source}/{key_sha256}/{YYYYMMDD}/{latestFetchedMs:013}-{count:06}-{revision_sha256}.json`,
+created with `If-None-Match: *` (a 412 counts only when the stored bytes are identical) and never
+deleted; the role has no delete permission and no lifecycle rule exists, so retention is unbounded
+(at least the three years of D6/O-4). The body records the canonical key, date, values and the
+input set (`count`, `latestFetchedMs`, SHA-256 of the sorted input identity lines, per-family
+counts). The newest revision is the greatest name whose body verifies; a later newest input sorts
+later.
+
+**Complete inputs and late revisions.** The KMA snapshot records summary inputs only when its
+reads were complete: grid families read from published catalogs (otherwise the request forwards),
+the 8-day station page window read for every day with no S3 load, fold or geocoding in flight, the
+history answer without a `cache-read-*` reason, and the mapped station's ASOS state loaded with no
+recovery run in flight. After a natively served response the backend hands the `getPastMid` rows
+(a JSON copy taken before later steps mutate them; the response is unchanged) to the recorder, which
+runs outside the request (two tasks, 30 s each; more are dropped and repeated by a later request).
+Per source, key and date it skips an input digest it already examined, and writes a new revision only
+when the values differ from the newest stored revision and its newest input is not older. A late
+input therefore recomputes the day; an older input set never supersedes a newer one.
+
+S16 also changes one S15b-2 behavior: a station-page day whose `aws-hourly` or `city-obs` catalog
+is not listed now reads as empty. Before, the absent catalog's lookup answered "incomplete", so a
+day without city pages never loaded its hourly pages from S3 and was read again on every load.
+
+**Last-year lookup** (`summary::Lookup::last_year`, not wired to a route). The same date a year
+earlier (Feb 29 → Feb 28), then ±1..±3, earlier first. At each date: the town's grid summary, then
+the station's ASOS summary (when missing, one data.go.kr daily range `[base-3, base+3]` through the
+funded S15b-2 acquirer, published to S06, its complete days stored; at most once per station and
+range a day), then the cell's VC summary (when missing, derived from stored raw VC records; the VC
+provider is never called). The first complete summary wins. A failed S3 read or provider failure
+returns an error rather than a lower-priority answer; `03` means absent.
+
+**Load (estimates, not measured).** A town request with new inputs examines at most 12 candidates;
+a cold process lists and reads at most one revision per candidate. A town-day typically changes its
+values when its `2400` hour, late station pages and the ASOS fill arrive, so a few revisions of
+about 1 KiB each: 2,000 requested towns at 3 revisions a day give about 2.2 M objects and 2.2 GB a
+year. Unit prices are not assumed. An on-demand ASOS range is one data.go.kr call under the S08
+`DONGNAE_SECRET_KEYS` budget.
+
+Verification (local, test peers only): unit tests for keys, bodies, names, input relevance,
+completeness (17/18 grid hours; inverted, missing and sentinel ASOS extremes; 23/24/25-hour New York
+days needing 18/18/19 hours), store revisions, the recorder (late inputs, older inputs, equal
+values, cold process, failures) and the lookup order and failure rules; end-to-end over the S06
+loopback S3 peer with the native backend (24-hour day stored including its `00:00` hour, 17-hour
+day not stored until its late 18th hour, a late `2400` hour writing a second revision, no record
+while an ASOS run is in flight, ASOS acquired once and published, VC derived from a stored raw body).
+Live on 2026-10-15: one ASOS daily call for station 108, 2025-10-12..18 (`00`, 7 items, 0.30 s),
+kept as the test fixture.

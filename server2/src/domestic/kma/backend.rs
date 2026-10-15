@@ -1,6 +1,6 @@
 //! Native v000903 KMA backend for the S10 dispatcher (`Family::Kma`). Registration keeps legacy
 //! selected; a request whose inputs the source cannot supply is forwarded to legacy.
-use super::{AssemblyConfig, KmaRequest, KmaStore, Outcome, assemble};
+use super::{AssemblyConfig, KmaRequest, KmaStore, Outcome, assemble, assemble_capturing};
 use crate::gateway::{
     BackendDispatcher, BackendHandler, BackendMode, BoxFuture, Family, GatewayError, OrderedJson,
     Version, backend::Native,
@@ -33,11 +33,18 @@ pub fn select_native(
     dispatcher: &BackendDispatcher,
     source: Arc<dyn KmaSource>,
 ) -> Result<(), GatewayError> {
-    let backend = Arc::new(KmaBackend::new(
-        source,
-        system_clock(),
-        AssemblyConfig::default(),
-    ));
+    select_native_with(dispatcher, source, None)
+}
+/// [`select_native`] with the S16 summary recorder.
+pub fn select_native_with(
+    dispatcher: &BackendDispatcher,
+    source: Arc<dyn KmaSource>,
+    summaries: Option<Arc<dyn crate::summary::SummarySink>>,
+) -> Result<(), GatewayError> {
+    let backend = Arc::new(
+        KmaBackend::new(source, system_clock(), AssemblyConfig::default())
+            .with_summaries(summaries),
+    );
     backend.register(dispatcher);
     KmaBackend::select(dispatcher, BackendMode::Native)
 }
@@ -56,6 +63,8 @@ pub struct KmaBackend {
     clock: Clock,
     config: AssemblyConfig,
     cpu: Arc<Semaphore>,
+    /// S16: receives the summary inputs of natively served responses.
+    summaries: Option<Arc<dyn crate::summary::SummarySink>>,
 }
 impl KmaBackend {
     pub fn new(source: Arc<dyn KmaSource>, clock: Clock, config: AssemblyConfig) -> Self {
@@ -64,7 +73,13 @@ impl KmaBackend {
             clock,
             config,
             cpu: Arc::new(Semaphore::new(2)),
+            summaries: None,
         }
+    }
+    /// Record S16 summaries after natively served responses (None: no recording).
+    pub fn with_summaries(mut self, sink: Option<Arc<dyn crate::summary::SummarySink>>) -> Self {
+        self.summaries = sink;
+        self
     }
     /// Register for v000903 (legacy stays selected).
     pub fn register(self: &Arc<Self>, dispatcher: &BackendDispatcher) {
@@ -93,13 +108,15 @@ impl KmaBackend {
         };
         let now = store.as_of_ms().unwrap_or_else(|| (self.clock)());
         let config = self.config;
+        // S16: only a snapshot whose reads were complete records summaries.
+        let inputs = self.summaries.as_ref().and_then(|_| store.summary_inputs());
         let permit = tokio::time::timeout_at(deadline, self.cpu.clone().acquire_owned())
             .await
             .map_err(|_| GatewayError::Provider)?
             .map_err(|_| GatewayError::Provider)?;
         let outcome = match tokio::task::spawn_blocking(move || {
             let _permit = permit;
-            assemble(&request, store.as_ref(), now, config)
+            assemble_capturing(&request, store.as_ref(), now, config)
         })
         .await
         {
@@ -108,6 +125,12 @@ impl KmaBackend {
             Err(e) if e.is_panic() => return Ok(Native::Forward),
             Err(_) => return Err(GatewayError::Provider),
         };
+        let (outcome, past_days) = outcome;
+        if let (Outcome::Json(_), Some(sink), Some(inputs), Some(rows)) =
+            (&outcome, &self.summaries, inputs, past_days)
+        {
+            sink.record(inputs, rows, now);
+        }
         match outcome {
             Outcome::Json(json) => Ok(Native::Served(json)),
             // The legacy hop treats a non-200 backend reply as a dependency failure.

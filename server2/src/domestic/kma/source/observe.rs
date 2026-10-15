@@ -188,6 +188,8 @@ struct State {
     geo: HashMap<String, (Option<(f64, f64)>, std::time::Instant)>,
     asos: HashMap<String, AsosEntry>,
     asos_failed: HashMap<String, std::time::Instant>,
+    /// Stations with a recovery run in progress (S16 completeness).
+    asos_running: std::collections::HashSet<String>,
     /// The hourly part of the last fold (registry, hourly rows, national rows).
     hourly_fold: Option<HourlyFold>,
 }
@@ -426,6 +428,20 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             days.push(day.date());
             d = day.add_hours(24);
         }
+        // Published day catalogs of both page kinds (S16): a day whose catalog is not listed has
+        // nothing published and reads as empty, as S14/S15b listings treat absent catalogs. A
+        // failed listing keeps every day to its catalog lookup.
+        let months = super::records::months(schedule::to_ms(first) as f64, now_ms as f64);
+        let (aws_k, city_k) = (aws_key(), city_key());
+        let (listed_hourly, listed_city) = tokio::join!(
+            self.reader
+                .partitions("kma-web", "aws-hourly", &aws_k, &months, deadline),
+            self.reader
+                .partitions("kma-web", "city-obs", &city_k, &months, deadline),
+        );
+        let listed = |l: &Result<Vec<String>, crate::storage::Error>, p: &str| {
+            l.as_ref().map_or(true, |l| l.iter().any(|x| x == p))
+        };
         for day in days {
             let fresh = {
                 let s = self.state();
@@ -439,11 +455,29 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             }
             let partition = format!("{day:08}");
             let (aws, city_k) = (aws_key(), city_key());
+            let (want_hourly, want_city) = (
+                listed(&listed_hourly, &partition),
+                listed(&listed_city, &partition),
+            );
             let (hourly, city) = tokio::join!(
-                self.reader
-                    .raw("kma-web", "aws-hourly", &aws, &partition, deadline),
-                self.reader
-                    .raw("kma-web", "city-obs", &city_k, &partition, deadline),
+                async {
+                    if want_hourly {
+                        self.reader
+                            .raw("kma-web", "aws-hourly", &aws, &partition, deadline)
+                            .await
+                    } else {
+                        Ok(Vec::new())
+                    }
+                },
+                async {
+                    if want_city {
+                        self.reader
+                            .raw("kma-web", "city-obs", &city_k, &partition, deadline)
+                            .await
+                    } else {
+                        Ok(Vec::new())
+                    }
+                },
             );
             let (Ok(hourly), Ok(city)) = (hourly, city) else {
                 continue;
@@ -1056,6 +1090,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// Legacy `Recovery.run` for one station: plan the incomplete window ranges, then acquire and
     /// publish them in order (hourly, then daily).
     async fn recover_asos(self: Arc<Self>, station: &str, folded: &Folded, start: &str, end: &str) {
+        let _running = Running::new(&self, station);
         let fetched = self
             .state()
             .asos
@@ -1093,6 +1128,87 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 retain_window(&mut entry.fetched, start);
             }
         }
+    }
+}
+/// Marks a station's recovery run in progress until dropped (also when the owned run times out).
+struct Running<T> {
+    observations: Arc<Observations<T>>,
+    station: String,
+}
+impl<T> Running<T> {
+    fn new(observations: &Arc<Observations<T>>, station: &str) -> Self {
+        observations
+            .state
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .asos_running
+            .insert(station.to_owned());
+        Self {
+            observations: observations.clone(),
+            station: station.to_owned(),
+        }
+    }
+}
+impl<T> Drop for Running<T> {
+    fn drop(&mut self) {
+        self.observations
+            .state
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .asos_running
+            .remove(&self.station);
+    }
+}
+/// What a snapshot needs to record S16 summaries: whether the station state was read
+/// completely, the station pages it holds and a station's ASOS acquisitions.
+impl<T> Observations<T> {
+    /// Whether the station collections reflect a complete read at `now_ms`: every day of the
+    /// 8-day page window was read from S3, the minute pages were read, and no S3 load, fold or
+    /// geocoding is in flight or pending.
+    pub fn settled(&self, now_ms: i64) -> bool {
+        let busy = {
+            let flights = self.flights.lock().unwrap_or_else(|e| e.into_inner());
+            [Flight::Load, Flight::Fold, Flight::Geocode]
+                .iter()
+                .any(|f| flights.contains_key(f))
+        };
+        if busy {
+            return false;
+        }
+        let s = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        if s.pages.dirty || s.pages.minute_read.is_none() || s.folded.is_none() {
+            return false;
+        }
+        let first = schedule::from_ms(now_ms - HOURLY_WINDOW_HOURS * 3_600_000 - 3_600_000);
+        let today = schedule::from_ms(now_ms).date();
+        let mut d = Publication::new(first.date(), 0);
+        while let Some(day) = d {
+            if day.date() > today {
+                break;
+            }
+            if !s.pages.days.contains_key(&day.date()) {
+                return false;
+            }
+            d = day.add_hours(24);
+        }
+        true
+    }
+    /// The hourly AWS pages (hour, fetch instant) and city pages (hour) held in memory.
+    pub fn page_inventory(&self) -> (Vec<(Publication, f64)>, Vec<Publication>) {
+        let s = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        (
+            s.pages.hourly_at.iter().map(|(p, at)| (*p, *at)).collect(),
+            s.pages.city.keys().copied().collect(),
+        )
+    }
+    /// The station's data.go.kr acquisitions, when its S3 state was read and no recovery run is
+    /// in progress; None otherwise.
+    pub fn asos_settled(&self, station: &str) -> Option<Vec<AsosFetched>> {
+        let s = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        if s.asos_running.contains(station) || s.asos_failed.contains_key(station) {
+            return None;
+        }
+        s.asos.get(station).map(|e| e.fetched.clone())
     }
 }
 /// Keep the acquisitions whose range reaches the window (older ones cannot change it).

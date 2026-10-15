@@ -60,6 +60,7 @@ use crate::domestic::publication::{self, Publication};
 use crate::gateway::{BoxFuture, OrderedJson};
 use crate::history::{IndexListing, schedule};
 use crate::storage::{CatalogLimits, CatalogStore, ProviderKey};
+use crate::summary::{GridInputs, InputId, grid::AsosInputs};
 use crate::warnings::{
     service::{ServiceConfig, WarningService},
     store::{StoreConfig, WarningStore},
@@ -319,6 +320,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         deadline: Instant,
     ) -> Result<Vec<Doc>, String> {
+        self.grid_inputs(family, grid, now, deadline)
+            .await
+            .map(|(docs, _)| docs)
+    }
+    /// [`Self::grid_answer`] with the identities of the acquisitions it folded (S16).
+    async fn grid_inputs(
+        &self,
+        family: Family,
+        grid: crate::history::Grid,
+        now: f64,
+        deadline: Instant,
+    ) -> Result<(Vec<Doc>, Vec<InputId>), String> {
         let coord = Coord {
             mx: f64::from(grid.nx()),
             my: f64::from(grid.ny()),
@@ -353,7 +366,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 latest.partition()
             ));
         }
-        Ok(grid_documents(family, coord, &fetched, now))
+        let ids = fetched
+            .iter()
+            .filter(|f| f.fetched_at_ms as f64 <= now)
+            .filter_map(|f| grid_input_id(family, sf.kind(), f))
+            .collect();
+        Ok((grid_documents(family, coord, &fetched, now), ids))
     }
     /// The short RSS documents of one grid at `now`; Err when the latest publication is absent.
     pub async fn rss_answer(
@@ -491,9 +509,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             self.zones(now, deadline),
             async {
                 tokio::join!(
-                    self.grid_answer(Family::Current, grid, now, deadline),
-                    self.grid_answer(Family::Shortest, grid, now, deadline),
-                    self.grid_answer(Family::Short, grid, now, deadline),
+                    self.grid_inputs(Family::Current, grid, now, deadline),
+                    self.grid_inputs(Family::Shortest, grid, now, deadline),
+                    self.grid_inputs(Family::Short, grid, now, deadline),
                     self.rss_answer(grid, now, deadline),
                 )
             },
@@ -502,10 +520,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .load(&town, &region, &city, dust_wanted, now, deadline),
         );
         let zones = zones?;
+        let (current, mut ids) = current?;
+        let (shortest, shortest_ids) = shortest?;
+        let (short, short_ids) = short?;
+        ids.extend(shortest_ids);
+        ids.extend(short_ids);
         let mut models = HashMap::new();
-        models.insert(TownModel::Current, current?);
-        models.insert(TownModel::Shortest, shortest?);
-        models.insert(TownModel::Short, short?);
+        models.insert(TownModel::Current, current);
+        models.insert(TownModel::Shortest, shortest);
+        models.insert(TownModel::Short, short);
         models.insert(TownModel::ShortRss, rss?);
         // The mid regions the chain asks for (`getAllDataFromDb`, `getMid`).
         let mut mids = HashMap::new();
@@ -539,7 +562,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // S15b-3b: the life inputs are loaded (and their owned acquisitions started) only for a
         // request the snapshot will serve; a forwarded request starts none.
         let life = self.life.load(now, deadline).await;
+        let summary = self.summary_inputs(&town, grid, &history, ids, now);
         Ok(Snapshot {
+            summary,
             now,
             town,
             coord,
@@ -551,6 +576,74 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             history,
             air,
             life,
+        })
+    }
+}
+impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
+    /// S16: the summary inputs of a snapshot, or None when a station or ASOS read was not
+    /// complete (the history answer still loading or failed, a fold or load in flight, an ASOS
+    /// recovery run in progress). Grid families that could not be read forward the request
+    /// before this point.
+    fn summary_inputs(
+        &self,
+        town: &Doc,
+        grid: crate::history::Grid,
+        history: &OrderedJson,
+        mut ids: Vec<InputId>,
+        now: f64,
+    ) -> Option<GridInputs> {
+        let names = town.get("town").and_then(Val::as_doc)?;
+        let name = |k: &str| names.get(k).and_then(Val::as_str).map(str::to_owned);
+        let town_key = [name("first")?, name("second")?, name("third")?];
+        match history
+            .get("reason")
+            .and_then(OrderedJson::string)
+            .as_deref()
+        {
+            None | Some("station-unavailable") => {}
+            Some(_) => return None,
+        }
+        if !self.observations.settled(now as i64) {
+            return None;
+        }
+        let (hourly, city) = self.observations.page_inventory();
+        for (hour, at) in hourly {
+            let t = schedule::to_ms(hour);
+            ids.push(InputId {
+                family: "aws-hourly".into(),
+                start_ms: t,
+                end_ms: t,
+                fetched_at_ms: at.max(0.) as u64,
+                content_sha256: "-".into(),
+            });
+        }
+        for hour in city {
+            let t = schedule::to_ms(hour);
+            ids.push(InputId {
+                family: "city-obs".into(),
+                start_ms: t,
+                end_ms: t,
+                fetched_at_ms: 0,
+                content_sha256: "-".into(),
+            });
+        }
+        let station = history
+            .get("mapping")
+            .and_then(|m| m.get("stationId"))
+            .and_then(OrderedJson::string);
+        let asos = match station {
+            Some(station) => {
+                let fetched = self.observations.asos_settled(&station)?;
+                ids.extend(fetched.iter().filter_map(crate::summary::asos::input_id));
+                Some(AsosInputs { station, fetched })
+            }
+            None => None,
+        };
+        Some(GridInputs {
+            town: town_key,
+            grid: (grid.nx(), grid.ny()),
+            ids,
+            asos,
         })
     }
 }
@@ -660,6 +753,24 @@ fn apply_grid(docs: &mut GridDocs, family: Family, coord: Coord, f: &Fetched) {
         docs.save(family, rows);
     }
 }
+/// The S16 input identity of one grid acquisition: its publication through the last hour it
+/// can write (current: the slot; ultra-short: six hours; short: four days).
+fn grid_input_id(family: Family, kind: &str, f: &Fetched) -> Option<InputId> {
+    let p = partition_publication(&f.partition)?;
+    let start = schedule::to_ms(p);
+    let horizon = match family {
+        Family::Current => 0.,
+        Family::Shortest => 6. * HOUR_MS,
+        Family::Short => 4. * DAY_MS,
+    };
+    Some(InputId {
+        family: kind.to_owned(),
+        start_ms: start,
+        end_ms: start + horizon as i64,
+        fetched_at_ms: f.fetched_at_ms,
+        content_sha256: identity(f).2,
+    })
+}
 /// Whether an acquisition of `partition` was complete at `now`.
 fn present(fetched: &[Fetched], partition: &str, now: f64) -> bool {
     fetched
@@ -725,6 +836,8 @@ pub fn special_zone_docs(state: &ZoneState, area_codes: &[String]) -> Vec<Doc> {
 
 /// One request's inputs in memory.
 pub struct Snapshot {
+    /// S16 summary inputs (None: the reads were not complete).
+    summary: Option<GridInputs>,
     now: f64,
     town: Doc,
     coord: Coord,
@@ -901,5 +1014,8 @@ impl KmaStore for Snapshot {
     }
     fn as_of_ms(&self) -> Option<f64> {
         Some(self.now)
+    }
+    fn summary_inputs(&self) -> Option<GridInputs> {
+        self.summary.clone()
     }
 }

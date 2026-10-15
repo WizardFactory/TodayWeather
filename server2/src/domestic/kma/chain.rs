@@ -23,6 +23,8 @@ pub struct Cx<'a> {
     pub config: AssemblyConfig,
     /// `self.dbTownList` (loaded once per controller).
     pub towns: Option<Arr>,
+    /// S16: a JSON copy of the `_getDaySummaryList` rows `getPastMid` merged.
+    pub past_days: Option<Vec<crate::gateway::OrderedJson>>,
 }
 impl Cx<'_> {
     pub fn r(&self, key: &str) -> V {
@@ -227,12 +229,13 @@ impl KmaStore for Callbacks<'_> {
     }
 }
 
-pub fn run(
+/// Run the router list; also returns the `getPastMid` day-summary rows (S16).
+pub fn run_capturing(
     request: &KmaRequest,
     store: &dyn KmaStore,
     now: f64,
     config: AssemblyConfig,
-) -> Outcome {
+) -> (Outcome, Option<Vec<crate::gateway::OrderedJson>>) {
     let store = &Callbacks(store);
     let params = Ob::new();
     if let Some(r) = &request.region {
@@ -265,27 +268,33 @@ pub fn run(
         now,
         config,
         towns: None,
+        past_days: None,
     };
     for (name, step) in CHAIN {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| step(&mut cx)));
         match result {
             Ok(Flow::Next) => (),
-            Ok(Flow::Done(outcome)) => return outcome,
+            Ok(Flow::Done(outcome)) => return (outcome, cx.past_days),
             Err(payload) => {
                 let payload = match payload.downcast::<Forward>() {
-                    Ok(f) => return Outcome::Legacy(format!("{name}: {}", f.0)),
+                    Ok(f) => return (Outcome::Legacy(format!("{name}: {}", f.0)), None),
                     Err(p) => p,
                 };
                 match payload.downcast::<Thrown>() {
                     // Legacy Express turns an escaped exception into a 500 (or the process
                     // crashes for an async callback): never invent a reply, forward instead.
-                    Ok(t) => return Outcome::Legacy(format!("{name}: uncaught {}", t.0)),
+                    Ok(t) => {
+                        return (Outcome::Legacy(format!("{name}: uncaught {}", t.0)), None);
+                    }
                     Err(other) => std::panic::resume_unwind(other),
                 }
             }
         }
     }
-    Outcome::Legacy("router list ended without a reply".into())
+    (
+        Outcome::Legacy("router list ended without a reply".into()),
+        None,
+    )
 }
 
 /// `checkQueryValidation` (ControllerTown24h).

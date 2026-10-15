@@ -1,0 +1,63 @@
+{
+  "task": "S16",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2701",
+  "server2_paths": [
+    "server2/config/tasks/S16.json",
+    "server2/src/lib.rs",
+    "server2/src/summary/",
+    "server2/src/domestic/kma/mod.rs",
+    "server2/src/domestic/kma/chain.rs",
+    "server2/src/domestic/kma/mid.rs",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/observe.rs",
+    "server2/src/history/transport.rs",
+    "server2/src/world/air_store.rs",
+    "server2/src/world/store.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/tests/summary.rs",
+    "server2/tests/summary/",
+    "server2/src/history/mod.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/summary_s3.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2701.md",
+      "category": "documentation",
+      "reason": "S16 governing intent record; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2701.md",
+      "category": "documentation",
+      "reason": "S16 specification: summary layout, completeness, late revisions and the last-year lookup; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2701.md",
+      "category": "documentation",
+      "reason": "S16 execution plan, scenarios, checks and live-call record; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S16 daily summary section and update the summary layout line in section 4"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2701#issuecomment-6193783986",
+  "path_notes": {
+    "server2/src/summary/": "new module: summary model, summary/v2 S3 transport and store, grid/ASOS/VC derivation, the post-response recorder and the internal last-year lookup",
+    "server2/src/domestic/kma/mod.rs": "shared: KmaStore::summary_inputs (default None) and assemble_capturing",
+    "server2/src/domestic/kma/chain.rs": "shared: the chain context keeps a JSON copy of the getPastMid day summaries",
+    "server2/src/domestic/kma/mid.rs": "shared: get_past_mid records its _getDaySummaryList rows before merging (output unchanged)",
+    "server2/src/domestic/kma/backend.rs": "shared: optional summary sink called after a natively served response",
+    "server2/src/domestic/kma/source/mod.rs": "shared: the snapshot records summary inputs (identities and completeness)",
+    "server2/src/domestic/kma/source/observe.rs": "shared S15b-2 file: read completeness, page inventory and the ASOS view for the snapshot",
+    "server2/src/history/transport.rs": "shared S14 file: LIST and bounded-body helpers made pub(crate) for the summary transport",
+    "server2/src/world/air_store.rs": "shared: BoundedS3 admission permit for the summary transport",
+    "server2/src/world/store.rs": "shared S11 file: read stored raw VC fetches by first local date for VC summaries",
+    "server2/src/gateway/runtime.rs": "shared: the kma family builds the summary recorder on the shared S3 admission",
+    "server2/src/history/mod.rs": "shared S14 file: the transport module becomes pub(crate) so the summary transport reuses its LIST helpers",
+    "server2/tests/domestic/summary_s3.rs": "S16 end-to-end test over the S06 loopback S3 peer: the native KMA backend records grid summaries, late inputs, incomplete reads, and the lookup's on-demand ASOS and VC paths; reuses the S15b source_s3 seed helpers",
+    "server2/tests/domestic.rs": "registers summary_s3"
+  }
+}

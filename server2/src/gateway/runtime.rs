@@ -251,7 +251,15 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         .map_err(|_| GatewayError::InvalidConfiguration)?
         .with_air(airkorea, air)
         .with_life(Some(life));
-        crate::domestic::kma::backend::select_native(&backend, Arc::new(source))?;
+        // S16: daily summaries of natively served towns, written after the response through
+        // the same S3 admission.
+        let summaries: Arc<dyn crate::summary::SummarySink> =
+            Arc::new(crate::summary::Recorder::new(s3.clone()));
+        crate::domestic::kma::backend::select_native_with(
+            &backend,
+            Arc::new(source),
+            Some(summaries),
+        )?;
     }
     Ok(Some(Arc::new(Gateway::new(geocoder, backend))))
 }

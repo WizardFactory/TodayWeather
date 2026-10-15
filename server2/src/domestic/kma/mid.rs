@@ -525,7 +525,13 @@ fn ensure_daily(cx: &Cx) -> V {
     }
     mid
 }
-fn merge_mid_by_current(daily: &Arr, current: &V, request_date: &str) {
+/// `_mergeMidByCurrent`; returns a JSON copy of the merged day-summary rows (S16 records them
+/// before later steps mutate the shared row objects).
+fn merge_mid_by_current(
+    daily: &Arr,
+    current: &V,
+    request_date: &str,
+) -> Vec<crate::gateway::OrderedJson> {
     let rd = parse_int(&s(request_date));
     let past: Vec<V> = current
         .a()
@@ -534,14 +540,18 @@ fn merge_mid_by_current(daily: &Arr, current: &V, request_date: &str) {
         .filter(|c| parse_int(&c.get("date")) >= rd)
         .collect();
     let summaries = day_summary_list(&past);
+    let copy = summaries.iter().filter_map(super::js::to_json).collect();
     merge_list(daily, &summaries);
+    copy
 }
 pub fn get_past_mid(cx: &mut Cx) -> Flow {
     let mid = ensure_daily(cx);
     let (rd, _) = cx.time_value(9. - 7. * 24.);
     if cx.r("currentList").truthy() {
         let (daily, current) = (mid.get("dailyData").a().clone(), cx.r("currentList"));
-        let _ = catch(|| merge_mid_by_current(&daily, &current, &rd));
+        if let Ok(rows) = catch(|| merge_mid_by_current(&daily, &current, &rd)) {
+            cx.past_days = Some(rows);
+        }
         return Flow::Next;
     }
     let Ok((coord, _)) = cx.coord() else {
@@ -550,14 +560,16 @@ pub fn get_past_mid(cx: &mut Cx) -> Flow {
     let Ok(info) = read_town(cx, TownModel::Current, &coord, true) else {
         return Flow::Next;
     };
-    let _ = catch(|| {
+    if let Ok(rows) = catch(|| {
         let list = info.get("ret");
         cx.set("currentList", list.clone());
         for row in list.a().items() {
             time::convert_0h_to_24h(&row);
         }
-        merge_mid_by_current(mid.get("dailyData").a(), &list, &rd);
-    });
+        merge_mid_by_current(mid.get("dailyData").a(), &list, &rd)
+    }) {
+        cx.past_days = Some(rows);
+    }
     Flow::Next
 }
 /// `overlay(inputs)` inside `mergeMidWithShort`.
