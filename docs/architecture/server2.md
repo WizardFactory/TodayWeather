@@ -2568,9 +2568,12 @@ counts, positions and reasons only. A document is malformed when it is not JSON,
 ObjectId `_id`, repeats an `_id`, has a model field of the wrong BSON kind, uses an unsupported
 Extended JSON type, or has neither `fcmToken` nor `registrationId`; fields the model does not
 declare are kept. `push_registration_import IMPORT` (server2 S3 settings, as the S12 importer)
-restores the state, merges by `_id` (absent: insert in export order; identical: unchanged; a
-newer legacy `updatedAt`: replace; removed in server2: stays removed; otherwise the server2 change
-is kept), commits 1 MiB journal
+restores the state and merges by `_id`. Each imported record keeps the sha256 of the legacy
+document it came from, so a later run can tell who changed it: absent records are inserted in
+export order; a record removed in server2 stays removed; identical is unchanged; when only server2
+changed it (the legacy document equals the one imported before) server2 is kept; when only legacy
+changed it, it is replaced; when both changed, a newer legacy `updatedAt` wins, otherwise server2
+is kept (no date is never "newer"). It commits 1 MiB journal
 entries, re-plans after another writer's entry and writes a snapshot. A re-run with the same file
 writes nothing. The final run before cutover is an S20 operator step.
 

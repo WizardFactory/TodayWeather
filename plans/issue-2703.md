@@ -55,6 +55,6 @@ Task: issue-2703-s18a; sources: [intent](../intent/issue-2703.md), [spec](../spe
 No process wiring: the routes stay on legacy until S20, so a revert has no runtime effect. Risks:
 replica-set reply metadata absent from bodies (the app ignores bodies); rare exotic body shapes
 beyond the oracle (documented subset of `util.inspect` and Date strings); restore time grows with
-journal length between snapshots (at most 1,024 entries, read 8 at a time). Rejected: one S3 object per
+journal length between snapshots (1,024 entries, read 8 at a time; more while snapshot writes keep failing). Rejected: one S3 object per
 record (76k GETs to restore), a single whole-state object (66 MB rewrite per change), local-disk
 state (tokens on disk; S3 stays the source of truth).

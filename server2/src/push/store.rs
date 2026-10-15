@@ -76,21 +76,27 @@ pub const TOKEN_FIELDS: [&str; 2] = ["fcmToken", "registrationId"];
 /// The fields the legacy store queries by (`keyQuery`, `tokenQuery`, token renames).
 pub const KEY_FIELDS: [&str; 5] = ["type", "cityIndex", "id", "fcmToken", "registrationId"];
 
+/// A record as stored: `(n, _id, encoded document, import digest)`.
+pub type Encoded<'a> = (u64, &'a Oid, &'a [u8], Option<&'a str>);
+
 /// A stored record kept compact: the encoded document plus the fields queries match on.
 #[derive(Clone, Debug)]
 struct Stored {
     oid: Oid,
     doc: Box<[u8]>,
     keys: Box<[Val; 5]>,
+    /// sha256 of the legacy document as last imported (one-time copy only).
+    imported: Option<Box<str>>,
 }
 impl Stored {
-    fn new(record: &Record) -> Self {
+    fn new(record: &Record, imported: Option<Box<str>>) -> Self {
         let mut doc = String::new();
         super::ejson::write_obj(&record.doc, &mut doc);
         Self {
             oid: record.oid,
             doc: doc.into_bytes().into_boxed_slice(),
             keys: Box::new(KEY_FIELDS.map(|f| record.doc.get(f).clone())),
+            imported,
         }
     }
     fn record(&self) -> Record {
@@ -135,9 +141,12 @@ impl Collection {
     pub fn iter(&self) -> impl Iterator<Item = (u64, Record)> + '_ {
         self.records.iter().map(|(n, r)| (*n, r.record()))
     }
-    /// Records in natural order as `(n, _id, encoded document)` (snapshots, import planning).
-    pub fn iter_encoded(&self) -> impl Iterator<Item = (u64, &Oid, &[u8])> {
-        self.records.iter().map(|(n, r)| (*n, &r.oid, &r.doc[..]))
+    /// Records in natural order as `(n, _id, encoded document, import digest)` (snapshots,
+    /// import planning).
+    pub fn iter_encoded(&self) -> impl Iterator<Item = Encoded<'_>> {
+        self.records
+            .iter()
+            .map(|(n, r)| (*n, &r.oid, &r.doc[..], r.imported.as_deref()))
     }
     fn index(&mut self, n: u64, stored: &Stored, add: bool) {
         for i in 0..TOKEN_FIELDS.len() {
@@ -153,8 +162,15 @@ impl Collection {
             }
         }
     }
+    /// Store a record; an existing import digest at `n` is kept unless `imported` replaces it.
     pub fn put(&mut self, n: u64, record: Record) {
-        self.put_stored(n, Stored::new(&record));
+        self.put_imported(n, record, None);
+    }
+    pub fn put_imported(&mut self, n: u64, record: Record, imported: Option<&str>) {
+        let digest = imported
+            .map(Into::into)
+            .or_else(|| self.records.get(&n).and_then(|old| old.imported.clone()));
+        self.put_stored(n, Stored::new(&record, digest));
     }
     fn put_stored(&mut self, n: u64, stored: Stored) {
         if let Some(old) = self.records.remove(&n) {
@@ -241,7 +257,11 @@ impl State {
     pub fn apply(&mut self, changes: &[Change]) {
         for change in changes {
             match &change.record {
-                Some(r) => self.coll_mut(change.coll).put(change.n, r.clone()),
+                Some(r) => self.coll_mut(change.coll).put_imported(
+                    change.n,
+                    r.clone(),
+                    change.imported.as_deref(),
+                ),
                 None => {
                     let coll = self.coll_mut(change.coll);
                     coll.remove(change.n);
@@ -261,6 +281,8 @@ pub struct Change {
     /// The record's `_id` (kept for a removal, so a re-run import cannot revive it).
     pub oid: Oid,
     pub record: Option<Record>,
+    /// For an imported legacy record: sha256 of its encoded document (`None`: keep the digest).
+    pub imported: Option<String>,
 }
 
 /// MongoDB equality for one query value against a stored field value.
@@ -420,6 +442,7 @@ impl<'a> Txn<'a> {
                     .as_ref()
                     .map_or_else(|| self.removed[&(*c, *n)], |r| r.oid),
                 record: r.clone(),
+                imported: None,
             })
             .collect()
     }

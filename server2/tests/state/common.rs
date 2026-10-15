@@ -282,6 +282,7 @@ pub async fn seed(s3: &MemS3, records: &[(Coll, Record)]) {
             n: n as u64,
             oid: r.oid,
             record: Some(r.clone()),
+            imported: None,
         })
         .collect();
     let mut durable = Durable::new(

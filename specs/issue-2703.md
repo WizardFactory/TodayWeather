@@ -56,7 +56,8 @@ Task: issue-2703-s18a; source: [intent](../intent/issue-2703.md); base 1d60f728;
   `$numberInt`, `$numberLong`, `$numberDouble`. Malformed: not JSON, no ObjectId `_id`, duplicate
   `_id`, model field of the wrong kind, unsupported type, no token. Report: counts, positions,
   reasons; import file mode 0600.
-- Importer: restore; merge by `_id` (insert / unchanged / newer legacy `updatedAt` replaces / removed
-  in server2 stays removed / server2 kept); 1 MiB journal entries; re-plan after a conflict or void;
+- Importer: restore; merge by `_id` with the sha256 of the legacy document recorded at import
+  (insert / removed in server2 stays removed / unchanged / only server2 changed: kept / only legacy
+  changed: replaced / both changed: newer legacy `updatedAt` replaces, otherwise kept); 1 MiB journal entries; re-plan after a conflict or void;
   snapshot when anything changed. The converter refuses an existing output path (no reused
   permissions or symbolic-link targets) and creates the import file 0600.

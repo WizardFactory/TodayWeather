@@ -221,3 +221,89 @@ fn records_of(state: &server2::push::State) -> Vec<(Coll, server2::push::Record)
     all.sort_by_key(|(n, ..)| *n);
     all.into_iter().map(|(_, c, r)| (c, r)).collect()
 }
+
+async fn rename(s3: &MemS3, old: &str, new: &str) -> String {
+    let service = start(
+        s3,
+        FixedClock::at("2026-10-15T04:00:00.000Z"),
+        fast_config(),
+    )
+    .await;
+    let body = serde_json::to_vec(&serde_json::json!({"newToken": new, "oldToken": old})).unwrap();
+    let request = Request::builder()
+        .method("PUT")
+        .uri("/v000902/push")
+        .header("content-type", "application/json")
+        .header("content-length", body.len())
+        .body(HttpBody::from(body))
+        .unwrap();
+    let response = service.handle(request).await.unwrap();
+    String::from_utf8(super::common::body(response).await).unwrap()
+}
+
+/// Documents without (or with a null) `updatedAt`: who changed what is decided by the digest of
+/// the legacy document imported before, not by dates.
+#[tokio::test]
+async fn undated_records_keep_server2_changes_and_take_legacy_changes() {
+    let line = |id: u32, token: &str, extra: &str| {
+        format!(
+            r#"{{"_id":{{"$oid":"5a1f000000000000000002{id:02}"}},"type":"ios","fcmToken":"{token}","cityIndex":{id},"id":{id}{extra}}}"#
+        )
+    };
+    let export = [
+        line(1, "u-1", ""),
+        line(2, "u-2", r#","updatedAt":null"#),
+        line(3, "u-3", ""),
+    ]
+    .join("\n");
+    let mut out = String::new();
+    let mut report = migrate::Report::default();
+    migrate::convert(Coll::Alarm, export.as_bytes(), &mut out, &mut report);
+    assert!(report.malformed.is_empty());
+    let records = migrate::parse_import(out.as_bytes()).unwrap();
+    let s3 = MemS3::new();
+    assert_eq!(import(&s3, &records, 1 << 20).await.inserted, 3);
+    // Server2 changes the first two through the API (a token rename does not touch updatedAt).
+    assert_eq!(
+        rename(&s3, "u-1", "s-1").await,
+        r#"[{"n":1,"nModified":1,"ok":1},{"n":0,"nModified":0,"ok":0}]"#
+            .replace(",\"ok\":0}]", ",\"ok\":1}]")
+    );
+    rename(&s3, "u-2", "s-2").await;
+    // Re-running the same copy keeps both server2 changes (legacy did not change).
+    let rerun = import(&s3, &records, 1 << 20).await;
+    assert_eq!((rerun.unchanged, rerun.kept, rerun.updated), (1, 2, 0));
+    // Legacy changes the third (untouched in server2) and the first (changed in server2).
+    let mut later = String::new();
+    let export2 = [
+        line(1, "u-1b", ""),
+        line(2, "u-2", r#","updatedAt":null"#),
+        line(3, "u-3b", ""),
+    ]
+    .join("\n");
+    migrate::convert(
+        Coll::Alarm,
+        export2.as_bytes(),
+        &mut later,
+        &mut migrate::Report::default(),
+    );
+    let records2 = migrate::parse_import(later.as_bytes()).unwrap();
+    let third = import(&s3, &records2, 1 << 20).await;
+    assert_eq!(
+        (third.updated, third.kept),
+        (1, 2),
+        "only the record server2 left alone follows legacy"
+    );
+    let mut durable = Durable::new(
+        Arc::new(s3.clone()),
+        DurableConfig::default(),
+        Arc::new(Counters::default()),
+    );
+    let state = durable.restore().await.unwrap();
+    let tokens: Vec<String> = state
+        .coll(Coll::Alarm)
+        .iter()
+        .map(|(_, r)| r.token("fcmToken").unwrap().to_owned())
+        .collect();
+    assert_eq!(tokens, ["s-1", "s-2", "u-3b"]);
+}

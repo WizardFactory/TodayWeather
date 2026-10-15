@@ -152,7 +152,9 @@ pub fn entry_bytes(seq: u64, next_n: u64, nonce: &str, changes: &[Change]) -> Ve
     );
     for change in changes {
         match &change.record {
-            Some(r) => ejson::write_record(change.coll, change.n, r, &mut s),
+            Some(r) => {
+                ejson::write_record(change.coll, change.n, r, change.imported.as_deref(), &mut s)
+            }
             None => s.push_str(&format!(
                 "{{\"c\":\"{}\",\"n\":{},\"_id\":\"{}\",\"removed\":true}}",
                 change.coll.collection(),
@@ -216,6 +218,7 @@ fn parse_entry(seq: u64, body: &[u8]) -> Result<Option<(u64, Vec<Change>)>, Stat
                 n,
                 oid,
                 record: None,
+                imported: None,
             });
         } else {
             let (coll, n, record) = ejson::read_record(&item)?;
@@ -224,6 +227,7 @@ fn parse_entry(seq: u64, body: &[u8]) -> Result<Option<(u64, Vec<Change>)>, Stat
                 n,
                 oid: record.oid,
                 record: Some(record),
+                imported: ejson::read_imported(&item),
             });
         }
     }
@@ -364,7 +368,10 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
                         state.coll_mut(c).mark_deleted(oid);
                     } else {
                         let (c, n, record) = ejson::read_record(&r)?;
-                        state.coll_mut(c).put(n, record);
+                        let imported = ejson::read_imported(&r);
+                        state
+                            .coll_mut(c)
+                            .put_imported(n, record, imported.as_deref());
                     }
                     seen += 1;
                 }
@@ -577,18 +584,13 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
     /// Serialize a full snapshot of `state` (CPU only; the caller holds its read access).
     pub fn prepare_snapshot(&self, state: &State) -> SnapshotPlan {
         let id = format!("{PREFIX}/snapshot/{:012}-{}", state.seq, nonce());
-        let mut all: Vec<(u64, Coll, &Oid, &[u8])> = state
+        let mut all: Vec<(Coll, super::store::Encoded<'_>)> = state
             .alarms
             .iter_encoded()
-            .map(|(n, o, d)| (n, Coll::Alarm, o, d))
-            .chain(
-                state
-                    .alerts
-                    .iter_encoded()
-                    .map(|(n, o, d)| (n, Coll::Alert, o, d)),
-            )
+            .map(|e| (Coll::Alarm, e))
+            .chain(state.alerts.iter_encoded().map(|e| (Coll::Alert, e)))
             .collect();
-        all.sort_by_key(|(n, ..)| *n);
+        all.sort_by_key(|(_, (n, ..))| *n);
         let mut parts: Vec<(String, Vec<u8>, usize)> = Vec::new();
         let mut current = String::new();
         let mut count = 0usize;
@@ -605,9 +607,9 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
             .collect();
         let lines = all
             .into_iter()
-            .map(|(n, c, oid, doc)| {
+            .map(|(c, (n, oid, doc, imported))| {
                 let mut line = String::new();
-                ejson::write_encoded(c, n, oid, doc, &mut line);
+                ejson::write_encoded(c, n, oid, doc, imported, &mut line);
                 line
             })
             .chain(removed.iter().map(|(c, oid)| {

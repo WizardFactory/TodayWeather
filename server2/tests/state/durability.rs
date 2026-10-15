@@ -275,23 +275,28 @@ async fn two_writers_racing_for_the_same_sequences_converge() {
         for (name, service) in [("a", a.clone()), ("b", b.clone())] {
             tasks.push(tokio::spawn(async move {
                 let token = format!("{name}-{i}");
-                call(
+                let answer = call(
                     &service,
                     "POST",
                     "/v000902/push-list",
                     serde_json::json!([alarm(&token, i)]),
                 )
-                .await
+                .await;
+                (token, answer)
             }));
         }
     }
+    let mut acknowledged = std::collections::BTreeSet::new();
     for t in tasks {
-        let (status, body) = t.await.unwrap();
+        let (token, (status, body)) = t.await.unwrap();
         // A writer that loses three races in a row answers the store error; never a false success.
         assert!(
             status == 200 && body.contains("upserted") || body == "[null]",
             "{status} {body}"
         );
+        if body.contains("upserted") {
+            acknowledged.insert(token);
+        }
     }
     let restored = start(&s3, FixedClock::at(T0), fast_config()).await;
     let shared = restored.state();
@@ -304,11 +309,11 @@ async fn two_writers_racing_for_the_same_sequences_converge() {
             seen.insert(s);
         }
         assert_eq!(seen.len() as u64, state.seq, "contiguous journal");
-        // Every acknowledged registration is in the restored state, each once.
+        // Exactly the acknowledged registrations are in the restored state, each once.
         let tokens = tokens(&state, Coll::Alarm);
-        let unique: std::collections::BTreeSet<_> = tokens.iter().collect();
+        let unique: std::collections::BTreeSet<String> = tokens.iter().cloned().collect();
         assert_eq!(unique.len(), tokens.len());
-        assert!(tokens.len() >= 18, "{tokens:?}");
+        assert_eq!(unique, acknowledged);
     }
     // Both writers converge on the same state when they next plan.
     call(

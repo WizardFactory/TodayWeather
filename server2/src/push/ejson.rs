@@ -53,21 +53,35 @@ fn write_str(s: &str, out: &mut String) {
 }
 
 /// One stored record as a JSON line: `{"c":collection,"n":order,"_id":hex,"doc":{...}}`.
-pub fn write_record(c: Coll, n: u64, r: &Record, out: &mut String) {
+pub fn write_record(c: Coll, n: u64, r: &Record, imported: Option<&str>, out: &mut String) {
     let mut doc = String::new();
     write_obj(&r.doc, &mut doc);
-    write_encoded(c, n, &r.oid, doc.as_bytes(), out);
+    write_encoded(c, n, &r.oid, doc.as_bytes(), imported, out);
 }
-/// [`write_record`] for an already encoded document.
-pub fn write_encoded(c: Coll, n: u64, oid: &Oid, doc: &[u8], out: &mut String) {
+/// [`write_record`] for an already encoded document; `imported` adds the import digest.
+pub fn write_encoded(
+    c: Coll,
+    n: u64,
+    oid: &Oid,
+    doc: &[u8],
+    imported: Option<&str>,
+    out: &mut String,
+) {
     out.push_str("{\"c\":\"");
     out.push_str(c.collection());
-    out.push_str(&format!(
-        "\",\"n\":{n},\"_id\":\"{}\",\"doc\":",
-        oid_hex(oid)
-    ));
+    out.push_str(&format!("\",\"n\":{n},\"_id\":\"{}\",", oid_hex(oid)));
+    if let Some(digest) = imported {
+        out.push_str(&format!("\"imported\":\"{digest}\","));
+    }
+    out.push_str("\"doc\":");
     out.push_str(std::str::from_utf8(doc).expect("encoded documents are UTF-8"));
     out.push('}');
+}
+/// The import digest of a record line, if any.
+pub fn read_imported(v: &OrderedJson) -> Option<String> {
+    v.get("imported")
+        .and_then(OrderedJson::string)
+        .filter(|d| d.len() == 64 && d.bytes().all(|b| b.is_ascii_hexdigit()))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -204,7 +218,7 @@ mod tests {
         doc.set("geo", Val::Arr(vec![Val::Num(127.1), Val::Num(37.5)]));
         let r = Record { oid: [7; 12], doc };
         let mut s = String::new();
-        write_record(Coll::Alert, 5, &r, &mut s);
+        write_record(Coll::Alert, 5, &r, None, &mut s);
         let parsed = OrderedJson::parse(s.as_bytes()).unwrap();
         let (c, n, back) = read_record(&parsed).unwrap();
         assert_eq!((c, n), (Coll::Alert, 5));

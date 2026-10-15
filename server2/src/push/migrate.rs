@@ -7,9 +7,9 @@
 use super::durable::{Commit, Durable, StateError};
 use super::ejson::{self, read_oid, read_val};
 use super::mongoose::{Ty, schema};
-use super::store::{Change, Coll, Oid, Record, State, oid_hex, parse_oid};
+use super::store::{Change, Coll, Encoded, Oid, Record, State, oid_hex, parse_oid};
 use crate::gateway::OrderedJson;
-use crate::storage::CatalogTransport;
+use crate::storage::{CatalogTransport, sha256};
 use crate::world::js::{Obj, Val};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -212,19 +212,25 @@ pub struct ImportCounts {
     pub inserted: usize,
     pub updated: usize,
     pub unchanged: usize,
-    /// Records server2 changed after the legacy copy (newer `updatedAt`); left as they are.
+    /// Records server2 changed after the legacy copy and legacy did not (or legacy is not
+    /// newer); left as they are.
     pub kept: usize,
     /// Records server2 removed after an earlier copy; not re-created.
     pub deleted: usize,
 }
 
-/// The changes that merge `records` into `state` by `_id`. A record server2 removed after an
-/// earlier copy stays removed.
+/// The changes that merge `records` into `state` by `_id`. Each imported record keeps the
+/// digest of the legacy document it came from, so a later run can tell who changed it:
+/// - absent: inserted; removed in server2 after an earlier copy: stays removed (`deleted`);
+/// - identical: `unchanged`;
+/// - the legacy document is the one imported before (only server2 changed it): `kept`;
+/// - server2 left the imported document as it was (only legacy changed it): `updated`;
+/// - both changed: the newer `updatedAt` wins when both have one (`updated`), else `kept`.
 pub fn plan_import(state: &State, records: &[(Coll, Record)]) -> (Vec<Change>, u64, ImportCounts) {
-    let mut by_oid: HashMap<(Coll, Oid), (u64, &[u8])> = HashMap::new();
+    let mut by_oid: HashMap<(Coll, Oid), Encoded<'_>> = HashMap::new();
     for c in [Coll::Alarm, Coll::Alert] {
-        for (n, oid, doc) in state.coll(c).iter_encoded() {
-            by_oid.insert((c, *oid), (n, doc));
+        for e in state.coll(c).iter_encoded() {
+            by_oid.insert((c, *e.1), e);
         }
     }
     let mut next_n = state.next_n;
@@ -233,36 +239,38 @@ pub fn plan_import(state: &State, records: &[(Coll, Record)]) -> (Vec<Change>, u
     for (c, record) in records {
         let mut encoded = String::new();
         ejson::write_obj(&record.doc, &mut encoded);
+        let digest = sha256(encoded.as_bytes());
         if state.coll(*c).is_deleted(&record.oid) {
             counts.deleted += 1;
             continue;
         }
+        let change = |n: u64| Change {
+            coll: *c,
+            n,
+            oid: record.oid,
+            record: Some(record.clone()),
+            imported: Some(digest.clone()),
+        };
         match by_oid.get(&(*c, record.oid)) {
             None => {
-                changes.push(Change {
-                    coll: *c,
-                    n: next_n,
-                    oid: record.oid,
-                    record: Some(record.clone()),
-                });
+                changes.push(change(next_n));
                 next_n += 1;
                 counts.inserted += 1;
             }
-            Some((_, existing)) if *existing == encoded.as_bytes() => counts.unchanged += 1,
-            Some((n, _)) => {
+            Some((_, _, existing, _)) if *existing == encoded.as_bytes() => counts.unchanged += 1,
+            Some((_, _, _, Some(previous))) if *previous == digest => counts.kept += 1,
+            Some((n, _, existing, Some(previous))) if sha256(existing) == *previous => {
+                changes.push(change(*n));
+                counts.updated += 1;
+            }
+            Some((n, ..)) => {
                 let existing = state.coll(*c).get(*n).expect("indexed record");
-                let newer = match (existing.doc.get("updatedAt"), record.doc.get("updatedAt")) {
-                    (Val::Date(old), Val::Date(new)) => new > old,
-                    (Val::Date(_), _) => false,
-                    _ => true,
-                };
+                let newer = matches!(
+                    (existing.doc.get("updatedAt"), record.doc.get("updatedAt")),
+                    (Val::Date(old), Val::Date(new)) if new > old
+                );
                 if newer {
-                    changes.push(Change {
-                        coll: *c,
-                        n: *n,
-                        oid: record.oid,
-                        record: Some(record.clone()),
-                    });
+                    changes.push(change(*n));
                     counts.updated += 1;
                 } else {
                     counts.kept += 1;
@@ -291,7 +299,13 @@ pub async fn import<T: CatalogTransport + Send + Sync + 'static>(
         for change in &changes[done..] {
             let mut line = String::new();
             match &change.record {
-                Some(r) => ejson::write_record(change.coll, change.n, r, &mut line),
+                Some(r) => ejson::write_record(
+                    change.coll,
+                    change.n,
+                    r,
+                    change.imported.as_deref(),
+                    &mut line,
+                ),
                 None => line.push_str("{\"c\":\"alertpushes\",\"n\":0,\"removed\":true}"),
             }
             if take > 0 && size + line.len() + 1 > limit {
