@@ -67,10 +67,13 @@ Inputs relevant to KST date D: grid acquisitions published in `[D 00:00 - 24 h, 
 station pages for hours `(D 00:00, D+1 00:00]`, ASOS ranges covering D.
 
 The recorder runs after a natively served response, outside the request wait. Per
-(source, key, date) it skips an input digest it already examined, and writes a new revision only
-when the values differ from the newest stored revision and its newest input is not older. A cold
-process lists the date prefix and reads the newest revision first. At most two record tasks run
-at once (more are dropped and repeated by a later request); memory keeps at most 65,536 entries.
+(source, key, date) it skips an input digest it already examined. A new digest lists the date
+prefix (another process may have written) and writes a revision when its newest input is newer
+than the stored newest revision's (also with equal values, so the stored order follows the
+inputs), or as new with other values; an older input set never supersedes a newer one. Record
+work is serialized; at most two record tasks run at once (more are dropped and repeated by a
+later request); memory keeps at most 65,536 entries. Before 01:00 KST yesterday is not stored
+(its `2400` hour is still the live minute-updated row).
 
 ## Last-year lookup (internal)
 
@@ -80,7 +83,8 @@ ASOS (stored; when missing, one on-demand acquisition of `[base-3, base+3]` for 
 station through the S15b-2 funded acquirer, published to S06, its complete days stored; a
 concurrent lookup waits for it, a cancelled or failed one releases the range, a finished one is
 not repeated for 24 h), then VC (derived from the stored raw VC records of that date each time;
-a new revision is stored when newer records give other values; never from the VC provider). The
+stored under the same rule as the recorder, so newer records are stored also with equal values;
+never from the VC provider). The
 first complete summary wins. A failed S3 read, a provider failure or an unfinished concurrent
 acquisition at the deadline returns an error instead of a lower-priority answer; `03`/empty means
 absent. Nothing exposes the
