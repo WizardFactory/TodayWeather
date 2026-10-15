@@ -487,7 +487,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             (folded, history)
         };
         let dust_wanted = air_input::airkorea_forecast_requested(&request.query);
-        let (zones, (current, shortest, short, rss), (stations, history), air, life) = tokio::join!(
+        let (zones, (current, shortest, short, rss), (stations, history), air) = tokio::join!(
             self.zones(now, deadline),
             async {
                 tokio::join!(
@@ -500,7 +500,6 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             observations,
             self.air
                 .load(&town, &region, &city, dust_wanted, now, deadline),
-            self.life.load(now, deadline),
         );
         let zones = zones?;
         let mut models = HashMap::new();
@@ -537,6 +536,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .zone_state(now as i64, deadline)
             .await
             .map_err(|e| format!("warning zone state unavailable: {}", e.message()))?;
+        // S15b-3b: the life inputs are loaded (and their owned acquisitions started) only for a
+        // request the snapshot will serve; a forwarded request starts none.
+        let life = self.life.load(now, deadline).await;
         Ok(Snapshot {
             now,
             town,

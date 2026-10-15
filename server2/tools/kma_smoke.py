@@ -76,8 +76,7 @@ def kma_env(endpoint):
     """Placeholder data.go.kr settings; every provider root is the loopback origin."""
     root = endpoint + '/'
     return dict(SERVER2_DATA_GO_KR_KEYS='["s15b2-local-placeholder-key"]', SERVER2_DATA_GO_KR_DAILY_UNITS='100',
-                SERVER2_DATA_GO_KR_BASE_URL=root, SERVER2_KMA_BASE_URL=root, SERVER2_KMA_WEATHER_BASE_URL=root,
-                SERVER2_MFDS_BASE_URL=root)
+                SERVER2_DATA_GO_KR_BASE_URL=root, SERVER2_KMA_BASE_URL=root, SERVER2_KMA_WEATHER_BASE_URL=root)
 
 
 def start(binary, endpoint, families, s3=None):

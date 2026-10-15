@@ -7,11 +7,11 @@
     "server2/src/domestic/mfds.rs",
     "server2/src/domestic/mod.rs",
     "server2/src/domestic/acquire.rs",
+    "server2/src/providers/public.rs",
     "server2/src/gateway/runtime.rs",
     "server2/tests/domestic.rs",
     "server2/tests/domestic/",
-    "server2/tests/gateway/runtime.rs",
-    "server2/tools/kma_smoke.py"
+    "server2/tests/gateway/runtime.rs"
   ],
   "outside": [
     {
@@ -41,8 +41,8 @@
     "server2/src/domestic/mfds.rs": "new keyless MFDS risk.do acquisition (legacy lib/foodPoisoning.js fetch/parse) on the S08 public transport bounds",
     "server2/src/domestic/mod.rs": "shared: registers the mfds module",
     "server2/src/domestic/acquire.rs": "shared S13 file: DomesticAcquirer::acquire_mfds (one attempt inside the legacy 10 s deadline)",
-    "server2/src/gateway/runtime.rs": "shared: kma builds one S15b-2 data.go.kr acquirer for ASOS and the life index/KASI, and the MFDS root (SERVER2_MFDS_BASE_URL)",
-    "server2/tools/kma_smoke.py": "shared S15b-1/S15b-2 smoke: SERVER2_MFDS_BASE_URL points at the loopback origin too, so the smoke still reaches no provider",
-    "server2/tests/domestic/": "life.rs and life_s3.rs tests, fixtures/life.json.gz (pinned legacy oracle) and fixtures/LIFE-PROVENANCE.md"
+    "server2/src/gateway/runtime.rs": "shared: kma builds one S15b-2 data.go.kr acquirer for ASOS and the life index/KASI, and the MFDS acquirer (production endpoint, no new setting)",
+    "server2/tests/domestic/": "life.rs and life_s3.rs tests, fixtures/life.json.gz (pinned legacy oracle) and fixtures/LIFE-PROVENANCE.md",
+    "server2/src/providers/public.rs": "Shared S08 file: HttpPublicTransport::without_redirects (new() unchanged) for the MFDS acquisition (legacy fetchRisk accepts only a direct 200; review S15b3b-R4)"
   }
 }

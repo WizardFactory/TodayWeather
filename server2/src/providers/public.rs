@@ -32,10 +32,18 @@ pub struct HttpPublicTransport {
 }
 impl HttpPublicTransport {
     pub fn new(maximum: usize) -> Result<Self, ProviderTransportError> {
+        Self::build(maximum, true)
+    }
+    /// A keyless transport that never follows a redirect (the answer of the first request is
+    /// final), for providers whose legacy client accepted only a direct 200 (S15b-3b MFDS).
+    pub fn without_redirects(maximum: usize) -> Result<Self, ProviderTransportError> {
+        Self::build(maximum, false)
+    }
+    fn build(maximum: usize, follow: bool) -> Result<Self, ProviderTransportError> {
         if maximum == 0 || maximum > 8 * 1024 * 1024 {
             return Err(ProviderTransportError::Invalid);
         }
-        let redirect = reqwest::redirect::Policy::custom(|attempt| {
+        let same_origin = reqwest::redirect::Policy::custom(|attempt| {
             let Some(first) = attempt.previous().first() else {
                 return attempt.stop();
             };
@@ -50,6 +58,11 @@ impl HttpPublicTransport {
             }
             attempt.follow()
         });
+        let redirect = if follow {
+            same_origin
+        } else {
+            reqwest::redirect::Policy::none()
+        };
         let client = reqwest::Client::builder()
             .http1_max_headers(32)
             .redirect(redirect)

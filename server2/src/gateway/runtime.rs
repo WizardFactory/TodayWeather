@@ -162,10 +162,10 @@ pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
         // S15b-3 adds request-time AirKorea
         // acquisition (`AIRKOREA_SECRET_KEYS`, `SERVER2_AIRKOREA_DAILY_UNITS`) and the air
         // fallback through the shared air chain; S15b-3b the life index and KASI on the same
-        // data.go.kr acquirer and the keyless MFDS table (`SERVER2_MFDS_BASE_URL`).
+        // data.go.kr acquirer and the keyless MFDS table (production endpoint, no setting).
         let airkorea = kma_airkorea(var, &s3)?;
         let daily = Arc::new(kma_acquirer(var, s3.clone())?);
-        let life = kma_life(var, &s3, daily.clone())?;
+        let life = kma_life(&s3, daily.clone())?;
         let air: Option<Arc<dyn crate::world::AirSource>> =
             air.map(|a| a as Arc<dyn crate::world::AirSource>);
         let source = crate::domestic::kma::source::S3Source::new(
@@ -222,16 +222,28 @@ type DailyKma = crate::domestic::kma::source::observe::DailyAcquirer<
     BoundedS3<HttpS3Transport>,
 >;
 fn kma_life(
-    var: Var,
     s3: &BoundedS3<HttpS3Transport>,
     daily: Arc<DailyKma>,
 ) -> Result<Arc<dyn crate::domestic::kma::source::life_live::LifeAcquire>, GatewayError> {
     use crate::domestic::kma::source::life_live::{LifeSettings, LiveLife};
-    let settings = LifeSettings::from_vars(var).map_err(|_| GatewayError::InvalidConfiguration)?;
+    let settings = LifeSettings::default();
     let store =
         crate::storage::CatalogStore::new(s3.clone(), crate::storage::CatalogLimits::default())
             .map_err(|_| GatewayError::InvalidConfiguration)?;
-    Ok(Arc::new(LiveLife::new(settings, daily, Arc::new(store))))
+    let mfds = crate::domestic::kma::source::life_live::mfds_acquirer(
+        Arc::new(
+            crate::providers::HttpProviderTransport::new(1024 * 1024)
+                .map_err(|_| GatewayError::InvalidConfiguration)?,
+        ),
+        Arc::new(SystemClock),
+    )
+    .map_err(|_| GatewayError::InvalidConfiguration)?;
+    Ok(Arc::new(LiveLife::new(
+        settings,
+        daily,
+        Arc::new(mfds),
+        Arc::new(store),
+    )))
 }
 /// The process environment entrypoint.
 pub fn configured_gateway() -> Result<Option<Arc<Gateway>>, GatewayError> {

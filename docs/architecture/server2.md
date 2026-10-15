@@ -1617,7 +1617,7 @@ task-owned test peers, and test doubles (quota, transport) live inside the tests
 | World weather | `VC_SECRET_KEY`, `SERVER2_WORLD_VC_DAILY_UNITS`, `SERVER2_WORLD_VC_QUOTA_ID`, `SERVER2_WORLD_VC_URL` | URL defaults to the legacy Timeline root `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/`. |
 | World air | `SERVER2_WORLD_AIR_<GOOGLE\|OPENWEATHER\|WAQI>_KEY`, `_MONTHLY_UNITS`, `_QUOTA_ID`, `_URL` | A provider takes part when its key is set (units and owner then required); URLs default to `https://airquality.googleapis.com/`, `https://api.openweathermap.org/`, `https://api.waqi.info/`. No key: legacy no-provider output. |
 | KMA AirKorea (S15b-3a) | `AIRKOREA_SECRET_KEYS` (legacy name), `SERVER2_AIRKOREA_DAILY_UNITS`, `SERVER2_DATA_GO_KR_URL` | Read only with `kma`. No usable key: stored AirKorea records only. A key needs its S08 units per key and KST day; the root defaults to `https://apis.data.go.kr/`. The `kma` air fallback uses the world air settings above through the same process air chain. |
-| KMA life inputs (S15b-3b) | `SERVER2_MFDS_BASE_URL` | Read only with `kma`. UV V5, pollen V3 and KASI use the S15b-2 data.go.kr acquirer (`SERVER2_DATA_GO_KR_KEYS`, `SERVER2_DATA_GO_KR_DAILY_UNITS`, `SERVER2_DATA_GO_KR_BASE_URL`): one S08 quota owner per key and KST day across ASOS and these services, one key ring per service. MFDS is keyless; its root defaults to `https://poisonmap.mfds.go.kr/` (HTTPS or loopback HTTP, ending in `/`, no query). |
+| KMA life inputs (S15b-3b) | none new | Read only with `kma`. UV V5, pollen V3 and KASI use the S15b-2 data.go.kr acquirer (its key and unit settings): one S08 quota owner per key and KST day across ASOS and these services, one key ring per service. MFDS is keyless at the production endpoint legacy hard-codes (`https://poisonmap.mfds.go.kr/api/risk.do`); per AK 2026-10-15 no new `SERVER2_*` provider setting is added (S10e converts the existing ones to the legacy names). |
 
 `FundedQuota` now opens one S08 budget store per key and UTC day from configured limits,
 claims at most 50 units per authority block, and still funds every possible attempt of a
@@ -2143,7 +2143,7 @@ assembles a native answer. Every input is a national dataset shared by all reque
 | `area_no`, `area_no_near` | Repository lists `20160704_AreaNoResutl` and `20180119_kma_lifeindex_areano.csv`, copied into `source/data` ([provenance](../../server2/src/domestic/kma/source/data/PROVENANCE.md)) | `utils/updateAreaNo.js` (2016 upsert by town), `utils/update.areano.to.db.js` (existing town: `$set {areaNo, updatedAt}`; a new town's Kakao geocode throws at `x.toFixed` on string coordinates, so none was stored) | `controllerTown.getLifeIndexKma` `findAreaNo` L2410 (`find({town}).limit(1)`) and `findNearAreaNo` L2451 (`$near`, `$maxDistance` 0.3, `limit(3)`) |
 | `life_index` | S13 `uv-idx-v5` and `oak|pine|weeds-pollen-v3` (all areas) of the last 14 days | `lifeIndexKmaRequester` `convertUvItemsV5` L1209, `convertPollenItemsV3` L1446, `saveLifeIndex2` L1027, `_removeOldData` L1045, the per-kind `lastIssued` skip L1331/L1588 | `lifeIndexKmaController._fromLifeIndexDb2` L267 (`find({areaNo})`) via `appendData2` L336 |
 | `rise_set` | S13a `kasi-area-rise-set` (one record per area and day) | `kasi.riseset.controller` `gatherAreaRiseSetFromApi` L771 (UTC days D-8..D+9, hourly at minute 55), `updateAreaRiseSetFromApi` L674 (a stored day is skipped), `_apiRaw2modelKasiRiseSet` L623, `_updateKasiRiseSet` L646 | `controllerTown.getRiseSetInfo` L3345 → `getRiseSetList` L582 (nearest stored document by `$near` without a bound, that location's days, `_model2RiseSet`; any error is `[]`, and legacy then computes rise/set) |
-| `food_poisoning` | New keyless `mfds-food-poisoning` acquisition (`domestic::mfds`, one per 08:20/12:20/17:20 KST slot) | `lib/foodPoisoning.js` `fetchRisk` L60 (one GET, 10 s, 1 MiB, no retry), `slot`/`due` L127/L136, `parse` L22, `collect` L141 (`updateOne({_id, publication <= }, $set, upsert)`) | `foodPoisoning.append` L178 via `controllerTown` L2544 |
+| `food_poisoning` | New keyless `mfds-food-poisoning` acquisition (`domestic::mfds`, one per 08:20/12:20/17:20 KST slot; its own keyless transport follows no redirect and stops reading at 1 MiB) | `lib/foodPoisoning.js` `fetchRisk` L60 (one GET, 10 s, 1 MiB, no retry), `slot`/`due` L127/L136, `parse` L22, `collect` L141 (`updateOne({_id, publication <= }, $set, upsert)`) | `foodPoisoning.append` L178 via `controllerTown` L2544 |
 
 **Provider documentation and live shapes (2026-10-15).** UV is `LivingWthrIdxServiceV5/getUVIdxV5`
 (3,851 areas, four pages of 1,000, `hN` strings); pollen is `HealthWthrIdxServiceV3`
@@ -2158,18 +2158,26 @@ reader answer stays byte-identical. KASI `getAreaRiseSetInfo` answers one item p
 keyless web endpoint without a published API document; legacy `lib/foodPoisoning.js` is followed
 (267 rows, `regDatetime` `YYYY-MM-DDHHMM`, a User-Agent is not required).
 
-**Request time.** S3 reads run as owned single-flight tasks (one per dataset and own-publication
-count) that update the process folds; a request waits for them only until its deadline. A request
-whose fold lacks the current three-hour UV slot, the latest 06/18 KST pollen issuance of a kind or
-the current MFDS slot starts that owned acquisition (S13d `OwnedFlights`, 10-minute retry per
-key) and waits only until its deadline; otherwise it answers with what S3 holds, the legacy output
-for missing data. A UV acquisition takes about 9 s (four pages), so the request that starts it is
+**Request time.** S3 reads run as owned tasks that update the process folds, one refresh of a
+fold at a time (each starts from the committed fold and commits fold, applied set, cut and
+consumed publication count together); a fold is read again after 60 s or as soon as an own
+acquisition published, and a request waits for a read only until its deadline. A request whose
+fold lacks the current three-hour UV slot, the latest 06/18 KST pollen issuance of a kind or the
+current MFDS slot starts that owned acquisition (S13d `OwnedFlights`, 10-minute retry per key)
+and waits only until its deadline; otherwise it answers with what S3 holds, the legacy output for
+missing data. The life inputs are loaded only for a request the snapshot serves (after the grid,
+mid and warning inputs), so a forwarded request starts no life acquisition. UV follows `taskUltrvV5`: the current slot, then each of the four earlier
+candidates while a slot answers no data; no data keeps UV retryable. A UV acquisition takes about 9 s (four pages), so the request that starts it is
 usually answered without the new issuance and the next request has it. A pollen issuance answered
 with no data is not asked again; an MFDS slot is asked once (legacy `lastSlot`, a failure waits
 for the next slot). KASI is captured while requests arrive (first pass at once, then hourly): one
 S3 listing per area, then the missing area/days of the window, today's column first (legacy
-iterates per area; the stored set is the same), an area stopping at its first failure.
-`rise_set` answers `[]` until the first complete S3 read. Each fold keeps acquisitions completed
+iterates per area; the stored set is the same), an area stopping at its first failure; every S3
+call of a pass has its own bound. The fold forgets days 30 days before the window but keeps every
+location it ever stored with its coordinate (a cold read learns a location that has only older
+days from its newest record), because legacy's unbounded `$near` still picks such a location. A
+location's days are answered in day order (legacy's natural order: each gather appends its new
+last day). `rise_set` answers `[]` until the first complete S3 read. Each fold keeps acquisitions completed
 by the request instant; the cut never moves back. MFDS rows past `expireAt` are dropped (the TTL
 index), which only affects dates before the reader's start.
 

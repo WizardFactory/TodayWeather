@@ -128,7 +128,7 @@ S15b-3b criteria (base `7ca6f002`, after #2750; same directions, coordinator 202
   (the legacy output for missing data) while the acquisition finishes for the next request.
 - B3-4: the provider's pollen day+3 (`twodaysaftertomorrow`) is kept in server2 data while the
   legacy answer stays byte-identical.
-- B3-5: settings are real configuration only: the S15b-2 data.go.kr keys and units
-  (`SERVER2_DATA_GO_KR_KEYS`, `SERVER2_DATA_GO_KR_DAILY_UNITS`, one quota owner per key) and
-  `SERVER2_MFDS_BASE_URL`; no mode or flag.
+- B3-5: no new setting (AK 2026-10-15: server2 uses the legacy configuration; S10e converts the
+  existing `SERVER2_*` provider settings): the life index and KASI use the S15b-2 data.go.kr
+  acquirer (one quota owner per key), MFDS the endpoint legacy hard-codes; no mode or flag.
 - B3-6: paths match `server2/config/tasks/S15b-3b.json`; outside changes are the declared documents.

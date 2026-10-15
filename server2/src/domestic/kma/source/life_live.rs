@@ -6,15 +6,14 @@
 //! `SERVER2_DATA_GO_KR_KEYS`, the legacy `DONGNAE_SECRET_KEYS` list, with one S08 quota owner per
 //! key and KST day); each complete group is published through S06 before any request uses it.
 //!
-//! Setting (read only when `kma` is in `SERVER2_NATIVE_FAMILIES`): `SERVER2_MFDS_BASE_URL`, the
-//! MFDS root, default `https://poisonmap.mfds.go.kr/`.
+//! No new setting: MFDS is the production endpoint legacy hard-codes.
 use super::observe::DailyAcquirer;
 use crate::budget::BudgetTransport;
-use crate::domestic::Acquired;
 use crate::domestic::family::{DataGoKrRequest, Service, owned_provider_time};
 use crate::domestic::mfds::MfdsRequest;
 use crate::domestic::publication::Publication;
 use crate::domestic::riseset::RiseSetRequest;
+use crate::domestic::{Acquired, DomesticAcquirer};
 use crate::gateway::BoxFuture;
 use crate::providers::{ProviderTransport, PublicTransport};
 use crate::storage::{CatalogStore, CatalogTransport};
@@ -22,6 +21,34 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
 
+/// Legacy `fetchRisk` `maxBytes`.
+pub const MFDS_MAX_BYTES: usize = crate::domestic::mfds::MAX_BYTES;
+/// The MFDS acquirer: no key ring, a keyless transport without redirects that stops reading at
+/// 1 MiB. `funded` is never used by it.
+pub fn mfds_acquirer<P: ProviderTransport + 'static, B: BudgetTransport + 'static>(
+    funded: Arc<P>,
+    clock: Arc<dyn crate::budget::Clock>,
+) -> Result<
+    DomesticAcquirer<P, crate::providers::HttpPublicTransport, B>,
+    crate::domestic::DomesticError,
+> {
+    let public = crate::providers::HttpPublicTransport::without_redirects(MFDS_MAX_BYTES)
+        .map_err(|_| crate::domestic::DomesticError::Invalid("mfds transport"))?;
+    let endpoints = crate::domestic::family::Endpoints::new(
+        "https://apis.data.go.kr/",
+        "https://www.kma.go.kr/",
+        "https://www.weather.go.kr/",
+    )?;
+    DomesticAcquirer::new(
+        funded,
+        Arc::new(public),
+        Default::default(),
+        endpoints,
+        clock,
+        Arc::new(crate::domestic::metrics::DomesticMetrics::default()),
+        crate::storage::CatalogLimits::default(),
+    )
+}
 /// S06 publication bound after a complete acquisition.
 const PUBLISH_BUDGET: Duration = Duration::from_secs(10);
 
@@ -64,25 +91,33 @@ pub trait LifeAcquire: Send + Sync + 'static {
     fn acquire(&self, request: LifeRequest) -> BoxFuture<'static, Result<LifeOutcome, String>>;
 }
 
-/// Static settings of the life acquirer.
+/// Static settings of the life acquirer. No setting is read (AK, 2026-10-15: server2 uses the
+/// legacy configuration only): MFDS is the production endpoint legacy hard-codes
+/// (`lib/foodPoisoning.js` `ENDPOINT`).
 #[derive(Debug, Clone)]
 pub struct LifeSettings {
     pub mfds_root: reqwest::Url,
 }
+impl Default for LifeSettings {
+    fn default() -> Self {
+        Self {
+            mfds_root: reqwest::Url::parse(crate::domestic::mfds::DEFAULT_ROOT)
+                .expect("valid MFDS root"),
+        }
+    }
+}
 impl LifeSettings {
-    /// `SERVER2_MFDS_BASE_URL`: HTTPS (or loopback HTTP), ending in `/`, without a query.
-    pub fn from_vars(var: &dyn Fn(&str) -> Option<String>) -> Result<Self, String> {
-        let mfds = var("SERVER2_MFDS_BASE_URL")
-            .filter(|v| !v.is_empty())
-            .unwrap_or_else(|| crate::domestic::mfds::DEFAULT_ROOT.into());
-        let mfds_root = reqwest::Url::parse(&mfds)
+    /// Tests and local peers only: another MFDS root (HTTPS, or HTTP to a loopback address),
+    /// ending in `/`, without a query.
+    pub fn with_mfds_root(root: &str) -> Result<Self, String> {
+        let mfds_root = reqwest::Url::parse(root)
             .ok()
             .filter(|u| {
                 crate::providers::PublicRequest::new(u.clone()).is_ok()
                     && u.path().ends_with('/')
                     && u.query().is_none()
             })
-            .ok_or("SERVER2_MFDS_BASE_URL must be an HTTPS (or loopback HTTP) root")?;
+            .ok_or("the MFDS root must be an HTTPS (or loopback HTTP) root")?;
         Ok(Self { mfds_root })
     }
 }
@@ -90,6 +125,9 @@ impl LifeSettings {
 struct Inner<P, W, B, T> {
     settings: LifeSettings,
     daily: Arc<DailyAcquirer<P, W, B>>,
+    /// The MFDS acquirer: no key ring, and a keyless transport of its own (legacy `fetchRisk`:
+    /// no redirect, 1 MiB enforced while reading).
+    mfds: Arc<DomesticAcquirer<P, W, B>>,
     store: Arc<CatalogStore<T>>,
 }
 /// The life acquirer with S06 publication.
@@ -103,15 +141,19 @@ where
     B: BudgetTransport + 'static,
     T: CatalogTransport + 'static,
 {
+    /// `mfds` must be a [`DomesticAcquirer`] without key rings over a
+    /// [`HttpPublicTransport::without_redirects`]`(`[`MFDS_MAX_BYTES`]`)` (see [`mfds_acquirer`]).
     pub fn new(
         settings: LifeSettings,
         daily: Arc<DailyAcquirer<P, W, B>>,
+        mfds: Arc<DomesticAcquirer<P, W, B>>,
         store: Arc<CatalogStore<T>>,
     ) -> Self {
         Self {
             inner: Arc::new(Inner {
                 settings,
                 daily,
+                mfds,
                 store,
             }),
         }
@@ -125,15 +167,20 @@ where
     T: CatalogTransport + 'static,
 {
     async fn run(&self, request: LifeRequest) -> Result<LifeOutcome, String> {
-        let acquirer = self.daily.today().await.map_err(|e| e.to_string())?;
         let deadline = Instant::now() + request.owned_for() - PUBLISH_BUDGET;
         let outcome = match &request {
-            LifeRequest::Index(r) => acquirer.acquire(r, deadline).await,
-            LifeRequest::RiseSet(r) => acquirer.acquire_rise_set(r, deadline).await,
+            LifeRequest::Index(r) => {
+                let acquirer = self.daily.today().await.map_err(|e| e.to_string())?;
+                acquirer.acquire(r, deadline).await
+            }
+            LifeRequest::RiseSet(r) => {
+                let acquirer = self.daily.today().await.map_err(|e| e.to_string())?;
+                acquirer.acquire_rise_set(r, deadline).await
+            }
             LifeRequest::Mfds(slot) => {
                 let request =
                     MfdsRequest::new(&self.settings.mfds_root, *slot).map_err(|e| e.to_string())?;
-                acquirer.acquire_mfds(&request, deadline).await
+                self.mfds.acquire_mfds(&request, deadline).await
             }
         }
         .map_err(|e| e.to_string())?;

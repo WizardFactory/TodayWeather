@@ -283,12 +283,6 @@ fn kma_requires_data_go_kr_keys_daily_units_and_valid_provider_roots() {
         ("SERVER2_DATA_GO_KR_DAILY_UNITS", "many"),
         ("SERVER2_KMA_WEATHER_BASE_URL", "http://www.weather.go.kr/"),
         ("SERVER2_DATA_GO_KR_BASE_URL", "https://apis.data.go.kr/x?y"),
-        // S15b-3b: the keyless MFDS root.
-        ("SERVER2_MFDS_BASE_URL", "http://poisonmap.example.test/"),
-        (
-            "SERVER2_MFDS_BASE_URL",
-            "https://poisonmap.example.test/api",
-        ),
     ] {
         let mut settings = complete();
         settings.retain(|(k, _)| *k != name);

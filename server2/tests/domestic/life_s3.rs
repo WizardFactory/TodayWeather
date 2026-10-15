@@ -246,7 +246,12 @@ struct StubState {
     kasi: AtomicUsize,
     mfds: AtomicUsize,
     uv_delay_ms: AtomicUsize,
+    /// The UV `time` answered `03` (no data).
+    uv_no_data: Mutex<Option<String>>,
     mfds_status: AtomicUsize,
+    mfds_delay_ms: AtomicUsize,
+    /// 1: a same-origin 302 to a valid table; 2: a valid table above 1 MiB.
+    mfds_shape: AtomicUsize,
     queries: Mutex<Vec<String>>,
 }
 fn now_ms() -> f64 {
@@ -295,6 +300,14 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> impl IntoRespo
             tokio::time::sleep(Duration::from_millis(delay as u64)).await;
         }
         let time = get("time").unwrap();
+        if state.uv_no_data.lock().unwrap().as_deref() == Some(time.as_str()) {
+            return (
+                axum::http::StatusCode::OK,
+                [("content-type", "application/json")],
+                json!({"response": {"header": {"resultCode": "03", "resultMsg": "NO_DATA"}}})
+                    .to_string(),
+            );
+        }
         let items: Vec<serde_json::Value> = AREAS
             .iter()
             .map(|a| {
@@ -347,7 +360,22 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> impl IntoRespo
                 "naute": "1918  ", "nautm": "0525  ", "sunrise": "0640  ", "sunset": "1802  ",
                 "suntransit": "1221  "}}, "numOfRows": 10, "pageNo": 1, "totalCount": 1}}})
     } else if path.ends_with("/api/risk.do") {
-        state.mfds.fetch_add(1, Ordering::SeqCst);
+        let delay = state.mfds_delay_ms.load(Ordering::SeqCst);
+        if delay > 0 {
+            tokio::time::sleep(Duration::from_millis(delay as u64)).await;
+        }
+        if uri.query() == Some("redirected=1") {
+            state.mfds.fetch_add(1, Ordering::SeqCst);
+        } else {
+            state.mfds.fetch_add(1, Ordering::SeqCst);
+            if state.mfds_shape.load(Ordering::SeqCst) == 1 {
+                return (
+                    axum::http::StatusCode::FOUND,
+                    [("location", "/api/risk.do?redirected=1")],
+                    String::new(),
+                );
+            }
+        }
         let status = state.mfds_status.load(Ordering::SeqCst);
         if status != 0 {
             return (
@@ -360,11 +388,15 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> impl IntoRespo
         let p = kst(now_ms());
         let base = p.base_date();
         let reg = format!("{}-{}-{}0000", &base[..4], &base[4..6], &base[6..]);
-        json!({"success": true, "data": [
+        let mut table = json!({"success": true, "data": [
             {"locationId": 1, "sd": "서울특별시", "sgg": null, "todayRisk": 0.2, "tomorrowRisk": 0.6,
              "afterTomorrowRisk": 0.8, "baseDate": base, "regDatetime": reg},
             {"locationId": 2, "sd": "서울특별시", "sgg": "종로구", "todayRisk": 0.4, "tomorrowRisk": null,
-             "afterTomorrowRisk": 0.1, "baseDate": base, "regDatetime": reg}]})
+             "afterTomorrowRisk": 0.1, "baseDate": base, "regDatetime": reg}]});
+        if state.mfds_shape.load(Ordering::SeqCst) == 2 {
+            table["padding"] = json!("x".repeat(1_200_000));
+        }
+        table
     } else {
         json!({"response": {"header": {"resultCode": "03", "resultMsg": "NO_DATA"}}})
     };
@@ -398,8 +430,6 @@ async fn stub() -> Stub {
 }
 /// The life acquirer on the KMA source's data.go.kr acquirer (S15b-2), against the stub.
 fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn LifeAcquire> {
-    let vars =
-        |name: &str| -> Option<String> { (name == "SERVER2_MFDS_BASE_URL").then(|| base.into()) };
     let daily = server2::domestic::kma::source::observe::DailyAcquirer::new(
         Arc::new(server2::providers::HttpProviderTransport::new(2 << 20).unwrap()),
         Arc::new(server2::providers::HttpPublicTransport::new(2 << 20).unwrap()),
@@ -411,9 +441,16 @@ fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn LifeAcquire> {
         Arc::new(server2::domestic::metrics::DomesticMetrics::default()),
     )
     .unwrap();
+    let mfds =
+        server2::domestic::kma::source::life_live::mfds_acquirer::<_, BoundedS3<HttpS3Transport>>(
+            Arc::new(server2::providers::HttpProviderTransport::new(1 << 20).unwrap()),
+            Arc::new(server2::budget::SystemClock),
+        )
+        .unwrap();
     Arc::new(LiveLife::new(
-        LifeSettings::from_vars(&vars).unwrap(),
+        LifeSettings::with_mfds_root(base).unwrap(),
         Arc::new(daily),
+        Arc::new(mfds),
         store,
     ))
 }
@@ -505,6 +542,7 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
     stub.state.uv_delay_ms.store(4_000, Ordering::SeqCst);
+    stub.state.mfds_delay_ms.store(4_000, Ordering::SeqCst);
     let inputs = LifeInputs::new(transport.clone(), store.clone())
         .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_kasi_schedule(HOLD, HOLD);
@@ -526,13 +564,21 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
             .count()
     };
     assert_eq!(uv_rows(&first), 0, "the legacy answer for missing data");
-    tokio::time::sleep(Duration::from_millis(3_000)).await;
-    let next = inputs.load(now, short_deadline()).await;
+    assert!(first.mfds.is_empty());
+    // The next request comes after the acquisitions ended and after their outcome stopped
+    // answering joiners (3 s): their publication still invalidates the folds' memo.
+    tokio::time::sleep(Duration::from_millis(9_000)).await;
+    let next = inputs.load(now_ms(), short_deadline()).await;
     assert!(
         uv_rows(&next) > 0,
         "the owned acquisition finished and serves the next request"
     );
+    assert!(
+        !next.mfds.is_empty(),
+        "the delayed MFDS table serves it too"
+    );
     assert_eq!(stub.state.uv.load(Ordering::SeqCst), 1);
+    assert_eq!(stub.state.mfds.load(Ordering::SeqCst), 1);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -583,6 +629,24 @@ async fn the_kasi_capture_acquires_missing_days_and_a_failing_area_does_not_stop
     .unwrap();
     assert_eq!(answer[0]["locationName"], "서울");
     assert_eq!(answer[0]["date"], today.as_str());
+    // The capture stored today's column first; a multi-date answer is in day order as legacy's
+    // natural order (each gather appends its new last day).
+    let window: Vec<String> = (-8..10)
+        .map(|i| server2::world::js::iso(now + f64::from(i) * DAY).unwrap()[..10].replace('-', ""))
+        .collect();
+    let answer = serde_json::from_slice::<serde_json::Value>(
+        &kasi
+            .answer(&json!({"lat": 37.57, "lon": 126.98}), &window)
+            .to_bytes(),
+    )
+    .unwrap();
+    let dates: Vec<&str> = answer
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|d| d["date"].as_str().unwrap())
+        .collect();
+    assert_eq!(dates, window.iter().map(String::as_str).collect::<Vec<_>>());
     // A second pass asks only what is still missing (the failing areas).
     inputs.kasi_pass(now).await.unwrap();
     assert_eq!(stub.state.kasi.load(Ordering::SeqCst), calls + 100 * 2);
@@ -664,18 +728,119 @@ async fn the_snapshot_answers_the_life_store_calls() {
 }
 
 #[test]
-fn life_settings_fail_closed() {
-    let root =
-        |v: &'static str| move |name: &str| (name == "SERVER2_MFDS_BASE_URL").then(|| v.to_owned());
-    let default = LifeSettings::from_vars(&|_: &str| None).unwrap();
-    assert_eq!(default.mfds_root.as_str(), "https://poisonmap.mfds.go.kr/");
+fn life_settings_use_the_legacy_mfds_endpoint() {
+    assert_eq!(
+        LifeSettings::default().mfds_root.as_str(),
+        "https://poisonmap.mfds.go.kr/"
+    );
     for bad in [
         "http://poisonmap.example.test/",
         "https://poisonmap.example.test/api",
         "https://poisonmap.example.test/?q=1",
         "not a url",
     ] {
-        assert!(LifeSettings::from_vars(&root(bad)).is_err(), "{bad}");
+        assert!(LifeSettings::with_mfds_root(bad).is_err(), "{bad}");
     }
-    assert!(LifeSettings::from_vars(&root("http://127.0.0.1:9/")).is_ok());
+    assert!(LifeSettings::with_mfds_root("http://127.0.0.1:9/").is_ok());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn uv_tries_earlier_slots_while_a_slot_has_no_data() {
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    let now = request_now();
+    let slots = server2::domestic::publication::uv_slots(now as i64).unwrap();
+    *stub.state.uv_no_data.lock().unwrap() = Some(slots[0].compact()[..10].to_owned());
+    let inputs = LifeInputs::new(transport.clone(), store.clone())
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
+        .with_kasi_schedule(HOLD, HOLD);
+    let answers = inputs.load(now, deadline()).await;
+    // Legacy `taskUltrvV5`: the current slot has no data, the previous candidate is saved.
+    assert_eq!(stub.state.uv.load(Ordering::SeqCst), 2);
+    assert_eq!(
+        answers.life.last_issued("ultrv"),
+        Some(&slots[1].compact()[..10])
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn mfds_accepts_only_a_direct_answer_within_one_mebibyte() {
+    let _serial = SERIAL.lock().await;
+    for shape in [1, 2] {
+        let peer = Peer::new();
+        let transport = peer.transport();
+        let store =
+            Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+        let stub = stub().await;
+        stub.state.mfds_shape.store(shape, Ordering::SeqCst);
+        let inputs = LifeInputs::new(transport.clone(), store.clone())
+            .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
+            .with_kasi_schedule(HOLD, HOLD);
+        let answers = inputs.load(request_now(), deadline()).await;
+        // Legacy `fetchRisk`: a redirect is a non-200 answer; a body above 1 MiB is refused.
+        assert!(answers.mfds.is_empty(), "shape {shape}");
+        assert_eq!(
+            stub.state.mfds.load(Ordering::SeqCst),
+            1,
+            "shape {shape}: no redirect followed"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_old_nearest_location_still_decides_rise_set_after_a_cold_read() {
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let now = now_ms();
+    let day =
+        |offset: f64| server2::world::js::iso(now + offset * DAY).unwrap()[..10].replace('-', "");
+    let item = |location: &str, locdate: &str, lat: &str, lon: &str| {
+        json!({"aste": "1949  ", "astm": "0454  ", "civile": "1848  ", "civilm": "0555  ",
+            "latitude": "3734", "latitudeNum": lat, "location": location,
+            "locdate": locdate.parse::<u64>().unwrap(), "longitude": "12659", "longitudeNum": lon,
+            "moonrise": "0611  ", "moonset": "0512  ", "moontransit": "2330  ", "naute": "1918  ",
+            "nautm": "0525  ", "sunrise": "0640  ", "sunset": "1802  ", "suntransit": "1221  "})
+    };
+    // 서울 has only a day long before the capture window; 수원 (farther) has today.
+    for (area, d, lat, lon, at) in [
+        (
+            "서울",
+            day(-40.),
+            "37.5666660",
+            "126.9833330",
+            now - 40. * DAY,
+        ),
+        ("수원", day(0.), "37.2666660", "127.0166660", now - 60_000.),
+    ] {
+        let p = Publication::new(d.parse().unwrap(), 0).unwrap();
+        publish(
+            &store,
+            "data-go-kr",
+            "kasi-area-rise-set",
+            area_key(area),
+            p.period(),
+            &d,
+            at,
+            &[kma_page(item(area, &d, lat, lon))],
+        )
+        .await;
+    }
+    let inputs = LifeInputs::new(transport.clone(), store.clone()).with_kasi_schedule(HOLD, HOLD);
+    inputs.kasi_pass(now).await.unwrap();
+    let kasi = inputs.load(now, deadline()).await.kasi.expect("read");
+    assert_eq!(kasi.places(), 2, "the old location is known");
+    // Legacy picks the nearest stored document (서울, only an old day) and answers [] for today.
+    let answer = kasi.answer(&json!({"lat": 37.57, "lon": 126.98}), &[day(0.)]);
+    same(
+        &answer,
+        &OrderedJson::Array(vec![]),
+        "nearest location without the day",
+    );
+    let suwon = kasi.answer(&json!({"lat": 37.27, "lon": 127.02}), &[day(0.)]);
+    assert_eq!(items_of(&suwon).len(), 1);
 }

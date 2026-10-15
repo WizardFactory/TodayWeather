@@ -29,10 +29,14 @@ pub const PROPERTIES: [&str; 12] = [
     "aste",
 ];
 
-/// The `kasiRiseSet` collection in natural order.
+/// The `kasiRiseSet` collection in natural order, and every stored location with its
+/// coordinate (first seen first). Legacy keeps every document, so a location with only old days
+/// still wins the unbounded nearest-location query; the places outlive the dated documents
+/// server2 forgets.
 #[derive(Debug, Clone, Default)]
 pub struct RiseSets {
     docs: Vec<Doc>,
+    places: Vec<(Val, Val)>,
 }
 impl RiseSets {
     pub fn len(&self) -> usize {
@@ -91,6 +95,23 @@ impl RiseSets {
         for (k, v) in fields.iter().rev() {
             self.docs[i].set(k, v.clone());
         }
+        let location = self.docs[i].get("location").cloned().unwrap_or(Val::Null);
+        if let Some(Val::Arr(_)) = self.docs[i].get("geo")
+            && !self.places.iter().any(|(l, _)| *l == location)
+        {
+            let geo = self.docs[i].get("geo").cloned().unwrap_or(Val::Null);
+            self.places.push((location, geo));
+        }
+    }
+    /// Whether a document of `location` was ever stored.
+    pub fn has_place(&self, location: &str) -> bool {
+        self.places
+            .iter()
+            .any(|(l, _)| l.as_str() == Some(location))
+    }
+    /// Stored locations (the nearest-location candidates).
+    pub fn places(&self) -> usize {
+        self.places.len()
     }
     /// Documents whose day is before `day` are forgotten (they never match a request date).
     pub fn forget_before(&mut self, day: f64) {
@@ -106,13 +127,14 @@ impl RiseSets {
         ) else {
             return empty;
         };
-        // _findRiseSetByGeo: the nearest indexed document, natural order on ties.
+        // _findRiseSetByGeo: the nearest stored document; every document of a location has
+        // that location's coordinate, so the nearest place (first seen on ties) names it.
         let nearest = self
-            .docs
+            .places
             .iter()
             .enumerate()
-            .filter_map(|(i, d)| {
-                let Some(Val::Arr(g)) = d.get("geo") else {
+            .filter_map(|(i, (_, geo))| {
+                let Val::Arr(g) = geo else {
                     return None;
                 };
                 Some((
@@ -124,10 +146,10 @@ impl RiseSets {
         let Some((_, i)) = nearest else {
             return empty;
         };
-        let location = self.docs[i].get("location").cloned();
+        let location = Some(self.places[i].0.clone());
         // _findKasiRiseSetList: `{$or: [{location, locdate}, ...]}`; none found is an error.
         let wanted: Vec<f64> = dates.iter().filter_map(|d| string_to_date(d)).collect();
-        let found: Vec<&Doc> = self
+        let mut found: Vec<&Doc> = self
             .docs
             .iter()
             .filter(|d| {
@@ -135,6 +157,16 @@ impl RiseSets {
                     && matches!(d.get("locdate"), Some(Val::Date(ms)) if wanted.contains(ms))
             })
             .collect();
+        // Legacy stores a location's days in ascending order (each gather adds the new last
+        // day), and `sort({date: -1})` names no stored field: the natural order is by day.
+        // server2 may capture another column first, so the answer is ordered by day.
+        found.sort_by(|a, b| {
+            let day = |d: &Doc| match d.get("locdate") {
+                Some(Val::Date(ms)) => *ms,
+                _ => f64::NEG_INFINITY,
+            };
+            day(a).total_cmp(&day(b))
+        });
         if found.is_empty() {
             return empty;
         }

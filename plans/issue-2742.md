@@ -213,7 +213,7 @@ Declaration: [S15b-3b.json](../server2/config/tasks/S15b-3b.json).
 | L6 | MFDS outage | 503 | Slot asked once, answer without fsn | B3-2/B3-3; `life_s3::an_mfds_slot_*` |
 | L7 | Rise/set | KASI capture with failing areas | Other areas captured; answers equal `getRiseSetList` | B3-1/B3-2; `life::kasi_*`, `life_s3::the_kasi_capture_*` |
 | L8 | Pollen day+3 | Provider `twodaysaftertomorrow` | Kept in `pollen_day3`, absent from the legacy answer | B3-4; `life::pollen_day_three_*` |
-| L9 | Operator enables `kma` | Bad MFDS root (keys and units: S15b-2) | Refused | B3-5; `gateway::runtime::kma_requires_*`, `life_s3::life_settings_*` |
+| L9 | Operator enables `kma` | No new setting; MFDS at the legacy endpoint (keys and units: S15b-2) | Production root; loopback roots only through the test constructor | B3-5; `life_s3::life_settings_*` |
 
 Live record (2026-10-15, keys loaded in-process from `server/.env`, nothing stored outside the
 local S3 peer): raw probes of UV, the three pollen kinds (oak and pine `99`), KASI and MFDS (with
