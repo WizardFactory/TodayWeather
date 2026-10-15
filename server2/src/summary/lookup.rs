@@ -167,15 +167,18 @@ pub struct Lookup<T> {
     vc: Option<Arc<dyn VcRecords>>,
     attempted: Mutex<HashMap<(String, u32), Slot>>,
 }
+/// The end of a running acquisition: `None` while it runs, `Some(true)` when it finished,
+/// `Some(false)` when it failed or was cancelled (the range is free again).
+type Ended = watch::Receiver<Option<bool>>;
 /// An on-demand ASOS range: running (its end is signalled) or finished at an instant.
 enum Slot {
-    Running(watch::Receiver<bool>),
+    Running(Ended),
     Done(std::time::Instant),
 }
 enum Claim<'a> {
     Mine(ClaimGuard<'a>),
     /// Another lookup is acquiring the range.
-    Running(watch::Receiver<bool>),
+    Running(Ended),
     /// Acquired within [`ASOS_RETRY`] (its days are stored, or the provider had none).
     Recent,
 }
@@ -184,7 +187,7 @@ enum Claim<'a> {
 struct ClaimGuard<'a> {
     slots: &'a Mutex<HashMap<(String, u32), Slot>>,
     key: (String, u32),
-    done: watch::Sender<bool>,
+    done: watch::Sender<Option<bool>>,
     finished: bool,
 }
 impl Drop for ClaimGuard<'_> {
@@ -195,7 +198,7 @@ impl Drop for ClaimGuard<'_> {
         } else {
             slots.remove(&self.key);
         }
-        let _ = self.done.send(true);
+        let _ = self.done.send(Some(self.finished));
     }
 }
 /// What the on-demand step found.
@@ -246,7 +249,7 @@ impl<T: SummaryTransport> Lookup<T> {
             Some(Slot::Done(_)) => return Claim::Recent,
             None => {}
         }
-        let (done, rx) = watch::channel(false);
+        let (done, rx) = watch::channel(None);
         slots.insert(key.clone(), Slot::Running(rx));
         Claim::Mine(ClaimGuard {
             slots: &self.attempted,
@@ -269,14 +272,22 @@ impl<T: SummaryTransport> Lookup<T> {
         let (Some(start), Some(end)) = (dates.iter().min(), dates.iter().max()) else {
             return Ok(OnDemand::Nothing);
         };
-        let mut guard = match self.claim(station, *start) {
-            Claim::Mine(guard) => guard,
-            Claim::Recent => return Ok(OnDemand::Nothing),
-            Claim::Running(mut rx) => {
-                return match tokio::time::timeout_at(deadline, rx.wait_for(|done| *done)).await {
-                    Ok(_) => Ok(OnDemand::Nothing),
-                    Err(_) => Err(LookupError::Pending),
-                };
+        // Wait for another lookup's acquisition; when it failed or was cancelled, claim the
+        // range again (this lookup may acquire it).
+        let mut guard = loop {
+            match self.claim(station, *start) {
+                Claim::Mine(guard) => break guard,
+                Claim::Recent => return Ok(OnDemand::Nothing),
+                Claim::Running(mut rx) => {
+                    let ended = tokio::time::timeout_at(deadline, rx.wait_for(Option::is_some))
+                        .await
+                        .map_err(|_| LookupError::Pending)?
+                        .map(|v| *v)
+                        .unwrap_or(Some(false));
+                    if ended == Some(true) {
+                        return Ok(OnDemand::Nothing);
+                    }
+                }
             }
         };
         let Some(fetched) = asos

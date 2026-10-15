@@ -1051,6 +1051,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         )
         .await;
         // The acquisitions and their completeness are read under one lock (S16).
+        // An S3 reload still running (the answer then uses the previous read) is not complete.
+        let reloading = self.flight(&Flight::AsosLoad(station.clone())).is_some();
         let (fetched, settled) = {
             let s = self.state();
             (
@@ -1058,7 +1060,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     .get(&station)
                     .map(|e| e.fetched.clone())
                     .unwrap_or_default(),
-                !s.asos_running.contains(&station) && !s.asos_failed.contains_key(&station),
+                !reloading
+                    && !s.asos_running.contains(&station)
+                    && !s.asos_failed.contains_key(&station),
             )
         };
         let store = station_store(&station, &fetched, folded);

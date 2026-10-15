@@ -2518,7 +2518,10 @@ read and its latest read did not fail, and no S3 load, fold, geocoding or unfold
 the history answer has no `cache-read-*` reason; and the ASOS acquisitions it answered from were
 read under the same lock as "no recovery run in flight, no failed read". Input identities are the
 acquisitions themselves: grid publications and ASOS ranges with their fetch time and content hash,
-and the station pages the fold applied with their fetch time and raw hash. After a natively served response the backend hands the `getPastMid` rows
+and the station pages the fold applied with their fetch time and raw hash. S15b-2 keeps the first
+page acquired for an hour (one acquisition per hour); a later acquisition of the same hour is not
+applied by the assembly, so it is not a summary input either. An ASOS S3 reload still running when
+the history answer is built also blocks recording. After a natively served response the backend hands the `getPastMid` rows
 (a JSON copy taken before later steps mutate them; the response is unchanged) to the recorder, which
 runs outside the request (two tasks, 30 s each; more are dropped and repeated by a later request).
 Per source, key and date it skips an input digest it already examined, and writes a new revision only

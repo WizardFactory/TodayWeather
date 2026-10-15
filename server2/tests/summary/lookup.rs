@@ -42,6 +42,8 @@ struct FakeAsos {
     calls: Mutex<Vec<(String, u32, u32)>>,
     answer: Mutex<Option<Result<bool, ()>>>,
     delay: std::time::Duration,
+    /// The first call fails (a provider failure) whatever `answer` says.
+    fail_once: std::sync::atomic::AtomicBool,
 }
 impl FakeAsos {
     fn new(answer: Result<bool, ()>) -> Arc<Self> {
@@ -52,6 +54,7 @@ impl FakeAsos {
             calls: Mutex::new(Vec::new()),
             answer: Mutex::new(Some(answer)),
             delay,
+            fail_once: std::sync::atomic::AtomicBool::new(false),
         })
     }
     fn calls(&self) -> Vec<(String, u32, u32)> {
@@ -69,6 +72,12 @@ impl AsosOnDemand for FakeAsos {
         Box::pin(async move {
             self.calls.lock().unwrap().push((station, start, end));
             tokio::time::sleep(self.delay).await;
+            if self
+                .fail_once
+                .swap(false, std::sync::atomic::Ordering::SeqCst)
+            {
+                return Err(LookupError::Provider);
+            }
             match (*self.answer.lock().unwrap()).unwrap() {
                 Err(()) => Err(LookupError::Provider),
                 Ok(false) => Ok(None),
@@ -410,4 +419,26 @@ async fn a_stored_vc_day_is_revised_by_newer_raw_records() {
         .unwrap();
     assert_eq!(found.summary.value("taMax"), Some(20.));
     assert_eq!(t.keys().len(), 2);
+}
+
+#[tokio::test]
+async fn a_waiter_acquires_the_range_itself_after_the_owner_failed() {
+    let asos_only = target(false, true, false);
+    let t = Arc::new(MemorySummaries::new());
+    let fake = FakeAsos::slow(Ok(true), std::time::Duration::from_millis(200));
+    fake.fail_once
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    let lookup = Lookup::new(t.clone(), Some(fake.clone() as Arc<dyn AsosOnDemand>), None);
+    let (owner, waiter) = tokio::join!(lookup.last_year(&asos_only, 20261015, deadline()), async {
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        lookup.last_year(&asos_only, 20261015, deadline()).await
+    },);
+    assert_eq!(owner.unwrap_err(), LookupError::Provider);
+    let found = waiter.unwrap().unwrap();
+    assert_eq!((found.source, found.date), (Source::Asos, 20251015));
+    assert_eq!(
+        fake.calls().len(),
+        2,
+        "the waiter acquired the range after the failure"
+    );
 }
