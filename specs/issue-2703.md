@@ -24,6 +24,8 @@ Task: issue-2703-s18a; source: [intent](../intent/issue-2703.md); base 1d60f728;
   `X-Content-Type-Options: nosniff`, no ETag). Bodies of other content types are `{}`.
 - Success answers: `res.send` JSON with a weak ETag (`W/"<len hex>-<md5 base64>"`); error answers
   `res.status(n).send(message)` as `text/html; charset=utf-8`.
+- The `geo` `2d` index: a point outside [-180, 180) is a write error (message
+  `point not in interval of [ -180, 180 )`, wording not re-verified on a live MongoDB 3.4).
 - Store errors keep their legacy route mapping: POST `/push` 500, PUT 500, DELETE 501 with the
   message; `push-list` swallows them (`null` item, or `{ok:0,n:0,nModified:0}` for a failed alert
   update, as `Model.update` passes it). The S3 failure message is `push state storage unavailable`.

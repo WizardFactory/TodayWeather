@@ -2508,7 +2508,9 @@ the handlers' validation in order (TypeError messages as V8 prints them), `initU
 `updatePushInfo`/`updateAlertPush`, `lib/pushStore/mongo.js` (`keyQuery`, `tokenQuery`, upsert,
 `multi` token renames, `remove`), Mongoose 5.1.2 casting (query keys cast last first; `CastError`
 text via `util.inspect`, including the `MongooseArray` form; ` for model "x"` on query casts) and
-the saved document's key order and `minimize`. Answers are `res.send` (JSON or `text/html`, weak
+the saved document's key order and `minimize`, and the `geo` field's `2d` index bounds (a point
+outside [-180, 180) is a write error, as MongoDB refuses it; the server message text
+`point not in interval of [ -180, 180 )` is not re-verified against a live 3.4 server). Answers are `res.send` (JSON or `text/html`, weak
 ETag) or the production `finalhandler` (status text, `nosniff`). Write results are the MongoDB
 3.4 write-command reply core (`{n, upserted?, nModified, ok}`, delete `{n, ok}`); replica-set
 metadata (`opTime`, `electionId`, `$clusterTime`) is not reproduced and the app ignores the body.

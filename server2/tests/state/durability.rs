@@ -460,3 +460,83 @@ async fn a_slow_store_answers_within_the_wait_and_never_acknowledges_late() {
         ["t2"]
     );
 }
+
+/// A delayed original write races the reconciliation: when it lands first it is the committed
+/// entry; when the void lands first it can never commit.
+#[tokio::test]
+async fn a_late_original_write_and_its_void_never_both_commit() {
+    // The original lands before the read-back: acknowledged as committed.
+    let s3 = MemS3::new();
+    let mut config = fast_config();
+    config.durable.op_deadline = Duration::from_millis(300);
+    let service = start(&s3, FixedClock::at(T0), config.clone()).await;
+    s3.fault_put(
+        "index/v2/push/state/journal/",
+        Fault::LateCommit(Duration::from_millis(0)),
+    );
+    let (status, body) = call(&service, "POST", "/v000705/push", alarm("early", 0)).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    let first = String::from_utf8(s3.body(&journal_key(1)).unwrap()).unwrap();
+    if status == 200 {
+        assert!(first.contains("early"), "{first}");
+    } else {
+        assert_eq!(body, STORAGE_FAILURE);
+        assert!(first.contains("\"void\":true"), "{first}");
+    }
+    // The void lands first: the late original (after the void) is refused by its condition.
+    let s3 = MemS3::new();
+    let service = start(&s3, FixedClock::at(T0), config.clone()).await;
+    s3.fault_put(
+        "index/v2/push/state/journal/",
+        Fault::LateCommit(Duration::from_millis(200)),
+    );
+    let (status, body) = call(&service, "POST", "/v000705/push", alarm("late", 0)).await;
+    assert_eq!((status, body.as_str()), (500, STORAGE_FAILURE));
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    let first = String::from_utf8(s3.body(&journal_key(1)).unwrap()).unwrap();
+    assert!(
+        first.contains("\"void\":true"),
+        "the void owns the sequence: {first}"
+    );
+    let (status, _) = call(&service, "POST", "/v000705/push", alarm("next", 0)).await;
+    assert_eq!(status, 200);
+    let restored = start(&s3, FixedClock::at(T0), config).await;
+    assert_eq!(
+        tokens(&restored.state().read().unwrap(), Coll::Alarm),
+        ["next"],
+        "the refused late write is never applied"
+    );
+}
+
+/// The legacy `2d` index on `geo` rejects points outside [-180, 180): the write fails like a
+/// MongoDB write error and nothing is stored.
+#[tokio::test]
+async fn geo_points_outside_the_2d_bounds_are_store_errors() {
+    let s3 = MemS3::new();
+    let service = start(&s3, FixedClock::at(T0), fast_config()).await;
+    let mut far = alarm("g1", 0);
+    far["location"] = serde_json::json!({"lat": 37.5, "long": 181});
+    let (status, body) = call(&service, "POST", "/v000705/push", far.clone()).await;
+    assert_eq!(
+        (status, body.as_str()),
+        (500, server2::push::mongoose::GEO_BOUNDS)
+    );
+    let mut edge = alarm("g2", 1);
+    edge["location"] = serde_json::json!({"lat": -180, "long": 179.999});
+    let (status, body) = call(
+        &service,
+        "POST",
+        "/v000902/push-list",
+        serde_json::json!([far, edge, {
+        "type": "ios", "fcmToken": "g3", "cityIndex": 2, "id": 0, "category": "alert",
+        "location": {"lat": 180, "long": 0}}]),
+    )
+    .await;
+    assert_eq!(status, 200);
+    assert!(body.starts_with("[null,{\"n\":1,\"upserted\""), "{body}");
+    assert!(body.ends_with(",null]"), "{body}");
+    let state = service.state();
+    let state = state.read().unwrap();
+    assert_eq!(tokens(&state, Coll::Alarm), ["g2"]);
+    assert!(tokens(&state, Coll::Alert).is_empty());
+}

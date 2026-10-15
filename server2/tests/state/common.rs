@@ -43,6 +43,9 @@ pub enum Fault {
     LostUnreadable,
     /// `CommitLost`, and the next read of the same key fails too.
     CommitLostUnreadable,
+    /// The request fails at once (transport error) but S3 applies the same conditional write
+    /// after this delay (a delayed request that still commits).
+    LateCommit(Duration),
 }
 
 #[derive(Default)]
@@ -104,6 +107,23 @@ impl MemS3 {
             .iter()
             .filter(|k| k.starts_with(prefix))
             .count()
+    }
+    /// S3 conditional PUT semantics: 200 stored, 412 condition failed.
+    pub fn conditional_write(&self, key: &str, body: &[u8], condition: &WriteCondition) -> u16 {
+        let mut inner = self.inner.lock().unwrap();
+        let current = inner.objects.get(key).map(|(_, t)| t.clone());
+        let allowed = match condition {
+            WriteCondition::Absent => current.is_none(),
+            WriteCondition::Match(tag) => current.as_deref() == Some(tag.as_str()),
+        };
+        if allowed {
+            inner
+                .objects
+                .insert(key.to_owned(), (body.to_vec(), etag(body)));
+            200
+        } else {
+            412
+        }
     }
     /// Store a body directly (another writer).
     pub fn insert(&self, key: &str, body: &[u8]) {
@@ -174,6 +194,15 @@ impl CatalogTransport for MemS3 {
         ) {
             self.fault_gets(key, 1);
         }
+        if let Some(Fault::LateCommit(delay)) = fault {
+            let this = self.clone();
+            let (key, body, condition) = (key.to_owned(), body.to_vec(), condition.clone());
+            tokio::spawn(async move {
+                tokio::time::sleep(delay).await;
+                this.conditional_write(&key, &body, &condition);
+            });
+            return Err(Error::Transport);
+        }
         match fault {
             Some(Fault::Reject(status)) => return Ok(status),
             Some(Fault::Lost | Fault::LostUnreadable) => return Err(Error::Transport),
@@ -183,22 +212,7 @@ impl CatalogTransport for MemS3 {
             }
             _ => (),
         }
-        let status = {
-            let mut inner = self.inner.lock().unwrap();
-            let current = inner.objects.get(key).map(|(_, t)| t.clone());
-            let allowed = match condition {
-                WriteCondition::Absent => current.is_none(),
-                WriteCondition::Match(tag) => current.as_deref() == Some(tag.as_str()),
-            };
-            if allowed {
-                inner
-                    .objects
-                    .insert(key.to_owned(), (body.to_vec(), etag(body)));
-                200
-            } else {
-                412
-            }
-        };
+        let status = self.conditional_write(key, body, condition);
         if matches!(fault, Some(Fault::CommitLost | Fault::CommitLostUnreadable)) && status == 200 {
             return Err(Error::Transport);
         }

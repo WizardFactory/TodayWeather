@@ -471,6 +471,9 @@ impl Backend for TxnBackend<'_, '_> {
             let mut record = self.txn.get(Coll::Alarm, *n).expect("found record");
             let before = record.doc.clone();
             mongoose::apply_set(&mut record.doc, &set);
+            if let Some(e) = mongoose::geo_index_error(&record.doc) {
+                return Err(e.into());
+            }
             let modified = !super::store::same_doc(&before, &record.doc);
             self.txn.put(Coll::Alarm, *n, record);
             return Ok(write_result(1, usize::from(modified), None));
@@ -485,6 +488,9 @@ impl Backend for TxnBackend<'_, '_> {
         }
         doc.set("__v", 0.);
         mongoose::apply_set(&mut doc, &set);
+        if let Some(e) = mongoose::geo_index_error(&doc) {
+            return Err(e.into());
+        }
         self.txn.insert(Coll::Alarm, Record { oid, doc });
         Ok(write_result(1, 0, Some(oid_hex(&oid))))
     }
@@ -496,6 +502,9 @@ impl Backend for TxnBackend<'_, '_> {
             let oid = self.txn.new_oid();
             let (doc, json) = mongoose::new_document(Coll::Alert, info, oid)
                 .ok_or_else(|| StoreError::from("AlertPush validation failed".to_owned()))?;
+            if let Some(e) = mongoose::geo_index_error(&doc) {
+                return Err(e.into());
+            }
             self.txn.insert(Coll::Alert, Record { oid, doc });
             return Ok(Val::Obj(json));
         };
@@ -512,6 +521,12 @@ impl Backend for TxnBackend<'_, '_> {
         let mut record = self.txn.get(Coll::Alert, *n).expect("found record");
         let before = record.doc.clone();
         mongoose::apply_set(&mut record.doc, &set);
+        if let Some(message) = mongoose::geo_index_error(&record.doc) {
+            return Err(StoreError {
+                message,
+                result: update_default(),
+            });
+        }
         let modified = !super::store::same_doc(&before, &record.doc);
         self.txn.put(Coll::Alert, *n, record);
         Ok(write_result(1, usize::from(modified), None))

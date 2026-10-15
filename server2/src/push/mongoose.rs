@@ -478,6 +478,23 @@ fn cast_nested(fields: &'static [(&'static str, Ty)], sub: &Obj, prefix: &str) -
     Ok(out)
 }
 
+/// The MongoDB 3.4 `2d` index error for a `geo` point outside the default bounds (exact server
+/// wording not re-verified against a live 3.4 server; the error/status mapping is the contract).
+pub const GEO_BOUNDS: &str = "point not in interval of [ -180, 180 )";
+
+/// The legacy `geo` field has a `2d` index (default bounds [-180, 180)): a document whose
+/// `geo` array holds a point outside them cannot be written.
+pub fn geo_index_error(doc: &Obj) -> Option<String> {
+    let Val::Arr(point) = doc.get("geo") else {
+        return None;
+    };
+    if point.is_empty() {
+        return None;
+    }
+    let inside = |v: Option<&Val>| matches!(v, Some(Val::Num(n)) if (-180. ..180.).contains(n));
+    (!(inside(point.first()) && inside(point.get(1)))).then(|| GEO_BOUNDS.to_owned())
+}
+
 /// Apply a cast `$set` to a stored document (MongoDB: replace in place, append new fields; a
 /// dotted path sets the field inside its embedded document, creating it when needed).
 pub fn apply_set(doc: &mut Obj, set: &[SetEntry]) {
