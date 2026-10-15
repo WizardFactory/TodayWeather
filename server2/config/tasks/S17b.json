@@ -18,7 +18,8 @@
     "server2/tests/legacy_versions.rs",
     "server2/tests/legacy_versions/",
     "server2/tests/domestic/recorded.rs",
-    "server2/tests/domestic/parity.rs"
+    "server2/tests/domestic/parity.rs",
+    "server2/tests/domestic/air_forecast_s3.rs"
   ],
   "outside": [
     {
@@ -44,7 +45,7 @@
     "server2/src/domestic/kma/": "town router lists and v000705 sub-routes (chain.rs), getSummary and dataToFixed and the JavaScript + of rn1Str without a unit (present.rs), res.json(undefined) and the request part/baseUrl (mod.rs), town path parsing and KmaBackend::outcome (backend.rs)",
     "server2/src/gateway/": "shared: Gateway::with_direct answers listed direct routes before the gateway routes (mod.rs); BackendDispatcher::proxy is the unchanged legacy hop of a forwarded direct request (backend.rs); the town entry and direct claims of kma/kma-v000901 (runtime.rs)",
     "server2/examples/kma_checkpoint.rs": "shared S15 example: the new Outcome::Undefined arm (no behavior change for v000903)",
-    "server2/tests/domestic/": "shared S15 test files: town recordings parse with the town parser (recorded.rs); the new outcome arm (parity.rs)",
+    "server2/tests/domestic/": "shared S15 test files: town recordings parse with the town parser (recorded.rs); the new outcome arm (parity.rs); the new outcome arm in the S15b-3c test helper (air_forecast_s3.rs)",
     "server2/tests/legacy_versions/": "kma_direct.rs, the town parity, fixtures/kma-town.json.gz (pinned legacy oracle) and its PROVENANCE section"
   }
 }
