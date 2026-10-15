@@ -219,7 +219,7 @@ async fn rss_and_mid_documents_read_from_s3_equal_the_legacy_oracle() {
                 .await;
             if reg_id == "11D10000" {
                 // Collected by legacy, but the scenario has no record and no acquirer: legacy's
-                // empty answer (S15b-4 acquires it when an acquirer is configured).
+                // empty answer (S15b-4a acquires it when an acquirer is configured).
                 assert_eq!(docs_json(&got.unwrap()).to_bytes(), b"[]");
                 continue;
             }

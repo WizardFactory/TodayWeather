@@ -274,3 +274,83 @@ documents named (54 frames), and the server2 decoder and the legacy master contr
 same 384 and 432 rows for the four smoke reference points. Some provider calls
 were slow or timed out (raw station-list pages took over 30 s for two keys, then 0.2-0.4 s); the
 downloaded images were deleted after the check.
+
+## S15b-4 native KMA without legacy forwards (2026-10-15)
+
+Base: master `c48b29aa`. S15b-4 is split into three PRs
+([#2742 comment](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6194920828)):
+
+| PR | Content |
+| --- | --- |
+| S15b-4a | Request-time acquisition of the missing forecast inputs: latest grid publications, the grid backfill, RSS, mid forecasts, the forecast-zone list and the warning cycle |
+| S15b-4b | Unknown-town geocoding and storage, the two S15 declared forwards, removal of every remaining forward reason, the S3-only parity harness with matched/forwarded/total counts, the KMA shadow family module and the release/S19 smokes |
+| S15b-4c | Cold-cell latency (warm per-cell memory, exact-raw packs, the bounded local disk cache) and the measured EC2 disk sizing |
+
+### S15b-4a request-time forecast acquisition
+
+Declaration: [S15b-4a.json](../server2/config/tasks/S15b-4a.json).
+
+**Sources and which was followed.**
+
+| Input | Provider documentation | Legacy collection | Legacy answer when absent |
+| --- | --- | --- | --- |
+| Current, ultra-short and short grids | [VilageFcstInfoService_2.0](https://www.data.go.kr/data/15084084/openapi.do) (`getUltraSrtNcst`, `getUltraSrtFcst`, `getVilageFcst`; development account 10,000 per day) | `controllerManager.js:2433` (current at minutes 2, 12, …), `:2444` (ultra-short at 47, 54, 4, 14), `:2423` (short at 12); backfill `PastConditionGather.js:22` ("kma 1.2부터는 23시간 전까지만 제공함"), `:2353-2356` | `controllerTown.js:4407-4421` (`find` empty: "there is no data"; S15 assembly reproduces it from an empty collection) |
+| Short RSS | `www.kma.go.kr/wid/queryDFS.jsp?gridx&gridy` (keyless; no published specification) | `controllerManager.js:2382-2385` (hourly, in the minute-2 block from `:2338`) | `controllerTown.js:494` over an empty collection |
+| Mid forecasts | [MidFcstInfoService](https://www.data.go.kr/data/15059468/openapi.do) (`getMidFcst`, `getMidLandFcst`, `getMidTa`; issued at 06:00 and 18:00) | `controllerManager.js:2365-2376` (minute-2 block) | `controllerTown.js:4535` (`_getMidDataFromDB`) |
+| Forecast-zone list | [FcstZoneInfoService](https://www.data.go.kr/data/15057111/openapi.do) (`getFcstZoneCd`) | `controllerManager.js:2530-2534`: `getFromKma()` once at process start | `controllerTown.js:4505-4514`: an empty `find` is the "error to get forecast zone" error |
+| Warnings | [WthrWrnInfoService](https://www.data.go.kr/data/15000415/openapi.do) | `controllerManager.js:2668` (`time % 3 == 0`); `kmaWarningRequester.js:17-20` (same `DONGNAE_SECRET_KEYS`, 30 s timeout) | `controllerTown24h.js:1924-1934`: a store error skips `specialInfo` |
+
+Followed: legacy cadence and absent-data answers. Where server2 cannot run legacy's schedule for every
+cell, it acquires the same publication on demand, as S15b-2 and S15b-3 do (O-9: published through S06
+before use).
+
+**Live confirmation** (2026-10-15 23:35 KST; keys loaded in-process from `server2/.env`, never
+printed; 9 calls; nothing stored):
+
+| Call | Result |
+| --- | --- |
+| `getUltraSrtNcst` 60,127 `base_time` 2200 | `00`, 8 items |
+| `getUltraSrtFcst` 2230 | `00`, 66 items |
+| `getVilageFcst` 2300 | `00`, 980 items (one 999-row page) |
+| `getMidFcst` `stnId` 109 `tmFc` 202610151800 | `00`, 1 item |
+| `getMidLandFcst` 11B00000 | `00`, 1 item |
+| `getMidTa` 11B10101 | `00`, 1 item |
+| `getFcstZoneCd` page 1 | `00`, 755 items (one 1,000-row page) |
+| `getWthrWrnList` `stnId` 108, today | `00`, 5 items |
+| `wid/queryDFS.jsp` 60,127 | 200 `text/xml`, `tm` 202610152300 |
+
+**Calls per path** (data.go.kr calls are S08 units on one quota owner per key and KST day):
+
+| Path | Calls | Retry bound |
+| --- | --- | --- |
+| Missing latest grid publication | 1 per family and cell (≤5 pages) | 5 minutes per publication |
+| Grid backfill (first request of a cell) | ≤23 current + 23 ultra-short + 7 short, 3 in flight per family | 1 hour per publication |
+| Missing latest RSS | 1 keyless GET per cell | 5 minutes |
+| Missing latest mid publication | 1 per collected region (3 per town) | 5 minutes |
+| Forecast-zone list | ≤10 pages once per process | once per process |
+| Warning cycle | the legacy cycle (5 steps) | every 3 minutes while requests arrive |
+
+Steady state per active cell and day: 24 current + 24 ultra-short + 8 short = 56 units, plus one
+`queryDFS` per hour; a cold cell adds up to 53 backfill units once.
+
+### Scenarios (S15b-4a)
+
+| ID | User and goal | Steps | Expected / failure | AC and proof |
+| --- | --- | --- | --- | --- |
+| Q1 | First user of a cell with no stored forecast | Snapshot with every grid, RSS, mid and zone input missing | No forward; the acquired current publication is used in the same request; the others answer legacy's empty collections | `source_s3::missing_inputs_are_acquired_at_request_time_and_never_forwarded` |
+| Q2 | Next user of the cell | Second request | No repeated acquisition (retry bounds); one backfill pass of 23 current hours | same test |
+| Q3 | User while every provider is slow | Every acquisition takes 6 s | The request waits once, at most 3 s, for all of them (15.2 s before the shared bound) | `source_s3::a_request_waits_for_late_acquisitions_once_within_three_seconds` |
+| Q4 | Town whose zone list is not stored | Snapshot | `forecast_zone` answers `[]` (legacy's empty `find`) | `source_s3_oracle` (11D10000) |
+| Q5 | Operator enables `kma` | No new setting | The acquirer uses `DONGNAE_SECRET_KEYS` and the built-in data.go.kr root | `gateway::runtime` (`kma_forecast`) |
+
+### Open decisions and limitations (S15b-4a)
+
+- **Quota.** S08 funds every data.go.kr service of these keys from one built-in 10,000 units per
+  key and KST day (S15b-2). One active cell needs 56 units a day, plus up to 53 once. Legacy collects
+  every town with the same keys, so the production keys must have operating-account quotas.
+  Options:
+  - (a) keep 10,000 and accept about 170 active cells per key;
+  - (b) set the built-in per-key units to the approved operating quotas (AK to give the values);
+  - (c) account per service, as data.go.kr does.
+- Until legacy retires, legacy and server2 spend the same keys.
+- The `queryDFS` RSS has no published specification; its shape is the S13 characterization.

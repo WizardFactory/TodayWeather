@@ -1887,6 +1887,7 @@ cutover; it does not claim to reproduce legacy collection timing.
 **Temporary forwards.** Until S15b-4, the snapshot forwards with a named reason in these cases:
 
 - A latest publication is not in S3: current, ultra-short, short, RSS, mid, or the zone list.
+  Since S15b-4a this is acquired at request time and no longer forwards.
 - The town is unknown.
 - A method owned by S15b-2 or S15b-3 is called.
 
@@ -2349,6 +2350,57 @@ same 384 rows (from 2026-10-15 00:00 KST) and 432 rows (from 2026-10-15 18:00 KS
 smoke reference points (Seoul, Daejeon, Busan, Jeju). On the loaded test machine a 6 MB write
 to the Python peer outlasted the 3-second S3 operation bound (an ambiguous write); the check used
 the 9-second maximum for the peer.
+
+### S15b-4a request-time forecast acquisition (2026-10-15)
+
+S15b-4a ([plan](../../plans/issue-2742.md#s15b-4a-request-time-forecast-acquisition)) acquires at
+request time the forecast inputs that S15b-1 still forwarded. A missing input is no longer a
+forward reason: the snapshot answers what is stored, as legacy answers from a collection that lacks
+the data.
+
+**Acquisitions** (`domestic/kma/source/fetch.rs`). Each runs on S13d `OwnedFlights`, keyed by
+dataset and publication. It survives the request, uses the legacy provider timeouts, and publishes
+its raw records through S06 before any request uses them.
+
+| Input | When the request acquires it | Retry bound |
+| --- | --- | --- |
+| Latest grid publication (`getUltraSrtNcst`, `getUltraSrtFcst` at HH30, `getVilageFcst`) | Not in S3 for the cell | 5 minutes |
+| Grid backfill (earlier publications: 23 current, 23 ultra-short, 7 short; S14 `schedule`) | Missing publications, in one owned pass per cell and family; the request does not wait | 1 hour each |
+| Latest short RSS (`wid/queryDFS.jsp`) | Not in S3 for the cell | 5 minutes |
+| Latest mid publications (`getMidFcst`, `getMidLandFcst`, `getMidTa` at the 06/18 `tmFc`) | A region legacy collects lacks the latest publication | 5 minutes |
+| Forecast-zone list (`getFcstZoneCd`) | Once per process, like legacy's `getFromKma()` at start | per process |
+| Warning cycle (`WarningCollector.gather`, S12) | Once per 3 minutes, legacy's cadence | 3 minutes |
+
+Failures count against the same bounds, so a failing provider is not asked again per request.
+
+**Request wait.** A request waits once for all of these and for the S15b-2 station observations.
+The shared bound is at most 3 s (`REQUEST_WAIT`) within its deadline. The three mid regions and the
+warning cycle run concurrently with the grid and RSS reads. An acquisition finishing after the bound
+serves the next request. If no zone list is stored yet, `forecast_zone` answers `[]`. If the warning
+state cannot be read, `special_zones` is the legacy store error, so `getSpecialInfo` skips the
+section.
+
+**Keys and quota.** The acquisitions use the process data.go.kr acquirer of S15b-2 (legacy
+`DONGNAE_SECRET_KEYS`, one S08 quota owner per key and KST day, built-in 10,000 units). Its key rings
+now include `VilageFcstInfoService_2.0`, `MidFcstInfoService` and `FcstZoneInfoService`. The warning
+requester draws on the same daily budgets, with the first two keys as legacy rotates them. The
+data.go.kr root is built in (`gateway::runtime::Builtins`). There is no new setting.
+
+**Load per active cell and day:** 56 units (24 current, 24 ultra-short, 8 short) and 24 keyless RSS
+GETs. A cold cell adds up to 53 backfill units once. The open quota decision is in the
+[plan](../../plans/issue-2742.md#open-decisions-and-limitations-s15b-4a).
+
+**Verification** (local test peers and doubles only):
+
+- With every input missing, one request is served without a forward and uses the current
+  publication acquired for it.
+- The next request repeats no acquisition, and the backfill asks for 23 earlier hours once.
+- When every acquisition takes 6 s, the request returns within the shared 3 s bound. Before the
+  shared bound, the same request took 15.2 s.
+
+The provider calls were confirmed live on 2026-10-15; see the plan for the list. The remaining
+forward reasons (unknown towns, a grid outside KMA, the S15 declared forwards) belong to S15b-4b.
+Cold-cell latency belongs to S15b-4c.
 
 ### S10e legacy settings and server2/.env (2026-10-15)
 

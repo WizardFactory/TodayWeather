@@ -15,6 +15,11 @@
       "reason": "S15b-4 split, sources followed, live checks and the request-time acquisition plan; no implementation outside server2"
     },
     {
+      "path": "specs/issue-2742.md",
+      "category": "documentation",
+      "reason": "The S15b-1 freshness rule: a missing latest publication is acquired at request time (S15b-4a) instead of forwarded"
+    },
+    {
       "path": "docs/architecture/server2.md",
       "category": "documentation",
       "reason": "Append the S15b-4a request-time forecast acquisition section only"
