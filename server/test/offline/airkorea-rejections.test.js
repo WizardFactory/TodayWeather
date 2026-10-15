@@ -62,7 +62,13 @@ test('zero-total pages traverse full pages and reject repeats, holes, changed to
     const t = transport(u => { const n = Number(u.searchParams.get('pageNo')); return {body: page(rows.slice((n - 1) * 2, n * 2), n)}; });
     assert.equal((await fetch(t, '전남', Api.STATION, {pageSize: 2})).list.length, 5);
     assert.equal(t.calls.length, 4);
-    for (const kind of ['repeat', 'hole', 'changed', 'limit', 'failed-terminal', 'oversize', 'wrong-page', 'wrong-size']) {
+    const failures = {
+        repeat: ['DUPLICATE_OBSERVATION'], hole: ['INCOMPLETE_PAGE', 'noncontiguous-page'],
+        changed: ['CHANGED_TOTAL'], limit: ['COLLECTION_LIMIT'], 'failed-terminal': ['HTTP_503'],
+        oversize: ['INCOMPLETE_PAGE', 'item-count'], 'wrong-page': ['INCOMPLETE_PAGE', 'page-number'],
+        'wrong-size': ['INCOMPLETE_PAGE', 'page-size']
+    };
+    for (const kind of Object.keys(failures)) {
         const broken = transport(u => {
             const n = Number(u.searchParams.get('pageNo'));
             let items = kind === 'hole' ? [rows[n - 1]] : rows.slice(0, 2);
@@ -72,8 +78,11 @@ test('zero-total pages traverse full pages and reject repeats, holes, changed to
             if (kind === 'oversize') body.response.body.items = rows;
             return {body, status: kind === 'failed-terminal' && n === 2 ? 503 : 200};
         });
-        await assert.rejects(fetch(broken, '전남', Api.STATION, {pageSize: 2, maxPages: kind === 'limit' ? 1 : 20}),
-            /INCOMPLETE_PAGE|CHANGED_TOTAL|COLLECTION_LIMIT|DUPLICATE_OBSERVATION|HTTP_503/);
+        await assert.rejects(fetch(broken, '전남', Api.STATION, {pageSize: 2, maxPages: kind === 'limit' ? 1 : 20}), err => {
+            assert.equal(err.code, failures[kind][0], kind);
+            assert.equal(err.diagnostic && err.diagnostic.reason, failures[kind][1], kind);
+            return true;
+        });
     }
 });
 test('positive total stays exact; auxiliary operations cannot use zero-total recovery', async () => {
