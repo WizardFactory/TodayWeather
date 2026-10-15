@@ -38,3 +38,19 @@ request flow is the existing S10 gateway/S15 backend sequence with one router li
 A library change selected only by `kma-v000901`/`kma-v000902`; v000903 is unchanged (its router
 list is the same table). Until S15b-4 every listed request forwards with the S15b named reasons.
 Revert the PR or remove the entries to roll back. Production switches remain S20.
+
+## S17b scenarios
+
+| ID | User and goal | Steps | Expected / failure | Proof |
+| --- | --- | --- | --- | --- |
+| B1 | Old app calls `/v000901/kma/addr` or `/v000903/kma/addr` directly | `kma-v000901`/`kma` listed; GET, revalidate with the ETag, HEAD | Golden status, body and headers; 304 with Express headers; HEAD without body; no legacy hop | `kma_direct::listed_direct_routes_reproduce_the_s02_goldens_natively` |
+| B2 | Old app calls `/v000803/town` | `town` listed; GET and revalidation | `domestic-v000803(-304)` on the wire | same test; `kma_parity::all_town_oracle_scenarios_match_legacy_status_and_bytes` |
+| B3 | Very old app calls `/v000705/town` (and sub-routes) | `town` listed | 200 `application/json` empty body without ETag (`domestic-v000705`); sub-route outcomes as legacy | same tests; `town_status_replies_and_declared_forwards` |
+| B4 | Request with a non-Korean region | `/v000803/town/중국/...` | 400 text as legacy | `town_status_replies_and_declared_forwards` |
+| B5 | Inputs not in S3 yet | Source forwards | Legacy reply passes unchanged (status, headers, body, 304) | `forwarded_direct_requests_return_the_legacy_reply_unchanged` |
+| B6 | Operator leaves the entries unlisted | Default list | Paths stay unclaimed (404 as before), no S3 read | `unlisted_direct_routes_keep_the_previous_reply`, `tools/kma_smoke.py` |
+
+Order: town recording and S02 cross-check; Red (tests against S17a: missing `api`,
+`parse_town_path`, `Outcome::Undefined`); town lists, `getSummary`, `dataToFixed`, the
+`rn1Str` `+`; direct routes, envelope and hop; runtime entry; fmt, clippy, tests, smokes,
+placement, artifact policy; PR stacked on S17a; Codex review; CI.

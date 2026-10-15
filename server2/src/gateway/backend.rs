@@ -226,6 +226,63 @@ impl BackendDispatcher {
         switch.mode = mode;
         Ok(())
     }
+    /// S17b coexistence hop for a direct public route the native port forwards: the request goes
+    /// to the legacy origin unchanged (method, path, query and end-to-end headers) and the legacy
+    /// status, headers and body come back unchanged. Hop-by-hop headers are not copied.
+    pub async fn proxy(
+        &self,
+        method: &axum::http::Method,
+        path_and_query: &str,
+        headers: &axum::http::HeaderMap,
+        timeout: Duration,
+    ) -> Result<(u16, axum::http::HeaderMap, Vec<u8>), GatewayError> {
+        const HOP: [&str; 9] = [
+            "connection",
+            "keep-alive",
+            "proxy-authenticate",
+            "proxy-authorization",
+            "te",
+            "trailer",
+            "transfer-encoding",
+            "upgrade",
+            "host",
+        ];
+        let method = reqwest::Method::from_bytes(method.as_str().as_bytes())
+            .map_err(|_| GatewayError::Provider)?;
+        let mut request = self
+            .http
+            .client
+            .request(method, format!("{}{path_and_query}", self.http.base))
+            .timeout(timeout);
+        for (name, value) in headers {
+            if !HOP.contains(&name.as_str()) && name.as_str() != "content-length" {
+                request = request.header(name.as_str(), value.as_bytes());
+            }
+        }
+        let mut response = request.send().await.map_err(|_| GatewayError::Provider)?;
+        let status = response.status().as_u16();
+        let mut out = axum::http::HeaderMap::new();
+        for (name, value) in response.headers() {
+            if HOP.contains(&name.as_str()) {
+                continue;
+            }
+            if let (Ok(n), Ok(v)) = (
+                axum::http::HeaderName::from_bytes(name.as_str().as_bytes()),
+                axum::http::HeaderValue::from_bytes(value.as_bytes()),
+            ) {
+                out.append(n, v);
+            }
+        }
+        let max = 6 * 1024 * 1024;
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response.chunk().await.map_err(|_| GatewayError::Provider)? {
+            if bytes.len().saturating_add(chunk.len()) > max {
+                return Err(GatewayError::Provider);
+            }
+            bytes.extend_from_slice(&chunk);
+        }
+        Ok((status, out, bytes))
+    }
     pub fn mode(&self, version: Version, family: Family) -> BackendMode {
         self.switches
             .read()

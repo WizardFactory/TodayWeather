@@ -1083,10 +1083,12 @@ fn rain_item(current: &V, units: &V, l: Locale) -> Option<Item> {
         String::new()
     };
     current.set("ptyStr", label.clone());
-    let rn1_str = to_str(&add(&current.get("rn1"), &units.get("precipitationUnit")));
+    // `rn1 + units.precipitationUnit` keeps JavaScript `+`: without the unit (the town routes
+    // set no query defaults) a number plus undefined is NaN, which JSON writes as null.
+    let rn1_str = add(&current.get("rn1"), &units.get("precipitationUnit"));
     current.set("rn1Str", rn1_str.clone());
     Some(Item {
-        text: format!("{label} {rn1_str}"),
+        text: format!("{label} {}", to_str(&rn1_str)),
         grade: add(&current.get("rn1"), &n(3.)),
     })
 }
@@ -1290,6 +1292,53 @@ pub fn get_summary_after_unit_converter(cx: &mut Cx) -> Flow {
     });
     if r.is_err() {
         current.set("summary", "");
+    }
+    Flow::Next
+}
+/// `getSummary` (ControllerTown, the town routes): yesterday and `makeSummary` before any unit
+/// conversion; `req.query` supplies the units as requested (no defaults on these routes).
+pub fn get_summary(cx: &mut Cx) -> Flow {
+    let (current, list) = (cx.r("current"), cx.r("currentList"));
+    if !current.truthy() || !list.truthy() {
+        return Flow::Next;
+    }
+    let l = cx.locale;
+    let query = cx.r("query");
+    let r = catch(|| {
+        current.set("yesterday", policy::yesterday(&current, &list));
+        current.set(
+            "summary",
+            summary(&current, &current.get("yesterday"), &query, l),
+        );
+    });
+    if r.is_err() {
+        current.set("summary", "");
+    }
+    Flow::Next
+}
+/// `dataToFixed` (ControllerTown, v000705): `Math.round` of the current, short and daily
+/// temperatures.
+pub fn data_to_fixed(cx: &mut Cx) -> Flow {
+    let math_round = |v: &V| V::Num(round(to_number(v)));
+    let current = cx.r("current");
+    if current.truthy() {
+        current.set("t1h", math_round(&current.get("t1h")));
+    }
+    let short = cx.r("short");
+    if short.truthy() {
+        for row in short.a().items() {
+            for key in ["t3h", "tmn", "tmx"] {
+                row.set(key, math_round(&row.get(key)));
+            }
+        }
+    }
+    let mid = cx.r("midData");
+    if mid.truthy() && mid.get("dailyData").truthy() {
+        for day in mid.get("dailyData").a().items() {
+            for key in ["taMin", "taMax"] {
+                day.set(key, math_round(&day.get(key)));
+            }
+        }
     }
     Flow::Next
 }

@@ -72,3 +72,34 @@ coverage plus the S15b-2 ASOS composition; the v000901/v000902 recording include
   `domestic-v000902-db1` equal their recordings; `gateway-default-domestic`,
   `gateway-v000901-domestic`, `gateway-v000902-domestic` match on the wire (status, body, headers
   except `date`/`connection`) with the native switch, the legacy default and the rollback.
+
+## S17b: direct routes and town
+
+`server2::api::DirectRoutes` answers the legacy direct public routes before the gateway routes
+when their entry is listed: `kma` (`/v000903/kma/addr`), `kma-v000901` (`/v000901/kma/addr`) and
+the new `town` entry (`/v000803/town`, `/v000705/town`). Unlisted paths keep the previous 404;
+other methods are never claimed. Direct `/v000902/kma/addr` is zero-observed and not claimed.
+
+- **Town router lists** (`routes/v000803/routeTownForecast.js`, `routes/v000705/routeTownForecast.js`):
+  no `checkQueryValidation` (no query defaults, no `req.version`), `insertSkyIcon` (upper case),
+  `getSummary` (ControllerTown: yesterday and `makeSummary` before any unit conversion,
+  `controllerTown.js:2316`). v000803 ends with `makeResult` (no `location`, since `req.version` is
+  unset) and `sendResult`. v000705 adds `dataToFixed` (`controllerTown.js:3142`) and has no
+  `makeResult`, so `sendResult` answers `res.json(undefined)`: 200, `Content-Type:
+  application/json`, an empty body and no ETag. The v000705 sub-routes `/mid`, `/short`,
+  `/shortest`, `/current` run their own lists; the report's `{location}` normalization cannot
+  show them unused.
+- Without query defaults, `makeSummary`'s `rn1 + units.precipitationUnit` is JavaScript `+` with
+  `undefined`: `NaN`, written as `null`.
+- **Express envelope** (Express 4.13.4): `res.json` with `application/json; charset=utf-8` and a
+  weak ETag; `res.status(400).send(text)` with `text/html; charset=utf-8` and an ETag;
+  `fresh` 0.3.0 revalidation for 2xx GET/HEAD (exact tag or `W/` + tag, `*`, `no-cache` and
+  `If-Modified-Since` without `Last-Modified` never fresh) with Express's 304 headers; HEAD
+  without a body; `cors()` and `X-Powered-By`. The locale is i18n 0.8.3 `init` (`twcookie`
+  cookie, then Accept-Language). The app-wide session cookie is not emitted (S12 precedent).
+- **Forwards.** An outcome legacy must answer (`Outcome::Legacy`: the S15b input forwards until
+  S15b-4, the S15 `next(err)`/uncaught-exception forwards, a panic) or a path no native route
+  parses takes the legacy hop unchanged (method, path, query, end-to-end headers; legacy status,
+  headers and body back). The v000705 `/short`, `/shortest`, `/current` replies without
+  `midData` are legacy 500s from `next(err)` and are forwarded like every S15 `next(err)`; S15b-4
+  owns removing the forwards.

@@ -176,62 +176,206 @@ const CHAIN: [(&str, Middleware); 37] = [
     ("sendResult", send_result),
 ];
 
+/// Legacy middleware outside the v000903 list: the v000901/v000902 air and icon steps (S17a) and
+/// the town steps (S17b).
+const OLDER_STEPS: [(&str, Middleware); 5] = [
+    ("makeAirInfo", super::air::make_air_info),
+    ("AirForecast", super::air::air_forecast),
+    ("insertSkyIcon", super::present::insert_sky_icon),
+    ("getSummary", super::present::get_summary),
+    ("dataToFixed", super::present::data_to_fixed),
+];
 /// The router-list prefix shared by every address version, up to `getKeco`.
 const SHARED: usize = 23;
 /// The v000901 tail after `getKeco` (`routes/v000901/route.kma.addr.js`): no air fallback or
 /// warning step, one air object (`makeAirInfo`, `AirForecast`) and the `_parseSkyState` icons.
-const TAIL_V000901: [(&str, Middleware); 12] = [
-    ("getKecoDustForecast", super::air::get_keco_dust_forecast),
-    ("getRiseSetInfo", super::air::get_rise_set_info),
-    ("insertIndex", super::present::insert_index),
-    ("makeAirInfo", super::air::make_air_info),
-    ("AirForecast", super::air::air_forecast),
-    ("insertSkyIcon", super::present::insert_sky_icon),
-    ("setYesterday", super::present::set_yesterday),
-    ("convertUnits", super::present::convert_units_mw),
-    ("insertStrForData", super::present::insert_str_for_data),
-    (
-        "getSummaryAfterUnitConverter",
-        super::present::get_summary_after_unit_converter,
-    ),
-    ("makeResult", make_result),
-    ("sendResult", send_result),
+const TAIL_V000901: [&str; 12] = [
+    "getKecoDustForecast",
+    "getRiseSetInfo",
+    "insertIndex",
+    "makeAirInfo",
+    "AirForecast",
+    "insertSkyIcon",
+    "setYesterday",
+    "convertUnits",
+    "insertStrForData",
+    "getSummaryAfterUnitConverter",
+    "makeResult",
+    "sendResult",
 ];
 /// The v000902 tail (`routes/v000902/route.kma.v000902.js`): v000901 with lower-case icons.
-const TAIL_V000902: [(&str, Middleware); 12] = [
-    ("getKecoDustForecast", super::air::get_keco_dust_forecast),
-    ("getRiseSetInfo", super::air::get_rise_set_info),
-    ("insertIndex", super::present::insert_index),
-    ("makeAirInfo", super::air::make_air_info),
-    ("AirForecast", super::air::air_forecast),
-    (
-        "insertSkyIconLowCase",
-        super::present::insert_sky_icon_low_case,
-    ),
-    ("setYesterday", super::present::set_yesterday),
-    ("convertUnits", super::present::convert_units_mw),
-    ("insertStrForData", super::present::insert_str_for_data),
-    (
-        "getSummaryAfterUnitConverter",
-        super::present::get_summary_after_unit_converter,
-    ),
-    ("makeResult", make_result),
-    ("sendResult", send_result),
+const TAIL_V000902: [&str; 12] = [
+    "getKecoDustForecast",
+    "getRiseSetInfo",
+    "insertIndex",
+    "makeAirInfo",
+    "AirForecast",
+    "insertSkyIconLowCase",
+    "setYesterday",
+    "convertUnits",
+    "insertStrForData",
+    "getSummaryAfterUnitConverter",
+    "makeResult",
+    "sendResult",
 ];
-/// The legacy router list of an address version (`v000901`, `v000902` or `v000903`); None for
-/// any other version.
-fn chain(version: &str) -> Option<Vec<(&'static str, Middleware)>> {
-    let tail: &[(&str, Middleware)] = match version {
-        "v000903" => return Some(CHAIN.to_vec()),
-        "v000902" => &TAIL_V000902,
-        "v000901" => &TAIL_V000901,
+/// `routes/v000803/routeTownForecast.js` (`/:region[/:city[/:town]]`): no query defaults,
+/// `getSummary` (ControllerTown) and the upper-case icons; `makeResult` without `location`.
+const TOWN_V000803: [&str; 30] = [
+    "checkParamValidation",
+    "getAllDataFromDb",
+    "getShort",
+    "getShortRss",
+    "getShortest",
+    "getCurrent",
+    "updateCurrentListForValidation",
+    "mergeCurrentSkyByShortest",
+    "mergeCurrentByStnHourly",
+    "getKmaStnMinuteWeather",
+    "convert0Hto24H",
+    "mergeShortWithCurrentList",
+    "mergeByShortest",
+    "adjustShort",
+    "getMid",
+    "getMidRss",
+    "convertMidKorStrToSkyInfo",
+    "getPastMid",
+    "mergeMidWithShort",
+    "updateMidTempMaxMin",
+    "getLifeIndexKma",
+    "getKeco",
+    "getKecoDustForecast",
+    "getRiseSetInfo",
+    "insertIndex",
+    "insertStrForData",
+    "insertSkyIcon",
+    "getSummary",
+    "makeResult",
+    "sendResult",
+];
+/// `routes/v000705/routeTownForecast.js` (`/:region[/:city[/:town]]`): no `makeResult`, so
+/// `sendResult` answers `res.json(undefined)`.
+const TOWN_V000705: [&str; 27] = [
+    "checkParamValidation",
+    "getAllDataFromDb",
+    "getShort",
+    "getShortRss",
+    "getShortest",
+    "getCurrent",
+    "updateCurrentListForValidation",
+    "mergeCurrentByStnHourly",
+    "getKmaStnMinuteWeather",
+    "convert0Hto24H",
+    "mergeShortWithCurrentList",
+    "mergeByShortest",
+    "adjustShort",
+    "getMid",
+    "getMidRss",
+    "convertMidKorStrToSkyInfo",
+    "getPastMid",
+    "mergeMidWithShort",
+    "getLifeIndexKma",
+    "getKeco",
+    "getKecoDustForecast",
+    "insertIndex",
+    "insertStrForData",
+    "insertSkyIcon",
+    "getSummary",
+    "dataToFixed",
+    "sendResult",
+];
+/// The v000705 `/:region/:city/:town/{mid,short,shortest,current}` lists.
+const TOWN_V000705_MID: [&str; 13] = [
+    "getMid",
+    "getMidRss",
+    "convertMidKorStrToSkyInfo",
+    "getPastMid",
+    "mergeMidWithShort",
+    "getLifeIndexKma",
+    "getKeco",
+    "getKecoDustForecast",
+    "insertIndex",
+    "insertSkyIcon",
+    "insertStrForData",
+    "dataToFixed",
+    "sendResult",
+];
+const TOWN_V000705_SHORT: [&str; 13] = [
+    "getShort",
+    "getShortRss",
+    "getShortest",
+    "convert0Hto24H",
+    "mergeShortWithCurrentList",
+    "adjustShort",
+    "getLifeIndexKma",
+    "getKeco",
+    "insertIndex",
+    "insertStrForData",
+    "insertSkyIcon",
+    "dataToFixed",
+    "sendResult",
+];
+const TOWN_V000705_SHORTEST: [&str; 7] = [
+    "getShortest",
+    "convert0Hto24H",
+    "insertIndex",
+    "insertStrForData",
+    "insertSkyIcon",
+    "dataToFixed",
+    "sendResult",
+];
+const TOWN_V000705_CURRENT: [&str; 13] = [
+    "getCurrent",
+    "updateCurrentListForValidation",
+    "mergeCurrentByStnHourly",
+    "getKmaStnMinuteWeather",
+    "convert0Hto24H",
+    "getLifeIndexKma",
+    "getKeco",
+    "insertIndex",
+    "insertStrForData",
+    "insertSkyIcon",
+    "getSummary",
+    "dataToFixed",
+    "sendResult",
+];
+/// The implementation of a legacy middleware name.
+fn step(name: &str) -> Option<(&'static str, Middleware)> {
+    CHAIN
+        .iter()
+        .chain(OLDER_STEPS.iter())
+        .find(|(n, _)| *n == name)
+        .copied()
+}
+/// The legacy router list of a request: the address versions (`v000901`, `v000902`,
+/// `v000903`) and the town versions (`v000803`, `v000705`, with the v000705 sub-routes in
+/// `part`); None for any other route.
+fn chain(version: &str, part: Option<&str>) -> Option<Vec<(&'static str, Middleware)>> {
+    let names: Vec<&str> = match (version, part) {
+        ("v000903", None) => return Some(CHAIN.to_vec()),
+        ("v000902", None) => CHAIN[..SHARED]
+            .iter()
+            .map(|(n, _)| *n)
+            .chain(TAIL_V000902)
+            .collect(),
+        ("v000901", None) => CHAIN[..SHARED]
+            .iter()
+            .map(|(n, _)| *n)
+            .chain(TAIL_V000901)
+            .collect(),
+        ("v000803", None) => TOWN_V000803.to_vec(),
+        ("v000705", None) => TOWN_V000705.to_vec(),
+        ("v000705", Some("mid")) => TOWN_V000705_MID.to_vec(),
+        ("v000705", Some("short")) => TOWN_V000705_SHORT.to_vec(),
+        ("v000705", Some("shortest")) => TOWN_V000705_SHORTEST.to_vec(),
+        ("v000705", Some("current")) => TOWN_V000705_CURRENT.to_vec(),
         _ => return None,
     };
-    Some(CHAIN[..SHARED].iter().chain(tail).copied().collect())
+    names.into_iter().map(step).collect()
 }
-/// Names of the router list of `version` in order (for tests and diagnostics).
-pub fn names(version: &str) -> Vec<&'static str> {
-    chain(version)
+/// Names of the router list of `version` (and a v000705 sub-route) in order (for tests and
+/// diagnostics).
+pub fn names(version: &str, part: Option<&str>) -> Vec<&'static str> {
+    chain(version, part)
         .unwrap_or_default()
         .iter()
         .map(|(n, _)| *n)
@@ -313,7 +457,7 @@ pub fn run(
     let req = obj(vec![
         ("params", V::Obj(params)),
         ("query", V::Obj(query)),
-        ("baseUrl", V::from(format!("/{}/kma", request.version))),
+        ("baseUrl", V::from(request.base_url())),
         ("originalUrl", V::from(request.original_url.as_str())),
     ]);
     let mut cx = Cx {
@@ -324,7 +468,7 @@ pub fn run(
         config,
         towns: None,
     };
-    let Some(steps) = chain(&request.version) else {
+    let Some(steps) = chain(&request.version, request.part.as_deref()) else {
         return Outcome::Legacy(format!("no native router list for {}", request.version));
     };
     for (name, step) in steps {
@@ -525,6 +669,10 @@ pub fn fixed_str(v: &V, digits: usize) -> String {
 /// `sendResult`: `res.json(req.result)`.
 fn send_result(cx: &mut Cx) -> Flow {
     let result = cx.r("result");
+    if result.is_undef() {
+        // The v000705 town list has no `makeResult`.
+        return Flow::Done(Outcome::Undefined);
+    }
     let body = super::js::to_json(&result).unwrap_or(crate::gateway::OrderedJson::Null);
     Flow::Done(Outcome::Json(body))
 }

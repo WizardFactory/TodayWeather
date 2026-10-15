@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """S15/S15b-1/S17a release HTTP smoke for the KMA routing entries (kma: v000903; S17a kma-v000901,
-kma-v000902: the unversioned and v000901/v000902 gateway backends): legacy ->
+kma-v000902: the unversioned and v000901/v000902 gateway backends; S17b town and the direct /kma/addr
+routes): legacy ->
 SERVER2_NATIVE_FAMILIES=kma -> legacy against a task-owned loopback legacy origin and the owned S06
 S3 test peer. With `kma` the S3 input source reads the shared S3 settings (S10e: SERVER2_S3_BUCKET,
 AWS_ACCESS_KEY, AWS_SECRET_KEY); until S15b-4 it forwards every request (named temporary
@@ -23,6 +24,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import urllib.parse
 import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -151,7 +153,35 @@ def run(binary, peer_binary):
                     g.stop(process)
             for path, phases in bodies.items():
                 assert phases[0] == phases[1] == phases[2], ('native forward changed the response bytes', path)
+        # S17b direct routes: unlisted they stay unclaimed (404, no legacy hop); listed
+        # (`town`, `kma-v000901`) they read the S3 input source and, until S15b-4, take the
+        # unchanged legacy hop.
+        town = '/' + '/'.join(urllib.parse.quote(s) for s in ('서울특별시', '중구', '명동'))
+        direct = ['/v000901/kma/addr' + town, '/v000803/town' + town, '/v000705/town' + town,
+                  '/v000705/town' + town + '/mid']
+        for families in (None, 'town,kma-v000901', None):
+            process, base = start(peer_command(peer_binary, endpoint, s3), endpoint, families)
+            try:
+                for index, path in enumerate(direct):
+                    before = len(Origin.paths)
+                    s3_before = s3_requests(s3)
+                    status, headers, body = g.request(base, path, headers={'Accept-Language': 'ko-KR'})
+                    hops = Origin.paths[before:]
+                    if families:
+                        assert status == 200 and body == b'{"temperature":21,"name":"backend"}', (path, status, body)
+                        assert path in hops, (path, hops)
+                        if index == 0:
+                            assert s3_requests(s3) - s3_before > 0, 'the direct route read nothing from S3'
+                    else:
+                        assert (status, body) == (404, b'Not Found'), (path, status, body)
+                        assert not hops and s3_requests(s3) == s3_before, (path, hops)
+                print('PASS %s: direct %s' % ('SERVER2_NATIVE_FAMILIES=' + families if families else 'routing list unset',
+                                             'routes took the legacy hop with the legacy bytes' if families
+                                             else 'routes stayed unclaimed (404, no legacy hop, no S3 read)'), flush=True)
+            finally:
+                g.stop(process)
         for bad, with_s3, with_keys in (('kma,kma', True, True), ('KMA', True, True), ('kma,unknown', True, True),
+                                        ('town,town', True, True), ('town', False, True), ('town', True, False),
                                         ('kma', False, True), ('kma', True, False),
                                         ('kma-v000901,kma-v000901', True, True), ('kma-v000903', True, True),
                                         ('kma-v000902', False, True), ('kma-v000901', True, False)):
@@ -163,9 +193,9 @@ def run(binary, peer_binary):
                 env.update(kma_env())
             refused = subprocess.run([binary], env=env, cwd=CWD, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=10)
             assert refused.returncode != 0 and 'server2 public=' not in refused.stdout, (bad, refused.returncode, refused.stderr)
-        print('PASS release server2: unknown or repeated routing entries, and kma or kma-v000901/kma-v000902 without the S3 settings or '
+        print('PASS release server2: unknown or repeated routing entries, and kma, kma-v000901/kma-v000902 or town without the S3 settings or '
               'DONGNAE_SECRET_KEYS, stop startup before binding', flush=True)
-        print('PASS S15b-1/S17a KMA routing release smoke (legacy -> kma | kma-v000901,kma-v000902 -> legacy, identical bytes, listed versions read '
+        print('PASS S15b-1/S17a/S17b KMA routing release smoke (legacy -> kma | kma-v000901,kma-v000902 | town -> legacy, identical bytes, listed entries read '
               'the S3 test peer); loopback peers only, no provider/AWS request, no native serving claim', flush=True)
     finally:
         peer.terminate()

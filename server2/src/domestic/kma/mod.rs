@@ -168,13 +168,15 @@ impl Default for AssemblyConfig {
     }
 }
 
-/// An address request (`/v000901/kma/addr`, `/v000902/kma/addr`, `/v000903/kma/addr`) after
-/// Express routing.
+/// An address request (`/v000901/kma/addr`, `/v000902/kma/addr`, `/v000903/kma/addr`) or a
+/// town request (`/v000803/town`, `/v000705/town`, S17b) after Express routing.
 #[derive(Debug, Clone)]
 pub struct KmaRequest {
     /// First path segment of the mount (`req.baseUrl`), e.g. `v000903`; it selects the router
     /// list (S17a).
     pub version: String,
+    /// The v000705 town sub-route (`mid`, `short`, `shortest`, `current`), else None.
+    pub part: Option<String>,
     pub region: Option<String>,
     pub city: Option<String>,
     pub town: Option<String>,
@@ -184,12 +186,25 @@ pub struct KmaRequest {
     pub query: Vec<(String, String)>,
     pub locale: Locale,
 }
+impl KmaRequest {
+    /// `req.baseUrl` of the legacy router (`/v000903/kma`, `/v000901/kma/addr`, `/v000803/town`).
+    pub fn base_url(&self) -> String {
+        match self.version.as_str() {
+            "v000803" | "v000705" => format!("/{}/town", self.version),
+            "v000901" => "/v000901/kma/addr".into(),
+            v => format!("/{v}/kma"),
+        }
+    }
+}
 
 /// Result of one assembly.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Outcome {
     /// `res.json(body)` with status 200.
     Json(OrderedJson),
+    /// `res.json(undefined)` (v000705 town, which has no `makeResult`): status 200,
+    /// `Content-Type: application/json`, an empty body and no ETag.
+    Undefined,
     /// A legacy non-JSON reply (`res.status(code).send(text)`).
     Status(u16, String),
     /// Legacy would leave the assembly path (redirect, geocoding a new town, a remote remap or
@@ -199,12 +214,12 @@ pub enum Outcome {
 
 /// The v000903 router list in legacy order.
 pub fn middleware() -> Vec<&'static str> {
-    chain::names("v000903")
+    chain::names("v000903", None)
 }
-/// The router list of an address version (`v000901`, `v000902`, `v000903`) in legacy order;
-/// empty for a version without a native list.
-pub fn middleware_of(version: &str) -> Vec<&'static str> {
-    chain::names(version)
+/// The router list of an address version (`v000901`, `v000902`, `v000903`) or a town version
+/// (`v000803`, `v000705` and its sub-routes) in legacy order; empty for any other route.
+pub fn middleware_of(version: &str, part: Option<&str>) -> Vec<&'static str> {
+    chain::names(version, part)
 }
 /// Assemble one request. `now_ms` is the request instant (`Date.now()`).
 pub fn assemble(

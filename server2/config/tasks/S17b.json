@@ -1,0 +1,50 @@
+{
+  "task": "S17b",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2702",
+  "server2_paths": [
+    "server2/config/tasks/S17b.json",
+    "server2/src/api/",
+    "server2/src/lib.rs",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/domestic/kma/chain.rs",
+    "server2/src/domestic/kma/mod.rs",
+    "server2/src/domestic/kma/present.rs",
+    "server2/src/gateway/backend.rs",
+    "server2/src/gateway/mod.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/examples/kma_checkpoint.rs",
+    "server2/.env.example",
+    "server2/tools/kma_smoke.py",
+    "server2/tests/legacy_versions.rs",
+    "server2/tests/legacy_versions/",
+    "server2/tests/domestic/recorded.rs",
+    "server2/tests/domestic/parity.rs"
+  ],
+  "outside": [
+    {
+      "path": "specs/issue-2702.md",
+      "category": "documentation",
+      "reason": "S17 specification: S17b direct routes, town router lists and Express envelope; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2702.md",
+      "category": "documentation",
+      "reason": "S17 execution plan: S17b scenarios, checks and verification record; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S17b section and the town routing entry"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2702#issuecomment-6194738360",
+  "path_notes": {
+    "server2/src/api/": "new: the legacy direct public KMA routes (/v000901 and /v000903 /kma/addr, /v000803 and /v000705 /town) with the Express 4.13.4 envelope (res.json/res.send, weak ETag, fresh 0.3.0, HEAD) and the coexistence legacy hop",
+    "server2/src/lib.rs": "shared: registers the api module",
+    "server2/src/domestic/kma/": "town router lists and v000705 sub-routes (chain.rs), getSummary and dataToFixed and the JavaScript + of rn1Str without a unit (present.rs), res.json(undefined) and the request part/baseUrl (mod.rs), town path parsing and KmaBackend::outcome (backend.rs)",
+    "server2/src/gateway/": "shared: Gateway::with_direct answers listed direct routes before the gateway routes (mod.rs); BackendDispatcher::proxy is the unchanged legacy hop of a forwarded direct request (backend.rs); the town entry and direct claims of kma/kma-v000901 (runtime.rs)",
+    "server2/examples/kma_checkpoint.rs": "shared S15 example: the new Outcome::Undefined arm (no behavior change for v000903)",
+    "server2/tests/domestic/": "shared S15 test files: town recordings parse with the town parser (recorded.rs); the new outcome arm (parity.rs)",
+    "server2/tests/legacy_versions/": "kma_direct.rs, the town parity, fixtures/kma-town.json.gz (pinned legacy oracle) and its PROVENANCE section"
+  }
+}

@@ -48,7 +48,7 @@ pub fn select_native_versions(
     dispatcher: &BackendDispatcher,
     source: Arc<dyn KmaSource>,
     versions: &[Version],
-) -> Result<(), GatewayError> {
+) -> Result<Arc<KmaBackend>, GatewayError> {
     let backend = Arc::new(KmaBackend::new(
         source,
         system_clock(),
@@ -58,7 +58,8 @@ pub fn select_native_versions(
         backend.register_version(dispatcher, *version);
         KmaBackend::select_version(dispatcher, *version, BackendMode::Native)?;
     }
-    Ok(())
+    // S17b: the same handler answers the listed direct routes.
+    Ok(backend)
 }
 /// Request clock (`Date.now()` in ms).
 pub type Clock = Arc<dyn Fn() -> f64 + Send + Sync>;
@@ -118,9 +119,24 @@ impl KmaBackend {
         let Some(request) = parse_path(&path, &lang) else {
             return Ok(Native::Forward);
         };
+        match self.outcome(request, deadline).await? {
+            Outcome::Json(json) => Ok(Native::Served(json)),
+            // The legacy hop treats a non-200 or non-JSON backend reply as a dependency failure.
+            Outcome::Status(..) | Outcome::Undefined => Err(GatewayError::Provider),
+            Outcome::Legacy(_) => Ok(Native::Forward),
+        }
+    }
+    /// S17b: assemble a parsed request (a gateway backend or a direct public route) from the
+    /// source's snapshot. `Outcome::Legacy` means legacy answers: the source cannot supply the
+    /// inputs, the assembly leaves the ported path, or a Rust panic (a port defect).
+    pub async fn outcome(
+        &self,
+        request: KmaRequest,
+        deadline: Instant,
+    ) -> Result<Outcome, GatewayError> {
         let store = match self.source.snapshot(&request, deadline).await {
             SourceAnswer::Snapshot(store) => store,
-            SourceAnswer::Forward(_) => return Ok(Native::Forward),
+            SourceAnswer::Forward(reason) => return Ok(Outcome::Legacy(reason)),
         };
         let now = store.as_of_ms().unwrap_or_else(|| (self.clock)());
         let config = self.config;
@@ -128,22 +144,16 @@ impl KmaBackend {
             .await
             .map_err(|_| GatewayError::Provider)?
             .map_err(|_| GatewayError::Provider)?;
-        let outcome = match tokio::task::spawn_blocking(move || {
+        match tokio::task::spawn_blocking(move || {
             let _permit = permit;
             assemble(&request, store.as_ref(), now, config)
         })
         .await
         {
-            Ok(outcome) => outcome,
+            Ok(outcome) => Ok(outcome),
             // A Rust panic is a port defect, not legacy behavior: legacy answers instead.
-            Err(e) if e.is_panic() => return Ok(Native::Forward),
-            Err(_) => return Err(GatewayError::Provider),
-        };
-        match outcome {
-            Outcome::Json(json) => Ok(Native::Served(json)),
-            // The legacy hop treats a non-200 backend reply as a dependency failure.
-            Outcome::Status(..) => Err(GatewayError::Provider),
-            Outcome::Legacy(_) => Ok(Native::Forward),
+            Err(e) if e.is_panic() => Ok(Outcome::Legacy("assembly panic".into())),
+            Err(_) => Err(GatewayError::Provider),
         }
     }
 }
@@ -217,17 +227,56 @@ const QS_PARAMETER_LIMIT: usize = 1000;
 /// the address versions `v000901`, `v000902` and `v000903` (S17a).
 /// None means the native port does not handle it (forward to legacy).
 pub fn parse_path(path: &str, lang: &str) -> Option<KmaRequest> {
-    let (p, q) = path.split_once('?').unwrap_or((path, ""));
+    let (p, _) = path.split_once('?').unwrap_or((path, ""));
     let p = p.strip_suffix('/').unwrap_or(p);
     let (version, rest) = ["v000901", "v000902", "v000903"]
         .into_iter()
         .find_map(|v| Some((v, p.strip_prefix(&format!("/{v}/kma/addr/"))?)))?;
     let parts: Vec<&str> = rest.split('/').collect();
-    if parts.is_empty() || parts.len() > 3 || parts.iter().any(|s| s.is_empty()) {
+    if parts.len() > 3 {
+        return None;
+    }
+    parse_request(version, None, &parts, path, lang)
+}
+/// S17b: parse a town path `/v000803/town/{region}[/{city}[/{town}]][?query]` or
+/// `/v000705/town/{region}[/{city}[/{town}[/{mid|short|shortest|current}]]][?query]` (the
+/// routes of `routes/v000803/routeTownForecast.js` and `routes/v000705/routeTownForecast.js`).
+/// None means the native port does not handle it (forward to legacy).
+pub fn parse_town_path(path: &str, lang: &str) -> Option<KmaRequest> {
+    let (p, _) = path.split_once('?').unwrap_or((path, ""));
+    let p = p.strip_suffix('/').unwrap_or(p);
+    let (version, rest) = ["v000803", "v000705"]
+        .into_iter()
+        .find_map(|v| Some((v, p.strip_prefix(&format!("/{v}/town/"))?)))?;
+    let mut parts: Vec<&str> = rest.split('/').collect();
+    let part = match parts.as_slice() {
+        [_, _, _, part] if version == "v000705" => {
+            if !["mid", "short", "shortest", "current"].contains(part) {
+                return None;
+            }
+            let part = (*part).to_owned();
+            parts.pop();
+            Some(part)
+        }
+        _ if parts.len() > 3 => return None,
+        _ => None,
+    };
+    parse_request(version, part, &parts, path, lang)
+}
+/// The Express parameters and `qs` query of a matched route.
+fn parse_request(
+    version: &str,
+    part: Option<String>,
+    parts: &[&str],
+    path: &str,
+    lang: &str,
+) -> Option<KmaRequest> {
+    let (_, q) = path.split_once('?').unwrap_or((path, ""));
+    if parts.is_empty() || parts.iter().any(|s| s.is_empty()) {
         return None;
     }
     let mut decoded = Vec::new();
-    for part in &parts {
+    for part in parts {
         decoded.push(decode_param(part)?);
     }
     let mut query = Vec::new();
@@ -248,6 +297,7 @@ pub fn parse_path(path: &str, lang: &str) -> Option<KmaRequest> {
     let mut it = decoded.into_iter();
     Some(KmaRequest {
         version: version.into(),
+        part,
         original_url: path.to_owned(),
         region: it.next(),
         city: it.next(),
