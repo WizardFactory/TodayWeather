@@ -73,11 +73,11 @@ These instructions cover local verification and configuration. They do not autho
 
 ## Recorded local verification
 
-The 2026-10-15 02:14:26 UTC release-process run of the S10e change passed against task-owned
+The 2026-10-15 02:45:40 UTC release-process run of the S10e change passed against task-owned
 loopback peers with the S10e setting names in an empty working directory: 16 same-key cold
 callers shared one Kakao request; 16 distinct keys caused 16 requests; a non-ko locale lookup at a
 Korean coordinate used Kakao plus Google. The 16-sample distinct-key native timings were p50
-65.21 ms, p95/p99 74.86 ms with eight concurrent clients and a fixed 50-ms peer delay. These are
+62.08 ms, p95/p99 68.52 ms with eight concurrent clients and a fixed 50-ms peer delay. These are
 synthetic local elapsed times, not live provider tails or production quota evidence. The S3 test
 peer held 4 quota records after the native phase and no object after the first legacy phase; the
 second legacy phase added none. The release `server2` binary with native geocode and no
