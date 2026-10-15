@@ -337,9 +337,12 @@ impl<T: SummaryTransport> Lookup<T> {
         let Some(derived) = super::vc::summary(cell, date, &fetches) else {
             return Ok(stored.map(|s| s.summary));
         };
+        // As the recorder: newer inputs are stored also with equal values, so an older input
+        // set read by a slower lookup never supersedes them.
         if let Some(stored) = stored
-            && (stored.summary.values_sha256() == derived.values_sha256()
-                || stored.name.latest > derived.inputs.latest_fetched_ms)
+            && (stored.name.latest > derived.inputs.latest_fetched_ms
+                || (stored.name.latest == derived.inputs.latest_fetched_ms
+                    && stored.summary.values_sha256() == derived.values_sha256()))
         {
             return Ok(Some(stored.summary));
         }

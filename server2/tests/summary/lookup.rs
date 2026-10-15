@@ -442,3 +442,54 @@ async fn a_waiter_acquires_the_range_itself_after_the_owner_failed() {
         "the waiter acquired the range after the failure"
     );
 }
+
+#[tokio::test]
+async fn a_slower_lookup_with_older_vc_records_never_supersedes_newer_ones() {
+    let t = Arc::new(MemorySummaries::new());
+    let start = 1_760_367_600_i64; // 2025-10-14 00:00 KST
+    let day = |temp: f64, fetched_at_ms: u64| {
+        let hours: Vec<serde_json::Value> = (0..24)
+            .map(|i| serde_json::json!({"datetimeEpoch": start + i * 3600, "temp": temp}))
+            .collect();
+        let body = serde_json::to_vec(&serde_json::json!({"timezone": "Asia/Seoul",
+            "tzoffset": 9.0, "days": [{"datetime": "2025-10-14", "hours": hours}]}))
+        .unwrap();
+        RawFetch {
+            fetched_at_ms,
+            range: Range::Recent,
+            first_date: 0,
+            sha256: server2::storage::sha256(&body),
+            body: Arc::from(body),
+        }
+    };
+    let base = (start as u64 + 2 * 86_400) * 1000;
+    let lookup_with = |records: Vec<RawFetch>| {
+        Lookup::new(
+            t.clone(),
+            None,
+            Some(Arc::new(FakeVc(records, Mutex::new(0))) as Arc<dyn VcRecords>),
+        )
+    };
+    let target = target(false, false, true);
+    // (t100, X), then (t400, X): the newer equal day is stored too.
+    let x100 = day(59., base + 100);
+    let x400 = day(59., base + 400);
+    lookup_with(vec![x100.clone()])
+        .last_year(&target, 20261014, deadline())
+        .await
+        .unwrap();
+    lookup_with(vec![x100.clone(), x400])
+        .last_year(&target, 20261014, deadline())
+        .await
+        .unwrap();
+    assert_eq!(t.keys().len(), 2);
+    // A slower lookup that read only (t100, X) and (t300, Y) keeps the newer revision.
+    let found = lookup_with(vec![x100, day(68., base + 300)])
+        .last_year(&target, 20261014, deadline())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(found.summary.value("taMax"), Some(15.));
+    assert_eq!(found.summary.inputs.latest_fetched_ms, base + 400);
+    assert_eq!(t.keys().len(), 2);
+}
