@@ -70,7 +70,7 @@ def declaration_errors(d):
     for x in d.get('outside', []):
         p = x.get('path', '')
         category = x.get('category')
-        allowed = {'documentation': ('docs/', 'intent/', 'specs/', 'plans/'), 'agent-guidance': ('AGENTS.md',), 'ci-wiring': ('.github/workflows/server2.yml',), 'legacy-oracle': ('server/test/offline/golden-record.js',), 'legacy-export': ('server/',), 'legacy-coexistence': ('server/',), 'legacy-retirement': ('server/',)}
+        allowed = {'documentation': ('docs/', 'intent/', 'specs/', 'plans/'), 'agent-guidance': ('AGENTS.md',), 'ci-wiring': ('.github/workflows/server2.yml',), 'workspace-setup': ('paseo.json',), 'legacy-oracle': ('server/test/offline/golden-record.js',), 'legacy-export': ('server/',), 'legacy-coexistence': ('server/',), 'legacy-retirement': ('server/',)}
         if not clean(p) or p.endswith('/') or not x.get('reason') or category not in allowed:
             errors.append(f'invalid exact outside exception: {p}')
         elif not any(p == prefix or (prefix.endswith('/') and p.startswith(prefix)) for prefix in allowed[category]):

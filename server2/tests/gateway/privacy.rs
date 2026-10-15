@@ -182,19 +182,19 @@ fn configured_endpoints_follow_the_transport_rule() {
 }
 #[test]
 fn google_key_fingerprint_applies_to_the_production_endpoint() {
-    let vars = |base: Option<&'static str>| {
-        move |name: &str| match name {
-            "GEOCODER_GOOGLE_KEY" => Some("synthetic-google-key".to_owned()),
-            "GEOCODER_GOOGLE_BASE_URL" => base.map(str::to_owned),
-            _ => None,
-        }
+    let vars = |name: &str| match name {
+        "GEOCODER_GOOGLE_KEY" => Some("synthetic-google-key".to_owned()),
+        // S10e: the legacy test-only endpoint name is not read.
+        "GEOCODER_GOOGLE_BASE_URL" => Some("http://127.0.0.1:9/".to_owned()),
+        _ => None,
     };
-    // Default (production) endpoint: a key with another fingerprint is not used (legacy rule).
-    let production = GeocoderConfig::from_vars(&vars(None)).unwrap();
+    // Production endpoint: a key with another fingerprint is not used (legacy rule).
+    let production = GeocoderConfig::from_vars(&vars).unwrap();
     assert_eq!(production.google_base_url, "https://maps.googleapis.com");
     assert!(production.google_key.is_none());
-    // A configured test endpoint keeps the configured key, as legacy does for its stub.
-    let test = GeocoderConfig::from_vars(&vars(Some("http://127.0.0.1:9/"))).unwrap();
+    // A test endpoint keeps the configured key, as legacy does for its stub.
+    let test = GeocoderConfig::from_vars_at(&vars, "https://dapi.kakao.com", "http://127.0.0.1:9/")
+        .unwrap();
     assert_eq!(test.google_base_url, "http://127.0.0.1:9");
     assert_eq!(test.google_key.as_deref(), Some("synthetic-google-key"));
 }

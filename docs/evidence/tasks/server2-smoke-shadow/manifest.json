@@ -1,10 +1,10 @@
 {
-  "binary_sha256": "7d09a7bb1e42de57b26786660f870e7b5e93676203339e8ad5d38a75bdd3b7c6",
+  "binary_sha256": "c25ede52debc81efe8ee931313a0e0e77cd74f2bc1004f08866faa598d5ed4e7",
   "capture_kind": "terminal result rendered from an actual isolated release-binary smoke.sh execution",
-  "captured_at_utc": "2026-10-13T15:00:42+00:00",
+  "captured_at_utc": "2026-10-15T02:14:47+00:00",
   "command": "bash server2/deploy/smoke.sh --binary <release server2>",
   "environment": "macOS, release binary, loopback recorded providers, frozen legacy origin, S03 local S3 peer",
-  "execution_log_sha256": "a4734f51a0d928746b77c338f8b7963981721db90d94cfc65d3e80a5dbb1ee06",
+  "execution_log_sha256": "063d95a15f04eaa85cd951378374eab6f1f372a155818e97195ae92053402ce7",
   "limitations": "Loopback fixtures only; no live provider/AWS/production latency/quota/shadow or cutover proof",
   "new_file_link_policy": "Repository-relative references rendered as text when absent from the pinned commit; Markdown keeps local clickable links",
   "observed": {
@@ -18,53 +18,53 @@
       "percentiles_ms": {
         "baseline": {
           "cold_miss": {
-            "max": 1.19,
+            "max": 126.34,
             "n": 11,
-            "p50": 0.93,
-            "p95": 1.19,
-            "p99": 1.19
+            "p50": 3.07,
+            "p95": 126.34,
+            "p99": 126.34
           },
           "cold_pass": {
-            "max": 1.19,
+            "max": 126.34,
             "n": 15,
-            "p50": 0.75,
-            "p95": 1.19,
-            "p99": 1.19
+            "p50": 1.81,
+            "p95": 126.34,
+            "p99": 126.34
           },
           "warm_pass": {
-            "max": 0.88,
+            "max": 2.55,
             "n": 15,
-            "p50": 0.31,
-            "p95": 0.88,
-            "p99": 0.88
+            "p50": 1.06,
+            "p95": 2.55,
+            "p99": 2.55
           }
         },
         "candidate": {
           "cold_miss": {
-            "max": 3.38,
+            "max": 10.26,
             "n": 4,
-            "p50": 0.31,
-            "p95": 3.38,
-            "p99": 3.38
+            "p50": 1.72,
+            "p95": 10.26,
+            "p99": 10.26
           },
           "cold_pass": {
-            "max": 3.38,
+            "max": 13.63,
             "n": 15,
-            "p50": 0.8,
-            "p95": 3.38,
-            "p99": 3.38
+            "p50": 2.13,
+            "p95": 13.63,
+            "p99": 13.63
           },
           "warm_pass": {
-            "max": 0.88,
+            "max": 7.33,
             "n": 15,
-            "p50": 0.19,
-            "p95": 0.88,
-            "p99": 0.88
+            "p50": 2.06,
+            "p95": 7.33,
+            "p99": 7.33
           }
         }
       },
       "revision": {
-        "commit": "8c3a703c929b0c62b00ed3b510f0aa804b850877",
+        "commit": "a41d59612e6e5c8a2c30c39c0c74b3944d458b21",
         "dirty": true
       },
       "self_check": {
@@ -75,32 +75,32 @@
       "unexplained": 0,
       "workload_sha256": "4de37182e4c289126e0a8bdd764b53d4a13f3fdc483ac854d65ba0e238aa978b"
     },
+    "rollback_configuration_refusal": [
+      {
+        "elapsed_ms": 23.52,
+        "exit_code": 1,
+        "message": "invalid gateway configuration",
+        "missing": "SERVER2_S3_BUCKET"
+      }
+    ],
     "rollback_default_lifetime_deadlines_ms": {
       "legacy-3": {
         "backend_attempts": 3,
         "backend_oracle": "gateway-deadline",
-        "backend_stall": 9003.47,
+        "backend_stall": 9003.22,
         "connection_seconds": "default",
         "geocoder_kind": "legacy_geo",
-        "geocoder_stall": 5003.57
+        "geocoder_stall": 5003.96
       },
       "native-2": {
         "backend_attempts": 3,
         "backend_oracle": "gateway-deadline",
-        "backend_stall": 9003.94,
+        "backend_stall": 9003.06,
         "connection_seconds": "default",
         "geocoder_kind": "kakao",
-        "geocoder_stall": 3001.94
+        "geocoder_stall": 3005.92
       }
     },
-    "rollback_lifetime_refusal": [
-      {
-        "connection_seconds": 9,
-        "elapsed_ms": 5.46,
-        "exit_code": 1,
-        "message": "SERVER2_CONNECTION_SECONDS must exceed the 9-second gateway deadline"
-      }
-    ],
     "scenarios": [
       "GW-COLD-WARM",
       "GW-EMPTY-RESTORE",
@@ -112,9 +112,9 @@
       "GW-DRAIN"
     ]
   },
-  "pdf_link_revision": "958e18d9f5e2459f1ee16ccce43e374fc089dac2",
-  "pdf_sha256": "1aa6c2210c76a8655aaf4f503f792df55a83ba36e756fa1d7a73851475fb9db7",
+  "pdf_link_revision": "6609a895a20137322d8b054e70bddc63993363f9",
+  "pdf_sha256": "0a68241ba4a23f0bc9ef362a1c35f95baa70755ae73cfcae7901e9b764bdfa4b",
   "schema": 1,
-  "screenshot_sha256": "2d2c3544c3955ada86e2c153ecd646c5441d4457525a731976e13ae1a556b5c2",
-  "source_sha256": "7c9f30cd8d0ad78ac149286326a2a068bf721af11378b069b0f27579b55de868"
+  "screenshot_sha256": "d28a3bd1a879b3ead2d32eef6ef479d51833338b455ed2b0d76d171ca477d7a8",
+  "source_sha256": "070e128f344b15f93078d92a3c3b13ca24be69929354ee531243916cebece4e5"
 }

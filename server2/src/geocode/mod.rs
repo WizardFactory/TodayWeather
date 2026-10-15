@@ -172,21 +172,27 @@ impl Default for GeocoderConfig {
     }
 }
 impl GeocoderConfig {
-    /// The existing legacy names: `GEOCODER_KAKAO_KEYS` (JSON array), `GEOCODER_GOOGLE_KEY`,
-    /// `GEOCODER_KAKAO_BASE_URL` and `GEOCODER_GOOGLE_BASE_URL` (production roots by default).
+    /// The existing legacy key names `GEOCODER_KAKAO_KEYS` (JSON array) and
+    /// `GEOCODER_GOOGLE_KEY` at the production endpoints. S10e: the endpoints are built in;
+    /// legacy's test-only `GEOCODER_*_BASE_URL` overrides are not read.
     pub fn from_vars(var: &dyn Fn(&str) -> Option<String>) -> Result<Self, GeocodeError> {
-        let mut config = Self::default();
+        Self::from_vars_at(var, KAKAO_ENDPOINT, GOOGLE_ENDPOINT)
+    }
+    /// [`GeocoderConfig::from_vars`] at other endpoints (tests: loopback test peers).
+    pub fn from_vars_at(
+        var: &dyn Fn(&str) -> Option<String>,
+        kakao_base_url: &str,
+        google_base_url: &str,
+    ) -> Result<Self, GeocodeError> {
+        let mut config = Self {
+            kakao_base_url: kakao_base_url.into(),
+            google_base_url: google_base_url.into(),
+            ..Self::default()
+        };
         if let Some(value) = var("GEOCODER_KAKAO_KEYS") {
-            config.kakao_keys = serde_json::from_str::<Vec<String>>(&value)
-                .map_err(|_| GeocodeError::InvalidConfiguration)?;
+            config.kakao_keys = legacy_kakao_keys(&value);
         }
         config.google_key = var("GEOCODER_GOOGLE_KEY").filter(|v| !v.is_empty());
-        if let Some(value) = var("GEOCODER_KAKAO_BASE_URL").filter(|v| !v.is_empty()) {
-            config.kakao_base_url = value;
-        }
-        if let Some(value) = var("GEOCODER_GOOGLE_BASE_URL").filter(|v| !v.is_empty()) {
-            config.google_base_url = value;
-        }
         config.validate()?;
         Ok(config)
     }
@@ -222,6 +228,20 @@ impl GeocoderConfig {
             }
         }
         Ok(())
+    }
+}
+/// Legacy `lib/geocoder/keys.parseKeys` (S10e: the same values as legacy): a JSON array; its
+/// nonempty strings in order. Unparseable or non-array values and other elements give no key.
+fn legacy_kakao_keys(value: &str) -> Vec<String> {
+    match serde_json::from_str::<serde_json::Value>(value) {
+        Ok(serde_json::Value::Array(items)) => items
+            .into_iter()
+            .filter_map(|item| match item {
+                serde_json::Value::String(key) if !key.is_empty() => Some(key),
+                _ => None,
+            })
+            .collect(),
+        _ => Vec::new(),
     }
 }
 /// The transport rule: HTTPS, or plain HTTP only to a loopback address; a root path and no

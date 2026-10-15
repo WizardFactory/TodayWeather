@@ -28,7 +28,7 @@ impl KmaSource for LegacyOnly {
 }
 
 /// Register the v000903 KMA handler with `source` and select it (`SERVER2_NATIVE_FAMILIES`
-/// contains `kma`; the runtime passes the S3 source built from `SERVER2_S3_*`).
+/// contains `kma`; the runtime passes the S3 source built from the legacy S3 settings).
 pub fn select_native(
     dispatcher: &BackendDispatcher,
     source: Arc<dyn KmaSource>,

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# S19 integrated smoke: drives the actual release binary with a local S3-compatible
-# peer, recorded providers and a frozen legacy origin, all on task-owned loopback
-# listeners. Stages: reused foundation/S10 smokes, family scenarios with metrics
+# S19 integrated smoke: drives the actual release binary (and, where the S3 peer is
+# needed, the release loopback_server example: the same process with its S3 root on the
+# peer) with a local S3-compatible peer, recorded providers and a frozen legacy origin,
+# all on task-owned loopback listeners and in an empty working directory. Stages: reused foundation/S10 smokes, family scenarios with metrics
 # assertions, offline paired replay (with a perturbation self-check) and the
 # cache-aware rollback rehearsal. It never reads an operator .env, calls a live
 # provider, creates AWS resources, deploys or mirrors traffic.
@@ -40,6 +41,13 @@ done
 py="${SERVER2_PYTHON:-python3}"
 if [[ ! -x "$binary" ]]; then
   echo "release binary not found: $binary (run: cargo build --locked --release)" >&2
+  exit 2
+fi
+# S10e: S3 and provider roots are not settings; phases that need the loopback peers run the
+# release loopback_server example (the same server2 process) built beside the binary.
+peer_binary="$(dirname "$binary")/examples/loopback_server"
+if [[ ! -x "$peer_binary" ]]; then
+  echo "release loopback_server example not found: $peer_binary (run: cargo build --locked --release --example loopback_server)" >&2
   exit 2
 fi
 if [[ ${#families[@]} -eq 0 ]]; then

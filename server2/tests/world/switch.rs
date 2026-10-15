@@ -156,16 +156,8 @@ fn runtime_routing_list_selects_the_native_world_with_real_endpoints() {
         vec![
             ("SERVER2_NATIVE_FAMILIES", "dsf".to_owned()),
             ("SERVER2_S3_BUCKET", "server2-world".to_owned()),
-            (
-                "SERVER2_S3_ACCESS_KEY_ID",
-                "configured-access-key".to_owned(),
-            ),
-            (
-                "SERVER2_S3_SECRET_ACCESS_KEY",
-                "configured-secret".to_owned(),
-            ),
-            ("SERVER2_WORLD_VC_DAILY_UNITS", "1000".to_owned()),
-            ("SERVER2_WORLD_VC_QUOTA_ID", "a".repeat(64)),
+            ("AWS_ACCESS_KEY", "configured-access-key".to_owned()),
+            ("AWS_SECRET_KEY", "configured-secret".to_owned()),
             ("VC_SECRET_KEY", "synthetic-vc-key-0001".to_owned()),
         ]
     };

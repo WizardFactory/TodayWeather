@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """S15/S15b-1 release HTTP smoke for the KMA v000903 routing entry: legacy ->
 SERVER2_NATIVE_FAMILIES=kma -> legacy against a task-owned loopback legacy origin and the owned S06
-S3 test peer. With `kma` the S3 input source reads the shared SERVER2_S3_* settings; until S15b-4
-it forwards every request (named temporary reasons), so each phase must reach the legacy KMA
-backend with the same bytes, and the native phase must have read S3. S15b-2 request-time
-acquisitions use the data.go.kr key settings and provider roots pointed at the loopback origin, so
-no provider is reached. Unknown or repeated entries, and `kma` without the S3 or data.go.kr
-settings, must stop startup before binding."""
+S3 test peer. With `kma` the S3 input source reads the shared S3 settings (S10e: SERVER2_S3_BUCKET,
+AWS_ACCESS_KEY, AWS_SECRET_KEY); until S15b-4 it forwards every request (named temporary
+reasons), so each phase must reach the legacy KMA backend with the same bytes, and the native
+phase must have read S3. S15b-2 request-time acquisitions use the legacy DONGNAE_SECRET_KEYS list.
+The phases run the release `loopback_server` example (the server2 process with its S3 and
+provider roots on the loopback peers; roots are not settings), so no provider is reached. The
+refusals run the release `server2` binary: unknown or repeated entries, and `kma` without the S3
+settings or the data.go.kr keys, must stop startup before binding. Every process runs in an empty
+working directory, so no real server2/.env is read."""
 import argparse
 import http.server
 import json
@@ -17,6 +20,7 @@ import json
 import select
 import subprocess
 import sys
+import tempfile
 import threading
 import urllib.request
 
@@ -67,27 +71,32 @@ def s3_requests(s3):
     return sum(v for k, v in counts.items() if re.match(r'(GET|HEAD|PUT|POST|DELETE) ', k))
 
 
-def s3_env(s3):
-    return dict(SERVER2_S3_ENDPOINT=s3, SERVER2_S3_BUCKET='server2-local', SERVER2_S3_ACCESS_KEY_ID='server2-local',
-                SERVER2_S3_SECRET_ACCESS_KEY='server2-local-secret')
+CWD = tempfile.mkdtemp(prefix='server2-kma-smoke-')
 
 
-def kma_env(endpoint):
-    """Placeholder data.go.kr settings; every provider root is the loopback origin."""
+def s3_env():
+    return dict(SERVER2_S3_BUCKET='server2-local', AWS_ACCESS_KEY='server2-local', AWS_SECRET_KEY='server2-local-secret')
+
+
+def kma_env():
+    """A placeholder legacy data.go.kr key list."""
+    return dict(DONGNAE_SECRET_KEYS='["s15b2-local-placeholder-key"]')
+
+
+def peer_command(peer_binary, endpoint, s3):
+    """The loopback_server example with S3 on the peer and every KMA provider root on the origin."""
     root = endpoint + '/'
-    return dict(SERVER2_DATA_GO_KR_KEYS='["s15b2-local-placeholder-key"]', SERVER2_DATA_GO_KR_DAILY_UNITS='100',
-                SERVER2_DATA_GO_KR_BASE_URL=root, SERVER2_KMA_BASE_URL=root, SERVER2_KMA_WEATHER_BASE_URL=root)
+    return [peer_binary, '--s3', s3, '--data-go-kr', root, '--kma', root, '--kma-weather', root]
 
 
-def start(binary, endpoint, families, s3=None):
+def start(command, endpoint, families):
     env = {k: v for k, v in os.environ.items() if k in ('PATH', 'SYSTEMROOT', 'TMPDIR')}
-    env.update(SERVER2_BIND='127.0.0.1:0', SERVER2_METRICS_BIND='127.0.0.1:0', SERVER2_GATEWAY_LEGACY_URL=endpoint)
-    if s3 is not None:
-        env.update(s3_env(s3))
+    env.update(PORT='0', SERVER2_GATEWAY_LEGACY_URL=endpoint)
+    env.update(s3_env())
     if families is not None:
         env['SERVER2_NATIVE_FAMILIES'] = families
-        env.update(kma_env(endpoint))
-    process = subprocess.Popen([binary], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        env.update(kma_env())
+    process = subprocess.Popen(command, env=env, cwd=CWD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         ready, _, _ = select.select([process.stdout], [], [], 10)
         assert ready, 'startup timeout'
@@ -100,7 +109,7 @@ def start(binary, endpoint, families, s3=None):
         raise
 
 
-def run(binary):
+def run(binary, peer_binary):
     Origin.fixtures = json.loads(g.FIXTURES.read_text())
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Origin)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -110,7 +119,7 @@ def run(binary):
     try:
         bodies = []
         for families in (None, 'kma', None):
-            process, base = start(binary, endpoint, families, s3)
+            process, base = start(peer_command(peer_binary, endpoint, s3), endpoint, families)
             try:
                 before = len(Origin.paths)
                 s3_before = s3_requests(s3)
@@ -132,16 +141,15 @@ def run(binary):
         for bad, with_s3, with_keys in (('kma,kma', True, True), ('KMA', True, True), ('kma,unknown', True, True),
                                         ('kma', False, True), ('kma', True, False)):
             env = {k: v for k, v in os.environ.items() if k in ('PATH', 'SYSTEMROOT', 'TMPDIR')}
-            env.update(SERVER2_BIND='127.0.0.1:0', SERVER2_METRICS_BIND='127.0.0.1:0', SERVER2_GATEWAY_LEGACY_URL=endpoint,
-                       SERVER2_NATIVE_FAMILIES=bad)
+            env.update(PORT='0', SERVER2_GATEWAY_LEGACY_URL=endpoint, SERVER2_NATIVE_FAMILIES=bad)
             if with_s3:
-                env.update(s3_env(s3))
+                env.update(s3_env())
             if with_keys:
-                env.update(kma_env(endpoint))
-            refused = subprocess.run([binary], env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=10)
+                env.update(kma_env())
+            refused = subprocess.run([binary], env=env, cwd=CWD, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=10)
             assert refused.returncode != 0 and 'server2 public=' not in refused.stdout, (bad, refused.returncode, refused.stderr)
-        print('PASS unknown or repeated routing entries, and kma without SERVER2_S3_* or SERVER2_DATA_GO_KR_*, '
-              'stop startup before binding', flush=True)
+        print('PASS release server2: unknown or repeated routing entries, and kma without the S3 settings or '
+              'DONGNAE_SECRET_KEYS, stop startup before binding', flush=True)
         print('PASS S15b-1 KMA routing release smoke (legacy -> kma -> legacy, identical bytes, the kma phase read '
               'the S3 test peer); loopback peers only, no provider/AWS request, no native serving claim', flush=True)
     finally:
@@ -155,4 +163,7 @@ def run(binary):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', required=True)
-    run(str(Path(parser.parse_args().binary).resolve()))
+    parser.add_argument('--peer-binary', help='release loopback_server example (default: examples/loopback_server beside --binary)')
+    args = parser.parse_args()
+    binary = Path(args.binary).resolve()
+    run(str(binary), str(Path(args.peer_binary or binary.parent / 'examples/loopback_server').resolve()))

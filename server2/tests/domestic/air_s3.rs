@@ -407,12 +407,25 @@ fn live_with(
     let vars = |name: &str| -> Option<String> {
         match name {
             "AIRKOREA_SECRET_KEYS" => Some(r#"["S15B3_LOCAL_KEY_A+aaaaaaaaaaaaaaaa/="]"#.into()),
-            "SERVER2_AIRKOREA_DAILY_UNITS" => Some("100".into()),
-            "SERVER2_DATA_GO_KR_URL" => Some(base.into()),
             _ => None,
         }
     };
-    let settings = AirKoreaSettings::from_vars(&vars).unwrap().unwrap();
+    // S10e: the data.go.kr root is a test-built root, not a setting.
+    let endpoints = server2::gateway::runtime::Builtins {
+        data_go_kr: base.into(),
+        ..server2::gateway::runtime::Builtins::production()
+    }
+    .kma_endpoints()
+    .unwrap();
+    let mut settings = AirKoreaSettings::from_vars(&vars, endpoints)
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        settings.daily_units,
+        server2::domestic::kma::source::live::AIRKOREA_DAILY_UNITS
+    );
+    // The tests' funding scenarios are sized for 100 units per key.
+    settings.daily_units = 100;
     Arc::new(LiveAirKorea::new(
         settings,
         Arc::new(funded),

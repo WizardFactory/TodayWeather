@@ -1,7 +1,8 @@
-//! S10c: the real runtime configuration. Native geocoder and native world/air are built from
-//! real-format settings (HTTPS endpoints, keys, quotas, S3) without any mode variable; test
-//! peers are reached only because the settings point at them. Test doubles live here.
+//! S10c/S10e: the real runtime configuration. Native geocoder, world/air and KMA are built from
+//! the legacy `server/.env` settings without any mode variable; test peers are reached only
+//! through test-built `Builtins` (S3 and provider roots are not settings). Test doubles live here.
 use super::geocode::{fixture, stub};
+use server2::gateway::runtime::Builtins;
 use server2::geocode::{BoxFuture, GeocodeError, Geocoder, GeocoderConfig, ProviderDemand, Quota};
 use std::{
     sync::{
@@ -124,16 +125,21 @@ impl Drop for S3Peer {
         let _ = self.child.wait();
     }
 }
-fn s3_vars(peer: &S3Peer) -> Vec<(&'static str, String)> {
+/// The legacy S3 settings (S10e): bucket and credentials by their legacy `server/.env` names.
+/// The endpoint is not a setting; tests reach the peer through [`peer_builtins`].
+fn s3_vars() -> Vec<(&'static str, String)> {
     vec![
-        ("SERVER2_S3_ENDPOINT", peer.endpoint.clone()),
         ("SERVER2_S3_BUCKET", "server2-local".to_owned()),
-        ("SERVER2_S3_ACCESS_KEY_ID", "server2-local".to_owned()),
-        (
-            "SERVER2_S3_SECRET_ACCESS_KEY",
-            "server2-local-secret".to_owned(),
-        ),
+        ("AWS_ACCESS_KEY", "server2-local".to_owned()),
+        ("AWS_SECRET_KEY", "server2-local-secret".to_owned()),
     ]
+}
+/// Production roots with the S3 endpoint on a loopback test peer.
+fn peer_builtins(peer: &S3Peer) -> Builtins {
+    Builtins {
+        s3: Some(peer.endpoint.clone()),
+        ..Builtins::production()
+    }
 }
 fn golden(id: &str) -> Vec<u8> {
     use base64::{Engine, engine::general_purpose::STANDARD};
@@ -162,6 +168,102 @@ async fn body(gateway: &server2::gateway::Gateway, path: &str) -> (u16, Vec<u8>)
     (status, bytes.to_vec())
 }
 
+/// The only `SERVER2_*` names server2 reads (S10e): coexistence routing (temporary until
+/// legacy retirement) and the raw-record bucket, a value legacy does not have.
+const SERVER2_ONLY: [&str; 4] = [
+    "SERVER2_GATEWAY_LEGACY_URL",
+    "SERVER2_NATIVE_FAMILIES",
+    "SERVER2_WORLD_VERSIONS",
+    "SERVER2_S3_BUCKET",
+];
+
+/// S10e (#2753, AK 2026-10-15): a legacy `server/.env`, plus the coexistence routing entries
+/// and the server2 bucket, configures every native family. No provider key, quota, quota owner,
+/// URL, S3 credential or region, or process setting has a `SERVER2_*` name. Built at the
+/// production roots; nothing is sent.
+#[test]
+fn legacy_env_alone_builds_every_native_family() {
+    let legacy = [
+        // Coexistence routing (temporary until legacy retirement) and the server2 bucket.
+        ("SERVER2_GATEWAY_LEGACY_URL", "http://127.0.0.1:9"),
+        ("SERVER2_NATIVE_FAMILIES", "geocode,dsf,kma"),
+        ("SERVER2_S3_BUCKET", "server2-raw-records"),
+        // Legacy server/.env names (config.js) with placeholder values.
+        ("OPENSHIFT_NODEJS_IP", "127.0.0.1"),
+        ("PORT", "3000"),
+        ("OPENSHIFT_NODEJS_PORT", "3000"),
+        ("TWA_S3_REGION", "ap-northeast-2"),
+        ("TWA_S3_WEATHER_DATA_BUCKET_NAME", "legacy-weather-data"),
+        ("AWS_ACCESS_KEY", "legacy-access-key"),
+        ("AWS_SECRET_KEY", "legacy-secret-key"),
+        ("AWS_REGION", "us-east-1"),
+        ("DONGNAE_SECRET_KEYS", r#"["legacy-data-go-kr-key-0001"]"#),
+        (
+            "AIRKOREA_SECRET_KEYS",
+            r#"["legacy-airkorea-key-000000001"]"#,
+        ),
+        ("VC_SECRET_KEY", "legacy-vc-key-0001"),
+        ("VC_DAILY_RECORD_LIMIT", "1000"),
+        ("GOOGLE_SECRET_KEY", "legacy-google-key-0001"),
+        ("OWM_SECRET_KEY", "legacy-owm-key-0001"),
+        ("WAQI_SECRET_KEY", "legacy-waqi-key-0001"),
+        ("GEOCODER_KAKAO_KEYS", r#"["legacy-kakao-key"]"#),
+        ("GEOCODER_GOOGLE_KEY", "legacy-geocoder-google-key"),
+    ];
+    let read = std::sync::Mutex::new(Vec::<String>::new());
+    let var = |name: &str| {
+        read.lock().unwrap().push(name.to_owned());
+        legacy
+            .iter()
+            .find(|(k, _)| *k == name)
+            .map(|(_, v)| (*v).to_owned())
+    };
+    let gateway = server2::gateway::runtime::from_vars(&var)
+        .unwrap()
+        .expect("gateway enabled");
+    drop(gateway);
+    let config = server2::Config::from_vars(&var).unwrap();
+    assert_eq!(config.public_addr.to_string(), "127.0.0.1:3000");
+    assert_eq!(config.metrics_addr.to_string(), "127.0.0.1:3001");
+    assert_eq!(
+        config.connection_seconds,
+        server2::GATEWAY_CONNECTION_SECONDS
+    );
+    let read = read.into_inner().unwrap();
+    for name in &read {
+        assert!(
+            !name.starts_with("SERVER2_") || SERVER2_ONLY.contains(&name.as_str()),
+            "read {name}"
+        );
+    }
+    // server2/.env.example lists every variable server2 read here.
+    let example = include_str!("../../.env.example");
+    for name in &read {
+        assert!(
+            example.contains(&format!("{name}=")),
+            "{name} missing from .env.example"
+        );
+    }
+    // Every family read its legacy settings.
+    for name in [
+        "SERVER2_S3_BUCKET",
+        "AWS_ACCESS_KEY",
+        "AWS_SECRET_KEY",
+        "TWA_S3_REGION",
+        "GEOCODER_KAKAO_KEYS",
+        "DONGNAE_SECRET_KEYS",
+        "AIRKOREA_SECRET_KEYS",
+        "VC_SECRET_KEY",
+        "VC_DAILY_RECORD_LIMIT",
+        "GOOGLE_SECRET_KEY",
+        "OWM_SECRET_KEY",
+        "WAQI_SECRET_KEY",
+        "OPENSHIFT_NODEJS_PORT",
+    ] {
+        assert!(read.iter().any(|n| n == name), "{name} not read");
+    }
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn native_geocode_from_real_settings_serves_the_s02_golden() {
     let providers = stub(
@@ -170,7 +272,7 @@ async fn native_geocode_from_real_settings_serves_the_s02_golden() {
     )
     .await;
     let peer = S3Peer::start();
-    let mut settings = s3_vars(&peer);
+    let mut settings = s3_vars();
     settings.extend([
         (
             "SERVER2_GATEWAY_LEGACY_URL",
@@ -179,12 +281,14 @@ async fn native_geocode_from_real_settings_serves_the_s02_golden() {
         ("SERVER2_NATIVE_FAMILIES", "geocode".to_owned()),
         ("GEOCODER_KAKAO_KEYS", r#"["synthetic-kakao"]"#.to_owned()),
         ("GEOCODER_GOOGLE_KEY", "synthetic-google".to_owned()),
-        ("GEOCODER_KAKAO_BASE_URL", providers.base.clone()),
-        ("GEOCODER_GOOGLE_BASE_URL", providers.base.clone()),
-        ("SERVER2_GEOCODER_KAKAO_DAILY_UNITS", "10".to_owned()),
-        ("SERVER2_GEOCODER_GOOGLE_DAILY_UNITS", "10".to_owned()),
     ]);
-    let gateway = server2::gateway::runtime::from_vars(&vars(settings))
+    let builtins = Builtins {
+        kakao: providers.base.clone(),
+        google: providers.base.clone(),
+        geocoder_daily_units: [10, 10],
+        ..peer_builtins(&peer)
+    };
+    let gateway = server2::gateway::runtime::from_vars_at(&vars(settings), &builtins)
         .unwrap()
         .expect("gateway enabled");
     let (status, bytes) = body(&gateway, "/geocode/v000903/coord/37.5663,126.9779").await;
@@ -244,62 +348,77 @@ async fn without_native_families_legacy_is_selected_and_no_native_setting_is_rea
 }
 
 #[test]
-fn kma_requires_data_go_kr_keys_daily_units_and_valid_provider_roots() {
-    use server2::gateway::runtime::from_vars as gateway;
+fn kma_requires_the_legacy_data_go_kr_keys_and_valid_provider_roots() {
+    use server2::gateway::runtime::{from_vars as gateway, from_vars_at};
     let complete = || {
-        vec![
+        let mut v = s3_vars();
+        v.extend([
             (
                 "SERVER2_GATEWAY_LEGACY_URL",
                 "http://127.0.0.1:9".to_owned(),
             ),
             ("SERVER2_NATIVE_FAMILIES", "kma".to_owned()),
-            ("SERVER2_S3_BUCKET", "server2-kma".to_owned()),
             (
-                "SERVER2_S3_ACCESS_KEY_ID",
-                "configured-access-key".to_owned(),
-            ),
-            (
-                "SERVER2_S3_SECRET_ACCESS_KEY",
-                "configured-secret".to_owned(),
-            ),
-            (
-                "SERVER2_DATA_GO_KR_KEYS",
+                "DONGNAE_SECRET_KEYS",
                 r#"["configured-data-go-kr-key-0001"]"#.to_owned(),
             ),
-            ("SERVER2_DATA_GO_KR_DAILY_UNITS", "1000".to_owned()),
-        ]
+        ]);
+        v
     };
     assert!(gateway(&vars(complete())).unwrap().is_some());
-    for missing in ["SERVER2_DATA_GO_KR_KEYS", "SERVER2_DATA_GO_KR_DAILY_UNITS"] {
-        let partial = complete()
-            .into_iter()
-            .filter(|(k, _)| *k != missing)
-            .collect();
-        assert!(gateway(&vars(partial)).is_err(), "{missing}");
-    }
-    for (name, value) in [
-        ("SERVER2_DATA_GO_KR_KEYS", "[]"),
-        ("SERVER2_DATA_GO_KR_DAILY_UNITS", "0"),
-        ("SERVER2_DATA_GO_KR_DAILY_UNITS", "many"),
-        ("SERVER2_KMA_WEATHER_BASE_URL", "http://www.weather.go.kr/"),
-        ("SERVER2_DATA_GO_KR_BASE_URL", "https://apis.data.go.kr/x?y"),
-    ] {
+    let partial = complete()
+        .into_iter()
+        .filter(|(k, _)| *k != "DONGNAE_SECRET_KEYS")
+        .collect();
+    assert!(gateway(&vars(partial)).is_err(), "no DONGNAE_SECRET_KEYS");
+    // Legacy `dataGoKrKeys.parse`: an empty, malformed or placeholder-only list has no key.
+    for value in ["[]", "not json", r#"["key1", "key2"]"#] {
         let mut settings = complete();
-        settings.retain(|(k, _)| *k != name);
-        settings.push((name, value.to_owned()));
-        assert!(gateway(&vars(settings)).is_err(), "{name}={value}");
+        settings.retain(|(k, _)| *k != "DONGNAE_SECRET_KEYS");
+        settings.push(("DONGNAE_SECRET_KEYS", value.to_owned()));
+        assert!(gateway(&vars(settings)).is_err(), "{value}");
     }
-    let mut loopback = complete();
-    loopback.push((
-        "SERVER2_KMA_WEATHER_BASE_URL",
-        "http://127.0.0.1:9/".to_owned(),
-    ));
-    assert!(gateway(&vars(loopback)).unwrap().is_some());
+    // The removed server2-only settings are not read: a stale value changes nothing.
+    let mut stale = complete();
+    stale.extend([
+        ("SERVER2_DATA_GO_KR_DAILY_UNITS", "many".to_owned()),
+        (
+            "SERVER2_KMA_WEATHER_BASE_URL",
+            "http://www.weather.go.kr/".to_owned(),
+        ),
+        ("SERVER2_S3_ENDPOINT", "http://s3.example.test/".to_owned()),
+    ]);
+    assert!(gateway(&vars(stale)).unwrap().is_some());
+    // Builtins are not settings; a test root follows the transport rule.
+    for roots in [
+        Builtins {
+            kma_weather: "http://www.weather.go.kr/".into(),
+            ..Builtins::production()
+        },
+        Builtins {
+            data_go_kr: "https://apis.data.go.kr/x?y".into(),
+            ..Builtins::production()
+        },
+    ] {
+        assert!(
+            from_vars_at(&vars(complete()), &roots).is_err(),
+            "{roots:?}"
+        );
+    }
+    let loopback = Builtins {
+        kma_weather: "http://127.0.0.1:9/".into(),
+        ..Builtins::production()
+    };
+    assert!(
+        from_vars_at(&vars(complete()), &loopback)
+            .unwrap()
+            .is_some()
+    );
 }
 
 #[test]
 fn routing_list_and_required_settings_fail_closed() {
-    use server2::gateway::runtime::{NativeFamilies, from_vars as gateway};
+    use server2::gateway::runtime::{NativeFamilies, from_vars as gateway, from_vars_at};
     let list = |v: &'static str| NativeFamilies::from_vars(&move |_: &str| Some(v.to_owned()));
     assert_eq!(list("").unwrap(), NativeFamilies::default());
     assert_eq!(
@@ -328,38 +447,25 @@ fn routing_list_and_required_settings_fail_closed() {
         assert!(list(bad).is_err(), "{bad}");
     }
     let complete = || {
-        vec![
+        let mut v = s3_vars();
+        v.extend([
             (
                 "SERVER2_GATEWAY_LEGACY_URL",
                 "http://127.0.0.1:9".to_owned(),
             ),
             ("SERVER2_NATIVE_FAMILIES", "geocode,dsf".to_owned()),
-            ("SERVER2_S3_BUCKET", "server2-world".to_owned()),
-            (
-                "SERVER2_S3_ACCESS_KEY_ID",
-                "configured-access-key".to_owned(),
-            ),
-            (
-                "SERVER2_S3_SECRET_ACCESS_KEY",
-                "configured-secret".to_owned(),
-            ),
             ("GEOCODER_KAKAO_KEYS", r#"["configured-kakao"]"#.to_owned()),
-            ("SERVER2_GEOCODER_KAKAO_DAILY_UNITS", "1000".to_owned()),
-            ("SERVER2_WORLD_VC_DAILY_UNITS", "1000".to_owned()),
-            ("SERVER2_WORLD_VC_QUOTA_ID", "ab".repeat(32)),
             ("VC_SECRET_KEY", "configured-vc-key".to_owned()),
-        ]
+        ]);
+        v
     };
-    // Production defaults: HTTPS S3, Kakao, Google and Visual Crossing endpoints.
+    // Production roots: HTTPS S3, Kakao, Google and Visual Crossing endpoints.
     assert!(gateway(&vars(complete())).unwrap().is_some());
     for missing in [
         "SERVER2_S3_BUCKET",
-        "SERVER2_S3_ACCESS_KEY_ID",
-        "SERVER2_S3_SECRET_ACCESS_KEY",
+        "AWS_ACCESS_KEY",
+        "AWS_SECRET_KEY",
         "GEOCODER_KAKAO_KEYS",
-        "SERVER2_GEOCODER_KAKAO_DAILY_UNITS",
-        "SERVER2_WORLD_VC_DAILY_UNITS",
-        "SERVER2_WORLD_VC_QUOTA_ID",
         "VC_SECRET_KEY",
     ] {
         let partial = complete()
@@ -369,73 +475,93 @@ fn routing_list_and_required_settings_fail_closed() {
         assert!(gateway(&vars(partial)).is_err(), "{missing}");
     }
     for (name, value) in [
-        ("SERVER2_S3_ENDPOINT", "http://s3.example.test/"),
-        ("GEOCODER_KAKAO_BASE_URL", "http://dapi.kakao.com"),
-        (
-            "SERVER2_WORLD_VC_URL",
-            "http://weather.example.test/timeline/",
-        ),
-        // S10C-R1-F02: a fragment would drop the request path; user information is refused.
-        (
-            "SERVER2_WORLD_VC_URL",
-            "https://weather.example.test/timeline/#/",
-        ),
-        (
-            "SERVER2_WORLD_VC_URL",
-            "https://user@weather.example.test/timeline/",
-        ),
-        ("SERVER2_GEOCODER_KAKAO_DAILY_UNITS", "many"),
         ("SERVER2_WORLD_VERSIONS", "v000705"),
+        // Legacy `config/air.js` throws on a cap that is not a whole number.
+        ("AIR_GOOGLE_MONTHLY_CAP", "many"),
+        ("AIR_OWM_MONTHLY_CAP", "-1"),
+        ("TWA_S3_REGION", "bad/region"),
     ] {
         let mut changed = complete();
         changed.retain(|(k, _)| *k != name);
         changed.push((name, value.to_owned()));
         assert!(gateway(&vars(changed)).is_err(), "{name}={value}");
     }
-    // Non-loopback HTTPS endpoints are configuration, not errors.
+    for roots in [
+        Builtins {
+            s3: Some("http://s3.example.test/".into()),
+            ..Builtins::production()
+        },
+        Builtins {
+            kakao: "http://dapi.kakao.com".into(),
+            ..Builtins::production()
+        },
+        Builtins {
+            vc: "http://weather.example.test/timeline/".into(),
+            ..Builtins::production()
+        },
+        // S10C-R1-F02: a fragment would drop the request path; user information is refused.
+        Builtins {
+            vc: "https://weather.example.test/timeline/#/".into(),
+            ..Builtins::production()
+        },
+        Builtins {
+            vc: "https://user@weather.example.test/timeline/".into(),
+            ..Builtins::production()
+        },
+    ] {
+        assert!(
+            from_vars_at(&vars(complete()), &roots).is_err(),
+            "{roots:?}"
+        );
+    }
+    // Non-loopback HTTPS roots are valid (a test peer or the production default).
     let mut https = complete();
-    https.extend([
-        ("SERVER2_S3_ENDPOINT", "https://s3.example.test/".to_owned()),
-        (
-            "GEOCODER_KAKAO_BASE_URL",
-            "https://geocode.example.test".to_owned(),
-        ),
-        (
-            "SERVER2_WORLD_VC_URL",
-            "https://weather.example.test/timeline/".to_owned(),
-        ),
-    ]);
-    assert!(gateway(&vars(https)).unwrap().is_some());
+    // S10e: legacy's test-only endpoint name is not read (an invalid value changes nothing).
+    https.push((
+        "GEOCODER_KAKAO_BASE_URL",
+        "http://dapi.kakao.com".to_owned(),
+    ));
+    let roots = Builtins {
+        kakao: "https://geocode.example.test".into(),
+        s3: Some("https://s3.example.test/".into()),
+        vc: "https://weather.example.test/timeline/".into(),
+        ..Builtins::production()
+    };
+    assert!(from_vars_at(&vars(https), &roots).unwrap().is_some());
+    // Legacy caps: blank is the default, zero leaves the provider out, digits are valid.
+    for (name, value) in [
+        ("AIR_GOOGLE_MONTHLY_CAP", " "),
+        ("AIR_GOOGLE_MONTHLY_CAP", "0"),
+        ("AIR_OWM_MONTHLY_CAP", " 2000 "),
+        ("VC_DAILY_RECORD_LIMIT", "0"),
+        ("VC_DAILY_RECORD_LIMIT", "many"),
+    ] {
+        let mut changed = complete();
+        changed.push((name, value.to_owned()));
+        assert!(gateway(&vars(changed)).unwrap().is_some(), "{name}={value}");
+    }
 }
 
-/// S15b-3: `kma` reads the legacy AirKorea key list; a key needs its S08 daily units, and the
-/// data.go.kr root follows the transport rule. No key: stored AirKorea records only.
+/// S15b-3: `kma` reads the legacy AirKorea key list with the built-in daily units (S10e). No
+/// key: stored AirKorea records only.
 #[test]
 fn kma_airkorea_acquisition_settings_fail_closed() {
-    use server2::gateway::runtime::from_vars as gateway;
+    use server2::gateway::runtime::{from_vars as gateway, from_vars_at};
     let base = || {
-        vec![
+        let mut v = s3_vars();
+        v.extend([
             (
                 "SERVER2_GATEWAY_LEGACY_URL",
                 "http://127.0.0.1:9".to_owned(),
             ),
             ("SERVER2_NATIVE_FAMILIES", "kma".to_owned()),
-            ("SERVER2_S3_BUCKET", "server2-kma".to_owned()),
+            // S15b-2: kma also requires the data.go.kr key list.
             (
-                "SERVER2_S3_ACCESS_KEY_ID",
-                "configured-access-key".to_owned(),
-            ),
-            (
-                "SERVER2_S3_SECRET_ACCESS_KEY",
-                "configured-secret".to_owned(),
-            ),
-            // S15b-2: kma also requires the data.go.kr key settings.
-            (
-                "SERVER2_DATA_GO_KR_KEYS",
+                "DONGNAE_SECRET_KEYS",
                 r#"["configured-data-go-kr-key-0001"]"#.to_owned(),
             ),
-            ("SERVER2_DATA_GO_KR_DAILY_UNITS", "1000".to_owned()),
-        ]
+        ]);
+        v
     };
     assert!(gateway(&vars(base())).unwrap().is_some(), "no key");
     let keyed = || {
@@ -446,20 +572,18 @@ fn kma_airkorea_acquisition_settings_fail_closed() {
         ));
         v
     };
-    assert!(gateway(&vars(keyed())).is_err(), "a key without units");
-    let mut ok = keyed();
-    ok.push(("SERVER2_AIRKOREA_DAILY_UNITS", "400".to_owned()));
-    assert!(gateway(&vars(ok.clone())).unwrap().is_some());
-    for (name, value) in [
-        ("SERVER2_AIRKOREA_DAILY_UNITS", "0"),
-        ("SERVER2_AIRKOREA_DAILY_UNITS", "many"),
-        ("SERVER2_DATA_GO_KR_URL", "http://apis.example.test/"),
-        ("SERVER2_DATA_GO_KR_URL", "https://apis.example.test/?q=1"),
+    assert!(gateway(&vars(keyed())).unwrap().is_some());
+    for roots in [
+        Builtins {
+            data_go_kr: "http://apis.example.test/".into(),
+            ..Builtins::production()
+        },
+        Builtins {
+            data_go_kr: "https://apis.example.test/?q=1".into(),
+            ..Builtins::production()
+        },
     ] {
-        let mut changed = ok.clone();
-        changed.retain(|(k, _)| *k != name);
-        changed.push((name, value.to_owned()));
-        assert!(gateway(&vars(changed)).is_err(), "{name}={value}");
+        assert!(from_vars_at(&vars(keyed()), &roots).is_err(), "{roots:?}");
     }
     // A placeholder key list (legacy default `["key1", "key2"]`) is no key.
     let mut placeholder = base();
@@ -469,28 +593,81 @@ fn kma_airkorea_acquisition_settings_fail_closed() {
 
 #[test]
 fn real_world_configuration_builds_without_a_mode_variable() {
-    let s3 = vec![
+    let mut settings = s3_vars();
+    settings.extend([
         ("SERVER2_NATIVE_FAMILIES", "dsf".to_owned()),
-        ("SERVER2_S3_BUCKET", "server2-world".to_owned()),
-        (
-            "SERVER2_S3_ACCESS_KEY_ID",
-            "configured-access-key".to_owned(),
-        ),
-        (
-            "SERVER2_S3_SECRET_ACCESS_KEY",
-            "configured-secret".to_owned(),
-        ),
-        ("SERVER2_WORLD_VC_DAILY_UNITS", "1000".to_owned()),
-        ("SERVER2_WORLD_VC_QUOTA_ID", "ab".repeat(32)),
         ("VC_SECRET_KEY", "configured-vc-key".to_owned()),
-        (
-            "SERVER2_WORLD_AIR_WAQI_KEY",
-            "configured-waqi-key".to_owned(),
-        ),
-        ("SERVER2_WORLD_AIR_WAQI_MONTHLY_UNITS", "100000".to_owned()),
-        ("SERVER2_WORLD_AIR_WAQI_QUOTA_ID", "cd".repeat(32)),
-    ];
-    let configured = server2::world::runtime::from_vars(&vars(s3)).unwrap();
+        ("WAQI_SECRET_KEY", "configured-waqi-key".to_owned()),
+    ]);
+    let configured = server2::world::runtime::from_vars(&vars(settings)).unwrap();
     let (_, versions) = configured.expect("native world configured");
     assert_eq!(versions.len(), 3);
+}
+
+/// S10e: process listeners follow legacy `config.js` (`OPENSHIFT_NODEJS_IP`, then
+/// `OPENSHIFT_NODEJS_PORT` or `PORT`, default 3000); metrics use the next loopback port.
+#[test]
+fn process_listeners_follow_the_legacy_port_rule() {
+    use server2::Config;
+    let config = |pairs: &[(&'static str, &str)]| {
+        let pairs: Vec<_> = pairs.iter().map(|(k, v)| (*k, (*v).to_owned())).collect();
+        Config::from_vars(&vars(pairs))
+    };
+    let addresses = |c: Config| (c.public_addr.to_string(), c.metrics_addr.to_string());
+    assert_eq!(
+        addresses(config(&[]).unwrap()),
+        ("127.0.0.1:3000".into(), "127.0.0.1:3001".into())
+    );
+    assert_eq!(
+        addresses(config(&[("PORT", "4100")]).unwrap()),
+        ("127.0.0.1:4100".into(), "127.0.0.1:4101".into())
+    );
+    // `OPENSHIFT_NODEJS_PORT` wins over `PORT`; an empty value counts as unset (JavaScript `||`).
+    assert_eq!(
+        addresses(config(&[("PORT", "4100"), ("OPENSHIFT_NODEJS_PORT", "4200")]).unwrap()),
+        ("127.0.0.1:4200".into(), "127.0.0.1:4201".into())
+    );
+    assert_eq!(
+        addresses(config(&[("PORT", "4100"), ("OPENSHIFT_NODEJS_PORT", "")]).unwrap()),
+        ("127.0.0.1:4100".into(), "127.0.0.1:4101".into())
+    );
+    // Port 0 selects ephemeral ports for both listeners (tests and smokes).
+    assert_eq!(
+        addresses(config(&[("PORT", "0")]).unwrap()),
+        ("127.0.0.1:0".into(), "127.0.0.1:0".into())
+    );
+    // The public address may be any interface; metrics stay on loopback.
+    assert_eq!(
+        addresses(config(&[("OPENSHIFT_NODEJS_IP", "0.0.0.0"), ("PORT", "80")]).unwrap()),
+        ("0.0.0.0:80".into(), "127.0.0.1:81".into())
+    );
+    assert_eq!(
+        addresses(config(&[("OPENSHIFT_NODEJS_IP", "::1"), ("PORT", "80")]).unwrap()),
+        ("[::1]:80".into(), "[::1]:81".into())
+    );
+    for bad in [
+        ("PORT", "http"),
+        ("PORT", "65535"),
+        ("OPENSHIFT_NODEJS_PORT", "-1"),
+        ("OPENSHIFT_NODEJS_IP", "localhost"),
+    ] {
+        assert!(config(&[bad]).is_err(), "{bad:?}");
+    }
+    // The removed process settings are not read.
+    let stale = config(&[
+        ("SERVER2_BIND", "0.0.0.0:1"),
+        ("SERVER2_METRICS_BIND", "0.0.0.0:2"),
+        ("SERVER2_WORKER_THREADS", "999"),
+        ("SERVER2_CONNECTION_SECONDS", "1"),
+    ])
+    .unwrap();
+    assert_eq!(stale.public_addr.to_string(), "127.0.0.1:3000");
+    assert_eq!(stale.worker_threads, Config::default().worker_threads);
+    assert_eq!(stale.connection_seconds, 9);
+    // With the gateway the lifetime is the S10b 12 seconds.
+    let gateway = config(&[("SERVER2_GATEWAY_LEGACY_URL", "http://127.0.0.1:9")]).unwrap();
+    assert_eq!(
+        gateway.connection_seconds,
+        server2::GATEWAY_CONNECTION_SECONDS
+    );
 }
