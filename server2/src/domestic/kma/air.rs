@@ -1222,10 +1222,19 @@ fn get_air_forecast(cx: &Cx, info: &V, source: &V, unit: &V) -> Result<(), ()> {
     if src != "kaq" && src != "airkorea" {
         return Err(());
     }
-    let results = cx
-        .store
-        .air_forecast(&src, &super::to_store(&station))
-        .map_err(|_| ())?;
+    let station_json = super::to_store(&station);
+    let (src, results) = match cx.store.air_forecast(&src, &station_json) {
+        // Intended difference (AK 2026-10-15): a `kaq` request when no KAQ forecast exists at all
+        // gets the AirKorea forecast, labelled `airkorea`; legacy answered no forecast. A KAQ
+        // forecast that exists keeps priority (including a station it has no rows for).
+        Err(e) if src == "kaq" && e.0 == super::NO_KAQ_FORECAST => (
+            "airkorea".to_owned(),
+            cx.store
+                .air_forecast("airkorea", &station_json)
+                .map_err(|_| ())?,
+        ),
+        answer => (src, answer.map_err(|_| ())?),
+    };
     let results = from_store(&results);
     let r = catch(|| {
         if results.nullish() || le(&results.len(), &n(0.)) {

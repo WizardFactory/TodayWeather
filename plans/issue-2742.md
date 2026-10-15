@@ -241,3 +241,36 @@ and without the legacy User-Agent); the server2 acquirer published UV (4 pages, 
 pollen (4 pages), KASI 서울 and MFDS into the local peer twice, oak answered no data, and the folds
 answered from them. The OpenWeather 401 of S15b-3a came from the first of two `OWM_SECRET_KEY`
 assignments; the last one (dotenv's) answers 200.
+
+### Scenarios (S15b-3c)
+
+Declaration: [S15b-3c.json](../server2/config/tasks/S15b-3c.json). Base: master `0997d702`.
+
+| ID | User and goal | Steps | Expected / failure | AC and proof |
+| --- | --- | --- | --- | --- |
+| F1 | Decoder | Nine synthetic GIFs (two streams longer than their frame) | Every frame equals get-pixels 3.3.2 | C3-1; `air_forecast::gif_frames_equal_get_pixels` |
+| F2 | Forecast rows | Ten `do` runs of characterized animations (skip, 54-frame 17-cycle, missing PM2.5 path, broken legend, 47 frames, a 12 cycle), eight stations | Rows, errors and `getForecast` answers equal legacy master | C3-1; `air_forecast::hourly_forecast_rows_*` |
+| F2b | #2757/#2762 regression cases | The 46 harness cases and the cycle-start arithmetic | Same rows or rejection | C3-1/C3-2; `air_forecast::the_legacy_image_regression_cases_*`, `cycle_starts_equal_legacy` |
+| F3 | App user (`kaq`) without KAQ data | Replay of `air-kaq-forecast` with KAQ hidden | `forecastSource` `airkorea`, the hourly rows and AQI, no KAQ-only days | C3-3; `air_forecast_s3::a_kaq_request_without_*` |
+| F4 | App user (`kaq`) with KAQ data | Parity replay | Legacy bytes | C3-3; `parity::all_oracle_scenarios_*`, `air_forecast_s3::a_kaq_request_without_*` |
+| F5 | Widget/web (`airkorea`) and the store | S3 snapshot | `airkorea` rows from S3, `kaq` rejected with the legacy error | C3-1/C3-3; `air_forecast_s3::the_snapshot_answers_*` |
+| F6 | First users of an announcement | Two concurrent requests, loopback provider | One acquisition, published before use, both served | C3-4; `air_forecast_s3::a_missing_image_forecast_*` |
+| F7 | User while the images are slow | 2 s per image | Request within its deadline without the forecast; a later one has it | C3-4; `air_forecast_s3::a_slow_image_*` |
+| F8 | Process across announcements | Another host's acquisitions, one late of the previous day, no publication count change | Folded in completion order within a minute, equal to a cold read | C3-4; `air_forecast_s3::other_hosts_acquisitions_*` |
+| F8b | New station list | Overlapping requests with the old and new list | Decoded at once for the new list | C3-4; `air_forecast_s3::a_new_station_list_*` |
+| F9 | Unpublished or rejected announcement | Expected documents missing, a 12 cycle or without PM2.5 | The previous announcement is acquired unless stored | C3-4; `air_forecast_s3::the_expected_announcement_*` |
+| F10 | Provider data legacy rejects | Another host, a 12 cycle, no PM2.5 path; a 404 | Never fetched; nothing stored | C3-4; `air_forecast_s3::rejected_image_paths_*`, `image_paths_are_fetched_*` |
+| F14 | Late 23시 announcement | Read on the fourth day | Kept until its rows expire | C3-4; `air_forecast_s3::a_late_announcement_*` |
+| F15 | Same-millisecond acquisitions | Two groups at one instant | Both folded | C3-4; `air_forecast_s3::acquisitions_completed_in_the_same_*` |
+| F16 | Malformed image | Cyclic LZW chain | Error, not a hang | C3-4; `air_forecast::a_cyclic_lzw_stream_*` |
+| F11 | Operator | Legacy calibration names | Deployed values when unset or empty | C3-2/C3-5; `air_forecast::the_calibration_reads_*` |
+| F13 | Hostile image | Huge frames, too many frames | Refused before allocation | C3-4; `air_forecast::gifs_beyond_the_decoding_bounds_*` |
+
+Live record (2026-10-15; settings read in-process from `server2/.env`, never printed; records
+only in a local S06 test peer started with room for the GIFs): dust forecast, station list and
+nationwide calls through the request path; the server2 acquirer fetched the 23-cycle pair the
+`11시 발표` documents named (sha256 equal to the #2757 evidence) and the 17-cycle pair the `17시 발표`
+documents named (54 frames), and the server2 decoder and the legacy master controllers stored the
+same 384 and 432 rows for the four smoke reference points. Some provider calls
+were slow or timed out (raw station-list pages took over 30 s for two keys, then 0.2-0.4 s); the
+downloaded images were deleted after the check.
