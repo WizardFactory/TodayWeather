@@ -199,6 +199,26 @@ Acquisitions, which also hold when a call fails; each acquisition makes at most 
 - AWS-page rows used for ASOS hours are labelled `KMA_ASOS` in provenance (with `origin` stored).
 - The `kmastninfos` export and import against production are separately authorized actions.
 
+## S15b-2s station registry seed (2026-10-15)
+
+AK authorized a one-time read-only export of the legacy `kmastninfos` on 2026-10-15. It ran with
+`find` only, and the connection URL was loaded in-process and never printed or stored. It returned
+776 documents at `2026-10-15T00:34:30.549Z`. Converted by `export_station_seeds.py`, the seed is
+carried as provenance-labelled static data (`domestic/kma/source/data/kmastninfos.seed.jsonl`;
+public station facts only). The registry starts from it before any page arrives, so seeded
+stations need no geocoding and keep `rnsHit`, `rnsCount` and `isMountain`. A repeated `stnId` is kept as legacy
+holds it (`965` and `989` appear three times each in the export). A newer export published by `station_seed_import`
+replaces the carried one.
+
+Cutover steps (AK 2026-10-15):
+
+1. A final read-only export is imported at cutover.
+2. Once legacy is retired, server2 takes over updating `rnsHit`/`rnsCount` with the ported
+   `_updateRnsHitRate` (`source/rnshit.rs`). It stays unwired while legacy runs, as legacy
+   behaves on the v000903 path, with no runtime flag.
+
+Declaration: [S15b-2s.json](../server2/config/tasks/S15b-2s.json). Base: master `dbf3a4bc`.
+
 ### Scenarios (S15b-3b)
 
 Declaration: [S15b-3b.json](../server2/config/tasks/S15b-3b.json).

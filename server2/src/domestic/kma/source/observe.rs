@@ -389,7 +389,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         if let Some(rx) = self.fold_if_dirty(now_ms) {
             Self::wait(vec![rx], until).await;
         }
-        self.state().folded.clone()
+        // Before the first fold the carried seed alone is the registry (no pages yet).
+        Some(self.state().folded.clone().unwrap_or_else(seed_only))
     }
     fn flight(&self, key: &Flight) -> Option<watch::Receiver<bool>> {
         self.flights
@@ -533,36 +534,38 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         s.pages.minute_read = Some(std::time::Instant::now());
         s.pages.dirty = true;
     }
+    /// The newest imported seed that parses and was exported after the carried one: partitions
+    /// (export days) newest first, acquisitions newest first; a corrupt or older import is
+    /// skipped. None keeps the seed in use (the carried one when nothing qualifies).
     async fn read_seed(&self, now_ms: i64, deadline: Instant) -> Option<Vec<Doc>> {
+        use super::seed;
+        let carried = seed::embedded().exported_at_ms;
         let months = super::history_months(now_ms as f64);
         let parts = self
             .reader
-            .partitions(
-                super::seed::SOURCE,
-                super::seed::KIND,
-                &super::seed::key(),
-                &months,
-                deadline,
-            )
+            .partitions(seed::SOURCE, seed::KIND, &seed::key(), &months, deadline)
             .await
             .ok()?;
-        let newest = parts.last()?;
-        let acquisitions = self
-            .reader
-            .raw(
-                super::seed::SOURCE,
-                super::seed::KIND,
-                &super::seed::key(),
-                newest,
-                deadline,
-            )
-            .await
-            .ok()?;
-        let latest = acquisitions
-            .iter()
-            .filter_map(|a| a.first())
-            .max_by_key(|r| r.envelope.identity.fetched_at_ms)?;
-        super::seed::parse(&latest.bytes).ok().map(|s| s.docs)
+        for partition in parts.iter().rev() {
+            let mut acquisitions = self
+                .reader
+                .raw(seed::SOURCE, seed::KIND, &seed::key(), partition, deadline)
+                .await
+                .ok()?;
+            acquisitions.sort_by_key(|a| {
+                std::cmp::Reverse(a.first().map_or(0, |r| r.envelope.identity.fetched_at_ms))
+            });
+            for a in &acquisitions {
+                if let Some(parsed) = a
+                    .first()
+                    .and_then(|r| seed::parse(&r.bytes).ok())
+                    .filter(|s| s.exported_at_ms > carried)
+                {
+                    return Some(parsed.docs);
+                }
+            }
+        }
+        None
     }
     fn ensure_minute(
         self: &Arc<Self>,
@@ -760,7 +763,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     .filter_map(|(k, (v, _))| Some((k.clone(), (*v)?)))
                     .collect();
                 (
-                    s.seed.clone(),
+                    s.seed
+                        .clone()
+                        .or_else(|| Some(Arc::new(super::seed::embedded().docs.clone()))),
                     s.pages.hourly.clone(),
                     s.pages.hourly_at.clone(),
                     s.pages.city.clone(),
@@ -1253,6 +1258,17 @@ fn fold_hourly(
     )
 }
 
+/// The collections before any page: the carried seed's registry.
+fn seed_only() -> Arc<Folded> {
+    static ONLY: std::sync::OnceLock<Arc<Folded>> = std::sync::OnceLock::new();
+    ONLY.get_or_init(|| {
+        Arc::new(Folded {
+            registry: Arc::new(Registry::seeded(&super::seed::embedded().docs)),
+            ..Folded::default()
+        })
+    })
+    .clone()
+}
 /// `policy.nearest(town, stations, maxKm)` over the registry's city stations.
 pub struct Mapping {
     pub station: String,

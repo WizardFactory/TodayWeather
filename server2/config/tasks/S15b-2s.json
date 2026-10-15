@@ -1,0 +1,28 @@
+{
+  "task": "S15b-2s",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-2s.json",
+    "server2/src/domestic/kma/source/",
+    "server2/tools/migration/export_station_seeds.py",
+    "server2/tests/domestic/observe.rs",
+    "server2/tests/domestic/stations.rs"
+  ],
+  "outside": [
+    {
+      "path": "plans/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b-2s station seed note and the cutover steps (final export, rain-sensor statistics); no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S15b-2s station registry seed paragraph only"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6181782805",
+  "path_notes": {
+    "server2/src/domestic/kma/source/": "data/kmastninfos.seed.jsonl (the 2026-10-15 read-only legacy export, provenance in data/PROVENANCE.md), the carried seed in seed.rs and observe.rs, repeated stnId rows kept in stations.rs",
+    "server2/tools/migration/export_station_seeds.py": "keeps a repeated stnId (the production export holds 965 and 989 three times each)"
+  }
+}
