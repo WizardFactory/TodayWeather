@@ -1,0 +1,28 @@
+{
+  "task": "S15b-4a",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-4a.json",
+    "server2/src/domestic/kma/source/",
+    "server2/src/gateway/runtime.rs",
+    "server2/tests/domestic/source_s3.rs",
+    "server2/tests/domestic/source_s3_oracle.rs"
+  ],
+  "outside": [
+    {
+      "path": "plans/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b-4 split, sources followed, live checks and the request-time acquisition plan; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S15b-4a request-time forecast acquisition section only"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6194920828",
+  "path_notes": {
+    "server2/src/domestic/kma/source/": "fetch.rs (owned grid, RSS, mid, forecast-zone and warning acquisitions), mod.rs (no forward for missing inputs), observe.rs (the daily data.go.kr acquirer also serves the forecast services and exposes its per-day budgets)",
+    "server2/src/gateway/runtime.rs": "the kma source gets the forecast acquirer on the existing DONGNAE_SECRET_KEYS acquirer; no new setting"
+  }
+}
