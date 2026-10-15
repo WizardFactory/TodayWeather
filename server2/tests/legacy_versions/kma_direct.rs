@@ -470,6 +470,45 @@ async fn usage_roots_head_and_mixed_case_mounts_follow_the_recorded_replies() {
     assert_eq!(hits.load(Ordering::SeqCst), 0, "no legacy hop");
 }
 
+/// Review S17B-R2-F1: the legacy hop sends the request target verbatim (no `..` or `%2e`
+/// resolution), so legacy routes the path it would have routed directly.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_legacy_hop_keeps_dot_segments_verbatim() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    for path in [
+        "/v000803/town/a/b/c/../../..",
+        "/v000705/town/a/b/c/%2e%2e/%2E?x=1",
+        "/v000901/kma/addr/./a/b/c/d",
+    ] {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let seen = Arc::new(Mutex::new(String::new()));
+        let record = seen.clone();
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut buf = vec![0u8; 8192];
+            let n = socket.read(&mut buf).await.unwrap();
+            *record.lock().unwrap() = String::from_utf8_lossy(&buf[..n]).into_owned();
+            let reply = ["HTTP/1.1 404 Not Found", "Content-Length: 1", "", "x"].join("\r\n");
+            socket.write_all(reply.as_bytes()).await.unwrap();
+            socket.shutdown().await.unwrap();
+        });
+        let gw = gateway(
+            &format!("http://{addr}/"),
+            Arc::new(server2::domestic::kma::backend::LegacyOnly),
+            ALL,
+        );
+        let req = Request::builder().uri(path).body(Body::empty()).unwrap();
+        let response = gw.handle(req).await;
+        assert_eq!(response.status().as_u16(), 404, "{path}");
+        let request = seen.lock().unwrap().clone();
+        assert!(
+            request.split("\r\n").next() == Some(format!("GET {path} HTTP/1.1").as_str()),
+            "{path}: {request}"
+        );
+    }
+}
+
 /// Review S17B-R1-F4: the legacy hop drops hop-by-hop headers in both directions, including the
 /// headers a `Connection` header lists.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

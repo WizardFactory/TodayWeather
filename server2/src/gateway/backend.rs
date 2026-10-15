@@ -247,55 +247,102 @@ impl BackendDispatcher {
             "upgrade",
             "host",
         ];
-        let method = reqwest::Method::from_bytes(method.as_str().as_bytes())
-            .map_err(|_| GatewayError::Provider)?;
-        let mut request = self
-            .http
-            .client
-            .request(method, format!("{}{path_and_query}", self.http.base))
-            .timeout(timeout);
         let listed = connection_tokens(headers);
-        for (name, value) in headers {
-            let name = name.as_str();
-            if !HOP.contains(&name)
-                && name != "content-length"
-                && !listed.contains(&name.to_owned())
-            {
-                request = request.header(name, value.as_bytes());
-            }
-        }
-        let mut response = request.send().await.map_err(|_| GatewayError::Provider)?;
-        let status = response.status().as_u16();
-        let mut out = axum::http::HeaderMap::new();
-        let listed: Vec<String> = response
-            .headers()
-            .get_all("connection")
+        let forwarded: Vec<(&axum::http::HeaderName, &axum::http::HeaderValue)> = headers
             .iter()
-            .filter_map(|v| v.to_str().ok())
-            .flat_map(|v| v.split(','))
-            .map(|t| t.trim().to_ascii_lowercase())
-            .filter(|t| !t.is_empty())
+            .filter(|(name, _)| {
+                let name = name.as_str();
+                !HOP.contains(&name)
+                    && name != "content-length"
+                    && !listed.contains(&name.to_owned())
+            })
             .collect();
-        for (name, value) in response.headers() {
-            if HOP.contains(&name.as_str()) || listed.contains(&name.as_str().to_owned()) {
-                continue;
+        let (status, legacy_headers, body) = if self.http.base.starts_with("http://") {
+            // Review S17B-R2-F1: the loopback legacy origin receives the path exactly as
+            // requested (a URL parser would resolve `..` and `%2e` segments).
+            tokio::time::timeout(
+                timeout,
+                self.http1_verbatim(method, path_and_query, &forwarded),
+            )
+            .await
+            .map_err(|_| GatewayError::Provider)??
+        } else {
+            let method = reqwest::Method::from_bytes(method.as_str().as_bytes())
+                .map_err(|_| GatewayError::Provider)?;
+            let mut request = self
+                .http
+                .client
+                .request(method, format!("{}{path_and_query}", self.http.base))
+                .timeout(timeout);
+            for (name, value) in &forwarded {
+                request = request.header(name.as_str(), value.as_bytes());
             }
-            if let (Ok(n), Ok(v)) = (
-                axum::http::HeaderName::from_bytes(name.as_str().as_bytes()),
-                axum::http::HeaderValue::from_bytes(value.as_bytes()),
-            ) {
-                out.append(n, v);
+            let mut response = request.send().await.map_err(|_| GatewayError::Provider)?;
+            let status = response.status().as_u16();
+            let headers = response.headers().clone();
+            let mut bytes = Vec::new();
+            while let Some(chunk) = response.chunk().await.map_err(|_| GatewayError::Provider)? {
+                if bytes.len().saturating_add(chunk.len()) > PROXY_MAX_BODY {
+                    return Err(GatewayError::Provider);
+                }
+                bytes.extend_from_slice(&chunk);
+            }
+            (status, headers, bytes)
+        };
+        let listed = connection_tokens(&legacy_headers);
+        let mut out = axum::http::HeaderMap::new();
+        for (name, value) in &legacy_headers {
+            if !HOP.contains(&name.as_str()) && !listed.contains(&name.as_str().to_owned()) {
+                out.append(name.clone(), value.clone());
             }
         }
-        let max = 6 * 1024 * 1024;
-        let mut bytes = Vec::new();
-        while let Some(chunk) = response.chunk().await.map_err(|_| GatewayError::Provider)? {
-            if bytes.len().saturating_add(chunk.len()) > max {
-                return Err(GatewayError::Provider);
-            }
-            bytes.extend_from_slice(&chunk);
+        Ok((status, out, body))
+    }
+    /// One HTTP/1.1 exchange with the `http://` legacy origin that writes the request target
+    /// verbatim.
+    async fn http1_verbatim(
+        &self,
+        method: &axum::http::Method,
+        path_and_query: &str,
+        headers: &[(&axum::http::HeaderName, &axum::http::HeaderValue)],
+    ) -> Result<(u16, axum::http::HeaderMap, Vec<u8>), GatewayError> {
+        let url = reqwest::Url::parse(&self.http.base).map_err(|_| GatewayError::Provider)?;
+        let host = url.host_str().ok_or(GatewayError::Provider)?.to_owned();
+        let port = url.port_or_known_default().ok_or(GatewayError::Provider)?;
+        let authority = match url.port() {
+            Some(p) => format!("{host}:{p}"),
+            None => host.clone(),
+        };
+        let stream = tokio::net::TcpStream::connect((host.trim_matches(['[', ']']), port))
+            .await
+            .map_err(|_| GatewayError::Provider)?;
+        let (mut sender, connection) =
+            hyper::client::conn::http1::handshake(hyper_util::rt::TokioIo::new(stream))
+                .await
+                .map_err(|_| GatewayError::Provider)?;
+        tokio::spawn(connection);
+        let target: axum::http::Uri = path_and_query.parse().map_err(|_| GatewayError::Provider)?;
+        let mut request = axum::http::Request::builder()
+            .method(method.clone())
+            .uri(target)
+            .header("host", authority);
+        for (name, value) in headers {
+            request = request.header(*name, *value);
         }
-        Ok((status, out, bytes))
+        let request = request
+            .body(axum::body::Body::empty())
+            .map_err(|_| GatewayError::Provider)?;
+        let response = sender
+            .send_request(request)
+            .await
+            .map_err(|_| GatewayError::Provider)?;
+        let status = response.status().as_u16();
+        let headers = response.headers().clone();
+        let body =
+            axum::body::to_bytes(axum::body::Body::new(response.into_body()), PROXY_MAX_BODY)
+                .await
+                .map_err(|_| GatewayError::Provider)?;
+        Ok((status, headers, body.to_vec()))
     }
     pub fn mode(&self, version: Version, family: Family) -> BackendMode {
         self.switches
@@ -424,6 +471,8 @@ impl BackendDispatcher {
         Err(GatewayError::Provider)
     }
 }
+/// The largest legacy body a forwarded direct request carries back (as for backend replies).
+const PROXY_MAX_BODY: usize = 6 * 1024 * 1024;
 /// The header names a `Connection` header lists (hop-by-hop, RFC 9110 7.6.1), lower case.
 fn connection_tokens(headers: &axum::http::HeaderMap) -> Vec<String> {
     headers

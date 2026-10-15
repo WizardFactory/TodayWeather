@@ -105,6 +105,7 @@ and both town routers). Unlisted paths keep the previous 404; other methods are 
   S15b-4, the S15 `next(err)`/uncaught-exception forwards, a panic) or a path no native route
   parses takes the legacy hop unchanged (method, path, query, end-to-end headers; legacy status,
   headers and body back; hop-by-hop headers, including those a `Connection` header lists, are
-  dropped in both directions). The v000705 `/short`, `/shortest`, `/current` replies without
+  dropped in both directions; to the `http://` loopback origin the request target is written
+  verbatim, without resolving `..` or `%2e` segments). The v000705 `/short`, `/shortest`, `/current` replies without
   `midData` are legacy 500s from `next(err)` and are forwarded like every S15 `next(err)`; S15b-4
   owns removing the forwards.
