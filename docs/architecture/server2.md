@@ -2401,8 +2401,9 @@ S17b serves the legacy direct public routes, which reach Express through nginx r
 
 - **Routing.** `server2::api::DirectRoutes` answers listed direct routes before the gateway routes:
   `kma` claims `/v000903/kma/addr`, `kma-v000901` claims `/v000901/kma/addr` and the new `town`
-  entry claims `/v000803/town` and `/v000705/town`. Unlisted paths keep the previous 404; only GET
-  and HEAD are claimed. Direct `/v000902/kma/addr` (zero observed) is not claimed. The listed
+  entry claims `/v000803/town` and `/v000705/town`, matched case-insensitively as in Express
+  (`req.baseUrl` keeps the requested spelling); the mounts answer the legacy usage JSON.
+  Unlisted paths keep the previous 404; only GET and HEAD are claimed. Direct `/v000902/kma/addr` (zero observed) is not claimed. The listed
   entries share the one KMA handler and S3 input source.
 - **Town assembly.** The town router lists run on the S15 chain without query defaults, with
   `getSummary` (ControllerTown) and the upper-case icons. v000803 ends with `makeResult` (no
@@ -2416,8 +2417,9 @@ S17b serves the legacy direct public routes, which reach Express through nginx r
   `next(err)` forwards, including the v000705 `/short`, `/shortest`, `/current` 500s) take the
   legacy hop unchanged (`BackendDispatcher::proxy`, 30-second CloudFront origin timeout).
 
-Verification (local): a town oracle (73 recordings; 52 v000803, 21 v000705; 1,132 store answers;
-S17a driver with the router, mount, path and scenario list changed) replays to the legacy statuses,
+Verification (local): a town oracle (86 recordings; 58 v000803, 25 v000705, 3 v000901 usage and
+mixed-case; 1,214 store answers; S17a driver with the router, mount, path, method and scenario
+list changed, including usage roots, HEAD and upper-case mounts) replays to the legacy statuses,
 bytes and ETags, with 10 declared forwards in total across both S17 fixtures. The S02 goldens
 `domestic-v000803`, `domestic-v000705`, `domestic-v000901` and `domestic-v000903` (with their 304
 revalidations) match on the wire natively (status, body and every header except `date`,

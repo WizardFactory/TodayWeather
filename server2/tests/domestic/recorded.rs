@@ -108,10 +108,11 @@ impl RecordedSource {
             // (S17b) record the path below `/{version}/town`.
             let version = text(sc, "version").unwrap_or_else(|| "v000903".into());
             let town = matches!(version.as_str(), "v000803" | "v000705");
-            let mut full = if town {
-                format!("/{version}/town{path}")
-            } else {
-                format!("/{version}/kma{path}")
+            // S17b review recordings carry the requested URL (mixed-case mounts).
+            let mut full = match text(sc, "url") {
+                Some(url) => url.split('?').next().unwrap_or_default().to_owned(),
+                None if town => format!("/{version}/town{path}"),
+                None => format!("/{version}/kma{path}"),
             };
             if !query.is_empty() {
                 full.push('?');

@@ -16,7 +16,7 @@
 //! (the S15b temporary forwards, until S15b-4), the request takes the legacy hop unchanged.
 use crate::domestic::kma::{
     KmaRequest, Outcome,
-    backend::{KmaBackend, parse_path, parse_town_path},
+    backend::{KmaBackend, parse_path, parse_town_path, split_mount},
 };
 use crate::gateway::{BackendDispatcher, response::etag};
 use axum::{
@@ -64,16 +64,19 @@ impl DirectRoutes {
             legacy,
         }
     }
-    /// Whether a listed direct route owns this request (GET or HEAD under its mount).
+    /// Whether a listed direct route owns this request: GET or HEAD at or under its mount,
+    /// matched case-insensitively as Express does.
     pub fn claims(&self, method: &Method, path: &str) -> bool {
         if *method != Method::GET && *method != Method::HEAD {
             return false;
         }
         let f = self.families;
-        (f.kma_v000903 && path.starts_with("/v000903/kma/addr/"))
-            || (f.kma_v000901 && path.starts_with("/v000901/kma/addr/"))
-            || (f.town
-                && (path.starts_with("/v000803/town/") || path.starts_with("/v000705/town/")))
+        match split_mount(path) {
+            Some(("v000903", ..)) => f.kma_v000903,
+            Some(("v000901", ..)) => f.kma_v000901,
+            Some(("v000803" | "v000705", ..)) => f.town,
+            _ => false,
+        }
     }
     /// Serve a claimed request.
     pub async fn handle(&self, request: Request<Body>) -> Response {
@@ -86,12 +89,18 @@ impl DirectRoutes {
         let text = |name: &str| headers.get(name).and_then(|v| v.to_str().ok());
         // i18n 0.8.3 `init`: the `twcookie` cookie, then Accept-Language (S12 implementation).
         let locale = crate::warnings::special::locale(text("accept-language"), text("cookie"));
-        let parsed =
-            if path_and_query.starts_with("/v000803/") || path_and_query.starts_with("/v000705/") {
-                parse_town_path(&path_and_query, locale)
-            } else {
-                parse_path(&path_and_query, locale)
-            };
+        let Some((version, _, rest)) = split_mount(&path_and_query) else {
+            return self.forward(&method, &path_and_query, &headers).await;
+        };
+        if matches!(rest, "" | "/") && version != "v000903" {
+            // `router.get('/')` of the v000901 address and the town routers: the usage list.
+            return express(&method, &headers, Outcome::Json(usage()));
+        }
+        let parsed = if matches!(version, "v000803" | "v000705") {
+            parse_town_path(&path_and_query, locale)
+        } else {
+            parse_path(&path_and_query, locale)
+        };
         if let Some(request) = parsed
             && let Some(outcome) = self.native(request).await
         {
@@ -133,6 +142,24 @@ impl DirectRoutes {
             }
         }
     }
+}
+/// The `router.get('/')` reply of `routes/v000901/route.kma.addr.js` and the two town routers
+/// (`req.summary` is never set): `{"usage": [...]}` with the legacy strings.
+fn usage() -> crate::gateway::OrderedJson {
+    use crate::gateway::OrderedJson;
+    const USAGE: [&str; 6] = [
+        "/{도,특별시,광역시} : response summarized weather information on matched region",
+        "/{도,특별시,광역시}/{시,군,구} : response summarized weather information on matched city",
+        "/{도,특별시,광역시}/{시,군,구}/{동,면,읍} : response weather data for all three types such as short, shortest, current",
+        "/{도,특별시,광역시}/{시,군,구}/{동,면,읍}/short : response only short information",
+        "/{도,특별시,광역시}/{시,군,구}/{동,면,읍}/shortest : response only shortest information",
+        "/{도,특별시,광역시}/{시,군,구}/{동,면,읍}/current : response only current information",
+    ];
+    let text = |s: &str| OrderedJson::String(s.encode_utf16().collect());
+    OrderedJson::Object(vec![(
+        "usage".encode_utf16().collect(),
+        OrderedJson::Array(USAGE.iter().map(|s| text(s)).collect()),
+    )])
 }
 /// `fresh` 0.3.0 as Express 4.13.4 calls it for a 2xx GET/HEAD reply without `Last-Modified`.
 fn fresh(request: &HeaderMap, tag: Option<&str>) -> bool {
@@ -196,15 +223,19 @@ pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Respon
     let h = response.headers_mut();
     h.insert("x-powered-by", HeaderValue::from_static("Express"));
     h.insert("access-control-allow-origin", HeaderValue::from_static("*"));
-    if let Some(tag) = tag {
-        h.insert("etag", HeaderValue::from_str(&tag).expect("ASCII digest"));
+    if let Some(tag) = &tag {
+        h.insert("etag", HeaderValue::from_str(tag).expect("ASCII digest"));
     }
     if !not_modified {
         h.insert("content-type", HeaderValue::from_static(content_type));
-        h.insert(
-            "content-length",
-            HeaderValue::from_str(&length.to_string()).expect("ASCII length"),
-        );
+        // `res.send` sets Content-Length for a body; for `res.json(undefined)` only Node adds
+        // `Content-Length: 0` when a GET ends without one, and a HEAD reply has none.
+        if tag.is_some() || *method != Method::HEAD {
+            h.insert(
+                "content-length",
+                HeaderValue::from_str(&length.to_string()).expect("ASCII length"),
+            );
+        }
     }
     response
 }

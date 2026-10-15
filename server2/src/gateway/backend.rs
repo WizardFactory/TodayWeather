@@ -254,16 +254,30 @@ impl BackendDispatcher {
             .client
             .request(method, format!("{}{path_and_query}", self.http.base))
             .timeout(timeout);
+        let listed = connection_tokens(headers);
         for (name, value) in headers {
-            if !HOP.contains(&name.as_str()) && name.as_str() != "content-length" {
-                request = request.header(name.as_str(), value.as_bytes());
+            let name = name.as_str();
+            if !HOP.contains(&name)
+                && name != "content-length"
+                && !listed.contains(&name.to_owned())
+            {
+                request = request.header(name, value.as_bytes());
             }
         }
         let mut response = request.send().await.map_err(|_| GatewayError::Provider)?;
         let status = response.status().as_u16();
         let mut out = axum::http::HeaderMap::new();
+        let listed: Vec<String> = response
+            .headers()
+            .get_all("connection")
+            .iter()
+            .filter_map(|v| v.to_str().ok())
+            .flat_map(|v| v.split(','))
+            .map(|t| t.trim().to_ascii_lowercase())
+            .filter(|t| !t.is_empty())
+            .collect();
         for (name, value) in response.headers() {
-            if HOP.contains(&name.as_str()) {
+            if HOP.contains(&name.as_str()) || listed.contains(&name.as_str().to_owned()) {
                 continue;
             }
             if let (Ok(n), Ok(v)) = (
@@ -409,6 +423,17 @@ impl BackendDispatcher {
         }
         Err(GatewayError::Provider)
     }
+}
+/// The header names a `Connection` header lists (hop-by-hop, RFC 9110 7.6.1), lower case.
+fn connection_tokens(headers: &axum::http::HeaderMap) -> Vec<String> {
+    headers
+        .get_all("connection")
+        .iter()
+        .filter_map(|v| v.to_str().ok())
+        .flat_map(|v| v.split(','))
+        .map(|t| t.trim().to_ascii_lowercase())
+        .filter(|t| !t.is_empty())
+        .collect()
 }
 pub(crate) fn backend_path(
     version: Version,

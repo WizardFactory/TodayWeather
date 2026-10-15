@@ -77,8 +77,11 @@ coverage plus the S15b-2 ASOS composition; the v000901/v000902 recording include
 
 `server2::api::DirectRoutes` answers the legacy direct public routes before the gateway routes
 when their entry is listed: `kma` (`/v000903/kma/addr`), `kma-v000901` (`/v000901/kma/addr`) and
-the new `town` entry (`/v000803/town`, `/v000705/town`). Unlisted paths keep the previous 404;
-other methods are never claimed. Direct `/v000902/kma/addr` is zero-observed and not claimed.
+the new `town` entry (`/v000803/town`, `/v000705/town`). Mounts and route literals match
+case-insensitively, as in Express, and `req.baseUrl` keeps the requested spelling (an upper-case
+`/V000901/KMA/ADDR` drops `req.version`, so the reply has no `location`). The mount itself (with
+or without a trailing slash) answers the legacy usage JSON of `router.get('/')` (v000901 address
+and both town routers). Unlisted paths keep the previous 404; other methods are never claimed. Direct `/v000902/kma/addr` is zero-observed and not claimed.
 
 - **Town router lists** (`routes/v000803/routeTownForecast.js`, `routes/v000705/routeTownForecast.js`):
   no `checkQueryValidation` (no query defaults, no `req.version`), `insertSkyIcon` (upper case),
@@ -95,11 +98,13 @@ other methods are never claimed. Direct `/v000902/kma/addr` is zero-observed and
   weak ETag; `res.status(400).send(text)` with `text/html; charset=utf-8` and an ETag;
   `fresh` 0.3.0 revalidation for 2xx GET/HEAD (exact tag or `W/` + tag, `*`, `no-cache` and
   `If-Modified-Since` without `Last-Modified` never fresh) with Express's 304 headers; HEAD
-  without a body; `cors()` and `X-Powered-By`. The locale is i18n 0.8.3 `init` (`twcookie`
+  without a body (`res.json(undefined)` then has no Content-Length, which Node adds only to a
+  GET); `cors()` and `X-Powered-By`. The locale is i18n 0.8.3 `init` (`twcookie`
   cookie, then Accept-Language). The app-wide session cookie is not emitted (S12 precedent).
 - **Forwards.** An outcome legacy must answer (`Outcome::Legacy`: the S15b input forwards until
   S15b-4, the S15 `next(err)`/uncaught-exception forwards, a panic) or a path no native route
   parses takes the legacy hop unchanged (method, path, query, end-to-end headers; legacy status,
-  headers and body back). The v000705 `/short`, `/shortest`, `/current` replies without
+  headers and body back; hop-by-hop headers, including those a `Connection` header lists, are
+  dropped in both directions). The v000705 `/short`, `/shortest`, `/current` replies without
   `midData` are legacy 500s from `next(err)` and are forwarded like every S15 `next(err)`; S15b-4
   owns removing the forwards.

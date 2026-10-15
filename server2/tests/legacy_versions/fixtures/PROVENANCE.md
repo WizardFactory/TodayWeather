@@ -158,24 +158,30 @@ The two S15 declared forwards are also declared here (`query-malformed-escape`,
 
 ## S17b town oracle fixture
 
-`kma-town.json.gz` (sha256 `57bc13eed46390bf3a17c93d38de82787884e06f7b73845e1cdc37bcadfb4075`) holds
+`kma-town.json.gz` (sha256 `991cf39a229d2e46491652611b331ae2573e6521a8db507f3c132e03b559f904`) holds
 pinned legacy-oracle recordings of the town routers `server/routes/v000803/routeTownForecast.js` and
-`server/routes/v000705/routeTownForecast.js` for the S17b tests. It is test data only.
+`server/routes/v000705/routeTownForecast.js` (and the usage root of
+`server/routes/v000901/route.kma.addr.js`) for the S17b tests. It is test data only.
 
-- Recorded like the S17a fixture (same legacy base, runtime, harness and dependencies; 51 legacy
-  source hashes). The driver is the S17a driver with the diff below applied (result sha256
-  `38e7422d75e5d7c8fb57f498492214bc220386358a874c528e79ecf6e494545f`): only the routers, mounts,
-  request paths (`/v000803/town/...`, `/v000705/town/...[/{part}]`) and the scenario list differ.
-  Recording twice gives identical bytes.
+- Recorded like the S17a fixture (same legacy base, runtime, harness and dependencies). The driver
+  is the S17a driver with the diff below applied (result sha256
+  `b3bac9dc6a13cc9bb12338b5c248b893a2520ef38e947dee8de5b5b468cc90fd`): only the routers, mounts,
+  request paths and methods, the recorded `method`, `url` and `content_length`, and the scenario
+  list differ. Recording twice gives identical bytes.
 - Cross-check: the recorded `domestic-v000803` and `domestic-v000705` bodies and ETags (none for
   v000705) equal the S02 goldens byte for byte.
-- 73 scenarios, 1,132 recorded store answers. **v000803 (52):** 51 S15 scenarios through the
-  v000803 router (ids prefixed `v000803-`, or `v000903` replaced by `v000803`). **v000705 (21):** 12
-  S15 scenarios through the base v000705 routes, the four sub-routes (`mid`, `short`, `shortest`,
-  `current`) with and without model errors, and an unknown sub-route (Express 404).
+- 86 scenarios, 1,214 recorded store answers. **v000803 (58):** 51 S15 scenarios through the
+  v000803 router (ids prefixed `v000803-`, or `v000903` replaced by `v000803`), the usage root
+  with and without the trailing slash and as HEAD, a HEAD request, a HEAD of the region guard and
+  an upper-case mount. **v000705 (25):** 12 S15 scenarios through the base routes, the four
+  sub-routes (`mid`, `short`, `shortest`, `current`) with and without model errors, an unknown
+  sub-route (Express 404), the usage root (with and without the slash), a HEAD request and an
+  upper-case mount with an upper-case `MID` sub-route. **v000901 (3):** the usage root (with and
+  without the slash) and an upper-case mount, whose `req.baseUrl` spelling makes
+  `checkQueryValidation` drop `req.version`, so the reply has no `location`.
 - Legacy outcomes: v000705 answers `res.json(undefined)` (200, `application/json`, empty body, no
-  ETag) because its list has no `makeResult`; the region guard answers 400; a malformed escape
-  answers 500 (both routers); the `short`, `shortest` and `current` sub-routes answer 500 when
+  ETag; `Content-Length: 0` on GET only); the region guard answers 400; a malformed escape answers
+  500 (both routers); the `short`, `shortest` and `current` sub-routes answer 500 when
   `insertSkyIcon` finds no `midData` (`next(err)`); the unknown sub-route answers 404. The 500s and
   the 404 are declared forwards in `support.rs`.
 
@@ -183,11 +189,11 @@ pinned legacy-oracle recordings of the town routers `server/routes/v000803/route
 
 ```diff
 --- record-older.js (S17a driver, sha256 a6ca68cddb86bdee227465de6bd7fe3c0f33e60fe3cd84034305d98d671b0c2c)
-+++ record-town.js (S17b driver, sha256 38e7422d75e5d7c8fb57f498492214bc220386358a874c528e79ecf6e494545f)
++++ record-town.js (S17b driver, sha256 b3bac9dc6a13cc9bb12338b5c248b893a2520ef38e947dee8de5b5b468cc90fd)
 @@ -1,10 +1,10 @@
 -/* S17a KMA v000901/v000902 oracle driver (task evidence, not a repository tool). Derived from the
 - * S15 driver (sha256 d9f7a410...): only the router, mount and scenario list differ.
-+/* S17b KMA town v000803/v000705 oracle driver (task evidence, not a repository tool). Derived from the
++/* S17b KMA town v000803/v000705 (and v000901 root) oracle driver (task evidence, not a repository tool). Derived from the
 + * S17a driver (sha256 a6ca68cd...): only the routers, mounts, request paths and scenario list differ.
   * Executes the legacy /v000901/kma/addr and /v000902/kma routers through the maintained offline harness
   * (server/test/offline/rss-response-smoke.js) exactly as the S02 recorder does, and records,
@@ -198,18 +204,30 @@ pinned legacy-oracle recordings of the town routers `server/routes/v000803/route
   */
  'use strict';
  const fs = require('fs'), path = require('path'), vm = require('vm'), Module = require('module');
-@@ -210,8 +210,8 @@
+@@ -201,17 +201,18 @@
+     const port = listener.address().port; allowedPorts.add(port);
+     try {
+         return await new Promise((resolve, reject) => {
+-            const req = http.request({host: '127.0.0.1', port, path: input.path, method: 'GET', headers: {connection: 'close', ...input.headers}, agent: false}, res => {
++            const req = http.request({host: '127.0.0.1', port, path: input.path, method: input.method || 'GET', headers: {connection: 'close', ...input.headers}, agent: false}, res => {
+                 const chunks = []; res.on('data', c => chunks.push(c));
+-                res.on('end', () => resolve({status: res.statusCode, contentType: res.headers['content-type'], etag: res.headers.etag, raw: Buffer.concat(chunks)}));
++                res.on('end', () => resolve({status: res.statusCode, contentType: res.headers['content-type'], etag: res.headers.etag, contentLength: res.headers['content-length'], raw: Buffer.concat(chunks)}));
+             });
+             req.setTimeout(15000, () => req.destroy(new Error('case timeout'))); req.on('error', reject); req.end();
+         });
      } finally { for (const s of sockets) s.destroy(); await new Promise(ok => listener.close(ok)); allowedPorts.delete(port); }
  }
  
 -const ROUTES = {v000901: {file: 'routes/v000901/route.kma.addr.js', mount: '/v000901/kma/addr'},
 -    v000902: {file: 'routes/v000902/route.kma.v000902.js', mount: '/v000902/kma'}};
 +const ROUTES = {v000803: {file: 'routes/v000803/routeTownForecast.js', mount: '/v000803/town'},
-+    v000705: {file: 'routes/v000705/routeTownForecast.js', mount: '/v000705/town'}};
++    v000705: {file: 'routes/v000705/routeTownForecast.js', mount: '/v000705/town'},
++    v000901: {file: 'routes/v000901/route.kma.addr.js', mount: '/v000901/kma/addr'}};
  const enc8 = s => s.split('/').map(encodeURIComponent).join('/');
  const SEOUL = '/addr/' + enc8('서울특별시/종로구/청운효자동');
  const MYEONG = '/addr/' + enc8('서울특별시/중구/명동');
-@@ -482,17 +482,29 @@
+@@ -482,17 +483,43 @@
  add('air-dust-forecast-stations', {path: SEOUL, query: 'airUnit=airkorea_who', lang: 'zh-TW'}, STATIONS, {overrides: {dust_forecast: [
      {date: '20260924', dustForecast: {PM10Grade: 2, PM10Str: '나쁨', PM25Grade: 1, PM25Str: '보통'}},
      {date: '20260926', dustForecast: {O3Grade: 3, O3Str: '매우나쁨'}}]}});
@@ -245,21 +263,37 @@ pinned legacy-oracle recordings of the town routers `server/routes/v000803/route
 +    versioned.push(Object.assign({}, cases.find(c => c.id === 'model-errors'), {id: 'v000705-' + part + '-model-errors', version: 'v000705', part}));
 +}
 +versioned.push(Object.assign({}, cases.find(c => c.id === 'domestic-v000903'), {id: 'v000705-unknown-part', version: 'v000705', part: 'other'}));
++// Review S17B-R1: the usage roots, HEAD replies and case-insensitive mounts.
++const base = () => cases.find(c => c.id === 'domestic-v000903');
++const ROOT = {path: '/addr', lang: 'ko'};
++for (const v of ['v000803', 'v000705', 'v000901']) {
++    versioned.push(Object.assign({}, base(), {id: v + '-usage', version: v, request: ROOT}));
++    versioned.push(Object.assign({}, base(), {id: v + '-usage-slash', version: v, request: {path: '/addr/', lang: 'ko'}}));
++}
++versioned.push(Object.assign({}, base(), {id: 'v000803-usage-head', version: 'v000803', request: ROOT, method: 'HEAD'}));
++versioned.push(Object.assign({}, base(), {id: 'v000705-head', version: 'v000705', method: 'HEAD'}));
++versioned.push(Object.assign({}, base(), {id: 'v000803-head', version: 'v000803', method: 'HEAD'}));
++versioned.push(Object.assign({}, cases.find(c => c.id === 'region-guard'), {id: 'v000803-region-guard-head', version: 'v000803', method: 'HEAD'}));
++versioned.push(Object.assign({}, base(), {id: 'v000803-mixed-case', version: 'v000803', upper: true}));
++versioned.push(Object.assign({}, base(), {id: 'v000705-mixed-case-mid', version: 'v000705', upper: true, part: 'MID'}));
++versioned.push(Object.assign({}, base(), {id: 'v000901-mixed-case', version: 'v000901', upper: true}));
  
  async function run() {
      const out = [];
-@@ -513,11 +525,12 @@
+@@ -513,11 +540,13 @@
          }
          overrides = c.options.overrides || {};
          calls = []; responded = false;
 -        const p = '/' + c.version + '/kma' + c.request.path + (c.request.query ? '?' + c.request.query : '');
+-        const res = await wire(appFor(h.router, route.mount), {path: p, headers: c.request.lang ? {'accept-language': c.request.lang} : {}});
 +        const townPath = c.request.path.replace(/^\/addr/, '') + (c.part ? '/' + c.part : '');
-+        const p = route.mount + townPath + (c.request.query ? '?' + c.request.query : '');
-         const res = await wire(appFor(h.router, route.mount), {path: p, headers: c.request.lang ? {'accept-language': c.request.lang} : {}});
++        const mount = c.upper ? route.mount.toUpperCase() : route.mount;
++        const p = mount + townPath + (c.request.query ? '?' + c.request.query : '');
++        const res = await wire(appFor(h.router, route.mount), {path: p, method: c.method, headers: c.request.lang ? {'accept-language': c.request.lang} : {}});
          await new Promise(ok => setImmediate(ok));
          const recorded = calls; calls = null;
 -        out.push({id: c.id, version: c.version, clock: now, db: c.options.db || '2.0', path: c.request.path, query: c.request.query || '', lang: c.request.lang || null,
-+        out.push({id: c.id, version: c.version, clock: now, db: c.options.db || '2.0', path: townPath, query: c.request.query || '', lang: c.request.lang || null,
++        out.push({id: c.id, version: c.version, method: c.method || 'GET', url: p, content_length: res.contentLength === undefined ? null : res.contentLength, clock: now, db: c.options.db || '2.0', path: townPath, query: c.request.query || '', lang: c.request.lang || null,
              status: res.status, content_type: res.contentType || null, etag: res.etag || null, body: res.raw.toString('utf8'), body_sha256: sha(res.raw), calls: recorded});
          if (thrown.length) process.stderr.write('  thrown: ' + JSON.stringify(thrown) + '\n');
          thrown = [];

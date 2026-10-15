@@ -240,12 +240,10 @@ async fn listed_direct_routes_reproduce_the_s02_goldens_natively() {
             (&recorded.query, recorded.locale)
         );
     }
-    // HEAD: the GET headers without a body.
-    for golden_id in ["domestic-v000901", "domestic-v000705"] {
-        *source.next.lock().unwrap() = Some(recording_of(golden_id));
-        let reply = send(&gw, Method::HEAD, golden_id).await;
-        assert_golden(golden_id, true, &reply);
-    }
+    // HEAD of a JSON body: the GET headers without a body.
+    *source.next.lock().unwrap() = Some("domestic-v000901");
+    let reply = send(&gw, Method::HEAD, "domestic-v000901").await;
+    assert_golden("domestic-v000901", true, &reply);
     assert_eq!(hits.load(Ordering::SeqCst), 0, "no legacy hop");
 }
 
@@ -405,4 +403,118 @@ fn town_entry_and_direct_claims_follow_the_routing_list() {
         from_vars(&with("town", false)).is_err(),
         "town needs the shared S3 settings"
     );
+}
+
+/// Review S17B-R1: the recorded usage roots (with and without the trailing slash), HEAD replies
+/// (`res.json(undefined)` has no Content-Length on HEAD) and case-insensitive mounts (the
+/// requested `req.baseUrl` spelling drops `location` on v000901) answer natively as legacy did.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn usage_roots_head_and_mixed_case_mounts_follow_the_recorded_replies() {
+    warm();
+    let hits = Arc::new(AtomicUsize::new(0));
+    let origin = legacy_origin(hits.clone()).await;
+    let source = Arc::new(Recorded {
+        next: Mutex::new(None),
+        requests: Mutex::new(Vec::new()),
+    });
+    let gw = gateway(&origin, source.clone(), ALL);
+    let ids = [
+        "v000803-usage",
+        "v000803-usage-slash",
+        "v000705-usage",
+        "v000705-usage-slash",
+        "v000901-usage",
+        "v000901-usage-slash",
+        "v000803-usage-head",
+        "v000705-head",
+        "v000803-head",
+        "v000803-region-guard-head",
+        "v000803-mixed-case",
+        "v000705-mixed-case-mid",
+        "v000901-mixed-case",
+    ];
+    for id in ids {
+        let sc = scenario(id);
+        *source.next.lock().unwrap() = Some(id);
+        let method = Method::from_bytes(sc["method"].as_str().unwrap().as_bytes()).unwrap();
+        let mut req = Request::builder()
+            .method(method)
+            .uri(sc["url"].as_str().unwrap())
+            .body(Body::empty())
+            .unwrap();
+        if let Some(lang) = sc["lang"].as_str() {
+            req.headers_mut()
+                .insert("accept-language", HeaderValue::from_str(lang).unwrap());
+        }
+        let response = gw.handle(req).await;
+        let h = response.headers().clone();
+        assert_eq!(
+            response.status().as_u16(),
+            sc["status"].as_u64().unwrap() as u16,
+            "{id}"
+        );
+        for (name, key) in [
+            ("content-type", "content_type"),
+            ("etag", "etag"),
+            ("content-length", "content_length"),
+        ] {
+            assert_eq!(
+                h.get(name).and_then(|v| v.to_str().ok()),
+                sc[key].as_str(),
+                "{id}: {name}"
+            );
+        }
+        let body = to_bytes(response.into_body(), 1 << 22).await.unwrap();
+        assert_eq!(body, sc["body"].as_str().unwrap().as_bytes(), "{id}");
+    }
+    assert_eq!(hits.load(Ordering::SeqCst), 0, "no legacy hop");
+}
+
+/// Review S17B-R1-F4: the legacy hop drops hop-by-hop headers in both directions, including the
+/// headers a `Connection` header lists.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_legacy_hop_drops_connection_listed_headers_both_ways() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let seen = Arc::new(Mutex::new(String::new()));
+    let record = seen.clone();
+    tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut buf = vec![0u8; 8192];
+        let n = socket.read(&mut buf).await.unwrap();
+        *record.lock().unwrap() = String::from_utf8_lossy(&buf[..n]).to_lowercase();
+        socket
+            .write_all(
+                b"HTTP/1.1 200 OK\r\nConnection: close, x-resp\r\nX-Resp: secret\r\n\
+                  Keep-Alive: timeout=5\r\nX-Kept: yes\r\nContent-Length: 2\r\n\r\nok",
+            )
+            .await
+            .unwrap();
+        socket.shutdown().await.unwrap();
+    });
+    // A source without inputs: the direct request takes the legacy hop.
+    let gw = gateway(
+        &format!("http://{addr}/"),
+        Arc::new(server2::domestic::kma::backend::LegacyOnly),
+        ALL,
+    );
+    let req = Request::builder()
+        .uri("/v000803/town/a/b/c")
+        .header("connection", "x-private")
+        .header("x-private", "value")
+        .header("x-public", "kept")
+        .body(Body::empty())
+        .unwrap();
+    let response = gw.handle(req).await;
+    assert_eq!(response.status().as_u16(), 200);
+    let h = response.headers().clone();
+    assert_eq!(h.get("x-kept").unwrap(), "yes");
+    for gone in ["x-resp", "keep-alive", "connection"] {
+        assert!(h.get(gone).is_none(), "{gone}");
+    }
+    assert_eq!(to_bytes(response.into_body(), 1024).await.unwrap(), "ok");
+    let request = seen.lock().unwrap().clone();
+    assert!(request.contains("x-public: kept"), "{request}");
+    assert!(!request.contains("x-private"), "{request}");
 }

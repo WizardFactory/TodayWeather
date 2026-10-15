@@ -457,7 +457,7 @@ pub fn run(
     let req = obj(vec![
         ("params", V::Obj(params)),
         ("query", V::Obj(query)),
-        ("baseUrl", V::from(request.base_url())),
+        ("baseUrl", V::from(request.mount.as_str())),
         ("originalUrl", V::from(request.original_url.as_str())),
     ]);
     let mut cx = Cx {

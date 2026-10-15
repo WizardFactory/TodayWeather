@@ -175,6 +175,9 @@ pub struct KmaRequest {
     /// First path segment of the mount (`req.baseUrl`), e.g. `v000903`; it selects the router
     /// list (S17a).
     pub version: String,
+    /// `req.baseUrl` as requested (Express matches mounts case-insensitively), e.g.
+    /// `/v000903/kma`, `/v000901/kma/addr`, `/v000803/town`.
+    pub mount: String,
     /// The v000705 town sub-route (`mid`, `short`, `shortest`, `current`), else None.
     pub part: Option<String>,
     pub region: Option<String>,
@@ -186,17 +189,6 @@ pub struct KmaRequest {
     pub query: Vec<(String, String)>,
     pub locale: Locale,
 }
-impl KmaRequest {
-    /// `req.baseUrl` of the legacy router (`/v000903/kma`, `/v000901/kma/addr`, `/v000803/town`).
-    pub fn base_url(&self) -> String {
-        match self.version.as_str() {
-            "v000803" | "v000705" => format!("/{}/town", self.version),
-            "v000901" => "/v000901/kma/addr".into(),
-            v => format!("/{v}/kma"),
-        }
-    }
-}
-
 /// Result of one assembly.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Outcome {

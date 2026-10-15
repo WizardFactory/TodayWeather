@@ -227,45 +227,68 @@ const QS_PARAMETER_LIMIT: usize = 1000;
 /// the address versions `v000901`, `v000902` and `v000903` (S17a).
 /// None means the native port does not handle it (forward to legacy).
 pub fn parse_path(path: &str, lang: &str) -> Option<KmaRequest> {
-    let (p, _) = path.split_once('?').unwrap_or((path, ""));
-    let p = p.strip_suffix('/').unwrap_or(p);
-    let (version, rest) = ["v000901", "v000902", "v000903"]
-        .into_iter()
-        .find_map(|v| Some((v, p.strip_prefix(&format!("/{v}/kma/addr/"))?)))?;
-    let parts: Vec<&str> = rest.split('/').collect();
+    let (version, mount, rest) = split_mount(path)?;
+    if !matches!(version, "v000901" | "v000902" | "v000903") {
+        return None;
+    }
+    let rest = rest.strip_suffix('/').unwrap_or(rest);
+    let parts: Vec<&str> = rest.strip_prefix('/')?.split('/').collect();
     if parts.len() > 3 {
         return None;
     }
-    parse_request(version, None, &parts, path, lang)
+    parse_request(version, mount, None, &parts, path, lang)
 }
 /// S17b: parse a town path `/v000803/town/{region}[/{city}[/{town}]][?query]` or
 /// `/v000705/town/{region}[/{city}[/{town}[/{mid|short|shortest|current}]]][?query]` (the
 /// routes of `routes/v000803/routeTownForecast.js` and `routes/v000705/routeTownForecast.js`).
 /// None means the native port does not handle it (forward to legacy).
 pub fn parse_town_path(path: &str, lang: &str) -> Option<KmaRequest> {
-    let (p, _) = path.split_once('?').unwrap_or((path, ""));
-    let p = p.strip_suffix('/').unwrap_or(p);
-    let (version, rest) = ["v000803", "v000705"]
-        .into_iter()
-        .find_map(|v| Some((v, p.strip_prefix(&format!("/{v}/town/"))?)))?;
-    let mut parts: Vec<&str> = rest.split('/').collect();
+    let (version, mount, rest) = split_mount(path)?;
+    if !matches!(version, "v000803" | "v000705") {
+        return None;
+    }
+    let rest = rest.strip_suffix('/').unwrap_or(rest);
+    let mut parts: Vec<&str> = rest.strip_prefix('/')?.split('/').collect();
     let part = match parts.as_slice() {
         [_, _, _, part] if version == "v000705" => {
-            if !["mid", "short", "shortest", "current"].contains(part) {
-                return None;
-            }
-            let part = (*part).to_owned();
+            // Express matches route literals case-insensitively.
+            let part = ["mid", "short", "shortest", "current"]
+                .into_iter()
+                .find(|p| part.eq_ignore_ascii_case(p))?;
             parts.pop();
-            Some(part)
+            Some(part.to_owned())
         }
         _ if parts.len() > 3 => return None,
         _ => None,
     };
-    parse_request(version, part, &parts, path, lang)
+    parse_request(version, mount, part, &parts, path, lang)
+}
+/// The legacy mounts of the address and town routes: (version, `req.baseUrl`, route prefix).
+/// Express matches both case-insensitively and keeps the requested spelling in `req.baseUrl`.
+const MOUNTS: [(&str, &str, &str); 5] = [
+    ("v000901", "/v000901/kma/addr", ""),
+    ("v000902", "/v000902/kma", "/addr"),
+    ("v000903", "/v000903/kma", "/addr"),
+    ("v000803", "/v000803/town", ""),
+    ("v000705", "/v000705/town", ""),
+];
+/// S17b: split a request path at its legacy mount: (version, `req.baseUrl` as requested, the
+/// remaining path, empty or starting with `/`). None for any other path.
+pub fn split_mount(path: &str) -> Option<(&'static str, String, &str)> {
+    let p = path.split_once('?').map_or(path, |(p, _)| p);
+    MOUNTS.into_iter().find_map(|(version, mount, route)| {
+        let full = mount.len() + route.len();
+        let head = p.get(..full)?;
+        let rest = &p[full..];
+        (head.eq_ignore_ascii_case(&format!("{mount}{route}"))
+            && (rest.is_empty() || rest.starts_with('/')))
+        .then(|| (version, p[..mount.len()].to_owned(), rest))
+    })
 }
 /// The Express parameters and `qs` query of a matched route.
 fn parse_request(
     version: &str,
+    mount: String,
     part: Option<String>,
     parts: &[&str],
     path: &str,
@@ -297,6 +320,7 @@ fn parse_request(
     let mut it = decoded.into_iter();
     Some(KmaRequest {
         version: version.into(),
+        mount,
         part,
         original_url: path.to_owned(),
         region: it.next(),

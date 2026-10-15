@@ -20,6 +20,10 @@ fn first_difference(a: &str, b: &str) -> String {
 }
 fn run(sc: &serde_json::Value) -> Result<(), String> {
     let id = sc["id"].as_str().unwrap();
+    if sc["method"] == "HEAD" || matches!(sc["path"].as_str(), Some("" | "/")) {
+        // HEAD and the usage roots are answered by the direct-route layer (`kma_direct.rs`).
+        return Ok(());
+    }
     let declared = FORWARDED.iter().find(|(f, _)| *f == id);
     let Some(request) = try_request(sc) else {
         return match declared {
@@ -142,7 +146,14 @@ fn all_v000901_and_v000902_oracle_scenarios_match_legacy_bytes() {
 /// (400) and the v000705 sub-routes.
 #[test]
 fn all_town_oracle_scenarios_match_legacy_status_and_bytes() {
-    assert_eq!((count(&TOWN, "v000803"), count(&TOWN, "v000705")), (52, 21));
+    assert_eq!(
+        (
+            count(&TOWN, "v000803"),
+            count(&TOWN, "v000705"),
+            count(&TOWN, "v000901")
+        ),
+        (58, 25, 3)
+    );
     let errors = run_all(&TOWN);
     assert!(
         errors.is_empty(),

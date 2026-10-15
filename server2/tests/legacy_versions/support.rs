@@ -133,8 +133,12 @@ pub fn oracle_config() -> AssemblyConfig {
 fn is_town(sc: &Value) -> bool {
     matches!(sc["version"].as_str(), Some("v000803" | "v000705"))
 }
-/// The request path of a recorded scenario (`/{version}/kma/addr/...`, `/{version}/town/...`).
+/// The request path of a recorded scenario (`/{version}/kma/addr/...`, `/{version}/town/...`,
+/// or the recorded URL).
 pub fn path(sc: &Value) -> String {
+    if let Some(url) = sc["url"].as_str() {
+        return url.to_owned();
+    }
     let mount = if is_town(sc) { "town" } else { "kma" };
     let mut path = format!(
         "/{}/{mount}{}",
