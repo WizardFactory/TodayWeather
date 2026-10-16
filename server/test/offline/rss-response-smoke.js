@@ -117,8 +117,14 @@ function createHarness(version, fixture, historyOptions = {}) {
     'kma.town.mid.rss.controller':{overwriteData:(mid,code,cb)=>cb(null)},
     'kma.forecast.zone.controller':function(){this.findForecastZoneByName=()=>({exec:cb=>cb(null,[{regId:'11B10101'}])});},
     'geo.controller':function(){this._isKoreaArea=(lat,lon)=>lat>=33&&lat<=39&&lon>=124&&lon<=132;},
-    'airkorea.hourly.forecast.controller':function(){this.getForecast=(stn,cb)=>cb(null,[]);},
-    'kaq.hourly.forecast.controller':function(){this.getForecast=(stn,cb)=>cb(null,[]);},
+    'airkorea.hourly.forecast.controller':function(){this.getForecast=(stn,cb)=>{
+      queries.push({forecastSource:'airkorea',stationName:stn});
+      cb(null,clone(fixture.airkoreaForecasts || []));
+    };},
+    'kaq.hourly.forecast.controller':function(){this.getForecast=(stn,cb)=>{
+      queries.push({forecastSource:'kaq',stationName:stn});
+      cb(fixture.kaqForecastError ? new Error(fixture.kaqForecastError) : null,clone(fixture.kaqForecasts || []));
+    };},
     'kma.specialweather.controller':function(){this.getSpecialInfo=(town,stn,cb)=>cb(null,[]);}
   };
   function load(filename) {

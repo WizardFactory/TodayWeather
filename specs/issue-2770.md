@@ -1,0 +1,11 @@
+# Specification: KAQ future availability and stored fallback
+
+Implements [intent](../intent/issue-2770.md); no endpoint or query changes.
+
+For a station forecast requested as `kaq`, retain KAQ if at least one supported pollutant has a finite nonnegative numeric concentration in a parseable KST slot strictly after both current time and the last observation, within the existing last-observation +24-hour display window. Zero is valid; negative sentinels, null/blank/string/nonfinite values, unsupported pollutants, malformed dates, expired rows and rows outside that window do not establish availability. Reuse KecoController._parseDateTime and normalize 24:00 to next-day 00:00. Check availability independently of publication age; old publication with a usable future slot remains eligible.
+
+If KAQ query fails or lacks any usable slot, read AirKorea for the same station and apply the same availability rule. Select one source before insertion, preserving the complete selected source's compatible timeline (past rows may support KAQ daily summaries), with invalid rows omitted. No partial pollutant fallback or cross-source merge. Actual selected `forecastSource`, per-slot `pubDate` and top-level publication remain provider values. If neither has usable slots, preserve observations/daily bulletin and add no hourly forecasts or forecast attribution. Store errors propagate to existing logging and safe route continuation; no provider call or write.
+
+Keep explicit AirKorea request behavior unchanged. Shared insertion may safely parse KST boundaries and include the first forecast for a pollutant lacking observations; preserve existing fields, units and AQI derivation. Do not overwrite observation slots.
+
+Verification: isolated controller boundary tests, real v000903 router/serialization to shared app forecast chart conversion with synthetic stored data, both DB versions, current/last/+24h boundaries, invalid values/dates, no data, errors, zero, partial pollutants, actual attribution and no client/build/provider side effects. This restores existing behavior; no new feature/UI/manual PDF required. Update mobile API knowledge and a focused Archify sequence describing stored forecast selection.
