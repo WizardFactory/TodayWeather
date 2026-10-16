@@ -946,3 +946,58 @@ async fn the_requests_own_acquisition_keeps_its_stored_identity() {
     };
     assert_eq!(identity(third.as_ref()), own);
 }
+
+/// Verify sink calls through the shared older-version backend. v000705 repairs current rows
+/// differently, so those rows must not become revisions of the v000903 summary baseline.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn older_native_routes_record_only_compatible_daily_rows() {
+    use server2::domestic::kma::backend::{parse_path, parse_town_path};
+    use server2::gateway::OrderedJson;
+    use server2::summary::GridInputs;
+    #[derive(Default)]
+    struct Sink(Mutex<Vec<Vec<OrderedJson>>>);
+    impl SummarySink for Sink {
+        fn record(&self, _: GridInputs, rows: Vec<OrderedJson>, _: f64) {
+            self.0.lock().unwrap().push(rows);
+        }
+    }
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let catalogs = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&catalogs, &[]).await;
+    day(&catalogs, 20260923, 1..=24).await;
+    let (backend, _) = backend(&peer, Arc::new(Unreachable));
+    let sink = Arc::new(Sink::default());
+    let backend = backend.with_summaries(Some(sink.clone()));
+    let suffix = PATH.strip_prefix("/v000903/kma/addr").unwrap();
+    for (mount, records) in [
+        ("/v000903/kma/addr", true),
+        ("/v000902/kma/addr", true),
+        ("/v000901/kma/addr", true),
+        ("/v000803/town", true),
+        ("/v000705/town", false),
+    ] {
+        let path = format!("{mount}{suffix}");
+        let request = parse_path(&path, "ko")
+            .or_else(|| parse_town_path(&path, "ko"))
+            .unwrap();
+        let before = sink.0.lock().unwrap().len();
+        let outcome = backend.outcome(request, deadline()).await.unwrap();
+        if records {
+            assert!(
+                matches!(outcome, server2::domestic::kma::Outcome::Json(_)),
+                "{mount}"
+            );
+        } else {
+            assert!(
+                matches!(outcome, server2::domestic::kma::Outcome::Undefined),
+                "{mount}"
+            );
+        }
+        let rows = sink.0.lock().unwrap();
+        assert_eq!(rows.len(), before + usize::from(records), "{mount}");
+        if records {
+            assert!(!rows.last().unwrap().is_empty(), "{mount}");
+        }
+    }
+}

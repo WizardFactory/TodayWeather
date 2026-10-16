@@ -49,6 +49,21 @@ Expected Red cause: missing `server2::summary`.
 
 ## Rollback and blast radius
 
-The recorder runs only with the `kma` family, which stays off until S15b-4; it writes only
+The recorder runs with enabled KMA address versions and the v000803 town route; v000705
+current-data repair differs and is excluded. Native families stay off until activation; it writes only
 `summary/v2/` objects after a natively served response. Revert the PR to roll back; stored
 summaries stay (no deletes) and are ignored by older builds.
+
+
+## S17 integration recovery (2026-10-16)
+
+The S16 branch incorporates master `73290838` without changing S15b-4a request-time acquisition.
+The shared backend captures daily rows for v000901/v000902/v000903 address and v000803 town
+responses, and excludes v000705 rows whose current-data repair differs. The regression
+`older_native_routes_record_only_compatible_daily_rows` exercises actual S3-backed native answers
+and sink calls across the five versions. No API fields or local-disk behavior are added.
+
+Existing review history is preserved: initial rounds 1–10 and the earlier master integration
+reviews remain recorded on PR #2764. AK explicitly authorized an additional integration review
+on 2026-10-16; recovery does not relabel or reset those earlier counts. No new architecture flow
+is introduced, so existing S16/S17 diagrams and manual artifacts remain applicable.

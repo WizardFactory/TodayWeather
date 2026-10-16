@@ -33,20 +33,43 @@ pub fn select_native(
     dispatcher: &BackendDispatcher,
     source: Arc<dyn KmaSource>,
 ) -> Result<(), GatewayError> {
-    select_native_with(dispatcher, source, None)
+    let backend = Arc::new(KmaBackend::new(
+        source,
+        system_clock(),
+        AssemblyConfig::default(),
+    ));
+    backend.register(dispatcher);
+    KmaBackend::select(dispatcher, BackendMode::Native)
 }
-/// [`select_native`] with the S16 summary recorder.
-pub fn select_native_with(
+/// S17a: register one KMA handler over `source` for each listed address version and select it
+/// (`kma`, `kma-v000901` and `kma-v000902` in `SERVER2_NATIVE_FAMILIES`). Unlisted versions
+/// stay on legacy.
+pub fn select_native_versions(
     dispatcher: &BackendDispatcher,
     source: Arc<dyn KmaSource>,
+    versions: &[Version],
+) -> Result<Arc<KmaBackend>, GatewayError> {
+    select_native_versions_with(dispatcher, source, versions, None)
+}
+/// [`select_native_versions`] with the S16 summary recorder: every natively assembled response
+/// whose route reaches `getPastMid` with the v000903 current-data prefix records its town's
+/// daily summaries (address versions and v000803 town, excluding v000705).
+pub fn select_native_versions_with(
+    dispatcher: &BackendDispatcher,
+    source: Arc<dyn KmaSource>,
+    versions: &[Version],
     summaries: Option<Arc<dyn crate::summary::SummarySink>>,
-) -> Result<(), GatewayError> {
+) -> Result<Arc<KmaBackend>, GatewayError> {
     let backend = Arc::new(
         KmaBackend::new(source, system_clock(), AssemblyConfig::default())
             .with_summaries(summaries),
     );
-    backend.register(dispatcher);
-    KmaBackend::select(dispatcher, BackendMode::Native)
+    for version in versions {
+        backend.register_version(dispatcher, *version);
+        KmaBackend::select_version(dispatcher, *version, BackendMode::Native)?;
+    }
+    // S17b: the same handler answers the listed direct routes.
+    Ok(backend)
 }
 /// Request clock (`Date.now()` in ms).
 pub type Clock = Arc<dyn Fn() -> f64 + Send + Sync>;
@@ -89,6 +112,18 @@ impl KmaBackend {
     pub fn select(dispatcher: &BackendDispatcher, mode: BackendMode) -> Result<(), GatewayError> {
         dispatcher.set_backend(Version::V000903, Family::Kma, mode)
     }
+    /// Register for one address version (legacy stays selected).
+    pub fn register_version(self: &Arc<Self>, dispatcher: &BackendDispatcher, version: Version) {
+        dispatcher.register_native(version, Family::Kma, self.clone());
+    }
+    /// Switch one address version's KMA backend to `mode`.
+    pub fn select_version(
+        dispatcher: &BackendDispatcher,
+        version: Version,
+        mode: BackendMode,
+    ) -> Result<(), GatewayError> {
+        dispatcher.set_backend(version, Family::Kma, mode)
+    }
     /// Assemble a parsed request with an already loaded store (tests and the checkpoint).
     pub fn assemble_with(&self, request: &KmaRequest, store: &dyn KmaStore) -> Outcome {
         assemble(request, store, (self.clock)(), self.config)
@@ -102,9 +137,24 @@ impl KmaBackend {
         let Some(request) = parse_path(&path, &lang) else {
             return Ok(Native::Forward);
         };
+        match self.outcome(request, deadline).await? {
+            Outcome::Json(json) => Ok(Native::Served(json)),
+            // The legacy hop treats a non-200 or non-JSON backend reply as a dependency failure.
+            Outcome::Status(..) | Outcome::Undefined => Err(GatewayError::Provider),
+            Outcome::Legacy(_) => Ok(Native::Forward),
+        }
+    }
+    /// S17b: assemble a parsed request (a gateway backend or a direct public route) from the
+    /// source's snapshot. `Outcome::Legacy` means legacy answers: the source cannot supply the
+    /// inputs, the assembly leaves the ported path, or a Rust panic (a port defect).
+    pub async fn outcome(
+        &self,
+        request: KmaRequest,
+        deadline: Instant,
+    ) -> Result<Outcome, GatewayError> {
         let store = match self.source.snapshot(&request, deadline).await {
             SourceAnswer::Snapshot(store) => store,
-            SourceAnswer::Forward(_) => return Ok(Native::Forward),
+            SourceAnswer::Forward(reason) => return Ok(Outcome::Legacy(reason)),
         };
         let now = store.as_of_ms().unwrap_or_else(|| (self.clock)());
         let config = self.config;
@@ -114,7 +164,7 @@ impl KmaBackend {
             .await
             .map_err(|_| GatewayError::Provider)?
             .map_err(|_| GatewayError::Provider)?;
-        let outcome = match tokio::task::spawn_blocking(move || {
+        let (outcome, past_days) = match tokio::task::spawn_blocking(move || {
             let _permit = permit;
             assemble_capturing(&request, store.as_ref(), now, config)
         })
@@ -122,21 +172,17 @@ impl KmaBackend {
         {
             Ok(outcome) => outcome,
             // A Rust panic is a port defect, not legacy behavior: legacy answers instead.
-            Err(e) if e.is_panic() => return Ok(Native::Forward),
+            Err(e) if e.is_panic() => return Ok(Outcome::Legacy("assembly panic".into())),
             Err(_) => return Err(GatewayError::Provider),
         };
-        let (outcome, past_days) = outcome;
+        // S16: a JSON answer whose route ran `getPastMid` (a captured day list) records the
+        // town's daily summaries; `getPastMid` reads the same inputs on every version.
         if let (Outcome::Json(_), Some(sink), Some(inputs), Some(rows)) =
             (&outcome, &self.summaries, inputs, past_days)
         {
             sink.record(inputs, rows, now);
         }
-        match outcome {
-            Outcome::Json(json) => Ok(Native::Served(json)),
-            // The legacy hop treats a non-200 backend reply as a dependency failure.
-            Outcome::Status(..) => Err(GatewayError::Provider),
-            Outcome::Legacy(_) => Ok(Native::Forward),
-        }
+        Ok(outcome)
     }
 }
 impl BackendHandler for KmaBackend {
@@ -205,18 +251,83 @@ fn plain_key(key: &str) -> bool {
 }
 /// `qs` `parameterLimit` of the pinned Express query parser.
 const QS_PARAMETER_LIMIT: usize = 1000;
-/// Parse a gateway backend path `/v000903/kma/addr/{region}[/{city}[/{town}]][?query]`.
+/// Parse a gateway backend path `/{version}/kma/addr/{region}[/{city}[/{town}]][?query]` for
+/// the address versions `v000901`, `v000902` and `v000903` (S17a).
 /// None means the native port does not handle it (forward to legacy).
 pub fn parse_path(path: &str, lang: &str) -> Option<KmaRequest> {
-    let (p, q) = path.split_once('?').unwrap_or((path, ""));
-    let p = p.strip_suffix('/').unwrap_or(p);
-    let rest = p.strip_prefix("/v000903/kma/addr/")?;
-    let parts: Vec<&str> = rest.split('/').collect();
-    if parts.is_empty() || parts.len() > 3 || parts.iter().any(|s| s.is_empty()) {
+    let (version, mount, rest) = split_mount(path)?;
+    if !matches!(version, "v000901" | "v000902" | "v000903") {
+        return None;
+    }
+    let rest = rest.strip_suffix('/').unwrap_or(rest);
+    let parts: Vec<&str> = rest.strip_prefix('/')?.split('/').collect();
+    if parts.len() > 3 {
+        return None;
+    }
+    parse_request(version, mount, None, &parts, path, lang)
+}
+/// S17b: parse a town path `/v000803/town/{region}[/{city}[/{town}]][?query]` or
+/// `/v000705/town/{region}[/{city}[/{town}[/{mid|short|shortest|current}]]][?query]` (the
+/// routes of `routes/v000803/routeTownForecast.js` and `routes/v000705/routeTownForecast.js`).
+/// None means the native port does not handle it (forward to legacy).
+pub fn parse_town_path(path: &str, lang: &str) -> Option<KmaRequest> {
+    let (version, mount, rest) = split_mount(path)?;
+    if !matches!(version, "v000803" | "v000705") {
+        return None;
+    }
+    let rest = rest.strip_suffix('/').unwrap_or(rest);
+    let mut parts: Vec<&str> = rest.strip_prefix('/')?.split('/').collect();
+    let part = match parts.as_slice() {
+        [_, _, _, part] if version == "v000705" => {
+            // Express matches route literals case-insensitively.
+            let part = ["mid", "short", "shortest", "current"]
+                .into_iter()
+                .find(|p| part.eq_ignore_ascii_case(p))?;
+            parts.pop();
+            Some(part.to_owned())
+        }
+        _ if parts.len() > 3 => return None,
+        _ => None,
+    };
+    parse_request(version, mount, part, &parts, path, lang)
+}
+/// The legacy mounts of the address and town routes: (version, `req.baseUrl`, route prefix).
+/// Express matches both case-insensitively and keeps the requested spelling in `req.baseUrl`.
+const MOUNTS: [(&str, &str, &str); 5] = [
+    ("v000901", "/v000901/kma/addr", ""),
+    ("v000902", "/v000902/kma", "/addr"),
+    ("v000903", "/v000903/kma", "/addr"),
+    ("v000803", "/v000803/town", ""),
+    ("v000705", "/v000705/town", ""),
+];
+/// S17b: split a request path at its legacy mount: (version, `req.baseUrl` as requested, the
+/// remaining path, empty or starting with `/`). None for any other path.
+pub fn split_mount(path: &str) -> Option<(&'static str, String, &str)> {
+    let p = path.split_once('?').map_or(path, |(p, _)| p);
+    MOUNTS.into_iter().find_map(|(version, mount, route)| {
+        let full = mount.len() + route.len();
+        let head = p.get(..full)?;
+        let rest = &p[full..];
+        (head.eq_ignore_ascii_case(&format!("{mount}{route}"))
+            && (rest.is_empty() || rest.starts_with('/')))
+        .then(|| (version, p[..mount.len()].to_owned(), rest))
+    })
+}
+/// The Express parameters and `qs` query of a matched route.
+fn parse_request(
+    version: &str,
+    mount: String,
+    part: Option<String>,
+    parts: &[&str],
+    path: &str,
+    lang: &str,
+) -> Option<KmaRequest> {
+    let (_, q) = path.split_once('?').unwrap_or((path, ""));
+    if parts.is_empty() || parts.iter().any(|s| s.is_empty()) {
         return None;
     }
     let mut decoded = Vec::new();
-    for part in &parts {
+    for part in parts {
         decoded.push(decode_param(part)?);
     }
     let mut query = Vec::new();
@@ -236,7 +347,9 @@ pub fn parse_path(path: &str, lang: &str) -> Option<KmaRequest> {
     }
     let mut it = decoded.into_iter();
     Some(KmaRequest {
-        version: "v000903".into(),
+        version: version.into(),
+        mount,
+        part,
         original_url: path.to_owned(),
         region: it.next(),
         city: it.next(),
@@ -270,7 +383,16 @@ mod tests {
         assert!(parse_path("/v000903/kma/addr/a/b/c/d", "en").is_none());
         assert!(parse_path("/v000903/kma/addr/%ZZ", "en").is_none());
         assert!(parse_path("/v000903/kma/addr/a?x[y]=1", "en").is_none());
-        assert!(parse_path("/v000901/kma/addr/a", "en").is_none());
+        assert_eq!(
+            parse_path("/v000901/kma/addr/a", "en").unwrap().version,
+            "v000901"
+        );
+        assert_eq!(
+            parse_path("/v000902/kma/addr/a/b", "en").unwrap().version,
+            "v000902"
+        );
+        assert!(parse_path("/v000904/kma/addr/a", "en").is_none());
+        assert!(parse_path("/v000901/kma/coord/a", "en").is_none());
         // Pinned qs: `F+%ZZ` -> "F+%ZZ", `a+%E0%A4%A` -> "a+%E0%A4%A", `a+%C3%28` -> "a+%C3%28".
         let q = parse_path(
             "/v000903/kma/addr/a?temperatureUnit=F+%ZZ&x=a+%E0%A4%A&y=a+%C3%28&z=a+b%20c",
