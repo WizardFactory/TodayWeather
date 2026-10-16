@@ -44,6 +44,7 @@ enum Credentials {
 
 /// Deliberately has no Debug: it can hold credentials.
 pub struct S3Settings {
+    local_cache: Option<(std::path::PathBuf, u64)>,
     pub endpoint: String,
     pub region: String,
     pub bucket: String,
@@ -90,7 +91,26 @@ impl S3Settings {
             (Some(_), None) => return Err(Error::Invalid(SECRET_KEY)),
             (None, Some(_)) => return Err(Error::Invalid(ACCESS_KEY)),
         };
+        let cache_dir = set("SERVER2_LOCAL_CACHE_DIR");
+        let cache_bytes = set("SERVER2_LOCAL_CACHE_MAX_BYTES");
+        let local_cache = match (cache_dir, cache_bytes) {
+            (None, None) => None,
+            (None, Some(_)) => return Err(Error::Invalid("local cache directory")),
+            (Some(dir), bytes) => {
+                let bytes = bytes
+                    .map(|b| {
+                        b.parse::<u64>()
+                            .map_err(|_| Error::Invalid("local cache bytes"))
+                    })
+                    .transpose()?
+                    .unwrap_or(crate::cache::disk::DEFAULT_MAX_BYTES);
+                // Pure validation; no local filesystem I/O during settings parsing.
+                crate::cache::disk::DiskCache::new(&dir, "validation", bytes, 131_072)?;
+                Some((dir.into(), bytes))
+            }
+        };
         let settings = Self {
+            local_cache,
             endpoint,
             region,
             bucket: set(BUCKET).ok_or(Error::Invalid(BUCKET))?,
@@ -119,6 +139,21 @@ impl S3Settings {
                 RefreshableCredentials::instance_role(InstanceRole::new(metadata_root)?)
             }
         };
-        HttpS3Transport::with_credentials(&self.endpoint, &self.bucket, &self.region, credentials)
+        let mut transport = HttpS3Transport::with_credentials(
+            &self.endpoint,
+            &self.bucket,
+            &self.region,
+            credentials,
+        )?;
+        if let Some((directory, bytes)) = &self.local_cache {
+            let namespace = format!(
+                "raw-cache-v1\n{}\n{}\n{}",
+                self.endpoint, self.bucket, self.region
+            );
+            transport.raw_cache = Some(std::sync::Arc::new(crate::cache::disk::DiskCache::new(
+                directory, &namespace, *bytes, 131_072,
+            )?));
+        }
+        Ok(transport)
     }
 }
