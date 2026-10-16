@@ -130,6 +130,87 @@ pub fn less(a: &Val, b: &Val) -> bool {
     greater(b, a)
 }
 
+/// `a >= b` (false when either side is NaN).
+pub fn ge(a: &Val, b: &Val) -> bool {
+    !less(a, b) && comparable(a, b)
+}
+/// `a <= b` (false when either side is NaN).
+pub fn le(a: &Val, b: &Val) -> bool {
+    !greater(a, b) && comparable(a, b)
+}
+fn comparable(a: &Val, b: &Val) -> bool {
+    let (pa, pb) = (primitive(a), primitive(b));
+    matches!((&pa, &pb), (Val::Str(_), Val::Str(_)))
+        || (!number(&pa).is_nan() && !number(&pb).is_nan())
+}
+
+/// `a == b` (abstract equality) for JSON-like values: objects compare by identity, which two
+/// distinct values never share.
+pub fn loose_eq(a: &Val, b: &Val) -> bool {
+    match (a, b) {
+        (Val::Undef | Val::Null, Val::Undef | Val::Null) => true,
+        (Val::Undef | Val::Null, _) | (_, Val::Undef | Val::Null) => false,
+        (Val::Str(x), Val::Str(y)) => x == y,
+        (Val::Bool(x), Val::Bool(y)) => x == y,
+        (Val::Arr(_) | Val::Obj(_), Val::Arr(_) | Val::Obj(_)) => false,
+        _ => {
+            let (pa, pb) = (primitive(a), primitive(b));
+            if let (Val::Str(x), Val::Str(y)) = (&pa, &pb) {
+                return x == y;
+            }
+            number(&pa) == number(&pb)
+        }
+    }
+}
+
+/// `a === b` for primitives (objects never equal here).
+pub fn strict_eq(a: &Val, b: &Val) -> bool {
+    match (a, b) {
+        (Val::Undef, Val::Undef) | (Val::Null, Val::Null) => true,
+        (Val::Num(x), Val::Num(y)) => x == y,
+        (Val::Str(x), Val::Str(y)) => x == y,
+        (Val::Bool(x), Val::Bool(y)) => x == y,
+        _ => false,
+    }
+}
+
+/// `parseInt(String(v))` with radix detection (`0x` is hexadecimal).
+pub fn parse_int(v: &Val) -> f64 {
+    let s = to_string(v);
+    let t = s.trim_start_matches(crate::world::js::is_js_space);
+    let (sign, rest) = match t.as_bytes().first() {
+        Some(b'-') => (-1., &t[1..]),
+        Some(b'+') => (1., &t[1..]),
+        _ => (1., t),
+    };
+    let (radix, digits) = if rest.len() >= 2 && (rest.starts_with("0x") || rest.starts_with("0X")) {
+        (16, &rest[2..])
+    } else {
+        (10, rest)
+    };
+    let mut value = 0f64;
+    let mut any = false;
+    for c in digits.chars() {
+        let Some(d) = c.to_digit(radix) else { break };
+        value = value * f64::from(radix) + f64::from(d);
+        any = true;
+    }
+    if any { sign * value } else { f64::NAN }
+}
+
+/// `encodeURIComponent` (unreserved: A-Z a-z 0-9 - _ . ! ~ * ' ( )).
+pub fn encode_uri_component(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        if b.is_ascii_alphanumeric() || b"-_.!~*'()".contains(&b) {
+            out.push(char::from(b));
+        } else {
+            out.push_str(&format!("%{b:02X}"));
+        }
+    }
+    out
+}
+
 fn primitive(v: &Val) -> Val {
     match v {
         Val::Arr(_) | Val::Obj(_) => Val::Str(to_string(v)),

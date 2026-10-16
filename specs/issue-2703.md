@@ -63,3 +63,45 @@ Task: issue-2703-s18a; source: [intent](../intent/issue-2703.md); base 1d60f728;
   changed: replaced / both changed: newer legacy `updatedAt` replaces, otherwise kept); 1 MiB journal entries; re-plan after a conflict or void;
   snapshot when anything changed. The converter refuses an existing output path (no reused
   permissions or symbolic-link targets) and creates the import file 0600.
+
+## S18b-1 scheduled alarm delivery (base a9b3a23d)
+
+| Legacy source (revision a9b3a23d) | server2 port |
+| --- | --- |
+| `server/app.js:140-147` (`SERVER_MODE=push` starts the worker), `server/controllers/controllerPush.js:1236-1244` (`start`, 60 s interval), `:1170-1234` (`sendPush`), `:1137-1160` (`_filterByDayOfWeek`), `:1085-1129` (`_removeOldList`) | `server2/src/push/deliver/alarm.rs` |
+| `server/lib/pushStore/mongo.js:60-65` (`disableByFcm`), `:70-115` (`removeDuplicates`), `:138-147` (`getAlarmsByTime`, `removeDuplicateAlarms`); `controllerPush.js:68-117` (`updatePushInfo`, `makeRemoveSelector`) | `deliver/ops.rs`, `store.rs` (`due`, key fields), `service.rs` (internal writer operations) |
+| `controllerPush.js:989-1026` (`requestDailySummary`), `:622-719`, `:851-906`, `:907-988` (KMA, DSF, geocode requests), `server/config/config.js:81-85` (`SERVICE_SERVER`, `API_SERVER`) | `deliver/weather.rs` |
+| `controllerPush.js:221-614`, `:720-842` (message builders), `server/lib/aqi.converter.js`, `server/locales/*.json` (i18n 0.8.3) | `deliver/text.rs`, `deliver/locales.json` (subset, per-file sha256) |
+| `controllerPush.js:1031-1083` (`sendNotification`), `:181-208` (`sendFcmNotification`), `:151-220` (node-gcm), `server/lib/pushProviders.js` (two Firebase apps); firebase-admin 5.13.1 `lib/auth/credential.js` (assertion, token endpoint), `lib/messaging/messaging-api-request.js:24-160` (timeout, error code), `lib/utils/error.js:258-262`, `:685-` (client codes), `lib/utils/api-request.js:278-300` (one retry after a network error) | `deliver/fcm.rs`, `deliver/alarm.rs` |
+
+Rules:
+
+- Minute: UTC boundary; time = seconds of day of the minute; duplicate removal, then due records
+  (`pushTime === time`, `enable !== false`, natural order), weekday filter (`dayOfWeek[day]` truthy
+  with `timezoneOffset` present), claim, deliver (6 in flight), result, 60-day removal and
+  `updatedAt` stamp. Skip (no claim) while the state is not restored or nothing is due.
+- Ledger: `index/v2/push/delivery/alarm/{YYYYMMDD}/{HHMM}.json` with `If-None-Match: *` before any
+  send (`schema`, `kind`, `minute`, `claimedAt`, `claim` nonce, record `_id`s); 409/412 taken;
+  other 4xx unavailable; unknown outcome read back (own body owned, other taken, unreadable
+  unavailable); 4 s bound. Result `....result.json` (`If-None-Match: *`) with `_id`, `outcome`,
+  `class`, `status` per delivery, best effort.
+- FCM: one `POST {fcm}/v1/projects/{project_id}/messages:send` (`content-type: application/json`,
+  `access_token_auth: true`, `Authorization: Bearer`), body
+  `{"message":{"notification":{"title","body"},"data":{"cityIndex":String(cityIndex)},"token"}}`,
+  10 s bound, no redirects, reqwest retries disabled. OAuth: RS256 JWT
+  (`{"alg":"RS256","typ":"JWT"}`; claims `scope`, `iat`, `exp = iat + 3600`, `aud`, `iss`),
+  `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer` to `https://oauth2.googleapis.com/token`
+  ([Google service-account flow](https://developers.google.com/identity/protocols/oauth2/service-account));
+  cached per app until less than 60 s remain; 10 s bound.
+- Classification (firebase-admin 5.13.1): `text/html`/`text/plain` answers map by status; other
+  bodies by `error` string, `FcmErrorCode` detail, `status` or `message` through
+  `MESSAGING_SERVER_TO_CLIENT_CODE`; 2xx without error accepted; `NOT_FOUND`/`NotRegistered`
+  unregistered (token's alarms disabled); timeout or transport error after connecting unknown;
+  connect failure, credentials or OAuth failure not sent. The
+  [FCM error reference](https://firebase.google.com/docs/cloud-messaging/error-codes) documents
+  `UNREGISTERED` as 404 and backoff for `UNAVAILABLE`/`QUOTA_EXCEEDED`; D02 sends no retry.
+- Not sent: iOS without `fcmToken`, Android with only a GCM `registrationId` (legacy FCM API
+  deprecated 2023-06-20, shut down from 2024-07-22), unknown type, unknown package, weather or
+  geocode failure (status >= 400, transport, 30 s bound), builder exception.
+- Diagnostics: per non-accepted delivery `minute`, `_id`, outcome, class, status; per skipped
+  minute a note; counters. No token, coordinate, name, address or text; no local-disk writes.
