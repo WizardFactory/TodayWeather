@@ -104,6 +104,7 @@ struct ProviderState<T> {
 }
 #[derive(Clone, Debug)]
 struct Row {
+    reason: Option<&'static str>,
     expire_at: f64,
     observation: Option<Observation>,
 }
@@ -297,14 +298,22 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         }
     }
     async fn answer(&self, lat: f64, lon: f64, request_ms: f64) -> AirOutcome {
+        self.answer_with_reason(lat, lon, request_ms).await.0
+    }
+    async fn answer_with_reason(
+        &self,
+        lat: f64,
+        lon: f64,
+        request_ms: f64,
+    ) -> (AirOutcome, Option<&'static str>) {
         let m = &self.inner.metrics;
         m.requests.fetch_add(1, Relaxed);
         let Some(cell) = AirCell::of(lat, lon) else {
-            return AirOutcome::None; // legacy 'no-coord'
+            return (AirOutcome::None, Some("no-coord"));
         };
         // Legacy 'no-provider': without a configured provider nothing is read.
         if self.inner.providers.is_empty() {
-            return AirOutcome::None;
+            return (AirOutcome::None, Some("no-provider"));
         }
         let row = match self.cached(cell, self.now()) {
             Some(row) => {
@@ -314,8 +323,14 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
             None => self.shared(cell, lat, lon, request_ms).await,
         };
         match row.observation {
-            Some(o) if usable(&o, lat, lon, request_ms) => AirOutcome::Observation(o),
-            _ => AirOutcome::None,
+            Some(o) => match super::air::rejection_reason(&o, lat, lon, request_ms) {
+                None => (AirOutcome::Observation(o), None),
+                reason => (AirOutcome::None, reason),
+            },
+            None => (
+                AirOutcome::None,
+                row.reason.or(Some("fallback-unavailable")),
+            ),
         }
     }
     /// One miss resolution per cell in this process; later callers wait for its row.
@@ -352,10 +367,12 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         };
         match rx.wait_for(Option::is_some).await {
             Ok(row) => row.clone().unwrap_or(Row {
+                reason: Some("fallback-unavailable"),
                 expire_at: 0.,
                 observation: None,
             }),
             Err(_) => Row {
+                reason: Some("fallback-unavailable"),
                 expire_at: 0.,
                 observation: None,
             },
@@ -381,17 +398,22 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
             if let Some(r) = newest {
                 self.inner.metrics.store_hits.fetch_add(1, Relaxed);
                 return Row {
+                    reason: None,
                     expire_at: r.fetched_at_ms as f64 + TTL_MS,
                     observation: r.provider.parse(&r.body),
                 };
             }
         }
         self.inner.metrics.chains.fetch_add(1, Relaxed);
-        let Some((record, observation)) = self.chain(cell, lat, lon, request_ms).await else {
-            return Row {
-                expire_at: self.now() + FAILURE_TTL_MS,
-                observation: None,
-            };
+        let (record, observation) = match self.chain(cell, lat, lon, request_ms).await {
+            Ok(found) => found,
+            Err(reason) => {
+                return Row {
+                    reason: Some(reason),
+                    expire_at: self.now() + FAILURE_TTL_MS,
+                    observation: None,
+                };
+            }
         };
         let fetched = record.fetched_at_ms as f64;
         let deadline = Instant::now() + self.inner.config.store_timeout;
@@ -399,6 +421,7 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
             Ok(()) => {
                 self.inner.metrics.publications.fetch_add(1, Relaxed);
                 Row {
+                    reason: None,
                     expire_at: fetched + TTL_MS,
                     observation: Some(observation),
                 }
@@ -410,6 +433,7 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                     .publication_failures
                     .fetch_add(1, Relaxed);
                 Row {
+                    reason: Some("fallback-unavailable"),
                     expire_at: self.now() + FAILURE_TTL_MS,
                     observation: None,
                 }
@@ -424,7 +448,7 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         lat: f64,
         lon: f64,
         request_ms: f64,
-    ) -> Option<(AirRecord, Observation)> {
+    ) -> Result<(AirRecord, Observation), &'static str> {
         let mut tried = BTreeSet::new();
         let mut last = None;
         for walk in [&AirProvider::ORDER[..], &[AirProvider::Waqi][..]] {
@@ -441,7 +465,7 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                     Attempt::Observation(found) => {
                         let (record, o) = *found;
                         if usable(&o, lat, lon, request_ms) {
-                            return Some((record, o));
+                            return Ok((record, o));
                         }
                         last = Some((record, o));
                     }
@@ -453,7 +477,11 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                 }
             }
         }
-        last
+        last.ok_or(if tried.is_empty() {
+            "no-provider"
+        } else {
+            "fallback-unavailable"
+        })
     }
     /// Legacy `budget.check` free phase: down marker, OpenWeather minute cap, then one S08
     /// unit reserved and consumed before HTTP. Any denial or S08 failure skips the provider.
@@ -618,6 +646,14 @@ fn roll(m: &mut Minute, now: f64) {
 impl<T: BudgetTransport + 'static> AirSource for LiveAir<T> {
     fn current(&self, lat: f64, lon: f64, request_ms: f64) -> BoxFuture<'_, AirOutcome> {
         Box::pin(self.answer(lat, lon, request_ms))
+    }
+    fn current_with_reason(
+        &self,
+        lat: f64,
+        lon: f64,
+        request_ms: f64,
+    ) -> BoxFuture<'_, (AirOutcome, Option<&'static str>)> {
+        Box::pin(self.answer_with_reason(lat, lon, request_ms))
     }
 }
 

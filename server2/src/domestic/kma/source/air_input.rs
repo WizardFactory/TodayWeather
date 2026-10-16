@@ -1017,3 +1017,193 @@ pub fn kst_date(now: f64) -> u32 {
     crate::world::js::parts(now + 9. * HOUR_MS)
         .map_or(0, |p| (p.year * 10000 + p.month * 100 + p.day) as u32)
 }
+
+impl<T: IndexListing + Clone + 'static> AirInputs<T> {
+    /// NationAir projection of the exact same nationwide observations used by town requests.
+    pub async fn nation(&self, now: f64, deadline: Instant) -> crate::nation::NationAir {
+        use crate::nation::{
+            NationAir,
+            air::{REGIONS, province_averages, stored_failure},
+            object, text,
+        };
+        use futures_util::{StreamExt, stream};
+        self.note_demand();
+        let until = deadline
+            .checked_sub(Duration::from_millis(200))
+            .unwrap_or(deadline);
+        let (stations, observations) =
+            tokio::join!(self.stations(now, until), self.observations(now, until));
+        let read_pending = observations.is_err() && Instant::now() >= until;
+        let failed = observations.is_err();
+        let averages = observations
+            .as_ref()
+            .map(|o| {
+                province_averages(
+                    o,
+                    stations
+                        .as_ref()
+                        .map(|s| s.as_ref())
+                        .unwrap_or(&Stations::default()),
+                )
+            })
+            .unwrap_or_default();
+        let mut rows: Vec<Option<OrderedJson>> = vec![None; REGIONS.len()];
+        let mut statuses = Vec::new();
+        let mut pending: Vec<(usize, String, String, f64, f64)> = Vec::new();
+        for (i, (name, city, lat, lon)) in REGIONS.iter().enumerate() {
+            if read_pending {
+                statuses.push(object(vec![
+                    ("sidoName", text(name)),
+                    ("available", OrderedJson::Bool(false)),
+                    ("reason", text("deadline")),
+                ]));
+                continue;
+            }
+            let row = averages
+                .iter()
+                .find(|r| r.get("sidoName").and_then(Val::as_str) == Some(*name));
+            let failure = row.and_then(|r| stored_failure(r, now));
+            if let Some(row) = row.filter(|_| failure.is_none()) {
+                let mut row = row.clone();
+                row.set("source", Val::str("airkorea"));
+                row.set("coverage", Val::str("province-average"));
+                rows[i] = Some(row.json());
+                statuses.push(object(vec![
+                    ("sidoName", text(name)),
+                    ("available", OrderedJson::Bool(true)),
+                    ("source", text("airkorea")),
+                    ("reason", text("stored")),
+                ]));
+            } else {
+                statuses.push(object(vec![
+                    ("sidoName", text(name)),
+                    ("available", OrderedJson::Bool(false)),
+                    ("reason", text("deadline")),
+                    (
+                        "airkorea",
+                        text(if failed {
+                            "database-error"
+                        } else {
+                            failure.unwrap_or("missing")
+                        }),
+                    ),
+                ]));
+                pending.push((i, name.to_string(), city.to_string(), *lat, *lon));
+            }
+        }
+        let air = self.air.clone();
+        let mut jobs = stream::iter(pending.into_iter().map(
+            |(i, name, city, lat, lon): (usize, String, String, f64, f64)| {
+                let air = air.clone();
+                async move {
+                    let result = if Instant::now() >= until {
+                        None
+                    } else {
+                        let task = tokio::spawn(async move {
+                            match air {
+                                Some(air) => air.current_with_reason(lat, lon, now).await,
+                                None => (AirOutcome::None, Some("no-provider")),
+                            }
+                        });
+                        tokio::time::timeout_at(until, task)
+                            .await
+                            .ok()
+                            .and_then(Result::ok)
+                    };
+                    (i, name, city, lat, lon, result)
+                }
+            },
+        ))
+        .buffer_unordered(4);
+        while let Some((i, name, city, lat, lon, result)) = jobs.next().await {
+            let Some((outcome, reason)) = result else {
+                continue;
+            };
+            let mut row = match outcome {
+                AirOutcome::Observation(o) if reason.is_none() && usable(&o, lat, lon, now) => {
+                    fallback_arpltn(&o)
+                }
+                _ => None,
+            };
+            if let Some(OrderedJson::Object(fields)) = &mut row {
+                let date = fields
+                    .iter()
+                    .find(|(k, _)| *k == "dataTime".encode_utf16().collect::<Vec<_>>())
+                    .and_then(|(_, v)| v.string())
+                    .as_deref()
+                    .map(super::airkorea::kst_instant)
+                    .unwrap_or(f64::NAN);
+                for (k, v) in [
+                    ("sidoName", text(&name)),
+                    ("cityName", text("")),
+                    ("sidocityName", text(&name)),
+                    ("date", object(vec![("$date", OrderedJson::Number(date))])),
+                    ("coverage", text("representative-point")),
+                    ("representativeCity", text(&city)),
+                    (
+                        "representativeCoord",
+                        object(vec![
+                            ("lat", OrderedJson::Number(lat)),
+                            ("lon", OrderedJson::Number(lon)),
+                        ]),
+                    ),
+                ] {
+                    fields.push((k.encode_utf16().collect(), v));
+                }
+                let source = fields
+                    .iter()
+                    .find(|(k, _)| *k == "source".encode_utf16().collect::<Vec<_>>())
+                    .map(|(_, v)| v.clone())
+                    .unwrap_or(OrderedJson::Null);
+                statuses[i] = object(vec![
+                    ("sidoName", text(&name)),
+                    ("available", OrderedJson::Bool(true)),
+                    ("reason", text("fallback")),
+                    (
+                        "airkorea",
+                        statuses[i]
+                            .get("airkorea")
+                            .cloned()
+                            .unwrap_or(OrderedJson::Null),
+                    ),
+                    ("source", source),
+                ]);
+                rows[i] = row;
+            } else if let OrderedJson::Object(fields) = &mut statuses[i] {
+                let reason = reason
+                    .filter(|r| {
+                        [
+                            "no-provider",
+                            "no-pm",
+                            "stale",
+                            "future",
+                            "too-far",
+                            "no-station-geo",
+                            "no-time",
+                            "no-coord",
+                            "failed",
+                            "deadline",
+                        ]
+                        .contains(r)
+                    })
+                    .unwrap_or("fallback-unavailable");
+                if let Some((_, v)) = fields
+                    .iter_mut()
+                    .find(|(k, _)| *k == "reason".encode_utf16().collect::<Vec<_>>())
+                {
+                    *v = text(reason);
+                }
+            }
+        }
+        NationAir {
+            rows: rows.into_iter().flatten().collect(),
+            status: object(vec![
+                (
+                    "checkedAt",
+                    text(&crate::world::js::iso(now).unwrap_or_default()),
+                ),
+                ("provinces", OrderedJson::Array(statuses)),
+            ]),
+        }
+    }
+}

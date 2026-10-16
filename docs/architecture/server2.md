@@ -3188,6 +3188,52 @@ revalidations) match on the wire natively (status, body and every header except 
 S3 and answering natively with the Express envelope (JSON with a weak ETag, the v000705
 `res.json(undefined)` reply without one, the usage root) and no legacy hop.
 
+## S17c: native nation weather and air
+
+The `kma` and `kma-v000901` entries also claim the used direct nation routes
+`/v000903/nation/:nation` and `/v000901/nation/:nation`. The nation backend calls
+fifteen native KMA assemblies using legacy version rules, concurrently with one absolute
+three-second deadline; it never calls legacy or opens a separate provider source.
+The child replies retain legacy city order after removing `airInfo`/`airInfoList`.
+Nation children share the same `KmaBackend` and S16 recorder as direct weather requests.
+When a complete snapshot produces compatible captured `getPastMid` rows, the shared backend
+records its summaries without adding fields to the nation response. Rendered nation errors
+keep the Jade `res.send` ETag/HEAD contract, distinct from native finalhandler errors.
+Mount claiming remains case-insensitive, but an uppercase `V` makes legacy query validation
+remove the version, so city requests default to v000901. Child locale uses only the forwarded
+`Accept-Language` header (English if absent); the parent `twcookie` is not forwarded.
+An actual failed internal child response maps to the legacy rendered 500, as AK
+approved; the response is successful when the internal calls succeed. Other late
+provider branches remain omitted according to the existing KMA partial-data rules.
+Native errors omit the legacy session ID, consistent with the existing absence of
+legacy session middleware/cookies. This is a response difference in diagnostic
+HTML only, not an invented synthetic session identity.
+
+Nation air is a projection of the same `AirInputs` S3 raw acquisitions as town air.
+The newest urban hour is selected independently per province; each pollutant uses
+its own valid numeric count and legacy rounding. The SidoArpltn schema drops
+24-hour PM fields. National `전남광주` labels are split by station-list address,
+without a second province-specific provider query. Unresolved station ownership
+is omitted, allowing the labelled representative-point fallback. Stored means
+become stale at exactly eight hours; provider observations keep the existing
+inclusive eight-hour boundary. The safe rejection reason is exposed through a
+backward-compatible AirSource method, while ordinary weather keeps its old
+AirOutcome interface. Fallback calls run at most four at once and never put
+provider error text or URLs in `airStatus`.
+
+No new API method is needed. The existing real-provider evidence (2026-10-14,
+672 nationwide rows in one `numOfRows=1000` page) and
+[official catalog](https://www.data.go.kr/data/15073861/openapi.do) apply. The
+new tests use recorded/synthetic public station data and loopback peers. Full
+nation composition uses deterministic child response doubles; the S15/S17
+oracles continue to verify the actual weather assembler. S3 restore tests verify
+the nation air branch separately from child-weather assembly.
+
+See [nation setup and checks](../operations/server2-nation.md),
+[PDF manual](../operations/server2-nation.pdf), and
+[nation sequence](diagrams/server2-nation.html)
+([editable JSON](diagrams/server2-nation.json)).
+
 ### S18b-2: conditional alerts
 
 `push::deliver::alerts::AlertWorker` ports `alert.push.controller.js` over S18a registrations,
