@@ -484,9 +484,13 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             };
             let next = now - now.rem_euclid(60_000) + 60_000;
             tokio::time::sleep(std::time::Duration::from_millis((next - now) as u64)).await;
+            // A delayed wake or wall-clock jump must not replay the scheduled minute.
+            let Ok(observed) = self.clock.now_ms() else {
+                continue;
+            };
             let worker = self.clone();
             tokio::spawn(async move {
-                worker.run_minute(next).await;
+                worker.run_minute(observed).await;
             });
         }
     }
