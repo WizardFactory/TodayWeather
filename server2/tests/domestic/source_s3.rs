@@ -1394,3 +1394,96 @@ async fn qs_query_structure_is_answered_natively() {
         );
     }
 }
+
+/// The response body for `query` on the seeded town (S15b-4b-1 round 3).
+async fn answer_body(query: &str) -> String {
+    use server2::domestic::kma::backend::KmaBackend;
+    use server2::gateway::BackendHandler;
+    use server2::gateway::backend::Native;
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&store, &[]).await;
+    let backend = KmaBackend::new(
+        Arc::new(source(&peer)),
+        Arc::new(|| NOW),
+        AssemblyConfig::default(),
+    );
+    let path = format!("{}?{query}", request().original_url);
+    match backend
+        .fetch_or_forward(path, "ko".into(), deadline())
+        .await
+    {
+        Ok(Native::Served(json)) => String::from_utf8(json.to_bytes()).unwrap(),
+        other => panic!("{query}: {:?}", other.map(|n| matches!(n, Native::Forward))),
+    }
+}
+
+/// Drops every `key` member below `v` (JSON.stringify omits `undefined` members).
+fn without(v: &mut serde_json::Value, key: &str) {
+    match v {
+        serde_json::Value::Object(m) => {
+            m.remove(key);
+            m.values_mut().for_each(|x| without(x, key));
+        }
+        serde_json::Value::Array(a) => a.iter_mut().for_each(|x| without(x, key)),
+        _ => {}
+    }
+}
+fn body_json(body: &str) -> serde_json::Value {
+    serde_json::from_str(body).unwrap()
+}
+
+#[tokio::test]
+async fn legacy_comparisons_and_conversions_shape_the_answer() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let plain = body_json(&answer_body("a=1").await);
+    // `switch (to)` is strict: an array wind unit converts every wind speed to `undefined`.
+    // (Its grade, string and summary follow from the missing speed; other fields stay.)
+    let array = body_json(&answer_body("windSpeedUnit[]=km/h").await);
+    let speeds = |b: &serde_json::Value| {
+        let mut items = vec![&b["current"]];
+        items.extend(b["short"].as_array().unwrap());
+        items.extend(b["shortest"].as_array().unwrap());
+        items.iter().filter(|x| x.get("wsd").is_some()).count()
+    };
+    assert!(speeds(&plain) > 10);
+    assert_eq!(speeds(&array), 0);
+    assert_eq!(array["current"]["wsdGrade"], json!(-1));
+    let mut short = array["short"].clone();
+    let mut expected = plain["short"].clone();
+    for key in ["wsd", "wsdGrade", "wsdStr"] {
+        without(&mut short, key);
+        without(&mut expected, key);
+    }
+    assert_eq!(short, expected);
+    assert_ne!(
+        body_json(&answer_body("windSpeedUnit=km/h").await)["current"]["wsd"],
+        plain["current"]["wsd"]
+    );
+    // `to == 'F'` in the converter is loose, so an array temperature unit converts 21.5 C to
+    // 70.7 F; the integer rounding after it tests `toTempUnit === 'F'` strictly, so only the
+    // string unit rounds to 70.
+    assert_eq!(plain["current"]["t1h"], json!(21.5));
+    let string = body_json(&answer_body("temperatureUnit=F").await);
+    assert_eq!(string["current"]["t1h"], json!(70));
+    let array = body_json(&answer_body("temperatureUnit[]=F").await);
+    assert_eq!(array["current"]["t1h"], json!(70.7));
+    // An unknown forecast source (a non-string one included) adds no forecast.
+    assert_eq!(
+        answer_body("airForecastSource[]=kaq").await,
+        answer_body("airForecastSource=bogus").await
+    );
+    // A non-callable `toString` (own or inherited through `__proto__`) makes the object's
+    // conversion throw: `checkQueryValidation` and `convertUnits` stop at their try/catch, so
+    // the forecasts keep their stored time and get no `dateObj`.
+    let ordinary = body_json(&answer_body("temperatureUnit[x]=F").await);
+    assert_eq!(ordinary["short"][0]["time"], json!(24));
+    assert!(ordinary["short"][0].get("dateObj").is_some());
+    let own = body_json(&answer_body("temperatureUnit[toString]=F").await);
+    assert_eq!(own["short"][0]["time"], json!("2400"));
+    assert!(own["short"][0].get("dateObj").is_none());
+    let mut inherited = body_json(&answer_body("temperatureUnit[__proto__][toString]=F").await);
+    assert_eq!(inherited["units"]["temperatureUnit"], json!({}));
+    inherited["units"]["temperatureUnit"] = json!({"toString": "F"});
+    assert_eq!(inherited, own);
+}

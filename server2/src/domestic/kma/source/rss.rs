@@ -194,7 +194,8 @@ pub fn parse_rss(xml: &[u8]) -> Option<Parsed> {
     let (header, data) = parse(xml)?;
     let mx = parse_int(&V::s(header.get("x")?));
     let my = parse_int(&V::s(header.get("y")?));
-    let ftm = header.get("tm")?.to_owned();
+    // Provider text in the value layer's form (it is sliced by code units below).
+    let ftm = crate::domestic::kma::js::canon_str(header.get("tm")?);
     let mut rows = Vec::new();
     for item in &data {
         let hours = parse_int(&V::s(item.get("hour")?));

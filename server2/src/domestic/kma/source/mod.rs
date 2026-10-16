@@ -765,9 +765,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     }
     async fn build(&self, request: &KmaRequest, deadline: Instant) -> Result<Snapshot, Unbuilt> {
         let now = (self.clock)();
-        let region = request.region.clone().unwrap_or_default();
-        let city = request.city.clone().unwrap_or_default();
-        let town_name = request.town.clone().unwrap_or_default();
+        // Request names in the value layer's form, as the chain holds them.
+        let region =
+            crate::domestic::kma::js::canon_str(request.region.as_deref().unwrap_or_default());
+        let city = crate::domestic::kma::js::canon_str(request.city.as_deref().unwrap_or_default());
+        let town_name =
+            crate::domestic::kma::js::canon_str(request.town.as_deref().unwrap_or_default());
         let list = towns();
         let town = find_town(
             list,

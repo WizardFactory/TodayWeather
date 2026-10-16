@@ -1687,7 +1687,7 @@ v000903 backend inputs, and supplementary DB 1.0, RSS, station, rain-category, a
 forecast, fallback, life-index/MFDS/rise-set, warning, temperature, error, clock-boundary and invalid
 DB 1.0 RSS/current publication, Boolean station-time, hexadecimal area-number, malformed-escape,
 interpolated string current and signed radix cases. 74 recordings match byte for byte, with the dependency calls in legacy order. Two are declared
-forwards: a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2026-01-09, and a query
+forwards: a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2024-01-09, and a query
 with a malformed escape, for which legacy `decodeURI(req.originalUrl)` throws before its `try` (500). `Date.parse` is reproduced for the strict ISO, space and dotted forms (years from
 100 for the legacy forms) and digit-only strings, checked against the pinned V8; any other date
 string forwards to legacy. Numeric Date constructors map years 0-99 to 1900-1999, `parseInt` without a radix reads `0x`
@@ -2471,12 +2471,21 @@ backend reply as a dependency failure, the same way it treats a failed legacy ho
 is a 503 `EWEATHERUNAVAILABLE`, which none of these replies is. So for the public request, the gateway
 answers the native reply the same way it answered the legacy one.
 
-An exception thrown inside an asynchronous callback is different in legacy: Node 16 ends the whole
-process by default. The legacy gateway runs in that same process and loops back to its own port
-(`server/routes/gateway.js`), so the request fails and the process's other in-flight requests are
-lost too. server2 answers the request as the 500 above, and its gateway gives the same dependency
-failure. server2 does not reproduce the loss of other requests. The oracle's
-`query-malformed-escape` reply (500, `Internal Server Error\n`) is now matched natively.
+An exception thrown inside an asynchronous callback is a deliberate containment difference, not an
+equivalent answer. In legacy, Node 16 ends the whole worker process by default (`uncaughtException`).
+The legacy gateway loops back to its own port (`server/routes/gateway.js:145`), so the outcome
+depends on placement:
+
+- If the gateway request and the backend request ran in the same PM2 worker, that worker's death
+  also closes the client's connection. The client gets no HTTP reply, and the worker's other
+  in-flight requests are lost.
+- If they ran in different workers, the surviving gateway sees its backend connection fail and
+  answers its usual dependency error.
+
+server2 contains the exception to the one request: the backend answers the 500 above, and the
+gateway answers its dependency error. server2 never ends the process and never loses other
+requests. The oracle's `query-malformed-escape` reply (500, `Internal Server Error\n`) is now
+matched natively.
 
 **`req.query`.** `domestic::kma::qs` ports `qs` 4.0.0 `parse` with Express 4.13.4's options
 (`allowDots: false`, `allowPrototypes: true`), so bracket syntax, array indices,
@@ -2495,7 +2504,7 @@ The port equals the pinned Express on a recorded corpus of 8,025 queries
 `MakeDate` and `TimeClip`, with the process zone UTC. The V8 BSD notice is kept in the module. It
 replaces the earlier subset, which forwarded any form it could not read.
 
-The port equals the pinned binary on a recorded corpus of 20,048 strings
+The port equals the pinned binary on a recorded corpus of 20,388 strings
 ([provenance](../../server2/tests/domestic/fixtures/V8-DATE-PROVENANCE.md)), and on the table of
 earlier pinned values. The oracle's `stn-small-year-datetime` (`0001-09-24 09:03`, which V8 reads
 as 2024-01-09 09:03) is now matched natively. The KMA page dates use the same parser.
@@ -2511,8 +2520,34 @@ restores the code unit wherever code units matter: `length`, indices, comparison
 `JSON.stringify`. The gateway serializer escapes a lone surrogate the way well-formed
 `JSON.stringify` does, and two halves that become adjacent form their pair again.
 
+A string is put in that form exactly once, where it enters the value layer: a request parameter
+or query value, or provider and repository text (`Val::str`, `js::canon_str`). A string already in
+that form is reused as it is (`Val::canonical`), and text that never enters the value layer, such
+as the world-air fallback's provider strings, is written out unchanged.
+
 Limitation: provider JSON with an escaped lone surrogate is rejected by the source's JSON parser,
 while legacy `JSON.parse` keeps it.
+
+**Legacy comparisons.** Since `req.query` values can now be arrays and objects, each comparison
+keeps the legacy operator:
+
+| Legacy code | Operator | A non-string value |
+| --- | --- | --- |
+| `_getAirForecast`: `forecastSource === 'kaq'` / `'airkorea'` | strict | Selects no source and adds no forecast, as when the forecast is loaded |
+| `convertUnits`: `from == to`, temperature `to == 'F'` / `'C'` | loose | `['F']` converts like `'F'` |
+| `convertUnits`: wind and pressure `switch (to)` | strict | Converts to `undefined`, so the member is omitted |
+| The rounding after temperature conversion: `toTempUnit === 'F'` | strict | Not rounded |
+| `AqiConverter.value2grade` / `value2index`: `air_pollutants_breakpoints[airUnit]` | property key | `['airnow']` reads the `airnow` table |
+| The same functions: `airUnit === 'airnow'` (ppm to ppb), `airUnit == 'aqicn'` | strict / loose | `['airnow']` skips the ppb conversion; `['aqicn']` converts |
+
+An object converts to a primitive through `OrdinaryToPrimitive`. Query objects have no callable
+members, so a `toString` or `valueOf` member, own or inherited through `__proto__`, is skipped.
+`Object.prototype.toString` gives `[object Object]`, and `Object.prototype.valueOf` returns the
+object itself. When neither gives a primitive, the conversion throws the legacy `TypeError`.
+
+For example, `temperatureUnit[toString]=F` makes the `== '(null)'` test in `checkQueryValidation`
+throw. The legacy `catch` then skips the remaining defaults, and `convertUnits` stops at its own
+`catch`. Node 16.20.2 confirms these conversions.
 
 **Grids outside KMA.** A town whose `mCoord` is not a KMA grid cell gets empty grid and RSS
 collections. Legacy's `find` by `mCoord` returns no row, so no acquisition starts.
@@ -2529,7 +2564,8 @@ test-only source.
 | Check | Result |
 | --- | --- |
 | All 85 oracle scenarios and the S02 goldens | Match with no declared forward (previously two) |
-| The V8 corpus | Equal to Node 16.20.2 |
+| The V8 corpus | Equal to Node 16.20.2, including TimeClip and offset-wrap edges |
+| Legacy comparisons | Array and object query values: response regressions (`source_s3`, `air_s3`) and unit tests |
 | Unit tests | Reply/Defect outcomes, `_getUrlWithCoord`, surrogate semantics against Node 16.20.2 values |
 | The store-callback exception (`replay`) | Now the Express 500 |
 

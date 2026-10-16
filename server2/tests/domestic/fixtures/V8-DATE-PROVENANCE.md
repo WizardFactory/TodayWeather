@@ -3,14 +3,14 @@
 This is test data only. The server2 runtime never reads it.
 
 `v8-date-parse.json.gz` holds `Date.parse` results of the legacy runtime over a deterministic
-corpus of 20,048 strings; 2,095 of them parse to a number. The test
+corpus of 20,388 strings; 2,226 of them parse to a number. The test
 `server2/tests/domestic/v8_date.rs` checks that the port `server2::domestic::kma::dateparse`
 returns the same value for every string.
 
 | Item | Value |
 | --- | --- |
-| sha256 | `9411254a1d5a85dde50c1c6dc93c7409e485e2324cfde8cf7644723e2873f96e` |
-| Generator | `v8_date_corpus.js` (sha256 `92d6c0c552c1eb813b041b181e7e8b0550a3de220c5ac82a23d03756546031e4`) |
+| sha256 | `7e6866153fba48bb35d5cb1b2e7c67491590db2a21d5a99cb5168e2adab4f634` |
+| Generator | `v8_date_corpus.js` (sha256 `da40791b4bf4d5d95977132177f95aeeb7753a5a606505eeee62d48075493418`) |
 | Runtime | Node.js `v16.20.2` (V8 9.4), `TZ=UTC`, the S15 oracle runtime |
 | Command | `TZ=UTC node v8_date_corpus.js \| gzip -9n > v8-date-parse.json.gz` |
 
@@ -21,7 +21,9 @@ The generator uses a fixed mulberry32 seed. Each case is `[UTF-16 code units, va
 - the KMA page forms;
 - legacy forms with month names, AM/PM, zone names and offsets, parentheses and every numeral
   length class;
-- whitespace and line terminators, NUL and unpaired surrogates.
+- whitespace and line terminators, NUL and unpaired surrogates;
+- the TimeClip limits (±8.64e15 ms) in each grammar, with adjacent milliseconds and offsets
+  that move an instant across them, and zone offsets whose minute arithmetic wraps 32 bits.
 
 The port follows `deps/v8/src/date/dateparser.h`, `dateparser-inl.h` and `dateparser.cc`, and
 `ParseDateTimeString`, `MakeDay`, `MakeTime` and `MakeDate` in `src/builtins/builtins-date.cc` of

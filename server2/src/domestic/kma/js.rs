@@ -231,6 +231,13 @@ impl Ob {
             None => p.proto.as_ref().map_or(V::Undef, |proto| proto.get(&k)),
         }
     }
+    /// Whether `k` is an own property or one of the prototype chain's (`k in obj` without
+    /// `Object.prototype`).
+    pub fn has_in_chain(&self, k: &str) -> bool {
+        let k = canon(k);
+        let p = self.0.borrow();
+        p.find(&k).is_some() || p.proto.as_ref().is_some_and(|proto| proto.has_in_chain(&k))
+    }
     /// `Object.setPrototypeOf(obj, proto)` (None: `null`).
     pub fn set_proto(&self, proto: Option<Ob>) {
         self.0.borrow_mut().proto = proto;
@@ -626,9 +633,31 @@ pub fn to_str(v: &V) -> String {
             })
             .collect::<Vec<_>>()
             .join(","),
-        V::Obj(_) => "[object Object]".into(),
+        V::Obj(o) => to_str(&object_to_primitive(o, true)),
         V::Date(ms) => date_to_string(*ms),
     }
+}
+/// `OrdinaryToPrimitive(o, hint)` for an ordinary object. The port's objects have no callable
+/// properties: a `toString` or `valueOf` they hold (own or through a `__proto__` prototype, as a
+/// `qs` field can) is skipped as not callable; otherwise the `Object.prototype` method applies
+/// (`valueOf` returns the object itself, `toString` gives `[object Object]`). Neither giving a
+/// primitive is the legacy `TypeError`.
+fn object_to_primitive(o: &Ob, string_hint: bool) -> V {
+    let order = if string_hint {
+        ["toString", "valueOf"]
+    } else {
+        ["valueOf", "toString"]
+    };
+    for method in order {
+        if o.has_in_chain(method) {
+            // A data property: not callable, so the next method is tried.
+            continue;
+        }
+        if method == "toString" {
+            return V::s("[object Object]");
+        }
+    }
+    throw("TypeError: Cannot convert object to primitive value")
 }
 /// `Date.prototype.toString` in the UTC process zone.
 pub fn date_to_string(ms: f64) -> String {
@@ -653,7 +682,8 @@ pub fn date_to_string(ms: f64) -> String {
 /// ToPrimitive (hint default/number) for the relational operators and `+`.
 fn to_primitive(v: &V) -> V {
     match v {
-        V::Arr(_) | V::Obj(_) => V::Str(to_str(v).into()),
+        V::Arr(_) => V::Str(to_str(v).into()),
+        V::Obj(o) => object_to_primitive(o, false),
         V::Date(ms) => V::Num(*ms),
         other => other.clone(),
     }
@@ -1054,6 +1084,32 @@ pub fn js_number_str(n: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn objects_convert_with_ordinary_to_primitive() {
+        let plain = V::Obj(Ob::new());
+        assert_eq!(to_str(&plain), "[object Object]");
+        assert!(loose_eq(&plain, &V::s("[object Object]")));
+        // A non-callable own `toString`: string conversion falls to the inherited `valueOf`
+        // (the object itself, not a primitive) and throws; `valueOf` first does the same.
+        let own = Ob::new();
+        own.set("toString", "F");
+        let own = V::Obj(own);
+        assert!(catch(|| to_str(&own)).is_err());
+        assert!(catch(|| loose_eq(&own, &V::s("(null)"))).is_err());
+        assert!(catch(|| add(&V::s("x"), &own)).is_err());
+        // A shadowed `valueOf` only: the inherited `toString` still answers.
+        let value_of = Ob::new();
+        value_of.set("valueOf", "1");
+        let value_of = V::Obj(value_of);
+        assert_eq!(to_str(&value_of), "[object Object]");
+        assert!(loose_eq(&value_of, &V::s("[object Object]")));
+        // An inherited non-callable `toString` (a `__proto__` prototype) also throws.
+        let proto = Ob::new();
+        proto.set("toString", "F");
+        let child = Ob::new();
+        child.set_proto(Some(proto));
+        assert!(catch(|| to_str(&V::Obj(child))).is_err());
+    }
     #[test]
     fn exceptions_unwind_to_catch_only_for_thrown() {
         let r = catch(|| -> i32 { V::Undef.get("x").truthy().into() });

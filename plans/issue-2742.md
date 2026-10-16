@@ -414,7 +414,7 @@ Declaration: [S15b-4b1.json](../server2/config/tasks/S15b-4b1.json). Base: maste
 | --- | --- | --- | --- | --- |
 | N1 | Malformed escape in the query | Oracle `query-malformed-escape` | Express 500, matched natively (before: forwarded) | `parity::all_oracle_scenarios_match_legacy_bytes` |
 | N2 | Station page with a small year | Oracle `stn-small-year-datetime` | Matched natively (before: forwarded) | same |
-| N3 | Any date string | Corpus of 20,048 strings | Equal to Node 16.20.2 `Date.parse` | `v8_date::date_parse_equals_node_16_on_the_recorded_corpus`, `time::tests` |
+| N3 | Any date string | Corpus of 20,388 strings (TimeClip and offset-wrap edges included) | Equal to Node 16.20.2 `Date.parse` | `v8_date::date_parse_equals_node_16_on_the_recorded_corpus`, `time::tests` |
 | N4 | `next(err)`, escaped exception, redirect, defect | Unwinding payloads | 500, 500, 302, defect | `chain::tests::replies_outside_the_router_list_are_answered_natively` |
 | N5 | Outside-Korea redirect URL | Query keys and values | `_getUrlWithCoord` string | `chain::tests::the_redirect_url_follows_get_url_with_coord` |
 | N6 | Emoji cut in half | `substr`, concatenation, comparison | Node 16 semantics | `js::tests::coercion_follows_javascript` |

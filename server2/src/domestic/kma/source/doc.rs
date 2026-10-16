@@ -23,8 +23,14 @@ impl Val {
     pub fn num(n: f64) -> Self {
         if n == 0. { Self::Num(0.) } else { Self::Num(n) }
     }
-    /// A string in the KMA value layer's form ([`crate::domestic::kma::js::canon_str`]: a
-    /// provider character in the stand-in range is kept as the stand-ins of its surrogates).
+    /// A string that is already in the value layer's form (taken from another `Val` or a
+    /// [`super::super::js::V`]): kept as it is, never canonicalized again.
+    pub fn canonical(s: impl Into<String>) -> Self {
+        Self::Str(s.into())
+    }
+    /// A string from outside the value layer (provider or repository text) in the value layer's
+    /// form ([`crate::domestic::kma::js::canon_str`]: a character in the stand-in range is kept as
+    /// the stand-ins of its surrogates). Strings already in that form use [`Self::canonical`].
     pub fn str(s: impl Into<String>) -> Self {
         let s = s.into();
         if s.as_bytes().contains(&0xF4) {
@@ -208,4 +214,23 @@ pub fn strict(doc: &Doc, schema: &[&str]) -> Doc {
         }
     }
     out
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn strings_are_canonicalized_once_at_ingress() {
+        let real = "\u{10F800}x";
+        let ingress = Val::str(real);
+        assert_eq!(
+            ingress.json(),
+            OrderedJson::String(real.encode_utf16().collect())
+        );
+        let Val::Str(internal) = &ingress else {
+            panic!("{ingress:?}")
+        };
+        // Reusing an internal string keeps it; canonicalizing it again would expand it twice.
+        assert_eq!(Val::canonical(internal.as_str()), ingress);
+        assert_ne!(Val::str(internal.as_str()), ingress);
+    }
 }

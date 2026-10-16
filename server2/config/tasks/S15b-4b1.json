@@ -4,6 +4,7 @@
   "server2_paths": [
     "server2/config/tasks/S15b-4b1.json",
     "server2/examples/kma_checkpoint.rs",
+    "server2/src/domestic/kma/air.rs",
     "server2/src/domestic/kma/backend.rs",
     "server2/src/domestic/kma/chain.rs",
     "server2/src/domestic/kma/data.rs",
@@ -21,13 +22,16 @@
     "server2/src/domestic/kma/source/mod.rs",
     "server2/src/domestic/kma/source/reference.rs",
     "server2/src/domestic/kma/source/rss.rs",
+    "server2/src/domestic/kma/source/stations.rs",
     "server2/src/domestic/kma/source/stn.rs",
     "server2/src/domestic/kma/source/zone.rs",
     "server2/src/domestic/kma/time.rs",
     "server2/src/gateway/metrics.rs",
+    "server2/src/world/units.rs",
     "server2/tests/domestic.rs",
     "server2/tests/domestic/air_forecast_s3.rs",
     "server2/tests/domestic/air_s3.rs",
+    "server2/tests/domestic/fixtures/PROVENANCE.md",
     "server2/tests/domestic/fixtures/V8-DATE-PROVENANCE.md",
     "server2/tests/domestic/fixtures/qs-parse.json.gz",
     "server2/tests/domestic/fixtures/qs_corpus.js",
@@ -66,6 +70,9 @@
     "server2/tests/domestic/fixtures/v8-date-parse.json.gz": "pinned Node 16.20.2 Date.parse corpus (provenance in V8-DATE-PROVENANCE.md)",
     "server2/src/domestic/kma/qs.rs": "port of qs 4.0.0 parse with Express 4.13.4 options (req.query); replaces the forward for bracketed and prototype query keys",
     "server2/tests/domestic/fixtures/qs-parse.json.gz": "pinned Node 16.20.2 + express 4.13.4/qs 4.0.0 req.query corpus (provenance in V8-DATE-PROVENANCE.md)",
-    "server2/src/domestic/kma/source/": "source string slicing/counting through the stand-in-aware js helpers; S3 failures typed as Failed"
+    "server2/src/domestic/kma/source/": "source string slicing/counting through the stand-in-aware js helpers; S3 failures typed as Failed",
+    "server2/src/domestic/kma/air.rs": "strict forecast-source selector; airUnit table key versus strict/loose conversion comparisons",
+    "server2/src/world/units.rs": "value2grade/value2index variants that take the air table key and the conversion unit separately (used by the KMA chain for non-string airUnit); existing callers unchanged",
+    "server2/tests/domestic/fixtures/PROVENANCE.md": "stale forwarding statements corrected (replay mismatches are defects; the small-year date is matched)"
   }
 }

@@ -18,9 +18,21 @@ fn n(x: f64) -> V {
 
 // ---- AqiConverter / KecoController helpers ----
 
+/// `(air_pollutants_breakpoints[airUnit], conversion)`: the table key is `airUnit` as a property
+/// key, while the conversion compares `airUnit === 'airnow'` strictly and `== 'aqicn'` loosely.
+fn air_unit(unit: &V) -> (String, &'static str) {
+    let key = to_str(unit);
+    let conversion = match (unit.str(), key.as_str()) {
+        (Some("airnow"), _) => "airnow",
+        (_, "aqicn") => "aqicn",
+        _ => "",
+    };
+    (key, conversion)
+}
 /// `AqiConverter.value2grade(airUnit, code, v)`; an unknown unit/code throws like legacy.
 pub fn value2grade(unit: &V, code: &str, v: &V) -> f64 {
-    units::value2grade(&to_str(unit), code, to_number(v))
+    let (key, conversion) = air_unit(unit);
+    units::value2grade_converting(&key, conversion, code, to_number(v))
         .unwrap_or_else(|_| throw("TypeError: Cannot read property of undefined (air unit)"))
 }
 /// `AqiConverter.value2index(airUnit, code, value)`.
@@ -28,8 +40,9 @@ pub fn value2index(unit: &V, code: &str, v: &V) -> V {
     if code == "aqi" || code == "khai" {
         return v.clone();
     }
+    let (key, conversion) = air_unit(unit);
     V::Num(
-        units::value2index(&to_str(unit), code, to_number(v))
+        units::value2index_converting(&key, conversion, code, to_number(v))
             .unwrap_or_else(|_| throw("TypeError: Cannot read property of undefined (air unit)")),
     )
 }
@@ -1218,10 +1231,11 @@ fn get_air_forecast(cx: &Cx, info: &V, source: &V, unit: &V) -> Result<(), ()> {
         Ok(v) => v,
         Err(_) => return Err(()),
     };
-    let src = to_str(source);
-    if src != "kaq" && src != "airkorea" {
-        return Err(());
-    }
+    // `forecastSource === 'kaq'` / `=== 'airkorea'`: only those strings select a controller.
+    let src = match source.str() {
+        Some(x @ ("kaq" | "airkorea")) => x.to_owned(),
+        _ => return Err(()),
+    };
     let station_json = super::to_store(&station);
     let (src, results) = match cx.store.air_forecast(&src, &station_json) {
         // Intended difference (AK 2026-10-15): a `kaq` request when no KAQ forecast exists at all
@@ -1276,5 +1290,27 @@ mod tests {
             assert!(publication_ms(&V::s(s)).is_nan(), "{s}");
         }
         assert!(publication_ms(&V::s("2026-09-240600")).is_finite());
+    }
+    #[test]
+    fn air_unit_selects_its_table_by_key_and_its_conversion_by_comparison() {
+        let arr = |u: &str| V::Arr(super::super::js::Arr::from_vec(vec![V::s(u)]));
+        // 0.06 ppm O3: `'airnow'` converts to 60 ppb (grade 2); `['airnow']` reads the airnow
+        // table with the unconverted value (`airUnit === 'airnow'` is false): grade 1.
+        assert_eq!(value2grade(&V::s("airnow"), "o3", &n(0.06)), 2.);
+        assert_eq!(value2grade(&arr("airnow"), "o3", &n(0.06)), 1.);
+        assert_eq!(to_number(&value2index(&arr("airnow"), "o3", &n(0.06))), 0.);
+        assert_eq!(
+            to_number(&value2index(&V::s("airnow"), "o3", &n(0.06))),
+            54.
+        );
+        // `airUnit == 'aqicn'` is loose: the array converts like the string.
+        assert_eq!(
+            value2grade(&arr("aqicn"), "o3", &n(0.1)),
+            value2grade(&V::s("aqicn"), "o3", &n(0.1))
+        );
+        assert_eq!(
+            to_number(&value2index(&arr("aqicn"), "co", &n(0.9))),
+            to_number(&value2index(&V::s("aqicn"), "co", &n(0.9)))
+        );
     }
 }

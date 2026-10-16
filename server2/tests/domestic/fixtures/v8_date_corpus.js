@@ -71,6 +71,33 @@ const corpus = [
     '2026-01-01 +', 'UTC+', 'UTC+0900', 'UTC-12345', 'GMT+9:30', '2026-01-01 1:00 +09:30',
     '\u00002026', '2026\u0000-01-01', '\ud800 2026', '2026-01-01 ',
 ];
+// TimeClip boundaries (|t| <= 8.64e15 ms) in each grammar, adjacent milliseconds and offsets
+// that move an instant across them, and zone offsets whose minute arithmetic wraps 32 bits.
+const EDGES = [
+    ['+275760', '09', '13', 'Sep 13 275760'],
+    ['-271821', '04', '20', 'Apr 20 -271821'],
+    ['+275760', '09', '12', 'Sep 12 275760'],
+    ['-271821', '04', '19', 'Apr 19 -271821'],
+];
+for (const [y, mo, d, legacy] of EDGES) {
+    for (const t of ['00:00:00.000', '00:00:00.001', '23:59:59.999', '24:00', '00:00']) {
+        for (const z of ['Z', '+00:00', '+00:01', '-00:01', '+23:59', '-23:59', '']) {
+            corpus.push(`${y}-${mo}-${d}T${t}${z}`);
+        }
+        for (const z of ['GMT', 'GMT+0001', 'GMT-0001', 'UTC+1', 'UTC-1', '']) {
+            corpus.push(`${legacy} ${t} ${z}`.trim());
+        }
+    }
+}
+for (const off of ['1193046:28', '1193046:29', '1193047:00', '35791394:08', '35791394:07',
+    '2147483647', '2147483648', '4294967295', '4294967296', '99999:99', '999999999', '0:2147483647']) {
+    for (const sign of ['+', '-']) {
+        corpus.push(`UTC${sign}${off}`, `2026-01-01 00:00 GMT${sign}${off}`, `Jan 1 2026 UTC${sign}${off}`);
+    }
+}
+for (const ms of ['8640000000000000', '8640000000000001', '-8640000000000000', '-8640000000000001']) {
+    corpus.push(ms, `${ms} GMT`);
+}
 for (let i = 0; i < 6000; i++) corpus.push(random());
 for (let i = 0; i < 14000; i++) corpus.push(structured());
 const units = (s) => Array.from({length: s.length}, (_, i) => s.charCodeAt(i));

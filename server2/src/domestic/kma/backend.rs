@@ -1,5 +1,6 @@
 //! Native v000903 KMA backend for the S10 dispatcher (`Family::Kma`). Registration keeps legacy
-//! selected; a request whose inputs the source cannot supply is forwarded to legacy.
+//! selected. Only an unknown town and the `KR` remap still forward (S15b-4b-2); a request whose
+//! inputs the source cannot read is a dependency failure.
 use super::{AssemblyConfig, KmaRequest, KmaStore, Outcome, assemble};
 use crate::gateway::{
     BackendDispatcher, BackendHandler, BackendMode, BoxFuture, Family, GatewayError, OrderedJson,

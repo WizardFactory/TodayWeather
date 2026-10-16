@@ -45,12 +45,14 @@ order is preserved. 1669 answers in total; 1 are flagged `after_response` becaus
 `async.map` keeps calling after an error has already ended the chain and the reply was sent.
 Each call also records its complete arguments, copied when legacy made the call. The replay store
 (`server2/tests/domestic/recorded.rs`, a test double) checks the method, order and arguments of every call and that
-every recorded call was used; any difference forwards the request instead of answering.
+every recorded call was used; any difference is a native defect (a dependency failure), never a
+forward.
 
 The harness answers model reads synchronously. In the deployed service they are asynchronous
 callbacks, so an exception thrown while a controller converts an answer escapes the `try` that
-issued the read. The native assembly follows the deployed behavior (such an exception forwards to
-legacy); no recorded scenario depends on the difference.
+issued the read. The native assembly follows the deployed behavior: such an exception reaches
+Express's default handler as a 500 (where legacy ends the process). No recorded scenario depends
+on the difference.
 
 The harness air fallback (`lib/AQI/airFallback.js`) throws synchronously in the oracle runtime
 (`axios` is not an oracle dependency); legacy catches it and serves no fallback. Those calls are
@@ -471,7 +473,7 @@ add('current-interpolated-strings', {path: SEOUL, lang: 'ko'}, f => {
 }, {clock: '2026-09-24T01:10:00.000Z'});
 // S15-R19: Number('0x+1') is NaN, so the station cloud amount is unusable.
 add('stn-cloud-radix-sign', {path: SEOUL, lang: 'en'}, f => { f.stnWeather = {stnDateTime: '2026-09-24 09:07', t1h: 21.2, weather: '눈', cloud: '0x+1', rs1h: 0, wsd: 3.1, vec: 22.5, stnId: 108}; });
-// S15-R12: V8's legacy parser reads `0001-09-24 09:03` as 2026-01-09 09:03 (the native port forwards).
+// S15-R12: V8's legacy parser reads `0001-09-24 09:03` as 2024-01-09 09:03 (matched natively since S15b-4b-1).
 add('stn-small-year-datetime', {path: SEOUL, lang: 'zh-CN'}, f => { f.stnWeather = {stnDateTime: '0001-09-24 09:03', weather: '뇌우끝,비', weatherType: 53, rns: false, localMinAws: true, rs1h: 12.36, stnId: 108}; });
 
 // S15b-2: ASOS history fill (#2564/#2648) with config.history.readEnabled (AK 2026-10-14).

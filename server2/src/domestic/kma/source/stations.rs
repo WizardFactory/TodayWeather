@@ -231,12 +231,12 @@ impl Registry {
                         continue;
                     };
                     let mut doc = Doc::new()
-                        .with("stnId", Val::str(id))
+                        .with("stnId", Val::canonical(id.as_str()))
                         .with("stnName", row.get("stnName").cloned().unwrap_or(Val::Undef));
                     if matches!(doc.get("stnName"), Some(Val::Undef)) {
                         doc.remove("stnName");
                     }
-                    doc.set("addr", Val::str(addr));
+                    doc.set("addr", Val::canonical(addr.as_str()));
                     if let Some(c) = city {
                         doc.set("isCityWeather", c);
                     }

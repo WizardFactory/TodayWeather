@@ -92,7 +92,7 @@ pub const NO_KAQ_FORECAST: &str = "Fail to get map case";
 /// legacy results as JSON with Dates as `{"$date": ms}`; `Err` is the callback error.
 /// Implementations must answer from a snapshot already in memory. A snapshot that cannot answer
 /// a call faithfully (the input is absent, not merely an error legacy would receive) calls
-/// [`unavailable`], which forwards the request to legacy.
+/// [`unavailable`], a native defect that the backend answers as a dependency failure.
 ///
 /// Except for the town list (`towns`, cached by the long-lived legacy controller), every method
 /// is a legacy asynchronous read: the assembly treats each answer as an asynchronous callback, so
@@ -149,7 +149,7 @@ pub trait KmaStore {
         None
     }
     /// After a reply: why the snapshot's inputs were not fully used (a replayed recording), or
-    /// None. A reply built without inputs the snapshot holds is forwarded to legacy.
+    /// None. A reply built without inputs the snapshot holds is a native defect.
     fn unconsumed(&self) -> Option<String> {
         None
     }
