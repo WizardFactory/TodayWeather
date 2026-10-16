@@ -2763,5 +2763,6 @@ bytes and ETags, with 10 declared forwards in total across both S17 fixtures. Th
 `domestic-v000803`, `domestic-v000705`, `domestic-v000901` and `domestic-v000903` (with their 304
 revalidations) match on the wire natively (status, body and every header except `date`,
 `connection` and `set-cookie`), and HEAD and forwarded requests keep the legacy reply. The release
-`kma_smoke.py` shows unlisted direct paths unclaimed and listed ones reading S3 and taking the
-legacy hop with the legacy bytes.
+`kma_smoke.py` shows unlisted direct paths unclaimed (404, no legacy hop) and listed ones reading
+S3 and answering natively with the Express envelope (JSON with a weak ETag, the v000705
+`res.json(undefined)` reply without one, the usage root) and no legacy hop.

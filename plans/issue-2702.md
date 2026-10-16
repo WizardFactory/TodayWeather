@@ -48,7 +48,7 @@ Revert the PR or remove the entries to roll back. Production switches remain S20
 | B2 | Old app calls `/v000803/town` | `town` listed; GET and revalidation | `domestic-v000803(-304)` on the wire | same test; `kma_parity::all_town_oracle_scenarios_match_legacy_status_and_bytes` |
 | B3 | Very old app calls `/v000705/town` (and sub-routes) | `town` listed | 200 `application/json` empty body without ETag (`domestic-v000705`); sub-route outcomes as legacy | same tests; `town_status_replies_and_declared_forwards` |
 | B4 | Request with a non-Korean region | `/v000803/town/중국/...` | 400 text as legacy | `town_status_replies_and_declared_forwards` |
-| B5 | Inputs not in S3 yet | Source forwards | Legacy reply passes unchanged (status, headers, body, 304) | `forwarded_direct_requests_return_the_legacy_reply_unchanged` |
+| B5 | The native assembly still yields `Outcome::Legacy` (a town absent from the town list, the S15 `next(err)` cases) | Source or assembly forwards | Legacy reply passes unchanged (status, headers, body, 304) | `forwarded_direct_requests_return_the_legacy_reply_unchanged` (a source answering Forward) |
 | B6 | Operator leaves the entries unlisted | Default list | Paths stay unclaimed (404 as before), no S3 read | `unlisted_direct_routes_keep_the_previous_reply`, `tools/kma_smoke.py` |
 
 Order: town recording and S02 cross-check; Red (tests against S17a: missing `api`,

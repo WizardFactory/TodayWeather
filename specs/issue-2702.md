@@ -109,5 +109,5 @@ and both town routers). Unlisted paths keep the previous 404; other methods are 
   dropped in both directions; the request target is written verbatim, without resolving `..`
   or `%2e` segments, so direct routes require the plain-HTTP loopback legacy origin and an HTTPS
   `SERVER2_GATEWAY_LEGACY_URL` with a direct entry refuses startup). The v000705 `/short`, `/shortest`, `/current` replies without
-  `midData` are legacy 500s from `next(err)` and are forwarded like every S15 `next(err)`; S15b-4
-  owns removing the forwards.
+  `midData` are legacy 500s from `next(err)` and are forwarded like every S15 `next(err)`;
+  reproducing Express's 500 natively remains open.
