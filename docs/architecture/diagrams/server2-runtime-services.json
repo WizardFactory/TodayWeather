@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "ef4909533ebb387ae2d7b3020580587eb434cd84"
+      "revision": "411eb9a8af1aa08a7dc91a343cb17ea4c8ebc874"
     }
   },
   "components": [
@@ -15,7 +15,7 @@
       "id": "process",
       "type": "backend",
       "label": "Process + factory",
-      "sublabel": "Bind both; common signal/error stop",
+      "sublabel": "HTTP-only 5s; push-owned drain 34s",
       "pos": [
         40,
         245
@@ -35,7 +35,7 @@
         },
         {
           "path": "server2/src/process.rs",
-          "line": 132
+          "line": 145
         }
       ]
     },
@@ -238,11 +238,11 @@
     },
     {
       "dot": "amber",
-      "title": "One 35-second cancellation envelope",
+      "title": "Selected cancellation deadline",
       "items": [
-        "34s shared HTTP/job/writer deadline + 1s runtime teardown.",
-        "Long owned acquisitions may remain incomplete and are cancelled.",
-        "Durable claims survive failed/unknown/cancelled sends; no replay."
+        "Push writer or delivery: shared 34s drain + up to 1s teardown.",
+        "Neither present: shared HTTP-only 5s drain + up to 1s teardown.",
+        "Long owned acquisitions remain incomplete; durable claims prevent replay."
       ]
     }
   ]

@@ -3565,8 +3565,12 @@ no catch-up or startup weather precollection. Warning initialization remains sil
 
 The process owns scheduler/job and registration-writer handles. Signals and listener
 failure close scheduling and final FCM POST admission before concurrent bounded drain.
-One 35-second cancellation envelope covers a shared 34-second HTTP/jobs/writer deadline
-and one second runtime teardown; it does not establish full native acquisition completion.
+When a push writer or delivery supervisor exists, one 35-second cancellation envelope
+covers a shared 34-second HTTP/jobs/writer deadline and one second runtime teardown.
+With neither present, HTTP retains the foundation 5-second shared drain and at most
+one second teardown; a signal deadline logs the original forced-stop message. Listener
+failure uses the same selected deadline and retains an error. Neither path establishes
+full native acquisition completion.
 Longer owned acquisitions are cancelled/incomplete at teardown and partial state remains
 subject to S3 recovery. Durable claims persist through failed, unknown or cancelled sends;
 no automatic replay is introduced. Lazy per-product credential failures remain per send.
