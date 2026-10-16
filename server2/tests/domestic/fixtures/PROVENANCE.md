@@ -1,6 +1,6 @@
 # S15 KMA v000903 oracle fixtures
 
-`oracle.json.gz` (sha256 `7327bcbc0fc36fef9925736d1edebd39e8cfda726ca6415b48aed8515364f6c9`) holds pinned legacy-oracle recordings
+`oracle.json.gz` (sha256 `35021a0384f40af09664c319e2b48c066c2fab77e9bec7d489c87992e4fcbd04`) holds pinned legacy-oracle recordings
 for the native KMA v000903 assembly tests. It is test data only; the server2 runtime never reads
 it or any legacy file.
 
@@ -22,7 +22,12 @@ it or any legacy file.
   S15b-2 (#2742, AK 2026-10-14) added 9 `history-*` scenarios recorded with
   `config.history.readEnabled` true; the other 76 recordings are byte-identical, and recording on
   master `f49921b6` gives the same bytes.
-- Driver: the script below (sha256 `d9f7a410b94ea32c98f5a051ed10a3757e6f16f35d0f503f15e78c30582eb821`), run as
+  S15b-3e (#2742, legacy #2771 "use AirKorea when KAQ has no usable future forecasts", AK) recorded
+  everything again on legacy master `915978bb`: the 85 earlier scenarios are byte-identical
+  (statuses, ETags, bodies and every store call; only the `source.files` hashes of
+  `controllerTown24h.js` and `test/offline/rss-response-smoke.js` changed), and 13 `air-*` scenarios
+  were added for the #2771 selection (listed below).
+- Driver: the script below (sha256 `c5c95038d35d77bfb61886be14945a5ddb7d1672d0610c5b2046566aa4c4a869`), run as
   `TZ=UTC NODE_ENV=production NODE_PATH=<deps>/node_modules node record-kma.js <repo> <out.json.gz>`.
   It is retained here as documentation rather than as an executable repository tool, because a new
   server2-located script reading legacy source would be a new placement exception; the S02 recorder
@@ -41,7 +46,7 @@ the store-read boundary, named by the server2 `KmaStore` methods: model reads (`
 `stn_hourly_and_min_rns`, `city_hourly`, `history`, `arpltn`, `dust_forecast`, `air_fallback`,
 `air_forecast`, `rise_set`). `history` is `lib/history/service.loadForTown`, recorded only when
 the scenario enables `config.history.readEnabled`. Dates are `{"$date": ms}`, undefined values `{"$undefined": true}`; object key
-order is preserved. 1669 answers in total; 1 are flagged `after_response` because legacy
+order is preserved. 1925 answers in total; 1 are flagged `after_response` because legacy
 `async.map` keeps calling after an error has already ended the chain and the reply was sent.
 Each call also records its complete arguments, copied when legacy made the call. The replay store
 (`server2/tests/domestic/recorded.rs`, a test double) checks the method, order and arguments of every call and that
@@ -60,8 +65,15 @@ dependency answer through the driver's `overrides`.
 
 ## Content
 
-85 scenarios: 15 S02 direct-route equivalents (domestic-v000903, domestic-locale-en, domestic-locale-ko, domestic-locale-ja, domestic-locale-zh-CN, domestic-locale-de, domestic-locale-zh-TW, domestic-v000903-db1, domestic-null-units, domestic-pop-covered, domestic-pop-missing-hour, domestic-old-no-pop, domestic-never-requested-history, domestic-partial-history, domestic-special-info); 5 gateway backend
-requests (gateway-v000903-domestic, gateway-query-normalization, gateway-history-never-requested, gateway-history-resumed-after-eight-days, gateway-history-partial-eight-day-history); and 56 supplementary scenarios (rss-older, rss-equal, busan, jeju, station-first-rain, station-first-snow-cloud, rain-categories, air-stations, air-stations-airnow, air-stale, air-kaq-forecast, air-dust-forecast, air-fallback, life-food-kasi, life-index-near-area, warning-two-zones, winter-cold-wind, hot-humid, missing-short, model-errors, unknown-air-unit, db1-history, stn-error, station-hourly-fill, db1-daily-source, short-publications, current-error, mid-forecast-error, yesterday-warmer, yesterday-colder, rss-unusable-values, current-sky-from-shortest, stn-invalid-zero, stn-fog-thunder, region-guard, clock-night-2340, clock-kst-0030, clock-kst-1010, clock-kst-1110, clock-kst-0605, clock-kst-1535, rss-pub-invalid-offset, rss-pub-hour24-fraction, rss-pub-non-ascii-offset, rss-pub-non-ascii, rss-pub-iso-offset, rss-pub-hour24-submillisecond, current-pub-small-year, stn-boolean-datetime-false, stn-boolean-datetime-true, life-index-hex-area, life-index-long-hex-area, query-malformed-escape, current-interpolated-strings, stn-cloud-radix-sign, stn-small-year-datetime); and 9 S15b-2 ASOS history scenarios with the read enabled (history-stations-unconfigured, history-asos-fill, history-asos-fill-en, history-read-timeout, history-station-unavailable, history-read-error, history-with-station-hourly, history-yesterday-from-asos, history-short-rain-3h).
+98 scenarios: 15 S02 direct-route equivalents (domestic-v000903, domestic-locale-en, domestic-locale-ko, domestic-locale-ja, domestic-locale-zh-CN, domestic-locale-de, domestic-locale-zh-TW, domestic-v000903-db1, domestic-null-units, domestic-pop-covered, domestic-pop-missing-hour, domestic-old-no-pop, domestic-never-requested-history, domestic-partial-history, domestic-special-info); 5 gateway backend
+requests (gateway-v000903-domestic, gateway-query-normalization, gateway-history-never-requested, gateway-history-resumed-after-eight-days, gateway-history-partial-eight-day-history); and 56 supplementary scenarios (rss-older, rss-equal, busan, jeju, station-first-rain, station-first-snow-cloud, rain-categories, air-stations, air-stations-airnow, air-stale, air-kaq-forecast, air-dust-forecast, air-fallback, life-food-kasi, life-index-near-area, warning-two-zones, winter-cold-wind, hot-humid, missing-short, model-errors, unknown-air-unit, db1-history, stn-error, station-hourly-fill, db1-daily-source, short-publications, current-error, mid-forecast-error, yesterday-warmer, yesterday-colder, rss-unusable-values, current-sky-from-shortest, stn-invalid-zero, stn-fog-thunder, region-guard, clock-night-2340, clock-kst-0030, clock-kst-1010, clock-kst-1110, clock-kst-0605, clock-kst-1535, rss-pub-invalid-offset, rss-pub-hour24-fraction, rss-pub-non-ascii-offset, rss-pub-non-ascii, rss-pub-iso-offset, rss-pub-hour24-submillisecond, current-pub-small-year, stn-boolean-datetime-false, stn-boolean-datetime-true, life-index-hex-area, life-index-long-hex-area, query-malformed-escape, current-interpolated-strings, stn-cloud-radix-sign, stn-small-year-datetime); and 9 S15b-2 ASOS history scenarios with the read enabled (history-stations-unconfigured, history-asos-fill, history-asos-fill-en, history-read-timeout, history-station-unavailable, history-read-error, history-with-station-hourly, history-yesterday-from-asos, history-short-rain-3h); and 13 S15b-3e scenarios for legacy #2771
+(air-kaq-past-only, air-kaq-missing, air-kaq-none-usable, air-kaq-invalid-rows, air-kaq-mixed-rows,
+air-kaq-beyond-day, air-kaq-day-edge, air-kaq-no-history, air-kaq-fallback-error,
+air-airkorea-request, air-airkorea-empty, air-kaq-before-now, air-kaq-after-now): a `kaq` request uses KAQ only with a
+usable row (listed pollutant, finite value >= 0, valid KST time) after now and within the day after
+the last observation, otherwise the stored AirKorea forecast under the same condition, otherwise no
+forecast; an AirKorea read error ends the list; explicit `airkorea` requests keep their selection
+with the KST epoch window and keys.
 
 ## Driver source
 
@@ -362,6 +374,64 @@ add('air-kaq-forecast', {path: SEOUL, query: APP, lang: 'ko'}, f => {
     }
     return out;
 }}});
+// S15b-3e (#2771): KAQ is used only with a usable future row; otherwise the stored AirKorea forecast.
+function forecastRows(from, to, codes, pubDate, edit) {
+    const out = [];
+    for (let h = from; h <= to; h++) for (const code of codes) {
+        const t = new RealDate(Date.parse('2026-09-24T09:00:00+09:00') + h * 3600000 + 9 * 3600000).toISOString().slice(0, 16).replace('T', ' ');
+        const row = {code, dataTime: t, val: code === 'o3' ? 0.03 + h / 1000 : code === 'co' ? 0.4 : code === 'no2' || code === 'so2' ? 0.02 : 20 + h, pubDate};
+        out.push(edit ? edit(row, h) : row);
+    }
+    return out;
+}
+const AIRKOREA_APP = APP.replace('airForecastSource=kaq', 'airForecastSource=airkorea');
+const seoulAir = f => { const a = hours('종로구', '2026-09-24 09:00', 2); f.arpltnInfo = {arpltn: station('종로구', '2026-09-24 09:00'), list: a, stnList: [a]}; };
+const AK_ROWS = () => forecastRows(1, 30, ['pm10', 'pm25'], '2026-09-24 05:00');
+add('air-kaq-past-only', {path: SEOUL, query: APP, lang: 'ko'}, seoulAir, {overrides: {
+    air_forecast_kaq: () => forecastRows(-3, 0, ['pm10', 'pm25', 'o3'], '2026-09-23 23:00'), air_forecast_airkorea: AK_ROWS}});
+add('air-kaq-missing', {path: SEOUL, query: APP, lang: 'ko'}, seoulAir, {overrides: {
+    air_forecast_kaq: {__error: 'Fail to get map case'}, air_forecast_airkorea: AK_ROWS}});
+add('air-kaq-none-usable', {path: SEOUL, query: APP, lang: 'en'}, seoulAir, {overrides: {
+    air_forecast_kaq: {__error: 'Fail to get map case'}, air_forecast_airkorea: []}});
+add('air-kaq-invalid-rows', {path: SEOUL, query: APP, lang: 'ko'}, seoulAir, {overrides: {
+    air_forecast_kaq: () => [
+        {code: 'pm10', dataTime: '2026-09-24 12:00', val: -1, pubDate: '2026-09-24 05:00'},
+        {code: 'pm10', dataTime: '2026-09-24 13:00', val: '30', pubDate: '2026-09-24 05:00'},
+        {code: 'pm10', dataTime: '2026-09-24 14:00', val: null, pubDate: '2026-09-24 05:00'},
+        {code: 'khai', dataTime: '2026-09-24 15:00', val: 30, pubDate: '2026-09-24 05:00'},
+        {code: 'pm25', dataTime: '2026-09-24 25:00', val: 30, pubDate: '2026-09-24 05:00'},
+        {code: 'pm25', dataTime: null, val: 30, pubDate: '2026-09-24 05:00'},
+        null],
+    air_forecast_airkorea: AK_ROWS}});
+add('air-kaq-mixed-rows', {path: SEOUL, query: APP, lang: 'ko'}, seoulAir, {overrides: {
+    air_forecast_kaq: () => forecastRows(-2, 30, ['pm10', 'pm25', 'o3'], '2026-09-24 05:00', (row, h) => (
+        h % 7 === 3 ? Object.assign(row, {val: -5}) : h % 7 === 5 ? Object.assign(row, {dataTime: row.dataTime.slice(0, 11) + '24:00'}) : row)),
+    air_forecast_airkorea: AK_ROWS}});
+add('air-kaq-beyond-day', {path: SEOUL, query: APP, lang: 'ko'}, seoulAir, {overrides: {
+    air_forecast_kaq: () => forecastRows(25, 40, ['pm10', 'pm25'], '2026-09-24 05:00'),
+    air_forecast_airkorea: () => forecastRows(1, 10, ['pm10', 'pm25'], '2026-09-24 05:00')}});
+add('air-kaq-day-edge', {path: SEOUL, query: APP, lang: 'ko'}, seoulAir, {overrides: {
+    air_forecast_kaq: () => forecastRows(24, 30, ['pm10'], '2026-09-24 05:00'), air_forecast_airkorea: AK_ROWS}});
+add('air-kaq-no-history', {path: SEOUL, query: APP, lang: 'ko'}, f => {
+    const a = hours('종로구', '2026-09-24 09:00', 2, () => ({no2Value: undefined, no2Grade: undefined}));
+    f.arpltnInfo = {arpltn: station('종로구', '2026-09-24 09:00', {no2Value: undefined, no2Grade: undefined}), list: a, stnList: [a]};
+}, {overrides: {air_forecast_kaq: () => forecastRows(1, 30, ['pm10', 'no2'], '2026-09-24 05:00')}});
+add('air-kaq-fallback-error', {path: SEOUL, query: APP, lang: 'ko'}, seoulAir, {overrides: {
+    air_forecast_kaq: () => [], air_forecast_airkorea: {__error: 'airkorea forecast read failed'}}});
+add('air-airkorea-request', {path: SEOUL, query: AIRKOREA_APP, lang: 'ko'}, seoulAir, {overrides: {
+    air_forecast_airkorea: () => forecastRows(-2, 30, ['pm10', 'pm25'], '2026-09-24 05:00', (row, h) => (
+        h === 6 ? Object.assign(row, {dataTime: '2026-09-24 24:00'}) : h === 7 ? Object.assign(row, {dataTime: '2026-09-24 7:00'}) : row))}});
+add('air-airkorea-empty', {path: SEOUL, query: AIRKOREA_APP, lang: 'en'}, seoulAir, {overrides: {air_forecast_airkorea: []}});
+// 21:30 KST, observed 20:00: KAQ rows after the observation but at or before now are not usable
+// (21:00 and exactly 21:30); a row after now keeps KAQ.
+const evening = f => { const a = hours('종로구', '2026-09-24 20:00', 2); f.arpltnInfo = {arpltn: station('종로구', '2026-09-24 20:00'), list: a, stnList: [a]}; };
+const kaqAt = times => times.flatMap(t => ['pm10', 'pm25'].map(code => ({code, dataTime: t, val: 33, pubDate: '2026-09-24 17:00'})));
+add('air-kaq-before-now', {path: SEOUL, query: APP, lang: 'ko'}, evening, {clock: '2026-09-24T12:30:00.000Z', overrides: {
+    air_forecast_kaq: () => kaqAt(['2026-09-24 21:00', '2026-09-24 21:30']),
+    air_forecast_airkorea: () => forecastRows(13, 30, ['pm10', 'pm25'], '2026-09-24 17:00')}});
+add('air-kaq-after-now', {path: SEOUL, query: APP, lang: 'ko'}, evening, {clock: '2026-09-24T12:30:00.000Z', overrides: {
+    air_forecast_kaq: () => kaqAt(['2026-09-24 21:00', '2026-09-24 21:30', '2026-09-24 21:31']),
+    air_forecast_airkorea: () => forecastRows(13, 30, ['pm10', 'pm25'], '2026-09-24 17:00')}});
 add('air-dust-forecast', {path: SEOUL, lang: 'ko'}, f => {
     const a = hours('종로구', '2026-09-24 09:00', 2);
     f.arpltnInfo = {arpltn: station('종로구', '2026-09-24 09:00'), list: a, stnList: [a]};

@@ -17,7 +17,7 @@ mod chain;
 mod data;
 pub mod js;
 mod mid;
-mod policy;
+pub(crate) mod policy;
 pub(crate) mod precip;
 mod present;
 mod short;
@@ -136,7 +136,8 @@ pub trait KmaStore {
     /// `AirFallback.getArpltn(gCoord, now)`: an observation or null (no provider is called here).
     fn air_fallback(&self, g_coord: &Value, now_ms: f64) -> StoreResult;
     /// KAQ (`kaq`) or AirKorea (`airkorea`) hourly forecast rows of a station. A store without
-    /// any KAQ forecast answers `kaq` with the error [`NO_KAQ_FORECAST`].
+    /// any KAQ forecast answers `kaq` with the error [`NO_KAQ_FORECAST`]; a `kaq` request then
+    /// reads `airkorea` (legacy #2771, as for KAQ rows without a usable future row).
     fn air_forecast(&self, source: &str, station: &Value) -> StoreResult;
     /// `kasiRiseSet.getRiseSetList(geocode, dates)`.
     fn rise_set(&self, geocode: &Value, dates: &[String]) -> StoreResult;
@@ -149,6 +150,11 @@ pub trait KmaStore {
     /// After a reply: why the snapshot's inputs were not fully used (a replayed recording), or
     /// None. A reply built without inputs the snapshot holds is forwarded to legacy.
     fn unconsumed(&self) -> Option<String> {
+        None
+    }
+    /// S16: the summary inputs of a snapshot whose reads were complete, or None (nothing is
+    /// recorded for this request).
+    fn summary_inputs(&self) -> Option<crate::summary::GridInputs> {
         None
     }
 }
@@ -224,10 +230,20 @@ pub fn assemble(
     now_ms: f64,
     config: AssemblyConfig,
 ) -> Outcome {
-    let outcome = chain::run(request, store, now_ms, config);
+    assemble_capturing(request, store, now_ms, config).0
+}
+/// [`assemble`], also returning a JSON copy of the `_getDaySummaryList` rows `getPastMid`
+/// merged (S16 grid summaries), or None when that step merged none.
+pub fn assemble_capturing(
+    request: &KmaRequest,
+    store: &dyn KmaStore,
+    now_ms: f64,
+    config: AssemblyConfig,
+) -> (Outcome, Option<Vec<OrderedJson>>) {
+    let (outcome, past) = chain::run_capturing(request, store, now_ms, config);
     match (&outcome, store.unconsumed()) {
-        (Outcome::Legacy(_), _) | (_, None) => outcome,
-        (_, Some(reason)) => Outcome::Legacy(reason),
+        (Outcome::Legacy(_), _) | (_, None) => (outcome, past),
+        (_, Some(reason)) => (Outcome::Legacy(reason), past),
     }
 }
 

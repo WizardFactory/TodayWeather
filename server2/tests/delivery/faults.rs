@@ -848,3 +848,58 @@ async fn diagnostics_and_the_ledger_hold_no_tokens_coordinates_or_names() {
     }
     assert_eq!(rig.diagnostics.events.lock().unwrap().len(), 2);
 }
+
+struct SchedulerJumpClock(std::sync::atomic::AtomicUsize);
+impl server2::budget::Clock for SchedulerJumpClock {
+    fn now_ms(&self) -> Result<i64, server2::budget::BudgetError> {
+        let at = if self.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed) == 0 {
+            "2026-10-16T00:06:59.999Z"
+        } else {
+            "2026-10-16T00:35:00Z"
+        };
+        Ok(server2::warnings::js::parse_iso(at).unwrap())
+    }
+}
+
+#[tokio::test]
+async fn scheduler_does_not_send_a_missed_alarm_after_a_clock_jump() {
+    let records = [
+        alarm(1, "missed-alarm", 7 * 60, ""),
+        alarm(2, "current-alarm", 35 * 60, ""),
+    ];
+    let rig = rig("alarm-clock-jump", "2026-10-16T00:35:00Z", &records, None).await;
+    rig.weather.set(&kma_weather());
+    let worker = Arc::new(AlarmWorker::new(
+        rig.push.clone(),
+        Arc::new(rig.s3.clone()),
+        rig.weather.clone(),
+        Arc::new(fcm(&rig.google, &temp_dir("alarm-clock-jump-provider"))),
+        servers(),
+        Arc::new(SchedulerJumpClock(std::sync::atomic::AtomicUsize::new(0))),
+        rig.diagnostics.clone(),
+    ));
+    let scheduler = tokio::spawn(worker.run());
+    let sent = tokio::time::timeout(Duration::from_secs(2), async {
+        while rig.google.sends().is_empty() {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await;
+    scheduler.abort();
+    sent.unwrap();
+    assert!(
+        rig.s3
+            .body("index/v2/push/delivery/alarm/20261016/0035.json")
+            .is_some(),
+        "claim the actual wake minute"
+    );
+    assert!(
+        rig.s3
+            .body("index/v2/push/delivery/alarm/20261016/0007.json")
+            .is_none(),
+        "do not claim or send the missed minute"
+    );
+    assert_eq!(rig.google.sends().len(), 1);
+    assert!(rig.google.sends()[0].body.contains("current-alarm"));
+    assert!(!rig.google.sends()[0].body.contains("missed-alarm"));
+}

@@ -69,6 +69,7 @@ use crate::domestic::publication::{self, Publication};
 use crate::gateway::{BoxFuture, OrderedJson};
 use crate::history::{IndexListing, schedule};
 use crate::storage::{CatalogLimits, CatalogStore, ProviderKey};
+use crate::summary::{GridInputs, InputId, grid::AsosInputs};
 use crate::warnings::{
     service::{ServiceConfig, WarningService},
     store::{StoreConfig, WarningStore},
@@ -469,8 +470,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     ) -> Result<Vec<Doc>, String> {
         self.grid_answer_by(family, grid, now, deadline, wait_bound(deadline))
             .await
+            .map(|(docs, _)| docs)
     }
-    /// [`Self::grid_answer`] waiting for an acquisition only until `until` (the request's bound).
+    /// [`Self::grid_answer`] waiting for an acquisition only until `until` (the request's bound),
+    /// with the S16 identities of the acquisitions it folded (`None` when S06 excluded a listed
+    /// group: a partial read).
     async fn grid_answer_by(
         &self,
         family: Family,
@@ -478,7 +482,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         deadline: Instant,
         until: Instant,
-    ) -> Result<Vec<Doc>, String> {
+    ) -> Result<(Vec<Doc>, Option<Vec<InputId>>), String> {
         let coord = Coord {
             mx: f64::from(grid.nx()),
             my: f64::from(grid.ny()),
@@ -498,11 +502,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .map_err(|e| format!("{} listing: {e}", sf.kind()))?;
         let oldest = schedule::from_ms(from as i64).partition();
         let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
-        let mut fetched = self
+        let (mut fetched, excluded) = self
             .reader
-            .all(sf.source(), sf.kind(), &key, &wanted, deadline)
+            .all_counted(sf.source(), sf.kind(), &key, &wanted, deadline)
             .await
             .map_err(|e| format!("{} read: {e}", sf.kind()))?;
+        // S16: this request's own acquisition keeps its stored fetch time in its identity (the
+        // fold sees it at the request instant).
+        let mut own: Option<InputId> = None;
         if let Some(latest) = sf.latest(now as i64) {
             // A stored acquisition legacy would not keep (an invalid forecast, a current
             // observation with a recovery sentinel) leaves its publication missing, so it stays
@@ -536,13 +543,23 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     )
                     .await
             {
+                own = grid_input_id(family, sf.kind(), &f);
                 fetched.push(visible(f, now));
             }
             if !backfill.is_empty() {
                 self.backfill(sf, grid, latest, backfill).await;
             }
         }
-        Ok(grid_documents(family, coord, &fetched, now))
+        let ids = (excluded == 0).then(|| {
+            let stored = fetched.len() - usize::from(own.is_some());
+            fetched[..stored]
+                .iter()
+                .filter(|f| f.fetched_at_ms as f64 <= now)
+                .filter_map(|f| grid_input_id(family, sf.kind(), f))
+                .chain(own)
+                .collect()
+        });
+        Ok((grid_documents(family, coord, &fetched, now), ids))
     }
     /// One owned pass over the missing backfill publications of a cell and family when its latest
     /// publication is `latest` (at most once per [`BACKFILL_RETRY`]), newest first, 3 in flight.
@@ -800,11 +817,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let section = (until + std::time::Duration::from_millis(200)).min(deadline);
         let observations = async {
             let folded = self.observations.stations(now as i64, until).await;
-            let history = self
+            let (history, asos) = self
                 .observations
-                .history(&town, folded.as_deref(), now, until)
+                .history_with_inputs(&town, folded.as_deref(), now, until)
                 .await;
-            (folded, history)
+            // S16: completeness of the station state these answers came from, judged at once.
+            let settled = folded
+                .as_ref()
+                .is_some_and(|f| self.observations.settled(now as i64, f));
+            (folded, (history, asos, settled))
         };
         let dust_wanted = air_input::airkorea_forecast_requested(&request.query);
         let image_wanted = air_input::image_forecast_requested(&request.query);
@@ -820,7 +841,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let (
             zones_and_mids,
             (current, shortest, short, rss),
-            (stations, history),
+            (stations, (history, asos, settled)),
             air,
             special,
             life,
@@ -857,12 +878,29 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             self.life.load(now, section),
         );
         let (zones, mids) = zones_and_mids?;
+        let (current, current_ids) = current?;
+        let (shortest, shortest_ids) = shortest?;
+        let (short, short_ids) = short?;
+        // S16: None when any grid family read was partial.
+        let ids: Option<Vec<InputId>> = [current_ids, shortest_ids, short_ids]
+            .into_iter()
+            .try_fold(Vec::new(), |mut all, part| {
+                all.extend(part?);
+                Some(all)
+            });
         let mut models = HashMap::new();
-        models.insert(TownModel::Current, current?);
-        models.insert(TownModel::Shortest, shortest?);
-        models.insert(TownModel::Short, short?);
+        models.insert(TownModel::Current, current);
+        models.insert(TownModel::Shortest, shortest);
+        models.insert(TownModel::Short, short);
         models.insert(TownModel::ShortRss, rss?);
+        let summary = match (settled, ids) {
+            (true, Some(ids)) => {
+                summary_inputs(&town, grid, &history, ids, stations.as_deref(), asos)
+            }
+            _ => None,
+        };
         Ok(Snapshot {
+            summary,
             now,
             town,
             coord,
@@ -960,6 +998,71 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             })
             .await;
     }
+}
+/// S16: the summary inputs of a snapshot whose station state was read completely, or None
+/// (the history answer still loading or failed, an ASOS recovery run in flight or a failed ASOS
+/// read). Grid families that could not be read forward the request before this point.
+fn summary_inputs(
+    town: &Doc,
+    grid: crate::history::Grid,
+    history: &OrderedJson,
+    mut ids: Vec<InputId>,
+    folded: Option<&observe::Folded>,
+    asos: Option<observe::AsosView>,
+) -> Option<GridInputs> {
+    let names = town.get("town").and_then(Val::as_doc)?;
+    let name = |k: &str| names.get(k).and_then(Val::as_str).map(str::to_owned);
+    let town_key = [name("first")?, name("second")?, name("third")?];
+    match history
+        .get("reason")
+        .and_then(OrderedJson::string)
+        .as_deref()
+    {
+        None | Some("station-unavailable") => {}
+        Some(_) => return None,
+    }
+    let folded = folded?;
+    // The station registry decides station selection and the ASOS mapping of every date.
+    let (registry, since) = folded.registry_id.clone()?;
+    ids.push(InputId {
+        family: "station-registry".into(),
+        start_ms: i64::MIN / 2,
+        end_ms: i64::MAX / 2,
+        fetched_at_ms: since.max(0.) as u64,
+        content_sha256: registry,
+    });
+    for page in folded.pages.iter() {
+        let t = schedule::to_ms(page.hour);
+        ids.push(InputId {
+            family: page.kind.to_owned(),
+            start_ms: t,
+            end_ms: t,
+            fetched_at_ms: page.fetched_at_ms.max(0.) as u64,
+            content_sha256: page.sha256.clone(),
+        });
+    }
+    let asos = match asos {
+        Some(view) if view.settled => {
+            ids.extend(
+                view.fetched
+                    .iter()
+                    .filter_map(crate::summary::asos::input_id),
+            );
+            Some(AsosInputs {
+                station: view.station,
+                fetched: view.fetched,
+            })
+        }
+        Some(_) => return None,
+        // No mapped station within 100 km (`station-unavailable`).
+        None => None,
+    };
+    Some(GridInputs {
+        town: town_key,
+        grid: (grid.nx(), grid.ny()),
+        ids,
+        asos,
+    })
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> {
     fn snapshot(&self, request: &KmaRequest, deadline: Instant) -> BoxFuture<'_, SourceAnswer> {
@@ -1082,6 +1185,21 @@ fn usable(family: Family, coord: Coord, f: &Fetched) -> bool {
         }
         _ => false,
     }
+}
+/// The S16 input identity of one grid acquisition: its publication through the last row it can
+/// write, the horizons of [`lookback_ms`] (current: the slot; ultra-short: six hours plus a
+/// trailing day; short: six days).
+pub fn grid_input_id(family: Family, kind: &str, f: &Fetched) -> Option<InputId> {
+    let p = partition_publication(&f.partition)?;
+    let start = schedule::to_ms(p);
+    let horizon = lookback_ms(family) - grid::RETENTION_MS - HOUR_MS;
+    Some(InputId {
+        family: kind.to_owned(),
+        start_ms: start,
+        end_ms: start + horizon as i64,
+        fetched_at_ms: f.fetched_at_ms,
+        content_sha256: identity(f).2,
+    })
 }
 /// Retry bound of a missing latest publication (legacy re-walks late grids near +5 and +10
 /// minutes, #2676).
@@ -1268,6 +1386,8 @@ pub fn special_zone_docs(state: &ZoneState, area_codes: &[String]) -> Vec<Doc> {
 
 /// One request's inputs in memory.
 pub struct Snapshot {
+    /// S16 summary inputs (None: the reads were not complete).
+    summary: Option<GridInputs>,
     now: f64,
     town: Doc,
     coord: Coord,
@@ -1426,7 +1546,8 @@ impl KmaStore for Snapshot {
         }
     }
     /// `getForecast(stationName)` of the AirKorea image forecast; KAQ has no forecast (its source
-    /// is gone, issue #2742), so `kaq` is the legacy rejection [`crate::domestic::kma::NO_KAQ_FORECAST`].
+    /// is gone, issue #2742), so `kaq` is the legacy rejection [`crate::domestic::kma::NO_KAQ_FORECAST`]
+    /// and a `kaq` request reads the AirKorea forecast (legacy #2771).
     fn air_forecast(&self, source: &str, station: &Value) -> StoreResult {
         match source {
             "kaq" => Err(StoreError(crate::domestic::kma::NO_KAQ_FORECAST.into())),
@@ -1462,5 +1583,8 @@ impl KmaStore for Snapshot {
     }
     fn as_of_ms(&self) -> Option<f64> {
         Some(self.now)
+    }
+    fn summary_inputs(&self) -> Option<GridInputs> {
+        self.summary.clone()
     }
 }

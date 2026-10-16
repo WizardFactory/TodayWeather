@@ -305,8 +305,11 @@ assembly: `controllerTown24h` `checkQueryValidation` L68 (absent or `(null)` →
 | `air_forecast("airkorea", station)` | `getMinuDustFrcstDspth` `imageUrl7` (PM10) and `imageUrl8` (PM2.5): animated GIFs on `https://www.airkorea.or.kr/dustImage/…`; the `11시 발표` documents of 2026-10-15 named the previous day's 23-cycle (820×820, 48 frames of 673×795 at (66,10), 5.1/4.9 MB), the `17시 발표` ones the 17-cycle (54 frames, 6.2/5.9 MB) | `kecoRequester.getMinuDustFrcstDspth` L649-703 → `AirkoreaHourlyForecastController.do` L95 (`_checkHourlyForecast` L127, `_getImgPaths` L67, `getDustImage` with `airkoreaImageLayout.frameStart`, `getPixelMap` with `layout.validate`, `getDustInfo` with `layout.station`, `_makeHourForecast` override, `_updateDb` L28, `_removeOldData` L116) | `getForecast` (`img.hourly.forecast.controller` L149) |
 | `air_forecast("kaq", station)` | none (KAQ source gone) | — | `KaqHourlyForecastController.getForecast` L469 → `_findLatestMapCase` L231-239 (`Fail to get map case`) |
 
-Where they disagree: `kaq` — legacy answers no forecast; server2 answers AirKorea labelled
-`airkorea` when the store has no KAQ forecast at all (AK). Legacy fetches the provider URL as
+`kaq`: server2 follows legacy #2771 (`915978bb`, S15b-3e). KAQ rows are used when one is usable
+after now and within the day after the last observation; otherwise the stored AirKorea forecast
+under the same condition, labelled `airkorea`; otherwise none. The earlier AK-approved difference
+(AirKorea only when no KAQ forecast exists) is now legacy behavior and is no longer a difference.
+Where they disagree: legacy fetches the provider URL as
 given; server2 fetches its validated path on the built-in root (the same resource). Legacy decodes
 any GIF; server2 bounds the frame descriptors first. Legacy accepts an image of any date for an
 announcement; server2 rejects (before download, and in the fold) an image whose first frame is
