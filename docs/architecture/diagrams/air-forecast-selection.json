@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Stored air forecast selection",
+    "output": "docs/architecture/diagrams/air-forecast-selection.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      600
+    ]
+  },
+  "participants": [
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "Installed app",
+      "sublabel": "airForecastSource=kaq"
+    },
+    {
+      "id": "route",
+      "type": "backend",
+      "label": "Town24h route",
+      "sublabel": "AirForecast / AirForecastList"
+    },
+    {
+      "id": "kaq",
+      "type": "database",
+      "label": "KAQ store",
+      "sublabel": "same station"
+    },
+    {
+      "id": "airkorea",
+      "type": "database",
+      "label": "AirKorea store",
+      "sublabel": "same station"
+    }
+  ],
+  "segments": [
+    {
+      "from": 146,
+      "to": 268,
+      "label": "KAQ first"
+    },
+    {
+      "from": 280,
+      "to": 400,
+      "label": "Stored fallback"
+    },
+    {
+      "from": 412,
+      "to": 488,
+      "label": "Response"
+    }
+  ],
+  "messages": [
+    {
+      "id": "request",
+      "from": "client",
+      "to": "route",
+      "y": 160,
+      "label": "weather request + observations ready",
+      "variant": "emphasis"
+    },
+    {
+      "id": "read-kaq",
+      "from": "route",
+      "to": "kaq",
+      "y": 200,
+      "label": "getForecast(stationName)",
+      "variant": "default"
+    },
+    {
+      "id": "kaq-result",
+      "from": "kaq",
+      "to": "route",
+      "y": 240,
+      "label": "retain if usable; otherwise fallback",
+      "variant": "return"
+    },
+    {
+      "id": "read-airkorea",
+      "from": "route",
+      "to": "airkorea",
+      "y": 300,
+      "label": "KAQ unavailable: getForecast(same station)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "airkorea-result",
+      "from": "airkorea",
+      "to": "route",
+      "y": 350,
+      "label": "usable stored forecast or no data",
+      "variant": "return"
+    },
+    {
+      "id": "response",
+      "from": "route",
+      "to": "client",
+      "y": 440,
+      "label": "observations + one selected forecast timeline",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Availability",
+      "items": [
+        "Supported pollutant with finite numeric value \u22650; KST timestamp strictly after now and the observation, through observation +24 h.",
+        "Valid KAQ stays selected, including partial pollutants. No cross-source timeline merge."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Compatibility",
+      "items": [
+        "Fallback uses real AirKorea forecastSource and publication times. Observation source and values remain unchanged.",
+        "Explicit AirKorea behavior stays intact. Neither source usable: no invented forecasts. No provider calls or writes."
+      ]
+    }
+  ]
+}

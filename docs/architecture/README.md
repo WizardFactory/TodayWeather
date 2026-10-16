@@ -42,6 +42,7 @@ Files ending in `.visual-check.html` are local screenshot contact sheets, not th
 | Mobile request (sequence) | [Request lifecycle](diagrams/mobile-weather-request.html) | [JSON](diagrams/mobile-weather-request.json) |
 | KAQ image producer and consumer | [KAQ pipeline](diagrams/kaq-image-pipeline.html) | [JSON](diagrams/kaq-image-pipeline.json) |
 | Overseas air request (sequence) | [Shared provider chain](diagrams/world-air-request.html) | [JSON](diagrams/world-air-request.json) |
+| Stored air forecast selection (sequence) | [KAQ to AirKorea](diagrams/air-forecast-selection.html) | [JSON](diagrams/air-forecast-selection.json) |
 | Domestic air fallback (sequence) | [AirKorea first, provider chain](diagrams/domestic-air-fallback.html) | [JSON](diagrams/domestic-air-fallback.json) |
 
 The overview combines AWS-confirmed routing with repository logical roles. Dashed deployment connections remain unverified at the EC2 process/configuration level. The collection view focuses on domestic scheduled ingestion; world-weather cache fills are explained in the collection document. Auxiliary provider calls are omitted from the overview to keep it readable.
