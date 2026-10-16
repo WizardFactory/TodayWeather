@@ -8,3 +8,6 @@ mod faults;
 mod parity;
 #[path = "state/common.rs"]
 mod state_common;
+
+#[path = "delivery/alerts.rs"]
+mod alerts;

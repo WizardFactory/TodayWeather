@@ -1,0 +1,71 @@
+{
+  "task": "S18b-2",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2703",
+  "server2_paths": [
+    "server2/config/tasks/S18b-2.json",
+    "server2/src/push/deliver/",
+    "server2/src/push/service.rs",
+    "server2/tests/delivery.rs",
+    "server2/tests/delivery/",
+    "server2/tools/push/",
+    "server2/examples/conditional_alert_smoke.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2703.md",
+      "category": "documentation",
+      "reason": "Add conditional alerts slice authority and acceptance"
+    },
+    {
+      "path": "specs/issue-2703.md",
+      "category": "documentation",
+      "reason": "Document legacy conditional evaluation and durable no-resend boundary"
+    },
+    {
+      "path": "plans/issue-2703.md",
+      "category": "documentation",
+      "reason": "Record S18b-2 scenarios and checks"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Describe conditional worker and selection/update contracts"
+    },
+    {
+      "path": "docs/operations/server2-push-delivery.md",
+      "category": "documentation",
+      "reason": "Operator manual with actual offline scenario captures"
+    },
+    {
+      "path": "docs/operations/server2-push-delivery.pdf",
+      "category": "documentation",
+      "reason": "Rendered checked operator manual"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-push-delivery.json",
+      "category": "documentation",
+      "reason": "Editable conditional-delivery flow"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-push-delivery.html",
+      "category": "documentation",
+      "reason": "Generated flow artifact"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2703-s18b2/verification.md",
+      "category": "documentation",
+      "reason": "Selected sanitized acceptance and source evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2703-s18b2/conditional-smoke.png",
+      "category": "documentation",
+      "reason": "Actual offline functional smoke stdout capture for manual"
+    }
+  ],
+  "declaration_record": "AK authorized S18 completion and reviews; parent delegated S18b-2 2026-10-16",
+  "path_notes": {
+    "server2/src/push/deliver/": "Conditional alert parsing, comparison, updates, locale subset, minute worker and internal transactions; existing alarm/FCM/ledger helpers reused",
+    "server2/src/push/service.rs": "Add conditional state update/disable/cleanup/duplicates internal operations with stale selection guard",
+    "server2/tools/push/": "Offline Node legacy oracle recorder and local functional smoke only; no runtime legacy access"
+  }
+}
