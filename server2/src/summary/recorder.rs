@@ -1,0 +1,230 @@
+//! The post-response summary recorder. After a natively served v000903 response whose snapshot
+//! read complete inputs, it stores the complete grid days of the town and the complete ASOS days
+//! of its mapped station. It never delays a response: the work runs as a bounded background task.
+//!
+//! Per (source, key, date) memory keeps the last examined input digest and the newest stored
+//! revision it saw. An input set already examined costs nothing. A new one lists the date in S3
+//! (another process may have written a newer revision) and writes a revision when its newest
+//! input is newer than the stored newest revision's (also with equal values, so the stored order
+//! follows the inputs), or as new as it with other values. An older input set never supersedes a
+//! newer one. Record work is serialized in a process and the remembered newest never moves back.
+use super::grid::{self, GridInputs};
+use super::store::SummaryStore;
+use super::transport::SummaryTransport;
+use super::{ObjectName, Source, Summary, add_days, kst_date};
+use crate::gateway::OrderedJson;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio::sync::Semaphore;
+use tokio::time::Instant;
+
+/// Record tasks running at once; a request finding both busy records nothing (a later request
+/// of the town repeats the work).
+pub const TASKS: usize = 2;
+/// Memory entries kept; beyond this, entries of dates before today-8 are dropped first.
+pub const MEMORY_ENTRIES: usize = 65_536;
+/// Bound of one record task (S3 reads and writes, not a provider call).
+const TASK_TIME: Duration = Duration::from_secs(30);
+
+/// Receives the summary inputs of a natively served response (the KMA backend calls it).
+pub trait SummarySink: Send + Sync + 'static {
+    fn record(&self, inputs: GridInputs, rows: Vec<OrderedJson>, now_ms: f64);
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RecordReport {
+    /// Object keys of the revisions written.
+    pub written: Vec<String>,
+    /// Candidates with an examined input set, equal values or an older input set.
+    pub unchanged: usize,
+    /// Candidates whose S3 read or write failed (retried by a later request).
+    pub failed: usize,
+}
+
+#[derive(Debug, Clone, Default)]
+struct Entry {
+    examined: Option<String>,
+    /// (object name, values digest) of the newest stored revision seen.
+    newest: Option<(ObjectName, String)>,
+}
+type MemoryKey = (Source, String, u32);
+
+struct Inner<T> {
+    store: SummaryStore<T>,
+    memory: Mutex<HashMap<MemoryKey, Entry>>,
+    tasks: Arc<Semaphore>,
+    dropped: AtomicU64,
+    /// Serializes record work, so revisions of one key and date are decided in order.
+    serial: tokio::sync::Mutex<()>,
+}
+/// Cheap to clone.
+pub struct Recorder<T> {
+    inner: Arc<Inner<T>>,
+}
+impl<T> Clone for Recorder<T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+fn memory_key(s: &Summary) -> MemoryKey {
+    (s.key.source(), s.key.sha256(), s.date)
+}
+impl<T: SummaryTransport> Recorder<T> {
+    pub fn new(transport: T) -> Self {
+        Self {
+            inner: Arc::new(Inner {
+                store: SummaryStore::new(transport),
+                memory: Mutex::new(HashMap::new()),
+                tasks: Arc::new(Semaphore::new(TASKS)),
+                dropped: AtomicU64::new(0),
+                serial: tokio::sync::Mutex::new(()),
+            }),
+        }
+    }
+    pub fn store(&self) -> &SummaryStore<T> {
+        &self.inner.store
+    }
+    /// Record calls dropped because both tasks were busy.
+    pub fn dropped(&self) -> u64 {
+        self.inner.dropped.load(Ordering::Relaxed)
+    }
+    fn memory(&self) -> std::sync::MutexGuard<'_, HashMap<MemoryKey, Entry>> {
+        self.inner.memory.lock().unwrap_or_else(|e| e.into_inner())
+    }
+    /// The complete summaries of a served response: grid days of the town, ASOS days of its
+    /// station (KST today-6..today-1).
+    pub fn candidates(inputs: &GridInputs, rows: &[OrderedJson], now_ms: f64) -> Vec<Summary> {
+        let mut out = grid::summaries(inputs, rows, now_ms);
+        if let Some(asos) = &inputs.asos {
+            out.extend(super::asos::summaries(
+                &asos.station,
+                &asos.fetched,
+                &grid::dates(now_ms),
+            ));
+        }
+        out
+    }
+    /// Store the candidates that need a new revision.
+    pub async fn record_now(
+        &self,
+        candidates: Vec<Summary>,
+        now_ms: f64,
+        deadline: Instant,
+    ) -> RecordReport {
+        let _serial = self.inner.serial.lock().await;
+        let mut report = RecordReport::default();
+        for s in candidates {
+            let key = memory_key(&s);
+            let entry = self.memory().get(&key).cloned().unwrap_or_default();
+            if entry.examined.as_deref() == Some(s.inputs.sha256.as_str()) {
+                report.unchanged += 1;
+                continue;
+            }
+            // The newest stored revision now: another process may have written one.
+            let store = &self.inner.store;
+            let newest = match store.names(&s.key, s.date, deadline).await {
+                Ok(names) => match (names.first(), entry.newest) {
+                    (Some((_, first)), Some(known)) if *first == known.0 => Ok(Some(known)),
+                    _ => store
+                        .newest_of(&s.key, s.date, names, deadline)
+                        .await
+                        .map(|f| f.map(|f| (f.name, f.summary.values_sha256()))),
+                },
+                Err(e) => Err(e),
+            };
+            let Ok(newest) = newest else {
+                report.failed += 1;
+                continue;
+            };
+            let values = s.values_sha256();
+            // Newer inputs are always recorded (also with equal values), so the stored newest
+            // revision carries the newest input time and an older input set, from this or
+            // another process, can never supersede it.
+            let keep = newest.as_ref().is_some_and(|(name, digest)| {
+                name.latest > s.inputs.latest_fetched_ms
+                    || (name.latest == s.inputs.latest_fetched_ms && *digest == values)
+            });
+            let newest = if keep {
+                report.unchanged += 1;
+                newest
+            } else {
+                match self.inner.store.publish(&s, deadline).await {
+                    Ok(()) => {
+                        report.written.push(s.object_key());
+                        let written = ObjectName::parse(&s.object_name());
+                        // Never move back: keep the greater of the written and the known newest.
+                        match (written, newest) {
+                            (Some(w), Some(n)) if n.0 > w => Some(n),
+                            (Some(w), _) => Some((w, values)),
+                            (None, n) => n,
+                        }
+                    }
+                    Err(_) => {
+                        report.failed += 1;
+                        continue;
+                    }
+                }
+            };
+            self.remember(
+                key,
+                Entry {
+                    examined: Some(s.inputs.sha256.clone()),
+                    newest,
+                },
+                now_ms,
+            );
+        }
+        report
+    }
+    fn remember(&self, key: MemoryKey, entry: Entry, now_ms: f64) {
+        let mut memory = self.memory();
+        if memory.len() >= MEMORY_ENTRIES && !memory.contains_key(&key) {
+            let floor = add_days(kst_date(now_ms), -8).unwrap_or(0);
+            memory.retain(|k, _| k.2 >= floor);
+            if memory.len() >= MEMORY_ENTRIES {
+                memory.clear();
+            }
+        }
+        memory.insert(key, entry);
+    }
+    /// Wait until no record task runs (tests and shutdown); false at the deadline.
+    pub async fn idle(&self, deadline: Instant) -> bool {
+        matches!(
+            tokio::time::timeout_at(deadline, self.inner.tasks.acquire_many(TASKS as u32)).await,
+            Ok(Ok(_))
+        )
+    }
+}
+impl<T: SummaryTransport> SummarySink for Recorder<T> {
+    fn record(&self, inputs: GridInputs, rows: Vec<OrderedJson>, now_ms: f64) {
+        let candidates: Vec<Summary> = {
+            let memory = self.memory();
+            Self::candidates(&inputs, &rows, now_ms)
+                .into_iter()
+                .filter(|s| {
+                    memory
+                        .get(&memory_key(s))
+                        .and_then(|e| e.examined.as_deref())
+                        != Some(s.inputs.sha256.as_str())
+                })
+                .collect()
+        };
+        if candidates.is_empty() {
+            return;
+        }
+        let Ok(permit) = self.inner.tasks.clone().try_acquire_owned() else {
+            self.inner.dropped.fetch_add(1, Ordering::Relaxed);
+            return;
+        };
+        let this = self.clone();
+        tokio::spawn(async move {
+            let _permit = permit;
+            this.record_now(candidates, now_ms, Instant::now() + TASK_TIME)
+                .await;
+        });
+    }
+}
