@@ -2,132 +2,128 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "S20b planned runtime supervision",
+    "title": "S20b supervised runtime lifecycle",
     "output": "docs/architecture/diagrams/server2-runtime-services.html",
     "quality_profile": "showcase",
     "repository": {
-      "url": "https://github.com/WizardFactory/TodayWeather.git",
-      "revision": "171472c5bfffb0010f1868ffcae1100dfb262de6"
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "ef4909533ebb387ae2d7b3020580587eb434cd84"
     }
   },
   "components": [
     {
-      "id": "http",
+      "id": "process",
       "type": "backend",
-      "label": "Public HTTP",
-      "sublabel": "Health + selected routes",
+      "label": "Process + factory",
+      "sublabel": "Bind both; common signal/error stop",
       "pos": [
-        50,
-        320
+        40,
+        245
       ],
       "size": [
-        185,
-        68
+        240,
+        110
       ],
       "sources": [
         {
           "path": "server2/src/process.rs",
-          "line": 46
-        }
-      ]
-    },
-    {
-      "id": "services",
-      "type": "backend",
-      "label": "Runtime services",
-      "sublabel": "One production constructor",
-      "pos": [
-        340,
-        300
-      ],
-      "size": [
-        200,
-        108
-      ],
-      "sources": [
+          "line": 83
+        },
         {
           "path": "server2/src/runtime_services.rs",
-          "line": 34
+          "line": 116
+        },
+        {
+          "path": "server2/src/process.rs",
+          "line": 132
         }
       ]
     },
     {
-      "id": "push",
+      "id": "writer",
       "type": "backend",
-      "label": "Push registration",
-      "sublabel": "Durable writer only",
+      "label": "Registration writer",
+      "sublabel": "Quiesce HTTP; close / join / abort",
       "pos": [
-        1050,
-        20
+        40,
+        25
       ],
       "size": [
-        220,
-        68
+        240,
+        90
       ],
       "sources": [
         {
           "path": "server2/src/push/service.rs",
-          "line": 177
+          "line": 224
+        }
+      ]
+    },
+    {
+      "id": "jobs",
+      "type": "backend",
+      "label": "Owned delivery jobs",
+      "sublabel": "UTC alarm/alerts; silent warning baseline",
+      "pos": [
+        430,
+        245
+      ],
+      "size": [
+        240,
+        110
+      ],
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/supervisor.rs",
+          "line": 48
+        }
+      ]
+    },
+    {
+      "id": "fcm",
+      "type": "backend",
+      "label": "OAuth + FCM client",
+      "sublabel": "Lazy product files; final stop check",
+      "pos": [
+        900,
+        245
+      ],
+      "size": [
+        240,
+        110
+      ],
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/fcm.rs",
+          "line": 261
         }
       ]
     },
     {
       "id": "native",
       "type": "backend",
-      "label": "Native dependencies",
-      "sublabel": "KMA / DSF / geocoder",
+      "label": "Shared native services",
+      "sublabel": "Typed fetch + WarningStore / feed",
       "pos": [
-        690,
-        320
+        430,
+        480
       ],
       "size": [
-        200,
-        68
+        240,
+        110
       ],
       "sources": [
         {
-          "path": "server2/src/gateway/runtime.rs",
-          "line": 393
-        }
-      ]
-    },
-    {
-      "id": "warning",
-      "type": "backend",
-      "label": "Warning collector + feed",
-      "sublabel": "Zone store precedes feed",
-      "pos": [
-        840,
-        490
-      ],
-      "size": [
-        200,
-        68
-      ],
-      "sources": [
+          "path": "server2/src/runtime_services.rs",
+          "line": 114
+        },
         {
-          "path": "server2/src/warnings/collector.rs",
-          "line": 194
-        }
-      ]
-    },
-    {
-      "id": "notice",
-      "type": "backend",
-      "label": "Notice GET / HEAD",
-      "sublabel": "No Translator client",
-      "pos": [
-        1050,
-        650
-      ],
-      "size": [
-        220,
-        68
-      ],
-      "sources": [
+          "path": "server2/src/runtime_services.rs",
+          "line": 145
+        },
         {
-          "path": "server2/src/notice/api.rs",
-          "line": 25
+          "path": "server2/src/push/deliver/native_fetch.rs",
+          "line": 31
         }
       ]
     },
@@ -135,128 +131,118 @@
       "id": "s3",
       "type": "database",
       "label": "Shared bounded S3",
-      "sublabel": "One credential cache + pool",
+      "sublabel": "State / claims / results / warning data",
       "pos": [
-        1050,
-        294
+        40,
+        480
       ],
       "size": [
-        220,
-        120
+        240,
+        110
       ],
       "sources": [
         {
-          "path": "server2/src/gateway/runtime.rs",
-          "line": 199
+          "path": "server2/src/runtime_services.rs",
+          "line": 60
+        },
+        {
+          "path": "server2/src/push/deliver/ledger.rs",
+          "line": 59
         }
       ]
     },
     {
-      "id": "fetch",
+      "id": "notice",
       "type": "backend",
-      "label": "NativeFetch prepared",
-      "sublabel": "Strict typed dispatch; 3s",
+      "label": "Notice GET / HEAD",
+      "sublabel": "Read only; no Translator client",
       "pos": [
-        690,
-        140
+        40,
+        710
       ],
       "size": [
-        200,
-        68
+        240,
+        80
       ],
       "sources": [
         {
-          "path": "server2/src/push/deliver/native_fetch.rs",
-          "line": 35
+          "path": "server2/src/notice/api.rs",
+          "line": 25
         }
       ]
     }
   ],
   "connections": [
     {
-      "id": "http-services",
-      "from": "http",
-      "to": "services",
-      "label": "dispatch"
+      "id": "process-writer",
+      "from": "process",
+      "to": "writer",
+      "label": "quiesce + drain"
     },
     {
-      "id": "services-push",
-      "from": "services",
-      "to": "push",
-      "label": "selected"
+      "id": "process-jobs",
+      "from": "process",
+      "to": "jobs",
+      "label": "after both binds"
     },
     {
-      "id": "services-notice",
-      "from": "services",
-      "to": "notice",
-      "label": "selected"
+      "id": "jobs-writer",
+      "from": "jobs",
+      "to": "writer",
+      "label": "current state guard",
+      "fromSide": "top",
+      "toSide": "right"
     },
     {
-      "id": "services-native",
-      "from": "services",
+      "id": "jobs-fcm",
+      "from": "jobs",
+      "to": "fcm",
+      "label": "claim + final admission"
+    },
+    {
+      "id": "jobs-native",
+      "from": "jobs",
       "to": "native",
-      "label": "construct once"
+      "label": "typed native calls"
     },
     {
-      "id": "native-warning",
-      "from": "native",
-      "to": "warning",
-      "label": "on request"
+      "id": "jobs-s3",
+      "from": "jobs",
+      "to": "s3",
+      "label": "durable claim / result",
+      "fromSide": "bottom",
+      "toSide": "top"
     },
     {
       "id": "native-s3",
       "from": "native",
       "to": "s3",
-      "label": "read / write"
-    },
-    {
-      "id": "services-fetch",
-      "from": "services",
-      "to": "fetch",
-      "label": "holds"
-    },
-    {
-      "id": "fetch-native",
-      "from": "fetch",
-      "to": "native",
-      "label": "on get only"
-    },
-    {
-      "id": "push-s3",
-      "from": "push",
-      "to": "s3",
-      "label": "durable journal"
+      "label": "read / publish"
     },
     {
       "id": "notice-s3",
       "from": "notice",
       "to": "s3",
-      "label": "read state"
-    },
-    {
-      "id": "warning-s3",
-      "from": "warning",
-      "to": "s3",
-      "label": "store then feed"
+      "label": "read publication"
     }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Construction contract",
+      "title": "Scheduling and admission",
       "items": [
-        "One shared native factory; ordinary push selection.",
-        "Planned: delivery starts after both listener binds.",
-        "No constructor provider, OAuth, FCM or Translator calls."
+        "Ordinary push selection; no startup weather precollection.",
+        "Observe UTC minutes; reject stale queued ticks, never catch up.",
+        "After OAuth: current subscription/time/zones and final stop gate."
       ]
     },
     {
       "dot": "amber",
-      "title": "Persistence and lifecycle",
+      "title": "One 35-second cancellation envelope",
       "items": [
-        "Planned: process owns minute jobs, warning polls and writer.",
-        "Stop closes scheduling and final POST admission.",
-        "35s cancellation envelope; provider completion unverified."
+        "34s shared HTTP/job/writer deadline + 1s runtime teardown.",
+        "Long owned acquisitions may remain incomplete and are cancelled.",
+        "Durable claims survive failed/unknown/cancelled sends; no replay."
       ]
     }
   ]
