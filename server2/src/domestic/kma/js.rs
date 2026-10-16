@@ -654,6 +654,49 @@ fn array_method(o: &Ob, method: &str) -> Option<bool> {
             .and_then(|proto| array_method(proto, method))
     }
 }
+/// Array.join on an ordinary receiver with a sparse array prototype. Work scales with
+/// stored properties and output bytes, rather than allocating one String for each hole.
+fn array_join_object(o: &Ob, len: usize) -> String {
+    fn keys(o: &Ob, len: usize, indices: &mut std::collections::BTreeSet<usize>) {
+        let p = o.0.borrow();
+        for (key, _) in &p.entries {
+            if let Some(index) = index_key(key).map(|i| i as usize).filter(|i| *i < len) {
+                indices.insert(index);
+            }
+        }
+        if let Some(proto) = &p.proto {
+            keys(proto, len, indices);
+        }
+    }
+    let mut indices = std::collections::BTreeSet::new();
+    keys(o, len, &mut indices);
+    let mut parts = Vec::new();
+    let mut output_units = len.saturating_sub(1);
+    for index in indices {
+        let value = o.get(&index.to_string());
+        if !value.nullish() {
+            let text = to_str(&value);
+            output_units = output_units.saturating_add(units(&text).len());
+            parts.push((index, text));
+        }
+    }
+    // buffer.constants.MAX_STRING_LENGTH on the pinned Node 16.20.2 (64-bit V8).
+    if output_units > 536_870_888 {
+        throw("RangeError: Invalid string length");
+    }
+    let mut text = String::new();
+    let mut cursor = 0;
+    for (index, part) in parts {
+        text.extend(std::iter::repeat_n(',', index - cursor));
+        text.push_str(&part);
+        cursor = index;
+    }
+    text.extend(std::iter::repeat_n(
+        ',',
+        len.saturating_sub(1).saturating_sub(cursor),
+    ));
+    text
+}
 /// `OrdinaryToPrimitive(o, hint)`. qs values have data properties, but a prototype
 /// assigned from an array inherits callable Array.prototype.toString/join. Array.toString
 /// calls join with the original receiver, so own length/elements still take precedence.
@@ -675,19 +718,7 @@ fn object_to_primitive(o: &Ob, string_hint: bool) -> V {
                 if !len.is_finite() || len > u32::MAX as f64 {
                     throw("TypeError: Invalid array length");
                 }
-                let len = len as usize;
-                let text = (0..len)
-                    .map(|i| {
-                        let v = o.get(&i.to_string());
-                        if v.nullish() {
-                            String::new()
-                        } else {
-                            to_str(&v)
-                        }
-                    })
-                    .collect::<Vec<_>>()
-                    .join(",");
-                return V::Str(text.into());
+                return V::Str(array_join_object(o, len as usize).into());
             }
             _ if method == "toString" => return V::s("[object Object]"),
             _ => {}

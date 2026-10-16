@@ -10,13 +10,15 @@
 //! - `AIRKOREA_SECRET_KEYS`: the legacy key list (a JSON array, `dataGoKrKeys.parse` rules).
 //!   Without a key no AirKorea acquisition runs; stored records are still read.
 //!
-//! Built in (S10e, AK 2026-10-15: no server2-only settings): [`AIRKOREA_DAILY_UNITS`] S08 units
-//! per key and KST day across the AirKorea operations server2 calls, and the production
-//! data.go.kr root (`gateway::runtime::Builtins`).
+//! Built in (S10e, AK 2026-10-15: no server2-only settings): the S08 units per key, AirKorea API
+//! and KST day ([`DataGoKrApi::daily_units`], AK decision 5: `ArpltnInforInqireSvc` and
+//! `MsrstnInfoInqireSvc` each have their own allowance), and the production data.go.kr root
+//! (`gateway::runtime::Builtins`).
 use crate::budget::{BudgetPolicy, BudgetStore, BudgetTransport, Clock, Provider};
 use crate::domestic::airkorea::AirKoreaRequest;
 use crate::domestic::family::{Endpoints, Service};
 use crate::domestic::metrics::DomesticMetrics;
+use crate::domestic::quota::DataGoKrApi;
 use crate::domestic::{Acquired, DomesticAcquirer, KeyRing};
 use crate::gateway::BoxFuture;
 use crate::providers::{
@@ -39,11 +41,6 @@ pub const CALL_BUDGET: Duration = Duration::from_secs(30);
 pub fn airkorea_transport() -> Result<HttpProviderTransport, ProviderTransportError> {
     HttpProviderTransport::with_connect_timeout(2 * 1024 * 1024, legacy_timeout::AIRKOREA)
 }
-/// S08 units per AirKorea key and KST day: the documented development-account traffic of
-/// `B552584/ArpltnInforInqireSvc`, "개발계정 : 500" per operation
-/// (<https://www.data.go.kr/data/15073861/openapi.do>, read 2026-10-15). One budget spans every
-/// AirKorea operation server2 calls, so it never exceeds a single operation's allowance.
-pub const AIRKOREA_DAILY_UNITS: u64 = 500;
 /// S06 publication bound after a complete acquisition.
 const PUBLISH_BUDGET: Duration = Duration::from_secs(10);
 const DAY_MS: i64 = 86_400_000;
@@ -77,19 +74,21 @@ pub const IMAGE_CALL_BUDGET: Duration = Duration::from_secs(60);
 pub struct AirKoreaSettings {
     /// Decoded keys in configuration order (legacy `withKeys` starts with the last one).
     pub keys: Vec<String>,
-    pub daily_units: u64,
+    /// Daily S08 units of one AirKorea API per key ([`DataGoKrApi::daily_units`]).
+    pub units: crate::domestic::kma::source::observe::ApiUnits,
     pub endpoints: Endpoints,
 }
 impl std::fmt::Debug for AirKoreaSettings {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AirKoreaSettings")
             .field("keys", &self.keys.len())
-            .field("daily_units", &self.daily_units)
+            .field("arpltn_units", &(self.units)(DataGoKrApi::AirKoreaArpltn))
+            .field("msrstn_units", &(self.units)(DataGoKrApi::AirKoreaMsrstn))
             .finish()
     }
 }
 impl AirKoreaSettings {
-    /// `AIRKOREA_SECRET_KEYS` (legacy name) with the built-in [`AIRKOREA_DAILY_UNITS`], at the
+    /// `AIRKOREA_SECRET_KEYS` (legacy name) with the built-in [`DataGoKrApi::daily_units`], at the
     /// given provider roots (production: `gateway::runtime::Builtins::production`). None without a
     /// usable key.
     pub fn from_vars(
@@ -104,19 +103,15 @@ impl AirKoreaSettings {
         }
         Ok(Some(Self {
             keys,
-            daily_units: AIRKOREA_DAILY_UNITS,
+            units: DataGoKrApi::daily_units,
             endpoints,
         }))
     }
 }
-/// The S08 quota owner of one AirKorea key: a domain-separated SHA-256 (the key never leaves).
-pub fn quota_owner(key: &str) -> String {
-    use sha2::{Digest, Sha256};
-    let mut hash = Sha256::new();
-    hash.update(b"server2-airkorea-quota-v1");
-    hash.update([0u8]);
-    hash.update(key.as_bytes());
-    hash.finalize().iter().map(|b| format!("{b:02x}")).collect()
+/// The S08 quota owner of one AirKorea key and API: a domain-separated SHA-256 (the key never
+/// leaves).
+pub fn quota_owner(key: &str, api: DataGoKrApi) -> String {
+    crate::domestic::quota::quota_owner("AIRKOREA_SECRET_KEYS", key, api)
 }
 /// The KST day window `[start, end)` and its id at `now_ms`.
 fn kst_day(now_ms: i64) -> (i64, i64, String) {
@@ -193,28 +188,38 @@ where
         {
             return Ok(a.clone());
         }
-        let units = self.settings.daily_units;
+        // One quota owner per key, AirKorea API and KST day (AK decision 5); the ring keeps one
+        // key position for every AirKorea operation, as legacy `withKeys` does.
         let entries = self
             .settings
             .keys
             .iter()
             .map(|key| {
-                let policy = BudgetPolicy {
-                    provider: Provider::DataGoKr,
-                    quota_id: quota_owner(key),
-                    window_id: window.clone(),
-                    starts_at_ms: start,
-                    ends_at_ms: end,
-                    limit: units,
-                    block_units: units.min(50),
-                };
-                let store = BudgetStore::new(self.budget.clone(), policy, self.clock.clone())
-                    .map_err(|e| format!("budget: {e:?}"))?;
+                let budgets = Service::AirKorea
+                    .apis()
+                    .iter()
+                    .map(|api| {
+                        let units = (self.settings.units)(*api);
+                        let policy = BudgetPolicy {
+                            provider: Provider::DataGoKr,
+                            quota_id: quota_owner(key, *api),
+                            window_id: window.clone(),
+                            starts_at_ms: start,
+                            ends_at_ms: end,
+                            limit: units,
+                            block_units: units.min(50),
+                        };
+                        let store =
+                            BudgetStore::new(self.budget.clone(), policy, self.clock.clone())
+                                .map_err(|e| format!("budget: {e:?}"))?;
+                        Ok((*api, Arc::new(store)))
+                    })
+                    .collect::<Result<BTreeMap<_, _>, String>>()?;
                 let key = ProviderKey::new(key.clone()).map_err(|_| "invalid AirKorea key")?;
-                Ok((key, Arc::new(store)))
+                Ok((key, budgets))
             })
             .collect::<Result<Vec<_>, String>>()?;
-        let ring = KeyRing::new(entries).map_err(|e| e.to_string())?;
+        let ring = KeyRing::per_api(entries).map_err(|e| e.to_string())?;
         let mut rings = BTreeMap::new();
         rings.insert(Service::AirKorea, ring);
         let acquirer = Arc::new(

@@ -64,6 +64,16 @@ fn array_prototypes_preserve_query_coercion_and_unit_defaults() {
     assert!(loose_eq(&query.get("temperatureUnit"), &V::s("(null)")));
     let query = parse("temperatureUnit[__proto__][]=F&temperatureUnit[join]=x");
     assert_eq!(to_str(&query.get("temperatureUnit")), "[object Object]");
+    for (raw, expected) in [
+        ("u[__proto__][]=F&u[length]=4", "F,,,"),
+        ("u[__proto__][2]=F&u[length]=4", ",,F,"),
+        ("u[__proto__][]=F&u[0]=C&u[length]=2", "C,"),
+    ] {
+        assert_eq!(to_str(&parse(raw).get("u")), expected);
+    }
+    // V8 rejects this string size. The sparse port checks before allocating holes.
+    let query = parse("u[__proto__][]=F&u[length]=536870890");
+    assert!(server2::domestic::kma::js::catch(|| to_str(&query.get("u"))).is_err());
     for length in ["1e20", "Infinity", "4294967296"] {
         let query = parse(&format!("u[__proto__][]=F&u[length]={length}"));
         assert!(server2::domestic::kma::js::catch(|| to_str(&query.get("u"))).is_err());

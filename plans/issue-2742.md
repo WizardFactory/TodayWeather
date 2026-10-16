@@ -372,6 +372,10 @@ once. On top of that, the same budgets fund:
   - (a) keep 10,000;
   - (b) set the built-in per-key units to the approved operating quotas (AK to give the values);
   - (c) account per service, as data.go.kr does.
+
+  **Decided (AK decision 5, 2026-10-16): (c).** S15b-4q accounts per key and API, with each API's
+  development allowance as the default. The operating values plug into
+  `domestic::quota::OPERATING_UNITS`.
 - Until legacy retires, legacy and server2 spend the same keys.
 - The `queryDFS` RSS has no published specification; its shape is the S13 characterization.
 - **Owned work outlives requests.** Provider calls, publications and warning cycles run in their
