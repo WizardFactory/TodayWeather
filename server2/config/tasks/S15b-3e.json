@@ -1,0 +1,41 @@
+{
+  "task": "S15b-3e",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-3e.json",
+    "server2/src/domestic/kma/air.rs",
+    "server2/src/domestic/kma/time.rs",
+    "server2/src/domestic/kma/mod.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/tests/domestic/",
+    "server2/tests/legacy_versions/fixtures/kma-older.json.gz",
+    "server2/tests/legacy_versions/fixtures/PROVENANCE.md"
+  ],
+  "outside": [
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "The S15b-3c kaq section follows legacy #2771 (the AK-approved difference is now legacy behavior); no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b specification: the kaq/airkorea selection follows legacy #2771; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b execution plan: the S15b-3e scenarios and checks; no implementation outside server2"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6207008050",
+  "path_notes": {
+    "server2/src/domestic/kma/air.rs": "_getAirForecast and _insertForecastPollutants ported from legacy master 915978bb (#2771): kaq uses KAQ only with a usable future row, else the stored AirKorea forecast; KST epoch window and keys; a pollutant without observation history keeps its first forecast",
+    "server2/src/domestic/kma/time.rs": "removes kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM, no longer used by the port",
+    "server2/src/domestic/kma/mod.rs": "documentation of the kaq store answer",
+    "server2/src/domestic/kma/source/mod.rs": "documentation of the kaq store answer",
+    "server2/tests/domestic/": "fixtures/oracle.json.gz re-recorded on legacy master 915978bb with 13 #2771 scenarios (85 earlier scenarios byte-identical), PROVENANCE.md with the new driver, parity.rs scenario list, air_forecast_s3.rs wording",
+    "server2/tests/legacy_versions/fixtures/kma-older.json.gz": "Re-record unchanged S17a driver on integrated legacy #2771; refresh the recorded KAQ fallback store reads and source hashes, retain all 123 scenarios.",
+    "server2/tests/legacy_versions/fixtures/PROVENANCE.md": "Pin re-recorded oracle hash, legacy source revision, comparison of preserved responses and the new KAQ fallback read."
+  }
+}
