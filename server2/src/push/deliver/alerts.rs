@@ -256,11 +256,17 @@ pub fn parse(record: &Obj, body: &Val, minute: u32, now_ms: i64) -> Result<Val, 
                     let Val::Arr(rows) = p.get("hourly") else {
                         return Err("hourly.filter is not a function".into());
                     };
+                    // Legacy runs filter over the entire original array before find.
+                    // Even a null after a matching hour aborts the whole evaluation, which
+                    // can suppress a precipitation notification as well as an air one.
+                    let mut hourly = Vec::new();
                     for row in rows {
-                        let d = prop(row, "date")?;
-                        if greater(&d, &Val::Str(formatted(now, true)))
-                            && strict_eq(&d, &Val::Str(formatted(next_hour, true)))
-                        {
+                        if greater(&prop(row, "date")?, &Val::Str(formatted(now, true))) {
+                            hourly.push(row);
+                        }
+                    }
+                    for row in hourly {
+                        if strict_eq(&prop(row, "date")?, &Val::Str(formatted(next_hour, true))) {
                             let mut o = object(row)?.clone();
                             o.set("name", key.as_str());
                             forecasts.push(Val::Obj(o));

@@ -615,3 +615,91 @@ async fn malformed_forecast_searches_never_submit_where_legacy_stops() {
         }
     }
 }
+
+fn air_filter_oracle() -> OrderedJson {
+    let mut raw = String::new();
+    flate2::read::GzDecoder::new(&include_bytes!("fixtures/alerts-air-filter.json.gz")[..])
+        .read_to_string(&mut raw)
+        .unwrap();
+    OrderedJson::parse(raw.as_bytes()).unwrap()
+}
+#[test]
+fn air_filter_traverses_all_rows_before_find_as_actual_legacy_does() {
+    let oracle = air_filter_oracle();
+    let now =
+        server2::warnings::js::parse_iso(&oracle.get("at").unwrap().string().unwrap()).unwrap();
+    let cases = items(oracle.get("cases").unwrap());
+    for case in cases {
+        let id = case.get("id").unwrap().string().unwrap();
+        let r = obj(case.get("record").unwrap());
+        let input = Val::from_ordered(case.get("body").unwrap());
+        let want = case.get("result").unwrap();
+        let minute = case.get("minute").unwrap().number().unwrap() as u32;
+        let parsed = alerts::parse(&r, &input, minute, now);
+        if let Some(error) = want.get("error") {
+            assert_eq!(
+                parsed.unwrap_err(),
+                error.string().unwrap(),
+                "{id}: whole-array filter must complete"
+            );
+        } else {
+            let parsed = parsed.unwrap();
+            assert_eq!(
+                parsed.to_json(),
+                Val::from_ordered(want.get("info").unwrap()).to_json(),
+                "{id} parsed"
+            );
+            assert_eq!(
+                alerts::compare(&r, &parsed, now).unwrap().as_str(),
+                want.get("send").unwrap().string().unwrap(),
+                "{id} decision"
+            );
+        }
+    }
+    assert_eq!(cases.len(), 12);
+}
+#[tokio::test]
+async fn air_filter_failure_prevents_precipitation_submission_as_actual_legacy_does() {
+    use server2::push::Coll;
+    let oracle = air_filter_oracle();
+    let now =
+        server2::warnings::js::parse_iso(&oracle.get("at").unwrap().string().unwrap()).unwrap();
+    for case in items(oracle.get("cases").unwrap()) {
+        let id = case.get("id").unwrap().string().unwrap();
+        let record = obj(case.get("record").unwrap());
+        let minute = case.get("minute").unwrap().number().unwrap() as i64;
+        let rig = rig(
+            &format!("conditional-filter-{id}"),
+            "2026-10-16T00:35:00Z",
+            &[(Coll::Alert, alert_record(1, record))],
+            None,
+        )
+        .await;
+        set_wet(&rig, case.get("body").unwrap());
+        let worker = alert_worker(&rig, rig.push.clone());
+        let report = worker.run_minute(now + (minute - 35) * 60000).await;
+        let expected = items(case.get("notifications").unwrap());
+        assert_eq!(
+            rig.google.sends().len(),
+            expected.len(),
+            "{id}: actual legacy submission count"
+        );
+        if case.get("result").unwrap().get("error").is_some() {
+            assert_eq!(report.deliveries[0].2, "parse", "{id}");
+        }
+        if let Some(want) = expected.first() {
+            let body: serde_json::Value =
+                serde_json::from_str(&rig.google.sends()[0].body).unwrap();
+            assert_eq!(
+                body["message"]["notification"]["title"],
+                want.get("title").unwrap().string().unwrap(),
+                "{id} title"
+            );
+            assert_eq!(
+                body["message"]["notification"]["body"],
+                want.get("text").unwrap().string().unwrap(),
+                "{id} text"
+            );
+        }
+    }
+}

@@ -92,7 +92,19 @@ A supplemental fixture records 11 actual legacy parser/orchestration cases. The 
 actual local submission where legacy made none); searches now propagate the property error
 and stop at their first match. Successful early matches still skip later nulls, and primitive
 rows retain their normal JavaScript property-read behavior. The complete delivery suite has
-36 tests after this correction. Required finding resolution remains subject to renewed review.
+36 tests after this correction. Round 2 independently confirmed S18B2-R1 resolved.
+
+## Required review correction S18B2-R2
+
+Round 2 found a distinct traversal mismatch in air forecasts. Legacy filters the complete
+hourly array before finding the first matching hour; a null after a match still aborts
+conditional evaluation, even though the air forecast is later discarded. Rust had fused
+those steps and stopped early. A separate 12-case actual-legacy fixture covers the failure
+and adjacent skip/valid cases without changing the original 133 or R1's 11 cases. Both parser
+and integrated no-submission regressions failed before correction. The port now performs
+the complete fallible filter, followed by first-match selection. R1's shortest/short/hourly
+find behavior is retained. Delivery verification now has 38 tests; R2 resolution awaits
+reviewer confirmation. No policy, mode, environment, provider or dependency changed.
 
 ## Limits and differences
 
