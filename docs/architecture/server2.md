@@ -2238,7 +2238,8 @@ The `kma` snapshot now answers `air_forecast`, the last store call S15b-3 owed, 
 longer forwards for it. The KAQ source is gone (#2742), so only the AirKorea image forecast is
 rebuilt. Its parity target is legacy master after #2757 ("Restore AirKorea image-derived hourly
 forecasts", `91c77fcb`) and #2762 ("decode variable AirKorea forecast frames and cycle times",
-`1d60f728`) (AK, relayed 2026-10-15), with one AK-approved difference: the `kaq` mapping below.
+`1d60f728`) (AK, relayed 2026-10-15); the `kaq` selection follows legacy #2771 (`915978bb`, S15b-3e)
+below.
 
 | Store call | Data | Legacy collection mirrored | tw_svc reader |
 | --- | --- | --- | --- |
@@ -2292,16 +2293,27 @@ KST hours as UTC instants and both paths required. With the legacy table the cur
 map grid without a value; that was the reason for the earlier decision and is resolved by #2757's
 legend handling.
 
-**`kaq` requests (AK 2026-10-15, intended difference from legacy).** The app always asks
-`airForecastSource=kaq` (`client/www/js/service.weatherutil.js:87`, `web/src/direct-api.ts:173`)
-and shows the source the response names (`controller.forecastctrl.js:389`,
-`tab-forecast.html:350-356`, `controller.tabctrl.js:1231-1250` with `LOC_AIRKOREA_DESCRIPTION`;
-`web/src/Weather.tsx:712-721`). Legacy answered `kaq` with no forecast once KAQ data stopped. When
-the store rejects `kaq` with `Fail to get map case` (no KAQ forecast at all), `_getAirForecast`
-asks the AirKorea forecast and labels it `forecastSource: "airkorea"`; the rows are inserted exactly
-as `_insertForecastPollutants` does for `airkorea` (hourly values and the hourly AQI; the per-day
-summary is KAQ-only, and `getKecoDustForecast` still runs only for `airkorea` requests). A KAQ
-forecast that exists keeps priority, including a station it has no rows for.
+**`kaq` requests (legacy #2771, S15b-3e).** The app always asks `airForecastSource=kaq`
+(`client/www/js/service.weatherutil.js:87`, `web/src/direct-api.ts:173`) and shows the source the
+response names (`controller.forecastctrl.js:389`, `tab-forecast.html:350-356`,
+`controller.tabctrl.js:1231-1250` with `LOC_AIRKOREA_DESCRIPTION`; `web/src/Weather.tsx:712-721`).
+S15b-3c first answered it with an AK-approved difference: AirKorea when no KAQ forecast existed at
+all. Legacy #2771 (`controllerTown24h._getAirForecast` L1225-L1274 at `915978bb`) now does more,
+and server2 follows it exactly.
+- A `kaq` request uses the KAQ rows only when one of them is usable: a listed pollutant, a finite
+  number of at least 0 and a valid KST `dataTime` (`KecoController._parseDateTime`). The row must
+  also be after now and after the last observation, and at most a day after that observation.
+- Otherwise, including a KAQ read error, the stored AirKorea forecast is used under the same
+  condition, labelled `forecastSource: "airkorea"`.
+- Otherwise the request gets no forecast and no error. An AirKorea read error ends the list.
+- Selected rows are copied with their time formatted (`_formatAirKstTime`).
+- `_insertForecastPollutants` (L711) keeps the day window after the last observation as KST
+  epochs, keys rows by the formatted time and keeps a pollutant's first forecast even without
+  observation history. These changes also apply to explicit `airkorea` requests, which otherwise
+  keep their selection (no rows: `Fail to get forecast`).
+- On server2 the KAQ source is gone, so a `kaq` request always reads the AirKorea forecast. The
+  per-day summary is KAQ-only, and `getKecoDustForecast` still runs only for `airkorea` requests.
+- The S15 oracle covers these cases with 13 recorded scenarios (`air-kaq-*`, `air-airkorea-*`).
 
 **Request time.** A request that reads the forecast (`airForecastSource` absent, `(null)`,
 `airkorea` or `kaq`) loads the station list and the dust forecast and reads the image fold. The

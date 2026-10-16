@@ -2,11 +2,14 @@
 
 Two recordings: `kma-older.json.gz` (S17a, below) and `kma-town.json.gz` ([S17b](#s17b-town-oracle-fixture)).
 
-`kma-older.json.gz` (sha256 `b401cff97bec3cc6561e85fa0f73f5aa45b3066b5541f2c25b87cd7bba26e188`) holds
+`kma-older.json.gz` (sha256 `f86f257bdff84c83f94ce676a79113cc48a84f195774f490df28c87b986e36d6`) holds
 pinned legacy-oracle recordings of the KMA v000901 and v000902 address routers for the S17a native
 assembly tests. It is test data only; the server2 runtime never reads it or any legacy file.
 
-## Recording
+## Original recording
+
+The S15b-3e integration refresh below supersedes the original older-version
+recording; the original method and town-oracle provenance are retained here.
 
 - Legacy source: master `1d60f728`. The sha256 of every legacy file read while recording is stored
   in `source.files` (51 files), including `server/routes/v000901/route.kma.addr.js` and
@@ -32,7 +35,8 @@ assembly tests. It is test data only; the server2 runtime never reads it or any 
 
 ## Content
 
-123 scenarios with 2,307 recorded store answers (none after the response):
+The original recording had 123 scenarios with 2,307 recorded store answers
+(none after the response):
 
 - **v000901 (94):** the 85 S15 scenarios run through the v000901 router (`v000903` in an id becomes
   `v000901`), 8 v000901 air paths and the unversioned gateway default:
@@ -298,3 +302,23 @@ pinned legacy-oracle recordings of the town routers `server/routes/v000803/route
          if (thrown.length) process.stderr.write('  thrown: ' + JSON.stringify(thrown) + '\n');
          thrown = [];
 ```
+
+## S15b-3e integration re-record (2026-10-16)
+
+The S17a `kma-older.json.gz` recording above was refreshed against legacy source
+from master `73290838` (including #2771). The original unmodified S17a driver
+(sha256 `a6ca68cddb86bdee227465de6bd7fe3c0f33e60fe3cd84034305d98d671b0c2c`)
+was reconstructed from the documented S15 driver and Driver diff; pinned Node
+16.20.2, dependency lock, timezone, network fences and MAX_CURRENT_COUNT=192
+remain unchanged. Two independent recorder executions produce identical gzip bytes.
+
+All 123 scenario response statuses, bodies, ETags and content types remain identical.
+Only `air-forecast-empty` gains the stored AirKorea fallback read after an empty KAQ
+read; its response still contains no forecast because the fallback is also empty.
+The recording now contains 2,308 store answers. Only two source hashes change:
+`server/controllers/controllerTown24h.js` and
+`server/test/offline/rss-response-smoke.js`. The S17b `kma-town.json.gz` oracle is
+unchanged; its town routes do not invoke the changed air-forecast selection.
+
+This refresh records the behavior of the existing legacy driver; it does not insert
+server2 output into the oracle or change a scenario to fit the Rust implementation.
