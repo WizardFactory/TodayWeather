@@ -1,0 +1,76 @@
+{
+  "task": "S18c",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2703",
+  "server2_paths": [
+    "server2/config/tasks/S18c.json",
+    "server2/src/notice/mod.rs",
+    "server2/src/notice/store.rs",
+    "server2/src/notice/api.rs",
+    "server2/src/notice/translate.rs",
+    "server2/src/notice/cli.rs",
+    "server2/src/bin/server2-notice.rs",
+    "server2/src/lib.rs",
+    "server2/.env.example",
+    "server2/tests/notices.rs",
+    "server2/tests/notices/common.rs",
+    "server2/tests/notices/contracts.rs",
+    "server2/tests/notices/store.rs",
+    "server2/tests/notices/translation.rs",
+    "server2/tests/notices/cli.rs",
+    "server2/examples/notice_smoke.rs",
+    "server2/tests/notices/api.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2703-s18c.md",
+      "category": "documentation",
+      "reason": "Record approved backend scope"
+    },
+    {
+      "path": "specs/issue-2703-s18c.md",
+      "category": "documentation",
+      "reason": "Define S3 and notice API/CLI semantics"
+    },
+    {
+      "path": "plans/issue-2703-s18c.md",
+      "category": "documentation",
+      "reason": "Record scenarios and implementation sequence"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append notice library/S20 connection boundary"
+    },
+    {
+      "path": "docs/operations/server2-notices.md",
+      "category": "documentation",
+      "reason": "Publishing operator manual"
+    },
+    {
+      "path": "docs/operations/server2-notices.pdf",
+      "category": "documentation",
+      "reason": "Rendered inspected manual"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-notices.json",
+      "category": "documentation",
+      "reason": "Editable design"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-notices.html",
+      "category": "documentation",
+      "reason": "Generated diagram"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2703-s18c/verification.md",
+      "category": "documentation",
+      "reason": "Selected sanitized evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2703-s18c/notice-smoke.png",
+      "category": "documentation",
+      "reason": "Actual isolated HTTP/CLI scenario capture"
+    }
+  ],
+  "declaration_record": "AK approved #2623 directly in server2, root approved backend/API publishing CLI and S3 plus publish-time translation; no clients/SQLite/startup wiring/paid API verification; root owns merge"
+}
