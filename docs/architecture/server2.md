@@ -3453,3 +3453,31 @@ must verify earlier server2 release/config recovery without legacy dependence.
 
 [Sequence](diagrams/server2-kma-replay.html) and
 [selected evidence](../evidence/tasks/issue-2742-s15b4b3/verification.md).
+
+## S18c notices backend and operator CLI
+
+[Source-pinned notice sequence](diagrams/server2-notices.html).
+
+S18c directly adopts #2623's public notice JSON and seven-language selection contract
+in server2; SQLite and client/web popups are outside this scope. The notice module
+exports a read-only Axum router and `server2-notice` provides CLI-only publication,
+update, withdrawal, list/show/latest and missing-language translation. S20 owns
+process/router mounting. This is not a claim that a notice route or popup is deployed.
+
+`index/v2/notices/state.json` retains numeric IDs, operator records and operation
+identities under an 8MiB/10000-record cap. Absent/ETag conditional writes plus unknown
+outcome readback preserve acknowledgements across concurrent writers. An unchanged
+readback retains pending bytes/identity/precondition; later read failure, refusal or
+retry exhaustion remains uncertain until success or a changed base rules out the old CAS. Mutable notice
+controls bypass raw disk caching. Reads validate S3 before replacing a verified
+memory copy: missing state gives null, cold unreadable/corrupt state503, and an
+existing verified copy survives failures. API requests never translate.
+
+Translation happens only in publication commands through the Responses REST API,
+using the #2623 `OPENAI_SECRET_KEY` and `TRANSLATION_LLM_*` names. Missing languages
+are filled once with source/model provenance; failure is reported without blocking
+valid original publication. Source changes during generation fail stale application,
+and translate never overwrites concurrent manual text. Tests inject local peers;
+there is no dry-run/mock/verification mode or test endpoint environment setting.
+See the [operator manual](../operations/server2-notices.md) and
+[selected checks](../evidence/tasks/issue-2703-s18c/verification.md).
