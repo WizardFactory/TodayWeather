@@ -734,3 +734,89 @@ fn process_listeners_follow_the_legacy_port_rule() {
         server2::GATEWAY_CONNECTION_SECONDS
     );
 }
+
+#[tokio::test]
+async fn kma_only_weather_geocodes_natively_while_public_geocode_stays_unselected() {
+    // Actual runtime factory: no public geocode selection, no reachable legacy peer.
+    let providers = stub(
+        vec![(200, fixture("kakao.coord.seoul"), Duration::ZERO)],
+        vec![],
+    )
+    .await;
+    let peer = S3Peer::start();
+    let settings = vec![
+        (
+            "SERVER2_GATEWAY_LEGACY_URL",
+            "http://127.0.0.1:9".to_owned(),
+        ),
+        ("SERVER2_NATIVE_FAMILIES", "kma".to_owned()),
+        ("SERVER2_S3_BUCKET", "server2-local".to_owned()),
+        ("AWS_ACCESS_KEY", "server2-local".to_owned()),
+        ("AWS_SECRET_KEY", "server2-local-secret".to_owned()),
+        (
+            "DONGNAE_SECRET_KEYS",
+            r#"["synthetic-data-go-kr"]"#.to_owned(),
+        ),
+        ("GEOCODER_KAKAO_KEYS", r#"["synthetic-kakao"]"#.to_owned()),
+    ];
+    let builtins = Builtins {
+        kakao: providers.base.clone(),
+        google: providers.base.clone(),
+        data_go_kr: "http://127.0.0.1:9".into(),
+        kma: "http://127.0.0.1:9".into(),
+        kma_weather: "http://127.0.0.1:9".into(),
+        mfds: "http://127.0.0.1:9".into(),
+        airkorea_images: "http://127.0.0.1:9".into(),
+        google_air: "http://127.0.0.1:9".into(),
+        openweather: "http://127.0.0.1:9".into(),
+        waqi: "http://127.0.0.1:9".into(),
+        geocoder_daily_units: [10, 10],
+        ..peer_builtins(&peer)
+    };
+    let gateway = server2::gateway::runtime::from_vars_at(&vars(settings), &builtins)
+        .unwrap()
+        .unwrap();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let root = format!("http://{}", listener.local_addr().unwrap());
+    let router = gateway.as_ref().clone().router();
+    let server = tokio::spawn(async move {
+        axum::serve(listener, router).await.unwrap();
+    });
+    let http = reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(4))
+        .build()
+        .unwrap();
+    let response = http
+        .get(format!("{root}/weather/v000903/coord/37.5663,126.9779"))
+        .header("accept-language", "ko")
+        .send()
+        .await
+        .unwrap();
+    let status = response.status().as_u16();
+    let bytes = response.bytes().await.unwrap();
+    assert_eq!(status, 200, "{}", String::from_utf8_lossy(&bytes));
+    assert_eq!(
+        providers.state.count.load(Ordering::SeqCst),
+        1,
+        "native internal geocoder reached Kakao once"
+    );
+    let status = http
+        .get(format!("{root}/geocode/v000903/coord/37.5663,126.9779"))
+        .header("accept-language", "ko")
+        .send()
+        .await
+        .unwrap()
+        .status()
+        .as_u16();
+    assert_eq!(
+        status, 501,
+        "unselected public geocode still uses its dead coexistence adapter"
+    );
+    assert_eq!(
+        providers.state.count.load(Ordering::SeqCst),
+        1,
+        "public route did not silently become native"
+    );
+    server.abort();
+}

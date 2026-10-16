@@ -378,11 +378,20 @@ async fn nothing_is_recorded_while_the_asos_history_read_runs() {
         0,
         "ASOS recovery in flight"
     );
-    // After the recovery run ended, the next request records the day.
-    tokio::time::sleep(Duration::from_secs(3)).await;
-    serve(&backend).await;
-    assert!(recorder.idle(deadline()).await);
-    assert_eq!(names(&recorder, 20260923).await, 1);
+    // The request-wide bound can return before the ASOS owner finishes. Observe actual
+    // settled recording instead of assuming a fixed sleep after that earlier response.
+    tokio::time::timeout(Duration::from_secs(15), async {
+        loop {
+            serve(&backend).await;
+            assert!(recorder.idle(deadline()).await);
+            if names(&recorder, 20260923).await == 1 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    })
+    .await
+    .expect("the completed ASOS read permits the complete grid day's summary");
 }
 
 /// The live station-108 daily body for any requested range (scripted S15b-2 acquirer).

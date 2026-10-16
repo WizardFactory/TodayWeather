@@ -1,5 +1,5 @@
 //! SWITCH/FORWARD: the KMA v000903 family is a native S10 backend handler. Legacy stays the
-//! default and the rollback; a request the source cannot supply goes to legacy; native output
+//! default and the rollback; a selected native source failure never forwards; native output
 //! reproduces the S02 gateway domestic v000903 goldens on the wire.
 use super::support::*;
 use axum::{
@@ -264,13 +264,14 @@ async fn native_kma_reproduces_s02_gateway_goldens_and_rolls_back() {
     assert_eq!(requests[0].locale.name(), "ko");
     assert_eq!(requests[2].locale.name(), "en");
 
-    // A cell the source cannot supply is forwarded inside the same request.
+    // A transitional source cannot escape a selected native handler to legacy.
     let (status, headers, bytes) = send(&gateway, &case, CASES[0]).await;
-    assert_golden(CASES[0], status, &headers, &bytes);
+    assert_eq!(status, 501);
+    let _ = (headers, bytes);
     assert_eq!(
         hits.load(Ordering::SeqCst),
-        CASES.len() + 1,
-        "forwarded to legacy"
+        CASES.len(),
+        "selected native failure made no legacy hop"
     );
 
     // Rollback.
@@ -280,15 +281,15 @@ async fn native_kma_reproduces_s02_gateway_goldens_and_rolls_back() {
     assert_golden(CASES[0], status, &headers, &bytes);
     assert_eq!(
         hits.load(Ordering::SeqCst),
-        CASES.len() + 2,
+        CASES.len() + 1,
         "rolled back to legacy"
     );
 }
 
 /// `select_native` registers and selects the handler with the given source; a source that
-/// supplies no inputs sends every request to legacy and the goldens hold.
+/// supplies no inputs terminates natively without a legacy hop.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_source_without_inputs_forwards_everything_to_legacy() {
+async fn a_transitional_source_forward_is_terminal_under_native_selection() {
     warm();
     let hits = Arc::new(AtomicUsize::new(0));
     let case: Case = Arc::new(Mutex::new(None));
@@ -306,15 +307,16 @@ async fn a_source_without_inputs_forwards_everything_to_legacy() {
     let gateway = Gateway::new(Arc::new(Myeongdong), dispatcher);
     for id in CASES {
         let (status, headers, bytes) = send(&gateway, &case, id).await;
-        assert_golden(id, status, &headers, &bytes);
+        assert_eq!(status, 501, "{id}");
+        let _ = (headers, bytes);
     }
-    assert_eq!(hits.load(Ordering::SeqCst), CASES.len());
+    assert_eq!(hits.load(Ordering::SeqCst), 0);
 }
 
-/// A town absent from the store's town list would be geocoded and saved by legacy, a
-/// non-Korean coordinate redirected and a `KR` region remapped remotely: all forward.
+/// A deliberately inconsistent recording cannot cause a native handler to invoke legacy.
+/// Production unknown-town and KR paths are covered with their owned S3 source separately.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn assembly_paths_legacy_cannot_share_are_forwarded() {
+async fn an_inconsistent_native_snapshot_never_escapes_to_legacy() {
     struct Unknown;
     impl KmaSource for Unknown {
         fn snapshot(&self, _: &KmaRequest, _: Instant) -> BoxFuture<'_, SourceAnswer> {
@@ -333,8 +335,13 @@ async fn assembly_paths_legacy_cannot_share_are_forwarded() {
     KmaBackend::select(&dispatcher, BackendMode::Native).unwrap();
     let gateway = Gateway::new(Arc::new(Myeongdong), dispatcher);
     let (status, headers, bytes) = send(&gateway, &case, CASES[0]).await;
-    assert_golden(CASES[0], status, &headers, &bytes);
-    assert_eq!(hits.load(Ordering::SeqCst), 1, "absent town forwarded");
+    assert_eq!(status, 501);
+    let _ = (headers, bytes);
+    assert_eq!(
+        hits.load(Ordering::SeqCst),
+        0,
+        "inconsistent recorded snapshot never forwards"
+    );
     let _ = AssemblyConfig::default();
 }
 

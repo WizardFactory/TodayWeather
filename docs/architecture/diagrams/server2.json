@@ -8,7 +8,7 @@
     "locale": "en",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "f5184d5a08f87955f3fa1b3ab8367c8504e7cb40",
+      "revision": "732766a8cbfc9e70f3afacaacb61010a881f0cf1",
       "provider": "github",
       "link_mode": "web"
     }
@@ -101,10 +101,10 @@
           "label": "Development coexistence adapter"
         },
         {
-          "path": "plans/issue-2742.md",
-          "line": 280,
-          "end_line": 287,
-          "label": "Remaining forwards removed before cutover"
+          "path": "server2/src/domestic/kma/backend.rs",
+          "line": 156,
+          "end_line": 196,
+          "label": "Selected native terminal errors, no legacy hop"
         }
       ]
     },
@@ -140,7 +140,7 @@
       "id": "memory",
       "type": "database",
       "label": "Disposable caches",
-      "sublabel": "RAM; disk allowed, 4c pending",
+      "sublabel": "RAM; verified raw disk optional",
       "pos": [
         330,
         360
@@ -157,10 +157,10 @@
           "label": "In-memory view from durable raw records"
         },
         {
-          "path": "plans/issue-2742.md",
-          "line": 280,
-          "end_line": 287,
-          "label": "Disk cache and sizing remain S15b-4c"
+          "path": "server2/src/cache/disk.rs",
+          "line": 1,
+          "end_line": 35,
+          "label": "Verified disposable raw disk cache"
         }
       ]
     },
@@ -293,8 +293,8 @@
       "items": [
         "Proposed origin deployment; no route cutover claimed",
         "Cold cells acquire data; no steady-state legacy dependency",
-        "Remaining explicit forwards must be removed before go-live",
-        "Packs, disk-cache bounds and EC2 sizing remain S15b-4c"
+        "Selected native KMA rejects all Forward markers; unknown towns and KR remaps resolve natively",
+        "Verified raw disk cache is bounded and disposable; full-data cold latency remains unmeasured"
       ]
     }
   ]

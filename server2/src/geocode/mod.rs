@@ -4,6 +4,7 @@ mod cache;
 mod format;
 mod provider;
 pub mod storage;
+pub mod town;
 use cache::{LookupKey, MemoryCache};
 pub use format::{is_korea_area, language_from_header, normalize_loc};
 use provider::Outcome;

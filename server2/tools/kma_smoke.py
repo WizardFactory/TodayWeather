@@ -11,7 +11,9 @@ only the loopback provider roots (the origin answers them with no data). The sam
 S17a `kma-v000901,kma-v000902` phase for the unversioned, v000901 and v000902 requests, while its
 unlisted v000903 request still reaches the legacy KMA backend. S17b: the listed direct routes (`town`,
 `kma-v000901`) answer natively from S3 with the Express envelope; unlisted they stay unclaimed (404). S15b-2 and S15b-4a
-request-time acquisitions use the legacy DONGNAE_SECRET_KEYS list.
+request-time acquisitions use the legacy DONGNAE_SECRET_KEYS list. Selected native weather also
+uses the internal native geocoder with synthetic legacy-named keys and injected loopback roots;
+public geocode remains unselected and only the legacy phases may reach /geocode/.
 The phases run the release `loopback_server` example (the server2 process with its S3 and
 provider roots on the loopback peers; roots are not settings), so no provider is reached. The
 refusals run the release `server2` binary: unknown or repeated entries, and `kma` without the S3
@@ -36,8 +38,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gateway_smoke as g  # noqa: E402
 
 
-# The legacy geocoder answers a seeded town (서울특별시 중구 명동), so the native phase resolves it
-# in the town list and reads its inputs from S3 before forwarding.
+# Both geocoder fixtures resolve the seeded town (서울특별시 중구 명동): legacy phases use
+# /geocode/, while selected native weather uses the Kakao fixture and reads S3 without a hop.
 GEOCODE = json.dumps({'name': '명동', 'country': 'KR', 'address': '서울특별시 중구 명동',
                       'location': {'lat': 37.566, 'long': 126.978},
                       'kmaAddress': {'name1': '서울특별시', 'name2': '중구', 'name3': '명동'}},
@@ -87,14 +89,17 @@ def s3_env():
 
 
 def kma_env():
-    """A placeholder legacy data.go.kr key list."""
-    return dict(DONGNAE_SECRET_KEYS='["s15b2-local-placeholder-key"]')
+    """Synthetic legacy-named provider keys; no real file or credential is read."""
+    return dict(DONGNAE_SECRET_KEYS='["s15b2-local-placeholder-key"]',
+                GEOCODER_KAKAO_KEYS='["s15b4b2-local-placeholder-key"]',
+                GEOCODER_GOOGLE_KEY='s15b4b2-local-placeholder-google')
 
 
 def peer_command(peer_binary, endpoint, s3):
-    """The loopback_server example with S3 on the peer and every KMA provider root on the origin."""
+    """Inject existing test-only roots for S3, KMA and the internal native geocoder."""
     root = endpoint + '/'
-    return [peer_binary, '--s3', s3, '--data-go-kr', root, '--kma', root, '--kma-weather', root]
+    return [peer_binary, '--s3', s3, '--data-go-kr', root, '--kma', root, '--kma-weather', root,
+            '--kakao', root, '--google', root]
 
 
 def start(command, endpoint, families):
@@ -150,10 +155,14 @@ def run(binary, peer_binary):
                         s3_read = s3_requests(s3) - s3_before
                         if families and listed:
                             assert not legacy_kma, ('the %s phase forwarded' % families, path, hops)
+                            assert not any(p.startswith('/geocode/') for p in hops), (
+                                'selected native weather used the legacy geocoder', path, hops)
                             assert s3_read > 0, 'the %s S3 input source read nothing' % families
                             json.loads(body)
                             acquired = [p for p in hops if not p.startswith('/geocode/')]
                             if first_native:
+                                assert any(p.startswith('/v2/local/geo/') for p in hops), (
+                                    'selected native weather did not use the native Kakao fixture', path, hops)
                                 # The phase's first native request acquires the missing forecast
                                 # inputs itself; later requests of the phase share them from S3.
                                 first_native = False
