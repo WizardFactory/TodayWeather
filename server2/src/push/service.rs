@@ -92,12 +92,13 @@ pub enum InternalOp {
     /// `disableAlarmsByFcm(token)`: `{enable: false, updatedAt: now, updatedBy: 'push'}`, multi.
     DisableAlarmsByFcm(String),
     /// `removeAlarms(selector)` with the `makeRemoveSelector` filter of the selected record
-    /// (natural-order number `n`, `_id`), applied only while that record is still unchanged
-    /// since selection and older than `cutoff_ms`.
+    /// (natural-order number `n`, `_id`, document `selected` as read before sending), applied
+    /// only while that record is unchanged since selection apart from this worker's own
+    /// unregistered-token disable (`enable`, `updatedAt`, `updatedBy: 'push'`).
     RemoveAlarms {
         n: u64,
         oid: super::store::Oid,
-        cutoff_ms: i64,
+        selected: crate::world::js::Obj,
         filter: Vec<(String, crate::world::js::Val)>,
     },
     /// `updatePushInfo(record)`: the worker's `updatedAt` stamp of a selected record without

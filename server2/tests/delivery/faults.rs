@@ -259,6 +259,126 @@ async fn an_unregistered_token_disables_its_alarms_durably() {
     );
 }
 
+/// Weather double that first applies a user update through the push routes, so the update
+/// lands between the minute's selection and the send.
+struct UpdatingFetch {
+    inner: Arc<WeatherDouble>,
+    push: Arc<PushService>,
+    body: serde_json::Value,
+}
+impl server2::push::deliver::Fetch for UpdatingFetch {
+    fn get(
+        &self,
+        url: String,
+        lang: Option<String>,
+    ) -> server2::gateway::BoxFuture<'_, Result<(u16, Vec<u8>), String>> {
+        Box::pin(async move {
+            let bytes = serde_json::to_vec(&self.body).unwrap();
+            let request = axum::extract::Request::builder()
+                .method("POST")
+                .uri("/v000705/push")
+                .header("content-type", "application/json")
+                .header("content-length", bytes.len())
+                .body(axum::body::Body::from(bytes))
+                .unwrap();
+            let response = self.push.handle(request).await.unwrap();
+            assert_eq!(response.status().as_u16(), 200);
+            self.inner.get(url, lang).await
+        })
+    }
+}
+
+#[tokio::test]
+async fn a_user_update_during_the_minute_survives_the_stale_cleanup() {
+    // Selected as stale (updated > 60 days ago); the user updates it during the minute; FCM
+    // then answers unregistered. The disable applies, but the cleanup keeps the user's record.
+    let mut stale = alarm(1, "stale", 79200, "");
+    stale.1.doc.set("updatedAt", Val::Date(1_700_000_000_000.));
+    let rig = rig_named("user-update", &[stale]).await;
+    rig.google
+        .state
+        .fcm
+        .lock()
+        .unwrap()
+        .push_back(Answer::Json(404, UNREGISTERED.into()));
+    let fetch = Arc::new(UpdatingFetch {
+        inner: rig.weather.clone(),
+        push: rig.push.clone(),
+        body: serde_json::json!({"type": "ios", "fcmToken": "stale", "cityIndex": 1, "id": 1,
+            "location": {"lat": 37.56, "long": 126.97}, "source": "KMA", "name": "새집",
+            "pushTime": 79200}),
+    });
+    let worker = AlarmWorker::new(
+        rig.push.clone(),
+        Arc::new(rig.s3.clone()),
+        fetch,
+        Arc::new(fcm(&rig.google, &temp_dir("user-update-2"))),
+        servers(),
+        rig.clock.clone(),
+        rig.diagnostics.clone(),
+    );
+    let report = worker.run_minute(NOW).await;
+    assert_eq!(report.deliveries[0].1, "unregistered");
+    let restored = start(
+        &rig.s3,
+        rig.clock.clone(),
+        super::state_common::fast_config(),
+    )
+    .await;
+    let state = restored.state();
+    let state = state.read().unwrap();
+    let records: Vec<(Val, Val)> = state
+        .coll(Coll::Alarm)
+        .iter()
+        .map(|(_, r)| (r.doc.get("name").clone(), r.doc.get("enable").clone()))
+        .collect();
+    assert_eq!(records, [(Val::Str("새집".into()), Val::Bool(false))]);
+}
+
+#[tokio::test]
+async fn the_minute_selects_like_get_alarms_by_time_and_the_weekday_filter() {
+    // 2026-10-15T22:00Z is Thursday (4) in UTC and Friday (5) at UTC+9.
+    let records = [
+        alarm(1, "due", 79200, ""),
+        alarm(2, "other-minute", 79260, ""),
+        alarm(3, "disabled", 79200, r#","enable":false"#),
+        alarm(4, "enabled", 79200, r#","enable":true"#),
+        alarm(
+            5,
+            "local-friday",
+            79200,
+            r#","timezoneOffset":540,"dayOfWeek":[true,true,true,true,false,true,true]"#,
+        ),
+        alarm(
+            6,
+            "not-local-friday",
+            79200,
+            r#","timezoneOffset":540,"dayOfWeek":[true,true,true,true,true,false,true]"#,
+        ),
+        alarm(
+            7,
+            "no-offset",
+            79200,
+            r#","dayOfWeek":[true,true,true,true,true,true,true]"#,
+        ),
+        alarm(8, "empty-days", 79200, r#","dayOfWeek":[]"#),
+    ];
+    let rig = rig_named("selection", &records).await;
+    let report = rig.worker.run_minute(NOW).await;
+    assert!(report.claimed);
+    let mut tokens: Vec<String> = rig
+        .google
+        .sends()
+        .iter()
+        .map(|r| {
+            let v: serde_json::Value = serde_json::from_str(&r.body).unwrap();
+            v["message"]["token"].as_str().unwrap().to_owned()
+        })
+        .collect();
+    tokens.sort();
+    assert_eq!(tokens, ["due", "empty-days", "enabled", "local-friday"]);
+}
+
 #[tokio::test]
 async fn a_failed_disable_is_reported_and_nothing_is_resent() {
     let rig = rig("disable-failed", AT, &[alarm(1, "gone", 79200, "")], None).await;

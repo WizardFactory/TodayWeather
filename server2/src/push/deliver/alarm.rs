@@ -350,9 +350,10 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             let gate = gate.clone();
             tasks.push(async move {
                 let _permit = gate.acquire_owned().await.expect("open gate");
+                let selected = info.clone();
                 let mut info = info;
                 let delivery = self.deliver(&mut info, now_ms).await;
-                (n, oid, info, delivery)
+                (n, oid, selected, info, delivery)
             });
         }
         let results = futures_join(tasks).await;
@@ -361,7 +362,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             deliveries: Vec::new(),
         };
         let mut rows = Vec::new();
-        for (_, oid, _, d) in &results {
+        for (_, oid, _, _, d) in &results {
             let id = &oid_hex(oid);
             let counter = match d {
                 Delivery::Accepted => &self.counters.accepted,
@@ -395,13 +396,13 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
         let cutoff = now_ms - 60 * DAY_MS;
         // Each operation re-checks the record in the writer, so a change made since selection
         // (a user update, a removal) is never undone.
-        for (n, oid, info, _) in results {
+        for (n, oid, selected, info, _) in results {
             let stale = matches!(info.get("updatedAt"), Val::Date(ms) if (*ms as i64) < cutoff);
             if stale && let Some(filter) = super::ops::remove_filter(&info) {
                 let op = InternalOp::RemoveAlarms {
                     n,
                     oid,
-                    cutoff_ms: cutoff,
+                    selected,
                     filter,
                 };
                 if self.push.internal(op).await {

@@ -80,8 +80,9 @@ Rules:
   (`pushTime === time`, `enable !== false`, natural order), weekday filter (`dayOfWeek[day]` truthy
   with `timezoneOffset` present), claim, deliver (6 in flight), result, 60-day removal and
   `updatedAt` stamp. Skip (no claim) while the state is not restored or nothing is due. The
-  removal applies only while the selected record (number, `_id`) is still older than 60 days or
-  was changed only by this worker's disable; the stamp only while it still has no `updatedAt`.
+  removal applies only while the selected record (number, `_id`) still equals the document read
+  at selection, or differs only by this worker's disable (`enable`, `updatedAt`,
+  `updatedBy: 'push'`); the stamp only while it still has no `updatedAt`.
 - Ledger: `index/v2/push/delivery/alarm/{YYYYMMDD}/{HHMM}.json` with `If-None-Match: *` before any
   send (`schema`, `kind`, `minute`, `claimedAt`, `claim` nonce, record `_id`s); 409/412 taken;
   other 4xx unavailable; unknown outcome read back (own body owned, other taken, unreadable

@@ -152,7 +152,8 @@ pub struct Fcm {
     endpoints: Endpoints,
     accounts: HashMap<Product, Option<std::path::PathBuf>>,
     loaded: Mutex<HashMap<Product, Arc<Account>>>,
-    tokens: Mutex<HashMap<Product, Token>>,
+    /// One lock per app: a slow token request of one app never blocks the other.
+    tokens: HashMap<Product, Mutex<Option<Token>>>,
 }
 
 impl Fcm {
@@ -163,11 +164,13 @@ impl Fcm {
         endpoints: Endpoints,
     ) -> Result<Self, String> {
         let mut accounts = HashMap::new();
+        let mut tokens = HashMap::new();
         for p in [Product::TodayWeather, Product::TodayAir] {
             accounts.insert(
                 p,
                 var(p.setting()).filter(|v| !v.is_empty()).map(Into::into),
             );
+            tokens.insert(p, Mutex::new(None));
         }
         Ok(Self {
             client: reqwest::Client::builder()
@@ -180,7 +183,7 @@ impl Fcm {
             endpoints,
             accounts,
             loaded: Mutex::new(HashMap::new()),
-            tokens: Mutex::new(HashMap::new()),
+            tokens,
         })
     }
 
@@ -204,8 +207,8 @@ impl Fcm {
     /// A cached access token, refreshed when it expires within a minute (one request at a time
     /// per product; a failure is not cached).
     async fn token(&self, product: Product, account: &Account, now_ms: i64) -> Option<String> {
-        let mut tokens = self.tokens.lock().await;
-        if let Some(t) = tokens.get(&product)
+        let mut cached = self.tokens.get(&product)?.lock().await;
+        if let Some(t) = cached.as_ref()
             && t.expires_ms - 60_000 >= now_ms
         {
             return Some(t.access.clone());
@@ -229,13 +232,10 @@ impl Fcm {
         }
         let access = json.get("access_token")?.as_str()?.to_owned();
         let expires_in = json.get("expires_in")?.as_f64()?;
-        tokens.insert(
-            product,
-            Token {
-                access: access.clone(),
-                expires_ms: now_ms + (expires_in * 1000.) as i64,
-            },
-        );
+        *cached = Some(Token {
+            access: access.clone(),
+            expires_ms: now_ms + (expires_in * 1000.) as i64,
+        });
         Some(access)
     }
 

@@ -33,19 +33,16 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
         InternalOp::RemoveAlarms {
             n,
             oid,
-            cutoff_ms,
+            selected,
             filter,
         } => {
-            // Unchanged since selection: still older than the cutoff, or changed only by this
-            // worker's own disable of an unregistered token (legacy removed it the same minute).
-            let still_stale = txn.get(Coll::Alarm, *n).is_some_and(|r| {
-                let doc = &r.doc;
-                r.oid == *oid
-                    && (matches!(doc.get("updatedAt"), Val::Date(ms) if (*ms as i64) < *cutoff_ms)
-                        || (doc.get("enable") == &Val::Bool(false)
-                            && doc.get("updatedBy") == &Val::Str("push".into())))
+            // Unchanged since selection, or changed only by this worker's own disable of an
+            // unregistered token (legacy removed such a record the same minute). A user update
+            // in between changes another field or `updatedBy`, and the record is kept.
+            let unchanged = txn.get(Coll::Alarm, *n).is_some_and(|r| {
+                r.oid == *oid && (r.doc == *selected || same_except_disable(&r.doc, selected))
             });
-            still_stale && TxnBackend { txn }.remove(Coll::Alarm, filter).is_ok()
+            unchanged && TxnBackend { txn }.remove(Coll::Alarm, filter).is_ok()
         }
         InternalOp::StampAlarm { n, oid, info } => {
             let unstamped = txn
@@ -122,6 +119,24 @@ fn remove_duplicates(txn: &mut Txn<'_>) {
             }
         }
     }
+}
+
+/// The fields `disableAlarmsByFcm` sets.
+const DISABLE_FIELDS: [&str; 3] = ["enable", "updatedAt", "updatedBy"];
+
+/// `current` is `selected` with only the worker's disable applied (`enable: false`,
+/// `updatedBy: 'push'`, a new `updatedAt`); the other fields are equal and in the same order.
+fn same_except_disable(current: &Obj, selected: &Obj) -> bool {
+    let rest = |o: &Obj| -> Vec<(String, Val)> {
+        o.entries()
+            .iter()
+            .filter(|(k, _)| !DISABLE_FIELDS.contains(&k.as_str()))
+            .cloned()
+            .collect()
+    };
+    current.get("enable") == &Val::Bool(false)
+        && current.get("updatedBy") == &Val::Str("push".into())
+        && rest(current) == rest(selected)
 }
 
 /// `makeRemoveSelector(pushInfo)` as a filter.
