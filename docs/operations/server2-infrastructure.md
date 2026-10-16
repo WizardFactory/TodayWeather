@@ -1,4 +1,4 @@
-# server2 infrastructure preparation (S03)
+# server2 infrastructure preparation (S03, S15b-4c cache)
 
 Status: reproducible local test environment and staging plan. S03 changed **no AWS
 resources or routing**; the account root provisioned the staging bucket and runtime
@@ -191,8 +191,10 @@ S09 must build Rust 1.99 on the actual Linux target (`aarch64-unknown-linux-musl
 or `x86_64-unknown-linux-musl`), verify release startup/signals/TLS CA/DNS and
 SDK behavior, and report RSS/CPU, cold p50/p95/p99, S3 throughput and provider
 budget headroom. Leave a proposed 25% host headroom until real workload sizing
-changes it. Root disk holds OS/binaries/sanitized logs only; there is no gp3
-weather serving volume, SQLite, Redis or shared-instance cache.
+changes it. S15b-4c adds a disposable local raw cache to the root disk; S3 remains
+its source of truth. No local weather database, SQLite, Redis or shared-instance
+cache is introduced. The volume is replaceable: even an EBS root that survives an
+instance restart is never treated as durable application state.
 
 `/health` proves process liveness only. Before a route receives traffic, later
 phases must prove configuration/keys, S3 role access, provider reservations,
@@ -211,21 +213,127 @@ remains required even with a watcher. Local SIGTERM smoke is not an actual Spot 
 
 ## Rollback and later scale-out
 
-Keep legacy and per-version family switches. `/weather` and `/geocode` move as a
-unit; a cold cell with unprovable history still forwards/retains legacy after a
-nominal family cutover. Rehearse CloudFront-aware rollback and count coexistence
-quotas. AK authorizes each operational cutover after goldens/shadow/performance;
-S03 does not retire MongoDB or promise cold-cell retirement is achievable.
+During coexistence, use the existing per-version family switches and rehearse
+CloudFront-aware rollback and combined provider quotas. AK's later retirement
+instruction supersedes the original S03 cold-cell forwarding plan: **after
+server2 go-live, native requests must not depend on a running legacy server or
+precollection**. Missing inputs use request-time acquisition and legacy partial
+missing-data/error shapes. S20 must verify cold cells, loss/restart, parity and
+budgets before retirement; this document is not a completed cutover claim.
 
-D02/D03 prohibit automatic failed/unknown push resend and legacy registration
-migration. Preserve new accepted S3 registrations during rollback; do not
-broadcast on startup. Sanitize outcomes for operations to fix subsequent sends.
-Weather/provider retries remain their separate contract.
+Automatic failed/unknown push resend remains prohibited. AK later authorized a
+one-time read-only copy of push registrations (S18a), superseding the original
+no-migration decision. Preserve accepted S3 registrations during rollback; do
+not broadcast on startup. Weather/provider retries remain their separate contract.
 
 Future multiple instances keep independent memory caches and share S3. Before
 that rollout, implement durable provider admission, fetch/background ownership,
 CAS contention, readiness/drain and bounded warm-up. This is a plan only; no
 shared cache or multi-instance deployment is introduced.
+
+## Disposable local cache and required disk capacity (S15b-4c)
+
+Provision **at least 32 GiB gp3 root capacity** for the initial single-process
+configuration below. This is a capacity recommendation with explicit assumptions,
+not a measured EC2 latency/IOPS or production demand result. Start with gp3's
+[baseline 3,000 IOPS and 125 MiB/s](https://docs.aws.amazon.com/ebs/latest/userguide/general-purpose.html);
+change performance provision only after real host measurements identify a need.
+
+server2 does not automatically create an application disk cache unless a directory
+is configured. In the private `server2/.env` (copied from legacy, with provider
+names unchanged), add these real operational settings for this deployment:
+
+```dotenv
+SERVER2_LOCAL_CACHE_DIR=/var/cache/server2/raw
+SERVER2_LOCAL_CACHE_MAX_BYTES=8589934592
+```
+
+Prepare a dedicated directory owned by the server2 service user with mode **0700**;
+new cache files are **0600**. A missing directory is created lazily, without any
+provider/S3 operation at settings parse time. A cap without a directory, malformed
+cap, or cap outside 4 KiB–1 TiB is a startup configuration error. A configured
+directory without a cap uses 8 GiB. Unset both settings to keep cache `None`.
+These settings do not select a provider or a validation mode. No private `.env`
+is read by the tests or measurement tool.
+
+The cache holds verified immutable raw objects for `data-go-kr`, `kma-web`, `vc`
+and the exact `airkorea-image` / `airkorea-forecast-image` pair. AirKorea's image
+raws are included; decoded GIFs and packs are **not** added in this increment.
+Mutable catalogs, absence proofs, state, budgets, push tokens, geocode and exact
+request coordinates are excluded. Catalog/group publication checks still use S3.
+Filename and namespace hashes do not replace the raw codec's identity validation.
+
+A root capacity lock serializes disk admission through temporary write, rename
+and cleanup. The byte cap covers **managed raw plus temporary allocated file
+bytes across all hashed namespaces in this dedicated directory**, including old
+bucket/region namespaces. Only the current namespace is evicted. If old data
+uses the remaining cap, a new fill is skipped and the request uses S3 normally;
+other namespaces are never reused or deleted. A lower cap does not promise to
+delete old namespaces that were already larger; it prevents new growth until
+space is available. Keep the same cap for all processes sharing a root; the
+supported initial deployment has one API process. A namespace owner lock prevents
+two cache managers from modifying the same namespace. Two admitted local operations
+bound copies/blocking work; lock contention bypasses optional cache work.
+
+LRU eviction uses access order while running and file modification order after a
+restart. There are at most 131,072 entries per namespace. Symlinks are refused.
+Truncated/checksum-invalid/codec-invalid local files are discarded and fetched
+from S3. Cache loss, read errors, ownership conflicts, full disk and failed writes
+cannot acknowledge publication or turn a bad S3 object into valid data. Files
+left by an interrupted write are cleaned only in the owned namespace. A live
+cache directory deleted externally may remain bypassed until process restart;
+canonical reads remain correct. Do not put unrelated operator files in the
+cache directory or count it as the only copy of any state.
+
+Size the root with this reusable formula (GiB, round **up**):
+
+```text
+root >= (OS + retained binaries + bounded logs + global cache cap
+         + peak temporary work outside that cap + swap) / (1 - free fraction)
+initial = (8 + 1 + 2 + 8 + 2 + 0) / (1 - 0.25) = 28 GiB
+recommended provision = 32 GiB gp3
+```
+
+OS 8 GiB, retained binaries 1 GiB, bounded sanitized logs 2 GiB and non-cache
+update/temporary work 2 GiB are **operator budgets**, not measured production
+usage. Swap is assumed off; add its size if configured. The cache cap already
+includes cache temporary files: do not add an extra 8 GiB or image copy for them.
+Directory/inode/lock overhead and filesystem variation fit in the 25% reserve;
+monitor `df -h`, `df -i` and allocated `du` on the entire cache root. Bound log
+rotation and binary retention to the listed budgets. Resize the root or lower
+the cap before headroom falls below 25%; never enlarge the cap without updating
+this calculation. With a 16 GiB cache cap the same formula needs at least 39 GiB
+(round to 40 GiB or more). More active regions increase misses/eviction, not the
+configured disk cap. Nationwide images are shared records and must not be
+multiplied by the number of active grids.
+
+The [selected local measurement](../evidence/tasks/issue-2742-s15b4c/cache-measurement.json)
+uses an incompressible synthetic 6 MiB **raw payload**, not a real GIF decode or
+AWS benchmark. Its gzip wire is about 6 MiB and its cache allocation about 6 MiB;
+exact bytes, temporary reservation peak, binary sizes and execution timestamp are
+in the receipt. Native HTTP with three seeded current publications returned the
+same response with cache unset, cold disk and empty-RAM/warm disk. Warm disk
+reduced raw GETs from 3 to 1, while **371 catalog GETs remained**. Optional fills
+may be skipped under bounded local contention, so warm disk is not a promise of
+zero raw GETs. Local raw warm
+latency was slower in this sample; no cold p95 achievement is inferred. Real S3,
+EBS, full-data cold cells and GIF decoding must be measured in S19/S20. Use that
+evidence to decide whether decoded caching or O01 packs are necessary; do not
+assume a pack archive or precollection is required.
+
+Run the reproducible local check with task-built debug/release examples:
+
+```sh
+python3 server2/tools/kma_cache_measure.py \
+  --measure-binary /path/to/examples/kma_cache_measure \
+  --native-binary /path/to/examples/loopback_server \
+  --output reports/cache-measurement.json
+```
+
+It uses owned loopback S3/provider doubles and explicit fake credentials, never
+production `.env`, AWS or a real provider. The [capture](../evidence/tasks/issue-2742-s15b4c/cache-measurement.png)
+and [verification record](../evidence/tasks/issue-2742-s15b4c/verification.md)
+distinguish this functional observation from deployment readiness.
 
 ## Evidence and limitations
 

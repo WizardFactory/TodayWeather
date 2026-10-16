@@ -3322,3 +3322,45 @@ policy comparison, not an actual-role or live-AWS verification claim. No AWS cha
 real provider request, device push or deployment is performed by this slice.
 S18c remains a subsequent backend/API, publishing CLI and S3 notice-state PR under
 #2623; client/web popup implementation and SQLite are outside these S18 PRs.
+
+## Verified disposable raw disk cache (S15b-4c)
+
+AK permits local disk caching throughout server2, provided local data is disposable
+and S3 remains authoritative. This increment caches only verified immutable weather
+raws; it does not make mutable state durable on disk. See the
+[sequence diagram](diagrams/server2-disk-cache.html),
+[specification](../../specs/issue-2742-s15b4c.md) and
+[setup capacity calculation](../operations/server2-infrastructure.md#disposable-local-cache-and-required-disk-capacity-s15b-4c).
+
+`S3Settings` accepts optional `SERVER2_LOCAL_CACHE_DIR` and
+`SERVER2_LOCAL_CACHE_MAX_BYTES` (8 GiB default **only when a directory is set**).
+No directory means `ObjectTransport::raw_cache() == None`. Tests inject values;
+the production dotenv/provider names and runtime request policy remain unchanged.
+`BoundedS3` forwards this capability without caching its control operations.
+`RawRecordStore` checks eligible expected identities, local framing/checksum and
+the existing codec before returning a hit. Otherwise it reads canonical S3 and
+queues a bounded best-effort disk fill only after full verification. CatalogStore
+still checks group publication/completeness through S3. A local hit cannot create
+an unpublished group, cached absence or forged raw identity.
+
+Eligible sources are `data-go-kr`, `kma-web`, `vc`, plus exact
+`airkorea-image` / `airkorea-forecast-image`. Credentials, precise request
+coordinates, geocode, push tokens/state, budgets and mutable catalogs are excluded.
+No decoded GIF sidecar or O01 pack is introduced. Namespace isolation binds
+endpoint/bucket/region/schema; private 0700 roots and 0600 hash-named files refuse
+symlinks. An owner file lock protects each namespace. A separate root lock covers
+raw/temp allocated-byte admission across namespaces; only current-namespace LRU
+entries may be evicted. Old namespaces consuming capacity cause disk fills to be
+skipped, not unbounded growth or cross-bucket reuse/deletion. Same-root managers
+must use the same operator cap. Metadata/inode overhead is budgeted as root
+headroom separately. Restart prunes owned incomplete files; missing/corrupt/full
+or locked local storage bypasses to S3. No local operation proves S3 durability.
+
+The owned-loopback debug measurement reduces native raw GETs from 3 to 1 in the selected sample after
+empty-RAM warm-disk restart with unchanged response bytes and no legacy hop.
+Optional bounded fills can be skipped under contention. Its 371 catalog GETs remain; this is not a production cold p95 result. The 6 MiB
+synthetic raw payload validates image-sized storage/verification, not GIF decoding.
+Raw warm latency did not improve in that sample. Follow real full-data cold
+measurements before proposing decoded caching or O01 packs. Setup recommends
+32 GiB gp3 for an 8 GiB global cache cap and labelled OS/log/temp/headroom budgets;
+no EC2 provisioning or production cache setting was performed by this task.

@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "capture_kind": "sanitized actual measurement JSON rendered as a result capture",
+  "executed_at_utc": "2026-10-16T07:33:51.903414+00:00",
+  "base_commit": "ec32c73f97083d664c601c86aa672392020a1194",
+  "runtime_source_sha256": {
+    "server2/src/cache/disk.rs": "472143813ceab8d8bf3470b5b296b0276b766907e6e7bc4c0c22aef716ffffd3",
+    "server2/src/cache/mod.rs": "cc64005b10deba0d57713258c358756a99b8a3e212d56e5470a6acf119146634",
+    "server2/src/storage/store.rs": "f9434cd7cecdac22cc6b353f093b2171888df66eb1e76d1352d5c90e0468fe1c",
+    "server2/src/storage/settings.rs": "2df1dcc992a10de05bb9046b4d792c40adbc4f3ea0d653c8a921873d4e8b6681",
+    "server2/src/storage/transport.rs": "b914ba47c810844cda6580c0c2db048b522477e76e7bfcd92f40ddab445466be",
+    "server2/src/world/air_store.rs": "55c2e9f8d3b31c301013129ca84ffd0304057d24938d3f22e639da2f23f1d4e7"
+  },
+  "command": "python3 server2/tools/kma_cache_measure.py --measure-binary <task build>/examples/kma_cache_measure --native-binary <task build>/examples/loopback_server --output <owned receipt>",
+  "binary_sha256": {
+    "loopback_server": "df989c817daa1cf460b804aa76bdbdc57d2d49bc600716637c0f67b20ea8cdb5",
+    "kma_cache_measure": "920f18bc837e6ab52276b65b05145c1a6d67c70fe9deb159da2555e6a022ec63"
+  },
+  "measurement_sha256": "1979ec1eab9cc1de7040cf50d4d6bb6ae406489060d66227aded41686f67fa0e",
+  "source_sha256": "cbeb32e1498c0d1362f8fb3927042039c0226722290390da519fcc74215c406c",
+  "pdf_sha256": "5225391dc7e41f86740d3f57c0fe7779c580edd4ccacafdd93bdbf5f2d0cfdde",
+  "capture_sha256": "9b9e06ae498318b10da7bf45fab771e44cb3ca6218b8c96ef0273c7fc75e4968",
+  "limitations": "owned-loopback debug HTTP, partial KMA current inputs, no AWS/provider/GIF decode latency claim",
+  "link_policy": "Relative Markdown links preserved; new files absent at pinned base render as relative references, not fabricated GitHub revision links"
+}
