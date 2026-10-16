@@ -1,6 +1,6 @@
 //! S18b-1 scheduled alarm delivery: the legacy alarm worker over server2 push state, the
 //! legacy weather requests, FCM HTTP v1 without hidden retries, an S3 delivery ledger and
-//! sanitized diagnostics. No process wiring yet (S20); tests use loopback doubles only.
+//! sanitized diagnostics. S20b owns process supervision; tests use loopback doubles only.
 pub mod alarm;
 pub mod fcm;
 pub mod ledger;
@@ -17,3 +17,5 @@ pub mod warning_feed;
 pub mod warnings;
 
 pub mod native_fetch;
+
+pub mod supervisor;

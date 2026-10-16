@@ -69,10 +69,13 @@ async fn strict_native_targets_preserve_family_version_units_language() {
 }
 #[tokio::test]
 async fn production_native_handlers_are_built_for_push_without_public_selection() {
-    let peer = super::common::Peer::new();
+    // This test checks production factory wiring, not cold CSV reference initialization.
+    // Initialize only repository-static data before NativeFetch starts its unchanged 3s timer.
+    let _ = server2::domestic::kma::source::towns();
+    let peer = super::common::Peer::persistent();
     let s = peer.services("push");
     super::common::ready(&s).await;
-    // Cold native inputs terminate locally; unreachable owned provider roots cannot forward.
+    // S3/provider inputs remain cold; unreachable owned provider roots cannot forward.
     let (status, bytes) = s
         .native_fetch
         .get(

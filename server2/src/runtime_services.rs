@@ -1,4 +1,4 @@
-//! S20a shared production construction. No delivery/scheduler loops or paid notice clients.
+//! Shared production construction. Workers are prepared here and started by the bound process.
 use crate::{
     gateway::{
         self, Gateway, GatewayError,
@@ -23,6 +23,7 @@ pub struct RuntimeServices {
     pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
     pub native_fetch: crate::push::deliver::native_fetch::NativeFetch,
     pub s3: Option<ProcessS3>,
+    pub delivery: Option<Arc<crate::push::deliver::supervisor::Workers<ProcessS3>>>,
 }
 impl RuntimeServices {
     pub fn from_vars(var: &dyn Fn(&str) -> Option<String>) -> Result<Self, GatewayError> {
@@ -31,6 +32,30 @@ impl RuntimeServices {
     pub fn from_vars_at(
         var: &dyn Fn(&str) -> Option<String>,
         builtins: &Builtins,
+    ) -> Result<Self, GatewayError> {
+        Self::from_vars_with_fcm(var, builtins, crate::push::deliver::Endpoints::production())
+    }
+    /// Code-injected endpoints for owned loopback peers; no environment override exists.
+    pub fn from_vars_with_fcm(
+        var: &dyn Fn(&str) -> Option<String>,
+        builtins: &Builtins,
+        endpoints: crate::push::deliver::Endpoints,
+    ) -> Result<Self, GatewayError> {
+        Self::from_vars_with_delivery(
+            var,
+            builtins,
+            endpoints,
+            Arc::new(crate::budget::SystemClock),
+            None,
+        )
+    }
+    /// Test dependency injection uses the same factory and native adapter, never settings/modes.
+    pub fn from_vars_with_delivery(
+        var: &dyn Fn(&str) -> Option<String>,
+        builtins: &Builtins,
+        endpoints: crate::push::deliver::Endpoints,
+        clock: Arc<dyn crate::budget::Clock>,
+        native: Option<crate::push::deliver::native_fetch::NativeFetch>,
     ) -> Result<Self, GatewayError> {
         let base = var("SERVER2_GATEWAY_LEGACY_URL");
         let families = NativeFamilies::from_vars(var)?;
@@ -86,14 +111,67 @@ impl RuntimeServices {
         } else {
             None
         };
+        let native_fetch = native
+            .unwrap_or_else(|| crate::push::deliver::native_fetch::NativeFetch::new(built.native));
+        let delivery = if let Some(push) = &push {
+            use crate::push::deliver::{self, native_fetch::NativeFetch, supervisor::Workers};
+            let transport = Arc::new(s3.clone().ok_or(GatewayError::InvalidConfiguration)?);
+            let fetch = Arc::new(native_fetch.clone());
+            let fcm = Arc::new(
+                deliver::Fcm::from_vars(var, endpoints)
+                    .map_err(|_| GatewayError::InvalidConfiguration)?,
+            );
+            let diagnostics: Arc<dyn deliver::Diagnostics> = Arc::new(deliver::StderrDiagnostics);
+            let servers = NativeFetch::servers();
+            Some(Arc::new(Workers {
+                alarm: Arc::new(deliver::AlarmWorker::new(
+                    push.clone(),
+                    transport.clone(),
+                    fetch.clone(),
+                    fcm.clone(),
+                    servers.clone(),
+                    clock.clone(),
+                    diagnostics.clone(),
+                )),
+                alerts: Arc::new(deliver::alerts::AlertWorker::new(
+                    push.clone(),
+                    transport.clone(),
+                    fetch.clone(),
+                    fcm.clone(),
+                    servers.clone(),
+                    clock.clone(),
+                    diagnostics.clone(),
+                )),
+                warnings: Arc::new(deliver::warnings::WarningWorker::new(
+                    push.clone(),
+                    transport,
+                    warning_feed
+                        .clone()
+                        .ok_or(GatewayError::InvalidConfiguration)?,
+                    warning_store
+                        .clone()
+                        .ok_or(GatewayError::InvalidConfiguration)?,
+                    Arc::new(deliver::warnings::ApiLocations::new(fetch, servers)),
+                    fcm.clone(),
+                    clock.clone(),
+                    diagnostics.clone(),
+                )),
+                fcm,
+                clock,
+                diagnostics,
+            }))
+        } else {
+            None
+        };
         Ok(Self {
+            delivery,
             warning_acquire: built.warning_acquire,
             gateway: built.gateway,
             push,
             notices,
             warning_store,
             warning_feed,
-            native_fetch: crate::push::deliver::native_fetch::NativeFetch::new(built.native),
+            native_fetch,
             s3,
         })
     }

@@ -223,7 +223,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
 
     /// `sendNotification`: weather, text, provider (one delivery, never retried).
     pub async fn deliver(&self, info: &mut Obj, now_ms: i64) -> Delivery {
-        self.deliver_selected(info, now_ms, &[]).await
+        self.deliver_selected(info, now_ms, &[], None).await
     }
 
     /// [`Self::deliver`] within a minute whose stale cleanups are `stale`: an unregistered
@@ -233,6 +233,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
         info: &mut Obj,
         now_ms: i64,
         stale: &[StaleSelection],
+        selection: Option<(u64, Oid, Obj)>,
     ) -> Delivery {
         let message = match weather::daily_summary(info, &self.servers, &*self.fetch).await {
             Ok(m) => m,
@@ -259,7 +260,24 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             let send_ms = self.clock.now_ms().unwrap_or(now_ms);
             return match self
                 .fcm
-                .send(Product::of(info.get("package")), body, send_ms)
+                .send_guarded(Product::of(info.get("package")), send_ms, || async {
+                    if let Some((n, oid, selected)) = selection {
+                        let at = self.clock.now_ms().ok()?;
+                        if at.div_euclid(60_000) != now_ms.div_euclid(60_000)
+                            || !self
+                                .push
+                                .internal(InternalOp::CheckAlarmSelection { n, oid, selected })
+                                .await
+                        {
+                            return None;
+                        }
+                        let at = self.clock.now_ms().ok()?;
+                        if at.div_euclid(60_000) != now_ms.div_euclid(60_000) {
+                            return None;
+                        }
+                    }
+                    Some(body)
+                })
                 .await
             {
                 SendOutcome::Accepted => Delivery::Accepted,
@@ -285,6 +303,8 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                     class: match reason {
                         "credentials" => "fcm-credentials",
                         "oauth" => "fcm-oauth",
+                        "shutdown" => "shutdown-before-post",
+                        "guard" => "alarm-admission",
                         _ => "fcm-connect",
                     },
                 },
@@ -401,8 +421,11 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             let all_stale = all_stale.clone();
             tasks.push(async move {
                 let _permit = gate.acquire_owned().await.expect("open gate");
+                let selected = info.clone();
                 let mut info = info;
-                let delivery = self.deliver_selected(&mut info, now_ms, &all_stale).await;
+                let delivery = self
+                    .deliver_selected(&mut info, now_ms, &all_stale, Some((n, oid, selected)))
+                    .await;
                 (n, oid, stale, info, delivery)
             });
         }
@@ -480,7 +503,9 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
     /// overlap as legacy batches did. A minute missed while the process was down is not caught
     /// up.
     pub async fn run(self: Arc<Self>) {
+        let mut jobs = tokio::task::JoinSet::new();
         loop {
+            while jobs.try_join_next().is_some() {}
             let Ok(now) = self.clock.now_ms() else {
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                 continue;
@@ -492,7 +517,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                 continue;
             };
             let worker = self.clone();
-            tokio::spawn(async move {
+            jobs.spawn(async move {
                 worker.run_minute(observed).await;
             });
         }

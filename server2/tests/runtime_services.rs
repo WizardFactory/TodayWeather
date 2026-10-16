@@ -6,3 +6,7 @@ mod feed;
 mod http;
 #[path = "runtime_services/native.rs"]
 mod native;
+#[path = "runtime_services/process.rs"]
+mod process;
+#[path = "runtime_services/supervision.rs"]
+mod supervision;

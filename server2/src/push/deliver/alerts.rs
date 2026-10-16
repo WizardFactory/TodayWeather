@@ -624,7 +624,15 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
             diagnostics,
         }
     }
-    async fn send(&self, info: &Obj, notification: &Message, now: i64) -> Delivery {
+    async fn send(
+        &self,
+        n: u64,
+        oid: crate::push::store::Oid,
+        info: &Obj,
+        selected: &Obj,
+        notification: &Message,
+        now: i64,
+    ) -> Delivery {
         let token = info.get("fcmToken");
         if token.truthy() {
             let Val::Str(token) = token else {
@@ -634,10 +642,29 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
             };
             match self
                 .fcm
-                .send(
+                .send_guarded(
                     Product::of(info.get("package")),
-                    fcm_body(notification, info),
                     self.clock.now_ms().unwrap_or(now),
+                    || async {
+                        if !self
+                            .push
+                            .internal(InternalOp::CheckAlertSelection {
+                                n,
+                                oid,
+                                selected: selected.clone(),
+                            })
+                            .await
+                        {
+                            return None;
+                        }
+                        let at = self.clock.now_ms().ok()?;
+                        if at.div_euclid(60_000) != now.div_euclid(60_000)
+                            || !inside_window(info, at)
+                        {
+                            return None;
+                        }
+                        Some(fcm_body(notification, info))
+                    },
                 )
                 .await
             {
@@ -657,6 +684,8 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
                     class: match reason {
                         "credentials" => "fcm-credentials",
                         "oauth" => "fcm-oauth",
+                        "shutdown" => "shutdown-before-post",
+                        "guard" => "alert-admission",
                         _ => "fcm-connect",
                     },
                 },
@@ -678,6 +707,9 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
         if ![7, 17, 35, 50].contains(&minute) {
             return MinuteReport::default();
         }
+        // run_minute remains a directly testable legacy selection API. Admission age uses
+        // the actual clock at entry; the supervisor separately rejects a stale queued tick.
+        let admission_ms = self.clock.now_ms().unwrap_or(now_ms);
         let at = crate::world::js::iso(minute_ms as f64).unwrap_or_default();
         if !self.push.ready() {
             self.diagnostics
@@ -751,7 +783,17 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
                         return Ok(None);
                     }
                     let notification = message(&info, &parsed).map_err(|_| "message")?;
-                    Ok(Some(self.send(&info, &notification, evaluated_ms).await))
+                    let mut selected = record.doc.clone();
+                    let mut fields = Obj::new();
+                    fields.set("precipAlerts", info.get("precipAlerts").clone());
+                    fields.set("airAlerts", info.get("airAlerts").clone());
+                    let set = crate::push::mongoose::cast_set(Coll::Alert, &fields, false)
+                        .map_err(|_| "state-cast")?;
+                    crate::push::mongoose::apply_set(&mut selected, &set);
+                    Ok(Some(
+                        self.send(n, record.oid, &info, &selected, &notification, admission_ms)
+                            .await,
+                    ))
                 }
                 .await;
                 (record.oid, result)
@@ -802,7 +844,9 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
     }
     /// Boundary scheduler, no catch-up after downtime and no retry of a claimed cycle.
     pub async fn run(self: Arc<Self>) {
+        let mut jobs = tokio::task::JoinSet::new();
         loop {
+            while jobs.try_join_next().is_some() {}
             let Ok(now) = self.clock.now_ms() else {
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                 continue;
@@ -815,9 +859,18 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
                 continue;
             };
             let worker = self.clone();
-            tokio::spawn(async move {
+            jobs.spawn(async move {
                 worker.run_minute(observed).await;
             });
         }
+    }
+}
+
+fn inside_window(info: &Obj, now: i64) -> bool {
+    let time = Val::Num((now.rem_euclid(86_400_000) / 1000) as f64);
+    match info.get("reverseTime") {
+        Val::Bool(false) => ge(&time, info.get("startTime")) && js::le(&time, info.get("endTime")),
+        Val::Bool(true) => ge(&time, info.get("startTime")) || js::le(&time, info.get("endTime")),
+        _ => false,
     }
 }

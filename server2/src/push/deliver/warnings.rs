@@ -388,6 +388,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                     "credentials" => "fcm-credentials",
                     "oauth" => "fcm-oauth",
                     "guard" => "warning-admission",
+                    "shutdown" => "shutdown-before-post",
                     _ => "fcm-connect",
                 },
             },

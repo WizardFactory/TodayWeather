@@ -1,0 +1,80 @@
+{
+  "task": "S20b",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2792",
+  "server2_paths": [
+    "server2/src/process.rs",
+    "server2/src/runtime_services.rs",
+    "server2/src/lib.rs",
+    "server2/src/push/service.rs",
+    "server2/src/push/deliver/mod.rs",
+    "server2/src/push/deliver/alarm.rs",
+    "server2/src/push/deliver/alerts.rs",
+    "server2/src/push/deliver/warnings.rs",
+    "server2/src/push/deliver/fcm.rs",
+    "server2/src/push/deliver/supervisor.rs",
+    "server2/src/push/deliver/ops.rs",
+    "server2/tests/runtime_services.rs",
+    "server2/tests/runtime_services/supervision.rs",
+    "server2/tests/runtime_services/process.rs",
+    "server2/tests/runtime_services/peer.py",
+    "server2/examples/loopback_server.rs",
+    "server2/tools/runtime_services_smoke.py",
+    "server2/config/tasks/S20b.json",
+    "server2/tests/delivery/faults.rs",
+    "server2/tests/runtime_services/common.rs",
+    "server2/tests/runtime_services/native.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2705-s20b.md",
+      "category": "documentation",
+      "reason": "S20b maintained contract, operations, architecture or selected evidence"
+    },
+    {
+      "path": "specs/issue-2705-s20b.md",
+      "category": "documentation",
+      "reason": "S20b maintained contract, operations, architecture or selected evidence"
+    },
+    {
+      "path": "plans/issue-2705-s20b.md",
+      "category": "documentation",
+      "reason": "S20b maintained contract, operations, architecture or selected evidence"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "S20b maintained contract, operations, architecture or selected evidence"
+    },
+    {
+      "path": "docs/operations/server2-runtime-services.md",
+      "category": "documentation",
+      "reason": "S20b maintained contract, operations, architecture or selected evidence"
+    },
+    {
+      "path": "docs/operations/server2-runtime-services.pdf",
+      "category": "documentation",
+      "reason": "S20b maintained contract, operations, architecture or selected evidence"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.json",
+      "category": "documentation",
+      "reason": "S20b maintained contract, operations, architecture or selected evidence"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.html",
+      "category": "documentation",
+      "reason": "S20b maintained contract, operations, architecture or selected evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2705-s20b/verification.md",
+      "category": "documentation",
+      "reason": "S20b maintained contract, operations, architecture or selected evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2705-s20b/runtime-smoke.png",
+      "category": "documentation",
+      "reason": "S20b maintained contract, operations, architecture or selected evidence"
+    }
+  ],
+  "declaration_record": "AK 2026-10-16 pre-merge assignment; root accepted ops.rs and runtime_services supervision.rs/process.rs/peer.py before dependent edits. No Rich source, legacy, parent plan or shared infrastructure changes. Before dependent edit, declared delivery/faults.rs to reconcile existing changed-subscription cleanup expectation with required final POST guard; same-settings refresh semantics retained. Root notified. AK 2026-10-17 explicitly authorizes test-only common.rs/native.rs persistent peer helper/static reference setup; reflected before dependent edits. Production sources/budgets/oracles/shared peer unchanged."
+}
