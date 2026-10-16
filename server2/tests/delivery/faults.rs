@@ -544,6 +544,65 @@ async fn an_unrecorded_result_is_reported_and_nothing_is_resent() {
 }
 
 #[tokio::test]
+async fn a_result_with_a_lost_answer_is_read_back() {
+    const RESULT: &str = "index/v2/push/delivery/alarm/20261015/2200.result.json";
+    // Stored, answer lost: read back as recorded, no note.
+    let rig = rig_named("result-lost", &[alarm(1, "r-1", 79200, "")]).await;
+    rig.s3.fault_put(RESULT, Fault::CommitLost);
+    assert!(rig.worker.run_minute(NOW).await.claimed);
+    assert!(rig.s3.body(RESULT).is_some());
+    assert!(rig.diagnostics.minutes.lock().unwrap().is_empty());
+    // Answer lost and unreadable: reported as unknown, not as unrecorded.
+    let rig = rig_named("result-unknown", &[alarm(1, "r-1", 79200, "")]).await;
+    rig.s3.fault_put(RESULT, Fault::LostUnreadable);
+    assert!(rig.worker.run_minute(NOW).await.claimed);
+    assert!(
+        rig.diagnostics.minutes.lock().unwrap()[0].contains("result write outcome unknown"),
+        "{:?}",
+        rig.diagnostics.minutes.lock().unwrap()
+    );
+}
+
+#[tokio::test]
+async fn an_unregistered_stale_record_is_removed_with_the_disable_in_one_entry() {
+    // The selected record is stale; another record of the same token is not. The disable and
+    // the stale removal are one journal entry, so no restart or later failure can leave the
+    // stale record enabled.
+    let mut stale = alarm(1, "gone", 79200, "");
+    stale.1.doc.set("updatedAt", Val::Date(1_700_000_000_000.));
+    let other = alarm(2, "gone", 0, "");
+    let rig = rig_named("atomic", &[stale, other]).await;
+    rig.google
+        .state
+        .fcm
+        .lock()
+        .unwrap()
+        .push_back(Answer::Json(404, UNREGISTERED.into()));
+    let before = rig.s3.put_count("index/v2/push/state/journal/");
+    let report = rig.worker.run_minute(NOW).await;
+    assert_eq!(report.deliveries[0].1, "unregistered");
+    assert_eq!(
+        rig.s3.put_count("index/v2/push/state/journal/") - before,
+        1,
+        "one journal entry for the disable and the removal"
+    );
+    let restored = start(
+        &rig.s3,
+        rig.clock.clone(),
+        super::state_common::fast_config(),
+    )
+    .await;
+    let state = restored.state();
+    let state = state.read().unwrap();
+    let records: Vec<(Val, Val)> = state
+        .coll(Coll::Alarm)
+        .iter()
+        .map(|(_, r)| (r.doc.get("cityIndex").clone(), r.doc.get("enable").clone()))
+        .collect();
+    assert_eq!(records, [(Val::Num(2.), Val::Bool(false))]);
+}
+
+#[tokio::test]
 async fn a_failed_disable_is_reported_and_nothing_is_resent() {
     let rig = rig("disable-failed", AT, &[alarm(1, "gone", 79200, "")], None).await;
     rig.weather.set(&kma_weather());

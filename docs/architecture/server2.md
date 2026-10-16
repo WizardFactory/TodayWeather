@@ -2751,8 +2751,8 @@ A delivery is identified by (kind, minute, record `_id`). Only the process whose
 sends; a second process, a restart or a repeated tick finds the claim (409/412) and sends nothing.
 An unknown claim outcome is read back (our body: owned; another body: taken; unreadable: nothing
 sent), and a refused or unavailable ledger sends nothing for that minute. A claim without a result
-means the outcomes are unknown and are not resent; a result that cannot be written is reported
-as a minute note and counted. Outcomes: `accepted`, `unregistered`,
+means the outcomes are unknown and are not resent; an unknown result write is read back, and a
+result that was refused or whose outcome stays unknown is reported as a minute note and counted. Outcomes: `accepted`, `unregistered`,
 `rejected` (firebase-admin client code), `unknown` (timeout or transport error after sending) and
 `failed` (nothing sent: weather, geocode, build, credentials, OAuth, connect, iOS without FCM token,
 retired GCM, unknown type).
@@ -2775,8 +2775,9 @@ demand per app, one request at a time, and a failure is not cached; the duplicat
 indexed key fields and decodes only grouped records; the 60-day removal and the `updatedAt` stamp
 re-check records in the writer: of the records the `makeRemoveSelector` filter matches, the
 selected one is removed only while it still equals the document read at selection and any other
-only while its own `updatedAt` is older than 60 days; an unregistered token's disable leaves
-exactly those records for the removal (legacy disabled, then removed them the same minute); the
+only while its own `updatedAt` is older than 60 days; an unregistered token's disable removes
+exactly those records in its own journal entry (legacy disabled, then removed them the same
+minute), so no restart can leave one enabled; the
 stamp applies only while the record still has no `updatedAt`. So a user change or removal made
 during the minute is never undone (even one that repeats the same settings) and a stamp never
 re-enables a disabled token (legacy removed every match and upserted the copy read before

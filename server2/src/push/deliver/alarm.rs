@@ -5,7 +5,7 @@
 //! records without `updatedAt`. A failed or unknown send is recorded and never retried; a later
 //! minute is a separate delivery.
 use super::fcm::{Fcm, Product, SendOutcome};
-use super::ledger::{Claim, Ledger};
+use super::ledger::{Claim, Ledger, Written};
 use super::weather::{self, Fetch, Servers, WeatherFailure};
 use crate::budget::Clock;
 use crate::push::{
@@ -427,14 +427,18 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                 &serde_json::json!({"schema": 1, "kind": "alarm", "minute": minute, "deliveries": rows}),
             )
             .await;
-        if !recorded {
-            // The claim stays: the minute is not resent; its outcomes are only in this process's
-            // diagnostics and counters.
+        // Either way the claim stays and nothing is resent; the outcomes are in this process's
+        // diagnostics and counters.
+        let note = match recorded {
+            Written::Recorded => None,
+            Written::Refused => Some("result not recorded; claim kept, nothing resent"),
+            Written::Unknown => Some("result write outcome unknown; claim kept, nothing resent"),
+        };
+        if let Some(note) = note {
             self.counters
                 .results_unrecorded
                 .fetch_add(1, Ordering::Relaxed);
-            self.diagnostics
-                .minute(&minute, "result not recorded; claim kept, nothing resent");
+            self.diagnostics.minute(&minute, note);
         }
         // `_removeOldList`. Each operation re-checks the records in the writer, so a change made
         // since selection (a user update, a removal) is never undone.

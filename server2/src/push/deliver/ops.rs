@@ -20,10 +20,13 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
                 .map(|s| still_stale(txn, s))
                 .unwrap_or_default();
             let query = [("fcmToken".to_owned(), Cond::Eq(Val::Str(token.clone())))];
+            // The stale records the delivery's cleanup would remove are removed here, in the same
+            // journal entry as the disable (legacy disabled, then removed them the same minute),
+            // so no restart or later failure can leave one of them enabled.
+            for n in &spared {
+                txn.remove(Coll::Alarm, *n);
+            }
             for n in txn.find(Coll::Alarm, &query) {
-                if spared.contains(&n) {
-                    continue;
-                }
                 let mut record = txn.get(Coll::Alarm, n).expect("found record");
                 mongoose::apply_set(
                     &mut record.doc,

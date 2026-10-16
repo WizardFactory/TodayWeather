@@ -29,6 +29,16 @@ pub enum Claim {
     Unavailable,
 }
 
+/// Whether the minute's result object was stored.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Written {
+    Recorded,
+    /// Not stored (refused, or read back as absent or different).
+    Refused,
+    /// The write's outcome and the read-back failed.
+    Unknown,
+}
+
 pub struct Ledger<T> {
     transport: std::sync::Arc<T>,
     deadline: Duration,
@@ -87,18 +97,29 @@ impl<T: CatalogTransport + Send + Sync + 'static> Ledger<T> {
         }
     }
 
-    /// Record the minute's outcomes (best effort; a failure leaves the claim without result,
-    /// which reads as "outcomes unknown").
-    pub async fn result(&self, kind: &str, minute_ms: i64, body: &serde_json::Value) -> bool {
+    /// Record the minute's outcomes (best effort; a missing result leaves the claim without
+    /// result, which reads as "outcomes unknown"). An unknown write outcome is read back.
+    pub async fn result(&self, kind: &str, minute_ms: i64, body: &serde_json::Value) -> Written {
         let key = format!("{}.result.json", minute_path(kind, minute_ms));
         let bytes = serde_json::to_vec(body).expect("result json");
-        matches!(
-            self.bounded(
+        match self
+            .bounded(
                 self.transport
-                    .put_control(&key, &bytes, &WriteCondition::Absent)
+                    .put_control(&key, &bytes, &WriteCondition::Absent),
             )
-            .await,
-            Ok(200)
-        )
+            .await
+        {
+            Ok(200) => Written::Recorded,
+            Ok(status) if (400..500).contains(&status) => Written::Refused,
+            _ => match self
+                .bounded(self.transport.get_control(&key, MAX_OBJECT))
+                .await
+            {
+                Ok(object) if object.body == bytes => Written::Recorded,
+                Ok(_) => Written::Refused,
+                Err(Error::NotFound) => Written::Refused,
+                Err(_) => Written::Unknown,
+            },
+        }
     }
 }

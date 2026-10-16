@@ -104,8 +104,8 @@ pub enum InternalOp {
     /// `removeDuplicateAlarms`: (registrationId, cityIndex, id) groups keep the newer record.
     RemoveDuplicateAlarms,
     /// `disableAlarmsByFcm(token)`: `{enable: false, updatedAt: now, updatedBy: 'push'}`, multi.
-    /// Records the delivery's stale cleanup will remove are left as they are (disabling them
-    /// would make them look recently updated).
+    /// The still-stale records of `spare` (the delivery's 60-day cleanup) are removed in the same
+    /// journal entry instead (disabling them would make them look recently updated).
     DisableAlarmsByFcm {
         token: String,
         spare: Option<StaleSelection>,
