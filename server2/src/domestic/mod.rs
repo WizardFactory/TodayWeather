@@ -16,7 +16,7 @@ pub mod quota;
 pub mod riseset;
 pub mod zone;
 use crate::{budget::BudgetError, providers::Disposition, resolver::Acquisition};
-pub use acquire::{DomesticAcquirer, KeyBudgets, KeyRing};
+pub use acquire::{ApiBudgets, DomesticAcquirer, KeyBudgets, KeyRing};
 use std::fmt;
 
 /// Outcome of one acquisition. Only `Complete` carries raw records.

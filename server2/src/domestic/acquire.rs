@@ -54,11 +54,13 @@ const KST_MS: i64 = 9 * 3_600_000;
 fn kst_day_end(now_ms: i64) -> i64 {
     (now_ms + KST_MS).div_euclid(DAY_MS) * DAY_MS + DAY_MS - KST_MS
 }
+/// One key's S08 budget per data.go.kr API.
+pub type ApiBudgets<B> = BTreeMap<DataGoKrApi, Arc<BudgetStore<B>>>;
 /// The S08 budgets of one ring key: one for every call (`One`), or one per data.go.kr API
 /// (AK decision 5: data.go.kr allocates its daily quota per API and key).
 pub enum KeyBudgets<B> {
     One(Arc<BudgetStore<B>>),
-    PerApi(BTreeMap<DataGoKrApi, Arc<BudgetStore<B>>>),
+    PerApi(ApiBudgets<B>),
 }
 impl<B> KeyBudgets<B> {
     fn stores(&self) -> Vec<&Arc<BudgetStore<B>>> {
@@ -86,9 +88,7 @@ impl<B: BudgetTransport> KeyRing<B> {
         )
     }
     /// One budget per key and data.go.kr API; a call of an API without a budget is refused.
-    pub fn per_api(
-        entries: Vec<(ProviderKey, BTreeMap<DataGoKrApi, Arc<BudgetStore<B>>>)>,
-    ) -> Result<Self, DomesticError> {
+    pub fn per_api(entries: Vec<(ProviderKey, ApiBudgets<B>)>) -> Result<Self, DomesticError> {
         if entries.iter().any(|(_, map)| map.is_empty()) {
             return Err(DomesticError::Invalid("key ring needs a budget per API"));
         }
