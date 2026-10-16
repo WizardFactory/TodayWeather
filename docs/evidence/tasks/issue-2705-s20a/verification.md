@@ -21,7 +21,7 @@ Runtime candidate: `s20a-source-sha256:87c15ca76fd6342b28d9211aae2373da93715b819
 | Additional functional smoke |Actual loopback_server process, SAME RuntimeServices factory; public registration durable/restart/PUT, notice null/HEAD/read-only, health/private metrics, unselected weather404; no .env or external providers |
 | SIGTERM smoke |Both exercised HTTP stops exit0 in0.002s; no full drain claim |
 | Manual |Two-page ReportLab PDF; PyMuPDF1.26.5 rendering (Poppler absent), both pages visually inspected |
-| Diagram |Separate artifact/browser/visual gates passed; final source pin renewed in follow-up design commit |
+| Diagram |Separate artifact/browser/visual gates passed; final source pin97c21cf renewed with artifact/browser PASS, zero crossings, and actual light/dark visual checks PASS |
 | S02 contract tool |18 passed under pinned Node16.20.2 |
 | S02 full local recorder |BLOCKED local environment: EADDRNOTAVAIL on owned127.0.0.1 peer; original failure retained. Current exact-head CI goldens remains required. Not claimed passed |
 

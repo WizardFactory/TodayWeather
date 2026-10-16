@@ -2,12 +2,12 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "S20a runtime services design",
+    "title": "S20a shared runtime services",
     "output": "docs/architecture/diagrams/server2-runtime-services.html",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather.git",
-      "revision": "20cd322809f119c765e1afdbca8f447251296bef"
+      "revision": "97c21cf56b1f59f07f4900480428a678874ae2cf"
     }
   },
   "components": [
@@ -18,7 +18,7 @@
       "sublabel": "Health + selected routes",
       "pos": [
         50,
-        220
+        320
       ],
       "size": [
         185,
@@ -27,7 +27,7 @@
       "sources": [
         {
           "path": "server2/src/process.rs",
-          "line": 48
+          "line": 46
         }
       ]
     },
@@ -35,19 +35,19 @@
       "id": "services",
       "type": "backend",
       "label": "Runtime services",
-      "sublabel": "Proposed shared ownership",
+      "sublabel": "One production constructor",
       "pos": [
         340,
-        220
+        300
       ],
       "size": [
-        185,
-        68
+        200,
+        108
       ],
       "sources": [
         {
-          "path": "server2/src/gateway/runtime.rs",
-          "line": 318
+          "path": "server2/src/runtime_services.rs",
+          "line": 34
         }
       ]
     },
@@ -57,11 +57,11 @@
       "label": "Push registration",
       "sublabel": "Durable writer only",
       "pos": [
-        340,
-        50
+        1050,
+        20
       ],
       "size": [
-        185,
+        220,
         68
       ],
       "sources": [
@@ -77,37 +77,37 @@
       "label": "Native dependencies",
       "sublabel": "KMA / DSF / geocoder",
       "pos": [
-        650,
-        220
+        690,
+        320
       ],
       "size": [
-        185,
+        200,
         68
       ],
       "sources": [
         {
           "path": "server2/src/gateway/runtime.rs",
-          "line": 343
+          "line": 393
         }
       ]
     },
     {
       "id": "warning",
       "type": "backend",
-      "label": "Warning publication",
-      "sublabel": "Request driven; durable feed",
+      "label": "Warning collector + feed",
+      "sublabel": "Zone store precedes feed",
       "pos": [
-        650,
-        400
+        840,
+        490
       ],
       "size": [
-        185,
+        200,
         68
       ],
       "sources": [
         {
           "path": "server2/src/warnings/collector.rs",
-          "line": 126
+          "line": 194
         }
       ]
     },
@@ -117,11 +117,11 @@
       "label": "Notice GET / HEAD",
       "sublabel": "No Translator client",
       "pos": [
-        340,
-        400
+        1050,
+        650
       ],
       "size": [
-        185,
+        220,
         68
       ],
       "sources": [
@@ -137,17 +137,37 @@
       "label": "Shared bounded S3",
       "sublabel": "One credential cache + pool",
       "pos": [
-        960,
-        220
+        1050,
+        294
       ],
       "size": [
-        185,
-        68
+        220,
+        120
       ],
       "sources": [
         {
           "path": "server2/src/gateway/runtime.rs",
           "line": 199
+        }
+      ]
+    },
+    {
+      "id": "fetch",
+      "type": "backend",
+      "label": "NativeFetch prepared",
+      "sublabel": "Strict typed dispatch; 3s",
+      "pos": [
+        690,
+        140
+      ],
+      "size": [
+        200,
+        68
+      ],
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/native_fetch.rs",
+          "line": 35
         }
       ]
     }
@@ -175,19 +195,49 @@
       "id": "services-native",
       "from": "services",
       "to": "native",
-      "label": "shared handles"
+      "label": "construct once"
     },
     {
       "id": "native-warning",
       "from": "native",
       "to": "warning",
-      "label": "after storage"
+      "label": "on request"
     },
     {
       "id": "native-s3",
       "from": "native",
       "to": "s3",
       "label": "read / write"
+    },
+    {
+      "id": "services-fetch",
+      "from": "services",
+      "to": "fetch",
+      "label": "holds"
+    },
+    {
+      "id": "fetch-native",
+      "from": "fetch",
+      "to": "native",
+      "label": "on get only"
+    },
+    {
+      "id": "push-s3",
+      "from": "push",
+      "to": "s3",
+      "label": "durable journal"
+    },
+    {
+      "id": "notice-s3",
+      "from": "notice",
+      "to": "s3",
+      "label": "read state"
+    },
+    {
+      "id": "warning-s3",
+      "from": "warning",
+      "to": "s3",
+      "label": "store then feed"
     }
   ],
   "cards": [
@@ -195,8 +245,8 @@
       "dot": "cyan",
       "title": "Construction contract",
       "items": [
-        "Proposed S20a connections reuse existing source modules.",
-        "push builds native dependencies without selecting public weather.",
+        "One production constructor shares native handles and one S3 pool.",
+        "push builds dependencies without selecting public weather routes.",
         "No delivery loops, FCM, OAuth or paid translation at startup."
       ]
     },
@@ -204,9 +254,9 @@
       "dot": "amber",
       "title": "Persistence and lifecycle",
       "items": [
-        "Push and notice also use the one bounded S3 transport.",
-        "Warning feed accepts successful durable publications only.",
-        "S20b owns supervised delivery stop; 5s HTTP drain is not full drain."
+        "Native-only startup requires no legacy URL or synthetic origin.",
+        "Selected Forward and unsupported native fetches terminate locally.",
+        "S20b owns supervised stop; 5s HTTP drain is not full worker drain."
       ]
     }
   ]
