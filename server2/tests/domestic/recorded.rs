@@ -104,7 +104,9 @@ impl RecordedSource {
             let path = text(sc, "path").ok_or(RecordingError("path"))?;
             let query = text(sc, "query").unwrap_or_default();
             let lang = text(sc, "lang").unwrap_or_default();
-            let mut full = format!("/v000903/kma{path}");
+            // S17a recordings name their address version; S15 recordings are v000903.
+            let version = text(sc, "version").unwrap_or_else(|| "v000903".into());
+            let mut full = format!("/{version}/kma{path}");
             if !query.is_empty() {
                 full.push('?');
                 full.push_str(&query);

@@ -41,6 +41,25 @@ pub fn select_native(
     backend.register(dispatcher);
     KmaBackend::select(dispatcher, BackendMode::Native)
 }
+/// S17a: register one KMA handler over `source` for each listed address version and select it
+/// (`kma`, `kma-v000901` and `kma-v000902` in `SERVER2_NATIVE_FAMILIES`). Unlisted versions
+/// stay on legacy.
+pub fn select_native_versions(
+    dispatcher: &BackendDispatcher,
+    source: Arc<dyn KmaSource>,
+    versions: &[Version],
+) -> Result<(), GatewayError> {
+    let backend = Arc::new(KmaBackend::new(
+        source,
+        system_clock(),
+        AssemblyConfig::default(),
+    ));
+    for version in versions {
+        backend.register_version(dispatcher, *version);
+        KmaBackend::select_version(dispatcher, *version, BackendMode::Native)?;
+    }
+    Ok(())
+}
 /// Request clock (`Date.now()` in ms).
 pub type Clock = Arc<dyn Fn() -> f64 + Send + Sync>;
 pub fn system_clock() -> Clock {
@@ -73,6 +92,18 @@ impl KmaBackend {
     /// Switch v000903 KMA to `mode` (native or the legacy rollback).
     pub fn select(dispatcher: &BackendDispatcher, mode: BackendMode) -> Result<(), GatewayError> {
         dispatcher.set_backend(Version::V000903, Family::Kma, mode)
+    }
+    /// Register for one address version (legacy stays selected).
+    pub fn register_version(self: &Arc<Self>, dispatcher: &BackendDispatcher, version: Version) {
+        dispatcher.register_native(version, Family::Kma, self.clone());
+    }
+    /// Switch one address version's KMA backend to `mode`.
+    pub fn select_version(
+        dispatcher: &BackendDispatcher,
+        version: Version,
+        mode: BackendMode,
+    ) -> Result<(), GatewayError> {
+        dispatcher.set_backend(version, Family::Kma, mode)
     }
     /// Assemble a parsed request with an already loaded store (tests and the checkpoint).
     pub fn assemble_with(&self, request: &KmaRequest, store: &dyn KmaStore) -> Outcome {
@@ -182,12 +213,15 @@ fn plain_key(key: &str) -> bool {
 }
 /// `qs` `parameterLimit` of the pinned Express query parser.
 const QS_PARAMETER_LIMIT: usize = 1000;
-/// Parse a gateway backend path `/v000903/kma/addr/{region}[/{city}[/{town}]][?query]`.
+/// Parse a gateway backend path `/{version}/kma/addr/{region}[/{city}[/{town}]][?query]` for
+/// the address versions `v000901`, `v000902` and `v000903` (S17a).
 /// None means the native port does not handle it (forward to legacy).
 pub fn parse_path(path: &str, lang: &str) -> Option<KmaRequest> {
     let (p, q) = path.split_once('?').unwrap_or((path, ""));
     let p = p.strip_suffix('/').unwrap_or(p);
-    let rest = p.strip_prefix("/v000903/kma/addr/")?;
+    let (version, rest) = ["v000901", "v000902", "v000903"]
+        .into_iter()
+        .find_map(|v| Some((v, p.strip_prefix(&format!("/{v}/kma/addr/"))?)))?;
     let parts: Vec<&str> = rest.split('/').collect();
     if parts.is_empty() || parts.len() > 3 || parts.iter().any(|s| s.is_empty()) {
         return None;
@@ -213,7 +247,7 @@ pub fn parse_path(path: &str, lang: &str) -> Option<KmaRequest> {
     }
     let mut it = decoded.into_iter();
     Some(KmaRequest {
-        version: "v000903".into(),
+        version: version.into(),
         original_url: path.to_owned(),
         region: it.next(),
         city: it.next(),
@@ -247,7 +281,16 @@ mod tests {
         assert!(parse_path("/v000903/kma/addr/a/b/c/d", "en").is_none());
         assert!(parse_path("/v000903/kma/addr/%ZZ", "en").is_none());
         assert!(parse_path("/v000903/kma/addr/a?x[y]=1", "en").is_none());
-        assert!(parse_path("/v000901/kma/addr/a", "en").is_none());
+        assert_eq!(
+            parse_path("/v000901/kma/addr/a", "en").unwrap().version,
+            "v000901"
+        );
+        assert_eq!(
+            parse_path("/v000902/kma/addr/a/b", "en").unwrap().version,
+            "v000902"
+        );
+        assert!(parse_path("/v000904/kma/addr/a", "en").is_none());
+        assert!(parse_path("/v000901/kma/coord/a", "en").is_none());
         // Pinned qs: `F+%ZZ` -> "F+%ZZ", `a+%E0%A4%A` -> "a+%E0%A4%A", `a+%C3%28` -> "a+%C3%28".
         let q = parse_path(
             "/v000903/kma/addr/a?temperatureUnit=F+%ZZ&x=a+%E0%A4%A&y=a+%C3%28&z=a+b%20c",

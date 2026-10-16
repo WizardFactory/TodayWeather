@@ -486,7 +486,7 @@ fn routing_list_and_required_settings_fail_closed() {
         NativeFamilies {
             geocode: true,
             dsf: true,
-            kma: false
+            ..NativeFamilies::default()
         }
     );
     assert_eq!(

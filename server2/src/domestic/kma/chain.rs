@@ -111,6 +111,7 @@ impl Cx<'_> {
     }
 }
 
+/// `routes/v000903/route.kma.v000903.js`.
 const CHAIN: [(&str, Middleware); 37] = [
     ("checkQueryValidation", check_query_validation),
     ("checkParamValidation", check_param_validation),
@@ -175,9 +176,66 @@ const CHAIN: [(&str, Middleware); 37] = [
     ("sendResult", send_result),
 ];
 
-/// Names of the router list in order (for tests and diagnostics).
-pub fn names() -> Vec<&'static str> {
-    CHAIN.iter().map(|(n, _)| *n).collect()
+/// The router-list prefix shared by every address version, up to `getKeco`.
+const SHARED: usize = 23;
+/// The v000901 tail after `getKeco` (`routes/v000901/route.kma.addr.js`): no air fallback or
+/// warning step, one air object (`makeAirInfo`, `AirForecast`) and the `_parseSkyState` icons.
+const TAIL_V000901: [(&str, Middleware); 12] = [
+    ("getKecoDustForecast", super::air::get_keco_dust_forecast),
+    ("getRiseSetInfo", super::air::get_rise_set_info),
+    ("insertIndex", super::present::insert_index),
+    ("makeAirInfo", super::air::make_air_info),
+    ("AirForecast", super::air::air_forecast),
+    ("insertSkyIcon", super::present::insert_sky_icon),
+    ("setYesterday", super::present::set_yesterday),
+    ("convertUnits", super::present::convert_units_mw),
+    ("insertStrForData", super::present::insert_str_for_data),
+    (
+        "getSummaryAfterUnitConverter",
+        super::present::get_summary_after_unit_converter,
+    ),
+    ("makeResult", make_result),
+    ("sendResult", send_result),
+];
+/// The v000902 tail (`routes/v000902/route.kma.v000902.js`): v000901 with lower-case icons.
+const TAIL_V000902: [(&str, Middleware); 12] = [
+    ("getKecoDustForecast", super::air::get_keco_dust_forecast),
+    ("getRiseSetInfo", super::air::get_rise_set_info),
+    ("insertIndex", super::present::insert_index),
+    ("makeAirInfo", super::air::make_air_info),
+    ("AirForecast", super::air::air_forecast),
+    (
+        "insertSkyIconLowCase",
+        super::present::insert_sky_icon_low_case,
+    ),
+    ("setYesterday", super::present::set_yesterday),
+    ("convertUnits", super::present::convert_units_mw),
+    ("insertStrForData", super::present::insert_str_for_data),
+    (
+        "getSummaryAfterUnitConverter",
+        super::present::get_summary_after_unit_converter,
+    ),
+    ("makeResult", make_result),
+    ("sendResult", send_result),
+];
+/// The legacy router list of an address version (`v000901`, `v000902` or `v000903`); None for
+/// any other version.
+fn chain(version: &str) -> Option<Vec<(&'static str, Middleware)>> {
+    let tail: &[(&str, Middleware)] = match version {
+        "v000903" => return Some(CHAIN.to_vec()),
+        "v000902" => &TAIL_V000902,
+        "v000901" => &TAIL_V000901,
+        _ => return None,
+    };
+    Some(CHAIN[..SHARED].iter().chain(tail).copied().collect())
+}
+/// Names of the router list of `version` in order (for tests and diagnostics).
+pub fn names(version: &str) -> Vec<&'static str> {
+    chain(version)
+        .unwrap_or_default()
+        .iter()
+        .map(|(n, _)| *n)
+        .collect()
 }
 
 /// The store as the chain sees it: each legacy asynchronous read answers in a callback.
@@ -266,7 +324,10 @@ pub fn run(
         config,
         towns: None,
     };
-    for (name, step) in CHAIN {
+    let Some(steps) = chain(&request.version) else {
+        return Outcome::Legacy(format!("no native router list for {}", request.version));
+    };
+    for (name, step) in steps {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| step(&mut cx)));
         match result {
             Ok(Flow::Next) => (),
