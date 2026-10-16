@@ -1079,6 +1079,62 @@ pub fn make_air_info_list(cx: &mut Cx) -> Flow {
     });
     Flow::Next
 }
+/// `_getAirInfo(req)`: `req.airInfo`, created as `{source: "airkorea"}` when undefined.
+fn air_info(cx: &Cx) -> V {
+    if cx.r("airInfo").nullish() {
+        cx.set("airInfo", V::Obj(obj(vec![("source", s("airkorea"))])));
+    }
+    cx.r("airInfo")
+}
+/// `makeAirInfo` (ControllerTown24h, v000901/v000902): one air object from the first station's
+/// fresh rows (`req.arpltnList`) and the daily dust forecasts.
+pub fn make_air_info(cx: &mut Cx) -> Flow {
+    let _ = catch(|| {
+        let mut info = V::Undef;
+        let unit = cx.query("airUnit");
+        let unit = if unit.truthy() { unit } else { s("airkorea") };
+        let rows = fresh_air_rows(&cx.r("arpltnList"), cx.now);
+        if !rows.is_empty() {
+            info = air_info(cx);
+            info.set("last", rows[0].clone());
+            info.set("pollutants", V::Obj(Ob::new()));
+            insert_hourly_pollutants(
+                &info.get("pollutants"),
+                &rows,
+                &unit,
+                &info.get("last").get("dataTime"),
+            );
+        }
+        let mid = cx.r("midData");
+        if mid.truthy() && mid.get("dailyData").as_arr().is_some() {
+            let days: Vec<V> = mid
+                .get("dailyData")
+                .a()
+                .items()
+                .into_iter()
+                .filter(|d| d.has("dustForecast"))
+                .collect();
+            if !days.is_empty() {
+                if info.nullish() {
+                    info = air_info(cx);
+                }
+                if !info.get("pollutants").truthy() {
+                    info.set("pollutants", V::Obj(Ob::new()));
+                }
+                insert_daily_pollutants(&info, &days, &unit);
+            }
+        }
+    });
+    Flow::Next
+}
+/// `AirForecast` (ControllerTown24h, v000901/v000902): the station forecast of `req.airInfo`,
+/// which is created even when no air data exists. A failure is logged only.
+pub fn air_forecast(cx: &mut Cx) -> Flow {
+    let source = cx.query("airForecastSource");
+    let info = air_info(cx);
+    let _ = get_air_forecast(cx, &info, &source, &cx.query("airUnit"));
+    Flow::Next
+}
 /// `_insertForecastPollutants(airInfo, hourlyForecasts, source, airUnit)`.
 fn insert_forecast_pollutants(air_info: &V, forecasts: &[V], source: &str, unit: &V) {
     let mut latest = s("1970-01-01");

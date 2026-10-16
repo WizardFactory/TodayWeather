@@ -31,6 +31,7 @@ fn main() {
             let body = match outcome {
                 Outcome::Json(json) => json.to_bytes(),
                 Outcome::Status(_, text) => text.into_bytes(),
+                Outcome::Undefined => Vec::new(),
                 Outcome::Legacy(reason) => {
                     // Declared forwards (legacy answers them) are timed but have no native body.
                     let id = sc["id"].as_str().unwrap();

@@ -53,3 +53,19 @@ fn req_query_equals_express_4_13_4_on_the_recorded_corpus() {
         differ[..differ.len().min(40)].join("\n")
     );
 }
+
+#[test]
+fn array_prototypes_preserve_query_coercion_and_unit_defaults() {
+    use server2::domestic::kma::js::{V, loose_eq, to_str};
+    let query = parse("temperatureUnit[__proto__][]=F");
+    assert_eq!(to_str(&query.get("temperatureUnit")), "F");
+    assert!(loose_eq(&query.get("temperatureUnit"), &V::s("F")));
+    let query = parse("temperatureUnit[__proto__][]=(null)");
+    assert!(loose_eq(&query.get("temperatureUnit"), &V::s("(null)")));
+    let query = parse("temperatureUnit[__proto__][]=F&temperatureUnit[join]=x");
+    assert_eq!(to_str(&query.get("temperatureUnit")), "[object Object]");
+    for length in ["1e20", "Infinity", "4294967296"] {
+        let query = parse(&format!("u[__proto__][]=F&u[length]={length}"));
+        assert!(server2::domestic::kma::js::catch(|| to_str(&query.get("u"))).is_err());
+    }
+}

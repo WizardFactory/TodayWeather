@@ -215,28 +215,75 @@ pub fn insert_index(cx: &mut Cx) -> Flow {
 
 // ---- sky icons ----
 
-fn sky_icon_low_case(sky: &V, pty: &V, lgt: &V, night: bool) -> String {
+/// Sky icon spelling: `_parseSkyStateLowCase` (v000902/v000903) or `_parseSkyState` (v000901
+/// and the town routes).
+#[derive(Clone, Copy)]
+pub enum IconCase {
+    Lower,
+    Upper,
+}
+impl IconCase {
+    /// Moon, sun, small cloud, big cloud, cloud, rain, rain/snow, snow, lightning.
+    fn tokens(self) -> [&'static str; 9] {
+        match self {
+            Self::Lower => [
+                "moon",
+                "sun",
+                "_smallcloud",
+                "_bigcloud",
+                "cloud",
+                "_rain",
+                "_rainsnow",
+                "_snow",
+                "_lightning",
+            ],
+            Self::Upper => [
+                "Moon",
+                "Sun",
+                "SmallCloud",
+                "BigCloud",
+                "Cloud",
+                "Rain",
+                "RainSnow",
+                "Snow",
+                "Lightning",
+            ],
+        }
+    }
+}
+fn sky_icon(case: IconCase, sky: &V, pty: &V, lgt: &V, night: bool) -> String {
+    let [
+        moon,
+        sun,
+        small,
+        big,
+        cloud,
+        rain,
+        rain_snow,
+        snow,
+        lightning,
+    ] = case.tokens();
     let mut name = if night {
-        "moon".to_owned()
+        moon.to_owned()
     } else {
-        "sun".to_owned()
+        sun.to_owned()
     };
     match sky {
         V::Num(x) if *x == 1. => (),
-        V::Num(x) if *x == 2. => name.push_str("_smallcloud"),
-        V::Num(x) if *x == 3. => name.push_str("_bigcloud"),
-        V::Num(x) if *x == 4. => name = "cloud".into(),
+        V::Num(x) if *x == 2. => name.push_str(small),
+        V::Num(x) if *x == 3. => name.push_str(big),
+        V::Num(x) if *x == 4. => name = cloud.into(),
         _ => (),
     }
     match pty {
         V::Num(x) if *x == 0. => (),
-        V::Num(x) if *x == 1. => name.push_str("_rain"),
-        V::Num(x) if *x == 2. => name.push_str("_rainsnow"),
-        V::Num(x) if *x == 3. => name.push_str("_snow"),
+        V::Num(x) if *x == 1. => name.push_str(rain),
+        V::Num(x) if *x == 2. => name.push_str(rain_snow),
+        V::Num(x) if *x == 3. => name.push_str(snow),
         _ => (),
     }
     if strict_eq(lgt, &n(1.)) {
-        name.push_str("_lightning");
+        name.push_str(lightning);
     }
     name
 }
@@ -256,6 +303,13 @@ fn is_night(days: &V, date: &V, tm: &V) -> bool {
     !(le(&sunrise, tm) && le(tm, &sunset))
 }
 pub fn insert_sky_icon_low_case(cx: &mut Cx) -> Flow {
+    insert_sky_icon_as(cx, IconCase::Lower)
+}
+/// `insertSkyIcon` (ControllerTown24h): the v000901 spelling.
+pub fn insert_sky_icon(cx: &mut Cx) -> Flow {
+    insert_sky_icon_as(cx, IconCase::Upper)
+}
+fn insert_sky_icon_as(cx: &mut Cx, case: IconCase) -> Flow {
     let r = catch(|| {
         let days = || cx.r("midData").get("dailyData");
         for key in ["short", "shortest"] {
@@ -266,7 +320,7 @@ pub fn insert_sky_icon_low_case(cx: &mut Cx) -> Flow {
                     d.set("night", night);
                     d.set(
                         "skyIcon",
-                        sky_icon_low_case(&d.get("sky"), &d.get("pty"), &d.get("lgt"), night),
+                        sky_icon(case, &d.get("sky"), &d.get("pty"), &d.get("lgt"), night),
                     );
                 }
             }
@@ -283,7 +337,8 @@ pub fn insert_sky_icon_low_case(cx: &mut Cx) -> Flow {
             current.set("night", night);
             current.set(
                 "skyIcon",
-                sky_icon_low_case(
+                sky_icon(
+                    case,
                     &current.get("sky"),
                     &current.get("pty"),
                     &current.get("lgt"),
@@ -297,19 +352,31 @@ pub fn insert_sky_icon_low_case(cx: &mut Cx) -> Flow {
                 if d.get("sky").truthy() {
                     d.set(
                         "skyIcon",
-                        sky_icon_low_case(&d.get("sky"), &d.get("pty"), &d.get("lgt"), false),
+                        sky_icon(case, &d.get("sky"), &d.get("pty"), &d.get("lgt"), false),
                     );
                 }
                 if d.get("skyAm").truthy() {
                     d.set(
                         "skyAmIcon",
-                        sky_icon_low_case(&d.get("skyAm"), &d.get("ptyAm"), &d.get("lgtAm"), false),
+                        sky_icon(
+                            case,
+                            &d.get("skyAm"),
+                            &d.get("ptyAm"),
+                            &d.get("lgtAm"),
+                            false,
+                        ),
                     );
                 }
                 if d.get("skyPm").truthy() {
                     d.set(
                         "skyPmIcon",
-                        sky_icon_low_case(&d.get("skyPm"), &d.get("ptyPm"), &d.get("lgtPm"), false),
+                        sky_icon(
+                            case,
+                            &d.get("skyPm"),
+                            &d.get("ptyPm"),
+                            &d.get("lgtPm"),
+                            false,
+                        ),
                     );
                 }
             }
@@ -1016,10 +1083,12 @@ fn rain_item(current: &V, units: &V, l: Locale) -> Option<Item> {
         String::new()
     };
     current.set("ptyStr", label.clone());
-    let rn1_str = to_str(&add(&current.get("rn1"), &units.get("precipitationUnit")));
+    // `rn1 + units.precipitationUnit` keeps JavaScript `+`: without the unit (the town routes
+    // set no query defaults) a number plus undefined is NaN, which JSON writes as null.
+    let rn1_str = add(&current.get("rn1"), &units.get("precipitationUnit"));
     current.set("rn1Str", rn1_str.clone());
     Some(Item {
-        text: format!("{label} {rn1_str}"),
+        text: format!("{label} {}", to_str(&rn1_str)),
         grade: add(&current.get("rn1"), &n(3.)),
     })
 }
@@ -1223,6 +1292,53 @@ pub fn get_summary_after_unit_converter(cx: &mut Cx) -> Flow {
     });
     if r.is_err() {
         current.set("summary", "");
+    }
+    Flow::Next
+}
+/// `getSummary` (ControllerTown, the town routes): yesterday and `makeSummary` before any unit
+/// conversion; `req.query` supplies the units as requested (no defaults on these routes).
+pub fn get_summary(cx: &mut Cx) -> Flow {
+    let (current, list) = (cx.r("current"), cx.r("currentList"));
+    if !current.truthy() || !list.truthy() {
+        return Flow::Next;
+    }
+    let l = cx.locale;
+    let query = cx.r("query");
+    let r = catch(|| {
+        current.set("yesterday", policy::yesterday(&current, &list));
+        current.set(
+            "summary",
+            summary(&current, &current.get("yesterday"), &query, l),
+        );
+    });
+    if r.is_err() {
+        current.set("summary", "");
+    }
+    Flow::Next
+}
+/// `dataToFixed` (ControllerTown, v000705): `Math.round` of the current, short and daily
+/// temperatures.
+pub fn data_to_fixed(cx: &mut Cx) -> Flow {
+    let math_round = |v: &V| V::Num(round(to_number(v)));
+    let current = cx.r("current");
+    if current.truthy() {
+        current.set("t1h", math_round(&current.get("t1h")));
+    }
+    let short = cx.r("short");
+    if short.truthy() {
+        for row in short.a().items() {
+            for key in ["t3h", "tmn", "tmx"] {
+                row.set(key, math_round(&row.get(key)));
+            }
+        }
+    }
+    let mid = cx.r("midData");
+    if mid.truthy() && mid.get("dailyData").truthy() {
+        for day in mid.get("dailyData").a().items() {
+            for key in ["taMin", "taMax"] {
+                day.set(key, math_round(&day.get(key)));
+            }
+        }
     }
     Flow::Next
 }

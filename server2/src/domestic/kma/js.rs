@@ -111,6 +111,8 @@ pub struct Props {
     /// The prototype a `__proto__` assignment set (qs `allowPrototypes`); property reads fall
     /// back to it, own-key operations and `JSON.stringify` ignore it.
     proto: Option<Ob>,
+    /// This object view came from an array, and inherits Array.prototype methods.
+    array_proto: bool,
     /// Key positions for larger objects (rows carry 30-50 properties).
     index: Option<HashMap<Rc<str>, usize, BuildFnv>>,
     /// Whether any key is an array index (those enumerate first).
@@ -366,6 +368,7 @@ impl Arr {
             }
         }
         o.set("length", V::Num(self.len() as f64));
+        o.0.borrow_mut().array_proto = true;
         o
     }
     /// `a[i] = v` (extends with holes read as undefined).
@@ -637,11 +640,23 @@ pub fn to_str(v: &V) -> String {
         V::Date(ms) => date_to_string(*ms),
     }
 }
-/// `OrdinaryToPrimitive(o, hint)` for an ordinary object. The port's objects have no callable
-/// properties: a `toString` or `valueOf` they hold (own or through a `__proto__` prototype, as a
-/// `qs` field can) is skipped as not callable; otherwise the `Object.prototype` method applies
-/// (`valueOf` returns the object itself, `toString` gives `[object Object]`). Neither giving a
-/// primitive is the legacy `TypeError`.
+/// The callable inherited built-ins needed by qs prototype assignment. A present data
+/// property shadows the built-in, including a data property on an intermediate prototype.
+fn array_method(o: &Ob, method: &str) -> Option<bool> {
+    let p = o.0.borrow();
+    if p.find(method).is_some() {
+        Some(false)
+    } else if p.array_proto && matches!(method, "toString" | "join") {
+        Some(true)
+    } else {
+        p.proto
+            .as_ref()
+            .and_then(|proto| array_method(proto, method))
+    }
+}
+/// `OrdinaryToPrimitive(o, hint)`. qs values have data properties, but a prototype
+/// assigned from an array inherits callable Array.prototype.toString/join. Array.toString
+/// calls join with the original receiver, so own length/elements still take precedence.
 fn object_to_primitive(o: &Ob, string_hint: bool) -> V {
     let order = if string_hint {
         ["toString", "valueOf"]
@@ -649,12 +664,33 @@ fn object_to_primitive(o: &Ob, string_hint: bool) -> V {
         ["valueOf", "toString"]
     };
     for method in order {
-        if o.has_in_chain(method) {
-            // A data property: not callable, so the next method is tried.
-            continue;
-        }
-        if method == "toString" {
-            return V::s("[object Object]");
+        match array_method(o, method) {
+            Some(false) => continue,
+            Some(true) if method == "toString" => {
+                if array_method(o, "join") != Some(true) {
+                    return V::s("[object Object]");
+                }
+                let len = to_number(&o.get("length")).max(0.).floor();
+                // Node 16 Array.join rejects a length above uint32 before iterating.
+                if !len.is_finite() || len > u32::MAX as f64 {
+                    throw("TypeError: Invalid array length");
+                }
+                let len = len as usize;
+                let text = (0..len)
+                    .map(|i| {
+                        let v = o.get(&i.to_string());
+                        if v.nullish() {
+                            String::new()
+                        } else {
+                            to_str(&v)
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(",");
+                return V::Str(text.into());
+            }
+            _ if method == "toString" => return V::s("[object Object]"),
+            _ => {}
         }
     }
     throw("TypeError: Cannot convert object to primitive value")

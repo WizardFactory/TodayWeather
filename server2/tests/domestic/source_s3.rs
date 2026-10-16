@@ -1468,6 +1468,13 @@ async fn legacy_comparisons_and_conversions_shape_the_answer() {
     assert_eq!(string["current"]["t1h"], json!(70));
     let array = body_json(&answer_body("temperatureUnit[]=F").await);
     assert_eq!(array["current"]["t1h"], json!(70.7));
+    // qs sets the object prototype to ["F"]. Its inherited Array.toString converts
+    // loosely to F, while the strict rounding test still treats it as an object.
+    let inherited_array = body_json(&answer_body("temperatureUnit[__proto__][]=F").await);
+    assert_eq!(inherited_array["current"]["t1h"], json!(70.7));
+    let inherited_null = body_json(&answer_body("temperatureUnit[__proto__][]=(null)").await);
+    assert_eq!(inherited_null["units"]["temperatureUnit"], json!("C"));
+    assert_eq!(inherited_null["current"]["t1h"], plain["current"]["t1h"]);
     // An unknown forecast source (a non-string one included) adds no forecast.
     assert_eq!(
         answer_body("airForecastSource[]=kaq").await,

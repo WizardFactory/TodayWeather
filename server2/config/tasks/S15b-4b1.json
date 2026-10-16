@@ -46,7 +46,12 @@
     "server2/tests/domestic/source_s3.rs",
     "server2/tests/domestic/support.rs",
     "server2/tests/domestic/switch.rs",
-    "server2/tests/domestic/v8_date.rs"
+    "server2/tests/domestic/v8_date.rs",
+    "server2/src/api/mod.rs",
+    "server2/tests/legacy_versions/kma_direct.rs",
+    "server2/tests/legacy_versions/kma_gateway.rs",
+    "server2/tests/legacy_versions/kma_parity.rs",
+    "server2/tests/legacy_versions/support.rs"
   ],
   "outside": [
     {
@@ -73,6 +78,7 @@
     "server2/src/domestic/kma/source/": "source string slicing/counting through the stand-in-aware js helpers; S3 failures typed as Failed",
     "server2/src/domestic/kma/air.rs": "strict forecast-source selector; airUnit table key versus strict/loose conversion comparisons",
     "server2/src/world/units.rs": "value2grade/value2index variants that take the air table key and the conversion unit separately (used by the KMA chain for non-string airUnit); existing callers unchanged",
-    "server2/tests/domestic/fixtures/PROVENANCE.md": "stale forwarding statements corrected (replay mismatches are defects; the small-year date is matched)"
+    "server2/tests/domestic/fixtures/PROVENANCE.md": "stale forwarding statements corrected (replay mismatches are defects; the small-year date is matched)",
+    "server2/src/api/mod.rs": "S17 direct routes consume parsed native 404/400 and dependency defects without forwarding; integrate the existing route surface"
   }
 }
