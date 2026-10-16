@@ -96,3 +96,27 @@ at server2's routes; a minute with an unknown claim outcome that cannot be read 
 (missed rather than duplicated). Rejected: per-delivery claim objects (one PUT per send; a
 minute claim gives the same no-resend guarantee with one object), retries inside the minute
 (D02), local-disk ledgers (tokens and state stay in memory and S3).
+
+## S18b-2 conditional alerts
+
+Task: issue-2703-s18b-2; base `9fed989e806408f3502867c01e111caca1188326` (stacked on S18b-1);
+owner: delegated conditional-alert lane; root owns shared state, integration and merges.
+Paths are declared before implementation in `server2/config/tasks/S18b-2.json`. Runtime,
+fixtures and smoke stay in server2; exact outside exceptions are maintained docs, this
+intent/spec/plan, operator PDF and selected sanitized evidence. No runtime reads of legacy.
+
+| Scenario | Actions | Expected result | Verification |
+| --- | --- | --- | --- |
+| C1: user crossing rain/air threshold | Eligible minute, current or forecast weather and current air | Same parsed input, decision, updated state and localized message as legacy | 133 offline actual-controller cases, six URL cases |
+| C2: disabled or outside-window registration | Normal/overnight endpoints and either category's six-hour gate | Inclusive boundaries; no send inside cooldown | Selection regression |
+| C3: overseas outage | Old (>30 min) response; exact boundary | Old observation skipped; 30 min accepted | Oracle cases |
+| C4: provider failure or restart | Rejected, reset and hanging peer; restore S3 state | One attempt, durable timestamps, no resend | Worker fault/restart regressions |
+| C5: unavailable S3 or concurrent user edit | Refused claim/state write; HTTP registration change during fetch | No unsafe send; newer user state preserved | Fault and concurrent HTTP regression |
+| C6: operator smoke | Run synthetic example against local HTTP weather/OAuth/FCM peers, restart | One submission and weather GET, zero resends/external calls | `cargo run --locked --example conditional_alert_smoke` |
+
+Checks: fmt, Clippy warnings denied, full Rust suite, additional local functional HTTP smoke,
+placement and artifact gates, diagram finalization/browser/visual checks, manual PDF render and
+visual review, independent PR review, CI. Keep required logs under ignored `reports/s18b2/`;
+selected facts are in [verification](../docs/evidence/tasks/issue-2703-s18b2/verification.md).
+No live push or new weather provider call: the weather API validity checks from the earlier
+S13/S15b source work are reused. FCM HTTP-v1 documentation was checked read-only on 2026-10-16.
