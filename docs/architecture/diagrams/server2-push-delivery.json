@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Server2 Conditional Alert Delivery",
+    "output": "docs/architecture/diagrams/server2-push-delivery.html",
+    "quality_profile": "showcase",
+    "animation": "none",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      696
+    ],
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "0d79b7ae2d482a35d1e949f05baaf0cb04510859",
+      "provider": "github",
+      "link_mode": "local-only"
+    }
+  },
+  "participants": [
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "Alert worker",
+      "sublabel": "UTC :07/:17/:35/:50",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/alerts.rs",
+          "line": 675,
+          "end_line": 823
+        }
+      ]
+    },
+    {
+      "id": "state",
+      "type": "backend",
+      "label": "Push state",
+      "sublabel": "read view + writer",
+      "sources": [
+        {
+          "path": "server2/src/push/service.rs",
+          "line": 205,
+          "end_line": 223
+        },
+        {
+          "path": "server2/src/push/deliver/ops.rs",
+          "line": 16,
+          "end_line": 46
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "database",
+      "label": "S3",
+      "sublabel": "claims, journal, results",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/ledger.rs",
+          "line": 64,
+          "end_line": 125
+        },
+        {
+          "path": "server2/src/push/durable.rs",
+          "line": 516,
+          "end_line": 548
+        }
+      ]
+    },
+    {
+      "id": "weather",
+      "type": "backend",
+      "label": "Weather source",
+      "sublabel": "server2 v000902 at cutover",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/weather.rs",
+          "line": 327,
+          "end_line": 381
+        }
+      ]
+    },
+    {
+      "id": "fcm",
+      "type": "external",
+      "label": "FCM HTTP v1",
+      "sublabel": "one provider submission",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/alerts.rs",
+          "line": 627,
+          "end_line": 674
+        }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "id": "step-0",
+      "from": "worker",
+      "to": "state",
+      "y": 170,
+      "label": "Read acknowledged state",
+      "variant": "default",
+      "note": "Inclusive window; either recent category suppresses the record."
+    },
+    {
+      "id": "step-1",
+      "from": "worker",
+      "to": "s3",
+      "y": 210,
+      "label": "Claim cycle; stop if unavailable or taken",
+      "variant": "security"
+    },
+    {
+      "id": "step-2",
+      "from": "worker",
+      "to": "weather",
+      "y": 250,
+      "label": "Fetch weather once, at most 10 s",
+      "variant": "default",
+      "note": "Six preparations at a time; a failed fetch sends nothing."
+    },
+    {
+      "id": "step-3",
+      "from": "weather",
+      "to": "worker",
+      "y": 290,
+      "label": "Current and forecast input",
+      "variant": "return"
+    },
+    {
+      "id": "step-4",
+      "from": "worker",
+      "to": "state",
+      "y": 330,
+      "label": "Commit evaluated state",
+      "variant": "emphasis",
+      "note": "Skip if the selected registration changed; no unsafe send."
+    },
+    {
+      "id": "step-5",
+      "from": "state",
+      "to": "s3",
+      "y": 370,
+      "label": "Append state journal",
+      "variant": "security"
+    },
+    {
+      "id": "step-6",
+      "from": "s3",
+      "to": "state",
+      "y": 410,
+      "label": "Durable acknowledgment",
+      "variant": "return"
+    },
+    {
+      "id": "step-7",
+      "from": "state",
+      "to": "worker",
+      "y": 450,
+      "label": "Committed, or skip",
+      "variant": "return"
+    },
+    {
+      "id": "step-8",
+      "from": "worker",
+      "to": "fcm",
+      "y": 490,
+      "label": "Threshold transition only: submit once",
+      "variant": "emphasis",
+      "note": "No retry after rejected, unknown, failed or restarted cycle."
+    },
+    {
+      "id": "step-9",
+      "from": "fcm",
+      "to": "worker",
+      "y": 530,
+      "label": "Accepted / rejected / unknown",
+      "variant": "return",
+      "note": "Unregistered tokens disable matching alerts durably."
+    },
+    {
+      "id": "step-10",
+      "from": "worker",
+      "to": "s3",
+      "y": 570,
+      "label": "Record sanitized result; keep claim",
+      "variant": "dashed",
+      "note": "A missing result never authorizes replay."
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Legacy behavior",
+      "items": [
+        "Current precipitation and air transitions; shortest and hourly forecast fallback.",
+        "Air forecast is discarded before deciding to send."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Durable single attempt",
+      "items": [
+        "Cycle claim precedes preparation; alert state precedes submission.",
+        "No resend after unknown outcome, lost result or restart."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Deployment boundary",
+      "items": [
+        "Library only in this slice; no live sender starts.",
+        "S20 connects weather to native server2 routes and assigns one owner."
+      ]
+    }
+  ]
+}

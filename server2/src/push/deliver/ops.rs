@@ -13,6 +13,49 @@ use std::collections::BTreeMap;
 /// Plan one operation; `false` is a store error (legacy logs it and continues).
 pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
     match op {
+        InternalOp::UpdateAlertState {
+            n,
+            oid,
+            selected,
+            precip,
+            air,
+        } => {
+            let Some(mut record) = txn.get(Coll::Alert, *n) else {
+                return false;
+            };
+            if record.oid != *oid || &record.doc != selected {
+                return false;
+            }
+            let mut fields = Obj::new();
+            fields.set("airAlerts", air.clone());
+            fields.set("precipAlerts", precip.clone());
+            let Ok(set) = mongoose::cast_set(Coll::Alert, &fields, false) else {
+                return false;
+            };
+            mongoose::apply_set(&mut record.doc, &set);
+            txn.put(Coll::Alert, *n, record);
+            true
+        }
+        InternalOp::DisableAlertsByFcm { token } => {
+            let query = [("fcmToken".to_owned(), Cond::Eq(Val::Str(token.clone())))];
+            for n in txn.find(Coll::Alert, &query) {
+                let mut record = txn.get(Coll::Alert, n).expect("found record");
+                mongoose::apply_set(
+                    &mut record.doc,
+                    &[
+                        ("enable".into(), Val::Bool(false)),
+                        ("updatedAt".into(), Val::Date(txn.now_ms)),
+                        ("updatedBy".into(), Val::Str("push".into())),
+                    ],
+                );
+                txn.put(Coll::Alert, n, record);
+            }
+            true
+        }
+        InternalOp::RemoveDuplicateAlerts => {
+            remove_duplicates(txn, Coll::Alert);
+            true
+        }
         InternalOp::DisableAlarmsByFcm { token, spare } => {
             let now = txn.now_ms;
             let mut spared: Vec<u64> = spare.iter().flat_map(|s| still_stale(txn, s)).collect();
@@ -61,7 +104,7 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
             )
         }
         InternalOp::RemoveDuplicateAlarms => {
-            remove_duplicates(txn);
+            remove_duplicates(txn, Coll::Alarm);
             true
         }
     }
@@ -72,12 +115,12 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
 /// Legacy compares only the first two `$addToSet` values (unordered) and throws when a group has
 /// a single distinct date; server2 uses the earliest date and skips groups with one date or a
 /// missing date (recorded difference).
-fn remove_duplicates(txn: &mut Txn<'_>) {
+fn remove_duplicates(txn: &mut Txn<'_>, coll: Coll) {
     // Group on the indexed key fields (no document is decoded); only the members of a group
     // with more than one record are decoded for their dates. This runs every minute.
     let mut groups: BTreeMap<String, Vec<u64>> = BTreeMap::new();
-    for n in txn.find(Coll::Alarm, &[]) {
-        let keys = txn.keys(Coll::Alarm, n).expect("found record");
+    for n in txn.find(coll, &[]) {
+        let keys = txn.keys(coll, n).expect("found record");
         let field = |name: &str| {
             keys[KEY_FIELDS
                 .iter()
@@ -99,7 +142,7 @@ fn remove_duplicates(txn: &mut Txn<'_>) {
         let members: Vec<(u64, Option<f64>)> = numbers
             .iter()
             .map(|n| {
-                let record = txn.get(Coll::Alarm, *n).expect("found record");
+                let record = txn.get(coll, *n).expect("found record");
                 let date = match record.doc.get("updatedAt") {
                     Val::Date(ms) => Some(*ms),
                     _ => None,
@@ -118,7 +161,7 @@ fn remove_duplicates(txn: &mut Txn<'_>) {
         }
         for (n, d) in members {
             if d == Some(dates[0]) {
-                txn.remove(Coll::Alarm, n);
+                txn.remove(coll, n);
             }
         }
     }

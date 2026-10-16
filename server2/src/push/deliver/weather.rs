@@ -321,3 +321,61 @@ pub async fn daily_summary(
         }
     }
 }
+
+/// `_makeRequestUrl` of the conditional worker. Its source must be present (unlike the daily
+/// alarm's geocoding fallback); VC and DSF share the overseas route.
+pub fn conditional_url(info: &mut Obj, servers: &Servers) -> Result<String, WeatherFailure> {
+    if info.get("lang").is_nullish() {
+        info.set("lang", "ko");
+    }
+    info.set(
+        "units",
+        init_units(info.get("units")).map_err(WeatherFailure::Build)?,
+    );
+    let Val::Str(source) = info.get("source") else {
+        return Err(WeatherFailure::Build(
+            "source.toLowerCase is not a function".into(),
+        ));
+    };
+    let mut source = source.to_lowercase();
+    if source == "vc" {
+        source = "dsf".into();
+    }
+    let mut url = servers.service.clone();
+    if info.get("geo").truthy() {
+        url.push_str(&format!(
+            "/v000902/{source}/coord/{}",
+            coords(info).map_err(WeatherFailure::Build)?
+        ));
+    } else if info.get("town").truthy() {
+        url.push_str("/v000902/kma/addr");
+        for field in ["first", "second", "third"] {
+            let v = prop(info.get("town"), field).map_err(WeatherFailure::Build)?;
+            if v.truthy() {
+                url.push('/');
+                url.push_str(&encode_uri_component(&to_string(&v)));
+            }
+        }
+    }
+    url.push_str(&units_query(info.get("units")));
+    Ok(url)
+}
+
+/// Conditional weather preparation, one attempt with the legacy 10 s timeout. It never
+/// retries provider submission; a failed fetch is a skipped conditional cycle.
+pub async fn conditional(
+    info: &mut Obj,
+    servers: &Servers,
+    fetch: &dyn Fetch,
+) -> Result<Val, WeatherFailure> {
+    if !info.get("source").truthy() {
+        return Err(WeatherFailure::Build("unknown source".into()));
+    }
+    let url = conditional_url(info, servers)?;
+    tokio::time::timeout(
+        Duration::from_secs(10),
+        fetch_json(fetch, url, lang_of(info), "weather"),
+    )
+    .await
+    .unwrap_or_else(|_| Err(WeatherFailure::Request("weather", "timeout".into())))
+}

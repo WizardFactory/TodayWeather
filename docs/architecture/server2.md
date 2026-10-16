@@ -3187,3 +3187,40 @@ revalidations) match on the wire natively (status, body and every header except 
 `kma_smoke.py` shows unlisted direct paths unclaimed (404, no legacy hop) and listed ones reading
 S3 and answering natively with the Express envelope (JSON with a weak ETag, the v000705
 `res.json(undefined)` reply without one, the usage root) and no legacy hop.
+
+### S18b-2: conditional alerts
+
+`push::deliver::alerts::AlertWorker` ports `alert.push.controller.js` over S18a registrations,
+S18b-1 FCM and the durable delivery ledger. This is an unwired library capability: no process
+starts the scheduler or sends live notifications. [Operator guide](../operations/server2-push-delivery.md),
+[PDF](../operations/server2-push-delivery.pdf), [flow](diagrams/server2-push-delivery.html) and
+[editable source](diagrams/server2-push-delivery.json) describe this slice.
+
+At UTC :07/:17/:35/:50 it selects explicitly enabled alerts in inclusive day/overnight windows.
+A weather or air send at or after now minus six hours suppresses the entire record. It claims
+the `index/v2/push/delivery/alert/{YYYYMMDD}/{HHMM}.json` cycle before weather preparation,
+then prepares at most six alerts concurrently. It requests v000902 weather with the legacy
+source/coordinate-or-address/units/language contract (`VC` shares `/dsf/coord`). One weather
+attempt has the legacy ten-second bound; there is no geocoding fallback for missing source.
+S20 must connect SERVICE_SERVER to server2's native weather routes before retiring legacy.
+
+The pure parser/comparison/text port preserves current rain detection, two successive wet
+shortest rows, short/hourly forecast fallback and current-air threshold transitions. Computed
+air forecasts are discarded, as legacy. Overseas data older than 30 minutes is skipped.
+The worker updates only the two alert-state fields through the single S18a writer before
+submission. Exact selected-document matching rejects a stale evaluation after an app change.
+Ordinary evaluations do not change `updatedAt`; an unregistered token disables every matching
+alert and stamps `updatedAt`/`updatedBy=push`, without changing alarms.
+
+FCM is submitted once with the existing S18b-1 adapter. Claim/state faults send nothing;
+provider rejection, unknown outcome, missing result and process restart never resend a claimed
+cycle. Result objects and diagnostics contain only record ID, kind, minute, outcome class and
+HTTP status. A no-notification decision is still persisted and recorded as `not-needed`.
+Legacy's misspelled `updateAt` cleanup remains a no-op. Duplicate registrations use S18b-1's
+earlier-date cleanup rule (including its documented malformed-group difference).
+
+Intentional safety differences: await state durability before send, skip stale selected
+records, one weather-preparation attempt instead of legacy's two, and no legacy GCM submission
+(same S18b-1 retirement handling). No new environment variable or dependency. Warning feed
+and notices remain subsequent S18 slices. [Selected verification](../evidence/tasks/issue-2703-s18b2/verification.md)
+records the actual offline comparison and functional checks; it does not claim device delivery.

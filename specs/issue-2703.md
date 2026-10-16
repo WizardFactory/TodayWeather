@@ -114,3 +114,28 @@ Rules:
   geocode failure (status >= 400, transport, 30 s bound), builder exception.
 - Diagnostics: per non-accepted delivery `minute`, `_id`, outcome, class, status; per skipped
   minute a note; counters. No token, coordinate, name, address or text; no local-disk writes.
+
+## S18b-2 conditional delivery contract
+
+- UTC minutes 7, 17, 35 and 50; six preparations at a time. Explicitly enabled registrations
+  use inclusive normal/overnight windows. Either category's send within six hours excludes
+  the record, matching `lib/pushStore/mongo.js:getAlertsByTime`.
+- Port `alert.push.controller.js` parsing, current precipitation transition, two-successive-
+  shortest-row precipitation forecast, current air grade, category comparison and text. Air
+  forecasts remain discarded before comparison. Overseas responses older than 30 minutes
+  are not used for current alerts (exactly 30 minutes remains valid).
+- Store `precipAlerts` and `airAlerts` through the S18a writer before submitting to FCM.
+  Match the selected record's identity and complete document; skip if a user update, token
+  rotation, removal or another evaluation changed it while weather was fetched. This avoids
+  overwriting newer registration state. Do not change `updatedAt` for an ordinary evaluation.
+- The S18b-1 ledger's `alert` namespace claims each cycle before preparation; FCM is attempted
+  once. Failure, unknown outcome, lost results and restart never resend the same cycle.
+  Invalid/unregistered FCM tokens disable all matching alerts durably, without touching alarms.
+- No new runtime flags, dependencies, credentials or provider configuration. The worker is a
+  library capability, not a launched process. S20 must connect its weather source to server2
+  routes and wire exactly one delivery owner before legacy retirement.
+- Intentional safety differences: state durability is awaited before send; stale selected
+  records are skipped; weather preparation is attempted once (legacy tried twice); GCM-only
+  registrations are not submitted to Google's retired legacy endpoint (same as S18b-1).
+  Legacy's `updateAt` cleanup typo has no matching schema field and remains a no-op. Duplicate
+  cleanup uses S18b-1's documented earliest-distinct-date rule for alerts too.
