@@ -29,6 +29,7 @@ Files ending in `.visual-check.html` are local screenshot contact sheets, not th
 | --- | --- | --- |
 | Food-poisoning recovery | [Collector and response design](diagrams/food-poisoning.html) | [JSON](diagrams/food-poisoning.json) |
 | Nation air recovery | [DB and global providers](diagrams/nation-air-recovery.html) | [JSON](diagrams/nation-air-recovery.json) |
+| AirKorea collector repair | [Observation and page validation](diagrams/airkorea-observation-recovery.html) | [JSON](diagrams/airkorea-observation-recovery.json) |
 | Historical observations | [Recovery and response](diagrams/historical-observations.html) | [JSON](diagrams/historical-observations.json) |
 | Push notifications | [Settings to device notification](diagrams/push-notifications.html) | [JSON](diagrams/push-notifications.json) |
 | Service EC2 internals | [nginx / PM2 / Mongo endpoint](diagrams/ec2-internals.html) | [JSON](diagrams/ec2-internals.json) |
