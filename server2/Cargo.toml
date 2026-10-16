@@ -12,6 +12,8 @@ license = "MIT"
 publish = false
 
 [dependencies]
+# S17c: bounded concurrent city/fallback composition; already transitive via reqwest.
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 axum = "0.8"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "signal", "sync", "time", "macros"] }
 

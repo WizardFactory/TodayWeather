@@ -55,3 +55,25 @@ Order: town recording and S02 cross-check; Red (tests against S17a: missing `api
 `parse_town_path`, `Outcome::Undefined`); town lists, `getSummary`, `dataToFixed`, the
 `rn1Str` `+`; direct routes, envelope and hop; runtime entry; fmt, clippy, tests, smokes,
 placement, artifact policy; PR stacked on S17a; Codex review; CI.
+
+## S17c scenarios and evidence
+
+S17c is a new functional slice following merged S17a/b. Their completed review
+history is retained and is not reset. Declaration: `server2/config/tasks/S17c.json`.
+
+| ID | User goal and actions | Expected result | Evidence |
+| --- | --- | --- | --- |
+| C1 | Open current nation weather | Fifteen native cities in legacy order, city air fields removed, seventeen province rows when all present | Node16 legacy nation oracle; HTTP GET/HEAD/304 smoke |
+| C2 | Open old v000901 nation weather | Same-version internal calls; actual child failure gives legacy 500; healthy calls give 200 | Oracle success and child 500/404 scenarios |
+| C3 | Request several regions while the national provider is slow | One national acquisition, one shared three-second deadline, available response now and saved result next time | Twelve concurrent requests and 3.2-second owned test acquisition |
+| C4 | Restart with providers disabled | New memory reconstructs all seventeen province averages from S3 raw records | Two independent AirInputs instances over the loopback S3 peer |
+| C5 | Stored averages are absent, stale, invalid or future | Correct representative-point fallback, freshness boundaries and safe reason/coverage | Actual legacy NationAir and observation.evaluate oracle; S3 fallback tests |
+| C6 | Revalidate, use HEAD, units or malformed route parameter | Express envelope and rendered error semantics; no legacy call | Real HTTP handler; unit/error oracle; URI regression |
+
+Provider evidence is reused from S15b-3a's actual national observation request
+(2026-10-14, 672 stations, `numOfRows=1000`), because S17c adds no provider method.
+The authoritative API catalog is
+[AirKorea atmospheric observations](https://www.data.go.kr/data/15073861/openapi.do).
+The source register and recording limits are in
+`server2/tests/nation/PROVENANCE.md`. No production request, database write, push
+send, AWS change or deployment is part of this slice.

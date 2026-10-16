@@ -56,6 +56,7 @@ pub struct DirectRoutes {
     kma: Arc<KmaBackend>,
     families: DirectFamilies,
     legacy: BackendDispatcher,
+    nation: Option<Arc<crate::nation::NationBackend>>,
 }
 impl DirectRoutes {
     /// `legacy` must be the plain-HTTP loopback legacy origin (the runtime refuses others): its
@@ -65,7 +66,13 @@ impl DirectRoutes {
             kma,
             families,
             legacy,
+            nation: None,
         }
+    }
+    /// S17c shares the same KMA input source and backend with the nation composition.
+    pub fn with_nation(mut self, nation: Arc<crate::nation::NationBackend>) -> Self {
+        self.nation = Some(nation);
+        self
     }
     /// Whether a listed direct route owns this request: GET or HEAD at or under its mount,
     /// matched case-insensitively as Express does.
@@ -74,6 +81,10 @@ impl DirectRoutes {
             return false;
         }
         let f = self.families;
+        if let Some(version) = crate::nation::mount(path) {
+            return (version == "v000903" && f.kma_v000903)
+                || (version == "v000901" && f.kma_v000901);
+        }
         match split_mount(path) {
             Some(("v000903", ..)) => f.kma_v000903,
             Some(("v000901", ..)) => f.kma_v000901,
@@ -92,6 +103,30 @@ impl DirectRoutes {
         let text = |name: &str| headers.get(name).and_then(|v| v.to_str().ok());
         // i18n 0.8.3 `init`: the `twcookie` cookie, then Accept-Language (S12 implementation).
         let locale = crate::warnings::special::locale(text("accept-language"), text("cookie"));
+        if let Some(version) = crate::nation::mount(&path_and_query) {
+            let parameter = request.uri().path().split('/').nth(3).unwrap_or("");
+            if !crate::nation::valid_parameter(parameter) {
+                return express(
+                    &method,
+                    &headers,
+                    crate::nation::rendered_error_status(
+                        400,
+                        &format!("Failed to decode param '{parameter}'"),
+                    ),
+                );
+            }
+            let query = path_and_query.split_once('?').map_or("", |(_, q)| q);
+            let child = format!(
+                "/{version}/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C?{query}"
+            );
+            let Some(base) = parse_path(&child, locale) else {
+                return express(&method, &headers, crate::nation::child_error(500));
+            };
+            let Some(nation) = &self.nation else {
+                return express(&method, &headers, crate::nation::child_error(500));
+            };
+            return express(&method, &headers, nation.outcome(base).await);
+        }
         let Some((version, _, rest)) = split_mount(&path_and_query) else {
             return self.forward(&method, &path_and_query, &headers).await;
         };

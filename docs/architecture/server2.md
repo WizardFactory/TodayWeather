@@ -2766,3 +2766,39 @@ revalidations) match on the wire natively (status, body and every header except 
 `kma_smoke.py` shows unlisted direct paths unclaimed (404, no legacy hop) and listed ones reading
 S3 and answering natively with the Express envelope (JSON with a weak ETag, the v000705
 `res.json(undefined)` reply without one, the usage root) and no legacy hop.
+
+## S17c: native nation weather and air
+
+The `kma` and `kma-v000901` entries also claim the used direct nation routes
+`/v000903/nation/:nation` and `/v000901/nation/:nation`. The nation backend calls
+fifteen same-version native KMA assemblies concurrently with one absolute
+three-second deadline; it never calls legacy or opens a separate provider source.
+The child replies retain legacy city order after removing `airInfo`/`airInfoList`.
+An actual failed internal child response maps to the legacy rendered 500, as AK
+approved; the response is successful when the internal calls succeed. Other late
+provider branches remain omitted according to the existing KMA partial-data rules.
+Native errors omit the legacy session ID, consistent with the existing absence of
+legacy session middleware/cookies. This is a response difference in diagnostic
+HTML only, not an invented synthetic session identity.
+
+Nation air is a projection of the same `AirInputs` S3 raw acquisitions as town air.
+The newest urban hour is selected independently per province; each pollutant uses
+its own valid numeric count and legacy rounding. The SidoArpltn schema drops
+24-hour PM fields. National `전남광주` labels are split by station-list address,
+without a second province-specific provider query. Unresolved station ownership
+is omitted, allowing the labelled representative-point fallback. Stored means
+become stale at exactly eight hours; provider observations keep the existing
+inclusive eight-hour boundary. The safe rejection reason is exposed through a
+backward-compatible AirSource method, while ordinary weather keeps its old
+AirOutcome interface. Fallback calls run at most four at once and never put
+provider error text or URLs in `airStatus`.
+
+No new API method is needed. The existing real-provider evidence (2026-10-14,
+672 nationwide rows in one `numOfRows=1000` page) and
+[official catalog](https://www.data.go.kr/data/15073861/openapi.do) apply. The
+new tests use recorded/synthetic public station data and loopback peers. Full
+nation composition uses deterministic child response doubles; the S15/S17
+oracles continue to verify the actual weather assembler. S3 restore tests verify
+the nation air branch separately from child-weather assembly.
+
+See [nation setup and checks](../operations/server2-nation.md).

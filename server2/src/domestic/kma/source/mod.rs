@@ -1464,3 +1464,9 @@ impl KmaStore for Snapshot {
         Some(self.now)
     }
 }
+
+impl<T: IndexListing + Clone + Send + Sync + 'static> crate::nation::NationSource for S3Source<T> {
+    fn nation_air(&self, now: f64, deadline: Instant) -> BoxFuture<'_, crate::nation::NationAir> {
+        Box::pin(self.air.nation(now, deadline))
+    }
+}

@@ -382,6 +382,8 @@ fn parse_row(o: &serde_json::Map<String, Value>, ms: f64) -> Option<Vec<(String,
 /// One parsed observation row (`parseRows` output) of a station and data time.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ObsRow {
+    /// National acquisition province label; not part of the legacy station document.
+    pub province: Option<String>,
     pub station: String,
     pub ms: f64,
     pub fields: Vec<(String, Val)>,
@@ -391,10 +393,15 @@ pub struct ObsRow {
 pub struct Observations {
     docs: Vec<Doc>,
     index: HashMap<(String, u64), usize>,
+    provincial: Vec<ObsRow>,
 }
 impl Observations {
     pub fn docs(&self) -> &[Doc] {
         &self.docs
+    }
+    /// Raw observation metadata retained for the nation projection, in acquisition order.
+    pub fn provincial_rows(&self) -> &[ObsRow] {
+        &self.provincial
     }
     /// One complete observation acquisition (every page's items): [`Self::parse`] then
     /// [`Self::apply_rows`].
@@ -425,6 +432,7 @@ impl Observations {
             }
             if let Some(fields) = parse_row(o, ms) {
                 rows.push(ObsRow {
+                    province: o.get("sidoName").and_then(Value::as_str).map(str::to_owned),
                     station: name.to_owned(),
                     ms,
                     fields,
@@ -438,6 +446,11 @@ impl Observations {
         for row in rows {
             let key = (row.station.clone(), row.ms.to_bits());
             let found = self.index.get(&key).copied();
+            if let Some(i) = found {
+                self.provincial[i] = row.clone();
+            } else {
+                self.provincial.push(row.clone());
+            }
             upsert(
                 &mut self.docs,
                 found,
