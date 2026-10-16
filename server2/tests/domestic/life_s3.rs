@@ -759,7 +759,7 @@ async fn the_snapshot_answers_the_life_store_calls() {
     .unwrap();
     let snapshot = match s3.snapshot(&request(), deadline()).await {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(r) => panic!("forwarded: {r}"),
+        SourceAnswer::Forward(r) | SourceAnswer::Failed(r) => panic!("forwarded: {r}"),
     };
     let area = snapshot
         .area_no("서울특별시", "종로구", "청운효자동")

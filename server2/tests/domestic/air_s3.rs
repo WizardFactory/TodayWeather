@@ -1045,7 +1045,7 @@ async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
         .await
     {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(r) => panic!("forwarded: {r}"),
+        SourceAnswer::Forward(r) | SourceAnswer::Failed(r) => panic!("forwarded: {r}"),
     };
     let town = town_value(snapshot.as_ref());
     let g = &town["gCoord"];
@@ -1083,6 +1083,38 @@ async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
         &OrderedJson::parse(r#"[{"date":"20260924","dustForecast":{"sido":"서울","PM10Grade":1,"PM10Str":"보통","PM25Grade":1,"PM25Str":"보통"}},{"date":"20260925","dustForecast":{"sido":"서울","PM10Grade":1,"PM10Str":"보통"}}]"#.as_bytes()).unwrap(),
         "dust forecast",
     );
+    // `airForecastSource[]=airkorea` (S15b-4b-1 R11): legacy's strict comparisons neither load
+    // nor read a forecast, so the answer keeps the observation without a forecast, exactly as
+    // for an unknown source; never a dependency failure.
+    {
+        use server2::domestic::kma::backend::KmaBackend;
+        use server2::gateway::BackendHandler;
+        use server2::gateway::backend::Native;
+        let backend = KmaBackend::new(
+            Arc::new(s3),
+            Arc::new(|| NOW),
+            server2::domestic::kma::AssemblyConfig::default(),
+        );
+        let mut bodies = Vec::new();
+        for query in ["airForecastSource[]=airkorea", "airForecastSource=bogus"] {
+            let path = format!("{}?{query}", request().original_url);
+            match backend
+                .fetch_or_forward(path, "ko".into(), deadline())
+                .await
+            {
+                Ok(Native::Served(json)) => {
+                    bodies.push(String::from_utf8(json.to_bytes()).unwrap())
+                }
+                other => panic!("{query}: {:?}", other.map(|n| matches!(n, Native::Forward))),
+            }
+        }
+        let array: serde_json::Value = serde_json::from_str(&bodies[0]).unwrap();
+        assert!(
+            array["airInfoList"][0]["last"]["pm10Value"].is_number(),
+            "{array}"
+        );
+        assert_eq!(bodies[0], bodies[1]);
+    }
     // A request without AirKorea data: the fallback observation is loaded for the town.
     let empty = Peer::new();
     let empty_transport = empty.transport();
@@ -1098,7 +1130,7 @@ async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
     .with_air(None, Some(Arc::new(FixedAir(observation))));
     let snapshot = match s3.snapshot(&request(), deadline()).await {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(r) => panic!("forwarded: {r}"),
+        SourceAnswer::Forward(r) | SourceAnswer::Failed(r) => panic!("forwarded: {r}"),
     };
     let town = town_value(snapshot.as_ref());
     same(
@@ -1126,12 +1158,21 @@ async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
 
 #[test]
 fn the_forecast_source_follows_legacy_query_defaults() {
-    use server2::domestic::kma::source::air_input::airkorea_forecast_requested as wanted;
-    let q = |pairs: &[(&str, &str)]| -> Vec<(String, String)> {
+    use server2::domestic::kma::source::air_input::airkorea_forecast_requested;
+    let q = |pairs: &[(&str, &str)]| -> String {
         pairs
             .iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
-            .collect()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>()
+            .join("&")
+    };
+    let wanted = |query: &String| {
+        let request = server2::domestic::kma::backend::parse_path(
+            &format!("/v000903/kma/addr/a?{query}"),
+            "ko",
+        )
+        .unwrap();
+        airkorea_forecast_requested(&server2::domestic::kma::validated_query(&request))
     };
     assert!(wanted(&q(&[])), "absent: default airkorea");
     assert!(

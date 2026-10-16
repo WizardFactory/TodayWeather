@@ -776,22 +776,30 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     async fn load(&self, request: &KmaRequest, deadline: Instant) -> SourceAnswer {
         match self.build(request, deadline).await {
             Ok(s) => SourceAnswer::Snapshot(Box::new(s)),
-            Err(reason) => SourceAnswer::Forward(reason),
+            Err(Unbuilt::Forward(reason)) => SourceAnswer::Forward(reason),
+            Err(Unbuilt::Failed(reason)) => SourceAnswer::Failed(reason),
         }
     }
-    async fn build(&self, request: &KmaRequest, deadline: Instant) -> Result<Snapshot, String> {
+    async fn build(&self, request: &KmaRequest, deadline: Instant) -> Result<Snapshot, Unbuilt> {
         let now = (self.clock)();
-        let region = request.region.clone().unwrap_or_default();
-        let city = request.city.clone().unwrap_or_default();
-        let town_name = request.town.clone().unwrap_or_default();
+        // Request names in the value layer's form, as the chain holds them.
+        let region =
+            crate::domestic::kma::js::canon_str(request.region.as_deref().unwrap_or_default());
+        let city = crate::domestic::kma::js::canon_str(request.city.as_deref().unwrap_or_default());
+        let town_name =
+            crate::domestic::kma::js::canon_str(request.town.as_deref().unwrap_or_default());
         let list = towns();
         let town = find_town(
             list,
-            request.region.as_deref(),
+            request.region.as_ref().map(|_| region.as_str()),
             Some(&city),
             Some(&town_name),
         )
-        .ok_or("town absent from the town list (S15b-4 geocodes and stores new towns)")?
+        .ok_or_else(|| {
+            Unbuilt::Forward(
+                "town absent from the town list (S15b-4b-2 geocodes and stores new towns)".into(),
+            )
+        })?
         .clone();
         let m = town.get("mCoord").and_then(Val::as_doc);
         let num = |k| {
@@ -803,10 +811,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             mx: num("mx"),
             my: num("my"),
         };
-        let grid = (coord.mx.fract() == 0. && coord.my.fract() == 0.)
-            .then(|| crate::history::Grid::new(coord.mx as u16, coord.my as u16))
-            .flatten()
-            .ok_or("town grid outside the KMA grid")?;
+        // A coordinate outside the KMA grid has no grid collection: legacy's `find` by `mCoord`
+        // finds no row, so every grid collection answers empty (no acquisition either).
+        let grid = kma_grid(coord);
         // One wait bound for the whole request (at most REQUEST_WAIT, 3 s, and ANSWER_RESERVE
         // before the deadline): station observations, ASOS history, the forecast, air and life
         // acquisitions all stop waiting at `until`, so the waits never add up; late parts are
@@ -827,8 +834,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .is_some_and(|f| self.observations.settled(now as i64, f));
             (folded, (history, asos, settled))
         };
-        let dust_wanted = air_input::airkorea_forecast_requested(&request.query);
-        let image_wanted = air_input::image_forecast_requested(&request.query);
+        // `req.query` after `checkQueryValidation` (a non-`Send` value, dropped before any await).
+        let (dust_wanted, image_wanted) = {
+            let query = super::validated_query(request);
+            (
+                air_input::airkorea_forecast_requested(&query),
+                air_input::image_forecast_requested(&query),
+            )
+        };
         // The mid regions follow the zone list (the temperature region comes from it); they do not
         // wait for the grids.
         let zones_and_mids = async {
@@ -848,6 +861,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         ) = tokio::join!(
             zones_and_mids,
             async {
+                let Some(grid) = grid else {
+                    return (
+                        Ok((Vec::new(), None)),
+                        Ok((Vec::new(), None)),
+                        Ok((Vec::new(), None)),
+                        Ok(Vec::new()),
+                    );
+                };
                 tokio::join!(
                     self.grid_answer_by(Family::Current, grid, now, deadline, until),
                     self.grid_answer_by(Family::Shortest, grid, now, deadline, until),
@@ -893,8 +914,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         models.insert(TownModel::Shortest, shortest);
         models.insert(TownModel::Short, short);
         models.insert(TownModel::ShortRss, rss?);
-        let summary = match (settled, ids) {
-            (true, Some(ids)) => {
+        let summary = match (settled, ids, grid) {
+            (true, Some(ids), Some(grid)) => {
                 summary_inputs(&town, grid, &history, ids, stations.as_deref(), asos)
             }
             _ => None,
@@ -1321,6 +1342,23 @@ fn wait_bound(deadline: Instant) -> Instant {
         .max(now)
         .min(now + observe::REQUEST_WAIT)
 }
+/// The KMA grid cell of a town's `mCoord` (None: not a cell, so no grid collection holds it).
+fn kma_grid(coord: Coord) -> Option<crate::history::Grid> {
+    (coord.mx.fract() == 0. && coord.my.fract() == 0.)
+        .then(|| crate::history::Grid::new(coord.mx as u16, coord.my as u16))
+        .flatten()
+}
+/// Why a snapshot was not built: a town legacy would geocode (forwarded until S15b-4b-2), or
+/// inputs S3 could not supply (a dependency failure).
+enum Unbuilt {
+    Forward(String),
+    Failed(String),
+}
+impl From<String> for Unbuilt {
+    fn from(reason: String) -> Self {
+        Self::Failed(reason)
+    }
+}
 /// Whether an acquisition of `partition` was complete at `now`.
 fn present(fetched: &[Fetched], partition: &str, now: f64) -> bool {
     fetched
@@ -1337,8 +1375,8 @@ fn partition_publication(p: &str) -> Option<Publication> {
 }
 /// `land_area_code(cityCode)` of the assembly.
 fn land_area_code(city_code: &str) -> String {
-    let u: Vec<u16> = city_code.encode_utf16().collect();
-    let head = |n: usize| String::from_utf16_lossy(&u[..n.min(u.len())]);
+    let u: Vec<u16> = crate::domestic::kma::js::units(city_code);
+    let head = |n: usize| crate::domestic::kma::js::from16(&u[..n.min(u.len())]);
     match head(3).as_str() {
         "11B" => "11B00000".into(),
         "21F" => "11F10000".into(),
@@ -1586,5 +1624,29 @@ impl KmaStore for Snapshot {
     }
     fn summary_inputs(&self) -> Option<GridInputs> {
         self.summary.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    /// A town whose `mCoord` is not a KMA cell gets empty grid collections (S15b-4b-1).
+    #[test]
+    fn only_kma_cells_have_grid_collections() {
+        let at = |mx: f64, my: f64| kma_grid(Coord { mx, my }).map(|g| (g.nx(), g.ny()));
+        assert_eq!(at(60., 127.), Some((60, 127)));
+        assert_eq!(at(1., 1.), Some((1, 1)));
+        assert_eq!(at(149., 253.), Some((149, 253)));
+        for (mx, my) in [
+            (60.5, 127.),
+            (0., 127.),
+            (150., 127.),
+            (60., 254.),
+            (-1., 127.),
+            (f64::NAN, 127.),
+            (1e300, 127.),
+        ] {
+            assert_eq!(at(mx, my), None, "{mx},{my}");
+        }
     }
 }

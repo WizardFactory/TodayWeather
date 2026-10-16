@@ -71,6 +71,7 @@ fn run(sc: &serde_json::Value) -> Result<(), String> {
             }
             text
         }
+        Outcome::Defect(reason) => panic!("native defect: {reason}"),
         Outcome::Legacy(reason) => {
             return match declared {
                 Some((_, why)) if reason.contains(why) => Ok(()),
@@ -84,9 +85,10 @@ fn run(sc: &serde_json::Value) -> Result<(), String> {
             first_difference(&actual, expected)
         ));
     }
-    let etag = server2::gateway::response::etag(actual.as_bytes());
-    if sc["etag"].as_str() != Some(etag.as_str()) {
-        return Err(format!("{id}: ETag {etag} vs {}", sc["etag"]));
+    let etag = (!(status >= 500 && actual == "Internal Server Error\n"))
+        .then(|| server2::gateway::response::etag(actual.as_bytes()));
+    if sc["etag"].as_str() != etag.as_deref() {
+        return Err(format!("{id}: ETag {etag:?} vs {}", sc["etag"]));
     }
     if let Some(reason) = store.unconsumed() {
         return Err(format!("{id}: {reason}"));

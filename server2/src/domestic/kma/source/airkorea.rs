@@ -612,7 +612,7 @@ pub fn arpltn_answer(
     ));
     Ok(OrderedJson::Object(
         out.into_iter()
-            .map(|(k, v)| (k.encode_utf16().collect(), v))
+            .map(|(k, v)| (crate::domestic::kma::js::units(k), v))
             .collect(),
     ))
 }
@@ -622,7 +622,7 @@ fn answer_json(d: &Doc) -> OrderedJson {
         d.entries()
             .iter()
             .filter(|(_, v)| !matches!(v, Val::Null))
-            .map(|(k, v)| (k.encode_utf16().collect(), v.json()))
+            .map(|(k, v)| (crate::domestic::kma::js::units(k), v.json()))
             .collect(),
     )
 }
@@ -780,8 +780,8 @@ pub fn dust_region(region: &str, city: &str) -> String {
     if sido != "강원" && sido != "경기" {
         return sido.into();
     }
-    let u: Vec<u16> = city.encode_utf16().collect();
-    let city = String::from_utf16_lossy(&u[..u.len().min(3)]);
+    let u: Vec<u16> = crate::domestic::kma::js::units(city);
+    let city = crate::domestic::kma::js::from16(&u[..u.len().min(3)]);
     let name = super::region_table()
         .iter()
         .find(|r| r.first == region && r.second == city)
@@ -813,9 +813,10 @@ pub fn dust_answer(
     date: &str,
 ) -> Result<OrderedJson, String> {
     let sido = dust_region(region, city);
-    let u: Vec<u16> = date.encode_utf16().collect();
-    let sub =
-        |a: usize, n: usize| String::from_utf16_lossy(&u[a.min(u.len())..(a + n).min(u.len())]);
+    let u: Vec<u16> = crate::domestic::kma::js::units(date);
+    let sub = |a: usize, n: usize| {
+        crate::domestic::kma::js::from16(&u[a.min(u.len())..(a + n).min(u.len())])
+    };
     let inform_date = format!("{}-{}-{}", sub(0, 4), sub(4, 2), sub(6, 2));
     let docs: Vec<&Forecast> = forecasts
         .docs
@@ -841,15 +842,20 @@ pub fn dust_answer(
             continue;
         }
         let data = d.inform_data.clone().unwrap_or_default();
-        let du: Vec<u16> = data.encode_utf16().collect();
+        // Provider text enters the value layer's form before it is sliced by code units.
+        let du: Vec<u16> =
+            crate::domestic::kma::js::units(&crate::domestic::kma::js::canon_str(&data));
         let part = |a: usize, n: usize| {
-            String::from_utf16_lossy(&du[a.min(du.len())..(a + n).min(du.len())])
+            crate::domestic::kma::js::from16(&du[a.min(du.len())..(a + n).min(du.len())])
         };
         let key = format!("{}{}{}", part(0, 4), part(5, 2), part(8, 2));
         let slot = match results.iter().position(|(k, _)| *k == key) {
             Some(i) => i,
             None => {
-                results.push((key.clone(), Doc::new().with("sido", Val::str(&sido))));
+                results.push((
+                    key.clone(),
+                    Doc::new().with("sido", Val::canonical(sido.as_str())),
+                ));
                 results.len() - 1
             }
         };
@@ -873,7 +879,7 @@ pub fn dust_answer(
                 OrderedJson::Object(vec![
                     (
                         "date".encode_utf16().collect(),
-                        OrderedJson::String(date.encode_utf16().collect()),
+                        OrderedJson::String(crate::domestic::kma::js::units(&date)),
                     ),
                     ("dustForecast".encode_utf16().collect(), answer_json(&f)),
                 ])
@@ -934,6 +940,29 @@ pub fn fallback_arpltn(o: &crate::world::air::Observation) -> Option<OrderedJson
         )
     })
 }
+/// A world-air provider string (outside the value layer) as JSON.
 fn js_str(s: &str) -> OrderedJson {
     OrderedJson::String(s.encode_utf16().collect())
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn fallback_strings_keep_provider_characters() {
+        // A real character in the stand-in range stays itself in the answer.
+        let name = "\u{10F800}측정소";
+        let o = crate::world::air::Observation {
+            provider: "aqicn".into(),
+            station_based: false,
+            observed_at: Some("2026-09-24T01:00:00Z".into()),
+            pollutants: vec![("pm10", 11.)],
+            attribution: crate::world::js::Val::Str(name.into()),
+            station_name: Some(name.into()),
+            station_geo: None,
+        };
+        let out = fallback_arpltn(&o).unwrap();
+        let want = OrderedJson::String(name.encode_utf16().collect());
+        assert_eq!(out.get("stationName"), Some(&want));
+        assert_eq!(out.get("attribution"), Some(&want));
+    }
 }

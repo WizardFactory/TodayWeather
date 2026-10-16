@@ -15,11 +15,13 @@ mod air;
 pub mod backend;
 mod chain;
 mod data;
+pub mod dateparse;
 pub mod js;
 mod mid;
 pub(crate) mod policy;
 pub(crate) mod precip;
 mod present;
+pub mod qs;
 mod short;
 pub mod source;
 mod time;
@@ -90,7 +92,7 @@ pub const NO_KAQ_FORECAST: &str = "Fail to get map case";
 /// legacy results as JSON with Dates as `{"$date": ms}`; `Err` is the callback error.
 /// Implementations must answer from a snapshot already in memory. A snapshot that cannot answer
 /// a call faithfully (the input is absent, not merely an error legacy would receive) calls
-/// [`unavailable`], which forwards the request to legacy.
+/// [`unavailable`], a native defect that the backend answers as a dependency failure.
 ///
 /// Except for the town list (`towns`, cached by the long-lived legacy controller), every method
 /// is a legacy asynchronous read: the assembly treats each answer as an asynchronous callback, so
@@ -148,7 +150,7 @@ pub trait KmaStore {
         None
     }
     /// After a reply: why the snapshot's inputs were not fully used (a replayed recording), or
-    /// None. A reply built without inputs the snapshot holds is forwarded to legacy.
+    /// None. A reply built without inputs the snapshot holds is a native defect.
     fn unconsumed(&self) -> Option<String> {
         None
     }
@@ -158,10 +160,10 @@ pub trait KmaStore {
         None
     }
 }
-/// The store cannot answer a call from its snapshot: end the assembly and forward to legacy.
-/// It passes every legacy `catch` (see [`js::forward`]).
+/// The store cannot answer a call from its snapshot (a port invariant broke): end the assembly
+/// as a dependency failure. It passes every legacy `catch` (see [`js::defect`]).
 pub fn unavailable(reason: impl Into<String>) -> ! {
-    js::forward(reason)
+    js::defect(reason)
 }
 
 /// Legacy process parameters that differ between the deployed service and the S02 harness.
@@ -209,12 +211,16 @@ pub enum Outcome {
     Undefined,
     /// A legacy non-JSON reply (`res.status(code).send(text)`).
     Status(u16, String),
-    /// Legacy would leave the assembly path (redirect, geocoding a new town, a remote remap or
-    /// an unhandled exception). Forward the request to legacy.
+    /// Legacy would leave the assembly path to geocode a new town or remap a region through a
+    /// remote geocoder (S15b-4b-2 reproduces both). Forward the request to legacy.
     Legacy(String),
+    /// A port invariant broke (a store answer the snapshot cannot give). Not legacy behavior:
+    /// the backend answers a dependency failure and never forwards.
+    Defect(String),
 }
 
 /// The v000903 router list in legacy order.
+pub use chain::validated_query;
 pub fn middleware() -> Vec<&'static str> {
     chain::names("v000903", None)
 }
@@ -242,8 +248,11 @@ pub fn assemble_capturing(
 ) -> (Outcome, Option<Vec<OrderedJson>>) {
     let (outcome, past) = chain::run_capturing(request, store, now_ms, config);
     match (&outcome, store.unconsumed()) {
-        (Outcome::Legacy(_), _) | (_, None) => (outcome, past),
-        (_, Some(reason)) => (Outcome::Legacy(reason), past),
+        (Outcome::Legacy(_) | Outcome::Defect(_), _) | (_, None) => (outcome, past),
+        // An Express 5xx ends the reply early (an escaped exception): later inputs go unused.
+        (Outcome::Status(code, _), _) if *code >= 500 => (outcome, past),
+        // A reply built without inputs the snapshot holds (a replayed recording): a defect.
+        (_, Some(reason)) => (Outcome::Defect(reason), None),
     }
 }
 

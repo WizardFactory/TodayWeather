@@ -997,36 +997,20 @@ async fn start_flight(
         })
         .await
 }
-/// Whether `AirForecastList` reads the AirKorea image forecast for this query: the source
-/// `airkorea` (a missing or `(null)` value, which `checkQueryValidation` makes `airkorea`), and
-/// `kaq`, which is answered with the AirKorea forecast while no KAQ forecast exists (AK
-/// 2026-10-15). A repeated key is an array: an unknown source (no forecast).
-pub fn image_forecast_requested(query: &[(String, String)]) -> bool {
-    let values: Vec<&str> = query
-        .iter()
-        .filter(|(k, _)| k == "airForecastSource")
-        .map(|(_, v)| v.as_str())
-        .collect();
-    match values.as_slice() {
-        [] => true,
-        [one] => matches!(*one, "(null)" | "airkorea" | "kaq"),
-        _ => false,
-    }
+/// Whether `AirForecastList` reads the AirKorea image forecast for this request: the source
+/// `airkorea` (`checkQueryValidation` makes a missing or `(null)` value `airkorea`), and `kaq`,
+/// which is answered with the AirKorea forecast while no KAQ forecast exists (AK 2026-10-15).
+/// Any other value (an array, an object, another string) reads no forecast. `query` is
+/// [`crate::domestic::kma::validated_query`].
+pub fn image_forecast_requested(query: &crate::domestic::kma::js::V) -> bool {
+    let source = query.get("airForecastSource");
+    matches!(source.str(), Some("airkorea" | "kaq"))
 }
-/// Whether `getKecoDustForecast` reads dust forecasts for this query: legacy
-/// `checkQueryValidation` sets an absent or `(null)` `airForecastSource` to `airkorea`, and the
-/// middleware continues only for the string `airkorea` (a repeated key is an array: never).
-pub fn airkorea_forecast_requested(query: &[(String, String)]) -> bool {
-    let values: Vec<&str> = query
-        .iter()
-        .filter(|(k, _)| k == "airForecastSource")
-        .map(|(_, v)| v.as_str())
-        .collect();
-    match values.as_slice() {
-        [] => true,
-        [one] => *one == "airkorea" || *one == "(null)",
-        _ => false,
-    }
+/// Whether `getKecoDustForecast` reads dust forecasts for this request: it continues only for
+/// the string `airkorea` (after `checkQueryValidation`'s default).
+pub fn airkorea_forecast_requested(query: &crate::domestic::kma::js::V) -> bool {
+    let source = query.get("airForecastSource");
+    source.str() == Some("airkorea")
 }
 /// The KST date `YYYYMMDD` of an instant (`_getCurrentTimeValue(+9).date`).
 pub fn kst_date(now: f64) -> u32 {

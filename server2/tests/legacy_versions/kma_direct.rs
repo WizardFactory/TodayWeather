@@ -247,8 +247,7 @@ async fn listed_direct_routes_reproduce_the_s02_goldens_natively() {
     assert_eq!(hits.load(Ordering::SeqCst), 0, "no legacy hop");
 }
 
-/// The town region guard and v000705 sub-routes answer natively; a malformed escape and an
-/// unknown sub-route take the legacy hop.
+/// Region guards, default errors and unmatched paths answer without a legacy hop.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn town_status_replies_and_declared_forwards() {
     warm();
@@ -263,6 +262,8 @@ async fn town_status_replies_and_declared_forwards() {
         "v000803-region-guard",
         "v000705-mid",
         "v000705-shortest-model-errors",
+        "v000803-query-malformed-escape",
+        "v000705-short",
     ] {
         let sc = scenario(id);
         *source.next.lock().unwrap() = Some(id);
@@ -295,14 +296,23 @@ async fn town_status_replies_and_declared_forwards() {
         assert_eq!(body, sc["body"].as_str().unwrap().as_bytes(), "{id}");
     }
     assert_eq!(hits.load(Ordering::SeqCst), 0);
-    // An unknown v000705 sub-route is not a native route: the legacy origin answers it.
+    // app.js passes unmatched paths as a 404 Error to finalhandler in production.
     let req = Request::builder()
         .uri("/v000705/town/a/b/c/other")
         .body(Body::empty())
         .unwrap();
     let response = gw.handle(req).await;
     assert_eq!(response.status().as_u16(), 404);
-    assert_eq!(hits.load(Ordering::SeqCst), 1, "legacy hop");
+    assert_eq!(
+        response.headers().get("x-content-type-options").unwrap(),
+        "nosniff"
+    );
+    assert!(response.headers().get("etag").is_none());
+    assert_eq!(
+        to_bytes(response.into_body(), 1024).await.unwrap(),
+        "Not Found\n"
+    );
+    assert_eq!(hits.load(Ordering::SeqCst), 0, "native app-level 404");
 }
 
 /// A source that cannot supply the inputs sends the request to legacy unchanged; the legacy
@@ -504,14 +514,19 @@ async fn the_legacy_hop_keeps_dot_segments_verbatim() {
             socket.write_all(reply.as_bytes()).await.unwrap();
             socket.shutdown().await.unwrap();
         });
-        let gw = gateway(
-            &format!("http://{addr}/"),
-            Arc::new(server2::domestic::kma::backend::LegacyOnly),
-            ALL,
-        );
-        let req = Request::builder().uri(path).body(Body::empty()).unwrap();
-        let response = gw.handle(req).await;
-        assert_eq!(response.status().as_u16(), 404, "{path}");
+        // Exercise the legacy transport directly: unmatched native paths are now
+        // answered before the source and must never invoke this transport.
+        let dispatcher = BackendDispatcher::legacy(&format!("http://{addr}/")).unwrap();
+        let (status, _, _) = dispatcher
+            .proxy(
+                &Method::GET,
+                path,
+                &HeaderMap::new(),
+                std::time::Duration::from_secs(3),
+            )
+            .await
+            .unwrap();
+        assert_eq!(status, 404, "{path}");
         let request = seen.lock().unwrap().clone();
         assert!(
             request.split("\r\n").next() == Some(format!("GET {path} HTTP/1.1").as_str()),
@@ -549,11 +564,7 @@ async fn the_legacy_hop_drops_connection_listed_headers_both_ways() {
         socket.shutdown().await.unwrap();
     });
     // A source without inputs: the direct request takes the legacy hop.
-    let gw = gateway(
-        &format!("http://{addr}/"),
-        Arc::new(server2::domestic::kma::backend::LegacyOnly),
-        ALL,
-    );
+    let gw = gateway(&format!("http://{addr}/"), Arc::new(LegacyOnly), ALL);
     let req = Request::builder()
         .uri("/v000803/town/a/b/c")
         .header("connection", "x-private")
