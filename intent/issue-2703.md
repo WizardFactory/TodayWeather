@@ -30,7 +30,7 @@ Also out of scope: process wiring and cutover (S20), merge, AWS resources, produ
 
 ## S18b-1 scheduled alarm delivery (2026-10-16)
 
-Task: issue-2703-s18b-1; base a9b3a23d; authority: AK 2026-10-16 (continue S18b as separate PRs;
+Task: issue-2703-s18b-1; base 915978bb (started on a9b3a23d); authority: AK 2026-10-16 (continue S18b as separate PRs;
 no live push/FCM/APNs sends; test doubles only). Declaration: `server2/config/tasks/S18b-1.json`.
 
 Deliver the registered daily alarms from server2 exactly as the legacy alarm worker built them,

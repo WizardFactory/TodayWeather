@@ -2,12 +2,12 @@
 
 Test data only; the server2 runtime never reads these files or any legacy file. Every token, coordinate, name and service account in them is synthetic.
 
-- `alarm-oracle.json.gz` (sha256 `a46f0030770296d27e9a459a5b4c6aefb8c2750a35489c9a988088d282d4b702`): pinned results of the legacy alarm worker for the S18b-1 parity test (`server2/tests/delivery/parity.rs`): 47 single deliveries (`ControllerPush.sendNotification`) and one scheduled minute (`ControllerPush.sendPush`) with 7 registrations.
+- `alarm-oracle.json.gz` (sha256 `16615cac3e711482788b38e3c379b53e3413cf53bf09cd3fc041f553527fa00c`): pinned results of the legacy alarm worker for the S18b-1 parity test (`server2/tests/delivery/parity.rs`): 47 single deliveries (`ControllerPush.sendNotification`) and one scheduled minute (`ControllerPush.sendPush`) with 7 registrations.
 - `rfc7515-a2-key.pkcs8.b64` (sha256 `57ea5536a0a770d015812a7c2bb2c82d829b8a7c564bdf64d82f93629a844149`): the public example RSA key of RFC 7515 Appendix A.2 (https://www.rfc-editor.org/rfc/rfc7515#appendix-A.2) as base64 PKCS#8 DER, extracted from the RFC text by `extract_jwk.py` and converted by `make-keys.js` below, which also checks that it reproduces the RFC A.2 signature. It signs the oracle and test service-account assertions; it is not a credential of any project.
 
 ## Recording
 
-- Legacy source: repository revision `a9b3a23d289d9a59d39da567877a4dca4e268a0e`; the sha256 of every legacy file loaded while recording is stored in `source.files` (97 files), including `server/controllers/controllerPush.js`.
+- Legacy source: repository revision `915978bb39f0dfa829b7af2aef14df4499c28997`; the sha256 of every legacy file loaded while recording is stored in `source.files` (97 files), including `server/controllers/controllerPush.js`.
 - Runtime: Node.js `v16.20.2`, `TZ=UTC`, `NODE_ENV=production`; firebase-admin `5.13.1` (the legacy `server/package.json` pin), i18n `0.8.3`, async `2.6.2`, Mongoose `5.1.2` (models load; the store is a double).
 - The real `ControllerPush` with the real firebase-admin over an `https.request` double that records every OAuth and FCM request (host, path, headers, body) and answers per case: JSON errors, a non-JSON 500 page, connection resets and a token-endpoint error. Weather and geocode requests (`request`) are a recording double answering with synthetic legacy-shaped bodies. The push store is a recording double. Every other network module throws. `Date` is a fixed clock (1 s per case; `advance` moves it past the cached access token).
 - Two synthetic service accounts (`fcm-test-todayWeather.json`, `fcm-test-todayAir.json`, projects `tw-oracle`/`ta-oracle`) use the RFC 7515 key, so the RS256 assertions are deterministic and compared byte for byte.
@@ -46,7 +46,7 @@ Test data only; the server2 runtime never reads these files or any legacy file. 
 }
 ```
 
-### `run-alarm.sh` (sha256 `10cb7c25813e69addfac7f7911c8b16c1d491156213e74cd7e48e7d3bceeb1e3`)
+### `run-alarm.sh` (sha256 `71e5d1eed0d32bd66577ba110fcd8ebd91c22195a2e2d6cb6936fee35b3c2800`)
 
 ```sh
 #!/bin/bash
@@ -54,7 +54,7 @@ Test data only; the server2 runtime never reads these files or any legacy file. 
 set -euo pipefail
 D="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$D/../../.." && pwd)"
-export TW_REPO="$REPO" TW_REVISION="$(cd "$REPO" && git rev-parse HEAD)" TZ=UTC NODE_ENV=production NODE_PATH="$D/node_modules"
+export TW_REPO="$REPO" TW_REVISION="$(cd "$REPO" && git merge-base HEAD origin/master)" TZ=UTC NODE_ENV=production NODE_PATH="$D/node_modules"
 "$D/node-v16.20.2-darwin-arm64/bin/node" "$D/record-alarm.js" "$1" 2> "$D/stderr-alarm.log"
 ```
 

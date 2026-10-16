@@ -61,7 +61,7 @@ state (tokens on disk; S3 stays the source of truth).
 
 ## S18b-1 scheduled alarm delivery
 
-Task: issue-2703-s18b-1; base a9b3a23d; date 2026-10-16; declaration
+Task: issue-2703-s18b-1; base 915978bb (started on a9b3a23d); date 2026-10-16; declaration
 `server2/config/tasks/S18b-1.json` ([record](https://github.com/WizardFactory/TodayWeather/issues/2703#issuecomment-6205966857)).
 
 - Paths: `server2/src/push/deliver/` (worker, weather requests, text, FCM adapter, ledger, internal

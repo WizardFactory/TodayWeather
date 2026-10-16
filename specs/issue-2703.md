@@ -64,9 +64,9 @@ Task: issue-2703-s18a; source: [intent](../intent/issue-2703.md); base 1d60f728;
   snapshot when anything changed. The converter refuses an existing output path (no reused
   permissions or symbolic-link targets) and creates the import file 0600.
 
-## S18b-1 scheduled alarm delivery (base a9b3a23d)
+## S18b-1 scheduled alarm delivery (base 915978bb)
 
-| Legacy source (revision a9b3a23d) | server2 port |
+| Legacy source (revision 915978bb) | server2 port |
 | --- | --- |
 | `server/app.js:140-147` (`SERVER_MODE=push` starts the worker), `server/controllers/controllerPush.js:1236-1244` (`start`, 60 s interval), `:1170-1234` (`sendPush`), `:1137-1160` (`_filterByDayOfWeek`), `:1085-1129` (`_removeOldList`) | `server2/src/push/deliver/alarm.rs` |
 | `server/lib/pushStore/mongo.js:60-65` (`disableByFcm`), `:70-115` (`removeDuplicates`), `:138-147` (`getAlarmsByTime`, `removeDuplicateAlarms`); `controllerPush.js:68-117` (`updatePushInfo`, `makeRemoveSelector`) | `deliver/ops.rs`, `store.rs` (`due`, key fields), `service.rs` (internal writer operations) |
