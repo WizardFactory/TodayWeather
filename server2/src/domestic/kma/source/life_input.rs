@@ -27,6 +27,7 @@ use super::life_live::{LifeAcquire, LifeOutcome, LifeRequest};
 use super::live::Flights;
 use super::mfds::FoodPoisoning;
 use super::records::{Fetched, Reader, months};
+use crate::budget::{Clock, SystemClock};
 use crate::domestic::acquire::Paged;
 use crate::domestic::family::{DataGoKrFamily, DataGoKrRequest, Target};
 use crate::domestic::mfds::{self as mfds_provider, MfdsRequest};
@@ -89,10 +90,11 @@ fn all_areas() -> ProviderKey {
         id: "all-areas".into(),
     }
 }
-fn wall_ms() -> f64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0., |d| d.as_millis() as f64)
+/// The wall clock in ms.///
+/// S15b-3d: read from the inputs' clock (the system clock unless `with_clock` injects another;
+/// tests fix it).
+fn wall_ms(clock: &dyn Clock) -> f64 {
+    clock.now_ms().map_or(0., |n| n as f64)
 }
 /// `response.body.items.item` of every page in page order (an array, or one object as KASI
 /// answers); None when a page is not an item page.
@@ -218,6 +220,8 @@ struct Shared<T> {
     kasi_first: Duration,
     kasi_every: Duration,
     cpu: Arc<tokio::sync::Semaphore>,
+    /// The wall clock (S15b-3d).
+    clock: Arc<dyn Clock>,
 }
 /// Inputs shared by every request of the process.
 pub struct LifeInputs<T> {
@@ -229,12 +233,14 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
             Reader { transport, store },
             None,
             (Duration::ZERO, KASI_EVERY),
+            Arc::new(SystemClock),
         )
     }
     fn build(
         reader: Reader<T>,
         acquire: Option<Arc<dyn LifeAcquire>>,
         (kasi_first, kasi_every): (Duration, Duration),
+        clock: Arc<dyn Clock>,
     ) -> Self {
         let reads = OwnedFlights::new(OwnedConfig {
             running: 8,
@@ -262,19 +268,25 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
                 kasi_first,
                 kasi_every,
                 cpu: Arc::new(tokio::sync::Semaphore::new(2)),
+                clock,
             }),
         }
     }
     /// Owned acquisitions (None: stored records only).
     pub fn with_acquire(self, acquire: Option<Arc<dyn LifeAcquire>>) -> Self {
         let s = Arc::try_unwrap(self.shared).unwrap_or_else(|_| panic!("unshared inputs"));
-        Self::build(s.reader, acquire, (s.kasi_first, s.kasi_every))
+        Self::build(s.reader, acquire, (s.kasi_first, s.kasi_every), s.clock)
     }
     /// The KASI capture schedule: the first pass `first` after the first request, then every
     /// `every` (the runtime: at once, then hourly).
     pub fn with_kasi_schedule(self, first: Duration, every: Duration) -> Self {
         let s = Arc::try_unwrap(self.shared).unwrap_or_else(|_| panic!("unshared inputs"));
-        Self::build(s.reader, s.acquire, (first, every))
+        Self::build(s.reader, s.acquire, (first, every), s.clock)
+    }
+    /// S15b-3d: the wall clock (the system clock by default; tests fix it).
+    pub fn with_clock(self, clock: Arc<dyn Clock>) -> Self {
+        let s = Arc::try_unwrap(self.shared).unwrap_or_else(|_| panic!("unshared inputs"));
+        Self::build(s.reader, s.acquire, (s.kasi_first, s.kasi_every), clock)
     }
     /// The life, MFDS and KASI folds for a request at `now`. Waits end 200 ms before the
     /// deadline; whatever is not ready then is answered from the last folds.
@@ -358,7 +370,8 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
         }
         let published = crate::history::join_all(flights).await;
         if published.into_iter().any(|p| p) {
-            self.read_life(wall_ms().max(now), until).await;
+            self.read_life(wall_ms(&*self.shared.clock).max(now), until)
+                .await;
         }
         self.life_fold()
     }
@@ -425,7 +438,8 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
                     )
                     .await
             {
-                self.read_mfds(wall_ms().max(now), until).await;
+                self.read_mfds(wall_ms(&*self.shared.clock).max(now), until)
+                    .await;
             }
         }
         self.shared
@@ -522,9 +536,10 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
                         for request in requests {
                             match acquire.acquire(request).await {
                                 Ok(LifeOutcome::Published) => {
-                                    shared
-                                        .published_at
-                                        .fetch_max(wall_ms() as i64, Ordering::AcqRel);
+                                    shared.published_at.fetch_max(
+                                        wall_ms(&*shared.clock) as i64,
+                                        Ordering::AcqRel,
+                                    );
                                     shared.published.fetch_add(1, Ordering::AcqRel);
                                     return true;
                                 }
@@ -550,7 +565,7 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
     fn note_demand(&self) {
         self.shared
             .demand_ms
-            .store(wall_ms() as i64, Ordering::Release);
+            .store(wall_ms(&*self.shared.clock) as i64, Ordering::Release);
         if self.shared.acquire.is_none() || self.shared.kasi_started.swap(true, Ordering::AcqRel) {
             return;
         }
@@ -561,7 +576,7 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
             tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 tick.tick().await;
-                let now = wall_ms();
+                let now = wall_ms(&*shared.clock);
                 if now - shared.demand_ms.load(Ordering::Acquire) as f64 > DEMAND_MS {
                     continue;
                 }

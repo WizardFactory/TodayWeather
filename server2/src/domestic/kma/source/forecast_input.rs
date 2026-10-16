@@ -25,6 +25,7 @@ use super::airkorea::{Forecasts, Stations, announcement_text, expected_announcem
 use super::doc::Val;
 use super::live::{AirKoreaAcquire, Flights};
 use super::records::{Reader, months};
+use crate::budget::{Clock, SystemClock};
 use crate::domestic::airkorea_image::{self as image, AirKoreaImageRequest};
 use crate::domestic::publication::Publication;
 use crate::gateway::BoxFuture;
@@ -87,15 +88,18 @@ struct Shared<T> {
     /// Wall-clock ms when an image acquisition of this process last published or failed (a
     /// failed S3 write may still have committed): the next request reads the catalogs again.
     published_at: AtomicI64,
+    /// The wall clock (S15b-3d).
+    clock: Arc<dyn Clock>,
 }
 /// The image forecast inputs shared by every request of the process.
 pub struct ImageForecasts<T> {
     shared: Arc<Shared<T>>,
 }
-fn wall_ms() -> f64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0., |d| d.as_millis() as f64)
+/// The wall clock in ms.///
+/// S15b-3d: read from the inputs' clock (the system clock unless `with_clock` injects another;
+/// tests fix it).
+fn wall_ms(clock: &dyn Clock) -> f64 {
+    clock.now_ms().map_or(0., |n| n as f64)
 }
 fn kst_date(ms: f64) -> u32 {
     crate::world::js::parts(ms + 9. * HOUR_MS)
@@ -239,7 +243,16 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
                 refresh: Default::default(),
                 cpu: Arc::new(tokio::sync::Semaphore::new(1)),
                 published_at: AtomicI64::new(0),
+                clock: Arc::new(SystemClock),
             }),
+        }
+    }
+    /// S15b-3d: the wall clock (the system clock by default; tests fix it).
+    pub fn with_clock(self, clock: Arc<dyn Clock>) -> Self {
+        let mut shared = Arc::into_inner(self.shared).expect("not shared yet");
+        shared.clock = clock;
+        Self {
+            shared: Arc::new(shared),
         }
     }
     /// A shorter refresh interval (tests; as `AirInputs::with_capture_interval`).
@@ -314,7 +327,7 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
                             if !matches!(outcome, Ok(None)) {
                                 shared
                                     .published_at
-                                    .fetch_max(wall_ms() as i64, Ordering::AcqRel);
+                                    .fetch_max(wall_ms(&*shared.clock) as i64, Ordering::AcqRel);
                             }
                             let ok = matches!(outcome, Ok(Some(_)));
                             if ok {
@@ -327,8 +340,13 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
                 .await;
             if published {
                 // The acquisition completed after the request instant: read up to now.
-                self.read(wall_ms().max(now), stations, generation, until)
-                    .await;
+                self.read(
+                    wall_ms(&*self.shared.clock).max(now),
+                    stations,
+                    generation,
+                    until,
+                )
+                .await;
             }
         }
         self.fold()
