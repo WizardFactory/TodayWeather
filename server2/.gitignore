@@ -1,2 +1,5 @@
 /target/
 **/__pycache__/
+
+# Disposable local weather cache (never tracked or authoritative).
+/local-cache/

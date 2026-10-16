@@ -58,6 +58,7 @@ impl RefreshableCredentials {
 /// SigV4 HTTP adapter. Credentials come from its [`RefreshableCredentials`] handle.
 /// No Debug implementation: neither credentials nor signed URLs belong in diagnostics.
 pub struct HttpS3Transport {
+    pub(crate) raw_cache: Option<Arc<crate::cache::disk::DiskCache>>,
     pub(crate) client: Client,
     pub(crate) bucket: Bucket,
     pub(crate) credentials: RefreshableCredentials,
@@ -128,6 +129,7 @@ impl HttpS3Transport {
             client,
             bucket,
             credentials,
+            raw_cache: None,
         })
     }
     fn headers(response: &reqwest::Response) -> Result<(BTreeMap<String, String>, usize), Error> {
@@ -217,6 +219,9 @@ impl HttpS3Transport {
     }
 }
 impl ObjectTransport for HttpS3Transport {
+    fn raw_cache(&self) -> Option<Arc<crate::cache::disk::DiskCache>> {
+        self.raw_cache.clone()
+    }
     async fn ready(&self) -> Result<(), Error> {
         self.credentials.snapshot().await.map(|_| ())
     }

@@ -1,4 +1,5 @@
-//! Bounded volatile cache primitives. No cache value is persisted.
+//! Bounded volatile memory caches and optional disposable verified weather raw disk cache.
+pub mod disk;
 mod index;
 mod keys;
 mod memory;
