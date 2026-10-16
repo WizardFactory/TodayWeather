@@ -1,0 +1,10 @@
+{"_id":{"$oid":"5a1f00000000000000000001"},"type":"ios","fcmToken":"tok-a","cityIndex":0,"id":1,"pushTime":79200,"enable":true,"town":{"first":"서울특별시","second":"송파구","third":"잠실본동"},"geo":[127.1,37.5],"lang":"ko","name":"잠실본동","source":"KMA","units":{"temperatureUnit":"C","windSpeedUnit":"m/s","pressureUnit":"hPa","distanceUnit":"km","precipitationUnit":"mm","airUnit":"airkorea","airForecastSource":"kaq"},"updatedAt":{"$date":"2026-10-01T00:00:00.000Z"},"updatedBy":"user","timezoneOffset":540,"dayOfWeek":[false,true,true,true,true,true,false],"package":"todayWeather","uuid":"u-1","appVersion":"1.1.0","__v":0}
+{"_id":{"$oid":"5a1f00000000000000000002"},"type":"android","registrationId":"reg-b","cityIndex":{"$numberInt":"1"},"id":{"$numberLong":"2"},"pushTime":{"$numberDouble":"3600.0"},"updatedAt":{"$date":{"$numberLong":"1759276800000"}},"legacyOnly":"kept"}
+{"_id":{"$oid":"5a1f00000000000000000003"},"type":"ios","fcmToken":"tok-c","cityIndex":2,"id":2,"updatedAt":{"$date":1759276800000}}
+not json
+{"type":"ios","fcmToken":"tok-d"}
+{"_id":"5a1f00000000000000000005","type":"ios","fcmToken":"tok-e"}
+{"_id":{"$oid":"5a1f00000000000000000006"},"type":"ios","fcmToken":"tok-f","cityIndex":"0"}
+{"_id":{"$oid":"5a1f00000000000000000007"},"type":"ios","cityIndex":0}
+{"_id":{"$oid":"5a1f00000000000000000001"},"type":"ios","fcmToken":"tok-dup"}
+{"_id":{"$oid":"5a1f00000000000000000008"},"type":"ios","fcmToken":"tok-g","blob":{"$binary":{"base64":"AA==","subType":"00"}}}
