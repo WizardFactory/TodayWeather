@@ -283,6 +283,47 @@ pub fn usable(o: &Observation, lat: f64, lon: f64, request_ms: f64) -> bool {
         .iter()
         .any(|(c, _)| *c == "pm10" || *c == "pm25")
 }
+/// Enumerated `lib/air/observation.evaluate` outcome; no provider text enters a response.
+pub fn rejection_reason(
+    o: &Observation,
+    lat: f64,
+    lon: f64,
+    request_ms: f64,
+) -> Option<&'static str> {
+    let Some(observed) = o
+        .observed_at
+        .as_deref()
+        .map(parse_iso_offset)
+        .filter(|m| m.is_finite())
+    else {
+        return Some("no-time");
+    };
+    let age = request_ms - observed;
+    if age > FRESHNESS_MS {
+        return Some("stale");
+    }
+    if age < -FUTURE_SLACK_MS {
+        return Some("future");
+    }
+    if o.station_based {
+        let Some([a, b]) = o.station_geo else {
+            return Some("no-station-geo");
+        };
+        let distance = distance_km(lat, lon, a, b);
+        if distance.is_nan() || distance > MAX_STATION_KM {
+            return Some("too-far");
+        }
+    }
+    if !o
+        .pollutants
+        .iter()
+        .any(|(c, v)| (*c == "pm10" || *c == "pm25") && v.is_finite() && *v >= 0.)
+    {
+        return Some("no-pm");
+    }
+    None
+}
+
 fn attribution_text(v: &Val) -> Option<String> {
     let t = v.str()?.trim();
     (!t.is_empty()).then(|| t.to_owned())
@@ -391,12 +432,38 @@ pub enum AirOutcome {
 /// Request-time air source. `lat`/`lon` are the precise request coordinates (never stored).
 pub trait AirSource: Send + Sync + 'static {
     fn current(&self, lat: f64, lon: f64, request_ms: f64) -> BoxFuture<'_, AirOutcome>;
+    /// NationAir needs the safe legacy reason that ordinary weather intentionally omits.
+    /// Sources without detail retain their old outcome and an explicit unavailable reason.
+    fn current_with_reason(
+        &self,
+        lat: f64,
+        lon: f64,
+        request_ms: f64,
+    ) -> BoxFuture<'_, (AirOutcome, Option<&'static str>)> {
+        Box::pin(async move {
+            let outcome = self.current(lat, lon, request_ms).await;
+            let reason = match &outcome {
+                AirOutcome::Observation(o) => rejection_reason(o, lat, lon, request_ms),
+                AirOutcome::Pending => Some("deadline"),
+                AirOutcome::None => Some("fallback-unavailable"),
+            };
+            (outcome, reason)
+        })
+    }
 }
 /// Legacy behavior with no configured air provider key: no air fields.
 pub struct Unconfigured;
 impl AirSource for Unconfigured {
     fn current(&self, _: f64, _: f64, _: f64) -> BoxFuture<'_, AirOutcome> {
         Box::pin(async { AirOutcome::None })
+    }
+    fn current_with_reason(
+        &self,
+        _: f64,
+        _: f64,
+        _: f64,
+    ) -> BoxFuture<'_, (AirOutcome, Option<&'static str>)> {
+        Box::pin(async { (AirOutcome::None, Some("no-provider")) })
     }
 }
 

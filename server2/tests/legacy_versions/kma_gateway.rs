@@ -10,7 +10,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use server2::{
     domestic::kma::{
         KmaRequest,
-        backend::{KmaBackend, KmaSource, LegacyOnly, SourceAnswer, select_native_versions},
+        backend::{KmaBackend, KmaSource, SourceAnswer, select_native_versions},
     },
     gateway::{
         BackendDispatcher, BackendMode, BoxFuture, Family, Gateway, GatewayError, Geocoder, Version,

@@ -55,6 +55,7 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
                 _ => Err(format!("{id}: native forwarded ({reason})")),
             };
         }
+        Outcome::Defect(reason) => return Err(format!("{id}: defect ({reason})")),
     };
     if actual != expected {
         return Err(format!(

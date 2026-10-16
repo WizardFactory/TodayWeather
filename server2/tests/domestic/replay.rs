@@ -38,14 +38,16 @@ fn outcome(source: &RecordedSource, id: &str) -> Outcome {
         oracle_config(),
     )
 }
+/// The recording cannot answer: a defect (S15b-4b-1: a dependency failure, never a forward).
 fn forwarded(o: &Outcome, needle: &str) -> bool {
-    matches!(o, Outcome::Legacy(reason) if reason.contains(needle))
+    matches!(o, Outcome::Defect(reason) if reason.contains(needle))
 }
 
 /// A recording replays only the request it was made for: absent, reordered, re-argued or
-/// unused recorded calls forward instead of assembling a reply from inputs it does not hold.
+/// unused recorded calls are a defect (a dependency failure) instead of a reply assembled from
+/// inputs it does not hold.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn recorded_store_forwards_when_the_recording_cannot_answer() {
+async fn recorded_store_is_a_defect_when_the_recording_cannot_answer() {
     warm();
     let id = "domestic-v000903";
     assert!(matches!(outcome(&edited(id, |_| ()), id), Outcome::Json(_)));
@@ -60,11 +62,10 @@ async fn recorded_store_forwards_when_the_recording_cannot_answer() {
             String::new(),
             tokio::time::Instant::now() + std::time::Duration::from_secs(3),
         )
-        .await
-        .unwrap();
+        .await;
     assert!(
-        matches!(served, Native::Forward),
-        "empty recording forwards"
+        matches!(served, Err(server2::gateway::GatewayError::Provider)),
+        "empty recording is a dependency failure"
     );
     let first_model = |sc: &serde_json::Value| {
         sc["calls"]
@@ -121,7 +122,8 @@ async fn recorded_store_forwards_when_the_recording_cannot_answer() {
 /// Legacy converts town rows inside the Mongo `exec` callback, outside the `try` of
 /// `getAllDataFromDb`/`getShort`: a document without `shortData` throws an uncaught TypeError in
 /// the deployed service (the S02 harness answers synchronously and would catch it). The native
-/// assembly forwards instead of continuing without the short forecast.
+/// assembly does not continue without the short forecast: it answers Express's 500 (S15b-4b-1;
+/// the deployed process ends instead, and the gateway hop fails the same way).
 #[test]
 fn an_exception_in_a_store_callback_is_not_caught_by_an_earlier_try() {
     warm();
@@ -137,7 +139,7 @@ fn an_exception_in_a_store_callback_is_not_caught_by_an_earlier_try() {
         docs[0].as_object_mut().unwrap().remove("shortData");
     });
     let o = outcome(&source, id);
-    assert!(forwarded(&o, "getAllDataFromDb: uncaught"), "{o:?}");
+    assert_eq!(o, Outcome::Status(500, "Internal Server Error\n".into()));
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -226,10 +228,10 @@ async fn non_ascii_publication_strings_do_not_panic() {
     assert!(matches!(served, Native::Served(_)));
 }
 
-/// A Rust panic during assembly is a port defect: the backend forwards to legacy instead of
-/// failing the request.
+/// A Rust panic during assembly is a port defect: the backend answers a dependency failure and
+/// counts it; it never forwards (S15b-4b-1).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_rust_panic_in_assembly_forwards_to_legacy() {
+async fn a_rust_panic_in_assembly_is_a_counted_dependency_failure() {
     use serde_json::Value;
     use server2::domestic::kma::{
         DbVersion, KmaRequest, KmaStore, MidModel, StoreResult, TownModel,
@@ -303,6 +305,14 @@ async fn a_rust_panic_in_assembly_forwards_to_legacy() {
         }
     }
     let backend = KmaBackend::new(Arc::new(Source), system_clock(), oracle_config());
+    let defects = || {
+        server2::gateway::metrics::snapshot()
+            .into_iter()
+            .find(|(name, _)| *name == "server2_gateway_native_defects_total")
+            .unwrap()
+            .1
+    };
+    let before = defects();
     let served = backend
         .fetch_or_forward(
             format!(
@@ -312,15 +322,18 @@ async fn a_rust_panic_in_assembly_forwards_to_legacy() {
             "ko".into(),
             tokio::time::Instant::now() + std::time::Duration::from_secs(3),
         )
-        .await
-        .unwrap();
-    assert!(matches!(served, Native::Forward));
+        .await;
+    assert!(matches!(
+        served,
+        Err(server2::gateway::GatewayError::Provider)
+    ));
+    assert!(defects() > before);
 }
 
-/// A store string with an unpaired UTF-16 surrogate (kept by JavaScript, `"\ud800"` in JSON)
-/// forwards instead of being replaced by U+FFFD in a native reply.
+/// A store string with an unpaired UTF-16 surrogate (kept by JavaScript, `"\ud800"` in JSON) is
+/// kept as JavaScript keeps it, not replaced by U+FFFD (S15b-4b-1).
 #[test]
-fn an_unpaired_surrogate_in_a_store_answer_forwards() {
+fn an_unpaired_surrogate_in_a_store_answer_is_kept() {
     warm();
     let id = "life-food-kasi";
     let mut sc = scenario(id).clone();
@@ -336,5 +349,5 @@ fn an_unpaired_surrogate_in_a_store_answer_forwards() {
         .replacen("SURROGATE-MARKER", "\\ud800", 1);
     let source = RecordedSource::parse(text.as_bytes()).unwrap();
     let o = outcome(&source, id);
-    assert!(forwarded(&o, "unpaired UTF-16 surrogate"), "{o:?}");
+    assert!(matches!(o, Outcome::Json(_)), "{o:?}");
 }

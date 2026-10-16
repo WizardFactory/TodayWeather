@@ -156,11 +156,23 @@ fn unit_value(unit: &str, code: &str, mut v: f64) -> f64 {
 pub struct UnknownUnit;
 /// Ok(grade) or Err for an unknown unit (the legacy TypeError).
 pub fn value2grade(unit: &str, code: &str, v: f64) -> Result<f64, UnknownUnit> {
+    value2grade_converting(unit, unit, code, v)
+}
+/// `value2grade` whose breakpoint table is looked up by `unit` (the property key of `airUnit`)
+/// while the value conversion follows `conversion` (legacy compares `airUnit === 'airnow'`
+/// strictly and `airUnit == 'aqicn'` loosely, so a non-string `airUnit` can select a table
+/// without its conversion; the caller passes `""` for no conversion).
+pub fn value2grade_converting(
+    unit: &str,
+    conversion: &str,
+    code: &str,
+    v: f64,
+) -> Result<f64, UnknownUnit> {
     if !known_unit(unit) {
         return Err(UnknownUnit);
     }
     let b = breakpoints(unit, code).ok_or(UnknownUnit)?;
-    let v = unit_value(unit, code, v);
+    let v = unit_value(conversion, code, v);
     Ok(grade_of(b, v))
 }
 fn grade_of(b: &[f64], v: f64) -> f64 {
@@ -188,13 +200,22 @@ fn grade_of(b: &[f64], v: f64) -> f64 {
     }
 }
 pub fn value2index(unit: &str, code: &str, value: f64) -> Result<f64, UnknownUnit> {
+    value2index_converting(unit, unit, code, value)
+}
+/// `value2index` with the table/conversion split of [`value2grade_converting`].
+pub fn value2index_converting(
+    unit: &str,
+    conversion: &str,
+    code: &str,
+    value: f64,
+) -> Result<f64, UnknownUnit> {
     if !known_unit(unit) {
         return Err(UnknownUnit);
     }
     let b = breakpoints(unit, code).ok_or(UnknownUnit)?;
     let a = breakpoints(unit, "aqi").ok_or(UnknownUnit)?;
-    let grade = value2grade(unit, code, value)?;
-    let v = unit_value(unit, code, value);
+    let grade = value2grade_converting(unit, conversion, code, value)?;
+    let v = unit_value(conversion, code, value);
     Ok(round(
         (at(a, grade) - at(a, grade - 1.)) / (at(b, grade) - at(b, grade - 1.))
             * (v - at(b, grade - 1.))

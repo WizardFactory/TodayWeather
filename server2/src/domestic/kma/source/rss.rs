@@ -121,13 +121,14 @@ fn weather(s: Option<&str>) -> f64 {
 /// `leadingZeros(n, digits)`.
 fn lead(n: f64, digits: usize) -> String {
     let s = crate::gateway::response::js_number(n);
-    let len = s.encode_utf16().count();
+    let len = crate::domestic::kma::js::units(&s).len();
     format!("{}{s}", "0".repeat(digits.saturating_sub(len)))
 }
 /// `calculateTime(cur, offset)` in a UTC process.
 fn calculate_time(cur: &str, offset: f64) -> String {
-    let u: Vec<u16> = cur.encode_utf16().collect();
-    let slice = |a: usize, b: usize| String::from_utf16_lossy(&u[a.min(u.len())..b.min(u.len())]);
+    let u: Vec<u16> = crate::domestic::kma::js::units(cur);
+    let slice =
+        |a: usize, b: usize| crate::domestic::kma::js::from16(&u[a.min(u.len())..b.min(u.len())]);
     let iso = format!(
         "{}-{}-{}T{}:{}",
         slice(0, 4),
@@ -193,14 +194,15 @@ pub fn parse_rss(xml: &[u8]) -> Option<Parsed> {
     let (header, data) = parse(xml)?;
     let mx = parse_int(&V::s(header.get("x")?));
     let my = parse_int(&V::s(header.get("y")?));
-    let ftm = header.get("tm")?.to_owned();
+    // Provider text in the value layer's form (it is sliced by code units below).
+    let ftm = crate::domestic::kma::js::canon_str(header.get("tm")?);
     let mut rows = Vec::new();
     for item in &data {
         let hours = parse_int(&V::s(item.get("hour")?));
         let days = parse_int(&V::s(item.get("day")?));
-        let u: Vec<u16> = ftm.encode_utf16().collect();
+        let u: Vec<u16> = crate::domestic::kma::js::units(&ftm);
         let date = calculate_time(
-            &(String::from_utf16_lossy(&u[..8.min(u.len())]) + "0000"),
+            &(crate::domestic::kma::js::from16(&u[..8.min(u.len())]) + "0000"),
             hours + days * 24.,
         );
         let f = |k: &str| -> Option<f64> { Some(parse_float(item.get(k)?)) };

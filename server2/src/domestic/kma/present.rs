@@ -250,12 +250,6 @@ impl IconCase {
             ],
         }
     }
-    fn name(self) -> &'static str {
-        match self {
-            Self::Lower => "insertSkyIconLowCase",
-            Self::Upper => "insertSkyIcon",
-        }
-    }
 }
 fn sky_icon(case: IconCase, sky: &V, pty: &V, lgt: &V, night: bool) -> String {
     let [
@@ -390,8 +384,8 @@ fn insert_sky_icon_as(cx: &mut Cx, case: IconCase) -> Flow {
     });
     match r {
         Ok(()) => Flow::Next,
-        // next(err): Express error page.
-        Err(t) => super::js::forward(format!("{} error {}", case.name(), t.0)),
+        // next(err): Express's default handler.
+        Err(_) => super::js::next_err(),
     }
 }
 
@@ -459,20 +453,26 @@ pub fn get_special_info(cx: &mut Cx) -> Flow {
 /// `UnitConverter.prototype.convertUnits(from, to, val)`.
 pub fn convert_units(from: &str, to: &V, val: &V) -> V {
     if val.nullish() {
+        // `log.warn('Fail to convert from ' + from + " to " + to + ...)`: the concatenation
+        // converts `to` (an unconvertible object throws).
+        let _ = add(&s(from), to);
         return val.clone();
     }
     if loose_eq(&s(from), to) {
         return val.clone();
     }
-    let to = to_str(to);
+    // Temperature compares loosely (`to == 'F'`); the wind and pressure `switch (to)` compare
+    // strictly, so only a string `to` selects a case (otherwise `undefined`).
+    let to_loose = |unit: &str| loose_eq(to, &s(unit));
+    let to = to.str().unwrap_or_default().to_owned();
     let v = to_number(val);
     let f1 = |x: f64| n(wjs::fixed(x, 1));
     match from {
         "C" | "F" => {
-            if from == "C" && to == "F" {
+            if from == "C" && to_loose("F") {
                 return f1(v / (5. / 9.) + 32.);
             }
-            if from == "F" && to == "C" {
+            if from == "F" && to_loose("C") {
                 return f1((v - 32.) / (9. / 5.));
             }
             val.clone()
@@ -1341,4 +1341,38 @@ pub fn data_to_fixed(cx: &mut Cx) -> Flow {
         }
     }
     Flow::Next
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domestic::kma::js::Arr;
+    #[test]
+    fn unit_switches_compare_like_legacy() {
+        let arr = |u: &str| V::Arr(Arr::from_vec(vec![V::s(u)]));
+        // `to == 'F'` is loose: an array converts like the string.
+        assert!(strict_eq(&convert_units("C", &arr("F"), &n(20.)), &n(68.)));
+        assert!(strict_eq(&convert_units("C", &s("F"), &n(20.)), &n(68.)));
+        // `switch (to)` is strict: only a string selects a wind or pressure case.
+        assert!(strict_eq(
+            &convert_units("m/s", &s("km/h"), &n(2.)),
+            &n(7.2)
+        ));
+        assert!(strict_eq(
+            &convert_units("m/s", &arr("km/h"), &n(2.)),
+            &V::Undef
+        ));
+        assert!(strict_eq(
+            &convert_units("hPa", &s("inHg"), &n(1000.)),
+            &n(29.5)
+        ));
+        assert!(strict_eq(
+            &convert_units("hPa", &arr("inHg"), &n(1000.)),
+            &V::Undef
+        ));
+        // `from == to` is loose: an equal array returns the value unchanged.
+        assert!(strict_eq(
+            &convert_units("m/s", &arr("m/s"), &n(2.)),
+            &n(2.)
+        ));
+    }
 }

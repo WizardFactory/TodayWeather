@@ -190,8 +190,10 @@ pub fn in_window(d: &V, now: f64) -> bool {
             d,
             V::Str(_) | V::Num(_) | V::Obj(_) | V::Arr(_) | V::Bool(_) | V::Date(_) | V::Null
         )
-        && add_days_s(&today, -7.).is_some_and(|a| ds.encode_utf16().cmp(a.encode_utf16()).is_ge())
-        && add_days_s(&today, 10.).is_some_and(|b| ds.encode_utf16().cmp(b.encode_utf16()).is_le())
+        && add_days_s(&today, -7.)
+            .is_some_and(|a| super::js::units(&ds).cmp(&super::js::units(&a)).is_ge())
+        && add_days_s(&today, 10.)
+            .is_some_and(|b| super::js::units(&ds).cmp(&super::js::units(&b)).is_le())
 }
 /// `midPolicy.dailyShortRows(records, now)`.
 pub fn daily_short_rows(records: &V, now: f64) -> Vec<V> {
@@ -221,7 +223,7 @@ pub fn daily_short_rows(records: &V, now: f64) -> Vec<V> {
             None => slots.push((key, row)),
         }
     }
-    slots.sort_by(|a, b| a.0.encode_utf16().cmp(b.0.encode_utf16()));
+    slots.sort_by_key(|a| super::js::units(&a.0));
     slots
         .into_iter()
         .map(|(_, r)| r)
@@ -232,9 +234,8 @@ pub fn daily_short_rows(records: &V, now: f64) -> Vec<V> {
                 && date(&pub_date)
                     .and_then(|d| add_days_s(&d, 4.))
                     .is_some_and(|limit| {
-                        to_str(&row.get("date"))
-                            .encode_utf16()
-                            .cmp(limit.encode_utf16())
+                        super::js::units(&to_str(&row.get("date")))
+                            .cmp(&super::js::units(&limit))
                             .is_le()
                     })
         })

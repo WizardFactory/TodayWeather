@@ -1688,7 +1688,7 @@ v000903 backend inputs, and supplementary DB 1.0, RSS, station, rain-category, a
 forecast, fallback, life-index/MFDS/rise-set, warning, temperature, error, clock-boundary and invalid
 DB 1.0 RSS/current publication, Boolean station-time, hexadecimal area-number, malformed-escape,
 interpolated string current and signed radix cases. 74 recordings match byte for byte, with the dependency calls in legacy order. Two are declared
-forwards: a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2026-01-09, and a query
+forwards: a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2024-01-09, and a query
 with a malformed escape, for which legacy `decodeURI(req.originalUrl)` throws before its `try` (500). `Date.parse` is reproduced for the strict ISO, space and dotted forms (years from
 100 for the legacy forms) and digit-only strings, checked against the pinned V8; any other date
 string forwards to legacy. Numeric Date constructors map years 0-99 to 1900-1999, `parseInt` without a radix reads `0x`
@@ -2520,6 +2520,151 @@ There is still no setting: legacy has no data.go.kr budget variable.
 | Unit tests | Every keyed operation maps to an API of its service; each key and API has its own owner; the defaults equal the development allowances; `KeyRing::per_api` refuses invalid rings and an API without a budget |
 | The province-average API (`ArpltnStatsSvc`, `AirKoreaOperation::Sido`) | Funded by its own budget (before the review fix: refused before HTTP) |
 
+### S15b-4b-1 legacy replies outside the router list (2026-10-16)
+
+S15b-4b-1 ([plan](../../plans/issue-2742.md#s15b-4b-1-legacy-replies-outside-the-router-list))
+answers natively what the KMA assembly still forwarded without needing a provider. Two paths
+still forward and need a geocoder: an unknown town and the `KR` remap (S15b-4b-2).
+
+**Express replies.** Legacy `app.js` (L167-197) defines its error handlers with three arguments,
+so Express does not use them as error handlers: every error reaches Express's default handler.
+That is finalhandler 0.4.1 (`express` 4.13.4 in `server/package-lock.json`), running in production.
+
+| Path | Reply |
+| --- | --- |
+| An escaped exception, and `next(err)` from `makeResult` or `insertSkyIconLowCase` | 500 `Internal Server Error\n` |
+| The end of the router list (the legacy 404 middleware), or a path no `/addr/:region[/:city[/:town]]` route takes | 404 `Not Found\n` |
+| A path parameter `decodeURIComponent` rejects (Express `decode_param`) | 400 `Bad Request\n` |
+| `getAllDataFromDb` for a coordinate outside Korea (`res.redirect(_getUrlWithCoord(...))`, `controllerTown.js:170-174`, `:5648`) | 302 |
+
+Comparison boundary for these replies. server2's gateway (`gateway::backend`) treats any non-200
+backend reply as a dependency failure, the same way it treats a failed legacy hop. The one exception
+is a 503 `EWEATHERUNAVAILABLE`, which none of these replies is. So for the public request, the gateway
+answers the native reply the same way it answered the legacy one.
+
+An exception thrown inside an asynchronous callback is a deliberate containment difference, not an
+equivalent answer. In legacy, Node 16 ends the whole worker process by default (`uncaughtException`).
+The legacy gateway loops back to its own port (`server/routes/gateway.js:145`), so the outcome
+depends on placement:
+
+- If the gateway request and the backend request ran in the same PM2 worker, that worker's death
+  also closes the client's connection. The client gets no HTTP reply, and the worker's other
+  in-flight requests are lost.
+- If they ran in different workers, the surviving gateway sees its backend connection fail and
+  answers its usual dependency error.
+
+server2 contains the exception to the one request: the backend answers the 500 above, and the
+gateway answers its dependency error. server2 never ends the process and never loses other
+requests. The oracle's `query-malformed-escape` reply (500, `Internal Server Error\n`) is now
+matched natively.
+
+**`req.query`.** `domestic::kma::qs` ports `qs` 4.0.0 `parse` with Express 4.13.4's options
+(`allowDots: false`, `allowPrototypes: true`), so bracket syntax, array indices,
+`Object.prototype` names and empty keys are parsed as legacy parses them, not forwarded.
+
+The port includes `__proto__` assignment: an object value becomes the prototype that property reads
+fall back to. A query field named `hasOwnProperty` shadows the method that `checkQueryValidation`
+calls, so the call throws and the legacy `catch` skips the defaults. The source decides which air
+inputs to load from the same validated `req.query`.
+
+The port equals the pinned Express on a recorded corpus of 8,025 queries
+([provenance](../../server2/tests/domestic/fixtures/V8-DATE-PROVENANCE.md)).
+
+**`Date.parse`.** `domestic::kma::dateparse` ports V8's date parser as shipped in Node 16.20.2
+(V8 9.4): the ES5 ISO form, then the permissive legacy parser, followed by `MakeDay`, `MakeTime`,
+`MakeDate` and `TimeClip`, with the process zone UTC. The V8 BSD notice is kept in the module. It
+replaces the earlier subset, which forwarded any form it could not read.
+
+The port equals the pinned binary on a recorded corpus of 20,388 strings
+([provenance](../../server2/tests/domestic/fixtures/V8-DATE-PROVENANCE.md)), and on the table of
+earlier pinned values. The oracle's `stn-small-year-datetime` (`0001-09-24 09:03`, which V8 reads
+as 2024-01-09 09:03) is now matched natively. The KMA page dates use the same parser.
+
+**Unpaired surrogates.** A JavaScript string can hold an unpaired UTF-16 surrogate, for example
+half of an emoji cut by `substr`. Property names are canonical: two halves made adjacent name
+the same property as the paired character. The date formatters' lengths, the date ordering and the
+source's AirKorea slices count stand-ins the same way. The port keeps one as a stand-in code point (U+10F800 + offset, the
+upper half of Supplementary Private Use Area-B). A real character in that range, from a request
+field or a provider string, is kept as the stand-ins of its own two surrogates. Stand-ins are
+therefore never ambiguous. It
+restores the code unit wherever code units matter: `length`, indices, comparison, `===` and
+`JSON.stringify`. The gateway serializer escapes a lone surrogate the way well-formed
+`JSON.stringify` does, and two halves that become adjacent form their pair again.
+
+A string is put in that form exactly once, where it enters the value layer: a request parameter
+or query value, or provider and repository text (`Val::str`, `js::canon_str`). A string already in
+that form is reused as it is (`Val::canonical`), and text that never enters the value layer, such
+as the world-air fallback's provider strings, is written out unchanged.
+
+Limitation: provider JSON with an escaped lone surrogate is rejected by the source's JSON parser,
+while legacy `JSON.parse` keeps it.
+
+**Legacy comparisons.** Since `req.query` values can now be arrays and objects, each comparison
+keeps the legacy operator:
+
+| Legacy code | Operator | A non-string value |
+| --- | --- | --- |
+| `_getAirForecast`: `forecastSource === 'kaq'` / `'airkorea'` | strict | Selects no source and adds no forecast, as when the forecast is loaded |
+| `convertUnits`: `from == to`, temperature `to == 'F'` / `'C'` | loose | `['F']` converts like `'F'` |
+| `convertUnits`: wind and pressure `switch (to)` | strict | Converts to `undefined`, so the member is omitted |
+| The rounding after temperature conversion: `toTempUnit === 'F'` | strict | Not rounded |
+| `AqiConverter.value2grade` / `value2index`: `air_pollutants_breakpoints[airUnit]` | property key | `['airnow']` reads the `airnow` table |
+| The same functions: `airUnit === 'airnow'` (ppm to ppb), `airUnit == 'aqicn'` | strict / loose | `['airnow']` skips the ppb conversion; `['aqicn']` converts |
+
+An object converts to a primitive through `OrdinaryToPrimitive`. Own or inherited query data
+properties are not callable and are skipped. An array assigned through `__proto__` retains its
+inherited `Array.prototype.toString`/`join`; conversion reads length and elements from the original
+receiver. Thus `temperatureUnit[__proto__][]=F` converts 21.5 C to 70.7 F without strict integer
+rounding, and the `(null)` variant receives the default unit.
+`Object.prototype.toString` gives `[object Object]`, and `Object.prototype.valueOf` returns the
+object itself. When neither gives a primitive, the conversion throws the legacy `TypeError`.
+
+For example, `temperatureUnit[toString]=F` makes the `== '(null)'` test in `checkQueryValidation`
+throw. The legacy `catch` then skips the remaining defaults, and `convertUnits` stops at its own
+`catch`. Node 16.20.2 confirms these conversions.
+
+**Grids outside KMA.** A town whose `mCoord` is not a KMA grid cell gets empty grid and RSS
+collections. Legacy's `find` by `mCoord` returns no row, so no acquisition starts.
+
+Provider-independent parameter validation and the synchronous `decodeURI(originalUrl)` guard run
+before snapshot acquisition, in legacy order. Unsupported regions and malformed query escapes
+therefore never read S3, call a provider, or forward to legacy. The direct S17 routes share these
+native error outcomes and never forward storage failures or Rust defects. finalhandler replies
+carry `X-Content-Type-Options: nosniff`, no ETag, and the legacy Content-Length even for HEAD.
+The standalone S17 router recording's unmatched-path `Cannot GET ...` is not the full app's
+404: `app.js` passes an Error with status 404, so production finalhandler emits `Not Found\n`.
+
+**Defects.** A store answer the snapshot cannot give (`unavailable`), a reply that leaves inputs
+of a replayed recording unused, or a Rust panic in assembly is a port invariant failure, not
+legacy behavior. An Express 5xx still ends the reply early, so its later inputs are allowed to go
+unused. The backend answers it as a dependency failure
+and counts it in `server2_gateway_native_defects_total`. It never forwards. `LegacyOnly` is now a
+test-only source.
+
+Maintained diagrams: [gateway ownership and terminal errors](diagrams/server2-gateway.html)
+([source JSON](diagrams/server2-gateway.sequence.json)) and the
+[server2 overview](diagrams/server2.html) ([source JSON](diagrams/server2.json)) pin code evidence
+to `f5184d5a`. Native errors terminate without a legacy hop; the selected legacy HTTP adapter
+retains its bounded retries during coexistence. Explicit unknown-town and KR-remap forwards
+remain S15b-4b-2 work and must be removed before go-live. S3 is authoritative; disposable RAM
+and local disk caches are allowed, while bounded disk caching, packs and EC2 sizing remain
+S15b-4c work rather than an implemented capability of this increment.
+
+S16 integration retains captured `getPastMid` rows and its post-response summary sink for
+successful compatible JSON routes. Native preflight errors bypass both the source and summary
+sink; source failures, invariant failures and Rust panics still terminate as counted dependency
+errors. The summary capture does not turn errors into legacy forwards.
+
+**Verification** (local, no provider):
+
+| Check | Result |
+| --- | --- |
+| All 85 oracle scenarios and the S02 goldens | Match with no declared forward (previously two) |
+| The V8 corpus | Equal to Node 16.20.2, including TimeClip and offset-wrap edges |
+| Legacy comparisons | Array and object query values: response regressions (`source_s3`, `air_s3`) and unit tests |
+| Unit tests | Reply/Defect outcomes, `_getUrlWithCoord`, surrogate semantics against Node 16.20.2 values |
+| The store-callback exception (`replay`) | Now the Express 500 |
+
 ### S10e legacy settings and server2/.env (2026-10-15)
 
 [S10e](../../plans/issue-2753.md) ([spec](../../specs/issue-2753.md), #2753) applies AK's decisions of
@@ -3042,6 +3187,52 @@ revalidations) match on the wire natively (status, body and every header except 
 `kma_smoke.py` shows unlisted direct paths unclaimed (404, no legacy hop) and listed ones reading
 S3 and answering natively with the Express envelope (JSON with a weak ETag, the v000705
 `res.json(undefined)` reply without one, the usage root) and no legacy hop.
+
+## S17c: native nation weather and air
+
+The `kma` and `kma-v000901` entries also claim the used direct nation routes
+`/v000903/nation/:nation` and `/v000901/nation/:nation`. The nation backend calls
+fifteen native KMA assemblies using legacy version rules, concurrently with one absolute
+three-second deadline; it never calls legacy or opens a separate provider source.
+The child replies retain legacy city order after removing `airInfo`/`airInfoList`.
+Nation children share the same `KmaBackend` and S16 recorder as direct weather requests.
+When a complete snapshot produces compatible captured `getPastMid` rows, the shared backend
+records its summaries without adding fields to the nation response. Rendered nation errors
+keep the Jade `res.send` ETag/HEAD contract, distinct from native finalhandler errors.
+Mount claiming remains case-insensitive, but an uppercase `V` makes legacy query validation
+remove the version, so city requests default to v000901. Child locale uses only the forwarded
+`Accept-Language` header (English if absent); the parent `twcookie` is not forwarded.
+An actual failed internal child response maps to the legacy rendered 500, as AK
+approved; the response is successful when the internal calls succeed. Other late
+provider branches remain omitted according to the existing KMA partial-data rules.
+Native errors omit the legacy session ID, consistent with the existing absence of
+legacy session middleware/cookies. This is a response difference in diagnostic
+HTML only, not an invented synthetic session identity.
+
+Nation air is a projection of the same `AirInputs` S3 raw acquisitions as town air.
+The newest urban hour is selected independently per province; each pollutant uses
+its own valid numeric count and legacy rounding. The SidoArpltn schema drops
+24-hour PM fields. National `전남광주` labels are split by station-list address,
+without a second province-specific provider query. Unresolved station ownership
+is omitted, allowing the labelled representative-point fallback. Stored means
+become stale at exactly eight hours; provider observations keep the existing
+inclusive eight-hour boundary. The safe rejection reason is exposed through a
+backward-compatible AirSource method, while ordinary weather keeps its old
+AirOutcome interface. Fallback calls run at most four at once and never put
+provider error text or URLs in `airStatus`.
+
+No new API method is needed. The existing real-provider evidence (2026-10-14,
+672 nationwide rows in one `numOfRows=1000` page) and
+[official catalog](https://www.data.go.kr/data/15073861/openapi.do) apply. The
+new tests use recorded/synthetic public station data and loopback peers. Full
+nation composition uses deterministic child response doubles; the S15/S17
+oracles continue to verify the actual weather assembler. S3 restore tests verify
+the nation air branch separately from child-weather assembly.
+
+See [nation setup and checks](../operations/server2-nation.md),
+[PDF manual](../operations/server2-nation.pdf), and
+[nation sequence](diagrams/server2-nation.html)
+([editable JSON](diagrams/server2-nation.json)).
 
 ### S18b-2: conditional alerts
 

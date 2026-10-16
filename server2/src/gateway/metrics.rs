@@ -31,6 +31,7 @@ counters! {
     google_attempts => "server2_geocoder_google_attempts_total",
     quota_rejections => "server2_geocoder_quota_rejections_total",
     capacity_rejections => "server2_geocoder_capacity_rejections_total",
+    native_defects => "server2_gateway_native_defects_total",
 }
 
 pub(crate) fn add(counter: &AtomicU64) {

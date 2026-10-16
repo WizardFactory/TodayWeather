@@ -58,9 +58,10 @@ pub fn dotted_minute(ms: f64) -> String {
 }
 /// `kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDDoHHoMM` / `...HHoZZ` (`substr` based).
 fn dotted(date_time: &str, hour_only: bool) -> String {
-    let u: Vec<u16> = date_time.encode_utf16().collect();
-    let sub =
-        |a: usize, n: usize| String::from_utf16_lossy(&u[a.min(u.len())..(a + n).min(u.len())]);
+    let u: Vec<u16> = crate::domestic::kma::js::units(date_time);
+    let sub = |a: usize, n: usize| {
+        crate::domestic::kma::js::from16(&u[a.min(u.len())..(a + n).min(u.len())])
+    };
     let mut s = format!("{}.{}.{}", sub(0, 4), sub(4, 2), sub(6, 2));
     if u.len() > 8 {
         s += &format!(

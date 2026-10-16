@@ -10,7 +10,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use server2::{
     domestic::kma::{
         AssemblyConfig, KmaRequest,
-        backend::{KmaBackend, KmaSource, LegacyOnly, SourceAnswer, select_native},
+        backend::{KmaBackend, KmaSource, SourceAnswer, select_native},
     },
     gateway::{
         BackendDispatcher, BackendMode, BoxFuture, Family, Gateway, GatewayError, Geocoder, Version,
@@ -23,6 +23,13 @@ use std::sync::{
 };
 use tokio::time::Instant;
 
+/// A source that keeps every request on legacy (TEST ONLY; the runtime uses the S3 source).
+struct LegacyOnly;
+impl KmaSource for LegacyOnly {
+    fn snapshot(&self, _: &KmaRequest, _: Instant) -> BoxFuture<'_, SourceAnswer> {
+        Box::pin(async { SourceAnswer::Forward("no native KMA input source configured".into()) })
+    }
+}
 struct Myeongdong;
 impl Geocoder for Myeongdong {
     fn coord(&self, _: [f64; 2], lang: String) -> BoxFuture<'_, Result<GeoClient, GatewayError>> {
@@ -361,4 +368,44 @@ fn native_families_kma_is_the_only_switch() {
     );
     assert!(from_vars(&with(None, false)).unwrap().is_some());
     assert!(from_vars(&with(Some("kma,kma"), true)).is_err());
+}
+
+#[tokio::test]
+async fn provider_independent_errors_do_not_touch_the_source() {
+    use server2::gateway::BackendHandler;
+    struct NoReads;
+    impl KmaSource for NoReads {
+        fn snapshot(&self, _: &KmaRequest, _: Instant) -> BoxFuture<'_, SourceAnswer> {
+            panic!("provider-independent error reached the data source");
+        }
+    }
+    struct NoSummaries;
+    impl server2::summary::SummarySink for NoSummaries {
+        fn record(
+            &self,
+            _: server2::summary::GridInputs,
+            _: Vec<server2::gateway::OrderedJson>,
+            _: f64,
+        ) {
+            panic!("provider-independent error reached the summary sink");
+        }
+    }
+    let now = clock_ms("2026-09-24T00:10:00.000Z");
+    let native = KmaBackend::new(Arc::new(NoReads), Arc::new(move || now), oracle_config())
+        .with_summaries(Some(Arc::new(NoSummaries)));
+    for path in [
+        "/v000903/kma/addr/중국",
+        "/v000903/kma/addr/not-a-town?x=%ZZ",
+        "/v000901/kma/addr/중국",
+        "/v000902/kma/addr/not-a-town?x=%ZZ",
+    ] {
+        let result = native
+            .fetch_or_forward(
+                path.into(),
+                "ko".into(),
+                Instant::now() + std::time::Duration::from_secs(3),
+            )
+            .await;
+        assert!(matches!(result, Err(GatewayError::Provider)), "{path}");
+    }
 }

@@ -262,7 +262,19 @@ pub fn get_all_data_from_db(cx: &mut Cx) -> Flow {
         let lat = super::js::to_number(&g_coord.get("lat"));
         let lon = super::js::to_number(&g_coord.get("lon"));
         if !((32.6942..=39.3769).contains(&lat) && (123.9523..=131.88).contains(&lon)) {
-            super::js::forward("coordinate outside Korea (legacy redirects)");
+            // `res.redirect(self._getUrlWithCoord(lat, lon, req.query))`: Express answers 302
+            // (the gateway treats any non-200 backend reply as a dependency failure).
+            super::js::reply(
+                302,
+                format!(
+                    "Found. Redirecting to {}",
+                    super::js::redirect_url(
+                        &g_coord.get("lat"),
+                        &g_coord.get("lon"),
+                        &cx.r("query")
+                    )
+                ),
+            );
         }
         cx.set("coord", coord.clone());
         if g_coord.truthy() {

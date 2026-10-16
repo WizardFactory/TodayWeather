@@ -979,7 +979,7 @@ async fn older_native_routes_record_only_compatible_daily_rows() {
     ] {
         let path = format!("{mount}{suffix}");
         let request = parse_path(&path, "ko")
-            .or_else(|| parse_town_path(&path, "ko"))
+            .or_else(|_| parse_town_path(&path, "ko"))
             .unwrap();
         let before = sink.0.lock().unwrap().len();
         let outcome = backend.outcome(request, deadline()).await.unwrap();

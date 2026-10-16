@@ -1,0 +1,106 @@
+{
+  "task": "S15b-4b1",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-4b1.json",
+    "server2/examples/kma_checkpoint.rs",
+    "server2/src/domestic/kma/air.rs",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/domestic/kma/chain.rs",
+    "server2/src/domestic/kma/data.rs",
+    "server2/src/domestic/kma/dateparse.rs",
+    "server2/src/domestic/kma/js.rs",
+    "server2/src/domestic/kma/mid.rs",
+    "server2/src/domestic/kma/mod.rs",
+    "server2/src/domestic/kma/policy.rs",
+    "server2/src/domestic/kma/present.rs",
+    "server2/src/domestic/kma/qs.rs",
+    "server2/src/domestic/kma/source/air_input.rs",
+    "server2/src/domestic/kma/source/airkorea.rs",
+    "server2/src/domestic/kma/source/doc.rs",
+    "server2/src/domestic/kma/source/grid.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/reference.rs",
+    "server2/src/domestic/kma/source/rss.rs",
+    "server2/src/domestic/kma/source/stations.rs",
+    "server2/src/domestic/kma/source/stn.rs",
+    "server2/src/domestic/kma/source/zone.rs",
+    "server2/src/domestic/kma/time.rs",
+    "server2/src/gateway/metrics.rs",
+    "server2/src/world/units.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/air_forecast_s3.rs",
+    "server2/tests/domestic/air_s3.rs",
+    "server2/tests/domestic/fixtures/PROVENANCE.md",
+    "server2/tests/domestic/fixtures/V8-DATE-PROVENANCE.md",
+    "server2/tests/domestic/fixtures/qs-parse.json.gz",
+    "server2/tests/domestic/fixtures/qs_corpus.js",
+    "server2/tests/domestic/fixtures/v8-date-parse.json.gz",
+    "server2/tests/domestic/fixtures/v8_date_corpus.js",
+    "server2/tests/domestic/life_s3.rs",
+    "server2/tests/domestic/observe.rs",
+    "server2/tests/domestic/parity.rs",
+    "server2/tests/domestic/qs.rs",
+    "server2/tests/domestic/recorded.rs",
+    "server2/tests/domestic/replay.rs",
+    "server2/tests/domestic/source_s3.rs",
+    "server2/tests/domestic/support.rs",
+    "server2/tests/domestic/switch.rs",
+    "server2/tests/domestic/v8_date.rs",
+    "server2/src/api/mod.rs",
+    "server2/tests/legacy_versions/kma_direct.rs",
+    "server2/tests/legacy_versions/kma_gateway.rs",
+    "server2/tests/legacy_versions/kma_parity.rs",
+    "server2/tests/legacy_versions/support.rs",
+    "server2/tests/domestic/summary_s3.rs"
+  ],
+  "outside": [
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "S15b-4b-1 section: legacy replies outside the router list, the V8 Date.parse port, unpaired surrogates, grids outside KMA, defects"
+    },
+    {
+      "path": "plans/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b-4b split (4b-1/4b-2/4b-3), sources and scenarios of 4b-1"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-gateway.sequence.json",
+      "category": "documentation",
+      "reason": "Update maintained gateway sequence evidence and native terminal-error/retry semantics for S15b-4b1."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-gateway.html",
+      "category": "documentation",
+      "reason": "Regenerate gateway sequence HTML with Archify from the declared JSON."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.json",
+      "category": "documentation",
+      "reason": "Correct overview cold-cell acquisition and disposable cache policy; pin current source evidence."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.html",
+      "category": "documentation",
+      "reason": "Regenerate overview HTML with Archify from the declared JSON."
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6206378683",
+  "path_notes": {
+    "server2/src/domestic/kma/dateparse.rs": "port of V8 9.4 DateParser and ParseDateTimeString (BSD notice kept); replaces the forward for unported Date.parse forms",
+    "server2/src/domestic/kma/chain.rs": "escaped exceptions, next(err) and the end of the router list are Express's finalhandler 0.4.1 replies; defects are their own outcome",
+    "server2/src/domestic/kma/js.rs": "Reply/Defect payloads, redirect_url, unpaired surrogates kept as stand-ins",
+    "server2/src/domestic/kma/backend.rs": "defects and Rust panics are dependency failures (counted), never forwards; LegacyOnly moves to the switch test",
+    "server2/src/gateway/metrics.rs": "server2_gateway_native_defects_total counter",
+    "server2/tests/domestic/fixtures/v8-date-parse.json.gz": "pinned Node 16.20.2 Date.parse corpus (provenance in V8-DATE-PROVENANCE.md)",
+    "server2/src/domestic/kma/qs.rs": "port of qs 4.0.0 parse with Express 4.13.4 options (req.query); replaces the forward for bracketed and prototype query keys",
+    "server2/tests/domestic/fixtures/qs-parse.json.gz": "pinned Node 16.20.2 + express 4.13.4/qs 4.0.0 req.query corpus (provenance in V8-DATE-PROVENANCE.md)",
+    "server2/src/domestic/kma/source/": "source string slicing/counting through the stand-in-aware js helpers; S3 failures typed as Failed",
+    "server2/src/domestic/kma/air.rs": "strict forecast-source selector; airUnit table key versus strict/loose conversion comparisons",
+    "server2/src/world/units.rs": "value2grade/value2index variants that take the air table key and the conversion unit separately (used by the KMA chain for non-string airUnit); existing callers unchanged",
+    "server2/tests/domestic/fixtures/PROVENANCE.md": "stale forwarding statements corrected (replay mismatches are defects; the small-year date is matched)",
+    "server2/src/api/mod.rs": "S17 direct routes consume parsed native 404/400 and dependency defects without forwarding; integrate the existing route surface",
+    "server2/tests/domestic/summary_s3.rs": "S16 integration: preserve summary route coverage while adapting parse_path Option-to-Result API."
+  }
+}

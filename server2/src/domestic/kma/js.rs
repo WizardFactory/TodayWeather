@@ -21,12 +21,53 @@ pub struct Thrown(pub String);
 pub fn throw(message: impl Into<String>) -> ! {
     std::panic::resume_unwind(Box::new(Thrown(message.into())))
 }
-/// Legacy work this port cannot reproduce (a redirect, geocoding a new town, a remote remap).
+/// Legacy work this port cannot reproduce yet (geocoding a new town, a remote remap; S15b-4b-2).
 /// It passes every legacy `catch` and ends the assembly with a forward to legacy.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Forward(pub String);
 pub fn forward(reason: impl Into<String>) -> ! {
     std::panic::resume_unwind(Box::new(Forward(reason.into())))
+}
+/// A reply legacy Express sends outside the router list (`next(err)` reaching the default
+/// handler, `res.redirect`): it passes every legacy `catch` and ends the assembly with that
+/// status and body.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Reply(pub u16, pub String);
+pub fn reply(status: u16, body: impl Into<String>) -> ! {
+    std::panic::resume_unwind(Box::new(Reply(status, body.into())))
+}
+/// Express's default handler (finalhandler 0.4.1 in production, legacy `app.js` has no
+/// four-argument error handler) for an error without a status: 500 `Internal Server Error`.
+pub fn next_err() -> ! {
+    reply(500, INTERNAL_SERVER_ERROR)
+}
+/// The finalhandler 0.4.1 production body of a 500.
+pub const INTERNAL_SERVER_ERROR: &str = "Internal Server Error\n";
+/// `ControllerTown._getUrlWithCoord(lat, lon, req.query)` (`controllerTown.js:5648`) with the
+/// legacy default `config.apiServer.url` (`http://localhost`, `API_SERVER` unset). Only a 302
+/// body carries it, and the gateway never relays a non-200 backend body.
+pub fn redirect_url(lat: &V, lon: &V, query: &V) -> String {
+    let mut url = format!(
+        "http://localhost/weather/coord/{},{}",
+        to_str(lat),
+        to_str(lon)
+    );
+    if let Some(q) = query.as_obj() {
+        for (i, (k, v)) in q.entries().into_iter().enumerate() {
+            url.push(if i == 0 { '?' } else { '&' });
+            url.push_str(&k);
+            url.push('=');
+            url.push_str(&to_str(&v));
+        }
+    }
+    url
+}
+/// A store answer the snapshot cannot give (a port invariant broke, not legacy behavior): it
+/// passes every legacy `catch` and ends the assembly as a dependency failure.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Defect(pub String);
+pub fn defect(reason: impl Into<String>) -> ! {
+    std::panic::resume_unwind(Box::new(Defect(reason.into())))
 }
 thread_local! {
     /// Count of asynchronous callbacks entered on this thread (see [`async_boundary`]).
@@ -67,6 +108,11 @@ pub struct Total {
 #[derive(Default, Debug)]
 pub struct Props {
     entries: Vec<(Rc<str>, V)>,
+    /// The prototype a `__proto__` assignment set (qs `allowPrototypes`); property reads fall
+    /// back to it, own-key operations and `JSON.stringify` ignore it.
+    proto: Option<Ob>,
+    /// This object view came from an array, and inherits Array.prototype methods.
+    array_proto: bool,
     /// Key positions for larger objects (rows carry 30-50 properties).
     index: Option<HashMap<Rc<str>, usize, BuildFnv>>,
     /// Whether any key is an array index (those enumerate first).
@@ -74,8 +120,8 @@ pub struct Props {
     kept: Vec<(String, Option<Total>)>,
 }
 const INDEX_FROM: usize = 12;
-/// FNV-1a for short property names (no untrusted-key flooding concern: keys come from the
-/// fixed legacy vocabulary and store field names).
+/// FNV-1a for short property names. Request query keys are untrusted, but at most 1,000 reach
+/// one object (qs `parameterLimit`), so a colliding set costs at most quadratic work in 1,000.
 #[derive(Default, Clone, Copy, Debug)]
 pub struct BuildFnv;
 pub struct Fnv(u64);
@@ -166,19 +212,45 @@ impl Default for Ob {
         Self::new()
     }
 }
+/// A property name in canonical form: JavaScript compares names by code units, so two adjacent
+/// stand-ins that hold a surrogate pair name the same property as the paired character.
+fn canon(k: &str) -> std::borrow::Cow<'_, str> {
+    if has_lone(k) {
+        std::borrow::Cow::Owned(from16(&units(k)))
+    } else {
+        std::borrow::Cow::Borrowed(k)
+    }
+}
 impl Ob {
     pub fn new() -> Self {
         Self(Rc::new(RefCell::new(Props::default())))
     }
     pub fn get(&self, k: &str) -> V {
+        let k = canon(k);
         let p = self.0.borrow();
-        p.find(k).map_or(V::Undef, |i| p.entries[i].1.clone())
+        match p.find(&k) {
+            Some(i) => p.entries[i].1.clone(),
+            None => p.proto.as_ref().map_or(V::Undef, |proto| proto.get(&k)),
+        }
+    }
+    /// Whether `k` is an own property or one of the prototype chain's (`k in obj` without
+    /// `Object.prototype`).
+    pub fn has_in_chain(&self, k: &str) -> bool {
+        let k = canon(k);
+        let p = self.0.borrow();
+        p.find(&k).is_some() || p.proto.as_ref().is_some_and(|proto| proto.has_in_chain(&k))
+    }
+    /// `Object.setPrototypeOf(obj, proto)` (None: `null`).
+    pub fn set_proto(&self, proto: Option<Ob>) {
+        self.0.borrow_mut().proto = proto;
     }
     /// `hasOwnProperty`.
     pub fn has(&self, k: &str) -> bool {
-        self.0.borrow().find(k).is_some()
+        let k = canon(k);
+        self.0.borrow().find(&k).is_some()
     }
     pub fn set(&self, k: &str, v: impl Into<V>) {
+        let k = &*canon(k);
         let v = v.into();
         let mut p = self.0.borrow_mut();
         if let Some(i) = p.find(k) {
@@ -201,8 +273,9 @@ impl Ob {
     }
     /// `delete obj[k]`.
     pub fn del(&self, k: &str) {
+        let k = canon(k);
         let mut p = self.0.borrow_mut();
-        if let Some(i) = p.find(k) {
+        if let Some(i) = p.find(&k) {
             p.entries.remove(i);
             p.reindex();
         }
@@ -285,6 +358,18 @@ impl Arr {
     /// `a[i]` (undefined past the end).
     pub fn at(&self, i: usize) -> V {
         self.0.borrow().get(i).cloned().unwrap_or_default()
+    }
+    /// The array as a prototype object: its defined elements by index and `length`.
+    pub fn as_object(&self) -> Ob {
+        let o = Ob::new();
+        for (i, x) in self.items().into_iter().enumerate() {
+            if !matches!(x, V::Undef) {
+                o.set(&i.to_string(), x);
+            }
+        }
+        o.set("length", V::Num(self.len() as f64));
+        o.0.borrow_mut().array_proto = true;
+        o
     }
     /// `a[i] = v` (extends with holes read as undefined).
     pub fn put(&self, i: usize, v: V) {
@@ -477,7 +562,7 @@ impl V {
                     V::Undef
                 }
             }
-            V::Str(s) if k == "length" => V::Num(s.encode_utf16().count() as f64),
+            V::Str(s) if k == "length" => V::Num(units(s).len() as f64),
             _ => V::Undef,
         }
     }
@@ -498,8 +583,7 @@ impl V {
             V::Obj(o) => o.has(k),
             V::Arr(a) => k == "length" || index_key(k).is_some_and(|i| (i as usize) < a.len()),
             V::Str(s) => {
-                k == "length"
-                    || index_key(k).is_some_and(|i| (i as usize) < s.encode_utf16().count())
+                k == "length" || index_key(k).is_some_and(|i| (i as usize) < units(s).len())
             }
             _ => false,
         }
@@ -552,9 +636,95 @@ pub fn to_str(v: &V) -> String {
             })
             .collect::<Vec<_>>()
             .join(","),
-        V::Obj(_) => "[object Object]".into(),
+        V::Obj(o) => to_str(&object_to_primitive(o, true)),
         V::Date(ms) => date_to_string(*ms),
     }
+}
+/// The callable inherited built-ins needed by qs prototype assignment. A present data
+/// property shadows the built-in, including a data property on an intermediate prototype.
+fn array_method(o: &Ob, method: &str) -> Option<bool> {
+    let p = o.0.borrow();
+    if p.find(method).is_some() {
+        Some(false)
+    } else if p.array_proto && matches!(method, "toString" | "join") {
+        Some(true)
+    } else {
+        p.proto
+            .as_ref()
+            .and_then(|proto| array_method(proto, method))
+    }
+}
+/// Array.join on an ordinary receiver with a sparse array prototype. Work scales with
+/// stored properties and output bytes, rather than allocating one String for each hole.
+fn array_join_object(o: &Ob, len: usize) -> String {
+    fn keys(o: &Ob, len: usize, indices: &mut std::collections::BTreeSet<usize>) {
+        let p = o.0.borrow();
+        for (key, _) in &p.entries {
+            if let Some(index) = index_key(key).map(|i| i as usize).filter(|i| *i < len) {
+                indices.insert(index);
+            }
+        }
+        if let Some(proto) = &p.proto {
+            keys(proto, len, indices);
+        }
+    }
+    let mut indices = std::collections::BTreeSet::new();
+    keys(o, len, &mut indices);
+    let mut parts = Vec::new();
+    let mut output_units = len.saturating_sub(1);
+    for index in indices {
+        let value = o.get(&index.to_string());
+        if !value.nullish() {
+            let text = to_str(&value);
+            output_units = output_units.saturating_add(units(&text).len());
+            parts.push((index, text));
+        }
+    }
+    // buffer.constants.MAX_STRING_LENGTH on the pinned Node 16.20.2 (64-bit V8).
+    if output_units > 536_870_888 {
+        throw("RangeError: Invalid string length");
+    }
+    let mut text = String::new();
+    let mut cursor = 0;
+    for (index, part) in parts {
+        text.extend(std::iter::repeat_n(',', index - cursor));
+        text.push_str(&part);
+        cursor = index;
+    }
+    text.extend(std::iter::repeat_n(
+        ',',
+        len.saturating_sub(1).saturating_sub(cursor),
+    ));
+    text
+}
+/// `OrdinaryToPrimitive(o, hint)`. qs values have data properties, but a prototype
+/// assigned from an array inherits callable Array.prototype.toString/join. Array.toString
+/// calls join with the original receiver, so own length/elements still take precedence.
+fn object_to_primitive(o: &Ob, string_hint: bool) -> V {
+    let order = if string_hint {
+        ["toString", "valueOf"]
+    } else {
+        ["valueOf", "toString"]
+    };
+    for method in order {
+        match array_method(o, method) {
+            Some(false) => continue,
+            Some(true) if method == "toString" => {
+                if array_method(o, "join") != Some(true) {
+                    return V::s("[object Object]");
+                }
+                let len = to_number(&o.get("length")).max(0.).floor();
+                // Node 16 Array.join rejects a length above uint32 before iterating.
+                if !len.is_finite() || len > u32::MAX as f64 {
+                    throw("TypeError: Invalid array length");
+                }
+                return V::Str(array_join_object(o, len as usize).into());
+            }
+            _ if method == "toString" => return V::s("[object Object]"),
+            _ => {}
+        }
+    }
+    throw("TypeError: Cannot convert object to primitive value")
 }
 /// `Date.prototype.toString` in the UTC process zone.
 pub fn date_to_string(ms: f64) -> String {
@@ -579,7 +749,8 @@ pub fn date_to_string(ms: f64) -> String {
 /// ToPrimitive (hint default/number) for the relational operators and `+`.
 fn to_primitive(v: &V) -> V {
     match v {
-        V::Arr(_) | V::Obj(_) => V::Str(to_str(v).into()),
+        V::Arr(_) => V::Str(to_str(v).into()),
+        V::Obj(o) => object_to_primitive(o, false),
         V::Date(ms) => V::Num(*ms),
         other => other.clone(),
     }
@@ -602,7 +773,8 @@ pub fn strict_eq(a: &V, b: &V) -> bool {
         (V::Undef, V::Undef) | (V::Null, V::Null) => true,
         (V::Bool(x), V::Bool(y)) => x == y,
         (V::Num(x), V::Num(y)) => x == y,
-        (V::Str(x), V::Str(y)) => x == y,
+        // Code-unit equality: stand-ins compare like the surrogates they hold.
+        (V::Str(x), V::Str(y)) => x == y || ((has_lone(x) || has_lone(y)) && units(x) == units(y)),
         (V::Arr(x), V::Arr(y)) => x.ptr_eq(y),
         (V::Obj(x), V::Obj(y)) => x.ptr_eq(y),
         // Dates are objects: identity is not preserved through clones; legacy never compares them.
@@ -629,7 +801,7 @@ pub fn loose_eq(a: &V, b: &V) -> bool {
 fn relational(a: &V, b: &V) -> Option<std::cmp::Ordering> {
     let (pa, pb) = (to_primitive(a), to_primitive(b));
     if let (V::Str(x), V::Str(y)) = (&pa, &pb) {
-        return Some(x.encode_utf16().cmp(y.encode_utf16()));
+        return Some(units(x).cmp(&units(y)));
     }
     let (x, y) = (to_number(&pa), to_number(&pb));
     x.partial_cmp(&y)
@@ -758,15 +930,99 @@ pub fn sv(v: &V) -> String {
         )),
     }
 }
-fn utf16(s: &str) -> Vec<u16> {
-    s.encode_utf16().collect()
+/// First code point of the range that stands for JavaScript's unpaired surrogates.
+///
+/// A JavaScript string is a sequence of UTF-16 code units and may hold an unpaired surrogate
+/// (`'\u{1F600}'.substr(0, 1)`); a Rust string cannot. The port keeps one as the code point
+/// `LONE_BASE + (unit - 0xD800)` (U+10F800..U+10FFFF, the upper half of Supplementary Private
+/// Use Area-B, which KMA and AirKorea text never uses) and turns it back into its code unit
+/// wherever code units matter: [`units`] (length, indices, comparison, `JSON.stringify`
+/// output). Two halves that end up adjacent form their pair again in the output, as in
+/// JavaScript.
+const LONE_BASE: u32 = 0x10F800;
+/// The UTF-16 code units JavaScript holds for a port string.
+pub fn units(s: &str) -> Vec<u16> {
+    let mut out = Vec::with_capacity(s.len());
+    let mut buf = [0u16; 2];
+    for c in s.chars() {
+        let cp = c as u32;
+        if cp >= LONE_BASE {
+            out.push((cp - LONE_BASE + 0xD800) as u16);
+        } else {
+            out.extend_from_slice(c.encode_utf16(&mut buf));
+        }
+    }
+    out
 }
-/// UTF-16 code units to a string. JavaScript strings may hold an unpaired surrogate that a Rust
-/// string cannot; replacing it would change the reply, so the request is forwarded instead.
-fn from16(u: &[u16]) -> String {
-    String::from_utf16(u).unwrap_or_else(|_| {
-        forward("unpaired UTF-16 surrogate in a string (kept by JavaScript, not reproduced)")
-    })
+fn utf16(s: &str) -> Vec<u16> {
+    units(s)
+}
+/// Whether a port string holds a stand-in for an unpaired surrogate (UTF-8 `F4 8F ..`).
+fn has_lone(s: &str) -> bool {
+    s.as_bytes().contains(&0xF4) && s.chars().any(|c| c as u32 >= LONE_BASE)
+}
+/// The stand-in of one surrogate code unit.
+fn stand_in(unit: u16) -> char {
+    char::from_u32(LONE_BASE + (u32::from(unit) - 0xD800)).expect("stand-in code point")
+}
+/// UTF-16 code units to a port string: an unpaired surrogate becomes its stand-in, and a
+/// character in the stand-in range (U+10F800..U+10FFFF) is kept as the stand-ins of its two
+/// surrogates, so the port's strings never hold such a character directly.
+pub fn from16(u: &[u16]) -> String {
+    let mut out = String::with_capacity(u.len());
+    for r in char::decode_utf16(u.iter().copied()) {
+        match r {
+            Ok(c) if c as u32 >= LONE_BASE => {
+                let mut buf = [0u16; 2];
+                for unit in c.encode_utf16(&mut buf) {
+                    out.push(stand_in(*unit));
+                }
+            }
+            Ok(c) => out.push(c),
+            Err(e) => out.push(stand_in(e.unpaired_surrogate())),
+        }
+    }
+    out
+}
+/// A string from outside the value layer (a decoded request field) in the port's form: a
+/// character in the stand-in range becomes the stand-ins of its two surrogates.
+pub fn canon_str(s: &str) -> String {
+    if s.as_bytes().contains(&0xF4) {
+        from16(&s.encode_utf16().collect::<Vec<_>>())
+    } else {
+        s.to_owned()
+    }
+}
+/// `decodeURIComponent(s)` (None: `URIError`): every `%` must start two hex digits, and the
+/// decoded bytes must be UTF-8 without encoded surrogates.
+pub fn decode_uri_component(s: &str) -> Option<String> {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' {
+            let (h, l) = (*b.get(i + 1)?, *b.get(i + 2)?);
+            if !h.is_ascii_hexdigit() || !l.is_ascii_hexdigit() {
+                return None;
+            }
+            out.push(u8::from_str_radix(&s[i + 1..i + 3], 16).ok()?);
+            i += 3;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).ok()
+}
+/// `obj.hasOwnProperty(key)` as a method call on a request object: an own `hasOwnProperty`
+/// property (a query field of that name) shadows the method, so the call throws a TypeError.
+pub fn call_has_own_property(obj: &V, key: &str) -> bool {
+    if let V::Obj(o) = obj
+        && o.has("hasOwnProperty")
+    {
+        throw("TypeError: req.query.hasOwnProperty is not a function");
+    }
+    obj.has(key)
 }
 /// `s.substr(start, len)` on a string (start >= 0).
 pub fn substr(s: &str, start: usize, len: usize) -> String {
@@ -896,6 +1152,32 @@ pub fn js_number_str(n: f64) -> String {
 mod tests {
     use super::*;
     #[test]
+    fn objects_convert_with_ordinary_to_primitive() {
+        let plain = V::Obj(Ob::new());
+        assert_eq!(to_str(&plain), "[object Object]");
+        assert!(loose_eq(&plain, &V::s("[object Object]")));
+        // A non-callable own `toString`: string conversion falls to the inherited `valueOf`
+        // (the object itself, not a primitive) and throws; `valueOf` first does the same.
+        let own = Ob::new();
+        own.set("toString", "F");
+        let own = V::Obj(own);
+        assert!(catch(|| to_str(&own)).is_err());
+        assert!(catch(|| loose_eq(&own, &V::s("(null)"))).is_err());
+        assert!(catch(|| add(&V::s("x"), &own)).is_err());
+        // A shadowed `valueOf` only: the inherited `toString` still answers.
+        let value_of = Ob::new();
+        value_of.set("valueOf", "1");
+        let value_of = V::Obj(value_of);
+        assert_eq!(to_str(&value_of), "[object Object]");
+        assert!(loose_eq(&value_of, &V::s("[object Object]")));
+        // An inherited non-callable `toString` (a `__proto__` prototype) also throws.
+        let proto = Ob::new();
+        proto.set("toString", "F");
+        let child = Ob::new();
+        child.set_proto(Some(proto));
+        assert!(catch(|| to_str(&V::Obj(child))).is_err());
+    }
+    #[test]
     fn exceptions_unwind_to_catch_only_for_thrown() {
         let r = catch(|| -> i32 { V::Undef.get("x").truthy().into() });
         assert!(r.is_err());
@@ -958,14 +1240,63 @@ mod tests {
         assert_eq!(to_str(&add(&V::s("2026"), &V::s("0924"))), "20260924");
         assert_eq!(to_str(&add(&V::from(1.), &V::s("mm"))), "1mm");
         assert_eq!(parse_int(&V::s("0900")), 900.);
-        // An unpaired surrogate forwards instead of becoming U+FFFD (S15-R17).
+        // An unpaired surrogate is kept as JavaScript keeps it (S15b-4b-1; pinned Node 16.20.2:
+        // `JSON.stringify` escapes it, and two halves made adjacent form their pair again).
         let lone = OrderedJson::parse(br#"{"name":"a\ud800b"}"#).unwrap();
-        let p = std::panic::catch_unwind(|| from_store(&lone)).expect_err("forward");
-        assert!(p.downcast_ref::<Forward>().is_some());
+        let value = from_store(&lone);
+        assert_eq!(to_number(&value.get("name").get("length")), 3.);
+        assert_eq!(
+            to_json(&value).unwrap().to_bytes(),
+            br#"{"name":"a\ud800b"}"#
+        );
         let pair = OrderedJson::parse(br#"{"name":"\ud83d\ude00"}"#).unwrap();
         assert_eq!(sv(&from_store(&pair).get("name")), "\u{1f600}");
-        let half = std::panic::catch_unwind(|| substr("\u{1f600}x", 1, 2)).expect_err("forward");
-        assert!(half.downcast_ref::<Forward>().is_some());
+        let half = V::from(substr("\u{1f600}x", 1, 2));
+        assert_eq!(to_number(&half.get("length")), 2.);
+        assert_eq!(to_json(&half).unwrap().to_bytes(), br#""\ude00x""#);
+        let joined = add(
+            &V::from(substr("\u{1f600}", 0, 1)),
+            &V::from(substr("\u{1f600}", 1, 1)),
+        );
+        assert!(strict_eq(&joined, &V::s("\u{1f600}")));
+        assert_eq!(
+            to_json(&joined).unwrap().to_bytes(),
+            "\"\u{1f600}\"".as_bytes()
+        );
+        assert!(lt(&V::from(substr("\u{1f600}", 0, 1)), &V::s("\u{e000}")));
+        // A property named by the two halves is the paired character's property.
+        let o = Ob::new();
+        o.set(&to_str(&joined), V::from(1.));
+        assert_eq!(to_number(&o.get("\u{1f600}")), 1.);
+        o.set("\u{1f600}", V::from(2.));
+        assert_eq!(o.len(), 1);
+        assert!(o.has(&to_str(&joined)));
+        assert_eq!(
+            to_json(&V::Obj(o.clone())).unwrap().to_bytes(),
+            "{\"\u{1f600}\":2}".as_bytes()
+        );
+        o.del(&to_str(&joined));
+        assert_eq!(o.len(), 0);
+        // A real character in the stand-in range (U+10F800) stays that character: it is never
+        // confused with the unpaired surrogate U+D800, as key, value or JSON output.
+        let real = V::from(canon_str("\u{10f800}"));
+        let lone = V::from(from16(&[0xD800]));
+        assert!(!strict_eq(&real, &lone));
+        assert_eq!(to_number(&real.get("length")), 2.);
+        assert_eq!(
+            to_json(&real).unwrap().to_bytes(),
+            "\"\u{10f800}\"".as_bytes()
+        );
+        assert_eq!(to_json(&lone).unwrap().to_bytes(), br#""\ud800""#);
+        let o = Ob::new();
+        o.set(&to_str(&real), V::from(1.));
+        o.set(&to_str(&lone), V::from(2.));
+        assert_eq!(o.len(), 2);
+        assert_eq!(
+            V::from(from16(&[0xDBFE, 0xDC00])).str(),
+            real.str(),
+            "decoded from UTF-16 like a request field"
+        );
         assert_eq!(slice("a\u{1f600}b", 1, Some(3)), "\u{1f600}");
         // Pinned Node 16.20.2 decodeURI (S15-R16).
         for (s, ok) in [
