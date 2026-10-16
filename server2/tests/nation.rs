@@ -4,5 +4,7 @@ mod averages;
 mod parity;
 #[path = "nation/reasons.rs"]
 mod reasons;
+#[path = "nation/request_edges.rs"]
+mod request_edges;
 #[path = "nation/s3.rs"]
 mod s3;

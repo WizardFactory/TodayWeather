@@ -115,11 +115,26 @@ impl DirectRoutes {
                     ),
                 );
             }
+            // Express claims mounts case-insensitively, but checkQueryValidation rejects
+            // an uppercase `V`, so requestApi defaults those child calls to v000901.
+            let version = if request
+                .uri()
+                .path()
+                .split('/')
+                .nth(1)
+                .is_some_and(|v| v.starts_with('v'))
+            {
+                version
+            } else {
+                "v000901"
+            };
+            // Nation's internal HTTP calls forward Accept-Language only, never the parent's cookie.
+            let child_locale = crate::warnings::special::locale(text("accept-language"), None);
             let query = path_and_query.split_once('?').map_or("", |(_, q)| q);
             let child = format!(
                 "/{version}/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C?{query}"
             );
-            let Some(base) = parse_path(&child, locale) else {
+            let Some(base) = parse_path(&child, child_locale) else {
                 return express(&method, &headers, crate::nation::child_error(500));
             };
             let Some(nation) = &self.nation else {

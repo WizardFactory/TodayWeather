@@ -44,7 +44,7 @@ pub const CITIES: [&str; 15] = [
     "경상북도/안동시",
     "울산광역시",
 ];
-/// Same-version child assembly, never an HTTP hop to legacy. Air and all 15 cities share one
+/// Legacy-selected child-version assembly, never an HTTP hop to legacy. Air and all 15 cities share one
 /// absolute three-second deadline; unfinished provider work is owned by the shared sources.
 pub trait CitySource: Send + Sync {
     fn weather(

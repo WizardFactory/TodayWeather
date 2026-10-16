@@ -5,8 +5,8 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),crypto=require('crypto');
 if(process.version!=='v16.20.2')throw Error('Node16.20.2 required');
 const root=path.resolve(process.argv[2]),output=path.resolve(process.argv[3]);
-const dependencies={mongoose:require('mongoose/package.json').version,async:require('async/package.json').version,jade:require('jade/package.json').version};
-for(const [name,version] of Object.entries({mongoose:'5.1.2',async:'2.6.2',jade:'1.11.0'}))if(dependencies[name]!==version)throw Error('Pinned '+name+' '+version+' required');
+const dependencies={mongoose:require('mongoose/package.json').version,async:require('async/package.json').version,jade:require('jade/package.json').version,i18n:require('i18n/package.json').version};
+for(const [name,version] of Object.entries({mongoose:'5.1.2',async:'2.6.2',jade:'1.11.0',i18n:'0.8.3'}))if(dependencies[name]!==version)throw Error('Pinned '+name+' '+version+' required');
 const now='2026-10-16T00:10:00.000Z', hash={};
 const log={info(){},debug(){},error(){},warn(){}};
 class FixedDate extends Date {constructor(...a){super(...(a.length?a:[now]));} static now(){return Date.parse(now);}}
@@ -43,7 +43,11 @@ new Collector().saveAvgSidoArpltn('서울',observationApi.parseRows({list:items,
 
 const model=run('server/models/sido.arpltn.keco.model.js',n=>{if(n==='mongoose')return mongoose;throw Error(n);},{Date});
 function document(avg){const q=model.update(avg.query,avg.set,{upsert:true});const cast=q._castUpdate(q._update);const out={...avg.query,...cast.$setOnInsert};for(const k of Object.keys(cast.$set))out[k]=cast.$set[k];delete out._id;delete out.__v;return out;}
-let stored=[],fallbacks={},cityError=null,cityCalls=[];
+// Execute the application's actual i18n configuration; disable locale file updates in this offline recorder.
+const i18n=require('i18n'),appSource=source('server/app.js');
+const configure=appSource.slice(appSource.indexOf('i18n.configure({'),appSource.indexOf('});',appSource.indexOf('i18n.configure({'))+3);
+vm.runInNewContext(configure,{i18n:{configure(options){i18n.configure({...options,updateFiles:false});}},__dirname:path.join(root,'server'),global:{}});
+let stored=[],fallbacks={},cityError=null,cityCalls=[],echoContract=false;
 Keco.getSidoArpltn=cb=>cb(null,stored,[]);
 const fallback={getArpltn(coord,time,cb){
  const row=fallbacks[coord.lat];if(!row)return cb(null,undefined,'no-provider');
@@ -56,14 +60,25 @@ let stack;
 const router={use(){},get(p,handlers,last){stack=[...handlers,last];}};
 run('server/routes/v000803/route.nation.js',n=>{
  if(n==='express')return{Router:()=>router};if(n==='async')return require('async');
- if(n==='request')return (url,opts,cb)=>{const name=new URL(url).pathname.split('/').slice(4).map(decodeURIComponent).join('/');cityCalls.push({url,lang:opts.headers['Accept-Language']});process.nextTick(()=>cb(null,{statusCode:cityError||200},{cityName:name,current:{t1h:20},airInfo:{private:true},airInfoList:[{}]}));};
+ if(n==='request')return (url,opts,cb)=>{
+  const parsed=new URL(url),name=parsed.pathname.split('/').slice(4).map(decodeURIComponent).join('/');
+  const call={url,lang:opts.headers['Accept-Language']};
+  const body={cityName:name,current:{t1h:20},airInfo:{private:true},airInfoList:[{}]};
+  if(echoContract){
+   // The internal HTTP child receives only the header forwarded by the actual nation route, never the parent cookie.
+   const child={headers:{'accept-language':opts.headers['Accept-Language']}};
+   i18n.init(child,{},()=>{});
+   call.locale=child.getLocale();body.childVersion=parsed.pathname.split('/')[1];body.childLocale=child.getLocale();
+  }
+  cityCalls.push(call);process.nextTick(()=>cb(null,{statusCode:cityError||200},body));
+ };
  if(n.includes('config/config'))return{apiServer:{url:'http://127.0.0.1:1'}};
  if(n.includes('controllerTown24h'))return Controller;if(n.includes('kecoController'))return Keco;if(n.includes('nationAir'))return nationAir;throw Error(n);
 });
-async function scenario(id,{rows=[],fallback={},version='v000903',query={},error=null}={}){
- stored=rows;fallbacks=fallback;cityError=error;cityCalls=[];
- const req={baseUrl:'/'+version+'/nation',headers:{'accept-language':'ko'},params:{nation:'KR'},query:{...query}};
- return new Promise(resolve=>{let i=0,done=false;const res={send(body){if(!done){done=true;resolve({id,version,query,stored:rows,fallback,body:JSON.stringify(body),cityCalls});}},status(c){this.code=c;return this;}};function next(err){if(done)return;if(err){done=true;resolve({id,version,query,stored:rows,fallback,error:{status:500,message:err.message},cityCalls});return;}const fn=stack[i++];fn(req,res,next);}next();});
+async function scenario(id,{rows=[],fallback={},version='v000903',query={},error=null,headers=null}={}){
+ stored=rows;fallbacks=fallback;cityError=error;cityCalls=[];echoContract=headers!==null;
+ const req={baseUrl:'/'+version+'/nation',headers:headers||{'accept-language':'ko'},params:{nation:'KR'},query:{...query}};
+ return new Promise(resolve=>{let i=0,done=false;const res={send(body){if(!done){done=true;resolve({id,version,query,...(headers?{headers}:{}),stored:rows,fallback,body:JSON.stringify(body),cityCalls});}},status(c){this.code=c;return this;}};function next(err){if(done)return;if(err){done=true;resolve({id,version,query,stored:rows,fallback,error:{status:500,message:err.message},cityCalls});return;}const fn=stack[i++];fn(req,res,next);}next();});
 }
 (async()=>{
  const avg=document(averages[0]);
@@ -82,6 +97,9 @@ async function scenario(id,{rows=[],fallback={},version='v000903',query={},error
  cases.push(await scenario('v903-child-404',{error:404}));
  for(const [id,date] of [['stale','2026-10-16 01:10'],['future','2026-10-16 10:11']])cases.push(await scenario(id,{rows:[{...avg,dataTime:date}]}));
  cases.push(await scenario('representative',{fallback:{37.5665:{source:'openweather',dataTime:'2026-10-16 09:00',pm10Value:25,pm25Value:12,attribution:'OpenWeather'}}}));
+ cases.push(await scenario('uppercase-v903-child-default',{version:'V000903',headers:{'accept-language':'ko'}}));
+ cases.push(await scenario('nation-child-header-over-parent-cookie',{headers:{'accept-language':'en',cookie:'twcookie=ko'}}));
+ cases.push(await scenario('nation-child-cookie-only-default',{headers:{cookie:'twcookie=ko'}}));
  const jade=require('jade');
  source('server/views/error.jade');source('server/views/layout.jade');
  for(const c of cases)if(c.error)c.error.html=jade.renderFile(path.join(root,'server/views/error.jade'),{message:c.error.message,error:{}});

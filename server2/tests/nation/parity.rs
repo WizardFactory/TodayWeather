@@ -57,6 +57,10 @@ async fn real_legacy_route_composition_matches_native_bytes_for_each_used_versio
     let now =
         server2::world::vc::parse_iso_z(&oracle["now"].as_str().unwrap().replace(".000Z", "Z"));
     for case in oracle["scenarios"].as_array().unwrap() {
+        // Header/version boundary cases exercise DirectRoutes in request_edges.rs.
+        if case.get("headers").is_some() {
+            continue;
+        }
         let version = case["version"].as_str().unwrap();
         // This test isolates the route boundary; AirInputs storage/fallback is tested separately.
         let ordered = case
