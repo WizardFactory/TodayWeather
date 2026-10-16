@@ -60,33 +60,39 @@ pub fn golden_body(id: &str) -> String {
     )
     .unwrap()
 }
-/// S15b-3d: a test's fixed "now" (ms). The request-time S3 tests fix it instead of reading the
-/// system clock: neither the KST hour a run starts at nor a KST day change during a run may change
-/// what they expect (their wall-clock versions failed from 2026-10-16 00:00 KST on). Set under the
-/// S3 peer lock by [`fixed_now`]; the stubs and the acquirers' [`TestClock`] read it.
-pub struct TestInstant(std::sync::atomic::AtomicU64);
+/// S15b-3d: a test's clock (ms). The request-time S3 tests start it at a fixed instant instead
+/// of reading the system clock: neither the KST hour a run starts at nor the date may change what
+/// they expect (their wall-clock versions failed from 2026-10-16 00:00 KST on). It then advances
+/// at the real pace, as the wall clock does (a publication completes after the request that
+/// started it). Set under the S3 peer lock by [`fixed_now`]; the stubs, the acquirers and the
+/// inputs read it through [`TestClock`].
+pub struct TestInstant(std::sync::Mutex<Option<(f64, std::time::Instant)>>);
 impl TestInstant {
     pub const fn new() -> Self {
-        Self(std::sync::atomic::AtomicU64::new(0))
+        Self(std::sync::Mutex::new(None))
     }
+    /// Start the clock at `ms`.
     pub fn set(&self, ms: f64) {
-        self.0
-            .store(ms.to_bits(), std::sync::atomic::Ordering::SeqCst);
+        *self.0.lock().unwrap_or_else(|e| e.into_inner()) = Some((ms, std::time::Instant::now()));
     }
+    /// The start instant plus the whole milliseconds elapsed since.
     pub fn get(&self) -> f64 {
-        let ms = f64::from_bits(self.0.load(std::sync::atomic::Ordering::SeqCst));
-        assert!(ms > 0., "no fixed test instant");
-        ms
+        let (start, at) = self
+            .0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .expect("no fixed test instant");
+        start + at.elapsed().as_millis() as f64
     }
 }
-/// The acquirers' wall clock in tests: the fixed test instant.
+/// The acquirers' and inputs' wall clock in tests: the test clock.
 pub struct TestClock(pub &'static TestInstant);
 impl server2::budget::Clock for TestClock {
     fn now_ms(&self) -> Result<i64, server2::budget::BudgetError> {
         Ok(self.0.get() as i64)
     }
 }
-/// Take `lock` (the S3 test peers') and fix `instant` at `at` (ISO) for the test holding the
+/// Take `lock` (the S3 test peers') and start `instant` at `at` (ISO) for the test holding the
 /// guard.
 pub async fn fixed_now(
     lock: &'static tokio::sync::Mutex<()>,
@@ -97,16 +103,20 @@ pub async fn fixed_now(
     instant.set(clock_ms(at));
     guard
 }
-/// The instant the request-time tests run at by default: 2026-10-16 00:00:30 KST, just after the
+/// The instant the request-time tests start at by default: 2026-10-16 00:00:30 KST, just after the
 /// KST day change at which their wall-clock versions failed.
 pub const FIXED_NOW: &str = "2026-10-15T15:00:30.000Z";
-/// The instants the ignored `*_across_kst_boundaries` sweeps run at (KST): around the day change,
-/// the 05시 dust-forecast announcement, the first MFDS slot (08:20), midday, the 17:21 slot and the
-/// 23시 announcement.
+/// A midday start (2026-10-16 12:30 KST) for tests whose requests span a minute or more, away
+/// from every KST slot boundary.
+pub const MIDDAY: &str = "2026-10-16T03:30:00.000Z";
+/// The instants the ignored image sweep starts at (KST): around the day change (the run from
+/// 23:59:59 crosses midnight), the 05시 dust-forecast announcement (two minutes before it: a run
+/// across it legitimately acquires the new announcement), the first MFDS slot (08:20), midday,
+/// the 17:21 slot and the 23시 announcement.
 pub const KST_BOUNDARIES: [&str; 9] = [
     "2026-10-15T14:59:59.000Z", // 10-15 23:59:59
     "2026-10-15T15:00:00.500Z", // 10-16 00:00:00.5
-    "2026-10-15T19:59:59.000Z", // 10-16 04:59:59
+    "2026-10-15T19:58:00.000Z", // 10-16 04:58
     "2026-10-15T20:00:00.500Z", // 10-16 05:00:00.5
     "2026-10-15T23:19:59.000Z", // 10-16 08:19:59
     "2026-10-15T23:20:00.500Z", // 10-16 08:20:00.5

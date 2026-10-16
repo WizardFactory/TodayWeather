@@ -6,7 +6,7 @@
 use super::life::{life_runs, oracle, value};
 use super::source::{at, items_of, number, same, text};
 use super::source_s3::{Peer, deadline};
-use super::support::{FIXED_NOW, KST_BOUNDARIES, TestClock, TestInstant, fixed_now};
+use super::support::{FIXED_NOW, MIDDAY, TestClock, TestInstant, fixed_now};
 use axum::{Router, extract::State, http::Uri, response::IntoResponse, routing::any};
 use serde_json::json;
 use server2::domestic::kma::source::life_input::LifeInputs;
@@ -440,7 +440,7 @@ fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn LifeAcquire> {
     let daily = server2::domestic::kma::source::observe::DailyAcquirer::new(
         Arc::new(server2::providers::HttpProviderTransport::new(2 << 20).unwrap()),
         Arc::new(server2::providers::HttpPublicTransport::new(2 << 20).unwrap()),
-        Arc::new(peer.transport()),
+        Arc::new(peer.transport_limited(super::source_s3::ACQUIRER_PERMITS)),
         vec!["S15B3B_LOCAL_KEY_A+aaaaaaaaaaaaaaaa/=".into()],
         5000,
         server2::domestic::family::Endpoints::new(base, base, base).unwrap(),
@@ -546,20 +546,37 @@ async fn missing_national_datasets_are_acquired_once_and_published_before_use() 
 /// At 00:00:30 KST (no MFDS slot yet) and at 12:30 KST (the 12:20 slot).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
-    for at in [FIXED_NOW, "2026-10-16T03:30:00.000Z"] {
-        slow_acquisition_at(at).await;
+    for (at, slot) in [(FIXED_NOW, None), (MIDDAY, Some((20261016, 1220)))] {
+        slow_acquisition_at(at, slot).await;
     }
 }
+/// The life sweep's starts (KST) with the MFDS slot (`YYYYMMDD`, `HHMM`) legacy collects by
+/// then: the latest of 08:20, 12:20 and 17:20 KST of that day, none before 08:20. The test's two
+/// requests are about 10 s apart and a new UV slot or MFDS slot between them is legitimately
+/// asked again, so the starts before a boundary are two minutes before it (the image sweep
+/// crosses the boundaries during the run).
+const LIFE_BOUNDARIES: [(&str, Option<(u32, u16)>); 9] = [
+    ("2026-10-15T14:58:00.000Z", Some((20261015, 1720))), // 10-15 23:58
+    ("2026-10-15T15:00:00.500Z", None),                   // 10-16 00:00:00.5
+    ("2026-10-15T19:58:00.000Z", None),                   // 04:58
+    ("2026-10-15T20:00:00.500Z", None),                   // 05:00:00.5
+    ("2026-10-15T23:18:00.000Z", None),                   // 08:18
+    ("2026-10-15T23:20:00.500Z", Some((20261016, 820))),  // 08:20:00.5
+    ("2026-10-16T03:00:00.000Z", Some((20261016, 820))),  // 12:00
+    ("2026-10-16T08:21:00.000Z", Some((20261016, 1720))), // 17:21
+    ("2026-10-16T14:00:30.000Z", Some((20261016, 1720))), // 23:00:30
+];
 /// S15b-3d: [`a_slow_acquisition_releases_the_request_and_serves_the_next_one`] at fixed
 /// instants around the KST boundaries (slow: `--ignored across_kst_boundaries`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "slow sweep; run with --ignored"]
 async fn life_acquisition_across_kst_boundaries() {
-    for at in KST_BOUNDARIES {
-        slow_acquisition_at(at).await;
+    for (at, slot) in LIFE_BOUNDARIES {
+        slow_acquisition_at(at, slot).await;
     }
 }
-async fn slow_acquisition_at(at: &str) {
+/// `slot`: the MFDS slot expected at `at` (an explicit oracle, not `slot_at`).
+async fn slow_acquisition_at(at: &str, slot: Option<(u32, u16)>) {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, at).await;
     let peer = Peer::new();
     let transport = peer.transport();
@@ -571,9 +588,13 @@ async fn slow_acquisition_at(at: &str) {
         .with_clock(test_clock())
         .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_kasi_schedule(HOLD, HOLD);
-    // Every request is at the fixed instant; MFDS is collected only from its first slot (08:20).
+    // MFDS is collected only from the day's first slot (08:20).
     let now = now_ms();
-    let slot = server2::domestic::mfds::slot_at(now);
+    assert_eq!(
+        server2::domestic::mfds::slot_at(now).map(|p| (p.date(), p.time())),
+        slot,
+        "{at}"
+    );
     let started = std::time::Instant::now();
     let first = inputs.load(now, short_deadline()).await;
     assert!(
@@ -595,7 +616,7 @@ async fn slow_acquisition_at(at: &str) {
     // The next request comes after the acquisitions ended and after their outcome stopped
     // answering joiners (3 s): their publication still invalidates the folds' memo.
     tokio::time::sleep(Duration::from_millis(9_000)).await;
-    let next = inputs.load(now, short_deadline()).await;
+    let next = inputs.load(now_ms(), short_deadline()).await;
     assert!(
         uv_rows(&next) > 0,
         "{at}: the owned acquisition finished and serves the next request"
@@ -885,7 +906,8 @@ async fn an_old_nearest_location_still_decides_rise_set_after_a_cold_read() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_publication_after_a_request_instant_is_read_by_a_later_request() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    // Its requests span a minute: a start away from the three-hour UV slot boundaries.
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());

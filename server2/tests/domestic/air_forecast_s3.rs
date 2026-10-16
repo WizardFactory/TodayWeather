@@ -467,6 +467,8 @@ struct StubState {
     pm25_absent: std::sync::atomic::AtomicBool,
     /// The PM10 image answers 404 (a failed download).
     pm10_missing: std::sync::atomic::AtomicBool,
+    /// The image URLs the last dust-forecast answer named.
+    served: Mutex<Option<[String; 2]>>,
 }
 /// This module's fixed test instant (S15b-3d).
 static INSTANT: TestInstant = TestInstant::new();
@@ -488,9 +490,6 @@ fn served_urls(host: &str, cycle: &str, now: f64) -> [String; 2] {
             day.replace('/', "")
         )
     })
-}
-fn default_urls(now: f64) -> [String; 2] {
-    served_urls("https://www.airkorea.or.kr", "23", now)
 }
 async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> axum::response::Response {
     let path = uri.path().to_owned();
@@ -528,6 +527,7 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> axum::response
             .clone()
             .unwrap_or_else(|| "23".into());
         let urls = served_urls(&host, &cycle, now_ms());
+        *state.served.lock().unwrap() = Some(urls.clone());
         let data_time = expected_announcement(now_ms()).unwrap();
         // Like the provider's, the announcement's documents cover its day and the next (and the
         // day after from the 17시 one): at 00:00-04:59 KST the expected announcement is the
@@ -580,6 +580,18 @@ impl Drop for Stub {
     }
 }
 async fn stub() -> Stub {
+    // Parse the oracle fixture and decode the served pair before anything runs (S15b3d-R1). The
+    // first parse takes seconds in a test build; done inside the stub's handler it held a runtime
+    // worker while an S3 publication waited on it, so the publication passed the 3 s S06 client
+    // timeout (`Transport`) and the acquisition was retried only after 10 minutes.
+    let [pm10, pm25] = fixture_urls('A');
+    tokio::task::spawn_blocking(move || {
+        stations();
+        image_at(&pm10).unwrap();
+        decoded(&pm10, &pm25).unwrap();
+    })
+    .await
+    .unwrap();
     let state = Arc::new(StubState::default());
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}/", listener.local_addr().unwrap());
@@ -614,7 +626,7 @@ fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn AirKoreaAcquire> 
         settings,
         Arc::new(server2::domestic::kma::source::live::airkorea_transport().unwrap()),
         Arc::new(server2::providers::HttpPublicTransport::new(8 << 20).unwrap()),
-        Arc::new(peer.transport()),
+        Arc::new(peer.transport_limited(super::source_s3::ACQUIRER_PERMITS)),
         store,
         test_clock(),
     ))
@@ -651,19 +663,59 @@ where
         if ready(&answer) {
             return answer;
         }
-        assert!(started.elapsed() < cap, "never ready");
+        assert!(
+            started.elapsed() < cap,
+            "never ready: {}",
+            WAITING.lock().unwrap_or_else(|e| e.into_inner())
+        );
         tokio::time::sleep(Duration::from_millis(200)).await;
     }
+}
+/// Why the last readiness check of [`until`] failed (S15b3d-R1: a stall names the missing input
+/// and its error instead of only "never ready").
+static WAITING: Mutex<String> = Mutex::new(String::new());
+fn waiting(ready: bool, why: impl FnOnce() -> String) -> bool {
+    if !ready {
+        *WAITING.lock().unwrap_or_else(|e| e.into_inner()) = why();
+    }
+    ready
+}
+/// The station list, the observations and the dust forecast are in (`state`: the stub's
+/// provider calls so far).
+fn warmed(a: &server2::domestic::kma::source::air_input::AirAnswers, state: &StubState) -> bool {
+    waiting(
+        matches!(&a.dust, Some((_, Ok(_)))) && a.arpltn.is_ok(),
+        || {
+            format!(
+                "dust {:?}, arpltn {:?}, dust-forecast calls {}",
+                a.dust.as_ref().map(|d| d.1.as_ref().err()),
+                a.arpltn.as_ref().err(),
+                state.dust.load(Ordering::SeqCst)
+            )
+        },
+    )
+}
+/// The image forecast answers 중구.
+fn served(a: &server2::domestic::kma::source::air_input::AirAnswers) -> bool {
+    waiting(has_rows(&rows(a, "중구")), || {
+        format!("no image rows for 중구 (fold read: {})", a.hourly.is_some())
+    })
 }
 fn has_rows(answer: &OrderedJson) -> bool {
     matches!(answer, OrderedJson::Array(r) if !r.is_empty())
 }
-/// The fold one acquisition of the served images between `before` and `after` gives (a KST day
-/// change between them is the only way they differ).
-fn acquired(before: f64, after: f64, answer: &OrderedJson, name: &str) {
+/// The fold one acquisition of the images the stub served (`state`) between `before` and `after`
+/// gives: a KST day change between them changes the one-day row cut (read on either side). The
+/// documents naming the images were fetched earlier, possibly on the other side of the change.
+fn acquired(before: f64, after: f64, state: &StubState, answer: &OrderedJson, name: &str) {
     let announcement = expected_announcement(before).unwrap();
+    let urls = state
+        .served
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("documents served");
     let candidates = [before, after].map(|at| {
-        let urls = default_urls(at);
         expected_fold(&[(&pub_date(&announcement), at, 'A', &urls)], at).by_station(name)
     });
     assert!(
@@ -704,7 +756,7 @@ async fn missing_image_forecast_at(at: &str) {
     // first, by requests that do not read the image forecast.
     let warm = until(
         || inputs.load(&seoul, "서울특별시", "중구", true, false, now_ms(), three()),
-        |a| matches!(&a.dust, Some((_, Ok(_)))) && a.arpltn.is_ok(),
+        |a| warmed(a, &stub.state),
     )
     .await;
     assert!(warm.hourly.is_none());
@@ -727,7 +779,7 @@ async fn missing_image_forecast_at(at: &str) {
     // acquisition and decoding outlasted its wait; a later request has it.
     let settled = until(
         || inputs.load(&seoul, "서울특별시", "중구", false, true, now_ms(), three()),
-        |a| has_rows(&rows(a, "중구")),
+        served,
     )
     .await;
     let after = now_ms();
@@ -740,7 +792,7 @@ async fn missing_image_forecast_at(at: &str) {
             continue;
         }
         for (name, _, _) in stations() {
-            acquired(before, after, &rows(answer, &name), &name);
+            acquired(before, after, &stub.state, &rows(answer, &name), &name);
         }
     }
     assert!(matches!(rows(&settled, "중구"), OrderedJson::Array(r) if r.len() > 40));
@@ -761,14 +813,18 @@ async fn missing_image_forecast_at(at: &str) {
     let cold = AirInputs::new(transport.clone(), store.clone()).with_clock(test_clock());
     let restored = until(
         || cold.load(&seoul, "서울특별시", "중구", false, true, now_ms(), three()),
-        |a| has_rows(&rows(a, "중구")),
+        served,
     )
     .await;
+    // The same acquisition, read now (rows older than a day are cut at the read).
+    let restored_at = now_ms();
     for (name, _, _) in stations() {
-        same(
+        acquired(
+            before,
+            restored_at,
+            &stub.state,
             &rows(&restored, &name),
-            &rows(&settled, &name),
-            &format!("{name} from S3"),
+            &name,
         );
     }
     // A request that does not read the image forecast does not load it.
@@ -853,10 +909,10 @@ async fn a_slow_image_acquisition_releases_the_request_and_serves_the_next_one()
                 Instant::now() + Duration::from_secs(3),
             )
         },
-        |a| has_rows(&rows(a, "중구")),
+        served,
     )
     .await;
-    acquired(before, now_ms(), &rows(&next, "중구"), "중구");
+    acquired(before, now_ms(), &stub.state, &rows(&next, "중구"), "중구");
     assert_eq!(stub.state.gifs.load(Ordering::SeqCst), 2, "one acquisition");
     assert_eq!(transport.available(), TEST_PERMITS);
 }
@@ -891,7 +947,7 @@ async fn rejected_image_paths_at(at: &str) {
         // The station list and the dust forecast naming the images are stored first.
         until(
             || inputs.load(&seoul, "서울특별시", "중구", true, false, now_ms(), three()),
-            |a| matches!(&a.dust, Some((_, Ok(_)))) && a.arpltn.is_ok(),
+            |a| warmed(a, &stub.state),
         )
         .await;
         let answer = inputs
