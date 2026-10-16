@@ -1,6 +1,6 @@
 {
  "_provenance": {
-  "source": "server/locales/<locale>.json",
+  "source": "legacy server package, locales/<locale>.json",
   "revision": "a9b3a23d289d9a59d39da567877a4dca4e268a0e",
   "files": {
    "en": "ce8b13c40bad5f5c40e0fb3d605b60b753f37b9dbe9f9397327a045f2319dc60",

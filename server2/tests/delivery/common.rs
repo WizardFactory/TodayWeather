@@ -235,8 +235,9 @@ impl GoogleDouble {
                         Answer::Json(s, b) => (s, "application/json; charset=UTF-8", b),
                         Answer::Text(s, b) => (s, "text/html", b),
                     };
+                    let crlf = "\r\n";
                     let reply = format!(
-                        "HTTP/1.1 {status} X\r\ncontent-type: {ct}\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{text}",
+                        "HTTP/1.1 {status} X{crlf}content-type: {ct}{crlf}content-length: {}{crlf}connection: close{crlf}{crlf}{text}",
                         text.len()
                     );
                     let _ = socket.write_all(reply.as_bytes()).await;
