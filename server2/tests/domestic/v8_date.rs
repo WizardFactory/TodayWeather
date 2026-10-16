@@ -5,15 +5,15 @@ use std::io::Read;
 
 #[test]
 fn date_parse_equals_node_16_on_the_recorded_corpus() {
-    let mut raw = String::new();
-    flate2::read::GzDecoder::new(
-        &include_bytes!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/tests/domestic/fixtures/v8-date-parse.json.gz"
-        ))[..],
-    )
-    .read_to_string(&mut raw)
+    let gz = std::fs::read(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/domestic/fixtures/v8-date-parse.json.gz"
+    ))
     .unwrap();
+    let mut raw = String::new();
+    flate2::read::GzDecoder::new(&gz[..])
+        .read_to_string(&mut raw)
+        .unwrap();
     let recorded: serde_json::Value = serde_json::from_str(&raw).unwrap();
     assert_eq!(recorded["runtime"], "v16.20.2");
     assert_eq!(recorded["tz"], "UTC");
