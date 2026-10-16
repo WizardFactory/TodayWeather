@@ -224,9 +224,25 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         acquire: Arc<dyn observe::Acquire>,
         locate: Arc<dyn observe::Locate>,
     ) -> Result<Self, crate::storage::Error> {
-        let limits = CatalogLimits::default();
-        let store = Arc::new(CatalogStore::new(transport.clone(), limits.clone())?);
-        let warnings = WarningStore::new(transport.clone(), limits, StoreConfig::default())?;
+        let warnings = Arc::new(WarningStore::new(
+            transport.clone(),
+            CatalogLimits::default(),
+            StoreConfig::default(),
+        )?);
+        Self::new_with_warning_store(transport, clock, acquire, locate, warnings)
+    }
+    /// Reuse the process warning store for request acquisition and warning response reads.
+    pub fn new_with_warning_store(
+        transport: T,
+        clock: Clock,
+        acquire: Arc<dyn observe::Acquire>,
+        locate: Arc<dyn observe::Locate>,
+        warnings: Arc<WarningStore<T>>,
+    ) -> Result<Self, crate::storage::Error> {
+        let store = Arc::new(CatalogStore::new(
+            transport.clone(),
+            CatalogLimits::default(),
+        )?);
         let observations = Arc::new(observe::Observations::new(
             transport.clone(),
             store.clone(),
@@ -243,7 +259,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             life: life_input::LifeInputs::new(transport.clone(), store.clone()),
             reader: Reader { transport, store },
             warnings: Arc::new(WarningService::new(
-                Arc::new(warnings),
+                warnings,
                 Arc::new(crate::budget::SystemClock),
                 ServiceConfig::default(),
             )),

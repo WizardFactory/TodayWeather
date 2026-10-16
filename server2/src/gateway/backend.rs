@@ -172,17 +172,25 @@ struct Switch {
 }
 #[derive(Clone)]
 pub struct BackendDispatcher {
-    http: Http,
+    http: Option<Http>,
     switches: Arc<RwLock<HashMap<(Version, Family), Switch>>>,
     cpu: Arc<Semaphore>,
 }
 impl BackendDispatcher {
     pub fn legacy(base: &str) -> Result<Self, GatewayError> {
         Ok(Self {
-            http: Http::new(base)?,
+            http: Some(Http::new(base)?),
             switches: Arc::new(RwLock::new(HashMap::new())),
             cpu: Arc::new(Semaphore::new(2)),
         })
+    }
+    /// A dispatcher with no legacy origin or client. Unselected routes terminate locally.
+    pub fn native_only() -> Self {
+        Self {
+            http: None,
+            switches: Arc::new(RwLock::new(HashMap::new())),
+            cpu: Arc::new(Semaphore::new(2)),
+        }
     }
     pub fn with_native(
         self,
@@ -280,7 +288,9 @@ impl BackendDispatcher {
     }
     /// Whether the legacy origin is plain HTTP (`Http::new` admits plain HTTP only on loopback).
     pub fn legacy_is_plain_http(&self) -> bool {
-        self.http.base.starts_with("http://")
+        self.http
+            .as_ref()
+            .is_some_and(|http| http.base.starts_with("http://"))
     }
     /// One HTTP/1.1 exchange with the `http://` legacy origin that writes the request target
     /// verbatim.
@@ -290,7 +300,8 @@ impl BackendDispatcher {
         path_and_query: &str,
         headers: &[(&axum::http::HeaderName, &axum::http::HeaderValue)],
     ) -> Result<(u16, axum::http::HeaderMap, Vec<u8>), GatewayError> {
-        let url = reqwest::Url::parse(&self.http.base).map_err(|_| GatewayError::Provider)?;
+        let http = self.http.as_ref().ok_or(GatewayError::NotFound)?;
+        let url = reqwest::Url::parse(&http.base).map_err(|_| GatewayError::Provider)?;
         let host = url.host_str().ok_or(GatewayError::Provider)?.to_owned();
         let port = url.port_or_known_default().ok_or(GatewayError::Provider)?;
         let authority = match url.port() {
@@ -381,18 +392,18 @@ impl BackendDispatcher {
             .map_err(|_| GatewayError::Provider)??
             {
                 Native::Served(value) => return Ok(value),
-                // S15: forwarded requests take the unchanged legacy hop on the remaining deadline.
-                Native::Forward => (),
+                // Selected native paths never recover through legacy, even in coexistence.
+                Native::Forward => return Err(GatewayError::Provider),
             }
         }
+        let http = self.http.as_ref().ok_or(GatewayError::NotFound)?;
         for attempt in 0..3 {
             let remaining = deadline.saturating_duration_since(Instant::now());
             if remaining.is_zero() {
                 return Err(GatewayError::Provider);
             }
             super::metrics::add(&super::metrics::COUNTERS.backend_attempts);
-            let result = self
-                .http
+            let result = http
                 .get(
                     &path,
                     &lang,

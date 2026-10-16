@@ -1,0 +1,77 @@
+{
+  "task": "S20a",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2789",
+  "server2_paths": [
+    "server2/src/main.rs",
+    "server2/src/process.rs",
+    "server2/src/lib.rs",
+    "server2/src/runtime_services.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/src/gateway/backend.rs",
+    "server2/src/domestic/kma/source/fetch.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/push/deliver/mod.rs",
+    "server2/src/push/deliver/native_fetch.rs",
+    "server2/config/tasks/S20a.json",
+    "server2/tests/runtime_services.rs",
+    "server2/tests/runtime_services/common.rs",
+    "server2/tests/runtime_services/http.rs",
+    "server2/tests/runtime_services/native.rs",
+    "server2/tests/runtime_services/feed.rs",
+    "server2/examples/loopback_server.rs",
+    "server2/README.md"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2705-s20a.md",
+      "category": "documentation",
+      "reason": "S20a canonical contract, operations, design or selected verification evidence"
+    },
+    {
+      "path": "specs/issue-2705-s20a.md",
+      "category": "documentation",
+      "reason": "S20a canonical contract, operations, design or selected verification evidence"
+    },
+    {
+      "path": "plans/issue-2705-s20a.md",
+      "category": "documentation",
+      "reason": "S20a canonical contract, operations, design or selected verification evidence"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "S20a canonical contract, operations, design or selected verification evidence"
+    },
+    {
+      "path": "docs/operations/server2-runtime-services.md",
+      "category": "documentation",
+      "reason": "S20a canonical contract, operations, design or selected verification evidence"
+    },
+    {
+      "path": "docs/operations/server2-runtime-services.pdf",
+      "category": "documentation",
+      "reason": "S20a canonical contract, operations, design or selected verification evidence"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.json",
+      "category": "documentation",
+      "reason": "S20a canonical contract, operations, design or selected verification evidence"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.html",
+      "category": "documentation",
+      "reason": "S20a canonical contract, operations, design or selected verification evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2705-s20a/verification.md",
+      "category": "documentation",
+      "reason": "S20a canonical contract, operations, design or selected verification evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2705-s20a/runtime-smoke.png",
+      "category": "documentation",
+      "reason": "S20a canonical contract, operations, design or selected verification evidence"
+    }
+  ],
+  "declaration_record": "AK task instruction 2026-10-16; native-only backend and shared warning source injection additions declared to root before dependent edits. PRE-MERGE only; no legacy runtime assets, deployment or sends. Before documentation edit, additionally declared server2/README.md to correct native-only serving discovery and link the current manual; root notified."
+}

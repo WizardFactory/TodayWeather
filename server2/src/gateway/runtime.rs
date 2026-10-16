@@ -1,10 +1,12 @@
 //! Process wiring from the operator-injected environment.
 //!
-//! `SERVER2_GATEWAY_LEGACY_URL` enables the gateway. `SERVER2_NATIVE_FAMILIES` lists the
+//! Native selection or an explicit `SERVER2_GATEWAY_LEGACY_URL` enables the gateway.
+//! `SERVER2_NATIVE_FAMILIES` lists the
 //! families routed to the native backend (`geocode`, `dsf`, `kma`, the S17a KMA versions
 //! `kma-v000901`, `kma-v000902`, and the S17b direct `town` routes; `kma` and `kma-v000901` also
 //! claim their direct `/kma/addr` routes); every other family stays on the
-//! legacy origin, and an unlisted family reads none of its native settings. Removing a family
+//! optional explicit legacy origin. `push` builds shared native weather dependencies even when
+//! their public routes are unlisted; `notice` selects read-only notice serving. Removing a family
 //! from the list and restarting is the rollback. These two and `SERVER2_WORLD_VERSIONS` are
 //! coexistence routing, removed with legacy retirement; with `SERVER2_S3_BUCKET` and
 //! `SERVER2_S3_REGION` (the server2 raw-record bucket and its region) they are the only
@@ -102,6 +104,8 @@ impl Default for Builtins {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct NativeFamilies {
     pub geocode: bool,
+    pub push: bool,
+    pub notice: bool,
     pub dsf: bool,
     /// S15: KMA v000903 address weather.
     pub kma: bool,
@@ -114,6 +118,9 @@ pub struct NativeFamilies {
     pub town: bool,
 }
 impl NativeFamilies {
+    pub fn any(&self) -> bool {
+        self.geocode || self.dsf || self.kma_source() || self.push || self.notice
+    }
     /// The address versions whose KMA backend is native; the shared S3 input source is built
     /// when any is listed.
     pub fn kma_versions(&self) -> Vec<super::Version> {
@@ -151,6 +158,8 @@ impl NativeFamilies {
         for entry in list.split(',').map(str::trim) {
             let slot = match entry {
                 "geocode" => &mut families.geocode,
+                "push" => &mut families.push,
+                "notice" => &mut families.notice,
                 "dsf" => &mut families.dsf,
                 "kma" => &mut families.kma,
                 "kma-v000901" => &mut families.kma_v000901,
@@ -300,49 +309,129 @@ pub fn kma_acquirer(
     .map_err(|_| GatewayError::InvalidConfiguration)
 }
 /// Build the gateway from injected variables at the production builtins. No legacy URL keeps the
-/// foundation service.
+/// foundation service when no native family is selected.
 pub fn from_vars(var: Var) -> Result<Option<Arc<Gateway>>, GatewayError> {
     from_vars_at(var, &Builtins::production())
 }
 /// [`from_vars`] at the given builtins (tests and the test-only `loopback_server` example).
 pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>>, GatewayError> {
-    let Some(base) = var("SERVER2_GATEWAY_LEGACY_URL") else {
-        return Ok(None);
-    };
+    let base = var("SERVER2_GATEWAY_LEGACY_URL");
     let families = NativeFamilies::from_vars(var)?;
-    let backend = BackendDispatcher::legacy(&base)?;
-    let s3 = if families.geocode || families.dsf || families.kma_source() {
+    let s3 = if families.any() {
         Some(shared_s3(var, builtins)?)
     } else {
         None
     };
-    let geocoder: Arc<dyn super::Geocoder> = match (&s3, families.geocode) {
-        (Some(s3), true) => Arc::new(native_geocoder(var, s3.clone(), builtins)?),
-        _ => Arc::new(LegacyGeocoder::new(&base)?),
+    let warnings = s3
+        .as_ref()
+        .map(|s3| {
+            crate::warnings::store::WarningStore::new(
+                s3.clone(),
+                crate::storage::CatalogLimits::default(),
+                crate::warnings::store::StoreConfig::default(),
+            )
+            .map(Arc::new)
+        })
+        .transpose()
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
+    build_shared(var, builtins, families, base, s3, warnings, None).map(|built| built.gateway)
+}
+
+/// Native handles are independent of public family switches; push uses these directly.
+#[derive(Clone, Default)]
+pub struct NativeHandles {
+    pub kma: Option<Arc<dyn super::BackendHandler>>,
+    pub dsf: Option<Arc<dyn super::BackendHandler>>,
+    pub geocoder: Option<Arc<dyn super::Geocoder>>,
+}
+pub(crate) struct BuiltGateway {
+    pub gateway: Option<Arc<Gateway>>,
+    pub native: NativeHandles,
+    pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
+}
+struct UnavailableGeocoder;
+impl super::Geocoder for UnavailableGeocoder {
+    fn coord(
+        &self,
+        _: [f64; 2],
+        _: String,
+    ) -> super::BoxFuture<'_, Result<crate::geocode::GeoClient, GatewayError>> {
+        Box::pin(async { Err(GatewayError::NotFound) })
+    }
+    fn addr(
+        &self,
+        _: String,
+        _: String,
+    ) -> super::BoxFuture<'_, Result<crate::geocode::GeoClient, GatewayError>> {
+        Box::pin(async { Err(GatewayError::NotFound) })
+    }
+}
+/// Construct native services on the caller's one shared S3 admission and warning store.
+pub(crate) fn build_shared(
+    var: Var,
+    builtins: &Builtins,
+    families: NativeFamilies,
+    base: Option<String>,
+    s3: Option<BoundedS3<HttpS3Transport>>,
+    warnings: Option<Arc<crate::warnings::store::WarningStore<BoundedS3<HttpS3Transport>>>>,
+    feed: Option<Arc<dyn crate::warnings::collector::PersistedWarningFeed>>,
+) -> Result<BuiltGateway, GatewayError> {
+    if families.any() && s3.is_none() {
+        return Err(GatewayError::InvalidConfiguration);
+    }
+    if base.is_none() && !families.any() {
+        return Ok(BuiltGateway {
+            gateway: None,
+            native: NativeHandles::default(),
+            warning_acquire: None,
+        });
+    }
+    let backend = match &base {
+        Some(base) => BackendDispatcher::legacy(base)?,
+        None => BackendDispatcher::native_only(),
     };
-    let weather_geocoder = match &s3 {
-        Some(s3) if families.dsf || families.kma_source() => Some(if families.geocode {
-            geocoder.clone()
+    let mut native = NativeHandles::default();
+    let needs_weather = families.dsf || families.kma_source() || families.push;
+    if let Some(s3) = &s3
+        && (needs_weather || families.geocode)
+    {
+        native.geocoder = Some(if families.geocode {
+            Arc::new(native_geocoder(var, s3.clone(), builtins)?)
         } else {
             native_weather_geocoder(var, s3.clone(), builtins)?
-        }),
-        _ => None,
+        });
+    }
+    let geocoder: Arc<dyn super::Geocoder> = if families.geocode {
+        native
+            .geocoder
+            .clone()
+            .ok_or(GatewayError::InvalidConfiguration)?
+    } else {
+        match &base {
+            Some(base) => Arc::new(LegacyGeocoder::new(base)?),
+            None => Arc::new(UnavailableGeocoder),
+        }
     };
+    let weather_geocoder = needs_weather.then(|| native.geocoder.clone()).flatten();
     // One process air chain for the world family and the KMA air fallback (S15b-3).
     let air = match &s3 {
-        Some(s3) if families.dsf || families.kma_source() => {
+        Some(s3) if needs_weather => {
             Some(crate::world::runtime::live_air(var, s3.clone(), builtins)?)
         }
         _ => None,
     };
     let mut versions = families.kma_versions();
-    if let (Some(s3), true, Some(air)) = (s3.clone(), families.dsf, air.clone()) {
+    if let (Some(s3), true, Some(air)) = (s3.clone(), families.dsf || families.push, air.clone()) {
         let configured = crate::world::runtime::build_with_air(var, s3, air, builtins)?;
-        versions.extend(configured.1.iter().copied());
-        crate::world::runtime::select(&backend, configured)?;
+        native.dsf = Some(configured.0.clone());
+        if families.dsf {
+            versions.extend(configured.1.iter().copied());
+            crate::world::runtime::select(&backend, configured)?;
+        }
     }
     let mut direct = None;
-    if let (Some(s3), true) = (s3, families.kma_source()) {
+    let mut warning_acquire = None;
+    if let (Some(s3), true) = (s3, families.kma_source() || families.push) {
         // S15b: the S3 input source over the shared admission, one for every listed address
         // version (S17a) and the direct routes (S17b). S15b-4 acquires missing forecast inputs at
         // request time, so no input forwards. S15b-2 request-time acquisitions use
@@ -357,7 +446,15 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         let daily_forecast = daily.clone();
         let air: Option<Arc<dyn crate::world::AirSource>> =
             air.map(|a| a as Arc<dyn crate::world::AirSource>);
-        let source = crate::domestic::kma::source::S3Source::new(
+        let forecast = kma_forecast(
+            &s3,
+            daily_forecast,
+            builtins,
+            warnings.clone().ok_or(GatewayError::InvalidConfiguration)?,
+            feed,
+        )?;
+        warning_acquire = Some(forecast.clone());
+        let source = crate::domestic::kma::source::S3Source::new_with_warning_store(
             s3.clone(),
             crate::domestic::kma::backend::system_clock(),
             daily,
@@ -367,6 +464,7 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
                     .expect("KMA internal geocoder constructed")
                     .clone(),
             )),
+            warnings.clone().ok_or(GatewayError::InvalidConfiguration)?,
         )
         .map_err(|_| GatewayError::InvalidConfiguration)?
         .with_town_geocoder(town_geocoder(var, s3.clone(), builtins)?)
@@ -375,7 +473,7 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
             crate::domestic::kma::source::air_forecast::Calibration::from_vars(var),
         )
         .with_life(Some(life))
-        .with_forecast(Some(kma_forecast(&s3, daily_forecast, builtins)?));
+        .with_forecast(Some(forecast));
         let source = Arc::new(source);
         // S16: daily summaries of natively served towns, written after the response through
         // the same S3 admission. Nation shares this backend and its summary recorder.
@@ -387,6 +485,7 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
             &families.kma_versions(),
             Some(summaries),
         )?;
+        native.kma = Some(kma.clone());
         if families.direct().any() {
             direct = Some(Arc::new(
                 crate::api::DirectRoutes::new(kma.clone(), families.direct(), backend.clone())
@@ -405,10 +504,14 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         Some(geocoder) => gateway.with_weather_geocoder(geocoder, versions),
         None => gateway,
     };
-    Ok(Some(Arc::new(match direct {
-        Some(direct) => gateway.with_direct(direct),
-        None => gateway,
-    })))
+    Ok(BuiltGateway {
+        gateway: Some(Arc::new(match direct {
+            Some(direct) => gateway.with_direct(direct),
+            None => gateway,
+        })),
+        native,
+        warning_acquire,
+    })
 }
 /// S15b-4: the request-time grid, RSS, mid, forecast-zone and warning acquirer of the KMA source
 /// on the process data.go.kr acquirer (legacy `DONGNAE_SECRET_KEYS`, S08 per key and KST day).
@@ -416,22 +519,19 @@ fn kma_forecast(
     s3: &BoundedS3<HttpS3Transport>,
     daily: Arc<DailyKma>,
     builtins: &Builtins,
+    warnings: Arc<crate::warnings::store::WarningStore<BoundedS3<HttpS3Transport>>>,
+    feed: Option<Arc<dyn crate::warnings::collector::PersistedWarningFeed>>,
 ) -> Result<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>, GatewayError> {
     let invalid = |_| GatewayError::InvalidConfiguration;
     let limits = crate::storage::CatalogLimits::default();
     let store = crate::storage::CatalogStore::new(s3.clone(), limits.clone()).map_err(invalid)?;
-    let warnings = crate::warnings::store::WarningStore::new(
-        s3.clone(),
-        limits,
-        crate::warnings::store::StoreConfig::default(),
-    )
-    .map_err(invalid)?;
     Ok(Arc::new(
-        crate::domestic::kma::source::fetch::LiveForecast::new(
+        crate::domestic::kma::source::fetch::LiveForecast::new_with_feed(
             daily,
             Arc::new(store),
-            Arc::new(warnings),
+            warnings,
             &builtins.data_go_kr,
+            feed,
         ),
     ))
 }
