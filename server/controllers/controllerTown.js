@@ -4201,6 +4201,10 @@ ControllerTown.prototype._findTown = function(list, region, city, town, cb) {
                     return callback('goto exit', newTown);
                 }
 
+                // Mongoose casts the saved document, not this returned/cached object.
+                newTown.gCoord.lat = Number(newTown.gCoord.lat);
+                newTown.gCoord.lon = Number(newTown.gCoord.lon);
+
                 var i;
                 var townObj;
                 for(i=0; i<list.length; i++) {
