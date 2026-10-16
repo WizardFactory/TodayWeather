@@ -143,7 +143,7 @@ fn an_exception_in_a_store_callback_is_not_caught_by_an_earlier_try() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn recorded_source_serves_recorded_bytes_and_forwards_unrecorded_requests() {
+async fn recorded_source_serves_recorded_bytes_and_rejects_unrecorded_native_requests() {
     warm();
     let source = RecordedSource::parse(&std::fs::read(FIXTURE).unwrap()).unwrap();
     assert_eq!(source.len(), scenarios().len());
@@ -180,9 +180,8 @@ async fn recorded_source_serves_recorded_bytes_and_forwards_unrecorded_requests(
             "en".into(),
             deadline,
         )
-        .await
-        .unwrap();
-    assert!(matches!(unrecorded, Native::Forward));
+        .await;
+    assert_eq!(unrecorded.err(), Some(GatewayError::Provider));
     // The legacy region guard is a non-200 reply: a dependency error at the gateway.
     let guard = backend
         .fetch_or_forward(

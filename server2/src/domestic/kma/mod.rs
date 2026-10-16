@@ -211,8 +211,9 @@ pub enum Outcome {
     Undefined,
     /// A legacy non-JSON reply (`res.status(code).send(text)`).
     Status(u16, String),
-    /// Legacy would leave the assembly path to geocode a new town or remap a region through a
-    /// remote geocoder (S15b-4b-2 reproduces both). Forward the request to legacy.
+    /// A standalone assembly still needs asynchronous parameter preparation. Runtime S3 sources
+    /// prepare it before assembly; native handlers reject this compatibility marker and never
+    /// forward it to legacy.
     Legacy(String),
     /// A port invariant broke (a store answer the snapshot cannot give). Not legacy behavior:
     /// the backend answers a dependency failure and never forwards.

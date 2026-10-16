@@ -8,7 +8,8 @@
 //! from the list and restarting is the rollback. These two and `SERVER2_WORLD_VERSIONS` are
 //! coexistence routing, removed with legacy retirement; with `SERVER2_S3_BUCKET` and
 //! `SERVER2_S3_REGION` (the server2 raw-record bucket and its region) they are the only
-//! `SERVER2_*` settings.
+//! runtime routing/storage settings. S15b-4c additionally owns optional bounded local raw-cache
+//! settings; that cache is disposable and S3 remains authoritative.
 //!
 //! S10e (AK, 2026-10-15): every provider and storage setting is the legacy `server/.env` name
 //! with its legacy value (`server/config/config.js`). Quotas without a legacy setting and every
@@ -204,6 +205,66 @@ pub fn native_geocoder(
         .map_err(|_| GatewayError::InvalidConfiguration)?
         .with_quota(Arc::new(quota)))
 }
+/// Internal weather geocoding does not depend on public geocode routing. Missing optional
+/// geocoder keys preserve KMA startup's existing mandatory-key scope: acquisition then fails
+/// natively instead of making a legacy hop.
+fn native_weather_geocoder(
+    var: Var,
+    s3: BoundedS3<HttpS3Transport>,
+    builtins: &Builtins,
+) -> Result<Arc<dyn super::Geocoder>, GatewayError> {
+    let config = GeocoderConfig::from_vars_at(var, &builtins.kakao, &builtins.google)
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
+    if config.kakao_keys.is_empty() && config.google_key.is_none() {
+        return Ok(Arc::new(
+            Geocoder::new(config).map_err(|_| GatewayError::InvalidConfiguration)?,
+        ));
+    }
+    Ok(Arc::new(native_geocoder(var, s3, builtins)?))
+}
+/// convertGeocode/name2address use the original legacy town keys, distinct from public
+/// GeoController product keys. No new environment variables or endpoint switches are read.
+fn town_geocoder(
+    var: Var,
+    s3: BoundedS3<HttpS3Transport>,
+    builtins: &Builtins,
+) -> Result<Option<Arc<dyn crate::geocode::town::Acquire>>, GatewayError> {
+    let kakao_keys = var("KAKAO_SECRET_KEYS")
+        .and_then(|v| serde_json::from_str::<serde_json::Value>(&v).ok())
+        .and_then(|v| v.as_array().cloned())
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|v| {
+            v.as_str()
+                .filter(|s| !s.trim().is_empty())
+                .map(str::to_owned)
+        })
+        .collect::<Vec<_>>();
+    let google_key = var("GOOGLE_SECRET_KEY").filter(|v| !v.is_empty());
+    if kakao_keys.is_empty() && google_key.is_none() {
+        return Ok(None);
+    }
+    let config = GeocoderConfig {
+        kakao_keys,
+        google_key,
+        kakao_base_url: builtins.kakao.clone(),
+        google_base_url: builtins.google.clone(),
+        ..GeocoderConfig::default()
+    };
+    let [kakao, google] = builtins.geocoder_daily_units;
+    let quota = FundedQuota::for_keys(
+        Arc::new(s3),
+        Arc::new(SystemClock),
+        &config,
+        Some(kakao),
+        Some(google),
+    )
+    .map_err(|_| GatewayError::InvalidConfiguration)?;
+    Ok(Some(Arc::new(
+        crate::geocode::town::Client::new(config, Arc::new(quota))
+            .map_err(|_| GatewayError::InvalidConfiguration)?,
+    )))
+}
 /// The KMA request-time acquirer: the legacy data.go.kr key list `DONGNAE_SECRET_KEYS` (a JSON
 /// array, required with `kma`), funded in S3 (S08) per key, data.go.kr API and KST day with the
 /// built-in [`crate::domestic::quota::DataGoKrApi::daily_units`] (AK decision 5), at the given
@@ -259,6 +320,14 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         (Some(s3), true) => Arc::new(native_geocoder(var, s3.clone(), builtins)?),
         _ => Arc::new(LegacyGeocoder::new(&base)?),
     };
+    let weather_geocoder = match &s3 {
+        Some(s3) if families.dsf || families.kma_source() => Some(if families.geocode {
+            geocoder.clone()
+        } else {
+            native_weather_geocoder(var, s3.clone(), builtins)?
+        }),
+        _ => None,
+    };
     // One process air chain for the world family and the KMA air fallback (S15b-3).
     let air = match &s3 {
         Some(s3) if families.dsf || families.kma_source() => {
@@ -266,11 +335,11 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         }
         _ => None,
     };
+    let mut versions = families.kma_versions();
     if let (Some(s3), true, Some(air)) = (s3.clone(), families.dsf, air.clone()) {
-        crate::world::runtime::select(
-            &backend,
-            crate::world::runtime::build_with_air(var, s3, air, builtins)?,
-        )?;
+        let configured = crate::world::runtime::build_with_air(var, s3, air, builtins)?;
+        versions.extend(configured.1.iter().copied());
+        crate::world::runtime::select(&backend, configured)?;
     }
     let mut direct = None;
     if let (Some(s3), true) = (s3, families.kma_source()) {
@@ -293,10 +362,14 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
             crate::domestic::kma::backend::system_clock(),
             daily,
             Arc::new(crate::domestic::kma::source::observe::ProductGeocoder(
-                geocoder.clone(),
+                weather_geocoder
+                    .as_ref()
+                    .expect("KMA internal geocoder constructed")
+                    .clone(),
             )),
         )
         .map_err(|_| GatewayError::InvalidConfiguration)?
+        .with_town_geocoder(town_geocoder(var, s3.clone(), builtins)?)
         .with_air(airkorea, air)
         .with_image_calibration(
             crate::domestic::kma::source::air_forecast::Calibration::from_vars(var),
@@ -315,11 +388,6 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
             Some(summaries),
         )?;
         if families.direct().any() {
-            // S17b: the direct routes forward to the loopback legacy origin with the request
-            // target verbatim, which only the plain-HTTP loopback hop provides.
-            if !backend.legacy_is_plain_http() {
-                return Err(GatewayError::InvalidConfiguration);
-            }
             direct = Some(Arc::new(
                 crate::api::DirectRoutes::new(kma.clone(), families.direct(), backend.clone())
                     .with_nation(Arc::new(crate::nation::NationBackend::new(
@@ -330,7 +398,13 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
             ));
         }
     }
+    versions.sort_by_key(|v| v.as_str());
+    versions.dedup();
     let gateway = Gateway::new(geocoder, backend);
+    let gateway = match weather_geocoder {
+        Some(geocoder) => gateway.with_weather_geocoder(geocoder, versions),
+        None => gateway,
+    };
     Ok(Some(Arc::new(match direct {
         Some(direct) => gateway.with_direct(direct),
         None => gateway,

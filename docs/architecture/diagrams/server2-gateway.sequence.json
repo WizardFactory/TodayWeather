@@ -12,7 +12,7 @@
     ],
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "f5184d5a08f87955f3fa1b3ab8367c8504e7cb40",
+      "revision": "732766a8cbfc9e70f3afacaacb61010a881f0cf1",
       "provider": "github",
       "link_mode": "web"
     },
@@ -56,14 +56,20 @@
         {
           "path": "server2/src/gateway/mod.rs",
           "line": 175,
-          "end_line": 214,
-          "label": "Admission and owned deadline"
+          "end_line": 232,
+          "label": "Admission and public deadline"
         },
         {
           "path": "server2/src/api/mod.rs",
-          "line": 107,
-          "end_line": 125,
-          "label": "Direct native route errors"
+          "line": 68,
+          "end_line": 128,
+          "label": "Direct native route terminal replies"
+        },
+        {
+          "path": "server2/src/gateway/mod.rs",
+          "line": 262,
+          "end_line": 291,
+          "label": "Selected weather internal native geocoder"
         }
       ]
     },
@@ -319,7 +325,7 @@
       "title": "Privacy and ownership",
       "items": [
         "Precise reverse-geocode results and lookup history stay in bounded volatile RAM.",
-        "S3 address caching is optional; coarse reverse labels require separate exact-parity proof.",
+        "Address-derived town metadata is durable after conditional S3 write/readback; exact reverse-coordinate identity stays volatile.",
         "A waiter owns its response deadline, while a shared job owns its bounded acquisition and reservation."
       ]
     },
@@ -328,8 +334,17 @@
       "title": "Coexistence is temporary",
       "items": [
         "Unselected families use legacy only during development and coexistence; no legacy dependency at go-live.",
-        "Explicit unknown-town and KR-remap forwards still require removal in the next S15b-4b increment.",
+        "Unknown towns and KR remaps use native owned lookup, validated S3 address metadata and one shared <=3s request wait.",
         "Provider quotas, paired shadow, measured latency and AK cutover approval remain activation gates."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Native address admission",
+      "items": [
+        "Internal KMA town lookup: Kakao address search, then Google XML; KR name remap uses Google JSON.",
+        "Canonical numeric coordinates from first request: approved correction of legacy hot500 / cold200 (#2782).",
+        "Missing or late town-dependent data is omitted while independent regional inputs remain available."
       ]
     }
   ]
