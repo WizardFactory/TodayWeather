@@ -13,7 +13,7 @@
     ],
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "71be606e2700a0b37baf2089e5b59c7d451be6da",
+      "revision": "aa1fce07a9bf11f6ef4fed9c0dc9f99d619c72ff",
       "provider": "github",
       "link_mode": "local-only"
     }
@@ -27,8 +27,8 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/alerts.rs",
-          "line": 659,
-          "end_line": 807
+          "line": 669,
+          "end_line": 817
         }
       ]
     },
@@ -89,8 +89,8 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/alerts.rs",
-          "line": 606,
-          "end_line": 657
+          "line": 621,
+          "end_line": 668
         }
       ]
     }
