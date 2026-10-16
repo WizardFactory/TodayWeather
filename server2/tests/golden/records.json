@@ -129,7 +129,7 @@
       "server/controllers/controllerManager.js": "b64cdffdb4bd8936d3bd1164000fad8a600e554a1c6ca5faf418d27a4f52d442",
       "server/controllers/controllerPush.js": "0ea6353917b6182bcede0307d712568a479d70bb086c098cd2dfd9f24865ac7e",
       "server/controllers/controllerTown.js": "bfe2d5eb7e405de5c9cc6a971a8dee3299f9c01d086661d4ed114688bb879396",
-      "server/controllers/controllerTown24h.js": "26981e87dbff5009c7110a4e663a67af42021749e7053a3572e68f020a59137a",
+      "server/controllers/controllerTown24h.js": "7e551bb88dca224f25877c1d2bf1ab43046238e37bb4c76c78c44ab2dcfd7234",
       "server/controllers/kecoController.js": "2041f9f23a1487008461ff780f9618b5dcc19f67e977a6c1a1cbc056013f904d",
       "server/controllers/kma.specialweather.controller.js": "a8886d197aa306d38388085ed63491871d2802e80eaa55778c589f6e769f1917",
       "server/controllers/kma/kma.town.current.controller.js": "2887d7f30909a12d434186ee1c1d26aebeb1f1e290ad48ff93c3dde738e3c94e",
@@ -206,7 +206,7 @@
       "server/test/offline/fixtures/kma-warning/wthr-pwn.json": "d3d5d90e1578e1669d107f39b912ab345ca31d85782da68f531dd0f7dfdb1b72",
       "server/test/offline/fixtures/vc-london-combined.json": "d52ec07c22a43b528f451efc2227b464d06b9a490b44082931c73aac25f37136",
       "server/test/offline/fixtures/vc-tokyo-combined.json": "35c1341b709b994ca2c7d16a930eced6017baa8c8702114aed3c6ef173cb1bb4",
-      "server/test/offline/rss-response-smoke.js": "7c9a5e27a66a48d096e97b0f9890d12e5accca31aaa511d1a69536a52631e362",
+      "server/test/offline/rss-response-smoke.js": "915ab74cef38a7ebc7ce2a67a95fc0bd9ed68d2bc72a8933e3322f2909e51d78",
       "server/test/offline/vc-synthetic.js": "8e61887db826270325fa5db1cd592329874316107f26a6a302cf3767a7784cf4",
       "server/test/offline/vc-weather-smoke.js": "4eec79811611d390c46d5b78d27d9d0c407712ec4d8cbcd70cc3dbcb3dcc3810",
       "server/utils/data/kma_warning_zones.csv": "c796c7d22d3c336b8d21172998b54788c6cf46c0c1df34ec6a66810421074ed2"
