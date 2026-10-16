@@ -11,3 +11,7 @@ mod state_common;
 
 #[path = "delivery/alerts.rs"]
 mod alerts;
+#[path = "warnings/common.rs"]
+mod warning_common;
+#[path = "delivery/warnings.rs"]
+mod warnings;

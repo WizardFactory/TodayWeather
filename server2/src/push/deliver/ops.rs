@@ -13,6 +13,9 @@ use std::collections::BTreeMap;
 /// Plan one operation; `false` is a store error (legacy logs it and continues).
 pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
     match op {
+        InternalOp::CheckAlertSelection { n, oid, selected } => txn
+            .get(Coll::Alert, *n)
+            .is_some_and(|r| r.oid == *oid && &r.doc == selected),
         InternalOp::UpdateAlertState {
             n,
             oid,
