@@ -1,0 +1,83 @@
+{
+  "task": "S18b-3",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2703",
+  "server2_paths": [
+    "server2/config/tasks/S18b-3.json",
+    "server2/src/push/deliver/warning_feed.rs",
+    "server2/src/push/deliver/warnings.rs",
+    "server2/src/push/deliver/mod.rs",
+    "server2/src/warnings/collector.rs",
+    "server2/src/warnings/mod.rs",
+    "server2/tests/delivery.rs",
+    "server2/tests/delivery/warnings.rs",
+    "server2/tests/delivery/fixtures/warnings-oracle.json.gz",
+    "server2/tests/delivery/fixtures/warnings-PROVENANCE.md",
+    "server2/tests/warnings/collector.rs",
+    "server2/tools/push/record_warnings.js",
+    "server2/examples/warning_push_smoke.rs",
+    "server2/src/push/deliver/fcm.rs",
+    "server2/src/push/service.rs",
+    "server2/src/push/deliver/ops.rs",
+    "server2/tests/delivery/common.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2703.md",
+      "category": "documentation",
+      "reason": "Add S18b-3 authority and outcome criteria"
+    },
+    {
+      "path": "specs/issue-2703.md",
+      "category": "documentation",
+      "reason": "Define warning feed, one-shot delivery and restart boundary"
+    },
+    {
+      "path": "plans/issue-2703.md",
+      "category": "documentation",
+      "reason": "Record warning scenarios and gates"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Describe persisted S12 feed and warning worker library"
+    },
+    {
+      "path": "docs/operations/server2-push-delivery.md",
+      "category": "documentation",
+      "reason": "Extend operator manual with synthetic warning scenario"
+    },
+    {
+      "path": "docs/operations/server2-push-delivery.pdf",
+      "category": "documentation",
+      "reason": "Render and visually verify updated manual"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2703-s18b3/verification.md",
+      "category": "documentation",
+      "reason": "Selected sanitized verification evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2703-s18b3/warning-smoke.png",
+      "category": "documentation",
+      "reason": "Actual synthetic warning functional smoke capture"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-warning-push.json",
+      "category": "documentation",
+      "reason": "New editable warning flow, preserve existing conditional diagram"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-warning-push.html",
+      "category": "documentation",
+      "reason": "Generated warning flow distinct from existing alarm/conditional artifacts"
+    }
+  ],
+  "declaration_record": "AK authorized S18 completion; root approved S18b-3 source plan on2026-10-16; no live sends/deploy/DBwrites; this separate task owns its SDLC state; root owns merge",
+  "path_notes": {
+    "server2/tools/push/record_warnings.js": "Named offline legacy recorder executes committed warningFeed/runtime selection with synthetic state. No new source inserver; not used at runtime.",
+    "server2/src/push/deliver/fcm.rs": "Additive warning-only post-OAuth guard; preserve existing send callers. Root approval 2026-10-16.",
+    "server2/src/push/service.rs": "Read-only CheckAlertSelection runs through writer catch-up to cover other-process durable updates.",
+    "server2/src/push/deliver/ops.rs": "Evaluate read-only selected registration after writer durable catch-up.",
+    "server2/tests/delivery/common.rs": "Synthetic OAuth response barrier tests changes while authentication is pending."
+  }
+}

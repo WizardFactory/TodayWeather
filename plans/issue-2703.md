@@ -120,3 +120,33 @@ visual review, independent PR review, CI. Keep required logs under ignored `repo
 selected facts are in [verification](../docs/evidence/tasks/issue-2703-s18b2/verification.md).
 No live push or new weather provider call: the weather API validity checks from the earlier
 S13/S15b source work are reused. FCM HTTP-v1 documentation was checked read-only on 2026-10-16.
+
+## S18b-3 execution plan (2026-10-16)
+
+Separate task `issue-2703-s18b3`; branch `feat/2703-s18b3-warning-feed`, base
+`82356a95`. Its owner is the delegated S18 agent; root owns integration. The
+execution notebook is `.planning/2026-10-16-s18b-3-warning-push-feed/` locally;
+tracked paths are declared in `server2/config/tasks/S18b-3.json`.
+
+1. Record actual Node16 legacy feed/selection/message/date identities twice and
+   preserve source hashes. Add failing behavior tests for silent baseline/new feed,
+   time/zone selection and durable no-resend before implementing the source port.
+2. Add conditional S3 feed publication and the S12 post-persistence sink. Preserve
+   acknowledged state on errors and verify interrupted event/head writes separately.
+3. Add the warning worker library: restore current S12 zones, baseline old feed,
+   group new events, resolve configured native geocode, select enabled alert windows,
+   deduplicate endpoints and claim before one FCM attempt. Keep open fresh campaigns
+   for newly eligible registrations; never retry claimed attempts or resume startup.
+4. Run focused delivery and warning tests only after coordinating a build slot.
+   Cover releases/expiry, S3 failure/unknown writes, two workers, cancellation,
+   registration changes, rejected/unknown send and restart; assert actual synthetic
+   submission counts. Run a separate actual loopback HTTP functional smoke.
+5. Update architecture, operator manual and visually checked PDF, plus a separate
+   warning diagram (preserve the existing conditional diagram). Validate declared
+   paths, dependency boundaries, staged and every outgoing artifact snapshot.
+6. Independent required review/corrections, optional reviewer attempts, fresh CI,
+   then a pre-merge receipt with `merge_authorized: false`. No actual push, production
+   data writes or deployment. S20 alone owns startup/native-route/worker activation.
+
+S18c follows as its own backend/API, publishing CLI and S3 state PR under #2623;
+client/web popup implementation and SQLite migration are excluded from this sequence.

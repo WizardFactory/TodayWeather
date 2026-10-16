@@ -41,7 +41,7 @@
       "id": "backend",
       "type": "backend",
       "label": "Service EC2",
-      "sublabel": "nginx / PM2 \u00d7 10"
+      "sublabel": "nginx / PM2 × 10"
     }
   ],
   "messages": [
@@ -123,7 +123,7 @@
       "dot": "amber",
       "title": "Repository gateway: temporary outage (#2635)",
       "items": [
-        "tw-svc replaces Lambda: typed provider-down / budget errors return 503 + Retry-After (1\u20133600 s), CORS and no-store.",
+        "tw-svc replaces Lambda: typed provider-down / budget errors return 503 + Retry-After (1–3600 s), CORS and no-store.",
         "Stored weather still succeeds; other failures remain 501. Known outages skip gateway retries."
       ]
     },
@@ -134,6 +134,14 @@
         "VC current/daily max UV: uvIndex and mobile ultrv / ultrvGrade / ultrvStr via converter, DSF/cache. Zero kept, missing omitted; rollout separate.",
         "KMA daily/current pollen: max pollenGrade, localized pollenStr, species grades. Absent areaNo checks up to three nearest candidates; DB errors stop reads; missing types omitted.",
         "Pollen popup: available species grades, seasonal context and precautions. Zero Low; no concentrations. V3 oak/pine/weeds; weather-core keeps UV/species grades."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "New domestic towns (#2782)",
+      "items": [
+        "After the Korea-area guard, _findTown normalizes new lat/lon before cache, async save and callback. Mongoose casting of a separate document does not update the cache.",
+        "First use, hot reuse and lean reload share numeric coordinates; makeResult retains v000901+ three-decimal location rounding. Invalid/out-of-area paths remain uncached and unsaved."
       ]
     }
   ]
