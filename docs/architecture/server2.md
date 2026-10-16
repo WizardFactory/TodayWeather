@@ -1701,8 +1701,14 @@ v000903 KMA handler; removing it and restarting is the rollback. S15 adds no oth
 Since S15b-1 ([below](#s15b-1-kma-s3-input-source-2026-10-14)) a listed `kma` builds the S3
 input source from the shared S3 settings (S10e names), which are then required; inputs owned by
 later S15b slices still forward. `tools/kma_smoke.py` checks legacy -> `kma` -> legacy on the release
-binary (identical bytes, the legacy KMA hop in every phase, the native phase reading the S3 test
-peer, unknown or repeated entries and `kma` without S3 settings refused before binding).
+binary, covering:
+
+- identical bytes in the legacy phases;
+- the native phase reading the S3 test peer;
+- unknown or repeated entries, and `kma` without S3 settings, refused before binding.
+
+Since S15b-4a the `kma` phase answers natively, with no legacy KMA hop. It acquires the missing
+forecast inputs from the loopback provider roots.
 
 O-2 checkpoint (Rust adoption is settled; this records correctness and cost). `kma_checkpoint`
 assembles every recorded request from memory, and `tools/kma_checkpoint.py` reads process rusage.
@@ -1887,6 +1893,7 @@ cutover; it does not claim to reproduce legacy collection timing.
 **Temporary forwards.** Until S15b-4, the snapshot forwards with a named reason in these cases:
 
 - A latest publication is not in S3: current, ultra-short, short, RSS, mid, or the zone list.
+  Since S15b-4a this is acquired at request time and no longer forwards.
 - The town is unknown.
 - A method owned by S15b-2 or S15b-3 is called.
 
@@ -2363,6 +2370,82 @@ same 384 rows (from 2026-10-15 00:00 KST) and 432 rows (from 2026-10-15 18:00 KS
 smoke reference points (Seoul, Daejeon, Busan, Jeju). On the loaded test machine a 6 MB write
 to the Python peer outlasted the 3-second S3 operation bound (an ambiguous write); the check used
 the 9-second maximum for the peer.
+
+### S15b-4a request-time forecast acquisition (2026-10-15)
+
+S15b-4a ([plan](../../plans/issue-2742.md#s15b-4a-request-time-forecast-acquisition)) acquires at
+request time the forecast inputs that S15b-1 still forwarded. A missing input is no longer a
+forward reason. The snapshot answers what is stored, the same way legacy answers from a collection
+that lacks the data.
+
+**Acquisitions** (`domestic/kma/source/fetch.rs`). Each runs on S13d `OwnedFlights`, keyed by
+dataset and publication, and publishes its raw records through S06 before any request uses them.
+The provider calls, publications and warning cycles run in their own tasks, with the legacy
+provider timeouts. An owned bound (at most 600 s) stops tracking them but never cancels them.
+
+The retry bound is claimed by whoever creates the flight, under the flight map's lock, so a
+concurrent request joins the real acquisition. Failures count against the same bounds. A grid publication counts as stored only when legacy
+collection would keep it. The collector must save its rows (an `invalidForecast` stays pending), and
+a current observation must carry no recovery sentinel (`t1h` -50 or `reh` -1 is collected again,
+`PastConditionGather._isInvalid`). Any other stored record stays eligible for the bounded retries.
+
+| Input | When the request acquires it | Retry bound |
+| --- | --- | --- |
+| Latest grid publication (`getUltraSrtNcst`, `getUltraSrtFcst` at HH30, `getVilageFcst`) | Not in S3 for the cell | 5 minutes |
+| Grid backfill (earlier publications: 23 current, 23 ultra-short, 7 short; S14 `schedule`) | Missing publications, in one owned pass per cell, family and latest publication (3 acquisitions in flight, 8 passes in their own pool); the request does not wait | Each pass at most hourly. Each publication shares the latest acquisition's flight and 5-minute retry bound. |
+| Latest short RSS (`wid/queryDFS.jsp`) | Not in S3 for the cell | 5 minutes |
+| Latest mid publications (`getMidFcst`, `getMidLandFcst`, `getMidTa` at the 06/18 `tmFc`) | A region legacy collects lacks the latest publication | 5 minutes |
+| Forecast-zone list (`getFcstZoneCd`) | Once per process, like legacy's `getFromKma()` at start; a published list replaces the memory | per process |
+| Warning cycle (`WarningCollector.gather`, S12) | Once per 3 minutes, legacy's cadence; never two at once | 3 minutes |
+
+Retry keys are bounded at 65,536. Expired keys are pruned when the map doubles. Beyond the bound,
+new acquisitions are skipped and S3 answers as stored.
+
+**Request wait.** A request waits once for every late input: these acquisitions, the S15b-2
+station observations and the S15b-3 AirKorea and life acquisitions. The shared bound is
+`REQUEST_WAIT` (3 s), and it ends 500 ms before the request deadline. The warning-state read and
+the air and life reads stop 300 ms before the deadline. The gateway's native attempt
+ends at most 3 s after the request starts (`gateway::backend`), so the reads that remain and the
+assembly still fit. The mid regions start as soon as the zone list is read. The grids, RSS, warning
+cycle, air and life inputs run concurrently.
+
+An acquisition that finishes after the bound serves the next request. If no zone list is stored
+yet, `forecast_zone` answers `[]`. If the warning state cannot be read, `special_zones` returns the
+legacy store error, and `getSpecialInfo` skips the section.
+
+**Keys and quota.** The acquisitions use the process data.go.kr acquirer of S15b-2: legacy
+`DONGNAE_SECRET_KEYS`, one S08 quota owner per key and KST day, with built-in 10,000 units. Its key
+rings now include `VilageFcstInfoService_2.0`, `MidFcstInfoService` and `FcstZoneInfoService`.
+
+The warning requests follow legacy `kmaWarningRequester.get`. They start at the key that last
+answered and move once around the list on an auth or quota error, or when that key's S08 budget
+refuses. Each attempt is funded by its own key.
+
+The data.go.kr root is built in (`gateway::runtime::Builtins`). There is no new setting.
+
+**Load baseline** (successful single-page answers): 56 units per active cell and KST day (24
+current, 24 ultra-short, 8 short) and 8 keyless RSS acquisitions, one per RSS publication
+(legacy polls hourly). A cold cell adds up to 53 backfill units
+once. Mid regions, warning cycles, the zone list, other S15b consumers, retries and extra pages
+spend the same budgets. The open quota decision is in the
+[plan](../../plans/issue-2742.md#open-decisions-and-limitations-s15b-4a).
+
+**Verification** (local test peers and doubles only):
+
+| Check | Result |
+| --- | --- |
+| Every input missing | One request is served without a forward and uses the current publication acquired for it |
+| Next request | Repeats no acquisition; the backfill asks for 23 earlier hours once |
+| Six concurrent first requests | Share one acquisition |
+| Every forecast acquisition takes 6 s | The request returns within the shared 3 s bound (before: 15.2 s) |
+| Forecast, life and AirKorea acquisitions take 6 s under a 3 s gateway attempt | Answered natively before the attempt ends, also through `KmaBackend` under the gateway's timeout (before: forwarded on a mid read timeout) |
+| Two unregistered keys | The warning requests reach the third key and keep it (before: the first two keys repeated) |
+| New hour while the previous latest publication is still being acquired or just failed | The backfill pass joins or skips it; one acquisition (before: two) |
+| Stored current hours with `t1h` -50 and an incomplete short publication | Acquired again; valid hours are not (before: none were) |
+
+The release `kma_smoke.py` answers natively in its `kma` phase. The provider calls were confirmed
+live on 2026-10-15; see the plan for the list. The remaining forward reasons (unknown towns, a grid
+outside KMA, the S15 declared forwards) belong to S15b-4b. Cold-cell latency belongs to S15b-4c.
 
 ### S10e legacy settings and server2/.env (2026-10-15)
 

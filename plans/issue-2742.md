@@ -274,3 +274,108 @@ documents named (54 frames), and the server2 decoder and the legacy master contr
 same 384 and 432 rows for the four smoke reference points. Some provider calls
 were slow or timed out (raw station-list pages took over 30 s for two keys, then 0.2-0.4 s); the
 downloaded images were deleted after the check.
+
+## S15b-4 native KMA without legacy forwards (2026-10-15)
+
+Base: master `c48b29aa`. S15b-4 is split into three PRs
+([#2742 comment](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6194920828)):
+
+| PR | Content |
+| --- | --- |
+| S15b-4a | Request-time acquisition of the missing forecast inputs: latest grid publications, the grid backfill, RSS, mid forecasts, the forecast-zone list and the warning cycle |
+| S15b-4b | Unknown-town geocoding and storage, the two S15 declared forwards, removal of every remaining forward reason, the S3-only parity harness with matched/forwarded/total counts, the KMA shadow family module and the release/S19 smokes |
+| S15b-4c | Cold-cell latency (warm per-cell memory, exact-raw packs, the bounded local disk cache) and the measured EC2 disk sizing |
+
+### S15b-4a request-time forecast acquisition
+
+Declaration: [S15b-4a.json](../server2/config/tasks/S15b-4a.json).
+
+**Sources and which was followed.**
+
+| Input | Provider documentation | Legacy collection | Legacy answer when absent |
+| --- | --- | --- | --- |
+| Current, ultra-short and short grids | [VilageFcstInfoService_2.0](https://www.data.go.kr/data/15084084/openapi.do) (`getUltraSrtNcst`, `getUltraSrtFcst`, `getVilageFcst`; development account 10,000 per day) | `controllerManager.js:2433` (current at minutes 2, 12, …), `:2444` (ultra-short at 47, 54, 4, 14), `:2423` (short at 12); backfill `PastConditionGather.js:22` ("kma 1.2부터는 23시간 전까지만 제공함"), `:2353-2356` | `controllerTown.js:4407-4421` (`find` empty: "there is no data"; S15 assembly reproduces it from an empty collection) |
+| Short RSS | `www.kma.go.kr/wid/queryDFS.jsp?gridx&gridy` (keyless; no published specification) | `controllerManager.js:2382-2385` (hourly, in the minute-2 block from `:2338`) | `controllerTown.js:494` over an empty collection |
+| Mid forecasts | [MidFcstInfoService](https://www.data.go.kr/data/15059468/openapi.do) (`getMidFcst`, `getMidLandFcst`, `getMidTa`; issued at 06:00 and 18:00) | `controllerManager.js:2365-2376` (minute-2 block) | `controllerTown.js:4535` (`_getMidDataFromDB`) |
+| Forecast-zone list | [FcstZoneInfoService](https://www.data.go.kr/data/15057111/openapi.do) (`getFcstZoneCd`) | `controllerManager.js:2530-2534`: `getFromKma()` once at process start | `controllerTown.js:4505-4514`: an empty `find` is the "error to get forecast zone" error |
+| Warnings | [WthrWrnInfoService](https://www.data.go.kr/data/15000415/openapi.do) | `controllerManager.js:2668` (`time % 3 == 0`); `kmaWarningRequester.js:17-20` (same `DONGNAE_SECRET_KEYS`, 30 s timeout) | `controllerTown24h.js:1924-1934`: a store error skips `specialInfo` |
+
+Followed: legacy cadence and absent-data answers. Where server2 cannot run legacy's schedule for every
+cell, it acquires the same publication on demand, as S15b-2 and S15b-3 do (O-9: published through S06
+before use).
+
+**Live confirmation** (2026-10-15 23:35 KST; keys loaded in-process from `server2/.env`, never
+printed; 9 calls; nothing stored):
+
+| Call | Result |
+| --- | --- |
+| `getUltraSrtNcst` 60,127 `base_time` 2200 | `00`, 8 items |
+| `getUltraSrtFcst` 2230 | `00`, 66 items |
+| `getVilageFcst` 2300 | `00`, 980 items (one 999-row page) |
+| `getMidFcst` `stnId` 109 `tmFc` 202610151800 | `00`, 1 item |
+| `getMidLandFcst` 11B00000 | `00`, 1 item |
+| `getMidTa` 11B10101 | `00`, 1 item |
+| `getFcstZoneCd` page 1 | `00`, 755 items (one 1,000-row page) |
+| `getWthrWrnList` `stnId` 108, today | `00`, 5 items |
+| `wid/queryDFS.jsp` 60,127 | 200 `text/xml`, `tm` 202610152300 |
+
+**Calls per path.** Each data.go.kr page attempt is one S08 unit on the key's quota owner (one per
+key and KST day, shared by every service of these keys). An acquisition retries a failed page once
+(two attempts, S08 executor), so its worst case is twice its pages.
+
+| Path | Calls when it succeeds at once | Worst case | Retry bound |
+| --- | --- | --- | --- |
+| Missing latest grid publication | 1 page per family and cell (the live `getVilageFcst` answer, 980 rows, fits one 999-row page) | 5 pages × 2 attempts | 5 minutes per publication |
+| Grid backfill | ≤23 current + 23 ultra-short + 7 short pages for a cold cell, 3 in flight per pass, 8 passes per process | the same × 2 attempts × pages | one pass per cell, family and latest publication (at most hourly). Each publication shares the latest acquisition's flight and 5-minute retry bound, so a running one is joined and a recent failure is not asked again. A publication still missing is asked by the next pass. |
+| Missing latest RSS | 1 keyless GET per cell | 2 attempts | 5 minutes |
+| Missing latest mid publication | 1 page per collected region (3 regions per town, shared by every town of the region) | × 2 attempts | 5 minutes |
+| Forecast-zone list | 1 page (755 zones live) once per process | 10 pages × 2 | once per process |
+| Warning cycle | Unchanged cycle: 4 calls (`getPwnStatus` and the three bulletin lists; `collector.rs:130-138`, `:373-386`). Shared by every request. | Plus a zone sync (`getPwnCd` per planned day, 10 days at most per sync) hourly, on a new announcement or on bootstrap; announcement documents; pagination (20 pages at most per list); each key tried once on auth or quota errors | one cycle per 3 minutes while requests arrive, never two at once |
+
+**Baseline per active cell and KST day** (successful single-page answers): 24 current + 24
+ultra-short + 8 short = 56 units, plus 8 keyless `queryDFS` acquisitions: one per RSS
+publication (`rss_latest`, every 3 hours), where legacy polls hourly. A cold cell adds up to 53 units
+once. On top of that, the same budgets fund:
+
+- shared work: mid regions (6 units a day per region), the zone list, and warning cycles. Under
+  continuous demand an unchanged cycle costs 4 units every 3 minutes (1,920 a day), plus the hourly
+  zone sync, announcement work, the bootstrap and pagination;
+- the other S15b consumers of these keys: ASOS (S15b-2), UV, pollen and KASI (S15b-3b);
+- retries and extra pages.
+
+### Scenarios (S15b-4a)
+
+| ID | User and goal | Steps | Expected / failure | AC and proof |
+| --- | --- | --- | --- | --- |
+| Q1 | First user of a cell with no stored forecast | Snapshot with every grid, RSS, mid and zone input missing | No forward; the acquired current publication is used in the same request; the others answer legacy's empty collections; `forecast_zone` answers `[]` (legacy's empty `find`, `controllerTown.js:4505-4514`) | `source_s3::missing_inputs_are_acquired_at_request_time_and_never_forwarded` |
+| Q2 | Next user of the cell | Second request | No repeated acquisition (retry bounds); one backfill pass of 23 current hours | same test |
+| Q3 | User while every forecast provider is slow | Every forecast acquisition takes 6 s; 20 s deadline | The request waits once, at most 3 s, for all of them (15.2 s before the shared bound) | `source_s3::a_request_waits_for_late_acquisitions_once_within_three_seconds` |
+| Q4 | User while every provider is slow, through the gateway | Forecast, life and AirKorea acquisitions take 6 s; the gateway's 3 s native attempt | Answered natively before the attempt ends. Waits stop 500 ms before the deadline. The warning state and the air and life reads stop 300 ms before it, which leaves the assembly its time. Before this fix the request was forwarded on a mid read timeout. | `source_s3::a_request_answers_within_the_gateway_attempt_while_every_acquisition_is_slow`, `source_s3::the_kma_backend_serves_within_the_gateway_attempt_while_every_acquisition_is_slow` (`KmaBackend` under the gateway's `timeout_at`) |
+| Q5 | Six first users of a cell at once | Concurrent snapshots | One acquisition of the latest publication, used by all six | `source_s3::concurrent_first_requests_share_one_acquisition_per_publication` |
+| Q6 | Warning cycle with rejected keys | Keys A and B not registered, C valid | A, B, then C once around the list; later requests start with C (legacy `kmaWarningRequester.get`) | `source_s3::warning_requests_rotate_through_every_key_and_keep_the_one_that_answered` (before: A, B repeated) |
+| Q7 | A collected mid region with no record and no acquirer | Snapshot | Legacy's empty answer | `source_s3_oracle` (11D10000) |
+| Q8 | Operator enables `kma` | No new setting | The `kma` phase answers natively from S3; its acquisitions reach only the loopback provider roots | `tools/kma_smoke.py` |
+| Q10 | User of a cell whose stored grid records legacy would not keep | Current 10:00 and 09:00 stored with `t1h` -50; short 08:00 stored incomplete | All three are acquired again, under the same bounded retries (`PastConditionGather.js:80-90`, `controllerManager.js:1212-1215`); valid stored hours are not (before: none were) | `source_s3::stored_acquisitions_legacy_would_not_keep_are_acquired_again` |
+| Q9 | First user of a new hour while the previous latest publication is still being acquired, or just failed | The 10:00 acquisition is slow (4 s) or fails; the clock moves to 11:50 | The new backfill pass joins the running 10:00 flight or skips the recent failure; 10:00 is asked once (before: twice) | `source_s3::a_backfill_pass_joins_a_publication_a_latest_acquisition_is_still_asking`, `source_s3::a_backfill_pass_skips_a_publication_a_latest_acquisition_just_failed` |
+
+### Open decisions and limitations (S15b-4a)
+
+- **Quota.** S08 funds every data.go.kr service of these keys from one built-in 10,000 units per
+  key and KST day (S15b-2). 10,000 is the published development-account allowance; the approved
+  production allowance of these keys is not known here.
+  - With the baseline above, one key covers at most about 170 continuously active cells, before
+    the shared and other consumers.
+  - Legacy collects every town with the same keys, so the production keys likely have
+    operating-account quotas.
+
+  Options:
+  - (a) keep 10,000;
+  - (b) set the built-in per-key units to the approved operating quotas (AK to give the values);
+  - (c) account per service, as data.go.kr does.
+- Until legacy retires, legacy and server2 spend the same keys.
+- The `queryDFS` RSS has no published specification; its shape is the S13 characterization.
+- **Owned work outlives requests.** Provider calls, publications and warning cycles run in their
+  own tasks. An owned bound (S13d, 600 s at most) never cancels them; it only stops tracking.
+  - A backfill pass whose bound ends leaves its unstarted publications to the next pass.
+  - Retry keys are bounded at 65,536 (expired keys pruned; beyond that new acquisitions are
+    skipped and S3 answers as stored).
