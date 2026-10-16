@@ -3195,6 +3195,10 @@ The `kma` and `kma-v000901` entries also claim the used direct nation routes
 fifteen native KMA assemblies using legacy version rules, concurrently with one absolute
 three-second deadline; it never calls legacy or opens a separate provider source.
 The child replies retain legacy city order after removing `airInfo`/`airInfoList`.
+Nation children share the same `KmaBackend` and S16 recorder as direct weather requests.
+When a complete snapshot produces compatible captured `getPastMid` rows, the shared backend
+records its summaries without adding fields to the nation response. Rendered nation errors
+keep the Jade `res.send` ETag/HEAD contract, distinct from native finalhandler errors.
 Mount claiming remains case-insensitive, but an uppercase `V` makes legacy query validation
 remove the version, so city requests default to v000901. Child locale uses only the forwarded
 `Accept-Language` header (English if absent); the parent `twcookie` is not forwarded.

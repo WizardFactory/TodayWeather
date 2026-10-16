@@ -95,3 +95,12 @@ Both new regressions failed before the routing correction and passed afterward;
 all twelve nation tests passed, including the prior ten HTTP/S3/deadline scenarios.
 The earlier 694-test full-workspace result is retained as baseline evidence, not
 claimed rerun for this narrow routing change. Independent QA2 remains pending.
+
+S17c integration with reviewed native/S16 candidate `b029cf80` preserves QA1's
+uppercase child-version default and header-only child locale. The source is shared
+as an Arc and the nation backend receives the same SummarySink-aware KmaBackend.
+The child parser consumes the new typed Result without changing nation error bytes.
+Thirteen nation tests pass, including an additional exact Jade500/HEAD/ETag check;
+the 27 summary tests and existing older-version captured-row integration test pass.
+All sixteen actual-legacy oracle scenarios/source hashes remain byte-identical.
+No full workspace rerun, live provider request or deployment is claimed for this merge.

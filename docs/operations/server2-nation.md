@@ -29,6 +29,9 @@ Province air prefers fresh urban-station means. Otherwise it uses a labelled
 representative city point and reports its source and safe reason in `airStatus`.
 `coverage: "representative-point"` must not be described as a province mean.
 The national provider query is shared with ordinary domestic weather.
+City requests also share the ordinary S16 recorder: complete compatible day rows
+are recorded without changing the nation response. Rendered nation errors retain
+their Jade ETag/HEAD contract independently of native finalhandler errors.
 
 ## Verified local scenarios
 

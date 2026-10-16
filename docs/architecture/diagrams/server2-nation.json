@@ -12,7 +12,7 @@
     ],
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "b92a8e5aa71cd443d86bcbd60556a16b6c915098"
+      "revision": "869191bdc18babafa70835c4afe572d9a19ec41f"
     }
   },
   "participants": [
@@ -54,6 +54,11 @@
           "path": "server2/src/api/mod.rs",
           "line": 117,
           "end_line": 138
+        },
+        {
+          "path": "server2/src/domestic/kma/backend.rs",
+          "line": 147,
+          "end_line": 187
         }
       ]
     },
@@ -227,7 +232,8 @@
       "title": "Nation composition",
       "items": [
         "Fifteen native KMA replies keep legacy order, with city air branches removed.",
-        "Fresh urban province means precede labelled representative-point fallback."
+        "Fresh urban province means precede labelled representative-point fallback.",
+        "Native children share the S16 captured-summary recorder; response bytes stay unchanged."
       ]
     },
     {

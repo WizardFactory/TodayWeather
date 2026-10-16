@@ -127,6 +127,10 @@ three-second deadline. City `airInfo` and `airInfoList` are removed, preserving 
 other fields and legacy city order. A real failed child request gives the legacy
 500 rendered-error response (AK's approved option b); successful dependencies give
 200. Missing provider branches remain the existing KMA partial-data contract.
+Nation children share the same `KmaBackend` and S16 recorder as direct weather requests.
+When a complete snapshot produces compatible captured `getPastMid` rows, the shared backend
+records its summaries without adding fields to the nation response. Rendered nation errors
+keep the Jade `res.send` ETag/HEAD contract, distinct from native finalhandler errors.
 No native nation request contacts legacy. URI decoding failures give a rendered
 400 response. Error output omits the legacy session ID because native routes do
 not run legacy session middleware; no cookie or arbitrary identifier is invented.
