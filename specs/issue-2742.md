@@ -334,3 +334,31 @@ exception, safety bound; review S15b3c-R7).
   or `kaq`) loads the station list and the dust forecast, reads the fold and, when the fold lacks
   the expected announcement, starts one owned acquisition of its images (of the previous
   announcement while the expected one names no acceptable pair), waiting only until its deadline.
+
+
+## S15b-4b2 specification (2026-10-16)
+
+Consumes approved intent S15b-4b2 and investigation `reports/sdlc/issue-2742-s15b4b2/investigation.md` (working evidence; material facts below).
+
+- AC1/2: static town lookup first; missing town starts owned Kakao address search then Google XML(ko) fallback. Keep requested first/second/third, coordinate primitive types and coordinate2xy rounding. Match legacy first same-grid areaNo then same region/city. Outside-Korea result is transient and follows redirect behavior. Existing public addr remains GoogleJSON→Kakao.
+- AC3: store only address-derived permitted projection/metadata with immutable complete S06 fetch-group publication; cold restore validates identities/hashes/completeness. No reverse precise user lookup archive. Reconstruct town model from safe durable inputs, not final weather JSON. Bound named key size, flights, retained entries and provider bytes; no credentials/address data in error diagnostics.
+- AC4: async KR normalization follows unsupported-region guard, swaps request components, GoogleJSON(ko) name2address and exact3/4/5-token address rules; subsequent URL decoding/assembly sees remapped params but original_url/query/mount preserved. Failures use recorded Express error/partial semantics.
+- AC5: geocoding and weather source share one<=3s wait budget and assembly reserve. Owned acquisition with bounded retry/provider deadline continues after cancellation and writes before admission. First late result produces current available fields/error contract, no invented503.
+- AC6: KMA receives native internal geocoder regardless of public geocode family selection. Remove native forward outcome producers and consumers; keep unselected family coexistence routing separate. Native errors and storage/port defects remain terminal/countable.
+- AC7: no changes to nearest ASOS city<=100km, D-7..D-1 exactmissinghour fill, provenance and valid grid value priority. Existing observations regression suite reused.
+
+Alternatives rejected: use product addr blindly (wrong provider order/types), legacy HTTP fallback (forbidden atgo-live), precollection/warmup (forbidden), pretend store-oracle rows are canonicalraw (invalid parity proof), newmodeflags (forbidden). No client/API expansion, no DB migration needed. Configuration retains legacy names and existing S3 settings; no new provider endpoint/runtime verification override.
+
+Verification: new pinned Node16/Mongoose offline provider-boundary oracle for unknown/KR, Red→Green tests for pure parsers and runtimeflow, canonical S3 restore with providers off and legacy absent, counted attempts/shared flights, partial result/total wait, fixture HTTP smoke. Real provider method verification uses matching dated evidence or remains explicitly unverified; this scope performs no live calls. Authoritative source, stage receipts and review findings retained according to artifact retention. Diagram and operations behavior checks are updated before completion.
+
+
+### S15b-4b2 bounded projection amendment (2026-10-16)
+
+Root approved the `index/v2/town-address/{town|remap}/{address-sha256}.json` control-object location after the transport's `index/v2/` boundary was verified. This supersedes the initial 4b2 proposal to represent town metadata as complete S06 raw fetch groups. Town metadata is an explicit permitted address projection, not normalized weather and not a fabricated provider raw record. Its versioned schema fixes the operation and `address-provider-projection` stage, records the permitted address, canonical numeric coordinate types, completion timestamp and result digest. SHA-256 domain separates the two operations. User text, keys and reverse-lookup exact coordinates never appear in object keys or logs.
+
+A town projection is durable reference metadata like legacy Mongo towns; a Google KR-remap projection expires after the existing 30-day address freshness bound. Every publication uses `If-None-Match` / `If-Match`, validates the confirmed read-back winner and admits nothing on ambiguous/rejected publication. An expired remap without a provider remains unavailable. Malformed, truncated, digest-invalid or mismatched objects fail closed. The existing `S3AddressStore` has a different product `GeoClient` projection and cannot preserve convertGeocode's Kakao string coordinates; it is not widened or used to store town-normalized weather.
+
+The actual Town schema / Mongoose 5.1.2 offline probe proves that legacy's hot plain-object coordinates are strings and its cold lean coordinates are numbers. Actual `makeResult` consequently fails hot with 500 and succeeds cold with 200. **AK approved the correction on 2026-10-16:** “처음부터 숫자로 정규화해 200으로 응답 (권장)”, followed by “legacy 해당 버그는 이슈만발행, 다른쪽검토”. Normalize address-derived coordinates to the real Town schema's numeric values before first native admission, persist only the canonical numeric projection and use that same result for first, same-process and cold-S3 requests. Preserve the old 500/200 fixture evidence and classify the first/same 200 results as the approved bug correction; do not rewrite the legacy oracle as 200. Root owns the separate legacy tracking issue. No runtime policy switch or compatibility mode is introduced.
+
+If unknown-town acquisition fails or is late, legacy `_getCoord` calls `next()` and leaves weather fields absent. Native assembly uses a missing-town snapshot to reproduce that partial output; owned acquisition can still publish after the waiter leaves. A KR-remap request error follows `next(err)` and ends with the native Express 500. Unsupported-region preflight remains before acquisition; malformed-original-URL handling remains after successful KR remapping. One request deadline bounds all remap/town/weather waits together, no later than 3 seconds.
+

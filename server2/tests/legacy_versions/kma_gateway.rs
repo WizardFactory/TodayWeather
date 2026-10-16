@@ -184,6 +184,15 @@ async fn send(gateway: &Gateway, origin: &Case, golden_id: &str, scenario_id: &'
         );
     }
 }
+async fn assert_native_failure(gateway: &Gateway, golden_id: &str) {
+    let case = golden(golden_id);
+    let req = Request::builder()
+        .uri(case["request"]["path"].as_str().unwrap())
+        .body(Body::empty())
+        .unwrap();
+    let response = gateway.handle(req).await;
+    assert_eq!(response.status().as_u16(), 501, "{golden_id}");
+}
 fn backend(source: Arc<dyn KmaSource>) -> Arc<KmaBackend> {
     let now = clock_ms("2026-09-24T00:10:00.000Z");
     Arc::new(KmaBackend::new(
@@ -241,9 +250,9 @@ async fn native_v000901_and_v000902_reproduce_s02_gateway_goldens_and_roll_back(
     );
     assert_eq!(requests[0].locale.name(), "ko");
 
-    // A request the source cannot supply is forwarded inside the same request.
-    send(&gateway, &case, CASES[0].0, CASES[0].1).await;
-    assert_eq!(hits.load(Ordering::SeqCst), CASES.len() + 2);
+    // A missing source is terminal for a selected native version.
+    assert_native_failure(&gateway, CASES[0].0).await;
+    assert_eq!(hits.load(Ordering::SeqCst), CASES.len() + 1);
 
     // Rollback of one version leaves the other native.
     KmaBackend::select_version(&dispatcher, Version::V000901, BackendMode::Legacy).unwrap();
@@ -253,13 +262,13 @@ async fn native_v000901_and_v000902_reproduce_s02_gateway_goldens_and_roll_back(
     );
     *source.next.lock().unwrap() = Some(CASES[0].1);
     send(&gateway, &case, CASES[0].0, CASES[0].1).await;
-    assert_eq!(hits.load(Ordering::SeqCst), CASES.len() + 3);
+    assert_eq!(hits.load(Ordering::SeqCst), CASES.len() + 2);
 }
 
-/// `select_native_versions` selects exactly the listed versions; a source without inputs sends
-/// every request to legacy and the goldens hold.
+/// Selection is version-specific: missing native inputs terminate, while unselected versions
+/// retain the documented development/coexistence legacy path.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn listed_versions_are_selected_and_a_source_without_inputs_forwards() {
+async fn listed_versions_are_selected_and_a_source_without_inputs_never_forwards() {
     warm();
     let hits = Arc::new(AtomicUsize::new(0));
     let case: Case = Arc::new(Mutex::new(None));
@@ -274,10 +283,14 @@ async fn listed_versions_are_selected_and_a_source_without_inputs_forwards() {
         assert_eq!(dispatcher.mode(version, Family::Kma), BackendMode::Legacy);
     }
     let gateway = Gateway::new(Arc::new(Myeongdong), dispatcher);
-    for (golden_id, id, _) in CASES {
-        send(&gateway, &case, golden_id, id).await;
+    for (golden_id, id, version) in CASES {
+        if version == Version::V000901 {
+            assert_native_failure(&gateway, golden_id).await;
+        } else {
+            send(&gateway, &case, golden_id, id).await;
+        }
     }
-    assert_eq!(hits.load(Ordering::SeqCst), CASES.len());
+    assert_eq!(hits.load(Ordering::SeqCst), 1);
 }
 
 /// `kma-v000901` and `kma-v000902` are separate `SERVER2_NATIVE_FAMILIES` entries beside `kma`

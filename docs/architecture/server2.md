@@ -3270,3 +3270,66 @@ records, one weather-preparation attempt instead of legacy's two, and no legacy 
 (same S18b-1 retirement handling). No new environment variable or dependency. Warning feed
 and notices remain subsequent S18 slices. [Selected verification](../evidence/tasks/issue-2703-s18b2/verification.md)
 records the actual offline comparison and functional checks; it does not claim device delivery.
+
+## S15b-4b2: native town resolution and weather-internal geocoding
+
+The selected KMA backend resolves an unknown town and the `KR` component remap without a
+legacy HTTP hop. Public `/geocode` retains its own coexistence selection. Native weather
+versions use an internal native reverse geocoder even when public geocode is unselected;
+station address lookups use that same native dependency. Unselected versions/families retain
+the temporary coexistence adapter. None is a go-live runtime dependency.
+
+`source/towns.rs` owns address acquisition and confirmed S3 projections. Unknown towns call
+Kakao address search first, then Google XML on failure (`geocode/town.rs`); the `KR` remap
+calls Google JSON with Korean labels and the legacy three request attempts. Request errors
+are retried, parser errors are terminal. Provider requests reserve the selected key's S08
+budget before HTTP. Town keys are legacy `KAKAO_SECRET_KEYS` / `GOOGLE_SECRET_KEY`; product
+reverse geocoding keeps `GEOCODER_KAKAO_KEYS` / `GEOCODER_GOOGLE_KEY`. No new provider setting,
+endpoint override or verification mode is introduced.
+
+The request methods match the primary specifications: Kakao
+[`GET /v2/local/search/address.json`, `query`, `Authorization: KakaoAK`](https://developers.kakao.com/docs/en/kakaomap/rest-api)
+and Google
+[`GET /maps/api/geocode/{json|xml}`, `address`, `language`, `key`](https://developers.google.com/maps/documentation/geocoding/guides-v3/requests-geocoding).
+The task checks the actual method/parameters with isolated HTTP peers; it does not claim a
+new live provider call, current quota measurement or provider availability.
+
+Safe metadata lives at
+`index/v2/town-address/{town|remap}/{SHA256(operation + NUL + address)}.json`. The fixed
+schema records operation, projection stage, permitted address, source-clock acquisition
+completion, canonical numeric result and its SHA-256. It is address metadata, not a weather
+raw record or a fabricated S06 fetch group. Town coordinates are durable reference metadata;
+Google remaps use the existing 30-day address freshness bound. Later requests recheck S3
+freshness; only active acquisitions are shared. Conditional create/update and confirmed
+read-back precede admission. Rejected/ambiguous writes, invalid identity/schema/digest,
+truncation and corruption admit nothing. `S3AddressStore`'s different product `GeoClient`
+projection is kept separate. Reverse exact-coordinate results remain volatile and never use
+this address-only store; neither raw address text nor coordinates occur in object keys or logs.
+
+One native request deadline covers reverse geocoding, remap, town acquisition and weather
+input waits together, at most three seconds. A late or disconnected waiter does not cancel
+the bounded owned acquisition or its S3 publication. Medium forecasts, dust forecasts, life
+indices and warnings depend on region/city rather than a successful town lookup; they load
+alongside it and remain available in the partial reply. Missing location-dependent fields
+follow legacy's `_getCoord` error/`next()` behavior. A failed `KR` remap follows `next(err)`.
+Compatibility Forward/Legacy markers from standalone/custom stores terminate as counted
+native failures; selected native backend and direct-route paths never invoke the legacy
+adapter. Internal geocoder capacity errors do not add a new 503 response.
+
+AK approved one bug correction on 2026-10-16: normalize the first address-derived location to
+the actual Town schema's numeric coordinates and answer 200. The offline oracle retains the
+actual legacy plain-object and Mongoose 5.1.2 save/lean phases: hot/same-process string
+coordinates make legacy `makeResult` fail with 500, while cold numeric coordinates answer
+200. Native first/same-process/cold responses use the same numeric contract. The legacy bug
+is tracked separately in [#2782](https://github.com/WizardFactory/TodayWeather/issues/2782);
+this task changes no legacy source. The approved correction stays explicit in comparison
+accounting rather than rewriting that oracle as 200.
+
+Coverage denominators remain separate: the existing 98-case v000903 assembly recording, the
+six remap/five town component cases, the actual Mongoose/makeResult lifecycle probes and
+production-source S3 restore/HTTP functional cases. These component tests do not claim that
+all 98 assembly inputs can be seeded as validated raw provider records. Full S3-only parity
+accounting and KMA shadow wiring remain the separate S15b-4b3 task; unrepresentable cases
+must remain visible in its denominator. Disk-cache implementation/sizing remains S15b-4c.
+The maintained [gateway sequence](diagrams/server2-gateway.html) and
+[origin overview](diagrams/server2.html) describe the native dependency boundary.

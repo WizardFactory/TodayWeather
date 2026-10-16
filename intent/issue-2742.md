@@ -158,3 +158,19 @@ choices):
 - C3-5: no new `SERVER2_*` setting, endpoint override, mode or flag (S10e model: the image origin is
   a built-in, tests build a loopback one).
 - C3-6: paths match `server2/config/tasks/S15b-3c.json`; outside changes are the declared documents.
+
+
+## S15b-4b2 native town resolution (2026-10-16)
+
+Task `issue-2742-s15b4b2`, owner `/root/recover_kma_finish`, approved investigation/execution plan `.planning/2026-10-16-issue-2742-s15b4b2/task_plan.md` (local working plan; canonical execution section in plans/issue-2742.md). Initial base reviewed #2773 `88448ddf`; implementation now aligns with merged S17c master `8daa43ad`. Existing users of KMA address/direct routes need unknown towns and KR address normalization to work after legacy retires. Replace their remaining forwards with bounded native acquisition and safe S3 metadata restore, preserving provider order, legacy response bytes/types and exact middleware ordering. KMA station geocoding must be native independently of the public geocode routing switch.
+
+Authority: parent approved scoped implementation, local fixture tests/smoke, independent review and separate PR/CI to pre-merge on 2026-10-16. Parent verified #2773 integration as `ec32c73f`; final push/CI is authorized. No merge/auto-merge/queue, deployment, live provider/FCM/OAuth/AWS/DB operations, secrets, .env reads, new accounts or permission changes. Existing authenticated review transfers remain subject to actual host approval. No counter reset.
+
+Acceptance: AC1 unknown-town shape/areaNo/types; AC2 Kakao→Google funded fallback; AC3 provider-free S3 coldrestore; AC4 KR remap/validation/envelopes; AC5 one<=3s wait and detached ownership; AC6 native routes make0legacyHTTPcalls even with KMA-only config; AC7 legacy ASOS exacthour/provenance fill remains unchanged. No warmup/precollection, no new503, no verification-mode flags. Source input gaps are honestly counted, never forced into fake canonical records. Full S3 parity manifest and S19 wiring implementation remain4b3, diskcache/sizing4c.
+
+Risks: legacy Google XML and Kakao coordinate types differ from product geocoder; townS3publication must not claim success before durability; huge addresses/prototypes require bounds and existing JS semantics. User decisions already approve native-only behavior and address-derived S3 metadata; precise reverse geocode remains memory-only.
+
+
+### S15b-4b2 approved numeric correction (2026-10-16)
+
+AK answered: “처음부터 숫자로 정규화해 200으로 응답 (권장)”, followed by “legacy 해당 버그는 이슈만발행, 다른쪽검토”. AC1 now requires Mongoose-equivalent numeric coordinates at the first native admission and the same 200 response for first/same-process/cold requests given unchanged stored inputs. Preserve the actual legacy hot/same500 and cold200 probe as approved correction evidence; root filed [legacy tracking #2782](https://github.com/WizardFactory/TodayWeather/issues/2782). No legacy edits or alternative runtime mode. Other ACs and pre-merge/no-production authority remain unchanged.

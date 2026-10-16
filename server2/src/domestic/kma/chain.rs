@@ -75,7 +75,8 @@ impl Cx<'_> {
         (t[..8].to_owned(), slot.to_owned())
     }
     /// `_getTownInfo(region, city, town)`: the town document, or Err for the legacy error
-    /// callback. A town absent from the list would be geocoded and saved by legacy: forward.
+    /// callback. Runtime sources resolve unknown towns before assembly; an unresolved standalone
+    /// store answers the legacy lookup error and leaves dependent fields absent.
     pub fn town_info(&mut self) -> Result<V, ()> {
         let list = match &self.towns {
             Some(l) => l.clone(),
@@ -104,7 +105,7 @@ impl Cx<'_> {
                 return Ok(t);
             }
         }
-        super::js::forward("town absent from the town list (legacy geocodes and saves it)")
+        Err(())
     }
     /// `_getCoord`: (mCoord, gCoord).
     pub fn coord(&mut self) -> Result<(V, V), ()> {
@@ -611,6 +612,15 @@ pub fn preflight(request: &KmaRequest) -> Option<Outcome> {
             x.as_ref()
                 .map_or(V::Undef, |s| V::s(&super::js::canon_str(s)))
         };
+        // KR remapping is async and precedes getAllDataFromDb's URI decoding. It is
+        // performed by KmaSource::prepare; preserve earlier unsupported-region validation.
+        if !["중국", "일본", "미국", "하늘시"]
+            .iter()
+            .any(|r| request.region.as_deref() == Some(r))
+            && (request.city.as_deref() == Some("KR") || request.town.as_deref() == Some("KR"))
+        {
+            return None;
+        }
         match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             check_params(v(&request.region), v(&request.city), v(&request.town))
         })) {
