@@ -285,3 +285,5 @@ pub mod warnings;
 
 /// S17c native nation weather and air composition.
 pub mod nation;
+
+pub mod notice;
