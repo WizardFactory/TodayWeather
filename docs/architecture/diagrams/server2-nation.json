@@ -64,7 +64,8 @@
         },
         {
           "path": "server2/src/domestic/kma/source/live.rs",
-          "line": 285
+          "line": 260,
+          "end_line": 279
         }
       ]
     },
@@ -88,7 +89,8 @@
       "sources": [
         {
           "path": "server2/src/domestic/kma/source/live.rs",
-          "line": 285
+          "line": 260,
+          "end_line": 279
         },
         {
           "path": "server2/src/world/air_chain.rs",
