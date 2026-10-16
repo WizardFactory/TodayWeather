@@ -38,6 +38,12 @@ pub static S3_PEERS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 /// S3 requests in flight per test transport: below the production 12, leaving peer slots for
 /// connections whose handler thread has not released its slot yet.
 pub const TEST_PERMITS: usize = 8;
+/// S3 requests in flight for a test's live acquirer, which has its own transport beside the
+/// inputs' (S15b3d-R1): together at most 12 reach the peer at once. With 8 more, a burst of
+/// reads and publications could pass the peer's 16 connections, and a refused connection is a
+/// `Transport` error that fails the acquisition (retried only after 10 minutes, so the test
+/// stalled).
+pub const ACQUIRER_PERMITS: usize = 4;
 pub struct Peer {
     child: Child,
     endpoint: String,
