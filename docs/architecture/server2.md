@@ -2343,7 +2343,21 @@ without a publication count change, a 23시 announcement kept until its rows exp
 acquisitions completed in one millisecond both read, a new station list decoded at once, rejected
 paths (another host, a 12 cycle, a missing PM2.5 path) never fetched and a failed download storing
 nothing, an image starting after its announcement's next day neither acquired nor folded, GIFs beyond the decoding bounds and a cyclic LZW stream refused, and the three
-`kaq`/`airkorea` cases above.
+`kaq`/`airkorea` cases above. The request-time tests here and S15b-3b's slow life acquisition
+start at fixed instants (S15b-3d, 2026-10-16), not on the system clock: their stubs, the
+acquirers' clock and the inputs' wall clock (`AirInputs`, `ImageForecasts` and `LifeInputs`
+`with_clock`, the system clock by default) read a test clock that starts at that instant
+(by default 2026-10-16 00:00:30 KST; the life test also at 12:30 KST) and advances at the real
+pace. The dust-forecast stub answers the announcement's day and the next ones as the provider
+does (before 05:00 KST the expected announcement is the previous day's 23시), and a test's live
+acquirer has at most 4 S3 requests in flight beside the inputs' 8, below the test peer's 16
+connections. The image stub parses its oracle fixture before the run: parsed inside a stub
+handler, it held a runtime worker for seconds and an S3 publication passed the 3 s client
+timeout, so the acquisition failed and was retried only after 10 minutes. Ignored sweeps (`cargo test --test domestic -- --ignored across_kst_boundaries`)
+start the image tests at 23:59:59 (the run crosses midnight), 00:00:00.5, 04:58, 05:00:00.5,
+08:19:59, 08:20:00.5, 12:00, 17:21 and 23:00:30 KST, and the life test at 23:58, 00:00:00.5,
+04:58, 05:00:00.5, 08:18, 08:20:00.5, 12:00, 17:21 and 23:00:30 KST with the MFDS slot expected
+at each (a new UV or MFDS slot between its two requests would legitimately be asked again).
 
 Live on 2026-10-15 (settings from the operator's `server2/.env` read in-process, never printed;
 records only in a local S06 test peer with room for the GIFs): the server2 acquirer fetched the
