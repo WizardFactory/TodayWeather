@@ -380,6 +380,84 @@ async fn the_minute_selects_like_get_alarms_by_time_and_the_weekday_filter() {
 }
 
 #[tokio::test]
+async fn the_stale_cleanup_removes_only_stale_records_of_the_selector() {
+    // Three records match the selected record's `makeRemoveSelector` filter (fcmToken,
+    // cityIndex, id): the selected stale one and another stale one are removed (as legacy
+    // `removeAlarms` did); a recently updated one is kept.
+    let old = Val::Date(1_700_000_000_000.);
+    let mut selected = alarm(1, "shared", 79200, "");
+    selected.1.doc.set("updatedAt", old.clone());
+    let mut other_stale = alarm(1, "shared", 0, "");
+    other_stale.1.doc.set("type", "android");
+    other_stale.1.doc.set("updatedAt", old);
+    other_stale.1.oid[10] = 2;
+    let mut fresh = alarm(1, "shared", 0, "");
+    fresh.1.doc.set("type", "web");
+    fresh.1.oid[10] = 3;
+    let rig = rig_named("selector", &[selected, other_stale, fresh]).await;
+    let report = rig.worker.run_minute(NOW).await;
+    assert_eq!(report.deliveries.len(), 1);
+    let restored = start(
+        &rig.s3,
+        rig.clock.clone(),
+        super::state_common::fast_config(),
+    )
+    .await;
+    let state = restored.state();
+    let state = state.read().unwrap();
+    let kinds: Vec<Val> = state
+        .coll(Coll::Alarm)
+        .iter()
+        .map(|(_, r)| r.doc.get("type").clone())
+        .collect();
+    assert_eq!(kinds, [Val::Str("web".into())]);
+}
+
+#[tokio::test]
+async fn the_oauth_token_follows_the_send_time_not_the_minute_start() {
+    let rig = rig_named("token-time", &[alarm(1, "t-1", 79200, "")]).await;
+    let mut info = alarm(1, "t-1", 79200, "").1.doc;
+    assert_eq!(
+        rig.worker.deliver(&mut info.clone(), NOW).await,
+        Delivery::Accepted
+    );
+    assert_eq!(rig.google.tokens().len(), 1);
+    // The same minute's start, but the send happens after the cached token expired.
+    rig.clock.set("2026-10-15T23:00:00.000Z");
+    assert_eq!(rig.worker.deliver(&mut info, NOW).await, Delivery::Accepted);
+    let tokens = rig.google.tokens();
+    assert_eq!(tokens.len(), 2, "refreshed at send time");
+    use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+    let assertion = tokens[1].body.split("&assertion=").nth(1).unwrap();
+    let claims: serde_json::Value = serde_json::from_slice(
+        &URL_SAFE_NO_PAD
+            .decode(assertion.split('.').nth(1).unwrap())
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(claims["iat"], (NOW + 3_600_000) / 1000);
+}
+
+#[tokio::test]
+async fn an_unrecorded_result_is_reported_and_nothing_is_resent() {
+    let rig = rig_named("result-failed", &[alarm(1, "r-1", 79200, "")]).await;
+    rig.s3.fault_put(
+        "index/v2/push/delivery/alarm/20261015/2200.result.json",
+        Fault::Reject(403),
+    );
+    let report = rig.worker.run_minute(NOW).await;
+    assert!(report.claimed);
+    assert_eq!(rig.google.sends().len(), 1);
+    assert!(
+        rig.diagnostics.minutes.lock().unwrap()[0].contains("result not recorded"),
+        "{:?}",
+        rig.diagnostics.minutes.lock().unwrap()
+    );
+    assert!(!rig.worker.run_minute(NOW + 1_000).await.claimed);
+    assert_eq!(rig.google.sends().len(), 1);
+}
+
+#[tokio::test]
 async fn a_failed_disable_is_reported_and_nothing_is_resent() {
     let rig = rig("disable-failed", AT, &[alarm(1, "gone", 79200, "")], None).await;
     rig.weather.set(&kma_weather());

@@ -2751,7 +2751,8 @@ A delivery is identified by (kind, minute, record `_id`). Only the process whose
 sends; a second process, a restart or a repeated tick finds the claim (409/412) and sends nothing.
 An unknown claim outcome is read back (our body: owned; another body: taken; unreadable: nothing
 sent), and a refused or unavailable ledger sends nothing for that minute. A claim without a result
-means the outcomes are unknown and are not resent. Outcomes: `accepted`, `unregistered`,
+means the outcomes are unknown and are not resent; a result that cannot be written is reported
+as a minute note and counted. Outcomes: `accepted`, `unregistered`,
 `rejected` (firebase-admin client code), `unknown` (timeout or transport error after sending) and
 `failed` (nothing sent: weather, geocode, build, credentials, OAuth, connect, iOS without FCM token,
 retired GCM, unknown type).
@@ -2772,13 +2773,15 @@ callback); OAuth uses the token endpoint and audience Google documents for servi
 firebase-admin 5.13.1 used `https://accounts.google.com/o/oauth2/token`), tokens are refreshed on
 demand per app, one request at a time, and a failure is not cached; the duplicate pass groups on
 indexed key fields and decodes only grouped records; the 60-day removal and the `updatedAt` stamp
-re-check the selected record in the writer: the removal applies only while the record equals the
-selected document, or differs only by this worker's unregistered-token disable (`enable`,
-`updatedAt`, `updatedBy: 'push'`; legacy removed such a stale record the same minute), and the
-stamp only while the record still has no `updatedAt`, so a user change or removal made during the
-minute is never undone and a stamp never re-enables a disabled token (legacy removed and upserted
-the copies read before sending); legacy disabled unregistered tokens without waiting; OAuth
-tokens are cached and refreshed with one lock per app.
+re-check records in the writer: of the records the `makeRemoveSelector` filter matches, the
+selected one is removed only while it equals the selected document or differs only by this
+worker's unregistered-token disable (`enable`, `updatedAt`, `updatedBy: 'push'`; legacy removed
+such a stale record the same minute) and any other only while its own `updatedAt` is older than
+60 days, and the stamp applies only while the record still has no `updatedAt`, so a user change
+or removal made during the minute is never undone and a stamp never re-enables a disabled token
+(legacy removed every match and upserted the copy read before sending); legacy disabled
+unregistered tokens without waiting; OAuth tokens are cached and refreshed with one lock per app,
+and the assertion and expiry use the time of each send (not the minute's start).
 
 **Verification.** The [oracle fixture](../../server2/tests/delivery/fixtures/PROVENANCE.md) runs
 the real `ControllerPush` and firebase-admin 5.13.1 (Node 16.20.2) over HTTPS and weather doubles:

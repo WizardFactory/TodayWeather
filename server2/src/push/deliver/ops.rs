@@ -3,7 +3,7 @@
 //! (with `makeRemoveSelector`) and `controllerPush.updatePushInfo` for the `updatedAt` stamp.
 use crate::push::{
     mongoose,
-    routes::{self, Backend, TxnBackend},
+    routes::{self, TxnBackend},
     service::InternalOp,
     store::{Coll, Cond, KEY_FIELDS, Txn},
 };
@@ -34,15 +34,32 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
             n,
             oid,
             selected,
+            cutoff_ms,
             filter,
         } => {
-            // Unchanged since selection, or changed only by this worker's own disable of an
-            // unregistered token (legacy removed such a record the same minute). A user update
-            // in between changes another field or `updatedBy`, and the record is kept.
-            let unchanged = txn.get(Coll::Alarm, *n).is_some_and(|r| {
-                r.oid == *oid && (r.doc == *selected || same_except_disable(&r.doc, selected))
-            });
-            unchanged && TxnBackend { txn }.remove(Coll::Alarm, filter).is_ok()
+            // `removeAlarms(makeRemoveSelector(pushInfo))`, record by record: the selected record
+            // only while it is unchanged since selection or changed only by this worker's own
+            // disable of an unregistered token (legacy removed such a record the same minute);
+            // any other record the filter matches only while it is itself older than the cutoff.
+            // A user update in between keeps the record.
+            let Ok(query) = mongoose::cast_query(Coll::Alarm, filter) else {
+                return false;
+            };
+            let mut removed = false;
+            for m in txn.find(Coll::Alarm, &query) {
+                let record = txn.get(Coll::Alarm, m).expect("found record");
+                let remove = if m == *n {
+                    record.oid == *oid
+                        && (record.doc == *selected || same_except_disable(&record.doc, selected))
+                } else {
+                    matches!(record.doc.get("updatedAt"), Val::Date(ms) if (*ms as i64) < *cutoff_ms)
+                };
+                if remove {
+                    txn.remove(Coll::Alarm, m);
+                    removed = true;
+                }
+            }
+            removed
         }
         InternalOp::StampAlarm { n, oid, info } => {
             let unstamped = txn

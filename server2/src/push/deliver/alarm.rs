@@ -120,6 +120,7 @@ impl Diagnostics for StderrDiagnostics {
 pub struct Counters {
     pub minutes: AtomicU64,
     pub minutes_skipped: AtomicU64,
+    pub results_unrecorded: AtomicU64,
     pub selected: AtomicU64,
     pub accepted: AtomicU64,
     pub unregistered: AtomicU64,
@@ -240,9 +241,12 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                 };
             }
             let body = fcm_body(&message, info);
+            // The OAuth assertion and token expiry use the time of this send, not the minute's
+            // start: with six in flight a long minute can outlast a cached token.
+            let send_ms = self.clock.now_ms().unwrap_or(now_ms);
             return match self
                 .fcm
-                .send(Product::of(info.get("package")), body, now_ms)
+                .send(Product::of(info.get("package")), body, send_ms)
                 .await
             {
                 SendOutcome::Accepted => Delivery::Accepted,
@@ -385,13 +389,23 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                 .deliveries
                 .push((id.clone(), event.outcome.into(), event.class));
         }
-        self.ledger
+        let recorded = self
+            .ledger
             .result(
                 "alarm",
                 minute_ms,
                 &serde_json::json!({"schema": 1, "kind": "alarm", "minute": minute, "deliveries": rows}),
             )
             .await;
+        if !recorded {
+            // The claim stays: the minute is not resent; its outcomes are only in this process's
+            // diagnostics and counters.
+            self.counters
+                .results_unrecorded
+                .fetch_add(1, Ordering::Relaxed);
+            self.diagnostics
+                .minute(&minute, "result not recorded; claim kept, nothing resent");
+        }
         // `_removeOldList` over the (mutated) records of this minute.
         let cutoff = now_ms - 60 * DAY_MS;
         // Each operation re-checks the record in the writer, so a change made since selection
@@ -403,6 +417,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                     n,
                     oid,
                     selected,
+                    cutoff_ms: cutoff,
                     filter,
                 };
                 if self.push.internal(op).await {

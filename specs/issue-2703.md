@@ -80,9 +80,11 @@ Rules:
   (`pushTime === time`, `enable !== false`, natural order), weekday filter (`dayOfWeek[day]` truthy
   with `timezoneOffset` present), claim, deliver (6 in flight), result, 60-day removal and
   `updatedAt` stamp. Skip (no claim) while the state is not restored or nothing is due. The
-  removal applies only while the selected record (number, `_id`) still equals the document read
-  at selection, or differs only by this worker's disable (`enable`, `updatedAt`,
-  `updatedBy: 'push'`); the stamp only while it still has no `updatedAt`.
+  removal goes record by record over the `makeRemoveSelector` matches: the selected record
+  (number, `_id`) only while it still equals the document read at selection or differs only by
+  this worker's disable (`enable`, `updatedAt`, `updatedBy: 'push'`), any other match only while
+  its own `updatedAt` is older than 60 days; the stamp only while the selected record still has
+  no `updatedAt`. A failed result write is a minute note and counter; the claim stays.
 - Ledger: `index/v2/push/delivery/alarm/{YYYYMMDD}/{HHMM}.json` with `If-None-Match: *` before any
   send (`schema`, `kind`, `minute`, `claimedAt`, `claim` nonce, record `_id`s); 409/412 taken;
   other 4xx unavailable; unknown outcome read back (own body owned, other taken, unreadable
@@ -95,7 +97,8 @@ Rules:
   (`{"alg":"RS256","typ":"JWT"}`; claims `scope`, `iat`, `exp = iat + 3600`, `aud`, `iss`),
   `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer` to `https://oauth2.googleapis.com/token`
   ([Google service-account flow](https://developers.google.com/identity/protocols/oauth2/service-account));
-  cached per app until less than 60 s remain; 10 s bound.
+  cached per app (one lock per app) until less than 60 s remain at the time of the send; the
+  assertion's `iat` is the send time; 10 s bound.
 - Classification (firebase-admin 5.13.1): `text/html`/`text/plain` answers map by status; other
   bodies by `error` string, `FcmErrorCode` detail, `status` or `message` through
   `MESSAGING_SERVER_TO_CLIENT_CODE`; 2xx without error accepted; `NOT_FOUND`/`NotRegistered`
