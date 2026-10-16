@@ -1,5 +1,5 @@
 # S18c execution plan
-Owner /root/s18_conditional_alerts; base f32386cb; N1-N4; canonical intent/spec/issue-2703-s18c.md consumed. Separate task index reports/sdlc/issue-2703-s18c/artifacts.json. Conceptual approved sequence .archify/s18c-design/candidate.json validated/delivered/browser-gated; final maintained diagram will pin implemented committed sources.
+Owner /root/s18_conditional_alerts; base f32386cb; N1-N4; canonical intent/spec/issue-2703-s18c.md consumed. Separate task index reports/sdlc/issue-2703-s18c/artifacts.json. Maintained sequence docs/architecture/diagrams/server2-notices.json pins implemented source6fb58c0c; artifact/browser/captures passed and actual1440light inspected. Earlier conceptual design remains preserved in ignored .archify/s18c-design.
 
 1. Write intended failing contract/store/CLI/translation tests for mandatory scenarios in user-scenarios output, initially unresolved notice module.
 2. Implement data validation, latest language selection and bounded S3 CAS state, explicit missing vs unavailable/corrupt. Mutable controls bypass disk cache.

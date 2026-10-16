@@ -3367,6 +3367,8 @@ no EC2 provisioning or production cache setting was performed by this task.
 
 ## S18c notices backend and operator CLI
 
+[Source-pinned notice sequence](diagrams/server2-notices.html).
+
 S18c directly adopts #2623's public notice JSON and seven-language selection contract
 in server2; SQLite and client/web popups are outside this scope. The notice module
 exports a read-only Axum router and `server2-notice` provides CLI-only publication,
