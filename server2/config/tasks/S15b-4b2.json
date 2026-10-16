@@ -35,7 +35,8 @@
     "server2/tests/legacy_versions/kma_direct.rs",
     "server2/.env.example",
     "server2/tests/domestic/summary_s3.rs",
-    "server2/tests/legacy_versions/kma_gateway.rs"
+    "server2/tests/legacy_versions/kma_gateway.rs",
+    "server2/tests/golden/records.json"
   ],
   "outside": [
     {
@@ -93,6 +94,8 @@
     "server2/tests/legacy_versions/kma_direct.rs": "Update selected-native no-fallback regressions; retain generic selected-legacy proxy header filtering coverage via direct adapter call.",
     "server2/.env.example": "Document existing legacy KAKAO_SECRET_KEYS for internal town resolution; no new provider variable or verification setting.",
     "server2/tests/domestic/summary_s3.rs": "Preserve S16 no-summary-during-ASOS contract when native one-request3s bound returns earlier; replace guessed post-response sleep with bounded observable completion/recording condition.",
-    "server2/tests/legacy_versions/kma_gateway.rs": "Preserve S17 per-version golden and coexistence rollback coverage while selected-native missing-source markers terminate with501 and zero legacy requests."
+    "server2/tests/legacy_versions/kma_gateway.rs": "Preserve S17 per-version golden and coexistence rollback coverage while selected-native missing-source markers terminate with501 and zero legacy requests.",
+    "server2/tools/kma_smoke.py": "Repair release fixture wiring for selected-native weather internal geocoding using existing test-only loopback_server --kakao/--google injection and legacy-named synthetic geocoder keys; preserve200/noLegacy/S3/rollback assertions and add zero legacygeocode-hop assertion.",
+    "server2/tests/golden/records.json": "Root-authorized actual fixedNode16 S02 recorder refresh after separately owned legacy#2784 merged: copy recorded bytes,76wirecases/inventory/backendcoverage unchanged,onlycontrollerTown sourcehash changed. Keep original town bug oracle and failed333CI evidence intact; verifytwice afterlatestmastermerge."
   }
 }
