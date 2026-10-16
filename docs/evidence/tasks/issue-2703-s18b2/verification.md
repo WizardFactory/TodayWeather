@@ -83,6 +83,17 @@ were inspected visually for clipping, legibility and page breaks. The
 source; generated HTML passed showcase validation, delivery, provenance and real-browser
 checks. Separate light/dark capture and actual visual inspection are recorded in local receipts.
 
+## Required review correction S18B2-R1
+
+The first independent review reproduced a malformed-row mismatch: null forecast rows before
+a match threw in legacy but were silently skipped in Rust, potentially sending a wet fallback.
+A supplemental fixture records 11 actual legacy parser/orchestration cases. The original
+133 cases are unchanged. Both new Rust regressions failed before correction (including an
+actual local submission where legacy made none); searches now propagate the property error
+and stop at their first match. Successful early matches still skip later nulls, and primitive
+rows retain their normal JavaScript property-read behavior. The complete delivery suite has
+36 tests after this correction. Required finding resolution remains subject to renewed review.
+
 ## Limits and differences
 
 This is an unwired library capability. S18b-3 warning feed and S18c notices are separate.

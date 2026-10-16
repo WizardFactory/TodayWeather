@@ -155,9 +155,15 @@ pub fn parse(record: &Obj, body: &Val, minute: u32, now_ms: i64) -> Result<Val, 
             let Val::Arr(rows) = data.get("shortest") else {
                 return Err("shortest.findIndex is not a function".into());
             };
-            let index = rows.iter().position(|row| {
-                prop(row, "dateObj").is_ok_and(|v| date(&v) == date(&Val::Str(str_next.clone())))
-            });
+            let mut index = None;
+            for (i, row) in rows.iter().enumerate() {
+                // Array#findIndex stops at the first match and propagates an accessor
+                // exception before it. A null row must not unlock a later wet fallback.
+                if date(&prop(row, "dateObj")?) == date(&Val::Str(str_next.clone())) {
+                    index = Some(i);
+                    break;
+                }
+            }
             if let Some(i) = index {
                 let mut forecast = Obj::new();
                 forecast.set("pty", 0.);
@@ -181,10 +187,14 @@ pub fn parse(record: &Obj, body: &Val, minute: u32, now_ms: i64) -> Result<Val, 
                     let Val::Arr(rows) = data.get(field) else {
                         return Err("forecast.find is not a function".into());
                     };
-                    if let Some(row) = rows.iter().find(|r| {
-                        prop(r, "dateObj")
-                            .is_ok_and(|v| strict_eq(&v, &Val::Str(str_short.clone())))
-                    }) {
+                    let mut matched = None;
+                    for row in rows {
+                        if strict_eq(&prop(row, "dateObj")?, &Val::Str(str_short.clone())) {
+                            matched = Some(row);
+                            break;
+                        }
+                    }
+                    if let Some(row) = matched {
                         let mut forecast = object(row)?.clone();
                         if let Some(key) = pubfield {
                             forecast.set("pubDate", data.get(key).clone());

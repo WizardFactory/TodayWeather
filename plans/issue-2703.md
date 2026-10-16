@@ -107,7 +107,7 @@ intent/spec/plan, operator PDF and selected sanitized evidence. No runtime reads
 
 | Scenario | Actions | Expected result | Verification |
 | --- | --- | --- | --- |
-| C1: user crossing rain/air threshold | Eligible minute, current or forecast weather and current air | Same parsed input, decision, updated state and localized message as legacy | 133 offline actual-controller cases, six URL cases |
+| C1: user crossing rain/air threshold | Eligible minute, current or forecast weather and current air | Same parsed input, decision, updated state and localized message as legacy | 133 original offline actual-controller cases, six URL cases, 11 supplemental malformed-row/first-match cases |
 | C2: disabled or outside-window registration | Normal/overnight endpoints and either category's six-hour gate | Inclusive boundaries; no send inside cooldown | Selection regression |
 | C3: overseas outage | Old (>30 min) response; exact boundary | Old observation skipped; 30 min accepted | Oracle cases |
 | C4: provider failure or restart | Rejected, reset and hanging peer; restore S3 state | One attempt, durable timestamps, no resend | Worker fault/restart regressions |

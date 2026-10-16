@@ -529,3 +529,89 @@ async fn scheduler_evaluates_the_current_minute_after_a_clock_jump_not_the_misse
         "missed cycles are not caught up"
     );
 }
+
+fn malformed_oracle() -> OrderedJson {
+    let mut raw = String::new();
+    flate2::read::GzDecoder::new(&include_bytes!("fixtures/alerts-malformed.json.gz")[..])
+        .read_to_string(&mut raw)
+        .unwrap();
+    OrderedJson::parse(raw.as_bytes()).unwrap()
+}
+#[test]
+fn malformed_forecast_searches_match_legacy_errors_and_first_match_short_circuit() {
+    let oracle = malformed_oracle();
+    let now =
+        server2::warnings::js::parse_iso(&oracle.get("at").unwrap().string().unwrap()).unwrap();
+    let cases = items(oracle.get("cases").unwrap());
+    for case in cases {
+        let id = case.get("id").unwrap().string().unwrap();
+        let r = obj(case.get("record").unwrap());
+        let input = Val::from_ordered(case.get("body").unwrap());
+        let want = case.get("result").unwrap();
+        let parsed = alerts::parse(&r, &input, 7, now);
+        if let Some(error) = want.get("error") {
+            assert_eq!(
+                parsed.unwrap_err(),
+                error.string().unwrap(),
+                "{id}: legacy stops at malformed row"
+            );
+        } else {
+            let parsed = parsed.unwrap();
+            assert_eq!(
+                parsed.to_json(),
+                Val::from_ordered(want.get("info").unwrap()).to_json(),
+                "{id} parsed"
+            );
+            assert_eq!(
+                alerts::compare(&r, &parsed, now).unwrap().as_str(),
+                want.get("send").unwrap().string().unwrap(),
+                "{id} decision"
+            );
+        }
+    }
+    assert_eq!(cases.len(), 11);
+}
+#[tokio::test]
+async fn malformed_forecast_searches_never_submit_where_legacy_stops() {
+    use server2::push::Coll;
+    let oracle = malformed_oracle();
+    let now =
+        server2::warnings::js::parse_iso(&oracle.get("at").unwrap().string().unwrap()).unwrap();
+    for case in items(oracle.get("cases").unwrap()) {
+        let id = case.get("id").unwrap().string().unwrap();
+        let record = obj(case.get("record").unwrap());
+        let rig = rig(
+            &format!("conditional-malformed-{id}"),
+            "2026-10-16T00:07:00Z",
+            &[(Coll::Alert, alert_record(1, record))],
+            None,
+        )
+        .await;
+        set_wet(&rig, case.get("body").unwrap());
+        let worker = alert_worker(&rig, rig.push.clone());
+        let report = worker.run_minute(now).await;
+        let expected = items(case.get("notifications").unwrap());
+        assert_eq!(
+            rig.google.sends().len(),
+            expected.len(),
+            "{id}: actual legacy submission count"
+        );
+        if case.get("result").unwrap().get("error").is_some() {
+            assert_eq!(report.deliveries[0].2, "parse", "{id}");
+        }
+        if let Some(want) = expected.first() {
+            let body: serde_json::Value =
+                serde_json::from_str(&rig.google.sends()[0].body).unwrap();
+            assert_eq!(
+                body["message"]["notification"]["title"],
+                want.get("title").unwrap().string().unwrap(),
+                "{id} title"
+            );
+            assert_eq!(
+                body["message"]["notification"]["body"],
+                want.get("text").unwrap().string().unwrap(),
+                "{id} text"
+            );
+        }
+    }
+}
