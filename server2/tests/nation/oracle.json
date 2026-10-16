@@ -1,5 +1,10 @@
 {
   "node": "v16.20.2",
+  "dependencies": {
+    "mongoose": "5.1.2",
+    "async": "2.6.2",
+    "jade": "1.11.0"
+  },
   "now": "2026-10-16T00:10:00.000Z",
   "hash": {
     "server/config/air.js": "194d074be1ad3bb67dac8273db395d785f848bdb5728cab4e9de99ada1c85f70",

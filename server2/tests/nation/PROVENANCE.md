@@ -2,7 +2,7 @@
 
 `oracle.json` is a reusable fixture recorded by `server2/tools/nation_record.cjs` from
 legacy sources at base `73290838` with Node **16.20.2**, UTC, Mongoose **5.1.2**, and
-legacy async/Jade dependencies. Its `hash` map pins every source loaded directly.
+async **2.6.2** and Jade **1.11.0** dependencies. Its `hash` map pins every source loaded directly.
 The script runs the actual province saver after `airkoreaObservation.parseRows`, casts its
 updates through the actual SidoArpltn model, and runs NationAir, observation evaluation,
 query-default validation, pollutant recalculation, nation middleware, and production Jade

@@ -5,6 +5,8 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),crypto=require('crypto');
 if(process.version!=='v16.20.2')throw Error('Node16.20.2 required');
 const root=path.resolve(process.argv[2]),output=path.resolve(process.argv[3]);
+const dependencies={mongoose:require('mongoose/package.json').version,async:require('async/package.json').version,jade:require('jade/package.json').version};
+for(const [name,version] of Object.entries({mongoose:'5.1.2',async:'2.6.2',jade:'1.11.0'}))if(dependencies[name]!==version)throw Error('Pinned '+name+' '+version+' required');
 const now='2026-10-16T00:10:00.000Z', hash={};
 const log={info(){},debug(){},error(){},warn(){}};
 class FixedDate extends Date {constructor(...a){super(...(a.length?a:[now]));} static now(){return Date.parse(now);}}
@@ -83,6 +85,6 @@ async function scenario(id,{rows=[],fallback={},version='v000903',query={},error
  const jade=require('jade');
  source('server/views/error.jade');source('server/views/layout.jade');
  for(const c of cases)if(c.error)c.error.html=jade.renderFile(path.join(root,'server/views/error.jade'),{message:c.error.message,error:{}});
- fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,JSON.stringify({node:process.version,now,hash,averageInputs:items,averages:[{...averages[0],stored:avg}],scenarios:cases},null,2)+'\n');
+ fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,JSON.stringify({node:process.version,dependencies,now,hash,averageInputs:items,averages:[{...averages[0],stored:avg}],scenarios:cases},null,2)+'\n');
  console.log(JSON.stringify({scenarios:cases.length,files:Object.keys(hash).length}));
 })();
