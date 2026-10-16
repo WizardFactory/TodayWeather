@@ -546,13 +546,14 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                             class: "registration-changed-or-expired",
                         }
                     } else {
-                        let zones = self.zones.current(now).await?;
-                        if !active(group, &ids, &zones, now) {
-                            Delivery::Failed {
+                        match self.zones.current(now).await {
+                            Err(_) => Delivery::Failed {
+                                class: "warning-state",
+                            },
+                            Ok(zones) if !active(group, &ids, &zones, now) => Delivery::Failed {
                                 class: "warning-inactive",
-                            }
-                        } else {
-                            self.submit(n, &record, group, &ids, now).await
+                            },
+                            Ok(_) => self.submit(n, &record, group, &ids, now).await,
                         }
                     };
                     let id = oid_hex(&record.oid);

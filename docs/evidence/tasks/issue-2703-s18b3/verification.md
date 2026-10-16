@@ -26,6 +26,10 @@ cases and the urgent payload. Alarm/conditional fixtures remain unchanged.
   invisible orphan event, prior-head preservation, unknown committed claims,
   concurrent workers, failed/unknown/cancelled submission, restart no-resend,
   late eligible endpoint, shared location and user edits during preparation.
+- Optional review GROK-HIGH-1 added a compiled Red regression for S12 errors
+  immediately after an owned claim. Transport and timeout errors now record
+  `warning-state` diagnostics/result without OAuth/FCM; repeat/restart remains
+  terminal. The corrected delivery suite has 60 passing checks.
 - Post-OAuth guards cover other-process durable disable (deliberately stale first
   service RAM), a release committed through a different S12 store, deadline,
   journal failure and guard error/timeout. No POST is made and claims stay terminal.

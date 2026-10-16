@@ -953,3 +953,64 @@ async fn final_guard_error_or_timeout_never_posts_or_retries() {
         assert_eq!(w.poll().await.unwrap().attempted, 0);
     }
 }
+
+struct PostClaimUnavailable(std::sync::atomic::AtomicUsize, bool);
+impl CurrentZones for PostClaimUnavailable {
+    fn current(&self, _: i64) -> BoxFuture<'_, Result<ZoneState, Error>> {
+        Box::pin(async move {
+            if self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst) == 1 {
+                return Err(if self.1 {
+                    Error::Timeout
+                } else {
+                    Error::Transport
+                });
+            }
+            let mut z = ZoneState::default();
+            z.apply(&prepare_events(&rows()));
+            Ok(z)
+        })
+    }
+}
+#[tokio::test]
+async fn an_s12_error_immediately_after_claim_records_a_terminal_failure_without_submission() {
+    for timeout in [false, true] {
+        let (rig, feed, _, _) = setup("warning-postclaim-error").await;
+        let zones = Arc::new(PostClaimUnavailable(
+            std::sync::atomic::AtomicUsize::new(0),
+            timeout,
+        ));
+        let w = worker(
+            &rig,
+            rig.push.clone(),
+            feed.clone(),
+            zones.clone(),
+            Arc::new(FixedLocations),
+        );
+        w.poll().await.unwrap();
+        feed.publish(&rows()).await.unwrap();
+        let first = w.poll().await.unwrap();
+        assert_eq!(first.failed, 1);
+        assert!(rig.google.sends().is_empty());
+        assert!(rig.google.tokens().is_empty());
+        let results = rig
+            .s3
+            .keys("index/v2/push/delivery/warning/")
+            .into_iter()
+            .filter(|k| k.ends_with("result.json"))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            results.len(),
+            1,
+            "GROK-HIGH-1: failure after owned claim is observable"
+        );
+        let result: serde_json::Value =
+            serde_json::from_slice(&rig.s3.body(&results[0]).unwrap()).unwrap();
+        assert_eq!(result["class"], "warning-state");
+        assert_eq!(w.poll().await.unwrap().attempted, 0);
+        assert!(rig.google.sends().is_empty());
+        let restored = start(&rig.s3, rig.clock.clone(), fast_config()).await;
+        let replacement = worker(&rig, restored, feed, zones, Arc::new(FixedLocations));
+        assert_eq!(replacement.poll().await.unwrap().attempted, 0);
+        assert!(rig.google.sends().is_empty());
+    }
+}
