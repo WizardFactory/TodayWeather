@@ -1,7 +1,8 @@
-# Server2 conditional push delivery
+# Server2 push delivery
 
-Editable operator guide for S18b-2 (#2703), 2026-10-16. [PDF](server2-push-delivery.pdf)
-and [sequence](../architecture/diagrams/server2-push-delivery.html).
+Editable operator guide for S18b-2 and S18b-3 (#2703), 2026-10-16. [PDF](server2-push-delivery.pdf)
+and [conditional sequence](../architecture/diagrams/server2-push-delivery.html),
+plus the [warning sequence](../architecture/diagrams/server2-warning-push.html).
 
 ## Capability and setup boundary
 
@@ -63,3 +64,49 @@ provenance, actual commands and limitations. Google documents the
 [HTTP v1 send contract](https://firebase.google.com/docs/cloud-messaging/send/admin-sdk) and
 [FCM error classes](https://firebase.google.com/docs/cloud-messaging/error-codes); observed
 provider acceptance and real device delivery remain separate facts.
+
+## Warning feed (S18b-3 library)
+
+This slice provides the severe-warning feed and one-shot worker; it does not start
+a live process. S20 installs `WarningCollector::with_push_feed` and a single
+`WarningWorker` owner alongside the existing alarm/conditional workers. Its region
+adapter must use server2's native `/geocode/v000903/coord/` route at cutover.
+
+The first persisted feed and the first worker read are silent. Afterwards a fresh
+issued/changed warning selects enabled alert registrations inside their time window
+and current S12 warning zone. Multiple city registrations for one package/device
+receive one attempt. Release, expiry, a concurrent user update or an unavailable
+claim stops submission. Rejected, unknown or cancelled work is not automatically
+retried; restarting cannot resume it. An independently issued later warning can
+send again. An unregistered token disables alerts only.
+
+S3 objects: `index/v2/push/warning-feed/head.json`, `events/<identity>.json`, and
+`index/v2/push/delivery/warning/<campaign>/<endpoint>/<UTC-date>/<source-minute>`
+claim/results. Claims and diagnostics contain hashes/record IDs and status classes,
+not token, location, name or notification text. Keep these claims during recovery;
+do not delete one to force delivery. Region and immutable-event memory caches can
+be discarded; S3 remains authoritative. No warning local-disk capacity is required.
+
+For local functional verification, the maintained example uses actual loopback S3,
+geocode and OAuth/FCM HTTP peers plus synthetic registrations/service-account data:
+
+```sh
+cd server2
+cargo run --locked --example warning_push_smoke
+```
+
+It never loads `.env` or calls a real provider/device. Successful execution must
+report one local submission and zero restart resends. This does not prove actual
+EC2-role permissions, deployed startup wiring or device delivery. New warning paths
+already fit the checked-in IAM/bucket `index/v2/*` policy; no AWS mutation is needed.
+
+After OAuth preparation, the final guard checks the latest S12 durable zone state
+and catches up registration journals from S3, including other-process changes.
+Disabled/changed registration, released warning, expired five-minute window or an
+unavailable/timed-out guard results in no POST. The delivery claim remains terminal.
+
+![Actual local warning smoke output](../evidence/tasks/issue-2703-s18b3/warning-smoke.png)
+
+[Warning verification](../evidence/tasks/issue-2703-s18b3/verification.md) records the
+actual legacy oracle and isolated failure checks. The image is a rendered capture
+of actual stdout, with synthetic names and no device token or private credentials.

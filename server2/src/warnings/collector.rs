@@ -19,6 +19,13 @@ use serde_json::Value;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::Mutex, time::Instant};
 
+/// A post-persistence hook. Implementations never see provider rows before every day/page
+/// of this sync is durable; a failure is a collection error, not a notification retry.
+pub trait PersistedWarningFeed: Send + Sync {
+    fn publish<'a>(&'a self, rows: &'a [Value])
+    -> crate::gateway::BoxFuture<'a, Result<(), Error>>;
+}
+
 pub const MAX_PENDING_CYCLES: u32 = 20;
 pub const RESYNC_MS: i64 = 60 * 60 * 1000;
 pub const ZONE_DAYS_PER_SYNC: usize = 10;
@@ -61,6 +68,7 @@ pub struct WarningCollector<S: ?Sized, T> {
     clock: Arc<dyn Clock>,
     state: Mutex<State>,
     step: Duration,
+    feed: Option<Arc<dyn PersistedWarningFeed>>,
 }
 fn shift_day(day: u32, n: i64) -> u32 {
     js::date_of_index(js::day_index(day) + n)
@@ -110,8 +118,14 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
             store,
             clock,
             state: Mutex::new(State::default()),
+            feed: None,
             step: Duration::from_secs(30),
         }
+    }
+    /// Install the S18 warning sink; process startup wiring belongs to S20.
+    pub fn with_push_feed(mut self, feed: Arc<dyn PersistedWarningFeed>) -> Self {
+        self.feed = Some(feed);
+        self
     }
     /// Per-step deadline (provider pages and S3 publication share it).
     pub fn with_step_deadline(mut self, step: Duration) -> Self {
@@ -223,6 +237,9 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
                 .map_err(CycleError::Store)?;
             state.published.insert(day, digest);
             report.zone_days += 1;
+        }
+        if let Some(feed) = &self.feed {
+            feed.publish(&rows).await.map_err(CycleError::Store)?;
         }
         state
             .zones

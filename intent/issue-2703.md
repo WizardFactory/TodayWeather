@@ -57,3 +57,26 @@ Continue the authorized S18 delivery scope with the legacy conditional worker's 
 weather/air transitions, localized message and registration-state updates. This slice builds
 on S18a and S18b-1; warning feed (S18b-3) and notices (S18c) remain separate. Endpoint is a
 reviewed PR awaiting root integration, without deployment or live FCM/OAuth/APNs calls.
+
+## S18b-3 warning feed (2026-10-16)
+
+Parent authorization follows merged S18b-1/#2774 and S18b-2/#2778. This is a new,
+separate pre-merge PR scope with its own `issue-2703-s18b3` lifecycle; prior findings,
+receipts and counters remain preserved. Root owns actual integration.
+
+- **WF1:** Port the actual legacy warning feed's silent first baseline, deterministic
+  identities, 24-hour event head/50,000 fingerprints, five-minute new-event gates,
+  grouping, active-zone selection and localized warning message.
+- **WF2:** Store feed publications and per-endpoint delivery claims in S3 before one
+  submission. Failed, cancelled or uncertain work and process replacement never
+  trigger automatic resubmission or startup broadcast.
+- **WF3:** Publish only S12 successfully persisted source rows; consume server2 state,
+  zone mapping and configured server2 geocoding routes without legacy runtime reads.
+- **WF4:** Establish actual legacy oracle parity, fault/concurrency/restart coverage,
+  additional synthetic HTTP smoke, maintained manual/PDF/diagram, eligible review and
+  fresh CI. No actual push/FCM/OAuth/APNs, deployment or production database write.
+
+The feed and worker remain libraries until S20 installs them together with the
+alarm and conditional workers. This does not claim a running push process or device
+receipt. Later **S18c is a separate backend/API + publishing CLI + S3 PR** following
+#2623; it excludes client/web popups and supersedes the SQLite storage proposal.

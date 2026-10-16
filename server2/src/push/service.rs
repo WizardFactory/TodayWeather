@@ -101,6 +101,13 @@ pub struct StaleSelection {
 /// alarm worker).
 #[derive(Clone, Debug)]
 pub enum InternalOp {
+    /// Read-only selection guard. The writer catches up from S3 before evaluating it,
+    /// including registration edits committed by another process.
+    CheckAlertSelection {
+        n: u64,
+        oid: Oid,
+        selected: crate::world::js::Obj,
+    },
     /// Conditional worker: only update the selected registration if it has not changed while
     /// weather was fetched. Durable before provider submission, including send timestamps.
     UpdateAlertState {
