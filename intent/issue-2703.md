@@ -27,3 +27,26 @@ Out of scope (split): S18b delivery (alarm/alert sends, provider adapter without
 delivery ledger, sanitized diagnostics, no automatic resend; also the S12-deferred push warning
 feed) and S18c notices (no legacy route or store exists; #2623 is open; needs an AK decision).
 Also out of scope: process wiring and cutover (S20), merge, AWS resources, production imports.
+
+## S18b-1 scheduled alarm delivery (2026-10-16)
+
+Task: issue-2703-s18b-1; base 915978bb (started on a9b3a23d); authority: AK 2026-10-16 (continue S18b as separate PRs;
+no live push/FCM/APNs sends; test doubles only). Declaration: `server2/config/tasks/S18b-1.json`.
+
+Deliver the registered daily alarms from server2 exactly as the legacy alarm worker built them,
+without ever sending one delivery twice.
+
+- PARITY (B1): for the pinned legacy oracle's cases, the weather/geocode requests, OAuth request,
+  FCM request bytes and outcomes match; a scheduled minute selects, filters, sends and cleans up
+  like `sendPush`.
+- ONCE (B2): at most one provider request per delivery; no retry after a failure or an unknown
+  outcome; a restart, a second process or a repeated tick never resends a claimed minute; a later
+  minute is delivered independently.
+- RECORD (B3): every minute's claim and per-delivery outcome are in S3; an unregistered token's
+  alarms are disabled through the S18a writer.
+- PRIVATE (B4): ledger objects and diagnostics contain no token, coordinate, name or message text;
+  nothing is written to local disk.
+- PLACEMENT (B5): every changed path matches the S18b-1 declaration.
+
+Out of scope: conditional alerts (S18b-2), the S12-deferred push warning feed (S18b-3), notices
+(S18c), process wiring (S20) and any live provider call.

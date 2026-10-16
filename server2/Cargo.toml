@@ -25,6 +25,8 @@ rusty-s3 = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "0.10"
+# S18b-1: RS256 assertion of the Firebase service account (already in the lock through rustls).
+ring = "0.17"
 time = { version = "0.3", features = ["formatting", "macros"] }
 # S11: IANA zone offsets for the legacy world Intl rule (bundled tz data, no runtime file reads).
 chrono = { version = "0.4", default-features = false, features = ["std"] }
