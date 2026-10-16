@@ -722,6 +722,25 @@ mongod and checks the stored count, the retired `11H10603`, the guide codes for
 active city zones. It prints a JSON summary without keys or URLs. On 2026-10-14 it
 stored 755 zones with one request (219 city zones, 176 mid-temperature zones).
 
+## KAQ stored forecast fallback (#2770)
+
+`air-forecast-fallback.test.js` exercises source selection, KST boundaries, invalid
+values, query failures, observation preservation and first-row insertion without
+provider/DB access. `air-forecast-fallback-smoke.js` runs the real v000903 router
+and serialization against stored fixtures for both DB versions, then executes
+the exact installed app chart-data assembly block from `controller.air.js`.
+It verifies future PM10/PM2.5/AQI values, source/publication and safe no-data.
+Both run in `npm run test:offline`; the route harness requires `TZ=UTC`.
+
+```sh
+NODE_PATH=<isolated-dependencies>/node_modules TZ=Asia/Seoul node server/test/offline/air-forecast-fallback.test.js
+NODE_PATH=<isolated-dependencies>/node_modules TZ=UTC node server/test/offline/air-forecast-fallback-smoke.js
+```
+
+Use `async@2.5.0 express@4.13.4 xml2js@0.4.23 sprintf@0.1.5` in an isolated
+dependency directory; no server startup, Mongo, collectors or live provider calls.
+See [verification](../../../docs/evidence/tasks/issue-2770/verification.md).
+
 ## AirKorea observation and paging rejection repair (#2758)
 
 `airkorea-rejections.test.js` reproduces the six null-time observation batches and
