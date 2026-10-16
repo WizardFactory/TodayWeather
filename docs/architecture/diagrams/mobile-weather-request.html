@@ -5379,6 +5379,17 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <li>Pollen popup: available species grades, seasonal context and precautions. Zero Low; no concentrations. V3 oak/pine/weeds; weather-core keeps UV/species grades.</li>
         </ul>
       </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>New domestic towns (#2782)</h3>
+        </div>
+        <ul>
+          <li>After the Korea-area guard, _findTown normalizes new lat/lon before cache, async save and callback. Mongoose casting of a separate document does not update the cache.</li>
+          <li>First use, hot reuse and lean reload share numeric coordinates; makeResult retains v000901+ three-decimal location rounding. Invalid/out-of-area paths remain uncached and unsaved.</li>
+        </ul>
+      </div>
     </div>
     <nav class="node-outline no-print" id="node-outline" hidden aria-labelledby="node-outline-title">
       <div class="node-outline-head">

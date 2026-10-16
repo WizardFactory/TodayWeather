@@ -217,3 +217,26 @@ jobs:
           export NODE_OPTIONS="--require=$PWD/server/test/offline/clock-shift.js"
           node server/test/offline/forecast-collection-smoke.js
           node server/test/offline/forecast-coverage-mongo-smoke.js
+
+  town-geocode-node16:
+    # Match the legacy production ODM and its supported Mongo wire operations.
+    runs-on: ubuntu-latest
+    container: node:16.20.2-bullseye
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install isolated town-geocode dependencies
+        run: npm install --prefix /tmp/town-geocode --ignore-scripts --no-audit --no-fund --package-lock=false mongoose@5.1.2 async@2.6.4 sprintf@0.1.5 express@4.13.4 axios@0.18.1 xml2js@0.4.23
+      - name: Prepare compatible temporary Mongo binary
+        run: |
+          curl -fsSL https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2004-4.4.29.tgz -o /tmp/town-geocode-mongo.tgz
+          tar -xzf /tmp/town-geocode-mongo.tgz -C /tmp
+      - name: Verify first use, hot cache, persisted reload and real HTTP response
+        env:
+          NODE_PATH: /tmp/town-geocode/node_modules
+          TW_MONGOD: /tmp/mongodb-linux-x86_64-ubuntu2004-4.4.29/bin/mongod
+        run: |
+          node server/test/offline/town-geocode-coordinates.test.js
+          node server/test/offline/town-geocode-smoke.js
