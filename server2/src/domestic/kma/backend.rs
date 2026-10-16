@@ -1,6 +1,6 @@
 //! Native v000903 KMA backend for the S10 dispatcher (`Family::Kma`). Registration keeps legacy
-//! selected. Only unknown-town geocoding and the KR remap still forward until S15b-4b-2.
-//! Storage failures and port defects never forward.
+//! selected during coexistence. Selected native routes resolve unknown towns and KR remaps
+//! through their source; storage failures, compatibility markers and port defects never forward.
 use super::{AssemblyConfig, KmaRequest, KmaStore, Outcome, assemble, assemble_capturing};
 use crate::gateway::{
     BackendDispatcher, BackendHandler, BackendMode, BoxFuture, Family, GatewayError, OrderedJson,
@@ -10,16 +10,24 @@ use crate::world::i18n;
 use std::sync::Arc;
 use tokio::{sync::Semaphore, time::Instant};
 
-/// A store snapshot for one request, or a decision to stay on legacy.
+/// A request snapshot or terminal dependency failure.
 pub enum SourceAnswer {
     Snapshot(Box<dyn KmaStore + Send>),
-    /// An unknown town still requires geocoding (S15b-4b-2).
+    /// Compatibility marker from custom/recorded sources, rejected by selected native handlers.
     Forward(String),
     /// Storage/build failure is a dependency failure, never a legacy forward.
     Failed(String),
 }
 /// Supplies request inputs (S15b: [`super::source::S3Source`]).
 pub trait KmaSource: Send + Sync {
+    /// Async legacy parameter remap before snapshot reads. Default sources need no remap.
+    fn prepare(
+        &self,
+        request: KmaRequest,
+        _deadline: Instant,
+    ) -> BoxFuture<'_, Result<KmaRequest, Outcome>> {
+        Box::pin(async { Ok(request) })
+    }
     fn snapshot(&self, request: &KmaRequest, deadline: Instant) -> BoxFuture<'_, SourceAnswer>;
 }
 /// Register the v000903 KMA handler with `source` and select it (`SERVER2_NATIVE_FAMILIES`
@@ -138,23 +146,32 @@ impl KmaBackend {
             Outcome::Status(..) | Outcome::Undefined | Outcome::Defect(_) => {
                 Err(GatewayError::Provider)
             }
-            Outcome::Legacy(_) => Ok(Native::Forward),
+            // Transitional/custom sources cannot escape a selected native handler to legacy.
+            Outcome::Legacy(_) => native_defect(),
         }
     }
     /// S17b: assemble a parsed request (a gateway backend or a direct public route) from the
-    /// source's snapshot. Only provider-backed town/geocode paths can return `Outcome::Legacy`.
-    /// Storage failures and Rust defects are counted dependency failures.
+    /// source's snapshot. Async source preparation remaps KR before reads; a source compatibility
+    /// marker is a counted dependency failure and cannot cause a legacy hop.
     pub async fn outcome(
         &self,
         request: KmaRequest,
         deadline: Instant,
     ) -> Result<Outcome, GatewayError> {
+        let deadline = deadline.min(Instant::now() + std::time::Duration::from_secs(3));
+        if let Some(reply) = super::chain::preflight(&request) {
+            return Ok(reply);
+        }
+        let request = match self.source.prepare(request, deadline).await {
+            Ok(request) => request,
+            Err(reply) => return Ok(reply),
+        };
         if let Some(reply) = super::chain::preflight(&request) {
             return Ok(reply);
         }
         let store = match self.source.snapshot(&request, deadline).await {
             SourceAnswer::Snapshot(store) => store,
-            SourceAnswer::Forward(reason) => return Ok(Outcome::Legacy(reason)),
+            SourceAnswer::Forward(_) => return native_defect(),
             SourceAnswer::Failed(_) => return native_defect(),
         };
         let now = store.as_of_ms().unwrap_or_else(|| (self.clock)());
@@ -171,7 +188,7 @@ impl KmaBackend {
         })
         .await
         {
-            Ok((Outcome::Defect(_), _)) => return native_defect(),
+            Ok((Outcome::Defect(_) | Outcome::Legacy(_), _)) => return native_defect(),
             Ok(outcome) => outcome,
             // A Rust panic is a counted dependency defect, never a legacy forward.
             Err(e) if e.is_panic() => return native_defect(),

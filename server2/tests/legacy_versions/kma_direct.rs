@@ -315,10 +315,10 @@ async fn town_status_replies_and_declared_forwards() {
     assert_eq!(hits.load(Ordering::SeqCst), 0, "native app-level 404");
 }
 
-/// A source that cannot supply the inputs sends the request to legacy unchanged; the legacy
-/// status, headers and body come back unchanged (including 304 revalidation).
+/// A selected native source that cannot supply inputs ends with a native dependency failure;
+/// no direct route silently uses the coexistence legacy origin.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn forwarded_direct_requests_return_the_legacy_reply_unchanged() {
+async fn selected_native_direct_dependency_failure_never_forwards() {
     warm();
     let hits = Arc::new(AtomicUsize::new(0));
     let origin = legacy_origin(hits.clone()).await;
@@ -327,10 +327,14 @@ async fn forwarded_direct_requests_return_the_legacy_reply_unchanged() {
         requests: Mutex::new(Vec::new()),
     });
     let gw = gateway(&origin, source.clone(), ALL);
-    for (n, golden_id) in GOLDENS.into_iter().enumerate() {
-        let reply = send(&gw, Method::GET, golden_id).await;
-        assert_golden(golden_id, false, &reply);
-        assert_eq!(hits.load(Ordering::SeqCst), n + 1, "{golden_id}");
+    for golden_id in GOLDENS {
+        let (status, _, body) = send(&gw, Method::GET, golden_id).await;
+        assert_eq!(
+            (status, body.as_slice()),
+            (502, b"Bad Gateway\n".as_slice()),
+            "{golden_id}"
+        );
+        assert_eq!(hits.load(Ordering::SeqCst), 0, "{golden_id}");
     }
 }
 
@@ -413,16 +417,16 @@ fn town_entry_and_direct_claims_follow_the_routing_list() {
         from_vars(&with("town", false)).is_err(),
         "town needs the shared S3 settings"
     );
-    // Review S17B-R3-F1: direct routes need the plain-HTTP loopback legacy origin, whose hop
-    // keeps the request target verbatim; an HTTPS legacy origin is refused at startup.
+    // Native direct routes no longer use the legacy hop. Its HTTP/HTTPS choice cannot
+    // impose a startup dependency on these selected native families.
     let https = |families: &'static str| {
         move |name: &str| match name {
             "SERVER2_GATEWAY_LEGACY_URL" => Some("https://legacy.example/".to_owned()),
             other => with(families, true)(other),
         }
     };
-    assert!(from_vars(&https("town")).is_err());
-    assert!(from_vars(&https("kma")).is_err());
+    assert!(from_vars(&https("town")).unwrap().is_some());
+    assert!(from_vars(&https("kma")).unwrap().is_some());
     assert!(from_vars(&https("kma-v000902")).unwrap().is_some());
 }
 
@@ -563,8 +567,9 @@ async fn the_legacy_hop_drops_connection_listed_headers_both_ways() {
         socket.write_all(reply.as_bytes()).await.unwrap();
         socket.shutdown().await.unwrap();
     });
-    // A source without inputs: the direct request takes the legacy hop.
-    let gw = gateway(&format!("http://{addr}/"), Arc::new(LegacyOnly), ALL);
+    // This is the explicitly selected legacy adapter's transport contract, independent
+    // of native DirectRoutes (which can no longer invoke it).
+    let dispatcher = BackendDispatcher::legacy(&format!("http://{addr}/")).unwrap();
     let req = Request::builder()
         .uri("/v000803/town/a/b/c")
         .header("connection", "x-private")
@@ -572,14 +577,21 @@ async fn the_legacy_hop_drops_connection_listed_headers_both_ways() {
         .header("x-public", "kept")
         .body(Body::empty())
         .unwrap();
-    let response = gw.handle(req).await;
-    assert_eq!(response.status().as_u16(), 200);
-    let h = response.headers().clone();
+    let (status, h, body) = dispatcher
+        .proxy(
+            req.method(),
+            req.uri().path_and_query().unwrap().as_str(),
+            req.headers(),
+            std::time::Duration::from_secs(3),
+        )
+        .await
+        .unwrap();
+    assert_eq!(status, 200);
     assert_eq!(h.get("x-kept").unwrap(), "yes");
     for gone in ["x-resp", "keep-alive", "connection"] {
         assert!(h.get(gone).is_none(), "{gone}");
     }
-    assert_eq!(to_bytes(response.into_body(), 1024).await.unwrap(), "ok");
+    assert_eq!(body, b"ok");
     let request = seen.lock().unwrap().clone();
     assert!(request.contains("x-public: kept"), "{request}");
     assert!(!request.contains("x-private"), "{request}");
