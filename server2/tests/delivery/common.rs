@@ -117,6 +117,8 @@ impl Fetch for WeatherDouble {
 pub enum Answer {
     Json(u16, String),
     Text(u16, String),
+    /// Test-owned OAuth barrier; no runtime configuration.
+    Held(Arc<tokio::sync::Notify>, Arc<tokio::sync::Notify>, String),
     /// Read the request, then close the connection without an answer.
     Reset,
     /// Read the request and never answer.
@@ -231,6 +233,11 @@ impl GoogleDouble {
                         Answer::Hang => {
                             tokio::time::sleep(Duration::from_secs(3600)).await;
                             return;
+                        }
+                        Answer::Held(started, release, b) => {
+                            started.notify_one();
+                            release.notified().await;
+                            (200, "application/json; charset=UTF-8", b)
                         }
                         Answer::Json(s, b) => (s, "application/json; charset=UTF-8", b),
                         Answer::Text(s, b) => (s, "text/html", b),

@@ -10,7 +10,7 @@
 //! (`FirebaseMessagingRequestHandler`, `FirebaseMessagingError.fromServerError`).
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use ring::{rand::SystemRandom, signature};
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, future::Future, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 
 /// firebase-admin `FIREBASE_MESSAGING_TIMEOUT` (10 s socket timeout; server2 bounds the whole
@@ -241,6 +241,18 @@ impl Fcm {
 
     /// One `messages:send` request with the given JSON body (`{"message": ...}`).
     pub async fn send(&self, product: Product, body: Vec<u8>, now_ms: i64) -> SendOutcome {
+        self.send_guarded(product, now_ms, || async move { Some(body) })
+            .await
+    }
+
+    /// Warning delivery's final admission after OAuth preparation, immediately before POST.
+    /// The caller bounds the guard and returns no payload on unavailable/changed state.
+    /// Existing alarm/conditional callers keep `send` and its original behavior.
+    pub async fn send_guarded<G, F>(&self, product: Product, now_ms: i64, prepare: G) -> SendOutcome
+    where
+        G: FnOnce() -> F,
+        F: Future<Output = Option<Vec<u8>>>,
+    {
         let Some(account) = self.account(product).await else {
             return SendOutcome::NotSent {
                 reason: "credentials",
@@ -248,6 +260,9 @@ impl Fcm {
         };
         let Some(token) = self.token(product, &account, now_ms).await else {
             return SendOutcome::NotSent { reason: "oauth" };
+        };
+        let Some(body) = prepare().await else {
+            return SendOutcome::NotSent { reason: "guard" };
         };
         let url = format!(
             "{}v1/projects/{}/messages:send",

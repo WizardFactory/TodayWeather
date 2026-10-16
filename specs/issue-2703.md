@@ -139,3 +139,53 @@ Rules:
   registrations are not submitted to Google's retired legacy endpoint (same as S18b-1).
   Legacy's `updateAt` cleanup typo has no matching schema field and remains a no-op. Duplicate
   cleanup uses S18b-1's documented earliest-distinct-date rule for alerts too.
+
+## S18b-3: warning feed and one-shot worker
+
+The stable task is `issue-2703-s18b3`, base `82356a95`. Legacy authority is
+`pushCoordinator/warningFeed.js`, `engine.pollWarnings/eligible`,
+`registry.warningRefs/inside` and `runtime.resolve/warning`, with S12 event and
+zone-state semantics reused. This library scope has no process-startup wiring.
+
+S12 calls a feed sink only after every source page/day in a successful zone sync
+has been durably published. A feed error is observable and leaves the collector
+able to retry publication on a subsequent source collection attempt. Source
+collection retry is not a notification retry.
+
+The feed uses conditional S3 writes at `index/v2/push/warning-feed/`: immutable
+`events/<identity>.json` objects precede a CAS `head.json`. First durable head
+publication is silent, including after memory loss; later unseen rows use the
+legacy source-time window (at most 60 seconds ahead and less than five minutes
+old). Events in the head last 24 hours; fingerprints keep the last 50,000. A
+partial event write cannot become visible without the head. Unknown writes are
+read back; corrupt/missing acknowledged references are errors, never empty state.
+
+The worker's first successful read is a silent baseline, so replacement does not
+resume old campaigns. Later fresh issue commands 1/3/6/7 are grouped in stable
+announcement/sequence/type/stress/command/end-time order. Current S12 zone state
+must still match the issued announcement and stress; release/expiry suppresses
+submission. Eligible enabled alert registrations are inside inclusive UTC normal
+or overnight windows; ordinary six-hour precipitation/air suppression does not
+apply. Resolve coordinates through the configured server2 geocode route; town
+registrations use the S12 mapping. All geographic coordinates remain in memory,
+never the feed, claim/results or diagnostics. Resolution failure skips selection.
+
+Each campaign's eligible endpoints are deduplicated by package and FCM token.
+An open five-minute campaign can admit a newly eligible registration, while each
+endpoint's deterministic delivery claim admits at most one attempt. Claim durable
+before any submission, after OAuth preparation re-read S12 durable zone state and check registration
+through the PushService writer (including other-process S3 journal commits), then
+use the final clock/deadline/time window immediately before POST. The guard has a
+four-second bound; error, timeout or changed state means no POST and a terminal claim. Cancellation after claim sacrifices the
+attempt; it never authorizes replay. Rejected, unknown and accepted submissions
+remain claimed across workers/restarts. FCM unregistered disables conditional
+alerts only. Claims/results contain identities/status classes without raw tokens,
+names, exact coordinates or message text. No automatic send retry is added.
+
+Korean titles use legacy weather/level strings; all other languages use legacy
+English titles. The body is the first matched warning zone's name. Existing FCM
+payload and provider adapter are reused; tests alone inject synthetic peers.
+
+S18c follows later as a separate PR: #2623 public JSON/language/validation/numeric-ID
+contracts, CLI-only publication and S3-authoritative notice state. Client/web popup
+implementation and the superseded SQLite proposal are outside these S18 PRs.
