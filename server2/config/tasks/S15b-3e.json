@@ -32,6 +32,6 @@
     "server2/src/domestic/kma/time.rs": "removes kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM, no longer used by the port",
     "server2/src/domestic/kma/mod.rs": "documentation of the kaq store answer",
     "server2/src/domestic/kma/source/mod.rs": "documentation of the kaq store answer",
-    "server2/tests/domestic/": "fixtures/oracle.json.gz re-recorded on legacy master 915978bb with 12 #2771 scenarios (85 earlier scenarios byte-identical), PROVENANCE.md with the new driver, parity.rs scenario list, air_forecast_s3.rs wording"
+    "server2/tests/domestic/": "fixtures/oracle.json.gz re-recorded on legacy master 915978bb with 13 #2771 scenarios (85 earlier scenarios byte-identical), PROVENANCE.md with the new driver, parity.rs scenario list, air_forecast_s3.rs wording"
   }
 }

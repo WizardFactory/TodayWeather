@@ -2312,7 +2312,7 @@ and server2 follows it exactly.
   keep their selection (no rows: `Fail to get forecast`).
 - On server2 the KAQ source is gone, so a `kaq` request always reads the AirKorea forecast. The
   per-day summary is KAQ-only, and `getKecoDustForecast` still runs only for `airkorea` requests.
-- The S15 oracle covers these cases with 12 recorded scenarios (`air-kaq-*`, `air-airkorea-*`).
+- The S15 oracle covers these cases with 13 recorded scenarios (`air-kaq-*`, `air-airkorea-*`).
 
 **Request time.** A request that reads the forecast (`airForecastSource` absent, `(null)`,
 `airkorea` or `kaq`) loads the station list and the dust forecast and reads the image fold. The
