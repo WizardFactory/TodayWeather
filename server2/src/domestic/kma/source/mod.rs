@@ -1426,7 +1426,8 @@ impl KmaStore for Snapshot {
         }
     }
     /// `getForecast(stationName)` of the AirKorea image forecast; KAQ has no forecast (its source
-    /// is gone, issue #2742), so `kaq` is the legacy rejection [`crate::domestic::kma::NO_KAQ_FORECAST`].
+    /// is gone, issue #2742), so `kaq` is the legacy rejection [`crate::domestic::kma::NO_KAQ_FORECAST`]
+    /// and a `kaq` request reads the AirKorea forecast (legacy #2771).
     fn air_forecast(&self, source: &str, station: &Value) -> StoreResult {
         match source {
             "kaq" => Err(StoreError(crate::domestic::kma::NO_KAQ_FORECAST.into())),
