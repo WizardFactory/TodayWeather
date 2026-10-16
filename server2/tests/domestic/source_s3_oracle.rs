@@ -218,12 +218,9 @@ async fn rss_and_mid_documents_read_from_s3_equal_the_legacy_oracle() {
                 .mid_answer(model, &reg_id, legacy_collects, now, deadline())
                 .await;
             if reg_id == "11D10000" {
-                // Collected by legacy, but the scenario has no record: S15b-4 acquires it.
-                let e = got.unwrap_err();
-                assert!(
-                    e.contains("mid-land-fcst 11D10000 20260924-1800 not in S3"),
-                    "{e}"
-                );
+                // Collected by legacy, but the scenario has no record and no acquirer: legacy's
+                // empty answer (S15b-4a acquires it when an acquirer is configured).
+                assert_eq!(docs_json(&got.unwrap()).to_bytes(), b"[]");
                 continue;
             }
             same(

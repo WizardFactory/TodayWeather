@@ -107,8 +107,9 @@ Documents are derived in memory; nothing derived is stored.
 
     A retired zone keeps its stored document.
 - **Freshness:** a missing latest publication (current `current_base`, shortest
-  `ultra_short_base`, short `short_base`, RSS `rss_latest`, mid `mid_tm_fc`) is a temporary forward
-  until S15b-4 acquires it at request time. Older gaps are not a forward reason; S15b-2 fills
+  `ultra_short_base`, short `short_base`, RSS `rss_latest`, mid `mid_tm_fc`) was a temporary forward
+  in S15b-1. Since S15b-4a the request acquires it, waiting at most 3 s with no forward; data that
+  is still late gets legacy's answer for absent data. Older gaps are not a forward reason; S15b-2 fills
   history (ASOS).
 
 ## D4

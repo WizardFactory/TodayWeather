@@ -5,7 +5,8 @@
 //! TEST ONLY: no provider or AWS is reached.
 use super::life::{life_runs, oracle, value};
 use super::source::{at, items_of, number, same, text};
-use super::source_s3::{Peer, S3_PEERS as SERIAL, deadline};
+use super::source_s3::{Peer, deadline};
+use super::support::{FIXED_NOW, MIDDAY, TestClock, TestInstant, fixed_now};
 use axum::{Router, extract::State, http::Uri, response::IntoResponse, routing::any};
 use serde_json::json;
 use server2::domestic::kma::source::life_input::LifeInputs;
@@ -163,7 +164,7 @@ const KASI_NOW: f64 = 1_792_152_000_000.; // 2026-10-16T12:00:00Z
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn life_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -172,8 +173,9 @@ async fn life_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
     let life = at(oracle(), &["life"]);
     for q in items_of(at(life, &["queries"])) {
         let now = number(at(q, &["now"]));
-        let inputs =
-            LifeInputs::new(transport.clone(), store.clone()).with_kasi_schedule(HOLD, HOLD);
+        let inputs = LifeInputs::new(transport.clone(), store.clone())
+            .with_clock(test_clock())
+            .with_kasi_schedule(HOLD, HOLD);
         let answers = inputs.load(now, deadline()).await;
         let area: f64 = text(at(q, &["areaNo"])).parse().unwrap();
         let expected = match at(q, &["error"]).string() {
@@ -192,7 +194,9 @@ async fn life_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
         .iter()
         .map(|r| number(at(r, &["now"])))
         .fold(0., f64::max);
-    let inputs = LifeInputs::new(transport.clone(), store.clone()).with_kasi_schedule(HOLD, HOLD);
+    let inputs = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD);
     let answers = inputs.load(last + 60_000., deadline()).await;
     let today = "20261014";
     let mut compared = 0;
@@ -210,7 +214,7 @@ async fn life_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
     }
     assert_eq!(compared, 5);
     // KASI: the first capture pass reads every area's stored days (no acquirer: read only).
-    let inputs = LifeInputs::new(transport.clone(), store.clone());
+    let inputs = LifeInputs::new(transport.clone(), store.clone()).with_clock(test_clock());
     assert!(
         inputs.load(KASI_NOW, deadline()).await.kasi.is_none(),
         "not read yet"
@@ -254,11 +258,14 @@ struct StubState {
     mfds_shape: AtomicUsize,
     queries: Mutex<Vec<String>>,
 }
+/// This module's fixed test instant (S15b-3d).
+static INSTANT: TestInstant = TestInstant::new();
 fn now_ms() -> f64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as f64
+    INSTANT.get()
+}
+/// The inputs' and acquirers' wall clock: the fixed test instant.
+fn test_clock() -> Arc<TestClock> {
+    Arc::new(TestClock(&INSTANT))
 }
 fn kst(ms: f64) -> Publication {
     server2::history::schedule::from_ms(ms as i64)
@@ -433,18 +440,18 @@ fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn LifeAcquire> {
     let daily = server2::domestic::kma::source::observe::DailyAcquirer::new(
         Arc::new(server2::providers::HttpProviderTransport::new(2 << 20).unwrap()),
         Arc::new(server2::providers::HttpPublicTransport::new(2 << 20).unwrap()),
-        Arc::new(peer.transport()),
+        Arc::new(peer.transport_limited(super::source_s3::ACQUIRER_PERMITS)),
         vec!["S15B3B_LOCAL_KEY_A+aaaaaaaaaaaaaaaa/=".into()],
         5000,
         server2::domestic::family::Endpoints::new(base, base, base).unwrap(),
-        Arc::new(server2::budget::SystemClock),
+        test_clock(),
         Arc::new(server2::domestic::metrics::DomesticMetrics::default()),
     )
     .unwrap();
     let mfds =
         server2::domestic::kma::source::life_live::mfds_acquirer::<_, BoundedS3<HttpS3Transport>>(
             Arc::new(server2::providers::HttpProviderTransport::new(1 << 20).unwrap()),
-            Arc::new(server2::budget::SystemClock),
+            test_clock(),
         )
         .unwrap();
     Arc::new(LiveLife::new(
@@ -473,13 +480,14 @@ fn short_deadline() -> Instant {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn missing_national_datasets_are_acquired_once_and_published_before_use() {
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
     let inputs = Arc::new(
         LifeInputs::new(transport.clone(), store.clone())
+            .with_clock(test_clock())
             .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
             .with_kasi_schedule(HOLD, HOLD),
     );
@@ -523,6 +531,7 @@ async fn missing_national_datasets_are_acquired_once_and_published_before_use() 
     }
     // A cold reader of a later request sees the published records (they completed after `now`).
     let cold = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
         .with_kasi_schedule(HOLD, HOLD)
         .load(now_ms(), deadline())
         .await;
@@ -534,9 +543,41 @@ async fn missing_national_datasets_are_acquired_once_and_published_before_use() 
     assert_eq!(transport.available(), super::source_s3::TEST_PERMITS);
 }
 
+/// At 00:00:30 KST (no MFDS slot yet) and at 12:30 KST (the 12:20 slot).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
-    let _serial = SERIAL.lock().await;
+    for (at, slot) in [(FIXED_NOW, None), (MIDDAY, Some((20261016, 1220)))] {
+        slow_acquisition_at(at, slot).await;
+    }
+}
+/// The life sweep's starts (KST) with the MFDS slot (`YYYYMMDD`, `HHMM`) legacy collects by
+/// then: the latest of 08:20, 12:20 and 17:20 KST of that day, none before 08:20. The test's two
+/// requests are about 10 s apart and a new UV slot or MFDS slot between them is legitimately
+/// asked again, so the starts before a boundary are two minutes before it (the image sweep
+/// crosses the boundaries during the run).
+const LIFE_BOUNDARIES: [(&str, Option<(u32, u16)>); 9] = [
+    ("2026-10-15T14:58:00.000Z", Some((20261015, 1720))), // 10-15 23:58
+    ("2026-10-15T15:00:00.500Z", None),                   // 10-16 00:00:00.5
+    ("2026-10-15T19:58:00.000Z", None),                   // 04:58
+    ("2026-10-15T20:00:00.500Z", None),                   // 05:00:00.5
+    ("2026-10-15T23:18:00.000Z", None),                   // 08:18
+    ("2026-10-15T23:20:00.500Z", Some((20261016, 820))),  // 08:20:00.5
+    ("2026-10-16T03:00:00.000Z", Some((20261016, 820))),  // 12:00
+    ("2026-10-16T08:21:00.000Z", Some((20261016, 1720))), // 17:21
+    ("2026-10-16T14:00:30.000Z", Some((20261016, 1720))), // 23:00:30
+];
+/// S15b-3d: [`a_slow_acquisition_releases_the_request_and_serves_the_next_one`] at fixed
+/// instants around the KST boundaries (slow: `--ignored across_kst_boundaries`).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "slow sweep; run with --ignored"]
+async fn life_acquisition_across_kst_boundaries() {
+    for (at, slot) in LIFE_BOUNDARIES {
+        slow_acquisition_at(at, slot).await;
+    }
+}
+/// `slot`: the MFDS slot expected at `at` (an explicit oracle, not `slot_at`).
+async fn slow_acquisition_at(at: &str, slot: Option<(u32, u16)>) {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, at).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -544,9 +585,16 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
     stub.state.uv_delay_ms.store(4_000, Ordering::SeqCst);
     stub.state.mfds_delay_ms.store(4_000, Ordering::SeqCst);
     let inputs = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
         .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_kasi_schedule(HOLD, HOLD);
-    let now = request_now();
+    // MFDS is collected only from the day's first slot (08:20).
+    let now = now_ms();
+    assert_eq!(
+        server2::domestic::mfds::slot_at(now).map(|p| (p.date(), p.time())),
+        slot,
+        "{at}"
+    );
     let started = std::time::Instant::now();
     let first = inputs.load(now, short_deadline()).await;
     assert!(
@@ -571,25 +619,31 @@ async fn a_slow_acquisition_releases_the_request_and_serves_the_next_one() {
     let next = inputs.load(now_ms(), short_deadline()).await;
     assert!(
         uv_rows(&next) > 0,
-        "the owned acquisition finished and serves the next request"
+        "{at}: the owned acquisition finished and serves the next request"
     );
-    assert!(
+    assert_eq!(
         !next.mfds.is_empty(),
-        "the delayed MFDS table serves it too"
+        slot.is_some(),
+        "{at}: the delayed MFDS table serves it too (from the first slot on)"
     );
-    assert_eq!(stub.state.uv.load(Ordering::SeqCst), 1);
-    assert_eq!(stub.state.mfds.load(Ordering::SeqCst), 1);
+    assert_eq!(stub.state.uv.load(Ordering::SeqCst), 1, "{at}");
+    assert_eq!(
+        stub.state.mfds.load(Ordering::SeqCst),
+        usize::from(slot.is_some()),
+        "{at}"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_mfds_slot_is_asked_once_even_when_it_fails() {
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
     stub.state.mfds_status.store(503, Ordering::SeqCst);
     let inputs = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
         .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_kasi_schedule(HOLD, HOLD);
     let now = request_now();
@@ -601,12 +655,13 @@ async fn an_mfds_slot_is_asked_once_even_when_it_fails() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_kasi_capture_acquires_missing_days_and_a_failing_area_does_not_stop_others() {
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
     let inputs = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
         .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_kasi_schedule(HOLD, HOLD);
     let now = now_ms();
@@ -654,7 +709,7 @@ async fn the_kasi_capture_acquires_missing_days_and_a_failing_area_does_not_stop
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_snapshot_answers_the_life_store_calls() {
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     use super::source_s3::{NOW, request, seed};
     use server2::domestic::kma::backend::{KmaSource, SourceAnswer};
     use server2::domestic::kma::source::S3Source;
@@ -746,7 +801,7 @@ fn life_settings_use_the_legacy_mfds_endpoint() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn uv_tries_earlier_slots_while_a_slot_has_no_data() {
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -755,6 +810,7 @@ async fn uv_tries_earlier_slots_while_a_slot_has_no_data() {
     let slots = server2::domestic::publication::uv_slots(now as i64).unwrap();
     *stub.state.uv_no_data.lock().unwrap() = Some(slots[0].compact()[..10].to_owned());
     let inputs = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
         .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_kasi_schedule(HOLD, HOLD);
     let answers = inputs.load(now, deadline()).await;
@@ -768,7 +824,7 @@ async fn uv_tries_earlier_slots_while_a_slot_has_no_data() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn mfds_accepts_only_a_direct_answer_within_one_mebibyte() {
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     for shape in [1, 2] {
         let peer = Peer::new();
         let transport = peer.transport();
@@ -777,6 +833,7 @@ async fn mfds_accepts_only_a_direct_answer_within_one_mebibyte() {
         let stub = stub().await;
         stub.state.mfds_shape.store(shape, Ordering::SeqCst);
         let inputs = LifeInputs::new(transport.clone(), store.clone())
+            .with_clock(test_clock())
             .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
             .with_kasi_schedule(HOLD, HOLD);
         let answers = inputs.load(request_now(), deadline()).await;
@@ -792,7 +849,7 @@ async fn mfds_accepts_only_a_direct_answer_within_one_mebibyte() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_old_nearest_location_still_decides_rise_set_after_a_cold_read() {
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -830,7 +887,9 @@ async fn an_old_nearest_location_still_decides_rise_set_after_a_cold_read() {
         )
         .await;
     }
-    let inputs = LifeInputs::new(transport.clone(), store.clone()).with_kasi_schedule(HOLD, HOLD);
+    let inputs = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD);
     inputs.kasi_pass(now).await.unwrap();
     let kasi = inputs.load(now, deadline()).await.kasi.expect("read");
     assert_eq!(kasi.places(), 2, "the old location is known");
@@ -847,13 +906,15 @@ async fn an_old_nearest_location_still_decides_rise_set_after_a_cold_read() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_publication_after_a_request_instant_is_read_by_a_later_request() {
-    let _serial = SERIAL.lock().await;
+    // Its requests span a minute: a start away from the three-hour UV slot boundaries.
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
     stub.state.uv_delay_ms.store(4_000, Ordering::SeqCst);
     let inputs = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
         .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_kasi_schedule(HOLD, HOLD);
     let uv_rows = |a: &server2::domestic::kma::source::life_input::LifeAnswers| {
@@ -880,7 +941,7 @@ async fn a_publication_after_a_request_instant_is_read_by_a_later_request() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_mfds_connection_may_take_the_legacy_ten_seconds() {
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -907,7 +968,7 @@ async fn an_mfds_connection_may_take_the_legacy_ten_seconds() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_mfds_slot_is_known_by_its_period_not_by_its_reception_time() {
-    let _serial = SERIAL.lock().await;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::new();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -942,6 +1003,7 @@ async fn an_mfds_slot_is_known_by_its_period_not_by_its_reception_time() {
     .await;
     // A cold process at 12:30: the 12:20 slot was never collected, so it is acquired.
     let inputs = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
         .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_kasi_schedule(HOLD, HOLD);
     inputs.load(at(1230), deadline()).await;

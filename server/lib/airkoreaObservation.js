@@ -42,10 +42,26 @@ function kstDayEnd(ms) { return Math.floor((ms + KST_MS) / DAY_MS) * DAY_MS + DA
 var VALUES = ['so2Value', 'coValue', 'o3Value', 'no2Value', 'pm10Value', 'pm25Value',
     'pm10Value24', 'pm25Value24', 'khaiValue'];
 
-function failure(code, retryable) {
+// Only enum labels and bounded counters may leave a rejection. Never copy provider fields into errors.
+function rejectionMetadata(details) {
+    if (!details || ['identity', 'province', 'timestamp', 'network', 'total-count', 'page-number',
+        'page-size', 'item-count', 'noncontiguous-page'].indexOf(details.reason) === -1) { return undefined; }
+    var clean = {reason: details.reason};
+    if (['stationName', 'cityName', 'sidoName', 'dataTime', 'mangName'].indexOf(details.field) !== -1) {
+        clean.field = details.field;
+    }
+    ['rowIndex', 'requestedPage', 'actualPage', 'requestedSize', 'actualSize', 'totalCount',
+        'itemCount', 'expectedItems'].forEach(function (name) {
+        var n = details[name];
+        if (typeof n === 'number' && isFinite(n) && n >= 0 && n <= 2000 && n % 1 === 0) { clean[name] = n; }
+    });
+    return clean;
+}
+function failure(code, retryable, details) {
     var err = new Error('AirKorea ' + code);
     err.code = code;
     err.retryable = !!retryable;
+    if (details) { err.diagnostic = rejectionMetadata(details); }
     return err;
 }
 function keyValue(key) {
@@ -115,18 +131,30 @@ function parseRows(data, operation, keys) {
     if (!Array.isArray(rows) || rows.length === 0) { throw failure('EMPTY_ITEMS'); }
     var unavailable = [];
     var output = [], seen = {};
-    rows.forEach(function (item) {
+    rows.forEach(function (item, index) {
         var station = operation === STATION;
         var identity = station ? item && item.stationName : item && item.cityName;
-        var ms = kstInstant(item && item.dataTime);
-        if (!item || typeof identity !== 'string' || !identity.trim() || !isFinite(ms) ||
-            (!station && (typeof item.sidoName !== 'string' || !item.sidoName.trim())) ||
-            (data.parm && item.sidoName && item.sidoName !== data.parm.sidoName)) {
-            throw failure('INVALID_OBSERVATION');
+        function invalid(reason, field) {
+            throw failure('INVALID_OBSERVATION', false, {reason: reason, field: field, rowIndex: index});
         }
-        var id = identity + '@' + ms;
+        if (!item || !text(identity)) { invalid('identity', station ? 'stationName' : 'cityName'); }
+        if ((!station && !text(item.sidoName)) ||
+            (data.parm && item.sidoName && item.sidoName !== data.parm.sidoName)) {
+            invalid('province', 'sidoName');
+        }
+        // Observed provider shape: a real station with no observation at all. This is not a timestamp
+        // normalization rule: missing/blank/malformed time and missing/non-null values stay invalid.
+        var unobserved = station && item.dataTime === null && VALUES.every(function (name) {
+            return Object.prototype.hasOwnProperty.call(item, name) && item[name] === null;
+        });
+        if (unobserved && !text(item.sidoName)) { invalid('province', 'sidoName'); }
+        if (unobserved && !text(item.mangName)) { invalid('network', 'mangName'); }
+        var ms = kstInstant(item.dataTime);
+        if (!unobserved && !isFinite(ms)) { invalid('timestamp', 'dataTime'); }
+        var id = identity + '@' + (unobserved ? 'unobserved' : ms);
         if (seen[id]) { throw failure('DUPLICATE_OBSERVATION'); }
         seen[id] = true;
+        if (unobserved) { unavailable.push(identity); return; }
         var row = {date: new Date(ms)};
         keys.forEach(function (name) {
             if (!Object.prototype.hasOwnProperty.call(item, name)) { return; }
@@ -174,12 +202,17 @@ function itemsBody(payload, check) {
     });
     return body;
 }
-function envelope(payload, page, size, check) {
+function envelope(payload, page, size, check, allowZeroTotal) {
     var body = itemsBody(payload, check);
     var total = Number(body.totalCount), actualPage = Number(body.pageNo), actualSize = Number(body.numOfRows);
-    if (!/^\d+$/.test(String(body.totalCount)) || total > 2000 || actualPage !== page || actualSize !== size ||
-        body.items.length !== Math.min(size, Math.max(0, total - (page - 1) * size))) {
-        throw failure('INCOMPLETE_PAGE');
+    var expected = Math.min(size, Math.max(0, total - (page - 1) * size));
+    var reason = !/^\d+$/.test(String(body.totalCount)) || total > 2000 ? 'total-count' :
+        actualPage !== page ? 'page-number' : actualSize !== size ? 'page-size' :
+            (allowZeroTotal && total === 0 ? body.items.length > size : body.items.length !== expected) ? 'item-count' : null;
+    if (reason) {
+        throw failure('INCOMPLETE_PAGE', false, {reason: reason, requestedPage: page, actualPage: actualPage,
+            requestedSize: size, actualSize: actualSize, totalCount: total, itemCount: body.items.length,
+            expectedItems: expected});
     }
     return body;
 }
@@ -245,7 +278,8 @@ function create(options) {
     function query(operation, key, params, cb, deadline, keyed) {
         var spec = Object.prototype.hasOwnProperty.call(OPERATIONS, operation) ? OPERATIONS[operation] : null;
         if (!spec) { return cb(failure('INVALID_OPERATION')); }
-        var all = [], page = 1, total, calls = 0;
+        var all = [], page = 1, total, calls = 0, zeroTotal = false, shortPage = false, seen = {};
+        var observation = operation === STATION || operation === SIDO;
         deadline = deadline || Date.now() + (options.budgetMs || 30000);
         function next() {
             if (page > maxPages || Date.now() >= deadline) { return cb(failure('COLLECTION_LIMIT')); }
@@ -262,10 +296,28 @@ function create(options) {
                         return cb(err);
                     }
                     var body;
-                    try { body = envelope(payload, page, size, spec.item); }
+                    try { body = envelope(payload, page, size, spec.item, observation); }
                     catch (e) { return cb(e); }
                     if (total !== undefined && total !== Number(body.totalCount)) { return cb(failure('CHANGED_TOTAL')); }
                     total = Number(body.totalCount);
+                    if (page === 1 && observation && total === 0 && body.items.length) { zeroTotal = true; }
+                    // Some observation operations report totalCount=0 despite returning rows. Confirm
+                    // exhaustion with an empty terminal page; a short page alone never proves completeness.
+                    if (zeroTotal) {
+                        if (shortPage && body.items.length) {
+                            return cb(failure('INCOMPLETE_PAGE', false, {reason: 'noncontiguous-page', requestedPage: page}));
+                        }
+                        if (all.length + body.items.length > 2000) { return cb(failure('COLLECTION_LIMIT')); }
+                        for (var i = 0; i < body.items.length; i++) {
+                            var item = body.items[i];
+                            var id = JSON.stringify([operation === STATION ? item.stationName : item.cityName, item.dataTime]);
+                            if (seen[id]) { return cb(failure('DUPLICATE_OBSERVATION')); }
+                            seen[id] = true;
+                        }
+                        if (!body.items.length) { return cb(null, {list: all, calls: calls}); }
+                        shortPage = body.items.length < size;
+                        all = all.concat(body.items); page++; return next();
+                    }
                     all = all.concat(body.items);
                     if (all.length < total) { page++; return next(); }
                     if (!all.length) { return cb(failure('EMPTY_ITEMS')); }
@@ -354,5 +406,5 @@ function create(options) {
     }
     return {fetch: fetch, query: query, fetchWithKeys: fetchWithKeys, queryWithKeys: queryWithKeys};
 }
-module.exports = {create: create, buildUrl: buildUrl, parseRows: parseRows, kstInstant: kstInstant,
+module.exports = {create: create, buildUrl: buildUrl, parseRows: parseRows, kstInstant: kstInstant, rejectionMetadata: rejectionMetadata,
     failure: failure, STATION: STATION, SIDO: SIDO, STATION_LIST: STATION_LIST, FORECAST: FORECAST, NEARBY: NEARBY};

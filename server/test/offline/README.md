@@ -740,3 +740,38 @@ NODE_PATH=<isolated-dependencies>/node_modules TZ=UTC node server/test/offline/a
 Use `async@2.5.0 express@4.13.4 xml2js@0.4.23 sprintf@0.1.5` in an isolated
 dependency directory; no server startup, Mongo, collectors or live provider calls.
 See [verification](../../../docs/evidence/tasks/issue-2770/verification.md).
+
+## AirKorea observation and paging rejection repair (#2758)
+
+`airkorea-rejections.test.js` reproduces the six null-time observation batches and
+four Gwangju/Jeonnam zero-total page pairs captured on 2026-10-16. The
+[fixture](fixtures/airkorea/rejections-20261016.json) retains only public observation
+fields. Null-time station fixtures contain a usable urban control and every
+null-time row from that province's first page; their original count is provenance,
+not a complete page. Zero-total fixtures preserve every returned item and the
+empty terminal page. No key, request URL, provider message or complete raw body is
+retained. Regression coverage includes strict identities/times, all-unavailable
+batches, duplicates, positive totals, auxiliary operations, incomplete paging and
+sanitized rejection metadata.
+
+```sh
+NODE_PATH=<isolated-deps>/node_modules node server/test/offline/airkorea-rejections.test.js
+TZ=UTC NODE_PATH=<isolated-deps>/node_modules node server/test/offline/airkorea-rejections-smoke.js
+```
+
+The separate smoke needs `async@2.6.4`, `express@4.13.4`,
+`mongoose-smoke@npm:mongoose@5.13.23` and `mongodb-memory-server-core@10.1.4`.
+Tests also need `mongoose@5.1.2` for production schema statics. Mongo 7.0.14 is
+started only on loopback in a disposable database; its binary may be provisioned
+with `MONGOMS_SYSTEM_BINARY` or cached via `MONGOMS_DOWNLOAD_DIR`. The 5.13 smoke
+driver is used because the production 5.1 driver cannot connect to modern Mongo.
+No app startup, production configuration, live provider, collection endpoint or
+external fallback is used. HTTP and Mongo are closed on exit.
+
+The smoke retains the captured timestamps/values under an injected observation
+clock, verifies direct-reader and real nation-route values/grades, 17 persisted
+averages, city-only rejection and zero writes after failed terminal paging.
+Nine provinces use captured inputs (reduced station fixtures use synthetic envelope
+counts); eight unaffected provinces use a relabeled Seoul control. This proves
+isolated wiring, not live all-province recovery. CI runs the regression on Node16/22
+and smoke in the existing AirKorea Mongo job. See [selected evidence](../../../docs/evidence/tasks/issue-2758/verification.md).

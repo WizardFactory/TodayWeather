@@ -43,6 +43,7 @@ var commands = [
     [path.join(__dirname, 'air-forecast-fallback.test.js')],
     [path.join(__dirname, 'air-forecast-fallback-smoke.js')],
     [path.join(__dirname, 'airkorea-collection.test.js')],
+    [path.join(__dirname, 'airkorea-rejections.test.js')],
     [path.join(__dirname, 'airkorea-keys-endpoints.test.js')],
     [path.join(__dirname, 'airkorea-image.test.js')],
     [path.join(__dirname, 'retention-anchor.test.js')],
