@@ -13,8 +13,8 @@
 //! legacy app (`res.json`/`res.send`, weak ETag, `fresh` 0.3.0 revalidation, HEAD, `cors()` and
 //! `X-Powered-By`). The session cookie of the legacy app-wide session middleware is not emitted
 //! (S12 precedent: no client reads it). Since S15b-4a missing forecast inputs are acquired at
-//! request time; when the assembly still cannot answer (a town absent from the town list, the S15
-//! `next(err)` forwards), the request takes the legacy hop unchanged.
+//! request time. Selected native routes terminate natively on missing inputs or dependency
+//! errors; neither unknown towns nor compatibility source markers invoke the legacy adapter.
 use crate::domestic::kma::{
     KmaRequest, Outcome,
     backend::{KmaBackend, parse_path, parse_town_path, split_mount},
@@ -30,10 +30,10 @@ use std::{sync::Arc, time::Duration};
 use tokio::time::Instant;
 
 /// The native attempt of a direct request, as for a gateway backend (S10: 3 s); the source's own
-/// request wait (S13d) is inside it. On expiry the request takes the legacy hop.
+/// request wait (S13d) is inside it. Expiry is a terminal native dependency error.
 const NATIVE_ATTEMPT: Duration = Duration::from_secs(3);
-/// The legacy hop of a forwarded direct request: the CloudFront default origin response timeout
-/// (30 s), since the legacy Express routes have no deadline of their own.
+/// Historical coexistence adapter timeout retained for API compatibility. Selected native
+/// DirectRoutes do not invoke that adapter.
 pub const LEGACY_HOP: Duration = Duration::from_secs(30);
 
 /// Direct routes selected by `SERVER2_NATIVE_FAMILIES`.
@@ -55,17 +55,15 @@ impl DirectFamilies {
 pub struct DirectRoutes {
     kma: Arc<KmaBackend>,
     families: DirectFamilies,
-    legacy: BackendDispatcher,
     nation: Option<Arc<crate::nation::NationBackend>>,
 }
 impl DirectRoutes {
-    /// `legacy` must be the plain-HTTP loopback legacy origin (the runtime refuses others): its
-    /// hop keeps the request target verbatim.
-    pub fn new(kma: Arc<KmaBackend>, families: DirectFamilies, legacy: BackendDispatcher) -> Self {
+    /// The legacy parameter is retained for callers of the coexistence constructor. Selected
+    /// native routes never use it; runtime no longer requires a plain-HTTP legacy adapter.
+    pub fn new(kma: Arc<KmaBackend>, families: DirectFamilies, _legacy: BackendDispatcher) -> Self {
         Self {
             kma,
             families,
-            legacy,
             nation: None,
         }
     }
@@ -144,7 +142,11 @@ impl DirectRoutes {
             return express(&method, &headers, nation.outcome(base).await);
         }
         let Some((version, _, rest)) = split_mount(&path_and_query) else {
-            return self.forward(&method, &path_and_query, &headers).await;
+            return express(
+                &method,
+                &headers,
+                Outcome::Status(404, "Not Found\n".into()),
+            );
         };
         if matches!(rest, "" | "/") && version != "v000903" {
             // `router.get('/')` of the v000901 address and the town routers: the usage list.
@@ -156,48 +158,19 @@ impl DirectRoutes {
             parse_path(&path_and_query, locale)
         };
         match parsed {
-            Err(outcome) => return express(&method, &headers, outcome),
+            Err(outcome) => express(&method, &headers, outcome),
             Ok(request) => {
-                if let Some(outcome) = self.native(request).await {
-                    return express(&method, &headers, outcome);
-                }
+                return express(&method, &headers, self.native(request).await);
             }
         }
-        self.forward(&method, &path_and_query, &headers).await
     }
-    /// The native outcome, or None when legacy must answer.
-    async fn native(&self, request: KmaRequest) -> Option<Outcome> {
+    /// Native outcome; dependency failures are terminal 502 replies.
+    async fn native(&self, request: KmaRequest) -> Outcome {
         let deadline = Instant::now() + NATIVE_ATTEMPT;
         match tokio::time::timeout_at(deadline, self.kma.outcome(request, deadline)).await {
-            Ok(Ok(Outcome::Legacy(_))) => None,
-            Ok(Err(_)) | Err(_) => Some(Outcome::Status(502, "Bad Gateway\n".into())),
-            Ok(Ok(outcome)) => Some(outcome),
-        }
-    }
-    async fn forward(
-        &self,
-        method: &Method,
-        path_and_query: &str,
-        headers: &HeaderMap,
-    ) -> Response {
-        match self
-            .legacy
-            .proxy(method, path_and_query, headers, LEGACY_HOP)
-            .await
-        {
-            Ok((status, legacy_headers, body)) => {
-                let mut response = Response::new(Body::from(body));
-                *response.status_mut() =
-                    StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_GATEWAY);
-                *response.headers_mut() = legacy_headers;
-                response
-            }
-            // The legacy origin did not answer: what nginx returns for an unreachable upstream.
-            Err(_) => {
-                let mut response = Response::new(Body::empty());
-                *response.status_mut() = StatusCode::BAD_GATEWAY;
-                response
-            }
+            Ok(Ok(Outcome::Legacy(_))) => Outcome::Status(502, "Bad Gateway\n".into()),
+            Ok(Err(_)) | Err(_) => Outcome::Status(502, "Bad Gateway\n".into()),
+            Ok(Ok(outcome)) => outcome,
         }
     }
 }

@@ -101,8 +101,11 @@ pub struct Gateway {
     /// S17b: listed legacy direct routes, answered before the gateway routes.
     direct: Option<Arc<crate::api::DirectRoutes>>,
 }
+#[derive(Clone)]
 struct Inner {
     geocoder: Arc<dyn Geocoder>,
+    weather_geocoder: Option<Arc<dyn Geocoder>>,
+    native_weather_versions: Vec<Version>,
     backends: BackendDispatcher,
     slots: Arc<Semaphore>,
     limit: usize,
@@ -113,6 +116,8 @@ impl Gateway {
         Self {
             inner: Arc::new(Inner {
                 geocoder,
+                weather_geocoder: None,
+                native_weather_versions: Vec::new(),
                 backends,
                 slots: Arc::new(Semaphore::new(40)),
                 limit: 40,
@@ -120,6 +125,18 @@ impl Gateway {
             }),
             direct: None,
         }
+    }
+    /// Select a native internal geocoder for weather versions. Public geocode routing keeps
+    /// its independent coexistence selection; unselected weather versions keep that path.
+    pub fn with_weather_geocoder(
+        mut self,
+        geocoder: Arc<dyn Geocoder>,
+        versions: Vec<Version>,
+    ) -> Self {
+        let inner = Arc::make_mut(&mut self.inner);
+        inner.weather_geocoder = Some(geocoder);
+        inner.native_weather_versions = versions;
+        self
     }
     /// S17b: serve the listed legacy direct routes (`SERVER2_NATIVE_FAMILIES`) beside the gateway.
     pub fn with_direct(mut self, direct: Arc<crate::api::DirectRoutes>) -> Self {
@@ -139,6 +156,8 @@ impl Gateway {
         Ok(Self {
             inner: Arc::new(Inner {
                 geocoder,
+                weather_geocoder: None,
+                native_weather_versions: Vec::new(),
                 backends,
                 slots: Arc::new(Semaphore::new(limit)),
                 limit,
@@ -247,7 +266,24 @@ impl Inner {
                 2_592_000,
             )),
             input::Route::Weather(version, loc) => {
-                let geo = self.geocoder.coord(loc, lang.clone()).await?;
+                let native = self.native_weather_versions.contains(&version);
+                let deadline = if native {
+                    deadline.min(Instant::now() + Duration::from_secs(3))
+                } else {
+                    deadline
+                };
+                let geocoder = if native {
+                    self.weather_geocoder.as_ref().unwrap_or(&self.geocoder)
+                } else {
+                    &self.geocoder
+                };
+                let geo = tokio::time::timeout_at(deadline, geocoder.coord(loc, lang.clone()))
+                    .await
+                    .map_err(|_| GatewayError::Provider)?
+                    .map_err(|error| match error {
+                        GatewayError::Unavailable(_) if native => GatewayError::Provider,
+                        other => other,
+                    })?;
                 let (family, mut path) = backend::backend_path(version, &geo)?;
                 path.push_str(&query);
                 let mut value = self

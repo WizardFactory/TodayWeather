@@ -7,10 +7,9 @@
 //! weather view is stored. Legacy is shut down at cutover, so nothing here reads legacy data.
 //!
 //! S15b-1 sources the town list, region code, forecast zone, the DB 2.0 grid and short RSS
-//! documents, the mid documents and the warning zones. Station observations (S15b-2), air and
-//! life inputs (S15b-3), request-time acquisition and unknown-town geocoding (S15b-4) are not
-//! sourced yet: the snapshot ends the assembly with a named temporary forward for them, and the
-//! `kma` family stays off until S15b-4.
+//! documents, the mid documents and the warning zones. Later increments add station observations
+//! (S15b-2), air/life inputs (S15b-3) and owned request-time acquisition (S15b-4). The source
+//! rebuilds these inputs without a legacy runtime dependency.
 //!
 //! S15b-3a adds the AirKorea inputs (`arpltn`, `dust_forecast`) from national datasets shared
 //! by every request and the air-provider fallback (`air_fallback`), with request-time
@@ -51,6 +50,7 @@ mod rss;
 pub mod seed;
 pub mod stations;
 pub mod stn;
+pub mod towns;
 mod zone;
 
 pub use doc::{Doc, Val};
@@ -153,6 +153,8 @@ fn day_before(partition: &str) -> String {
 /// The S3 source. `T` is the process S3 transport behind the shared admission.
 pub struct S3Source<T> {
     reader: Reader<T>,
+    /// Safe address-only town and KR-remap projections; owned acquisition survives waiters.
+    town_resolver: towns::Resolver<T>,
     warnings: Arc<WarningService<T>>,
     clock: Clock,
     zones: Arc<tokio::sync::Mutex<Option<ZoneCache>>>,
@@ -232,6 +234,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             locate,
         ));
         Ok(Self {
+            town_resolver: towns::Resolver::new(transport.clone(), None).with_clock({
+                let clock = clock.clone();
+                Arc::new(move || clock().max(0.) as u64)
+            }),
             observations,
             air: air_input::AirInputs::new(transport.clone(), store.clone()),
             life: life_input::LifeInputs::new(transport.clone(), store.clone()),
@@ -260,6 +266,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             zones_requested: std::sync::atomic::AtomicBool::new(false),
             warning_running: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         })
+    }
+    /// Address-derived town metadata, independent of public geocode coexistence routing.
+    pub fn with_town_geocoder(
+        mut self,
+        acquire: Option<Arc<dyn crate::geocode::town::Acquire>>,
+    ) -> Self {
+        self.town_resolver = towns::Resolver::new(self.reader.transport.clone(), acquire)
+            .with_clock({
+                let clock = self.clock.clone();
+                Arc::new(move || clock().max(0.) as u64)
+            });
+        self
     }
     /// S15b-4: request-time grid, RSS, mid, forecast-zone and warning acquisitions.
     pub fn with_forecast(mut self, acquire: Option<Arc<dyn fetch::ForecastAcquire>>) -> Self {
@@ -776,31 +794,97 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     async fn load(&self, request: &KmaRequest, deadline: Instant) -> SourceAnswer {
         match self.build(request, deadline).await {
             Ok(s) => SourceAnswer::Snapshot(Box::new(s)),
-            Err(Unbuilt::Forward(reason)) => SourceAnswer::Forward(reason),
             Err(Unbuilt::Failed(reason)) => SourceAnswer::Failed(reason),
         }
     }
     async fn build(&self, request: &KmaRequest, deadline: Instant) -> Result<Snapshot, Unbuilt> {
         let now = (self.clock)();
+        let mut effective = request.clone();
+        if super::middleware_of(&request.version, request.part.as_deref())
+            .contains(&"getAllDataFromDb")
+        {
+            effective.city.get_or_insert_with(String::new);
+            effective.town.get_or_insert_with(String::new);
+        }
+        let request = &effective;
         // Request names in the value layer's form, as the chain holds them.
         let region =
             crate::domestic::kma::js::canon_str(request.region.as_deref().unwrap_or_default());
         let city = crate::domestic::kma::js::canon_str(request.city.as_deref().unwrap_or_default());
         let town_name =
             crate::domestic::kma::js::canon_str(request.town.as_deref().unwrap_or_default());
+        // `req.query` after `checkQueryValidation` (a non-`Send` value, dropped before any await).
+        let (dust_wanted, image_wanted) = {
+            let query = super::validated_query(request);
+            (
+                air_input::airkorea_forecast_requested(&query),
+                air_input::image_forecast_requested(&query),
+            )
+        };
         let list = towns();
-        let town = find_town(
+        let (town, preloaded_mids) = if let Some(town) = find_town(
             list,
             request.region.as_ref().map(|_| region.as_str()),
             Some(&city),
             Some(&town_name),
-        )
-        .ok_or_else(|| {
-            Unbuilt::Forward(
-                "town absent from the town list (S15b-4b-2 geocodes and stores new towns)".into(),
+        ) {
+            (town.clone(), None)
+        } else {
+            let address = format!(
+                "{}{}{}",
+                request.region.as_deref().unwrap_or("undefined"),
+                request.city.as_deref().unwrap_or("undefined"),
+                request.town.as_deref().unwrap_or("undefined")
+            );
+            // Medium-range inputs depend on region/city, not on a successful town geocode.
+            // Start them alongside the owned lookup so a late location cannot discard already
+            // available mid data or create a second acquisition wait budget.
+            let until = wait_bound(deadline);
+            let section = (until + std::time::Duration::from_millis(200)).min(deadline);
+            let absent_town = Doc::new();
+            let (result, mid, air, life, special) = tokio::join!(
+                self.town_resolver.resolve(
+                    crate::geocode::town::Operation::Town,
+                    address,
+                    until,
+                    now.max(0.) as u64
+                ),
+                async {
+                    let zones = self.zones(now, deadline).await?;
+                    let mids = self
+                        .mids(&region, &city, &zones, now, deadline, until)
+                        .await?;
+                    Ok::<_, String>((zones, mids))
+                },
+                self.air.load(
+                    &absent_town,
+                    &region,
+                    &city,
+                    dust_wanted,
+                    image_wanted,
+                    now,
+                    section
+                ),
+                self.life.load(now, section),
+                async {
+                    self.warning_cycle(until).await;
+                    self.warnings.zone_state(now as i64, section).await.ok()
+                }
+            );
+            let (zones, mids) = mid?;
+            let result = match result {
+                Ok(result) => result,
+                Err(towns::ResolveError::Storage) => {
+                    return Err(Unbuilt::Failed("town projection unavailable".into()));
+                }
+                Err(_) => return Ok(Snapshot::missing_town(now, zones, mids, air, life, special)),
+            };
+            (
+                towns::town_document(&result, request, list),
+                Some((zones, mids)),
             )
-        })?
-        .clone();
+        };
+
         let m = town.get("mCoord").and_then(Val::as_doc);
         let num = |k| {
             m.and_then(|m| m.get(k))
@@ -834,17 +918,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .is_some_and(|f| self.observations.settled(now as i64, f));
             (folded, (history, asos, settled))
         };
-        // `req.query` after `checkQueryValidation` (a non-`Send` value, dropped before any await).
-        let (dust_wanted, image_wanted) = {
-            let query = super::validated_query(request);
-            (
-                air_input::airkorea_forecast_requested(&query),
-                air_input::image_forecast_requested(&query),
-            )
-        };
         // The mid regions follow the zone list (the temperature region comes from it); they do not
         // wait for the grids.
         let zones_and_mids = async {
+            if let Some(loaded) = preloaded_mids {
+                return Ok::<_, String>(loaded);
+            }
             let zones = self.zones(now, deadline).await?;
             let mids = self
                 .mids(&region, &city, &zones, now, deadline, until)
@@ -1086,6 +1165,64 @@ fn summary_inputs(
     })
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> {
+    fn prepare(
+        &self,
+        mut request: KmaRequest,
+        deadline: Instant,
+    ) -> BoxFuture<'_, Result<KmaRequest, super::Outcome>> {
+        Box::pin(async move {
+            if !super::middleware_of(&request.version, request.part.as_deref())
+                .contains(&"checkParamValidation")
+                || (request.city.as_deref() != Some("KR") && request.town.as_deref() != Some("KR"))
+            {
+                return Ok(request);
+            }
+            // checkParamValidation swaps city/region and clears town before name2address.
+            let old_region = request.region.take();
+            request.region = request.city.take();
+            request.city = old_region;
+            request.town = None;
+            let address = format!(
+                "{}{}",
+                request.region.as_deref().unwrap_or("undefined"),
+                request.city.as_deref().unwrap_or("undefined")
+            );
+            let result = self
+                .town_resolver
+                .resolve(
+                    crate::geocode::town::Operation::Remap,
+                    address,
+                    wait_bound(deadline),
+                    (self.clock)().max(0.) as u64,
+                )
+                .await
+                .map_err(|_| {
+                    super::Outcome::Status(500, super::js::INTERNAL_SERVER_ERROR.into())
+                })?;
+            let mut prior = serde_json::Map::new();
+            if let Some(v) = &request.region {
+                prior.insert("region".into(), Value::String(v.clone()));
+            }
+            if let Some(v) = &request.city {
+                prior.insert("city".into(), Value::String(v.clone()));
+            }
+            let params = towns::remap_address(
+                result["address"].as_str().unwrap_or_default(),
+                &Value::Object(prior),
+            );
+            request.region = params["region"].as_str().map(str::to_owned);
+            request.city = params["city"].as_str().map(str::to_owned);
+            request.town = params["town"].as_str().map(str::to_owned);
+            // A still-KR result must terminate instead of recurring or forwarding.
+            if request.city.as_deref() == Some("KR") || request.town.as_deref() == Some("KR") {
+                return Err(super::Outcome::Status(
+                    500,
+                    super::js::INTERNAL_SERVER_ERROR.into(),
+                ));
+            }
+            Ok(request)
+        })
+    }
     fn snapshot(&self, request: &KmaRequest, deadline: Instant) -> BoxFuture<'_, SourceAnswer> {
         let request = request.clone();
         Box::pin(async move { self.load(&request, deadline).await })
@@ -1348,10 +1485,9 @@ fn kma_grid(coord: Coord) -> Option<crate::history::Grid> {
         .then(|| crate::history::Grid::new(coord.mx as u16, coord.my as u16))
         .flatten()
 }
-/// Why a snapshot was not built: a town legacy would geocode (forwarded until S15b-4b-2), or
-/// inputs S3 could not supply (a dependency failure).
+/// Why a snapshot was not built: a storage dependency failed. Missing/late geocoding yields
+/// a partial native snapshot, as legacy's _getCoord error calls next() without weather fields.
 enum Unbuilt {
-    Forward(String),
     Failed(String),
 }
 impl From<String> for Unbuilt {
@@ -1441,6 +1577,34 @@ pub struct Snapshot {
     air: air_input::AirAnswers,
     life: life_input::LifeAnswers,
 }
+impl Snapshot {
+    fn missing_town(
+        now: f64,
+        zones: Arc<Zones>,
+        mids: HashMap<(MidModel, String), Vec<Doc>>,
+        air: air_input::AirAnswers,
+        life: life_input::LifeAnswers,
+        special: Option<Arc<ZoneState>>,
+    ) -> Self {
+        Self {
+            summary: None,
+            now,
+            town: Doc::new(),
+            coord: Coord {
+                mx: f64::NAN,
+                my: f64::NAN,
+            },
+            models: HashMap::new(),
+            mids,
+            zones,
+            special,
+            stations: None,
+            history: OrderedJson::Null,
+            air,
+            life,
+        }
+    }
+}
 fn list(docs: &[Doc]) -> OrderedJson {
     OrderedJson::Array(docs.iter().map(Doc::json).collect())
 }
@@ -1454,10 +1618,15 @@ impl KmaStore for Snapshot {
     /// The chain uses the town list only for `_findTown`; the snapshot lists the matched town,
     /// which `_findTown` finds first in the full list as well.
     fn towns(&self) -> StoreResult {
-        Ok(list(std::slice::from_ref(&self.town)))
+        Ok(if self.town.get("town").is_some() {
+            list(std::slice::from_ref(&self.town))
+        } else {
+            OrderedJson::Array(Vec::new())
+        })
     }
     fn town(&self, first: &str, second: &str, third: &str) -> StoreResult {
-        let found: Vec<Doc> = find_town(towns(), Some(first), Some(second), Some(third))
+        let chosen = std::slice::from_ref(&self.town);
+        let found: Vec<Doc> = find_town(chosen, Some(first), Some(second), Some(third))
             .into_iter()
             .cloned()
             .collect();
