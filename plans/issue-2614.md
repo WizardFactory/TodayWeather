@@ -1,7 +1,23 @@
 # Plan: document and later implement server2
 
 Source: [intent](../intent/issue-2614.md), [spec](../specs/issue-2614.md).
-Current status (2026-10-13): issues S01–S14 (#2686–#2699) are closed; S01 is a decision task, and S02–S14 closed after their implementation PRs merged. Follow-ups S10a #2724 (live geocoder/quotas) and S13a #2729 (one AirKorea decision) remain open; S19 has its first (gateway) increment. S10 gateway/geocode (#2723), S11 world (#2728), S12 warnings (#2727), S13 domestic acquisition (#2726), S13a provider formats/air (#2733), S14 history/capture (#2732), S10b gateway lifetime (#2731) and the first S19 increment (#2725) are merged at master `87ab79cd`. Native families stay off by default; legacy HTTP remains selected. Next: S15 domestic KMA v000903 assembly. See the dated entry at the end. Earlier status paragraphs below are historical. No production/resource action or route cutover is authorized by that work.
+Current status (2026-10-16, observed master `c7ad661b`): the S01–S14 foundation and S15 assembly are integrated, together with S15b-1/2/3a/3b/3c/4a, S17a/b and S18a. S15b-4q service/key quotas (#2772) and S15b-3e air-selection alignment (#2777) are merged. S16 (#2764), S18b-1 alarms (#2774) and S15b-4b-1 native errors (#2773) remain open. Their independent code-review results are separate from the remaining integration, documentation and CI gates: successful review alone does not complete a task. S17c nation and S18b-2 conditional alerts are being implemented; S18b-3 warning delivery, S18c notices and the remaining S15b cold-request/cache work follow. S19 has its first gateway increment. S10a #2724 owns actual geocoder quota measurements; native wiring was completed in S10c. Development still defaults to legacy HTTP and native families remain off. Earlier dated status entries below remain history. No production deployment, live push or cutover is authorized by this status update.
+
+## Current AK amendments (2026-10-14 to 2026-10-16)
+
+These decisions supersede the older cold-cell, key, push-copy, cache and mock-only statements below. In particular, the 2026-10-13 mock-only geocoder description is historical; S10c/S10e replaced those verification modes.
+
+- **Request-time collection:** wait at most 3 seconds once across a client request. Assemble the available data using the legacy absent-field rules and omit parts still being acquired. The original `EWEATHERUNAVAILABLE` / 503 direction in [the first record](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6170975982) was explicitly withdrawn by [AK's correction](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6171051242); late inputs alone must not create a new 503 response. Owned acquisitions continue with the legacy provider timeouts (AirKorea 5 s, life index 30 s, KMA web pages 30 s, town forecast and forecast zone 10 s), store the raw record and serve subsequent requests. Do not pre-collect before startup or cutover.
+- **Hourly history:** retrieve recent KMA grid hours on demand. For D-7..D-1, fill only missing or invalid grid hourly fields at exact hourly keys from the nearest ASOS city station within 100 km, with per-field provenance, `historyStatus` and the legacy yesterday-comparison eligibility rules. Fetch the ASOS records on demand and store them as raw records ([AK correction](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6167422423)). Past multi-day history uses the data.go.kr per-station period request; ongoing nationwide observations use the national AWS hourly page ([AK's two-source decision](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6172208535)). No full Mongo weather archive copy or post-go-live legacy fallback is required.
+- **Go-live boundary:** legacy stops when server2 goes live. Development/coexistence routing switches may remain until then, but every included production path must work without forwarding to legacy. Missing native coverage blocks cutover rather than becoming a permanent legacy dependency. Shadow verification does not authorize startup or cutover pre-collection ([decision](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6167422423)).
+- **Small state copies:** only push/alarm registrations, latest warning bulletins/zone state and `kmastninfos` are copied from MongoDB. Original documents remain unchanged. Development-time read-only copies are already authorized whenever needed, followed by a final pre-cutover copy; no renewed operator approval is required merely to read/copy these datasets ([development authorization](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6167457443), [copy clarification](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6167461903), [station authorization](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6180171324), [S20 procedure](https://github.com/WizardFactory/TodayWeather/issues/2705)). The station seed is copied. Production server2 push state has not been reported as seeded. Preserve legacy rainfall statistics until shutdown, then server2 manages updates ([S20 handover](https://github.com/WizardFactory/TodayWeather/issues/2705)). Production deployment, cutover and live sends retain their separate gates.
+- **Nationwide reuse:** AirKorea `전국` observations, station lists and dust forecasts, and KMA national observation pages are acquired once per dataset/publication and shared across requests ([AirKorea contract](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6172254679), [station/history contract](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6173095881)). ASOS historical station/period records are shared by every grid using that station; the request-local 3-second wait does not multiply collection work.
+- **Configuration:** server2 reads its own `server2/.env`, initially copied from `server/.env`, using legacy names/values for equivalent settings. AK also allowed necessary server2-only settings in that file; this permits settings missing from legacy, not arbitrary replacement provider keys ([S10e decision and mapping](https://github.com/WizardFactory/TodayWeather/pull/2755)). The dedicated S3 settings are one use of this permission. Do not add dry-run, mock, local-only or operational verification modes; test doubles are injected in tests. S10c/S10e removed the former modes.
+- **Provider scope:** follow current official API documentation, legacy collectors and tw-svc assembly, and confirm proposed collection methods with real API calls before relying on them ([national collection decision](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6172254679), [ASOS method decision](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6172208535)). AirKorea dust forecast/station listing and forecast zones follow the repaired legacy sources; quota rejection rotates keys in both legacy and server2; day+3 pollen is retained ([AK decisions](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6170975982)). Quotas are per API and key (#2772); operating allowance values remain to be supplied ([quota decision](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6205933057)). Live push sending remains excluded from development verification.
+- **Image forecasts:** restore AirKorea 820×820 image forecasts ([AK decision](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6180171324)). Read calibration read-only from production configuration, or derive it if absent ([calibration direction](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6170975982)); the deployed calibration was subsequently retained and the current legend/KAQ fallback approved ([later decision](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6183425093)). Current legacy #2757/#2762 governs decoding and #2771 governs KAQ-to-AirKorea selection. S15b-3c and its #2777 selection alignment are merged. The accepted image-start safety bound remains recorded in [the S15b-3c decision](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6194598140).
+- **Local disk:** the entire server2 may use a bounded, disposable local cache. S3 remains authoritative; missing/corrupt local copies are recovered from S3. Existing privacy boundaries still apply. Measure the total cache/OS/log/temporary-file budget and state required EC2 capacity in [the infrastructure guide](../docs/operations/server2-infrastructure.md) during the remaining S15b cache work ([AK decision](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6194793664)).
+- **Notices and summaries:** implement #2623 directly in server2/S3 (S18c); preserve legacy `push-list` storage-error 200 with item `null` ([S18 decisions](https://github.com/WizardFactory/TodayWeather/issues/2703#issuecomment-6205932430)). S16 town-keyed grid summaries and lookup-only VC summaries are accepted ([S16 decision](https://github.com/WizardFactory/TodayWeather/issues/2701#issuecomment-6205932746)), with no new API/UI (O-13). Acceptance of these choices does not claim that open S16 PR #2764 is merged.
+
 
 ## This PR
 
@@ -185,7 +201,7 @@ the operation deadline or returning expired data.
 | S08 | [server2 S08: enforce provider reservations and rejection rules](https://github.com/WizardFactory/TodayWeather/issues/2693) | [S04](https://github.com/WizardFactory/TodayWeather/issues/2689), [S05](https://github.com/WizardFactory/TodayWeather/issues/2690), [S06](https://github.com/WizardFactory/TodayWeather/issues/2691) |
 | S09 | [server2 S09: verify locally and minimize EC2 validation](https://github.com/WizardFactory/TodayWeather/issues/2694) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S03](https://github.com/WizardFactory/TodayWeather/issues/2688), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693) |
 | S10 | [server2 S10: port gateway and geocoding with legacy backend switches](https://github.com/WizardFactory/TodayWeather/issues/2695) | [S02](https://github.com/WizardFactory/TodayWeather/issues/2687), [S07](https://github.com/WizardFactory/TodayWeather/issues/2692), [S08](https://github.com/WizardFactory/TodayWeather/issues/2693), [S09](https://github.com/WizardFactory/TodayWeather/issues/2694) |
-| S10a | [server2 S10a: measure geocoder quotas and enable live geocoder mode](https://github.com/WizardFactory/TodayWeather/issues/2724) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S19](https://github.com/WizardFactory/TodayWeather/issues/2704) gateway increment (#2725) |
+| S10a | [server2 S10a: measure actual geocoder quotas](https://github.com/WizardFactory/TodayWeather/issues/2724) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S19](https://github.com/WizardFactory/TodayWeather/issues/2704) gateway increment (#2725) |
 | S10b | [server2 S10b: keep the gateway 501 deadline response within the connection lifetime](https://github.com/WizardFactory/TodayWeather/issues/2730) (merged #2731) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695), [S19](https://github.com/WizardFactory/TodayWeather/issues/2704) gateway increment (#2725) |
 | S11 | [server2 S11: port world weather and air](https://github.com/WizardFactory/TodayWeather/issues/2696) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695) |
 | S12 | [server2 S12: port warning history and latest bulletin recovery](https://github.com/WizardFactory/TodayWeather/issues/2697) | [S10](https://github.com/WizardFactory/TodayWeather/issues/2695) |
@@ -221,13 +237,13 @@ to block their named work after S01 closes.
 | --- | --- |
 | O-1 / O-11 | S14 history/capture, S15/S17 dependent assembly and affected push weather behavior; no history gaps accepted |
 | O-2 | Rust adoption settled; S09 local/Linux artifact checks. S15 correctness checkpoint remains; language go/fallback/time-box review removed |
-| O-3 | D01–D03 resolved: S18 owns schema/ordering, uses new registrations without legacy migration, and does not automatically retry failed/unknown deliveries; verification and durable acceptance still gate activation |
-| O-4 / O-12 | S04/S07 memory-only admission/failure contract; local disk policy superseded |
+| O-3 | D01–D03 resolved: S18 owns schema/ordering and copies legacy registrations read-only (development-time and final pre-cutover authority above); failed/unknown deliveries are not automatically retried. Verification and durable acceptance still gate activation |
+| O-4 / O-12 | S04/S07 bounded cache admission/failure contract; disposable local disk caches allowed by the 2026-10-15 amendment |
 | O-5 | S05/S06 catalog/raw lifecycle, S08 reservation retention, S09 local operation/version-byte cost inputs, pre-cutover actual API cost validation and O01 pack policy |
-| O-6 | D04 authorizes memory/S3 caches; S07/S10 select layout/validity and prove exact labels, privacy, quota/deadline behavior |
+| O-6 | D04 authorizes memory/S3 caches; the 2026-10-15 disposable-disk amendment also applies without changing privacy. S07/S10 select layout/validity and prove exact labels, privacy, quota/deadline behavior |
 | O-7 / O-8 | S02 fixture scope, S15/S17 current active behavior; unknown scope stays on legacy until dispositioned |
 | O-9 | S05–S08 publication/reservation/outage semantics, S10–S13 affected serving and warning behavior, S18 state acceptance and O01 publication |
-| O-10 | S10 Kakao/Google reuse existing injected `.env` keys per AK 2026-10-13; actual quotas remain prerequisite. S03/S08/S13 data.go.kr separate-key policy is unchanged |
+| O-10 | Reuse the legacy names/values from the copied `server2/.env` per the [S10e configuration decision](https://github.com/WizardFactory/TodayWeather/pull/2755); ASOS uses existing `DONGNAE_SECRET_KEYS` per [AK](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6170975982). This supersedes the former separate-key requirement, not actual quota verification |
 | O-13 | S16 authorized summary storage only; new API/UI remains excluded |
 
 Ordinary legacy maintenance remains allowed in `server/`. The S02 planned new
@@ -242,14 +258,14 @@ Each route port depends on P1 and recorded issue decisions; one PR per phase.
 
 | Phase | Scope and proof |
 | --- | --- |
-| P0 | Record remaining issue choices; keys/IAM/bucket/versioning/lifecycle, actual runtime/Spot prerequisites and rollback ownership. No persistent gp3 requirement. Use accepted traffic report; supplement only its scope gaps/new paths before their cutover. |
+| P0 | Record remaining issue choices; keys/IAM/bucket/versioning/lifecycle, actual runtime/Spot prerequisites and rollback ownership. No durable local archive requirement; reserve measured disposable-cache capacity. Use accepted traffic report; supplement only its scope gaps/new paths before their cutover. |
 | P1 | Golden harness for the 19 observed groups and retained internal dependencies; current deployment/source/client contract reconciliation, error/CORS/cache/304/preflight fixtures, #2609/#2620 and acquired-history cases. Freeze clock and raw input; two runs byte-identical. |
 | P2 | First establish the `server2/` Rust workspace/CI and placement gate (S04); later implementation tasks depend on it. Then storage/resolver, synchronous publication, memory/single-flight limits; property/crash tests with recorded providers and local S3-compatible peer. Verify local/Linux-musl build compatibility, synthetic origin throughput, RSS/CPU and cold request fan-out. Use only a separately authorized minimal preproduction host smoke; validate actual API latency/costs before cutover. Raw packs remain disabled pending measured route benefit. |
 | P2b | Gateway/geocoder with backend switches to legacy, exact validation/errors/cache/deadline and privacy-safe coordinate handling. Whole-gateway shadow and rollback rehearsal. |
 | P3/P4 | World providers used by gateway and warning catalogs/restore; no deletion of a backend solely due to unused direct public paths. |
-| P5/P6 | Domestic raw JSON, legacy-history export, summaries and v000903 assembly; close O-1/O-11 acquisition gaps and runtime correctness checkpoint. Active health/air behavior follows current fixtures. |
+| P5/P6 | Domestic raw JSON, request-time KMA/ASOS history, summaries and v000903 assembly; close O-1/O-11 acquisition gaps and runtime correctness checkpoint. Active health/air behavior follows current fixtures. |
 | P7 | Used older versions, nation and town, including v000705 town; exclude only supported zero-observed public paths. |
-| P8 | Used push/state and applicable notice supplement; durable new-state acceptance, send ownership, sanitized failure logs, no automatic resend and new registrations without legacy migration. Do not revive retired purchases. |
+| P8 | Used push/state and applicable notice supplement; durable new-state acceptance, send ownership, sanitized failure logs, no automatic resend and a read-only copy of existing registrations. Do not revive retired purchases. |
 | P9 | Retire legacy/Mongo only after every included family and scope gap is dispositioned, parity/shadow/performance/quota gates pass and AK approves cutover. |
 | Later scale-out | Independent per-host caches, shared S3, durable global provider admission, fetch/background ownership, concurrent catalog CAS, readiness/drain and bounded S3 warm-up. No shared-cache implementation now. |
 
@@ -277,11 +293,13 @@ packs must fall back to the same canonical raw set. Multi-process API workers
 and inter-instance shared caches are rejected initially because they add cache
 duplication/IPC/coordination before a measured need.
 
-Keep the legacy process and family switches during coexistence. D03 requires
-no legacy push-registration migration, while rollback must preserve new durable
-registrations; switch-back alone does not undo accepted state mutations. Preserve CloudFront policy and rehearse rollback with cached responses.
-Only per-family AK-approved cutover changes deployment. A design-document revert
-has no runtime side effects.
+Keep the legacy process and family switches only during development/coexistence.
+The later AK copy decision supersedes D03: copy legacy registrations read-only and
+preserve new durable state. Go-live must remove the legacy serving dependency, so
+an old-process switch is not a steady-state recovery strategy after retirement.
+Preserve CloudFront policy and rehearse the approved recovery procedure with cached
+responses. Cutover and production deployment still require explicit AK approval.
+A plan-document revert has no runtime side effects.
 
 Proof for this PR is recorded in
 [selected verification evidence](../docs/evidence/tasks/issue-2614-design/verification.md).
@@ -311,11 +329,12 @@ This document verification checks the recorded disposition, not runtime capture.
 The [parent clarification](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6009294236)
 retains the accepted demand-limited policy without approving absent history.
 S14 #2699 tests never-requested, resumed-after-more-than-8-days and partial S3
-history cells. Only verified S3 revisions, legacy exports and legacy-equivalent
-recovery may reproduce history; ASOS does not replace missing grid-hour values.
-S20 #2705 preserves per-family legacy fallback, deadlines/errors and measured
-coexistence quota costs even after nominal cutover. S21 #2706 is blocked while
-cold-cell behavior needs legacy/Mongo; retirement is not promised without proof.
+history cells. The original no-ASOS/no-gap interpretation was corrected by AK on
+2026-10-14: use request-time recent KMA data and legacy-compatible ASOS hourly fill,
+with provenance and comparison eligibility. Do not depend on Mongo weather exports,
+startup pre-collection or post-go-live legacy forwarding. S20 #2705 must verify the cold
+request's native partial response and continuing acquisition before cutover; S21
+#2706 cannot retire a dependency that an included path still needs.
 Demand identity under state/demand/grid/ is grid, last-demand time and expiry
 only, without user coordinates/identifiers, tokens or per-request logs.
 
@@ -331,7 +350,7 @@ proposal, not provisioning. See [S03 plan](issue-2688.md) and its operations man
 
 [AK D01–D04](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-6015980608)
 remove the superseded registration-migration/retry policy gate. They do not remove
-weather-history acquisition, cold-cell legacy fallback, quota or cutover gates.
+weather-history acquisition, cold-cell native coverage, quota or cutover gates. The later copy decision supersedes D03; see Current AK amendments above.
 
 ## 2026-10-09 focused PR correction after actual AWS execution
 
@@ -392,3 +411,21 @@ runs a `5bca407` checkout (commit date 2019-03-07), and `2116c6bf` (2026-09-24),
 switch. This is a timestamped observation, not proof of the current deployment; recheck
 the deployed revision before cutover. Native families remain off; no AWS, live provider,
 deployment or cutover action was taken.
+
+### Implementation/status reconciliation (2026-10-16)
+
+This amendment records already authorized work and corrections; it does not introduce
+new runtime behavior. S15b data work is tracked by [#2742](https://github.com/WizardFactory/TodayWeather/issues/2742).
+Merged provider/configuration follow-ups include S13b #2743, S13c #2748, S13d #2749,
+S10c #2738, S10e #2755 and S10f #2760. Original S15 assembly #2735 is integrated;
+S15b inputs were added by #2744, #2751, #2754, #2750, #2752 and #2761, and request-time
+forecast collection by #2767. S17a #2763 and S17b #2765, S18a #2766 and fixed-clock
+tests #2768 are integrated. Golden hash refresh #2776 follows legacy #2771.
+
+At master `c7ad661b`, S15b-3e #2777 is merged; the active integration queue is S16 #2764,
+S18b-1 #2774 and S15b-4b-1 #2773. Their independent code-review results are separate
+from documentation assessment, CI and integration: none alone establishes task completion,
+cutover or live push success. S17c nation and S18b-2 conditional alerts are separate
+implementation lanes. Then finish the S18 warning feed/notices and the S15b cold
+request/local-cache/storage sizing work, extend S19 verification, measure the
+remaining S10a quotas, and perform separately approved S20/S21 operational work.
