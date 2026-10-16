@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 from urllib.parse import unquote
 
 SERVER2 = Path(__file__).resolve().parents[2]
@@ -251,6 +252,19 @@ class KmaFamilyTest(unittest.TestCase):
         for changed in (records[:-1], records + records[:1], records + [{'id': 'extra', 'pass': family.PASSES[0]}]):
             with self.assertRaises(AssertionError):
                 family.validate_records(dict(good, records=changed), cases)
+
+    def test_domestic_smoke_rejects_extra_functional_header(self):
+        family = families.load('kma')
+        case = {'id': 'c', 'status': 200, 'headers': [], 'body_base64': ''}
+        records = [{'id': 'c', 'pass': phase, 'oracle': 'c', 'status': 200,
+                    'headers': {'content-length': '0'}, 'body': b'', 'hops': []}
+                   for phase in family.PASSES]
+        # oracle_check checks expected header values only; the smoke must also
+        # reject extra headers, such as the real Undefined HEAD wire regression.
+        with patch.object(family, 'replay_side', return_value=(records, {})), \
+             patch.object(family, 'oracle_cases', return_value={'c': case}):
+            with self.assertRaisesRegex(AssertionError, 'content-length'):
+                family.smoke('unused-binary')
 
     def test_domestic_manifest_keeps_original_assembly_denominator_separate(self):
         family = families.load('kma')

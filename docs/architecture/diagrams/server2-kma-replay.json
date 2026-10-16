@@ -2,7 +2,7 @@
   "schema_version": 1,
   "diagram_type": "sequence",
   "meta": {
-    "title": "Planned domestic whole-response S3 verification",
+    "title": "Domestic canonical S3 core verifier",
     "output": "docs/architecture/diagrams/server2-kma-replay.html",
     "locale": "en",
     "viewBox": [
@@ -12,7 +12,7 @@
     "column_fit": "spread",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather.git",
-      "revision": "f32386cb9b532433ee6ef4e9eff1d35e99ea20ee",
+      "revision": "9659668be5b7b43081825eb28b6438d7b25d13b0",
       "provider": "github"
     }
   },
@@ -24,8 +24,8 @@
       "sublabel": "shared frozen inputs",
       "sources": [
         {
-          "path": "server2/tests/domestic/fixtures/SOURCE-PROVENANCE.md",
-          "line": 50
+          "path": "server2/tools/golden/kma_s3/grid-fixtures.js",
+          "line": 1
         }
       ]
     },
@@ -36,8 +36,8 @@
       "sublabel": "independent conversion",
       "sources": [
         {
-          "path": "server2/tests/domestic/fixtures/SOURCE-PROVENANCE.md",
-          "line": 439
+          "path": "server2/tools/golden/kma_s3/record.js",
+          "line": 245
         }
       ]
     },
@@ -48,8 +48,8 @@
       "sublabel": "raw + published catalogs",
       "sources": [
         {
-          "path": "server2/tests/domestic/source_s3_oracle.rs",
-          "line": 24
+          "path": "server2/examples/kma_s3_replay.rs",
+          "line": 68
         }
       ]
     },
@@ -60,8 +60,8 @@
       "sublabel": "fresh source / no provider",
       "sources": [
         {
-          "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 219
+          "path": "server2/examples/kma_s3_replay.rs",
+          "line": 275
         }
       ]
     },
@@ -72,8 +72,8 @@
       "sublabel": "status / headers / bytes",
       "sources": [
         {
-          "path": "server2/tools/shadow/replay.py",
-          "line": 48
+          "path": "server2/tools/shadow/kma_family.py",
+          "line": 165
         }
       ]
     }
@@ -190,8 +190,8 @@
       "dot": "rose",
       "title": "Fresh replay and recovery",
       "items": [
-        "No warmup, precollection or provider calls; selected native has zero legacy hops.",
-        "Disposable cache corruption/loss must replay canonical S3 correctly."
+        "55 unique HTTP cases x four disk phases; original 98 assembly cases separate.",
+        "Grid/RSS/mid only; rich inputs pending. Rollback unsupported; S20 server2 recovery pending."
       ]
     }
   ]

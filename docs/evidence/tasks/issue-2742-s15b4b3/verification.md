@@ -55,7 +55,7 @@ records independent collector execution, hashes and limitations. Two fresh Node
 recordings were byte-identical; raw inputs and all 55 responses stayed unchanged
 when helper/package/static-seed provenance hashes were added.
 
-Focused local checks: actual API HTTP Red then Green, 27 Python shadow tests,
+Focused local checks: actual API HTTP Red then Green, 28 Python shadow tests,
 all-target Clippy with warnings denied, and the exact replay/self-check above.
 Full unchanged Rust suites were not repeated locally; CI results are recorded on
 the PR at the exact candidate. Local debug timing does not establish EC2 cold p95
