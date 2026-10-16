@@ -12,8 +12,16 @@ pub struct Peer {
 }
 impl Peer {
     pub fn new() -> Self {
+        Self::start(&[])
+    }
+    /// Case-specific HTTP reuse; the default peer and its admission/socket bounds stay unchanged.
+    pub fn persistent() -> Self {
+        Self::start(&["--persistent"])
+    }
+    fn start(args: &[&str]) -> Self {
         let mut child = Command::new("python3")
             .arg("tests/storage/catalog_peer.py")
+            .args(args)
             .current_dir(env!("CARGO_MANIFEST_DIR"))
             .stdout(Stdio::piped())
             .spawn()
@@ -116,5 +124,26 @@ pub async fn ready(s: &RuntimeServices) {
         })
         .await
         .unwrap();
+    }
+}
+
+#[tokio::test]
+async fn fixture_http_reuse_is_case_specific_and_default_is_unchanged() {
+    for (peer, version) in [
+        (Peer::new(), reqwest::Version::HTTP_10),
+        (Peer::persistent(), reqwest::Version::HTTP_11),
+    ] {
+        let client = reqwest::Client::new();
+        for _ in 0..2 {
+            let response = client
+                .get(format!("{}__catalog/status", peer.endpoint))
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(response.status(), 200);
+            assert_eq!(response.version(), version);
+            let _: serde_json::Value =
+                serde_json::from_slice(&response.bytes().await.unwrap()).unwrap();
+        }
     }
 }
