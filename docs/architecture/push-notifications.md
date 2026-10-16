@@ -28,7 +28,7 @@ The DELETE implementation uses truthiness rather than property presence. With `{
 ## Token refresh and the 403 branch
 
 1. `Firebase.init()` registers the native `onTokenRefresh` callback. The app initially defines `pushData.fcmToken = null`, with persisted state restored if available.
-2. Non-string, empty and whitespace-only callbacks are ignored before logging, token assignment, HTTP, storage or alarm-list fallback. The last valid token remains available during native token deletion/reissue. When a valid callback token differs, `Push._updateFcmToken()` submits `{newToken: token, oldToken: previousToken}` to `PUT /push`.
+2. Non-string, empty and whitespace-only callbacks are ignored before Push-service logging, token assignment, HTTP, storage or alarm-list fallback. The last valid token remains available during native token deletion/reissue. When a valid callback token differs, `Push._updateFcmToken()` submits `{newToken: token, oldToken: previousToken}` to `PUT /push`.
 3. The app immediately replaces its in-memory token after submitting the request. It does not await HTTP success; the error callback logs failure without rolling that assignment back. This function does not itself persist `pushData2` or retry.
 4. The server accepts a complete FCM token pair or legacy registration-ID pair. Otherwise it returns **HTTP 403, `invalid body`**. Accepted pairs call updates against both Mongo models; database errors return 500.
 
