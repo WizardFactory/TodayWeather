@@ -136,7 +136,8 @@ pub trait KmaStore {
     /// `AirFallback.getArpltn(gCoord, now)`: an observation or null (no provider is called here).
     fn air_fallback(&self, g_coord: &Value, now_ms: f64) -> StoreResult;
     /// KAQ (`kaq`) or AirKorea (`airkorea`) hourly forecast rows of a station. A store without
-    /// any KAQ forecast answers `kaq` with the error [`NO_KAQ_FORECAST`].
+    /// any KAQ forecast answers `kaq` with the error [`NO_KAQ_FORECAST`]; a `kaq` request then
+    /// reads `airkorea` (legacy #2771, as for KAQ rows without a usable future row).
     fn air_forecast(&self, source: &str, station: &Value) -> StoreResult;
     /// `kasiRiseSet.getRiseSetList(geocode, dates)`.
     fn rise_set(&self, geocode: &Value, dates: &[String]) -> StoreResult;

@@ -73,7 +73,7 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
 }
 
 /// The pinned recording, in order (unique ids); change deliberately with the recording.
-const SCENARIOS: [&str; 85] = [
+const SCENARIOS: [&str; 97] = [
     "domestic-v000903",
     "domestic-locale-en",
     "domestic-locale-ko",
@@ -105,6 +105,18 @@ const SCENARIOS: [&str; 85] = [
     "air-stations-airnow",
     "air-stale",
     "air-kaq-forecast",
+    "air-kaq-past-only",
+    "air-kaq-missing",
+    "air-kaq-none-usable",
+    "air-kaq-invalid-rows",
+    "air-kaq-mixed-rows",
+    "air-kaq-beyond-day",
+    "air-kaq-day-edge",
+    "air-kaq-no-history",
+    "air-kaq-fallback-error",
+    "air-airkorea-request",
+    "air-airkorea-empty",
+    "air-kaq-before-now",
     "air-dust-forecast",
     "air-fallback",
     "life-food-kasi",
