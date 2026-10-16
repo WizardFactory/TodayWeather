@@ -23,8 +23,15 @@ impl Val {
     pub fn num(n: f64) -> Self {
         if n == 0. { Self::Num(0.) } else { Self::Num(n) }
     }
+    /// A string in the KMA value layer's form ([`crate::domestic::kma::js::canon_str`]: a
+    /// provider character in the stand-in range is kept as the stand-ins of its surrogates).
     pub fn str(s: impl Into<String>) -> Self {
-        Self::Str(s.into())
+        let s = s.into();
+        if s.as_bytes().contains(&0xF4) {
+            Self::Str(crate::domestic::kma::js::canon_str(&s))
+        } else {
+            Self::Str(s)
+        }
     }
     pub fn as_num(&self) -> Option<f64> {
         match self {

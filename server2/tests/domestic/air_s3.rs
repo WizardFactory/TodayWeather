@@ -1126,12 +1126,21 @@ async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
 
 #[test]
 fn the_forecast_source_follows_legacy_query_defaults() {
-    use server2::domestic::kma::source::air_input::airkorea_forecast_requested as wanted;
-    let q = |pairs: &[(&str, &str)]| -> Vec<(String, String)> {
+    use server2::domestic::kma::source::air_input::airkorea_forecast_requested;
+    let q = |pairs: &[(&str, &str)]| -> String {
         pairs
             .iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
-            .collect()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>()
+            .join("&")
+    };
+    let wanted = |query: &String| {
+        let request = server2::domestic::kma::backend::parse_path(
+            &format!("/v000903/kma/addr/a?{query}"),
+            "ko",
+        )
+        .unwrap();
+        airkorea_forecast_requested(&server2::domestic::kma::validated_query(&request))
     };
     assert!(wanted(&q(&[])), "absent: default airkorea");
     assert!(

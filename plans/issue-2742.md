@@ -419,3 +419,7 @@ Declaration: [S15b-4b1.json](../server2/config/tasks/S15b-4b1.json). Base: maste
 | N5 | Outside-Korea redirect URL | Query keys and values | `_getUrlWithCoord` string | `chain::tests::the_redirect_url_follows_get_url_with_coord` |
 | N6 | Emoji cut in half | `substr`, concatenation, comparison | Node 16 semantics | `js::tests::coercion_follows_javascript` |
 | N7 | Store row without `shortData` (async callback) | Replay | 500 (before: forwarded) | `replay::an_exception_in_a_store_callback_is_not_caught_by_an_earlier_try` |
+| N8 | Query with bracket syntax, prototype names, empty keys | Known town through `KmaBackend` | Served natively (before: forwarded) | `source_s3::qs_query_structure_is_answered_natively` |
+| N9 | Any query string | Corpus of 8,025 queries | Equal to Express 4.13.4 / qs 4.0.0 `req.query` (JSON and prototype reads) | `qs::req_query_equals_express_4_13_4_on_the_recorded_corpus` |
+| N10 | S3 unreadable | Malformed listing | Dependency failure, no forward | `source_s3::an_s3_read_failure_is_a_dependency_failure_not_a_forward` |
+| N11 | A path the routes do not take | Too many segments, malformed escape | 404 / 400 natively | `backend::tests::gateway_paths_parse_like_express` |

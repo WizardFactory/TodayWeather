@@ -108,6 +108,9 @@ pub struct Total {
 #[derive(Default, Debug)]
 pub struct Props {
     entries: Vec<(Rc<str>, V)>,
+    /// The prototype a `__proto__` assignment set (qs `allowPrototypes`); property reads fall
+    /// back to it, own-key operations and `JSON.stringify` ignore it.
+    proto: Option<Ob>,
     /// Key positions for larger objects (rows carry 30-50 properties).
     index: Option<HashMap<Rc<str>, usize, BuildFnv>>,
     /// Whether any key is an array index (those enumerate first).
@@ -115,8 +118,8 @@ pub struct Props {
     kept: Vec<(String, Option<Total>)>,
 }
 const INDEX_FROM: usize = 12;
-/// FNV-1a for short property names (no untrusted-key flooding concern: keys come from the
-/// fixed legacy vocabulary and store field names).
+/// FNV-1a for short property names. Request query keys are untrusted, but at most 1,000 reach
+/// one object (qs `parameterLimit`), so a colliding set costs at most quadratic work in 1,000.
 #[derive(Default, Clone, Copy, Debug)]
 pub struct BuildFnv;
 pub struct Fnv(u64);
@@ -223,7 +226,14 @@ impl Ob {
     pub fn get(&self, k: &str) -> V {
         let k = canon(k);
         let p = self.0.borrow();
-        p.find(&k).map_or(V::Undef, |i| p.entries[i].1.clone())
+        match p.find(&k) {
+            Some(i) => p.entries[i].1.clone(),
+            None => p.proto.as_ref().map_or(V::Undef, |proto| proto.get(&k)),
+        }
+    }
+    /// `Object.setPrototypeOf(obj, proto)` (None: `null`).
+    pub fn set_proto(&self, proto: Option<Ob>) {
+        self.0.borrow_mut().proto = proto;
     }
     /// `hasOwnProperty`.
     pub fn has(&self, k: &str) -> bool {
@@ -339,6 +349,17 @@ impl Arr {
     /// `a[i]` (undefined past the end).
     pub fn at(&self, i: usize) -> V {
         self.0.borrow().get(i).cloned().unwrap_or_default()
+    }
+    /// The array as a prototype object: its defined elements by index and `length`.
+    pub fn as_object(&self) -> Ob {
+        let o = Ob::new();
+        for (i, x) in self.items().into_iter().enumerate() {
+            if !matches!(x, V::Undef) {
+                o.set(&i.to_string(), x);
+            }
+        }
+        o.set("length", V::Num(self.len() as f64));
+        o
     }
     /// `a[i] = v` (extends with holes read as undefined).
     pub fn put(&self, i: usize, v: V) {
@@ -843,16 +864,68 @@ fn utf16(s: &str) -> Vec<u16> {
 fn has_lone(s: &str) -> bool {
     s.as_bytes().contains(&0xF4) && s.chars().any(|c| c as u32 >= LONE_BASE)
 }
-/// UTF-16 code units to a port string (an unpaired surrogate becomes its stand-in).
+/// The stand-in of one surrogate code unit.
+fn stand_in(unit: u16) -> char {
+    char::from_u32(LONE_BASE + (u32::from(unit) - 0xD800)).expect("stand-in code point")
+}
+/// UTF-16 code units to a port string: an unpaired surrogate becomes its stand-in, and a
+/// character in the stand-in range (U+10F800..U+10FFFF) is kept as the stand-ins of its two
+/// surrogates, so the port's strings never hold such a character directly.
 pub fn from16(u: &[u16]) -> String {
-    char::decode_utf16(u.iter().copied())
-        .map(|r| {
-            r.unwrap_or_else(|e| {
-                char::from_u32(LONE_BASE + (u32::from(e.unpaired_surrogate()) - 0xD800))
-                    .expect("stand-in code point")
-            })
-        })
-        .collect()
+    let mut out = String::with_capacity(u.len());
+    for r in char::decode_utf16(u.iter().copied()) {
+        match r {
+            Ok(c) if c as u32 >= LONE_BASE => {
+                let mut buf = [0u16; 2];
+                for unit in c.encode_utf16(&mut buf) {
+                    out.push(stand_in(*unit));
+                }
+            }
+            Ok(c) => out.push(c),
+            Err(e) => out.push(stand_in(e.unpaired_surrogate())),
+        }
+    }
+    out
+}
+/// A string from outside the value layer (a decoded request field) in the port's form: a
+/// character in the stand-in range becomes the stand-ins of its two surrogates.
+pub fn canon_str(s: &str) -> String {
+    if s.as_bytes().contains(&0xF4) {
+        from16(&s.encode_utf16().collect::<Vec<_>>())
+    } else {
+        s.to_owned()
+    }
+}
+/// `decodeURIComponent(s)` (None: `URIError`): every `%` must start two hex digits, and the
+/// decoded bytes must be UTF-8 without encoded surrogates.
+pub fn decode_uri_component(s: &str) -> Option<String> {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' {
+            let (h, l) = (*b.get(i + 1)?, *b.get(i + 2)?);
+            if !h.is_ascii_hexdigit() || !l.is_ascii_hexdigit() {
+                return None;
+            }
+            out.push(u8::from_str_radix(&s[i + 1..i + 3], 16).ok()?);
+            i += 3;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).ok()
+}
+/// `obj.hasOwnProperty(key)` as a method call on a request object: an own `hasOwnProperty`
+/// property (a query field of that name) shadows the method, so the call throws a TypeError.
+pub fn call_has_own_property(obj: &V, key: &str) -> bool {
+    if let V::Obj(o) = obj
+        && o.has("hasOwnProperty")
+    {
+        throw("TypeError: req.query.hasOwnProperty is not a function");
+    }
+    obj.has(key)
 }
 /// `s.substr(start, len)` on a string (start >= 0).
 pub fn substr(s: &str, start: usize, len: usize) -> String {
@@ -1081,6 +1154,26 @@ mod tests {
         );
         o.del(&to_str(&joined));
         assert_eq!(o.len(), 0);
+        // A real character in the stand-in range (U+10F800) stays that character: it is never
+        // confused with the unpaired surrogate U+D800, as key, value or JSON output.
+        let real = V::from(canon_str("\u{10f800}"));
+        let lone = V::from(from16(&[0xD800]));
+        assert!(!strict_eq(&real, &lone));
+        assert_eq!(to_number(&real.get("length")), 2.);
+        assert_eq!(
+            to_json(&real).unwrap().to_bytes(),
+            "\"\u{10f800}\"".as_bytes()
+        );
+        assert_eq!(to_json(&lone).unwrap().to_bytes(), br#""\ud800""#);
+        let o = Ob::new();
+        o.set(&to_str(&real), V::from(1.));
+        o.set(&to_str(&lone), V::from(2.));
+        assert_eq!(o.len(), 2);
+        assert_eq!(
+            V::from(from16(&[0xDBFE, 0xDC00])).str(),
+            real.str(),
+            "decoded from UTF-16 like a request field"
+        );
         assert_eq!(slice("a\u{1f600}b", 1, Some(3)), "\u{1f600}");
         // Pinned Node 16.20.2 decodeURI (S15-R16).
         for (s, ok) in [

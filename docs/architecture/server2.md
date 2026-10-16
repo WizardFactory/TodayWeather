@@ -2462,7 +2462,8 @@ That is finalhandler 0.4.1 (`express` 4.13.4 in `server/package-lock.json`), run
 | Path | Reply |
 | --- | --- |
 | An escaped exception, and `next(err)` from `makeResult` or `insertSkyIconLowCase` | 500 `Internal Server Error\n` |
-| The end of the router list (the legacy 404 middleware) | 404 `Not Found\n` |
+| The end of the router list (the legacy 404 middleware), or a path no `/addr/:region[/:city[/:town]]` route takes | 404 `Not Found\n` |
+| A path parameter `decodeURIComponent` rejects (Express `decode_param`) | 400 `Bad Request\n` |
 | `getAllDataFromDb` for a coordinate outside Korea (`res.redirect(_getUrlWithCoord(...))`, `controllerTown.js:170-174`, `:5648`) | 302 |
 
 Comparison boundary for these replies. server2's gateway (`gateway::backend`) treats any non-200
@@ -2477,6 +2478,18 @@ lost too. server2 answers the request as the 500 above, and its gateway gives th
 failure. server2 does not reproduce the loss of other requests. The oracle's
 `query-malformed-escape` reply (500, `Internal Server Error\n`) is now matched natively.
 
+**`req.query`.** `domestic::kma::qs` ports `qs` 4.0.0 `parse` with Express 4.13.4's options
+(`allowDots: false`, `allowPrototypes: true`), so bracket syntax, array indices,
+`Object.prototype` names and empty keys are parsed as legacy parses them, not forwarded.
+
+The port includes `__proto__` assignment: an object value becomes the prototype that property reads
+fall back to. A query field named `hasOwnProperty` shadows the method that `checkQueryValidation`
+calls, so the call throws and the legacy `catch` skips the defaults. The source decides which air
+inputs to load from the same validated `req.query`.
+
+The port equals the pinned Express on a recorded corpus of 8,025 queries
+([provenance](../../server2/tests/domestic/fixtures/V8-DATE-PROVENANCE.md)).
+
 **`Date.parse`.** `domestic::kma::dateparse` ports V8's date parser as shipped in Node 16.20.2
 (V8 9.4): the ES5 ISO form, then the permissive legacy parser, followed by `MakeDay`, `MakeTime`,
 `MakeDate` and `TimeClip`, with the process zone UTC. The V8 BSD notice is kept in the module. It
@@ -2490,8 +2503,10 @@ as 2024-01-09 09:03) is now matched natively. The KMA page dates use the same pa
 **Unpaired surrogates.** A JavaScript string can hold an unpaired UTF-16 surrogate, for example
 half of an emoji cut by `substr`. Property names are canonical: two halves made adjacent name
 the same property as the paired character. The date formatters' lengths, the date ordering and the
-source's AirKorea slices count stand-ins the same way. The port keeps one as a stand-in code point (U+10F800 + offset,
-the upper half of Supplementary Private Use Area-B, which KMA and AirKorea text never uses). It
+source's AirKorea slices count stand-ins the same way. The port keeps one as a stand-in code point (U+10F800 + offset, the
+upper half of Supplementary Private Use Area-B). A real character in that range, from a request
+field or a provider string, is kept as the stand-ins of its own two surrogates. Stand-ins are
+therefore never ambiguous. It
 restores the code unit wherever code units matter: `length`, indices, comparison, `===` and
 `JSON.stringify`. The gateway serializer escapes a lone surrogate the way well-formed
 `JSON.stringify` does, and two halves that become adjacent form their pair again.

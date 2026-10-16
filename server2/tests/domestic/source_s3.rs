@@ -1360,3 +1360,37 @@ async fn an_s3_read_failure_is_a_dependency_failure_not_a_forward() {
         "dependency failure"
     );
 }
+
+/// S15b-4b-1 (review R7): query structure Express parses with `qs` (brackets, prototype names,
+/// an empty key) is answered natively for a known town, never forwarded.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn qs_query_structure_is_answered_natively() {
+    use server2::domestic::kma::backend::KmaBackend;
+    use server2::gateway::BackendHandler;
+    use server2::gateway::backend::Native;
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&store, &[]).await;
+    let backend = KmaBackend::new(
+        Arc::new(source(&peer)),
+        Arc::new(|| NOW),
+        AssemblyConfig::default(),
+    );
+    for query in [
+        "x[y]=1",
+        "hasOwnProperty=1&temperatureUnit=F",
+        "airForecastSource[x]=kaq&a.b=1&=1&__proto__[airUnit]=airnow",
+        "temperatureUnit[]=F&temperatureUnit[]=C",
+    ] {
+        let path = format!("{}?{query}", request().original_url);
+        let served = backend
+            .fetch_or_forward(path, "ko".into(), deadline())
+            .await;
+        assert!(
+            matches!(served, Ok(Native::Served(_))),
+            "{query}: {:?}",
+            served.map(|n| matches!(n, Native::Forward))
+        );
+    }
+}

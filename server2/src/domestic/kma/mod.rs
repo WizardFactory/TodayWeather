@@ -21,6 +21,7 @@ mod mid;
 mod policy;
 pub(crate) mod precip;
 mod present;
+pub mod qs;
 mod short;
 pub mod source;
 mod time;
@@ -204,6 +205,7 @@ pub enum Outcome {
 }
 
 /// The v000903 router list in legacy order.
+pub use chain::validated_query;
 pub fn middleware() -> Vec<&'static str> {
     chain::names()
 }

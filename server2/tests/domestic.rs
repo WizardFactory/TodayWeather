@@ -16,6 +16,8 @@ mod life_s3;
 mod observe;
 #[path = "domestic/parity.rs"]
 mod parity;
+#[path = "domestic/qs.rs"]
+mod qs;
 #[path = "domestic/replay.rs"]
 mod replay;
 #[path = "domestic/source.rs"]

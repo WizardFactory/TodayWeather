@@ -236,25 +236,17 @@ pub fn run(
     let store = &Callbacks(store);
     let params = Ob::new();
     if let Some(r) = &request.region {
-        params.set("region", r.as_str());
+        params.set("region", super::js::canon_str(r));
     }
     if let Some(c) = &request.city {
-        params.set("city", c.as_str());
+        params.set("city", super::js::canon_str(c));
     }
     if let Some(t) = &request.town {
-        params.set("town", t.as_str());
-    }
-    let query = Ob::new();
-    for (k, v) in &request.query {
-        match query.get(k) {
-            V::Undef if !query.has(k) => query.set(k, v.as_str()),
-            V::Arr(a) => a.push(v.as_str()),
-            prev => query.set(k, V::Arr(Arr::from_vec(vec![prev, V::s(v)]))),
-        }
+        params.set("town", super::js::canon_str(t));
     }
     let req = obj(vec![
         ("params", V::Obj(params)),
-        ("query", V::Obj(query)),
+        ("query", request_query(request)),
         ("baseUrl", V::from(format!("/{}/kma", request.version))),
         ("originalUrl", V::from(request.original_url.as_str())),
     ]);
@@ -304,6 +296,35 @@ fn outcome_of(name: &str, payload: Box<dyn std::any::Any + Send>) -> Outcome {
     }
 }
 
+/// `req.query` as Express 4.13.4 parses it (`qs` 4.0.0, [`super::qs`]) from the raw query of
+/// `req.originalUrl`.
+fn request_query(request: &KmaRequest) -> V {
+    let raw = request.original_url.split_once('?').map_or("", |(_, q)| q);
+    super::qs::parse(raw)
+}
+/// `req.query` after `checkQueryValidation` (the unit and `airForecastSource` defaults), for a
+/// source deciding which inputs the chain will read.
+pub fn validated_query(request: &KmaRequest) -> V {
+    let query = request_query(request);
+    let _ = super::js::catch(|| query_defaults(&query));
+    query
+}
+/// The defaults of `checkQueryValidation`. `req.query.hasOwnProperty(...)` is a method call:
+/// a query field named `hasOwnProperty` makes it throw (the legacy `catch` then skips the rest).
+fn query_defaults(query: &V) {
+    for unit in crate::world::units::UNIT_LIST {
+        if !super::js::call_has_own_property(query, unit)
+            || super::js::loose_eq(&query.get(unit), &V::s("(null)"))
+        {
+            query.set(unit, crate::world::units::default_unit(unit));
+        }
+    }
+    if !super::js::call_has_own_property(query, "airForecastSource")
+        || super::js::loose_eq(&query.get("airForecastSource"), &V::s("(null)"))
+    {
+        query.set("airForecastSource", "airkorea");
+    }
+}
 /// `checkQueryValidation` (ControllerTown24h).
 fn check_query_validation(cx: &mut Cx) -> Flow {
     if !cx.has("query") {
@@ -319,17 +340,7 @@ fn check_query_validation(cx: &mut Cx) -> Flow {
                 cx.req.del("version");
             }
         }
-        let query = cx.r("query");
-        for unit in crate::world::units::UNIT_LIST {
-            if !query.has(unit) || super::js::loose_eq(&query.get(unit), &V::s("(null)")) {
-                query.set(unit, crate::world::units::default_unit(unit));
-            }
-        }
-        if !query.has("airForecastSource")
-            || super::js::loose_eq(&query.get("airForecastSource"), &V::s("(null)"))
-        {
-            query.set("airForecastSource", "airkorea");
-        }
+        query_defaults(&cx.r("query"));
     });
     Flow::Next
 }

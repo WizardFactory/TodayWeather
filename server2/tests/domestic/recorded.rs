@@ -137,7 +137,7 @@ impl RecordedSource {
             }
             scenarios.push(Recorded {
                 id: text(sc, "id").unwrap_or_default(),
-                request: parse_path(&full, &lang),
+                request: parse_path(&full, &lang).ok(),
                 db,
                 as_of_ms,
                 calls: replay.into(),

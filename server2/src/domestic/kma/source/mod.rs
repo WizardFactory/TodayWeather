@@ -810,8 +810,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .await;
             (folded, history)
         };
-        let dust_wanted = air_input::airkorea_forecast_requested(&request.query);
-        let image_wanted = air_input::image_forecast_requested(&request.query);
+        // `req.query` after `checkQueryValidation` (a non-`Send` value, dropped before any await).
+        let (dust_wanted, image_wanted) = {
+            let query = super::validated_query(request);
+            (
+                air_input::airkorea_forecast_requested(&query),
+                air_input::image_forecast_requested(&query),
+            )
+        };
         // The mid regions follow the zone list (the temperature region comes from it); they do not
         // wait for the grids.
         let zones_and_mids = async {
@@ -1248,8 +1254,8 @@ fn partition_publication(p: &str) -> Option<Publication> {
 }
 /// `land_area_code(cityCode)` of the assembly.
 fn land_area_code(city_code: &str) -> String {
-    let u: Vec<u16> = city_code.encode_utf16().collect();
-    let head = |n: usize| String::from_utf16_lossy(&u[..n.min(u.len())]);
+    let u: Vec<u16> = crate::domestic::kma::js::units(city_code);
+    let head = |n: usize| crate::domestic::kma::js::from16(&u[..n.min(u.len())]);
     match head(3).as_str() {
         "11B" => "11B00000".into(),
         "21F" => "11F10000".into(),

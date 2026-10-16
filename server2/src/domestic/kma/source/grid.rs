@@ -507,7 +507,9 @@ fn organize(family: Family, items: &[Item]) -> Option<Vec<Row>> {
         // A missing field read is a TypeError caught by the organizer: the grid fails.
         let date = item.get(date_key)?;
         let time = item.get(time_key)?;
-        if date.encode_utf16().count() <= 1 || time.encode_utf16().count() <= 1 {
+        if crate::domestic::kma::js::units(date).len() <= 1
+            || crate::domestic::kma::js::units(time).len() <= 1
+        {
             continue;
         }
         let publication = format!("{}{}", item.get("baseDate")?, item.get("baseTime")?);

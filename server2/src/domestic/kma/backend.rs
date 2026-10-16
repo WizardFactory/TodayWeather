@@ -80,8 +80,10 @@ impl KmaBackend {
         lang: String,
         deadline: Instant,
     ) -> Result<Native, GatewayError> {
-        let Some(request) = parse_path(&path, &lang) else {
-            return Ok(Native::Forward);
+        // A path the legacy routes do not take is Express's 404/400: a non-200 reply, which the
+        // gateway answers as a dependency failure.
+        let Ok(request) = parse_path(&path, &lang) else {
+            return Err(GatewayError::Provider);
         };
         let store = match self.source.snapshot(&request, deadline).await {
             SourceAnswer::Snapshot(store) => store,
@@ -149,78 +151,53 @@ impl BackendHandler for KmaBackend {
 }
 
 /// Express `decodeURIComponent` of a path parameter (None for a malformed escape).
+/// Express `decode_param`: `decodeURIComponent` of a path parameter (None: `URIError`).
 fn decode_param(raw: &str) -> Option<String> {
-    let b = raw.as_bytes();
-    let mut out = Vec::with_capacity(b.len());
-    let mut i = 0;
-    while i < b.len() {
-        if b[i] == b'%' {
-            let hex = raw.get(i + 1..i + 3)?;
-            out.push(u8::from_str_radix(hex, 16).ok()?);
-            i += 3;
-        } else {
-            out.push(b[i]);
-            i += 1;
-        }
-    }
-    String::from_utf8(out).ok()
+    super::js::decode_uri_component(raw)
 }
 /// `qs` `Utils.decode`: `+` is a space, but a failed `decodeURIComponent` (malformed escape or
 /// invalid UTF-8) returns the original text, plus signs included.
 fn decode_query(raw: &str) -> String {
-    decode_param(&raw.replace('+', " ")).unwrap_or_else(|| raw.to_owned())
-}
-/// Keys `qs` would treat structurally or drop (bracket syntax, Object.prototype names).
-fn plain_key(key: &str) -> bool {
-    const PROTO: [&str; 12] = [
-        "__proto__",
-        "constructor",
-        "hasOwnProperty",
-        "isPrototypeOf",
-        "propertyIsEnumerable",
-        "toLocaleString",
-        "toString",
-        "valueOf",
-        "__defineGetter__",
-        "__defineSetter__",
-        "__lookupGetter__",
-        "__lookupSetter__",
-    ];
-    !key.is_empty() && !key.contains(['[', ']', '.']) && !PROTO.contains(&key)
+    super::js::decode_uri_component(&raw.replace('+', " ")).unwrap_or_else(|| raw.to_owned())
 }
 /// `qs` `parameterLimit` of the pinned Express query parser.
 const QS_PARAMETER_LIMIT: usize = 1000;
+/// Express's reply for a path the legacy KMA routes do not take (finalhandler 0.4.1,
+/// production): no `/addr/:region[/:city[/:town]]` route matches.
+fn not_found() -> Outcome {
+    Outcome::Status(404, "Not Found\n".into())
+}
 /// Parse a gateway backend path `/v000903/kma/addr/{region}[/{city}[/{town}]][?query]`.
-/// None means the native port does not handle it (forward to legacy).
-pub fn parse_path(path: &str, lang: &str) -> Option<KmaRequest> {
+/// Err is the reply legacy Express gives instead of the KMA router list: 404 when no
+/// `/addr/...` route matches, 400 (`Bad Request`) when a path parameter cannot be decoded.
+/// `query` lists the decoded raw fields; the chain parses `req.query` from the raw query with
+/// `qs` 4.0.0 ([`super::qs`]).
+pub fn parse_path(path: &str, lang: &str) -> Result<KmaRequest, Outcome> {
     let (p, q) = path.split_once('?').unwrap_or((path, ""));
     let p = p.strip_suffix('/').unwrap_or(p);
-    let rest = p.strip_prefix("/v000903/kma/addr/")?;
+    let rest = p.strip_prefix("/v000903/kma/addr/").ok_or_else(not_found)?;
     let parts: Vec<&str> = rest.split('/').collect();
     if parts.is_empty() || parts.len() > 3 || parts.iter().any(|s| s.is_empty()) {
-        return None;
+        return Err(not_found());
     }
     let mut decoded = Vec::new();
     for part in &parts {
-        decoded.push(decode_param(part)?);
+        decoded
+            .push(decode_param(part).ok_or_else(|| Outcome::Status(400, "Bad Request\n".into()))?);
     }
     let mut query = Vec::new();
-    // Express `qs` (parameterLimit 1000) splits at most 1,000 raw fields, empty ones included;
-    // later fields are ignored and an empty field yields no key.
+    // `qs` (parameterLimit 1000) splits at most 1,000 raw fields, empty ones included; an empty
+    // field yields no key.
     for pair in q
         .split('&')
         .take(QS_PARAMETER_LIMIT)
         .filter(|s| !s.is_empty())
     {
         let (k, v) = pair.split_once('=').unwrap_or((pair, ""));
-        let key = decode_query(k);
-        if !plain_key(&key) {
-            return None;
-        }
-        query.push((key, decode_query(v)));
+        query.push((decode_query(k), decode_query(v)));
     }
     let mut it = decoded.into_iter();
-    Some(KmaRequest {
+    Ok(KmaRequest {
         version: "v000903".into(),
         original_url: path.to_owned(),
         region: it.next(),
@@ -252,10 +229,16 @@ mod tests {
             ]
         );
         assert_eq!(r.locale.name(), "ko");
-        assert!(parse_path("/v000903/kma/addr/a/b/c/d", "en").is_none());
-        assert!(parse_path("/v000903/kma/addr/%ZZ", "en").is_none());
-        assert!(parse_path("/v000903/kma/addr/a?x[y]=1", "en").is_none());
-        assert!(parse_path("/v000901/kma/addr/a", "en").is_none());
+        let reply = |path: &str| parse_path(path, "en").err();
+        let not_found = Some(Outcome::Status(404, "Not Found\n".into()));
+        let bad = Some(Outcome::Status(400, "Bad Request\n".into()));
+        assert_eq!(reply("/v000903/kma/addr/a/b/c/d"), not_found);
+        assert_eq!(reply("/v000903/kma/addr/a//c"), not_found);
+        assert_eq!(reply("/v000901/kma/addr/a"), not_found);
+        assert_eq!(reply("/v000903/kma/addr/%ZZ"), bad);
+        assert_eq!(reply("/v000903/kma/addr/%+1"), bad);
+        // Bracket syntax and prototype names are `qs` structure, parsed by the chain.
+        assert!(parse_path("/v000903/kma/addr/a?x[y]=1&hasOwnProperty=1", "en").is_ok());
         // Pinned qs: `F+%ZZ` -> "F+%ZZ", `a+%E0%A4%A` -> "a+%E0%A4%A", `a+%C3%28` -> "a+%C3%28".
         let q = parse_path(
             "/v000903/kma/addr/a?temperatureUnit=F+%ZZ&x=a+%E0%A4%A&y=a+%C3%28&z=a+b%20c",

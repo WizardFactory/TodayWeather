@@ -223,7 +223,7 @@ pub fn daily_short_rows(records: &V, now: f64) -> Vec<V> {
             None => slots.push((key, row)),
         }
     }
-    slots.sort_by(|a, b| super::js::units(&a.0).cmp(&super::js::units(&b.0)));
+    slots.sort_by_key(|a| super::js::units(&a.0));
     slots
         .into_iter()
         .map(|(_, r)| r)
