@@ -1,0 +1,243 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Native nation request and shared acquisition",
+    "output": "docs/architecture/diagrams/server2-nation.html",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      660
+    ],
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "e3c1ff95aaf929f0bd361d139366d8f61418eaa7"
+    }
+  },
+  "participants": [
+    {
+      "id": "client",
+      "type": "external",
+      "label": "Client",
+      "sublabel": "nation view",
+      "sources": [
+        {
+          "path": "client/www/js/service.weatherutil.js",
+          "line": 909
+        }
+      ]
+    },
+    {
+      "id": "nation",
+      "type": "backend",
+      "label": "Nation",
+      "sublabel": "one 3 s deadline",
+      "sources": [
+        {
+          "path": "server2/src/nation/mod.rs",
+          "line": 78
+        }
+      ]
+    },
+    {
+      "id": "cities",
+      "type": "backend",
+      "label": "15 cities",
+      "sublabel": "same-version KMA",
+      "sources": [
+        {
+          "path": "server2/src/nation/mod.rs",
+          "line": 87
+        }
+      ]
+    },
+    {
+      "id": "air",
+      "type": "backend",
+      "label": "Air inputs",
+      "sublabel": "shared acquisitions",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/air_input.rs",
+          "line": 1039
+        },
+        {
+          "path": "server2/src/domestic/kma/source/live.rs",
+          "line": 285
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "database",
+      "label": "S3",
+      "sublabel": "raw source of truth",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/records.rs",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "provider",
+      "type": "external",
+      "label": "Providers",
+      "sublabel": "national + fallback",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/live.rs",
+          "line": 285
+        },
+        {
+          "path": "server2/src/world/air_chain.rs",
+          "line": 445
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 296,
+      "label": "Native request: one absolute deadline"
+    },
+    {
+      "from": 310,
+      "to": 424,
+      "label": "Available rows and bounded response"
+    },
+    {
+      "from": 436,
+      "to": 550,
+      "label": "Owned acquisition outlives the request"
+    }
+  ],
+  "messages": [
+    {
+      "id": "request",
+      "from": "client",
+      "to": "nation",
+      "y": 170,
+      "label": "GET /v000903/nation/KR",
+      "variant": "emphasis"
+    },
+    {
+      "id": "fanout",
+      "from": "nation",
+      "to": "cities",
+      "y": 198,
+      "label": "start 15 native assemblies",
+      "variant": "default",
+      "note": "Fixed bounded fan-out; same absolute deadline"
+    },
+    {
+      "id": "national",
+      "from": "nation",
+      "to": "air",
+      "y": 226,
+      "label": "read province air",
+      "variant": "default"
+    },
+    {
+      "id": "raw-read",
+      "from": "air",
+      "to": "s3",
+      "y": 254,
+      "label": "read raw datasets",
+      "variant": "default"
+    },
+    {
+      "id": "raw-return",
+      "from": "s3",
+      "to": "air",
+      "y": 282,
+      "label": "stored observations",
+      "variant": "return"
+    },
+    {
+      "id": "acquire",
+      "from": "air",
+      "to": "provider",
+      "y": 320,
+      "label": "missing: join owned acquisition",
+      "variant": "dashed",
+      "note": "National publication shared with town requests"
+    },
+    {
+      "id": "city-return",
+      "from": "cities",
+      "to": "nation",
+      "y": 348,
+      "label": "available child replies",
+      "variant": "return"
+    },
+    {
+      "id": "air-return",
+      "from": "air",
+      "to": "nation",
+      "y": 376,
+      "label": "available air + safe status",
+      "variant": "return"
+    },
+    {
+      "id": "reply",
+      "from": "nation",
+      "to": "client",
+      "y": 410,
+      "label": "200 JSON; actual child failure: 500",
+      "variant": "return"
+    },
+    {
+      "id": "provider-result",
+      "from": "provider",
+      "to": "air",
+      "y": 450,
+      "label": "late response completes",
+      "variant": "return"
+    },
+    {
+      "id": "publish",
+      "from": "air",
+      "to": "s3",
+      "y": 482,
+      "label": "publish complete raw group",
+      "variant": "dashed"
+    },
+    {
+      "id": "publication",
+      "from": "s3",
+      "to": "air",
+      "y": 514,
+      "label": "confirmed; next request uses it",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Nation composition",
+      "items": [
+        "Fifteen native KMA replies keep legacy order, with city air branches removed.",
+        "Fresh urban province means precede labelled representative-point fallback."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Deadline and ownership",
+      "items": [
+        "All branches share one three-second request budget.",
+        "Only prepared rows are returned; acquisition continues after deadline or disconnect."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Durability and boundaries",
+      "items": [
+        "S3 raw records remain authoritative; empty memory restores the same province rows.",
+        "No selected nation request forwards to legacy; this diagram does not claim deployment."
+      ]
+    }
+  ]
+}

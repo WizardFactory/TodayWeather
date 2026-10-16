@@ -77,3 +77,13 @@ The authoritative API catalog is
 The source register and recording limits are in
 `server2/tests/nation/PROVENANCE.md`. No production request, database write, push
 send, AWS change or deployment is part of this slice.
+
+S17c local verification at integrated base `80ecf56b`: Rust workspace **694 passed,
+0 failed, 2 ignored** (slow image/life boundary sweeps); ten nation tests passed.
+All-targets Clippy with warnings denied, formatting and the placement gate passed.
+The additional actual HTTP smoke uses the public Gateway/DirectRoutes handler,
+with a closed legacy origin and GET/HEAD/revalidation on both nation versions.
+The thirteen-case Node16 oracle was reproduced byte-for-byte. The one-page API
+manual was rendered with PyMuPDF (Poppler unavailable) and inspected; Archify
+artifact checks, actual Chrome inspection and four light/dark viewport captures
+were verified separately. Review and CI remain required before readiness.

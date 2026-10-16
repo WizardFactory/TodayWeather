@@ -39,6 +39,8 @@ with providers disabled. Twelve concurrent requests share one intentionally
 slow national acquisition. The first requests return available data within their
 three-second budget; the next request includes the newly saved observation.
 
+![Capture of actual local HTTP verification output](assets/server2-nation-http.png)
+
 Run the maintained checks from the repository root:
 
 ```sh

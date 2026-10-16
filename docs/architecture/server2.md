@@ -2859,4 +2859,7 @@ nation composition uses deterministic child response doubles; the S15/S17
 oracles continue to verify the actual weather assembler. S3 restore tests verify
 the nation air branch separately from child-weather assembly.
 
-See [nation setup and checks](../operations/server2-nation.md).
+See [nation setup and checks](../operations/server2-nation.md),
+[PDF manual](../operations/server2-nation.pdf), and
+[nation sequence](diagrams/server2-nation.html)
+([editable JSON](diagrams/server2-nation.json)).
