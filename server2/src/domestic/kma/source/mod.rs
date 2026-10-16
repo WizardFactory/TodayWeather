@@ -774,7 +774,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let list = towns();
         let town = find_town(
             list,
-            request.region.as_deref(),
+            request.region.as_ref().map(|_| region.as_str()),
             Some(&city),
             Some(&town_name),
         )
