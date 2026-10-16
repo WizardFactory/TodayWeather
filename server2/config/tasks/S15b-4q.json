@@ -1,0 +1,40 @@
+{
+  "task": "S15b-4q",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-4q.json",
+    "server2/src/domestic/quota.rs",
+    "server2/src/domestic/mod.rs",
+    "server2/src/domestic/acquire.rs",
+    "server2/src/domestic/family.rs",
+    "server2/src/domestic/kma/source/observe.rs",
+    "server2/src/domestic/kma/source/fetch.rs",
+    "server2/src/domestic/kma/source/live.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/quota.rs",
+    "server2/tests/domestic/air_s3.rs",
+    "server2/tests/domestic/life_s3.rs",
+    "server2/tests/domestic/source_s3.rs"
+  ],
+  "outside": [
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "S15b-4q section and the current data.go.kr/AirKorea settings rows (per-API quotas, AK decision 5)"
+    },
+    {
+      "path": "plans/issue-2742.md",
+      "category": "documentation",
+      "reason": "Record AK decision 5 on the S15b-4a quota open decision"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6206044410",
+  "path_notes": {
+    "server2/src/domestic/quota.rs": "data.go.kr APIs, their documented development allowances, the OPERATING_UNITS hook and per key/API quota owners",
+    "server2/src/domestic/acquire.rs": "KeyRing budgets per API (KeyBudgets, KeyRing::per_api); the request URL selects the budget",
+    "server2/src/domestic/kma/source/observe.rs": "DailyAcquirer: one S08 owner per DONGNAE key, API and KST day; warning budgets per key",
+    "server2/src/domestic/kma/source/live.rs": "AirKorea: one S08 owner per key, AirKorea API and KST day",
+    "server2/src/gateway/runtime.rs": "the KMA acquirer uses the built-in per-API units; no new setting"
+  }
+}

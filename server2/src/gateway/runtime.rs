@@ -205,9 +205,9 @@ pub fn native_geocoder(
         .with_quota(Arc::new(quota)))
 }
 /// The KMA request-time acquirer: the legacy data.go.kr key list `DONGNAE_SECRET_KEYS` (a JSON
-/// array, required with `kma`), funded with the built-in
-/// [`crate::domestic::kma::source::observe::DATA_GO_KR_DAILY_UNITS`] per key and KST day in S3
-/// (S08), at the given builtins.
+/// array, required with `kma`), funded in S3 (S08) per key, data.go.kr API and KST day with the
+/// built-in [`crate::domestic::quota::DataGoKrApi::daily_units`] (AK decision 5), at the given
+/// builtins.
 pub fn kma_acquirer(
     var: Var,
     s3: BoundedS3<HttpS3Transport>,
@@ -223,7 +223,8 @@ pub fn kma_acquirer(
     let keys = crate::domestic::keys::parse_keys(
         &var("DONGNAE_SECRET_KEYS").ok_or(GatewayError::InvalidConfiguration)?,
     );
-    let units = crate::domestic::kma::source::observe::DATA_GO_KR_DAILY_UNITS;
+    let units: crate::domestic::kma::source::observe::ApiUnits =
+        crate::domestic::quota::DataGoKrApi::daily_units;
     let invalid = |_| GatewayError::InvalidConfiguration;
     crate::domestic::kma::source::observe::DailyAcquirer::new(
         Arc::new(crate::providers::HttpProviderTransport::new(8 * 1024 * 1024).map_err(invalid)?),
