@@ -134,6 +134,34 @@ pub struct Folded {
     pub minute: Arc<RowStore>,
     /// City stations' AWS hourly rows with their fetch instants (ongoing ASOS hours).
     pub national: Arc<HashMap<String, Vec<(f64, Doc)>>>,
+    /// S16: the hourly and city pages this fold applied (input identities).
+    pub pages: Arc<Vec<PageId>>,
+    /// S16: the registry's content hash and the instant it first appeared in this process (the
+    /// seed, every window page and the station geocodes decide station selection and the ASOS
+    /// mapping of every date).
+    pub registry_id: Option<(String, f64)>,
+}
+/// One station page a fold applied: its kind (`aws-hourly`, `city-obs`), hour, fetch instant and
+/// raw SHA-256.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PageId {
+    pub kind: &'static str,
+    pub hour: Publication,
+    pub fetched_at_ms: f64,
+    pub sha256: String,
+}
+type PageIds = BTreeMap<(&'static str, Publication), (f64, String)>;
+fn page_ids(ids: &PageIds) -> Arc<Vec<PageId>> {
+    Arc::new(
+        ids.iter()
+            .map(|((kind, hour), (at, sha))| PageId {
+                kind,
+                hour: *hour,
+                fetched_at_ms: *at,
+                sha256: sha.clone(),
+            })
+            .collect(),
+    )
 }
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Flight {
@@ -165,8 +193,12 @@ struct Pages {
     /// Fetch instant of each hourly page.
     hourly_at: BTreeMap<Publication, f64>,
     city: BTreeMap<Publication, Arc<Vec<Doc>>>,
+    /// Fetch instant and raw hash of each kept hourly and city page (S16 input identities).
+    ids: PageIds,
     minute: BTreeMap<Publication, Arc<Vec<Doc>>>,
     days: HashMap<u32, std::time::Instant>,
+    /// Days whose latest S3 read failed (S16 completeness; a later success clears them).
+    failed_days: std::collections::BTreeSet<u32>,
     minute_read: Option<std::time::Instant>,
     /// Pages changed since the last fold.
     dirty: bool,
@@ -188,6 +220,14 @@ struct State {
     geo: HashMap<String, (Option<(f64, f64)>, std::time::Instant)>,
     asos: HashMap<String, AsosEntry>,
     asos_failed: HashMap<String, std::time::Instant>,
+    /// Stations with a recovery run in progress (S16 completeness).
+    asos_running: std::collections::HashSet<String>,
+    /// Stations whose latest S3 read had a group S06 excluded (S16 completeness).
+    asos_partial: std::collections::HashSet<String>,
+    /// The latest registry seed read failed (S16 completeness).
+    seed_failed: bool,
+    /// Content hash of the last folded registry and the request instant it first appeared.
+    registry_id: Option<(String, f64)>,
     /// The hourly part of the last fold (registry, hourly rows, national rows).
     hourly_fold: Option<HourlyFold>,
 }
@@ -197,6 +237,7 @@ struct HourlyFold {
     hourly: Arc<RowStore>,
     national: Arc<HashMap<String, Vec<(f64, Doc)>>>,
     unresolved: Vec<String>,
+    pages: Arc<Vec<PageId>>,
 }
 
 pub struct Observations<T> {
@@ -426,6 +467,20 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             days.push(day.date());
             d = day.add_hours(24);
         }
+        // Published day catalogs of both page kinds (S16): a day whose catalog is not listed has
+        // nothing published and reads as empty, as S14/S15b listings treat absent catalogs. A
+        // failed listing keeps every day to its catalog lookup.
+        let months = super::records::months(schedule::to_ms(first) as f64, now_ms as f64);
+        let (aws_k, city_k) = (aws_key(), city_key());
+        let (listed_hourly, listed_city) = tokio::join!(
+            self.reader
+                .partitions("kma-web", "aws-hourly", &aws_k, &months, deadline),
+            self.reader
+                .partitions("kma-web", "city-obs", &city_k, &months, deadline),
+        );
+        let listed = |l: &Result<Vec<String>, crate::storage::Error>, p: &str| {
+            l.as_ref().map_or(true, |l| l.iter().any(|x| x == p))
+        };
         for day in days {
             let fresh = {
                 let s = self.state();
@@ -439,15 +494,36 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             }
             let partition = format!("{day:08}");
             let (aws, city_k) = (aws_key(), city_key());
-            let (hourly, city) = tokio::join!(
-                self.reader
-                    .raw("kma-web", "aws-hourly", &aws, &partition, deadline),
-                self.reader
-                    .raw("kma-web", "city-obs", &city_k, &partition, deadline),
+            let (want_hourly, want_city) = (
+                listed(&listed_hourly, &partition),
+                listed(&listed_city, &partition),
             );
-            let (Ok(hourly), Ok(city)) = (hourly, city) else {
+            let (hourly, city) = tokio::join!(
+                async {
+                    if want_hourly {
+                        self.reader
+                            .raw_counted("kma-web", "aws-hourly", &aws, &partition, deadline)
+                            .await
+                    } else {
+                        Ok((Vec::new(), 0))
+                    }
+                },
+                async {
+                    if want_city {
+                        self.reader
+                            .raw_counted("kma-web", "city-obs", &city_k, &partition, deadline)
+                            .await
+                    } else {
+                        Ok((Vec::new(), 0))
+                    }
+                },
+            );
+            let (Ok((hourly, hourly_excluded)), Ok((city, city_excluded))) = (hourly, city) else {
+                self.state().pages.failed_days.insert(day);
                 continue;
             };
+            // S16: a group S06 excluded makes the day's read partial.
+            let partial = hourly_excluded + city_excluded > 0;
             let parsed = tokio::task::spawn_blocking(move || {
                 (
                     hourly
@@ -462,22 +538,38 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             .await
             .unwrap_or_default();
             let mut s = self.state();
-            for (p, rows, at) in parsed.0 {
+            for (p, rows, at, sha) in parsed.0 {
                 if let std::collections::btree_map::Entry::Vacant(e) = s.pages.hourly.entry(p) {
                     e.insert(rows);
                     s.pages.hourly_at.insert(p, at);
+                    s.pages.ids.insert(("aws-hourly", p), (at, sha));
                 }
             }
-            for (p, rows) in parsed.1 {
-                s.pages.city.entry(p).or_insert(rows);
+            for (p, rows, at, sha) in parsed.1 {
+                if let std::collections::btree_map::Entry::Vacant(e) = s.pages.city.entry(p) {
+                    e.insert(rows);
+                    s.pages.ids.insert(("city-obs", p), (at, sha));
+                }
             }
             s.pages.days.insert(day, std::time::Instant::now());
+            if partial {
+                s.pages.failed_days.insert(day);
+            } else {
+                s.pages.failed_days.remove(&day);
+            }
             s.pages.dirty = true;
             s.pages.hourly_dirty = true;
         }
-        self.state().pages.days.retain(|d, _| *d >= first.date());
+        {
+            let mut s = self.state();
+            s.pages.days.retain(|d, _| *d >= first.date());
+            s.pages.failed_days.retain(|d| *d >= first.date());
+        }
         // The newest registry seed, if one was imported.
-        if let Some(seed) = self.read_seed(now_ms, deadline).await {
+        let seed = self.read_seed(now_ms, deadline).await;
+        // S16: a failed seed read leaves the registry unproven (the previous seed stays in use).
+        self.state().seed_failed = !matches!(seed, Ok((_, false)));
+        if let Ok((Some(seed), _)) = seed {
             let mut s = self.state();
             if s.seed
                 .as_ref()
@@ -537,21 +629,29 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// The newest imported seed that parses and was exported after the carried one: partitions
     /// (export days) newest first, acquisitions newest first; a corrupt or older import is
     /// skipped. None keeps the seed in use (the carried one when nothing qualifies).
-    async fn read_seed(&self, now_ms: i64, deadline: Instant) -> Option<Vec<Doc>> {
+    /// Also reports whether a listed seed import was excluded by S06 (S16 completeness).
+    async fn read_seed(
+        &self,
+        now_ms: i64,
+        deadline: Instant,
+    ) -> Result<(Option<Vec<Doc>>, bool), ()> {
         use super::seed;
+        let mut partial = false;
         let carried = seed::embedded().exported_at_ms;
         let months = super::history_months(now_ms as f64);
         let parts = self
             .reader
             .partitions(seed::SOURCE, seed::KIND, &seed::key(), &months, deadline)
             .await
-            .ok()?;
+            .map_err(|_| ())?;
         for partition in parts.iter().rev() {
-            let mut acquisitions = self
+            let (mut acquisitions, excluded) = self
                 .reader
-                .raw(seed::SOURCE, seed::KIND, &seed::key(), partition, deadline)
+                .raw_counted(seed::SOURCE, seed::KIND, &seed::key(), partition, deadline)
                 .await
-                .ok()?;
+                .map_err(|_| ())?;
+            // A seed import S06 excluded (raw body missing): the seed used may not be the newest.
+            partial |= excluded > 0;
             acquisitions.sort_by_key(|a| {
                 std::cmp::Reverse(a.first().map_or(0, |r| r.envelope.identity.fetched_at_ms))
             });
@@ -561,11 +661,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     .and_then(|r| seed::parse(&r.bytes).ok())
                     .filter(|s| s.exported_at_ms > carried)
                 {
-                    return Some(parsed.docs);
+                    return Ok((Some(parsed.docs), partial));
                 }
             }
         }
-        None
+        Ok((None, partial))
     }
     fn ensure_minute(
         self: &Arc<Self>,
@@ -631,11 +731,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         if let Some(records) = self
             .acquire_web(request, Instant::now() + page_time())
             .await
-            && let Some((p, rows, at)) = parse_hourly(&records)
+            && let Some((p, rows, at, sha)) = parse_hourly(&records)
         {
             let mut s = self.state();
             s.pages.hourly.insert(p, rows);
             s.pages.hourly_at.insert(p, at);
+            s.pages.ids.insert(("aws-hourly", p), (at, sha));
             s.pages.dirty = true;
             s.pages.hourly_dirty = true;
         }
@@ -659,10 +760,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 if let Some(records) = this
                     .acquire_web(request, Instant::now() + page_time())
                     .await
-                    && let Some((p, rows)) = parse_city_record(&records)
+                    && let Some((p, rows, at, sha)) = parse_city_record(&records)
                 {
                     let mut s = this.state();
                     s.pages.city.insert(p, rows);
+                    s.pages.ids.insert(("city-obs", p), (at, sha));
                     s.pages.dirty = true;
                     s.pages.hourly_dirty = true;
                 }
@@ -751,6 +853,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             s.pages.hourly.retain(|h, _| *h >= first);
             s.pages.hourly_at.retain(|h, _| *h >= first);
             s.pages.city.retain(|h, _| *h >= first);
+            s.pages.ids.retain(|(_, h), _| *h >= first);
             // Minute pages older than the readers' reach, however they arrived (S3 or local).
             let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
             s.pages.minute.retain(|k, _| *k > floor);
@@ -770,14 +873,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     s.pages.hourly_at.clone(),
                     s.pages.city.clone(),
                     geo,
+                    page_ids(&s.pages.ids),
                 )
             });
             (inputs, s.pages.minute.clone(), cached)
         };
         let hourly_fold = match (cached, inputs) {
             (Some(cached), _) => cached,
-            (None, Some((seed, hourly, hourly_at, city, geo))) => {
-                let Ok((fold, reduced)) = tokio::task::spawn_blocking(move || {
+            (None, Some((seed, hourly, hourly_at, city, geo, pages))) => {
+                let Ok((mut fold, reduced)) = tokio::task::spawn_blocking(move || {
                     fold_hourly(
                         seed.as_deref().map(Vec::as_slice),
                         &hourly,
@@ -790,6 +894,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 else {
                     return;
                 };
+                fold.pages = pages;
                 let mut s = self.state();
                 // Non-city stations' hourly rows are kept as registry facts only.
                 for (h, rows) in reduced {
@@ -811,12 +916,29 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         })
         .await
         .unwrap_or_default();
-        self.state().folded = Some(Arc::new(Folded {
+        let digest = {
+            let mut bytes = Vec::new();
+            for d in hourly_fold.registry.docs() {
+                bytes.extend_from_slice(&d.json().to_bytes());
+                bytes.push(b'\n');
+            }
+            crate::storage::sha256(&bytes)
+        };
+        let mut s = self.state();
+        let registry_id = match &s.registry_id {
+            Some((hash, since)) if *hash == digest => (digest, *since),
+            _ => (digest, now_ms as f64),
+        };
+        s.registry_id = Some(registry_id.clone());
+        s.folded = Some(Arc::new(Folded {
             registry: hourly_fold.registry.clone(),
             hourly: hourly_fold.hourly.clone(),
             minute: Arc::new(minutes),
             national: hourly_fold.national.clone(),
+            pages: hourly_fold.pages.clone(),
+            registry_id: Some(registry_id),
         }));
+        drop(s);
         if !hourly_fold.unresolved.is_empty() {
             self.geocode(hourly_fold.unresolved.clone());
         }
@@ -878,6 +1000,19 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         now_ms: f64,
         until: Instant,
     ) -> OrderedJson {
+        self.history_with_inputs(town, folded, now_ms, until)
+            .await
+            .0
+    }
+    /// [`Self::history`] with the station's ASOS acquisitions it answered from (S16): `None`
+    /// without a mapped, loaded station.
+    pub async fn history_with_inputs(
+        self: &Arc<Self>,
+        town: &Doc,
+        folded: Option<&Folded>,
+        now_ms: f64,
+        until: Instant,
+    ) -> (OrderedJson, Option<AsosView>) {
         let reason = |r: &str, mapping: Option<OrderedJson>| {
             let mut out = Vec::new();
             if let Some(m) = mapping {
@@ -890,18 +1025,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         };
         let Some(folded) = folded else {
             // The station list is still loading: legacy's read budget expired.
-            return reason("cache-read-timeout", None);
+            return (reason("cache-read-timeout", None), None);
         };
         let Some(mapping) = nearest(town, folded.registry.docs(), ASOS_MAX_KM) else {
             // Station coordinates still being resolved are late data, not an absent station.
             if self.flight(&Flight::Geocode).is_some() {
-                return reason("cache-read-timeout", None);
+                return (reason("cache-read-timeout", None), None);
             }
-            return reason("station-unavailable", None);
+            return (reason("station-unavailable", None), None);
         };
         let station = mapping.station.clone();
         let Some((start, end, _)) = policy::window(now_ms) else {
-            return reason("station-unavailable", None);
+            return (reason("station-unavailable", None), None);
         };
         // Station state from S3 (a failed read is retried after ASOS_LOAD_RETRY).
         let (stale, failed) = {
@@ -931,11 +1066,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 .asos_failed
                 .get(&station)
                 .is_some_and(|at| at.elapsed() < ASOS_LOAD_RETRY);
-            return if failed {
+            let answer = if failed {
                 reason("cache-read-failed", Some(mapping.json()))
             } else {
                 reason("cache-read-timeout", None)
             };
+            return (answer, None);
         }
         // One recovery run per station at a time and at most once per hour (legacy lease and
         // hourly job): it plans the incomplete ranges and acquires them in order.
@@ -957,15 +1093,30 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             },
         )
         .await;
-        let fetched = self
-            .state()
-            .asos
-            .get(&station)
-            .map(|e| e.fetched.clone())
-            .unwrap_or_default();
+        // The acquisitions and their completeness are read under one lock (S16).
+        // An S3 reload still running (the answer then uses the previous read) is not complete.
+        let reloading = self.flight(&Flight::AsosLoad(station.clone())).is_some();
+        let (fetched, settled) = {
+            let s = self.state();
+            (
+                s.asos
+                    .get(&station)
+                    .map(|e| e.fetched.clone())
+                    .unwrap_or_default(),
+                !reloading
+                    && !s.asos_running.contains(&station)
+                    && !s.asos_partial.contains(&station)
+                    && !s.asos_failed.contains_key(&station),
+            )
+        };
         let store = station_store(&station, &fetched, folded);
+        let view = AsosView {
+            station: station.clone(),
+            fetched: fetched.clone(),
+            settled,
+        };
         let docs = |d: Vec<Doc>| OrderedJson::Array(d.iter().map(Doc::json).collect());
-        object(vec![
+        let answer = object(vec![
             ("mapping", mapping.json()),
             (
                 "hourly",
@@ -980,7 +1131,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 "daily",
                 docs(store.read(AsosKind::Daily, &station, &start, &end)),
             ),
-        ])
+        ]);
+        (answer, Some(view))
     }
     async fn load_asos(self: Arc<Self>, station: &str, now_ms: f64) {
         let deadline = Instant::now() + READ_DEADLINE;
@@ -988,6 +1140,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         // Ranges start at most 7 days before a window that starts 7 days before today.
         let months = super::records::months(now_ms - 15. * 86_400_000., now_ms);
         let mut fetched: Vec<AsosFetched> = Vec::new();
+        let mut partial = false;
         for kind in [AsosKind::Hourly, AsosKind::Daily] {
             let parts = match self
                 .reader
@@ -1008,10 +1161,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 };
                 match self
                     .reader
-                    .raw("data-go-kr", kind.kind(), &key, &partition, deadline)
+                    .raw_counted("data-go-kr", kind.kind(), &key, &partition, deadline)
                     .await
                 {
-                    Ok(acquisitions) => {
+                    Ok((acquisitions, excluded)) => {
+                        partial |= excluded > 0;
                         for records in acquisitions {
                             fetched.push(asos_fetched(kind, &start, &end, &records));
                         }
@@ -1028,6 +1182,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         fetched.sort_by(|a, b| a.fetched_at_ms.total_cmp(&b.fetched_at_ms));
         let mut s = self.state();
         s.asos_failed.remove(station);
+        if partial {
+            s.asos_partial.insert(station.to_owned());
+        } else {
+            s.asos_partial.remove(station);
+        }
         // Keep acquisitions this process published after the read started.
         let mine: Vec<AsosFetched> = s
             .asos
@@ -1056,6 +1215,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// Legacy `Recovery.run` for one station: plan the incomplete window ranges, then acquire and
     /// publish them in order (hourly, then daily).
     async fn recover_asos(self: Arc<Self>, station: &str, folded: &Folded, start: &str, end: &str) {
+        let _running = Running::new(&self, station);
         let fetched = self
             .state()
             .asos
@@ -1095,6 +1255,84 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         }
     }
 }
+/// Marks a station's recovery run in progress until dropped (also when the owned run times out).
+struct Running<T> {
+    observations: Arc<Observations<T>>,
+    station: String,
+}
+impl<T> Running<T> {
+    fn new(observations: &Arc<Observations<T>>, station: &str) -> Self {
+        observations
+            .state
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .asos_running
+            .insert(station.to_owned());
+        Self {
+            observations: observations.clone(),
+            station: station.to_owned(),
+        }
+    }
+}
+impl<T> Drop for Running<T> {
+    fn drop(&mut self) {
+        self.observations
+            .state
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .asos_running
+            .remove(&self.station);
+    }
+}
+/// The station ASOS acquisitions a history answer used and whether they were complete (no
+/// recovery run in flight, no failed S3 read).
+#[derive(Debug, Clone)]
+pub struct AsosView {
+    pub station: String,
+    pub fetched: Vec<AsosFetched>,
+    pub settled: bool,
+}
+/// S16: whether the station state behind a snapshot was read completely.
+impl<T> Observations<T> {
+    /// Whether `folded` is the current fold of a complete read at `now_ms`: every day of the
+    /// 8-day page window was read from S3 and its latest read did not fail, the minute pages were
+    /// read, no newer page is waiting for a fold, and no S3 load, fold or geocoding is in flight.
+    pub fn settled(&self, now_ms: i64, folded: &Arc<Folded>) -> bool {
+        let busy = {
+            let flights = self.flights.lock().unwrap_or_else(|e| e.into_inner());
+            [Flight::Load, Flight::Fold, Flight::Geocode]
+                .iter()
+                .any(|f| flights.contains_key(f))
+        };
+        if busy {
+            return false;
+        }
+        let s = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        // The snapshot's fold must be the current one: a newer fold or newer pages are inputs
+        // the snapshot did not use.
+        if s.pages.dirty
+            || s.seed_failed
+            || s.pages.minute_read.is_none()
+            || !s.folded.as_ref().is_some_and(|f| Arc::ptr_eq(f, folded))
+        {
+            return false;
+        }
+        let first = schedule::from_ms(now_ms - HOURLY_WINDOW_HOURS * 3_600_000 - 3_600_000);
+        let today = schedule::from_ms(now_ms).date();
+        let mut d = Publication::new(first.date(), 0);
+        while let Some(day) = d {
+            if day.date() > today {
+                break;
+            }
+            if !s.pages.days.contains_key(&day.date()) || s.pages.failed_days.contains(&day.date())
+            {
+                return false;
+            }
+            d = day.add_hours(24);
+        }
+        true
+    }
+}
 /// Keep the acquisitions whose range reaches the window (older ones cannot change it).
 pub fn retain_window(fetched: &mut Vec<AsosFetched>, start: &str) {
     fetched.retain(|f| f.end.get(..8).is_some_and(|d| d >= start));
@@ -1130,7 +1368,8 @@ fn object(pairs: Vec<(&str, OrderedJson)>) -> OrderedJson {
             .collect(),
     )
 }
-fn parse_hourly(records: &[RawRecord]) -> Option<(Publication, Arc<Vec<Doc>>, f64)> {
+type ParsedPage = (Publication, Arc<Vec<Doc>>, f64, String);
+fn parse_hourly(records: &[RawRecord]) -> Option<ParsedPage> {
     let r = records.first()?;
     let requested = record_publication(r)?;
     let page = parse_aws(&r.bytes, Some(&dotted(requested))).ok()?;
@@ -1138,13 +1377,19 @@ fn parse_hourly(records: &[RawRecord]) -> Option<(Publication, Arc<Vec<Doc>>, f6
         requested,
         Arc::new(page.rows),
         r.envelope.identity.fetched_at_ms as f64,
+        r.envelope.identity.raw_sha256.clone(),
     ))
 }
-fn parse_city_record(records: &[RawRecord]) -> Option<(Publication, Arc<Vec<Doc>>)> {
+fn parse_city_record(records: &[RawRecord]) -> Option<ParsedPage> {
     let r = records.first()?;
     let requested = record_publication(r)?;
     let page = parse_city(&r.bytes, &r.envelope.content_type, Some(&dotted(requested))).ok()?;
-    Some((requested, Arc::new(page.rows)))
+    Some((
+        requested,
+        Arc::new(page.rows),
+        r.envelope.identity.fetched_at_ms as f64,
+        r.envelope.identity.raw_sha256.clone(),
+    ))
 }
 fn parse_minute(records: &[RawRecord]) -> Option<(Publication, Arc<Vec<Doc>>)> {
     let r = records.first()?;
@@ -1253,6 +1498,7 @@ fn fold_hourly(
             hourly: Arc::new(rows),
             national: Arc::new(national),
             unresolved: unresolved.into_iter().collect(),
+            pages: Arc::new(Vec::new()),
         },
         reduced,
     )
