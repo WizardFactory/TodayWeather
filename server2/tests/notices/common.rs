@@ -16,6 +16,11 @@ pub struct Data {
     pub reads: usize,
     pub first_read_barrier: Option<Arc<tokio::sync::Barrier>>,
     pub unreadable_after_commit: bool,
+    pub delayed: bool,
+    pub pending: Option<(Vec<u8>, WriteCondition)>,
+    pub fail_read_after_unchanged: bool,
+    pub refuse_retry: bool,
+    pub advance_after_pending: bool,
     pub held_commit: Option<(Arc<tokio::sync::Notify>, Arc<tokio::sync::Notify>)>,
 }
 impl ObjectTransport for Memory {
@@ -34,8 +39,23 @@ impl CatalogTransport for Memory {
         let (object, barrier) = {
             let mut d = self.0.lock().unwrap();
             d.reads += 1;
-            if d.read_error {
+            if d.read_error || (d.fail_read_after_unchanged && d.reads >= 3) {
                 return Err(Error::Transport);
+            }
+            if d.advance_after_pending && d.reads == 2 {
+                let (body, _) = d.pending.as_ref().unwrap();
+                let mut state: server2::notice::store::State =
+                    serde_json::from_slice(body).unwrap();
+                state.operations.clear();
+                state.operations.insert("b".repeat(64), 1);
+                d.revision += 1;
+                d.object = Some(ControlObject {
+                    body: serde_json::to_vec(&state).unwrap(),
+                    etag: format!("\"v{}\"", d.revision),
+                    version: None,
+                });
+                d.delayed = false;
+                d.refuse = true;
             }
             let object = if d.corrupt {
                 Ok(ControlObject {
@@ -69,6 +89,22 @@ impl CatalogTransport for Memory {
         let (answer, held) = {
             let mut d = self.0.lock().unwrap();
             d.writes += 1;
+            if d.delayed {
+                if let Some((original, original_condition)) = &d.pending {
+                    assert_eq!(body, original, "identical retry retains pending bytes");
+                    assert_eq!(
+                        condition, original_condition,
+                        "identical retry retains pending precondition"
+                    );
+                } else {
+                    d.pending = Some((body.to_vec(), condition.clone()));
+                }
+                return if d.refuse_retry && d.writes > 1 {
+                    Ok(403)
+                } else {
+                    Err(Error::Transport)
+                };
+            }
             if d.refuse {
                 return Ok(403);
             }

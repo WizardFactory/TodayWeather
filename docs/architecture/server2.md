@@ -3377,7 +3377,9 @@ process/router mounting. This is not a claim that a notice route or popup is dep
 
 `index/v2/notices/state.json` retains numeric IDs, operator records and operation
 identities under an 8MiB/10000-record cap. Absent/ETag conditional writes plus unknown
-outcome readback preserve acknowledgements across concurrent writers. Mutable notice
+outcome readback preserve acknowledgements across concurrent writers. An unchanged
+readback retains pending bytes/identity/precondition; later read failure, refusal or
+retry exhaustion remains uncertain until success or a changed base rules out the old CAS. Mutable notice
 controls bypass raw disk caching. Reads validate S3 before replacing a verified
 memory copy: missing state gives null, cold unreadable/corrupt state503, and an
 existing verified copy survives failures. API requests never translate.

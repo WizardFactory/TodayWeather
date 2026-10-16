@@ -158,6 +158,16 @@ struct Versioned {
     state: State,
     etag: Option<String>,
 }
+// Unknown PUT results remain pending while the canonical precondition is unchanged.
+// An identical retry uses exactly the same body/id; only a changed base rules out
+// the old CAS. Retained operation identities and monotonic IDs prevent ETag ABA.
+#[derive(Clone)]
+struct Pending {
+    base: Option<String>,
+    body: Vec<u8>,
+    next: State,
+    id: u64,
+}
 pub struct NoticeStore<T> {
     transport: T,
     verified: Mutex<Option<State>>,
@@ -212,45 +222,81 @@ impl<T: CatalogTransport> NoticeStore<T> {
         if !valid_operation(operation) {
             return Err(Error::Invalid("notice operation identity"));
         }
+        let mut pending: Option<Pending> = None;
         for _ in 0..8 {
-            let v = self.current().await?;
+            let v = self.current().await.map_err(|e| {
+                if pending.is_some() {
+                    Error::Uncertain
+                } else {
+                    e
+                }
+            })?;
             if let Some(id) = v.state.operations.get(operation) {
                 return Ok(*id);
             }
-            let mut next = v.state;
-            let id = mutation.apply(&mut next, now)?;
-            next.operations.insert(operation.to_owned(), id);
-            next.validate()?;
-            let body = serde_json::to_vec(&next).map_err(|_| Error::Corrupt)?;
-            if body.len() > CAP {
-                return Err(Error::Capacity);
+            if pending.as_ref().is_some_and(|p| p.base != v.etag) {
+                // A strong canonical read observed an intervening write. The old
+                // conditional PUT can no longer commit against its prior base.
+                pending = None;
             }
-            let condition = v
-                .etag
+            let attempt = if let Some(p) = &pending {
+                p.clone()
+            } else {
+                let mut next = v.state;
+                let id = mutation.apply(&mut next, now)?;
+                next.operations.insert(operation.to_owned(), id);
+                next.validate()?;
+                let body = serde_json::to_vec(&next).map_err(|_| Error::Corrupt)?;
+                if body.len() > CAP {
+                    return Err(Error::Capacity);
+                }
+                Pending {
+                    base: v.etag,
+                    body,
+                    next,
+                    id,
+                }
+            };
+            let condition = attempt
+                .base
+                .clone()
                 .map(WriteCondition::Match)
                 .unwrap_or(WriteCondition::Absent);
             let outcome = tokio::time::timeout(
                 Duration::from_secs(2),
-                self.transport.put_control(KEY, &body, &condition),
+                self.transport.put_control(KEY, &attempt.body, &condition),
             )
             .await;
             match outcome {
                 Ok(Ok(200..=299)) => {
-                    *self.verified.lock().await = Some(next);
-                    return Ok(id);
+                    *self.verified.lock().await = Some(attempt.next);
+                    return Ok(attempt.id);
                 }
                 Ok(Ok(409 | 412)) => continue,
-                Ok(Ok(status)) if status < 500 => return Err(Error::Unavailable),
+                Ok(Ok(status)) if status < 500 => {
+                    return Err(if pending.is_some() {
+                        Error::Uncertain
+                    } else {
+                        Error::Unavailable
+                    });
+                }
                 _ => {
+                    pending = Some(attempt);
                     let readback = self.current().await.map_err(|_| Error::Uncertain)?;
                     if let Some(id) = readback.state.operations.get(operation) {
                         return Ok(*id);
                     }
-                    // Retry from a fresh ETag. Retained monotonic IDs/operations prevent ABA;
-                    // an old pending CAS cannot overwrite an intervening committed state.
+                    if pending.as_ref().is_some_and(|p| p.base != readback.etag) {
+                        pending = None;
+                    }
+                    // An unchanged readback does not resolve a delayed PUT.
                 }
             }
         }
-        Err(Error::Conflict)
+        Err(if pending.is_some() {
+            Error::Uncertain
+        } else {
+            Error::Conflict
+        })
     }
 }

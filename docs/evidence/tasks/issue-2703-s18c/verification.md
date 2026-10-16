@@ -9,3 +9,7 @@ The additional actual localhost HTTP scenario publishes via the same CLI command
 ![Actual isolated HTTP stdout](notice-smoke.png)
 
 Original logs, state receipts, source hashes and active verification inputs remain in ignored reports/s18c and reports/sdlc/issue-2703-s18c. Maintained code/tests/example/manual belong to declared paths. Independent review and freshCI are pending; no merge readiness is asserted by this draft record.
+
+## Required S18C-R1 correction
+
+Independent native review2 identified pending CAS uncertainty lost after unchanged readback. Three delayed-commit regressions failed before the correction (Unavailable/Conflict instead of Uncertain), then all 24 focused notice tests passed (including an existing-object ETag case). Each original operation recovers after delayed commit with exactly one durable add; a changed-base control proves the old CAS returns 412. Fresh HTTP/Clippy and final CI are recorded separately; no live paid API or push call is used. Historical full851 remains before the narrow Q-case fix, not an exact-current run.

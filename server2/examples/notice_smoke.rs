@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 use server2::{
     notice::{
         api, cli,
-        store::NoticeStore,
+        store::{Mutation, NoticeStore},
         translate::{Settings, Translator, Transport},
     },
     storage::{HttpS3Transport, S3Settings},
@@ -28,12 +28,19 @@ use tokio::net::TcpListener;
 struct S3 {
     body: Option<Vec<u8>>,
     revision: u64,
+    delayed: bool,
+    pending: Option<Vec<u8>>,
+    reads: usize,
 }
 async fn peer(state: Arc<Mutex<S3>>, request: Request) -> Response {
     let method = request.method().clone();
     let headers = request.headers().clone();
     if method == "GET" {
-        let s = state.lock().unwrap();
+        let mut s = state.lock().unwrap();
+        s.reads += 1;
+        if s.delayed && s.pending.is_some() && s.reads >= 3 {
+            return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        }
         return match &s.body {
             Some(body) => {
                 let mut r = Body::from(body.clone()).into_response();
@@ -62,6 +69,10 @@ async fn peer(state: Arc<Mutex<S3>>, request: Request) -> Response {
         };
         if !condition {
             return StatusCode::PRECONDITION_FAILED.into_response();
+        }
+        if s.delayed {
+            s.pending.get_or_insert(bytes.to_vec());
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
         s.body = Some(bytes.to_vec());
         s.revision += 1;
@@ -195,9 +206,48 @@ async fn main() {
     let v: Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(v["notice"], Value::Null);
     assert_eq!(translations.load(Ordering::SeqCst), 6);
+    // S18C-R1 actual HTTP: failed PUT response before delayed durable commit,
+    // unchanged readback, then failing GET must retain the original operation ID.
+    let fault_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let fault_endpoint = format!("http://{}", fault_listener.local_addr().unwrap());
+    let fault_s3 = Arc::new(Mutex::new(S3 {
+        delayed: true,
+        ..S3::default()
+    }));
+    let fault_state = fault_s3.clone();
+    let fault_job = tokio::spawn(async move {
+        axum::serve(
+            fault_listener,
+            Router::new().fallback(move |r| peer(fault_state.clone(), r)),
+        )
+        .await
+        .unwrap()
+    });
+    let operation = "c".repeat(64);
+    let mutation =
+        Mutation::Add(json!({"texts":{"en":{"title":"Delayed","body":"One publication"}}}));
+    assert_eq!(
+        NoticeStore::new(transport(&fault_endpoint))
+            .apply(&operation, mutation.clone(), 0)
+            .await
+            .unwrap_err(),
+        server2::notice::Error::Uncertain
+    );
+    {
+        let mut state = fault_s3.lock().unwrap();
+        assert!(state.body.is_none());
+        state.body = state.pending.take();
+        state.revision = 1;
+        state.delayed = false;
+    }
+    let recovered = NoticeStore::new(transport(&fault_endpoint));
+    assert_eq!(recovered.apply(&operation, mutation, 0).await.unwrap(), 1);
+    assert_eq!(recovered.canonical().await.unwrap().records.len(), 1);
+    assert_eq!(fault_s3.lock().unwrap().revision, 1);
+    fault_job.abort();
     println!(
         "{}",
-        json!({"scenario":"notice-cli-s3-api","outcome":"PASS","s3_http":true,"cli_add_id":1,"responses_local_calls":6,"api_language":"fr","restart_reads_s3":true,"withdrawn_notice":null,"request_path_translations":0,"external_calls":0})
+        json!({"scenario":"notice-cli-s3-api","outcome":"PASS","s3_http":true,"cli_add_id":1,"responses_local_calls":6,"api_language":"fr","restart_reads_s3":true,"withdrawn_notice":null,"request_path_translations":0,"external_calls":0,"delayed_commit_recovery":true,"delayed_durable_adds":1})
     );
     s3_job.abort();
     responses_job.abort();

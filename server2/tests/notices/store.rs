@@ -215,3 +215,127 @@ async fn stale_generated_source_is_rejected_and_concurrent_manual_language_is_pr
     );
     assert_eq!(m.0.lock().unwrap().object, before);
 }
+
+// S18C-R1: request processing can outlive a transport error and unchanged readback.
+async fn delayed_add(mode: &str) {
+    use server2::storage::{CatalogTransport, WriteCondition};
+    let m = Memory::default();
+    let seeded = mode == "read-match";
+    if seeded {
+        NoticeStore::new(m.clone())
+            .apply(&op('b'), Mutation::Add(input()), 0)
+            .await
+            .unwrap();
+        let mut d = m.0.lock().unwrap();
+        d.reads = 0;
+        d.writes = 0;
+    }
+    {
+        let mut d = m.0.lock().unwrap();
+        d.delayed = true;
+        d.fail_read_after_unchanged = mode == "read" || seeded;
+        d.refuse_retry = mode == "refusal";
+    }
+    let operation = op('a');
+    assert_eq!(
+        NoticeStore::new(m.clone())
+            .apply(&operation, Mutation::Add(input()), 0)
+            .await
+            .unwrap_err(),
+        Error::Uncertain
+    );
+    let (body, condition) = {
+        let mut d = m.0.lock().unwrap();
+        assert_eq!(d.object.is_some(), seeded, "original PUT is still pending");
+        if mode == "exhaustion" {
+            assert_eq!(d.writes, 8);
+        }
+        d.delayed = false;
+        d.fail_read_after_unchanged = false;
+        d.pending.take().unwrap()
+    };
+    assert_eq!(
+        condition,
+        if seeded {
+            WriteCondition::Match("\"v1\"".into())
+        } else {
+            WriteCondition::Absent
+        }
+    );
+    assert_eq!(
+        m.put_control(server2::notice::store::KEY, &body, &condition)
+            .await
+            .unwrap(),
+        200
+    );
+    let writes = m.0.lock().unwrap().writes;
+    let recovered = NoticeStore::new(m.clone());
+    assert_eq!(
+        recovered
+            .apply(&operation, Mutation::Add(input()), 0)
+            .await
+            .unwrap(),
+        if seeded { 2 } else { 1 }
+    );
+    let state = recovered.canonical().await.unwrap();
+    assert_eq!(state.records.len(), if seeded { 2 } else { 1 });
+    assert_eq!(
+        state.operations.get(&operation),
+        Some(&(if seeded { 2 } else { 1 }))
+    );
+    assert_eq!(
+        m.0.lock().unwrap().writes,
+        writes,
+        "recovery must not PUT again"
+    );
+}
+#[tokio::test]
+async fn delayed_commit_unchanged_then_read_failure_retains_uncertainty() {
+    delayed_add("read").await;
+}
+#[tokio::test]
+async fn delayed_commit_unchanged_until_exhaustion_retains_uncertainty() {
+    delayed_add("exhaustion").await;
+}
+#[tokio::test]
+async fn delayed_commit_unchanged_then_retry_refusal_retains_uncertainty() {
+    delayed_add("refusal").await;
+}
+
+#[tokio::test]
+async fn changed_base_proves_pending_cas_cannot_commit_and_allows_known_failure() {
+    use server2::storage::CatalogTransport;
+    let m = Memory::default();
+    {
+        let mut d = m.0.lock().unwrap();
+        d.delayed = true;
+        d.advance_after_pending = true;
+    }
+    assert_eq!(
+        NoticeStore::new(m.clone())
+            .apply(&op('a'), Mutation::Add(input()), 0)
+            .await
+            .unwrap_err(),
+        Error::Unavailable
+    );
+    let (body, condition) = {
+        let mut d = m.0.lock().unwrap();
+        d.refuse = false;
+        d.pending.take().unwrap()
+    };
+    assert_eq!(
+        m.put_control(server2::notice::store::KEY, &body, &condition)
+            .await
+            .unwrap(),
+        412
+    );
+    let state = NoticeStore::new(m).canonical().await.unwrap();
+    assert_eq!(state.records.len(), 1);
+    assert!(!state.operations.contains_key(&op('a')));
+    assert_eq!(state.operations.get(&op('b')), Some(&1));
+}
+
+#[tokio::test]
+async fn delayed_commit_match_etag_then_read_failure_retains_uncertainty() {
+    delayed_add("read-match").await;
+}
