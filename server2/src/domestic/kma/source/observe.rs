@@ -1600,43 +1600,46 @@ pub fn nearest(town: &Doc, stations: &[Doc], max_km: f64) -> Option<Mapping> {
     best
 }
 
-/// S08 units per data.go.kr key (`DONGNAE_SECRET_KEYS`) and KST day: the documented
-/// development-account traffic of a KMA data.go.kr service, "개발계정 : 10,000" (ASOS hourly and
-/// daily, <https://www.data.go.kr/data/15057210/openapi.do>,
-/// <https://www.data.go.kr/data/15059093/openapi.do>, read 2026-10-15). The data.go.kr limit is
-/// per service; one budget spans every service of this acquirer (ASOS, UV V5, pollen V3, KASI),
-/// so it never exceeds a single service's allowance. Built in (S10e): legacy has no data.go.kr
-/// call budget setting.
-pub const DATA_GO_KR_DAILY_UNITS: u64 = 10_000;
-/// The S13 acquirer for request-time acquisitions: KMA pages (keyless) and ASOS ranges funded by
-/// S08 per data.go.kr key and KST day (each key its own quota owner with `daily_units`; a new
-/// window opens when the KST day changes).
+/// The services the KMA source calls with `DONGNAE_SECRET_KEYS` (S15b-2 ASOS; S15b-3b UV V5,
+/// pollen V3 and KASI; S15b-4 the grid and mid forecasts and the forecast-zone list).
+const DONGNAE_SERVICES: [crate::domestic::family::Service; 7] = [
+    crate::domestic::family::Service::Asos,
+    crate::domestic::family::Service::LivingWthrIdx,
+    crate::domestic::family::Service::HealthWthrIdx,
+    crate::domestic::family::Service::RiseSet,
+    crate::domestic::family::Service::VilageFcst,
+    crate::domestic::family::Service::MidFcst,
+    crate::domestic::family::Service::ForecastZone,
+];
+/// Daily S08 units of one data.go.kr API per key (production: [`DataGoKrApi::daily_units`]).
+pub type ApiUnits = fn(crate::domestic::quota::DataGoKrApi) -> u64;
+/// The S13 acquirer for request-time acquisitions: KMA pages (keyless) and data.go.kr requests
+/// funded by S08 per `DONGNAE_SECRET_KEYS` key, data.go.kr API and KST day (AK decision 5: one
+/// quota owner per key and API, limited to that API's allowance; a new window opens when the
+/// KST day changes). The warning requests (`WthrWrnInfoService`) use the same keys.
+///
+/// [`DataGoKrApi::daily_units`]: crate::domestic::quota::DataGoKrApi::daily_units
 pub struct DailyAcquirer<P, W, B> {
     funded: Arc<P>,
     public: Arc<W>,
     budgets: Arc<B>,
     keys: Vec<String>,
-    daily_units: u64,
+    units: ApiUnits,
     endpoints: crate::domestic::family::Endpoints,
     clock: Arc<dyn crate::budget::Clock>,
     metrics: Arc<crate::domestic::metrics::DomesticMetrics>,
     current: DailyCurrent<P, W, B>,
 }
 type DailyCurrent<P, W, B> = tokio::sync::Mutex<Option<(i64, Arc<Daily<P, W, B>>)>>;
-/// One KST day: the acquirer and the per-key S08 budgets it funds (shared with the warning
-/// requester, which calls the same keys).
+/// One KST day: the acquirer and, per key in configuration order, the S08 budget of the
+/// warning API (`WthrWrnInfoService`) with its key.
 pub struct Daily<P, W, B> {
     pub acquirer: Arc<crate::domestic::DomesticAcquirer<P, W, B>>,
-    pub budgets: Vec<(Arc<crate::budget::BudgetStore<B>>, String)>,
+    pub warnings: Vec<(Arc<crate::budget::BudgetStore<B>>, String)>,
 }
-/// The S08 quota owner of a data.go.kr key (domain-separated SHA-256 of the key).
-pub fn data_go_kr_quota_owner(key: &str) -> String {
-    use sha2::{Digest, Sha256};
-    let mut hash = Sha256::new();
-    hash.update(b"server2-data-go-kr-quota-v1");
-    hash.update([0u8]);
-    hash.update(key.as_bytes());
-    hash.finalize().iter().map(|b| format!("{b:02x}")).collect()
+/// The S08 quota owner of a `DONGNAE_SECRET_KEYS` key and data.go.kr API.
+pub fn data_go_kr_quota_owner(key: &str, api: crate::domestic::quota::DataGoKrApi) -> String {
+    crate::domestic::quota::quota_owner("DONGNAE_SECRET_KEYS", key, api)
 }
 const KST_MS: i64 = 9 * 3_600_000;
 const DAY_MS: i64 = 86_400_000;
@@ -1652,7 +1655,7 @@ where
         public: Arc<W>,
         budgets: Arc<B>,
         keys: Vec<String>,
-        daily_units: u64,
+        units: ApiUnits,
         endpoints: crate::domestic::family::Endpoints,
         clock: Arc<dyn crate::budget::Clock>,
         metrics: Arc<crate::domestic::metrics::DomesticMetrics>,
@@ -1662,7 +1665,7 @@ where
             public,
             budgets,
             keys,
-            daily_units,
+            units,
             endpoints,
             clock,
             metrics,
@@ -1674,53 +1677,56 @@ where
     }
     fn build(&self, starts: i64) -> Result<Daily<P, W, B>, DomesticError> {
         use crate::budget::{BudgetPolicy, BudgetStore, Provider};
+        use crate::domestic::quota::DataGoKrApi;
         let invalid = DomesticError::Invalid("data.go.kr key or daily units");
-        if self.keys.is_empty() || self.daily_units == 0 {
+        if self.keys.is_empty() {
             return Err(invalid);
         }
         let window_id = crate::world::js::iso((starts + KST_MS) as f64)
             .map(|s| s[..10].to_owned())
             .ok_or(DomesticError::Invalid("window"))?;
-        let mut stores = Vec::new();
-        for key in &self.keys {
+        let store = |key: &str, api: DataGoKrApi| {
+            let limit = (self.units)(api);
+            if limit == 0 {
+                return Err(invalid.clone());
+            }
             let policy = BudgetPolicy {
                 provider: Provider::DataGoKr,
-                quota_id: data_go_kr_quota_owner(key),
+                quota_id: data_go_kr_quota_owner(key, api),
                 window_id: window_id.clone(),
                 starts_at_ms: starts,
                 ends_at_ms: starts + DAY_MS,
-                limit: self.daily_units,
-                block_units: self.daily_units.min(50),
+                limit,
+                block_units: limit.min(50),
             };
-            let store = BudgetStore::new(self.budgets.clone(), policy, self.clock.clone())
-                .map_err(|_| invalid.clone())?;
-            stores.push(Arc::new(store));
-        }
-        // One quota owner per key and KST day across the services server2 calls with these keys
-        // (S15b-2 ASOS; S15b-3b UV V5, pollen V3 and KASI; S15b-4 the grid and mid forecasts and
-        // the forecast-zone list); each service keeps its own key ring.
+            BudgetStore::new(self.budgets.clone(), policy, self.clock.clone())
+                .map(Arc::new)
+                .map_err(|_| invalid.clone())
+        };
+        // One quota owner per key, API and KST day; each service keeps its own key ring.
         let mut rings = BTreeMap::new();
-        for service in [
-            crate::domestic::family::Service::Asos,
-            crate::domestic::family::Service::LivingWthrIdx,
-            crate::domestic::family::Service::HealthWthrIdx,
-            crate::domestic::family::Service::RiseSet,
-            crate::domestic::family::Service::VilageFcst,
-            crate::domestic::family::Service::MidFcst,
-            crate::domestic::family::Service::ForecastZone,
-        ] {
+        for service in DONGNAE_SERVICES {
             let entries = self
                 .keys
                 .iter()
-                .zip(&stores)
-                .map(|(key, store)| {
+                .map(|key| {
+                    let budgets = service
+                        .apis()
+                        .iter()
+                        .map(|api| Ok((*api, store(key, *api)?)))
+                        .collect::<Result<BTreeMap<_, _>, DomesticError>>()?;
                     crate::providers::ProviderKey::new(key.clone())
-                        .map(|k| (k, store.clone()))
+                        .map(|k| (k, budgets))
                         .map_err(|_| invalid.clone())
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            rings.insert(service, crate::domestic::KeyRing::new(entries)?);
+            rings.insert(service, crate::domestic::KeyRing::per_api(entries)?);
         }
+        let warnings = self
+            .keys
+            .iter()
+            .map(|key| Ok((store(key, DataGoKrApi::WthrWrn)?, key.clone())))
+            .collect::<Result<Vec<_>, DomesticError>>()?;
         let acquirer = crate::domestic::DomesticAcquirer::new(
             self.funded.clone(),
             self.public.clone(),
@@ -1732,7 +1738,7 @@ where
         )?;
         Ok(Daily {
             acquirer: Arc::new(acquirer),
-            budgets: stores.into_iter().zip(self.keys.iter().cloned()).collect(),
+            warnings,
         })
     }
     /// The current KST day (acquirer and budgets).
