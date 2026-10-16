@@ -30,8 +30,30 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
             }
             true
         }
-        InternalOp::RemoveAlarms(filter) => TxnBackend { txn }.remove(Coll::Alarm, filter).is_ok(),
-        InternalOp::StampAlarm(info) => {
+        InternalOp::RemoveAlarms {
+            n,
+            oid,
+            cutoff_ms,
+            filter,
+        } => {
+            // Unchanged since selection: still older than the cutoff, or changed only by this
+            // worker's own disable of an unregistered token (legacy removed it the same minute).
+            let still_stale = txn.get(Coll::Alarm, *n).is_some_and(|r| {
+                let doc = &r.doc;
+                r.oid == *oid
+                    && (matches!(doc.get("updatedAt"), Val::Date(ms) if (*ms as i64) < *cutoff_ms)
+                        || (doc.get("enable") == &Val::Bool(false)
+                            && doc.get("updatedBy") == &Val::Str("push".into())))
+            });
+            still_stale && TxnBackend { txn }.remove(Coll::Alarm, filter).is_ok()
+        }
+        InternalOp::StampAlarm { n, oid, info } => {
+            let unstamped = txn
+                .get(Coll::Alarm, *n)
+                .is_some_and(|r| r.oid == *oid && r.doc.get("updatedAt").is_nullish());
+            if !unstamped {
+                return false;
+            }
             let mut info = info.clone();
             matches!(
                 routes::update_push_info(&mut info, &mut TxnBackend { txn }),

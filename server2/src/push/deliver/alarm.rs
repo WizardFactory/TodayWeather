@@ -11,7 +11,7 @@ use crate::budget::Clock;
 use crate::push::{
     js::{self, to_string},
     service::{InternalOp, PushService},
-    store::{Coll, oid_hex},
+    store::{Coll, Oid, oid_hex},
 };
 use crate::storage::CatalogTransport;
 use crate::world::js::{Obj, Val};
@@ -29,9 +29,11 @@ const DAY_MS: i64 = 86_400_000;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Delivery {
     Accepted,
-    /// FCM: token not registered; the token's alarms were disabled.
+    /// FCM: token not registered; `disabled` tells whether disabling the token's alarms was
+    /// committed.
     Unregistered {
         status: u16,
+        disabled: bool,
     },
     Rejected {
         status: u16,
@@ -59,7 +61,12 @@ impl Delivery {
     pub fn class(&self) -> String {
         match self {
             Delivery::Accepted => "fcm".into(),
-            Delivery::Unregistered { .. } => "messaging/registration-token-not-registered".into(),
+            Delivery::Unregistered { disabled: true, .. } => {
+                "messaging/registration-token-not-registered".into()
+            }
+            Delivery::Unregistered {
+                disabled: false, ..
+            } => "messaging/registration-token-not-registered;disable-failed".into(),
             Delivery::Rejected { code, .. } => code.clone(),
             Delivery::Unknown { reason } => format!("fcm-{reason}"),
             Delivery::Failed { class } => (*class).into(),
@@ -67,7 +74,9 @@ impl Delivery {
     }
     fn status(&self) -> Option<u16> {
         match self {
-            Delivery::Unregistered { status } | Delivery::Rejected { status, .. } => Some(*status),
+            Delivery::Unregistered { status, .. } | Delivery::Rejected { status, .. } => {
+                Some(*status)
+            }
             _ => None,
         }
     }
@@ -238,13 +247,13 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             {
                 SendOutcome::Accepted => Delivery::Accepted,
                 SendOutcome::Unregistered { status } => {
-                    // Legacy disables the token's alarms without waiting (fire and forget).
-                    let push = self.push.clone();
-                    let token = to_string(&token);
-                    tokio::spawn(async move {
-                        push.internal(InternalOp::DisableAlarmsByFcm(token)).await;
-                    });
-                    Delivery::Unregistered { status }
+                    // Legacy disabled the token's alarms without waiting; server2 waits until the
+                    // disable is durable (or failed) so the outcome says which.
+                    let disabled = self
+                        .push
+                        .internal(InternalOp::DisableAlarmsByFcm(to_string(&token)))
+                        .await;
+                    Delivery::Unregistered { status, disabled }
                 }
                 SendOutcome::Rejected { status, code } => Delivery::Rejected { status, code },
                 SendOutcome::Unknown { reason } => Delivery::Unknown { reason },
@@ -297,15 +306,15 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             return MinuteReport::default();
         }
         self.push.internal(InternalOp::RemoveDuplicateAlarms).await;
-        let due: Vec<(String, Obj)> = {
+        let due: Vec<(u64, Oid, Obj)> = {
             let state = self.push.state();
             let state = state.read().unwrap_or_else(|e| e.into_inner());
             state
                 .coll(Coll::Alarm)
                 .due(time)
                 .into_iter()
-                .map(|(_, r)| (oid_hex(&r.oid), r.doc))
-                .filter(|(_, doc)| due_today(doc, now_ms))
+                .map(|(n, r)| (n, r.oid, r.doc))
+                .filter(|(_, _, doc)| due_today(doc, now_ms))
                 .collect()
         };
         self.counters
@@ -315,7 +324,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             // Nothing to send or clean up: no ledger objects for an empty minute.
             return MinuteReport::default();
         }
-        let ids: Vec<String> = due.iter().map(|(id, _)| id.clone()).collect();
+        let ids: Vec<String> = due.iter().map(|(_, oid, _)| oid_hex(oid)).collect();
         match self.ledger.claim("alarm", minute_ms, now_ms, &ids).await {
             Claim::Owned => (),
             Claim::Taken => {
@@ -337,13 +346,13 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
         }
         let gate = Arc::new(Semaphore::new(CONCURRENCY));
         let mut tasks = Vec::with_capacity(due.len());
-        for (id, info) in due {
+        for (n, oid, info) in due {
             let gate = gate.clone();
             tasks.push(async move {
                 let _permit = gate.acquire_owned().await.expect("open gate");
                 let mut info = info;
                 let delivery = self.deliver(&mut info, now_ms).await;
-                (id, info, delivery)
+                (n, oid, info, delivery)
             });
         }
         let results = futures_join(tasks).await;
@@ -352,7 +361,8 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             deliveries: Vec::new(),
         };
         let mut rows = Vec::new();
-        for (id, _, d) in &results {
+        for (_, oid, _, d) in &results {
+            let id = &oid_hex(oid);
             let counter = match d {
                 Delivery::Accepted => &self.counters.accepted,
                 Delivery::Unregistered { .. } => &self.counters.unregistered,
@@ -383,15 +393,25 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             .await;
         // `_removeOldList` over the (mutated) records of this minute.
         let cutoff = now_ms - 60 * DAY_MS;
-        for (_, info, _) in results {
+        // Each operation re-checks the record in the writer, so a change made since selection
+        // (a user update, a removal) is never undone.
+        for (n, oid, info, _) in results {
             let stale = matches!(info.get("updatedAt"), Val::Date(ms) if (*ms as i64) < cutoff);
-            if stale
-                && let Some(filter) = super::ops::remove_filter(&info)
-                && self.push.internal(InternalOp::RemoveAlarms(filter)).await
-            {
-                self.counters.removed_old.fetch_add(1, Ordering::Relaxed);
+            if stale && let Some(filter) = super::ops::remove_filter(&info) {
+                let op = InternalOp::RemoveAlarms {
+                    n,
+                    oid,
+                    cutoff_ms: cutoff,
+                    filter,
+                };
+                if self.push.internal(op).await {
+                    self.counters.removed_old.fetch_add(1, Ordering::Relaxed);
+                }
             } else if info.get("updatedAt").is_nullish()
-                && self.push.internal(InternalOp::StampAlarm(info)).await
+                && self
+                    .push
+                    .internal(InternalOp::StampAlarm { n, oid, info })
+                    .await
             {
                 self.counters.stamped.fetch_add(1, Ordering::Relaxed);
             }

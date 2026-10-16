@@ -91,10 +91,23 @@ pub enum InternalOp {
     RemoveDuplicateAlarms,
     /// `disableAlarmsByFcm(token)`: `{enable: false, updatedAt: now, updatedBy: 'push'}`, multi.
     DisableAlarmsByFcm(String),
-    /// `removeAlarms(selector)` with a `makeRemoveSelector` filter.
-    RemoveAlarms(Vec<(String, crate::world::js::Val)>),
-    /// `updatePushInfo(record)`: the worker's `updatedAt` stamp of a record without one.
-    StampAlarm(crate::world::js::Obj),
+    /// `removeAlarms(selector)` with the `makeRemoveSelector` filter of the selected record
+    /// (natural-order number `n`, `_id`), applied only while that record is still unchanged
+    /// since selection and older than `cutoff_ms`.
+    RemoveAlarms {
+        n: u64,
+        oid: super::store::Oid,
+        cutoff_ms: i64,
+        filter: Vec<(String, crate::world::js::Val)>,
+    },
+    /// `updatePushInfo(record)`: the worker's `updatedAt` stamp of a selected record without
+    /// one, applied only while that record still has no `updatedAt` (any other change, such as
+    /// an unregistered token's disable, sets it and is never overwritten).
+    StampAlarm {
+        n: u64,
+        oid: super::store::Oid,
+        info: crate::world::js::Obj,
+    },
 }
 
 enum Job {

@@ -86,7 +86,10 @@ fn expected(id: &str) -> Delivery {
         }
         "geo-500" => failed("geocode-request"),
         "weather-500" | "weather-transport" => failed("weather-request"),
-        "fcm-not-found" => Delivery::Unregistered { status: 404 },
+        "fcm-not-found" => Delivery::Unregistered {
+            status: 404,
+            disabled: true,
+        },
         "fcm-invalid-argument" => rejected(400, "messaging/invalid-argument"),
         "fcm-quota" => rejected(429, "messaging/message-rate-exceeded"),
         "fcm-unavailable" => rejected(503, "messaging/server-unavailable"),

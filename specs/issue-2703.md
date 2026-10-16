@@ -79,7 +79,9 @@ Rules:
 - Minute: UTC boundary; time = seconds of day of the minute; duplicate removal, then due records
   (`pushTime === time`, `enable !== false`, natural order), weekday filter (`dayOfWeek[day]` truthy
   with `timezoneOffset` present), claim, deliver (6 in flight), result, 60-day removal and
-  `updatedAt` stamp. Skip (no claim) while the state is not restored or nothing is due.
+  `updatedAt` stamp. Skip (no claim) while the state is not restored or nothing is due. The
+  removal applies only while the selected record (number, `_id`) is still older than 60 days or
+  was changed only by this worker's disable; the stamp only while it still has no `updatedAt`.
 - Ledger: `index/v2/push/delivery/alarm/{YYYYMMDD}/{HHMM}.json` with `If-None-Match: *` before any
   send (`schema`, `kind`, `minute`, `claimedAt`, `claim` nonce, record `_id`s); 409/412 taken;
   other 4xx unavailable; unknown outcome read back (own body owned, other taken, unreadable
@@ -96,7 +98,8 @@ Rules:
 - Classification (firebase-admin 5.13.1): `text/html`/`text/plain` answers map by status; other
   bodies by `error` string, `FcmErrorCode` detail, `status` or `message` through
   `MESSAGING_SERVER_TO_CLIENT_CODE`; 2xx without error accepted; `NOT_FOUND`/`NotRegistered`
-  unregistered (token's alarms disabled); timeout or transport error after connecting unknown;
+  unregistered (token's alarms disabled before the outcome is reported; class suffix
+  `;disable-failed` when the disable was not committed); timeout or transport error after connecting unknown;
   connect failure, credentials or OAuth failure not sent. The
   [FCM error reference](https://firebase.google.com/docs/cloud-messaging/error-codes) documents
   `UNREGISTERED` as 404 and backoff for `UNAVAILABLE`/`QUOTA_EXCEEDED`; D02 sends no retry.

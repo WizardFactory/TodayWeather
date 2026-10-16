@@ -2730,7 +2730,8 @@ hour; refreshed when less than a minute is left). Service accounts are server2 s
 firebase-admin's rules (`FirebaseMessagingRequestHandler`, `MESSAGING_SERVER_TO_CLIENT_CODE`): an
 unregistered token (`NOT_FOUND`, the documented
 [`UNREGISTERED` 404](https://firebase.google.com/docs/cloud-messaging/error-codes)) disables every
-alarm of that token (`disableAlarmsByFcm`). Records with only a GCM `registrationId` are not sent:
+alarm of that token (`disableAlarmsByFcm`); the outcome is reported after the disable is durable,
+with class suffix `;disable-failed` when it could not be committed. Records with only a GCM `registrationId` are not sent:
 node-gcm used the legacy FCM API, which Google deprecated on 2023-06-20 and began shutting down on
 2024-07-22 ([migration guide](https://firebase.google.com/docs/cloud-messaging/migrate-v1)).
 
@@ -2770,7 +2771,11 @@ callback); OAuth uses the token endpoint and audience Google documents for servi
 ([service-account flow](https://developers.google.com/identity/protocols/oauth2/service-account);
 firebase-admin 5.13.1 used `https://accounts.google.com/o/oauth2/token`), tokens are refreshed on
 demand per app, one request at a time, and a failure is not cached; the duplicate pass groups on
-indexed key fields and decodes only grouped records.
+indexed key fields and decodes only grouped records; the 60-day removal and the `updatedAt` stamp
+re-check the selected record in the writer, so a user change or removal made during the minute is
+never undone and a stamp never re-enables a token disabled as unregistered (legacy upserted the
+copy read before sending; a record disabled by this worker is still removed when stale, as legacy
+did); legacy disabled unregistered tokens without waiting.
 
 **Verification.** The [oracle fixture](../../server2/tests/delivery/fixtures/PROVENANCE.md) runs
 the real `ControllerPush` and firebase-admin 5.13.1 (Node 16.20.2) over HTTPS and weather doubles:
@@ -2781,7 +2786,11 @@ and geocode URLs with `Accept-Language`, the OAuth request bytes (re-signed only
 the FCM path, authorization and body bytes, and the outcomes; the minute's FCM bodies and requests
 as multisets and the resulting state. Fault tests: one request on 503, timeout and reset with
 nothing sent later; a replacement process at the same minute sends nothing and the next minute
-delivers; a refused claim and an unrestored state send nothing; an unregistered token's alarms
-are disabled durably; diagnostics and ledger objects contain no token, coordinate or name. With
+delivers; two processes claiming one minute deliver each alarm once; a claim whose answer was lost
+is read back (own: delivered; another's: nothing sent); a refused claim and an unrestored state
+send nothing; an unregistered token's alarms are disabled durably before the outcome (not
+re-enabled by the stamp; a stale one removed), and a failed disable is reported and not resent;
+the classification follows firebase-admin 5.13.1 for its detail type and for current FCM error
+bodies; diagnostics and ledger objects contain no token, coordinate or name. With
 42,226 synthetic alarms a minute ran in about 0.1–0.2 s (debug build, loopback doubles). Only
 loopback doubles were called; no push was sent.

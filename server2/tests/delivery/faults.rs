@@ -186,31 +186,10 @@ async fn an_unrestored_state_neither_claims_nor_sends_the_minute() {
     assert_eq!(rig.google.sends().len(), 1);
 }
 
-#[tokio::test]
-async fn an_unregistered_token_disables_its_alarms_durably() {
-    let records = [
-        alarm(1, "gone", 79200, ""),
-        alarm(2, "gone", 0, ""),
-        alarm(3, "kept", 0, ""),
-    ];
-    let rig = rig("unregistered", AT, &records, None).await;
-    rig.weather.set(&kma_weather());
-    rig.google.state.fcm.lock().unwrap().push_back(Answer::Json(
-        404,
-        r#"{"error":{"code":404,"status":"NOT_FOUND","details":[{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":"UNREGISTERED"}]}}"#.into(),
-    ));
-    let report = rig.worker.run_minute(NOW).await;
-    assert_eq!(report.deliveries[0].1, "unregistered");
-    tokio::time::sleep(Duration::from_millis(100)).await;
-    let restored = start(
-        &rig.s3,
-        rig.clock.clone(),
-        super::state_common::fast_config(),
-    )
-    .await;
-    let state = restored.state();
-    let state = state.read().unwrap();
-    let enabled: Vec<(String, Val)> = state
+const UNREGISTERED: &str = r#"{"error":{"code":404,"status":"NOT_FOUND","details":[{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":"UNREGISTERED"}]}}"#;
+
+fn enabled_after_restore(state: &server2::push::State) -> Vec<(String, Val)> {
+    state
         .coll(Coll::Alarm)
         .iter()
         .map(|(_, r)| {
@@ -219,14 +198,215 @@ async fn an_unregistered_token_disables_its_alarms_durably() {
                 r.doc.get("enable").clone(),
             )
         })
+        .collect()
+}
+
+#[tokio::test]
+async fn an_unregistered_token_disables_its_alarms_durably() {
+    // `fresh` has no updatedAt and `enable: true`: the worker's stamp must not re-enable it.
+    // `old` is older than 60 days: removed in the same minute, as legacy did.
+    let mut fresh = alarm(4, "fresh", 79200, r#","enable":true"#);
+    fresh.1.doc.remove("updatedAt");
+    let mut old = alarm(5, "old", 79200, "");
+    old.1.doc.set("updatedAt", Val::Date(1_700_000_000_000.));
+    let records = [
+        alarm(1, "gone", 79200, ""),
+        alarm(2, "gone", 0, ""),
+        alarm(3, "kept", 0, ""),
+        fresh,
+        old,
+    ];
+    let rig = rig("unregistered", AT, &records, None).await;
+    rig.weather.set(&kma_weather());
+    for _ in 0..3 {
+        rig.google
+            .state
+            .fcm
+            .lock()
+            .unwrap()
+            .push_back(Answer::Json(404, UNREGISTERED.into()));
+    }
+    let report = rig.worker.run_minute(NOW).await;
+    let classes: Vec<(&str, &str)> = report
+        .deliveries
+        .iter()
+        .map(|(_, o, c)| (o.as_str(), c.as_str()))
         .collect();
     assert_eq!(
-        enabled,
+        classes,
+        [(
+            "unregistered",
+            "messaging/registration-token-not-registered"
+        ); 3]
+    );
+    // The disable was durable before the outcome was reported: an empty-memory restore sees it.
+    let restored = start(
+        &rig.s3,
+        rig.clock.clone(),
+        super::state_common::fast_config(),
+    )
+    .await;
+    let state = restored.state();
+    let state = state.read().unwrap();
+    assert_eq!(
+        enabled_after_restore(&state),
         [
             ("gone".to_owned(), Val::Bool(false)),
             ("gone".to_owned(), Val::Bool(false)),
-            ("kept".to_owned(), Val::Undef)
+            ("kept".to_owned(), Val::Undef),
+            ("fresh".to_owned(), Val::Bool(false)),
         ]
+    );
+}
+
+#[tokio::test]
+async fn a_failed_disable_is_reported_and_nothing_is_resent() {
+    let rig = rig("disable-failed", AT, &[alarm(1, "gone", 79200, "")], None).await;
+    rig.weather.set(&kma_weather());
+    rig.google
+        .state
+        .fcm
+        .lock()
+        .unwrap()
+        .push_back(Answer::Json(404, UNREGISTERED.into()));
+    rig.s3
+        .fault_put("index/v2/push/state/journal/", Fault::Reject(403));
+    let report = rig.worker.run_minute(NOW).await;
+    assert_eq!(
+        report.deliveries[0].2,
+        "messaging/registration-token-not-registered;disable-failed"
+    );
+    assert_eq!(rig.google.sends().len(), 1);
+    assert!(!rig.worker.run_minute(NOW + 1_000).await.claimed);
+    assert_eq!(rig.google.sends().len(), 1);
+}
+
+#[tokio::test]
+async fn a_claim_with_a_lost_answer_is_read_back() {
+    // Stored but the answer was lost: the read-back finds our own claim and delivers once.
+    let rig = rig("claim-lost", AT, &[alarm(1, "c-1", 79200, "")], None).await;
+    rig.weather.set(&kma_weather());
+    rig.s3
+        .fault_put("index/v2/push/delivery/", Fault::CommitLost);
+    let report = rig.worker.run_minute(NOW).await;
+    assert!(report.claimed);
+    assert_eq!(rig.google.sends().len(), 1);
+    // Not stored and the answer lost, while another process's claim is there: taken.
+    let rig = rig_named("claim-other", &[alarm(1, "c-1", 79200, "")]).await;
+    rig.s3.insert(
+        "index/v2/push/delivery/alarm/20261015/2200.json",
+        br#"{"schema":1,"kind":"alarm","claim":"other"}"#,
+    );
+    rig.s3.fault_put("index/v2/push/delivery/", Fault::Lost);
+    let report = rig.worker.run_minute(NOW).await;
+    assert!(!report.claimed);
+    assert!(rig.google.sends().is_empty());
+}
+
+async fn rig_named(name: &str, records: &[(Coll, server2::push::Record)]) -> Rig {
+    let rig = rig(name, AT, records, None).await;
+    rig.weather.set(&kma_weather());
+    rig
+}
+
+#[tokio::test]
+async fn concurrent_claims_of_one_minute_deliver_once() {
+    let rig = rig_named(
+        "race",
+        &[alarm(1, "r-1", 79200, ""), alarm(2, "r-2", 79200, "")],
+    )
+    .await;
+    let push2 = start(
+        &rig.s3,
+        rig.clock.clone(),
+        super::state_common::fast_config(),
+    )
+    .await;
+    let worker2 = worker_on(&rig, push2);
+    let (a, b) = tokio::join!(rig.worker.run_minute(NOW), worker2.run_minute(NOW + 1));
+    assert!(a.claimed ^ b.claimed, "exactly one owner");
+    let mut tokens: Vec<String> = rig
+        .google
+        .sends()
+        .iter()
+        .map(|r| {
+            let v: serde_json::Value = serde_json::from_str(&r.body).unwrap();
+            v["message"]["token"].as_str().unwrap().to_owned()
+        })
+        .collect();
+    tokens.sort();
+    assert_eq!(tokens, ["r-1", "r-2"]);
+}
+
+#[test]
+fn classification_follows_firebase_admin_5_13_1() {
+    use server2::push::deliver::{SendOutcome, fcm::classify};
+    let json = |status: u16, body: &str| {
+        classify(status, "application/json; charset=UTF-8", body.as_bytes())
+    };
+    let rejected = |status: u16, code: &str| SendOutcome::Rejected {
+        status,
+        code: code.into(),
+    };
+    // firebase-admin 5.13.1 reads the `FcmErrorCode` detail first ...
+    assert_eq!(
+        json(
+            400,
+            r#"{"error":{"status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmErrorCode","errorCode":"NOT_FOUND"}]}}"#
+        ),
+        SendOutcome::Unregistered { status: 400 }
+    );
+    // ... and current FCM's `FcmError` detail is not that type, so the status decides (the
+    // documented UNREGISTERED, QUOTA_EXCEEDED, SENDER_ID_MISMATCH and THIRD_PARTY_AUTH_ERROR
+    // statuses map to the same client codes).
+    let fcm_error = |status: u16, grpc: &str, code: &str| {
+        json(
+            status,
+            &format!(
+                r#"{{"error":{{"code":{status},"status":"{grpc}","details":[{{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":"{code}"}}]}}}}"#
+            ),
+        )
+    };
+    assert_eq!(
+        fcm_error(404, "NOT_FOUND", "UNREGISTERED"),
+        SendOutcome::Unregistered { status: 404 }
+    );
+    assert_eq!(
+        fcm_error(429, "RESOURCE_EXHAUSTED", "QUOTA_EXCEEDED"),
+        rejected(429, "messaging/message-rate-exceeded")
+    );
+    assert_eq!(
+        fcm_error(403, "PERMISSION_DENIED", "SENDER_ID_MISMATCH"),
+        rejected(403, "messaging/mismatched-credential")
+    );
+    assert_eq!(
+        fcm_error(401, "UNAUTHENTICATED", "THIRD_PARTY_AUTH_ERROR"),
+        rejected(401, "messaging/invalid-apns-credentials")
+    );
+    assert_eq!(
+        fcm_error(400, "INVALID_ARGUMENT", "INVALID_ARGUMENT"),
+        rejected(400, "messaging/invalid-argument")
+    );
+    // A string error, a 2xx with an error, text answers and unparsable bodies.
+    assert_eq!(
+        json(200, r#"{"error":"NotRegistered"}"#),
+        SendOutcome::Unregistered { status: 200 }
+    );
+    assert_eq!(
+        classify(200, "text/html", b"<html>"),
+        rejected(200, "messaging/unknown-error")
+    );
+    assert_eq!(
+        classify(503, "text/plain", b"busy"),
+        rejected(503, "messaging/server-unavailable")
+    );
+    assert_eq!(
+        json(502, "not json"),
+        rejected(502, "app/unable-to-parse-response")
+    );
+    assert_eq!(
+        json(200, r#"{"name":"projects/p/messages/1"}"#),
+        SendOutcome::Accepted
     );
 }
 
