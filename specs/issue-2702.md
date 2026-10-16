@@ -118,8 +118,11 @@ and both town routers). Unlisted paths keep the previous 404; other methods are 
 `/v000901/nation/:nation`. Express case-insensitive mounts and the optional trailing
 slash remain supported. The legacy route returns `nation: "KR"` for every decoded
 nation parameter; the server does not invent a country-validation rule.
+Uppercase `V000903` is claimed but defaults child version to v000901, matching legacy
+query validation. Child locale comes only from `Accept-Language`, defaulting to English
+without the header; the parent locale cookie is not forwarded to child requests.
 
-Fifteen city responses use the same-version native KMA backend with one absolute
+Fifteen city responses use native KMA backends and legacy version rules with one absolute
 three-second deadline. City `airInfo` and `airInfoList` are removed, preserving all
 other fields and legacy city order. A real failed child request gives the legacy
 500 rendered-error response (AK's approved option b); successful dependencies give

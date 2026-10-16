@@ -2841,9 +2841,12 @@ S3 and answering natively with the Express envelope (JSON with a weak ETag, the 
 
 The `kma` and `kma-v000901` entries also claim the used direct nation routes
 `/v000903/nation/:nation` and `/v000901/nation/:nation`. The nation backend calls
-fifteen same-version native KMA assemblies concurrently with one absolute
+fifteen native KMA assemblies using legacy version rules, concurrently with one absolute
 three-second deadline; it never calls legacy or opens a separate provider source.
 The child replies retain legacy city order after removing `airInfo`/`airInfoList`.
+Mount claiming remains case-insensitive, but an uppercase `V` makes legacy query validation
+remove the version, so city requests default to v000901. Child locale uses only the forwarded
+`Accept-Language` header (English if absent); the parent `twcookie` is not forwarded.
 An actual failed internal child response maps to the legacy rendered 500, as AK
 approved; the response is successful when the internal calls succeed. Other late
 provider branches remain omitted according to the existing KMA partial-data rules.

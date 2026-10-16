@@ -12,7 +12,7 @@
     ],
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "e3c1ff95aaf929f0bd361d139366d8f61418eaa7"
+      "revision": "b92a8e5aa71cd443d86bcbd60556a16b6c915098"
     }
   },
   "participants": [
@@ -44,11 +44,16 @@
       "id": "cities",
       "type": "backend",
       "label": "15 cities",
-      "sublabel": "same-version KMA",
+      "sublabel": "legacy child version",
       "sources": [
         {
           "path": "server2/src/nation/mod.rs",
           "line": 87
+        },
+        {
+          "path": "server2/src/api/mod.rs",
+          "line": 117,
+          "end_line": 138
         }
       ]
     },
@@ -132,7 +137,7 @@
       "y": 198,
       "label": "start 15 native assemblies",
       "variant": "default",
-      "note": "Fixed bounded fan-out; same absolute deadline"
+      "note": "Header-only locale; uppercase V defaults v000901"
     },
     {
       "id": "national",

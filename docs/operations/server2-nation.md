@@ -1,7 +1,7 @@
 # Native nation API
 
-The native nation route combines fifteen same-version domestic city replies and
-available nationwide air rows. It shares the existing S3 inputs and provider
+The native nation route combines fifteen domestic city replies using legacy version rules
+and available nationwide air rows. It shares the existing S3 inputs and provider
 acquisitions; it never forwards a selected nation request to legacy.
 
 ## Setup
@@ -21,6 +21,9 @@ late acquisition continues independently and is shared by later requests.
 A missing optional provider branch does not by itself turn the response into an
 error. If an actual city dependency fails, the nation route returns the legacy
 rendered 500 error. Successful child replies produce 200.
+An uppercase version prefix (`V000903`) defaults children to v000901, matching
+legacy validation. Children use the forwarded `Accept-Language` header, or English
+when it is absent. The parent locale cookie is not forwarded.
 
 Province air prefers fresh urban-station means. Otherwise it uses a labelled
 representative city point and reports its source and safe reason in `airStatus`.
@@ -49,7 +52,7 @@ cargo clippy --locked --manifest-path server2/Cargo.toml --test nation -- -D war
 ```
 
 For the offline legacy oracle use pinned Node 16.20.2, Mongoose 5.1.2 and the
-legacy async/Jade dependencies. `nation_record.cjs` takes repository and output
+async 2.6.2, Jade 1.11.0 and i18n 0.8.3. `nation_record.cjs` takes repository and output
 paths. It does not load private configuration or contact providers or databases.
 Its city weather dependencies are deterministic doubles; it verifies nation
 composition, not live weather-provider output.

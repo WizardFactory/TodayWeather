@@ -87,3 +87,11 @@ The thirteen-case Node16 oracle was reproduced byte-for-byte. The one-page API
 manual was rendered with PyMuPDF (Poppler unavailable) and inspected; Archify
 artifact checks, actual Chrome inspection and four light/dark viewport captures
 were verified separately. Review and CI remain required before readiness.
+
+S17c QA1 on `1eb3a7bf` found two Required compatibility issues: uppercase-version
+child selection (S17C-R1-F01) and forwarding the parent cookie locale to children
+(S17C-R1-F02). Three actual-legacy cases were added to the pinned oracle (16 total).
+Both new regressions failed before the routing correction and passed afterward;
+all twelve nation tests passed, including the prior ten HTTP/S3/deadline scenarios.
+The earlier 694-test full-workspace result is retained as baseline evidence, not
+claimed rerun for this narrow routing change. Independent QA2 remains pending.
