@@ -507,6 +507,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .all_counted(sf.source(), sf.kind(), &key, &wanted, deadline)
             .await
             .map_err(|e| format!("{} read: {e}", sf.kind()))?;
+        // S16: this request's own acquisition keeps its stored fetch time in its identity (the
+        // fold sees it at the request instant).
+        let mut own: Option<InputId> = None;
         if let Some(latest) = sf.latest(now as i64) {
             // A stored acquisition legacy would not keep (an invalid forecast, a current
             // observation with a recovery sentinel) leaves its publication missing, so it stays
@@ -540,6 +543,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     )
                     .await
             {
+                own = grid_input_id(family, sf.kind(), &f);
                 fetched.push(visible(f, now));
             }
             if !backfill.is_empty() {
@@ -547,10 +551,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             }
         }
         let ids = (excluded == 0).then(|| {
-            fetched
+            let stored = fetched.len() - usize::from(own.is_some());
+            fetched[..stored]
                 .iter()
                 .filter(|f| f.fetched_at_ms as f64 <= now)
                 .filter_map(|f| grid_input_id(family, sf.kind(), f))
+                .chain(own)
                 .collect()
         });
         Ok((grid_documents(family, coord, &fetched, now), ids))

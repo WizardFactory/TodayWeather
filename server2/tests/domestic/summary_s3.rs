@@ -831,7 +831,8 @@ async fn a_request_time_backfill_is_a_late_input_of_a_stored_day() {
     assert_eq!(first.summary.value("observationHours"), Some(23.));
     // The owned backfill publishes the 2400 hour; a later request records a newer revision.
     let mut revised = None;
-    for _ in 0..40 {
+    // Up to 20 s for the owned backfill pass (CI runners are slower than the 250 ms steps).
+    for _ in 0..80 {
         serve(&backend).await;
         assert!(recorder.idle(deadline()).await);
         let newest = store
@@ -848,4 +849,100 @@ async fn a_request_time_backfill_is_a_late_input_of_a_stored_day() {
     let revised = revised.expect("the backfilled 2400 hour is recorded");
     assert_eq!(revised.summary.value("taMax"), Some(30.));
     assert!(revised.name > first.name);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_requests_own_acquisition_keeps_its_stored_identity() {
+    use server2::domestic::family::DataGoKrFamily;
+    use server2::domestic::kma::backend::{KmaSource, SourceAnswer};
+    use server2::domestic::kma::source::fetch::{ForecastAcquire, ForecastRequest, Published};
+    let _peers = S3_PEERS.lock().await;
+    /// Publishes the latest (10:00) current observation, fetched after the request instant.
+    struct Provider(Arc<CatalogStore<BoundedS3<HttpS3Transport>>>);
+    const FETCHED: f64 = NOW + 5_000.;
+    impl ForecastAcquire for Provider {
+        fn acquire(
+            &self,
+            request: ForecastRequest,
+        ) -> BoxFuture<'static, Result<Published, String>> {
+            let store = self.0.clone();
+            Box::pin(async move {
+                let ForecastRequest::DataGoKr(r) = request else {
+                    return Ok(None);
+                };
+                if r.family() != DataGoKrFamily::UltraSrtNcst
+                    || r.publication() != p(20260924, 1000)
+                {
+                    return Ok(None);
+                }
+                let a = acquisition(
+                    "data-go-kr",
+                    "ultra-srt-ncst",
+                    &Grid::new(60, 127).unwrap().provider_key(),
+                    r.publication().period(),
+                    &r.publication().partition(),
+                    FETCHED,
+                    current_page("20260924", "1000", "21.5"),
+                    "application/json",
+                );
+                let records = a.records.clone();
+                store
+                    .publish(a.declaration, a.records, deadline())
+                    .await
+                    .map_err(|e| format!("{e:?}"))?;
+                Ok(Some(records))
+            })
+        }
+    }
+    let peer = Peer::new();
+    let catalogs = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+    seed(&catalogs, &["current"]).await;
+    let source = S3Source::new(
+        peer.transport_limited(4),
+        Arc::new(|| NOW),
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+    )
+    .unwrap()
+    .with_forecast(Some(Arc::new(Provider(catalogs.clone()))));
+    let identity = |snapshot: &dyn server2::domestic::kma::KmaStore| {
+        snapshot
+            .summary_inputs()
+            .expect("complete reads")
+            .ids
+            .into_iter()
+            .filter(|id| {
+                id.family == "ultra-srt-ncst" && id.start_ms == kst_ms(20260924, 1000) as i64
+            })
+            .collect::<Vec<_>>()
+    };
+    // First request: the publication is acquired by the request itself.
+    let SourceAnswer::Snapshot(first) = source
+        .snapshot(&super::source_s3::request(), deadline())
+        .await
+    else {
+        panic!("forwarded");
+    };
+    let own = identity(first.as_ref());
+    assert_eq!(own.len(), 1);
+    assert_eq!(
+        own[0].fetched_at_ms, FETCHED as u64,
+        "stored fetch time, not the request instant"
+    );
+    // A later request (another process, after the fetch) reads the stored record: the same
+    // identity, so the same input digest and no extra revision.
+    let later = S3Source::new(
+        peer.transport_limited(4),
+        Arc::new(|| NOW + 10_000.),
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+    )
+    .unwrap();
+    let SourceAnswer::Snapshot(third) = later
+        .snapshot(&super::source_s3::request(), deadline())
+        .await
+    else {
+        panic!("forwarded");
+    };
+    assert_eq!(identity(third.as_ref()), own);
 }

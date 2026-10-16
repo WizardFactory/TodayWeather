@@ -2615,8 +2615,9 @@ later.
 reads were complete; a listed group that S06 excludes (not eligible, or a raw body missing) makes a
 grid, station-page, registry-seed, ASOS or VC read partial. Grid families are read from published
 catalogs; since S15b-4a a missing latest publication is acquired within the request's single wait
-bound and becomes an input when it arrives in time, and the backfill pass the request does not
-wait for adds late inputs that a later request records as a newer revision;
+bound and becomes an input (with its stored fetch time) when it arrives in time; one that misses
+the bound is not an input, so a stored day may be recorded without it and revised by a later
+request, as are the late inputs of the backfill pass the request does not wait for;
 the station fold the answer used is still the current one, every day of the 8-day page window was
 read and its latest read did not fail, and no S3 load, fold, geocoding or unfolded page is pending;
 the history answer has no `cache-read-*` reason; and the ASOS acquisitions it answered from were
