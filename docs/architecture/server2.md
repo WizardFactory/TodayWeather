@@ -3429,3 +3429,27 @@ Raw warm latency did not improve in that sample. Follow real full-data cold
 measurements before proposing decoded caching or O01 packs. Setup recommends
 32 GiB gp3 for an 8 GiB global cache cap and labelled OS/log/temp/headroom budgets;
 no EC2 provisioning or production cache setting was performed by this task.
+
+### S15b-4b3 core: canonical S3 HTTP verifier
+
+The [domestic replay guide](../operations/server2-kma-replay.md) describes the
+S19 `kma` core module. It independently records legacy collector/document/HTTP
+results under pinned Node 16.20.2, then publishes shared grid/RSS/mid raw inputs
+through production S13 inspectors and CatalogStore before rebuilding native
+responses with fresh S3Source instances. Four disk phases cover cold, warm,
+corrupt and lost disposable raw copies. Functional header unions and body bytes
+are compared; no Content-Length normalization is permitted. A wire regression
+fix prevents Hyper adding a zero length to Undefined HEAD responses, while GET,
+JSON HEAD and 304 framing stay unchanged.
+
+The denominator is 55 unique HTTP cases across four phases (220 native replies).
+The original 98 synthetic assembly cases remain separate. Station/ASOS rows,
+air, life and image raw inputs are absent in this increment; the following
+rich-input corpus must cover them before the original #2742 whole-domestic goal
+can be completed. This core does not establish cutover, live shadow, AWS latency
+or production-main startup readiness. S19 registration advertises smoke/replay/
+cache-recovery support; domestic rollback is unsupported and fails closed. S20
+must verify earlier server2 release/config recovery without legacy dependence.
+
+[Sequence](diagrams/server2-kma-replay.html) and
+[selected evidence](../evidence/tasks/issue-2742-s15b4b3/verification.md).

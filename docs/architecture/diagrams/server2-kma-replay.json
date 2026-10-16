@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Domestic canonical S3 core verifier",
+    "output": "docs/architecture/diagrams/server2-kma-replay.html",
+    "locale": "en",
+    "viewBox": [
+      1080,
+      650
+    ],
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather.git",
+      "revision": "9659668be5b7b43081825eb28b6438d7b25d13b0",
+      "provider": "github"
+    }
+  },
+  "participants": [
+    {
+      "id": "raw",
+      "type": "database",
+      "label": "Public raw fixtures",
+      "sublabel": "shared frozen inputs",
+      "sources": [
+        {
+          "path": "server2/tools/golden/kma_s3/grid-fixtures.js",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "legacy",
+      "type": "backend",
+      "label": "Node legacy oracle",
+      "sublabel": "independent conversion",
+      "sources": [
+        {
+          "path": "server2/tools/golden/kma_s3/record.js",
+          "line": 245
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "database",
+      "label": "Canonical S3",
+      "sublabel": "raw + published catalogs",
+      "sources": [
+        {
+          "path": "server2/examples/kma_s3_replay.rs",
+          "line": 68
+        }
+      ]
+    },
+    {
+      "id": "native",
+      "type": "backend",
+      "label": "Native HTTP",
+      "sublabel": "fresh source / no provider",
+      "sources": [
+        {
+          "path": "server2/examples/kma_s3_replay.rs",
+          "line": 275
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "type": "backend",
+      "label": "S19 comparator",
+      "sublabel": "status / headers / bytes",
+      "sources": [
+        {
+          "path": "server2/tools/shadow/kma_family.py",
+          "line": 165
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 282,
+      "label": "Prepare independent evidence"
+    },
+    {
+      "from": 300,
+      "to": 490,
+      "label": "Fresh native replay"
+    },
+    {
+      "from": 510,
+      "to": 590,
+      "label": "Classify every outcome"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m0",
+      "from": "raw",
+      "to": "legacy",
+      "y": 165,
+      "label": "Collector + saver + response",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m1",
+      "from": "legacy",
+      "to": "compare",
+      "y": 210,
+      "label": "Frozen expected HTTP bytes",
+      "variant": "return"
+    },
+    {
+      "id": "m2",
+      "from": "raw",
+      "to": "s3",
+      "y": 255,
+      "label": "Validated conditional publication",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m3",
+      "from": "compare",
+      "to": "native",
+      "y": 320,
+      "label": "Request / empty RAM + disk",
+      "variant": "default"
+    },
+    {
+      "id": "m4",
+      "from": "native",
+      "to": "s3",
+      "y": 365,
+      "label": "Read published canonical records",
+      "variant": "default"
+    },
+    {
+      "id": "m5",
+      "from": "s3",
+      "to": "native",
+      "y": 410,
+      "label": "Verified raw members",
+      "variant": "return"
+    },
+    {
+      "id": "m6",
+      "from": "native",
+      "to": "compare",
+      "y": 455,
+      "label": "Actual status / headers / body",
+      "variant": "return"
+    },
+    {
+      "id": "m7",
+      "from": "compare",
+      "to": "native",
+      "y": 530,
+      "label": "Restart with lost / corrupt cache",
+      "variant": "default"
+    },
+    {
+      "id": "m8",
+      "from": "native",
+      "to": "compare",
+      "y": 560,
+      "label": "Response + provider / legacy counts",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Independent expected response",
+      "items": [
+        "Same public raw values feed Node collector/saver and canonical S3 seeder.",
+        "Node legacy output supplies expected bytes; native output never does."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Explicit coverage limits",
+      "items": [
+        "98 assembly-only cases retain their original denominator.",
+        "Injected DB1/coercion states are not fabricated as provider raw."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Fresh replay and recovery",
+      "items": [
+        "55 unique HTTP cases x four disk phases; original 98 assembly cases separate.",
+        "Grid/RSS/mid only; rich inputs pending. Rollback unsupported; S20 server2 recovery pending."
+      ]
+    }
+  ]
+}

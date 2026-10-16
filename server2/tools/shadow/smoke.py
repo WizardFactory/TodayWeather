@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""S19 integrated release-binary smoke for each ready family.
+"""S19 isolated smoke for each supported family capability.
 
-Runs the actual release binary against task-owned loopback peers: recorded providers,
+Runs the selected family artifact against task-owned loopback peers: recorded providers,
 a frozen legacy origin and the S03 local S3-compatible peer. Asserts process metrics and
 peer counters. No live provider, AWS resource, deployment or traffic mirroring.
 """
@@ -43,7 +43,7 @@ def main(argv=None):
             status = 1
     report['verdict'] = 'PASS' if status == 0 else 'FAIL'
     harness.write_report(args.report, report)
-    print(report['verdict'] + ' S19 integrated release smoke; loopback fixtures only, no live provider/AWS/cutover claim', flush=True)
+    print(report['verdict'] + ' S19 integrated smoke; loopback fixtures only, no live provider/AWS/cutover claim', flush=True)
     return status
 
 
