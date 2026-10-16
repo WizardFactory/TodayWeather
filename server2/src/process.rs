@@ -128,8 +128,15 @@ where
             _ => Err(io::Error::other("listener terminated unexpectedly")),
         }
     };
-    // One shared deadline. Listener failure cannot bypass this stop path.
-    let deadline = tokio::time::Instant::now() + DRAIN;
+    // HTTP-only processes retain the foundation 5s forced stop. A push writer or delivery
+    // supervisor needs the shared 34s drain; listener failure takes this same owned stop path.
+    let has_push_work = push.is_some() || delivery.is_some();
+    let drain = if has_push_work {
+        DRAIN
+    } else {
+        Duration::from_secs(5)
+    };
+    let deadline = tokio::time::Instant::now() + drain;
     if let Some(delivery) = &delivery {
         delivery.quiesce();
     }
@@ -171,13 +178,17 @@ where
             if let Some(push) = &push {
                 let _ = push.drain(deadline).await;
             }
+            if !has_push_work && result.is_ok() {
+                eprintln!("server2 signal drain deadline; forced stop");
+            }
             eprintln!(
                 "server2 stop deadline: delivery/writer/HTTP may be cancelled/incomplete; durable claims retained"
             );
         }
     }
     eprintln!(
-        "server2 provider completion unverified; unfinished owned acquisitions cancelled at runtime teardown; shutdown limit=35s"
+        "server2 provider completion unverified; unfinished owned acquisitions cancelled at runtime teardown; shutdown limit={}s",
+        if has_push_work { 35 } else { 6 }
     );
     result
 }
