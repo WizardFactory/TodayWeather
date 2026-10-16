@@ -442,7 +442,7 @@ fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn LifeAcquire> {
         Arc::new(server2::providers::HttpPublicTransport::new(2 << 20).unwrap()),
         Arc::new(peer.transport_limited(super::source_s3::ACQUIRER_PERMITS)),
         vec!["S15B3B_LOCAL_KEY_A+aaaaaaaaaaaaaaaa/=".into()],
-        5000,
+        server2::domestic::quota::DataGoKrApi::daily_units,
         server2::domestic::family::Endpoints::new(base, base, base).unwrap(),
         test_clock(),
         Arc::new(server2::domestic::metrics::DomesticMetrics::default()),

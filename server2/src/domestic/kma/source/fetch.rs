@@ -82,7 +82,8 @@ pub trait ForecastAcquire: Send + Sync + 'static {
     fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>>;
 }
 
-/// A warning source on the KST-day budgets of the process data.go.kr acquirer. Legacy
+/// A warning source on the KST-day `WthrWrnInfoService` budgets of the process data.go.kr
+/// acquirer (one per key, AK decision 5). Legacy
 /// `kmaWarningRequester.get` (`server/lib/kmaWarningRequester.js:122-155`) uses the same
 /// `DONGNAE_SECRET_KEYS`: it starts at the last successful key, moves to the next key on an
 /// auth or quota error once around the list, and remembers the key that answered. Each attempt
@@ -109,7 +110,7 @@ where
         use std::sync::atomic::Ordering::SeqCst;
         Box::pin(async move {
             let day = self.daily.day().await.map_err(|_| FetchError::Invalid)?;
-            let count = day.budgets.len();
+            let count = day.warnings.len();
             if count == 0 {
                 return Err(FetchError::Invalid);
             }
@@ -120,7 +121,7 @@ where
                 let source = FundedSource::new(
                     self.daily.funded_transport(),
                     &self.base,
-                    vec![day.budgets[index].clone()],
+                    vec![day.warnings[index].clone()],
                     self.daily.clock(),
                 )?;
                 match source.fetch(operation, params.clone(), deadline).await {
