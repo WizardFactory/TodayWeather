@@ -169,20 +169,6 @@ pub fn korea_time_string(v: &V) -> String {
         None => "NaNNaNNaNNaNNaN".into(),
     }
 }
-/// `kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(date)`.
-pub fn yyyy_mm_dd_hhmm(ms: f64) -> String {
-    match wjs::parts(ms) {
-        Some(p) => format!(
-            "{}-{}-{} {}:{}",
-            p.year,
-            pad(p.month, 2),
-            pad(p.day, 2),
-            pad(p.hour, 2),
-            pad(p.minute, 2)
-        ),
-        None => "NaN-NaN-NaN NaN:NaN".into(),
-    }
-}
 /// `convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM`.
 pub fn dot_space(s: &str) -> String {
     let sub = |a, n| super::js::substr(s, a, n);

@@ -405,10 +405,12 @@ fn body(outcome: Outcome) -> Value {
     }
 }
 
-/// AK 2026-10-15: a `kaq` request when no KAQ forecast exists is answered with the AirKorea
-/// forecast as legacy `_insertForecastPollutants` shapes it for `airkorea` (hourly rows and the
-/// hourly AQI; the per-day summary is KAQ-only) and `forecastSource: "airkorea"`. With KAQ rows
-/// the legacy KAQ answer stays (the `air-kaq-forecast` parity recording, byte for byte).
+/// Legacy #2771 (S15b-3e; it replaced the S15b-3c AK-approved difference): a `kaq` request when no
+/// KAQ forecast exists, as on server2 whose KAQ source is gone, is answered with the stored
+/// AirKorea forecast as `_insertForecastPollutants` shapes it for `airkorea` (hourly rows and the
+/// hourly AQI; the per-day summary is KAQ-only) and `forecastSource: "airkorea"`. With usable KAQ
+/// rows the KAQ answer stays. The `air-kaq-*` and `air-airkorea-*` parity recordings cover the
+/// legacy cases byte for byte.
 #[test]
 fn a_kaq_request_without_kaq_forecasts_gets_the_airkorea_forecast() {
     let sc = scenarios()

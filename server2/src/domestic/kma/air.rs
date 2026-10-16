@@ -1135,8 +1135,9 @@ pub fn air_forecast(cx: &mut Cx) -> Flow {
     let _ = get_air_forecast(cx, &info, &source, &cx.query("airUnit"));
     Flow::Next
 }
-/// `_insertForecastPollutants(airInfo, hourlyForecasts, source, airUnit)`.
-fn insert_forecast_pollutants(air_info: &V, forecasts: &[V], source: &str, unit: &V) {
+/// `_lastAirObservationTime(airInfo)` (legacy #2771): the last observation's `dataTime`, else
+/// the latest hourly `date` of any pollutant, else `1970-01-01`.
+fn last_air_observation_time(air_info: &V) -> V {
     let mut latest = s("1970-01-01");
     let last = air_info.get("last");
     if last.truthy() && last.get("dataTime").truthy() {
@@ -1154,21 +1155,30 @@ fn insert_forecast_pollutants(air_info: &V, forecasts: &[V], source: &str, unit:
             }
         }
     }
+    latest
+}
+/// `_insertForecastPollutants(airInfo, hourlyForecasts, source, airUnit)` (legacy #2771): rows
+/// within the day after the last observation, compared and keyed as KST epochs
+/// (`KecoController._parseDateTime`, `_formatAirKstTime`); a pollutant without observation
+/// history keeps its first forecast.
+fn insert_forecast_pollutants(air_info: &V, forecasts: &[V], source: &str, unit: &V) {
+    let latest = last_air_observation_time(air_info);
     air_info.set("forecastSource", source);
     air_info.set(
         "forecastPubDate",
         forecasts[forecasts.len() - 1].get("pubDate"),
     );
-    let end = time::new_date(&latest) + time::DAY;
-    let end = V::from(time::yyyy_mm_dd_hhmm(end));
+    let last_epoch = parse_date_time(&latest);
+    let end_epoch = last_epoch + time::DAY;
     for fc in forecasts {
         if fc.nullish() {
             continue;
         }
-        let dt = fc.get("dataTime");
-        if le(&dt, &latest) || gt(&dt, &end) {
+        let epoch = parse_date_time(&fc.get("dataTime"));
+        if !epoch.is_finite() || epoch <= last_epoch || epoch > end_epoch {
             continue;
         }
+        let dt = V::from(format_air_kst(epoch));
         let code = to_str(&fc.get("code"));
         let pollutants = air_info.get("pollutants");
         if pollutants.get(&code).nullish() {
@@ -1183,7 +1193,6 @@ fn insert_forecast_pollutants(air_info: &V, forecasts: &[V], source: &str, unit:
                     latest.clone(),
                 )]))])),
             );
-            continue;
         }
         let exists = pollutant
             .get("hourly")
@@ -1293,19 +1302,10 @@ fn get_air_forecast(cx: &Cx, info: &V, source: &V, unit: &V) -> Result<(), ()> {
         _ => return Err(()),
     };
     let station_json = super::to_store(&station);
-    let (src, results) = match cx.store.air_forecast(&src, &station_json) {
-        // Intended difference (AK 2026-10-15): a `kaq` request when no KAQ forecast exists at all
-        // gets the AirKorea forecast, labelled `airkorea`; legacy answered no forecast. A KAQ
-        // forecast that exists keeps priority (including a station it has no rows for).
-        Err(e) if src == "kaq" && e.0 == super::NO_KAQ_FORECAST => (
-            "airkorea".to_owned(),
-            cx.store
-                .air_forecast("airkorea", &station_json)
-                .map_err(|_| ())?,
-        ),
-        answer => (src, answer.map_err(|_| ())?),
-    };
-    let results = from_store(&results);
+    if src == "kaq" {
+        return kaq_or_airkorea(cx, info, &station_json, unit);
+    }
+    let results = from_store(&cx.store.air_forecast(&src, &station_json).map_err(|_| ())?);
     let r = catch(|| {
         if results.nullish() || le(&results.len(), &n(0.)) {
             if strict_eq(&station, &s("태하리")) {
@@ -1320,6 +1320,65 @@ fn get_air_forecast(cx: &Cx, info: &V, source: &V, unit: &V) -> Result<(), ()> {
         Ok(x) => x,
         Err(_) => Err(()),
     }
+}
+/// The `kaq` branch of `_getAirForecast` (legacy #2771): the KAQ forecast when it has a usable row
+/// after now and within the day after the last observation, otherwise the stored AirKorea
+/// forecast under the same condition, otherwise none. A KAQ read error falls back too; an AirKorea
+/// read error or an exception ends the list (`callback(err)`).
+fn kaq_or_airkorea(cx: &Cx, info: &V, station: &serde_json::Value, unit: &V) -> Result<(), ()> {
+    let now = cx.now;
+    let last_epoch = parse_date_time(&last_air_observation_time(info));
+    // `usableRows`: listed pollutants with a finite non-negative number and a valid KST time,
+    // copied with that time formatted.
+    let usable = |results: &V| -> Vec<V> {
+        let Some(rows) = results.as_arr() else {
+            return Vec::new();
+        };
+        rows.items()
+            .into_iter()
+            .filter(|row| {
+                // `row && ...`: a falsy row is not read.
+                row.truthy()
+                    && ["pm10", "pm25", "o3", "no2", "co", "so2"]
+                        .iter()
+                        .any(|c| strict_eq(&row.get("code"), &s(c)))
+                    && is_finite_number(&row.get("val"))
+                    && ge(&row.get("val"), &n(0.))
+                    && parse_date_time(&row.get("dataTime")).is_finite()
+            })
+            .map(|row| {
+                let copy = row.o().assign_copy();
+                copy.set(
+                    "dataTime",
+                    format_air_kst(parse_date_time(&row.get("dataTime"))),
+                );
+                V::Obj(copy)
+            })
+            .collect()
+    };
+    // `insertIfAvailable`.
+    let insert_if_available = |results: &V, source: &str| -> Result<bool, ()> {
+        catch(|| {
+            let rows = usable(results);
+            let available = rows.iter().any(|row| {
+                let epoch = parse_date_time(&row.get("dataTime"));
+                epoch > now && epoch > last_epoch && epoch <= last_epoch + time::DAY
+            });
+            if available {
+                insert_forecast_pollutants(info, &rows, source, unit);
+            }
+            available
+        })
+        .map_err(|_| ())
+    };
+    if let Ok(results) = cx.store.air_forecast("kaq", station)
+        && insert_if_available(&from_store(&results), "kaq")?
+    {
+        return Ok(());
+    }
+    let fallback = cx.store.air_forecast("airkorea", station).map_err(|_| ())?;
+    insert_if_available(&from_store(&fallback), "airkorea")?;
+    Ok(())
 }
 pub fn air_forecast_list(cx: &mut Cx) -> Flow {
     let source = cx.query("airForecastSource");
