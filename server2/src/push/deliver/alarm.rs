@@ -72,7 +72,7 @@ impl Delivery {
             Delivery::Failed { class } => (*class).into(),
         }
     }
-    fn status(&self) -> Option<u16> {
+    pub(crate) fn status(&self) -> Option<u16> {
         match self {
             Delivery::Unregistered { status, .. } | Delivery::Rejected { status, .. } => {
                 Some(*status)
@@ -86,6 +86,7 @@ impl Delivery {
 /// coordinate, name or message text.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Event {
+    pub kind: &'static str,
     pub minute: String,
     pub id: String,
     pub outcome: &'static str,
@@ -102,7 +103,8 @@ impl Diagnostics for StderrDiagnostics {
     fn delivery(&self, e: &Event) {
         if e.outcome != "accepted" {
             eprintln!(
-                "push alarm minute={} id={} outcome={} class={} status={}",
+                "push {} minute={} id={} outcome={} class={} status={}",
+                e.kind,
                 e.minute,
                 e.id,
                 e.outcome,
@@ -112,7 +114,7 @@ impl Diagnostics for StderrDiagnostics {
         }
     }
     fn minute(&self, minute: &str, note: &'static str) {
-        eprintln!("push alarm minute={minute} {note}");
+        eprintln!("push minute={minute} {note}");
     }
 }
 
@@ -421,6 +423,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             };
             counter.fetch_add(1, Ordering::Relaxed);
             let event = Event {
+                kind: "alarm",
                 minute: minute.clone(),
                 id: id.clone(),
                 outcome: d.outcome(),
@@ -493,7 +496,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
 }
 
 /// Await every future, keeping their order (the gate bounds concurrency).
-async fn futures_join<F: std::future::Future>(tasks: Vec<F>) -> Vec<F::Output> {
+pub(crate) async fn futures_join<F: std::future::Future>(tasks: Vec<F>) -> Vec<F::Output> {
     let mut pinned: Vec<std::pin::Pin<Box<F>>> = tasks.into_iter().map(Box::pin).collect();
     let mut out: Vec<Option<F::Output>> = (0..pinned.len()).map(|_| None).collect();
     std::future::poll_fn(|cx| {

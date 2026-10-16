@@ -101,6 +101,20 @@ pub struct StaleSelection {
 /// alarm worker).
 #[derive(Clone, Debug)]
 pub enum InternalOp {
+    /// Conditional worker: only update the selected registration if it has not changed while
+    /// weather was fetched. Durable before provider submission, including send timestamps.
+    UpdateAlertState {
+        n: u64,
+        oid: Oid,
+        selected: crate::world::js::Obj,
+        precip: crate::world::js::Val,
+        air: crate::world::js::Val,
+    },
+    /// Disable every conditional alert of an unregistered FCM token, without touching alarms.
+    DisableAlertsByFcm {
+        token: String,
+    },
+    RemoveDuplicateAlerts,
     /// `removeDuplicateAlarms`: (registrationId, cityIndex, id) groups keep the newer record.
     RemoveDuplicateAlarms,
     /// `disableAlarmsByFcm(token)`: `{enable: false, updatedAt: now, updatedBy: 'push'}`, multi.
