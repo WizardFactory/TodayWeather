@@ -2416,7 +2416,8 @@ yet, `forecast_zone` answers `[]`. If the warning state cannot be read, `special
 legacy store error, and `getSpecialInfo` skips the section.
 
 **Keys and quota.** The acquisitions use the process data.go.kr acquirer of S15b-2: legacy
-`DONGNAE_SECRET_KEYS`, one S08 quota owner per key and KST day, with built-in 10,000 units. Its key
+`DONGNAE_SECRET_KEYS`, one S08 quota owner per key and KST day, with built-in 10,000 units (per key
+and API since S15b-4q). Its key
 rings now include `VilageFcstInfoService_2.0`, `MidFcstInfoService` and `FcstZoneInfoService`.
 
 The warning requests follow legacy `kmaWarningRequester.get`. They start at the key that last
@@ -2449,6 +2450,61 @@ The release `kma_smoke.py` answers natively in its `kma` phase. The provider cal
 live on 2026-10-15; see the plan for the list. The remaining forward reasons (unknown towns, a grid
 outside KMA, the S15 declared forwards) belong to S15b-4b. Cold-cell latency belongs to S15b-4c.
 
+### S15b-4q data.go.kr quotas per API and key (2026-10-16)
+
+AK decision 5 (2026-10-16): S08 accounts data.go.kr calls per API and key, the way data.go.kr
+allocates its daily quota.
+
+**Why.** Every dataset page lists its own "개발계정" allowance per key, and an operating account
+can raise it after a use case is registered. Until this change, S08 kept one budget per key and
+KST day across every service the key called. That budget never exceeded one API's allowance, but it
+let one API's traffic block all the others.
+
+**Accounting.** S08 now keeps one quota owner per key, API and KST day, for both key lists:
+
+- `DONGNAE_SECRET_KEYS` (KMA source);
+- `AIRKOREA_SECRET_KEYS`.
+
+The owner is a domain-separated SHA-256 of the key list name, the API path and the key
+(`domestic::quota::quota_owner`), so the key itself is never stored. The request URL selects its
+API (`DataGoKrApi::of_url`).
+
+**Key rings are unchanged.** Rotation and legacy AirKorea `withKeys` still keep one key position
+per service. Only the budget behind each key is per API (`KeyRing::per_api`).
+
+| API (path) | data.go.kr | Built-in units per key and KST day |
+| --- | --- | --- |
+| `1360000/VilageFcstInfoService_2.0` | [15084084](https://www.data.go.kr/data/15084084/openapi.do) | 10,000 |
+| `1360000/MidFcstInfoService` | [15059468](https://www.data.go.kr/data/15059468/openapi.do) | 10,000 |
+| `1360000/FcstZoneInfoService` | [15057111](https://www.data.go.kr/data/15057111/openapi.do) | 10,000 |
+| `1360000/WthrWrnInfoService` | [15000415](https://www.data.go.kr/data/15000415/openapi.do) | 10,000 |
+| `1360000/AsosHourlyInfoService` | [15057210](https://www.data.go.kr/data/15057210/openapi.do) | 10,000 |
+| `1360000/AsosDalyInfoService` | [15059093](https://www.data.go.kr/data/15059093/openapi.do) | 10,000 |
+| `1360000/LivingWthrIdxServiceV5` | [15085288](https://www.data.go.kr/data/15085288/openapi.do) | 10,000 |
+| `1360000/HealthWthrIdxServiceV3` | [15085289](https://www.data.go.kr/data/15085289/openapi.do) | 10,000 |
+| `B090041/openapi/service/RiseSetInfoService` | [15012688](https://www.data.go.kr/data/15012688/openapi.do) | 10,000 |
+| `B552584/ArpltnInforInqireSvc` | [15073861](https://www.data.go.kr/data/15073861/openapi.do) | 500 |
+| `B552584/MsrstnInfoInqireSvc` | [15073877](https://www.data.go.kr/data/15073877/openapi.do) | 500 |
+
+The values are the documented development allowances, read on 2026-10-15/16. The approved
+operating allowances plug into `domestic::quota::OPERATING_UNITS` (one `(DataGoKrApi, units)` entry
+per API). That list is empty until AK supplies the values; an entry replaces that API's default.
+There is still no setting: legacy has no data.go.kr budget variable.
+
+**Effects of the new owners.**
+- Earlier S08 budget objects (owner hashes v1) are not reused. No production server2 budget was
+  live.
+- With several keys, each key still spends at most its own allowance per API. Legacy spends the
+  same keys while it runs.
+
+**Verification** (loopback stub and S3 test peer):
+
+| Check | Result |
+| --- | --- |
+| Exhaust one key's short-forecast API | A further call of that API is refused by S08 without reaching the provider, while the same key still funds a mid-forecast call |
+| The same scenario on master `a9b3a23d` | The mid call was refused with `Funding(Exhausted)` |
+| Unit tests | Every keyed operation maps to an API of its service; each key and API has its own owner; the defaults equal the development allowances |
+
 ### S10e legacy settings and server2/.env (2026-10-15)
 
 [S10e](../../plans/issue-2753.md) ([spec](../../specs/issue-2753.md), #2753) applies AK's decisions of
@@ -2475,8 +2531,8 @@ ensured). Smokes and tests run processes in an empty working directory and never
 | --- | --- | --- |
 | Listener | `OPENSHIFT_NODEJS_IP`, `OPENSHIFT_NODEJS_PORT`, `PORT` (legacy) | As `config.js`: address default `127.0.0.1`, port `OPENSHIFT_NODEJS_PORT`, else `PORT`, else `3000`; an empty value is unset. Give server2 another port than the legacy origin during coexistence. |
 | S3 | `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `TWA_S3_REGION` (legacy); `SERVER2_S3_BUCKET` (server2) | Region default `ap-northeast-2`; endpoint built in (`https://s3.<region>.amazonaws.com/`); bucket and credentials required when any family is native. The importers use the same settings. Superseded by [S10f](#s10f-instance-role-credentials-and-the-server2-s3-region-2026-10-15): `SERVER2_S3_REGION` replaces `TWA_S3_REGION`, and unset keys select the EC2 instance role. |
-| data.go.kr | `DONGNAE_SECRET_KEYS` (legacy) | Required with `kma` (ASOS ranges; since S15b-3b also UV, pollen and KASI). Built in: 10,000 units per key and KST day across those services (ASOS hourly/daily development traffic "개발계정 : 10,000", data.go.kr 15057210/15059093). |
-| AirKorea | `AIRKOREA_SECRET_KEYS` (legacy) | Read with `kma`; no usable key: stored records only. Built in: 500 units per key and KST day ("개발계정 : 500", data.go.kr 15073861). |
+| data.go.kr | `DONGNAE_SECRET_KEYS` (legacy) | Required with `kma` (ASOS ranges; since S15b-3b also UV, pollen and KASI; since S15b-4a the grid and mid forecasts, the zone list and warnings). Built in since [S15b-4q](#s15b-4q-datagokr-quotas-per-api-and-key-2026-10-16): each API's documented development allowance per key and KST day (10,000 for the KMA and KASI APIs), replaced by `domestic::quota::OPERATING_UNITS` once AK supplies the operating values. |
+| AirKorea | `AIRKOREA_SECRET_KEYS` (legacy) | Read with `kma`; no usable key: stored records only. Built in since S15b-4q: 500 units per key, AirKorea API (`ArpltnInforInqireSvc` 15073861, `MsrstnInfoInqireSvc` 15073877) and KST day. |
 | AirKorea forecast images (S15b-3c) | `AIRKOREA_KOREA_IMAGE_COORDI_*`, `AIRKOREA_KOREA_IMAGE_SIZE_*`, `AIRKOREA_KOREA_IMAGE_MAP_*` (legacy) | Read with `kma` as master `config.js` L89-105 and `airkoreaImageLayout` read them; unset or empty: the characterized defaults (820×820, map 77/663/75/794). The image root is built in (`https://www.airkorea.or.kr/`); the images are keyless. |
 | Geocoder | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY` (legacy) | Kakao keys parsed as legacy `keys.parseKeys` (nonempty strings of a JSON array; anything else gives no key). Endpoints built in; legacy's test-only `GEOCODER_*_BASE_URL` are not read. Built in: Kakao 100,000 units per key and UTC day (Kakao quota page, 100,000건 per day), Google 322 per UTC day (Google documents no daily quota; 10,000 free Geocoding events a month ÷ 31). |
 | Visual Crossing | `VC_SECRET_KEY`, `VC_DAILY_RECORD_LIMIT` (legacy) | Read as JavaScript `Number` (`50.0`, `5e1` are 50); a positive finite limit admits `floor(limit)` records a day (at least 1). 0, unset, not a number or `Infinity` is "no budget" in legacy, here the documented free plan, 1,000 records a day. Quota owner derived from the key. |
