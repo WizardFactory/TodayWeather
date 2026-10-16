@@ -1,0 +1,43 @@
+{
+  "task": "S18b-1",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2703",
+  "server2_paths": [
+    "server2/config/tasks/S18b-1.json",
+    "server2/src/push/",
+    "server2/Cargo.toml",
+    "server2/Cargo.lock",
+    "server2/.env.example",
+    "server2/tests/delivery.rs",
+    "server2/tests/delivery/"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2703.md",
+      "category": "documentation",
+      "reason": "S18 governing intent record: add the S18b-1 scheduled-alarm delivery slice and its criteria; no implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2703.md",
+      "category": "documentation",
+      "reason": "S18 specification: S18b-1 delivery, provider adapter, ledger and diagnostics; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2703.md",
+      "category": "documentation",
+      "reason": "S18 execution plan: S18b-1 scenarios, checks and the split; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S18b-1 delivery section to the push state contract; no implementation outside server2"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2703#issuecomment-6205966857",
+  "path_notes": {
+    "server2/src/push/": "new deliver/ (alarm scheduler, legacy weather requests, message text, FCM HTTP v1 adapter without retries, S3 delivery ledger, sanitized diagnostics, embedded locale subset with provenance); store.rs gains pushTime/enable query keys; service.rs gains internal writer operations (token disable, 60-day cleanup, updatedAt stamp, duplicate removal)",
+    "server2/Cargo.toml": "adds ring 0.17 (already in the lock through rustls) for the RS256 service-account assertion",
+    "server2/Cargo.lock": "the direct ring dependency",
+    "server2/.env.example": "documents SERVICE_SERVER and API_SERVER (legacy names) and the server2-only Firebase service-account paths",
+    "server2/tests/delivery/": "oracle fixture of the legacy alarm worker (synthetic data; provenance), FCM and weather loopback doubles, ledger/restart/no-retry/diagnostics tests"
+  }
+}

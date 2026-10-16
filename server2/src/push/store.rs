@@ -74,7 +74,15 @@ pub enum Cond {
 
 pub const TOKEN_FIELDS: [&str; 2] = ["fcmToken", "registrationId"];
 /// The fields the legacy store queries by (`keyQuery`, `tokenQuery`, token renames).
-pub const KEY_FIELDS: [&str; 5] = ["type", "cityIndex", "id", "fcmToken", "registrationId"];
+pub const KEY_FIELDS: [&str; 7] = [
+    "type",
+    "cityIndex",
+    "id",
+    "fcmToken",
+    "registrationId",
+    "pushTime",
+    "enable",
+];
 
 /// A record as stored: `(n, _id, encoded document, import digest)`.
 pub type Encoded<'a> = (u64, &'a Oid, &'a [u8], Option<&'a str>);
@@ -84,7 +92,7 @@ pub type Encoded<'a> = (u64, &'a Oid, &'a [u8], Option<&'a str>);
 struct Stored {
     oid: Oid,
     doc: Box<[u8]>,
-    keys: Box<[Val; 5]>,
+    keys: Box<[Val; 7]>,
     /// sha256 of the legacy document as last imported (one-time copy only).
     imported: Option<Box<str>>,
 }
@@ -136,6 +144,16 @@ impl Collection {
     }
     pub fn get(&self, n: u64) -> Option<Record> {
         self.records.get(&n).map(Stored::record)
+    }
+    /// `find({pushTime: time}).$where(enable !== false)`: due alarms in natural order.
+    pub fn due(&self, time: f64) -> Vec<(u64, Record)> {
+        self.records
+            .iter()
+            .filter(|(_, r)| {
+                matches!(r.keys[5], Val::Num(t) if t == time) && r.keys[6] != Val::Bool(false)
+            })
+            .map(|(n, r)| (*n, r.record()))
+            .collect()
     }
     /// Records in natural (insertion) order, decoded.
     pub fn iter(&self) -> impl Iterator<Item = (u64, Record)> + '_ {
@@ -392,6 +410,13 @@ impl<'a> Txn<'a> {
         match self.changes.get(&(c, n)) {
             Some(r) => r.clone(),
             None => self.base.coll(c).get(n),
+        }
+    }
+    /// The query key fields ([`KEY_FIELDS`]) of record `n`, without decoding an unchanged record.
+    pub fn keys(&self, c: Coll, n: u64) -> Option<[Val; 7]> {
+        match self.changes.get(&(c, n)) {
+            Some(r) => r.as_ref().map(|r| KEY_FIELDS.map(|f| r.doc.get(f).clone())),
+            None => self.base.coll(c).records.get(&n).map(|s| (*s.keys).clone()),
         }
     }
     /// Matching record numbers in natural order.

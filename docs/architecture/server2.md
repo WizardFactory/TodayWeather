@@ -2852,6 +2852,122 @@ into a loopback S3 peer in 2.0 s (64 journal entries), restored in 1.3 s with ev
 and a re-run changed nothing. The raw export and converted file were deleted after the check; no
 token or record was committed or logged. No push provider was called.
 
+### S18b-1 scheduled alarm delivery (2026-10-16)
+
+[S18b-1](../../plans/issue-2703.md#s18b-1-scheduled-alarm-delivery) ports the legacy alarm worker
+(`server/controllers/controllerPush.js` `start`, `sendPush`, `sendNotification` and the message
+builders; started only in `SERVER_MODE=push`, `server/app.js:140-147`) onto the S18a state. It is a
+library worker like the routes; process wiring and the switch from the legacy push process belong
+to S20, so legacy and server2 never both send. Conditional alerts (S18b-2), the push warning feed
+deferred by S12 (S18b-3) and notices (S18c) are separate PRs. The
+[declaration](../../server2/config/tasks/S18b-1.json) lists the paths.
+
+**Minute.** At each UTC minute boundary (legacy: `setInterval` 60 s from process start, so a
+minute could be skipped or repeated) the worker: removes duplicate registrations
+(`lib/pushStore/mongo.js` `removeDuplicates`), selects alarms with `pushTime` equal to the minute's
+seconds of day and `enable !== false` in natural order (`getAlarmsByTime`), keeps those due on the
+client's local weekday (`_filterByDayOfWeek`, `kmaTimeLib.toLocalTime`), claims the minute in the
+ledger, delivers with at most six in flight (`async.mapLimit(..., 6, ...)`), writes the minute's
+result, then removes records not updated for 60 days and stamps records without `updatedAt`
+(`_removeOldList` through `makeRemoveSelector` and `updatePushInfo`). Store changes go through the
+S18a writer as internal operations (journal before effect). A minute with no due alarm writes no
+ledger object. A minute whose state is not restored
+is neither claimed nor sent. A minute missed while no process ran is not caught up.
+
+**One delivery.** As `sendNotification`: language default `ko`, `initUnits`, package default
+`todayWeather`; the record selects `GET {SERVICE_SERVER}/v000902/kma/coord|addr/...` or
+`/v000902/dsf/coord/...`, or first `GET {API_SERVER}/geocode/v000903/coord/...` (city 0 with
+`geo`, or no known source), with the units query and `Accept-Language` (legacy names and defaults,
+`config.js` `serviceServer`/`apiServer`). The title and text are the legacy builders' output
+(`_makeKmaPushMessage`, `_makeDsfPushMessage`, `_makePushAirMessage`, `_getAqiStr` with V8's sort
+and the legacy comparator, i18n 0.8.3 lookup over an embedded subset of the legacy locale files
+with per-file sha256 provenance). The FCM HTTP v1 request is the firebase-admin 5.13.1 `send`
+request: `POST https://fcm.googleapis.com/v1/projects/{project}/messages:send` with
+`{"message":{"notification":{title, body},"data":{"cityIndex"},"token"}}` and a cached OAuth
+token from an RS256 service-account assertion (the scopes and claim order of firebase-admin; one
+hour; refreshed when less than a minute is left). Service accounts are server2 settings
+(`SERVER2_FIREBASE_TODAYWEATHER`, `SERVER2_FIREBASE_TODAYAIR`). Responses are classified with
+firebase-admin's rules (`FirebaseMessagingRequestHandler`, `MESSAGING_SERVER_TO_CLIENT_CODE`): an
+unregistered token (`NOT_FOUND`, the documented
+[`UNREGISTERED` 404](https://firebase.google.com/docs/cloud-messaging/error-codes)) disables every
+alarm of that token (`disableAlarmsByFcm`); the outcome is reported after the disable is durable,
+with class suffix `;disable-failed` when it could not be committed. Records with only a GCM `registrationId` are not sent:
+node-gcm used the legacy FCM API, which Google deprecated on 2023-06-20 and began shutting down on
+2024-07-22 ([migration guide](https://firebase.google.com/docs/cloud-messaging/migrate-v1)).
+
+**No hidden retry, no resend (D02).** Each delivery makes at most one FCM request; reqwest's
+protocol-NACK retry is disabled and redirects are not followed. firebase-admin retried once after a
+network error, which could deliver twice; server2 records the outcome as unknown. FCM recommends
+backoff retries for `UNAVAILABLE` and `QUOTA_EXCEEDED`; D02 keeps them out: the failure is recorded
+and the next independently scheduled minute is the next attempt. Weather and geocode requests are
+one attempt each, bounded to 30 s (legacy had no bound); the OAuth and FCM requests to 10 s.
+
+| S3 object (`index/v2/push/delivery/`) | Write | Content |
+| --- | --- | --- |
+| `alarm/{YYYYMMDD}/{HHMM}.json` | `If-None-Match: *`, before any send | minute, claim time, nonce, record `_id`s |
+| `alarm/{YYYYMMDD}/{HHMM}.result.json` | `If-None-Match: *`, after the sends | per `_id`: outcome, class, HTTP status |
+
+A delivery is identified by (kind, minute, record `_id`). Only the process whose claim committed
+sends; a second process, a restart or a repeated tick finds the claim (409/412) and sends nothing.
+An unknown claim outcome is read back (our body: owned; another body: taken; unreadable: nothing
+sent), and a refused or unavailable ledger sends nothing for that minute. A claim without a result
+means the outcomes are unknown and are not resent; an unknown result write is read back, and a
+result that was refused or whose outcome stays unknown is reported as a minute note and counted. Outcomes: `accepted`, `unregistered`,
+`rejected` (firebase-admin client code), `unknown` (timeout or transport error after sending) and
+`failed` (nothing sent: weather, geocode, build, credentials, OAuth, connect, iOS without FCM token,
+retired GCM, unknown type).
+
+**Diagnostics.** Ledger objects and diagnostics hold record `_id`s, minutes, outcome classes and
+HTTP statuses only: no token, coordinate, name, address or message text (legacy logged whole
+records with tokens). Standard error gets one line per non-accepted delivery and per skipped
+minute; counters cover minutes, skips, selections, each outcome, removals and stamps. Nothing is
+written to local disk.
+
+**Deliberate differences.** Besides the retry, minute alignment and GCM items above: duplicate
+removal deletes the records holding the group's earliest `updatedAt` and skips a group with one
+distinct date or a record without one (legacy compared the first two unordered `$addToSet` values
+and threw on a single date); an unknown package fails the delivery (legacy threw inside a
+callback); OAuth uses the token endpoint and audience Google documents for service accounts,
+`https://oauth2.googleapis.com/token`
+([service-account flow](https://developers.google.com/identity/protocols/oauth2/service-account);
+firebase-admin 5.13.1 used `https://accounts.google.com/o/oauth2/token`), tokens are refreshed on
+demand per app, one request at a time, and a failure is not cached; the duplicate pass groups on
+indexed key fields and decodes only grouped records; the 60-day removal and the `updatedAt` stamp
+re-check records in the writer: of the records the `makeRemoveSelector` filter matches, the
+selected one is removed only while it still equals the document read at selection and any other
+only while its own `updatedAt` is older than 60 days; an unregistered token's disable removes
+exactly those records of every selection of the minute with that token in its own journal entry
+(legacy disabled, then removed them the same minute), so no restart can leave one enabled and one
+disable never makes another stale selection look recent; the
+stamp applies only while the record still has no `updatedAt`. So a user change or removal made
+during the minute is never undone (even one that repeats the same settings) and a stamp never
+re-enables a disabled token (legacy removed every match and upserted the copy read before
+sending); legacy disabled unregistered tokens without waiting; OAuth tokens are cached and refreshed with one lock per app,
+and the assertion and expiry use the time of each send (not the minute's start).
+
+**Verification.** The [oracle fixture](../../server2/tests/delivery/fixtures/PROVENANCE.md) runs
+the real `ControllerPush` and firebase-admin 5.13.1 (Node 16.20.2) over HTTPS and weather doubles:
+47 single deliveries (KMA, DSF, geocode, TodayAir, units, languages, failures, every FCM error
+class, connection resets, token errors, iOS/Android/unknown types) and one scheduled minute with 7
+registrations (weekday filter, 60-day removal, `updatedAt` stamp). server2 matches the weather
+and geocode URLs with `Accept-Language`, the OAuth request bytes (re-signed only for the audience),
+the FCM path, authorization and body bytes, and the outcomes; the minute's FCM bodies and requests
+as multisets and the resulting state. Fault tests: one request on 503, timeout and reset with
+nothing sent later; a replacement process at the same minute sends nothing and the next minute
+delivers; two processes claiming one minute deliver each alarm once; a claim whose answer was lost
+is read back (own: delivered; another's: nothing sent); selection excludes other minutes,
+`enable: false`, excluded local weekdays and weekday lists without `timezoneOffset`; a user update
+made during the minute (changed or identical settings) survives the stale cleanup; a claim stored
+with a lost answer and a failed read-back sends nothing, also after a restart, and the next minute
+delivers; a refused claim and an unrestored state
+send nothing; an unregistered token's alarms are disabled durably before the outcome (not
+re-enabled by the stamp; stale ones removed in the disable's journal entry, also when several
+share the token), and a failed disable is reported and not resent;
+the classification follows firebase-admin 5.13.1 for its detail type and for current FCM error
+bodies; diagnostics and ledger objects contain no token, coordinate or name. With
+42,226 synthetic alarms a minute ran in about 0.1–0.2 s (debug build, loopback doubles). Only
+loopback doubles were called; no push was sent.
+
 ### S17a KMA v000901 and v000902 address weather (2026-10-15)
 
 [S17](../../plans/issue-2702.md) ([spec](../../specs/issue-2702.md)) ports the used older weather

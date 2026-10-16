@@ -1543,6 +1543,7 @@ dependencies = [
  "instant-xml",
  "md-5 0.10.6",
  "reqwest",
+ "ring",
  "rusty-s3",
  "serde",
  "serde_json",

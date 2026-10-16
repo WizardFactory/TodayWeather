@@ -83,13 +83,63 @@ impl OidSource for ObjectIds {
     }
 }
 
+/// A selected alarm not updated for 60 days (`_removeOldList`): its natural-order number, `_id`,
+/// the document as read at selection, the cutoff and its `makeRemoveSelector` filter. The
+/// records it removes are the filter's matches that are still stale: the selected record only
+/// while it equals `selected`, any other match only while its own `updatedAt` is older than
+/// `cutoff_ms`. A change made since selection (a user update) keeps the record.
+#[derive(Clone, Debug)]
+pub struct StaleSelection {
+    pub n: u64,
+    pub oid: super::store::Oid,
+    pub selected: crate::world::js::Obj,
+    pub cutoff_ms: i64,
+    pub filter: Vec<(String, crate::world::js::Val)>,
+}
+
+/// State changes the delivery workers make through the same writer (legacy store calls of the
+/// alarm worker).
+#[derive(Clone, Debug)]
+pub enum InternalOp {
+    /// `removeDuplicateAlarms`: (registrationId, cityIndex, id) groups keep the newer record.
+    RemoveDuplicateAlarms,
+    /// `disableAlarmsByFcm(token)`: `{enable: false, updatedAt: now, updatedBy: 'push'}`, multi.
+    /// The still-stale records of `spare` (the minute's 60-day cleanup of every selected record
+    /// with this token) are removed in the same
+    /// journal entry instead (disabling them would make them look recently updated).
+    DisableAlarmsByFcm {
+        token: String,
+        spare: Vec<StaleSelection>,
+    },
+    /// `removeAlarms(makeRemoveSelector(pushInfo))` restricted to the still-stale records.
+    RemoveAlarms(StaleSelection),
+    /// `updatePushInfo(record)`: the worker's `updatedAt` stamp of a selected record without
+    /// one, applied only while that record still has no `updatedAt` (any other change, such as
+    /// an unregistered token's disable, sets it and is never overwritten).
+    StampAlarm {
+        n: u64,
+        oid: super::store::Oid,
+        info: crate::world::js::Obj,
+    },
+}
+
+enum Job {
+    Http {
+        route: Route,
+        body: Body,
+        language: Option<String>,
+        reply: oneshot::Sender<Reply>,
+    },
+    Internal {
+        op: InternalOp,
+        reply: oneshot::Sender<bool>,
+    },
+}
+
 struct Command {
-    route: Route,
-    body: Body,
-    language: Option<String>,
+    job: Job,
     now_ms: f64,
     deadline: Instant,
-    reply: oneshot::Sender<Reply>,
 }
 
 pub struct PushService {
@@ -178,6 +228,28 @@ impl PushService {
         Some(express::respond(&reply, &method))
     }
 
+    /// Apply one worker state change through the writer; `true` once it is durable (or there
+    /// was nothing to change).
+    pub async fn internal(&self, op: InternalOp) -> bool {
+        let Ok(now_ms) = self.clock.now_ms() else {
+            return false;
+        };
+        let deadline = Instant::now() + self.config.wait;
+        let (reply, answer) = oneshot::channel();
+        let command = Command {
+            job: Job::Internal { op, reply },
+            now_ms: now_ms as f64,
+            deadline,
+        };
+        if self.tx.send(command).await.is_err() {
+            return false;
+        }
+        matches!(
+            tokio::time::timeout_at(deadline, answer).await,
+            Ok(Ok(true))
+        )
+    }
+
     /// Run one handler through the writer and wait for its answer.
     pub async fn submit(&self, route: Route, body: Body, language: Option<String>) -> Reply {
         let now_ms = self.clock.now_ms().map_or(f64::NAN, |ms| ms as f64);
@@ -195,12 +267,14 @@ impl PushService {
             return failure(&body, &language);
         }
         let command = Command {
-            route,
-            body: body.clone(),
-            language: language.clone(),
+            job: Job::Http {
+                route,
+                body: body.clone(),
+                language: language.clone(),
+                reply,
+            },
             now_ms,
             deadline,
-            reply,
         };
         if self.tx.try_send(command).is_err() {
             return failure(&body, &language);
@@ -208,6 +282,24 @@ impl PushService {
         match tokio::time::timeout_at(deadline, answer).await {
             Ok(Ok(reply)) => reply,
             _ => failure(&body, &language),
+        }
+    }
+}
+
+enum Answer {
+    Http(Reply),
+    Internal(bool),
+}
+impl Job {
+    fn answer(self, answer: Answer) {
+        match (self, answer) {
+            (Job::Http { reply, .. }, Answer::Http(r)) => {
+                let _ = reply.send(r);
+            }
+            (Job::Internal { reply, .. }, Answer::Internal(ok)) => {
+                let _ = reply.send(ok);
+            }
+            _ => (),
         }
     }
 }
@@ -294,16 +386,26 @@ impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
             let (reply, changes, next_n, seq) = {
                 let state = self.state.read().unwrap_or_else(|e| e.into_inner());
                 let mut txn = Txn::new(&state, command.now_ms, &mut *self.ids);
-                let reply = routes::handle(
-                    command.route,
-                    &command.body,
-                    command.language.as_deref(),
-                    &mut TxnBackend { txn: &mut txn },
-                );
+                let reply = match &command.job {
+                    Job::Http {
+                        route,
+                        body,
+                        language,
+                        ..
+                    } => Answer::Http(routes::handle(
+                        *route,
+                        body,
+                        language.as_deref(),
+                        &mut TxnBackend { txn: &mut txn },
+                    )),
+                    Job::Internal { op, .. } => {
+                        Answer::Internal(super::deliver::ops::plan(op, &mut txn))
+                    }
+                };
                 (reply, txn.changes(), txn.next_n(), state.seq + 1)
             };
             if changes.is_empty() {
-                let _ = command.reply.send(reply);
+                command.job.answer(reply);
                 return;
             }
             match self.durable.commit(seq, &changes, next_n).await {
@@ -314,7 +416,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
                         state.next_n = state.next_n.max(next_n);
                         state.seq = seq;
                     }
-                    let _ = command.reply.send(reply);
+                    command.job.answer(reply);
                     self.maybe_snapshot().await;
                     return;
                 }
