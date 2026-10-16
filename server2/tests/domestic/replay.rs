@@ -121,7 +121,8 @@ async fn recorded_store_forwards_when_the_recording_cannot_answer() {
 /// Legacy converts town rows inside the Mongo `exec` callback, outside the `try` of
 /// `getAllDataFromDb`/`getShort`: a document without `shortData` throws an uncaught TypeError in
 /// the deployed service (the S02 harness answers synchronously and would catch it). The native
-/// assembly forwards instead of continuing without the short forecast.
+/// assembly does not continue without the short forecast: it answers Express's 500 (S15b-4b-1;
+/// the deployed process ends instead, and the gateway hop fails the same way).
 #[test]
 fn an_exception_in_a_store_callback_is_not_caught_by_an_earlier_try() {
     warm();
@@ -137,7 +138,7 @@ fn an_exception_in_a_store_callback_is_not_caught_by_an_earlier_try() {
         docs[0].as_object_mut().unwrap().remove("shortData");
     });
     let o = outcome(&source, id);
-    assert!(forwarded(&o, "getAllDataFromDb: uncaught"), "{o:?}");
+    assert_eq!(o, Outcome::Status(500, "Internal Server Error\n".into()));
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

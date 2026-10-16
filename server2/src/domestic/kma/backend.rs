@@ -19,13 +19,6 @@ pub enum SourceAnswer {
 pub trait KmaSource: Send + Sync {
     fn snapshot(&self, request: &KmaRequest, deadline: Instant) -> BoxFuture<'_, SourceAnswer>;
 }
-/// A source that keeps every request on legacy (tests; the runtime uses the S3 source).
-pub struct LegacyOnly;
-impl KmaSource for LegacyOnly {
-    fn snapshot(&self, _: &KmaRequest, _: Instant) -> BoxFuture<'_, SourceAnswer> {
-        Box::pin(async { SourceAnswer::Forward("no native KMA input source configured".into()) })
-    }
-}
 
 /// Register the v000903 KMA handler with `source` and select it (`SERVER2_NATIVE_FAMILIES`
 /// contains `kma`; the runtime passes the S3 source built from the legacy S3 settings).
@@ -104,8 +97,12 @@ impl KmaBackend {
         .await
         {
             Ok(outcome) => outcome,
-            // A Rust panic is a port defect, not legacy behavior: legacy answers instead.
-            Err(e) if e.is_panic() => return Ok(Native::Forward),
+            // A Rust panic is a port defect, not legacy behavior: a dependency failure (counted;
+            // never a forward, legacy is not a steady-state fallback).
+            Err(e) if e.is_panic() => {
+                crate::gateway::metrics::add(&crate::gateway::metrics::COUNTERS.native_defects);
+                return Err(GatewayError::Provider);
+            }
             Err(_) => return Err(GatewayError::Provider),
         };
         match outcome {
@@ -113,6 +110,10 @@ impl KmaBackend {
             // The legacy hop treats a non-200 backend reply as a dependency failure.
             Outcome::Status(..) => Err(GatewayError::Provider),
             Outcome::Legacy(_) => Ok(Native::Forward),
+            Outcome::Defect(_) => {
+                crate::gateway::metrics::add(&crate::gateway::metrics::COUNTERS.native_defects);
+                Err(GatewayError::Provider)
+            }
         }
     }
 }

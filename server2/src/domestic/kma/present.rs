@@ -317,8 +317,8 @@ pub fn insert_sky_icon_low_case(cx: &mut Cx) -> Flow {
     });
     match r {
         Ok(()) => Flow::Next,
-        // next(err): Express error page.
-        Err(t) => super::js::forward(format!("insertSkyIconLowCase error {}", t.0)),
+        // next(err): Express's default handler.
+        Err(_) => super::js::next_err(),
     }
 }
 

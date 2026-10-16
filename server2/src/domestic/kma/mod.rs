@@ -15,6 +15,7 @@ mod air;
 pub mod backend;
 mod chain;
 mod data;
+pub mod dateparse;
 pub mod js;
 mod mid;
 mod policy;
@@ -152,10 +153,10 @@ pub trait KmaStore {
         None
     }
 }
-/// The store cannot answer a call from its snapshot: end the assembly and forward to legacy.
-/// It passes every legacy `catch` (see [`js::forward`]).
+/// The store cannot answer a call from its snapshot (a port invariant broke): end the assembly
+/// as a dependency failure. It passes every legacy `catch` (see [`js::defect`]).
 pub fn unavailable(reason: impl Into<String>) -> ! {
-    js::forward(reason)
+    js::defect(reason)
 }
 
 /// Legacy process parameters that differ between the deployed service and the S02 harness.
@@ -194,9 +195,12 @@ pub enum Outcome {
     Json(OrderedJson),
     /// A legacy non-JSON reply (`res.status(code).send(text)`).
     Status(u16, String),
-    /// Legacy would leave the assembly path (redirect, geocoding a new town, a remote remap or
-    /// an unhandled exception). Forward the request to legacy.
+    /// Legacy would leave the assembly path to geocode a new town or remap a region through a
+    /// remote geocoder (S15b-4b-2 reproduces both). Forward the request to legacy.
     Legacy(String),
+    /// A port invariant broke (a store answer the snapshot cannot give). Not legacy behavior:
+    /// the backend answers a dependency failure and never forwards.
+    Defect(String),
 }
 
 /// The v000903 router list in legacy order.
@@ -212,7 +216,7 @@ pub fn assemble(
 ) -> Outcome {
     let outcome = chain::run(request, store, now_ms, config);
     match (&outcome, store.unconsumed()) {
-        (Outcome::Legacy(_), _) | (_, None) => outcome,
+        (Outcome::Legacy(_) | Outcome::Defect(_), _) | (_, None) => outcome,
         (_, Some(reason)) => Outcome::Legacy(reason),
     }
 }

@@ -21,12 +21,53 @@ pub struct Thrown(pub String);
 pub fn throw(message: impl Into<String>) -> ! {
     std::panic::resume_unwind(Box::new(Thrown(message.into())))
 }
-/// Legacy work this port cannot reproduce (a redirect, geocoding a new town, a remote remap).
+/// Legacy work this port cannot reproduce yet (geocoding a new town, a remote remap; S15b-4b-2).
 /// It passes every legacy `catch` and ends the assembly with a forward to legacy.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Forward(pub String);
 pub fn forward(reason: impl Into<String>) -> ! {
     std::panic::resume_unwind(Box::new(Forward(reason.into())))
+}
+/// A reply legacy Express sends outside the router list (`next(err)` reaching the default
+/// handler, `res.redirect`): it passes every legacy `catch` and ends the assembly with that
+/// status and body.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Reply(pub u16, pub String);
+pub fn reply(status: u16, body: impl Into<String>) -> ! {
+    std::panic::resume_unwind(Box::new(Reply(status, body.into())))
+}
+/// Express's default handler (finalhandler 0.4.1 in production, legacy `app.js` has no
+/// four-argument error handler) for an error without a status: 500 `Internal Server Error`.
+pub fn next_err() -> ! {
+    reply(500, INTERNAL_SERVER_ERROR)
+}
+/// The finalhandler 0.4.1 production body of a 500.
+pub const INTERNAL_SERVER_ERROR: &str = "Internal Server Error\n";
+/// `ControllerTown._getUrlWithCoord(lat, lon, req.query)` (`controllerTown.js:5648`) with the
+/// legacy default `config.apiServer.url` (`http://localhost`, `API_SERVER` unset). Only a 302
+/// body carries it, and the gateway never relays a non-200 backend body.
+pub fn redirect_url(lat: &V, lon: &V, query: &V) -> String {
+    let mut url = format!(
+        "http://localhost/weather/coord/{},{}",
+        to_str(lat),
+        to_str(lon)
+    );
+    if let Some(q) = query.as_obj() {
+        for (i, (k, v)) in q.entries().into_iter().enumerate() {
+            url.push(if i == 0 { '?' } else { '&' });
+            url.push_str(&k);
+            url.push('=');
+            url.push_str(&to_str(&v));
+        }
+    }
+    url
+}
+/// A store answer the snapshot cannot give (a port invariant broke, not legacy behavior): it
+/// passes every legacy `catch` and ends the assembly as a dependency failure.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Defect(pub String);
+pub fn defect(reason: impl Into<String>) -> ! {
+    std::panic::resume_unwind(Box::new(Defect(reason.into())))
 }
 thread_local! {
     /// Count of asynchronous callbacks entered on this thread (see [`async_boundary`]).
@@ -477,7 +518,7 @@ impl V {
                     V::Undef
                 }
             }
-            V::Str(s) if k == "length" => V::Num(s.encode_utf16().count() as f64),
+            V::Str(s) if k == "length" => V::Num(units(s).len() as f64),
             _ => V::Undef,
         }
     }
@@ -498,8 +539,7 @@ impl V {
             V::Obj(o) => o.has(k),
             V::Arr(a) => k == "length" || index_key(k).is_some_and(|i| (i as usize) < a.len()),
             V::Str(s) => {
-                k == "length"
-                    || index_key(k).is_some_and(|i| (i as usize) < s.encode_utf16().count())
+                k == "length" || index_key(k).is_some_and(|i| (i as usize) < units(s).len())
             }
             _ => false,
         }
@@ -602,7 +642,8 @@ pub fn strict_eq(a: &V, b: &V) -> bool {
         (V::Undef, V::Undef) | (V::Null, V::Null) => true,
         (V::Bool(x), V::Bool(y)) => x == y,
         (V::Num(x), V::Num(y)) => x == y,
-        (V::Str(x), V::Str(y)) => x == y,
+        // Code-unit equality: stand-ins compare like the surrogates they hold.
+        (V::Str(x), V::Str(y)) => x == y || ((has_lone(x) || has_lone(y)) && units(x) == units(y)),
         (V::Arr(x), V::Arr(y)) => x.ptr_eq(y),
         (V::Obj(x), V::Obj(y)) => x.ptr_eq(y),
         // Dates are objects: identity is not preserved through clones; legacy never compares them.
@@ -629,7 +670,7 @@ pub fn loose_eq(a: &V, b: &V) -> bool {
 fn relational(a: &V, b: &V) -> Option<std::cmp::Ordering> {
     let (pa, pb) = (to_primitive(a), to_primitive(b));
     if let (V::Str(x), V::Str(y)) = (&pa, &pb) {
-        return Some(x.encode_utf16().cmp(y.encode_utf16()));
+        return Some(units(x).cmp(&units(y)));
     }
     let (x, y) = (to_number(&pa), to_number(&pb));
     x.partial_cmp(&y)
@@ -758,15 +799,47 @@ pub fn sv(v: &V) -> String {
         )),
     }
 }
-fn utf16(s: &str) -> Vec<u16> {
-    s.encode_utf16().collect()
+/// First code point of the range that stands for JavaScript's unpaired surrogates.
+///
+/// A JavaScript string is a sequence of UTF-16 code units and may hold an unpaired surrogate
+/// (`'\u{1F600}'.substr(0, 1)`); a Rust string cannot. The port keeps one as the code point
+/// `LONE_BASE + (unit - 0xD800)` (U+10F800..U+10FFFF, the upper half of Supplementary Private
+/// Use Area-B, which KMA and AirKorea text never uses) and turns it back into its code unit
+/// wherever code units matter: [`units`] (length, indices, comparison, `JSON.stringify`
+/// output). Two halves that end up adjacent form their pair again in the output, as in
+/// JavaScript.
+const LONE_BASE: u32 = 0x10F800;
+/// The UTF-16 code units JavaScript holds for a port string.
+pub fn units(s: &str) -> Vec<u16> {
+    let mut out = Vec::with_capacity(s.len());
+    let mut buf = [0u16; 2];
+    for c in s.chars() {
+        let cp = c as u32;
+        if cp >= LONE_BASE {
+            out.push((cp - LONE_BASE + 0xD800) as u16);
+        } else {
+            out.extend_from_slice(c.encode_utf16(&mut buf));
+        }
+    }
+    out
 }
-/// UTF-16 code units to a string. JavaScript strings may hold an unpaired surrogate that a Rust
-/// string cannot; replacing it would change the reply, so the request is forwarded instead.
-fn from16(u: &[u16]) -> String {
-    String::from_utf16(u).unwrap_or_else(|_| {
-        forward("unpaired UTF-16 surrogate in a string (kept by JavaScript, not reproduced)")
-    })
+fn utf16(s: &str) -> Vec<u16> {
+    units(s)
+}
+/// Whether a port string holds a stand-in for an unpaired surrogate.
+fn has_lone(s: &str) -> bool {
+    s.chars().any(|c| c as u32 >= LONE_BASE)
+}
+/// UTF-16 code units to a port string (an unpaired surrogate becomes its stand-in).
+pub fn from16(u: &[u16]) -> String {
+    char::decode_utf16(u.iter().copied())
+        .map(|r| {
+            r.unwrap_or_else(|e| {
+                char::from_u32(LONE_BASE + (u32::from(e.unpaired_surrogate()) - 0xD800))
+                    .expect("stand-in code point")
+            })
+        })
+        .collect()
 }
 /// `s.substr(start, len)` on a string (start >= 0).
 pub fn substr(s: &str, start: usize, len: usize) -> String {
@@ -958,14 +1031,30 @@ mod tests {
         assert_eq!(to_str(&add(&V::s("2026"), &V::s("0924"))), "20260924");
         assert_eq!(to_str(&add(&V::from(1.), &V::s("mm"))), "1mm");
         assert_eq!(parse_int(&V::s("0900")), 900.);
-        // An unpaired surrogate forwards instead of becoming U+FFFD (S15-R17).
+        // An unpaired surrogate is kept as JavaScript keeps it (S15b-4b-1; pinned Node 16.20.2:
+        // `JSON.stringify` escapes it, and two halves made adjacent form their pair again).
         let lone = OrderedJson::parse(br#"{"name":"a\ud800b"}"#).unwrap();
-        let p = std::panic::catch_unwind(|| from_store(&lone)).expect_err("forward");
-        assert!(p.downcast_ref::<Forward>().is_some());
+        let value = from_store(&lone);
+        assert_eq!(to_number(&value.get("name").get("length")), 3.);
+        assert_eq!(
+            to_json(&value).unwrap().to_bytes(),
+            br#"{"name":"a\ud800b"}"#
+        );
         let pair = OrderedJson::parse(br#"{"name":"\ud83d\ude00"}"#).unwrap();
         assert_eq!(sv(&from_store(&pair).get("name")), "\u{1f600}");
-        let half = std::panic::catch_unwind(|| substr("\u{1f600}x", 1, 2)).expect_err("forward");
-        assert!(half.downcast_ref::<Forward>().is_some());
+        let half = V::from(substr("\u{1f600}x", 1, 2));
+        assert_eq!(to_number(&half.get("length")), 2.);
+        assert_eq!(to_json(&half).unwrap().to_bytes(), br#""\ude00x""#);
+        let joined = add(
+            &V::from(substr("\u{1f600}", 0, 1)),
+            &V::from(substr("\u{1f600}", 1, 1)),
+        );
+        assert!(strict_eq(&joined, &V::s("\u{1f600}")));
+        assert_eq!(
+            to_json(&joined).unwrap().to_bytes(),
+            "\"\u{1f600}\"".as_bytes()
+        );
+        assert!(lt(&V::from(substr("\u{1f600}", 0, 1)), &V::s("\u{e000}")));
         assert_eq!(slice("a\u{1f600}b", 1, Some(3)), "\u{1f600}");
         // Pinned Node 16.20.2 decodeURI (S15-R16).
         for (s, ok) in [

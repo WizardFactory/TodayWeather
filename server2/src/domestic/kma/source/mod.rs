@@ -786,10 +786,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             mx: num("mx"),
             my: num("my"),
         };
+        // A coordinate outside the KMA grid has no grid collection: legacy's `find` by `mCoord`
+        // finds no row, so every grid collection answers empty (no acquisition either).
         let grid = (coord.mx.fract() == 0. && coord.my.fract() == 0.)
             .then(|| crate::history::Grid::new(coord.mx as u16, coord.my as u16))
-            .flatten()
-            .ok_or("town grid outside the KMA grid")?;
+            .flatten();
         // One wait bound for the whole request (at most REQUEST_WAIT, 3 s, and ANSWER_RESERVE
         // before the deadline): station observations, ASOS history, the forecast, air and life
         // acquisitions all stop waiting at `until`, so the waits never add up; late parts are
@@ -827,6 +828,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         ) = tokio::join!(
             zones_and_mids,
             async {
+                let Some(grid) = grid else {
+                    return (
+                        Ok(Vec::new()),
+                        Ok(Vec::new()),
+                        Ok(Vec::new()),
+                        Ok(Vec::new()),
+                    );
+                };
                 tokio::join!(
                     self.grid_answer_by(Family::Current, grid, now, deadline, until),
                     self.grid_answer_by(Family::Shortest, grid, now, deadline, until),

@@ -379,3 +379,43 @@ once. On top of that, the same budgets fund:
   - A backfill pass whose bound ends leaves its unstarted publications to the next pass.
   - Retry keys are bounded at 65,536 (expired keys pruned; beyond that new acquisitions are
     skipped and S3 answers as stored).
+
+## S15b-4b (2026-10-16)
+
+S15b-4b is split into three PRs
+([#2742 comment](https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6206378683)):
+
+| PR | Content |
+| --- | --- |
+| 4b-1 | Legacy replies outside the router list, the V8 `Date.parse` port, unpaired surrogates, grids outside KMA, defects as dependency failures (no provider) |
+| 4b-2 | Unknown towns (`_findTown` → `convertGeocode`: Kakao address search, then Google), the town addition stored in S3, the `KR` remap (`geo.name2address`); removal of the remaining forward mechanism |
+| 4b-3 | S3-only parity counts, the KMA shadow family module, the KMA release and S19 smokes |
+
+### S15b-4b-1 legacy replies outside the router list
+
+Declaration: [S15b-4b1.json](../server2/config/tasks/S15b-4b1.json). Base: master `a9b3a23d`.
+
+**Sources and which was followed.**
+
+| Path | Legacy | Followed |
+| --- | --- | --- |
+| Escaped exception, `next(err)` | `app.js:167-197`: the handlers take three arguments, so Express skips them as error handlers; finalhandler 0.4.1 (`express` 4.13.4, `server/package-lock.json`) | Production body `Internal Server Error\n`, as the oracle recorded for `query-malformed-escape` |
+| End of the router list | `app.js:168-172` 404 middleware → finalhandler | 404 `Not Found\n` |
+| Coordinate outside Korea | `controllerTown.js:170-174` `res.redirect`, `_getUrlWithCoord` `:5648-5659` | 302; the body carries the legacy default `apiServer.url`, and the gateway never relays a non-200 body |
+| `Date.parse` | Node 16.20.2, V8 9.4 `src/date/dateparser*.{h,cc}`, `src/builtins/builtins-date.cc` | Full port, compared with the binary |
+| Unpaired surrogates | V8 strings are UTF-16; Node 16 `JSON.stringify` is well-formed | Stand-in code points, mapped back wherever code units matter |
+| `mCoord` outside the grid | `_getTownDataFromDB` `find({'mCoord.mx', 'mCoord.my'})` returns nothing (`controllerTown.js:4407-4421`) | Empty grid collections, no acquisition |
+
+**Live calls:** none. No provider is involved.
+
+### Scenarios (S15b-4b-1)
+
+| ID | User and goal | Steps | Expected / failure | AC and proof |
+| --- | --- | --- | --- | --- |
+| N1 | Malformed escape in the query | Oracle `query-malformed-escape` | Express 500, matched natively (before: forwarded) | `parity::all_oracle_scenarios_match_legacy_bytes` |
+| N2 | Station page with a small year | Oracle `stn-small-year-datetime` | Matched natively (before: forwarded) | same |
+| N3 | Any date string | Corpus of 20,048 strings | Equal to Node 16.20.2 `Date.parse` | `v8_date::date_parse_equals_node_16_on_the_recorded_corpus`, `time::tests` |
+| N4 | `next(err)`, escaped exception, redirect, defect | Unwinding payloads | 500, 500, 302, defect | `chain::tests::replies_outside_the_router_list_are_answered_natively` |
+| N5 | Outside-Korea redirect URL | Query keys and values | `_getUrlWithCoord` string | `chain::tests::the_redirect_url_follows_get_url_with_coord` |
+| N6 | Emoji cut in half | `substr`, concatenation, comparison | Node 16 semantics | `js::tests::coercion_follows_javascript` |
+| N7 | Store row without `shortData` (async callback) | Replay | 500 (before: forwarded) | `replay::an_exception_in_a_store_callback_is_not_caught_by_an_earlier_try` |

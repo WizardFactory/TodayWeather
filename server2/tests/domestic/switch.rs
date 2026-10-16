@@ -10,7 +10,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use server2::{
     domestic::kma::{
         AssemblyConfig, KmaRequest,
-        backend::{KmaBackend, KmaSource, LegacyOnly, SourceAnswer, select_native},
+        backend::{KmaBackend, KmaSource, SourceAnswer, select_native},
     },
     gateway::{
         BackendDispatcher, BackendMode, BoxFuture, Family, Gateway, GatewayError, Geocoder, Version,
@@ -23,6 +23,13 @@ use std::sync::{
 };
 use tokio::time::Instant;
 
+/// A source that keeps every request on legacy (TEST ONLY; the runtime uses the S3 source).
+struct LegacyOnly;
+impl KmaSource for LegacyOnly {
+    fn snapshot(&self, _: &KmaRequest, _: Instant) -> BoxFuture<'_, SourceAnswer> {
+        Box::pin(async { SourceAnswer::Forward("no native KMA input source configured".into()) })
+    }
+}
 struct Myeongdong;
 impl Geocoder for Myeongdong {
     fn coord(&self, _: [f64; 2], lang: String) -> BoxFuture<'_, Result<GeoClient, GatewayError>> {

@@ -399,6 +399,7 @@ fn body(outcome: Outcome) -> Value {
         Outcome::Json(json) => serde_json::from_slice(&json.to_bytes()).unwrap(),
         Outcome::Status(code, text) => panic!("{code} {text}"),
         Outcome::Legacy(reason) => panic!("forwarded: {reason}"),
+        Outcome::Defect(reason) => panic!("defect: {reason}"),
     }
 }
 

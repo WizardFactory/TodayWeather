@@ -271,21 +271,37 @@ pub fn run(
         match result {
             Ok(Flow::Next) => (),
             Ok(Flow::Done(outcome)) => return outcome,
-            Err(payload) => {
-                let payload = match payload.downcast::<Forward>() {
-                    Ok(f) => return Outcome::Legacy(format!("{name}: {}", f.0)),
-                    Err(p) => p,
-                };
-                match payload.downcast::<Thrown>() {
-                    // Legacy Express turns an escaped exception into a 500 (or the process
-                    // crashes for an async callback): never invent a reply, forward instead.
-                    Ok(t) => return Outcome::Legacy(format!("{name}: uncaught {}", t.0)),
-                    Err(other) => std::panic::resume_unwind(other),
-                }
-            }
+            Err(payload) => return outcome_of(name, payload),
         }
     }
-    Outcome::Legacy("router list ended without a reply".into())
+    // Express then runs the legacy 404 middleware (`app.js`: `next(err)` with status 404),
+    // which finalhandler 0.4.1 answers in production.
+    Outcome::Status(404, "Not Found\n".into())
+}
+
+/// The reply of a middleware that left the router list by unwinding: a forward, an Express
+/// reply outside the list, a port defect, or an escaped legacy exception. Any other panic is a
+/// Rust bug and keeps unwinding.
+fn outcome_of(name: &str, payload: Box<dyn std::any::Any + Send>) -> Outcome {
+    let payload = match payload.downcast::<Forward>() {
+        Ok(f) => return Outcome::Legacy(format!("{name}: {}", f.0)),
+        Err(p) => p,
+    };
+    let payload = match payload.downcast::<super::js::Reply>() {
+        Ok(r) => return Outcome::Status(r.0, r.1),
+        Err(p) => p,
+    };
+    let payload = match payload.downcast::<super::js::Defect>() {
+        Ok(d) => return Outcome::Defect(format!("{name}: {}", d.0)),
+        Err(p) => p,
+    };
+    match payload.downcast::<Thrown>() {
+        // An escaped exception reaches Express's default handler (finalhandler 0.4.1,
+        // production): 500 `Internal Server Error`. In an asynchronous callback it ends the
+        // legacy process instead; the gateway hop then fails the same way (no 200 reply).
+        Ok(_) => Outcome::Status(500, super::js::INTERNAL_SERVER_ERROR.into()),
+        Err(other) => std::panic::resume_unwind(other),
+    }
 }
 
 /// `checkQueryValidation` (ControllerTown24h).
@@ -446,8 +462,8 @@ fn make_result(cx: &mut Cx) -> Flow {
     });
     match r {
         Ok(()) => Flow::Next,
-        // next(err): Express renders a 500 page.
-        Err(t) => super::js::forward(format!("makeResult error {}", t.0)),
+        // next(err): Express's default handler.
+        Err(_) => super::js::next_err(),
     }
 }
 /// `x.toFixed(d)` as a string (number receiver required).
@@ -466,4 +482,56 @@ fn send_result(cx: &mut Cx) -> Flow {
     let result = cx.r("result");
     let body = super::js::to_json(&result).unwrap_or(crate::gateway::OrderedJson::Null);
     Flow::Done(Outcome::Json(body))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn unwind(f: impl FnOnce() + std::panic::UnwindSafe) -> Box<dyn std::any::Any + Send> {
+        std::panic::catch_unwind(f).expect_err("unwinds")
+    }
+    /// Express answers outside the router list instead of a forward (S15b-4b-1): `next(err)`
+    /// and an escaped exception are finalhandler 0.4.1's production 500, `res.redirect` its 302;
+    /// a port defect is its own outcome (the backend answers a dependency failure).
+    #[test]
+    fn replies_outside_the_router_list_are_answered_natively() {
+        let p = unwind(|| super::super::js::next_err());
+        assert_eq!(
+            outcome_of("makeResult", p),
+            Outcome::Status(500, "Internal Server Error\n".into())
+        );
+        let p = unwind(|| super::super::js::throw("TypeError: x"));
+        assert_eq!(
+            outcome_of("getAllDataFromDb", p),
+            Outcome::Status(500, "Internal Server Error\n".into())
+        );
+        let p = unwind(|| super::super::js::reply(302, "Found. Redirecting to /x"));
+        assert_eq!(
+            outcome_of("getAllDataFromDb", p),
+            Outcome::Status(302, "Found. Redirecting to /x".into())
+        );
+        let p = unwind(|| super::super::js::defect("town_model collection not loaded"));
+        assert_eq!(
+            outcome_of("getShort", p),
+            Outcome::Defect("getShort: town_model collection not loaded".into())
+        );
+    }
+    /// `_getUrlWithCoord(lat, lon, req.query)`: keys in `for...in` order, values as strings.
+    #[test]
+    fn the_redirect_url_follows_get_url_with_coord() {
+        let query = V::Obj(Ob::new());
+        query.set("airForecastSource", V::s("kaq"));
+        query.set(
+            "units",
+            V::Arr(super::super::js::Arr::from_vec(vec![V::s("a"), V::s("b")])),
+        );
+        assert_eq!(
+            super::super::js::redirect_url(&V::from(35.1), &V::from(140.25), &query),
+            "http://localhost/weather/coord/35.1,140.25?airForecastSource=kaq&units=a,b"
+        );
+        assert_eq!(
+            super::super::js::redirect_url(&V::s("1"), &V::s("2"), &V::Obj(Ob::new())),
+            "http://localhost/weather/coord/1,2"
+        );
+    }
 }

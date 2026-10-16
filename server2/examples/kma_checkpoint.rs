@@ -43,6 +43,7 @@ fn main() {
                     samples.push(t.elapsed().as_secs_f64() * 1e6);
                     continue;
                 }
+                Outcome::Defect(reason) => panic!("{}: defect {reason}", sc["id"]),
             };
             samples.push(t.elapsed().as_secs_f64() * 1e6);
             assert_eq!(

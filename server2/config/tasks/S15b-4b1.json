@@ -1,0 +1,49 @@
+{
+  "task": "S15b-4b1",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-4b1.json",
+    "server2/src/domestic/kma/dateparse.rs",
+    "server2/src/domestic/kma/time.rs",
+    "server2/src/domestic/kma/js.rs",
+    "server2/src/domestic/kma/chain.rs",
+    "server2/src/domestic/kma/present.rs",
+    "server2/src/domestic/kma/data.rs",
+    "server2/src/domestic/kma/mod.rs",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/gateway/metrics.rs",
+    "server2/examples/kma_checkpoint.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/v8_date.rs",
+    "server2/tests/domestic/parity.rs",
+    "server2/tests/domestic/support.rs",
+    "server2/tests/domestic/replay.rs",
+    "server2/tests/domestic/switch.rs",
+    "server2/tests/domestic/air_forecast_s3.rs",
+    "server2/tests/domestic/fixtures/v8-date-parse.json.gz",
+    "server2/tests/domestic/fixtures/v8_date_corpus.js",
+    "server2/tests/domestic/fixtures/V8-DATE-PROVENANCE.md"
+  ],
+  "outside": [
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "S15b-4b-1 section: legacy replies outside the router list, the V8 Date.parse port, unpaired surrogates, grids outside KMA, defects"
+    },
+    {
+      "path": "plans/issue-2742.md",
+      "category": "documentation",
+      "reason": "S15b-4b split (4b-1/4b-2/4b-3), sources and scenarios of 4b-1"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6206378683",
+  "path_notes": {
+    "server2/src/domestic/kma/dateparse.rs": "port of V8 9.4 DateParser and ParseDateTimeString (BSD notice kept); replaces the forward for unported Date.parse forms",
+    "server2/src/domestic/kma/chain.rs": "escaped exceptions, next(err) and the end of the router list are Express's finalhandler 0.4.1 replies; defects are their own outcome",
+    "server2/src/domestic/kma/js.rs": "Reply/Defect payloads, redirect_url, unpaired surrogates kept as stand-ins",
+    "server2/src/domestic/kma/backend.rs": "defects and Rust panics are dependency failures (counted), never forwards; LegacyOnly moves to the switch test",
+    "server2/src/gateway/metrics.rs": "server2_gateway_native_defects_total counter",
+    "server2/tests/domestic/fixtures/v8-date-parse.json.gz": "pinned Node 16.20.2 Date.parse corpus (provenance in V8-DATE-PROVENANCE.md)"
+  }
+}

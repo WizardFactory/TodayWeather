@@ -2449,6 +2449,64 @@ The release `kma_smoke.py` answers natively in its `kma` phase. The provider cal
 live on 2026-10-15; see the plan for the list. The remaining forward reasons (unknown towns, a grid
 outside KMA, the S15 declared forwards) belong to S15b-4b. Cold-cell latency belongs to S15b-4c.
 
+### S15b-4b-1 legacy replies outside the router list (2026-10-16)
+
+S15b-4b-1 ([plan](../../plans/issue-2742.md#s15b-4b-1-legacy-replies-outside-the-router-list))
+answers natively what the KMA assembly still forwarded without needing a provider. Two paths
+still forward and need a geocoder: an unknown town and the `KR` remap (S15b-4b-2).
+
+**Express replies.** Legacy `app.js` (L167-197) defines its error handlers with three arguments,
+so Express does not use them as error handlers: every error reaches Express's default handler.
+That is finalhandler 0.4.1 (`express` 4.13.4 in `server/package-lock.json`), running in production.
+
+| Path | Reply |
+| --- | --- |
+| An escaped exception, and `next(err)` from `makeResult` or `insertSkyIconLowCase` | 500 `Internal Server Error\n` |
+| The end of the router list (the legacy 404 middleware) | 404 `Not Found\n` |
+| `getAllDataFromDb` for a coordinate outside Korea (`res.redirect(_getUrlWithCoord(...))`, `controllerTown.js:170-174`, `:5648`) | 302 |
+
+An exception thrown inside an asynchronous callback ends the legacy process instead. The gateway's
+legacy hop treats any non-200 backend reply as a dependency failure (`gateway::backend`), so the
+gateway answers all of these the same way it answered the legacy hop. The oracle's
+`query-malformed-escape` reply (500, `Internal Server Error\n`) is now matched natively.
+
+**`Date.parse`.** `domestic::kma::dateparse` ports V8's date parser as shipped in Node 16.20.2
+(V8 9.4): the ES5 ISO form, then the permissive legacy parser, followed by `MakeDay`, `MakeTime`,
+`MakeDate` and `TimeClip`, with the process zone UTC. The V8 BSD notice is kept in the module. It
+replaces the earlier subset, which forwarded any form it could not read.
+
+The port equals the pinned binary on a recorded corpus of 20,048 strings
+([provenance](../../server2/tests/domestic/fixtures/V8-DATE-PROVENANCE.md)), and on the table of
+earlier pinned values. The oracle's `stn-small-year-datetime` (`0001-09-24 09:03`, which V8 reads
+as 2024-01-09 09:03) is now matched natively. The KMA page dates use the same parser.
+
+**Unpaired surrogates.** A JavaScript string can hold an unpaired UTF-16 surrogate, for example
+half of an emoji cut by `substr`. The port keeps one as a stand-in code point (U+10F800 + offset,
+the upper half of Supplementary Private Use Area-B, which KMA and AirKorea text never uses). It
+restores the code unit wherever code units matter: `length`, indices, comparison, `===` and
+`JSON.stringify`. The gateway serializer escapes a lone surrogate the way well-formed
+`JSON.stringify` does, and two halves that become adjacent form their pair again.
+
+Limitation: provider JSON with an escaped lone surrogate is rejected by the source's JSON parser,
+while legacy `JSON.parse` keeps it.
+
+**Grids outside KMA.** A town whose `mCoord` is not a KMA grid cell gets empty grid and RSS
+collections. Legacy's `find` by `mCoord` returns no row, so no acquisition starts.
+
+**Defects.** A store answer the snapshot cannot give (`unavailable`) or a Rust panic in assembly
+is a port invariant failure, not legacy behavior. The backend answers it as a dependency failure
+and counts it in `server2_gateway_native_defects_total`. It never forwards. `LegacyOnly` is now a
+test-only source.
+
+**Verification** (local, no provider):
+
+| Check | Result |
+| --- | --- |
+| All 85 oracle scenarios and the S02 goldens | Match with no declared forward (previously two) |
+| The V8 corpus | Equal to Node 16.20.2 |
+| Unit tests | Reply/Defect outcomes, `_getUrlWithCoord`, surrogate semantics against Node 16.20.2 values |
+| The store-callback exception (`replay`) | Now the Express 500 |
+
 ### S10e legacy settings and server2/.env (2026-10-15)
 
 [S10e](../../plans/issue-2753.md) ([spec](../../specs/issue-2753.md), #2753) applies AK's decisions of

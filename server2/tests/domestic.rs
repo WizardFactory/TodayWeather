@@ -32,3 +32,5 @@ mod stub;
 mod support;
 #[path = "domestic/switch.rs"]
 mod switch;
+#[path = "domestic/v8_date.rs"]
+mod v8_date;
