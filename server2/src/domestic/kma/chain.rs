@@ -23,6 +23,8 @@ pub struct Cx<'a> {
     pub config: AssemblyConfig,
     /// `self.dbTownList` (loaded once per controller).
     pub towns: Option<Arr>,
+    /// S16: a JSON copy of the `_getDaySummaryList` rows `getPastMid` merged.
+    pub past_days: Option<Vec<crate::gateway::OrderedJson>>,
 }
 impl Cx<'_> {
     pub fn r(&self, key: &str) -> V {
@@ -372,6 +374,24 @@ fn chain(version: &str, part: Option<&str>) -> Option<Vec<(&'static str, Middlew
     };
     names.into_iter().map(step).collect()
 }
+/// S16: whether a router list reaches `getPastMid` through exactly the steps of v000903 that
+/// shape its current list (`checkQueryValidation` only sets query defaults). Legacy v000901,
+/// v000902 and v000803 share that prefix (`route.kma.addr.js:53`, `route.kma.v000902.js:53`,
+/// `v000803/routeTownForecast.js:47`); v000705 has no ultra-short sky repair and its `/mid`
+/// route no current steps, so their day rows are not the S16 grid summary.
+fn summarizes(steps: &[(&'static str, Middleware)]) -> bool {
+    let prefix = |list: &[(&'static str, Middleware)]| -> Option<Vec<&'static str>> {
+        let at = list.iter().position(|(n, _)| *n == "getPastMid")?;
+        Some(
+            list[..at]
+                .iter()
+                .map(|(n, _)| *n)
+                .filter(|n| *n != "checkQueryValidation")
+                .collect(),
+        )
+    };
+    prefix(steps).is_some_and(|p| Some(p) == prefix(&CHAIN))
+}
 /// Names of the router list of `version` (and a v000705 sub-route) in order (for tests and
 /// diagnostics).
 pub fn names(version: &str, part: Option<&str>) -> Vec<&'static str> {
@@ -429,12 +449,13 @@ impl KmaStore for Callbacks<'_> {
     }
 }
 
-pub fn run(
+/// Run the router list; also returns the `getPastMid` day-summary rows (S16).
+pub fn run_capturing(
     request: &KmaRequest,
     store: &dyn KmaStore,
     now: f64,
     config: AssemblyConfig,
-) -> Outcome {
+) -> (Outcome, Option<Vec<crate::gateway::OrderedJson>>) {
     let store = &Callbacks(store);
     let params = Ob::new();
     if let Some(r) = &request.region {
@@ -467,30 +488,42 @@ pub fn run(
         now,
         config,
         towns: None,
+        past_days: None,
     };
     let Some(steps) = chain(&request.version, request.part.as_deref()) else {
-        return Outcome::Legacy(format!("no native router list for {}", request.version));
+        return (
+            Outcome::Legacy(format!("no native router list for {}", request.version)),
+            None,
+        );
     };
+    let summarized = summarizes(&steps);
     for (name, step) in steps {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| step(&mut cx)));
         match result {
             Ok(Flow::Next) => (),
-            Ok(Flow::Done(outcome)) => return outcome,
+            Ok(Flow::Done(outcome)) => {
+                return (outcome, cx.past_days.filter(|_| summarized));
+            }
             Err(payload) => {
                 let payload = match payload.downcast::<Forward>() {
-                    Ok(f) => return Outcome::Legacy(format!("{name}: {}", f.0)),
+                    Ok(f) => return (Outcome::Legacy(format!("{name}: {}", f.0)), None),
                     Err(p) => p,
                 };
                 match payload.downcast::<Thrown>() {
                     // Legacy Express turns an escaped exception into a 500 (or the process
                     // crashes for an async callback): never invent a reply, forward instead.
-                    Ok(t) => return Outcome::Legacy(format!("{name}: uncaught {}", t.0)),
+                    Ok(t) => {
+                        return (Outcome::Legacy(format!("{name}: uncaught {}", t.0)), None);
+                    }
                     Err(other) => std::panic::resume_unwind(other),
                 }
             }
         }
     }
-    Outcome::Legacy("router list ended without a reply".into())
+    (
+        Outcome::Legacy("router list ended without a reply".into()),
+        None,
+    )
 }
 
 /// `checkQueryValidation` (ControllerTown24h).

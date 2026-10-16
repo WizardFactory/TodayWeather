@@ -283,6 +283,14 @@ impl<T> BoundedS3<T> {
     pub fn available(&self) -> usize {
         self.gate.available_permits()
     }
+    /// One admission permit, for request kinds implemented outside this file (S16 summaries).
+    pub(crate) async fn permit(&self) -> Result<tokio::sync::SemaphorePermit<'_>, Error> {
+        self.gate.acquire().await.map_err(|_| Error::Capacity)
+    }
+    /// The admitted transport.
+    pub(crate) fn inner(&self) -> &T {
+        &self.inner
+    }
 }
 impl<T: crate::storage::ObjectTransport> crate::storage::ObjectTransport for BoundedS3<T> {
     async fn put(&self, record: &crate::storage::PreparedRecord) -> Result<u16, Error> {

@@ -1,6 +1,6 @@
 //! Native v000903 KMA backend for the S10 dispatcher (`Family::Kma`). Registration keeps legacy
 //! selected; a request whose inputs the source cannot supply is forwarded to legacy.
-use super::{AssemblyConfig, KmaRequest, KmaStore, Outcome, assemble};
+use super::{AssemblyConfig, KmaRequest, KmaStore, Outcome, assemble, assemble_capturing};
 use crate::gateway::{
     BackendDispatcher, BackendHandler, BackendMode, BoxFuture, Family, GatewayError, OrderedJson,
     Version, backend::Native,
@@ -49,11 +49,21 @@ pub fn select_native_versions(
     source: Arc<dyn KmaSource>,
     versions: &[Version],
 ) -> Result<Arc<KmaBackend>, GatewayError> {
-    let backend = Arc::new(KmaBackend::new(
-        source,
-        system_clock(),
-        AssemblyConfig::default(),
-    ));
+    select_native_versions_with(dispatcher, source, versions, None)
+}
+/// [`select_native_versions`] with the S16 summary recorder: every natively assembled response
+/// whose route reaches `getPastMid` with the v000903 current-data prefix records its town's
+/// daily summaries (address versions and v000803 town, excluding v000705).
+pub fn select_native_versions_with(
+    dispatcher: &BackendDispatcher,
+    source: Arc<dyn KmaSource>,
+    versions: &[Version],
+    summaries: Option<Arc<dyn crate::summary::SummarySink>>,
+) -> Result<Arc<KmaBackend>, GatewayError> {
+    let backend = Arc::new(
+        KmaBackend::new(source, system_clock(), AssemblyConfig::default())
+            .with_summaries(summaries),
+    );
     for version in versions {
         backend.register_version(dispatcher, *version);
         KmaBackend::select_version(dispatcher, *version, BackendMode::Native)?;
@@ -76,6 +86,8 @@ pub struct KmaBackend {
     clock: Clock,
     config: AssemblyConfig,
     cpu: Arc<Semaphore>,
+    /// S16: receives the summary inputs of natively served responses.
+    summaries: Option<Arc<dyn crate::summary::SummarySink>>,
 }
 impl KmaBackend {
     pub fn new(source: Arc<dyn KmaSource>, clock: Clock, config: AssemblyConfig) -> Self {
@@ -84,7 +96,13 @@ impl KmaBackend {
             clock,
             config,
             cpu: Arc::new(Semaphore::new(2)),
+            summaries: None,
         }
+    }
+    /// Record S16 summaries after natively served responses (None: no recording).
+    pub fn with_summaries(mut self, sink: Option<Arc<dyn crate::summary::SummarySink>>) -> Self {
+        self.summaries = sink;
+        self
     }
     /// Register for v000903 (legacy stays selected).
     pub fn register(self: &Arc<Self>, dispatcher: &BackendDispatcher) {
@@ -140,21 +158,31 @@ impl KmaBackend {
         };
         let now = store.as_of_ms().unwrap_or_else(|| (self.clock)());
         let config = self.config;
+        // S16: only a snapshot whose reads were complete records summaries.
+        let inputs = self.summaries.as_ref().and_then(|_| store.summary_inputs());
         let permit = tokio::time::timeout_at(deadline, self.cpu.clone().acquire_owned())
             .await
             .map_err(|_| GatewayError::Provider)?
             .map_err(|_| GatewayError::Provider)?;
-        match tokio::task::spawn_blocking(move || {
+        let (outcome, past_days) = match tokio::task::spawn_blocking(move || {
             let _permit = permit;
-            assemble(&request, store.as_ref(), now, config)
+            assemble_capturing(&request, store.as_ref(), now, config)
         })
         .await
         {
-            Ok(outcome) => Ok(outcome),
+            Ok(outcome) => outcome,
             // A Rust panic is a port defect, not legacy behavior: legacy answers instead.
-            Err(e) if e.is_panic() => Ok(Outcome::Legacy("assembly panic".into())),
-            Err(_) => Err(GatewayError::Provider),
+            Err(e) if e.is_panic() => return Ok(Outcome::Legacy("assembly panic".into())),
+            Err(_) => return Err(GatewayError::Provider),
+        };
+        // S16: a JSON answer whose route ran `getPastMid` (a captured day list) records the
+        // town's daily summaries; `getPastMid` reads the same inputs on every version.
+        if let (Outcome::Json(_), Some(sink), Some(inputs), Some(rows)) =
+            (&outcome, &self.summaries, inputs, past_days)
+        {
+            sink.record(inputs, rows, now);
         }
+        Ok(outcome)
     }
 }
 impl BackendHandler for KmaBackend {

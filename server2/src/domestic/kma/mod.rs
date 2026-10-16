@@ -17,7 +17,7 @@ mod chain;
 mod data;
 pub mod js;
 mod mid;
-mod policy;
+pub(crate) mod policy;
 pub(crate) mod precip;
 mod present;
 mod short;
@@ -152,6 +152,11 @@ pub trait KmaStore {
     fn unconsumed(&self) -> Option<String> {
         None
     }
+    /// S16: the summary inputs of a snapshot whose reads were complete, or None (nothing is
+    /// recorded for this request).
+    fn summary_inputs(&self) -> Option<crate::summary::GridInputs> {
+        None
+    }
 }
 /// The store cannot answer a call from its snapshot: end the assembly and forward to legacy.
 /// It passes every legacy `catch` (see [`js::forward`]).
@@ -225,10 +230,20 @@ pub fn assemble(
     now_ms: f64,
     config: AssemblyConfig,
 ) -> Outcome {
-    let outcome = chain::run(request, store, now_ms, config);
+    assemble_capturing(request, store, now_ms, config).0
+}
+/// [`assemble`], also returning a JSON copy of the `_getDaySummaryList` rows `getPastMid`
+/// merged (S16 grid summaries), or None when that step merged none.
+pub fn assemble_capturing(
+    request: &KmaRequest,
+    store: &dyn KmaStore,
+    now_ms: f64,
+    config: AssemblyConfig,
+) -> (Outcome, Option<Vec<OrderedJson>>) {
+    let (outcome, past) = chain::run_capturing(request, store, now_ms, config);
     match (&outcome, store.unconsumed()) {
-        (Outcome::Legacy(_), _) | (_, None) => outcome,
-        (_, Some(reason)) => Outcome::Legacy(reason),
+        (Outcome::Legacy(_), _) | (_, None) => (outcome, past),
+        (_, Some(reason)) => (Outcome::Legacy(reason), past),
     }
 }
 

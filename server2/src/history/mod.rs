@@ -11,7 +11,7 @@ pub mod index;
 pub mod legacy;
 pub mod metrics;
 pub mod schedule;
-mod transport;
+pub(crate) mod transport;
 pub use transport::IndexListing;
 
 use crate::storage::ProviderKey;

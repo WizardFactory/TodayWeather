@@ -256,6 +256,7 @@ pub mod budget;
 pub mod domestic;
 pub mod history;
 pub mod providers;
+pub mod summary;
 
 pub mod gateway;
 pub mod geocode;

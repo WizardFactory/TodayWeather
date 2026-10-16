@@ -121,6 +121,20 @@ impl<T: IndexListing + Clone> Reader<T> {
         partition: &str,
         deadline: Instant,
     ) -> Result<Vec<Fetched>, Error> {
+        self.acquisitions_counted(source, kind, key, partition, deadline)
+            .await
+            .map(|(f, _)| f)
+    }
+    /// [`Self::acquisitions`] and the number of listed groups S06 excluded (not eligible or a
+    /// raw body missing): S16 records nothing from such a partial read.
+    pub async fn acquisitions_counted(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        deadline: Instant,
+    ) -> Result<(Vec<Fetched>, usize), Error> {
         let id = CatalogId {
             source: source.into(),
             kind: kind.into(),
@@ -131,7 +145,7 @@ impl<T: IndexListing + Clone> Reader<T> {
         let set = match self.store.lookup(&id, deadline).await {
             Ok(LookupOutcome::Ready(set)) => set,
             Ok(LookupOutcome::Incomplete) => return Err(Error::Corrupt("incomplete catalog")),
-            Err(Error::NotFound) => return Ok(Vec::new()),
+            Err(Error::NotFound) => return Ok((Vec::new(), 0)),
             Err(e) => return Err(e),
         };
         let mut out = Vec::new();
@@ -153,7 +167,7 @@ impl<T: IndexListing + Clone> Reader<T> {
                 pages: records.iter().map(|r| r.bytes.clone()).collect(),
             });
         }
-        Ok(out)
+        Ok((out, set.excluded_groups()))
     }
     /// Every complete acquisition of one catalog as raw records (envelopes kept), in catalog
     /// order; empty when the catalog does not exist.
@@ -165,15 +179,30 @@ impl<T: IndexListing + Clone> Reader<T> {
         partition: &str,
         deadline: Instant,
     ) -> Result<Vec<Vec<RawRecord>>, Error> {
+        self.raw_counted(source, kind, key, partition, deadline)
+            .await
+            .map(|(r, _)| r)
+    }
+    /// [`Self::raw`] and the number of listed groups S06 excluded (S16 completeness).
+    pub async fn raw_counted(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        deadline: Instant,
+    ) -> Result<(Vec<Vec<RawRecord>>, usize), Error> {
         let id = catalog(source, kind, key, partition)?;
         match self.store.lookup(&id, deadline).await {
-            Ok(LookupOutcome::Ready(set)) => Ok(set
-                .acquisitions()
-                .iter()
-                .map(|a| ordered(a.records()))
-                .collect()),
+            Ok(LookupOutcome::Ready(set)) => Ok((
+                set.acquisitions()
+                    .iter()
+                    .map(|a| ordered(a.records()))
+                    .collect(),
+                set.excluded_groups(),
+            )),
             Ok(LookupOutcome::Incomplete) => Err(Error::Corrupt("incomplete catalog")),
-            Err(Error::NotFound) => Ok(Vec::new()),
+            Err(Error::NotFound) => Ok((Vec::new(), 0)),
             Err(e) => Err(e),
         }
     }
@@ -221,17 +250,33 @@ impl<T: IndexListing + Clone> Reader<T> {
         partitions: &[String],
         deadline: Instant,
     ) -> Result<Vec<Fetched>, Error> {
+        self.all_counted(source, kind, key, partitions, deadline)
+            .await
+            .map(|(f, _)| f)
+    }
+    /// [`Self::all`] and the number of listed groups S06 excluded (S16 completeness).
+    pub async fn all_counted(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partitions: &[String],
+        deadline: Instant,
+    ) -> Result<(Vec<Fetched>, usize), Error> {
         let mut out = Vec::new();
+        let mut excluded = 0;
         for chunk in partitions.chunks(LOOKUPS) {
             let reads = crate::history::join_all(
                 chunk
                     .iter()
-                    .map(|p| self.acquisitions(source, kind, key, p, deadline))
+                    .map(|p| self.acquisitions_counted(source, kind, key, p, deadline))
                     .collect(),
             )
             .await;
             for r in reads {
-                out.extend(r?);
+                let (f, e) = r?;
+                out.extend(f);
+                excluded += e;
             }
         }
         out.sort_by(|a, b| {
@@ -239,7 +284,7 @@ impl<T: IndexListing + Clone> Reader<T> {
                 .cmp(&b.fetched_at_ms)
                 .then_with(|| a.partition.cmp(&b.partition))
         });
-        Ok(out)
+        Ok((out, excluded))
     }
 }
 /// KST months (`YYYYMM`) from `from_ms` through `to_ms`.
