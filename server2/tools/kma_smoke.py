@@ -139,7 +139,7 @@ def run(binary, peer_binary):
             for families in (None, native, None):
                 process, base = start(peer_command(peer_binary, endpoint, s3), endpoint, families)
                 try:
-                    phase_start = len(Origin.paths)
+                    first_native = True
                     for path, hop, listed in cases:
                         before = len(Origin.paths)
                         s3_before = s3_requests(s3)
@@ -152,12 +152,16 @@ def run(binary, peer_binary):
                             assert not legacy_kma, ('the %s phase forwarded' % families, path, hops)
                             assert s3_read > 0, 'the %s S3 input source read nothing' % families
                             json.loads(body)
-                            acquired = [p for p in Origin.paths[phase_start:] if not p.startswith('/geocode/')]
-                            assert any(p.startswith('/1360000/VilageFcstInfoService_2.0/') for p in acquired), acquired
-                            assert any(p.startswith('/wid/queryDFS.jsp') for p in acquired), acquired
-                            assert any(p.startswith('/1360000/MidFcstInfoService/') for p in acquired), acquired
+                            acquired = [p for p in hops if not p.startswith('/geocode/')]
+                            if first_native:
+                                # The phase's first native request acquires the missing forecast
+                                # inputs itself; later requests of the phase share them from S3.
+                                first_native = False
+                                assert any(p.startswith('/1360000/VilageFcstInfoService_2.0/') for p in acquired), acquired
+                                assert any(p.startswith('/wid/queryDFS.jsp') for p in acquired), acquired
+                                assert any(p.startswith('/1360000/MidFcstInfoService/') for p in acquired), acquired
                             print('PASS SERVER2_NATIVE_FAMILIES=%s: %s answered natively from S3 with %d loopback '
-                                  'provider requests so far, no legacy KMA hop' % (families, path, len(acquired)), flush=True)
+                                  'provider requests during it, no legacy KMA hop' % (families, path, len(acquired)), flush=True)
                         else:
                             assert legacy_kma, (path, hops)
                             assert s3_read == 0, ('legacy request read S3', path, s3_read)
