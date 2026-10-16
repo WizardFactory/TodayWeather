@@ -1,0 +1,46 @@
+{
+  "task": "S17a",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2702",
+  "server2_paths": [
+    "server2/config/tasks/S17a.json",
+    "server2/src/domestic/kma/air.rs",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/domestic/kma/chain.rs",
+    "server2/src/domestic/kma/mod.rs",
+    "server2/src/domestic/kma/present.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/.env.example",
+    "server2/tools/kma_smoke.py",
+    "server2/tests/legacy_versions.rs",
+    "server2/tests/legacy_versions/",
+    "server2/tests/domestic/recorded.rs",
+    "server2/tests/gateway/runtime.rs"
+  ],
+  "outside": [
+    {
+      "path": "specs/issue-2702.md",
+      "category": "documentation",
+      "reason": "S17 specification: slices, family routing entries and parity contract; no implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2702.md",
+      "category": "documentation",
+      "reason": "S17 execution plan: S17a scenarios, checks and verification record; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Append the S17a section and the kma-v000901/kma-v000902 routing entries"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2702#issuecomment-6193953948",
+  "path_notes": {
+    "server2/src/domestic/kma/": "S15 chain gains the v000901/v000902 router lists (chain.rs), makeAirInfo/AirForecast (air.rs), the _parseSkyState icon spelling (present.rs), version-aware path parsing and per-version registration (backend.rs, mod.rs); the S15b input source is unchanged",
+    "server2/src/gateway/runtime.rs": "shared: kma-v000901 and kma-v000902 entries in SERVER2_NATIVE_FAMILIES build the same S3 input source as kma and select their gateway backends",
+    "server2/.env.example": "shared: lists the two new routing entries",
+    "server2/tools/kma_smoke.py": "S15 release smoke extended to the new entries (legacy -> native -> legacy, refusals)",
+    "server2/tests/legacy_versions/": "kma_parity.rs, kma_gateway.rs, support.rs, fixtures/kma-older.json.gz (pinned legacy oracle) and fixtures/PROVENANCE.md",
+    "server2/tests/domestic/recorded.rs": "shared S15 replay double: builds /{version}/kma{path} from a recording's version (default v000903)",
+    "server2/tests/gateway/runtime.rs": "shared S10c routing test: its NativeFamilies literal uses ..default() for the two new fields (no behavior change)"
+  }
+}

@@ -46,6 +46,8 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
             }
             text
         }
+        // `res.json(undefined)` exists only on the v000705 town route.
+        Outcome::Undefined => return Err(format!("{id}: native res.json(undefined)")),
         Outcome::Legacy(reason) => {
             // A declared forward: legacy answers this request (the port does not reproduce it).
             return match FORWARDED.iter().find(|(f, _)| *f == id) {
