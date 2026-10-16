@@ -756,13 +756,15 @@ disable hidden adapter send retries. Record sanitized errors/uncertain outcomes
 so operations can fix the next independently scheduled send. Never broadcast or
 resend on startup recovery. Weather-provider retry rules are unchanged.
 
-D03 starts with **new registrations** through existing APIs. Do not export/import
-or reverse-migrate legacy push registrations. This is an approved registration
-continuity difference, not permission to alter payload/status/header/auth behavior
-or discard weather history. Preserve/restore newly accepted S3 state during
-rollback; a route switch alone cannot undo accepted mutations. S18 owns schema,
-ordered concurrent state updates and ownership in the single Rust process,
-subject to S02 contract proofs and publication/deadline gates.
+D03 as first approved started with new registrations only. **AK superseded it on
+2026-10-14**: legacy push/alarm registrations are copied once into server2 before
+cutover (a read-only export; legacy MongoDB is not changed) and users keep
+registering through the existing API contract. There is no reverse migration;
+legacy is retired at cutover. Preserve/restore accepted S3 state during rollback;
+a route switch alone cannot undo accepted mutations. S18 owns schema, ordered
+concurrent state updates and ownership in the single Rust process, subject to S02
+contract proofs and publication/deadline gates; see the
+[S18a section](#s18a-push-registration-state-2026-10-15).
 
 ## 7. Budgets, deadlines and failures
 
@@ -2582,3 +2584,110 @@ two retained versions, budget and demand create/412 repeat/CAS update, and 403 (
 policy deny) for an unconditional `raw/v2` PUT; see the
 [sanitized evidence](../evidence/aws/server2-s3-readiness-2026-10-15.json). Not verified: the real
 IMDS on EC2 and the runtime role's 404/403 statuses, which the same tool checks at deployment.
+
+### S18a push registration state (2026-10-15)
+
+[S18a](../../plans/issue-2703.md) ([spec](../../specs/issue-2703.md), #2703) ports the used push
+registration routes and moves their state from MongoDB to server2-owned S3 state. Delivery (S18b)
+and notices (S18c, no legacy route exists yet; #2623 is open) are separate. The
+[declaration](../../server2/config/tasks/S18a.json) lists the paths. The routes are a library
+service with a loopback router, like S12; process wiring and the family switch belong to S20.
+
+**Routes.** `POST`, `PUT` and `DELETE` on `/v000705/push` and `/v000902/push`
+(`routes/v000705/routePushNotification.js`, one router mounted on both), `POST /v000902/push-list`
+(`routes/v000902/route.push.update.list.js`), and the `cors()` preflight for every method. The
+observed groups are `PUT`/`DELETE`/`OPTIONS /v000902/push`, `POST /v000902/push-list` and
+`POST /v000705/push`; the other method/mount pairs share the same handler. The port follows the
+legacy request path step by step: body-parser 1.20.6 `json()` (100 kb, strict, `utf-*`
+charsets) and `urlencoded({extended: false})` (a null-prototype object, so `hasOwnProperty` is a
+TypeError), the version router's `decodeURI(req.originalUrl)`, Express case-insensitive mounts,
+the handlers' validation in order (TypeError messages as V8 prints them), `initUnits`,
+`updatePushInfo`/`updateAlertPush`, `lib/pushStore/mongo.js` (`keyQuery`, `tokenQuery`, upsert,
+`multi` token renames, `remove`), Mongoose 5.1.2 casting (query keys cast last first; `CastError`
+text via `util.inspect`, including the `MongooseArray` form; ` for model "x"` on query casts) and
+the saved document's key order and `minimize`, and the `geo` field's `2d` index bounds (a point
+outside [-180, 180) is a write error, as MongoDB refuses it; the server message text
+`point not in interval of [ -180, 180 )` is not re-verified against a live 3.4 server). Answers are `res.send` (JSON or `text/html`, weak
+ETag) or the production `finalhandler` (status text, `nosniff`). Write results are the MongoDB
+3.4 write-command reply core (`{n, upserted?, nModified, ok}`, delete `{n, ok}`); replica-set
+metadata (`opTime`, `electionId`, `$clusterTime`) is not reproduced and the app ignores the body.
+
+**Deliberate differences.** Update operators in a body (`$inc`, ...) are dropped and operator
+query values (`{"$ne": ...}`) are cast errors, so a body cannot run MongoDB operators (legacy
+passed them through). A castable `_id` in a body is ignored (MongoDB refuses to change `_id`; an
+upsert would take a client-chosen id). Items of one `push-list` request that target the same key
+apply in list order (legacy ran them concurrently and could duplicate an alert). Date strings in
+date fields follow Mongoose (`new Date(string)`) for the ECMAScript date-time format and the
+millisecond rule; V8's legacy free-form forms (`Oct 1 2020`, ` 2020`, `2020-02-30`, unsigned
+six-digit years) are cast errors. Only `precipAlerts`/`airAlerts.pushTime` can carry a client date
+(`updatedAt` is set by the server) and the app never sends them. The session cookie is not set
+(as S12).
+
+**State.** Records keep the legacy document shape (field names, BSON kinds, `_id`, natural
+order), so the copied registrations and new ones are one data set. Memory holds each record as
+its encoded document plus the five fields queries use (`type`, `cityIndex`, `id`, `fcmToken`,
+`registrationId`) and token indexes: the 76,442 production registrations take about 65 MB. One
+writer task orders every change (D01): a request is planned against the current state in a
+transaction overlay, and one that changes state is answered only after its journal entry is in
+S3. Before planning, the writer reads the next journal sequence so another process's entry
+(the importer, an overlapping replacement) is applied first.
+
+| S3 object (`index/v2/push/state/`) | Write | Content |
+| --- | --- | --- |
+| `journal/{seq:012}.json` | `If-None-Match: *` | header line, then one line per changed record (final state or removal) |
+| `snapshot/{seq:012}-{nonce}/{part:04}.json` | `If-None-Match: *` | header line, then record lines (2 MiB parts) |
+| `head.json` | `If-Match` (or `If-None-Match: *`) | snapshot sequence, natural-order counter, parts with sha256 and counts |
+
+A journal sequence belongs to exactly one entry, so two writers can never both commit it; the
+loser gets `412`, applies the other entry and plans again. An unknown write outcome (timeout,
+transport error, 5xx) is read back: our body means committed; absent means a `void` entry is
+written conditionally so the original can never commit later; if that cannot be decided, the
+writer accepts no further change until it can (a later read that finds the entry applies it,
+durable though never acknowledged). A 4xx refusal and a credential failure before sending are
+not commits. A removal entry keeps the record's `_id`, and snapshots keep removed `_id`s, so a
+registration removed through the API is never re-created by a later import. Restore reads the head, its parts (at most 8 reads at once, digests and counts
+checked) and the journal after it until the first absent sequence; a failed restore leaves the
+service unready and retries every 5 s. A snapshot is written after 1,024 entries (each part
+upload bounded to 8 s); a failed snapshot leaves the journal authoritative and is retried after
+the next commit, so while snapshots keep failing the journal to replay grows beyond 1,024
+entries. Other S3 operations have a 2 s bound; a request waits at most 9 s (the app's timeout is
+10 s). State is memory and S3 only: no local-disk copy is made, so device
+tokens are not written to disk (AK's 2026-10-15 disk-cache rule changes nothing here).
+
+When the change cannot be made durable in time (S3 refusal, void, unready state, full queue or
+the wait expiring), the route gives its legacy store-error answer with the message
+`push state storage unavailable`: `POST /push` and `PUT` 500, `DELETE` 501, and `push-list` 200
+with `null` for each affected item (the legacy batch helper swallows store errors). Validation and
+cast-error answers are unchanged because they precede any store call.
+
+**One-time copy.** `push_registration_convert PUSHES ALERTPUSHES IMPORT REPORT` (offline) reads
+`mongoexport` output of `pushes` and `alertpushes` (lines or `--jsonArray`; relaxed, canonical or
+legacy Extended JSON) and writes canonical import lines (owner-only file mode) and a report with
+counts, positions and reasons only. A document is malformed when it is not JSON, lacks an
+ObjectId `_id`, repeats an `_id`, has a model field of the wrong BSON kind, uses an unsupported
+Extended JSON type, or has neither `fcmToken` nor `registrationId`; fields the model does not
+declare are kept. `push_registration_import IMPORT` (server2 S3 settings, as the S12 importer)
+restores the state and merges by `_id`. Each imported record keeps the sha256 of the legacy
+document it came from, so a later run can tell who changed it: absent records are inserted in
+export order; a record removed in server2 stays removed; identical is unchanged; when only server2
+changed it (the legacy document equals the one imported before) server2 is kept; when only legacy
+changed it, it is replaced; when both changed, a newer legacy `updatedAt` wins, otherwise server2
+is kept (no date is never "newer"). It commits 1 MiB journal
+entries, re-plans after another writer's entry and writes a snapshot. A re-run with the same file
+writes nothing. The final run before cutover is an S20 operator step.
+
+**Verification.** The [oracle fixture](../../server2/tests/state/fixtures/PROVENANCE.md) replays
+115 requests in 9 scenarios through the legacy routes (Node 16.20.2, Express 4.13.4, Mongoose
+5.1.2 over an in-memory collection double; synthetic data); server2 matches status, body bytes,
+headers (except date, connection and the session cookie) and both collections after every
+request, and the final state after an empty-memory restore. Fault tests cover refused, lost,
+committed-but-lost and unreadable writes, a concurrent writer, two writers racing for the same
+sequences (no false success, contiguous journal, converged state), 24 concurrent requests (contiguous
+journal, identical restore), multi-part snapshots, a corrupt snapshot (unready, legacy store
+errors) and a hanging store (answer within the wait, nothing acknowledged late); one test runs
+the journal over `HttpS3Transport` and the owned S3 peer with injected `commit500`,
+`drop-commit` and `conflict409`. A read-only copy of the production collections (2026-10-15,
+MongoDB 3.4.15; 42,226 alarms and 34,216 alerts) converted with no malformed document, imported
+into a loopback S3 peer in 2.0 s (64 journal entries), restored in 1.3 s with every record equal,
+and a re-run changed nothing. The raw export and converted file were deleted after the check; no
+token or record was committed or logged. No push provider was called.
