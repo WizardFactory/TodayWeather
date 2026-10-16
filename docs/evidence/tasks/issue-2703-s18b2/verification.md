@@ -1,8 +1,9 @@
 # S18b-2 conditional alerts: selected verification
 
 2026-10-16, local macOS arm64. This record is retained because it binds the conditional
-worker's compatibility and no-resend evidence to maintained reproduction inputs. Source
-commit: `7b3584760994a93e4c7f6b5dd0449e2079c9c484`; stacked task base:
+worker's compatibility and no-resend evidence to maintained reproduction inputs. Initial
+source commit: `7b3584760994a93e4c7f6b5dd0449e2079c9c484`; scheduler clock-jump fix:
+`71be606e2700a0b37baf2089e5b59c7d451be6da`; original stacked task base:
 `9fed989e806408f3502867c01e111caca1188326` (S18b-1). Review/CI receipts belong on the PR
 at its exact final head; they are not claimed by this self-verification record.
 
