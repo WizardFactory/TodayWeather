@@ -2776,8 +2776,9 @@ indexed key fields and decodes only grouped records; the 60-day removal and the 
 re-check records in the writer: of the records the `makeRemoveSelector` filter matches, the
 selected one is removed only while it still equals the document read at selection and any other
 only while its own `updatedAt` is older than 60 days; an unregistered token's disable removes
-exactly those records in its own journal entry (legacy disabled, then removed them the same
-minute), so no restart can leave one enabled; the
+exactly those records of every selection of the minute with that token in its own journal entry
+(legacy disabled, then removed them the same minute), so no restart can leave one enabled and one
+disable never makes another stale selection look recent; the
 stamp applies only while the record still has no `updatedAt`. So a user change or removal made
 during the minute is never undone (even one that repeats the same settings) and a stamp never
 re-enables a disabled token (legacy removed every match and upserted the copy read before
@@ -2800,7 +2801,8 @@ made during the minute (changed or identical settings) survives the stale cleanu
 with a lost answer and a failed read-back sends nothing, also after a restart, and the next minute
 delivers; a refused claim and an unrestored state
 send nothing; an unregistered token's alarms are disabled durably before the outcome (not
-re-enabled by the stamp; a stale one removed), and a failed disable is reported and not resent;
+re-enabled by the stamp; stale ones removed in the disable's journal entry, also when several
+share the token), and a failed disable is reported and not resent;
 the classification follows firebase-admin 5.13.1 for its detail type and for current FCM error
 bodies; diagnostics and ledger objects contain no token, coordinate or name. With
 42,226 synthetic alarms a minute ran in about 0.1–0.2 s (debug build, loopback doubles). Only

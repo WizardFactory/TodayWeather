@@ -15,14 +15,14 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
     match op {
         InternalOp::DisableAlarmsByFcm { token, spare } => {
             let now = txn.now_ms;
-            let spared = spare
-                .as_ref()
-                .map(|s| still_stale(txn, s))
-                .unwrap_or_default();
+            let mut spared: Vec<u64> = spare.iter().flat_map(|s| still_stale(txn, s)).collect();
+            spared.sort_unstable();
+            spared.dedup();
             let query = [("fcmToken".to_owned(), Cond::Eq(Val::Str(token.clone())))];
-            // The stale records the delivery's cleanup would remove are removed here, in the same
-            // journal entry as the disable (legacy disabled, then removed them the same minute),
-            // so no restart or later failure can leave one of them enabled.
+            // The stale records this minute's cleanup would remove (of every selection with this
+            // token) are removed here, in the same journal entry as the disable (legacy disabled,
+            // then removed them the same minute), so no restart or later failure can leave one
+            // of them enabled, and disabling one never makes another look recently updated.
             for n in &spared {
                 txn.remove(Coll::Alarm, *n);
             }

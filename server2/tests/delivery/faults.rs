@@ -603,6 +603,43 @@ async fn an_unregistered_stale_record_is_removed_with_the_disable_in_one_entry()
 }
 
 #[tokio::test]
+async fn stale_selections_sharing_a_token_are_all_removed() {
+    // Two stale alarms of one token with different selectors (cityIndex/id) in one minute, both
+    // answered unregistered: the first disable must not make the second look recent.
+    let old = Val::Date(1_700_000_000_000.);
+    let mut a = alarm(1, "gone", 79200, "");
+    a.1.doc.set("updatedAt", old.clone());
+    let mut b = alarm(2, "gone", 79200, "");
+    b.1.doc.set("updatedAt", old);
+    let other = alarm(3, "gone", 0, "");
+    let rig = rig_named("shared-token", &[a, b, other]).await;
+    for _ in 0..2 {
+        rig.google
+            .state
+            .fcm
+            .lock()
+            .unwrap()
+            .push_back(Answer::Json(404, UNREGISTERED.into()));
+    }
+    let report = rig.worker.run_minute(NOW).await;
+    assert_eq!(report.deliveries.len(), 2);
+    let restored = start(
+        &rig.s3,
+        rig.clock.clone(),
+        super::state_common::fast_config(),
+    )
+    .await;
+    let state = restored.state();
+    let state = state.read().unwrap();
+    let records: Vec<(Val, Val)> = state
+        .coll(Coll::Alarm)
+        .iter()
+        .map(|(_, r)| (r.doc.get("cityIndex").clone(), r.doc.get("enable").clone()))
+        .collect();
+    assert_eq!(records, [(Val::Num(3.), Val::Bool(false))]);
+}
+
+#[tokio::test]
 async fn a_failed_disable_is_reported_and_nothing_is_resent() {
     let rig = rig("disable-failed", AT, &[alarm(1, "gone", 79200, "")], None).await;
     rig.weather.set(&kma_weather());

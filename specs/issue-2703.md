@@ -83,7 +83,8 @@ Rules:
   removal goes record by record over the `makeRemoveSelector` matches: the selected record
   (number, `_id`) only while it still equals the document read at selection, any other match only
   while its own `updatedAt` is older than 60 days; an unregistered token's disable removes exactly
-  those records in the same journal entry; the stamp only while the selected record still has no
+  those records of every selection of the minute with that token, in the same journal entry; the
+  stamp only while the selected record still has no
   `updatedAt`. An unknown result write is read back; a refused or undecidable one is a minute note and
   counter; the claim stays.
 - Ledger: `index/v2/push/delivery/alarm/{YYYYMMDD}/{HHMM}.json` with `If-None-Match: *` before any

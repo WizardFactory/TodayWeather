@@ -221,16 +221,16 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
 
     /// `sendNotification`: weather, text, provider (one delivery, never retried).
     pub async fn deliver(&self, info: &mut Obj, now_ms: i64) -> Delivery {
-        self.deliver_selected(info, now_ms, None).await
+        self.deliver_selected(info, now_ms, &[]).await
     }
 
-    /// [`Self::deliver`] for a selected record whose stale cleanup (`spare`) follows: an
-    /// unregistered token's disable leaves the records that cleanup removes.
+    /// [`Self::deliver`] within a minute whose stale cleanups are `stale`: an unregistered
+    /// token's disable removes those of the same token in the same journal entry.
     async fn deliver_selected(
         &self,
         info: &mut Obj,
         now_ms: i64,
-        spare: Option<&StaleSelection>,
+        stale: &[StaleSelection],
     ) -> Delivery {
         let message = match weather::daily_summary(info, &self.servers, &*self.fetch).await {
             Ok(m) => m,
@@ -268,7 +268,11 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                         .push
                         .internal(InternalOp::DisableAlarmsByFcm {
                             token: to_string(&token),
-                            spare: spare.cloned(),
+                            spare: stale
+                                .iter()
+                                .filter(|s| s.selected.get("fcmToken") == &token)
+                                .cloned()
+                                .collect(),
                         })
                         .await;
                     Delivery::Unregistered { status, disabled }
@@ -365,28 +369,38 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
         // `_removeOldList` decides on the records as selected: stale ones (not updated for 60
         // days) are removed after the sends, the others without `updatedAt` are stamped.
         let cutoff = now_ms - 60 * DAY_MS;
+        let selections: Vec<(u64, Oid, Obj, Option<StaleSelection>)> =
+            due.into_iter()
+                .map(|(n, oid, info)| {
+                    let stale = match info.get("updatedAt") {
+                        Val::Date(ms) if (*ms as i64) < cutoff => super::ops::remove_filter(&info)
+                            .map(|filter| StaleSelection {
+                                n,
+                                oid,
+                                selected: info.clone(),
+                                cutoff_ms: cutoff,
+                                filter,
+                            }),
+                        _ => None,
+                    };
+                    (n, oid, info, stale)
+                })
+                .collect();
+        let all_stale: Arc<Vec<StaleSelection>> = Arc::new(
+            selections
+                .iter()
+                .filter_map(|(_, _, _, s)| s.clone())
+                .collect(),
+        );
         let gate = Arc::new(Semaphore::new(CONCURRENCY));
-        let mut tasks = Vec::with_capacity(due.len());
-        for (n, oid, info) in due {
+        let mut tasks = Vec::with_capacity(selections.len());
+        for (n, oid, info, stale) in selections {
             let gate = gate.clone();
-            let stale = match info.get("updatedAt") {
-                Val::Date(ms) if (*ms as i64) < cutoff => {
-                    super::ops::remove_filter(&info).map(|filter| StaleSelection {
-                        n,
-                        oid,
-                        selected: info.clone(),
-                        cutoff_ms: cutoff,
-                        filter,
-                    })
-                }
-                _ => None,
-            };
+            let all_stale = all_stale.clone();
             tasks.push(async move {
                 let _permit = gate.acquire_owned().await.expect("open gate");
                 let mut info = info;
-                let delivery = self
-                    .deliver_selected(&mut info, now_ms, stale.as_ref())
-                    .await;
+                let delivery = self.deliver_selected(&mut info, now_ms, &all_stale).await;
                 (n, oid, stale, info, delivery)
             });
         }
