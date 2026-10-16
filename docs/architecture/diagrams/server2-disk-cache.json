@@ -3,45 +3,86 @@
   "diagram_type": "sequence",
   "meta": {
     "title": "Verified weather disk cache",
-    "subtitle": "S15b-4c design: disposable acceleration, S3 publication remains authority",
+    "subtitle": "S15b-4c: optional immutable raw cache; S3 publication remains authority",
     "output": "docs/architecture/diagrams/server2-disk-cache.html",
     "viewBox": [
       1080,
       680
     ],
     "column_fit": "spread",
-    "quality_profile": "showcase"
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "0f38d6bd31091dc0c54c035056429dbaf7906da2",
+      "provider": "github",
+      "link_mode": "web"
+    }
   },
   "participants": [
     {
       "id": "catalog",
       "type": "backend",
       "label": "Catalog reader",
-      "sublabel": "Published group only"
+      "sublabel": "Published group only",
+      "sources": [
+        {
+          "path": "server2/src/storage/catalog.rs",
+          "line": 466,
+          "end_line": 525
+        }
+      ]
     },
     {
       "id": "store",
       "type": "backend",
       "label": "RawRecordStore",
-      "sublabel": "Expected full identity"
+      "sublabel": "Expected full identity",
+      "sources": [
+        {
+          "path": "server2/src/storage/store.rs",
+          "line": 67,
+          "end_line": 140
+        }
+      ]
     },
     {
       "id": "codec",
       "type": "security",
       "label": "Raw codec",
-      "sublabel": "Hash and identity"
+      "sublabel": "Hash and identity",
+      "sources": [
+        {
+          "path": "server2/src/storage/codec.rs",
+          "line": 319,
+          "end_line": 374
+        }
+      ]
     },
     {
       "id": "disk",
       "type": "database",
       "label": "Local cache",
-      "sublabel": "Bounded; disposable"
+      "sublabel": "Bounded; disposable",
+      "sources": [
+        {
+          "path": "server2/src/cache/disk.rs",
+          "line": 436,
+          "end_line": 600
+        }
+      ]
     },
     {
       "id": "s3",
       "type": "cloud",
       "label": "Canonical S3",
-      "sublabel": "Authoritative raw"
+      "sublabel": "Authoritative raw",
+      "sources": [
+        {
+          "path": "server2/src/storage/transport.rs",
+          "line": 263,
+          "end_line": 295
+        }
+      ]
     }
   ],
   "segments": [
