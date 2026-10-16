@@ -11,7 +11,7 @@
 use serde_json::{Value, json};
 use server2::domestic::kma::{
     DbVersion, KmaRequest, KmaStore, MidModel, StoreError, StoreResult, TownModel,
-    backend::{KmaSource, SourceAnswer, parse_path},
+    backend::{KmaSource, SourceAnswer, parse_path, parse_town_path},
     unavailable,
 };
 use server2::gateway::{BoxFuture, OrderedJson};
@@ -104,9 +104,16 @@ impl RecordedSource {
             let path = text(sc, "path").ok_or(RecordingError("path"))?;
             let query = text(sc, "query").unwrap_or_default();
             let lang = text(sc, "lang").unwrap_or_default();
-            // S17a recordings name their address version; S15 recordings are v000903.
+            // S17 recordings name their version (S15 recordings are v000903); town recordings
+            // (S17b) record the path below `/{version}/town`.
             let version = text(sc, "version").unwrap_or_else(|| "v000903".into());
-            let mut full = format!("/{version}/kma{path}");
+            let town = matches!(version.as_str(), "v000803" | "v000705");
+            // S17b review recordings carry the requested URL (mixed-case mounts).
+            let mut full = match text(sc, "url") {
+                Some(url) => url.split('?').next().unwrap_or_default().to_owned(),
+                None if town => format!("/{version}/town{path}"),
+                None => format!("/{version}/kma{path}"),
+            };
             if !query.is_empty() {
                 full.push('?');
                 full.push_str(&query);
@@ -139,7 +146,11 @@ impl RecordedSource {
             }
             scenarios.push(Recorded {
                 id: text(sc, "id").unwrap_or_default(),
-                request: parse_path(&full, &lang),
+                request: if town {
+                    parse_town_path(&full, &lang)
+                } else {
+                    parse_path(&full, &lang)
+                },
                 db,
                 as_of_ms,
                 calls: replay.into(),

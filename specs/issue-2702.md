@@ -72,3 +72,42 @@ coverage plus the S15b-2 ASOS composition; the v000901/v000902 recording include
   `domestic-v000902-db1` equal their recordings; `gateway-default-domestic`,
   `gateway-v000901-domestic`, `gateway-v000902-domestic` match on the wire (status, body, headers
   except `date`/`connection`) with the native switch, the legacy default and the rollback.
+
+## S17b: direct routes and town
+
+`server2::api::DirectRoutes` answers the legacy direct public routes before the gateway routes
+when their entry is listed: `kma` (`/v000903/kma/addr`), `kma-v000901` (`/v000901/kma/addr`) and
+the new `town` entry (`/v000803/town`, `/v000705/town`). Mounts and route literals match
+case-insensitively, as in Express, and `req.baseUrl` keeps the requested spelling (an upper-case
+`/V000901/KMA/ADDR` drops `req.version`, so the reply has no `location`). The mount itself (with
+or without a trailing slash) answers the legacy usage JSON of `router.get('/')` (v000901 address
+and both town routers). Unlisted paths keep the previous 404; other methods are never claimed. Direct `/v000902/kma/addr` is zero-observed and not claimed.
+
+- **Town router lists** (`routes/v000803/routeTownForecast.js`, `routes/v000705/routeTownForecast.js`):
+  no `checkQueryValidation` (no query defaults, no `req.version`), `insertSkyIcon` (upper case),
+  `getSummary` (ControllerTown: yesterday and `makeSummary` before any unit conversion,
+  `controllerTown.js:2316`). v000803 ends with `makeResult` (no `location`, since `req.version` is
+  unset) and `sendResult`. v000705 adds `dataToFixed` (`controllerTown.js:3142`) and has no
+  `makeResult`, so `sendResult` answers `res.json(undefined)`: 200, `Content-Type:
+  application/json`, an empty body and no ETag. The v000705 sub-routes `/mid`, `/short`,
+  `/shortest`, `/current` run their own lists; the report's `{location}` normalization cannot
+  show them unused.
+- Without query defaults, `makeSummary`'s `rn1 + units.precipitationUnit` is JavaScript `+` with
+  `undefined`: `NaN`, written as `null`.
+- **Express envelope** (Express 4.13.4): `res.json` with `application/json; charset=utf-8` and a
+  weak ETag; `res.status(400).send(text)` with `text/html; charset=utf-8` and an ETag;
+  `fresh` 0.3.0 revalidation for 2xx GET/HEAD (exact tag or `W/` + tag, `*`, `no-cache` and
+  `If-Modified-Since` without `Last-Modified` never fresh) with Express's 304 headers; HEAD
+  without a body (`res.json(undefined)` then has no Content-Length, which Node adds only to a
+  GET); `cors()` and `X-Powered-By`. The locale is i18n 0.8.3 `init` (`twcookie`
+  cookie, then Accept-Language). The app-wide session cookie is not emitted (S12 precedent).
+- **Forwards.** An outcome legacy must answer (`Outcome::Legacy`: the S15b forwards S15b-4a
+  kept, such as a town absent from the town list, the S15 `next(err)`/uncaught-exception
+  forwards, a panic) or a path no native route
+  parses takes the legacy hop unchanged (method, path, query, end-to-end headers; legacy status,
+  headers and body back; hop-by-hop headers, including those a `Connection` header lists, are
+  dropped in both directions; the request target is written verbatim, without resolving `..`
+  or `%2e` segments, so direct routes require the plain-HTTP loopback legacy origin and an HTTPS
+  `SERVER2_GATEWAY_LEGACY_URL` with a direct entry refuses startup). The v000705 `/short`, `/shortest`, `/current` replies without
+  `midData` are legacy 500s from `next(err)` and are forwarded like every S15 `next(err)`;
+  reproducing Express's 500 natively remains open.

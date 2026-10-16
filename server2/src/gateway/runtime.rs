@@ -1,8 +1,9 @@
 //! Process wiring from the operator-injected environment.
 //!
 //! `SERVER2_GATEWAY_LEGACY_URL` enables the gateway. `SERVER2_NATIVE_FAMILIES` lists the
-//! families routed to the native backend (`geocode`, `dsf`, `kma`, and the S17a KMA versions
-//! `kma-v000901`, `kma-v000902`); every other family stays on the
+//! families routed to the native backend (`geocode`, `dsf`, `kma`, the S17a KMA versions
+//! `kma-v000901`, `kma-v000902`, and the S17b direct `town` routes; `kma` and `kma-v000901` also
+//! claim their direct `/kma/addr` routes); every other family stays on the
 //! legacy origin, and an unlisted family reads none of its native settings. Removing a family
 //! from the list and restarting is the rollback. These two and `SERVER2_WORLD_VERSIONS` are
 //! coexistence routing, removed with legacy retirement; with `SERVER2_S3_BUCKET` and
@@ -108,6 +109,8 @@ pub struct NativeFamilies {
     pub kma_v000901: bool,
     /// S17a: KMA v000902 address weather (`kma-v000902`), the backend of `/weather/v000902/coord`.
     pub kma_v000902: bool,
+    /// S17b: the direct town routes `/v000803/town` and `/v000705/town` (`town`).
+    pub town: bool,
 }
 impl NativeFamilies {
     /// The address versions whose KMA backend is native; the shared S3 input source is built
@@ -121,6 +124,19 @@ impl NativeFamilies {
         .into_iter()
         .filter_map(|(on, v)| on.then_some(v))
         .collect()
+    }
+    /// S17b: the listed direct public routes (`kma`: `/v000903/kma/addr`, `kma-v000901`:
+    /// `/v000901/kma/addr`, `town`: `/v000803/town` and `/v000705/town`).
+    pub fn direct(&self) -> crate::api::DirectFamilies {
+        crate::api::DirectFamilies {
+            kma_v000903: self.kma,
+            kma_v000901: self.kma_v000901,
+            town: self.town,
+        }
+    }
+    /// Whether any KMA entry is listed (the shared S3 input source is then built).
+    pub fn kma_source(&self) -> bool {
+        !self.kma_versions().is_empty() || self.direct().any()
     }
 }
 impl NativeFamilies {
@@ -138,6 +154,7 @@ impl NativeFamilies {
                 "kma" => &mut families.kma,
                 "kma-v000901" => &mut families.kma_v000901,
                 "kma-v000902" => &mut families.kma_v000902,
+                "town" => &mut families.town,
                 _ => return Err(GatewayError::InvalidConfiguration),
             };
             if *slot {
@@ -232,7 +249,7 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
     };
     let families = NativeFamilies::from_vars(var)?;
     let backend = BackendDispatcher::legacy(&base)?;
-    let s3 = if families.geocode || families.dsf || !families.kma_versions().is_empty() {
+    let s3 = if families.geocode || families.dsf || families.kma_source() {
         Some(shared_s3(var, builtins)?)
     } else {
         None
@@ -243,7 +260,7 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
     };
     // One process air chain for the world family and the KMA air fallback (S15b-3).
     let air = match &s3 {
-        Some(s3) if families.dsf || !families.kma_versions().is_empty() => {
+        Some(s3) if families.dsf || families.kma_source() => {
             Some(crate::world::runtime::live_air(var, s3.clone(), builtins)?)
         }
         _ => None,
@@ -254,10 +271,11 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
             crate::world::runtime::build_with_air(var, s3, air, builtins)?,
         )?;
     }
-    if let (Some(s3), false) = (s3, families.kma_versions().is_empty()) {
+    let mut direct = None;
+    if let (Some(s3), true) = (s3, families.kma_source()) {
         // S15b: the S3 input source over the shared admission, one for every listed address
-        // version (S17a). S15b-4 acquires missing forecast inputs at request time, so no input
-        // forwards. S15b-2 request-time acquisitions use
+        // version (S17a) and the direct routes (S17b). S15b-4 acquires missing forecast inputs at
+        // request time, so no input forwards. S15b-2 request-time acquisitions use
         // the data.go.kr keys for ASOS and the product geocoder for station coordinates.
         // S15b-3 adds request-time AirKorea
         // acquisition (`AIRKOREA_SECRET_KEYS`) and the air fallback through the shared air chain;
@@ -284,13 +302,29 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         )
         .with_life(Some(life))
         .with_forecast(Some(kma_forecast(&s3, daily_forecast, builtins)?));
-        crate::domestic::kma::backend::select_native_versions(
+        let kma = crate::domestic::kma::backend::select_native_versions(
             &backend,
             Arc::new(source),
             &families.kma_versions(),
         )?;
+        if families.direct().any() {
+            // S17b: the direct routes forward to the loopback legacy origin with the request
+            // target verbatim, which only the plain-HTTP loopback hop provides.
+            if !backend.legacy_is_plain_http() {
+                return Err(GatewayError::InvalidConfiguration);
+            }
+            direct = Some(Arc::new(crate::api::DirectRoutes::new(
+                kma,
+                families.direct(),
+                backend.clone(),
+            )));
+        }
     }
-    Ok(Some(Arc::new(Gateway::new(geocoder, backend))))
+    let gateway = Gateway::new(geocoder, backend);
+    Ok(Some(Arc::new(match direct {
+        Some(direct) => gateway.with_direct(direct),
+        None => gateway,
+    })))
 }
 /// S15b-4: the request-time grid, RSS, mid, forecast-zone and warning acquirer of the KMA source
 /// on the process data.go.kr acquirer (legacy `DONGNAE_SECRET_KEYS`, S08 per key and KST day).

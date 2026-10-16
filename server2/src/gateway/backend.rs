@@ -226,6 +226,108 @@ impl BackendDispatcher {
         switch.mode = mode;
         Ok(())
     }
+    /// S17b coexistence hop for a direct public route the native port forwards: the request goes
+    /// to the legacy origin unchanged (method, path, query and end-to-end headers) and the legacy
+    /// status, headers and body come back unchanged. Hop-by-hop headers are not copied.
+    pub async fn proxy(
+        &self,
+        method: &axum::http::Method,
+        path_and_query: &str,
+        headers: &axum::http::HeaderMap,
+        timeout: Duration,
+    ) -> Result<(u16, axum::http::HeaderMap, Vec<u8>), GatewayError> {
+        const HOP: [&str; 9] = [
+            "connection",
+            "keep-alive",
+            "proxy-authenticate",
+            "proxy-authorization",
+            "te",
+            "trailer",
+            "transfer-encoding",
+            "upgrade",
+            "host",
+        ];
+        let listed = connection_tokens(headers);
+        let forwarded: Vec<(&axum::http::HeaderName, &axum::http::HeaderValue)> = headers
+            .iter()
+            .filter(|(name, _)| {
+                let name = name.as_str();
+                !HOP.contains(&name)
+                    && name != "content-length"
+                    && !listed.contains(&name.to_owned())
+            })
+            .collect();
+        // Review S17B-R2-F1/R3-F1: the legacy origin receives the path exactly as requested (a
+        // URL parser would resolve `..` and `%2e` segments). Direct routes run beside the
+        // loopback legacy origin only (`DirectRoutes` requires a plain-HTTP loopback base).
+        if !self.legacy_is_plain_http() {
+            return Err(GatewayError::InvalidConfiguration);
+        }
+        let (status, legacy_headers, body) = tokio::time::timeout(
+            timeout,
+            self.http1_verbatim(method, path_and_query, &forwarded),
+        )
+        .await
+        .map_err(|_| GatewayError::Provider)??;
+        let listed = connection_tokens(&legacy_headers);
+        let mut out = axum::http::HeaderMap::new();
+        for (name, value) in &legacy_headers {
+            if !HOP.contains(&name.as_str()) && !listed.contains(&name.as_str().to_owned()) {
+                out.append(name.clone(), value.clone());
+            }
+        }
+        Ok((status, out, body))
+    }
+    /// Whether the legacy origin is plain HTTP (`Http::new` admits plain HTTP only on loopback).
+    pub fn legacy_is_plain_http(&self) -> bool {
+        self.http.base.starts_with("http://")
+    }
+    /// One HTTP/1.1 exchange with the `http://` legacy origin that writes the request target
+    /// verbatim.
+    async fn http1_verbatim(
+        &self,
+        method: &axum::http::Method,
+        path_and_query: &str,
+        headers: &[(&axum::http::HeaderName, &axum::http::HeaderValue)],
+    ) -> Result<(u16, axum::http::HeaderMap, Vec<u8>), GatewayError> {
+        let url = reqwest::Url::parse(&self.http.base).map_err(|_| GatewayError::Provider)?;
+        let host = url.host_str().ok_or(GatewayError::Provider)?.to_owned();
+        let port = url.port_or_known_default().ok_or(GatewayError::Provider)?;
+        let authority = match url.port() {
+            Some(p) => format!("{host}:{p}"),
+            None => host.clone(),
+        };
+        let stream = tokio::net::TcpStream::connect((host.trim_matches(['[', ']']), port))
+            .await
+            .map_err(|_| GatewayError::Provider)?;
+        let (mut sender, connection) =
+            hyper::client::conn::http1::handshake(hyper_util::rt::TokioIo::new(stream))
+                .await
+                .map_err(|_| GatewayError::Provider)?;
+        tokio::spawn(connection);
+        let target: axum::http::Uri = path_and_query.parse().map_err(|_| GatewayError::Provider)?;
+        let mut request = axum::http::Request::builder()
+            .method(method.clone())
+            .uri(target)
+            .header("host", authority);
+        for (name, value) in headers {
+            request = request.header(*name, *value);
+        }
+        let request = request
+            .body(axum::body::Body::empty())
+            .map_err(|_| GatewayError::Provider)?;
+        let response = sender
+            .send_request(request)
+            .await
+            .map_err(|_| GatewayError::Provider)?;
+        let status = response.status().as_u16();
+        let headers = response.headers().clone();
+        let body =
+            axum::body::to_bytes(axum::body::Body::new(response.into_body()), PROXY_MAX_BODY)
+                .await
+                .map_err(|_| GatewayError::Provider)?;
+        Ok((status, headers, body.to_vec()))
+    }
     pub fn mode(&self, version: Version, family: Family) -> BackendMode {
         self.switches
             .read()
@@ -352,6 +454,19 @@ impl BackendDispatcher {
         }
         Err(GatewayError::Provider)
     }
+}
+/// The largest legacy body a forwarded direct request carries back (as for backend replies).
+const PROXY_MAX_BODY: usize = 6 * 1024 * 1024;
+/// The header names a `Connection` header lists (hop-by-hop, RFC 9110 7.6.1), lower case.
+fn connection_tokens(headers: &axum::http::HeaderMap) -> Vec<String> {
+    headers
+        .get_all("connection")
+        .iter()
+        .filter_map(|v| v.to_str().ok())
+        .flat_map(|v| v.split(','))
+        .map(|t| t.trim().to_ascii_lowercase())
+        .filter(|t| !t.is_empty())
+        .collect()
 }
 pub(crate) fn backend_path(
     version: Version,

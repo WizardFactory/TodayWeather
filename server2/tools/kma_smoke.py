@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """S15/S15b-1/S17a release HTTP smoke for the KMA routing entries (kma: v000903; S17a kma-v000901,
-kma-v000902: the unversioned and v000901/v000902 gateway backends): legacy ->
+kma-v000902: the unversioned and v000901/v000902 gateway backends; S17b town and the direct /kma/addr
+routes): legacy ->
 SERVER2_NATIVE_FAMILIES=kma -> legacy against a task-owned loopback legacy origin and the owned S06
 S3 test peer. With `kma` the S3 input source reads the shared S3 settings (S10e: SERVER2_S3_BUCKET,
 AWS_ACCESS_KEY, AWS_SECRET_KEY). The legacy phases reach the legacy KMA backend with the same bytes.
@@ -8,7 +9,8 @@ Since S15b-4a a missing forecast input is acquired at request time instead of fo
 `kma` phase answers natively without a legacy KMA hop, must have read S3, and its acquisitions reach
 only the loopback provider roots (the origin answers them with no data). The same holds for the
 S17a `kma-v000901,kma-v000902` phase for the unversioned, v000901 and v000902 requests, while its
-unlisted v000903 request still reaches the legacy KMA backend. S15b-2 and S15b-4a
+unlisted v000903 request still reaches the legacy KMA backend. S17b: the listed direct routes (`town`,
+`kma-v000901`) answer natively from S3 with the Express envelope; unlisted they stay unclaimed (404). S15b-2 and S15b-4a
 request-time acquisitions use the legacy DONGNAE_SECRET_KEYS list.
 The phases run the release `loopback_server` example (the server2 process with its S3 and
 provider roots on the loopback peers; roots are not settings), so no provider is reached. The
@@ -27,6 +29,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import urllib.parse
 import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -171,7 +174,48 @@ def run(binary, peer_binary):
                     g.stop(process)
             for path, phases in bodies.items():
                 assert phases[0] == phases[1], ('the rollback changed the legacy response bytes', path)
+        # S17b direct routes: unlisted they stay unclaimed (404, no legacy hop, no S3 read); listed
+        # (`town`, `kma-v000901`) they answer natively from S3 (S15b-4a request-time acquisition)
+        # with the Express envelope and no legacy hop.
+        town = '/' + '/'.join(urllib.parse.quote(s) for s in ('서울특별시', '중구', '명동'))
+        direct = [('/v000901/kma/addr' + town, 'json'), ('/v000803/town' + town, 'json'),
+                  ('/v000705/town' + town, 'undefined'), ('/v000705/town' + town + '/mid', 'undefined'),
+                  ('/v000803/town', 'usage')]
+        for families in (None, 'town,kma-v000901', None):
+            process, base = start(peer_command(peer_binary, endpoint, s3), endpoint, families)
+            try:
+                for index, (path, kind) in enumerate(direct):
+                    before = len(Origin.paths)
+                    s3_before = s3_requests(s3)
+                    status, headers, body = g.request(base, path, headers={'Accept-Language': 'ko-KR'})
+                    hops = Origin.paths[before:]
+                    headers = {k.lower(): v for k, v in headers.items()}
+                    if families:
+                        assert path not in hops, ('direct route took the legacy hop', path, hops)
+                        assert status == 200 and headers.get('x-powered-by') == 'Express', (path, status, headers)
+                        if kind == 'undefined':
+                            assert body == b'' and headers.get('content-type') == 'application/json', (path, headers, body)
+                            assert 'etag' not in headers, (path, headers)
+                        else:
+                            parsed = json.loads(body)
+                            assert headers.get('etag', '').startswith('W/"'), (path, headers)
+                            if kind == 'usage':
+                                assert list(parsed) == ['usage'], parsed
+                            else:
+                                assert parsed.get('source') == 'KMA', (path, body[:200])
+                        if index == 0:
+                            assert s3_requests(s3) - s3_before > 0, 'the direct route read nothing from S3'
+                    else:
+                        assert (status, body) == (404, b'Not Found'), (path, status, body)
+                        assert not hops and s3_requests(s3) == s3_before, (path, hops)
+                print('PASS %s: direct %s' % ('SERVER2_NATIVE_FAMILIES=' + families if families else 'routing list unset',
+                                             'routes answered natively from S3 with the Express envelope, no legacy hop'
+                                             if families else 'routes stayed unclaimed (404, no legacy hop, no S3 read)'),
+                      flush=True)
+            finally:
+                g.stop(process)
         for bad, with_s3, with_keys in (('kma,kma', True, True), ('KMA', True, True), ('kma,unknown', True, True),
+                                        ('town,town', True, True), ('town', False, True), ('town', True, False),
                                         ('kma', False, True), ('kma', True, False),
                                         ('kma-v000901,kma-v000901', True, True), ('kma-v000903', True, True),
                                         ('kma-v000902', False, True), ('kma-v000901', True, False)):
@@ -183,11 +227,12 @@ def run(binary, peer_binary):
                 env.update(kma_env())
             refused = subprocess.run([binary], env=env, cwd=CWD, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=10)
             assert refused.returncode != 0 and 'server2 public=' not in refused.stdout, (bad, refused.returncode, refused.stderr)
-        print('PASS release server2: unknown or repeated routing entries, and kma or kma-v000901/kma-v000902 without the S3 settings or '
+        print('PASS release server2: unknown or repeated routing entries, and kma, kma-v000901/kma-v000902 or town without the S3 settings or '
               'DONGNAE_SECRET_KEYS, stop startup before binding', flush=True)
-        print('PASS S15b-4a/S17a KMA routing release smoke (legacy -> kma | kma-v000901,kma-v000902 native -> legacy '
-              'with identical legacy bytes; listed versions read the S3 test peer and acquired from loopback roots, '
-              'unlisted versions reached legacy); loopback peers only, no provider/AWS request, no parity claim', flush=True)
+        print('PASS S15b-4a/S17a/S17b KMA routing release smoke (legacy -> kma | kma-v000901,kma-v000902 | town '
+              'native -> legacy with identical legacy bytes; listed entries read the S3 test peer and acquired from '
+              'loopback roots, unlisted versions reached legacy, unlisted direct routes stayed unclaimed); loopback '
+              'peers only, no provider/AWS request, no parity claim', flush=True)
     finally:
         peer.terminate()
         peer.wait(timeout=5)

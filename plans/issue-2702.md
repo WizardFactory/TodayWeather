@@ -39,3 +39,19 @@ A library change selected only by `kma-v000901`/`kma-v000902`; v000903 is unchan
 list is the same table). Since S15b-4a the listed versions answer natively from S3 with request-time
 acquisition of missing forecast inputs, as `kma` does.
 Revert the PR or remove the entries to roll back. Production switches remain S20.
+
+## S17b scenarios
+
+| ID | User and goal | Steps | Expected / failure | Proof |
+| --- | --- | --- | --- | --- |
+| B1 | Old app calls `/v000901/kma/addr` or `/v000903/kma/addr` directly | `kma-v000901`/`kma` listed; GET, revalidate with the ETag, HEAD | Golden status, body and headers; 304 with Express headers; HEAD without body; no legacy hop | `kma_direct::listed_direct_routes_reproduce_the_s02_goldens_natively` |
+| B2 | Old app calls `/v000803/town` | `town` listed; GET and revalidation | `domestic-v000803(-304)` on the wire | same test; `kma_parity::all_town_oracle_scenarios_match_legacy_status_and_bytes` |
+| B3 | Very old app calls `/v000705/town` (and sub-routes) | `town` listed | 200 `application/json` empty body without ETag (`domestic-v000705`); sub-route outcomes as legacy | same tests; `town_status_replies_and_declared_forwards` |
+| B4 | Request with a non-Korean region | `/v000803/town/중국/...` | 400 text as legacy | `town_status_replies_and_declared_forwards` |
+| B5 | The native assembly still yields `Outcome::Legacy` (a town absent from the town list, the S15 `next(err)` cases) | Source or assembly forwards | Legacy reply passes unchanged (status, headers, body, 304) | `forwarded_direct_requests_return_the_legacy_reply_unchanged` (a source answering Forward) |
+| B6 | Operator leaves the entries unlisted | Default list | Paths stay unclaimed (404 as before), no S3 read | `unlisted_direct_routes_keep_the_previous_reply`, `tools/kma_smoke.py` |
+
+Order: town recording and S02 cross-check; Red (tests against S17a: missing `api`,
+`parse_town_path`, `Outcome::Undefined`); town lists, `getSummary`, `dataToFixed`, the
+`rn1Str` `+`; direct routes, envelope and hop; runtime entry; fmt, clippy, tests, smokes,
+placement, artifact policy; PR stacked on S17a; Codex review; CI.

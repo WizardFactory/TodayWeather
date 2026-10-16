@@ -1615,7 +1615,7 @@ The table records the S10c state.
 
 | Concern | Setting | Default / rule |
 | --- | --- | --- |
-| Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf`, `kma` (S15; reads `SERVER2_S3_*` since S15b-1), `kma-v000901`, `kma-v000902` (S17a) | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
+| Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf`, `kma` (S15; reads `SERVER2_S3_*` since S15b-1), `kma-v000901`, `kma-v000902` (S17a), `town` (S17b) | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
 | World versions | `SERVER2_WORLD_VERSIONS` | `v000901,v000902,v000903` |
 | S3 (shared) | `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`, `SERVER2_S3_BUCKET`, `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY` | `ap-northeast-2`; `https://s3.<region>.amazonaws.com/`; bucket and static credentials required when any family is native. One 12-request admission for weather, air and budgets. The importers use the same settings. |
 | Geocoder keys/endpoints | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY`, `GEOCODER_KAKAO_BASE_URL`, `GEOCODER_GOOGLE_BASE_URL` | Existing legacy names; `https://dapi.kakao.com`, `https://maps.googleapis.com`; the Google fingerprint rule applies to the production endpoint, as in legacy. |
@@ -2729,3 +2729,40 @@ legacy -> `kma-v000901,kma-v000902` -> legacy: listed versions answer natively (
 loopback acquisitions, no legacy KMA hop), the unlisted v000903 still reaches legacy, the legacy
 phases return identical bytes, and repeated or unknown entries and missing settings are refused. Live provider data and
 production latency are not claimed.
+
+### S17b direct `/kma/addr` routes and town v000803/v000705 (2026-10-15)
+
+S17b serves the legacy direct public routes, which reach Express through nginx rather than the
+`/weather` gateway: `/v000901/kma/addr` (1,853 requests in the accepted report), `/v000903/kma/addr`
+(1,320), `/v000803/town` (205) and `/v000705/town` (12, retained under O-8).
+
+- **Routing.** `server2::api::DirectRoutes` answers listed direct routes before the gateway routes:
+  `kma` claims `/v000903/kma/addr`, `kma-v000901` claims `/v000901/kma/addr` and the new `town`
+  entry claims `/v000803/town` and `/v000705/town`, matched case-insensitively as in Express
+  (`req.baseUrl` keeps the requested spelling); the mounts answer the legacy usage JSON.
+  Unlisted paths keep the previous 404; only GET and HEAD are claimed. Direct `/v000902/kma/addr` (zero observed) is not claimed. The listed
+  entries share the one KMA handler and S3 input source.
+- **Town assembly.** The town router lists run on the S15 chain without query defaults, with
+  `getSummary` (ControllerTown) and the upper-case icons. v000803 ends with `makeResult` (no
+  `location`); v000705 adds `dataToFixed` and has no `makeResult`, so it answers
+  `res.json(undefined)` (200, `application/json`, empty body, no ETag). The v000705 sub-routes are
+  ported as well. Without query defaults, `rn1Str` is JavaScript `NaN` (JSON `null`), as in legacy.
+- **Envelope.** Express 4.13.4: weak ETag, `fresh` 0.3.0 revalidation and its 304 headers, HEAD,
+  `cors()` and `X-Powered-By`; the i18n locale from `twcookie` then Accept-Language; no session
+  cookie (S12 precedent).
+- **Forwards.** Since S15b-4a listed direct routes answer natively with request-time
+  acquisition. Outcomes legacy must still answer (a town absent from the town list, the S15
+  `next(err)` forwards, including the v000705 `/short`, `/shortest`, `/current` 500s) take the
+  legacy hop unchanged (`BackendDispatcher::proxy`: verbatim request target to the plain-HTTP
+  loopback origin, which direct entries require at startup, hop-by-hop and `Connection`-listed headers dropped, 30-second CloudFront origin timeout).
+
+Verification (local): a town oracle (86 recordings; 58 v000803, 25 v000705, 3 v000901 usage and
+mixed-case; 1,214 store answers; S17a driver with the router, mount, path, method and scenario
+list changed, including usage roots, HEAD and upper-case mounts) replays to the legacy statuses,
+bytes and ETags, with 10 declared forwards in total across both S17 fixtures. The S02 goldens
+`domestic-v000803`, `domestic-v000705`, `domestic-v000901` and `domestic-v000903` (with their 304
+revalidations) match on the wire natively (status, body and every header except `date`,
+`connection` and `set-cookie`), and HEAD and forwarded requests keep the legacy reply. The release
+`kma_smoke.py` shows unlisted direct paths unclaimed (404, no legacy hop) and listed ones reading
+S3 and answering natively with the Express envelope (JSON with a weak ETag, the v000705
+`res.json(undefined)` reply without one, the usage root) and no legacy hop.
