@@ -42,3 +42,16 @@ establish whether mutable catalog latency needs O01 or decoded caching.
 
 No actual `.env` was read/changed, provider/AWS/DB called, push sent, resource
 created, deployment performed or merge invoked by this task.
+
+
+## Independent review correction D4C-R1
+
+The reviewer found that a warmed local raw could mask canonical S3 body corruption
+when `publish` reconciled a conditional/uncertain PUT using matching HEAD metadata.
+The added regression first failed with `Ok(AlreadyPresent)` after changing only
+the canonical bytes, preserving their length and metadata. Reconciliation now
+bypasses local cache and always GETs/decodes canonical S3. Ordinary `load` keeps
+its immutable cache path. The selected performance capture above predates this
+correction and remains bound to its recorded source hashes; it is not relabelled
+as a later execution. Corrected focused/HTTP checks and reviewer confirmation
+are recorded on the final PR.

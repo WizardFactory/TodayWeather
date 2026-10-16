@@ -376,3 +376,57 @@ async fn unsafe_root_permissions_and_symlink_capacity_lock_are_optional_cache_mi
     assert_eq!(std::fs::read(outside).unwrap(), b"DO-NOT-TOUCH");
     assert!(d.files().is_empty());
 }
+
+#[tokio::test]
+async fn publication_reconciliation_never_uses_cache_to_mask_same_length_s3_corruption() {
+    struct PublishTransport {
+        canonical: Arc<std::sync::Mutex<Object>>,
+        gets: Arc<AtomicUsize>,
+        cache: Arc<DiskCache>,
+    }
+    impl ObjectTransport for PublishTransport {
+        fn raw_cache(&self) -> Option<Arc<DiskCache>> {
+            Some(self.cache.clone())
+        }
+        async fn put(&self, _: &PreparedRecord) -> Result<u16, Error> {
+            Ok(412)
+        }
+        async fn head(&self, _: &str) -> Result<Object, Error> {
+            Ok(self.canonical.lock().unwrap().clone())
+        }
+        async fn get(&self, _: &str, _: usize) -> Result<Object, Error> {
+            self.gets.fetch_add(1, Ordering::SeqCst);
+            Ok(self.canonical.lock().unwrap().clone())
+        }
+    }
+    let d = Directory::new();
+    let r = record("kma-web", "aws-hourly", 1, b"weather".to_vec());
+    let p = r.prepare(&Limits::default()).unwrap();
+    let canonical = Arc::new(std::sync::Mutex::new(Object {
+        metadata: p.metadata,
+        length: p.body.len(),
+        body: p.body,
+    }));
+    let gets = Arc::new(AtomicUsize::new(0));
+    let cache = Arc::new(DiskCache::new(&d.0, "a", 1048576, 16).unwrap());
+    let s = RawRecordStore::new(
+        PublishTransport {
+            canonical: canonical.clone(),
+            gets: gets.clone(),
+            cache: cache.clone(),
+        },
+        Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(s.load(&r.envelope.identity).await.unwrap().bytes, r.bytes);
+    idle(&cache).await;
+    assert_eq!(cache.metrics().writes, 1);
+    // Preserve length and envelope/gzip hash metadata, corrupt only the canonical bytes.
+    canonical.lock().unwrap().body[0] ^= 1;
+    let result = s.publish(r).await;
+    assert!(
+        matches!(result, Err(Error::Corrupt(_))),
+        "publication must verify canonical S3, got {result:?}"
+    );
+    assert_eq!(gets.load(Ordering::SeqCst), 2);
+}

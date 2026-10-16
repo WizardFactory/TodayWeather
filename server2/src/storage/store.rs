@@ -78,7 +78,13 @@ impl<T: ObjectTransport> RawRecordStore<T> {
                 .await
                 .map_err(|_| Error::Transport)?,
         );
-        let cache = self.transport.raw_cache();
+        // A publish reconciliation must prove the canonical body is durable, not
+        // merely that a previously verified disposable copy agrees with HEAD.
+        let cache = if head.is_none() {
+            self.transport.raw_cache()
+        } else {
+            None
+        };
         if let Some(cache) = &cache
             && let Some(object) = cache.load(expected, self.limits.gzip_bytes).await
         {
