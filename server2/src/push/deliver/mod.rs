@@ -15,3 +15,5 @@ pub use weather::{Fetch, HttpFetch, Servers};
 pub mod alerts;
 pub mod warning_feed;
 pub mod warnings;
+
+pub mod native_fetch;

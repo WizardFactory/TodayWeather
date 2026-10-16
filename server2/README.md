@@ -35,9 +35,15 @@ Cargo local dependencies, literal resources and symlinks, plus both rename ends.
 Computed filesystem paths still require human review. Existing unrelated legacy
 maintenance remains allowed; this checker is for server2 tasks.
 
-No local serving persistence or shared-instance cache is introduced. The runtime has
-no verification-only mode: `SERVER2_NATIVE_FAMILIES` routes `geocode`, `dsf` and `kma` to
-the native backends; without it every family stays on legacy. Since S10e the settings are the
+The runtime has no verification-only mode. `SERVER2_NATIVE_FAMILIES` selects ordinary
+native ownership, including `geocode`, `dsf`, KMA version/town entries, `push` and `notice`.
+Selected native services start without a legacy URL. An explicit
+`SERVER2_GATEWAY_LEGACY_URL` retains coexistence for unselected families; with neither
+selection nor legacy URL the process keeps the health foundation. Selected native
+errors never forward. S20a shares one S3 transport and native dependency handles,
+serves durable push registration and read-only notices, and starts no delivery loops.
+See the [runtime services manual](../docs/operations/server2-runtime-services.md) and
+[visually checked PDF](../docs/operations/server2-runtime-services.pdf). Since S10e the settings are the
 legacy `server/.env` names and values, read from `server2/.env` in the working directory (a
 private copy of the legacy file; see [.env.example](.env.example) for every variable), plus
 the server2-only `SERVER2_S3_BUCKET`, `SERVER2_S3_REGION` and coexistence routing. Endpoints and

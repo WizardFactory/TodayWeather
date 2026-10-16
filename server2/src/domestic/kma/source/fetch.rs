@@ -162,6 +162,16 @@ where
         warning_store: Arc<WarningStore<T>>,
         data_go_kr: &str,
     ) -> Self {
+        Self::new_with_feed(daily, store, warning_store, data_go_kr, None)
+    }
+    /// Install the durable publication hook before the collector is shared in an Arc.
+    pub fn new_with_feed(
+        daily: Arc<DailyAcquirer<P, W, B>>,
+        store: Arc<CatalogStore<T>>,
+        warning_store: Arc<WarningStore<T>>,
+        data_go_kr: &str,
+        feed: Option<Arc<dyn crate::warnings::collector::PersistedWarningFeed>>,
+    ) -> Self {
         let source: Arc<dyn WarningSource> = Arc::new(DailyWarnings {
             daily: daily.clone(),
             base: format!(
@@ -175,10 +185,15 @@ where
             key_index: std::sync::atomic::AtomicUsize::new(0),
         });
         let clock = daily.clock();
+        let collector = WarningCollector::new(source, warning_store, clock);
+        let collector = match feed {
+            Some(feed) => collector.with_push_feed(feed),
+            None => collector,
+        };
         Self {
             daily,
             store,
-            warnings: Arc::new(WarningCollector::new(source, warning_store, clock)),
+            warnings: Arc::new(collector),
         }
     }
     async fn publish(&self, outcome: Result<Acquired, DomesticError>) -> Result<Published, String> {

@@ -4,6 +4,7 @@ pub mod dotenv;
 pub mod listener;
 pub mod process;
 pub mod resolver;
+pub mod runtime_services;
 pub mod storage;
 use axum::{
     Router,
@@ -90,7 +91,11 @@ impl Config {
         c.metrics_addr = SocketAddr::new(loopback, metrics_port);
         c.validate()?;
         // Same presence test as `gateway::runtime::from_vars`.
-        c.select_connection_lifetime(var("SERVER2_GATEWAY_LEGACY_URL").is_some())?;
+        let families =
+            gateway::runtime::NativeFamilies::from_vars(var).map_err(|e| e.to_string())?;
+        c.select_connection_lifetime(
+            var("SERVER2_GATEWAY_LEGACY_URL").is_some() || families.any(),
+        )?;
         Ok(c)
     }
     /// The absolute connection lifetime must outlive the gateway deadline so its
@@ -287,3 +292,14 @@ pub mod warnings;
 pub mod nation;
 
 pub mod notice;
+
+/// Compose one fallback and route-only APIs; health retains foundation admission/CORS.
+pub fn public_router_with_routes(state: Arc<SharedState>, routes: Router) -> Router {
+    let health_route = get(health)
+        .layer(middleware::from_fn_with_state(state.clone(), admission))
+        .layer(middleware::from_fn(cors));
+    Router::new()
+        .route("/health", health_route)
+        .with_state(state)
+        .merge(routes)
+}
