@@ -219,13 +219,22 @@ fn backend(
     peer: &Peer,
     acquire: Arc<dyn Acquire>,
 ) -> (KmaBackend, Recorder<BoundedS3<HttpS3Transport>>) {
+    backend_with(peer, acquire, None)
+}
+/// [`backend`] with the S15b-4a request-time forecast acquirer.
+fn backend_with(
+    peer: &Peer,
+    acquire: Arc<dyn Acquire>,
+    forecast: Option<Arc<dyn server2::domestic::kma::source::fetch::ForecastAcquire>>,
+) -> (KmaBackend, Recorder<BoundedS3<HttpS3Transport>>) {
     let source = S3Source::new(
         peer.transport_limited(4),
         Arc::new(|| NOW),
         acquire,
         Arc::new(Unreachable),
     )
-    .unwrap();
+    .unwrap()
+    .with_forecast(forecast);
     let recorder = Recorder::new(peer.transport_limited(2));
     let sink: Arc<dyn SummarySink> = Arc::new(recorder.clone());
     let backend = KmaBackend::new(
@@ -759,4 +768,84 @@ async fn a_partial_vc_read_stores_no_vc_day() {
             .unwrap()
             .is_empty()
     );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_request_time_backfill_is_a_late_input_of_a_stored_day() {
+    use server2::domestic::family::DataGoKrFamily;
+    use server2::domestic::kma::source::fetch::{ForecastAcquire, ForecastRequest, Published};
+    let _peers = S3_PEERS.lock().await;
+    /// S15b-4a acquirer double: publishes the 09-24 00:00 current observation (09-23's 2400
+    /// hour, a backfill publication the request does not wait for); nothing else is new.
+    struct Provider(Arc<CatalogStore<BoundedS3<HttpS3Transport>>>);
+    impl ForecastAcquire for Provider {
+        fn acquire(
+            &self,
+            request: ForecastRequest,
+        ) -> BoxFuture<'static, Result<Published, String>> {
+            let store = self.0.clone();
+            Box::pin(async move {
+                let ForecastRequest::DataGoKr(r) = request else {
+                    return Ok(None);
+                };
+                if r.family() != DataGoKrFamily::UltraSrtNcst || r.publication() != p(20260924, 0) {
+                    return Ok(None);
+                }
+                let a = acquisition(
+                    "data-go-kr",
+                    "ultra-srt-ncst",
+                    &Grid::new(60, 127).unwrap().provider_key(),
+                    r.publication().period(),
+                    &r.publication().partition(),
+                    NOW - 1_000.,
+                    current_page("20260924", "0000", "30"),
+                    "application/json",
+                );
+                let records = a.records.clone();
+                store
+                    .publish(a.declaration, a.records, deadline())
+                    .await
+                    .map_err(|e| format!("{e:?}"))?;
+                Ok(Some(records))
+            })
+        }
+    }
+    let peer = Peer::new();
+    let catalogs = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+    seed(&catalogs, &[]).await;
+    day(&catalogs, 20260923, 1..=23).await;
+    let (backend, recorder) = backend_with(
+        &peer,
+        Arc::new(Unreachable),
+        Some(Arc::new(Provider(catalogs.clone()))),
+    );
+    // The native answer is served and 09-23 is recorded with the 23 hours the request read.
+    serve(&backend).await;
+    assert!(recorder.idle(deadline()).await);
+    let store = recorder.store();
+    let first = store
+        .newest(&town(), 20260923, deadline())
+        .await
+        .unwrap()
+        .expect("09-23 stored");
+    assert_eq!(first.summary.value("observationHours"), Some(23.));
+    // The owned backfill publishes the 2400 hour; a later request records a newer revision.
+    let mut revised = None;
+    for _ in 0..40 {
+        serve(&backend).await;
+        assert!(recorder.idle(deadline()).await);
+        let newest = store
+            .newest(&town(), 20260923, deadline())
+            .await
+            .unwrap()
+            .unwrap();
+        if newest.summary.value("observationHours") == Some(24.) {
+            revised = Some(newest);
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+    let revised = revised.expect("the backfilled 2400 hour is recorded");
+    assert_eq!(revised.summary.value("taMax"), Some(30.));
+    assert!(revised.name > first.name);
 }

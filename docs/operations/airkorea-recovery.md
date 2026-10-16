@@ -54,3 +54,33 @@ For request-path rollback, restore the nation route/service revision; shared glo
 The existing nation-map clients do not render `coverage`, `representativeCity`, or provider `attribution`. Server metadata alone therefore does not establish correct user-visible provenance: a Suwon point can look like a Gyeonggi province average. Before production rollout, the operator must explicitly decide whether existing clients may receive representative-point fallback values, or require a client release that labels those points first. This PR does not silently decide that release policy or claim the old map displays it.
 
 Before enabling this path in production, verify each reachable provider's attribution/display requirements against the actual iOS/Android nation screens (including WAQI), implement any required client attribution, and record device evidence. Returning attribution in JSON is not proof of on-screen compliance. No provider-terms conclusion or device verification was performed in this server change. An unresolved provenance or attribution decision stops rollout; it does not require a live AirKorea call during request recovery.
+
+## Observation/page repair rollout gate (#2758)
+
+The [2026-10-16 diagnosis and isolated checks](../evidence/tasks/issue-2758/verification.md)
+confirm null-observation station rows and zero-total nonempty pages. This repair
+requires its own operator-authorized rollout; no service restart, collection
+activation or deployment is implied by a merged collector change.
+
+Before rollout, run `airkorea-rejections.test.js` and the distinct real local
+`airkorea-rejections-smoke.js` as documented in the [offline suite](../../server/test/offline/README.md).
+The latter must produce 17 persisted province averages with zero external fallback
+calls and reject city-only rows. It uses recorded affected-region inputs plus
+synthetic controls; it is not a nationwide live-provider audit.
+
+After separately authorized rollout, observe one scheduled station collection
+without calling `/gather/*`. Reconcile all 17 province identities against aggregate
+rows (`cityName: ""`) and the public nation response, checking PM2.5/PM10,
+requested grades and fresh observation times. For the eight affected provinces,
+explicitly record accepted station counts and unavailable station identities.
+The provider's all-null row only establishes no observation; it does not establish
+maintenance, closure or lack of a station. Investigate a fully unavailable province
+and record its source reason; do not label the map recovered based on city rows,
+HTTP 200 or representative-point fallback. A provider/quota/terminal-page failure
+leaves that live gate blocked.
+
+The zero-total path consumes one empty terminal-page probe beyond nonempty pages,
+under the existing province budget. If a predicate still rejects, use the bounded
+`diagnostic` reason/field/index/counts to identify it; never log provider bodies,
+keys or URLs. Keep the prior collector revision for rollback. No schema migration,
+data deletion or new runtime setting is required.

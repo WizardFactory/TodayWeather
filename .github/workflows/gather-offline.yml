@@ -83,6 +83,7 @@ jobs:
           node server/test/offline/gateway-route.test.js
           node server/test/offline/gateway-callers.test.js
           node server/test/offline/airkorea-image.test.js
+          node server/test/offline/airkorea-rejections.test.js
 
   history-integration:
     runs-on: ubuntu-latest
@@ -131,7 +132,9 @@ jobs:
           TZ: UTC
           NODE_PATH: ${{ runner.temp }}/airkorea-offline/node_modules
           MONGOMS_DOWNLOAD_DIR: ${{ runner.temp }}/airkorea-mongodb
-        run: node server/test/offline/airkorea-nation-smoke.js
+        run: |
+          node server/test/offline/airkorea-nation-smoke.js
+          node server/test/offline/airkorea-rejections-smoke.js
 
   current-grid-integration:
     runs-on: ubuntu-latest

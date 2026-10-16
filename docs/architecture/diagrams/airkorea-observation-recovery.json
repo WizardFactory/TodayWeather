@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "AirKorea collector recovery (#2758)",
+    "subtitle": "Local repair contract; production rollout requires separate authorization",
+    "output": "docs/architecture/diagrams/airkorea-observation-recovery.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1120,
+      720
+    ],
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "c48b29aa900d35ab50da0ca5ccc5392345817cc5",
+      "provider": "github",
+      "link_mode": "local-only"
+    }
+  },
+  "participants": [
+    {
+      "id": "collector",
+      "type": "backend",
+      "label": "Collector",
+      "sources": [
+        {
+          "path": "server/lib/kecoRequester.js"
+        }
+      ]
+    },
+    {
+      "id": "provider",
+      "type": "external",
+      "label": "AirKorea",
+      "sources": [
+        {
+          "path": "server/lib/airkoreaObservation.js"
+        }
+      ]
+    },
+    {
+      "id": "parser",
+      "type": "backend",
+      "label": "Validation",
+      "sources": [
+        {
+          "path": "server/lib/airkoreaObservation.js"
+        }
+      ]
+    },
+    {
+      "id": "mongo",
+      "type": "database",
+      "label": "MongoDB",
+      "sources": [
+        {
+          "path": "server/models/sido.arpltn.keco.model.js"
+        }
+      ]
+    },
+    {
+      "id": "nation",
+      "type": "backend",
+      "label": "Nation reader",
+      "sources": [
+        {
+          "path": "server/controllers/kecoController.js"
+        }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "from": "collector",
+      "to": "provider",
+      "y": 170,
+      "label": "Fetch station pages",
+      "variant": "default"
+    },
+    {
+      "id": "m2",
+      "from": "provider",
+      "to": "collector",
+      "y": 218,
+      "label": "Positive total or zero total",
+      "variant": "return"
+    },
+    {
+      "id": "m3",
+      "from": "collector",
+      "to": "provider",
+      "y": 266,
+      "label": "Zero total: probe until empty",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m4",
+      "from": "collector",
+      "to": "parser",
+      "y": 314,
+      "label": "Validate complete batch",
+      "variant": "default"
+    },
+    {
+      "id": "m5",
+      "from": "parser",
+      "to": "collector",
+      "y": 362,
+      "label": "Accepted rows / unavailable",
+      "variant": "return"
+    },
+    {
+      "id": "m6",
+      "from": "collector",
+      "to": "mongo",
+      "y": 410,
+      "label": "Save accepted station rows",
+      "variant": "default"
+    },
+    {
+      "id": "m7",
+      "from": "collector",
+      "to": "mongo",
+      "y": 458,
+      "label": "On success: save urban average",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m8",
+      "from": "nation",
+      "to": "mongo",
+      "y": 506,
+      "label": "Read cityName empty rows",
+      "variant": "default"
+    },
+    {
+      "id": "m9",
+      "from": "mongo",
+      "to": "nation",
+      "y": 554,
+      "label": "PM values and observation time",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Explicit unavailable stations",
+      "items": [
+        "Identity and province must be valid. Only a null timestamp with all supported values explicitly null is skipped.",
+        "Malformed timestamps remain rejected; no invalid row is persisted. An all-unavailable province fails."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Complete paging and persistence",
+      "items": [
+        "Zero-total observation pages require an empty terminal page; positive totals stay exact.",
+        "No nonempty page after a short page, duplicate observations or unbounded traversal. Average writes await successful station writes."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Evidence and rollout boundary",
+      "items": [
+        "2026-10-16 direct responses confirmed six null-time provinces and four zero-total operation/province pairs.",
+        "The deployed direct reader has no global fallback; isolated verification disables it. Deployment and scheduled production readback remain operator gates."
+      ]
+    }
+  ]
+}

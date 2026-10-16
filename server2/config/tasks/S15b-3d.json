@@ -1,0 +1,22 @@
+{
+  "task": "S15b-3d",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-3d.json",
+    "server2/src/domestic/kma/source/",
+    "server2/tests/domestic/"
+  ],
+  "outside": [
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Record in the S15b-3 sections that the request-time S3 tests run at fixed instants (and the boundary sweep); no implementation outside server2"
+    }
+  ],
+  "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6197440292",
+  "path_notes": {
+    "server2/tests/domestic/": "support.rs: a test clock started at a fixed instant (advancing at the real pace), the clock the acquirers and inputs read, and the KST boundary instants; air_forecast_s3.rs and life_s3.rs: the request-time tests, their stubs, acquirers and inputs use the test clock instead of the system clock, the dust-forecast stub answers the announcement's day and the next ones as the provider does, explicit MFDS slot expectations, stall diagnostics, and ignored sweeps across the KST boundaries; source_s3.rs, air_s3.rs, air_forecast_s3.rs, life_s3.rs: a live acquirer's S3 transport admits 4 requests (ACQUIRER_PERMITS) so a test stays below the peer's 16 connections",
+    "server2/src/domestic/kma/source/": "air_input.rs, forecast_input.rs, life_input.rs: the wall clock their fold cuts, publication instants and capture tasks read is injected (with_clock, budget::Clock; the system clock by default, no behavior change); tests fix it"
+  },
+  "declaration_update": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6203460659"
+}

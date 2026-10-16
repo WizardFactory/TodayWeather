@@ -439,7 +439,7 @@ fn live_with(
         settings,
         Arc::new(funded),
         Arc::new(server2::providers::HttpPublicTransport::new(2 << 20).unwrap()),
-        Arc::new(peer.transport()),
+        Arc::new(peer.transport_limited(super::source_s3::ACQUIRER_PERMITS)),
         store,
         Arc::new(server2::budget::SystemClock),
     ))

@@ -56,7 +56,8 @@ Incomplete summaries are not stored.
 
 The snapshot records summary inputs only when its reads were complete (a listed group that S06
 excludes, not eligible or with a raw body missing, makes a grid, station-page, registry-seed, ASOS or VC read
-partial): every grid family read from published S06 catalogs (otherwise the request forwards anyway); the station fold the answer
+partial): every grid family read from published S06 catalogs (since S15b-4a with the request's own
+acquisitions; backfill that arrives later is a late input); the station fold the answer
 used is still current, every day of the page window was read and its latest read did not fail, and
 no S3 load, fold, geocoding or unfolded page is pending; the history answer has no `cache-read-*`
 reason; and the ASOS acquisitions it used were read under the same lock as "no recovery run in
