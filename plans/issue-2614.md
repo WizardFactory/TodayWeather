@@ -1,7 +1,7 @@
 # Plan: document and later implement server2
 
 Source: [intent](../intent/issue-2614.md), [spec](../specs/issue-2614.md).
-Current status (2026-10-16, observed master `f32386cb`): the foundation and S15 assembly/data increments remain integrated. S16 summaries (#2764), S17 older versions/town/nation (#2763/#2765/#2780), S18a registrations (#2766), S18b-1 alarms (#2774), S18b-2 conditional alerts (#2778), native error handling (#2773) and verified disposable disk cache (#2781) are merged. S16 #2701 and S17 #2702 are closed. S15b #2742 remains open for new-town/internal-geocoder work and whole-response canonical-S3 verification; S18 #2703 remains open for warning integration (#2783) and notices. S19 has its first gateway increment and domestic coverage is being extended. S10a #2724 still owns real geocoder quota measurements. Production cold performance, process wiring, final state copies and cutover retain S20 gates. Development defaults to coexistence routing; no deployment, cutover or live push is claimed. Earlier dated entries below remain revision-bound history.
+Current status (2026-10-16, observed master `bf772fff`): the foundation and S15 assembly/data increments remain integrated. S16 summaries (#2764), S17 older versions/town/nation (#2763/#2765/#2780), S18a registrations (#2766), S18b-1 alarms (#2774), S18b-2 conditional alerts (#2778), native error handling (#2773), verified disposable disk cache (#2781) and warning delivery (#2783) are merged. S16 #2701 and S17 #2702 are closed. S15b #2742 remains open for new-town/internal-geocoder work and whole-response canonical-S3 verification; S18 #2703 remains open for notices; worker/process wiring remains an S20 activation task. S19 has its first gateway increment and domestic coverage is being extended. S10a #2724 still owns real geocoder quota measurements. Production cold performance, process wiring, final state copies and cutover retain S20 gates. Development defaults to coexistence routing; no deployment, cutover or live push is claimed. Earlier dated entries below remain revision-bound history.
 
 ## Current AK amendments (2026-10-14 to 2026-10-16)
 
@@ -431,11 +431,12 @@ request/local-cache/storage sizing work, extend S19 verification, measure the
 remaining S10a quotas, and perform separately approved S20/S21 operational work.
 
 
-### Recovery integration snapshot (2026-10-16, master f32386cb)
+### Recovery integration snapshot (2026-10-16, master bf772fff)
 
 S16 #2764 merged as `f00b83d3`, scheduled alarms #2774 as `abf59d09`,
 conditional alerts #2778 as `82356a95`, native errors #2773 as `ec32c73f`,
-nation #2780 as `8daa43ad`, and disposable disk cache #2781 as `f32386cb`.
+nation #2780 as `8daa43ad`, disposable disk cache #2781 as `f32386cb`,
+and warning delivery #2783 as `bf772fff`.
 Each integration retains its exact-head CI and independent review evidence in
 its PR. Earlier failed or incomplete attempts remain in task history.
 
@@ -449,5 +450,6 @@ The remaining S15b whole-response verification must distinguish assembly-only
 oracle cases from cases representable by actual provider raw. It must not
 fabricate canonical S3 records, weaken validators or label partial-layer checks
 as full-response parity. Empty RAM, disabled providers, cache loss/corruption
-and zero legacy hops remain required scenarios. S18 warning/notice integration,
-S19 family coverage and S20 deployment/cutover gates remain unfinished.
+and zero legacy hops remain required scenarios. S18 notice implementation and
+S19 family coverage remain unfinished; warning worker/process wiring and
+deployment/cutover are S20 activation tasks.
