@@ -3323,7 +3323,10 @@ coordinates make legacy `makeResult` fail with 500, while cold numeric coordinat
 200. Native first/same-process/cold responses use the same numeric contract. The legacy bug
 is tracked separately in [#2782](https://github.com/WizardFactory/TodayWeather/issues/2782);
 this task changes no legacy source. The approved correction stays explicit in comparison
-accounting rather than rewriting that oracle as 200.
+accounting rather than rewriting that oracle as 200. The separately owned legacy fix
+[#2784](https://github.com/WizardFactory/TodayWeather/pull/2784), merged in master `5c6844cc`,
+now normalizes those coordinates too; the retained 500/500/200 recording describes its
+explicit older source revision, while native numeric admission agrees with the updated legacy.
 
 Coverage denominators remain separate: the existing 98-case v000903 assembly recording, the
 six remap/five town component cases, the actual Mongoose/makeResult lifecycle probes and

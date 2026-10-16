@@ -128,7 +128,7 @@
       "server/controllers/controllerKmaStnWeather.js": "c7bd8b7848bf2f3a10c6f2b87f6dec3c6a06151da0aee8b22282254f495f5163",
       "server/controllers/controllerManager.js": "b64cdffdb4bd8936d3bd1164000fad8a600e554a1c6ca5faf418d27a4f52d442",
       "server/controllers/controllerPush.js": "0ea6353917b6182bcede0307d712568a479d70bb086c098cd2dfd9f24865ac7e",
-      "server/controllers/controllerTown.js": "bfe2d5eb7e405de5c9cc6a971a8dee3299f9c01d086661d4ed114688bb879396",
+      "server/controllers/controllerTown.js": "9d801b07e6686b64ddae0c87e3fc32d50f429e9c6f243ecc0683d7a111d40396",
       "server/controllers/controllerTown24h.js": "7e551bb88dca224f25877c1d2bf1ab43046238e37bb4c76c78c44ab2dcfd7234",
       "server/controllers/kecoController.js": "2041f9f23a1487008461ff780f9618b5dcc19f67e977a6c1a1cbc056013f904d",
       "server/controllers/kma.specialweather.controller.js": "a8886d197aa306d38388085ed63491871d2802e80eaa55778c589f6e769f1917",
