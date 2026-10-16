@@ -1,0 +1,12 @@
+{
+  "task": "S02r2771",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2687",
+  "server2_paths": [
+    "server2/config/tasks/S02r2771.json",
+    "server2/tests/golden/records.json"
+  ],
+  "outside": [],
+  "path_notes": {
+    "server2/tests/golden/records.json": "golden source-hash refresh after legacy #2771; outputs unchanged: re-recorded with the pinned Node 16.20.2 oracle, only the source.files hashes of server/controllers/controllerTown24h.js and server/test/offline/rss-response-smoke.js differ; all 76 cases, the inventory and the backend coverage are byte-identical"
+  }
+}
