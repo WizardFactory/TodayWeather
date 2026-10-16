@@ -247,8 +247,9 @@ impl Zones {
             .collect()
     }
 }
+/// JavaScript code units of a request name (see [`crate::domestic::kma::js::units`]).
 fn units(s: &str) -> Vec<u16> {
-    s.encode_utf16().collect()
+    crate::domestic::kma::js::units(s)
 }
 /// The `regName` (None: `undefined`, which matches no stored name) and special `regId`.
 fn zone_query(region: &str, city: &str) -> (Option<String>, Option<&'static str>) {
@@ -285,9 +286,9 @@ fn zone_query(region: &str, city: &str) -> (Option<String>, Option<&'static str>
                 Some(i) => i,
                 None => u.len() - 1,
             };
-            String::from_utf16_lossy(&u[..end])
+            crate::domestic::kma::js::from16(&u[..end])
         } else {
-            String::from_utf16_lossy(&u[..u.len() - 1])
+            crate::domestic::kma::js::from16(&u[..u.len() - 1])
         };
         if n == "광주" {
             reg_id = Some("11B20702");

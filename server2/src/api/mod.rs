@@ -134,8 +134,9 @@ impl DirectRoutes {
             let child = format!(
                 "/{version}/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C?{query}"
             );
-            let Some(base) = parse_path(&child, child_locale) else {
-                return express(&method, &headers, crate::nation::child_error(500));
+            let base = match parse_path(&child, child_locale) {
+                Ok(base) => base,
+                Err(_) => return express(&method, &headers, crate::nation::child_error(500)),
             };
             let Some(nation) = &self.nation else {
                 return express(&method, &headers, crate::nation::child_error(500));
@@ -154,10 +155,13 @@ impl DirectRoutes {
         } else {
             parse_path(&path_and_query, locale)
         };
-        if let Some(request) = parsed
-            && let Some(outcome) = self.native(request).await
-        {
-            return express(&method, &headers, outcome);
+        match parsed {
+            Err(outcome) => return express(&method, &headers, outcome),
+            Ok(request) => {
+                if let Some(outcome) = self.native(request).await {
+                    return express(&method, &headers, outcome);
+                }
+            }
         }
         self.forward(&method, &path_and_query, &headers).await
     }
@@ -165,7 +169,8 @@ impl DirectRoutes {
     async fn native(&self, request: KmaRequest) -> Option<Outcome> {
         let deadline = Instant::now() + NATIVE_ATTEMPT;
         match tokio::time::timeout_at(deadline, self.kma.outcome(request, deadline)).await {
-            Ok(Ok(Outcome::Legacy(_))) | Ok(Err(_)) | Err(_) => None,
+            Ok(Ok(Outcome::Legacy(_))) => None,
+            Ok(Err(_)) | Err(_) => Some(Outcome::Status(502, "Bad Gateway\n".into())),
             Ok(Ok(outcome)) => Some(outcome),
         }
     }
@@ -246,6 +251,10 @@ fn split_list(value: &str) -> Vec<&str> {
 /// The Express reply of an assembly outcome (`res.json(body)`, `res.json(undefined)`,
 /// `res.status(code).send(text)`).
 pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Response {
+    // finalhandler 0.4.1 writes directly (no res.send ETag), and sets nosniff.
+    let finalhandler = matches!(&outcome, Outcome::Status(code, text)
+        if matches!((*code, text.as_str()),
+            (500, "Internal Server Error\n") | (404, "Not Found\n") | (400, "Bad Request\n")));
     let (status, body, content_type, tag) = match outcome {
         Outcome::Json(json) => {
             let bytes = json.to_bytes();
@@ -255,9 +264,10 @@ pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Respon
         Outcome::Undefined => (200, Vec::new(), "application/json", None),
         Outcome::Status(code, text) => {
             let bytes = text.into_bytes();
-            let tag = etag(&bytes);
-            (code, bytes, "text/html; charset=utf-8", Some(tag))
+            let tag = (!finalhandler).then(|| etag(&bytes));
+            (code, bytes, "text/html; charset=utf-8", tag)
         }
+        Outcome::Defect(_) => unreachable!("defects are rejected by the backend"),
         Outcome::Legacy(_) => unreachable!("forwarded outcomes are not answered natively"),
     };
     let not_modified = (200..300).contains(&status) && fresh(request, tag.as_deref());
@@ -276,6 +286,12 @@ pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Respon
     let h = response.headers_mut();
     h.insert("x-powered-by", HeaderValue::from_static("Express"));
     h.insert("access-control-allow-origin", HeaderValue::from_static("*"));
+    if finalhandler {
+        h.insert(
+            "x-content-type-options",
+            HeaderValue::from_static("nosniff"),
+        );
+    }
     if let Some(tag) = &tag {
         h.insert("etag", HeaderValue::from_str(tag).expect("ASCII digest"));
     }
@@ -283,7 +299,7 @@ pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Respon
         h.insert("content-type", HeaderValue::from_static(content_type));
         // `res.send` sets Content-Length for a body; for `res.json(undefined)` only Node adds
         // `Content-Length: 0` when a GET ends without one, and a HEAD reply has none.
-        if tag.is_some() || *method != Method::HEAD {
+        if finalhandler || tag.is_some() || *method != Method::HEAD {
             h.insert(
                 "content-length",
                 HeaderValue::from_str(&length.to_string()).expect("ASCII length"),

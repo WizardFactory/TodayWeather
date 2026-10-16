@@ -2,7 +2,7 @@
   "schema_version": 1,
   "diagram_type": "sequence",
   "meta": {
-    "title": "S10 Planned Gateway and Geocode Ownership",
+    "title": "Gateway ownership and native terminal errors",
     "output": "docs/architecture/diagrams/server2-gateway.html",
     "locale": "en",
     "quality_profile": "showcase",
@@ -12,7 +12,7 @@
     ],
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "07fdaf991d617f16944d75c201d64f35a4f2c83a",
+      "revision": "f5184d5a08f87955f3fa1b3ab8367c8504e7cb40",
       "provider": "github",
       "link_mode": "web"
     },
@@ -40,10 +40,10 @@
       "sublabel": "weather / geocode",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 169,
-          "end_line": 185,
-          "label": "S10 design contract"
+          "path": "client/www/js/service.weatherutil.js",
+          "line": 78,
+          "end_line": 88,
+          "label": "Client query contract"
         }
       ]
     },
@@ -54,10 +54,16 @@
       "sublabel": "9s public deadline",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 169,
-          "end_line": 185,
-          "label": "S10 design contract"
+          "path": "server2/src/gateway/mod.rs",
+          "line": 175,
+          "end_line": 214,
+          "label": "Admission and owned deadline"
+        },
+        {
+          "path": "server2/src/api/mod.rs",
+          "line": 107,
+          "end_line": 125,
+          "label": "Direct native route errors"
         }
       ]
     },
@@ -68,10 +74,10 @@
       "sublabel": "5s owned lookup",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 263,
-          "end_line": 271,
-          "label": "S10 design contract"
+          "path": "server2/src/geocode/mod.rs",
+          "line": 450,
+          "end_line": 477,
+          "label": "Owned acquisition and funded lookup"
         }
       ]
     },
@@ -82,10 +88,10 @@
       "sublabel": "bounded precise keys",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 618,
-          "end_line": 635,
-          "label": "S10 design contract"
+          "path": "server2/src/geocode/mod.rs",
+          "line": 293,
+          "end_line": 309,
+          "label": "Bounded geocode memory cache"
         }
       ]
     },
@@ -96,10 +102,10 @@
       "sublabel": "3s attempt cap",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 169,
-          "end_line": 176,
-          "label": "S10 design contract"
+          "path": "server2/src/geocode/mod.rs",
+          "line": 293,
+          "end_line": 309,
+          "label": "Geocode HTTP attempt timeout"
         }
       ]
     },
@@ -110,10 +116,10 @@
       "sublabel": "optional safe cache",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 618,
-          "end_line": 645,
-          "label": "S10 design contract"
+          "path": "server2/src/geocode/mod.rs",
+          "line": 460,
+          "end_line": 477,
+          "label": "Address-only durable projection"
         }
       ]
     },
@@ -124,10 +130,22 @@
       "sublabel": "family + version",
       "sources": [
         {
-          "path": "docs/architecture/server2.md",
-          "line": 180,
-          "end_line": 185,
-          "label": "S10 design contract"
+          "path": "server2/src/gateway/backend.rs",
+          "line": 366,
+          "end_line": 410,
+          "label": "Selected native vs legacy adapter"
+        },
+        {
+          "path": "server2/src/domestic/kma/backend.rs",
+          "line": 108,
+          "end_line": 158,
+          "label": "Preflight and counted native defects"
+        },
+        {
+          "path": "server2/src/api/mod.rs",
+          "line": 202,
+          "end_line": 260,
+          "label": "Direct Express error envelope"
         }
       ]
     }
@@ -152,7 +170,7 @@
       "y": 160,
       "label": "GET weather / geocode",
       "variant": "emphasis",
-      "note": "Planned S10 flow; production activation remains gated."
+      "note": "Current code; deployment and family activation remain separate."
     },
     {
       "id": "lookup",
@@ -251,7 +269,7 @@
       "y": 468,
       "label": "weather: selected adapter",
       "variant": "emphasis",
-      "note": "Legacy HTTP by default. A registered in-process family uses the same contract."
+      "note": "Coexistence default: legacy adapter. Selected native runs once; early KMA 404/400 skips source reads."
     },
     {
       "id": "backend-result",
@@ -260,7 +278,7 @@
       "y": 496,
       "label": "JSON or mapped error",
       "variant": "return",
-      "note": "At most three attempts; each <=3s and bounded by the original 9s deadline."
+      "note": "Native errors terminate without a legacy hop. Legacy HTTP adapter: <=3 attempts, <=3s each, original 9s deadline."
     },
     {
       "id": "response",
@@ -289,11 +307,11 @@
   "cards": [
     {
       "dot": "emerald",
-      "title": "Local verification",
+      "title": "Native error boundary",
       "items": [
-        "Validate input before reading the exact-key volatile geocode cache.",
-        "Run all recorded S02 wire cases, including aliases, errors, HEAD, 304 and preflight.",
-        "Measure cold/warm one- and two-provider mock bursts and distinct-key demand."
+        "Direct native routes preserve Express 400/404/500 status, body and HEAD headers.",
+        "Gateway native non-200 replies and timeouts map to dependency errors without retrying legacy.",
+        "Source failures, assembly defects and Rust panics increment the native-defect counter; no error fallback."
       ]
     },
     {
@@ -307,11 +325,11 @@
     },
     {
       "dot": "amber",
-      "title": "Activation remains separate",
+      "title": "Coexistence is temporary",
       "items": [
-        "Reuse the existing operator-injected geocoder environment; this diagram contains no keys.",
-        "Actual daily and peak provider quotas remain unknown. Local mock results do not accept those gates.",
-        "Production family activation needs parity, seven-day paired shadow, measured latency, quota headroom and AK cutover authority."
+        "Unselected families use legacy only during development and coexistence; no legacy dependency at go-live.",
+        "Explicit unknown-town and KR-remap forwards still require removal in the next S15b-4b increment.",
+        "Provider quotas, paired shadow, measured latency and AK cutover approval remain activation gates."
       ]
     }
   ]

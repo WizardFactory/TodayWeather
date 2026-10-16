@@ -547,7 +547,9 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
     let s3 = source(&peer);
     let snapshot = match s3.snapshot(&request(), deadline()).await {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+        SourceAnswer::Forward(reason) | SourceAnswer::Failed(reason) => {
+            panic!("forwarded: {reason}")
+        }
     };
     assert_eq!(snapshot.as_of_ms(), Some(NOW));
     let town = find_town(
@@ -724,7 +726,9 @@ async fn missing_inputs_are_acquired_at_request_time_and_never_forwarded() {
     let s3 = source(&peer).with_forecast(Some(provider.clone()));
     let snapshot = match s3.snapshot(&request(), deadline()).await {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+        SourceAnswer::Forward(reason) | SourceAnswer::Failed(reason) => {
+            panic!("forwarded: {reason}")
+        }
     };
     // The acquired 10:00 current publication is used by the same request.
     let current = snapshot
@@ -813,7 +817,9 @@ async fn a_request_waits_for_late_acquisitions_once_within_three_seconds() {
     // The grid, RSS, three mid and warning waits share one 3-second bound instead of adding up.
     let snapshot = match s3.snapshot(&request(), deadline()).await {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+        SourceAnswer::Forward(reason) | SourceAnswer::Failed(reason) => {
+            panic!("forwarded: {reason}")
+        }
     };
     let waited = started.elapsed();
     assert!(waited < Duration::from_millis(4500), "waited {waited:?}");
@@ -886,7 +892,9 @@ async fn a_request_answers_within_the_gateway_attempt_while_every_acquisition_is
     let attempt = started + Duration::from_secs(3);
     let snapshot = match s3.snapshot(&request(), attempt).await {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+        SourceAnswer::Forward(reason) | SourceAnswer::Failed(reason) => {
+            panic!("forwarded: {reason}")
+        }
     };
     let waited = started.elapsed();
     assert!(waited < Duration::from_millis(2_900), "waited {waited:?}");
@@ -985,7 +993,9 @@ async fn concurrent_first_requests_share_one_acquisition_per_publication() {
                             .unwrap();
                         String::from_utf8(current.to_bytes()).unwrap()
                     }
-                    SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+                    SourceAnswer::Forward(reason) | SourceAnswer::Failed(reason) => {
+                        panic!("forwarded: {reason}")
+                    }
                 }
             })
         })
@@ -1317,4 +1327,170 @@ async fn stored_acquisitions_legacy_would_not_keep_are_acquired_again() {
         1,
         "invalid forecast: {log:?}"
     );
+}
+
+/// S15b-4b-1: inputs S3 cannot supply are a dependency failure, never a forward to legacy.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_s3_read_failure_is_a_dependency_failure_not_a_forward() {
+    use server2::domestic::kma::backend::KmaBackend;
+    use server2::gateway::BackendHandler;
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&store, &[]).await;
+    // Every S3 listing now answers a malformed page.
+    reqwest::Client::new()
+        .post(format!("{}__catalog?mode=bad-list&key=x", peer.endpoint()))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    let s3 = Arc::new(source(&peer));
+    match s3.snapshot(&request(), deadline()).await {
+        SourceAnswer::Failed(_) => {}
+        SourceAnswer::Snapshot(_) => panic!("built a snapshot without S3"),
+        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+    }
+    let backend = KmaBackend::new(s3, Arc::new(|| NOW), AssemblyConfig::default());
+    let served = backend
+        .fetch_or_forward(request().original_url, "ko".into(), deadline())
+        .await;
+    assert!(
+        matches!(served, Err(server2::gateway::GatewayError::Provider)),
+        "dependency failure"
+    );
+}
+
+/// S15b-4b-1 (review R7): query structure Express parses with `qs` (brackets, prototype names,
+/// an empty key) is answered natively for a known town, never forwarded.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn qs_query_structure_is_answered_natively() {
+    use server2::domestic::kma::backend::KmaBackend;
+    use server2::gateway::BackendHandler;
+    use server2::gateway::backend::Native;
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&store, &[]).await;
+    let backend = KmaBackend::new(
+        Arc::new(source(&peer)),
+        Arc::new(|| NOW),
+        AssemblyConfig::default(),
+    );
+    for query in [
+        "x[y]=1",
+        "hasOwnProperty=1&temperatureUnit=F",
+        "airForecastSource[x]=kaq&a.b=1&=1&__proto__[airUnit]=airnow",
+        "temperatureUnit[]=F&temperatureUnit[]=C",
+    ] {
+        let path = format!("{}?{query}", request().original_url);
+        let served = backend
+            .fetch_or_forward(path, "ko".into(), deadline())
+            .await;
+        assert!(
+            matches!(served, Ok(Native::Served(_))),
+            "{query}: {:?}",
+            served.map(|n| matches!(n, Native::Forward))
+        );
+    }
+}
+
+/// The response body for `query` on the seeded town (S15b-4b-1 round 3).
+async fn answer_body(query: &str) -> String {
+    use server2::domestic::kma::backend::KmaBackend;
+    use server2::gateway::BackendHandler;
+    use server2::gateway::backend::Native;
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&store, &[]).await;
+    let backend = KmaBackend::new(
+        Arc::new(source(&peer)),
+        Arc::new(|| NOW),
+        AssemblyConfig::default(),
+    );
+    let path = format!("{}?{query}", request().original_url);
+    match backend
+        .fetch_or_forward(path, "ko".into(), deadline())
+        .await
+    {
+        Ok(Native::Served(json)) => String::from_utf8(json.to_bytes()).unwrap(),
+        other => panic!("{query}: {:?}", other.map(|n| matches!(n, Native::Forward))),
+    }
+}
+
+/// Drops every `key` member below `v` (JSON.stringify omits `undefined` members).
+fn without(v: &mut serde_json::Value, key: &str) {
+    match v {
+        serde_json::Value::Object(m) => {
+            m.remove(key);
+            m.values_mut().for_each(|x| without(x, key));
+        }
+        serde_json::Value::Array(a) => a.iter_mut().for_each(|x| without(x, key)),
+        _ => {}
+    }
+}
+fn body_json(body: &str) -> serde_json::Value {
+    serde_json::from_str(body).unwrap()
+}
+
+#[tokio::test]
+async fn legacy_comparisons_and_conversions_shape_the_answer() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let plain = body_json(&answer_body("a=1").await);
+    // `switch (to)` is strict: an array wind unit converts every wind speed to `undefined`.
+    // (Its grade, string and summary follow from the missing speed; other fields stay.)
+    let array = body_json(&answer_body("windSpeedUnit[]=km/h").await);
+    let speeds = |b: &serde_json::Value| {
+        let mut items = vec![&b["current"]];
+        items.extend(b["short"].as_array().unwrap());
+        items.extend(b["shortest"].as_array().unwrap());
+        items.iter().filter(|x| x.get("wsd").is_some()).count()
+    };
+    assert!(speeds(&plain) > 10);
+    assert_eq!(speeds(&array), 0);
+    assert_eq!(array["current"]["wsdGrade"], json!(-1));
+    let mut short = array["short"].clone();
+    let mut expected = plain["short"].clone();
+    for key in ["wsd", "wsdGrade", "wsdStr"] {
+        without(&mut short, key);
+        without(&mut expected, key);
+    }
+    assert_eq!(short, expected);
+    assert_ne!(
+        body_json(&answer_body("windSpeedUnit=km/h").await)["current"]["wsd"],
+        plain["current"]["wsd"]
+    );
+    // `to == 'F'` in the converter is loose, so an array temperature unit converts 21.5 C to
+    // 70.7 F; the integer rounding after it tests `toTempUnit === 'F'` strictly, so only the
+    // string unit rounds to 70.
+    assert_eq!(plain["current"]["t1h"], json!(21.5));
+    let string = body_json(&answer_body("temperatureUnit=F").await);
+    assert_eq!(string["current"]["t1h"], json!(70));
+    let array = body_json(&answer_body("temperatureUnit[]=F").await);
+    assert_eq!(array["current"]["t1h"], json!(70.7));
+    // qs sets the object prototype to ["F"]. Its inherited Array.toString converts
+    // loosely to F, while the strict rounding test still treats it as an object.
+    let inherited_array = body_json(&answer_body("temperatureUnit[__proto__][]=F").await);
+    assert_eq!(inherited_array["current"]["t1h"], json!(70.7));
+    let inherited_null = body_json(&answer_body("temperatureUnit[__proto__][]=(null)").await);
+    assert_eq!(inherited_null["units"]["temperatureUnit"], json!("C"));
+    assert_eq!(inherited_null["current"]["t1h"], plain["current"]["t1h"]);
+    // An unknown forecast source (a non-string one included) adds no forecast.
+    assert_eq!(
+        answer_body("airForecastSource[]=kaq").await,
+        answer_body("airForecastSource=bogus").await
+    );
+    // A non-callable `toString` (own or inherited through `__proto__`) makes the object's
+    // conversion throw: `checkQueryValidation` and `convertUnits` stop at their try/catch, so
+    // the forecasts keep their stored time and get no `dateObj`.
+    let ordinary = body_json(&answer_body("temperatureUnit[x]=F").await);
+    assert_eq!(ordinary["short"][0]["time"], json!(24));
+    assert!(ordinary["short"][0].get("dateObj").is_some());
+    let own = body_json(&answer_body("temperatureUnit[toString]=F").await);
+    assert_eq!(own["short"][0]["time"], json!("2400"));
+    assert!(own["short"][0].get("dateObj").is_none());
+    let mut inherited = body_json(&answer_body("temperatureUnit[__proto__][toString]=F").await);
+    assert_eq!(inherited["units"]["temperatureUnit"], json!({}));
+    inherited["units"]["temperatureUnit"] = json!({"toString": "F"});
+    assert_eq!(inherited, own);
 }

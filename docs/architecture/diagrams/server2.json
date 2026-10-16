@@ -2,10 +2,16 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Proposed server2: one Spot host, memory and S3",
+    "title": "Proposed server2 origin: S3 and disposable caches",
     "output": "docs/architecture/diagrams/server2.html",
     "quality_profile": "showcase",
-    "locale": "en"
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "f5184d5a08f87955f3fa1b3ab8367c8504e7cb40",
+      "provider": "github",
+      "link_mode": "web"
+    }
   },
   "components": [
     {
@@ -20,6 +26,14 @@
       "size": [
         155,
         70
+      ],
+      "sources": [
+        {
+          "path": "docs/architecture/service-overview.md",
+          "line": 55,
+          "end_line": 62,
+          "label": "Existing clients and public boundary"
+        }
       ]
     },
     {
@@ -34,6 +48,14 @@
       "size": [
         170,
         70
+      ],
+      "sources": [
+        {
+          "path": "docs/architecture/service-overview.md",
+          "line": 55,
+          "end_line": 62,
+          "label": "Observed edge; origin cutover pending"
+        }
       ]
     },
     {
@@ -48,13 +70,21 @@
       "size": [
         185,
         80
+      ],
+      "sources": [
+        {
+          "path": "server2/src/gateway/mod.rs",
+          "line": 175,
+          "end_line": 214,
+          "label": "Weather and geocode admission"
+        }
       ]
     },
     {
       "id": "legacy",
       "type": "backend",
       "label": "Legacy Node",
-      "sublabel": "Unmigrated families / rollback",
+      "sublabel": "Development / coexistence only",
       "pos": [
         970,
         90
@@ -62,6 +92,20 @@
       "size": [
         190,
         80
+      ],
+      "sources": [
+        {
+          "path": "server2/src/gateway/backend.rs",
+          "line": 366,
+          "end_line": 410,
+          "label": "Development coexistence adapter"
+        },
+        {
+          "path": "plans/issue-2742.md",
+          "line": 280,
+          "end_line": 287,
+          "label": "Remaining forwards removed before cutover"
+        }
       ]
     },
     {
@@ -76,13 +120,27 @@
       "size": [
         185,
         90
+      ],
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/backend.rs",
+          "line": 127,
+          "end_line": 158,
+          "label": "Native source and bounded CPU assembly"
+        },
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 2086,
+          "end_line": 2098,
+          "label": "Request-time KMA and ASOS acquisition"
+        }
       ]
     },
     {
       "id": "memory",
       "type": "database",
-      "label": "Shared volatile cache",
-      "sublabel": "One cache across threads",
+      "label": "Disposable caches",
+      "sublabel": "RAM; disk allowed, 4c pending",
       "pos": [
         330,
         360
@@ -90,6 +148,20 @@
       "size": [
         190,
         90
+      ],
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 3,
+          "end_line": 7,
+          "label": "In-memory view from durable raw records"
+        },
+        {
+          "path": "plans/issue-2742.md",
+          "line": 280,
+          "end_line": 287,
+          "label": "Disk cache and sizing remain S15b-4c"
+        }
       ]
     },
     {
@@ -104,13 +176,27 @@
       "size": [
         195,
         90
+      ],
+      "sources": [
+        {
+          "path": "server2/src/geocode/mod.rs",
+          "line": 460,
+          "end_line": 477,
+          "label": "Reserve before provider HTTP"
+        },
+        {
+          "path": "docs/architecture/server2.md",
+          "line": 2086,
+          "end_line": 2098,
+          "label": "Shared owned request-time acquisition"
+        }
       ]
     },
     {
       "id": "s3",
       "type": "cloud",
       "label": "S3 serving store",
-      "sublabel": "Raw / catalogs / raw packs",
+      "sublabel": "Authoritative raw + catalogs",
       "pos": [
         630,
         620
@@ -118,6 +204,20 @@
       "size": [
         185,
         80
+      ],
+      "sources": [
+        {
+          "path": "server2/src/storage/catalog.rs",
+          "line": 25,
+          "end_line": 67,
+          "label": "Complete durable acquisitions and volatile folds"
+        },
+        {
+          "path": "server2/src/storage/catalog.rs",
+          "line": 885,
+          "end_line": 927,
+          "label": "Raw writes before catalog publication"
+        }
       ]
     }
   ],
@@ -138,7 +238,7 @@
       "id": "legacy-switch",
       "from": "gateway",
       "to": "legacy",
-      "label": "legacy family",
+      "label": "coexistence only",
       "variant": "dashed"
     },
     {
@@ -171,30 +271,30 @@
       "dot": "cyan",
       "title": "Serving contract",
       "items": [
-        "Preserve the 19 observed API groups",
-        "No local persistent serving store",
-        "Coarse geocode: memory / S3; precise stays volatile",
-        "Demand state: grid identity and times only"
+        "Preserve the observed client API contracts",
+        "S3 is authoritative; RAM and disk copies are disposable",
+        "Precise reverse-geocode keys and bodies stay volatile",
+        "Local disk caching is allowed; S15b-4c implementation pending"
       ]
     },
     {
       "dot": "emerald",
       "title": "Durability and lookup",
       "items": [
-        "Raw + complete catalog before new success",
+        "Publish raw + complete catalogs before using new data",
         "Catalogs contain identities, not weather views",
-        "Packs reduce GETs; canonical fallback remains",
-        "Serve only complete fetch groups across partitions"
+        "Request-time KMA; older missing hours use nearest ASOS",
+        "A request waits <=3s; detached shared acquisition continues"
       ]
     },
     {
       "dot": "amber",
       "title": "Scope and gates",
       "items": [
-        "S02 / S03 / S04 / S05 merged; no route cutover",
-        "Cold cells keep legacy until parity is proven",
-        "Later scale-out: independent caches and shared S3",
-        "Design source: docs/architecture/server2.md"
+        "Proposed origin deployment; no route cutover claimed",
+        "Cold cells acquire data; no steady-state legacy dependency",
+        "Remaining explicit forwards must be removed before go-live",
+        "Packs, disk-cache bounds and EC2 sizing remain S15b-4c"
       ]
     }
   ]

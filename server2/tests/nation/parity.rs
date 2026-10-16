@@ -1,3 +1,4 @@
+use super::support::UnusedCitySource;
 use serde_json::Value;
 use server2::{
     domestic::kma::{KmaRequest, Outcome, backend::parse_path},
@@ -139,10 +140,7 @@ async fn real_legacy_route_composition_matches_native_bytes_for_each_used_versio
 async fn actual_http_nation_get_head_and_304_never_contact_legacy() {
     use server2::{
         api::{DirectFamilies, DirectRoutes},
-        domestic::kma::{
-            AssemblyConfig,
-            backend::{KmaBackend, LegacyOnly},
-        },
+        domestic::kma::{AssemblyConfig, backend::KmaBackend},
         gateway::{BackendDispatcher, Gateway, LegacyGeocoder},
     };
     let oracle = oracle();
@@ -174,7 +172,7 @@ async fn actual_http_nation_get_head_and_304_never_contact_legacy() {
     let legacy = "http://127.0.0.1:1"; // Closed port: an accidental legacy hop fails this check.
     let dispatcher = BackendDispatcher::legacy(legacy).unwrap();
     let kma = Arc::new(KmaBackend::new(
-        Arc::new(LegacyOnly),
+        Arc::new(UnusedCitySource),
         Arc::new(move || now),
         AssemblyConfig::default(),
     ));
@@ -284,5 +282,85 @@ fn unconverted_stored_province_rows_recalculate_like_the_actual_legacy_controlle
             expected.get("air").unwrap().to_bytes(),
             "{id}"
         );
+    }
+}
+
+#[tokio::test]
+async fn nation_rendered_errors_keep_jade_send_headers_after_native_finalhandler_integration() {
+    use axum::{
+        body::{Body, to_bytes},
+        http::{Method, Request},
+    };
+    use server2::{
+        api::{DirectFamilies, DirectRoutes},
+        domestic::kma::{AssemblyConfig, backend::KmaBackend},
+        gateway::BackendDispatcher,
+    };
+    let fixture = oracle();
+    for (id, child_status) in [("v901-child-500", 500), ("v903-child-404", 404)] {
+        let case = fixture["scenarios"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["id"] == id)
+            .unwrap();
+        let expected = case["error"]["html"].as_str().unwrap().as_bytes();
+        let clock = Arc::new(|| 0.);
+        let direct = DirectRoutes::new(
+            Arc::new(KmaBackend::new(
+                Arc::new(UnusedCitySource),
+                clock.clone(),
+                AssemblyConfig::default(),
+            )),
+            DirectFamilies {
+                kma_v000903: true,
+                kma_v000901: true,
+                town: false,
+            },
+            BackendDispatcher::legacy("http://127.0.0.1:1").unwrap(),
+        )
+        .with_nation(Arc::new(NationBackend::new(
+            Arc::new(Cities {
+                status: Some(child_status),
+                calls: Mutex::new(vec![]),
+            }),
+            Arc::new(Air {
+                rows: vec![],
+                status: OrderedJson::Null,
+            }),
+            clock,
+        )));
+        let path = format!("/{}/nation/KR", case["version"].as_str().unwrap());
+        let tag = server2::gateway::response::etag(expected);
+        for method in [Method::GET, Method::HEAD] {
+            let request = Request::builder()
+                .method(method.clone())
+                .uri(&path)
+                .header("if-none-match", &tag)
+                .body(Body::empty())
+                .unwrap();
+            let response = direct.handle(request).await;
+            assert_eq!(response.status(), 500, "{id}");
+            assert_eq!(
+                response.headers()["content-type"],
+                "text/html; charset=utf-8"
+            );
+            assert_eq!(
+                response.headers()["content-length"],
+                expected.len().to_string()
+            );
+            assert_eq!(response.headers()["etag"], tag);
+            // res.render uses res.send's ETag contract, unlike the native finalhandler errors.
+            assert!(!response.headers().contains_key("x-content-type-options"));
+            assert!(!response.headers().contains_key("set-cookie"));
+            let body = to_bytes(response.into_body(), 2 * 1024 * 1024)
+                .await
+                .unwrap();
+            if method == Method::HEAD {
+                assert!(body.is_empty());
+            } else {
+                assert_eq!(body.as_ref(), expected);
+            }
+        }
     }
 }

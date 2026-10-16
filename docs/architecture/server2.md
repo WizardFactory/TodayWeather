@@ -357,7 +357,7 @@ raw/v2/{source}/{kind}/{YYYY}/{MM}/{DD}/{period}/{key_sha256}/
   {fetched_at_ms}-{raw_sha256}.raw.gz
 index/v2/{source}/{kind}/{key_sha256}/{partition}.json
 packs/v2/{source}/{kind}/{key_sha256}/{date}/{pack_sha256}.pack
-summary/v2/{source}/{key_sha256}/{date}/{revision_sha256}.json
+summary/v2/{source}/{key_sha256}/{date}/{latest_fetched_ms}-{count}-{revision_sha256}.json
 state/v2/...
 budgets/v2/...
 ```
@@ -743,7 +743,8 @@ future late records cannot arrive. Recompute when later inputs become published;
 do not finalize a summary after partial repair. Last-year lookup remains same
 date, then nearest +/-1..3 days; at each date grid → ASOS → VC. ASOS missing
 data may require on-demand provider calls, so that path is outside the no-provider
-latency examples. Product exposure remains O-13.
+latency examples. Product exposure remains O-13. S16 implements this contract
+([below](#s16-daily-summaries-and-the-last-year-lookup-2026-10-15)).
 
 Push/purchase/notice state is separate from weather raw bodies. Follow the
 [S3 notice handoff](https://github.com/WizardFactory/TodayWeather/issues/2614#issuecomment-5882199479)
@@ -1687,7 +1688,7 @@ v000903 backend inputs, and supplementary DB 1.0, RSS, station, rain-category, a
 forecast, fallback, life-index/MFDS/rise-set, warning, temperature, error, clock-boundary and invalid
 DB 1.0 RSS/current publication, Boolean station-time, hexadecimal area-number, malformed-escape,
 interpolated string current and signed radix cases. 74 recordings match byte for byte, with the dependency calls in legacy order. Two are declared
-forwards: a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2026-01-09, and a query
+forwards: a station time `0001-09-24 09:03`, which V8's legacy parser reads as 2024-01-09, and a query
 with a malformed escape, for which legacy `decodeURI(req.originalUrl)` throws before its `try` (500). `Date.parse` is reproduced for the strict ISO, space and dotted forms (years from
 100 for the legacy forms) and digit-only strings, checked against the pinned V8; any other date
 string forwards to legacy. Numeric Date constructors map years 0-99 to 1900-1999, `parseInt` without a radix reads `0x`
@@ -2519,6 +2520,151 @@ There is still no setting: legacy has no data.go.kr budget variable.
 | Unit tests | Every keyed operation maps to an API of its service; each key and API has its own owner; the defaults equal the development allowances; `KeyRing::per_api` refuses invalid rings and an API without a budget |
 | The province-average API (`ArpltnStatsSvc`, `AirKoreaOperation::Sido`) | Funded by its own budget (before the review fix: refused before HTTP) |
 
+### S15b-4b-1 legacy replies outside the router list (2026-10-16)
+
+S15b-4b-1 ([plan](../../plans/issue-2742.md#s15b-4b-1-legacy-replies-outside-the-router-list))
+answers natively what the KMA assembly still forwarded without needing a provider. Two paths
+still forward and need a geocoder: an unknown town and the `KR` remap (S15b-4b-2).
+
+**Express replies.** Legacy `app.js` (L167-197) defines its error handlers with three arguments,
+so Express does not use them as error handlers: every error reaches Express's default handler.
+That is finalhandler 0.4.1 (`express` 4.13.4 in `server/package-lock.json`), running in production.
+
+| Path | Reply |
+| --- | --- |
+| An escaped exception, and `next(err)` from `makeResult` or `insertSkyIconLowCase` | 500 `Internal Server Error\n` |
+| The end of the router list (the legacy 404 middleware), or a path no `/addr/:region[/:city[/:town]]` route takes | 404 `Not Found\n` |
+| A path parameter `decodeURIComponent` rejects (Express `decode_param`) | 400 `Bad Request\n` |
+| `getAllDataFromDb` for a coordinate outside Korea (`res.redirect(_getUrlWithCoord(...))`, `controllerTown.js:170-174`, `:5648`) | 302 |
+
+Comparison boundary for these replies. server2's gateway (`gateway::backend`) treats any non-200
+backend reply as a dependency failure, the same way it treats a failed legacy hop. The one exception
+is a 503 `EWEATHERUNAVAILABLE`, which none of these replies is. So for the public request, the gateway
+answers the native reply the same way it answered the legacy one.
+
+An exception thrown inside an asynchronous callback is a deliberate containment difference, not an
+equivalent answer. In legacy, Node 16 ends the whole worker process by default (`uncaughtException`).
+The legacy gateway loops back to its own port (`server/routes/gateway.js:145`), so the outcome
+depends on placement:
+
+- If the gateway request and the backend request ran in the same PM2 worker, that worker's death
+  also closes the client's connection. The client gets no HTTP reply, and the worker's other
+  in-flight requests are lost.
+- If they ran in different workers, the surviving gateway sees its backend connection fail and
+  answers its usual dependency error.
+
+server2 contains the exception to the one request: the backend answers the 500 above, and the
+gateway answers its dependency error. server2 never ends the process and never loses other
+requests. The oracle's `query-malformed-escape` reply (500, `Internal Server Error\n`) is now
+matched natively.
+
+**`req.query`.** `domestic::kma::qs` ports `qs` 4.0.0 `parse` with Express 4.13.4's options
+(`allowDots: false`, `allowPrototypes: true`), so bracket syntax, array indices,
+`Object.prototype` names and empty keys are parsed as legacy parses them, not forwarded.
+
+The port includes `__proto__` assignment: an object value becomes the prototype that property reads
+fall back to. A query field named `hasOwnProperty` shadows the method that `checkQueryValidation`
+calls, so the call throws and the legacy `catch` skips the defaults. The source decides which air
+inputs to load from the same validated `req.query`.
+
+The port equals the pinned Express on a recorded corpus of 8,025 queries
+([provenance](../../server2/tests/domestic/fixtures/V8-DATE-PROVENANCE.md)).
+
+**`Date.parse`.** `domestic::kma::dateparse` ports V8's date parser as shipped in Node 16.20.2
+(V8 9.4): the ES5 ISO form, then the permissive legacy parser, followed by `MakeDay`, `MakeTime`,
+`MakeDate` and `TimeClip`, with the process zone UTC. The V8 BSD notice is kept in the module. It
+replaces the earlier subset, which forwarded any form it could not read.
+
+The port equals the pinned binary on a recorded corpus of 20,388 strings
+([provenance](../../server2/tests/domestic/fixtures/V8-DATE-PROVENANCE.md)), and on the table of
+earlier pinned values. The oracle's `stn-small-year-datetime` (`0001-09-24 09:03`, which V8 reads
+as 2024-01-09 09:03) is now matched natively. The KMA page dates use the same parser.
+
+**Unpaired surrogates.** A JavaScript string can hold an unpaired UTF-16 surrogate, for example
+half of an emoji cut by `substr`. Property names are canonical: two halves made adjacent name
+the same property as the paired character. The date formatters' lengths, the date ordering and the
+source's AirKorea slices count stand-ins the same way. The port keeps one as a stand-in code point (U+10F800 + offset, the
+upper half of Supplementary Private Use Area-B). A real character in that range, from a request
+field or a provider string, is kept as the stand-ins of its own two surrogates. Stand-ins are
+therefore never ambiguous. It
+restores the code unit wherever code units matter: `length`, indices, comparison, `===` and
+`JSON.stringify`. The gateway serializer escapes a lone surrogate the way well-formed
+`JSON.stringify` does, and two halves that become adjacent form their pair again.
+
+A string is put in that form exactly once, where it enters the value layer: a request parameter
+or query value, or provider and repository text (`Val::str`, `js::canon_str`). A string already in
+that form is reused as it is (`Val::canonical`), and text that never enters the value layer, such
+as the world-air fallback's provider strings, is written out unchanged.
+
+Limitation: provider JSON with an escaped lone surrogate is rejected by the source's JSON parser,
+while legacy `JSON.parse` keeps it.
+
+**Legacy comparisons.** Since `req.query` values can now be arrays and objects, each comparison
+keeps the legacy operator:
+
+| Legacy code | Operator | A non-string value |
+| --- | --- | --- |
+| `_getAirForecast`: `forecastSource === 'kaq'` / `'airkorea'` | strict | Selects no source and adds no forecast, as when the forecast is loaded |
+| `convertUnits`: `from == to`, temperature `to == 'F'` / `'C'` | loose | `['F']` converts like `'F'` |
+| `convertUnits`: wind and pressure `switch (to)` | strict | Converts to `undefined`, so the member is omitted |
+| The rounding after temperature conversion: `toTempUnit === 'F'` | strict | Not rounded |
+| `AqiConverter.value2grade` / `value2index`: `air_pollutants_breakpoints[airUnit]` | property key | `['airnow']` reads the `airnow` table |
+| The same functions: `airUnit === 'airnow'` (ppm to ppb), `airUnit == 'aqicn'` | strict / loose | `['airnow']` skips the ppb conversion; `['aqicn']` converts |
+
+An object converts to a primitive through `OrdinaryToPrimitive`. Own or inherited query data
+properties are not callable and are skipped. An array assigned through `__proto__` retains its
+inherited `Array.prototype.toString`/`join`; conversion reads length and elements from the original
+receiver. Thus `temperatureUnit[__proto__][]=F` converts 21.5 C to 70.7 F without strict integer
+rounding, and the `(null)` variant receives the default unit.
+`Object.prototype.toString` gives `[object Object]`, and `Object.prototype.valueOf` returns the
+object itself. When neither gives a primitive, the conversion throws the legacy `TypeError`.
+
+For example, `temperatureUnit[toString]=F` makes the `== '(null)'` test in `checkQueryValidation`
+throw. The legacy `catch` then skips the remaining defaults, and `convertUnits` stops at its own
+`catch`. Node 16.20.2 confirms these conversions.
+
+**Grids outside KMA.** A town whose `mCoord` is not a KMA grid cell gets empty grid and RSS
+collections. Legacy's `find` by `mCoord` returns no row, so no acquisition starts.
+
+Provider-independent parameter validation and the synchronous `decodeURI(originalUrl)` guard run
+before snapshot acquisition, in legacy order. Unsupported regions and malformed query escapes
+therefore never read S3, call a provider, or forward to legacy. The direct S17 routes share these
+native error outcomes and never forward storage failures or Rust defects. finalhandler replies
+carry `X-Content-Type-Options: nosniff`, no ETag, and the legacy Content-Length even for HEAD.
+The standalone S17 router recording's unmatched-path `Cannot GET ...` is not the full app's
+404: `app.js` passes an Error with status 404, so production finalhandler emits `Not Found\n`.
+
+**Defects.** A store answer the snapshot cannot give (`unavailable`), a reply that leaves inputs
+of a replayed recording unused, or a Rust panic in assembly is a port invariant failure, not
+legacy behavior. An Express 5xx still ends the reply early, so its later inputs are allowed to go
+unused. The backend answers it as a dependency failure
+and counts it in `server2_gateway_native_defects_total`. It never forwards. `LegacyOnly` is now a
+test-only source.
+
+Maintained diagrams: [gateway ownership and terminal errors](diagrams/server2-gateway.html)
+([source JSON](diagrams/server2-gateway.sequence.json)) and the
+[server2 overview](diagrams/server2.html) ([source JSON](diagrams/server2.json)) pin code evidence
+to `f5184d5a`. Native errors terminate without a legacy hop; the selected legacy HTTP adapter
+retains its bounded retries during coexistence. Explicit unknown-town and KR-remap forwards
+remain S15b-4b-2 work and must be removed before go-live. S3 is authoritative; disposable RAM
+and local disk caches are allowed, while bounded disk caching, packs and EC2 sizing remain
+S15b-4c work rather than an implemented capability of this increment.
+
+S16 integration retains captured `getPastMid` rows and its post-response summary sink for
+successful compatible JSON routes. Native preflight errors bypass both the source and summary
+sink; source failures, invariant failures and Rust panics still terminate as counted dependency
+errors. The summary capture does not turn errors into legacy forwards.
+
+**Verification** (local, no provider):
+
+| Check | Result |
+| --- | --- |
+| All 85 oracle scenarios and the S02 goldens | Match with no declared forward (previously two) |
+| The V8 corpus | Equal to Node 16.20.2, including TimeClip and offset-wrap edges |
+| Legacy comparisons | Array and object query values: response regressions (`source_s3`, `air_s3`) and unit tests |
+| Unit tests | Reply/Defect outcomes, `_getUrlWithCoord`, surrogate semantics against Node 16.20.2 values |
+| The store-callback exception (`replay`) | Now the Express 500 |
+
 ### S10e legacy settings and server2/.env (2026-10-15)
 
 [S10e](../../plans/issue-2753.md) ([spec](../../specs/issue-2753.md), #2753) applies AK's decisions of
@@ -2655,6 +2801,95 @@ policy deny) for an unconditional `raw/v2` PUT; see the
 [sanitized evidence](../evidence/aws/server2-s3-readiness-2026-10-15.json). Not verified: the real
 IMDS on EC2 and the runtime role's 404/403 statuses, which the same tool checks at deployment.
 
+### S16 daily summaries and the last-year lookup (2026-10-15)
+
+[S16](../../plans/issue-2701.md) ([spec](../../specs/issue-2701.md), #2701) adds `server2::summary`. Per
+O-13 it stores daily summaries and an internal last-year fallback only; no response field, API
+version or UI changes. Legacy stores no summary: the grid values are the rows the tw_svc assembly
+derives at `getPastMid`, so S16 adds storage, not a new computation.
+
+| Source | Values | Complete when | Written by |
+| --- | --- | --- | --- |
+| `grid` (key: the town) | The `_getDaySummaryList` row `getPastMid` merges (`controllerTown.js:2697`, `:5530`): `taMax`, `taMin`, `t1d`, `reh`, `rn1`, `sky`, `pty`, `lgt`, `wsd`, AM/PM fields, `observationHours` | at least 18 valid `t1h` hours; the `00:00` hour counts for the previous day (`:5539`) | the recorder, for KST today-6..today-1 (today-2 before 01:00, while yesterday's `2400` hour is still the live minute-updated row) |
+| `asos` (key: station) | The `policy.normalize` daily row (`taMin`, `taMax`, `t1d`, `reh`, `rn1`, `wsd`) | `taMin`, `taMax` valid and ordered; rain optional | the recorder (S15b-2 ranges) and the lookup (on demand) |
+| `vc` (key: 0.02-degree cell) | `taMin`, `taMax`, `t1d` (°C), optional `rn1` (mm), `observationHours`, `localHours` from a body fetched after the local day ended | temperature in at least 75 % of the local hours (23/24/25, IANA zone) | the lookup, from stored raw VC records |
+
+Native v000901, v000902, v000903 address routes and v000803 town routes record the same
+`getPastMid` rows. v000705 routes do not record grid summaries: their current-data repair
+prefix differs from the S16 baseline. The shared backend preserves each route response.
+
+Grid summaries are keyed by town, not grid: `mergeCurrentByStnHourly` corrects a town's rows with
+its own stations and ASOS mapping, so towns of one grid can differ. AK approved town keys and
+lookup-only VC derivation on 2026-10-16 (decision 6); revision volume is measured after S15b-4.
+
+**Objects.** `summary/v2/{source}/{key_sha256}/{YYYYMMDD}/{latestFetchedMs:013}-{count:06}-{revision_sha256}.json`,
+created with `If-None-Match: *` (a 412 counts only when the stored bytes are identical) and never
+deleted; the role has no delete permission and no lifecycle rule exists, so retention is unbounded
+(at least the three years of D6/O-4). The body records the canonical key, date, values and the
+input set (`count`, `latestFetchedMs`, SHA-256 of the sorted input identity lines, per-family
+counts). The newest revision is the greatest name whose body verifies; a later newest input sorts
+later.
+
+**Complete inputs and late revisions.** The KMA snapshot records summary inputs only when its
+reads were complete; a listed group that S06 excludes (not eligible, or a raw body missing) makes a
+grid, station-page, registry-seed, ASOS or VC read partial. Grid families are read from published
+catalogs; since S15b-4a a missing latest publication is acquired within the request's single wait
+bound and becomes an input (with its stored fetch time) when it arrives in time; one that misses
+the bound is not an input, so a stored day may be recorded without it and revised by a later
+request, as are the late inputs of the backfill pass the request does not wait for;
+the station fold the answer used is still the current one, every day of the 8-day page window was
+read and its latest read did not fail, and no S3 load, fold, geocoding or unfolded page is pending;
+the history answer has no `cache-read-*` reason; and the ASOS acquisitions it answered from were
+read under the same lock as "no recovery run in flight, no failed read". Input identities are the
+acquisitions themselves: grid publications and ASOS ranges with their fetch time and content hash,
+and the station pages the fold applied with their fetch time and raw hash, plus the station
+registry (seed, window pages and geocodes decide station selection and the ASOS mapping of every
+date) as its content hash and the instant it first appeared; a failed registry seed read blocks
+recording. S15b-2 keeps the first
+page acquired for an hour (one acquisition per hour); a later acquisition of the same hour is not
+applied by the assembly, so it is not a summary input either. An ASOS S3 reload still running when
+the history answer is built also blocks recording. After a natively served response the backend hands the `getPastMid` rows
+(a JSON copy taken before later steps mutate them; the response is unchanged) to the recorder, which
+runs outside the request (two tasks, serialized, 30 s each; more are dropped and repeated by a later
+request). Per source, key and date it skips an input digest it already examined; a new digest lists
+the date in S3 (another process may have written), and a new revision is written when its newest
+input is newer than the stored newest revision's (also with equal values, so the stored order follows
+the inputs) or as new with other values. An older input set never supersedes a newer one. A late
+input therefore recomputes the day; an older input set never supersedes a newer one.
+
+S16 also changes one S15b-2 behavior: a station-page day whose `aws-hourly` or `city-obs` catalog
+is not listed now reads as empty. Before, the absent catalog's lookup answered "incomplete", so a
+day without city pages never loaded its hourly pages from S3 and was read again on every load.
+
+**Last-year lookup** (`summary::Lookup::last_year`, not wired to a route). The same date a year
+earlier (Feb 29 → Feb 28), then ±1..±3, earlier first. At each date: the town's grid summary, then
+the station's ASOS summary (when missing, one data.go.kr daily range `[base-3, base+3]` through the
+funded S15b-2 acquirer, published to S06, its complete days stored; at most once per station and
+range a day; a concurrent lookup waits for that acquisition and a cancelled one releases it), then
+the cell's VC summary (derived from the stored raw VC records each time and stored as a new revision
+when newer records give other values; the VC provider is never called). The first complete summary
+wins. A failed S3 read, a provider failure or another lookup's unfinished acquisition at the deadline
+returns an error rather than a lower-priority answer; `03` means absent.
+
+**Load (estimates, not measured).** A town request with new inputs examines at most 12 candidates,
+each with one LIST and at most one GET. After a day ends, only a few new inputs concern it (its
+`2400` hour, late station pages, ASOS ranges, a registry change; a process start also restarts the
+registry instant), so a few revisions of about 1 KiB each: 2,000 requested towns at 3 revisions a day give about 2.2 M objects and 2.2 GB a
+year. Unit prices are not assumed. An on-demand ASOS range is one data.go.kr call under the S08
+`DONGNAE_SECRET_KEYS` budget. S16 uses no local disk (the 2026-10-15 disk-cache rule is not
+needed): the recorder keeps at most 65,536 memory entries of a few hundred bytes (about 15 MiB at
+most), and S3 stays the only store.
+
+Verification (local, test peers only): unit tests for keys, bodies, names, input relevance,
+completeness (17/18 grid hours; inverted, missing and sentinel ASOS extremes; 23/24/25-hour New York
+days needing 18/18/19 hours), store revisions, the recorder (late inputs, older inputs, equal
+values, cold process, failures) and the lookup order and failure rules; end-to-end over the S06
+loopback S3 peer with the native backend (24-hour day stored including its `00:00` hour, 17-hour
+day not stored until its late 18th hour, a late `2400` hour writing a second revision, no record
+while an ASOS run is in flight, ASOS acquired once and published, VC derived from a stored raw body).
+Live on 2026-10-15: one ASOS daily call for station 108, 2025-10-12..18 (`00`, 7 items, 0.30 s),
+kept as the test fixture.
+
 ### S18a push registration state (2026-10-15)
 
 [S18a](../../plans/issue-2703.md) ([spec](../../specs/issue-2703.md), #2703) ports the used push
@@ -2761,6 +2996,122 @@ MongoDB 3.4.15; 42,226 alarms and 34,216 alerts) converted with no malformed doc
 into a loopback S3 peer in 2.0 s (64 journal entries), restored in 1.3 s with every record equal,
 and a re-run changed nothing. The raw export and converted file were deleted after the check; no
 token or record was committed or logged. No push provider was called.
+
+### S18b-1 scheduled alarm delivery (2026-10-16)
+
+[S18b-1](../../plans/issue-2703.md#s18b-1-scheduled-alarm-delivery) ports the legacy alarm worker
+(`server/controllers/controllerPush.js` `start`, `sendPush`, `sendNotification` and the message
+builders; started only in `SERVER_MODE=push`, `server/app.js:140-147`) onto the S18a state. It is a
+library worker like the routes; process wiring and the switch from the legacy push process belong
+to S20, so legacy and server2 never both send. Conditional alerts (S18b-2), the push warning feed
+deferred by S12 (S18b-3) and notices (S18c) are separate PRs. The
+[declaration](../../server2/config/tasks/S18b-1.json) lists the paths.
+
+**Minute.** At each UTC minute boundary (legacy: `setInterval` 60 s from process start, so a
+minute could be skipped or repeated) the worker: removes duplicate registrations
+(`lib/pushStore/mongo.js` `removeDuplicates`), selects alarms with `pushTime` equal to the minute's
+seconds of day and `enable !== false` in natural order (`getAlarmsByTime`), keeps those due on the
+client's local weekday (`_filterByDayOfWeek`, `kmaTimeLib.toLocalTime`), claims the minute in the
+ledger, delivers with at most six in flight (`async.mapLimit(..., 6, ...)`), writes the minute's
+result, then removes records not updated for 60 days and stamps records without `updatedAt`
+(`_removeOldList` through `makeRemoveSelector` and `updatePushInfo`). Store changes go through the
+S18a writer as internal operations (journal before effect). A minute with no due alarm writes no
+ledger object. A minute whose state is not restored
+is neither claimed nor sent. A minute missed while no process ran is not caught up.
+
+**One delivery.** As `sendNotification`: language default `ko`, `initUnits`, package default
+`todayWeather`; the record selects `GET {SERVICE_SERVER}/v000902/kma/coord|addr/...` or
+`/v000902/dsf/coord/...`, or first `GET {API_SERVER}/geocode/v000903/coord/...` (city 0 with
+`geo`, or no known source), with the units query and `Accept-Language` (legacy names and defaults,
+`config.js` `serviceServer`/`apiServer`). The title and text are the legacy builders' output
+(`_makeKmaPushMessage`, `_makeDsfPushMessage`, `_makePushAirMessage`, `_getAqiStr` with V8's sort
+and the legacy comparator, i18n 0.8.3 lookup over an embedded subset of the legacy locale files
+with per-file sha256 provenance). The FCM HTTP v1 request is the firebase-admin 5.13.1 `send`
+request: `POST https://fcm.googleapis.com/v1/projects/{project}/messages:send` with
+`{"message":{"notification":{title, body},"data":{"cityIndex"},"token"}}` and a cached OAuth
+token from an RS256 service-account assertion (the scopes and claim order of firebase-admin; one
+hour; refreshed when less than a minute is left). Service accounts are server2 settings
+(`SERVER2_FIREBASE_TODAYWEATHER`, `SERVER2_FIREBASE_TODAYAIR`). Responses are classified with
+firebase-admin's rules (`FirebaseMessagingRequestHandler`, `MESSAGING_SERVER_TO_CLIENT_CODE`): an
+unregistered token (`NOT_FOUND`, the documented
+[`UNREGISTERED` 404](https://firebase.google.com/docs/cloud-messaging/error-codes)) disables every
+alarm of that token (`disableAlarmsByFcm`); the outcome is reported after the disable is durable,
+with class suffix `;disable-failed` when it could not be committed. Records with only a GCM `registrationId` are not sent:
+node-gcm used the legacy FCM API, which Google deprecated on 2023-06-20 and began shutting down on
+2024-07-22 ([migration guide](https://firebase.google.com/docs/cloud-messaging/migrate-v1)).
+
+**No hidden retry, no resend (D02).** Each delivery makes at most one FCM request; reqwest's
+protocol-NACK retry is disabled and redirects are not followed. firebase-admin retried once after a
+network error, which could deliver twice; server2 records the outcome as unknown. FCM recommends
+backoff retries for `UNAVAILABLE` and `QUOTA_EXCEEDED`; D02 keeps them out: the failure is recorded
+and the next independently scheduled minute is the next attempt. Weather and geocode requests are
+one attempt each, bounded to 30 s (legacy had no bound); the OAuth and FCM requests to 10 s.
+
+| S3 object (`index/v2/push/delivery/`) | Write | Content |
+| --- | --- | --- |
+| `alarm/{YYYYMMDD}/{HHMM}.json` | `If-None-Match: *`, before any send | minute, claim time, nonce, record `_id`s |
+| `alarm/{YYYYMMDD}/{HHMM}.result.json` | `If-None-Match: *`, after the sends | per `_id`: outcome, class, HTTP status |
+
+A delivery is identified by (kind, minute, record `_id`). Only the process whose claim committed
+sends; a second process, a restart or a repeated tick finds the claim (409/412) and sends nothing.
+An unknown claim outcome is read back (our body: owned; another body: taken; unreadable: nothing
+sent), and a refused or unavailable ledger sends nothing for that minute. A claim without a result
+means the outcomes are unknown and are not resent; an unknown result write is read back, and a
+result that was refused or whose outcome stays unknown is reported as a minute note and counted. Outcomes: `accepted`, `unregistered`,
+`rejected` (firebase-admin client code), `unknown` (timeout or transport error after sending) and
+`failed` (nothing sent: weather, geocode, build, credentials, OAuth, connect, iOS without FCM token,
+retired GCM, unknown type).
+
+**Diagnostics.** Ledger objects and diagnostics hold record `_id`s, minutes, outcome classes and
+HTTP statuses only: no token, coordinate, name, address or message text (legacy logged whole
+records with tokens). Standard error gets one line per non-accepted delivery and per skipped
+minute; counters cover minutes, skips, selections, each outcome, removals and stamps. Nothing is
+written to local disk.
+
+**Deliberate differences.** Besides the retry, minute alignment and GCM items above: duplicate
+removal deletes the records holding the group's earliest `updatedAt` and skips a group with one
+distinct date or a record without one (legacy compared the first two unordered `$addToSet` values
+and threw on a single date); an unknown package fails the delivery (legacy threw inside a
+callback); OAuth uses the token endpoint and audience Google documents for service accounts,
+`https://oauth2.googleapis.com/token`
+([service-account flow](https://developers.google.com/identity/protocols/oauth2/service-account);
+firebase-admin 5.13.1 used `https://accounts.google.com/o/oauth2/token`), tokens are refreshed on
+demand per app, one request at a time, and a failure is not cached; the duplicate pass groups on
+indexed key fields and decodes only grouped records; the 60-day removal and the `updatedAt` stamp
+re-check records in the writer: of the records the `makeRemoveSelector` filter matches, the
+selected one is removed only while it still equals the document read at selection and any other
+only while its own `updatedAt` is older than 60 days; an unregistered token's disable removes
+exactly those records of every selection of the minute with that token in its own journal entry
+(legacy disabled, then removed them the same minute), so no restart can leave one enabled and one
+disable never makes another stale selection look recent; the
+stamp applies only while the record still has no `updatedAt`. So a user change or removal made
+during the minute is never undone (even one that repeats the same settings) and a stamp never
+re-enables a disabled token (legacy removed every match and upserted the copy read before
+sending); legacy disabled unregistered tokens without waiting; OAuth tokens are cached and refreshed with one lock per app,
+and the assertion and expiry use the time of each send (not the minute's start).
+
+**Verification.** The [oracle fixture](../../server2/tests/delivery/fixtures/PROVENANCE.md) runs
+the real `ControllerPush` and firebase-admin 5.13.1 (Node 16.20.2) over HTTPS and weather doubles:
+47 single deliveries (KMA, DSF, geocode, TodayAir, units, languages, failures, every FCM error
+class, connection resets, token errors, iOS/Android/unknown types) and one scheduled minute with 7
+registrations (weekday filter, 60-day removal, `updatedAt` stamp). server2 matches the weather
+and geocode URLs with `Accept-Language`, the OAuth request bytes (re-signed only for the audience),
+the FCM path, authorization and body bytes, and the outcomes; the minute's FCM bodies and requests
+as multisets and the resulting state. Fault tests: one request on 503, timeout and reset with
+nothing sent later; a replacement process at the same minute sends nothing and the next minute
+delivers; two processes claiming one minute deliver each alarm once; a claim whose answer was lost
+is read back (own: delivered; another's: nothing sent); selection excludes other minutes,
+`enable: false`, excluded local weekdays and weekday lists without `timezoneOffset`; a user update
+made during the minute (changed or identical settings) survives the stale cleanup; a claim stored
+with a lost answer and a failed read-back sends nothing, also after a restart, and the next minute
+delivers; a refused claim and an unrestored state
+send nothing; an unregistered token's alarms are disabled durably before the outcome (not
+re-enabled by the stamp; stale ones removed in the disable's journal entry, also when several
+share the token), and a failed disable is reported and not resent;
+the classification follows firebase-admin 5.13.1 for its detail type and for current FCM error
+bodies; diagnostics and ledger objects contain no token, coordinate or name. With
+42,226 synthetic alarms a minute ran in about 0.1–0.2 s (debug build, loopback doubles). Only
+loopback doubles were called; no push was sent.
 
 ### S17a KMA v000901 and v000902 address weather (2026-10-15)
 

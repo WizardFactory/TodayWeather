@@ -156,45 +156,31 @@ pub fn path(sc: &Value) -> String {
 pub fn try_request(sc: &Value) -> Option<KmaRequest> {
     let lang = sc["lang"].as_str().unwrap_or("");
     if is_town(sc) {
-        parse_town_path(&path(sc), lang)
+        parse_town_path(&path(sc), lang).ok()
     } else {
-        parse_path(&path(sc), lang)
+        parse_path(&path(sc), lang).ok()
     }
 }
 pub fn request(sc: &Value) -> KmaRequest {
     try_request(sc).expect("parsable recorded path")
 }
-/// Recordings whose legacy result the port does not reproduce: the assembly (or the router,
-/// for an unrouted path) forwards them to legacy for the stated reason.
-pub const FORWARDED: [(&str, &str); 10] = [
-    // The two S15 declared forwards on the v000901 router.
-    (
-        "query-malformed-escape",
-        "getAllDataFromDb: uncaught URIError: URI malformed",
-    ),
-    (
-        "stn-small-year-datetime",
-        "date string form not reproduced (V8 legacy Date.parse): \"0001-09-24 09:03\"",
-    ),
-    // S17b: the same malformed escape on the town routers.
-    (
-        "v000803-query-malformed-escape",
-        "getAllDataFromDb: uncaught URIError: URI malformed",
-    ),
-    (
-        "v000705-query-malformed-escape",
-        "getAllDataFromDb: uncaught URIError: URI malformed",
-    ),
-    // S17b: v000705 sub-routes without `midData`: `insertSkyIcon` calls `next(err)` and Express
-    // answers 500 (forwarded like every S15 `next(err)`; reproducing Express's 500 is open).
-    ("v000705-short", "insertSkyIcon error"),
-    ("v000705-short-model-errors", "insertSkyIcon error"),
-    ("v000705-shortest", "insertSkyIcon error"),
-    ("v000705-current", "insertSkyIcon error"),
-    ("v000705-current-model-errors", "insertSkyIcon error"),
-    // An unknown sub-route is no legacy route (Express 404): not routed natively.
-    ("v000705-unknown-part", "not routed"),
-];
+/// The standalone router oracle has no app-level 404 middleware. Unmatched paths are
+/// checked against app.js/finalhandler separately by the direct-route tests.
+pub const FORWARDED: [(&str, &str); 1] = [("v000705-unknown-part", "not routed")];
+
+/// Test-only origin source for coexistence transport checks.
+pub struct LegacyOnly;
+impl server2::domestic::kma::backend::KmaSource for LegacyOnly {
+    fn snapshot(
+        &self,
+        _: &KmaRequest,
+        _: tokio::time::Instant,
+    ) -> server2::gateway::BoxFuture<'_, server2::domestic::kma::backend::SourceAnswer> {
+        Box::pin(async {
+            server2::domestic::kma::backend::SourceAnswer::Forward("test origin".into())
+        })
+    }
+}
 /// The replay store of one recorded scenario.
 pub fn replay(sc: &Value) -> RecordedStore {
     let id = sc["id"].as_str().unwrap();

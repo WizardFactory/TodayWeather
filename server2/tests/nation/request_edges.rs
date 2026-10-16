@@ -1,3 +1,4 @@
+use super::support::UnusedCitySource;
 use axum::{
     body::{Body, to_bytes},
     http::{Method, Request},
@@ -5,10 +6,7 @@ use axum::{
 use serde_json::Value;
 use server2::{
     api::{DirectFamilies, DirectRoutes},
-    domestic::kma::{
-        AssemblyConfig, KmaRequest, Outcome,
-        backend::{KmaBackend, LegacyOnly},
-    },
+    domestic::kma::{AssemblyConfig, KmaRequest, Outcome, backend::KmaBackend},
     gateway::{BackendDispatcher, BoxFuture, GatewayError, OrderedJson},
     nation::{CitySource, NationAir, NationBackend, NationSource, object, text},
 };
@@ -65,7 +63,7 @@ async fn assert_legacy_child_contract(id: &str) {
     let clock = Arc::new(|| 0.);
     let direct = DirectRoutes::new(
         Arc::new(KmaBackend::new(
-            Arc::new(LegacyOnly),
+            Arc::new(UnusedCitySource),
             clock.clone(),
             AssemblyConfig::default(),
         )),

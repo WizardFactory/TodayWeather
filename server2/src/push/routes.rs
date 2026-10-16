@@ -56,7 +56,7 @@ impl From<String> for StoreError {
         }
     }
 }
-type StoreResult = Result<Val, StoreError>;
+pub(crate) type StoreResult = Result<Val, StoreError>;
 
 /// Store calls the handlers make; implemented over a transaction and, for the response after a
 /// failed S3 write, by a backend that casts and then fails every call.
@@ -153,7 +153,11 @@ fn post(body: &Body, lang_header: Option<&str>, be: &mut dyn Backend) -> Reply {
 }
 
 /// `ControllerPush.prototype.updatePushInfo`: Err is an exception thrown to Express.
-fn update_push_info(info: &mut Obj, be: &mut dyn Backend) -> Result<StoreResult, Thrown> {
+/// `ControllerPush.prototype.updatePushInfo` (also the alarm worker's `updatedAt` stamp).
+pub(crate) fn update_push_info(
+    info: &mut Obj,
+    be: &mut dyn Backend,
+) -> Result<StoreResult, Thrown> {
     let now = Val::Date(be.now());
     info.set("updatedAt", now);
     info.set("updatedBy", "user");
@@ -273,7 +277,7 @@ fn delete(body: &Body, be: &mut dyn Backend) -> Reply {
 }
 
 /// `makeRemoveSelector` + `tokenQuery`.
-fn remove_selector(info: &Val) -> Option<Vec<(String, Val)>> {
+pub(crate) fn remove_selector(info: &Val) -> Option<Vec<(String, Val)>> {
     let mut filter = Vec::new();
     if info.get("fcmToken").truthy() {
         filter.push(("fcmToken".to_owned(), info.get("fcmToken").clone()));
@@ -378,7 +382,7 @@ fn list(body: &Body, lang_header: Option<&str>, be: &mut dyn Backend) -> Reply {
 }
 
 /// `UnitConverter.initUnits` (strict mode).
-fn init_units(units: &Val) -> Result<Val, Thrown> {
+pub(crate) fn init_units(units: &Val) -> Result<Val, Thrown> {
     const DEFAULTS: [(&str, &str); 7] = [
         ("temperatureUnit", "C"),
         ("windSpeedUnit", "m/s"),

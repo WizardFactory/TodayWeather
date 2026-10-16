@@ -58,3 +58,41 @@ beyond the oracle (documented subset of `util.inspect` and Date strings); restor
 journal length between snapshots (1,024 entries, read 8 at a time; more while snapshot writes keep failing). Rejected: one S3 object per
 record (76k GETs to restore), a single whole-state object (66 MB rewrite per change), local-disk
 state (tokens on disk; S3 stays the source of truth).
+
+## S18b-1 scheduled alarm delivery
+
+Task: issue-2703-s18b-1; base 915978bb (started on a9b3a23d); date 2026-10-16; declaration
+`server2/config/tasks/S18b-1.json` ([record](https://github.com/WizardFactory/TodayWeather/issues/2703#issuecomment-6205966857)).
+
+- Paths: `server2/src/push/deliver/` (worker, weather requests, text, FCM adapter, ledger, internal
+  store operations, embedded locale subset), small additions in `server2/src/push/` (`store.rs`
+  query keys and `due`, `service.rs` internal operations, `js.rs` helpers, `routes.rs`
+  visibility), `server2/Cargo.toml`/`Cargo.lock` (`ring`), `server2/.env.example`,
+  `server2/tests/delivery.rs`, `server2/tests/delivery/`. Outside: this plan, the intent and spec,
+  and the S18b-1 section of `docs/architecture/server2.md`.
+- Split: S18b-2 conditional alerts (`alert.push.controller.js`), S18b-3 the S12-deferred push
+  warning feed, S18c notices (`GET /v000903/notice/latest`, AK 2026-10-16), each its own PR.
+
+| ID | User / goal | Steps | Expected | AC |
+| --- | --- | --- | --- | --- |
+| A1 | App user with a daily alarm | Minute with due alarms (KMA, DSF, geocoded, TodayAir) | Same weather requests, title/text and FCM request as legacy | B1 |
+| A2 | App user with weekday alarms | Due alarm on an excluded local weekday | Not sent | B1 |
+| A3 | User whose app was removed | FCM `NOT_FOUND` | Token's alarms disabled durably; outcome recorded | B3 |
+| A4 | Operator during FCM errors | 503, timeout, reset | One request each; `rejected`/`unknown` recorded; no resend | B2 |
+| A5 | Operator replacing the host | Second process at the same minute; next minute | Nothing resent; next minute delivered | B2 |
+| A6 | Operator during an S3 or state fault | Refused claim; unrestored state | Nothing sent, minute skipped with a sanitized note | B2 |
+| A7 | Privacy review | Read diagnostics and ledger | No token, coordinate or name | B4 |
+
+Checks: `cargo fmt --check`, clippy `-D warnings`, `cargo test --locked --workspace`, release
+build, placement gate with the S18b-1 declaration, artifact policy, Codex review until PASS, CI.
+
+Live calls: none. The oracle runs offline (HTTPS/weather doubles); tests use loopback doubles and
+the public RFC 7515 A.2 example key. No push, FCM, APNs, OAuth, AWS or weather provider call.
+
+Rollback and risks: no process wiring, so a revert has no runtime effect. Risks: FCM may change
+error bodies (classification follows firebase-admin 5.13.1 and falls back to status codes);
+weather requests depend on `SERVICE_SERVER`/`API_SERVER` (legacy HTTP API) until S20 points them
+at server2's routes; a minute with an unknown claim outcome that cannot be read back is skipped
+(missed rather than duplicated). Rejected: per-delivery claim objects (one PUT per send; a
+minute claim gives the same no-resend guarantee with one object), retries inside the minute
+(D02), local-disk ledgers (tokens and state stay in memory and S3).

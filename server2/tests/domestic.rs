@@ -16,6 +16,8 @@ mod life_s3;
 mod observe;
 #[path = "domestic/parity.rs"]
 mod parity;
+#[path = "domestic/qs.rs"]
+mod qs;
 #[path = "domestic/quota.rs"]
 mod quota;
 #[path = "domestic/replay.rs"]
@@ -30,7 +32,11 @@ mod source_s3_oracle;
 mod stations;
 #[path = "providers/support.rs"]
 mod stub;
+#[path = "domestic/summary_s3.rs"]
+mod summary_s3;
 #[path = "domestic/support.rs"]
 mod support;
 #[path = "domestic/switch.rs"]
 mod switch;
+#[path = "domestic/v8_date.rs"]
+mod v8_date;

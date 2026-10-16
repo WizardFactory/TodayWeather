@@ -23,6 +23,8 @@ pub struct Cx<'a> {
     pub config: AssemblyConfig,
     /// `self.dbTownList` (loaded once per controller).
     pub towns: Option<Arr>,
+    /// S16: a JSON copy of the `_getDaySummaryList` rows `getPastMid` merged.
+    pub past_days: Option<Vec<crate::gateway::OrderedJson>>,
 }
 impl Cx<'_> {
     pub fn r(&self, key: &str) -> V {
@@ -372,6 +374,24 @@ fn chain(version: &str, part: Option<&str>) -> Option<Vec<(&'static str, Middlew
     };
     names.into_iter().map(step).collect()
 }
+/// S16: whether a router list reaches `getPastMid` through exactly the steps of v000903 that
+/// shape its current list (`checkQueryValidation` only sets query defaults). Legacy v000901,
+/// v000902 and v000803 share that prefix (`route.kma.addr.js:53`, `route.kma.v000902.js:53`,
+/// `v000803/routeTownForecast.js:47`); v000705 has no ultra-short sky repair and its `/mid`
+/// route no current steps, so their day rows are not the S16 grid summary.
+fn summarizes(steps: &[(&'static str, Middleware)]) -> bool {
+    let prefix = |list: &[(&'static str, Middleware)]| -> Option<Vec<&'static str>> {
+        let at = list.iter().position(|(n, _)| *n == "getPastMid")?;
+        Some(
+            list[..at]
+                .iter()
+                .map(|(n, _)| *n)
+                .filter(|n| *n != "checkQueryValidation")
+                .collect(),
+        )
+    };
+    prefix(steps).is_some_and(|p| Some(p) == prefix(&CHAIN))
+}
 /// Names of the router list of `version` (and a v000705 sub-route) in order (for tests and
 /// diagnostics).
 pub fn names(version: &str, part: Option<&str>) -> Vec<&'static str> {
@@ -429,34 +449,27 @@ impl KmaStore for Callbacks<'_> {
     }
 }
 
-pub fn run(
+/// Run the router list; also returns the `getPastMid` day-summary rows (S16).
+pub fn run_capturing(
     request: &KmaRequest,
     store: &dyn KmaStore,
     now: f64,
     config: AssemblyConfig,
-) -> Outcome {
+) -> (Outcome, Option<Vec<crate::gateway::OrderedJson>>) {
     let store = &Callbacks(store);
     let params = Ob::new();
     if let Some(r) = &request.region {
-        params.set("region", r.as_str());
+        params.set("region", super::js::canon_str(r));
     }
     if let Some(c) = &request.city {
-        params.set("city", c.as_str());
+        params.set("city", super::js::canon_str(c));
     }
     if let Some(t) = &request.town {
-        params.set("town", t.as_str());
-    }
-    let query = Ob::new();
-    for (k, v) in &request.query {
-        match query.get(k) {
-            V::Undef if !query.has(k) => query.set(k, v.as_str()),
-            V::Arr(a) => a.push(v.as_str()),
-            prev => query.set(k, V::Arr(Arr::from_vec(vec![prev, V::s(v)]))),
-        }
+        params.set("town", super::js::canon_str(t));
     }
     let req = obj(vec![
         ("params", V::Obj(params)),
-        ("query", V::Obj(query)),
+        ("query", request_query(request)),
         ("baseUrl", V::from(request.mount.as_str())),
         ("originalUrl", V::from(request.original_url.as_str())),
     ]);
@@ -467,32 +480,81 @@ pub fn run(
         now,
         config,
         towns: None,
+        past_days: None,
     };
     let Some(steps) = chain(&request.version, request.part.as_deref()) else {
-        return Outcome::Legacy(format!("no native router list for {}", request.version));
+        return (Outcome::Status(404, "Not Found\n".into()), None);
     };
+    let summarized = summarizes(&steps);
     for (name, step) in steps {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| step(&mut cx)));
         match result {
             Ok(Flow::Next) => (),
-            Ok(Flow::Done(outcome)) => return outcome,
-            Err(payload) => {
-                let payload = match payload.downcast::<Forward>() {
-                    Ok(f) => return Outcome::Legacy(format!("{name}: {}", f.0)),
-                    Err(p) => p,
-                };
-                match payload.downcast::<Thrown>() {
-                    // Legacy Express turns an escaped exception into a 500 (or the process
-                    // crashes for an async callback): never invent a reply, forward instead.
-                    Ok(t) => return Outcome::Legacy(format!("{name}: uncaught {}", t.0)),
-                    Err(other) => std::panic::resume_unwind(other),
-                }
+            Ok(Flow::Done(outcome)) => {
+                return (outcome, cx.past_days.filter(|_| summarized));
             }
+            Err(payload) => return (outcome_of(name, payload), None),
         }
     }
-    Outcome::Legacy("router list ended without a reply".into())
+    // Express then runs the legacy 404 middleware (`app.js`: `next(err)` with status 404),
+    // which finalhandler 0.4.1 answers in production.
+    (Outcome::Status(404, "Not Found\n".into()), None)
 }
 
+/// The reply of a middleware that left the router list by unwinding: a forward, an Express
+/// reply outside the list, a port defect, or an escaped legacy exception. Any other panic is a
+/// Rust bug and keeps unwinding.
+fn outcome_of(name: &str, payload: Box<dyn std::any::Any + Send>) -> Outcome {
+    let payload = match payload.downcast::<Forward>() {
+        Ok(f) => return Outcome::Legacy(format!("{name}: {}", f.0)),
+        Err(p) => p,
+    };
+    let payload = match payload.downcast::<super::js::Reply>() {
+        Ok(r) => return Outcome::Status(r.0, r.1),
+        Err(p) => p,
+    };
+    let payload = match payload.downcast::<super::js::Defect>() {
+        Ok(d) => return Outcome::Defect(format!("{name}: {}", d.0)),
+        Err(p) => p,
+    };
+    match payload.downcast::<Thrown>() {
+        // An escaped exception reaches Express's default handler (finalhandler 0.4.1,
+        // production): 500 `Internal Server Error`. In an asynchronous callback it ends the
+        // legacy process instead; the gateway hop then fails the same way (no 200 reply).
+        Ok(_) => Outcome::Status(500, super::js::INTERNAL_SERVER_ERROR.into()),
+        Err(other) => std::panic::resume_unwind(other),
+    }
+}
+
+/// `req.query` as Express 4.13.4 parses it (`qs` 4.0.0, [`super::qs`]) from the raw query of
+/// `req.originalUrl`.
+fn request_query(request: &KmaRequest) -> V {
+    let raw = request.original_url.split_once('?').map_or("", |(_, q)| q);
+    super::qs::parse(raw)
+}
+/// `req.query` after `checkQueryValidation` (the unit and `airForecastSource` defaults), for a
+/// source deciding which inputs the chain will read.
+pub fn validated_query(request: &KmaRequest) -> V {
+    let query = request_query(request);
+    let _ = super::js::catch(|| query_defaults(&query));
+    query
+}
+/// The defaults of `checkQueryValidation`. `req.query.hasOwnProperty(...)` is a method call:
+/// a query field named `hasOwnProperty` makes it throw (the legacy `catch` then skips the rest).
+fn query_defaults(query: &V) {
+    for unit in crate::world::units::UNIT_LIST {
+        if !super::js::call_has_own_property(query, unit)
+            || super::js::loose_eq(&query.get(unit), &V::s("(null)"))
+        {
+            query.set(unit, crate::world::units::default_unit(unit));
+        }
+    }
+    if !super::js::call_has_own_property(query, "airForecastSource")
+        || super::js::loose_eq(&query.get("airForecastSource"), &V::s("(null)"))
+    {
+        query.set("airForecastSource", "airkorea");
+    }
+}
 /// `checkQueryValidation` (ControllerTown24h).
 fn check_query_validation(cx: &mut Cx) -> Flow {
     if !cx.has("query") {
@@ -508,26 +570,16 @@ fn check_query_validation(cx: &mut Cx) -> Flow {
                 cx.req.del("version");
             }
         }
-        let query = cx.r("query");
-        for unit in crate::world::units::UNIT_LIST {
-            if !query.has(unit) || super::js::loose_eq(&query.get(unit), &V::s("(null)")) {
-                query.set(unit, crate::world::units::default_unit(unit));
-            }
-        }
-        if !query.has("airForecastSource")
-            || super::js::loose_eq(&query.get("airForecastSource"), &V::s("(null)"))
-        {
-            query.set("airForecastSource", "airkorea");
-        }
+        query_defaults(&cx.r("query"));
     });
     Flow::Next
 }
 
 /// `checkParamValidation` (ControllerTown).
 fn check_param_validation(cx: &mut Cx) -> Flow {
-    let region = cx.param("region");
-    let city = cx.param("city");
-    let town = cx.param("town");
+    check_params(cx.param("region"), cx.param("city"), cx.param("town"))
+}
+fn check_params(region: V, city: V, town: V) -> Flow {
     let is = |v: &V, s: &str| super::js::loose_eq(v, &V::s(s));
     if ["중국", "일본", "미국", "하늘시"]
         .iter()
@@ -543,6 +595,39 @@ fn check_param_validation(cx: &mut Cx) -> Flow {
         return Flow::Done(Outcome::Status(400, "We didn't support this region".into()));
     }
     Flow::Next
+}
+
+/// Provider-independent middleware prefix, in legacy router order. The backend must
+/// execute it before obtaining its snapshot (which can geocode or acquire providers).
+pub fn preflight(request: &KmaRequest) -> Option<Outcome> {
+    let Some(steps) = chain(&request.version, request.part.as_deref()) else {
+        return Some(Outcome::Status(404, "Not Found\n".into()));
+    };
+    if steps
+        .iter()
+        .any(|(name, _)| *name == "checkParamValidation")
+    {
+        let v = |x: &Option<String>| {
+            x.as_ref()
+                .map_or(V::Undef, |s| V::s(&super::js::canon_str(s)))
+        };
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            check_params(v(&request.region), v(&request.city), v(&request.town))
+        })) {
+            Ok(Flow::Done(reply)) => return Some(reply),
+            Ok(Flow::Next) => {}
+            Err(payload) => return Some(outcome_of("checkParamValidation", payload)),
+        }
+    }
+    if steps.iter().any(|(name, _)| *name == "getAllDataFromDb")
+        && !super::js::decode_uri_ok(&request.original_url)
+    {
+        return Some(Outcome::Status(
+            500,
+            super::js::INTERNAL_SERVER_ERROR.into(),
+        ));
+    }
+    None
 }
 
 fn get_mid_rss(_cx: &mut Cx) -> Flow {
@@ -651,8 +736,8 @@ fn make_result(cx: &mut Cx) -> Flow {
     });
     match r {
         Ok(()) => Flow::Next,
-        // next(err): Express renders a 500 page.
-        Err(t) => super::js::forward(format!("makeResult error {}", t.0)),
+        // next(err): Express's default handler.
+        Err(_) => super::js::next_err(),
     }
 }
 /// `x.toFixed(d)` as a string (number receiver required).
@@ -675,4 +760,56 @@ fn send_result(cx: &mut Cx) -> Flow {
     }
     let body = super::js::to_json(&result).unwrap_or(crate::gateway::OrderedJson::Null);
     Flow::Done(Outcome::Json(body))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn unwind(f: impl FnOnce() + std::panic::UnwindSafe) -> Box<dyn std::any::Any + Send> {
+        std::panic::catch_unwind(f).expect_err("unwinds")
+    }
+    /// Express answers outside the router list instead of a forward (S15b-4b-1): `next(err)`
+    /// and an escaped exception are finalhandler 0.4.1's production 500, `res.redirect` its 302;
+    /// a port defect is its own outcome (the backend answers a dependency failure).
+    #[test]
+    fn replies_outside_the_router_list_are_answered_natively() {
+        let p = unwind(|| super::super::js::next_err());
+        assert_eq!(
+            outcome_of("makeResult", p),
+            Outcome::Status(500, "Internal Server Error\n".into())
+        );
+        let p = unwind(|| super::super::js::throw("TypeError: x"));
+        assert_eq!(
+            outcome_of("getAllDataFromDb", p),
+            Outcome::Status(500, "Internal Server Error\n".into())
+        );
+        let p = unwind(|| super::super::js::reply(302, "Found. Redirecting to /x"));
+        assert_eq!(
+            outcome_of("getAllDataFromDb", p),
+            Outcome::Status(302, "Found. Redirecting to /x".into())
+        );
+        let p = unwind(|| super::super::js::defect("town_model collection not loaded"));
+        assert_eq!(
+            outcome_of("getShort", p),
+            Outcome::Defect("getShort: town_model collection not loaded".into())
+        );
+    }
+    /// `_getUrlWithCoord(lat, lon, req.query)`: keys in `for...in` order, values as strings.
+    #[test]
+    fn the_redirect_url_follows_get_url_with_coord() {
+        let query = V::Obj(Ob::new());
+        query.set("airForecastSource", V::s("kaq"));
+        query.set(
+            "units",
+            V::Arr(super::super::js::Arr::from_vec(vec![V::s("a"), V::s("b")])),
+        );
+        assert_eq!(
+            super::super::js::redirect_url(&V::from(35.1), &V::from(140.25), &query),
+            "http://localhost/weather/coord/35.1,140.25?airForecastSource=kaq&units=a,b"
+        );
+        assert_eq!(
+            super::super::js::redirect_url(&V::s("1"), &V::s("2"), &V::Obj(Ob::new())),
+            "http://localhost/weather/coord/1,2"
+        );
+    }
 }

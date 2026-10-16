@@ -192,8 +192,8 @@ pub fn region_table() -> &'static [RegionRow] {
 }
 /// `getRegIdByTown(region, city)`: the row, or the legacy error message.
 pub fn region_code(region: &str, city: &str) -> Result<&'static RegionRow, String> {
-    let units: Vec<u16> = city.encode_utf16().take(3).collect();
-    let city = String::from_utf16_lossy(&units);
+    let units = crate::domestic::kma::js::units(city);
+    let city = crate::domestic::kma::js::from16(&units[..units.len().min(3)]);
     for (i, row) in region_table().iter().enumerate() {
         if row.first == region && (i < 8 || city.is_empty() || row.second == city) {
             return Ok(row);
