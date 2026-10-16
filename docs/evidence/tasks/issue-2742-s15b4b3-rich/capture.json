@@ -1,12 +1,12 @@
 {
   "schema": 1,
   "capture_kind": "Actual sanitized replay report rendered as result capture",
-  "started_at_utc": "2026-10-16T12:31:50+00:00",
+  "started_at_utc": "2026-10-16T13:11:16+00:00",
   "hashes": {
-    "docs/operations/server2-kma-rich-replay.md": "4efce7f0a5836368226852722d163add56a3ae21ad6783bbdcca0f1b3a6bc65b",
-    "docs/operations/server2-kma-rich-replay.pdf": "731c9be36998f2f43059ce34170fcd43d03614615cf2326d6ee08d1c3491c05f",
-    "docs/evidence/tasks/issue-2742-s15b4b3-rich/replay.png": "7c39d01795b156d66eb8b46530f8e19509dabe7c8ba64ac58004e9aa46418a1c",
-    "docs/evidence/tasks/issue-2742-s15b4b3-rich/replay.json": "3e9d3a7925693e8bcfa91c1cf5dfda51c7db42f2a2a42533c4ef58e3eebf4455"
+    "docs/operations/server2-kma-rich-replay.md": "36acd06cfd3b1836b4ba36bbf97f36edd2d55d44f8271e97a849214e8048d034",
+    "docs/operations/server2-kma-rich-replay.pdf": "badc6f4395097f24a8a040cc80d6e606371c33023a430161ec5fa3c255b3d3fa",
+    "docs/evidence/tasks/issue-2742-s15b4b3-rich/replay.png": "c42ee9b3b9a09429890cde0ce948d7fa6451ede9679db889be2bb6eab615bc6b",
+    "docs/evidence/tasks/issue-2742-s15b4b3-rich/replay.json": "c76d466cd8aeeb9b0ac6df62cfdb34e355046873a1533ba4350e699aeef6d48c"
   },
   "limitations": "Owned-loopback library HTTP example with test-injected clock/providers; not production startup, AWS/EC2 p95, quota, seven-day live shadow or cutover evidence. Original 98 dependency-oracle cases remain assembly-only. Rich corpus includes three grid regions, stations/ASOS, air/life/KASI/MFDS/images and separately counted cold coordinate geocoding. Rollback is UNSUPPORTED here; S20 must verify recovery to an earlier server2 release/config without legacy."
 }

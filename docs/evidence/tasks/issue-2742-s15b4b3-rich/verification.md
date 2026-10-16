@@ -1,8 +1,8 @@
 # Rich canonical S3 response verification
 
 Dated 2026-10-16 UTC. Final main-aligned debug example SHA256
-`2dbd1811fc9ea020e5864b909e342872b7b851fcd36328ca62aa60d1a336662e`;
-base d2137b2e integrated at c5d69506, authored working-tree bytes recorded below. Local debug example with fixed clock and owned loopback S3,
+`d95727dbe0e7cfdca5fa58c6bdd8de74be657d9cd26c2041b372c729f199dc26`;
+base171472c5 integrated at b177843b, authored working-tree bytes recorded below. Local debug example with fixed clock and owned loopback S3,
 HTTP and geocoder peers; no production startup, live provider/DB/AWS/push or
 external Lambda execution. Independent Node16 source/driver/dependency/raw hashes
 are retained in the fixture and its provenance.
@@ -22,8 +22,8 @@ are retained in the fixture and its provenance.
   Exact request coordinates remain memory-only. Disk hits/corruption were observed.
 - Original98 assembly-only cases and core55x4 remain separate; this evidence does
   not promote injected DB1/coercion/error inputs into canonical providerraw cases.
-- Actual local debug p95: cold1885.76ms, warm1884.17ms, corrupt1863.69ms,
-  lost2046.26ms (23 responses each). These are owned-loopback measurements, not
+- Actual local debug p95: cold1965.62ms, warm1865.53ms, corrupt2110.35ms,
+  lost1925.74ms (23 responses each). These are owned-loopback measurements, not
   production EC2/release p95 or provider quota/shadow evidence.
 
 Earlier failures were retained, not relabeled: initial6x4 had189 field differences;
@@ -50,3 +50,23 @@ startup, quota headroom and seven-day live shadow. Issue#2742 remains open.
 See [actual replay report](replay.json), [result capture](replay.png),
 [operation guide](../../../operations/server2-kma-rich-replay.md) and
 [fixture provenance](../../../../server2/tests/domestic/fixtures/S3-RICH-PROVENANCE.md).
+
+
+## S20a integration and CI correction
+
+QA1 PASS on ca2300b2/base d2137b2e remains historical, unmodified. Normal-merged
+reviewed S20a171472c5 as b177843b, retaining both architecture append sections.
+Original foundation38902001101 had161PASS/1FAIL/2ignored: new overlap regression
+image rows absent. Its full log remains retained. One bounded local diagnostic
+confirmed observation blocked0ms and all image raw reads finished8/14/19ms;
+96rows arrived locally within the original budget. CI's own decoder duration
+was not separately observed, so CPU speed is a supported explanation, not a
+measured CI phase result.
+
+Only the scheduling regression's synthetic valid GIFs keep their first2complete
+frames now. The same3s limit, blocked-observation assertion and nonempty-image
+assertion remain: old sequential code Red at2.803s, imageGET0/rows0; current
+parallel code Green at2.801s, imageGET8/8/9ms/rows4. Production source/decoder,
+whole92fullGIFraw and independent expected responses are unchanged. S20a combined
+runtime14/14PASS; integration Clippy andfull92replay PASS with8deliberateperturbation differences;
+CI andindependent integrationreview remain pending in the PR.

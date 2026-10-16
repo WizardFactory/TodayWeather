@@ -94,6 +94,17 @@ separate candidate measurement. Debug loopback timing and ~149 KB synthetic GIFs
 do not establish EC2/release performance for real 5-6 MB images. No decoded cache
 or pack was added; O01 remains measurement-driven.
 
+The first CI run failed the new overlap regression while decoding its full
+48-frame GIFs under the same three-second request budget. One bounded local
+transport diagnostic observed all raw reads in19ms; CI's separate decoder time
+was not observed. The focused scheduling test now keeps two complete valid GIF
+frames, the same blocked observation, three-second deadline and nonempty-image
+assertion. Old sequential code still fails and parallel code passes. Full GIF
+raw/expected data in all92whole-response comparisons remains unchanged. This
+separates the functional ordering check from a shared runner's debug decoder
+speed; it does not establish production image performance.
+
+
 See [fixture provenance](../../server2/tests/domestic/fixtures/S3-RICH-PROVENANCE.md),
 [selected evidence](../evidence/tasks/issue-2742-s15b4b3-rich/verification.md)
 and the [sequence diagram](../architecture/diagrams/server2-kma-rich-replay.html).
