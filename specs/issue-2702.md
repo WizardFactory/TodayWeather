@@ -101,8 +101,9 @@ and both town routers). Unlisted paths keep the previous 404; other methods are 
   without a body (`res.json(undefined)` then has no Content-Length, which Node adds only to a
   GET); `cors()` and `X-Powered-By`. The locale is i18n 0.8.3 `init` (`twcookie`
   cookie, then Accept-Language). The app-wide session cookie is not emitted (S12 precedent).
-- **Forwards.** An outcome legacy must answer (`Outcome::Legacy`: the S15b input forwards until
-  S15b-4, the S15 `next(err)`/uncaught-exception forwards, a panic) or a path no native route
+- **Forwards.** An outcome legacy must answer (`Outcome::Legacy`: the S15b forwards S15b-4a
+  kept, such as a town absent from the town list, the S15 `next(err)`/uncaught-exception
+  forwards, a panic) or a path no native route
   parses takes the legacy hop unchanged (method, path, query, end-to-end headers; legacy status,
   headers and body back; hop-by-hop headers, including those a `Connection` header lists, are
   dropped in both directions; the request target is written verbatim, without resolving `..`

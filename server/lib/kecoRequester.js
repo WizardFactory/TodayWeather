@@ -60,6 +60,7 @@ Keco.prototype._collectionOutcome = function (operation, sido, err, rows, aggreg
     this._emitOutcome({operation: operation, sido: sido,
         finishedAt: new Date().toISOString(), outcome: err ? 'failed' : 'success',
         code: err ? this._safeCode(err) : 'OK', saved: rows ? rows.length : 0,
+        diagnostic: observationApi.rejectionMetadata(err && err.diagnostic),
         unavailable: rows ? rows.unavailable || [] : [],
         observationTime: aggregate ? aggregate.dataTime : rows && rows[0] && rows[0].dataTime});
 };

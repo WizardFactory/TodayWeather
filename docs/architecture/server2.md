@@ -756,13 +756,15 @@ disable hidden adapter send retries. Record sanitized errors/uncertain outcomes
 so operations can fix the next independently scheduled send. Never broadcast or
 resend on startup recovery. Weather-provider retry rules are unchanged.
 
-D03 starts with **new registrations** through existing APIs. Do not export/import
-or reverse-migrate legacy push registrations. This is an approved registration
-continuity difference, not permission to alter payload/status/header/auth behavior
-or discard weather history. Preserve/restore newly accepted S3 state during
-rollback; a route switch alone cannot undo accepted mutations. S18 owns schema,
-ordered concurrent state updates and ownership in the single Rust process,
-subject to S02 contract proofs and publication/deadline gates.
+D03 as first approved started with new registrations only. **AK superseded it on
+2026-10-14**: legacy push/alarm registrations are copied once into server2 before
+cutover (a read-only export; legacy MongoDB is not changed) and users keep
+registering through the existing API contract. There is no reverse migration;
+legacy is retired at cutover. Preserve/restore accepted S3 state during rollback;
+a route switch alone cannot undo accepted mutations. S18 owns schema, ordered
+concurrent state updates and ownership in the single Rust process, subject to S02
+contract proofs and publication/deadline gates; see the
+[S18a section](#s18a-push-registration-state-2026-10-15).
 
 ## 7. Budgets, deadlines and failures
 
@@ -1701,8 +1703,14 @@ v000903 KMA handler; removing it and restarting is the rollback. S15 adds no oth
 Since S15b-1 ([below](#s15b-1-kma-s3-input-source-2026-10-14)) a listed `kma` builds the S3
 input source from the shared S3 settings (S10e names), which are then required; inputs owned by
 later S15b slices still forward. `tools/kma_smoke.py` checks legacy -> `kma` -> legacy on the release
-binary (identical bytes, the legacy KMA hop in every phase, the native phase reading the S3 test
-peer, unknown or repeated entries and `kma` without S3 settings refused before binding).
+binary, covering:
+
+- identical bytes in the legacy phases;
+- the native phase reading the S3 test peer;
+- unknown or repeated entries, and `kma` without S3 settings, refused before binding.
+
+Since S15b-4a the `kma` phase answers natively, with no legacy KMA hop. It acquires the missing
+forecast inputs from the loopback provider roots.
 
 O-2 checkpoint (Rust adoption is settled; this records correctness and cost). `kma_checkpoint`
 assembles every recorded request from memory, and `tools/kma_checkpoint.py` reads process rusage.
@@ -1887,6 +1895,7 @@ cutover; it does not claim to reproduce legacy collection timing.
 **Temporary forwards.** Until S15b-4, the snapshot forwards with a named reason in these cases:
 
 - A latest publication is not in S3: current, ultra-short, short, RSS, mid, or the zone list.
+  Since S15b-4a this is acquired at request time and no longer forwards.
 - The town is unknown.
 - A method owned by S15b-2 or S15b-3 is called.
 
@@ -2364,6 +2373,82 @@ smoke reference points (Seoul, Daejeon, Busan, Jeju). On the loaded test machine
 to the Python peer outlasted the 3-second S3 operation bound (an ambiguous write); the check used
 the 9-second maximum for the peer.
 
+### S15b-4a request-time forecast acquisition (2026-10-15)
+
+S15b-4a ([plan](../../plans/issue-2742.md#s15b-4a-request-time-forecast-acquisition)) acquires at
+request time the forecast inputs that S15b-1 still forwarded. A missing input is no longer a
+forward reason. The snapshot answers what is stored, the same way legacy answers from a collection
+that lacks the data.
+
+**Acquisitions** (`domestic/kma/source/fetch.rs`). Each runs on S13d `OwnedFlights`, keyed by
+dataset and publication, and publishes its raw records through S06 before any request uses them.
+The provider calls, publications and warning cycles run in their own tasks, with the legacy
+provider timeouts. An owned bound (at most 600 s) stops tracking them but never cancels them.
+
+The retry bound is claimed by whoever creates the flight, under the flight map's lock, so a
+concurrent request joins the real acquisition. Failures count against the same bounds. A grid publication counts as stored only when legacy
+collection would keep it. The collector must save its rows (an `invalidForecast` stays pending), and
+a current observation must carry no recovery sentinel (`t1h` -50 or `reh` -1 is collected again,
+`PastConditionGather._isInvalid`). Any other stored record stays eligible for the bounded retries.
+
+| Input | When the request acquires it | Retry bound |
+| --- | --- | --- |
+| Latest grid publication (`getUltraSrtNcst`, `getUltraSrtFcst` at HH30, `getVilageFcst`) | Not in S3 for the cell | 5 minutes |
+| Grid backfill (earlier publications: 23 current, 23 ultra-short, 7 short; S14 `schedule`) | Missing publications, in one owned pass per cell, family and latest publication (3 acquisitions in flight, 8 passes in their own pool); the request does not wait | Each pass at most hourly. Each publication shares the latest acquisition's flight and 5-minute retry bound. |
+| Latest short RSS (`wid/queryDFS.jsp`) | Not in S3 for the cell | 5 minutes |
+| Latest mid publications (`getMidFcst`, `getMidLandFcst`, `getMidTa` at the 06/18 `tmFc`) | A region legacy collects lacks the latest publication | 5 minutes |
+| Forecast-zone list (`getFcstZoneCd`) | Once per process, like legacy's `getFromKma()` at start; a published list replaces the memory | per process |
+| Warning cycle (`WarningCollector.gather`, S12) | Once per 3 minutes, legacy's cadence; never two at once | 3 minutes |
+
+Retry keys are bounded at 65,536. Expired keys are pruned when the map doubles. Beyond the bound,
+new acquisitions are skipped and S3 answers as stored.
+
+**Request wait.** A request waits once for every late input: these acquisitions, the S15b-2
+station observations and the S15b-3 AirKorea and life acquisitions. The shared bound is
+`REQUEST_WAIT` (3 s), and it ends 500 ms before the request deadline. The warning-state read and
+the air and life reads stop 300 ms before the deadline. The gateway's native attempt
+ends at most 3 s after the request starts (`gateway::backend`), so the reads that remain and the
+assembly still fit. The mid regions start as soon as the zone list is read. The grids, RSS, warning
+cycle, air and life inputs run concurrently.
+
+An acquisition that finishes after the bound serves the next request. If no zone list is stored
+yet, `forecast_zone` answers `[]`. If the warning state cannot be read, `special_zones` returns the
+legacy store error, and `getSpecialInfo` skips the section.
+
+**Keys and quota.** The acquisitions use the process data.go.kr acquirer of S15b-2: legacy
+`DONGNAE_SECRET_KEYS`, one S08 quota owner per key and KST day, with built-in 10,000 units. Its key
+rings now include `VilageFcstInfoService_2.0`, `MidFcstInfoService` and `FcstZoneInfoService`.
+
+The warning requests follow legacy `kmaWarningRequester.get`. They start at the key that last
+answered and move once around the list on an auth or quota error, or when that key's S08 budget
+refuses. Each attempt is funded by its own key.
+
+The data.go.kr root is built in (`gateway::runtime::Builtins`). There is no new setting.
+
+**Load baseline** (successful single-page answers): 56 units per active cell and KST day (24
+current, 24 ultra-short, 8 short) and 8 keyless RSS acquisitions, one per RSS publication
+(legacy polls hourly). A cold cell adds up to 53 backfill units
+once. Mid regions, warning cycles, the zone list, other S15b consumers, retries and extra pages
+spend the same budgets. The open quota decision is in the
+[plan](../../plans/issue-2742.md#open-decisions-and-limitations-s15b-4a).
+
+**Verification** (local test peers and doubles only):
+
+| Check | Result |
+| --- | --- |
+| Every input missing | One request is served without a forward and uses the current publication acquired for it |
+| Next request | Repeats no acquisition; the backfill asks for 23 earlier hours once |
+| Six concurrent first requests | Share one acquisition |
+| Every forecast acquisition takes 6 s | The request returns within the shared 3 s bound (before: 15.2 s) |
+| Forecast, life and AirKorea acquisitions take 6 s under a 3 s gateway attempt | Answered natively before the attempt ends, also through `KmaBackend` under the gateway's timeout (before: forwarded on a mid read timeout) |
+| Two unregistered keys | The warning requests reach the third key and keep it (before: the first two keys repeated) |
+| New hour while the previous latest publication is still being acquired or just failed | The backfill pass joins or skips it; one acquisition (before: two) |
+| Stored current hours with `t1h` -50 and an incomplete short publication | Acquired again; valid hours are not (before: none were) |
+
+The release `kma_smoke.py` answers natively in its `kma` phase. The provider calls were confirmed
+live on 2026-10-15; see the plan for the list. The remaining forward reasons (unknown towns, a grid
+outside KMA, the S15 declared forwards) belong to S15b-4b. Cold-cell latency belongs to S15b-4c.
+
 ### S10e legacy settings and server2/.env (2026-10-15)
 
 [S10e](../../plans/issue-2753.md) ([spec](../../specs/issue-2753.md), #2753) applies AK's decisions of
@@ -2500,6 +2585,113 @@ policy deny) for an unconditional `raw/v2` PUT; see the
 [sanitized evidence](../evidence/aws/server2-s3-readiness-2026-10-15.json). Not verified: the real
 IMDS on EC2 and the runtime role's 404/403 statuses, which the same tool checks at deployment.
 
+### S18a push registration state (2026-10-15)
+
+[S18a](../../plans/issue-2703.md) ([spec](../../specs/issue-2703.md), #2703) ports the used push
+registration routes and moves their state from MongoDB to server2-owned S3 state. Delivery (S18b)
+and notices (S18c, no legacy route exists yet; #2623 is open) are separate. The
+[declaration](../../server2/config/tasks/S18a.json) lists the paths. The routes are a library
+service with a loopback router, like S12; process wiring and the family switch belong to S20.
+
+**Routes.** `POST`, `PUT` and `DELETE` on `/v000705/push` and `/v000902/push`
+(`routes/v000705/routePushNotification.js`, one router mounted on both), `POST /v000902/push-list`
+(`routes/v000902/route.push.update.list.js`), and the `cors()` preflight for every method. The
+observed groups are `PUT`/`DELETE`/`OPTIONS /v000902/push`, `POST /v000902/push-list` and
+`POST /v000705/push`; the other method/mount pairs share the same handler. The port follows the
+legacy request path step by step: body-parser 1.20.6 `json()` (100 kb, strict, `utf-*`
+charsets) and `urlencoded({extended: false})` (a null-prototype object, so `hasOwnProperty` is a
+TypeError), the version router's `decodeURI(req.originalUrl)`, Express case-insensitive mounts,
+the handlers' validation in order (TypeError messages as V8 prints them), `initUnits`,
+`updatePushInfo`/`updateAlertPush`, `lib/pushStore/mongo.js` (`keyQuery`, `tokenQuery`, upsert,
+`multi` token renames, `remove`), Mongoose 5.1.2 casting (query keys cast last first; `CastError`
+text via `util.inspect`, including the `MongooseArray` form; ` for model "x"` on query casts) and
+the saved document's key order and `minimize`, and the `geo` field's `2d` index bounds (a point
+outside [-180, 180) is a write error, as MongoDB refuses it; the server message text
+`point not in interval of [ -180, 180 )` is not re-verified against a live 3.4 server). Answers are `res.send` (JSON or `text/html`, weak
+ETag) or the production `finalhandler` (status text, `nosniff`). Write results are the MongoDB
+3.4 write-command reply core (`{n, upserted?, nModified, ok}`, delete `{n, ok}`); replica-set
+metadata (`opTime`, `electionId`, `$clusterTime`) is not reproduced and the app ignores the body.
+
+**Deliberate differences.** Update operators in a body (`$inc`, ...) are dropped and operator
+query values (`{"$ne": ...}`) are cast errors, so a body cannot run MongoDB operators (legacy
+passed them through). A castable `_id` in a body is ignored (MongoDB refuses to change `_id`; an
+upsert would take a client-chosen id). Items of one `push-list` request that target the same key
+apply in list order (legacy ran them concurrently and could duplicate an alert). Date strings in
+date fields follow Mongoose (`new Date(string)`) for the ECMAScript date-time format and the
+millisecond rule; V8's legacy free-form forms (`Oct 1 2020`, ` 2020`, `2020-02-30`, unsigned
+six-digit years) are cast errors. Only `precipAlerts`/`airAlerts.pushTime` can carry a client date
+(`updatedAt` is set by the server) and the app never sends them. The session cookie is not set
+(as S12).
+
+**State.** Records keep the legacy document shape (field names, BSON kinds, `_id`, natural
+order), so the copied registrations and new ones are one data set. Memory holds each record as
+its encoded document plus the five fields queries use (`type`, `cityIndex`, `id`, `fcmToken`,
+`registrationId`) and token indexes: the 76,442 production registrations take about 65 MB. One
+writer task orders every change (D01): a request is planned against the current state in a
+transaction overlay, and one that changes state is answered only after its journal entry is in
+S3. Before planning, the writer reads the next journal sequence so another process's entry
+(the importer, an overlapping replacement) is applied first.
+
+| S3 object (`index/v2/push/state/`) | Write | Content |
+| --- | --- | --- |
+| `journal/{seq:012}.json` | `If-None-Match: *` | header line, then one line per changed record (final state or removal) |
+| `snapshot/{seq:012}-{nonce}/{part:04}.json` | `If-None-Match: *` | header line, then record lines (2 MiB parts) |
+| `head.json` | `If-Match` (or `If-None-Match: *`) | snapshot sequence, natural-order counter, parts with sha256 and counts |
+
+A journal sequence belongs to exactly one entry, so two writers can never both commit it; the
+loser gets `412`, applies the other entry and plans again. An unknown write outcome (timeout,
+transport error, 5xx) is read back: our body means committed; absent means a `void` entry is
+written conditionally so the original can never commit later; if that cannot be decided, the
+writer accepts no further change until it can (a later read that finds the entry applies it,
+durable though never acknowledged). A 4xx refusal and a credential failure before sending are
+not commits. A removal entry keeps the record's `_id`, and snapshots keep removed `_id`s, so a
+registration removed through the API is never re-created by a later import. Restore reads the head, its parts (at most 8 reads at once, digests and counts
+checked) and the journal after it until the first absent sequence; a failed restore leaves the
+service unready and retries every 5 s. A snapshot is written after 1,024 entries (each part
+upload bounded to 8 s); a failed snapshot leaves the journal authoritative and is retried after
+the next commit, so while snapshots keep failing the journal to replay grows beyond 1,024
+entries. Other S3 operations have a 2 s bound; a request waits at most 9 s (the app's timeout is
+10 s). State is memory and S3 only: no local-disk copy is made, so device
+tokens are not written to disk (AK's 2026-10-15 disk-cache rule changes nothing here).
+
+When the change cannot be made durable in time (S3 refusal, void, unready state, full queue or
+the wait expiring), the route gives its legacy store-error answer with the message
+`push state storage unavailable`: `POST /push` and `PUT` 500, `DELETE` 501, and `push-list` 200
+with `null` for each affected item (the legacy batch helper swallows store errors). Validation and
+cast-error answers are unchanged because they precede any store call.
+
+**One-time copy.** `push_registration_convert PUSHES ALERTPUSHES IMPORT REPORT` (offline) reads
+`mongoexport` output of `pushes` and `alertpushes` (lines or `--jsonArray`; relaxed, canonical or
+legacy Extended JSON) and writes canonical import lines (owner-only file mode) and a report with
+counts, positions and reasons only. A document is malformed when it is not JSON, lacks an
+ObjectId `_id`, repeats an `_id`, has a model field of the wrong BSON kind, uses an unsupported
+Extended JSON type, or has neither `fcmToken` nor `registrationId`; fields the model does not
+declare are kept. `push_registration_import IMPORT` (server2 S3 settings, as the S12 importer)
+restores the state and merges by `_id`. Each imported record keeps the sha256 of the legacy
+document it came from, so a later run can tell who changed it: absent records are inserted in
+export order; a record removed in server2 stays removed; identical is unchanged; when only server2
+changed it (the legacy document equals the one imported before) server2 is kept; when only legacy
+changed it, it is replaced; when both changed, a newer legacy `updatedAt` wins, otherwise server2
+is kept (no date is never "newer"). It commits 1 MiB journal
+entries, re-plans after another writer's entry and writes a snapshot. A re-run with the same file
+writes nothing. The final run before cutover is an S20 operator step.
+
+**Verification.** The [oracle fixture](../../server2/tests/state/fixtures/PROVENANCE.md) replays
+115 requests in 9 scenarios through the legacy routes (Node 16.20.2, Express 4.13.4, Mongoose
+5.1.2 over an in-memory collection double; synthetic data); server2 matches status, body bytes,
+headers (except date, connection and the session cookie) and both collections after every
+request, and the final state after an empty-memory restore. Fault tests cover refused, lost,
+committed-but-lost and unreadable writes, a concurrent writer, two writers racing for the same
+sequences (no false success, contiguous journal, converged state), 24 concurrent requests (contiguous
+journal, identical restore), multi-part snapshots, a corrupt snapshot (unready, legacy store
+errors) and a hanging store (answer within the wait, nothing acknowledged late); one test runs
+the journal over `HttpS3Transport` and the owned S3 peer with injected `commit500`,
+`drop-commit` and `conflict409`. A read-only copy of the production collections (2026-10-15,
+MongoDB 3.4.15; 42,226 alarms and 34,216 alerts) converted with no malformed document, imported
+into a loopback S3 peer in 2.0 s (64 journal entries), restored in 1.3 s with every record equal,
+and a re-run changed nothing. The raw export and converted file were deleted after the check; no
+token or record was committed or logged. No push provider was called.
+
 ### S17a KMA v000901 and v000902 address weather (2026-10-15)
 
 [S17](../../plans/issue-2702.md) ([spec](../../specs/issue-2702.md)) ports the used older weather
@@ -2518,8 +2710,9 @@ product requests; the gateway default is v000901), `/weather/v000901/coord` and
   the dust forecasts; `AirForecast` creates `{source: "airkorea"}` when absent and adds the station
   forecast. v000903 is unchanged.
 - **Inputs.** The S15b S3 input source is version independent, so all three versions read the same
-  snapshot and share its temporary forwards until S15b-4. History coverage is the S14/S15b-2
-  coverage of v000903; no version-specific history exists.
+  snapshot and, since S15b-4a, the same request-time acquisition of missing forecast inputs (no
+  input forwards). History coverage is the S14/S15b-2 coverage of v000903; no version-specific
+  history exists.
 - **Routing.** `kma-v000901` and `kma-v000902` in `SERVER2_NATIVE_FAMILIES` select those gateway
   backends; `kma` stays v000903. Any of them builds the one S3 input source (S3 settings and
   `DONGNAE_SECRET_KEYS` required). Each version switches and rolls back alone.
@@ -2532,8 +2725,9 @@ order, except the two S15 declared forwards. The S02 goldens `domestic-v000901(-
 `domestic-v000902(-db1)` equal their recordings, and the gateway goldens `gateway-default-domestic`,
 `gateway-v000901-domestic` and `gateway-v000902-domestic` match on the wire with the native switch,
 the legacy default, a one-version switch and the rollback. The release `kma_smoke.py` runs
-legacy -> `kma-v000901,kma-v000902` -> legacy with identical bytes, S3 reads only for listed
-versions, and refuses repeated or unknown entries and missing settings. Live provider data and
+legacy -> `kma-v000901,kma-v000902` -> legacy: listed versions answer natively (S3 reads and
+loopback acquisitions, no legacy KMA hop), the unlisted v000903 still reaches legacy, the legacy
+phases return identical bytes, and repeated or unknown entries and missing settings are refused. Live provider data and
 production latency are not claimed.
 
 ### S17b direct `/kma/addr` routes and town v000803/v000705 (2026-10-15)
@@ -2556,7 +2750,8 @@ S17b serves the legacy direct public routes, which reach Express through nginx r
 - **Envelope.** Express 4.13.4: weak ETag, `fresh` 0.3.0 revalidation and its 304 headers, HEAD,
   `cors()` and `X-Powered-By`; the i18n locale from `twcookie` then Accept-Language; no session
   cookie (S12 precedent).
-- **Forwards.** Outcomes legacy must answer (the S15b input forwards until S15b-4, the S15
+- **Forwards.** Since S15b-4a listed direct routes answer natively with request-time
+  acquisition. Outcomes legacy must still answer (a town absent from the town list, the S15
   `next(err)` forwards, including the v000705 `/short`, `/shortest`, `/current` 500s) take the
   legacy hop unchanged (`BackendDispatcher::proxy`: verbatim request target to the plain-HTTP
   loopback origin, which direct entries require at startup, hop-by-hop and `Connection`-listed headers dropped, 30-second CloudFront origin timeout).

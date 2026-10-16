@@ -273,8 +273,9 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
     }
     let mut direct = None;
     if let (Some(s3), true) = (s3, families.kma_source()) {
-        // S15b: the S3 input source over the shared admission. Inputs owned by later slices
-        // still forward with named reasons until S15b-4. S15b-2 request-time acquisitions use
+        // S15b: the S3 input source over the shared admission, one for every listed address
+        // version (S17a) and the direct routes (S17b). S15b-4 acquires missing forecast inputs at
+        // request time, so no input forwards. S15b-2 request-time acquisitions use
         // the data.go.kr keys for ASOS and the product geocoder for station coordinates.
         // S15b-3 adds request-time AirKorea
         // acquisition (`AIRKOREA_SECRET_KEYS`) and the air fallback through the shared air chain;
@@ -283,6 +284,7 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         let airkorea = kma_airkorea(var, &s3, builtins)?;
         let daily = Arc::new(kma_acquirer(var, s3.clone(), builtins)?);
         let life = kma_life(&s3, daily.clone(), builtins)?;
+        let daily_forecast = daily.clone();
         let air: Option<Arc<dyn crate::world::AirSource>> =
             air.map(|a| a as Arc<dyn crate::world::AirSource>);
         let source = crate::domestic::kma::source::S3Source::new(
@@ -298,7 +300,8 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         .with_image_calibration(
             crate::domestic::kma::source::air_forecast::Calibration::from_vars(var),
         )
-        .with_life(Some(life));
+        .with_life(Some(life))
+        .with_forecast(Some(kma_forecast(&s3, daily_forecast, builtins)?));
         let kma = crate::domestic::kma::backend::select_native_versions(
             &backend,
             Arc::new(source),
@@ -322,6 +325,31 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         Some(direct) => gateway.with_direct(direct),
         None => gateway,
     })))
+}
+/// S15b-4: the request-time grid, RSS, mid, forecast-zone and warning acquirer of the KMA source
+/// on the process data.go.kr acquirer (legacy `DONGNAE_SECRET_KEYS`, S08 per key and KST day).
+fn kma_forecast(
+    s3: &BoundedS3<HttpS3Transport>,
+    daily: Arc<DailyKma>,
+    builtins: &Builtins,
+) -> Result<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>, GatewayError> {
+    let invalid = |_| GatewayError::InvalidConfiguration;
+    let limits = crate::storage::CatalogLimits::default();
+    let store = crate::storage::CatalogStore::new(s3.clone(), limits.clone()).map_err(invalid)?;
+    let warnings = crate::warnings::store::WarningStore::new(
+        s3.clone(),
+        limits,
+        crate::warnings::store::StoreConfig::default(),
+    )
+    .map_err(invalid)?;
+    Ok(Arc::new(
+        crate::domestic::kma::source::fetch::LiveForecast::new(
+            daily,
+            Arc::new(store),
+            Arc::new(warnings),
+            &builtins.data_go_kr,
+        ),
+    ))
 }
 /// The request-time AirKorea acquirer of the KMA source; None without `AIRKOREA_SECRET_KEYS`.
 fn kma_airkorea(

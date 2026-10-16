@@ -12,8 +12,9 @@
 //! gateway answers 404, as before S17b). The reply keeps the Express envelope of the pinned
 //! legacy app (`res.json`/`res.send`, weak ETag, `fresh` 0.3.0 revalidation, HEAD, `cors()` and
 //! `X-Powered-By`). The session cookie of the legacy app-wide session middleware is not emitted
-//! (S12 precedent: no client reads it). When the assembly cannot answer from server2's inputs
-//! (the S15b temporary forwards, until S15b-4), the request takes the legacy hop unchanged.
+//! (S12 precedent: no client reads it). Since S15b-4a missing forecast inputs are acquired at
+//! request time; when the assembly still cannot answer (a town absent from the town list, the S15
+//! `next(err)` forwards), the request takes the legacy hop unchanged.
 use crate::domestic::kma::{
     KmaRequest, Outcome,
     backend::{KmaBackend, parse_path, parse_town_path, split_mount},

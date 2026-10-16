@@ -14,7 +14,7 @@ request flow is the existing S10 gateway/S15 backend sequence with one router li
 | A3 | v000901 user with air data and forecasts | makeAirInfo/AirForecast paths: AirKorea and KAQ forecasts, empty, 태하리, unknown source, error, stale first station, dust forecasts | Same bytes as legacy (`airInfo`, upper-case icons) | `kma_parity::all_v000901_and_v000902_oracle_scenarios_match_legacy_bytes` |
 | A4 | Users in other regions, locales, clock and history states | 85 S15 scenarios on v000901, 29 on v000902 | Byte parity, calls in legacy order; two declared forwards | same test; `s02_v000901_and_v000902_goldens_equal_recorded_oracle_bodies` |
 | A5 | Cell the source cannot supply | Source forwards | Same request takes the legacy hop; no invented body | `listed_versions_are_selected_and_a_source_without_inputs_forwards` |
-| A6 | Operator enables the entries | `SERVER2_NATIVE_FAMILIES=kma-v000901,kma-v000902` on the release binary | Listed versions read the S3 peer; v000903 stays legacy; identical bytes across legacy -> native -> legacy; bad lists refused | `tools/kma_smoke.py`, `kma_version_entries_are_separate_routing_switches` |
+| A6 | Operator enables the entries | `SERVER2_NATIVE_FAMILIES=kma-v000901,kma-v000902` on the release binary | Listed versions answer natively (S3 reads, loopback acquisitions, no legacy KMA hop); v000903 stays legacy; legacy phases return identical bytes; bad lists refused | `tools/kma_smoke.py`, `kma_version_entries_are_separate_routing_switches` |
 | A7 | Reviewer checks placement | Placement gate with S17a.json | Only declared paths | `check_placement.py`, `test_placement.py` |
 
 ## Order
@@ -36,7 +36,8 @@ request flow is the existing S10 gateway/S15 backend sequence with one router li
 ## Rollback and blast radius
 
 A library change selected only by `kma-v000901`/`kma-v000902`; v000903 is unchanged (its router
-list is the same table). Until S15b-4 every listed request forwards with the S15b named reasons.
+list is the same table). Since S15b-4a the listed versions answer natively from S3 with request-time
+acquisition of missing forecast inputs, as `kma` does.
 Revert the PR or remove the entries to roll back. Production switches remain S20.
 
 ## S17b scenarios

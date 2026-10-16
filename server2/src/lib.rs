@@ -279,4 +279,5 @@ pub fn public_router_with_gateway(
 }
 /// S17b: legacy direct public KMA routes.
 pub mod api;
+pub mod push;
 pub mod warnings;

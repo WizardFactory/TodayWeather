@@ -286,7 +286,8 @@ not stop the other provinces. Scheduled station/sido runs cannot overlap another
 run of the same type in the same process (there is no new distributed lock).
 
 Validated KST wall times, including 24:00, produce UTC BSON `date` values while
-preserving `dataTime`. Invalid identities/timestamps reject a batch; invalid
+preserving `dataTime`. Invalid identities/timestamps reject a batch, except the
+explicit no-observation station shape described below; invalid
 concentrations and grades are omitted, and stations with no valid concentration
 are reported as unavailable. Station and aggregate schema/grade mapping remain.
 The latest urban-monitoring batch still produces `cityName: ""` province rows;
@@ -300,6 +301,34 @@ province, stable error code, saved count, unavailable station names and observat
 time, never URLs, keys or provider bodies. Successful outcomes use stdout so the
 production error-only Winston console does not suppress them; failures use error
 logging. Best-effort S3 observation archival remains outside DB success semantics.
+
+**Observation/page repair (#2758, local candidate).** Direct read-only provider
+checks on 2026-10-16 KST confirmed a valid named station with `dataTime: null`
+and all nine supported value fields explicitly null in each of Incheon, Gyeonggi,
+Gangwon, Chungnam, Jeonbuk and Gyeongnam. This explicit no-observation shape is
+reported as unavailable and never persisted. Identity/province checks still run;
+the network name must be nonblank. Missing/blank/malformed timestamps, a missing
+value field or any non-null value under a null timestamp remain invalid. A province
+with no usable observations or no usable urban observations fails; no average is
+fabricated. The provider response establishes unavailable observation data, not a
+maintenance/closure reason for the station.
+
+The same check found `totalCount: 0` with 13/51 station rows and 5/22 city rows
+for Gwangju/Jeonnam respectively; all four next pages were empty. Only station and
+city-statistics operations may use bounded zero-total traversal. It must reach an
+empty terminal page; a short page alone is insufficient. A nonempty page after a
+short page, repeated observations, changed totals, wrong page/size echoes,
+oversized pages or exhausted page/row/deadline limits reject the fetch before
+writes. Positive totals and auxiliary operations retain exact counts. Rejection
+logs add only allowlisted predicate/field labels and bounded row/page/count
+numbers, without raw values, names, timestamps, URLs, keys or bodies.
+
+The [collector sequence](diagrams/airkorea-observation-recovery.html) and
+[editable source](diagrams/airkorea-observation-recovery.json) describe this local
+repair. [Selected evidence](../evidence/tasks/issue-2758/verification.md) separates
+gather logs/direct responses, isolated persistence tests and the pending operator
+rollout. The deployed direct nation reader requires `cityName: ""` aggregates;
+repository fallback must not substitute for verifying their production recovery.
 
 **Key selection and remaining operations (#2636, 2026-10-13).** Every AirKorea
 request uses the same client and the configured `AIRKOREA_SECRET_KEYS` list.

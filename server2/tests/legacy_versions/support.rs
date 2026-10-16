@@ -186,7 +186,7 @@ pub const FORWARDED: [(&str, &str); 10] = [
         "getAllDataFromDb: uncaught URIError: URI malformed",
     ),
     // S17b: v000705 sub-routes without `midData`: `insertSkyIcon` calls `next(err)` and Express
-    // answers 500 (forwarded like every S15 `next(err)` until S15b-4).
+    // answers 500 (forwarded like every S15 `next(err)`; reproducing Express's 500 is open).
     ("v000705-short", "insertSkyIcon error"),
     ("v000705-short-model-errors", "insertSkyIcon error"),
     ("v000705-shortest", "insertSkyIcon error"),

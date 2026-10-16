@@ -1376,8 +1376,13 @@ pub struct DailyAcquirer<P, W, B> {
     metrics: Arc<crate::domestic::metrics::DomesticMetrics>,
     current: DailyCurrent<P, W, B>,
 }
-type DailyCurrent<P, W, B> =
-    tokio::sync::Mutex<Option<(i64, Arc<crate::domestic::DomesticAcquirer<P, W, B>>)>>;
+type DailyCurrent<P, W, B> = tokio::sync::Mutex<Option<(i64, Arc<Daily<P, W, B>>)>>;
+/// One KST day: the acquirer and the per-key S08 budgets it funds (shared with the warning
+/// requester, which calls the same keys).
+pub struct Daily<P, W, B> {
+    pub acquirer: Arc<crate::domestic::DomesticAcquirer<P, W, B>>,
+    pub budgets: Vec<(Arc<crate::budget::BudgetStore<B>>, String)>,
+}
 /// The S08 quota owner of a data.go.kr key (domain-separated SHA-256 of the key).
 pub fn data_go_kr_quota_owner(key: &str) -> String {
     use sha2::{Digest, Sha256};
@@ -1421,10 +1426,7 @@ where
         this.build(0)?;
         Ok(this)
     }
-    fn build(
-        &self,
-        starts: i64,
-    ) -> Result<crate::domestic::DomesticAcquirer<P, W, B>, DomesticError> {
+    fn build(&self, starts: i64) -> Result<Daily<P, W, B>, DomesticError> {
         use crate::budget::{BudgetPolicy, BudgetStore, Provider};
         let invalid = DomesticError::Invalid("data.go.kr key or daily units");
         if self.keys.is_empty() || self.daily_units == 0 {
@@ -1449,13 +1451,17 @@ where
             stores.push(Arc::new(store));
         }
         // One quota owner per key and KST day across the services server2 calls with these keys
-        // (S15b-2 ASOS; S15b-3b UV V5, pollen V3 and KASI); each service keeps its own key ring.
+        // (S15b-2 ASOS; S15b-3b UV V5, pollen V3 and KASI; S15b-4 the grid and mid forecasts and
+        // the forecast-zone list); each service keeps its own key ring.
         let mut rings = BTreeMap::new();
         for service in [
             crate::domestic::family::Service::Asos,
             crate::domestic::family::Service::LivingWthrIdx,
             crate::domestic::family::Service::HealthWthrIdx,
             crate::domestic::family::Service::RiseSet,
+            crate::domestic::family::Service::VilageFcst,
+            crate::domestic::family::Service::MidFcst,
+            crate::domestic::family::Service::ForecastZone,
         ] {
             let entries = self
                 .keys
@@ -1469,7 +1475,7 @@ where
                 .collect::<Result<Vec<_>, _>>()?;
             rings.insert(service, crate::domestic::KeyRing::new(entries)?);
         }
-        crate::domestic::DomesticAcquirer::new(
+        let acquirer = crate::domestic::DomesticAcquirer::new(
             self.funded.clone(),
             self.public.clone(),
             rings,
@@ -1477,26 +1483,41 @@ where
             self.clock.clone(),
             self.metrics.clone(),
             crate::storage::CatalogLimits::default(),
-        )
+        )?;
+        Ok(Daily {
+            acquirer: Arc::new(acquirer),
+            budgets: stores.into_iter().zip(self.keys.iter().cloned()).collect(),
+        })
     }
-    /// The acquirer of the current KST day (S08 windows are per day).
-    pub async fn today(
-        &self,
-    ) -> Result<Arc<crate::domestic::DomesticAcquirer<P, W, B>>, DomesticError> {
+    /// The current KST day (acquirer and budgets).
+    pub async fn day(&self) -> Result<Arc<Daily<P, W, B>>, DomesticError> {
         let now = self
             .clock
             .now_ms()
             .map_err(|_| DomesticError::Invalid("clock"))?;
         let starts = (now + KST_MS).div_euclid(DAY_MS) * DAY_MS - KST_MS;
         let mut current = self.current.lock().await;
-        if let Some((at, acquirer)) = current.as_ref()
+        if let Some((at, day)) = current.as_ref()
             && *at == starts
         {
-            return Ok(acquirer.clone());
+            return Ok(day.clone());
         }
-        let acquirer = Arc::new(self.build(starts)?);
-        *current = Some((starts, acquirer.clone()));
-        Ok(acquirer)
+        let day = Arc::new(self.build(starts)?);
+        *current = Some((starts, day.clone()));
+        Ok(day)
+    }
+    /// The funded provider transport (shared with the warning requester).
+    pub fn funded_transport(&self) -> Arc<P> {
+        self.funded.clone()
+    }
+    pub fn clock(&self) -> Arc<dyn crate::budget::Clock> {
+        self.clock.clone()
+    }
+    /// The acquirer of the current KST day (S08 windows are per day).
+    pub async fn today(
+        &self,
+    ) -> Result<Arc<crate::domestic::DomesticAcquirer<P, W, B>>, DomesticError> {
+        Ok(self.day().await?.acquirer.clone())
     }
 }
 impl<P, W, B> Acquire for DailyAcquirer<P, W, B>
