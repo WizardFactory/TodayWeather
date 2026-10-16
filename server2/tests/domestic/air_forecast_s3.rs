@@ -218,7 +218,7 @@ fn town(lat: f64, lon: f64) -> Doc {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_snapshot_answers_the_stored_image_forecast_and_rejects_kaq() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
     seed(&store, &[]).await;
@@ -747,7 +747,7 @@ async fn image_acquisition_across_kst_boundaries() {
 }
 async fn missing_image_forecast_at(at: &str) {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, at).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
     let stub = stub().await;
@@ -852,7 +852,7 @@ async fn missing_image_forecast_at(at: &str) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_slow_image_acquisition_releases_the_request_and_serves_the_next_one() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
     let stub = stub().await;
@@ -934,7 +934,7 @@ async fn rejected_image_paths_at(at: &str) {
     let seoul = town(37.5665, 126.978);
     let three = || Instant::now() + Duration::from_secs(3);
     for case in ["another host", "12 cycle", "no PM2.5 path", "PM10 404"] {
-        let peer = Peer::new();
+        let peer = Peer::persistent();
         let transport = peer.transport();
         let store = store_for(&transport);
         let stub = stub().await;
@@ -1100,7 +1100,7 @@ async fn other_hosts_acquisitions_are_read_in_completion_order_across_days() {
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
     let key = || ProviderKey::Named {
@@ -1220,7 +1220,7 @@ async fn a_new_station_list_decodes_everything_again_at_once() {
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
     let a_at = NOW - 4. * 3_600_000.;
@@ -1326,7 +1326,7 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
     let all = station_fold(&[]);
@@ -1452,7 +1452,7 @@ async fn a_late_announcement_stays_until_its_rows_expire() {
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
     // 09-24 23시 over the 09/24/23 animation: rows 09-25 00:00 .. 09-26 23:00 KST.
@@ -1508,7 +1508,7 @@ async fn acquisitions_completed_in_the_same_millisecond_are_both_read() {
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
     let key = || ProviderKey::Named {
@@ -1583,7 +1583,7 @@ async fn a_long_animation_is_read_until_its_last_rows_expire() {
     use server2::domestic::kma::source::live::Flights;
     use std::sync::atomic::AtomicU64;
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
     // The oracle's 96-frame pair, dated by the 09/24/23 path.
@@ -1691,7 +1691,7 @@ async fn an_image_dated_after_its_announcement_is_not_used() {
         );
     }
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = store_for(&transport);
     let at = NOW - 4. * 3_600_000.;
@@ -1735,4 +1735,155 @@ async fn an_image_dated_after_its_announcement_is_not_used() {
     assert!(!fold.has("2026-09-24 05:00"));
     assert_eq!(fold.json(), expected.json());
     assert_eq!(transport.available(), TEST_PERMITS);
+}
+
+/// Hold only an observation catalog at the transport boundary; all published station/image
+/// groups still use the actual S06 store and raw verification. No external service is reached.
+#[derive(Clone)]
+struct HeldObservations {
+    inner: BoundedS3<HttpS3Transport>,
+    held: Arc<std::sync::atomic::AtomicBool>,
+    entered: Arc<AtomicUsize>,
+    release: Arc<tokio::sync::Notify>,
+}
+impl server2::storage::ObjectTransport for HeldObservations {
+    async fn put(
+        &self,
+        record: &server2::storage::PreparedRecord,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put(record).await
+    }
+    async fn head(&self, key: &str) -> Result<server2::storage::Object, server2::storage::Error> {
+        self.inner.head(key).await
+    }
+    async fn get(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::Object, server2::storage::Error> {
+        self.inner.get(key, max).await
+    }
+}
+impl server2::storage::CatalogTransport for HeldObservations {
+    async fn get_control(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
+        if key.starts_with("index/v2/data-go-kr/airkorea-station/") {
+            self.entered.fetch_add(1, Ordering::SeqCst);
+            let released = self.release.notified();
+            tokio::pin!(released);
+            released.as_mut().enable();
+            if self.held.load(Ordering::SeqCst) {
+                released.await;
+            }
+        }
+        self.inner.get_control(key, max).await
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &server2::storage::WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put_control(key, body, condition).await
+    }
+    async fn list_raw_document(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+        keys: usize,
+        bytes: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        self.inner
+            .list_raw_document(prefix, token, keys, bytes)
+            .await
+    }
+}
+impl server2::history::IndexListing for HeldObservations {
+    async fn list_index(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+    ) -> Result<server2::storage::ListPage, server2::storage::Error> {
+        self.inner.list_index(prefix, token).await
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn stored_images_restore_while_observations_use_the_same_expiring_request_budget() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = store_for(&transport);
+    publish_json(
+        &store,
+        "airkorea-station-list",
+        "stations",
+        Period {
+            local_date: 20260923,
+            slot: "0000".into(),
+        },
+        "20260923",
+        NOW - 86_400_000.,
+        station_page(),
+    )
+    .await;
+    publish_json(&store,"airkorea-station","sido-nationwide",Period{local_date:20260924,slot:"1000".into()},"20260924-1000",NOW-60_000.,
+        serde_json::to_vec(&json!({"response":{"header":{"resultCode":"00","resultMsg":"NORMAL_CODE"},"body":{"items":[{"stationName":"중구","dataTime":"2026-09-24 10:00","pm10Value":"10","pm25Value":"5"}],"totalCount":1,"pageNo":1,"numOfRows":100}}})).unwrap()).await;
+    let announcement = Publication::new(20260924, 500).unwrap();
+    publish(
+        &store,
+        ("airkorea-image", "airkorea-forecast-image"),
+        ProviderKey::Named {
+            id: "national".into(),
+        },
+        announcement.period(),
+        "20260924",
+        NOW - 4. * 3_600_000.,
+        &image_pages('A', &near_urls()),
+    )
+    .await;
+    let held = Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let entered = Arc::new(AtomicUsize::new(0));
+    let release = Arc::new(tokio::sync::Notify::new());
+    let delayed = HeldObservations {
+        inner: transport,
+        held: held.clone(),
+        entered: entered.clone(),
+        release: release.clone(),
+    };
+    let store = Arc::new(CatalogStore::new(delayed.clone(), CatalogLimits::default()).unwrap());
+    let inputs = AirInputs::new(delayed, store).with_clock(test_clock());
+    let started = Instant::now();
+    let answer = inputs
+        .load(
+            &town(37.56, 126.98),
+            "서울특별시",
+            "중구",
+            false,
+            true,
+            NOW,
+            started + Duration::from_secs(3),
+        )
+        .await;
+    held.store(false, Ordering::SeqCst);
+    release.notify_waiters();
+    assert!(
+        entered.load(Ordering::SeqCst) > 0,
+        "the observation read must actually be blocked"
+    );
+    assert!(
+        started.elapsed() < Duration::from_millis(3300),
+        "one combined request deadline"
+    );
+    assert!(
+        answer.arpltn.is_err(),
+        "late observation follows the missing-data contract"
+    );
+    assert!(
+        matches!(rows(&answer,"중구"),OrderedJson::Array(r) if !r.is_empty()),
+        "independent stored images must not wait behind observations"
+    );
 }

@@ -539,15 +539,23 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             .unwrap_or_default();
             let mut s = self.state();
             for (p, rows, at, sha) in parsed.0 {
-                if let std::collections::btree_map::Entry::Vacant(e) = s.pages.hourly.entry(p) {
-                    e.insert(rows);
+                if s.pages
+                    .hourly_at
+                    .get(&p)
+                    .is_none_or(|previous| *previous < at)
+                {
+                    s.pages.hourly.insert(p, rows);
                     s.pages.hourly_at.insert(p, at);
                     s.pages.ids.insert(("aws-hourly", p), (at, sha));
                 }
             }
             for (p, rows, at, sha) in parsed.1 {
-                if let std::collections::btree_map::Entry::Vacant(e) = s.pages.city.entry(p) {
-                    e.insert(rows);
+                if s.pages
+                    .ids
+                    .get(&("city-obs", p))
+                    .is_none_or(|(previous, _)| *previous < at)
+                {
+                    s.pages.city.insert(p, rows);
                     s.pages.ids.insert(("city-obs", p), (at, sha));
                 }
             }
@@ -881,6 +889,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         let hourly_fold = match (cached, inputs) {
             (Some(cached), _) => cached,
             (None, Some((seed, hourly, hourly_at, city, geo, pages))) => {
+                let fold_pages = pages.clone();
                 let Ok((mut fold, reduced)) = tokio::task::spawn_blocking(move || {
                     fold_hourly(
                         seed.as_deref().map(Vec::as_slice),
@@ -888,6 +897,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                         &hourly_at,
                         &city,
                         &geo,
+                        &fold_pages,
                     )
                 })
                 .await
@@ -1427,6 +1437,7 @@ fn fold_hourly(
     hourly_at: &BTreeMap<Publication, f64>,
     city: &BTreeMap<Publication, Arc<Vec<Doc>>>,
     geo: &HashMap<String, (f64, f64)>,
+    page_ids: &[PageId],
 ) -> (HourlyFold, Vec<(Publication, Page)>) {
     let city_ids: BTreeSet<String> = city
         .values()
@@ -1453,7 +1464,29 @@ fn fold_hourly(
         let merged;
         let (run, city_available): (&[Doc], bool) = match city.get(h) {
             Some(c) => {
-                merged = merge_aws_city((**aws).clone(), c);
+                merged = {
+                    let mut merged = merge_aws_city((**aws).clone(), c);
+                    let city_at = page_ids
+                        .iter()
+                        .find(|id| id.kind == "city-obs" && id.hour == *h)
+                        .map(|id| id.fetched_at_ms);
+                    if city_at.is_some_and(|at| hourly_at.get(h).is_some_and(|aws_at| *aws_at > at))
+                    {
+                        // Legacy Mongoose update wraps the newer AWS row in $set: fields
+                        // actually present overwrite, omitted city weather/cloud remain.
+                        // A later city acquisition (or a same-acquisition pair) still wins.
+                        for row in &mut merged {
+                            if let Some(raw) =
+                                aws.iter().find(|raw| raw.get("stnId") == row.get("stnId"))
+                            {
+                                for (key, value) in raw.entries() {
+                                    row.set(key, value.clone());
+                                }
+                            }
+                        }
+                    }
+                    merged
+                };
                 (&merged, true)
             }
             None => (aws, false),
