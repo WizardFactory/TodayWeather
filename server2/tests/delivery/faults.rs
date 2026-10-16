@@ -336,6 +336,92 @@ async fn a_user_update_during_the_minute_survives_the_stale_cleanup() {
 }
 
 #[tokio::test]
+async fn a_same_settings_user_update_during_the_minute_survives_the_stale_cleanup() {
+    // The record is created through the API 90 days ago; during the minute the user sends the
+    // same registration again (only `updatedAt`/`updatedBy` change), then FCM answers
+    // unregistered. The record must be kept (disabled), not removed as stale.
+    let rig = rig_named("same-update", &[]).await;
+    let body = serde_json::json!({"type": "ios", "fcmToken": "same", "cityIndex": 1, "id": 1,
+        "location": {"lat": 37.56, "long": 126.97}, "source": "KMA", "name": "집",
+        "pushTime": 79200});
+    rig.clock.set("2026-07-17T00:00:00.000Z");
+    let fetch = Arc::new(UpdatingFetch {
+        inner: rig.weather.clone(),
+        push: rig.push.clone(),
+        body: body.clone(),
+    });
+    // Create it once (old clock) through the same route.
+    server2::push::deliver::Fetch::get(&*fetch, "http://unrouted.test/".into(), None)
+        .await
+        .ok();
+    rig.clock.set(AT);
+    rig.google
+        .state
+        .fcm
+        .lock()
+        .unwrap()
+        .push_back(Answer::Json(404, UNREGISTERED.into()));
+    let worker = AlarmWorker::new(
+        rig.push.clone(),
+        Arc::new(rig.s3.clone()),
+        fetch,
+        Arc::new(fcm(&rig.google, &temp_dir("same-update-2"))),
+        servers(),
+        rig.clock.clone(),
+        rig.diagnostics.clone(),
+    );
+    let report = worker.run_minute(NOW).await;
+    assert_eq!(report.deliveries[0].1, "unregistered");
+    let restored = start(
+        &rig.s3,
+        rig.clock.clone(),
+        super::state_common::fast_config(),
+    )
+    .await;
+    let state = restored.state();
+    let state = state.read().unwrap();
+    let records: Vec<(Val, Val)> = state
+        .coll(Coll::Alarm)
+        .iter()
+        .map(|(_, r)| (r.doc.get("enable").clone(), r.doc.get("updatedBy").clone()))
+        .collect();
+    assert_eq!(
+        records,
+        [(Val::Bool(false), Val::Str("push".into()))],
+        "kept and disabled"
+    );
+}
+
+#[tokio::test]
+async fn an_undecidable_claim_is_never_sent_and_the_next_minute_is() {
+    // The claim is stored but its answer is lost and the read-back fails: nothing is sent.
+    // A replacement process finds the claim; the next minute is delivered.
+    let rig = rig_named(
+        "claim-undecided",
+        &[alarm(1, "u-1", 79200, ""), alarm(2, "u-2", 79260, "")],
+    )
+    .await;
+    rig.s3
+        .fault_put("index/v2/push/delivery/", Fault::CommitLostUnreadable);
+    let first = rig.worker.run_minute(NOW).await;
+    assert!(!first.claimed);
+    assert!(rig.google.sends().is_empty());
+    let push2 = start(
+        &rig.s3,
+        rig.clock.clone(),
+        super::state_common::fast_config(),
+    )
+    .await;
+    let worker2 = worker_on(&rig, push2);
+    assert!(!worker2.run_minute(NOW + 2_000).await.claimed);
+    assert!(rig.google.sends().is_empty());
+    rig.clock.set("2026-10-15T22:01:00.000Z");
+    let next = worker2.run_minute(NOW + 60_000).await;
+    assert!(next.claimed);
+    assert_eq!(rig.google.sends().len(), 1);
+}
+
+#[tokio::test]
 async fn the_minute_selects_like_get_alarms_by_time_and_the_weekday_filter() {
     // 2026-10-15T22:00Z is Thursday (4) in UTC and Friday (5) at UTC+9.
     let records = [

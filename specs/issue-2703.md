@@ -81,10 +81,9 @@ Rules:
   with `timezoneOffset` present), claim, deliver (6 in flight), result, 60-day removal and
   `updatedAt` stamp. Skip (no claim) while the state is not restored or nothing is due. The
   removal goes record by record over the `makeRemoveSelector` matches: the selected record
-  (number, `_id`) only while it still equals the document read at selection or differs only by
-  this worker's disable (`enable`, `updatedAt`, `updatedBy: 'push'`), any other match only while
-  its own `updatedAt` is older than 60 days; the stamp only while the selected record still has
-  no `updatedAt`. A failed result write is a minute note and counter; the claim stays.
+  (number, `_id`) only while it still equals the document read at selection, any other match only
+  while its own `updatedAt` is older than 60 days; an unregistered token's disable skips exactly
+  those records; the stamp only while the selected record still has no `updatedAt`. A failed result write is a minute note and counter; the claim stays.
 - Ledger: `index/v2/push/delivery/alarm/{YYYYMMDD}/{HHMM}.json` with `If-None-Match: *` before any
   send (`schema`, `kind`, `minute`, `claimedAt`, `claim` nonce, record `_id`s); 409/412 taken;
   other 4xx unavailable; unknown outcome read back (own body owned, other taken, unreadable

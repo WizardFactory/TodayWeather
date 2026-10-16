@@ -10,7 +10,7 @@ use super::weather::{self, Fetch, Servers, WeatherFailure};
 use crate::budget::Clock;
 use crate::push::{
     js::{self, to_string},
-    service::{InternalOp, PushService},
+    service::{InternalOp, PushService, StaleSelection},
     store::{Coll, Oid, oid_hex},
 };
 use crate::storage::CatalogTransport;
@@ -221,6 +221,17 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
 
     /// `sendNotification`: weather, text, provider (one delivery, never retried).
     pub async fn deliver(&self, info: &mut Obj, now_ms: i64) -> Delivery {
+        self.deliver_selected(info, now_ms, None).await
+    }
+
+    /// [`Self::deliver`] for a selected record whose stale cleanup (`spare`) follows: an
+    /// unregistered token's disable leaves the records that cleanup removes.
+    async fn deliver_selected(
+        &self,
+        info: &mut Obj,
+        now_ms: i64,
+        spare: Option<&StaleSelection>,
+    ) -> Delivery {
         let message = match weather::daily_summary(info, &self.servers, &*self.fetch).await {
             Ok(m) => m,
             Err(WeatherFailure::Request(what, _)) => {
@@ -255,7 +266,10 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                     // disable is durable (or failed) so the outcome says which.
                     let disabled = self
                         .push
-                        .internal(InternalOp::DisableAlarmsByFcm(to_string(&token)))
+                        .internal(InternalOp::DisableAlarmsByFcm {
+                            token: to_string(&token),
+                            spare: spare.cloned(),
+                        })
                         .await;
                     Delivery::Unregistered { status, disabled }
                 }
@@ -348,16 +362,32 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                 return MinuteReport::default();
             }
         }
+        // `_removeOldList` decides on the records as selected: stale ones (not updated for 60
+        // days) are removed after the sends, the others without `updatedAt` are stamped.
+        let cutoff = now_ms - 60 * DAY_MS;
         let gate = Arc::new(Semaphore::new(CONCURRENCY));
         let mut tasks = Vec::with_capacity(due.len());
         for (n, oid, info) in due {
             let gate = gate.clone();
+            let stale = match info.get("updatedAt") {
+                Val::Date(ms) if (*ms as i64) < cutoff => {
+                    super::ops::remove_filter(&info).map(|filter| StaleSelection {
+                        n,
+                        oid,
+                        selected: info.clone(),
+                        cutoff_ms: cutoff,
+                        filter,
+                    })
+                }
+                _ => None,
+            };
             tasks.push(async move {
                 let _permit = gate.acquire_owned().await.expect("open gate");
-                let selected = info.clone();
                 let mut info = info;
-                let delivery = self.deliver(&mut info, now_ms).await;
-                (n, oid, selected, info, delivery)
+                let delivery = self
+                    .deliver_selected(&mut info, now_ms, stale.as_ref())
+                    .await;
+                (n, oid, stale, info, delivery)
             });
         }
         let results = futures_join(tasks).await;
@@ -406,21 +436,11 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             self.diagnostics
                 .minute(&minute, "result not recorded; claim kept, nothing resent");
         }
-        // `_removeOldList` over the (mutated) records of this minute.
-        let cutoff = now_ms - 60 * DAY_MS;
-        // Each operation re-checks the record in the writer, so a change made since selection
-        // (a user update, a removal) is never undone.
-        for (n, oid, selected, info, _) in results {
-            let stale = matches!(info.get("updatedAt"), Val::Date(ms) if (*ms as i64) < cutoff);
-            if stale && let Some(filter) = super::ops::remove_filter(&info) {
-                let op = InternalOp::RemoveAlarms {
-                    n,
-                    oid,
-                    selected,
-                    cutoff_ms: cutoff,
-                    filter,
-                };
-                if self.push.internal(op).await {
+        // `_removeOldList`. Each operation re-checks the records in the writer, so a change made
+        // since selection (a user update, a removal) is never undone.
+        for (n, oid, stale, info, _) in results {
+            if let Some(stale) = stale {
+                if self.push.internal(InternalOp::RemoveAlarms(stale)).await {
                     self.counters.removed_old.fetch_add(1, Ordering::Relaxed);
                 }
             } else if info.get("updatedAt").is_nullish()

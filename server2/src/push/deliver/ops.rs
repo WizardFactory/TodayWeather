@@ -4,7 +4,7 @@
 use crate::push::{
     mongoose,
     routes::{self, TxnBackend},
-    service::InternalOp,
+    service::{InternalOp, StaleSelection},
     store::{Coll, Cond, KEY_FIELDS, Txn},
 };
 use crate::world::js::{Obj, Val};
@@ -13,10 +13,17 @@ use std::collections::BTreeMap;
 /// Plan one operation; `false` is a store error (legacy logs it and continues).
 pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
     match op {
-        InternalOp::DisableAlarmsByFcm(token) => {
+        InternalOp::DisableAlarmsByFcm { token, spare } => {
             let now = txn.now_ms;
+            let spared = spare
+                .as_ref()
+                .map(|s| still_stale(txn, s))
+                .unwrap_or_default();
             let query = [("fcmToken".to_owned(), Cond::Eq(Val::Str(token.clone())))];
             for n in txn.find(Coll::Alarm, &query) {
+                if spared.contains(&n) {
+                    continue;
+                }
                 let mut record = txn.get(Coll::Alarm, n).expect("found record");
                 mongoose::apply_set(
                     &mut record.doc,
@@ -30,36 +37,12 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
             }
             true
         }
-        InternalOp::RemoveAlarms {
-            n,
-            oid,
-            selected,
-            cutoff_ms,
-            filter,
-        } => {
-            // `removeAlarms(makeRemoveSelector(pushInfo))`, record by record: the selected record
-            // only while it is unchanged since selection or changed only by this worker's own
-            // disable of an unregistered token (legacy removed such a record the same minute);
-            // any other record the filter matches only while it is itself older than the cutoff.
-            // A user update in between keeps the record.
-            let Ok(query) = mongoose::cast_query(Coll::Alarm, filter) else {
-                return false;
-            };
-            let mut removed = false;
-            for m in txn.find(Coll::Alarm, &query) {
-                let record = txn.get(Coll::Alarm, m).expect("found record");
-                let remove = if m == *n {
-                    record.oid == *oid
-                        && (record.doc == *selected || same_except_disable(&record.doc, selected))
-                } else {
-                    matches!(record.doc.get("updatedAt"), Val::Date(ms) if (*ms as i64) < *cutoff_ms)
-                };
-                if remove {
-                    txn.remove(Coll::Alarm, m);
-                    removed = true;
-                }
+        InternalOp::RemoveAlarms(stale) => {
+            let numbers = still_stale(txn, stale);
+            for m in &numbers {
+                txn.remove(Coll::Alarm, *m);
             }
-            removed
+            !numbers.is_empty()
         }
         InternalOp::StampAlarm { n, oid, info } => {
             let unstamped = txn
@@ -138,22 +121,22 @@ fn remove_duplicates(txn: &mut Txn<'_>) {
     }
 }
 
-/// The fields `disableAlarmsByFcm` sets.
-const DISABLE_FIELDS: [&str; 3] = ["enable", "updatedAt", "updatedBy"];
-
-/// `current` is `selected` with only the worker's disable applied (`enable: false`,
-/// `updatedBy: 'push'`, a new `updatedAt`); the other fields are equal and in the same order.
-fn same_except_disable(current: &Obj, selected: &Obj) -> bool {
-    let rest = |o: &Obj| -> Vec<(String, Val)> {
-        o.entries()
-            .iter()
-            .filter(|(k, _)| !DISABLE_FIELDS.contains(&k.as_str()))
-            .cloned()
-            .collect()
+/// The records of a stale selection's filter that are still stale (see [`StaleSelection`]).
+fn still_stale(txn: &Txn<'_>, stale: &StaleSelection) -> Vec<u64> {
+    let Ok(query) = mongoose::cast_query(Coll::Alarm, &stale.filter) else {
+        return Vec::new();
     };
-    current.get("enable") == &Val::Bool(false)
-        && current.get("updatedBy") == &Val::Str("push".into())
-        && rest(current) == rest(selected)
+    txn.find(Coll::Alarm, &query)
+        .into_iter()
+        .filter(|m| {
+            let record = txn.get(Coll::Alarm, *m).expect("found record");
+            if *m == stale.n {
+                record.oid == stale.oid && record.doc == stale.selected
+            } else {
+                matches!(record.doc.get("updatedAt"), Val::Date(ms) if (*ms as i64) < stale.cutoff_ms)
+            }
+        })
+        .collect()
 }
 
 /// `makeRemoveSelector(pushInfo)` as a filter.

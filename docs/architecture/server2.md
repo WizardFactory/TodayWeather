@@ -2774,13 +2774,13 @@ firebase-admin 5.13.1 used `https://accounts.google.com/o/oauth2/token`), tokens
 demand per app, one request at a time, and a failure is not cached; the duplicate pass groups on
 indexed key fields and decodes only grouped records; the 60-day removal and the `updatedAt` stamp
 re-check records in the writer: of the records the `makeRemoveSelector` filter matches, the
-selected one is removed only while it equals the selected document or differs only by this
-worker's unregistered-token disable (`enable`, `updatedAt`, `updatedBy: 'push'`; legacy removed
-such a stale record the same minute) and any other only while its own `updatedAt` is older than
-60 days, and the stamp applies only while the record still has no `updatedAt`, so a user change
-or removal made during the minute is never undone and a stamp never re-enables a disabled token
-(legacy removed every match and upserted the copy read before sending); legacy disabled
-unregistered tokens without waiting; OAuth tokens are cached and refreshed with one lock per app,
+selected one is removed only while it still equals the document read at selection and any other
+only while its own `updatedAt` is older than 60 days; an unregistered token's disable leaves
+exactly those records for the removal (legacy disabled, then removed them the same minute); the
+stamp applies only while the record still has no `updatedAt`. So a user change or removal made
+during the minute is never undone (even one that repeats the same settings) and a stamp never
+re-enables a disabled token (legacy removed every match and upserted the copy read before
+sending); legacy disabled unregistered tokens without waiting; OAuth tokens are cached and refreshed with one lock per app,
 and the assertion and expiry use the time of each send (not the minute's start).
 
 **Verification.** The [oracle fixture](../../server2/tests/delivery/fixtures/PROVENANCE.md) runs
@@ -2795,7 +2795,9 @@ nothing sent later; a replacement process at the same minute sends nothing and t
 delivers; two processes claiming one minute deliver each alarm once; a claim whose answer was lost
 is read back (own: delivered; another's: nothing sent); selection excludes other minutes,
 `enable: false`, excluded local weekdays and weekday lists without `timezoneOffset`; a user update
-made during the minute survives the stale cleanup; a refused claim and an unrestored state
+made during the minute (changed or identical settings) survives the stale cleanup; a claim stored
+with a lost answer and a failed read-back sends nothing, also after a restart, and the next minute
+delivers; a refused claim and an unrestored state
 send nothing; an unregistered token's alarms are disabled durably before the outcome (not
 re-enabled by the stamp; a stale one removed), and a failed disable is reported and not resent;
 the classification follows firebase-admin 5.13.1 for its detail type and for current FCM error

@@ -83,6 +83,20 @@ impl OidSource for ObjectIds {
     }
 }
 
+/// A selected alarm not updated for 60 days (`_removeOldList`): its natural-order number, `_id`,
+/// the document as read at selection, the cutoff and its `makeRemoveSelector` filter. The
+/// records it removes are the filter's matches that are still stale: the selected record only
+/// while it equals `selected`, any other match only while its own `updatedAt` is older than
+/// `cutoff_ms`. A change made since selection (a user update) keeps the record.
+#[derive(Clone, Debug)]
+pub struct StaleSelection {
+    pub n: u64,
+    pub oid: super::store::Oid,
+    pub selected: crate::world::js::Obj,
+    pub cutoff_ms: i64,
+    pub filter: Vec<(String, crate::world::js::Val)>,
+}
+
 /// State changes the delivery workers make through the same writer (legacy store calls of the
 /// alarm worker).
 #[derive(Clone, Debug)]
@@ -90,19 +104,14 @@ pub enum InternalOp {
     /// `removeDuplicateAlarms`: (registrationId, cityIndex, id) groups keep the newer record.
     RemoveDuplicateAlarms,
     /// `disableAlarmsByFcm(token)`: `{enable: false, updatedAt: now, updatedBy: 'push'}`, multi.
-    DisableAlarmsByFcm(String),
-    /// `removeAlarms(selector)` with the `makeRemoveSelector` filter of the selected record
-    /// (natural-order number `n`, `_id`, document `selected` as read before sending), record by
-    /// record: the selected one only while it is unchanged since selection apart from this
-    /// worker's own unregistered-token disable (`enable`, `updatedAt`, `updatedBy: 'push'`),
-    /// any other match only while its own `updatedAt` is older than `cutoff_ms`.
-    RemoveAlarms {
-        n: u64,
-        oid: super::store::Oid,
-        selected: crate::world::js::Obj,
-        cutoff_ms: i64,
-        filter: Vec<(String, crate::world::js::Val)>,
+    /// Records the delivery's stale cleanup will remove are left as they are (disabling them
+    /// would make them look recently updated).
+    DisableAlarmsByFcm {
+        token: String,
+        spare: Option<StaleSelection>,
     },
+    /// `removeAlarms(makeRemoveSelector(pushInfo))` restricted to the still-stale records.
+    RemoveAlarms(StaleSelection),
     /// `updatePushInfo(record)`: the worker's `updatedAt` stamp of a selected record without
     /// one, applied only while that record still has no `updatedAt` (any other change, such as
     /// an unregistered token's disable, sets it and is never overwritten).
