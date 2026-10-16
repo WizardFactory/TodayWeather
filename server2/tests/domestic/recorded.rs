@@ -6,8 +6,8 @@
 //!
 //! A recording replays only the request it was made for: a call outside the recorded order, with
 //! different arguments or beyond the recorded calls, and a reply leaving recorded calls unused,
-//! forward the request to legacy (`kma::unavailable`) instead of assembling from inputs the
-//! recording does not contain.
+//! end the assembly as a defect (`kma::unavailable`, a dependency failure since S15b-4b-1)
+//! instead of assembling from inputs the recording does not contain.
 use serde_json::{Value, json};
 use server2::domestic::kma::{
     DbVersion, KmaRequest, KmaStore, MidModel, StoreError, StoreResult, TownModel,

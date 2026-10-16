@@ -217,7 +217,10 @@ pub fn assemble(
     let outcome = chain::run(request, store, now_ms, config);
     match (&outcome, store.unconsumed()) {
         (Outcome::Legacy(_) | Outcome::Defect(_), _) | (_, None) => outcome,
-        (_, Some(reason)) => Outcome::Legacy(reason),
+        // An Express 5xx ends the reply early (an escaped exception): later inputs go unused.
+        (Outcome::Status(code, _), _) if *code >= 500 => outcome,
+        // A reply built without inputs the snapshot holds (a replayed recording): a defect.
+        (_, Some(reason)) => Outcome::Defect(reason),
     }
 }
 

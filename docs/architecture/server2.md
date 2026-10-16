@@ -2493,8 +2493,10 @@ while legacy `JSON.parse` keeps it.
 **Grids outside KMA.** A town whose `mCoord` is not a KMA grid cell gets empty grid and RSS
 collections. Legacy's `find` by `mCoord` returns no row, so no acquisition starts.
 
-**Defects.** A store answer the snapshot cannot give (`unavailable`) or a Rust panic in assembly
-is a port invariant failure, not legacy behavior. The backend answers it as a dependency failure
+**Defects.** A store answer the snapshot cannot give (`unavailable`), a reply that leaves inputs
+of a replayed recording unused, or a Rust panic in assembly is a port invariant failure, not
+legacy behavior. An Express 5xx still ends the reply early, so its later inputs are allowed to go
+unused. The backend answers it as a dependency failure
 and counts it in `server2_gateway_native_defects_total`. It never forwards. `LegacyOnly` is now a
 test-only source.
 
