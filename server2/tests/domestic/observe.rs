@@ -293,7 +293,7 @@ async fn snapshot(
         .await
     {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(r) => panic!("forwarded: {r}"),
+        SourceAnswer::Forward(r) | SourceAnswer::Failed(r) => panic!("forwarded: {r}"),
     }
 }
 type Store = Box<dyn server2::domestic::kma::KmaStore + Send>;

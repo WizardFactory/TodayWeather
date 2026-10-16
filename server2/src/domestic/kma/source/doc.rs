@@ -47,7 +47,7 @@ impl Val {
     pub fn json(&self) -> OrderedJson {
         match self {
             Self::Num(n) => OrderedJson::Number(*n),
-            Self::Str(s) => OrderedJson::String(s.encode_utf16().collect()),
+            Self::Str(s) => OrderedJson::String(crate::domestic::kma::js::units(s)),
             Self::Bool(b) => OrderedJson::Bool(*b),
             Self::Null => OrderedJson::Null,
             Self::Undef => OrderedJson::Object(vec![(
@@ -107,7 +107,7 @@ impl Doc {
         OrderedJson::Object(
             self.0
                 .iter()
-                .map(|(k, v)| (k.encode_utf16().collect(), v.json()))
+                .map(|(k, v)| (crate::domestic::kma::js::units(k), v.json()))
                 .collect(),
         )
     }

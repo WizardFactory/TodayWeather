@@ -612,7 +612,7 @@ pub fn arpltn_answer(
     ));
     Ok(OrderedJson::Object(
         out.into_iter()
-            .map(|(k, v)| (k.encode_utf16().collect(), v))
+            .map(|(k, v)| (crate::domestic::kma::js::units(k), v))
             .collect(),
     ))
 }
@@ -622,7 +622,7 @@ fn answer_json(d: &Doc) -> OrderedJson {
         d.entries()
             .iter()
             .filter(|(_, v)| !matches!(v, Val::Null))
-            .map(|(k, v)| (k.encode_utf16().collect(), v.json()))
+            .map(|(k, v)| (crate::domestic::kma::js::units(k), v.json()))
             .collect(),
     )
 }
@@ -780,8 +780,8 @@ pub fn dust_region(region: &str, city: &str) -> String {
     if sido != "강원" && sido != "경기" {
         return sido.into();
     }
-    let u: Vec<u16> = city.encode_utf16().collect();
-    let city = String::from_utf16_lossy(&u[..u.len().min(3)]);
+    let u: Vec<u16> = crate::domestic::kma::js::units(city);
+    let city = crate::domestic::kma::js::from16(&u[..u.len().min(3)]);
     let name = super::region_table()
         .iter()
         .find(|r| r.first == region && r.second == city)
@@ -813,9 +813,10 @@ pub fn dust_answer(
     date: &str,
 ) -> Result<OrderedJson, String> {
     let sido = dust_region(region, city);
-    let u: Vec<u16> = date.encode_utf16().collect();
-    let sub =
-        |a: usize, n: usize| String::from_utf16_lossy(&u[a.min(u.len())..(a + n).min(u.len())]);
+    let u: Vec<u16> = crate::domestic::kma::js::units(date);
+    let sub = |a: usize, n: usize| {
+        crate::domestic::kma::js::from16(&u[a.min(u.len())..(a + n).min(u.len())])
+    };
     let inform_date = format!("{}-{}-{}", sub(0, 4), sub(4, 2), sub(6, 2));
     let docs: Vec<&Forecast> = forecasts
         .docs
@@ -841,9 +842,9 @@ pub fn dust_answer(
             continue;
         }
         let data = d.inform_data.clone().unwrap_or_default();
-        let du: Vec<u16> = data.encode_utf16().collect();
+        let du: Vec<u16> = crate::domestic::kma::js::units(&data);
         let part = |a: usize, n: usize| {
-            String::from_utf16_lossy(&du[a.min(du.len())..(a + n).min(du.len())])
+            crate::domestic::kma::js::from16(&du[a.min(du.len())..(a + n).min(du.len())])
         };
         let key = format!("{}{}{}", part(0, 4), part(5, 2), part(8, 2));
         let slot = match results.iter().position(|(k, _)| *k == key) {
@@ -873,7 +874,7 @@ pub fn dust_answer(
                 OrderedJson::Object(vec![
                     (
                         "date".encode_utf16().collect(),
-                        OrderedJson::String(date.encode_utf16().collect()),
+                        OrderedJson::String(crate::domestic::kma::js::units(&date)),
                     ),
                     ("dustForecast".encode_utf16().collect(), answer_json(&f)),
                 ])
@@ -929,11 +930,11 @@ pub fn fallback_arpltn(o: &crate::world::air::Observation) -> Option<OrderedJson
     pm.then(|| {
         OrderedJson::Object(
             out.into_iter()
-                .map(|(k, v)| (k.encode_utf16().collect(), v))
+                .map(|(k, v)| (crate::domestic::kma::js::units(k), v))
                 .collect(),
         )
     })
 }
 fn js_str(s: &str) -> OrderedJson {
-    OrderedJson::String(s.encode_utf16().collect())
+    OrderedJson::String(crate::domestic::kma::js::units(s))
 }

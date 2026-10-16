@@ -12,8 +12,11 @@ use tokio::{sync::Semaphore, time::Instant};
 /// A store snapshot for one request, or a decision to stay on legacy.
 pub enum SourceAnswer {
     Snapshot(Box<dyn KmaStore + Send>),
-    /// The source cannot supply complete inputs (S14 coverage `Legacy`, absent records, ...).
+    /// Legacy work that needs a provider the source does not call yet (a town absent from the
+    /// town list: legacy geocodes it; S15b-4b-2). Forward the request to legacy.
     Forward(String),
+    /// The source could not read its inputs (S3): a dependency failure, never a forward.
+    Failed(String),
 }
 /// Supplies request inputs (S15b: [`super::source::S3Source`]).
 pub trait KmaSource: Send + Sync {
@@ -83,6 +86,10 @@ impl KmaBackend {
         let store = match self.source.snapshot(&request, deadline).await {
             SourceAnswer::Snapshot(store) => store,
             SourceAnswer::Forward(_) => return Ok(Native::Forward),
+            SourceAnswer::Failed(_) => {
+                crate::gateway::metrics::add(&crate::gateway::metrics::COUNTERS.native_defects);
+                return Err(GatewayError::Provider);
+            }
         };
         let now = store.as_of_ms().unwrap_or_else(|| (self.clock)());
         let config = self.config;

@@ -2465,9 +2465,16 @@ That is finalhandler 0.4.1 (`express` 4.13.4 in `server/package-lock.json`), run
 | The end of the router list (the legacy 404 middleware) | 404 `Not Found\n` |
 | `getAllDataFromDb` for a coordinate outside Korea (`res.redirect(_getUrlWithCoord(...))`, `controllerTown.js:170-174`, `:5648`) | 302 |
 
-An exception thrown inside an asynchronous callback ends the legacy process instead. The gateway's
-legacy hop treats any non-200 backend reply as a dependency failure (`gateway::backend`), so the
-gateway answers all of these the same way it answered the legacy hop. The oracle's
+Comparison boundary for these replies. server2's gateway (`gateway::backend`) treats any non-200
+backend reply as a dependency failure, the same way it treats a failed legacy hop. The one exception
+is a 503 `EWEATHERUNAVAILABLE`, which none of these replies is. So for the public request, the gateway
+answers the native reply the same way it answered the legacy one.
+
+An exception thrown inside an asynchronous callback is different in legacy: Node 16 ends the whole
+process by default. The legacy gateway runs in that same process and loops back to its own port
+(`server/routes/gateway.js`), so the request fails and the process's other in-flight requests are
+lost too. server2 answers the request as the 500 above, and its gateway gives the same dependency
+failure. server2 does not reproduce the loss of other requests. The oracle's
 `query-malformed-escape` reply (500, `Internal Server Error\n`) is now matched natively.
 
 **`Date.parse`.** `domestic::kma::dateparse` ports V8's date parser as shipped in Node 16.20.2
@@ -2481,7 +2488,9 @@ earlier pinned values. The oracle's `stn-small-year-datetime` (`0001-09-24 09:03
 as 2024-01-09 09:03) is now matched natively. The KMA page dates use the same parser.
 
 **Unpaired surrogates.** A JavaScript string can hold an unpaired UTF-16 surrogate, for example
-half of an emoji cut by `substr`. The port keeps one as a stand-in code point (U+10F800 + offset,
+half of an emoji cut by `substr`. Property names are canonical: two halves made adjacent name
+the same property as the paired character. The date formatters' lengths, the date ordering and the
+source's AirKorea slices count stand-ins the same way. The port keeps one as a stand-in code point (U+10F800 + offset,
 the upper half of Supplementary Private Use Area-B, which KMA and AirKorea text never uses). It
 restores the code unit wherever code units matter: `length`, indices, comparison, `===` and
 `JSON.stringify`. The gateway serializer escapes a lone surrogate the way well-formed

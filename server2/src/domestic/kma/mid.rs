@@ -456,7 +456,7 @@ fn merge_land_with_temp(now: f64, land_list: &V, temp_list: &V, land_pub: &V, te
             }
         }
     }
-    by_date.sort_by(|a, b| a.0.encode_utf16().cmp(b.0.encode_utf16()));
+    by_date.sort_by(|a, b| super::js::units(&a.0).cmp(&super::js::units(&b.0)));
     Arr::from_vec(
         by_date
             .into_iter()
@@ -732,7 +732,7 @@ pub fn merge_mid_with_short(cx: &mut Cx) -> Flow {
             }
         }
     }
-    by_date.sort_by(|a, b| a.0.encode_utf16().cmp(b.0.encode_utf16()));
+    by_date.sort_by(|a, b| super::js::units(&a.0).cmp(&super::js::units(&b.0)));
     mid.set(
         "dailyData",
         V::Arr(Arr::from_vec(by_date.into_iter().map(|(_, r)| r).collect())),

@@ -207,19 +207,31 @@ impl Default for Ob {
         Self::new()
     }
 }
+/// A property name in canonical form: JavaScript compares names by code units, so two adjacent
+/// stand-ins that hold a surrogate pair name the same property as the paired character.
+fn canon(k: &str) -> std::borrow::Cow<'_, str> {
+    if has_lone(k) {
+        std::borrow::Cow::Owned(from16(&units(k)))
+    } else {
+        std::borrow::Cow::Borrowed(k)
+    }
+}
 impl Ob {
     pub fn new() -> Self {
         Self(Rc::new(RefCell::new(Props::default())))
     }
     pub fn get(&self, k: &str) -> V {
+        let k = canon(k);
         let p = self.0.borrow();
-        p.find(k).map_or(V::Undef, |i| p.entries[i].1.clone())
+        p.find(&k).map_or(V::Undef, |i| p.entries[i].1.clone())
     }
     /// `hasOwnProperty`.
     pub fn has(&self, k: &str) -> bool {
-        self.0.borrow().find(k).is_some()
+        let k = canon(k);
+        self.0.borrow().find(&k).is_some()
     }
     pub fn set(&self, k: &str, v: impl Into<V>) {
+        let k = &*canon(k);
         let v = v.into();
         let mut p = self.0.borrow_mut();
         if let Some(i) = p.find(k) {
@@ -242,8 +254,9 @@ impl Ob {
     }
     /// `delete obj[k]`.
     pub fn del(&self, k: &str) {
+        let k = canon(k);
         let mut p = self.0.borrow_mut();
-        if let Some(i) = p.find(k) {
+        if let Some(i) = p.find(&k) {
             p.entries.remove(i);
             p.reindex();
         }
@@ -826,9 +839,9 @@ pub fn units(s: &str) -> Vec<u16> {
 fn utf16(s: &str) -> Vec<u16> {
     units(s)
 }
-/// Whether a port string holds a stand-in for an unpaired surrogate.
+/// Whether a port string holds a stand-in for an unpaired surrogate (UTF-8 `F4 8F ..`).
 fn has_lone(s: &str) -> bool {
-    s.chars().any(|c| c as u32 >= LONE_BASE)
+    s.as_bytes().contains(&0xF4) && s.chars().any(|c| c as u32 >= LONE_BASE)
 }
 /// UTF-16 code units to a port string (an unpaired surrogate becomes its stand-in).
 pub fn from16(u: &[u16]) -> String {
@@ -1055,6 +1068,19 @@ mod tests {
             "\"\u{1f600}\"".as_bytes()
         );
         assert!(lt(&V::from(substr("\u{1f600}", 0, 1)), &V::s("\u{e000}")));
+        // A property named by the two halves is the paired character's property.
+        let o = Ob::new();
+        o.set(&to_str(&joined), V::from(1.));
+        assert_eq!(to_number(&o.get("\u{1f600}")), 1.);
+        o.set("\u{1f600}", V::from(2.));
+        assert_eq!(o.len(), 1);
+        assert!(o.has(&to_str(&joined)));
+        assert_eq!(
+            to_json(&V::Obj(o.clone())).unwrap().to_bytes(),
+            "{\"\u{1f600}\":2}".as_bytes()
+        );
+        o.del(&to_str(&joined));
+        assert_eq!(o.len(), 0);
         assert_eq!(slice("a\u{1f600}b", 1, Some(3)), "\u{1f600}");
         // Pinned Node 16.20.2 decodeURI (S15-R16).
         for (s, ok) in [

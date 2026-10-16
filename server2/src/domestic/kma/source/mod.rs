@@ -759,10 +759,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     async fn load(&self, request: &KmaRequest, deadline: Instant) -> SourceAnswer {
         match self.build(request, deadline).await {
             Ok(s) => SourceAnswer::Snapshot(Box::new(s)),
-            Err(reason) => SourceAnswer::Forward(reason),
+            Err(Unbuilt::Forward(reason)) => SourceAnswer::Forward(reason),
+            Err(Unbuilt::Failed(reason)) => SourceAnswer::Failed(reason),
         }
     }
-    async fn build(&self, request: &KmaRequest, deadline: Instant) -> Result<Snapshot, String> {
+    async fn build(&self, request: &KmaRequest, deadline: Instant) -> Result<Snapshot, Unbuilt> {
         let now = (self.clock)();
         let region = request.region.clone().unwrap_or_default();
         let city = request.city.clone().unwrap_or_default();
@@ -774,7 +775,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             Some(&city),
             Some(&town_name),
         )
-        .ok_or("town absent from the town list (S15b-4 geocodes and stores new towns)")?
+        .ok_or_else(|| {
+            Unbuilt::Forward(
+                "town absent from the town list (S15b-4b-2 geocodes and stores new towns)".into(),
+            )
+        })?
         .clone();
         let m = town.get("mCoord").and_then(Val::as_doc);
         let num = |k| {
@@ -788,9 +793,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         };
         // A coordinate outside the KMA grid has no grid collection: legacy's `find` by `mCoord`
         // finds no row, so every grid collection answers empty (no acquisition either).
-        let grid = (coord.mx.fract() == 0. && coord.my.fract() == 0.)
-            .then(|| crate::history::Grid::new(coord.mx as u16, coord.my as u16))
-            .flatten();
+        let grid = kma_grid(coord);
         // One wait bound for the whole request (at most REQUEST_WAIT, 3 s, and ANSWER_RESERVE
         // before the deadline): station observations, ASOS history, the forecast, air and life
         // acquisitions all stop waiting at `until`, so the waits never add up; late parts are
@@ -1212,6 +1215,23 @@ fn wait_bound(deadline: Instant) -> Instant {
         .max(now)
         .min(now + observe::REQUEST_WAIT)
 }
+/// The KMA grid cell of a town's `mCoord` (None: not a cell, so no grid collection holds it).
+fn kma_grid(coord: Coord) -> Option<crate::history::Grid> {
+    (coord.mx.fract() == 0. && coord.my.fract() == 0.)
+        .then(|| crate::history::Grid::new(coord.mx as u16, coord.my as u16))
+        .flatten()
+}
+/// Why a snapshot was not built: a town legacy would geocode (forwarded until S15b-4b-2), or
+/// inputs S3 could not supply (a dependency failure).
+enum Unbuilt {
+    Forward(String),
+    Failed(String),
+}
+impl From<String> for Unbuilt {
+    fn from(reason: String) -> Self {
+        Self::Failed(reason)
+    }
+}
 /// Whether an acquisition of `partition` was complete at `now`.
 fn present(fetched: &[Fetched], partition: &str, now: f64) -> bool {
     fetched
@@ -1471,5 +1491,29 @@ impl KmaStore for Snapshot {
     }
     fn as_of_ms(&self) -> Option<f64> {
         Some(self.now)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    /// A town whose `mCoord` is not a KMA cell gets empty grid collections (S15b-4b-1).
+    #[test]
+    fn only_kma_cells_have_grid_collections() {
+        let at = |mx: f64, my: f64| kma_grid(Coord { mx, my }).map(|g| (g.nx(), g.ny()));
+        assert_eq!(at(60., 127.), Some((60, 127)));
+        assert_eq!(at(1., 1.), Some((1, 1)));
+        assert_eq!(at(149., 253.), Some((149, 253)));
+        for (mx, my) in [
+            (60.5, 127.),
+            (0., 127.),
+            (150., 127.),
+            (60., 254.),
+            (-1., 127.),
+            (f64::NAN, 127.),
+            (1e300, 127.),
+        ] {
+            assert_eq!(at(mx, my), None, "{mx},{my}");
+        }
     }
 }

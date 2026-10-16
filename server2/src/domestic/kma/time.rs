@@ -187,7 +187,7 @@ pub fn yyyy_mm_dd_hhmm(ms: f64) -> String {
 pub fn dot_space(s: &str) -> String {
     let sub = |a, n| super::js::substr(s, a, n);
     let mut out = format!("{}.{}.{}", sub(0, 4), sub(4, 2), sub(6, 2));
-    if s.encode_utf16().count() > 8 {
+    if super::js::units(s).len() > 8 {
         out.push_str(&format!(" {}:{}", sub(8, 2), sub(10, 2)));
     }
     out
@@ -196,7 +196,7 @@ pub fn dot_space(s: &str) -> String {
 pub fn dotted_to_dot_space(s: &str) -> String {
     let sub = |a, n| super::js::substr(s, a, n);
     let mut out = format!("{}.{}.{}", sub(0, 4), sub(5, 2), sub(8, 2));
-    if s.encode_utf16().count() > 10 {
+    if super::js::units(s).len() > 10 {
         out.push_str(&format!(" {}:{}", sub(11, 2), sub(14, 2)));
     }
     out
@@ -205,14 +205,14 @@ pub fn dotted_to_dot_space(s: &str) -> String {
 pub fn dotted_to_compact(s: &str) -> String {
     let sub = |a, n| super::js::substr(s, a, n);
     let mut out = format!("{}{}{}", sub(0, 4), sub(5, 2), sub(8, 2));
-    if s.encode_utf16().count() > 10 {
+    if super::js::units(s).len() > 10 {
         out.push_str(&format!("{}{}", sub(11, 2), sub(14, 2)));
     }
     out
 }
 /// `convertYYYYoMMoDDoHHoMMtoHHMM`.
 pub fn dotted_hhmm(s: &str) -> String {
-    if s.encode_utf16().count() > 10 {
+    if super::js::units(s).len() > 10 {
         format!(
             "{}{}",
             super::js::substr(s, 11, 2),
@@ -321,6 +321,26 @@ mod tests {
             let got = parse_date(s);
             assert!(got == v8 || (got.is_nan() && v8.is_nan()), "{s}: {got}");
         }
+    }
+    /// Lengths count JavaScript code units: an unpaired surrogate is one unit
+    /// (`kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM`, `server/lib/kmaTimeLib.js:152-157`).
+    #[test]
+    fn formatters_count_an_unpaired_surrogate_as_one_unit() {
+        let js = super::super::js::from16;
+        let units = super::super::js::units;
+        // Eight units: no time part.
+        let s = js(&[49, 50, 51, 52, 53, 54, 55, 0xD800]);
+        assert_eq!(
+            units(&dot_space(&s)),
+            [49, 50, 51, 52, 46, 53, 54, 46, 55, 0xD800]
+        );
+        // Ten units: no time part in the dotted form either.
+        let s = js(&[50, 48, 50, 54, 46, 48, 57, 46, 50, 0xDC00]);
+        assert_eq!(
+            units(&dotted_to_dot_space(&s)),
+            units(&format!("2026.09.{}", js(&[50, 0xDC00])))
+        );
+        assert_eq!(dotted_hhmm(&s), "");
     }
     #[test]
     fn legacy_time_helpers() {

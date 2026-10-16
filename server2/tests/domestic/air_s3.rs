@@ -1045,7 +1045,7 @@ async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
         .await
     {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(r) => panic!("forwarded: {r}"),
+        SourceAnswer::Forward(r) | SourceAnswer::Failed(r) => panic!("forwarded: {r}"),
     };
     let town = town_value(snapshot.as_ref());
     let g = &town["gCoord"];
@@ -1098,7 +1098,7 @@ async fn the_snapshot_answers_the_air_store_calls_it_loaded() {
     .with_air(None, Some(Arc::new(FixedAir(observation))));
     let snapshot = match s3.snapshot(&request(), deadline()).await {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(r) => panic!("forwarded: {r}"),
+        SourceAnswer::Forward(r) | SourceAnswer::Failed(r) => panic!("forwarded: {r}"),
     };
     let town = town_value(snapshot.as_ref());
     same(

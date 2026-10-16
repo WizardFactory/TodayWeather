@@ -547,7 +547,9 @@ async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
     let s3 = source(&peer);
     let snapshot = match s3.snapshot(&request(), deadline()).await {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+        SourceAnswer::Forward(reason) | SourceAnswer::Failed(reason) => {
+            panic!("forwarded: {reason}")
+        }
     };
     assert_eq!(snapshot.as_of_ms(), Some(NOW));
     let town = find_town(
@@ -724,7 +726,9 @@ async fn missing_inputs_are_acquired_at_request_time_and_never_forwarded() {
     let s3 = source(&peer).with_forecast(Some(provider.clone()));
     let snapshot = match s3.snapshot(&request(), deadline()).await {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+        SourceAnswer::Forward(reason) | SourceAnswer::Failed(reason) => {
+            panic!("forwarded: {reason}")
+        }
     };
     // The acquired 10:00 current publication is used by the same request.
     let current = snapshot
@@ -813,7 +817,9 @@ async fn a_request_waits_for_late_acquisitions_once_within_three_seconds() {
     // The grid, RSS, three mid and warning waits share one 3-second bound instead of adding up.
     let snapshot = match s3.snapshot(&request(), deadline()).await {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+        SourceAnswer::Forward(reason) | SourceAnswer::Failed(reason) => {
+            panic!("forwarded: {reason}")
+        }
     };
     let waited = started.elapsed();
     assert!(waited < Duration::from_millis(4500), "waited {waited:?}");
@@ -886,7 +892,9 @@ async fn a_request_answers_within_the_gateway_attempt_while_every_acquisition_is
     let attempt = started + Duration::from_secs(3);
     let snapshot = match s3.snapshot(&request(), attempt).await {
         SourceAnswer::Snapshot(s) => s,
-        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+        SourceAnswer::Forward(reason) | SourceAnswer::Failed(reason) => {
+            panic!("forwarded: {reason}")
+        }
     };
     let waited = started.elapsed();
     assert!(waited < Duration::from_millis(2_900), "waited {waited:?}");
@@ -985,7 +993,9 @@ async fn concurrent_first_requests_share_one_acquisition_per_publication() {
                             .unwrap();
                         String::from_utf8(current.to_bytes()).unwrap()
                     }
-                    SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+                    SourceAnswer::Forward(reason) | SourceAnswer::Failed(reason) => {
+                        panic!("forwarded: {reason}")
+                    }
                 }
             })
         })
@@ -1316,5 +1326,37 @@ async fn stored_acquisitions_legacy_would_not_keep_are_acquired_again() {
         count("vilage-fcst 20260924-0800"),
         1,
         "invalid forecast: {log:?}"
+    );
+}
+
+/// S15b-4b-1: inputs S3 cannot supply are a dependency failure, never a forward to legacy.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_s3_read_failure_is_a_dependency_failure_not_a_forward() {
+    use server2::domestic::kma::backend::KmaBackend;
+    use server2::gateway::BackendHandler;
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&store, &[]).await;
+    // Every S3 listing now answers a malformed page.
+    reqwest::Client::new()
+        .post(format!("{}__catalog?mode=bad-list&key=x", peer.endpoint()))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    let s3 = Arc::new(source(&peer));
+    match s3.snapshot(&request(), deadline()).await {
+        SourceAnswer::Failed(_) => {}
+        SourceAnswer::Snapshot(_) => panic!("built a snapshot without S3"),
+        SourceAnswer::Forward(reason) => panic!("forwarded: {reason}"),
+    }
+    let backend = KmaBackend::new(s3, Arc::new(|| NOW), AssemblyConfig::default());
+    let served = backend
+        .fetch_or_forward(request().original_url, "ko".into(), deadline())
+        .await;
+    assert!(
+        matches!(served, Err(server2::gateway::GatewayError::Provider)),
+        "dependency failure"
     );
 }

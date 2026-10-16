@@ -269,7 +269,7 @@ async fn the_snapshot_answers_the_stored_image_forecast_and_rejects_kaq() {
                 .await
             {
                 SourceAnswer::Snapshot(s) => s,
-                SourceAnswer::Forward(r) => panic!("forwarded: {r}"),
+                SourceAnswer::Forward(r) | SourceAnswer::Failed(r) => panic!("forwarded: {r}"),
             }
         }
     };
