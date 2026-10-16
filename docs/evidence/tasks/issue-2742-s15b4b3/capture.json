@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "capture_kind": "Actual sanitized replay report rendered as result capture",
+  "started_at_utc": "2026-10-16T10:10:28+00:00",
+  "hashes": {
+    "docs/operations/server2-kma-replay.md": "72bd111f309fd4f35aacf7817b644bd1d68002c2cfdf90351c05d6accc0cc3bf",
+    "docs/operations/server2-kma-replay.pdf": "f5a22e3cc924e622c8cc85a4a446c9740417e0945d60ae921a165113260971fa",
+    "docs/evidence/tasks/issue-2742-s15b4b3/replay.png": "e1d38a737768b7d12a1663771ebec25972450c3063bc97152621536c9367591e",
+    "docs/evidence/tasks/issue-2742-s15b4b3/replay.json": "edce86e0aa8e328b18a4fc37f9a1c9c3c03b9e45caf8d3cbafb7d0f630b18cd8"
+  },
+  "limitations": "Owned-loopback library HTTP example with test-injected clock/providers; not production startup, AWS/EC2 p95, quota, seven-day live shadow or cutover evidence. Original 98 dependency-oracle cases remain assembly-only. Current canonical corpus includes grid/RSS/mid; station/air/life/ASOS rows/images are absent. Rollback is UNSUPPORTED here; S20 must verify recovery to an earlier server2 release/config without legacy."
+}

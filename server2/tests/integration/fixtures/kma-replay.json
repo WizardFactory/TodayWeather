@@ -1,0 +1,1795 @@
+{
+  "schema": 1,
+  "family": "kma",
+  "oracle": {
+    "path": "tests/domestic/fixtures/s3-response.json.gz",
+    "sha256": "60be815b9a4abc340f843b32d412ea4c7c1aaa0919f91dff45edfbbf074e5bc5"
+  },
+  "declared_differences": [
+    {
+      "id": "D-TRANSPORT",
+      "scope": "header",
+      "names": [
+        "date",
+        "connection",
+        "set-cookie",
+        "server"
+      ],
+      "reason": "Transport clock/socket/server headers and the documented legacy session-cookie omission; functional headers remain exact."
+    }
+  ],
+  "assembly_only": {
+    "count": 98,
+    "cases": [
+      {
+        "id": "domestic-v000903",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-locale-en",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-locale-ko",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-locale-ja",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-locale-zh-CN",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-locale-de",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-locale-zh-TW",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-v000903-db1",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "domestic-null-units",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-pop-covered",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-pop-missing-hour",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-old-no-pop",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-never-requested-history",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-partial-history",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-special-info",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "gateway-v000903-domestic",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "gateway-query-normalization",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "gateway-history-never-requested",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "gateway-history-resumed-after-eight-days",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "gateway-history-partial-eight-day-history",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "rss-older",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "rss-equal",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "busan",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "jeju",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "station-first-rain",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "station-first-snow-cloud",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "rain-categories",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-stations",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-stations-airnow",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-stale",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-forecast",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-past-only",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-missing",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "air-kaq-none-usable",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "air-kaq-invalid-rows",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-mixed-rows",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-beyond-day",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-day-edge",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-no-history",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-fallback-error",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "air-airkorea-request",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-airkorea-empty",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-before-now",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-after-now",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-dust-forecast",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-fallback",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "life-food-kasi",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "life-index-near-area",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "warning-two-zones",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "winter-cold-wind",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "hot-humid",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "missing-short",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "model-errors",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "unknown-air-unit",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "db1-history",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "stn-error",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "station-hourly-fill",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "db1-daily-source",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "short-publications",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "current-error",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "mid-forecast-error",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "yesterday-warmer",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "yesterday-colder",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "rss-unusable-values",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "current-sky-from-shortest",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "stn-invalid-zero",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "stn-fog-thunder",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "region-guard",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "clock-night-2340",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "clock-kst-0030",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "clock-kst-1010",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "clock-kst-1110",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "clock-kst-0605",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "clock-kst-1535",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "rss-pub-invalid-offset",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "rss-pub-hour24-fraction",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "rss-pub-non-ascii-offset",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "rss-pub-non-ascii",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "rss-pub-iso-offset",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "rss-pub-hour24-submillisecond",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "current-pub-small-year",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "stn-boolean-datetime-false",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "stn-boolean-datetime-true",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "life-index-hex-area",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "life-index-long-hex-area",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "query-malformed-escape",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "current-interpolated-strings",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "stn-cloud-radix-sign",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "stn-small-year-datetime",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-stations-unconfigured",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-asos-fill",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-asos-fill-en",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-read-timeout",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-station-unavailable",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-read-error",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "history-with-station-hourly",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-yesterday-from-asos",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-short-rain-3h",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      }
+    ]
+  },
+  "workload": [
+    {
+      "id": "v000903-en",
+      "oracle": "v000903-en",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-en-units",
+      "oracle": "v000903-en-units",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-ko",
+      "oracle": "v000903-ko",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "ko",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-ko-units",
+      "oracle": "v000903-ko-units",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "ko",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-ja",
+      "oracle": "v000903-ja",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "ja",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-ja-units",
+      "oracle": "v000903-ja-units",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "ja",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-zh-CN",
+      "oracle": "v000903-zh-CN",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "zh-CN",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-zh-CN-units",
+      "oracle": "v000903-zh-CN-units",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "zh-CN",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-de",
+      "oracle": "v000903-de",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "de",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-de-units",
+      "oracle": "v000903-de-units",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "de",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-zh-TW",
+      "oracle": "v000903-zh-TW",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "zh-TW",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-zh-TW-units",
+      "oracle": "v000903-zh-TW-units",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "zh-TW",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-en",
+      "oracle": "v000901-en",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-en-units",
+      "oracle": "v000901-en-units",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-ko",
+      "oracle": "v000901-ko",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "ko",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-ko-units",
+      "oracle": "v000901-ko-units",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "ko",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-ja",
+      "oracle": "v000901-ja",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "ja",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-ja-units",
+      "oracle": "v000901-ja-units",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "ja",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-zh-CN",
+      "oracle": "v000901-zh-CN",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "zh-CN",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-zh-CN-units",
+      "oracle": "v000901-zh-CN-units",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "zh-CN",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-de",
+      "oracle": "v000901-de",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "de",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-de-units",
+      "oracle": "v000901-de-units",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "de",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-zh-TW",
+      "oracle": "v000901-zh-TW",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "zh-TW",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-zh-TW-units",
+      "oracle": "v000901-zh-TW-units",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "zh-TW",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-en",
+      "oracle": "v000803-en",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-en-units",
+      "oracle": "v000803-en-units",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-ko",
+      "oracle": "v000803-ko",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "ko",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-ko-units",
+      "oracle": "v000803-ko-units",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "ko",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-ja",
+      "oracle": "v000803-ja",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "ja",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-ja-units",
+      "oracle": "v000803-ja-units",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "ja",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-zh-CN",
+      "oracle": "v000803-zh-CN",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "zh-CN",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-zh-CN-units",
+      "oracle": "v000803-zh-CN-units",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "zh-CN",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-de",
+      "oracle": "v000803-de",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "de",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-de-units",
+      "oracle": "v000803-de-units",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "de",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-zh-TW",
+      "oracle": "v000803-zh-TW",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "zh-TW",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-zh-TW-units",
+      "oracle": "v000803-zh-TW-units",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "zh-TW",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-en",
+      "oracle": "v000705-en",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-en-units",
+      "oracle": "v000705-en-units",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-ko",
+      "oracle": "v000705-ko",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "ko",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-ko-units",
+      "oracle": "v000705-ko-units",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "ko",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-ja",
+      "oracle": "v000705-ja",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "ja",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-ja-units",
+      "oracle": "v000705-ja-units",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "ja",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-zh-CN",
+      "oracle": "v000705-zh-CN",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "zh-CN",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-zh-CN-units",
+      "oracle": "v000705-zh-CN-units",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "zh-CN",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-de",
+      "oracle": "v000705-de",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "de",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-de-units",
+      "oracle": "v000705-de-units",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "de",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-zh-TW",
+      "oracle": "v000705-zh-TW",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "zh-TW",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-zh-TW-units",
+      "oracle": "v000705-zh-TW-units",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?temperatureUnit=F&windSpeedUnit=mph",
+      "method": "GET",
+      "lang": "zh-TW",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-head",
+      "oracle": "v000903-head",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "HEAD",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-conditional",
+      "oracle": "v000903-conditional",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-head",
+      "oracle": "v000901-head",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "HEAD",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-conditional",
+      "oracle": "v000901-conditional",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-head",
+      "oracle": "v000803-head",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "HEAD",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-conditional",
+      "oracle": "v000803-conditional",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "GET",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-head",
+      "oracle": "v000705-head",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "method": "HEAD",
+      "lang": "en",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    }
+  ]
+}

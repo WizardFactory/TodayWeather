@@ -32,6 +32,12 @@ class CompareTest(unittest.TestCase):
         right = [record(hops=[('backend', '/v000903/kma/addr/x', 'ko')])]
         self.assertEqual(replay.compare(left, right, DECLARED), ([], []))
 
+    def test_duplicate_records_are_unexplained(self):
+        _, right = replay.compare([record()], [record(), record()], DECLARED)
+        self.assertIn('duplicate-candidate', {r['kind'] for r in right})
+        _, left = replay.compare([record(), record()], [record()], DECLARED)
+        self.assertIn('duplicate-baseline', {r['kind'] for r in left})
+
     def test_body_and_status_differences_are_unexplained(self):
         declared, unexplained = replay.compare([record(body=b'{"a":1}')], [record(status=501, body=b'{"a":2}')], DECLARED)
         self.assertEqual(declared, [])
@@ -220,6 +226,39 @@ class RegistryTest(unittest.TestCase):
 
     def test_smoke_entrypoint_is_valid_bash(self):
         subprocess.run(['bash', '-n', str(SERVER2 / 'deploy/smoke.sh')], check=True)
+
+
+class KmaFamilyTest(unittest.TestCase):
+    def test_domestic_s3_family_is_registered_with_explicit_coverage(self):
+        family = families.load('kma')
+        self.assertEqual(family.FAMILY, 'kma')
+        self.assertTrue(family.REPLAY_FIXTURE.is_file())
+        self.assertIn('assembly-only', family.REPLAY_LIMITATIONS)
+
+
+    def test_domestic_rollback_is_explicitly_unsupported(self):
+        family = families.load('kma')
+        self.assertFalse(families.CAPABILITIES['kma']['rollback'])
+        with self.assertRaisesRegex(AssertionError, 'UNSUPPORTED'):
+            family.rollback('unused-binary')
+
+    def test_domestic_record_denominator_rejects_missing_extra_and_duplicate(self):
+        family = families.load('kma')
+        cases = [{'id': 'c'}]
+        records = [{'id': 'c', 'pass': phase, 'cache': {'hits': 1, 'corruptions': 1}} for phase in family.PASSES]
+        good = {'records': records, 'legacy_requests': 0, 'provider_requests': 0}
+        family.validate_records(good, cases)
+        for changed in (records[:-1], records + records[:1], records + [{'id': 'extra', 'pass': family.PASSES[0]}]):
+            with self.assertRaises(AssertionError):
+                family.validate_records(dict(good, records=changed), cases)
+
+    def test_domestic_manifest_keeps_original_assembly_denominator_separate(self):
+        family = families.load('kma')
+        fixture = json.loads(family.REPLAY_FIXTURE.read_text())
+        self.assertEqual(fixture['assembly_only']['count'], 98)
+        self.assertEqual(len(fixture['assembly_only']['cases']), 98)
+        self.assertEqual(len(fixture['workload']), len(family.oracle()['requests']))
+        self.assertEqual(len({c['id'] for c in fixture['workload']}), len(fixture['workload']))
 
 
 if __name__ == '__main__':

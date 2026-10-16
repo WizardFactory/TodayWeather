@@ -61,6 +61,13 @@ def compare(baseline, candidate, declared, plan=None):
     deviation from a planned count is unexplained even if both sides agree.
     """
     declared_out, unexplained = [], []
+    seen = {'baseline': set(), 'candidate': set()}
+    for side, records in (('baseline', baseline), ('candidate', candidate)):
+        for record in records:
+            key = (record['id'], record['pass'])
+            if key in seen[side]:
+                unexplained.append({'request': key[0], 'pass': key[1], 'kind': 'duplicate-' + side})
+            seen[side].add(key)
     index = {(r['id'], r['pass']): r for r in candidate}
     for left in baseline:
         key = (left['id'], left['pass'])
@@ -165,7 +172,8 @@ def run(family, binary, workload, report_path, self_check):
     plan = {item['id']: item['acquisitions'] for item in fixture['workload'] if 'acquisitions' in item}
     declared_out, unexplained = compare(sides['baseline']['records'], sides['candidate']['records'], declared, plan)
     cases = module.oracle_cases()
-    expected_oracles = 2 * sum(1 for item in fixture['workload'] if item.get('oracle'))
+    passes = list(getattr(module, 'PASSES', ('cold', 'warm')))
+    expected_oracles = len(passes) * sum(1 for item in fixture['workload'] if item.get('oracle'))
     oracle = {}
     for side in sides:
         checked, mismatches = oracle_check(sides[side]['records'], cases, transport)
@@ -178,7 +186,7 @@ def run(family, binary, workload, report_path, self_check):
         'revision': harness.revision(),
         'binary': {'path': str(Path(binary)), 'sha256': harness.sha256_file(binary)},
         'workload': {'path': str(Path(workload).resolve().relative_to(harness.ROOT)), 'sha256': harness.sha256_file(workload),
-                     'requests': len(fixture['workload']), 'passes': ['cold', 'warm']},
+                     'requests': len(fixture['workload']), 'passes': passes},
         'sides': {side: dict(sides[side]['info'], percentiles_ms=summarize(sides[side]['records'])) for side in sides},
         'declared_differences': {'definitions': declared, 'observed': declared_out},
         'unexplained_differences': unexplained,
@@ -200,7 +208,7 @@ def run(family, binary, workload, report_path, self_check):
     for item in unexplained[:20]:
         print('  UNEXPLAINED ' + json.dumps(item, ensure_ascii=False, sort_keys=True), flush=True)
     for side in oracle:
-        print('oracle ' + side + ': S02 ' + str(oracle[side]['checked']) + ' checked, weather merge ' +
+        print('oracle ' + side + ': ' + getattr(module, 'ORACLE_LABEL', 'S02') + ' ' + str(oracle[side]['checked']) + ' checked, weather merge ' +
               str(oracle[side]['structural_checked']) + ' checked, ' + str(len(oracle[side]['mismatches'])) + ' mismatches', flush=True)
         for item in oracle[side]['mismatches'][:10]:
             print('  ORACLE ' + json.dumps(item, ensure_ascii=False, sort_keys=True), flush=True)

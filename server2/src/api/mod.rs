@@ -251,6 +251,7 @@ fn split_list(value: &str) -> Vec<&str> {
 /// The Express reply of an assembly outcome (`res.json(body)`, `res.json(undefined)`,
 /// `res.status(code).send(text)`).
 pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Response {
+    let undefined_head = *method == Method::HEAD && matches!(&outcome, Outcome::Undefined);
     // finalhandler 0.4.1 writes directly (no res.send ETag), and sets nosniff.
     let finalhandler = matches!(&outcome, Outcome::Status(code, text)
         if matches!((*code, text.as_str()),
@@ -273,7 +274,13 @@ pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Respon
     let not_modified = (200..300).contains(&status) && fresh(request, tag.as_deref());
     let length = body.len();
     let empty = not_modified || *method == Method::HEAD;
-    let mut response = Response::new(if empty {
+    let mut response = Response::new(if undefined_head && !not_modified {
+        // A finite, unknown-size empty stream avoids Hyper adding Content-Length: 0
+        // to Express res.json(undefined) HEAD replies. It terminates immediately.
+        Body::from_stream(futures_util::stream::empty::<
+            Result<Vec<u8>, std::convert::Infallible>,
+        >())
+    } else if empty {
         Body::empty()
     } else {
         Body::from(body)
@@ -318,6 +325,54 @@ mod tests {
             h.insert(*k, HeaderValue::from_str(v).unwrap());
         }
         h
+    }
+    // Exercise Hyper's wire framing: a Response header-only check misses an
+    // automatically inserted Content-Length for an exact-size empty HEAD body.
+    #[tokio::test]
+    async fn undefined_and_json_framing_matches_express_on_the_wire() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let app = axum::Router::new().fallback(|request: Request| async move {
+            let outcome = if request.uri().path() == "/undefined" {
+                Outcome::Undefined
+            } else {
+                Outcome::Json(crate::gateway::OrderedJson::parse(br#"{"ok":true}"#).unwrap())
+            };
+            express(request.method(), request.headers(), outcome)
+        });
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(2))
+            .build()
+            .unwrap();
+        let undefined = format!("http://{address}/undefined");
+        let head = client.head(&undefined).send().await.unwrap();
+        assert_eq!(head.status(), StatusCode::OK);
+        assert_eq!(head.headers().get("content-length"), None);
+        assert!(head.bytes().await.unwrap().is_empty());
+        let get = client.get(&undefined).send().await.unwrap();
+        assert_eq!(get.status(), StatusCode::OK);
+        assert_eq!(get.headers()["content-length"], "0");
+        assert!(get.bytes().await.unwrap().is_empty());
+        let json = format!("http://{address}/json");
+        let get = client.get(&json).send().await.unwrap();
+        assert_eq!(get.status(), StatusCode::OK);
+        let tag = get.headers()["etag"].clone();
+        assert_eq!(get.bytes().await.unwrap().as_ref(), br#"{"ok":true}"#);
+        let head = client.head(&json).send().await.unwrap();
+        assert_eq!(head.headers()["content-length"], "11");
+        assert!(head.bytes().await.unwrap().is_empty());
+        let fresh = client
+            .get(&json)
+            .header("if-none-match", tag)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(fresh.status(), StatusCode::NOT_MODIFIED);
+        assert_eq!(fresh.headers().get("content-length"), None);
+        assert!(fresh.bytes().await.unwrap().is_empty());
+        server.abort();
     }
     #[test]
     fn freshness_follows_fresh_0_3_0() {
