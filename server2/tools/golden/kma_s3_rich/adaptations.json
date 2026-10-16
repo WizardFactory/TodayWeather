@@ -1,0 +1,179 @@
+{
+  "schema": 1,
+  "task": "issue-2742-s15b4b3-rich",
+  "legacy_execution": "Current existing server source executes offline; no production startup, network, DB or private env. Expected values never use Rust results.",
+  "historical_helper_bodies": [
+    {
+      "source": "server2/tests/domestic/fixtures/STATIONS-PROVENANCE.md",
+      "documented_name": "sections-stations.js",
+      "documented_sha256": "426032acabfc7d8ed1ec81729e38bf0958cb2e532fef7565416463e4c440f18c",
+      "actual_embedded_body_sha256": "426032acabfc7d8ed1ec81729e38bf0958cb2e532fef7565416463e4c440f18c",
+      "matches_documented": true,
+      "ported_path": "server2/tools/golden/kma_s3_rich/sections-stations.js",
+      "current_adapted_sha256": "426032acabfc7d8ed1ec81729e38bf0958cb2e532fef7565416463e4c440f18c",
+      "historical_claim_status": "matches embedded body"
+    },
+    {
+      "source": "server2/tests/domestic/fixtures/STATIONS-PROVENANCE.md",
+      "documented_name": "sections-stn.js",
+      "documented_sha256": "2cd2be565249fe27895907c6f9764d6fa0484c3629383e12d437775b687bfb1e",
+      "actual_embedded_body_sha256": "2cd2be565249fe27895907c6f9764d6fa0484c3629383e12d437775b687bfb1e",
+      "matches_documented": true,
+      "ported_path": "server2/tools/golden/kma_s3_rich/sections-stn.js",
+      "current_adapted_sha256": "ff8d79df63b6b7ef2ffeaebbc8562204a1e6a08fb04f1fa26a983254ac699840",
+      "historical_claim_status": "matches embedded body"
+    },
+    {
+      "source": "server2/tests/domestic/fixtures/STATIONS-PROVENANCE.md",
+      "documented_name": "station-fixtures.js",
+      "documented_sha256": "91145680847fe6f5a16475b81d227eca63fc994b4c8a36104f9ccc97a8d6b8e3",
+      "actual_embedded_body_sha256": "91145680847fe6f5a16475b81d227eca63fc994b4c8a36104f9ccc97a8d6b8e3",
+      "matches_documented": true,
+      "ported_path": "server2/tools/golden/kma_s3_rich/station-fixtures.js",
+      "current_adapted_sha256": "91145680847fe6f5a16475b81d227eca63fc994b4c8a36104f9ccc97a8d6b8e3",
+      "historical_claim_status": "matches embedded body"
+    },
+    {
+      "source": "server2/tests/domestic/fixtures/AIR-PROVENANCE.md",
+      "documented_name": "sections-air.js",
+      "documented_sha256": "320db2b9bd4ee9b1b332586a61806743b4c7f7b81a1aae17996c76a097b2c0ce",
+      "actual_embedded_body_sha256": "ac1657c6ad440cbebf237c4fd124373d3610f85f60eb7011226fcfef6310e9e8",
+      "matches_documented": false,
+      "ported_path": "server2/tools/golden/kma_s3_rich/sections-air.js",
+      "current_adapted_sha256": "ef635137ec0c039765cd0825c1b651ce37ec468500f87fe8addaee3a436102db",
+      "historical_claim_status": "UNVERIFIED documented hash; embedded bytes differ"
+    },
+    {
+      "source": "server2/tests/domestic/fixtures/AIR-PROVENANCE.md",
+      "documented_name": "air-fixtures.js",
+      "documented_sha256": "c6402cc2ee83a76f00e632caff30268fd7c4b25c4b3939d3186ca8d33bb254a5",
+      "actual_embedded_body_sha256": "60b1e6466f8c5a87c30b6d54eb1a9f4cffefd8d017aec7ae76cea4f2155f9445",
+      "matches_documented": false,
+      "ported_path": "server2/tools/golden/kma_s3_rich/air-fixtures.js",
+      "current_adapted_sha256": "60b1e6466f8c5a87c30b6d54eb1a9f4cffefd8d017aec7ae76cea4f2155f9445",
+      "historical_claim_status": "UNVERIFIED documented hash; embedded bytes differ"
+    },
+    {
+      "source": "server2/tests/domestic/fixtures/AIR-PROVENANCE.md",
+      "documented_name": "fakemongo.js",
+      "documented_sha256": "af919f3cc3c934edb3963eefde7f04dfac68a2aeaaf399be0a482bd680e78ad8",
+      "actual_embedded_body_sha256": "99f8330c3243a79ecf628d5aa8b7872ba4185026a84850bf6a2a65e66ab3f18c",
+      "matches_documented": false,
+      "ported_path": "server2/tools/golden/kma_s3_rich/fakemongo.js",
+      "current_adapted_sha256": "99f8330c3243a79ecf628d5aa8b7872ba4185026a84850bf6a2a65e66ab3f18c",
+      "historical_claim_status": "UNVERIFIED documented hash; embedded bytes differ"
+    },
+    {
+      "source": "server2/tests/domestic/fixtures/LIFE-PROVENANCE.md",
+      "documented_name": "sections-area.js",
+      "documented_sha256": "9db457c9ba6f215954d37e9a62fa37d9d6f9e0a9ea0e6c79182831641b8231ab",
+      "actual_embedded_body_sha256": "ef1dc273fd09955ffac67b7e5679996ff67f9896d839dda248b36d655b9b33b4",
+      "matches_documented": false,
+      "ported_path": "server2/tools/golden/kma_s3_rich/sections-area.js",
+      "current_adapted_sha256": "ef1dc273fd09955ffac67b7e5679996ff67f9896d839dda248b36d655b9b33b4",
+      "historical_claim_status": "UNVERIFIED documented hash; embedded bytes differ"
+    },
+    {
+      "source": "server2/tests/domestic/fixtures/LIFE-PROVENANCE.md",
+      "documented_name": "sections-life.js",
+      "documented_sha256": "a2333bbabf771d78841d6a1207942d15213e5a6f00b50cd3f0e0c130f3be3749",
+      "actual_embedded_body_sha256": "21fb9b7ed91251c9eee4a03d3fb141b0b35b2d8709875a2f631df8acba192416",
+      "matches_documented": false,
+      "ported_path": "server2/tools/golden/kma_s3_rich/sections-life.js",
+      "current_adapted_sha256": "7fdc313f40cdbe4056d1a6461aaf18be402473bc5ee81437dd3385a4e4f82711",
+      "historical_claim_status": "UNVERIFIED documented hash; embedded bytes differ"
+    },
+    {
+      "source": "server2/tests/domestic/fixtures/LIFE-PROVENANCE.md",
+      "documented_name": "life-fixtures.js",
+      "documented_sha256": "873777e6f774f349932c94e5c00d4dfdd1d0fc0455791c3e81ceb58e23a5a65f",
+      "actual_embedded_body_sha256": "b83dfb7ba5d9ef2d441467bb0f88d6dd050af1618fe01b819b1a77b77963c065",
+      "matches_documented": false,
+      "ported_path": "server2/tools/golden/kma_s3_rich/life-fixtures.js",
+      "current_adapted_sha256": "b83dfb7ba5d9ef2d441467bb0f88d6dd050af1618fe01b819b1a77b77963c065",
+      "historical_claim_status": "UNVERIFIED documented hash; embedded bytes differ"
+    },
+    {
+      "source": "server2/tests/domestic/fixtures/LIFE-PROVENANCE.md",
+      "documented_name": "sections-kasi.js",
+      "documented_sha256": "dcf55d824016d2200a2399325cd83a5a116cd1a8144a4f1300c4b6b88f40ccb5",
+      "actual_embedded_body_sha256": "8c81b0265e8f9489fe254049ef666b405bf020369db0915cca7dc984933498e5",
+      "matches_documented": false,
+      "ported_path": "server2/tools/golden/kma_s3_rich/sections-kasi.js",
+      "current_adapted_sha256": "8c81b0265e8f9489fe254049ef666b405bf020369db0915cca7dc984933498e5",
+      "historical_claim_status": "UNVERIFIED documented hash; embedded bytes differ"
+    },
+    {
+      "source": "server2/tests/domestic/fixtures/LIFE-PROVENANCE.md",
+      "documented_name": "sections-mfds.js",
+      "documented_sha256": "7718738f68413a82051763da83fe25b6f87bef408b4a44d734539ca0adf9eb1f",
+      "actual_embedded_body_sha256": "90bf050b6b24477cb07555aa2f2d4e389ae0afbc8d1b90e9352d6dde7238ebdb",
+      "matches_documented": false,
+      "ported_path": "server2/tools/golden/kma_s3_rich/sections-mfds.js",
+      "current_adapted_sha256": "c6b07bd1c8182d9cf6869ff9c439dd2c98aaabb88af8a56b4349b70fd6d08fdf",
+      "historical_claim_status": "UNVERIFIED documented hash; embedded bytes differ"
+    },
+    {
+      "source": "server2/tests/domestic/fixtures/AIR-FORECAST-PROVENANCE.md",
+      "documented_name": "oracle/legacy.js",
+      "documented_sha256": "d4317568c6fb7383dd06258c251f492d23bc69aaf8ddf15aa78aba9978075432",
+      "actual_embedded_body_sha256": "cdf0994efc96712819dc43b86a75e3a4c55035552fab811511065c93786f6603",
+      "matches_documented": false,
+      "ported_path": "server2/tools/golden/kma_s3_rich/legacy.js",
+      "current_adapted_sha256": "36b785fb00d3f139053a27824987f4e6d340a65e9033272222f011bf00ef4896",
+      "historical_claim_status": "UNVERIFIED documented hash; embedded bytes differ"
+    },
+    {
+      "source": "server2/tools/golden/kma_s3/grid-fixtures.js",
+      "actual_embedded_body_sha256": "bae43763ca21c4a43b7a76166298d038f2053c9250483ffdf4c4d08a050dfb2d",
+      "ported_path": "server2/tools/golden/kma_s3_rich/grid-fixtures.js",
+      "current_adapted_sha256": "bae43763ca21c4a43b7a76166298d038f2053c9250483ffdf4c4d08a050dfb2d",
+      "historical_claim_status": "Ported from current maintained core helper; source hash retained separately"
+    },
+    {
+      "source": "server2/tools/golden/kma_s3/rss-fixtures.js",
+      "actual_embedded_body_sha256": "3cfd7f3f9e4ca30426a9a5589f9661dfb2874f14148f60d950a17b3381b6e9f8",
+      "ported_path": "server2/tools/golden/kma_s3_rich/rss-fixtures.js",
+      "current_adapted_sha256": "3cfd7f3f9e4ca30426a9a5589f9661dfb2874f14148f60d950a17b3381b6e9f8",
+      "historical_claim_status": "Ported from current maintained core helper; source hash retained separately"
+    },
+    {
+      "source": "server2/tools/golden/kma_s3/mid-fixtures.js",
+      "actual_embedded_body_sha256": "863597b811fca42d6611df347f99aebf17b7acf412934a70a7cc4933ddcac76c",
+      "ported_path": "server2/tools/golden/kma_s3_rich/mid-fixtures.js",
+      "current_adapted_sha256": "863597b811fca42d6611df347f99aebf17b7acf412934a70a7cc4933ddcac76c",
+      "historical_claim_status": "Ported from current maintained core helper; source hash retained separately"
+    },
+    {
+      "source": "server2/tools/golden/kma_s3/sections-grid.js",
+      "actual_embedded_body_sha256": "69e49062b5353f0175609e4492216ba99f3760649b117e16a7d8ca86d653f573",
+      "ported_path": "server2/tools/golden/kma_s3_rich/sections-grid.js",
+      "current_adapted_sha256": "05dba0af9d9e148680fd688b79ddac963d0075f6cf32547885f31fdc2fa5c6e4",
+      "historical_claim_status": "Ported from current maintained core helper; source hash retained separately"
+    },
+    {
+      "source": "server2/tools/golden/kma_s3/sections.js",
+      "actual_embedded_body_sha256": "da8d4826a6bee5553aef38525448da227c1969113adf5b79d72f76ff95969902",
+      "ported_path": "server2/tools/golden/kma_s3_rich/sections.js",
+      "current_adapted_sha256": "3b71647d76baf802cd93311cf7f229842394e47e999de3b9e399be6ffd51f74f",
+      "historical_claim_status": "Ported from current maintained core helper; source hash retained separately"
+    },
+    {
+      "source": "server2/tools/golden/kma_s3/record.js",
+      "actual_embedded_body_sha256": "2cb4f9052e36f661b5338dcb7003309d94836ac0626388b64ef33e34ae134e05",
+      "ported_path": "server2/tools/golden/kma_s3_rich/record.js",
+      "current_adapted_sha256": "fe8bc805729a5a2d6fc8e9decf36c2d8c0989538308a2bcba297efaf24ec6140",
+      "historical_claim_status": "Ported from current maintained core helper; source hash retained separately"
+    }
+  ],
+  "adaptations": [
+    "Raw dates shift before actual legacy conversion: grid/RSS/mid+21days, selected AirKorea lists/announcements+1day, ASOS raw+1day. No converted row or expected response edited.",
+    "Three grid raw clones change nx/ny before actual collector/converter; actual legacy region-table methods replace Seoul-only offline lookup.",
+    "Station acquisition clock captured before actual saver; actual Mongoose casted collection writes recorded and Mongo $set semantics retained.",
+    "Fixed Date preserves real Date prototype and constructor name for lazy Mongoose models; clock2026-10-15T13:05Z, runtime192current slots.",
+    "KAQ sees empty actual DB collections and synthetic constructor-only S3 config; no KAQ archive/network. Current legacy chooses stored AirKorea when no usable future KAQ row.",
+    "Actual legacy gateway/createGeocoder and backend coord/address routes execute on owned loopback, public Kakao raw/synthetic key/in-process geocoder transport. No original Lambda execution claim.",
+    "Actual Google provider chain/budget/cache write uses synthetic key/public reconstructed raw dated2026-10-15T13:00Z; actual reader uses that stored cache. Native receives only canonical S3 raw.",
+    "One dependency tree pins legacy/S02 versions plus Mongoose5.1.2/get-pixels3.3.2/omggif1.0.9/iconv-lite0.4.24. Initial exploratory NODE_PATH chose async2.1.4; retained historical probes, final recording uses pinned2.6.2."
+  ]
+}

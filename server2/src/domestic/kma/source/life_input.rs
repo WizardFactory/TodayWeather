@@ -19,8 +19,8 @@
 //! legacy output for missing data). A pollen issuance the provider answers with no data (out of
 //! season, `99`) is not asked again; an MFDS slot is asked once (legacy `lastSlot`). KASI is
 //! captured while requests arrive (legacy `gatherKasiRiseSet`, hourly): every missing area/day,
-//! today's column first; requests never wait for it and answer `[]` until the first full S3 read
-//! (legacy then computes rise/set itself).
+//! today's column first. The first request also joins a shared S3-only restore within the same
+//! request deadline; until it finishes, legacy computes the missing rise/set itself.
 use super::kasi::RiseSets;
 use super::life::{KINDS, LifeIndex};
 use super::life_live::{LifeAcquire, LifeOutcome, LifeRequest};
@@ -205,6 +205,7 @@ struct Shared<T> {
     /// applied set, cut and publication count together.
     life_refresh: tokio::sync::Mutex<()>,
     mfds_refresh: tokio::sync::Mutex<()>,
+    kasi_refresh: tokio::sync::Mutex<()>,
     /// Dataset keys not asked again (a no-data pollen issuance, an asked MFDS slot), kept
     /// [`SETTLED_FOR`].
     settled: std::sync::Mutex<HashMap<String, std::time::Instant>>,
@@ -260,6 +261,7 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
                 kasi: Default::default(),
                 life_refresh: Default::default(),
                 mfds_refresh: Default::default(),
+                kasi_refresh: Default::default(),
                 settled: Default::default(),
                 demand_ms: AtomicI64::new(0),
                 published: std::sync::atomic::AtomicU64::new(0),
@@ -293,12 +295,36 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
     pub async fn load(&self, now: f64, deadline: Instant) -> LifeAnswers {
         let until = deadline - Duration::from_millis(200);
         self.note_demand();
-        let (life, mfds) = tokio::join!(self.life(now, until), self.mfds(now, until));
+        let (life, mfds, ()) = tokio::join!(
+            self.life(now, until),
+            self.mfds(now, until),
+            self.read_kasi(now, until),
+        );
         LifeAnswers {
             life,
             mfds,
             kasi: self.kasi(),
         }
+    }
+    async fn read_kasi(&self, now: f64, until: Instant) {
+        if self.kasi().is_some() {
+            return;
+        }
+        let shared = self.shared.clone();
+        let _ = self
+            .shared
+            .reads
+            .join(
+                format!("kasi-restore-{}", utc_date(now)),
+                until,
+                READ_FOR,
+                move |deadline| async move {
+                    tokio::time::timeout_at(deadline, restore_kasi(&shared, now, Some(deadline)))
+                        .await
+                        .is_ok_and(|result| result.is_ok())
+                },
+            )
+            .await;
     }
     fn kasi(&self) -> Option<Arc<RiseSets>> {
         let state = self.shared.kasi.lock().unwrap_or_else(|e| e.into_inner());
@@ -560,8 +586,8 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
 
     // ---- KASI ----
 
-    /// Record demand and start the KASI capture once (only with an acquirer: a stored-only
-    /// source never reads KASI and answers `[]`).
+    /// Record demand and start provider capture once when an acquirer is configured.
+    /// Stored-only requests independently join the bounded S3 restore.
     fn note_demand(&self) {
         self.shared
             .demand_ms
@@ -839,10 +865,15 @@ fn kasi_key(area: &str) -> Option<ProviderKey> {
 /// One KASI capture pass: read every area's stored days of the window from S3 (the fold is then
 /// loaded), then acquire the missing area/days, today's column first (legacy `mapSeries`
 /// order is per area; the stored set is the same, and every area has today early).
-async fn kasi_pass<T: IndexListing + Clone + 'static>(
+/// Restore only canonical S3 acquisitions. A request's owned read has one overall bound;
+/// the hourly capture retains its per-operation bounds. Serializing refreshes keeps a cold
+/// restore and provider capture from publishing conflicting folds.
+async fn restore_kasi<T: IndexListing + Clone + 'static>(
     shared: &Arc<Shared<T>>,
     now: f64,
+    deadline: Option<Instant>,
 ) -> Result<(), String> {
+    let _refresh = shared.kasi_refresh.lock().await;
     let days = kasi_days(now);
     let first_day = crate::world::js::parts(now - (8. + KASI_KEEP_DAYS) * DAY_MS).map_or(0., |p| {
         crate::world::js::days_from_civil(p.year, p.month, p.day) as f64 * DAY_MS
@@ -854,7 +885,7 @@ async fn kasi_pass<T: IndexListing + Clone + 'static>(
     };
     // Read: one listing per area, then the stored days the fold lacks. Every S3 call has its
     // own bound (a pass can run for many minutes).
-    let read_by = || Instant::now() + KASI_READ;
+    let read_by = || deadline.unwrap_or_else(|| Instant::now() + KASI_READ);
     let mut stored: Vec<(String, Vec<String>)> = Vec::new();
     for chunk in AREAS.chunks(8) {
         let lists = crate::history::join_all(
@@ -881,49 +912,88 @@ async fn kasi_pass<T: IndexListing + Clone + 'static>(
         }
     }
     let loaded = shared.kasi.lock().unwrap_or_else(|e| e.into_inner()).loaded;
-    for (area, partitions) in &stored {
-        let (missing, placed) = {
-            let state = shared.kasi.lock().unwrap_or_else(|e| e.into_inner());
-            let missing: Vec<String> = partitions
+    // Area reads are independent, but fold order decides ties between equally near places.
+    // Read at most eight areas together, then apply in the original AREAS order. If one
+    // area fails, preserve the earlier partial fold and do not apply later results.
+    for chunk in stored.chunks(8) {
+        let fetched = crate::history::join_all(
+            chunk
                 .iter()
-                .filter(|p| days.contains(p) && !state.folded.has(area, p))
-                .cloned()
-                .collect();
-            (missing, state.folded.has_place(area))
-        };
-        let key = kasi_key(area).ok_or("kasi key")?;
-        if !missing.is_empty() {
-            let fetched = shared
-                .reader
-                .all(DATA_GO_KR, "kasi-area-rise-set", &key, &missing, read_by())
-                .await
-                .map_err(|e| format!("kasi read: {e}"))?;
+                .map(|(area, partitions)| {
+                    let days = &days;
+                    let read_by = &read_by;
+                    async move {
+                        let (missing, placed) = {
+                            let state = shared.kasi.lock().unwrap_or_else(|e| e.into_inner());
+                            let missing: Vec<String> = partitions
+                                .iter()
+                                .filter(|p| days.contains(p) && !state.folded.has(area, p))
+                                .cloned()
+                                .collect();
+                            (missing, state.folded.has_place(area))
+                        };
+                        let key = kasi_key(area).ok_or("kasi key")?;
+                        let fetched = if !missing.is_empty() {
+                            shared
+                                .reader
+                                .all(DATA_GO_KR, "kasi-area-rise-set", &key, &missing, read_by())
+                                .await
+                                .map_err(|e| format!("kasi read: {e}"))?
+                        } else if !loaded && !placed {
+                            // Older days still decide the nearest location in a cold process.
+                            let all = shared
+                                .reader
+                                .partitions(
+                                    DATA_GO_KR,
+                                    "kasi-area-rise-set",
+                                    &key,
+                                    &super::history_months(now),
+                                    read_by(),
+                                )
+                                .await
+                                .map_err(|e| format!("kasi listing: {e}"))?;
+                            if let Some(last) = all.last() {
+                                shared
+                                    .reader
+                                    .acquisitions(
+                                        DATA_GO_KR,
+                                        "kasi-area-rise-set",
+                                        &key,
+                                        last,
+                                        read_by(),
+                                    )
+                                    .await
+                                    .map_err(|e| format!("kasi read: {e}"))?
+                            } else {
+                                Vec::new()
+                            }
+                        } else {
+                            Vec::new()
+                        };
+                        Ok::<_, String>((area, fetched))
+                    }
+                })
+                .collect(),
+        )
+        .await;
+        for result in fetched {
+            let (area, fetched) = result?;
             apply_kasi(shared, area, &fetched, first_day);
-        } else if !loaded && !placed {
-            // A cold process learns the place of an area that has only older days (legacy
-            // keeps them, and they still decide the nearest location): its newest stored day.
-            let all = shared
-                .reader
-                .partitions(
-                    DATA_GO_KR,
-                    "kasi-area-rise-set",
-                    &key,
-                    &super::history_months(now),
-                    read_by(),
-                )
-                .await
-                .map_err(|e| format!("kasi listing: {e}"))?;
-            if let Some(last) = all.last() {
-                let fetched = shared
-                    .reader
-                    .acquisitions(DATA_GO_KR, "kasi-area-rise-set", &key, last, read_by())
-                    .await
-                    .map_err(|e| format!("kasi read: {e}"))?;
-                apply_kasi(shared, area, &fetched, first_day);
-            }
         }
     }
     shared.kasi.lock().unwrap_or_else(|e| e.into_inner()).loaded = true;
+    Ok(())
+}
+async fn kasi_pass<T: IndexListing + Clone + 'static>(
+    shared: &Arc<Shared<T>>,
+    now: f64,
+) -> Result<(), String> {
+    restore_kasi(shared, now, None).await?;
+    let days = kasi_days(now);
+    let first_day = crate::world::js::parts(now - (8. + KASI_KEEP_DAYS) * DAY_MS).map_or(0., |p| {
+        crate::world::js::days_from_civil(p.year, p.month, p.day) as f64 * DAY_MS
+    });
+    let read_by = || Instant::now() + KASI_READ;
     // Acquire what is still missing.
     let Some(acquire) = shared.acquire.clone() else {
         return Ok(());

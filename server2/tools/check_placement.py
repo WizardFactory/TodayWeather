@@ -385,7 +385,7 @@ def audit_nonrust(path, body):
 def audit_workflow(body):
     errors = []
     if re.search(r'^jobs:\s*$', body, re.M):
-        expected_foundation='name: Server2\non:\n  pull_request:\n    paths:\n      - "server2/**"\n      - ".github/workflows/server2.yml"\npermissions:\n  contents: read\njobs:\n  foundation:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - run: bash tools/ci.sh\n'
+        expected_foundation='name: Server2\non:\n  pull_request:\n    paths:\n      - "server2/**"\n      - ".github/workflows/server2.yml"\npermissions:\n  contents: read\njobs:\n  foundation:\n    runs-on: ubuntu-latest\n    timeout-minutes: 45\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - run: bash tools/ci.sh\n'
         expected_goldens="  goldens:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '16.20.2'\n      - uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n      - run: python tools/golden/ci.py --install\n"
         # Exact job/source wiring; no env, expressions, arbitrary actions or run steps.
         artifact_upload = '      - uses: actions/upload-artifact@v4\n        with:\n          name: server2-linux-musl-verified\n          path: reports/verification/server2-local-first/artifact-native/\n          if-no-files-found: error\n          retention-days: 7\n'
@@ -401,8 +401,8 @@ def audit_workflow(body):
         errors.append('server2 workflow must only invoke bash tools/ci.sh from server2')
     if uses != ['actions/checkout@v4'] or re.findall(r'^[ \t]*fetch-depth:[ \t]*([^\r\n]+)$', body, re.M) != ['0']:
         errors.append('server2 workflow permits only actions/checkout@v4 with full history')
-    if timeouts != ['30']:
-        errors.append('server2 workflow requires the 30-minute job timeout')
+    if timeouts != ['45']:
+        errors.append('server2 foundation workflow requires the exact 45-minute job timeout')
     return errors
 
 

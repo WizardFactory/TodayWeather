@@ -152,14 +152,32 @@ class Handler(base.Handler):
     do_GET = do_HEAD = do_PUT = do_POST = do_DELETE = do_OPTIONS = dispatch
 
 
-def make():
+class PersistentHandler(Handler):
+    protocol_version = 'HTTP/1.1'
+
+    def setup(self):
+        super().setup()
+        self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        self.opened_at = time.monotonic()
+
+    def send(self, status, body=b'', headers=None):
+        # The inherited absolute socket lifetime stays bounded. Stop advertising reuse
+        # before its timer can interrupt a later request on this connection.
+        lifetime = self.server.config['socket_timeout_seconds']
+        if time.monotonic() - self.opened_at >= lifetime / 2:
+            headers = dict(headers or {}, **{'Connection': 'close'})
+            self.close_connection = True
+        return super().send(status, body, headers)
+
+
+def make(persistent=False):
     config = base.load_config(OWNED/'config/local-stack.json')
     # Linux drops connection attempts beyond the listen backlog (socketserver default 5) and the
     # S3 client connects within 1 s, so a few concurrent readers failed with Transport on CI.
     # Admission stays bounded by the peer's connection slots.
     base.Peer.request_queue_size = 128
     peer = base.Peer('s3', config, {})
-    peer.RequestHandlerClass = Handler
+    peer.RequestHandlerClass = PersistentHandler if persistent else Handler
     peer.mode, peer.fault_key, peer.pending, peer.barrier_puts = '', '', None, 0
     peer.counts = {}
     peer.response_lock = threading.Lock()
@@ -167,11 +185,76 @@ def make():
     return peer
 
 
+def check_persistent():
+    """Actual loopback requests; no external credentials, endpoint or lasting data."""
+    import http.client
+    auth = {'X-Server2-Test-Key': 'server2-local'}
+    for persistent in (False, True):
+        peer = make(persistent)
+        thread = threading.Thread(target=peer.serve_forever, daemon=True)
+        thread.start()
+        connection = http.client.HTTPConnection('127.0.0.1', peer.server_port, timeout=2)
+        try:
+            path = '/server2-local/reuse'
+            body = b'canonical'
+            headers = dict(auth, **{'If-None-Match': '*', 'Content-MD5': base64.b64encode(hashlib.md5(body).digest()).decode()})
+            connection.request('PUT', path, body, headers)
+            response = connection.getresponse()
+            assert response.status == 200
+            response.read()
+            original = connection.sock
+            assert (original is not None) == persistent
+            for method in ('HEAD', 'GET', 'GET'):
+                connection.request(method, path, headers=auth)
+                response = connection.getresponse()
+                assert response.status == 200 and response.getheader('Content-Length') == str(len(body))
+                assert response.read() == (b'' if method == 'HEAD' else body)
+                if persistent:
+                    assert connection.sock is original, 'two requests must reuse the same actual socket'
+            if persistent:
+                time.sleep(peer.config['socket_timeout_seconds'] / 2 + 0.05)
+                connection.request('GET', path, headers=auth)
+                response = connection.getresponse()
+                assert response.status == 200 and response.read() == body
+                assert response.getheader('Connection') == 'close'
+                assert connection.sock is None, 'reuse ends before unchanged hard socket expiry'
+            connection.request('POST', '/__catalog?mode=drop-commit&key=fault', body=b'', headers=auth)
+            response = connection.getresponse()
+            assert response.status == 204 and response.read() == b''
+            # The injected committed-write disconnect must still be observed, not hidden.
+            connection.request('PUT', '/server2-local/fault', body, headers)
+            try:
+                connection.getresponse()
+                raise AssertionError('drop-commit fault must close before a response')
+            except (http.client.RemoteDisconnected, ConnectionResetError):
+                pass
+            connection.close()
+            connection = http.client.HTTPConnection('127.0.0.1', peer.server_port, timeout=2)
+            connection.request('GET', '/server2-local/fault', headers=auth)
+            response = connection.getresponse()
+            assert response.status == 200 and response.read() == body
+            connection.request('PUT', '/server2-local/fault', body, headers)
+            response = connection.getresponse()
+            assert response.status == 412
+            response.read()
+            print('owned peer', 'persistent' if persistent else 'default', 'reuse/framing/HEAD/204/CAS/fault PASS')
+        finally:
+            connection.close()
+            peer.shutdown()
+            peer.server_close()
+            thread.join(timeout=3)
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--smoke', help='Built catalogs_smoke executable')
+    parser.add_argument('--persistent', action='store_true', help='Reuse owned HTTP connections within unchanged admission/socket bounds')
+    parser.add_argument('--check-persistent', action='store_true', help='Run isolated framing/reuse/default/fault checks and exit')
     args = parser.parse_args()
-    peer = make()
+    if args.check_persistent:
+        return check_persistent()
+    peer = make(args.persistent)
     endpoint = f'http://127.0.0.1:{peer.server_port}/'
     if args.smoke:
         thread = threading.Thread(target=peer.serve_forever, daemon=True)

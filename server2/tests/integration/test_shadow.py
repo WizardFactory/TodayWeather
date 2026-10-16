@@ -275,5 +275,58 @@ class KmaFamilyTest(unittest.TestCase):
         self.assertEqual(len({c['id'] for c in fixture['workload']}), len(fixture['workload']))
 
 
+class KmaRichFamilyTest(unittest.TestCase):
+    def test_rich_manifest_keeps_counts_and_coordinate_acquisition_separate(self):
+        family = families.load('kma-rich')
+        fixture = json.loads(family.REPLAY_FIXTURE.read_text())
+        cases = family.oracle()['requests']
+        self.assertEqual(len(cases), 23)
+        self.assertEqual(fixture['assembly_only']['count'], 98)
+        self.assertEqual(fixture['coverage']['responses'], 92)
+        self.assertEqual(sum(bool(c.get('coord_provider')) for c in cases), 2)
+        for item in fixture['workload']:
+            expected = {'geocoder': 1} if item['id'].startswith('gateway-') else {}
+            self.assertEqual(set(item['acquisitions']), set(family.PASSES))
+            for counts in item['acquisitions'].values():
+                self.assertEqual(counts, {'baseline': {}, 'candidate': expected})
+        self.assertFalse(families.CAPABILITIES['kma-rich']['rollback'])
+        with self.assertRaisesRegex(AssertionError, 'UNSUPPORTED'):
+            family.rollback('unused-binary')
+
+    def test_rich_rejects_dependency_or_coordinate_count_changes(self):
+        family = families.load('kma-rich')
+        cases = [{'id': 'direct'}, {'id': 'coord', 'coord_provider': True}]
+        records = [{'id': case['id'], 'pass': phase,
+                    'cache': {'hits': 1, 'corruptions': 1},
+                    'owned_geocoder_http_requests': int(bool(case.get('coord_provider')))}
+                   for case in cases for phase in family.PASSES]
+        good = {'records': records, 'legacy_requests': 0, 'provider_requests': 0,
+                'external_http_requests': 0}
+        family.validate_records(good, cases)
+        for key in ('legacy_requests', 'provider_requests', 'external_http_requests'):
+            with self.assertRaises(AssertionError):
+                family.validate_records(dict(good, **{key: 1}), cases)
+        for count in (0, 2):
+            changed = [dict(r, owned_geocoder_http_requests=count) if r['id'] == 'coord' else r
+                       for r in records]
+            with self.assertRaises(AssertionError):
+                family.validate_records(dict(good, records=changed), cases)
+        for changed in (records[:-1], records + records[:1],
+                        records + [dict(records[0], id='extra')]):
+            with self.assertRaises(AssertionError):
+                family.validate_records(dict(good, records=changed), cases)
+
+    def test_rich_smoke_keeps_extra_functional_headers_visible(self):
+        family = families.load('kma-rich')
+        case = {'id': 'c', 'status': 200, 'headers': [], 'body_base64': ''}
+        records = [{'id': 'c', 'pass': phase, 'oracle': 'c', 'status': 200,
+                    'headers': {'content-length': '0'}, 'body': b'', 'hops': []}
+                   for phase in family.PASSES]
+        with patch.object(family, 'replay_side', return_value=(records, {})), \
+             patch.object(family, 'oracle_cases', return_value={'c': case}):
+            with self.assertRaisesRegex(AssertionError, 'content-length'):
+                family.smoke('unused-binary')
+
+
 if __name__ == '__main__':
     unittest.main()

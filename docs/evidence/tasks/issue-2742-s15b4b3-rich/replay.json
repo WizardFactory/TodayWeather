@@ -1,0 +1,4442 @@
+{
+  "binary": {
+    "path": "/private/tmp/tw-s15b4b3-rich/reports/sdlc/issue-2742-s15b4b3-rich/kma_s3_replay.candidate",
+    "sha256": "d95727dbe0e7cfdca5fa58c6bdd8de74be657d9cd26c2041b372c729f199dc26"
+  },
+  "declared_differences": {
+    "definitions": [
+      {
+        "id": "D-TRANSPORT",
+        "names": [
+          "date",
+          "connection",
+          "set-cookie",
+          "server"
+        ],
+        "reason": "Transport clock/socket/server headers and the documented legacy session-cookie omission; functional headers remain exact.",
+        "scope": "header"
+      },
+      {
+        "id": "D-GEOCODER-COLD",
+        "kinds": [
+          "geocoder"
+        ],
+        "reason": "Each fresh native coordinate response resolves its public coordinates with one owned-loopback Kakao HTTP call; exact coordinate cache remains memory-only. Frozen baseline has no replay-time acquisition. Weather provider/external/legacy HTTP remain zero.",
+        "scope": "acquisition"
+      }
+    ],
+    "observed": [
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-en-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-en-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-en-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-en-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-en-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-en-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-ko-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-ko-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-ko-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-ko-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-ko-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-ko-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000901-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000901-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000901-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000901-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000803-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000803-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000803-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000803-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000705-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000705-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000705-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000705-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-incheon-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-incheon-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-incheon-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-incheon-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-jeju-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-jeju-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-jeju-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-jeju-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-conditional"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000903-conditional"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000705-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "v000705-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "gateway-v000903-coord-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "gateway-v000903-coord-ko"
+      },
+      {
+        "baseline": 0,
+        "candidate": 1,
+        "declared": "D-GEOCODER-COLD",
+        "kind": "acquisition",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "gateway-v000903-coord-ko",
+        "source": "geocoder"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "gateway-v000903-coord-ko-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "gateway-v000903-coord-ko-units"
+      },
+      {
+        "baseline": 0,
+        "candidate": 1,
+        "declared": "D-GEOCODER-COLD",
+        "kind": "acquisition",
+        "pass": "cold-empty-ram-and-disk",
+        "request": "gateway-v000903-coord-ko-units",
+        "source": "geocoder"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-en-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-en-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-en-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-en-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-en-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-en-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-ko-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-ko-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-ko-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-ko-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-ko-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-ko-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000901-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000901-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000901-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000901-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000803-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000803-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000803-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000803-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000705-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000705-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000705-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000705-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-incheon-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-incheon-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-incheon-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-incheon-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-jeju-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-jeju-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-jeju-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-jeju-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-conditional"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000903-conditional"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000705-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "v000705-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko"
+      },
+      {
+        "baseline": 0,
+        "candidate": 1,
+        "declared": "D-GEOCODER-COLD",
+        "kind": "acquisition",
+        "pass": "warm-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko",
+        "source": "geocoder"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "warm-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "warm-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko-units"
+      },
+      {
+        "baseline": 0,
+        "candidate": 1,
+        "declared": "D-GEOCODER-COLD",
+        "kind": "acquisition",
+        "pass": "warm-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko-units",
+        "source": "geocoder"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-en-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-en-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-en-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-en-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-en-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-en-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-ko-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-ko-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-ko-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-ko-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-ko-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-ko-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000901-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000901-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000901-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000901-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000803-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000803-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000803-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000803-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000705-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000705-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000705-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000705-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-incheon-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-incheon-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-incheon-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-incheon-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-jeju-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-jeju-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-jeju-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-jeju-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-conditional"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000903-conditional"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000705-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "v000705-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko"
+      },
+      {
+        "baseline": 0,
+        "candidate": 1,
+        "declared": "D-GEOCODER-COLD",
+        "kind": "acquisition",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko",
+        "source": "geocoder"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko-units"
+      },
+      {
+        "baseline": 0,
+        "candidate": 1,
+        "declared": "D-GEOCODER-COLD",
+        "kind": "acquisition",
+        "pass": "corrupt-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko-units",
+        "source": "geocoder"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-en-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-en-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-en-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-en-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-en-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-en-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-ko-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-ko-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-ko-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-ko-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-ko-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-ko-units-airkorea"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000901-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000901-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000901-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000901-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000803-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000803-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000803-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000803-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000705-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000705-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000705-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000705-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-incheon-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-incheon-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-incheon-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-incheon-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-jeju-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-jeju-en"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-jeju-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-jeju-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-conditional"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000903-conditional"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000705-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "v000705-head"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko"
+      },
+      {
+        "baseline": 0,
+        "candidate": 1,
+        "declared": "D-GEOCODER-COLD",
+        "kind": "acquisition",
+        "pass": "lost-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko",
+        "source": "geocoder"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "date",
+        "pass": "lost-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko-units"
+      },
+      {
+        "declared": "D-TRANSPORT",
+        "kind": "header",
+        "name": "server",
+        "pass": "lost-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko-units"
+      },
+      {
+        "baseline": 0,
+        "candidate": 1,
+        "declared": "D-GEOCODER-COLD",
+        "kind": "acquisition",
+        "pass": "lost-disk-empty-ram",
+        "request": "gateway-v000903-coord-ko-units",
+        "source": "geocoder"
+      }
+    ]
+  },
+  "family": "kma-rich",
+  "limitations": "Owned-loopback library HTTP example with test-injected clock/providers; not production startup, AWS/EC2 p95, quota, seven-day live shadow or cutover evidence. Original 98 dependency-oracle cases remain assembly-only. Rich corpus includes three grid regions, stations/ASOS, air/life/KASI/MFDS/images and separately counted cold coordinate geocoding. Rollback is UNSUPPORTED here; S20 must verify recovery to an earlier server2 release/config without legacy.",
+  "oracle": {
+    "baseline": {
+      "checked": 92,
+      "mismatches": [],
+      "structural_checked": 0
+    },
+    "candidate": {
+      "checked": 92,
+      "mismatches": [],
+      "structural_checked": 0
+    }
+  },
+  "revision": {
+    "commit": "b177843bffb6c2a32992694b2aed33dc50d316c2",
+    "dirty": true
+  },
+  "schema": 1,
+  "self_check": {
+    "detected": true,
+    "perturbation": "first expected body perturbed",
+    "unexplained": 8
+  },
+  "sides": {
+    "baseline": {
+      "configuration": "Frozen independent Node16 collector+HTTP outputs on loopback; baseline timings are frozen-server transport, not legacy execution",
+      "percentiles_ms": {
+        "cold-empty-ram-and-disk_pass": {
+          "max": 0.55,
+          "n": 23,
+          "p50": 0.31,
+          "p95": 0.38,
+          "p99": 0.55
+        },
+        "corrupt-disk-empty-ram_pass": {
+          "max": 0.37,
+          "n": 23,
+          "p50": 0.33,
+          "p95": 0.36,
+          "p99": 0.37
+        },
+        "lost-disk-empty-ram_pass": {
+          "max": 0.36,
+          "n": 23,
+          "p50": 0.31,
+          "p95": 0.35,
+          "p99": 0.36
+        },
+        "warm-disk-empty-ram_pass": {
+          "max": 0.39,
+          "n": 23,
+          "p50": 0.33,
+          "p95": 0.38,
+          "p99": 0.39
+        }
+      },
+      "perturbation": null
+    },
+    "candidate": {
+      "case_progress": [
+        "canonical rich acquisitions=334 records=336",
+        "replay cold-empty-ram-and-disk v000903-en status=200 body_bytes=95717",
+        "replay cold-empty-ram-and-disk v000903-en-units status=200 body_bytes=95664",
+        "replay cold-empty-ram-and-disk v000903-en-airkorea status=200 body_bytes=97673",
+        "replay cold-empty-ram-and-disk v000903-en-units-airkorea status=200 body_bytes=97620",
+        "replay cold-empty-ram-and-disk v000903-ko status=200 body_bytes=96051",
+        "replay cold-empty-ram-and-disk v000903-ko-units status=200 body_bytes=96049",
+        "replay cold-empty-ram-and-disk v000903-ko-airkorea status=200 body_bytes=97941",
+        "replay cold-empty-ram-and-disk v000903-ko-units-airkorea status=200 body_bytes=97939",
+        "replay cold-empty-ram-and-disk v000901-en status=200 body_bytes=67623",
+        "replay cold-empty-ram-and-disk v000901-ko status=200 body_bytes=68246",
+        "replay cold-empty-ram-and-disk v000803-en status=200 body_bytes=50176",
+        "replay cold-empty-ram-and-disk v000803-ko status=200 body_bytes=50981",
+        "replay cold-empty-ram-and-disk v000705-en status=200 body_bytes=0",
+        "replay cold-empty-ram-and-disk v000705-ko status=200 body_bytes=0",
+        "replay cold-empty-ram-and-disk v000903-incheon-en status=200 body_bytes=85372",
+        "replay cold-empty-ram-and-disk v000903-incheon-ko status=200 body_bytes=85746",
+        "replay cold-empty-ram-and-disk v000903-jeju-en status=200 body_bytes=51911",
+        "replay cold-empty-ram-and-disk v000903-jeju-ko status=200 body_bytes=52486",
+        "replay cold-empty-ram-and-disk v000903-head status=200 body_bytes=0",
+        "replay cold-empty-ram-and-disk v000903-conditional status=304 body_bytes=0",
+        "replay cold-empty-ram-and-disk v000705-head status=200 body_bytes=0",
+        "replay cold-empty-ram-and-disk gateway-v000903-coord-ko status=200 body_bytes=95681",
+        "replay cold-empty-ram-and-disk gateway-v000903-coord-ko-units status=200 body_bytes=95679",
+        "replay warm-disk-empty-ram v000903-en status=200 body_bytes=95717",
+        "replay warm-disk-empty-ram v000903-en-units status=200 body_bytes=95664",
+        "replay warm-disk-empty-ram v000903-en-airkorea status=200 body_bytes=97673",
+        "replay warm-disk-empty-ram v000903-en-units-airkorea status=200 body_bytes=97620",
+        "replay warm-disk-empty-ram v000903-ko status=200 body_bytes=96051",
+        "replay warm-disk-empty-ram v000903-ko-units status=200 body_bytes=96049",
+        "replay warm-disk-empty-ram v000903-ko-airkorea status=200 body_bytes=97941",
+        "replay warm-disk-empty-ram v000903-ko-units-airkorea status=200 body_bytes=97939",
+        "replay warm-disk-empty-ram v000901-en status=200 body_bytes=67623",
+        "replay warm-disk-empty-ram v000901-ko status=200 body_bytes=68246",
+        "replay warm-disk-empty-ram v000803-en status=200 body_bytes=50176",
+        "replay warm-disk-empty-ram v000803-ko status=200 body_bytes=50981",
+        "replay warm-disk-empty-ram v000705-en status=200 body_bytes=0",
+        "replay warm-disk-empty-ram v000705-ko status=200 body_bytes=0",
+        "replay warm-disk-empty-ram v000903-incheon-en status=200 body_bytes=85372",
+        "replay warm-disk-empty-ram v000903-incheon-ko status=200 body_bytes=85746",
+        "replay warm-disk-empty-ram v000903-jeju-en status=200 body_bytes=51911",
+        "replay warm-disk-empty-ram v000903-jeju-ko status=200 body_bytes=52486",
+        "replay warm-disk-empty-ram v000903-head status=200 body_bytes=0",
+        "replay warm-disk-empty-ram v000903-conditional status=304 body_bytes=0",
+        "replay warm-disk-empty-ram v000705-head status=200 body_bytes=0",
+        "replay warm-disk-empty-ram gateway-v000903-coord-ko status=200 body_bytes=95681",
+        "replay warm-disk-empty-ram gateway-v000903-coord-ko-units status=200 body_bytes=95679",
+        "replay corrupt-disk-empty-ram v000903-en status=200 body_bytes=95717",
+        "replay corrupt-disk-empty-ram v000903-en-units status=200 body_bytes=95664",
+        "replay corrupt-disk-empty-ram v000903-en-airkorea status=200 body_bytes=97673",
+        "replay corrupt-disk-empty-ram v000903-en-units-airkorea status=200 body_bytes=97620",
+        "replay corrupt-disk-empty-ram v000903-ko status=200 body_bytes=96051",
+        "replay corrupt-disk-empty-ram v000903-ko-units status=200 body_bytes=96049",
+        "replay corrupt-disk-empty-ram v000903-ko-airkorea status=200 body_bytes=97941",
+        "replay corrupt-disk-empty-ram v000903-ko-units-airkorea status=200 body_bytes=97939",
+        "replay corrupt-disk-empty-ram v000901-en status=200 body_bytes=67623",
+        "replay corrupt-disk-empty-ram v000901-ko status=200 body_bytes=68246",
+        "replay corrupt-disk-empty-ram v000803-en status=200 body_bytes=50176",
+        "replay corrupt-disk-empty-ram v000803-ko status=200 body_bytes=50981",
+        "replay corrupt-disk-empty-ram v000705-en status=200 body_bytes=0",
+        "replay corrupt-disk-empty-ram v000705-ko status=200 body_bytes=0",
+        "replay corrupt-disk-empty-ram v000903-incheon-en status=200 body_bytes=85372",
+        "replay corrupt-disk-empty-ram v000903-incheon-ko status=200 body_bytes=85746",
+        "replay corrupt-disk-empty-ram v000903-jeju-en status=200 body_bytes=51911",
+        "replay corrupt-disk-empty-ram v000903-jeju-ko status=200 body_bytes=52486",
+        "replay corrupt-disk-empty-ram v000903-head status=200 body_bytes=0",
+        "replay corrupt-disk-empty-ram v000903-conditional status=304 body_bytes=0",
+        "replay corrupt-disk-empty-ram v000705-head status=200 body_bytes=0",
+        "replay corrupt-disk-empty-ram gateway-v000903-coord-ko status=200 body_bytes=95681",
+        "replay corrupt-disk-empty-ram gateway-v000903-coord-ko-units status=200 body_bytes=95679",
+        "replay lost-disk-empty-ram v000903-en status=200 body_bytes=95717",
+        "replay lost-disk-empty-ram v000903-en-units status=200 body_bytes=95664",
+        "replay lost-disk-empty-ram v000903-en-airkorea status=200 body_bytes=97673",
+        "replay lost-disk-empty-ram v000903-en-units-airkorea status=200 body_bytes=97620",
+        "replay lost-disk-empty-ram v000903-ko status=200 body_bytes=96051",
+        "replay lost-disk-empty-ram v000903-ko-units status=200 body_bytes=96049",
+        "replay lost-disk-empty-ram v000903-ko-airkorea status=200 body_bytes=97941",
+        "replay lost-disk-empty-ram v000903-ko-units-airkorea status=200 body_bytes=97939",
+        "replay lost-disk-empty-ram v000901-en status=200 body_bytes=67623",
+        "replay lost-disk-empty-ram v000901-ko status=200 body_bytes=68246",
+        "replay lost-disk-empty-ram v000803-en status=200 body_bytes=50176",
+        "replay lost-disk-empty-ram v000803-ko status=200 body_bytes=50981",
+        "replay lost-disk-empty-ram v000705-en status=200 body_bytes=0",
+        "replay lost-disk-empty-ram v000705-ko status=200 body_bytes=0",
+        "replay lost-disk-empty-ram v000903-incheon-en status=200 body_bytes=85372",
+        "replay lost-disk-empty-ram v000903-incheon-ko status=200 body_bytes=85746",
+        "replay lost-disk-empty-ram v000903-jeju-en status=200 body_bytes=51911",
+        "replay lost-disk-empty-ram v000903-jeju-ko status=200 body_bytes=52486",
+        "replay lost-disk-empty-ram v000903-head status=200 body_bytes=0",
+        "replay lost-disk-empty-ram v000903-conditional status=304 body_bytes=0",
+        "replay lost-disk-empty-ram v000705-head status=200 body_bytes=0",
+        "replay lost-disk-empty-ram gateway-v000903-coord-ko status=200 body_bytes=95681",
+        "replay lost-disk-empty-ram gateway-v000903-coord-ko-units status=200 body_bytes=95679"
+      ],
+      "configuration": "Fresh S3Source per case/pass; weather raw restored from canonical S3; cold coordinate requests separately acquire one owned-loopback geocoder response; no external HTTP",
+      "example": {
+        "path": "/private/tmp/tw-s15b4b3-rich/reports/sdlc/issue-2742-s15b4b3-rich/examples/kma_s3_replay",
+        "sha256": "d95727dbe0e7cfdca5fa58c6bdd8de74be657d9cd26c2041b372c729f199dc26"
+      },
+      "external_http_requests": 0,
+      "legacy_requests": 0,
+      "percentiles_ms": {
+        "cold-empty-ram-and-disk_pass": {
+          "max": 1988.93,
+          "n": 23,
+          "p50": 1857.12,
+          "p95": 1965.62,
+          "p99": 1988.93
+        },
+        "corrupt-disk-empty-ram_pass": {
+          "max": 2163.17,
+          "n": 23,
+          "p50": 1905.12,
+          "p95": 2110.35,
+          "p99": 2163.17
+        },
+        "lost-disk-empty-ram_pass": {
+          "max": 1933.27,
+          "n": 23,
+          "p50": 1878.41,
+          "p95": 1925.74,
+          "p99": 1933.27
+        },
+        "warm-disk-empty-ram_pass": {
+          "max": 1881.13,
+          "n": 23,
+          "p50": 1845.72,
+          "p95": 1865.53,
+          "p99": 1881.13
+        }
+      },
+      "profile": "debug",
+      "provider_requests": 0,
+      "provider_requests_scope": "weather raw reacquisition only; owned geocoder HTTP counted per response",
+      "response_audit": [
+        {
+          "body_sha256": "8376d0da2d37c5667b4c022003b3f731c09686c938d156e6d3f68ac7be846836",
+          "cache": {
+            "bytes": 815104,
+            "corruptions": 0,
+            "entries": 191,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 815104,
+            "peak_root_reserved_bytes": 815104,
+            "pending_writes": 0,
+            "root_observed_bytes": 815104,
+            "writes": 191
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1965.620458,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "95717",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:21 GMT",
+            "etag": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "0eeb33547196c1fc5bcb953a16f5f1702d0c7f9fa4dd242fce135c7625afccdd",
+          "cache": {
+            "bytes": 823296,
+            "corruptions": 0,
+            "entries": 189,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 823296,
+            "peak_root_reserved_bytes": 823296,
+            "pending_writes": 0,
+            "root_observed_bytes": 823296,
+            "writes": 189
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1936.036542,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "95664",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:23 GMT",
+            "etag": "W/\"175b0-xBvf2/VHB8slmXFxwGCN6A\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en-units",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "a1d4b19cc52da1722e6ec8100c1cc9eadd58a98829813dff3f306fb3e25210c9",
+          "cache": {
+            "bytes": 790528,
+            "corruptions": 0,
+            "entries": 185,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 790528,
+            "peak_root_reserved_bytes": 790528,
+            "pending_writes": 0,
+            "root_observed_bytes": 790528,
+            "writes": 185
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1858.593917,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97673",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:25 GMT",
+            "etag": "W/\"17d89-yzCwWiuIt+0EoMVHLVtp1g\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "450d7a2a194d417fe7eeeaf651e8756af23729c86e0e1dd70f5596c959528474",
+          "cache": {
+            "bytes": 815104,
+            "corruptions": 0,
+            "entries": 191,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 815104,
+            "peak_root_reserved_bytes": 815104,
+            "pending_writes": 0,
+            "root_observed_bytes": 815104,
+            "writes": 191
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1857.1225419999998,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97620",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:27 GMT",
+            "etag": "W/\"17d54-qrBEKPkQ4MRphXKtwFVSCw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en-units-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "f20b658d7b949aa499fe053beed3955500121d4eada33bec86d5bdf9dc401f8b",
+          "cache": {
+            "bytes": 790528,
+            "corruptions": 0,
+            "entries": 183,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 790528,
+            "peak_root_reserved_bytes": 790528,
+            "pending_writes": 0,
+            "root_observed_bytes": 790528,
+            "writes": 183
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1849.28475,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "96051",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:29 GMT",
+            "etag": "W/\"17733-08NYhtV23wF45sUjtUbTqQ\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "0b603914a0ca9c993a1c84ca37d81b05a387b2b5d7aa1a3c8e2e019317f2cc3f",
+          "cache": {
+            "bytes": 778240,
+            "corruptions": 0,
+            "entries": 179,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 778240,
+            "peak_root_reserved_bytes": 778240,
+            "pending_writes": 0,
+            "root_observed_bytes": 778240,
+            "writes": 179
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1856.702167,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "96049",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:30 GMT",
+            "etag": "W/\"17731-EUvqSdFMS+irQYQPRSuB3w\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko-units",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "780886faae74fd348f1079ff0971162fc20859c3d9d39f93c3d7f9b469042f08",
+          "cache": {
+            "bytes": 786432,
+            "corruptions": 0,
+            "entries": 186,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 786432,
+            "peak_root_reserved_bytes": 786432,
+            "pending_writes": 0,
+            "root_observed_bytes": 786432,
+            "writes": 186
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1853.67875,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97941",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:32 GMT",
+            "etag": "W/\"17e95-gECQo+mclROH9V6ApJcrHA\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "81c9f5322a4950726fdf4d08ce135756d11576aa7f4db0e8e925a3a99348cc08",
+          "cache": {
+            "bytes": 819200,
+            "corruptions": 0,
+            "entries": 194,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 819200,
+            "peak_root_reserved_bytes": 819200,
+            "pending_writes": 0,
+            "root_observed_bytes": 819200,
+            "writes": 194
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1859.564833,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97939",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:34 GMT",
+            "etag": "W/\"17e93-oQio8tVo+3SEoB0VRFPwug\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko-units-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "5c30897981de77dbce49095dbc4730f738de22f724cae9cab4156224b1717184",
+          "cache": {
+            "bytes": 823296,
+            "corruptions": 0,
+            "entries": 191,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 823296,
+            "peak_root_reserved_bytes": 823296,
+            "pending_writes": 0,
+            "root_observed_bytes": 823296,
+            "writes": 191
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1988.934667,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "67623",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:36 GMT",
+            "etag": "W/\"10827-lzLqNJIM6s4uA9QwGZgXcw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000901-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "79c32b8eab0abc9f0a8d1ae19706afe58b4a416ff89bae84ae2f75f7147fa99d",
+          "cache": {
+            "bytes": 778240,
+            "corruptions": 0,
+            "entries": 188,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 778240,
+            "peak_root_reserved_bytes": 778240,
+            "pending_writes": 0,
+            "root_observed_bytes": 778240,
+            "writes": 188
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1840.9499999999998,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "68246",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:38 GMT",
+            "etag": "W/\"10a96-J1MFcnUNnXKkkrvjk+UIug\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000901-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "f09c2d76752f15bb4ca7e08f8fb048303afa95f3499158c15b611cafe4142982",
+          "cache": {
+            "bytes": 761856,
+            "corruptions": 0,
+            "entries": 179,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 761856,
+            "peak_root_reserved_bytes": 761856,
+            "pending_writes": 0,
+            "root_observed_bytes": 761856,
+            "writes": 179
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1872.110417,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "50176",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:40 GMT",
+            "etag": "W/\"c400-VBnJ4n+i3ABmkwRCbJ2G6Q\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000803-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "8f2e35459c55e1704421e4e4d28fa10fdb8ab7c029fd564053a34ae98c92d23c",
+          "cache": {
+            "bytes": 798720,
+            "corruptions": 0,
+            "entries": 183,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 798720,
+            "peak_root_reserved_bytes": 798720,
+            "pending_writes": 0,
+            "root_observed_bytes": 798720,
+            "writes": 183
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1831.75225,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "50981",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:42 GMT",
+            "etag": "W/\"c725-JxqQ4GcJIa+7Hmyj+pg+RQ\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000803-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 811008,
+            "corruptions": 0,
+            "entries": 188,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 811008,
+            "peak_root_reserved_bytes": 811008,
+            "pending_writes": 0,
+            "root_observed_bytes": 811008,
+            "writes": 188
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1845.234917,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "0",
+            "content-type": "application/json",
+            "date": "Fri, 16 Oct 2026 13:11:44 GMT",
+            "x-powered-by": "Express"
+          },
+          "id": "v000705-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 770048,
+            "corruptions": 0,
+            "entries": 179,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 770048,
+            "peak_root_reserved_bytes": 770048,
+            "pending_writes": 0,
+            "root_observed_bytes": 770048,
+            "writes": 179
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1856.014375,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "0",
+            "content-type": "application/json",
+            "date": "Fri, 16 Oct 2026 13:11:45 GMT",
+            "x-powered-by": "Express"
+          },
+          "id": "v000705-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "3c682f4a9d0270d91ec2a317aab9bb30ecbbcd2c6f467b3b4c280685303731e2",
+          "cache": {
+            "bytes": 782336,
+            "corruptions": 0,
+            "entries": 181,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 370,
+            "peak_bytes": 782336,
+            "peak_root_reserved_bytes": 782336,
+            "pending_writes": 0,
+            "root_observed_bytes": 782336,
+            "writes": 181
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1858.7605,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "85372",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:47 GMT",
+            "etag": "W/\"14d7c-HO3rW13NNUw6cMm3dcIh6g\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-incheon-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "9fa9b295a79481b582a4ad38f51bafadf5a2075c3d4aa537f031ed0df3d7534a",
+          "cache": {
+            "bytes": 774144,
+            "corruptions": 0,
+            "entries": 180,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 370,
+            "peak_bytes": 774144,
+            "peak_root_reserved_bytes": 774144,
+            "pending_writes": 0,
+            "root_observed_bytes": 774144,
+            "writes": 180
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1841.880042,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "85746",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:49 GMT",
+            "etag": "W/\"14ef2-QpbrtXMIoh16g9SXk/jXEg\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-incheon-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "31e3d18d8e9b70d1d8b4078b50710f3f6e68e7b5ee95de6e45fd7aebcd9662ad",
+          "cache": {
+            "bytes": 786432,
+            "corruptions": 0,
+            "entries": 182,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 366,
+            "peak_bytes": 786432,
+            "peak_root_reserved_bytes": 786432,
+            "pending_writes": 0,
+            "root_observed_bytes": 786432,
+            "writes": 182
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1868.9782500000001,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "51911",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:51 GMT",
+            "etag": "W/\"cac7-KUlgTi4pSNqbHox6bPsM4A\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-jeju-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "47cf4ae242028f60154c91aeab87fdc89babeeb8b8e6b71226e24079e278c6c4",
+          "cache": {
+            "bytes": 778240,
+            "corruptions": 0,
+            "entries": 180,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 366,
+            "peak_bytes": 778240,
+            "peak_root_reserved_bytes": 778240,
+            "pending_writes": 0,
+            "root_observed_bytes": 778240,
+            "writes": 180
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1842.4842919999999,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "52486",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:53 GMT",
+            "etag": "W/\"cd06-sJDdyc/+Qv557BnpqRcbww\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-jeju-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 794624,
+            "corruptions": 0,
+            "entries": 182,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 794624,
+            "peak_root_reserved_bytes": 794624,
+            "pending_writes": 0,
+            "root_observed_bytes": 794624,
+            "writes": 182
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1893.810583,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "95717",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:11:55 GMT",
+            "etag": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-head",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 794624,
+            "corruptions": 0,
+            "entries": 182,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 794624,
+            "peak_root_reserved_bytes": 794624,
+            "pending_writes": 0,
+            "root_observed_bytes": 794624,
+            "writes": 182
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1870.549542,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "date": "Fri, 16 Oct 2026 13:11:57 GMT",
+            "etag": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-conditional",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 304
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 815104,
+            "corruptions": 0,
+            "entries": 187,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 815104,
+            "peak_root_reserved_bytes": 815104,
+            "pending_writes": 0,
+            "root_observed_bytes": 815104,
+            "writes": 187
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1854.487959,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-type": "application/json",
+            "date": "Fri, 16 Oct 2026 13:11:58 GMT",
+            "x-powered-by": "Express"
+          },
+          "id": "v000705-head",
+          "owned_geocoder_http_requests": 0,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "9f5e74da3d9be5205c9af0b80ee0db7869ea649ef7eecf16d66a008d2553418f",
+          "cache": {
+            "bytes": 757760,
+            "corruptions": 0,
+            "entries": 178,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 757760,
+            "peak_root_reserved_bytes": 757760,
+            "pending_writes": 0,
+            "root_observed_bytes": 757760,
+            "writes": 178
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1856.2047910000001,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "cache-control": "max-age=300",
+            "content-length": "95681",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:00 GMT",
+            "etag": "W/\"175c1-qsEbS6xaUxY0yN2Ub+tKZg\"",
+            "x-powered-by": "Express"
+          },
+          "id": "gateway-v000903-coord-ko",
+          "owned_geocoder_http_requests": 1,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "6c56434d02cdcd72e37424e3fd30fa3f3625cf82fcf24d6a4d1501fe7cdca0d2",
+          "cache": {
+            "bytes": 835584,
+            "corruptions": 0,
+            "entries": 192,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 835584,
+            "peak_root_reserved_bytes": 835584,
+            "pending_writes": 0,
+            "root_observed_bytes": 835584,
+            "writes": 192
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1860.3407089999998,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "cache-control": "max-age=300",
+            "content-length": "95679",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:02 GMT",
+            "etag": "W/\"175bf-XquWjrbU+20Yyi1eXUQ76w\"",
+            "x-powered-by": "Express"
+          },
+          "id": "gateway-v000903-coord-ko-units",
+          "owned_geocoder_http_requests": 1,
+          "pass": "cold-empty-ram-and-disk",
+          "status": 200
+        },
+        {
+          "body_sha256": "8376d0da2d37c5667b4c022003b3f731c09686c938d156e6d3f68ac7be846836",
+          "cache": {
+            "bytes": 1159168,
+            "corruptions": 0,
+            "entries": 271,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 129,
+            "misses": 247,
+            "peak_bytes": 1159168,
+            "peak_root_reserved_bytes": 1159168,
+            "pending_writes": 0,
+            "root_observed_bytes": 1159168,
+            "writes": 107
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1857.9993749999999,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "95717",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:04 GMT",
+            "etag": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "0eeb33547196c1fc5bcb953a16f5f1702d0c7f9fa4dd242fce135c7625afccdd",
+          "cache": {
+            "bytes": 1183744,
+            "corruptions": 0,
+            "entries": 276,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 115,
+            "misses": 261,
+            "peak_bytes": 1183744,
+            "peak_root_reserved_bytes": 1183744,
+            "pending_writes": 0,
+            "root_observed_bytes": 1183744,
+            "writes": 118
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1842.935625,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "95664",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:06 GMT",
+            "etag": "W/\"175b0-xBvf2/VHB8slmXFxwGCN6A\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en-units",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "a1d4b19cc52da1722e6ec8100c1cc9eadd58a98829813dff3f306fb3e25210c9",
+          "cache": {
+            "bytes": 1146880,
+            "corruptions": 0,
+            "entries": 267,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 110,
+            "misses": 266,
+            "peak_bytes": 1146880,
+            "peak_root_reserved_bytes": 1146880,
+            "pending_writes": 0,
+            "root_observed_bytes": 1146880,
+            "writes": 114
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1850.0197090000001,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97673",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:08 GMT",
+            "etag": "W/\"17d89-yzCwWiuIt+0EoMVHLVtp1g\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "450d7a2a194d417fe7eeeaf651e8756af23729c86e0e1dd70f5596c959528474",
+          "cache": {
+            "bytes": 1171456,
+            "corruptions": 0,
+            "entries": 273,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 119,
+            "misses": 257,
+            "peak_bytes": 1171456,
+            "peak_root_reserved_bytes": 1171456,
+            "pending_writes": 0,
+            "root_observed_bytes": 1171456,
+            "writes": 112
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1848.160125,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97620",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:10 GMT",
+            "etag": "W/\"17d54-qrBEKPkQ4MRphXKtwFVSCw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en-units-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "f20b658d7b949aa499fe053beed3955500121d4eada33bec86d5bdf9dc401f8b",
+          "cache": {
+            "bytes": 1093632,
+            "corruptions": 0,
+            "entries": 257,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 122,
+            "misses": 254,
+            "peak_bytes": 1093632,
+            "peak_root_reserved_bytes": 1093632,
+            "pending_writes": 0,
+            "root_observed_bytes": 1093632,
+            "writes": 111
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1858.5403330000001,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "96051",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:11 GMT",
+            "etag": "W/\"17733-08NYhtV23wF45sUjtUbTqQ\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "0b603914a0ca9c993a1c84ca37d81b05a387b2b5d7aa1a3c8e2e019317f2cc3f",
+          "cache": {
+            "bytes": 1146880,
+            "corruptions": 0,
+            "entries": 267,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 115,
+            "misses": 261,
+            "peak_bytes": 1146880,
+            "peak_root_reserved_bytes": 1146880,
+            "pending_writes": 0,
+            "root_observed_bytes": 1146880,
+            "writes": 118
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1862.156916,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "96049",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:13 GMT",
+            "etag": "W/\"17731-EUvqSdFMS+irQYQPRSuB3w\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko-units",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "780886faae74fd348f1079ff0971162fc20859c3d9d39f93c3d7f9b469042f08",
+          "cache": {
+            "bytes": 1150976,
+            "corruptions": 0,
+            "entries": 270,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 123,
+            "misses": 253,
+            "peak_bytes": 1150976,
+            "peak_root_reserved_bytes": 1150976,
+            "pending_writes": 0,
+            "root_observed_bytes": 1150976,
+            "writes": 120
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1854.020875,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97941",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:15 GMT",
+            "etag": "W/\"17e95-gECQo+mclROH9V6ApJcrHA\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "81c9f5322a4950726fdf4d08ce135756d11576aa7f4db0e8e925a3a99348cc08",
+          "cache": {
+            "bytes": 1155072,
+            "corruptions": 0,
+            "entries": 272,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 124,
+            "misses": 252,
+            "peak_bytes": 1155072,
+            "peak_root_reserved_bytes": 1155072,
+            "pending_writes": 0,
+            "root_observed_bytes": 1155072,
+            "writes": 109
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1854.455833,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97939",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:17 GMT",
+            "etag": "W/\"17e93-oQio8tVo+3SEoB0VRFPwug\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko-units-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "5c30897981de77dbce49095dbc4730f738de22f724cae9cab4156224b1717184",
+          "cache": {
+            "bytes": 1183744,
+            "corruptions": 0,
+            "entries": 277,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 119,
+            "misses": 257,
+            "peak_bytes": 1183744,
+            "peak_root_reserved_bytes": 1183744,
+            "pending_writes": 0,
+            "root_observed_bytes": 1183744,
+            "writes": 116
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1865.53375,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "67623",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:19 GMT",
+            "etag": "W/\"10827-lzLqNJIM6s4uA9QwGZgXcw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000901-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "79c32b8eab0abc9f0a8d1ae19706afe58b4a416ff89bae84ae2f75f7147fa99d",
+          "cache": {
+            "bytes": 1163264,
+            "corruptions": 0,
+            "entries": 273,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 113,
+            "misses": 263,
+            "peak_bytes": 1163264,
+            "peak_root_reserved_bytes": 1163264,
+            "pending_writes": 0,
+            "root_observed_bytes": 1163264,
+            "writes": 117
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1840.224833,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "68246",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:21 GMT",
+            "etag": "W/\"10a96-J1MFcnUNnXKkkrvjk+UIug\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000901-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "f09c2d76752f15bb4ca7e08f8fb048303afa95f3499158c15b611cafe4142982",
+          "cache": {
+            "bytes": 1171456,
+            "corruptions": 0,
+            "entries": 274,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 113,
+            "misses": 263,
+            "peak_bytes": 1171456,
+            "peak_root_reserved_bytes": 1171456,
+            "pending_writes": 0,
+            "root_observed_bytes": 1171456,
+            "writes": 119
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1839.699167,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "50176",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:23 GMT",
+            "etag": "W/\"c400-VBnJ4n+i3ABmkwRCbJ2G6Q\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000803-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "8f2e35459c55e1704421e4e4d28fa10fdb8ab7c029fd564053a34ae98c92d23c",
+          "cache": {
+            "bytes": 1134592,
+            "corruptions": 0,
+            "entries": 265,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 103,
+            "misses": 273,
+            "peak_bytes": 1134592,
+            "peak_root_reserved_bytes": 1134592,
+            "pending_writes": 0,
+            "root_observed_bytes": 1134592,
+            "writes": 123
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1845.715708,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "50981",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:24 GMT",
+            "etag": "W/\"c725-JxqQ4GcJIa+7Hmyj+pg+RQ\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000803-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 1204224,
+            "corruptions": 0,
+            "entries": 282,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 105,
+            "misses": 271,
+            "peak_bytes": 1204224,
+            "peak_root_reserved_bytes": 1204224,
+            "pending_writes": 0,
+            "root_observed_bytes": 1204224,
+            "writes": 123
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1841.345125,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "0",
+            "content-type": "application/json",
+            "date": "Fri, 16 Oct 2026 13:12:26 GMT",
+            "x-powered-by": "Express"
+          },
+          "id": "v000705-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 1122304,
+            "corruptions": 0,
+            "entries": 262,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 112,
+            "misses": 264,
+            "peak_bytes": 1122304,
+            "peak_root_reserved_bytes": 1122304,
+            "pending_writes": 0,
+            "root_observed_bytes": 1122304,
+            "writes": 116
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1833.328291,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "0",
+            "content-type": "application/json",
+            "date": "Fri, 16 Oct 2026 13:12:28 GMT",
+            "x-powered-by": "Express"
+          },
+          "id": "v000705-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "3c682f4a9d0270d91ec2a317aab9bb30ecbbcd2c6f467b3b4c280685303731e2",
+          "cache": {
+            "bytes": 1097728,
+            "corruptions": 0,
+            "entries": 257,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 124,
+            "misses": 246,
+            "peak_bytes": 1097728,
+            "peak_root_reserved_bytes": 1097728,
+            "pending_writes": 0,
+            "root_observed_bytes": 1097728,
+            "writes": 105
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1819.29175,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "85372",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:30 GMT",
+            "etag": "W/\"14d7c-HO3rW13NNUw6cMm3dcIh6g\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-incheon-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "9fa9b295a79481b582a4ad38f51bafadf5a2075c3d4aa537f031ed0df3d7534a",
+          "cache": {
+            "bytes": 1093632,
+            "corruptions": 0,
+            "entries": 257,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 113,
+            "misses": 257,
+            "peak_bytes": 1093632,
+            "peak_root_reserved_bytes": 1093632,
+            "pending_writes": 0,
+            "root_observed_bytes": 1093632,
+            "writes": 108
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1843.4870829999998,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "85746",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:32 GMT",
+            "etag": "W/\"14ef2-QpbrtXMIoh16g9SXk/jXEg\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-incheon-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "31e3d18d8e9b70d1d8b4078b50710f3f6e68e7b5ee95de6e45fd7aebcd9662ad",
+          "cache": {
+            "bytes": 1138688,
+            "corruptions": 0,
+            "entries": 266,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 133,
+            "misses": 233,
+            "peak_bytes": 1138688,
+            "peak_root_reserved_bytes": 1138688,
+            "pending_writes": 0,
+            "root_observed_bytes": 1138688,
+            "writes": 106
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1818.808416,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "51911",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:34 GMT",
+            "etag": "W/\"cac7-KUlgTi4pSNqbHox6bPsM4A\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-jeju-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "47cf4ae242028f60154c91aeab87fdc89babeeb8b8e6b71226e24079e278c6c4",
+          "cache": {
+            "bytes": 1130496,
+            "corruptions": 0,
+            "entries": 265,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 126,
+            "misses": 240,
+            "peak_bytes": 1130496,
+            "peak_root_reserved_bytes": 1130496,
+            "pending_writes": 0,
+            "root_observed_bytes": 1130496,
+            "writes": 109
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1819.36675,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "52486",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:35 GMT",
+            "etag": "W/\"cd06-sJDdyc/+Qv557BnpqRcbww\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-jeju-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 1142784,
+            "corruptions": 0,
+            "entries": 266,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 133,
+            "misses": 243,
+            "peak_bytes": 1142784,
+            "peak_root_reserved_bytes": 1142784,
+            "pending_writes": 0,
+            "root_observed_bytes": 1142784,
+            "writes": 107
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1831.23475,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "95717",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:37 GMT",
+            "etag": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-head",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 1138688,
+            "corruptions": 0,
+            "entries": 265,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 113,
+            "misses": 263,
+            "peak_bytes": 1138688,
+            "peak_root_reserved_bytes": 1138688,
+            "pending_writes": 0,
+            "root_observed_bytes": 1138688,
+            "writes": 113
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1852.087333,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "date": "Fri, 16 Oct 2026 13:12:39 GMT",
+            "etag": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-conditional",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 304
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 1155072,
+            "corruptions": 0,
+            "entries": 270,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 102,
+            "misses": 274,
+            "peak_bytes": 1155072,
+            "peak_root_reserved_bytes": 1155072,
+            "pending_writes": 0,
+            "root_observed_bytes": 1155072,
+            "writes": 112
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1841.25075,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-type": "application/json",
+            "date": "Fri, 16 Oct 2026 13:12:41 GMT",
+            "x-powered-by": "Express"
+          },
+          "id": "v000705-head",
+          "owned_geocoder_http_requests": 0,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "9f5e74da3d9be5205c9af0b80ee0db7869ea649ef7eecf16d66a008d2553418f",
+          "cache": {
+            "bytes": 1130496,
+            "corruptions": 0,
+            "entries": 268,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 118,
+            "misses": 258,
+            "peak_bytes": 1130496,
+            "peak_root_reserved_bytes": 1130496,
+            "pending_writes": 0,
+            "root_observed_bytes": 1130496,
+            "writes": 115
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1862.345833,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "cache-control": "max-age=300",
+            "content-length": "95681",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:43 GMT",
+            "etag": "W/\"175c1-qsEbS6xaUxY0yN2Ub+tKZg\"",
+            "x-powered-by": "Express"
+          },
+          "id": "gateway-v000903-coord-ko",
+          "owned_geocoder_http_requests": 1,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "6c56434d02cdcd72e37424e3fd30fa3f3625cf82fcf24d6a4d1501fe7cdca0d2",
+          "cache": {
+            "bytes": 1224704,
+            "corruptions": 0,
+            "entries": 287,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 136,
+            "misses": 240,
+            "peak_bytes": 1224704,
+            "peak_root_reserved_bytes": 1224704,
+            "pending_writes": 0,
+            "root_observed_bytes": 1224704,
+            "writes": 121
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1881.132584,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "cache-control": "max-age=300",
+            "content-length": "95679",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:45 GMT",
+            "etag": "W/\"175bf-XquWjrbU+20Yyi1eXUQ76w\"",
+            "x-powered-by": "Express"
+          },
+          "id": "gateway-v000903-coord-ko-units",
+          "owned_geocoder_http_requests": 1,
+          "pass": "warm-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "8376d0da2d37c5667b4c022003b3f731c09686c938d156e6d3f68ac7be846836",
+          "cache": {
+            "bytes": 925696,
+            "corruptions": 147,
+            "entries": 217,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1110016,
+            "peak_root_reserved_bytes": 1089536,
+            "pending_writes": 0,
+            "root_observed_bytes": 925696,
+            "writes": 134
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1905.1248329999999,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "95717",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:47 GMT",
+            "etag": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "0eeb33547196c1fc5bcb953a16f5f1702d0c7f9fa4dd242fce135c7625afccdd",
+          "cache": {
+            "bytes": 884736,
+            "corruptions": 157,
+            "entries": 205,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1130496,
+            "peak_root_reserved_bytes": 1118208,
+            "pending_writes": 0,
+            "root_observed_bytes": 884736,
+            "writes": 133
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1899.856209,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "95664",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:49 GMT",
+            "etag": "W/\"175b0-xBvf2/VHB8slmXFxwGCN6A\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en-units",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "a1d4b19cc52da1722e6ec8100c1cc9eadd58a98829813dff3f306fb3e25210c9",
+          "cache": {
+            "bytes": 831488,
+            "corruptions": 172,
+            "entries": 195,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1093632,
+            "peak_root_reserved_bytes": 1069056,
+            "pending_writes": 0,
+            "root_observed_bytes": 831488,
+            "writes": 140
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1870.58725,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97673",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:50 GMT",
+            "etag": "W/\"17d89-yzCwWiuIt+0EoMVHLVtp1g\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "450d7a2a194d417fe7eeeaf651e8756af23729c86e0e1dd70f5596c959528474",
+          "cache": {
+            "bytes": 958464,
+            "corruptions": 138,
+            "entries": 222,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1118208,
+            "peak_root_reserved_bytes": 1114112,
+            "pending_writes": 0,
+            "root_observed_bytes": 958464,
+            "writes": 132
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 2163.167291,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97620",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:53 GMT",
+            "etag": "W/\"17d54-qrBEKPkQ4MRphXKtwFVSCw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en-units-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "f20b658d7b949aa499fe053beed3955500121d4eada33bec86d5bdf9dc401f8b",
+          "cache": {
+            "bytes": 933888,
+            "corruptions": 131,
+            "entries": 222,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1052672,
+            "peak_root_reserved_bytes": 1052672,
+            "pending_writes": 0,
+            "root_observed_bytes": 933888,
+            "writes": 136
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 2042.1720410000003,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "96051",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:55 GMT",
+            "etag": "W/\"17733-08NYhtV23wF45sUjtUbTqQ\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "0b603914a0ca9c993a1c84ca37d81b05a387b2b5d7aa1a3c8e2e019317f2cc3f",
+          "cache": {
+            "bytes": 901120,
+            "corruptions": 154,
+            "entries": 211,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1093632,
+            "peak_root_reserved_bytes": 1073152,
+            "pending_writes": 0,
+            "root_observed_bytes": 901120,
+            "writes": 141
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 2110.349625,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "96049",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:57 GMT",
+            "etag": "W/\"17731-EUvqSdFMS+irQYQPRSuB3w\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko-units",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "780886faae74fd348f1079ff0971162fc20859c3d9d39f93c3d7f9b469042f08",
+          "cache": {
+            "bytes": 901120,
+            "corruptions": 153,
+            "entries": 214,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1105920,
+            "peak_root_reserved_bytes": 1073152,
+            "pending_writes": 0,
+            "root_observed_bytes": 901120,
+            "writes": 137
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1966.33375,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97941",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:12:59 GMT",
+            "etag": "W/\"17e95-gECQo+mclROH9V6ApJcrHA\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "81c9f5322a4950726fdf4d08ce135756d11576aa7f4db0e8e925a3a99348cc08",
+          "cache": {
+            "bytes": 872448,
+            "corruptions": 151,
+            "entries": 208,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1114112,
+            "peak_root_reserved_bytes": 1085440,
+            "pending_writes": 0,
+            "root_observed_bytes": 872448,
+            "writes": 131
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1961.9675000000002,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97939",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:01 GMT",
+            "etag": "W/\"17e93-oQio8tVo+3SEoB0VRFPwug\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko-units-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "5c30897981de77dbce49095dbc4730f738de22f724cae9cab4156224b1717184",
+          "cache": {
+            "bytes": 892928,
+            "corruptions": 146,
+            "entries": 212,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1134592,
+            "peak_root_reserved_bytes": 1114112,
+            "pending_writes": 0,
+            "root_observed_bytes": 892928,
+            "writes": 127
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 2063.468417,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "67623",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:03 GMT",
+            "etag": "W/\"10827-lzLqNJIM6s4uA9QwGZgXcw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000901-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "79c32b8eab0abc9f0a8d1ae19706afe58b4a416ff89bae84ae2f75f7147fa99d",
+          "cache": {
+            "bytes": 851968,
+            "corruptions": 149,
+            "entries": 203,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1118208,
+            "peak_root_reserved_bytes": 1081344,
+            "pending_writes": 0,
+            "root_observed_bytes": 851968,
+            "writes": 120
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1905.980584,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "68246",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:05 GMT",
+            "etag": "W/\"10a96-J1MFcnUNnXKkkrvjk+UIug\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000901-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "f09c2d76752f15bb4ca7e08f8fb048303afa95f3499158c15b611cafe4142982",
+          "cache": {
+            "bytes": 937984,
+            "corruptions": 140,
+            "entries": 219,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1122304,
+            "peak_root_reserved_bytes": 1122304,
+            "pending_writes": 0,
+            "root_observed_bytes": 937984,
+            "writes": 131
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1877.6149580000001,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "50176",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:07 GMT",
+            "etag": "W/\"c400-VBnJ4n+i3ABmkwRCbJ2G6Q\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000803-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "8f2e35459c55e1704421e4e4d28fa10fdb8ab7c029fd564053a34ae98c92d23c",
+          "cache": {
+            "bytes": 913408,
+            "corruptions": 143,
+            "entries": 217,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1085440,
+            "peak_root_reserved_bytes": 1077248,
+            "pending_writes": 0,
+            "root_observed_bytes": 913408,
+            "writes": 139
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1871.74225,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "50981",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:09 GMT",
+            "etag": "W/\"c725-JxqQ4GcJIa+7Hmyj+pg+RQ\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000803-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 991232,
+            "corruptions": 136,
+            "entries": 231,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1155072,
+            "peak_root_reserved_bytes": 1142784,
+            "pending_writes": 0,
+            "root_observed_bytes": 991232,
+            "writes": 132
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1879.936834,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "0",
+            "content-type": "application/json",
+            "date": "Fri, 16 Oct 2026 13:13:10 GMT",
+            "x-powered-by": "Express"
+          },
+          "id": "v000705-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 888832,
+            "corruptions": 141,
+            "entries": 211,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1073152,
+            "peak_root_reserved_bytes": 1056768,
+            "pending_writes": 0,
+            "root_observed_bytes": 888832,
+            "writes": 140
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1907.6047919999999,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "0",
+            "content-type": "application/json",
+            "date": "Fri, 16 Oct 2026 13:13:12 GMT",
+            "x-powered-by": "Express"
+          },
+          "id": "v000705-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "3c682f4a9d0270d91ec2a317aab9bb30ecbbcd2c6f467b3b4c280685303731e2",
+          "cache": {
+            "bytes": 892928,
+            "corruptions": 140,
+            "entries": 209,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 370,
+            "peak_bytes": 1052672,
+            "peak_root_reserved_bytes": 1040384,
+            "pending_writes": 0,
+            "root_observed_bytes": 892928,
+            "writes": 133
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1848.778709,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "85372",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:14 GMT",
+            "etag": "W/\"14d7c-HO3rW13NNUw6cMm3dcIh6g\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-incheon-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "9fa9b295a79481b582a4ad38f51bafadf5a2075c3d4aa537f031ed0df3d7534a",
+          "cache": {
+            "bytes": 868352,
+            "corruptions": 135,
+            "entries": 208,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 370,
+            "peak_bytes": 1052672,
+            "peak_root_reserved_bytes": 1036288,
+            "pending_writes": 0,
+            "root_observed_bytes": 868352,
+            "writes": 130
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1867.927625,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "85746",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:16 GMT",
+            "etag": "W/\"14ef2-QpbrtXMIoh16g9SXk/jXEg\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-incheon-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "31e3d18d8e9b70d1d8b4078b50710f3f6e68e7b5ee95de6e45fd7aebcd9662ad",
+          "cache": {
+            "bytes": 860160,
+            "corruptions": 152,
+            "entries": 200,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 366,
+            "peak_bytes": 1089536,
+            "peak_root_reserved_bytes": 1081344,
+            "pending_writes": 0,
+            "root_observed_bytes": 860160,
+            "writes": 125
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1915.0636250000002,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "51911",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:18 GMT",
+            "etag": "W/\"cac7-KUlgTi4pSNqbHox6bPsM4A\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-jeju-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "47cf4ae242028f60154c91aeab87fdc89babeeb8b8e6b71226e24079e278c6c4",
+          "cache": {
+            "bytes": 798720,
+            "corruptions": 165,
+            "entries": 185,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 366,
+            "peak_bytes": 1085440,
+            "peak_root_reserved_bytes": 1073152,
+            "pending_writes": 0,
+            "root_observed_bytes": 798720,
+            "writes": 122
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1901.552667,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "52486",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:20 GMT",
+            "etag": "W/\"cd06-sJDdyc/+Qv557BnpqRcbww\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-jeju-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 864256,
+            "corruptions": 152,
+            "entries": 205,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1089536,
+            "peak_root_reserved_bytes": 1060864,
+            "pending_writes": 0,
+            "root_observed_bytes": 864256,
+            "writes": 136
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1878.96325,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "95717",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:22 GMT",
+            "etag": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-head",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 905216,
+            "corruptions": 137,
+            "entries": 211,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1085440,
+            "peak_root_reserved_bytes": 1069056,
+            "pending_writes": 0,
+            "root_observed_bytes": 905216,
+            "writes": 128
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1887.250667,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "date": "Fri, 16 Oct 2026 13:13:24 GMT",
+            "etag": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-conditional",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 304
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 937984,
+            "corruptions": 126,
+            "entries": 226,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1105920,
+            "peak_root_reserved_bytes": 1105920,
+            "pending_writes": 0,
+            "root_observed_bytes": 937984,
+            "writes": 132
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1889.118917,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-type": "application/json",
+            "date": "Fri, 16 Oct 2026 13:13:26 GMT",
+            "x-powered-by": "Express"
+          },
+          "id": "v000705-head",
+          "owned_geocoder_http_requests": 0,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "9f5e74da3d9be5205c9af0b80ee0db7869ea649ef7eecf16d66a008d2553418f",
+          "cache": {
+            "bytes": 876544,
+            "corruptions": 160,
+            "entries": 204,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1097728,
+            "peak_root_reserved_bytes": 1081344,
+            "pending_writes": 0,
+            "root_observed_bytes": 876544,
+            "writes": 126
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1937.2293750000001,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "cache-control": "max-age=300",
+            "content-length": "95681",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:28 GMT",
+            "etag": "W/\"175c1-qsEbS6xaUxY0yN2Ub+tKZg\"",
+            "x-powered-by": "Express"
+          },
+          "id": "gateway-v000903-coord-ko",
+          "owned_geocoder_http_requests": 1,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "6c56434d02cdcd72e37424e3fd30fa3f3625cf82fcf24d6a4d1501fe7cdca0d2",
+          "cache": {
+            "bytes": 942080,
+            "corruptions": 154,
+            "entries": 218,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 1175552,
+            "peak_root_reserved_bytes": 1146880,
+            "pending_writes": 0,
+            "root_observed_bytes": 942080,
+            "writes": 132
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1959.033917,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "cache-control": "max-age=300",
+            "content-length": "95679",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:30 GMT",
+            "etag": "W/\"175bf-XquWjrbU+20Yyi1eXUQ76w\"",
+            "x-powered-by": "Express"
+          },
+          "id": "gateway-v000903-coord-ko-units",
+          "owned_geocoder_http_requests": 1,
+          "pass": "corrupt-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "8376d0da2d37c5667b4c022003b3f731c09686c938d156e6d3f68ac7be846836",
+          "cache": {
+            "bytes": 765952,
+            "corruptions": 0,
+            "entries": 182,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 765952,
+            "peak_root_reserved_bytes": 765952,
+            "pending_writes": 0,
+            "root_observed_bytes": 765952,
+            "writes": 182
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1881.819125,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "95717",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:31 GMT",
+            "etag": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "0eeb33547196c1fc5bcb953a16f5f1702d0c7f9fa4dd242fce135c7625afccdd",
+          "cache": {
+            "bytes": 819200,
+            "corruptions": 0,
+            "entries": 188,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 819200,
+            "peak_root_reserved_bytes": 819200,
+            "pending_writes": 0,
+            "root_observed_bytes": 819200,
+            "writes": 188
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1902.44725,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "95664",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:33 GMT",
+            "etag": "W/\"175b0-xBvf2/VHB8slmXFxwGCN6A\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en-units",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "a1d4b19cc52da1722e6ec8100c1cc9eadd58a98829813dff3f306fb3e25210c9",
+          "cache": {
+            "bytes": 823296,
+            "corruptions": 0,
+            "entries": 189,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 823296,
+            "peak_root_reserved_bytes": 823296,
+            "pending_writes": 0,
+            "root_observed_bytes": 823296,
+            "writes": 189
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1883.353375,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97673",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:35 GMT",
+            "etag": "W/\"17d89-yzCwWiuIt+0EoMVHLVtp1g\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "450d7a2a194d417fe7eeeaf651e8756af23729c86e0e1dd70f5596c959528474",
+          "cache": {
+            "bytes": 839680,
+            "corruptions": 0,
+            "entries": 193,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 839680,
+            "peak_root_reserved_bytes": 839680,
+            "pending_writes": 0,
+            "root_observed_bytes": 839680,
+            "writes": 193
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1888.0824579999999,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97620",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:37 GMT",
+            "etag": "W/\"17d54-qrBEKPkQ4MRphXKtwFVSCw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-en-units-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "f20b658d7b949aa499fe053beed3955500121d4eada33bec86d5bdf9dc401f8b",
+          "cache": {
+            "bytes": 790528,
+            "corruptions": 0,
+            "entries": 185,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 790528,
+            "peak_root_reserved_bytes": 790528,
+            "pending_writes": 0,
+            "root_observed_bytes": 790528,
+            "writes": 185
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1917.3461249999998,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "96051",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:39 GMT",
+            "etag": "W/\"17733-08NYhtV23wF45sUjtUbTqQ\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "0b603914a0ca9c993a1c84ca37d81b05a387b2b5d7aa1a3c8e2e019317f2cc3f",
+          "cache": {
+            "bytes": 741376,
+            "corruptions": 0,
+            "entries": 173,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 741376,
+            "peak_root_reserved_bytes": 741376,
+            "pending_writes": 0,
+            "root_observed_bytes": 741376,
+            "writes": 173
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1910.2073750000002,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "96049",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:41 GMT",
+            "etag": "W/\"17731-EUvqSdFMS+irQYQPRSuB3w\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko-units",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "780886faae74fd348f1079ff0971162fc20859c3d9d39f93c3d7f9b469042f08",
+          "cache": {
+            "bytes": 819200,
+            "corruptions": 0,
+            "entries": 188,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 819200,
+            "peak_root_reserved_bytes": 819200,
+            "pending_writes": 0,
+            "root_observed_bytes": 819200,
+            "writes": 188
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1878.406666,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97941",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:43 GMT",
+            "etag": "W/\"17e95-gECQo+mclROH9V6ApJcrHA\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "81c9f5322a4950726fdf4d08ce135756d11576aa7f4db0e8e925a3a99348cc08",
+          "cache": {
+            "bytes": 815104,
+            "corruptions": 0,
+            "entries": 187,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 815104,
+            "peak_root_reserved_bytes": 815104,
+            "pending_writes": 0,
+            "root_observed_bytes": 815104,
+            "writes": 187
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1872.3180419999999,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "97939",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:45 GMT",
+            "etag": "W/\"17e93-oQio8tVo+3SEoB0VRFPwug\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-ko-units-airkorea",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "5c30897981de77dbce49095dbc4730f738de22f724cae9cab4156224b1717184",
+          "cache": {
+            "bytes": 794624,
+            "corruptions": 0,
+            "entries": 185,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 794624,
+            "peak_root_reserved_bytes": 794624,
+            "pending_writes": 0,
+            "root_observed_bytes": 794624,
+            "writes": 185
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1867.515625,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "67623",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:47 GMT",
+            "etag": "W/\"10827-lzLqNJIM6s4uA9QwGZgXcw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000901-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "79c32b8eab0abc9f0a8d1ae19706afe58b4a416ff89bae84ae2f75f7147fa99d",
+          "cache": {
+            "bytes": 831488,
+            "corruptions": 0,
+            "entries": 191,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 831488,
+            "peak_root_reserved_bytes": 831488,
+            "pending_writes": 0,
+            "root_observed_bytes": 831488,
+            "writes": 191
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1873.482541,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "68246",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:49 GMT",
+            "etag": "W/\"10a96-J1MFcnUNnXKkkrvjk+UIug\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000901-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "f09c2d76752f15bb4ca7e08f8fb048303afa95f3499158c15b611cafe4142982",
+          "cache": {
+            "bytes": 806912,
+            "corruptions": 0,
+            "entries": 185,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 806912,
+            "peak_root_reserved_bytes": 806912,
+            "pending_writes": 0,
+            "root_observed_bytes": 806912,
+            "writes": 185
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1856.665417,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "50176",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:50 GMT",
+            "etag": "W/\"c400-VBnJ4n+i3ABmkwRCbJ2G6Q\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000803-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "8f2e35459c55e1704421e4e4d28fa10fdb8ab7c029fd564053a34ae98c92d23c",
+          "cache": {
+            "bytes": 782336,
+            "corruptions": 0,
+            "entries": 183,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 782336,
+            "peak_root_reserved_bytes": 782336,
+            "pending_writes": 0,
+            "root_observed_bytes": 782336,
+            "writes": 183
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1925.735167,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "50981",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:52 GMT",
+            "etag": "W/\"c725-JxqQ4GcJIa+7Hmyj+pg+RQ\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000803-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 749568,
+            "corruptions": 0,
+            "entries": 173,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 749568,
+            "peak_root_reserved_bytes": 749568,
+            "pending_writes": 0,
+            "root_observed_bytes": 749568,
+            "writes": 173
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1858.494917,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "0",
+            "content-type": "application/json",
+            "date": "Fri, 16 Oct 2026 13:13:54 GMT",
+            "x-powered-by": "Express"
+          },
+          "id": "v000705-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 786432,
+            "corruptions": 0,
+            "entries": 180,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 786432,
+            "peak_root_reserved_bytes": 786432,
+            "pending_writes": 0,
+            "root_observed_bytes": 786432,
+            "writes": 180
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1852.615417,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "0",
+            "content-type": "application/json",
+            "date": "Fri, 16 Oct 2026 13:13:56 GMT",
+            "x-powered-by": "Express"
+          },
+          "id": "v000705-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "3c682f4a9d0270d91ec2a317aab9bb30ecbbcd2c6f467b3b4c280685303731e2",
+          "cache": {
+            "bytes": 741376,
+            "corruptions": 0,
+            "entries": 171,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 370,
+            "peak_bytes": 741376,
+            "peak_root_reserved_bytes": 741376,
+            "pending_writes": 0,
+            "root_observed_bytes": 741376,
+            "writes": 171
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1861.954625,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "85372",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:13:58 GMT",
+            "etag": "W/\"14d7c-HO3rW13NNUw6cMm3dcIh6g\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-incheon-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "9fa9b295a79481b582a4ad38f51bafadf5a2075c3d4aa537f031ed0df3d7534a",
+          "cache": {
+            "bytes": 753664,
+            "corruptions": 0,
+            "entries": 173,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 370,
+            "peak_bytes": 753664,
+            "peak_root_reserved_bytes": 753664,
+            "pending_writes": 0,
+            "root_observed_bytes": 753664,
+            "writes": 173
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1842.834334,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "85746",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:14:00 GMT",
+            "etag": "W/\"14ef2-QpbrtXMIoh16g9SXk/jXEg\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-incheon-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "31e3d18d8e9b70d1d8b4078b50710f3f6e68e7b5ee95de6e45fd7aebcd9662ad",
+          "cache": {
+            "bytes": 733184,
+            "corruptions": 0,
+            "entries": 174,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 366,
+            "peak_bytes": 733184,
+            "peak_root_reserved_bytes": 733184,
+            "pending_writes": 0,
+            "root_observed_bytes": 733184,
+            "writes": 174
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1879.4720419999999,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "51911",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:14:02 GMT",
+            "etag": "W/\"cac7-KUlgTi4pSNqbHox6bPsM4A\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-jeju-en",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "47cf4ae242028f60154c91aeab87fdc89babeeb8b8e6b71226e24079e278c6c4",
+          "cache": {
+            "bytes": 798720,
+            "corruptions": 0,
+            "entries": 185,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 366,
+            "peak_bytes": 798720,
+            "peak_root_reserved_bytes": 798720,
+            "pending_writes": 0,
+            "root_observed_bytes": 798720,
+            "writes": 185
+          },
+          "disabled_acquisition_attempts": 192,
+          "elapsed_ms": 1933.268333,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "52486",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:14:04 GMT",
+            "etag": "W/\"cd06-sJDdyc/+Qv557BnpqRcbww\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-jeju-ko",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 765952,
+            "corruptions": 0,
+            "entries": 180,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 765952,
+            "peak_root_reserved_bytes": 765952,
+            "pending_writes": 0,
+            "root_observed_bytes": 765952,
+            "writes": 180
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1878.385458,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-length": "95717",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:14:06 GMT",
+            "etag": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-head",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 815104,
+            "corruptions": 0,
+            "entries": 187,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 815104,
+            "peak_root_reserved_bytes": 815104,
+            "pending_writes": 0,
+            "root_observed_bytes": 815104,
+            "writes": 187
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1888.228833,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "date": "Fri, 16 Oct 2026 13:14:08 GMT",
+            "etag": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+            "x-powered-by": "Express"
+          },
+          "id": "v000903-conditional",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 304
+        },
+        {
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "cache": {
+            "bytes": 778240,
+            "corruptions": 0,
+            "entries": 184,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 778240,
+            "peak_root_reserved_bytes": 778240,
+            "pending_writes": 0,
+            "root_observed_bytes": 778240,
+            "writes": 184
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1847.926709,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "content-type": "application/json",
+            "date": "Fri, 16 Oct 2026 13:14:09 GMT",
+            "x-powered-by": "Express"
+          },
+          "id": "v000705-head",
+          "owned_geocoder_http_requests": 0,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "9f5e74da3d9be5205c9af0b80ee0db7869ea649ef7eecf16d66a008d2553418f",
+          "cache": {
+            "bytes": 778240,
+            "corruptions": 0,
+            "entries": 182,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 778240,
+            "peak_root_reserved_bytes": 778240,
+            "pending_writes": 0,
+            "root_observed_bytes": 778240,
+            "writes": 182
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1893.141875,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "cache-control": "max-age=300",
+            "content-length": "95681",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:14:11 GMT",
+            "etag": "W/\"175c1-qsEbS6xaUxY0yN2Ub+tKZg\"",
+            "x-powered-by": "Express"
+          },
+          "id": "gateway-v000903-coord-ko",
+          "owned_geocoder_http_requests": 1,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        },
+        {
+          "body_sha256": "6c56434d02cdcd72e37424e3fd30fa3f3625cf82fcf24d6a4d1501fe7cdca0d2",
+          "cache": {
+            "bytes": 790528,
+            "corruptions": 0,
+            "entries": 185,
+            "errors": 0,
+            "evictions": 0,
+            "hits": 0,
+            "misses": 376,
+            "peak_bytes": 790528,
+            "peak_root_reserved_bytes": 790528,
+            "pending_writes": 0,
+            "root_observed_bytes": 790528,
+            "writes": 185
+          },
+          "disabled_acquisition_attempts": 194,
+          "elapsed_ms": 1874.178,
+          "headers": {
+            "access-control-allow-origin": "*",
+            "cache-control": "max-age=300",
+            "content-length": "95679",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Fri, 16 Oct 2026 13:14:13 GMT",
+            "etag": "W/\"175bf-XquWjrbU+20Yyi1eXUQ76w\"",
+            "x-powered-by": "Express"
+          },
+          "id": "gateway-v000903-coord-ko-units",
+          "owned_geocoder_http_requests": 1,
+          "pass": "lost-disk-empty-ram",
+          "status": 200
+        }
+      ],
+      "s3_requests": 229764,
+      "scope": "owned loopback library HTTP example with injected clock; canonical CatalogStore seed + fresh S3Source; not production startup/AWS/latency proof"
+    }
+  },
+  "started_at_utc": "2026-10-16T13:11:16+00:00",
+  "unexplained_differences": [],
+  "verdict": "PASS",
+  "workload": {
+    "passes": [
+      "cold-empty-ram-and-disk",
+      "warm-disk-empty-ram",
+      "corrupt-disk-empty-ram",
+      "lost-disk-empty-ram"
+    ],
+    "path": "server2/tests/integration/fixtures/kma-rich-replay.json",
+    "requests": 23,
+    "sha256": "95241db12dfcac706f9761f325d23e4cac5caf4ff0d5c131f802977ccaadd415"
+  }
+}

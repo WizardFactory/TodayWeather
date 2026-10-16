@@ -1,5 +1,7 @@
 //! Offline canonical S3 whole-response verifier; no dotenv or production provider roots.
 //! Arguments: task-owned S3 loopback endpoint, gzip oracle fixture, disposable cache directory.
+#[path = "kma_s3_replay/rich.rs"]
+mod rich;
 use axum::{Router, routing::any};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
@@ -151,7 +153,13 @@ async fn seed(endpoint: &str, fixture: &Value) {
             DataGoKrFamily::MidLandFcst | DataGoKrFamily::MidTa => {
                 Target::Region(run["code"].as_str().unwrap().into())
             }
-            _ => Target::Grid { nx: 60, ny: 127 },
+            _ => Target::Grid {
+                nx: run.get("grid").and_then(|g| g["nx"].as_i64()).unwrap_or(60) as u16,
+                ny: run
+                    .get("grid")
+                    .and_then(|g| g["ny"].as_i64())
+                    .unwrap_or(127) as u16,
+            },
         };
         let request = DataGoKrRequest::new(family, target, publication).unwrap();
         let pages = run["pages"].as_array().unwrap();
@@ -236,6 +244,7 @@ async fn response(
     legacy_url: &str,
     now: f64,
     case: &Value,
+    fixture: &Value,
     phase: &str,
 ) -> Result<Value, Box<dyn std::error::Error>> {
     let disabled = Arc::new(Disabled::default());
@@ -244,29 +253,44 @@ async fn response(
         4,
     ));
     let cache = transport.raw_cache();
-    let source = Arc::new(S3Source::new(
-        (*transport).clone(),
-        Arc::new(move || now),
-        disabled.clone(),
-        disabled.clone(),
-    )?);
+    let source = Arc::new(
+        S3Source::new(
+            (*transport).clone(),
+            Arc::new(move || now),
+            disabled.clone(),
+            disabled.clone(),
+        )?
+        .with_air(
+            None,
+            rich::restored_air(fixture, (*transport).clone(), now)?,
+        ),
+    );
     let dispatcher = BackendDispatcher::legacy(legacy_url)?;
     let kma = Arc::new(KmaBackend::new(
         source,
         Arc::new(move || now),
         AssemblyConfig::default(),
     ));
-    let gateway = Gateway::new(disabled.clone(), dispatcher.clone()).with_direct(Arc::new(
+    let mut gateway = Gateway::new(disabled.clone(), dispatcher.clone()).with_direct(Arc::new(
         DirectRoutes::new(
-            kma,
+            kma.clone(),
             DirectFamilies {
                 kma_v000903: true,
                 kma_v000901: true,
                 town: true,
             },
-            dispatcher,
+            dispatcher.clone(),
         ),
     ));
+    let coord = if case["coord_provider"] == true {
+        let (geocoder, task, count) = rich::coord_geocoder(fixture, (*transport).clone()).await?;
+        kma.register(&dispatcher);
+        KmaBackend::select(&dispatcher, server2::gateway::backend::BackendMode::Native)?;
+        gateway = gateway.with_weather_geocoder(geocoder, vec![server2::gateway::Version::V000903]);
+        Some((task, count))
+    } else {
+        None
+    };
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
     let base = format!("http://{}", listener.local_addr()?);
     // Use production routing. Wrapping this in routing::any would strip HEAD's
@@ -326,8 +350,12 @@ async fn response(
         body.len()
     );
     task.abort();
+    let owned_geocoder_http_requests = coord.map_or(0, |(task, count)| {
+        task.abort();
+        count.load(Ordering::Relaxed)
+    });
     Ok(
-        json!({"id":case["id"],"pass":phase,"status":status,"headers":headers,"body_base64":STANDARD.encode(&body),"elapsed_ms":elapsed,"cache":cache_metrics,"disabled_acquisition_attempts":disabled.attempts.load(Ordering::Relaxed)}),
+        json!({"owned_geocoder_http_requests":owned_geocoder_http_requests,"id":case["id"],"pass":phase,"status":status,"headers":headers,"body_base64":STANDARD.encode(&body),"elapsed_ms":elapsed,"cache":cache_metrics,"disabled_acquisition_attempts":disabled.attempts.load(Ordering::Relaxed)}),
     )
 }
 
@@ -360,6 +388,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let fixture: Value = serde_json::from_str(&text)?;
     seed(&args[0], &fixture).await;
+    rich::seed(&args[0], &fixture).await?;
     let now = server2::history::legacy::parse_iso(fixture["clock"].as_str().unwrap())
         .ok_or("oracle clock")? as f64;
     let legacy_count = Arc::new(AtomicUsize::new(0));
@@ -420,14 +449,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            records.push(response(&args[0], &dir, &legacy_url, now, case, phase).await?);
+            records.push(response(&args[0], &dir, &legacy_url, now, case, &fixture, phase).await?);
         }
     }
     legacy_task.abort();
     println!(
         "{}",
         serde_json::to_string(
-            &json!({"records":records,"legacy_requests":legacy_count.load(Ordering::Relaxed),"provider_requests":0,"profile":if cfg!(debug_assertions){"debug"}else{"release"},"scope":"owned loopback library HTTP example with injected clock; canonical CatalogStore seed + fresh S3Source; not production startup/AWS/latency proof"})
+            &json!({"records":records,"legacy_requests":legacy_count.load(Ordering::Relaxed),"provider_requests":0,"provider_requests_scope":"weather raw reacquisition only; owned geocoder HTTP counted per response","external_http_requests":0,"profile":if cfg!(debug_assertions){"debug"}else{"release"},"scope":"owned loopback library HTTP example with injected clock; canonical CatalogStore seed + fresh S3Source; not production startup/AWS/latency proof"})
         )?
     );
     Ok(())
