@@ -63,6 +63,26 @@
       "path": "plans/issue-2742.md",
       "category": "documentation",
       "reason": "S15b-4b split (4b-1/4b-2/4b-3), sources and scenarios of 4b-1"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-gateway.sequence.json",
+      "category": "documentation",
+      "reason": "Update maintained gateway sequence evidence and native terminal-error/retry semantics for S15b-4b1."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-gateway.html",
+      "category": "documentation",
+      "reason": "Regenerate gateway sequence HTML with Archify from the declared JSON."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.json",
+      "category": "documentation",
+      "reason": "Correct overview cold-cell acquisition and disposable cache policy; pin current source evidence."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.html",
+      "category": "documentation",
+      "reason": "Regenerate overview HTML with Archify from the declared JSON."
     }
   ],
   "declaration_record": "https://github.com/WizardFactory/TodayWeather/issues/2742#issuecomment-6206378683",

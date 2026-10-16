@@ -2628,6 +2628,15 @@ unused. The backend answers it as a dependency failure
 and counts it in `server2_gateway_native_defects_total`. It never forwards. `LegacyOnly` is now a
 test-only source.
 
+Maintained diagrams: [gateway ownership and terminal errors](diagrams/server2-gateway.html)
+([source JSON](diagrams/server2-gateway.sequence.json)) and the
+[server2 overview](diagrams/server2.html) ([source JSON](diagrams/server2.json)) pin code evidence
+to `f5184d5a`. Native errors terminate without a legacy hop; the selected legacy HTTP adapter
+retains its bounded retries during coexistence. Explicit unknown-town and KR-remap forwards
+remain S15b-4b-2 work and must be removed before go-live. S3 is authoritative; disposable RAM
+and local disk caches are allowed, while bounded disk caching, packs and EC2 sizing remain
+S15b-4c work rather than an implemented capability of this increment.
+
 **Verification** (local, no provider):
 
 | Check | Result |
