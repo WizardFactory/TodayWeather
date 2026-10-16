@@ -2,28 +2,29 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "TodayWeather push: settings to notification",
+    "title": "TodayWeather push: optional SQLite path",
     "locale": "en",
     "quality_profile": "showcase",
     "viewBox": [
-      1360,
+      1240,
       590
     ],
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "125e821bc029b9830cf7d8b23f5211e7c20867e2",
+      "revision": "def509aa5737962eb5f408dc127f6674c7869b4a",
       "provider": "github",
       "link_mode": "local-only"
-    }
+    },
+    "output": "docs/architecture/diagrams/push-notifications.html"
   },
   "components": [
     {
       "id": "settings",
       "type": "frontend",
       "label": "App push settings",
-      "sublabel": "Firebase token + local pushData2",
+      "sublabel": "Valid token + local pushData2",
       "pos": [
-        40,
+        40.0,
         85
       ],
       "size": [
@@ -32,7 +33,9 @@
       ],
       "sources": [
         {
-          "path": "client/www/js/service.push.js"
+          "path": "client/www/js/service.push.js",
+          "line": 808,
+          "end_line": 828
         },
         {
           "path": "client/www/js/service.firebase.js"
@@ -45,7 +48,7 @@
       "label": "CloudFront",
       "sublabel": "Push goes directly to EC2",
       "pos": [
-        400,
+        360.0,
         85
       ],
       "size": [
@@ -59,7 +62,7 @@
       "label": "Service push API",
       "sublabel": "tw-svc POST / PUT / DELETE",
       "pos": [
-        760,
+        680.0,
         85
       ],
       "size": [
@@ -84,7 +87,7 @@
       "label": "SQLite push file",
       "sublabel": "tw-svc PUSH_DB_PATH",
       "pos": [
-        1120,
+        1000.0,
         85
       ],
       "size": [
@@ -109,7 +112,7 @@
       "label": "Notification handling",
       "sublabel": "Tap: select city + reload",
       "pos": [
-        40,
+        40.0,
         365
       ],
       "size": [
@@ -128,7 +131,7 @@
       "label": "Push provider selection",
       "sublabel": "FCM (iOS + Android) / legacy GCM",
       "pos": [
-        400,
+        360.0,
         365
       ],
       "size": [
@@ -147,7 +150,7 @@
       "label": "push-worker on tw-svc",
       "sublabel": "one PM2 process",
       "pos": [
-        760,
+        680.0,
         365
       ],
       "size": [
@@ -172,7 +175,7 @@
       "label": "Weather service",
       "sublabel": "SERVICE_SERVER /v000902/...",
       "pos": [
-        1120,
+        1000.0,
         365
       ],
       "size": [
@@ -247,6 +250,7 @@
       "dot": "cyan",
       "title": "Settings and token changes",
       "items": [
+        "Ignore empty SDK callbacks; keep A until valid B.",
         "POST /v000902/push-list saves alarm / alert settings on tw-svc.",
         "PUT /v000902/push moves every record of the old token; DELETE by city.",
         "Ten service workers write one SQLite file: async lock, temp file, rename."
@@ -267,7 +271,7 @@
       "items": [
         "PUSH_STORE=sqlite + PUSH_DB_PATH; unset to return to MongoDB.",
         "Existing Mongo records are not imported; clients re-post on launch.",
-        "Deployment, Firebase credentials and device delivery unverified."
+        "SQLite worker deployment is not established by this diagram."
       ]
     }
   ]
