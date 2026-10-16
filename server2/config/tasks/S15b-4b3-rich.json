@@ -23,7 +23,9 @@
     "server2/tools/golden/kma_s3_rich/package.json",
     "server2/tools/golden/kma_s3_rich/package-lock.json",
     "server2/tests/domestic/source_s3.rs",
-    "server2/tests/storage/catalog_peer.py"
+    "server2/tests/storage/catalog_peer.py",
+    "server2/tools/check_placement.py",
+    "server2/tools/test_placement.py"
   ],
   "outside": [
     {
@@ -85,6 +87,11 @@
       "path": "docs/evidence/tasks/issue-2742-s15b4b3-rich/capture.json",
       "category": "documentation",
       "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": ".github/workflows/server2.yml",
+      "category": "ci-wiring",
+      "reason": "Parent approved foundation-only exact45minute timeout after actual30minute cancellation during finalmusl compile; golden30/allsteps/permissions unchanged. Strictaudit andregression enforce45/30 exact."
     }
   ],
   "verification_exception": "Only server2/tools/golden/kma_s3_rich offline recorder/helpers may read/execute existing server/ collection/conversion/HTTP assembly as verification target, fixed Node16 and network/DB boundary doubles, no legacy edits/private configuration/livecalls/runtime/build legacy dependency; same named parent-approved recorder exception expanded to explicitly retained rich increment before edits.",

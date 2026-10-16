@@ -70,3 +70,24 @@ parallel code Green at2.801s, imageGET8/8/9ms/rows4. Production source/decoder,
 whole92fullGIFraw and independent expected responses are unchanged. S20a combined
 runtime14/14PASS; integration Clippy andfull92replay PASS with8deliberateperturbation differences;
 CI andindependent integrationreview remain pending in the PR.
+
+
+## CI budget correction after QA2
+
+QA2 PASS on6a1493fb/base171472c5 and originalCI cancellation remain preserved.
+Run38906577983 passed893 Rust tests and both core/rich paired replay workloads,
+then GitHub cancelled the finalmusl compile at the foundation job's30minute cap.
+This is not a completed CI PASS. The approved correction changes foundation to
+exactly45minutes and retains goldens at exactly30. Permissions, steps, actions,
+commands, artifacts, application deadlines and all verification gates stay intact.
+The strict placement auditor and independent-budget regression enforce those
+exact values and reject nearby/larger alternatives; no blanket timeout range.
+
+This correction changes YAML/Python/declaration only. The unchanged Rust and
+replay successes are reused with their original head/run identity; no production
+Cargo rebuild or new full-response run was made for this edit. The first full
+placement-test invocation lackedrustc onPATH and errored at its synthetic compiler
+controls; that environmentfailure is retained, followed by the complete43test
+PASS using the existing toolchain. Actualcurrent workflow audit passes and proves
+that only the first timeout value changed. Freshcurrent-head CI and independent
+review3 must finish before merge-readiness can be claimed.
