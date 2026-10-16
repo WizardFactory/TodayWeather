@@ -56,9 +56,25 @@
     "memory_gib": 4,
     "spot_instances": 1,
     "api_processes": 1,
-    "ephemeral_root_for_os_and_logs_only": true,
     "persistent_weather_serving_volume": false,
-    "measured_target": false
+    "measured_target": false,
+    "disposable_root_for_os_logs_and_verified_raw_cache": true,
+    "recommended_root_gp3_gib": 32,
+    "initial_cache_cap_bytes": 8589934592,
+    "cache_entries_per_namespace": 131072,
+    "cache_capacity_scope": "dedicated root managed raw and temporary allocated bytes across all namespaces; current namespace eviction, insufficient space skips disk fill; same cap for shared processes",
+    "capacity_assumptions_gib": {
+      "os": 8,
+      "retained_binaries": 1,
+      "bounded_logs": 2,
+      "global_cache_cap": 8,
+      "non_cache_peak_temporary": 2,
+      "swap": 0
+    },
+    "minimum_free_fraction": 0.25,
+    "computed_root_minimum_gib": 28,
+    "measured_host_iops_or_p95": false,
+    "cache_truth": "S3; loss/corruption/full disk are safe misses; mutable catalog/state/budget/push/geocode excluded"
   },
   "runtime": {
     "rust": "1.99.0",
@@ -80,7 +96,7 @@
       "GEOCODER_KAKAO_KEYS",
       "GEOCODER_GOOGLE_KEY"
     ],
-    "source": "server2/.env, a private copy of the legacy server/.env (AK decision 2026-10-15, S10e #2753); the server2-only values SERVER2_S3_BUCKET and SERVER2_S3_REGION are added there",
+    "source": "server2/.env, a private copy of the legacy server/.env (AK decision 2026-10-15, S10e #2753); the server2-only values SERVER2_S3_BUCKET and SERVER2_S3_REGION are added there; optional disposable cache directory/cap are server2-only operational values",
     "values_in_git": false,
     "separate_from_legacy": false,
     "quota_units": "data.go.kr calls; VC records; geocoder chain calls",
@@ -117,11 +133,12 @@
     "unexpected_loss": "acknowledged state/records must already be S3 durable; drain is not durability guarantee"
   },
   "rollback": {
-    "legacy_kept_for_cold_cells": true,
+    "legacy_kept_for_cold_cells": false,
     "weather_geocode_switch_as_unit": true,
     "cloudfront_cache_rehearsal_required": true,
     "new_registration_state_preserved": true,
-    "legacy_registration_migration": false
+    "legacy_registration_migration": true,
+    "retirement_contract": "AK later instruction: no legacy dependency or precollection after go-live; S20 must verify request-time acquisition and partial missing-data/error behavior"
   },
   "scale_out": "plan only: independent caches, S3 CAS/reservations/fetch/capture ownership and bounded warm-up; no shared cache"
 }

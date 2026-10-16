@@ -293,6 +293,9 @@ impl<T> BoundedS3<T> {
     }
 }
 impl<T: crate::storage::ObjectTransport> crate::storage::ObjectTransport for BoundedS3<T> {
+    fn raw_cache(&self) -> Option<Arc<crate::cache::disk::DiskCache>> {
+        self.inner.raw_cache()
+    }
     async fn put(&self, record: &crate::storage::PreparedRecord) -> Result<u16, Error> {
         let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
         self.inner.put(record).await

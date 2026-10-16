@@ -170,18 +170,21 @@ async fn body(gateway: &server2::gateway::Gateway, path: &str) -> (u16, Vec<u8>)
 
 /// The only `SERVER2_*` names server2 reads (S10e): coexistence routing (temporary until
 /// legacy retirement) and the raw-record bucket and its region (S10f), values legacy does not
-/// have.
-const SERVER2_ONLY: [&str; 5] = [
+/// have, plus the explicitly approved disposable-cache directory and capacity.
+const SERVER2_ONLY: [&str; 7] = [
     "SERVER2_GATEWAY_LEGACY_URL",
     "SERVER2_NATIVE_FAMILIES",
     "SERVER2_WORLD_VERSIONS",
     "SERVER2_S3_BUCKET",
     "SERVER2_S3_REGION",
+    "SERVER2_LOCAL_CACHE_DIR",
+    "SERVER2_LOCAL_CACHE_MAX_BYTES",
 ];
 
 /// S10e (#2753, AK 2026-10-15): a legacy `server/.env`, plus the coexistence routing entries
 /// and the server2 bucket, configures every native family. No provider key, quota, quota owner,
-/// URL, S3 credential or region, or process setting has a `SERVER2_*` name. Built at the
+/// URL or S3 credential has a new `SERVER2_*` name; bucket/region, coexistence and optional
+/// cache directory/capacity are approved server2 operational values. Built at the
 /// production roots; nothing is sent.
 #[test]
 fn legacy_env_alone_builds_every_native_family() {

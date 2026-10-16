@@ -1,0 +1,138 @@
+{
+  "executed_at_utc": "2026-10-16T07:33:51.903414+00:00",
+  "scope": "owned-loopback debug HTTP, partial KMA current inputs, no AWS/provider/GIF decode latency claim",
+  "raw": {
+    "cache_cap_bytes": 16777216,
+    "gzip_wire_bytes": 6292469,
+    "phases": [
+      {
+        "elapsed_ms": 317.533917,
+        "metrics": {
+          "bytes": 6295552,
+          "corruptions": 0,
+          "entries": 1,
+          "errors": 0,
+          "evictions": 0,
+          "hits": 0,
+          "misses": 1,
+          "peak_bytes": 6295552,
+          "peak_root_reserved_bytes": 6295552,
+          "pending_writes": 0,
+          "root_observed_bytes": 6295552,
+          "writes": 1
+        },
+        "phase": "cold-empty-ram-and-disk"
+      },
+      {
+        "elapsed_ms": 475.902916,
+        "metrics": {
+          "bytes": 6295552,
+          "corruptions": 0,
+          "entries": 1,
+          "errors": 0,
+          "evictions": 0,
+          "hits": 1,
+          "misses": 0,
+          "peak_bytes": 6295552,
+          "peak_root_reserved_bytes": 0,
+          "pending_writes": 0,
+          "root_observed_bytes": 0,
+          "writes": 0
+        },
+        "phase": "warm-disk-empty-ram"
+      },
+      {
+        "elapsed_ms": 318.827208,
+        "metrics": {
+          "bytes": 6295552,
+          "corruptions": 1,
+          "entries": 1,
+          "errors": 0,
+          "evictions": 0,
+          "hits": 0,
+          "misses": 1,
+          "peak_bytes": 6295552,
+          "peak_root_reserved_bytes": 6295552,
+          "pending_writes": 0,
+          "root_observed_bytes": 6295552,
+          "writes": 1
+        },
+        "phase": "corrupt-disk"
+      },
+      {
+        "elapsed_ms": 319.19575,
+        "metrics": {
+          "bytes": 6295552,
+          "corruptions": 0,
+          "entries": 1,
+          "errors": 0,
+          "evictions": 0,
+          "hits": 0,
+          "misses": 1,
+          "peak_bytes": 6295552,
+          "peak_root_reserved_bytes": 6295552,
+          "pending_writes": 0,
+          "root_observed_bytes": 6295552,
+          "writes": 1
+        },
+        "phase": "missing-disk"
+      }
+    ],
+    "raw_bytes": 6291456,
+    "raw_sha256": "8c5156599ab57378585af576b24b0deafb453bfdd201f9b62b2466c08c4dacdf",
+    "scope": "owned-loopback HTTP; debug build; synthetic incompressible raw image-sized payload; not GIF decoding, AWS or full KMA latency",
+    "seeded_current_publications": 3,
+    "http_counters_including_seed_publication": {
+      "raw_gets": 7,
+      "control_gets": 12
+    }
+  },
+  "native_http": [
+    {
+      "phase": "cache-unset-empty-ram",
+      "elapsed_ms": 396.09466699999984,
+      "status": 200,
+      "response_bytes": 27582,
+      "response_sha256": "7019fde165d6ea9caa4393111730f9c17a040cc5c51d1e4b0230e0562a23edd5",
+      "legacy_hops": 0,
+      "raw_gets": 3,
+      "control_gets": 371
+    },
+    {
+      "phase": "cold-empty-ram-and-disk",
+      "elapsed_ms": 377.3349159999997,
+      "status": 200,
+      "response_bytes": 27582,
+      "response_sha256": "7019fde165d6ea9caa4393111730f9c17a040cc5c51d1e4b0230e0562a23edd5",
+      "legacy_hops": 0,
+      "raw_gets": 3,
+      "control_gets": 371
+    },
+    {
+      "phase": "warm-disk-empty-ram",
+      "elapsed_ms": 373.44866599999983,
+      "status": 200,
+      "response_bytes": 27582,
+      "response_sha256": "7019fde165d6ea9caa4393111730f9c17a040cc5c51d1e4b0230e0562a23edd5",
+      "legacy_hops": 0,
+      "raw_gets": 1,
+      "control_gets": 371
+    }
+  ],
+  "native_binary_bytes": 69740288,
+  "binary_sha256": {
+    "loopback_server": "df989c817daa1cf460b804aa76bdbdc57d2d49bc600716637c0f67b20ea8cdb5",
+    "kma_cache_measure": "920f18bc837e6ab52276b65b05145c1a6d67c70fe9deb159da2555e6a022ec63"
+  },
+  "capacity_assumptions_gib": {
+    "os": 8,
+    "retained_binaries": 1,
+    "bounded_logs": 2,
+    "cache_cap": 8,
+    "other_peak_temporary": 2,
+    "swap": 0
+  },
+  "minimum_free_fraction": 0.25,
+  "computed_root_minimum_gib": 28,
+  "recommended_root_gp3_gib": 32
+}

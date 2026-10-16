@@ -6,6 +6,10 @@ use tokio::{
 };
 /// Implementations must return bounded bodies, disable hidden retries and redact URLs/errors.
 pub trait ObjectTransport: Send + Sync + 'static {
+    /// Optional verified immutable weather raw cache; mutable controls/state are excluded.
+    fn raw_cache(&self) -> Option<Arc<crate::cache::disk::DiskCache>> {
+        None
+    }
     fn put(&self, record: &PreparedRecord) -> impl Future<Output = Result<u16, Error>> + Send;
     fn head(&self, key: &str) -> impl Future<Output = Result<Object, Error>> + Send;
     fn get(&self, key: &str, maximum: usize) -> impl Future<Output = Result<Object, Error>> + Send;
@@ -67,13 +71,46 @@ impl<T: ObjectTransport> RawRecordStore<T> {
         head: Option<Object>,
     ) -> Result<RawRecord, Error> {
         // A bounded buffer slot spans GET, CPU wait and decode (including cancellation).
-        let buffer = self
-            .buffers
-            .clone()
-            .acquire_owned()
-            .await
-            .map_err(|_| Error::Transport)?;
+        let buffer = Arc::new(
+            self.buffers
+                .clone()
+                .acquire_owned()
+                .await
+                .map_err(|_| Error::Transport)?,
+        );
+        // A publish reconciliation must prove the canonical body is durable, not
+        // merely that a previously verified disposable copy agrees with HEAD.
+        let cache = if head.is_none() {
+            self.transport.raw_cache()
+        } else {
+            None
+        };
+        if let Some(cache) = &cache
+            && let Some(object) = cache.load(expected, self.limits.gzip_bytes).await
+        {
+            let agrees = head
+                .as_ref()
+                .is_none_or(|h| h.length == object.length && h.metadata == object.metadata);
+            if agrees {
+                let key = key.to_owned();
+                let id = expected.clone();
+                let limits = self.limits.clone();
+                let cpu_buffer = buffer.clone();
+                let checked = self
+                    .cpu(move || {
+                        let _buffer = cpu_buffer;
+                        decode(&key, object, &id, &limits)
+                    })
+                    .await;
+                if let Ok(record) = checked {
+                    return Ok(record);
+                }
+            }
+            cache.invalidate(expected).await;
+        }
         let object = self.transport.get(key, self.limits.gzip_bytes).await?;
+        let writer = cache.as_ref().and_then(|c| c.writer(expected));
+        let cached = writer.as_ref().map(|_| object.clone());
         if let Some(head) = head
             && (head.length != object.length || head.metadata != object.metadata)
         {
@@ -88,13 +125,17 @@ impl<T: ObjectTransport> RawRecordStore<T> {
             .acquire_owned()
             .await
             .map_err(|_| Error::Transport)?;
-        tokio::task::spawn_blocking(move || {
+        let record = tokio::task::spawn_blocking(move || {
             let _buffer = buffer;
             let _permit = permit;
             decode(&key, object, &expected, &limits)
         })
         .await
-        .map_err(|_| Error::Transport)?
+        .map_err(|_| Error::Transport)??;
+        if let (Some(writer), Some(object)) = (writer, cached) {
+            writer.enqueue(object);
+        }
+        Ok(record)
     }
     fn reconciliation_error(error: Error) -> Error {
         match error {

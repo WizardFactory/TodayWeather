@@ -1,0 +1,84 @@
+{
+  "task": "S15b-4c",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-4c.json",
+    "server2/src/cache/mod.rs",
+    "server2/src/cache/disk.rs",
+    "server2/src/storage/store.rs",
+    "server2/src/storage/transport.rs",
+    "server2/src/storage/settings.rs",
+    "server2/src/world/air_store.rs",
+    "server2/.env.example",
+    "server2/.gitignore",
+    "server2/tests/cache.rs",
+    "server2/tests/cache/",
+    "server2/examples/kma_cache_measure.rs",
+    "server2/tools/kma_cache_measure.py",
+    "server2/tools/render_cache_manual.py",
+    "server2/deploy/staging/prerequisites.json",
+    "server2/tests/gateway/runtime.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2742-s15b4c.md",
+      "category": "documentation",
+      "reason": "S15b-4c scoped intent/spec/plan, cache architecture, required setup capacity/PDF or selected sanitized measurement evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2742-s15b4c.md",
+      "category": "documentation",
+      "reason": "S15b-4c scoped intent/spec/plan, cache architecture, required setup capacity/PDF or selected sanitized measurement evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2742-s15b4c.md",
+      "category": "documentation",
+      "reason": "S15b-4c scoped intent/spec/plan, cache architecture, required setup capacity/PDF or selected sanitized measurement evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "S15b-4c scoped intent/spec/plan, cache architecture, required setup capacity/PDF or selected sanitized measurement evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-disk-cache.json",
+      "category": "documentation",
+      "reason": "S15b-4c scoped intent/spec/plan, cache architecture, required setup capacity/PDF or selected sanitized measurement evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-disk-cache.html",
+      "category": "documentation",
+      "reason": "S15b-4c scoped intent/spec/plan, cache architecture, required setup capacity/PDF or selected sanitized measurement evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-infrastructure.md",
+      "category": "documentation",
+      "reason": "S15b-4c scoped intent/spec/plan, cache architecture, required setup capacity/PDF or selected sanitized measurement evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-infrastructure.pdf",
+      "category": "documentation",
+      "reason": "S15b-4c scoped intent/spec/plan, cache architecture, required setup capacity/PDF or selected sanitized measurement evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2742-s15b4c/verification.md",
+      "category": "documentation",
+      "reason": "S15b-4c scoped intent/spec/plan, cache architecture, required setup capacity/PDF or selected sanitized measurement evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2742-s15b4c/cache-measurement.json",
+      "category": "documentation",
+      "reason": "S15b-4c scoped intent/spec/plan, cache architecture, required setup capacity/PDF or selected sanitized measurement evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2742-s15b4c/cache-measurement.png",
+      "category": "documentation",
+      "reason": "S15b-4c scoped intent/spec/plan, cache architecture, required setup capacity/PDF or selected sanitized measurement evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2742-s15b4c/capture.json",
+      "category": "documentation",
+      "reason": "S15b-4c scoped intent/spec/plan, cache architecture, required setup capacity/PDF or selected sanitized measurement evidence; no runtime implementation outside server2"
+    }
+  ]
+}
