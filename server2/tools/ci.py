@@ -56,6 +56,12 @@ def main():
     os.environ.setdefault('SERVER2_PYTHON', sys.executable)
     commands.append(['bash', 'deploy/smoke.sh', '--binary', 'target/release/server2', '--skip-reused',
                      '--out', str(root/'reports/server2-smoke/ci')])
+    # S15b-4b3: whole-response canonical S3 replay uses the same library HTTP path with
+    # fixed clock and disabled providers injected only by this isolated example.
+    commands.append(['cargo', 'build', '--locked', '--release', '--example', 'kma_s3_replay'])
+    commands.append([sys.executable, 'tools/shadow/replay.py', '--binary', 'target/release/server2',
+                     '--family', 'kma', '--self-check', '--report',
+                     str(root/'reports/server2-kma-replay/ci.json')])
     # Uses the just-built GNU binary: real private_manifest, then the non-musl
     # fence, without worker claims or any AWS/IMDS network path.
     commands.append([sys.executable, sandbox, 'manifest-functional'])

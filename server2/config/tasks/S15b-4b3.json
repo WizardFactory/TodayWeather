@@ -1,0 +1,86 @@
+{
+  "task": "S15b-4b3",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-4b3.json",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/domestic/fixtures/s3-response.json.gz",
+    "server2/tests/domestic/fixtures/S3-RESPONSE-PROVENANCE.md",
+    "server2/tools/golden/kma_s3/",
+    "server2/examples/kma_s3_replay.rs",
+    "server2/tools/shadow/kma_family.py",
+    "server2/tools/shadow/families.py",
+    "server2/tools/shadow/replay.py",
+    "server2/tests/integration/test_shadow.py",
+    "server2/tests/integration/fixtures/kma-replay.json",
+    "server2/tools/render_kma_replay_manual.py",
+    "server2/tools/ci.py",
+    "server2/tests/domestic/fixtures/ASSEMBLY-COVERAGE.md",
+    "server2/tools/shadow/smoke.py",
+    "server2/src/api/mod.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2742-s15b4b3.md",
+      "category": "documentation",
+      "reason": "S15b4b3 scoped intent/spec/plan, S3-only whole-response replay guide/diagram/PDF and selected sanitized evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2742-s15b4b3.md",
+      "category": "documentation",
+      "reason": "S15b4b3 scoped intent/spec/plan, S3-only whole-response replay guide/diagram/PDF and selected sanitized evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2742-s15b4b3.md",
+      "category": "documentation",
+      "reason": "S15b4b3 scoped intent/spec/plan, S3-only whole-response replay guide/diagram/PDF and selected sanitized evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "S15b4b3 scoped intent/spec/plan, S3-only whole-response replay guide/diagram/PDF and selected sanitized evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-replay.json",
+      "category": "documentation",
+      "reason": "S15b4b3 scoped intent/spec/plan, S3-only whole-response replay guide/diagram/PDF and selected sanitized evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-replay.html",
+      "category": "documentation",
+      "reason": "S15b4b3 scoped intent/spec/plan, S3-only whole-response replay guide/diagram/PDF and selected sanitized evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-kma-replay.md",
+      "category": "documentation",
+      "reason": "S15b4b3 scoped intent/spec/plan, S3-only whole-response replay guide/diagram/PDF and selected sanitized evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-kma-replay.pdf",
+      "category": "documentation",
+      "reason": "S15b4b3 scoped intent/spec/plan, S3-only whole-response replay guide/diagram/PDF and selected sanitized evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2742-s15b4b3/verification.md",
+      "category": "documentation",
+      "reason": "S15b4b3 scoped intent/spec/plan, S3-only whole-response replay guide/diagram/PDF and selected sanitized evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2742-s15b4b3/replay.json",
+      "category": "documentation",
+      "reason": "S15b4b3 scoped intent/spec/plan, S3-only whole-response replay guide/diagram/PDF and selected sanitized evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2742-s15b4b3/replay.png",
+      "category": "documentation",
+      "reason": "S15b4b3 scoped intent/spec/plan, S3-only whole-response replay guide/diagram/PDF and selected sanitized evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2742-s15b4b3/capture.json",
+      "category": "documentation",
+      "reason": "S15b4b3 scoped intent/spec/plan, S3-only whole-response replay guide/diagram/PDF and selected sanitized evidence; no runtime implementation outside server2"
+    }
+  ],
+  "verification_exception": "Parent2026-10-16 explicitly permits only server2/tools/golden/kma_s3 offline recorder/helpers to read/execute existing server/ collector/conversion/assembly source as verification target, pinnedNode16, network/DB boundary doubles; no legacy file edits or runtime/build dependency on legacy. Fixture outputs under server2/tests/domestic/fixtures with provenance."
+}
