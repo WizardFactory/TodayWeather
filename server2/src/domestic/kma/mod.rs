@@ -18,7 +18,7 @@ mod data;
 pub mod dateparse;
 pub mod js;
 mod mid;
-mod policy;
+pub(crate) mod policy;
 pub(crate) mod precip;
 mod present;
 pub mod qs;
@@ -154,6 +154,11 @@ pub trait KmaStore {
     fn unconsumed(&self) -> Option<String> {
         None
     }
+    /// S16: the summary inputs of a snapshot whose reads were complete, or None (nothing is
+    /// recorded for this request).
+    fn summary_inputs(&self) -> Option<crate::summary::GridInputs> {
+        None
+    }
 }
 /// The store cannot answer a call from its snapshot (a port invariant broke): end the assembly
 /// as a dependency failure. It passes every legacy `catch` (see [`js::defect`]).
@@ -231,13 +236,23 @@ pub fn assemble(
     now_ms: f64,
     config: AssemblyConfig,
 ) -> Outcome {
-    let outcome = chain::run(request, store, now_ms, config);
+    assemble_capturing(request, store, now_ms, config).0
+}
+/// [`assemble`], also returning a JSON copy of the `_getDaySummaryList` rows `getPastMid`
+/// merged (S16 grid summaries), or None when that step merged none.
+pub fn assemble_capturing(
+    request: &KmaRequest,
+    store: &dyn KmaStore,
+    now_ms: f64,
+    config: AssemblyConfig,
+) -> (Outcome, Option<Vec<OrderedJson>>) {
+    let (outcome, past) = chain::run_capturing(request, store, now_ms, config);
     match (&outcome, store.unconsumed()) {
-        (Outcome::Legacy(_) | Outcome::Defect(_), _) | (_, None) => outcome,
+        (Outcome::Legacy(_) | Outcome::Defect(_), _) | (_, None) => (outcome, past),
         // An Express 5xx ends the reply early (an escaped exception): later inputs go unused.
-        (Outcome::Status(code, _), _) if *code >= 500 => outcome,
+        (Outcome::Status(code, _), _) if *code >= 500 => (outcome, past),
         // A reply built without inputs the snapshot holds (a replayed recording): a defect.
-        (_, Some(reason)) => Outcome::Defect(reason),
+        (_, Some(reason)) => (Outcome::Defect(reason), None),
     }
 }
 

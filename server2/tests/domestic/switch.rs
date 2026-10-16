@@ -379,7 +379,20 @@ async fn provider_independent_errors_do_not_touch_the_source() {
             panic!("provider-independent error reached the data source");
         }
     }
-    let native = backend(Arc::new(NoReads));
+    struct NoSummaries;
+    impl server2::summary::SummarySink for NoSummaries {
+        fn record(
+            &self,
+            _: server2::summary::GridInputs,
+            _: Vec<server2::gateway::OrderedJson>,
+            _: f64,
+        ) {
+            panic!("provider-independent error reached the summary sink");
+        }
+    }
+    let now = clock_ms("2026-09-24T00:10:00.000Z");
+    let native = KmaBackend::new(Arc::new(NoReads), Arc::new(move || now), oracle_config())
+        .with_summaries(Some(Arc::new(NoSummaries)));
     for path in [
         "/v000903/kma/addr/중국",
         "/v000903/kma/addr/not-a-town?x=%ZZ",

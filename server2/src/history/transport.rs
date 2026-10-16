@@ -15,7 +15,7 @@ const HEADER_BYTES: usize = 8192;
 const LIST_BYTES: usize = 2 * 1024 * 1024;
 const S3_NAMESPACE: &str = "http://s3.amazonaws.com/doc/2006-03-01/";
 
-fn segment_ok(path: &str) -> bool {
+pub(crate) fn segment_ok(path: &str) -> bool {
     path.split('/')
         .all(|s| !s.is_empty() && s != "." && s != "..")
         && path
@@ -39,11 +39,11 @@ fn etag_ok(s: &str) -> bool {
             .iter()
             .all(|b| *b == 0x21 || (0x23..=0x7e).contains(b))
 }
-fn token_ok(s: &str) -> bool {
+pub(crate) fn token_ok(s: &str) -> bool {
     !s.trim().is_empty() && s.len() <= 2048 && !s.chars().any(char::is_control)
 }
 /// Single-valued, bounded headers without content encoding; returns the declared length.
-fn headers(response: &Response, cap: usize) -> Result<Option<usize>, DemandError> {
+pub(crate) fn headers(response: &Response, cap: usize) -> Result<Option<usize>, DemandError> {
     let h = response.headers();
     if h.iter()
         .map(|(k, v)| k.as_str().len() + v.as_bytes().len())
@@ -72,7 +72,7 @@ fn headers(response: &Response, cap: usize) -> Result<Option<usize>, DemandError
     }
     Ok(length)
 }
-async fn body(
+pub(crate) async fn body(
     mut response: Response,
     length: Option<usize>,
     cap: usize,
@@ -151,7 +151,7 @@ fn well_formed(text: &str) -> bool {
     root && stack.is_empty()
 }
 /// Keys of one bounded LIST page; every key must start with `prefix` and pass `valid`.
-fn decode_keys(
+pub(crate) fn decode_keys(
     bytes: &[u8],
     prefix: &str,
     valid: impl Fn(&str) -> bool,
@@ -184,7 +184,7 @@ pub(crate) fn decode_page(bytes: &[u8], prefix: &str) -> Result<DemandPage, Dema
         .ok_or(DemandError::Corrupt("demand list"))
 }
 /// One bounded ListObjectsV2 page body; the caller validates the prefix and decodes.
-async fn list_page(
+pub(crate) async fn list_page(
     t: &HttpS3Transport,
     prefix: &str,
     token: Option<&str>,

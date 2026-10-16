@@ -303,10 +303,15 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
         )
         .with_life(Some(life))
         .with_forecast(Some(kma_forecast(&s3, daily_forecast, builtins)?));
-        let kma = crate::domestic::kma::backend::select_native_versions(
+        // S16: daily summaries of natively served towns, written after the response through
+        // the same S3 admission.
+        let summaries: Arc<dyn crate::summary::SummarySink> =
+            Arc::new(crate::summary::Recorder::new(s3.clone()));
+        let kma = crate::domestic::kma::backend::select_native_versions_with(
             &backend,
             Arc::new(source),
             &families.kma_versions(),
+            Some(summaries),
         )?;
         if families.direct().any() {
             // S17b: the direct routes forward to the loopback legacy origin with the request
