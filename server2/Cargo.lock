@@ -1539,6 +1539,7 @@ dependencies = [
  "encoding_rs",
  "flate2",
  "hyper",
+ "hyper-util",
  "instant-xml",
  "md-5 0.10.6",
  "reqwest",

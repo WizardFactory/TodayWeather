@@ -98,6 +98,8 @@ fn map_geocode_error(error: crate::geocode::GeocodeError) -> GatewayError {
 #[derive(Clone)]
 pub struct Gateway {
     inner: Arc<Inner>,
+    /// S17b: listed legacy direct routes, answered before the gateway routes.
+    direct: Option<Arc<crate::api::DirectRoutes>>,
 }
 struct Inner {
     geocoder: Arc<dyn Geocoder>,
@@ -116,7 +118,13 @@ impl Gateway {
                 limit: 40,
                 deadline: PUBLIC_DEADLINE,
             }),
+            direct: None,
         }
+    }
+    /// S17b: serve the listed legacy direct routes (`SERVER2_NATIVE_FAMILIES`) beside the gateway.
+    pub fn with_direct(mut self, direct: Arc<crate::api::DirectRoutes>) -> Self {
+        self.direct = Some(direct);
+        self
     }
     /// Smaller isolated limits exercise overload and deadlines without widening production caps.
     pub fn with_limits(
@@ -136,6 +144,7 @@ impl Gateway {
                 limit,
                 deadline,
             }),
+            direct: None,
         })
     }
     pub fn inflight(&self) -> usize {
@@ -149,6 +158,12 @@ impl Gateway {
     }
     /// Records aggregate outcome counters around the unchanged request contract.
     pub async fn handle(&self, request: Request<Body>) -> Response {
+        if let Some(direct) = &self.direct
+            && direct.claims(request.method(), request.uri().path())
+        {
+            // Direct routes are not gateway requests: no gateway counters or admission.
+            return direct.handle(request).await;
+        }
         let outcome = metrics::Outcome::start();
         let response = self.respond(request).await;
         outcome.finish(response.status().as_u16());

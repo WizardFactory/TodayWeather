@@ -810,6 +810,10 @@ angular.module('service.push', [])
                     console.error(err);
                     return;
                 }
+                // Token deletion can emit null before its replacement arrives; keep the old token.
+                if (typeof token !== 'string' || token.trim().length === 0) {
+                    return;
+                }
                 console.log(JSON.stringify({ "tokenFresh": token }));
                 if (self.pushData.fcmToken != token) {
                     var firstToken = !self.pushData.fcmToken;
@@ -912,4 +916,3 @@ angular.module('service.push', [])
 
         return obj;
     });
-
