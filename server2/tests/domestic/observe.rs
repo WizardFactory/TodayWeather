@@ -951,3 +951,96 @@ async fn only_a_newer_valid_import_replaces_the_carried_seed() {
     publish_seed(&store, b"not a seed\n".to_vec(), 20261017, 5).await;
     assert_eq!(settled_registry(&peer, store).await, carried);
 }
+
+/// Current legacy Mongoose wire uses $set for an AWS-only repeat: provided numerical fields
+/// overwrite the previous city values, while omitted weather/cloud fields remain unchanged.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn same_hour_aws_and_city_restore_respects_fetched_order_and_field_presence() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    for aws_last in [true, false] {
+        let peer = Peer::new();
+        let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+        seed(&store, &[]).await;
+        let hour = p(20260924, 1000);
+        for (kind, body, content, offset) in [
+            (
+                "aws-hourly",
+                aws_page("2026.09.24.10:00", false),
+                "text/html;charset=euc-kr",
+                3000,
+            ),
+            (
+                "aws-hourly",
+                aws_page("2026.09.24.10:00", false),
+                "text/html;charset=euc-kr",
+                if aws_last { 1000 } else { 2000 },
+            ),
+            (
+                "city-obs",
+                city_page("2026.9.24.10:00"),
+                "text/html;charset=utf-8",
+                if aws_last { 2000 } else { 1000 },
+            ),
+        ] {
+            let key = server2::storage::ProviderKey::Named {
+                id: if kind == "city-obs" {
+                    "city-national"
+                } else {
+                    "aws-national"
+                }
+                .into(),
+            };
+            let record = RawRecord::new(
+                "kma-web",
+                kind,
+                &key,
+                hour.period(),
+                NOW as u64 - offset,
+                200,
+                content,
+                None,
+                body.into(),
+                &CatalogLimits::default().raw,
+            )
+            .unwrap();
+            let member = GroupMember {
+                envelope: record.envelope.clone(),
+                catalogs: vec![
+                    CatalogId::for_record(&record.envelope.identity, "20260924").unwrap(),
+                ],
+            };
+            let declaration =
+                GroupDeclaration::new(vec![member], &CatalogLimits::default()).unwrap();
+            store
+                .publish(declaration, vec![record], deadline())
+                .await
+                .unwrap();
+        }
+        let s3 = source(&peer, Arc::new(Unreachable), Arc::new(Table(Mutex::new(0))));
+        let restored = snapshot(&s3).await;
+        let rows = restored.city_hourly(&town(restored.as_ref())).unwrap();
+        let OrderedJson::Array(rows) = rows else {
+            panic!("hourly rows");
+        };
+        assert_eq!(rows.len(), 1);
+        let hourly = &rows[0];
+        assert_eq!(
+            get(hourly, "t1h").to_bytes(),
+            if aws_last {
+                b"18.4".as_slice()
+            } else {
+                b"18".as_slice()
+            }
+        );
+        assert_eq!(
+            get(hourly, "reh").to_bytes(),
+            if aws_last {
+                b"61".as_slice()
+            } else {
+                b"60".as_slice()
+            }
+        );
+        assert_eq!(get(hourly, "weather").string(), Some("맑음".into()));
+        assert_eq!(get(hourly, "cloud").to_bytes(), b"3");
+    }
+}

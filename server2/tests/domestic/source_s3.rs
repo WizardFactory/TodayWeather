@@ -50,8 +50,20 @@ pub struct Peer {
 }
 impl Peer {
     pub fn new() -> Self {
-        let mut child = Command::new("python3")
-            .arg("tests/storage/catalog_peer.py")
+        Self::spawn(false)
+    }
+    /// Rich cold restores read thousands of catalogs. Reuse bounded owned HTTP connections
+    /// instead of exhausting ephemeral ports; ordinary/fault tests retain their default peer.
+    pub fn persistent() -> Self {
+        Self::spawn(true)
+    }
+    fn spawn(persistent: bool) -> Self {
+        let mut command = Command::new("python3");
+        command.arg("tests/storage/catalog_peer.py");
+        if persistent {
+            command.arg("--persistent");
+        }
+        let mut child = command
             .current_dir(env!("CARGO_MANIFEST_DIR"))
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())

@@ -1,0 +1,102 @@
+{
+  "task": "S15b-4b3-rich",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2742",
+  "server2_paths": [
+    "server2/config/tasks/S15b-4b3-rich.json",
+    "server2/examples/kma_s3_replay.rs",
+    "server2/examples/kma_s3_replay/rich.rs",
+    "server2/tools/golden/kma_s3_rich/",
+    "server2/tests/domestic/fixtures/s3-rich-response.json.gz",
+    "server2/tests/domestic/fixtures/S3-RICH-PROVENANCE.md",
+    "server2/tests/integration/fixtures/kma-rich-replay.json",
+    "server2/tests/integration/test_shadow.py",
+    "server2/tools/shadow/kma_rich_family.py",
+    "server2/tools/shadow/families.py",
+    "server2/tools/ci.py",
+    "server2/tools/render_kma_rich_manual.py",
+    "server2/src/domestic/kma/source/life_input.rs",
+    "server2/tests/domestic/life_s3.rs",
+    "server2/src/domestic/kma/source/observe.rs",
+    "server2/tests/domestic/observe.rs",
+    "server2/src/domestic/kma/source/air_input.rs",
+    "server2/tests/domestic/air_forecast_s3.rs",
+    "server2/tools/golden/kma_s3_rich/package.json",
+    "server2/tools/golden/kma_s3_rich/package-lock.json",
+    "server2/tests/domestic/source_s3.rs",
+    "server2/tests/storage/catalog_peer.py",
+    "server2/tools/check_placement.py",
+    "server2/tools/test_placement.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2742-s15b4b3-rich.md",
+      "category": "documentation",
+      "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": "specs/issue-2742-s15b4b3-rich.md",
+      "category": "documentation",
+      "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": "plans/issue-2742-s15b4b3-rich.md",
+      "category": "documentation",
+      "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-rich-replay.json",
+      "category": "documentation",
+      "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-rich-replay.html",
+      "category": "documentation",
+      "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": "docs/operations/server2-kma-rich-replay.md",
+      "category": "documentation",
+      "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": "docs/operations/server2-kma-rich-replay.pdf",
+      "category": "documentation",
+      "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2742-s15b4b3-rich/verification.md",
+      "category": "documentation",
+      "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2742-s15b4b3-rich/replay.json",
+      "category": "documentation",
+      "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2742-s15b4b3-rich/replay.png",
+      "category": "documentation",
+      "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2742-s15b4b3-rich/capture.json",
+      "category": "documentation",
+      "reason": "Rich-input verifier intent/spec/plan, manual/PDF/diagram and selected public sanitized evidence; runtime implementation remains server2"
+    },
+    {
+      "path": ".github/workflows/server2.yml",
+      "category": "ci-wiring",
+      "reason": "Parent approved foundation-only exact45minute timeout after actual30minute cancellation during finalmusl compile; golden30/allsteps/permissions unchanged. Strictaudit andregression enforce45/30 exact."
+    }
+  ],
+  "verification_exception": "Only server2/tools/golden/kma_s3_rich offline recorder/helpers may read/execute existing server/ collection/conversion/HTTP assembly as verification target, fixed Node16 and network/DB boundary doubles, no legacy edits/private configuration/livecalls/runtime/build legacy dependency; same named parent-approved recorder exception expanded to explicitly retained rich increment before edits.",
+  "production_fix_reason": "Parent authorized first-fresh S3 KASI restoration before snapshot, within existing combined request deadline and shared owned reads; no provider call when canonical KASI is present.",
+  "station_fix_reason": "Parent authorized fetched-order and field-presence $set-equivalent same-hour AWS/city fold after actual current-legacy Mongoose5.1.2 wire capture proves newer AWS numerical fields overwrite while omitted weather/cloud remain; no validator/query/acquisition-policy change.",
+  "cold_optimization_reason": "Parent approved bounded8 area restoration with AREAS-order apply and observations/image overlap under unchanged combined deadline/200ms reserve/CPU2; exact queries, horizon, validation, ordering and partial-error policy retained. No decoded cache/pack/mode.",
+  "owned_peer_reason": "Parent approved explicit Peer::persistent() opt-in for rich life/image S3 tests; unchanged default/fault semantics and bounded slots/socket lifespan; no production flag or transport change."
+}

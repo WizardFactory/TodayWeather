@@ -165,7 +165,7 @@ const KASI_NOW: f64 = 1_792_152_000_000.; // 2026-10-16T12:00:00Z
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn life_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     seed_oracle(&store).await;
@@ -213,13 +213,9 @@ async fn life_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
         compared += 1;
     }
     assert_eq!(compared, 5);
-    // KASI: the first capture pass reads every area's stored days (no acquirer: read only).
+    // KASI: the first request reads every area's stored days without a provider or warmup.
     let inputs = LifeInputs::new(transport.clone(), store.clone()).with_clock(test_clock());
-    assert!(
-        inputs.load(KASI_NOW, deadline()).await.kasi.is_none(),
-        "not read yet"
-    );
-    inputs.kasi_pass(KASI_NOW).await.unwrap();
+
     let kasi = inputs.load(KASI_NOW, deadline()).await.kasi.expect("read");
     let k = at(oracle(), &["kasi"]);
     // The capture reads areas in `getAreaList` order: the same documents, another natural order
@@ -237,6 +233,47 @@ async fn life_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
             "getRiseSetList from S3",
         );
     }
+}
+
+/// Stored KASI is available on the first request without a capture pass or provider.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn first_request_restores_stored_kasi_without_acquirer_or_warmup() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let run = &items_of(at(oracle(), &["kasi", "runs"]))[0];
+    let area = text(at(run, &["area"]));
+    let day = text(at(run, &["day"]));
+    let publication = Publication::new(day.parse().unwrap(), 0).unwrap();
+    publish(
+        &store,
+        "data-go-kr",
+        "kasi-area-rise-set",
+        area_key(&area),
+        publication.period(),
+        &day,
+        1_791_000_000_000.,
+        &[kma_page(value(at(run, &["raw"])))],
+    )
+    .await;
+    let inputs = LifeInputs::new(transport, store).with_clock(test_clock());
+    // An exhausted request budget returns without waiting for the owned S3 work.
+    let started = Instant::now();
+    let late = inputs.load(KASI_NOW, started).await;
+    assert!(started.elapsed() < Duration::from_millis(250));
+    assert!(late.kasi.is_none());
+    // The next request joins the same restore; no capture/warmup call is required.
+    let answers = inputs
+        .load(KASI_NOW, Instant::now() + Duration::from_secs(3))
+        .await;
+    let restored = answers
+        .kasi
+        .expect("first request must read canonical KASI from S3");
+    assert!(
+        !items_of(&restored.json()).is_empty(),
+        "the S3 day must be restored"
+    );
 }
 
 // ---- request-time acquisition ----
@@ -481,7 +518,7 @@ fn short_deadline() -> Instant {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn missing_national_datasets_are_acquired_once_and_published_before_use() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
@@ -578,7 +615,7 @@ async fn life_acquisition_across_kst_boundaries() {
 /// `slot`: the MFDS slot expected at `at` (an explicit oracle, not `slot_at`).
 async fn slow_acquisition_at(at: &str, slot: Option<(u32, u16)>) {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, at).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
@@ -637,7 +674,7 @@ async fn slow_acquisition_at(at: &str, slot: Option<(u32, u16)>) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_mfds_slot_is_asked_once_even_when_it_fails() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
@@ -656,7 +693,7 @@ async fn an_mfds_slot_is_asked_once_even_when_it_fails() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_kasi_capture_acquires_missing_days_and_a_failing_area_does_not_stop_others() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
@@ -713,7 +750,7 @@ async fn the_snapshot_answers_the_life_store_calls() {
     use super::source_s3::{NOW, request, seed};
     use server2::domestic::kma::backend::{KmaSource, SourceAnswer};
     use server2::domestic::kma::source::S3Source;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     seed(&store, &[]).await;
@@ -802,7 +839,7 @@ fn life_settings_use_the_legacy_mfds_endpoint() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn uv_tries_earlier_slots_while_a_slot_has_no_data() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
@@ -826,7 +863,7 @@ async fn uv_tries_earlier_slots_while_a_slot_has_no_data() {
 async fn mfds_accepts_only_a_direct_answer_within_one_mebibyte() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     for shape in [1, 2] {
-        let peer = Peer::new();
+        let peer = Peer::persistent();
         let transport = peer.transport();
         let store =
             Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -850,7 +887,7 @@ async fn mfds_accepts_only_a_direct_answer_within_one_mebibyte() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_old_nearest_location_still_decides_rise_set_after_a_cold_read() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let now = now_ms();
@@ -908,7 +945,7 @@ async fn an_old_nearest_location_still_decides_rise_set_after_a_cold_read() {
 async fn a_publication_after_a_request_instant_is_read_by_a_later_request() {
     // Its requests span a minute: a start away from the three-hour UV slot boundaries.
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
@@ -942,7 +979,7 @@ async fn a_publication_after_a_request_instant_is_read_by_a_later_request() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_mfds_connection_may_take_the_legacy_ten_seconds() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     // A TLS peer that stays silent for 4.5 s after the ClientHello: legacy `fetchRisk` keeps
@@ -969,7 +1006,7 @@ async fn an_mfds_connection_may_take_the_legacy_ten_seconds() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_mfds_slot_is_known_by_its_period_not_by_its_reception_time() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let stub = stub().await;
@@ -1011,5 +1048,143 @@ async fn an_mfds_slot_is_known_by_its_period_not_by_its_reception_time() {
         stub.state.mfds.load(Ordering::SeqCst),
         1,
         "the 12:20 slot is acquired"
+    );
+}
+
+/// Real S3 reads finish out of area order; a failing area prevents a complete snapshot.
+#[derive(Clone)]
+struct OrderedKasi {
+    inner: BoundedS3<HttpS3Transport>,
+    failed_area: Arc<std::sync::atomic::AtomicBool>,
+    done: Arc<Mutex<Vec<String>>>,
+}
+impl server2::storage::ObjectTransport for OrderedKasi {
+    async fn put(
+        &self,
+        record: &server2::storage::PreparedRecord,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put(record).await
+    }
+    async fn head(&self, key: &str) -> Result<server2::storage::Object, server2::storage::Error> {
+        self.inner.head(key).await
+    }
+    async fn get(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::Object, server2::storage::Error> {
+        if key.starts_with("raw/v2/data-go-kr/kasi-area-rise-set/") {
+            let slow = server2::storage::sha256(&area_key("강릉").canonical_bytes().unwrap());
+            let bad = server2::storage::sha256(&area_key("강화도").canonical_bytes().unwrap());
+            if key.contains(&slow) {
+                tokio::time::sleep(Duration::from_millis(150)).await;
+            }
+            self.done.lock().unwrap().push(key.to_owned());
+            if key.contains(&bad) && self.failed_area.load(Ordering::SeqCst) {
+                return Err(server2::storage::Error::Transport);
+            }
+        }
+        self.inner.get(key, max).await
+    }
+}
+impl server2::storage::CatalogTransport for OrderedKasi {
+    async fn get_control(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
+        self.inner.get_control(key, max).await
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &server2::storage::WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put_control(key, body, condition).await
+    }
+    async fn list_raw_document(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+        keys: usize,
+        bytes: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        self.inner
+            .list_raw_document(prefix, token, keys, bytes)
+            .await
+    }
+}
+impl server2::history::IndexListing for OrderedKasi {
+    async fn list_index(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+    ) -> Result<server2::storage::ListPage, server2::storage::Error> {
+        self.inner.list_index(prefix, token).await
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn parallel_kasi_restore_preserves_area_ties_and_recovers_after_a_partial_read_error() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let run = &items_of(at(oracle(), &["kasi", "runs"]))[0];
+    let day = text(at(run, &["day"]));
+    let publication = Publication::new(day.parse().unwrap(), 0).unwrap();
+    for area in ["강릉", "강화도", "거제"] {
+        let mut raw = value(at(run, &["raw"]));
+        raw["location"] = json!(area);
+        // Equal coordinates make insertion order observable through the nearest-place query.
+        raw["latitudeNum"] = json!("37.5");
+        raw["longitudeNum"] = json!("127.0");
+        publish(
+            &store,
+            "data-go-kr",
+            "kasi-area-rise-set",
+            area_key(area),
+            publication.period(),
+            &day,
+            1_791_000_000_000.,
+            &[kma_page(raw)],
+        )
+        .await;
+    }
+    let failed_area = Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let done = Arc::new(Mutex::new(Vec::new()));
+    let wrapped = OrderedKasi {
+        inner: transport,
+        failed_area: failed_area.clone(),
+        done: done.clone(),
+    };
+    let store = Arc::new(CatalogStore::new(wrapped.clone(), CatalogLimits::default()).unwrap());
+    let inputs = LifeInputs::new(wrapped, store)
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD);
+    assert!(inputs.kasi_pass(KASI_NOW).await.is_err());
+    let completed = done.lock().unwrap().clone();
+    assert!(completed.len() >= 3);
+    let first = server2::storage::sha256(&area_key("강릉").canonical_bytes().unwrap());
+    let second = server2::storage::sha256(&area_key("강화도").canonical_bytes().unwrap());
+    let position = |part: &str| completed.iter().position(|k| k.contains(part)).unwrap();
+    assert!(
+        position(&second) < position(&first),
+        "S3 completion order differs from AREAS"
+    );
+    failed_area.store(false, Ordering::SeqCst);
+    inputs.kasi_pass(KASI_NOW).await.unwrap();
+    let restored = inputs
+        .load(KASI_NOW, deadline())
+        .await
+        .kasi
+        .expect("complete after recovery");
+    assert_eq!(restored.places(), 3);
+    let answer = restored.answer(&json!({"lat":37.5,"lon":127.0}), &[day]);
+    assert_eq!(
+        text(at(&items_of(&answer)[0], &["locationName"])),
+        "강릉",
+        "first AREAS entry wins equal-distance tie"
     );
 }

@@ -1,0 +1,1040 @@
+{
+  "schema": 1,
+  "family": "kma-rich",
+  "oracle": {
+    "path": "tests/domestic/fixtures/s3-rich-response.json.gz",
+    "sha256": "9057374928813cc5568bafebbaee19f84021faa3bb5a9d8877846acf4f01ff17"
+  },
+  "declared_differences": [
+    {
+      "id": "D-TRANSPORT",
+      "scope": "header",
+      "names": [
+        "date",
+        "connection",
+        "set-cookie",
+        "server"
+      ],
+      "reason": "Transport clock/socket/server headers and the documented legacy session-cookie omission; functional headers remain exact."
+    },
+    {
+      "id": "D-GEOCODER-COLD",
+      "scope": "acquisition",
+      "kinds": [
+        "geocoder"
+      ],
+      "reason": "Each fresh native coordinate response resolves its public coordinates with one owned-loopback Kakao HTTP call; exact coordinate cache remains memory-only. Frozen baseline has no replay-time acquisition. Weather provider/external/legacy HTTP remain zero."
+    }
+  ],
+  "assembly_only": {
+    "count": 98,
+    "cases": [
+      {
+        "id": "domestic-v000903",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-locale-en",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-locale-ko",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-locale-ja",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-locale-zh-CN",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-locale-de",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-locale-zh-TW",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-v000903-db1",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "domestic-null-units",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-pop-covered",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-pop-missing-hour",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-old-no-pop",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-never-requested-history",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-partial-history",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "domestic-special-info",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "gateway-v000903-domestic",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "gateway-query-normalization",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "gateway-history-never-requested",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "gateway-history-resumed-after-eight-days",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "gateway-history-partial-eight-day-history",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "rss-older",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "rss-equal",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "busan",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "jeju",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "station-first-rain",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "station-first-snow-cloud",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "rain-categories",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-stations",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-stations-airnow",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-stale",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-forecast",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-past-only",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-missing",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "air-kaq-none-usable",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "air-kaq-invalid-rows",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-mixed-rows",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-beyond-day",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-day-edge",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-no-history",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-fallback-error",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "air-airkorea-request",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-airkorea-empty",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-before-now",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-kaq-after-now",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-dust-forecast",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "air-fallback",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "life-food-kasi",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "life-index-near-area",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "warning-two-zones",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "winter-cold-wind",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "hot-humid",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "missing-short",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "model-errors",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "unknown-air-unit",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "db1-history",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "stn-error",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "station-hourly-fill",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "db1-daily-source",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "short-publications",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "current-error",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "mid-forecast-error",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "yesterday-warmer",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "yesterday-colder",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "rss-unusable-values",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "current-sky-from-shortest",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "stn-invalid-zero",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "stn-fog-thunder",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "region-guard",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "clock-night-2340",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "clock-kst-0030",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "clock-kst-1010",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "clock-kst-1110",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "clock-kst-0605",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "clock-kst-1535",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "rss-pub-invalid-offset",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "rss-pub-hour24-fraction",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "rss-pub-non-ascii-offset",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "rss-pub-non-ascii",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "rss-pub-iso-offset",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "rss-pub-hour24-submillisecond",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "current-pub-small-year",
+        "reason": "LegacyDB1 snapshot"
+      },
+      {
+        "id": "stn-boolean-datetime-false",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "stn-boolean-datetime-true",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "life-index-hex-area",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "life-index-long-hex-area",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "query-malformed-escape",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "current-interpolated-strings",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "stn-cloud-radix-sign",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "stn-small-year-datetime",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-stations-unconfigured",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-asos-fill",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-asos-fill-en",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-read-timeout",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-station-unavailable",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-read-error",
+        "reason": "Injected database/read error"
+      },
+      {
+        "id": "history-with-station-hourly",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-yesterday-from-asos",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      },
+      {
+        "id": "history-short-rain-3h",
+        "reason": "Synthetic dependency-boundary snapshot without a complete corresponding providerraw corpus"
+      }
+    ]
+  },
+  "coverage": {
+    "unique_cases": 23,
+    "passes": [
+      "cold-empty-ram-and-disk",
+      "warm-disk-empty-ram",
+      "corrupt-disk-empty-ram",
+      "lost-disk-empty-ram"
+    ],
+    "responses": 92,
+    "direct_cases": 21,
+    "gateway_coord_cases": 2,
+    "boundary": "Actual Gateway::router library HTTP example, fixed time and test transport injection; no production executable startup/Lambda/AWS/EC2 latency/7-day shadow/cutover proof.",
+    "rich_inputs": [
+      "three grid regions",
+      "AWS/minute/city/ASOS with QC rejection",
+      "AirKorea station-list/observations/forecast/GIF",
+      "Google stored air fallback",
+      "life/pollen/KASI/MFDS"
+    ]
+  },
+  "workload": [
+    {
+      "id": "v000903-en",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?airForecastSource=kaq",
+      "lang": "en",
+      "oracle": "v000903-en",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-en-units",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?airForecastSource=kaq&temperatureUnit=F&windSpeedUnit=mph",
+      "lang": "en",
+      "oracle": "v000903-en-units",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-en-airkorea",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?airForecastSource=airkorea",
+      "lang": "en",
+      "oracle": "v000903-en-airkorea",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-en-units-airkorea",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?airForecastSource=airkorea&temperatureUnit=F&windSpeedUnit=mph",
+      "lang": "en",
+      "oracle": "v000903-en-units-airkorea",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-ko",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?airForecastSource=kaq",
+      "lang": "ko",
+      "oracle": "v000903-ko",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-ko-units",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?airForecastSource=kaq&temperatureUnit=F&windSpeedUnit=mph",
+      "lang": "ko",
+      "oracle": "v000903-ko-units",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-ko-airkorea",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?airForecastSource=airkorea",
+      "lang": "ko",
+      "oracle": "v000903-ko-airkorea",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-ko-units-airkorea",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?airForecastSource=airkorea&temperatureUnit=F&windSpeedUnit=mph",
+      "lang": "ko",
+      "oracle": "v000903-ko-units-airkorea",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-en",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "lang": "en",
+      "oracle": "v000901-en",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000901-ko",
+      "path": "/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "lang": "ko",
+      "oracle": "v000901-ko",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-en",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "lang": "en",
+      "oracle": "v000803-en",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000803-ko",
+      "path": "/v000803/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "lang": "ko",
+      "oracle": "v000803-ko",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-en",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "lang": "en",
+      "oracle": "v000705-en",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-ko",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "lang": "ko",
+      "oracle": "v000705-ko",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-incheon-en",
+      "path": "/v000903/kma/addr/%EC%9D%B8%EC%B2%9C%EA%B4%91%EC%97%AD%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EC%8B%A0%ED%8F%AC%EB%8F%99?airForecastSource=kaq",
+      "lang": "en",
+      "oracle": "v000903-incheon-en",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-incheon-ko",
+      "path": "/v000903/kma/addr/%EC%9D%B8%EC%B2%9C%EA%B4%91%EC%97%AD%EC%8B%9C/%EC%A4%91%EA%B5%AC/%EC%8B%A0%ED%8F%AC%EB%8F%99?airForecastSource=kaq",
+      "lang": "ko",
+      "oracle": "v000903-incheon-ko",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-jeju-en",
+      "path": "/v000903/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%BC%EB%8F%841%EB%8F%99?airForecastSource=kaq",
+      "lang": "en",
+      "oracle": "v000903-jeju-en",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-jeju-ko",
+      "path": "/v000903/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C/%EC%9D%BC%EB%8F%841%EB%8F%99?airForecastSource=kaq",
+      "lang": "ko",
+      "oracle": "v000903-jeju-ko",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-head",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?airForecastSource=kaq",
+      "lang": "en",
+      "oracle": "v000903-head",
+      "method": "HEAD",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000903-conditional",
+      "path": "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99?airForecastSource=kaq",
+      "lang": "en",
+      "oracle": "v000903-conditional",
+      "method": "GET",
+      "if_none_match": "W/\"175e5-EfXjljUv99OwUGWxAucjvw\"",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "v000705-head",
+      "path": "/v000705/town/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99",
+      "lang": "en",
+      "oracle": "v000705-head",
+      "method": "HEAD",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {}
+        }
+      }
+    },
+    {
+      "id": "gateway-v000903-coord-ko",
+      "path": "/weather/v000903/coord/37.5663,126.9779",
+      "lang": "ko",
+      "oracle": "gateway-v000903-coord-ko",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {
+            "geocoder": 1
+          }
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {
+            "geocoder": 1
+          }
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {
+            "geocoder": 1
+          }
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {
+            "geocoder": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "gateway-v000903-coord-ko-units",
+      "path": "/weather/v000903/coord/37.5663,126.9779?temperatureUnit=F&windSpeedUnit=mph",
+      "lang": "ko",
+      "oracle": "gateway-v000903-coord-ko-units",
+      "method": "GET",
+      "acquisitions": {
+        "cold-empty-ram-and-disk": {
+          "baseline": {},
+          "candidate": {
+            "geocoder": 1
+          }
+        },
+        "warm-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {
+            "geocoder": 1
+          }
+        },
+        "corrupt-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {
+            "geocoder": 1
+          }
+        },
+        "lost-disk-empty-ram": {
+          "baseline": {},
+          "candidate": {
+            "geocoder": 1
+          }
+        }
+      }
+    }
+  ]
+}

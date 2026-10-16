@@ -859,34 +859,36 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             .and_then(Val::as_doc)
             .and_then(|g| Some((g.get("lat")?.as_num()?, g.get("lon")?.as_num()?)));
         let date = kst_date(now);
-        let (stations, observations, dust) = tokio::join!(
-            self.stations(now, wait_until),
-            self.observations(now, wait_until),
-            async {
-                // The image forecast needs the announcement's documents (`imageUrl`) too.
-                if dust_wanted || image_wanted {
-                    Some(self.forecasts(now, date, wait_until).await)
-                } else {
-                    None
-                }
-            }
-        );
-        let hourly = match (image_wanted, &stations) {
-            (true, Ok(s)) => Some(
-                self.images
-                    .load(
-                        now,
-                        s.clone(),
-                        dust.as_ref().and_then(|f| f.as_ref().ok()),
-                        self.acquire.clone(),
-                        &self.flights,
-                        &self.generation,
-                        wait_until,
-                    )
-                    .await,
-            ),
-            _ => None,
-        };
+        // Image recovery depends on stations and announcement documents, not observations.
+        // Keep both branches under the same request deadline: a slow observation read must
+        // not consume the image branch's entire budget before decoding can start.
+        let (observations, (stations, dust, hourly)) =
+            tokio::join!(self.observations(now, wait_until), async {
+                let (stations, dust) = tokio::join!(self.stations(now, wait_until), async {
+                    if dust_wanted || image_wanted {
+                        Some(self.forecasts(now, date, wait_until).await)
+                    } else {
+                        None
+                    }
+                });
+                let hourly = match (image_wanted, &stations) {
+                    (true, Ok(s)) => Some(
+                        self.images
+                            .load(
+                                now,
+                                s.clone(),
+                                dust.as_ref().and_then(|f| f.as_ref().ok()),
+                                self.acquire.clone(),
+                                &self.flights,
+                                &self.generation,
+                                wait_until,
+                            )
+                            .await,
+                    ),
+                    _ => None,
+                };
+                (stations, dust, hourly)
+            });
         let dust = if dust_wanted { dust } else { None };
         let arpltn = match (stations, observations) {
             (Ok(s), Ok(o)) => bounded(

@@ -62,6 +62,10 @@ def main():
     commands.append([sys.executable, 'tools/shadow/replay.py', '--binary', 'target/release/server2',
                      '--family', 'kma', '--self-check', '--report',
                      str(root/'reports/server2-kma-replay/ci.json')])
+    # Rich corpus has its own denominator; both manifests retain the original assembly-only cases.
+    commands.append([sys.executable, 'tools/shadow/replay.py', '--binary', 'target/release/server2',
+                     '--family', 'kma-rich', '--self-check', '--report',
+                     str(root/'reports/server2-kma-rich-replay/ci.json')])
     # Uses the just-built GNU binary: real private_manifest, then the non-musl
     # fence, without worker claims or any AWS/IMDS network path.
     commands.append([sys.executable, sandbox, 'manifest-functional'])

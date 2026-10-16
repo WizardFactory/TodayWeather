@@ -3482,6 +3482,43 @@ there is no dry-run/mock/verification mode or test endpoint environment setting.
 See the [operator manual](../operations/server2-notices.md) and
 [selected checks](../evidence/tasks/issue-2703-s18c/verification.md).
 
+### S15b-4b3 rich canonical S3 verification
+
+The `kma-rich` S19 family has a separate 23-input, four-phase whole-response
+corpus (92 native responses): three grid regions, station/minute/city/ASOS,
+AirKorea observation/announcement/GIF, life/KASI/MFDS and stored Google fallback.
+The independent Node16 recorder runs actual current legacy collectors, Mongoose
+wire writes/readers, direct routes and repository gateway/geocoder over public
+raw inputs. Only the named offline recorder exception reads legacy source; the
+Rust runtime/build does not. Pinned dependencies, executed-source hashes and
+explicit driver adaptations remain in the fixture/provenance.
+
+Fresh S3Source/RAM is created for every request in empty/warm/corrupt/lost disk
+phases. Weather-provider, external and legacy HTTP stay zero. Two actual native
+Gateway coordinate cases separately require one owned-loopback Kakao HTTP call
+per fresh response; exact coordinates remain memory-only. Status, body and the
+functional-header union are exact. Original98 assembly-only and core55 counts
+are separate; injected DB1/coercion/error cases are not fabricated as raw S3.
+
+Rich restore uncovered first-fresh KASI and same-hour station gaps. KASI now
+restores canonical records before the snapshot under shared owned work and the
+existing combined deadline, reading at most eight areas together and applying
+AREAS order. AWS/city folding selects the latest same-hour acquisition and applies
+actual Mongoose `$set` field presence: later AWS numbers overwrite present fields,
+omitted city weather/cloud remain. Image recovery depends on stations and
+announcement documents and runs alongside observations under the same deadline,
+200 ms reserve and existing CPU/S3 bounds. No response/deadline normalization,
+decoded cache, pack, precollection, runtime mode or legacy fallback is introduced.
+
+The registry's READY label means offline smoke/replay/cache-recovery support.
+Domestic rollback remains UNSUPPORTED; S20 must verify earlier-server2-release/
+configuration recovery without legacy. Debug loopback timings and ~149 KB
+synthetic GIFs do not prove production startup, AWS/EC2 cold p95, 5-6 MB image
+performance, quota headroom, live shadow or complete domestic cutover readiness.
+See the [guide](../operations/server2-kma-rich-replay.md),
+[fixture provenance](../../server2/tests/domestic/fixtures/S3-RICH-PROVENANCE.md)
+and [sequence diagram](diagrams/server2-kma-rich-replay.html).
+
 ## S20a shared runtime construction (#2789)
 
 `RuntimeServices::from_vars` is the production constructor used by `main`, and the
