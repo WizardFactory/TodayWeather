@@ -43,6 +43,30 @@ The weather `_retryGetHttp` wrapper specifies only `{method:'GET', url, timeout}
 
 Sources: [Units](../../client/www/js/controller.units.js), [HTTP wrapper](../../client/www/js/service.weatherutil.js), [server defaults](../../server/controllers/controllerTown24h.js).
 
+### Stored hourly air forecast fallback (#2770)
+
+Installed clients still send `airForecastSource=kaq`. Both `AirForecast` and the
+v000903 `AirForecastList` select KAQ only when it has a supported pollutant with a
+finite numeric concentration ≥0 at a valid KST time strictly after now and the
+last observation, through observation +24 hours. Empty, expired, malformed or
+invalid rows do not suppress fallback. A KAQ read error also permits the stored
+AirKorea lookup for the same station. Partial usable KAQ remains KAQ; sources are
+selected before insertion and are never combined.
+
+Fallback keeps observation `source`/`last` unchanged, sets `forecastSource` to
+`airkorea`, and retains the selected source's actual `forecastPubDate` and per-slot
+`pubDate`. If neither source has usable future slots, observations and existing
+daily bulletins remain without invented hourly forecasts or new forecast
+attribution. Explicit AirKorea selection is unchanged. Insertion uses strict KST
+parsing (including `24:00`) and includes the first forecast for pollutants without
+an observation series. There are no provider calls, collection changes or writes
+in this fallback.
+
+See the [selection sequence](diagrams/air-forecast-selection.html),
+[editable source](diagrams/air-forecast-selection.json), and
+[verification](../evidence/tasks/issue-2770/verification.md). Source:
+[`_getAirForecast` / `_insertForecastPollutants`](../../server/controllers/controllerTown24h.js).
+
 ## Public API and implemented backend
 
 Read-only AWS inspection and deployed Lambda code close the earlier missing-gateway gap. See [AWS/code correlation](aws-code-correlation.md) and [request diagram](diagrams/mobile-weather-request.html).

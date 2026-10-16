@@ -687,7 +687,7 @@ function ControllerTown24h() {
        return true;
     }
 
-    this._insertForecastPollutants = function (airInfo, hourlyForecasts, source, airUnit) {
+    function _lastAirObservationTime(airInfo) {
         var latestPastDate = '1970-01-01';
 
         if (airInfo.last && airInfo.last.dataTime) {
@@ -705,21 +705,27 @@ function ControllerTown24h() {
             }
         }
 
+        return latestPastDate;
+    }
+
+    this._insertForecastPollutants = function (airInfo, hourlyForecasts, source, airUnit) {
+        var latestPastDate = _lastAirObservationTime(airInfo);
         airInfo.forecastSource = source;
         airInfo.forecastPubDate = hourlyForecasts[hourlyForecasts.length-1].pubDate;
 
-        var endForecastDate = new Date(latestPastDate);
-        endForecastDate.setDate(endForecastDate.getDate()+1);
-        endForecastDate = kmaTimeLib.convertDateToYYYY_MM_DD_HHoMM(endForecastDate);
+        var lastEpoch = KecoController._parseDateTime(latestPastDate);
+        var endForecastEpoch = lastEpoch + 24 * 3600000;
 
         hourlyForecasts.forEach(function (forecast) {
             if (forecast == null) {
                 return;
             }
-            if (forecast.dataTime <= latestPastDate || forecast.dataTime > endForecastDate) {
+            var forecastEpoch = KecoController._parseDateTime(forecast.dataTime);
+            if (!isFinite(forecastEpoch) || forecastEpoch <= lastEpoch || forecastEpoch > endForecastEpoch) {
                 return;
             }
 
+            var forecastTime = _formatAirKstTime(forecastEpoch);
             var code = forecast.code;
             var pollutant = airInfo.pollutants[code];
             if (pollutant == undefined) {
@@ -731,11 +737,10 @@ function ControllerTown24h() {
                 var hourlyObj = {date: latestPastDate};
                 pollutant.hourly = [];
                 pollutant.hourly.push(hourlyObj);
-                return;
             }
 
             var hourlyData = pollutant.hourly.find(function (hourlyObj) {
-                return hourlyObj.date === forecast.dataTime;
+                return hourlyObj.date === forecastTime;
             });
 
             if (hourlyData) {
@@ -743,12 +748,12 @@ function ControllerTown24h() {
                 return;
             }
             forecast.grade = AqiConverter.value2grade(airUnit, code, forecast.val);
-            hourlyData = {date: forecast.dataTime, val: forecast.val, grade: forecast.grade, pubDate: forecast.pubDate};
+            hourlyData = {date: forecastTime, val: forecast.val, grade: forecast.grade, pubDate: forecast.pubDate};
 
             pollutant.hourly.push(hourlyData);
 
             var aqiVal = AqiConverter.value2index(airUnit, code, forecast.val);
-            var aqiData = {date: forecast.dataTime, code: code,
+            var aqiData = {date: forecastTime, code: code,
                 val: aqiVal,
                 grade: AqiConverter.value2grade(airUnit, 'aqi', aqiVal)};
             _insertHourlyAqiData(airInfo, aqiData);
@@ -1214,6 +1219,58 @@ function ControllerTown24h() {
         }
         catch (err) {
             return callback(err);
+        }
+
+        // Explicit AirKorea requests retain their existing selection behavior.
+        if (forecastSource === 'kaq') {
+            var now = Date.now();
+            var lastEpoch = KecoController._parseDateTime(_lastAirObservationTime(airInfo));
+            function usableRows(results) {
+                return (Array.isArray(results) ? results : []).filter(function (row) {
+                    return row && ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].indexOf(row.code) >= 0 &&
+                        typeof row.val === 'number' && isFinite(row.val) && row.val >= 0 &&
+                        isFinite(KecoController._parseDateTime(row.dataTime));
+                }).map(function (row) {
+                    return Object.assign({}, row, {dataTime: _formatAirKstTime(KecoController._parseDateTime(row.dataTime))});
+                });
+            }
+            function insertIfAvailable(results, source) {
+                var rows = usableRows(results);
+                var available = rows.some(function (row) {
+                    var epoch = KecoController._parseDateTime(row.dataTime);
+                    return epoch > now && epoch > lastEpoch && epoch <= lastEpoch + 24 * 3600000;
+                });
+                if (available) {
+                    self._insertForecastPollutants(airInfo, rows, source, airUnit);
+                }
+                return available;
+            }
+            return ctrl.getForecast(stnName, function (err, results) {
+                try {
+                    if (!err && insertIfAvailable(results, 'kaq')) {
+                        return callback(null, airInfo);
+                    }
+                    if (err) {
+                        log.warn('KAQ forecast unavailable stnName:' + stnName, err);
+                    }
+                    new AirkoreaHourlyForecastCtrl().getForecast(stnName, function (fallbackError, fallbackResults) {
+                        if (fallbackError) {
+                            fallbackError.message += ' stnName:' + stnName;
+                            return callback(fallbackError);
+                        }
+                        try {
+                            insertIfAvailable(fallbackResults, 'airkorea');
+                        }
+                        catch (error) {
+                            return callback(error);
+                        }
+                        callback(null, airInfo);
+                    });
+                }
+                catch (error) {
+                    callback(error);
+                }
+            });
         }
 
         ctrl.getForecast(stnName, function (err, results) {
