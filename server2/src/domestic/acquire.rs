@@ -1149,6 +1149,78 @@ mod tests {
             .collect();
         KeyRing::new(entries).unwrap()
     }
+    fn store(owner: &str, provider: Provider) -> Arc<BudgetStore<Unreachable>> {
+        let policy = BudgetPolicy {
+            provider,
+            quota_id: owner.repeat(64),
+            window_id: "unit".into(),
+            starts_at_ms: 1,
+            ends_at_ms: 100,
+            limit: 10,
+            block_units: 10,
+        };
+        Arc::new(BudgetStore::new(Arc::new(Unreachable), policy, Arc::new(Fixed)).unwrap())
+    }
+    /// AK decision 5: one budget per key and API; invalid rings are refused and a call of an
+    /// API without a budget never reaches the transport.
+    #[test]
+    fn per_api_rings_validate_and_select_the_api_budget() {
+        let key = |k: &str| ProviderKey(k.into());
+        let map = |pairs: &[(DataGoKrApi, &str)]| {
+            pairs
+                .iter()
+                .map(|(api, owner)| (*api, store(owner, Provider::DataGoKr)))
+                .collect::<BTreeMap<_, _>>()
+        };
+        // Empty map, duplicate key, an owner reused within a key or across keys, wrong provider.
+        assert!(KeyRing::<Unreachable>::per_api(vec![(key("a"), BTreeMap::new())]).is_err());
+        assert!(
+            KeyRing::per_api(vec![
+                (key("a"), map(&[(DataGoKrApi::MidFcst, "1")])),
+                (key("a"), map(&[(DataGoKrApi::MidFcst, "2")])),
+            ])
+            .is_err()
+        );
+        assert!(
+            KeyRing::per_api(vec![(
+                key("a"),
+                map(&[(DataGoKrApi::MidFcst, "1"), (DataGoKrApi::VilageFcst, "1")])
+            )])
+            .is_err()
+        );
+        assert!(
+            KeyRing::per_api(vec![
+                (key("a"), map(&[(DataGoKrApi::MidFcst, "1")])),
+                (key("b"), map(&[(DataGoKrApi::MidFcst, "1")])),
+            ])
+            .is_err()
+        );
+        let wrong: BTreeMap<_, _> = [(DataGoKrApi::MidFcst, store("3", Provider::Kakao))].into();
+        assert!(KeyRing::per_api(vec![(key("a"), wrong)]).is_err());
+        // A valid ring funds each API from its own budget; an API without one is refused.
+        let ring = KeyRing::per_api(vec![
+            (
+                key("a"),
+                map(&[(DataGoKrApi::MidFcst, "4"), (DataGoKrApi::FcstZone, "5")]),
+            ),
+            (
+                key("b"),
+                map(&[(DataGoKrApi::MidFcst, "6"), (DataGoKrApi::FcstZone, "7")]),
+            ),
+        ])
+        .unwrap();
+        let (start, candidates) = ring.candidates(Some(DataGoKrApi::FcstZone)).unwrap();
+        assert_eq!(start, 0);
+        let owners: Vec<_> = candidates
+            .iter()
+            .map(|c| c.budget.policy().quota_id.clone())
+            .collect();
+        assert_eq!(owners, vec!["5".repeat(64), "7".repeat(64)]);
+        assert!(ring.candidates(Some(DataGoKrApi::VilageFcst)).is_err());
+        assert!(ring.candidates(None).is_err());
+        assert!(ring.single(1, Some(DataGoKrApi::MidFcst)).is_ok());
+        assert!(ring.single(1, Some(DataGoKrApi::RiseSet)).is_err());
+    }
     fn report(attempts: &[(u8, Disposition)]) -> CallReport {
         CallReport {
             reserved: vec![2, 1],

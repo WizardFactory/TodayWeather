@@ -1581,3 +1581,26 @@ async fn an_airkorea_connection_may_take_the_whole_legacy_attempt() {
         "{gave_up:?}"
     );
 }
+
+/// AK decision 5: the province-average API (`ArpltnStatsSvc`, `AirKoreaOperation::Sido`) has
+/// its own S08 budget, so the live acquirer reaches the provider for it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_province_average_api_is_funded_by_its_own_budget() {
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let store = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    let acquire = live(&peer, store, &stub.base);
+    let request =
+        AirKoreaRequest::new(server2::domestic::airkorea::AirKoreaOperation::Sido, "서울").unwrap();
+    // The stub answers this API "no data": nothing is published, and the call was funded.
+    let outcome = acquire.acquire(request).await;
+    assert!(matches!(outcome, Ok(None)), "{outcome:?}");
+    let queries = stub.state.queries.lock().unwrap().clone();
+    assert!(
+        queries
+            .iter()
+            .any(|q| q.starts_with("/B552584/ArpltnStatsSvc/getCtprvnMesureSidoLIst ")),
+        "{queries:?}"
+    );
+}

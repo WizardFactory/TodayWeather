@@ -45,7 +45,7 @@ impl Service {
             Self::MidFcst => &[A::MidFcst],
             Self::LivingWthrIdx => &[A::LivingWthrIdx],
             Self::HealthWthrIdx => &[A::HealthWthrIdx],
-            Self::AirKorea => &[A::AirKoreaArpltn, A::AirKoreaMsrstn],
+            Self::AirKorea => &[A::AirKoreaArpltn, A::AirKoreaMsrstn, A::AirKoreaStats],
             Self::RiseSet => &[A::RiseSet],
             Self::ForecastZone => &[A::FcstZone],
             Self::Asos => &[A::AsosHourly, A::AsosDaily],

@@ -33,13 +33,15 @@ pub enum DataGoKrApi {
     AirKoreaArpltn,
     /// 한국환경공단_에어코리아_측정소정보 (station list).
     AirKoreaMsrstn,
+    /// 한국환경공단_에어코리아_대기오염통계 현황 (province averages, `AirKoreaOperation::Sido`).
+    AirKoreaStats,
 }
 /// Approved operating allowances per API (units per key and KST day). Empty until AK supplies
 /// the values; an entry replaces that API's development allowance.
 pub const OPERATING_UNITS: &[(DataGoKrApi, u64)] = &[];
 
 impl DataGoKrApi {
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 12] = [
         Self::VilageFcst,
         Self::MidFcst,
         Self::FcstZone,
@@ -51,6 +53,7 @@ impl DataGoKrApi {
         Self::RiseSet,
         Self::AirKoreaArpltn,
         Self::AirKoreaMsrstn,
+        Self::AirKoreaStats,
     ];
     /// The API's path below the data.go.kr root (its operations follow it).
     pub fn path(self) -> &'static str {
@@ -66,6 +69,7 @@ impl DataGoKrApi {
             Self::RiseSet => "B090041/openapi/service/RiseSetInfoService",
             Self::AirKoreaArpltn => "B552584/ArpltnInforInqireSvc",
             Self::AirKoreaMsrstn => "B552584/MsrstnInfoInqireSvc",
+            Self::AirKoreaStats => "B552584/ArpltnStatsSvc",
         }
     }
     /// The data.go.kr dataset page that documents the API and its allowance.
@@ -82,12 +86,13 @@ impl DataGoKrApi {
             Self::RiseSet => 15012688,
             Self::AirKoreaArpltn => 15073861,
             Self::AirKoreaMsrstn => 15073877,
+            Self::AirKoreaStats => 15073855,
         }
     }
     /// The documented development allowance ("개발계정", read 2026-10-15/16 on the dataset page).
     pub fn development_units(self) -> u64 {
         match self {
-            Self::AirKoreaArpltn | Self::AirKoreaMsrstn => 500,
+            Self::AirKoreaArpltn | Self::AirKoreaMsrstn | Self::AirKoreaStats => 500,
             _ => 10_000,
         }
     }
@@ -99,13 +104,17 @@ impl DataGoKrApi {
             .find(|(api, _)| *api == self)
             .map_or_else(|| self.development_units(), |(_, units)| *units)
     }
-    /// The API a request URL calls (any root, including a loopback test root; None outside
-    /// these APIs).
+    /// The API a request URL calls: the API path immediately before the operation (the last
+    /// path segment), under any root, including a loopback test root whose own path may name
+    /// another API. None outside these APIs.
     pub fn of_url(url: &reqwest::Url) -> Option<Self> {
-        let path = url.path();
+        let (dir, operation) = url.path().rsplit_once('/')?;
+        if operation.is_empty() {
+            return None;
+        }
         Self::ALL.into_iter().find(|api| {
-            path.split_once(&format!("/{}/", api.path()))
-                .is_some_and(|(root, _)| root.is_empty() || root.starts_with('/'))
+            dir.strip_suffix(api.path())
+                .is_some_and(|root| root.ends_with('/'))
         })
     }
 }
@@ -182,6 +191,10 @@ mod tests {
                 "B552584/MsrstnInfoInqireSvc/getMsrstnList",
                 Service::AirKorea,
             ),
+            (
+                "B552584/ArpltnStatsSvc/getCtprvnMesureSidoLIst",
+                Service::AirKorea,
+            ),
         ])
         .collect();
         for root in ["https://apis.data.go.kr/", "http://127.0.0.1:9/"] {
@@ -192,7 +205,20 @@ mod tests {
             let warn = url(root, "1360000/WthrWrnInfoService/getPwnStatus");
             assert_eq!(DataGoKrApi::of_url(&warn), Some(DataGoKrApi::WthrWrn));
         }
-        // A path outside the APIs, or an API name inside another segment, maps to none.
+        // A root whose own path names another API: the API before the operation counts.
+        assert_eq!(
+            DataGoKrApi::of_url(&url(
+                "http://127.0.0.1:9/1360000/VilageFcstInfoService_2.0/",
+                "1360000/MidFcstInfoService/getMidTa"
+            )),
+            Some(DataGoKrApi::MidFcst)
+        );
+        // A path outside the APIs, an API name inside another segment, or an API path without
+        // an operation maps to none.
+        assert_eq!(
+            DataGoKrApi::of_url(&url("http://x/", "1360000/MidFcstInfoService/")),
+            None
+        );
         assert_eq!(
             DataGoKrApi::of_url(&url("http://x/", "wid/queryDFS.jsp")),
             None
@@ -211,6 +237,7 @@ mod tests {
         assert_eq!(DataGoKrApi::VilageFcst.daily_units(), 10_000);
         assert_eq!(DataGoKrApi::AirKoreaArpltn.daily_units(), 500);
         assert_eq!(DataGoKrApi::AirKoreaMsrstn.daily_units(), 500);
+        assert_eq!(DataGoKrApi::AirKoreaStats.daily_units(), 500);
     }
     #[test]
     fn each_key_and_api_has_its_own_quota_owner() {
