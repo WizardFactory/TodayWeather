@@ -32,7 +32,9 @@ time = { version = "0.3", features = ["formatting", "macros"] }
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 chrono-tz = { version = "0.10", default-features = false, features = ["std", "case-insensitive"] }
 # S11: classify a VC connection closed before the response as the legacy ECONNRESET retry.
-hyper = { version = "1", default-features = false }
+hyper = { version = "1", default-features = false, features = ["client", "http1"] }
+# S17b: the verbatim HTTP/1.1 legacy hop of a forwarded direct request (already in the tree).
+hyper-util = { version = "0.1", default-features = false, features = ["tokio"] }
 # S15b-2: EUC-KR (KS X 1001) decoding of KMA AWS/city observation pages, as legacy iconv decodes them.
 encoding_rs = "0.8"
 

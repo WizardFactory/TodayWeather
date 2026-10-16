@@ -398,6 +398,8 @@ fn body(outcome: Outcome) -> Value {
     match outcome {
         Outcome::Json(json) => serde_json::from_slice(&json.to_bytes()).unwrap(),
         Outcome::Status(code, text) => panic!("{code} {text}"),
+        // S17b: `res.json(undefined)` exists only on the v000705 town route.
+        Outcome::Undefined => panic!("res.json(undefined)"),
         Outcome::Legacy(reason) => panic!("forwarded: {reason}"),
     }
 }
