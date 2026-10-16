@@ -7,6 +7,7 @@ use super::format::{Expect, PageReport, PageVerdict, WebVerdict, inspect_page, i
 use super::metrics::{CallGuard, DomesticMetrics};
 use super::mfds::MfdsRequest;
 use super::publication::Publication;
+use super::quota::DataGoKrApi;
 use super::riseset::RiseSetRequest;
 use super::zone::ZoneRequest;
 use super::{Acquired, DomesticError};
@@ -38,7 +39,7 @@ const KMA_WEB: &str = "kma-web";
 /// Sticky per-service key position (#2604). Keys are secrets; budgets are their quota owners.
 /// AirKorea uses `preferred` instead (legacy `withKeys`, S13b).
 pub struct KeyRing<B> {
-    entries: Vec<(ProviderKey, Arc<BudgetStore<B>>)>,
+    entries: Vec<(ProviderKey, KeyBudgets<B>)>,
     current: AtomicUsize,
     /// Index of the key that last completed an AirKorea operation; `NONE` before any success.
     preferred: AtomicUsize,
@@ -53,16 +54,62 @@ const KST_MS: i64 = 9 * 3_600_000;
 fn kst_day_end(now_ms: i64) -> i64 {
     (now_ms + KST_MS).div_euclid(DAY_MS) * DAY_MS + DAY_MS - KST_MS
 }
+/// One key's S08 budget per data.go.kr API.
+pub type ApiBudgets<B> = BTreeMap<DataGoKrApi, Arc<BudgetStore<B>>>;
+/// The S08 budgets of one ring key: one for every call (`One`), or one per data.go.kr API
+/// (AK decision 5: data.go.kr allocates its daily quota per API and key).
+pub enum KeyBudgets<B> {
+    One(Arc<BudgetStore<B>>),
+    PerApi(ApiBudgets<B>),
+}
+impl<B> KeyBudgets<B> {
+    fn stores(&self) -> Vec<&Arc<BudgetStore<B>>> {
+        match self {
+            Self::One(b) => vec![b],
+            Self::PerApi(map) => map.values().collect(),
+        }
+    }
+    /// The budget funding a call of `api` (None: no budget for that API).
+    fn for_api(&self, api: Option<DataGoKrApi>) -> Option<Arc<BudgetStore<B>>> {
+        match self {
+            Self::One(b) => Some(b.clone()),
+            Self::PerApi(map) => api.and_then(|a| map.get(&a).cloned()),
+        }
+    }
+}
 impl<B: BudgetTransport> KeyRing<B> {
+    /// One budget per key for every call of the ring.
     pub fn new(entries: Vec<(ProviderKey, Arc<BudgetStore<B>>)>) -> Result<Self, DomesticError> {
+        Self::with_budgets(
+            entries
+                .into_iter()
+                .map(|(k, b)| (k, KeyBudgets::One(b)))
+                .collect(),
+        )
+    }
+    /// One budget per key and data.go.kr API; a call of an API without a budget is refused.
+    pub fn per_api(entries: Vec<(ProviderKey, ApiBudgets<B>)>) -> Result<Self, DomesticError> {
+        if entries.iter().any(|(_, map)| map.is_empty()) {
+            return Err(DomesticError::Invalid("key ring needs a budget per API"));
+        }
+        Self::with_budgets(
+            entries
+                .into_iter()
+                .map(|(k, map)| (k, KeyBudgets::PerApi(map)))
+                .collect(),
+        )
+    }
+    fn with_budgets(entries: Vec<(ProviderKey, KeyBudgets<B>)>) -> Result<Self, DomesticError> {
         let mut keys = HashSet::new();
         let mut owners = HashSet::new();
         if entries.is_empty()
             || entries.len() > 64
-            || entries.iter().any(|(key, budget)| {
-                budget.policy().provider != Provider::DataGoKr
-                    || !keys.insert(key.0.clone())
-                    || !owners.insert(budget.policy().quota_id.clone())
+            || entries.iter().any(|(key, budgets)| {
+                !keys.insert(key.0.clone())
+                    || budgets.stores().into_iter().any(|budget| {
+                        budget.policy().provider != Provider::DataGoKr
+                            || !owners.insert(budget.policy().quota_id.clone())
+                    })
             })
         {
             return Err(DomesticError::Invalid(
@@ -103,12 +150,27 @@ impl<B: BudgetTransport> KeyRing<B> {
     fn remember(&self, index: usize) {
         self.preferred.store(index, Ordering::Release);
     }
-    /// One candidate: the key at `index` (no rotation inside the funded call).
-    fn single(&self, index: usize) -> Vec<Candidate<B>> {
-        vec![Candidate {
-            budget: self.entries[index].1.clone(),
-            key: ProviderKey(self.entries[index].0.0.clone()),
-        }]
+    fn candidate(
+        &self,
+        index: usize,
+        api: Option<DataGoKrApi>,
+    ) -> Result<Candidate<B>, DomesticError> {
+        let (key, budgets) = &self.entries[index];
+        Ok(Candidate {
+            budget: budgets.for_api(api).ok_or(DomesticError::Invalid(
+                "no S08 budget for this data.go.kr API",
+            ))?,
+            key: ProviderKey(key.0.clone()),
+        })
+    }
+    /// One candidate: the key at `index` (no rotation inside the funded call), funded by its
+    /// budget for `api`.
+    fn single(
+        &self,
+        index: usize,
+        api: Option<DataGoKrApi>,
+    ) -> Result<Vec<Candidate<B>>, DomesticError> {
+        Ok(vec![self.candidate(index, api)?])
     }
     pub fn len(&self) -> usize {
         self.entries.len()
@@ -116,8 +178,12 @@ impl<B: BudgetTransport> KeyRing<B> {
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
-    /// The current key and, when configured, the next one as the single rotation candidate.
-    fn candidates(&self) -> (usize, Vec<Candidate<B>>) {
+    /// The current key and, when configured, the next one as the single rotation candidate,
+    /// each funded by its budget for `api`.
+    fn candidates(
+        &self,
+        api: Option<DataGoKrApi>,
+    ) -> Result<(usize, Vec<Candidate<B>>), DomesticError> {
         let start = self.current();
         let n = self.entries.len();
         let picked = if n > 1 {
@@ -127,12 +193,9 @@ impl<B: BudgetTransport> KeyRing<B> {
         };
         let candidates = picked
             .into_iter()
-            .map(|i| Candidate {
-                budget: self.entries[i].1.clone(),
-                key: ProviderKey(self.entries[i].0.0.clone()),
-            })
-            .collect();
-        (start, candidates)
+            .map(|i| self.candidate(i, api))
+            .collect::<Result<_, _>>()?;
+        Ok((start, candidates))
     }
     /// Move to the key that answered, or past every key rejected for quota/auth.
     fn settle(&self, start: usize, report: &CallReport) {
@@ -409,7 +472,7 @@ where
                 page,
                 expect,
             });
-            let (start, candidates) = ring.candidates();
+            let (start, candidates) = ring.candidates(DataGoKrApi::of_url(&url))?;
             let mut guard = CallGuard::new(&self.metrics);
             let result = self
                 .funded
@@ -655,9 +718,10 @@ where
                 *skipped = true;
                 return Err(DomesticError::Provider(Disposition::Quota));
             }
+            let api = DataGoKrApi::of_url(&url);
             let (start, candidates) = match fixed {
-                Some(index) => (index, ring.single(index)),
-                None => ring.candidates(),
+                Some(index) => (index, ring.single(index, api)?),
+                None => ring.candidates(api)?,
             };
             let mut guard = CallGuard::new(&self.metrics);
             let result = self
@@ -1084,6 +1148,78 @@ mod tests {
             })
             .collect();
         KeyRing::new(entries).unwrap()
+    }
+    fn store(owner: &str, provider: Provider) -> Arc<BudgetStore<Unreachable>> {
+        let policy = BudgetPolicy {
+            provider,
+            quota_id: owner.repeat(64),
+            window_id: "unit".into(),
+            starts_at_ms: 1,
+            ends_at_ms: 100,
+            limit: 10,
+            block_units: 10,
+        };
+        Arc::new(BudgetStore::new(Arc::new(Unreachable), policy, Arc::new(Fixed)).unwrap())
+    }
+    /// AK decision 5: one budget per key and API; invalid rings are refused and a call of an
+    /// API without a budget never reaches the transport.
+    #[test]
+    fn per_api_rings_validate_and_select_the_api_budget() {
+        let key = |k: &str| ProviderKey(k.into());
+        let map = |pairs: &[(DataGoKrApi, &str)]| {
+            pairs
+                .iter()
+                .map(|(api, owner)| (*api, store(owner, Provider::DataGoKr)))
+                .collect::<BTreeMap<_, _>>()
+        };
+        // Empty map, duplicate key, an owner reused within a key or across keys, wrong provider.
+        assert!(KeyRing::<Unreachable>::per_api(vec![(key("a"), BTreeMap::new())]).is_err());
+        assert!(
+            KeyRing::per_api(vec![
+                (key("a"), map(&[(DataGoKrApi::MidFcst, "1")])),
+                (key("a"), map(&[(DataGoKrApi::MidFcst, "2")])),
+            ])
+            .is_err()
+        );
+        assert!(
+            KeyRing::per_api(vec![(
+                key("a"),
+                map(&[(DataGoKrApi::MidFcst, "1"), (DataGoKrApi::VilageFcst, "1")])
+            )])
+            .is_err()
+        );
+        assert!(
+            KeyRing::per_api(vec![
+                (key("a"), map(&[(DataGoKrApi::MidFcst, "1")])),
+                (key("b"), map(&[(DataGoKrApi::MidFcst, "1")])),
+            ])
+            .is_err()
+        );
+        let wrong: BTreeMap<_, _> = [(DataGoKrApi::MidFcst, store("3", Provider::Kakao))].into();
+        assert!(KeyRing::per_api(vec![(key("a"), wrong)]).is_err());
+        // A valid ring funds each API from its own budget; an API without one is refused.
+        let ring = KeyRing::per_api(vec![
+            (
+                key("a"),
+                map(&[(DataGoKrApi::MidFcst, "4"), (DataGoKrApi::FcstZone, "5")]),
+            ),
+            (
+                key("b"),
+                map(&[(DataGoKrApi::MidFcst, "6"), (DataGoKrApi::FcstZone, "7")]),
+            ),
+        ])
+        .unwrap();
+        let (start, candidates) = ring.candidates(Some(DataGoKrApi::FcstZone)).unwrap();
+        assert_eq!(start, 0);
+        let owners: Vec<_> = candidates
+            .iter()
+            .map(|c| c.budget.policy().quota_id.clone())
+            .collect();
+        assert_eq!(owners, vec!["5".repeat(64), "7".repeat(64)]);
+        assert!(ring.candidates(Some(DataGoKrApi::VilageFcst)).is_err());
+        assert!(ring.candidates(None).is_err());
+        assert!(ring.single(1, Some(DataGoKrApi::MidFcst)).is_ok());
+        assert!(ring.single(1, Some(DataGoKrApi::RiseSet)).is_err());
     }
     fn report(attempts: &[(u8, Disposition)]) -> CallReport {
         CallReport {
