@@ -297,3 +297,141 @@ async fn funded_source_uses_s08_budgets_and_rejection_rules_on_loopback() {
             .any(|k| k.starts_with("PUT budgets/v2/data_go_kr/"))
     );
 }
+
+struct PersistedSink<T> {
+    store: Arc<server2::warnings::WarningStore<T>>,
+    rows: Mutex<Vec<Vec<serde_json::Value>>>,
+    fail: std::sync::atomic::AtomicBool,
+}
+impl<T: server2::storage::CatalogTransport + Send + Sync + 'static>
+    server2::warnings::collector::PersistedWarningFeed for PersistedSink<T>
+{
+    fn publish<'a>(
+        &'a self,
+        rows: &'a [serde_json::Value],
+    ) -> server2::gateway::BoxFuture<'a, Result<(), server2::storage::Error>> {
+        Box::pin(async move {
+            let durable = self
+                .store
+                .zone_state(
+                    ms("2026-09-26T03:05:00Z"),
+                    Instant::now() + std::time::Duration::from_secs(9),
+                )
+                .await?;
+            assert!(
+                !durable.is_empty(),
+                "feed observes source rows only after their catalogs/raw are readable"
+            );
+            self.rows.lock().unwrap().push(rows.to_vec());
+            if self.fail.load(std::sync::atomic::Ordering::SeqCst) {
+                Err(server2::storage::Error::Invalid(
+                    "synthetic feed publication failure",
+                ))
+            } else {
+                Ok(())
+            }
+        })
+    }
+}
+#[tokio::test]
+async fn push_feed_hook_observes_durable_zone_rows_and_retries_publication_safely() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let clock = FixedClock::at("2026-09-26T03:05:00Z");
+    let sink = Arc::new(PersistedSink {
+        store: store.clone(),
+        rows: Mutex::new(Vec::new()),
+        fail: std::sync::atomic::AtomicBool::new(true),
+    });
+    let collector = WarningCollector::new(Arc::new(Recorded::fixtures()), store, clock)
+        .with_push_feed(sink.clone());
+    let first = collector.gather().await;
+    assert!(first.errors.iter().any(|e| matches!(
+        e,
+        CycleError::Store(server2::storage::Error::Invalid(
+            "synthetic feed publication failure"
+        ))
+    )));
+    assert!(!sink.rows.lock().unwrap().is_empty());
+    sink.fail.store(false, std::sync::atomic::Ordering::SeqCst);
+    let next = collector.gather().await;
+    assert!(next.synced, "later source publication can complete");
+    assert!(next.errors.is_empty(), "{next:?}");
+}
+struct RefuseRaw(HttpS3Transport);
+impl server2::storage::ObjectTransport for RefuseRaw {
+    async fn put(
+        &self,
+        _: &server2::storage::PreparedRecord,
+    ) -> Result<u16, server2::storage::Error> {
+        Ok(403)
+    }
+    async fn head(&self, key: &str) -> Result<server2::storage::Object, server2::storage::Error> {
+        server2::storage::ObjectTransport::head(&self.0, key).await
+    }
+    async fn get(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::Object, server2::storage::Error> {
+        server2::storage::ObjectTransport::get(&self.0, key, max).await
+    }
+    async fn ready(&self) -> Result<(), server2::storage::Error> {
+        server2::storage::ObjectTransport::ready(&self.0).await
+    }
+}
+impl server2::storage::CatalogTransport for RefuseRaw {
+    async fn get_control(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
+        server2::storage::CatalogTransport::get_control(&self.0, key, max).await
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        c: &server2::storage::WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        server2::storage::CatalogTransport::put_control(&self.0, key, body, c).await
+    }
+    async fn list_raw_document(
+        &self,
+        p: &str,
+        t: Option<&str>,
+        keys: usize,
+        bytes: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        server2::storage::CatalogTransport::list_raw_document(&self.0, p, t, keys, bytes).await
+    }
+}
+#[tokio::test]
+async fn failed_raw_publication_never_calls_the_push_feed_hook() {
+    let peer = Peer::new();
+    let store = Arc::new(
+        server2::warnings::WarningStore::new(
+            RefuseRaw(peer.transport()),
+            server2::storage::CatalogLimits::default(),
+            server2::warnings::StoreConfig::default(),
+        )
+        .unwrap(),
+    );
+    let sink = Arc::new(PersistedSink {
+        store: store.clone(),
+        rows: Mutex::new(Vec::new()),
+        fail: std::sync::atomic::AtomicBool::new(false),
+    });
+    let collector = WarningCollector::new(
+        Arc::new(Recorded::fixtures()),
+        store,
+        FixedClock::at("2026-09-26T03:05:00Z"),
+    )
+    .with_push_feed(sink.clone());
+    let report = collector.gather().await;
+    assert!(!report.errors.is_empty());
+    assert!(
+        sink.rows.lock().unwrap().is_empty(),
+        "unacknowledged provider rows never enter feed"
+    );
+}

@@ -3333,6 +3333,57 @@ accounting and KMA shadow wiring remain the separate S15b-4b3 task; unrepresenta
 must remain visible in its denominator. The separately merged S15b-4c increment implements bounded verified raw disk caching; its setup guide owns sizing.
 The maintained [gateway sequence](diagrams/server2-gateway.html) and
 [origin overview](diagrams/server2.html) describe the native dependency boundary.
+## S18b-3 warning feed and one-shot delivery (2026-10-16)
+
+[Source-pinned warning sequence](diagrams/server2-warning-push.html).
+
+`push::deliver::warning_feed` ports the actual legacy S3 warning feed, with an
+explicit `WarningCollector::with_push_feed` post-persistence sink. Every fetched
+zone page/day must already be published in S12 before the sink receives its rows.
+A failed sink is reported as a collection/storage error; it cannot send a push.
+There is no process-startup installation in this PR. S20 owns wiring this sink and
+one warning worker together with the alarm/conditional workers, using native
+server2 geocode and weather routes and a single operational sender.
+
+Feed state lives under `index/v2/push/warning-feed/`: absent-only event objects
+precede a conditional `head.json`. The first durable source window is silent;
+later fingerprints persist across memory loss (last 50,000). The head references
+24 hours of events. Legacy publication-time normalization, cancellation/duplicate
+filtering and source freshness (less than five minutes, at most 60 seconds ahead)
+are preserved. Interrupted publication cannot expose an orphan event, and a
+refused head preserves the prior readable head. CAS conflicts merge against the
+new head. Immutable event caching is disposable and pruned to retained references.
+
+The worker's first read is separately silent; it does not resume pending delivery
+or broadcast at replacement. New issue commands 1/3/6/7 group matching zones by
+announcement identity. Active S12 zone state, end time, enabled registration and
+inclusive UTC normal/overnight window gate admission; the ordinary conditional
+six-hour gate does not apply. Coordinate registrations resolve via server2's
+configured geocoding route, sharing one resolution for a common geometry. The
+region cache is only in memory while campaigns remain open and is cleared when
+none remain; it holds no device tokens and is never durable serving truth.
+
+Each fresh five-minute campaign can admit a newly eligible endpoint. Package and
+FCM token deduplicate city registrations; a deterministic per-endpoint claim at
+`index/v2/push/delivery/warning/` precedes one submission. Claim outcomes are never
+replayed after failed/unknown/cancelled work or restart. Current registration and
+active-zone state are rechecked after OAuth preparation, immediately before POST.
+The read-only registration check runs through the writer's S3 journal catch-up,
+including commits by another process; S12 zone reads use the durable store. A
+four-second guard timeout/error fails closed. APNs expiry uses the final submission
+clock. A missing result never releases
+its claim. Unregistered FCM tokens disable conditional alerts, leaving alarms alone.
+Korean titles use the legacy weather/level names; other languages use legacy
+English text. The first matched zone supplies the body. The urgent HTTP-v1 envelope
+preserves `data.eventId`, Android TTL `300s`/priority `HIGH` and APNs expiry at
+submission time plus 300 seconds; see the [official message reference](https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages).
+
+The new feed/claim paths fall inside the repository S03/S10f `index/v2/*` IAM
+read/write permissions and use its required conditional writes. This is a source
+policy comparison, not an actual-role or live-AWS verification claim. No AWS change,
+real provider request, device push or deployment is performed by this slice.
+S18c remains a subsequent backend/API, publishing CLI and S3 notice-state PR under
+#2623; client/web popup implementation and SQLite are outside these S18 PRs.
 
 ## Verified disposable raw disk cache (S15b-4c)
 
