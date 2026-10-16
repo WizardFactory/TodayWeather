@@ -12,9 +12,7 @@
 //!        [--vc URL] [--google-air URL] [--openweather URL] [--waqi URL]
 //!        [--kakao URL] [--google URL] [--geocoder-daily-units N]   (per Kakao key and Google key; default: built in)
 use server2::{
-    Config,
-    dotenv::DotEnv,
-    gateway::runtime::{Builtins, from_vars_at},
+    Config, dotenv::DotEnv, gateway::runtime::Builtins, runtime_services::RuntimeServices,
 };
 use std::io;
 
@@ -81,5 +79,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let env = DotEnv::empty();
     let var = move |name: &str| env.var(name);
     let config = Config::from_vars(&var).map_err(io::Error::other)?;
-    server2::process::run(config, move || from_vars_at(&var, &builtins))
+    server2::process::run(config, move || {
+        RuntimeServices::from_vars_at(&var, &builtins)
+    })
 }

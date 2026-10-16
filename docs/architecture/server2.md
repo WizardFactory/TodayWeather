@@ -3518,3 +3518,39 @@ performance, quota headroom, live shadow or complete domestic cutover readiness.
 See the [guide](../operations/server2-kma-rich-replay.md),
 [fixture provenance](../../server2/tests/domestic/fixtures/S3-RICH-PROVENANCE.md)
 and [sequence diagram](diagrams/server2-kma-rich-replay.html).
+
+## S20a shared runtime construction (#2789)
+
+`RuntimeServices::from_vars` is the production constructor used by `main`, and the
+loopback harness uses the same constructor with code-injected `Builtins`. Ordinary
+`SERVER2_NATIVE_FAMILIES` now includes `push` and `notice`. Selected native services
+can start without a legacy URL; an explicit URL retains coexistence for unselected
+families. The dispatcher holds an optional legacy client, never a fabricated origin.
+A selected native `Forward` result is terminal.
+
+The constructor creates one bounded S3 transport/credential cache and shares clones
+with push registration, notice reads, native KMA/DSF/geocoder dependencies, warning
+storage/feed, budgets and summaries. Push builds internal weather dependencies
+without selecting public weather routes. `NativeFetch` strictly admits generated
+v000902 KMA address/coordinate and DSF coordinate targets plus v000903 geocode at a
+fixed logical origin, dispatches directly to the shared native handles, retains the
+full weather language preference list and unit/version parsers, and bounds waits to
+three seconds. It never uses SERVICE_SERVER/API_SERVER, self-HTTP or legacy fallback.
+Exact reverse coordinates retain the geocoder's memory-only contract.
+
+The KMA source and request-driven collector share WarningStore. The persisted S12
+feed hook is installed before the collector enters Arc; zone publication precedes
+feed publication. There is no startup collection. Notice serving constructs no
+Translator; publication/translation stays in the CLI. Push starts its existing
+registration writer only, with success after durable S3 journal publication.
+
+Native selection gets the existing 12-second connection lifetime, above the
+9-second gateway/registration wait. S20a starts no alarm/conditional/warning send or
+scheduler loop and requires no FCM account. S20b owns delivery supervision and stop;
+the current 5-second HTTP drain and 1-second runtime teardown are not a complete
+worker/acquisition drain. No production activation, deployment or full #2742/#2705
+cutover claim follows from this connection.
+
+See the [operations manual](../operations/server2-runtime-services.md),
+[design](diagrams/server2-runtime-services.html) and
+[selected verification](../evidence/tasks/issue-2705-s20a/verification.md).

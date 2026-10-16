@@ -1,18 +1,19 @@
-//! The server2 process: listeners, the optional gateway and the signal drain.
+//! The server2 process: listeners, the shared native services and the HTTP signal drain.
 //!
-//! `server2` (src/main.rs) runs it with the configuration and gateway built from the process
+//! `server2` (src/main.rs) runs it with the configuration and services built from the process
 //! environment and `server2/.env` ([`crate::dotenv`]). The test-only `loopback_server` example
-//! runs the same process with the gateway built for loopback test peers (S10e).
-use crate::gateway::{Gateway, GatewayError};
+//! runs the same process with services built for loopback test peers (S10e).
+use crate::gateway::GatewayError;
 use crate::listener::BoundedListener;
-use crate::{Config, SharedState, metrics_router, public_router};
+use crate::runtime_services::RuntimeServices;
+use crate::{Config, SharedState, metrics_router};
 use std::{future::IntoFuture, io, sync::Arc, time::Duration};
 use tokio::{net::TcpListener, sync::watch};
 
-/// Build the runtime from `config`, build the gateway inside it and serve until a signal.
+/// Build the runtime from `config`, build shared services inside it and serve until a signal.
 pub fn run<F>(config: Config, gateway: F) -> Result<(), Box<dyn std::error::Error>>
 where
-    F: FnOnce() -> Result<Option<Arc<Gateway>>, GatewayError>,
+    F: FnOnce() -> Result<RuntimeServices, GatewayError>,
 {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(config.worker_threads)
@@ -43,7 +44,7 @@ async fn wait_shutdown(mut stop: watch::Receiver<bool>) {
 }
 async fn serve<F>(config: Config, gateway: F) -> io::Result<()>
 where
-    F: FnOnce() -> Result<Option<Arc<Gateway>>, GatewayError>,
+    F: FnOnce() -> Result<RuntimeServices, GatewayError>,
 {
     let gateway = gateway().map_err(|_| io::Error::other("invalid gateway configuration"))?;
     let public = TcpListener::bind(config.public_addr).await?;
@@ -57,10 +58,7 @@ where
     let public = BoundedListener::new(public, config.connection_limit, lifetime);
     let private = BoundedListener::new(private, 16, lifetime);
     let state = Arc::new(SharedState::new(&config));
-    let router = match gateway {
-        Some(gateway) => crate::public_router_with_gateway(state.clone(), gateway),
-        None => public_router(state.clone()),
-    };
+    let router = gateway.public_router(state.clone());
     let (tx, rx) = watch::channel(false);
     let mut public_task = tokio::spawn(
         axum::serve(public, router)
