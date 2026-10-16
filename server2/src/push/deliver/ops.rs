@@ -13,6 +13,9 @@ use std::collections::BTreeMap;
 /// Plan one operation; `false` is a store error (legacy logs it and continues).
 pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
     match op {
+        InternalOp::CheckAlarmSelection { n, oid, selected } => txn
+            .get(Coll::Alarm, *n)
+            .is_some_and(|r| r.oid == *oid && same_alarm_subscription(&r.doc, selected)),
         InternalOp::CheckAlertSelection { n, oid, selected } => txn
             .get(Coll::Alert, *n)
             .is_some_and(|r| r.oid == *oid && &r.doc == selected),
@@ -191,4 +194,17 @@ fn still_stale(txn: &Txn<'_>, stale: &StaleSelection) -> Vec<u64> {
 /// `makeRemoveSelector(pushInfo)` as a filter.
 pub fn remove_filter(info: &Obj) -> Option<Vec<(String, Val)>> {
     routes::remove_selector(&Val::Obj(info.clone()))
+}
+
+// A registration refresh stamp alone changes no subscription. Cleanup still compares the
+// full selected record, so the refreshed record cannot be removed as stale.
+fn same_alarm_subscription(current: &Obj, selected: &Obj) -> bool {
+    let fields = |o: &Obj| {
+        o.entries()
+            .iter()
+            .filter(|(k, _)| !matches!(k.as_str(), "updatedAt" | "updatedBy"))
+            .cloned()
+            .collect::<Vec<_>>()
+    };
+    fields(current) == fields(selected)
 }

@@ -22,7 +22,7 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    sync::{mpsc, oneshot},
+    sync::{mpsc, oneshot, watch},
     time::Instant,
 };
 
@@ -101,6 +101,11 @@ pub struct StaleSelection {
 /// alarm worker).
 #[derive(Clone, Debug)]
 pub enum InternalOp {
+    CheckAlarmSelection {
+        n: u64,
+        oid: Oid,
+        selected: crate::world::js::Obj,
+    },
     /// Read-only selection guard. The writer catches up from S3 before evaluating it,
     /// including registration edits committed by another process.
     CheckAlertSelection {
@@ -170,6 +175,9 @@ pub struct PushService {
     state: Arc<RwLock<State>>,
     ready: Arc<std::sync::atomic::AtomicBool>,
     pub counters: Arc<Counters>,
+    accepting: std::sync::atomic::AtomicBool,
+    stop: watch::Sender<bool>,
+    writer: std::sync::Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
 impl PushService {
@@ -192,7 +200,8 @@ impl PushService {
             ready: ready.clone(),
             config: config.clone(),
         };
-        tokio::spawn(writer.run(rx));
+        let (stop, stopped) = watch::channel(false);
+        let writer = tokio::spawn(writer.run(rx, stopped));
         Arc::new(Self {
             tx,
             clock,
@@ -200,7 +209,32 @@ impl PushService {
             state,
             ready,
             counters,
+            accepting: std::sync::atomic::AtomicBool::new(true),
+            stop,
+            writer: std::sync::Mutex::new(Some(writer)),
         })
+    }
+
+    /// Reject new HTTP mutations; internal result/guard operations remain admitted during drain.
+    pub fn quiesce(&self) {
+        self.accepting
+            .store(false, std::sync::atomic::Ordering::Release);
+    }
+    /// Close the writer queue after delivery jobs finish; existing queued writes may settle.
+    pub async fn drain(&self, deadline: Instant) -> bool {
+        self.quiesce();
+        self.stop.send_replace(true);
+        let task = self.writer.lock().unwrap_or_else(|e| e.into_inner()).take();
+        let Some(task) = task else { return true };
+        let mut task = AbortWriter(task);
+        match tokio::time::timeout_at(deadline, &mut task.0).await {
+            Ok(result) => result.is_ok(),
+            Err(_) => {
+                task.0.abort();
+                let _ = tokio::time::timeout_at(deadline, &mut task.0).await;
+                false
+            }
+        }
     }
 
     /// Shared read access to the acknowledged state (delivery, tests).
@@ -297,7 +331,9 @@ impl PushService {
             now_ms,
             deadline,
         };
-        if self.tx.try_send(command).is_err() {
+        if !self.accepting.load(std::sync::atomic::Ordering::Acquire)
+            || self.tx.try_send(command).is_err()
+        {
             return failure(&body, &language);
         }
         match tokio::time::timeout_at(deadline, answer).await {
@@ -334,9 +370,15 @@ struct Writer<T> {
 }
 
 impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
-    async fn run(mut self, mut rx: mpsc::Receiver<Command>) {
+    async fn run(mut self, mut rx: mpsc::Receiver<Command>, mut stop: watch::Receiver<bool>) {
         let mut next_restore = Instant::now();
         loop {
+            if *stop.borrow() {
+                rx.close();
+            }
+            if rx.is_closed() && rx.is_empty() {
+                return;
+            }
             if !self.ready.load(std::sync::atomic::Ordering::Acquire)
                 && Instant::now() >= next_restore
             {
@@ -349,12 +391,13 @@ impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
                 }
             }
             let command = if self.ready.load(std::sync::atomic::Ordering::Acquire) {
-                match rx.recv().await {
+                match tokio::select! { biased; _ = stop.changed(), if !*stop.borrow() => { rx.close(); rx.recv().await }, c = rx.recv() => c }
+                {
                     Some(c) => c,
                     None => return,
                 }
             } else {
-                match tokio::time::timeout_at(next_restore, rx.recv()).await {
+                match tokio::time::timeout_at(next_restore, async { tokio::select! { biased; _ = stop.changed(), if !*stop.borrow() => { rx.close(); rx.recv().await }, c = rx.recv() => c } }).await {
                     Ok(Some(c)) => c,
                     Ok(None) => return,
                     Err(_) => continue,
@@ -488,4 +531,24 @@ pub fn router(service: Arc<PushService>) -> axum::Router {
             }
         }
     })
+}
+
+impl Drop for PushService {
+    fn drop(&mut self) {
+        if let Some(task) = self
+            .writer
+            .get_mut()
+            .unwrap_or_else(|e| e.into_inner())
+            .take()
+        {
+            task.abort();
+        }
+    }
+}
+
+struct AbortWriter(tokio::task::JoinHandle<()>);
+impl Drop for AbortWriter {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
 }

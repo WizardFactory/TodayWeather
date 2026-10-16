@@ -2,12 +2,12 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "S20a shared runtime services",
+    "title": "S20b planned runtime supervision",
     "output": "docs/architecture/diagrams/server2-runtime-services.html",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather.git",
-      "revision": "97c21cf56b1f59f07f4900480428a678874ae2cf"
+      "revision": "171472c5bfffb0010f1868ffcae1100dfb262de6"
     }
   },
   "components": [
@@ -245,18 +245,18 @@
       "dot": "cyan",
       "title": "Construction contract",
       "items": [
-        "One production constructor shares native handles and one S3 pool.",
-        "push builds dependencies without selecting public weather routes.",
-        "No delivery loops, FCM, OAuth or paid translation at startup."
+        "One shared native factory; ordinary push selection.",
+        "Planned: delivery starts after both listener binds.",
+        "No constructor provider, OAuth, FCM or Translator calls."
       ]
     },
     {
       "dot": "amber",
       "title": "Persistence and lifecycle",
       "items": [
-        "Native-only startup requires no legacy URL or synthetic origin.",
-        "Selected Forward and unsupported native fetches terminate locally.",
-        "S20b owns supervised stop; 5s HTTP drain is not full worker drain."
+        "Planned: process owns minute jobs, warning polls and writer.",
+        "Stop closes scheduling and final POST admission.",
+        "35s cancellation envelope; provider completion unverified."
       ]
     }
   ]

@@ -147,6 +147,7 @@ struct Token {
 }
 
 pub struct Fcm {
+    stopping: std::sync::atomic::AtomicBool,
     client: reqwest::Client,
     send_timeout: Duration,
     endpoints: Endpoints,
@@ -173,6 +174,7 @@ impl Fcm {
             tokens.insert(p, Mutex::new(None));
         }
         Ok(Self {
+            stopping: std::sync::atomic::AtomicBool::new(false),
             client: reqwest::Client::builder()
                 .redirect(reqwest::redirect::Policy::none())
                 // reqwest otherwise re-sends requests refused by an HTTP/2 protocol NACK.
@@ -185,6 +187,15 @@ impl Fcm {
             loaded: Mutex::new(HashMap::new()),
             tokens,
         })
+    }
+
+    /// Close final POST admission, including sends currently awaiting weather/OAuth/guards.
+    pub fn quiesce(&self) {
+        self.stopping
+            .store(true, std::sync::atomic::Ordering::Release);
+    }
+    pub fn stopping(&self) -> bool {
+        self.stopping.load(std::sync::atomic::Ordering::Acquire)
     }
 
     /// Test-only: a shorter send bound to exercise the timeout path quickly.
@@ -245,14 +256,16 @@ impl Fcm {
             .await
     }
 
-    /// Warning delivery's final admission after OAuth preparation, immediately before POST.
-    /// The caller bounds the guard and returns no payload on unavailable/changed state.
-    /// Existing alarm/conditional callers keep `send` and its original behavior.
+    /// Final admission after OAuth, immediately before POST. Each worker revalidates its
+    /// selected state/time (and warning zones); quiesce is checked after the awaited guard.
     pub async fn send_guarded<G, F>(&self, product: Product, now_ms: i64, prepare: G) -> SendOutcome
     where
         G: FnOnce() -> F,
         F: Future<Output = Option<Vec<u8>>>,
     {
+        if self.stopping() {
+            return SendOutcome::NotSent { reason: "shutdown" };
+        }
         let Some(account) = self.account(product).await else {
             return SendOutcome::NotSent {
                 reason: "credentials",
@@ -264,6 +277,9 @@ impl Fcm {
         let Some(body) = prepare().await else {
             return SendOutcome::NotSent { reason: "guard" };
         };
+        if self.stopping() {
+            return SendOutcome::NotSent { reason: "shutdown" };
+        }
         let url = format!(
             "{}v1/projects/{}/messages:send",
             self.endpoints.fcm, account.project_id

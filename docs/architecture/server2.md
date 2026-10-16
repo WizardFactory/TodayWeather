@@ -3517,3 +3517,24 @@ cutover claim follows from this connection.
 See the [operations manual](../operations/server2-runtime-services.md),
 [design](diagrams/server2-runtime-services.html) and
 [selected verification](../evidence/tasks/issue-2705-s20a/verification.md).
+
+### S20b supervised delivery (issue #2792)
+
+Ordinary push selection now prepares the alarm, conditional and warning workers in
+`RuntimeServices` with shared S3/state/WarningStore/feed and typed NativeFetch.
+The process starts delivery only after both listeners bind. UTC minute scheduling
+uses the observed minute, rejects stale queued ticks before claiming, and performs
+no catch-up or startup weather precollection. Warning initialization remains silent.
+
+The process owns scheduler/job and registration-writer handles. Signals and listener
+failure close scheduling and final FCM POST admission before concurrent bounded drain.
+One 35-second cancellation envelope covers a shared 34-second HTTP/jobs/writer deadline
+and one second runtime teardown; it does not establish full native acquisition completion.
+Longer owned acquisitions are cancelled/incomplete at teardown and partial state remains
+subject to S3 recovery. Durable claims persist through failed, unknown or cancelled sends;
+no automatic replay is introduced. Lazy per-product credential failures remain per send.
+
+See the [runtime operations and safety manual](../operations/server2-runtime-services.md),
+[diagram](diagrams/server2-runtime-services.html), and
+[S20b evidence](../evidence/tasks/issue-2705-s20b/verification.md).
+This source wiring does not authorize deployment, live sending or #2705 cutover.

@@ -291,7 +291,8 @@ impl server2::push::deliver::Fetch for UpdatingFetch {
 #[tokio::test]
 async fn a_user_update_during_the_minute_survives_the_stale_cleanup() {
     // Selected as stale (updated > 60 days ago); the user updates it during the minute; FCM
-    // then answers unregistered. The disable applies, but the cleanup keeps the user's record.
+    // would answer unregistered, but final selection rejects the changed subscription.
+    // The cleanup keeps the user's record and no provider POST occurs.
     let mut stale = alarm(1, "stale", 79200, "");
     stale.1.doc.set("updatedAt", Val::Date(1_700_000_000_000.));
     let rig = rig_named("user-update", &[stale]).await;
@@ -318,7 +319,9 @@ async fn a_user_update_during_the_minute_survives_the_stale_cleanup() {
         rig.diagnostics.clone(),
     );
     let report = worker.run_minute(NOW).await;
-    assert_eq!(report.deliveries[0].1, "unregistered");
+    assert_eq!(report.deliveries[0].1, "failed");
+    assert_eq!(report.deliveries[0].2, "alarm-admission");
+    assert!(rig.google.sends().is_empty());
     let restored = start(
         &rig.s3,
         rig.clock.clone(),
@@ -332,7 +335,7 @@ async fn a_user_update_during_the_minute_survives_the_stale_cleanup() {
         .iter()
         .map(|(_, r)| (r.doc.get("name").clone(), r.doc.get("enable").clone()))
         .collect();
-    assert_eq!(records, [(Val::Str("새집".into()), Val::Bool(false))]);
+    assert_eq!(records, [(Val::Str("새집".into()), Val::Undef)]);
 }
 
 #[tokio::test]

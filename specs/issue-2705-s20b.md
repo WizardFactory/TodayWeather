@@ -1,0 +1,15 @@
+# S20b specification
+
+Input: [intent](../intent/issue-2705-s20b.md), exact S20a base `171472c5bfffb0010f1868ffcae1100dfb262de6` and actual process/services/delivery source. Decision: PROCEED within AK's assignment.
+
+RuntimeServices constructs shared workers and FCM client without network acquisition or credential-file validation. Production selects workers with ordinary push family. All worker URLs use NativeFetch::servers() logical origin; SERVICE_SERVER/API_SERVER and HttpFetch are not selected. Existing full Accept-Language, units, coordinate order and v000902 worker requests remain unchanged.
+
+One supervisor owns scheduler and job JoinSets. Alarm and conditional jobs use the observed minute after the next boundary, never a stored missed minute. Warning jobs serialize and preserve first-poll silent initialization. Stop closes admission before awaiting any drain, including after OAuth and asynchronous selection revalidation immediately before FCM POST. POST already begun may return Accepted/Rejected/Unknown; stop before admission is NotSent. Claims remain durable and are never released for resend.
+
+The process has one 35-second shutdown envelope: 34 seconds for concurrent HTTP/delivery/writer drain and up to 1 second runtime teardown. A single native weather waiter is 3 seconds, OAuth 10 seconds, FCM 10 seconds, ledger/state operations 4 seconds each; 3+10+10+4+4=31 seconds leaves 3 seconds of scheduler/HTTP overhead before cancellation. This is a cancellation envelope, not a promise that an arbitrary queue or batch completes. Native providers can run up to 600 seconds independently of their waiters; runtime teardown cancels unfinished async acquisitions, whose completion is unverified. No completed-provider claim is allowed. HTTP requests are quiesced, queued registration work is resolved if durable before deadline, otherwise classified incomplete with S3 recovery. Worker jobs are cancelled at deadline; already claimed cycles are not replayed.
+
+Signal and listener failure take the same stop path; listener failure retains an error exit. Failure to bind the second listener starts no delivery. Process ownership also covers the registration writer, including pre-listener startup failure. Drop abort is a safety net; normal drain explicitly joins.
+
+Final alarm admission rechecks selected registration and current minute; conditional admission rechecks committed alert selection and its window; warning retains its durable writer catch-up and current zones/time checks. FCM stop is checked again after every awaited admission step. Existing retries, durable claim keys, sentinels and response contracts stay unchanged.
+
+Verification uses only injected owned loopback peers, synthetic signing key fixture, isolated process environment and same production factory/stop implementation. No dotenv loading or real endpoints. Tests cover two-worker/restart, selection mutation, slow weather/OAuth/POST/result writes and cancellation accounting. Deployment readiness checks real credential files separately under future authority.
