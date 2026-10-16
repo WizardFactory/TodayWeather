@@ -516,3 +516,23 @@ Malformed or uncharacterized cycle times are rejected during collection. The app
 are unchanged. Local decoder/storage replay is not public API or device recovery.
 See [collection](weather-collection.md#airkorea-image-derived-hourly-recovery-2756)
 and [operations](../operations/airkorea-image-forecast.md).
+
+## Newly geocoded town coordinates (#2782)
+
+Legacy `controllerTown._findTown` keeps a process-local list of plain town objects.
+After the existing Korea-area check accepts a newly geocoded town, it converts
+`gCoord.lat` and `gCoord.lon` to numbers before cache insertion, asynchronous save
+and callback. Mongoose casts the separate saved document; it does not cast the
+plain cached object. First use, cache reuse and a persisted `lean()` reload now
+supply the same numeric contract to `controllerTown24h.makeResult`, which keeps
+the existing v000901+ three-decimal `location: {lat, long}` rounding.
+
+Existing cached towns are returned unchanged. Empty lists and geocoder failures
+keep their errors. Invalid or out-of-area geocoder results retain their existing
+uncached, unsaved return path. Save failure still logs and keeps the accepted town
+in memory; the response does not wait for persistence. This change neither adds
+provider calls nor changes coordinate order, schema or DB data-version behavior.
+
+The [isolated verification record](../evidence/tasks/issue-2782/verification.md)
+links the Mongoose-aware regression and local HTTP/Mongo smoke. Production
+incidence and deployment remain unverified.
