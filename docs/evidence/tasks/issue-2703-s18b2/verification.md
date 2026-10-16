@@ -52,6 +52,11 @@ The concurrent-update regression initially omitted the HTTP Content-Length/locat
 correcting the test request exercised the actual registration route and preserved the newer
 user edit without submitting the stale notification.
 
+The subsequent scheduler clock-jump regression first failed on the missed :07 cycle; waking
+with a fresh clock reading passes and claims only the observed :35 cycle. Focused delivery
+verification after this fix covers 34 tests. The earlier full-suite 712 count is preserved
+as executed evidence; the additional regression is not relabeled as a full-suite run.
+
 Meaningful failure coverage: refused cycle claim, refused alert-state journal, rejected FCM,
 connection reset, hanging provider, durable cooldown after restored state, stale user update
 during weather preparation, unregistered token disabling alerts only, no-change state update,

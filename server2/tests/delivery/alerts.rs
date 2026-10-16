@@ -468,3 +468,64 @@ async fn no_change_still_updates_alert_state_without_a_provider_call() {
         "not a scheduler minute"
     );
 }
+
+struct JumpClock(std::sync::atomic::AtomicUsize);
+impl server2::budget::Clock for JumpClock {
+    fn now_ms(&self) -> Result<i64, server2::budget::BudgetError> {
+        let at = if self.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed) == 0 {
+            "2026-10-16T00:06:59.999Z"
+        } else {
+            "2026-10-16T00:35:00Z"
+        };
+        Ok(server2::warnings::js::parse_iso(at).unwrap())
+    }
+}
+#[tokio::test]
+async fn scheduler_evaluates_the_current_minute_after_a_clock_jump_not_the_missed_one() {
+    use server2::push::Coll;
+    let (r, body, _) = wet_case();
+    let rig = rig(
+        "conditional-clock-jump",
+        "2026-10-16T00:35:00Z",
+        &[(Coll::Alert, alert_record(1, r))],
+        None,
+    )
+    .await;
+    set_wet(&rig, &body);
+    let worker = std::sync::Arc::new(alerts::AlertWorker::new(
+        rig.push.clone(),
+        std::sync::Arc::new(rig.s3.clone()),
+        rig.weather.clone(),
+        std::sync::Arc::new(fcm(
+            &rig.google,
+            &temp_dir("conditional-clock-jump-provider"),
+        )),
+        servers(),
+        std::sync::Arc::new(JumpClock(std::sync::atomic::AtomicUsize::new(0))),
+        rig.diagnostics.clone(),
+    ));
+    let scheduler = tokio::spawn(worker.run());
+    tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        loop {
+            if !rig.google.sends().is_empty() {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    scheduler.abort();
+    assert!(
+        rig.s3
+            .body("index/v2/push/delivery/alert/20261016/0035.json")
+            .is_some(),
+        "the current cycle is claimed"
+    );
+    assert!(
+        rig.s3
+            .body("index/v2/push/delivery/alert/20261016/0007.json")
+            .is_none(),
+        "missed cycles are not caught up"
+    );
+}

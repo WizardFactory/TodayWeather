@@ -793,9 +793,14 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
             };
             let next = now - now.rem_euclid(60_000) + 60_000;
             tokio::time::sleep(std::time::Duration::from_millis((next - now) as u64)).await;
+            // A suspended process or clock jump can wake well after `next`. Evaluate the
+            // observed minute only; never catch up an old conditional cycle.
+            let Ok(observed) = self.clock.now_ms() else {
+                continue;
+            };
             let worker = self.clone();
             tokio::spawn(async move {
-                worker.run_minute(next).await;
+                worker.run_minute(observed).await;
             });
         }
     }
