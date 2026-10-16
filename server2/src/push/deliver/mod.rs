@@ -11,3 +11,5 @@ pub mod weather;
 pub use alarm::{AlarmWorker, Delivery, Diagnostics, Event, MinuteReport, StderrDiagnostics};
 pub use fcm::{Endpoints, Fcm, Product, SendOutcome};
 pub use weather::{Fetch, HttpFetch, Servers};
+
+pub mod alerts;

@@ -10,7 +10,7 @@
    "de": "1034953a35425f75acbfb2cf8eb18453f27528388e48e43a198c680da498e01b",
    "zh-TW": "bc47e1dddfe07659f083e15b80f10472ee8ac7899db94b40d1c01df10e037dda"
   },
-  "note": "S18b-1 subset: the keys the legacy alarm text uses (controllerPush.js, aqi.converter.js name2string, controllerTown.js _convertKmaPtyToStr). Copied verbatim; the runtime never reads legacy files."
+  "note": "S18b-1 subset: the keys the legacy alarm text uses (controllerPush.js, aqi.converter.js name2string, controllerTown.js _convertKmaPtyToStr). Copied verbatim; the runtime never reads legacy files. S18b-2 adds conditional-alert text keys from the same legacy locale files."
  },
  "locales": {
   "en": {
@@ -33,7 +33,17 @@
    "LOC_HAIL": "Hail",
    "LOC_AVERAGE": "Average",
    "LOC_AIR_QUALITY_IS_GOOD": "Air quality is good",
-   "LOC_AIR_QUALITY_IS_MODERATE": "Air quality is moderate"
+   "LOC_AIR_QUALITY_IS_MODERATE": "Air quality is moderate",
+   "LOC_IT_IS_RAINING": "It is raining",
+   "LOC_IT_IS_SLEETING": "It is sleeting",
+   "LOC_IT_IS_SNOWING": "It is snowing",
+   "LOC_FORECAST": "Forecast",
+   "LOC_IT_WILL_BE_RAINY_FROM_H": "It's expected to rain from %dh.",
+   "LOC_IT_WILL_BE_SLEETING_FROM_H": "It's expected to snow or rain from %dh.",
+   "LOC_IT_WILL_BE_SNOWY_FROM_H": "It's expected to snow from %dh.",
+   "LOC_AIR_INFORMATION": "AQI",
+   "LOC_H_POLLUTANT_IS_GRADE": "%dh %s is %s.",
+   "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "From %dh %s is expected to be at %s."
   },
   "ko": {
    "LOC_TODAY": "오늘",
@@ -55,7 +65,17 @@
    "LOC_HAIL": "우박",
    "LOC_AVERAGE": "평균",
    "LOC_AIR_QUALITY_IS_GOOD": "대기상태가 좋아요",
-   "LOC_AIR_QUALITY_IS_MODERATE": "대기상태는 보통입니다"
+   "LOC_AIR_QUALITY_IS_MODERATE": "대기상태는 보통입니다",
+   "LOC_IT_IS_RAINING": "비가 내리고 있습니다.",
+   "LOC_IT_IS_SLEETING": "진눈깨비가 내리고 있습니다.",
+   "LOC_IT_IS_SNOWING": "눈이 내리고 있습니다.",
+   "LOC_FORECAST": "예보",
+   "LOC_IT_WILL_BE_RAINY_FROM_H": "%d시부터 비가 내릴 예정입니다.",
+   "LOC_IT_WILL_BE_SLEETING_FROM_H": "%d시부터 눈 또는 비가 내릴 예정입니다.",
+   "LOC_IT_WILL_BE_SNOWY_FROM_H": "%d시부터 눈이 내릴 예정입니다.",
+   "LOC_AIR_INFORMATION": "대기정보",
+   "LOC_H_POLLUTANT_IS_GRADE": "%d시 %s가 %s입니다.",
+   "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "%d시부터 %s가 %s 수준을 나타낼 것으로 예상됩니다."
   },
   "ja": {
    "LOC_TODAY": "今日",
@@ -77,7 +97,17 @@
    "LOC_HAIL": "ひょう",
    "LOC_AVERAGE": "平均",
    "LOC_AIR_QUALITY_IS_GOOD": "大気の状態が良いです",
-   "LOC_AIR_QUALITY_IS_MODERATE": "大気の状態は普通です"
+   "LOC_AIR_QUALITY_IS_MODERATE": "大気の状態は普通です",
+   "LOC_IT_IS_RAINING": "雨が降っています。",
+   "LOC_IT_IS_SLEETING": "霙が降っています。",
+   "LOC_IT_IS_SNOWING": "雪が降っています。",
+   "LOC_FORECAST": "予報",
+   "LOC_IT_WILL_BE_RAINY_FROM_H": "%d時から雨が降る予定です。",
+   "LOC_IT_WILL_BE_SLEETING_FROM_H": "%d時から雪または雨が降る予定です。",
+   "LOC_IT_WILL_BE_SNOWY_FROM_H": "%d時から雪が降る予定です。",
+   "LOC_AIR_INFORMATION": "空気質指数",
+   "LOC_H_POLLUTANT_IS_GRADE": "%d時 %sが %sです。",
+   "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "%d時から%sの「%s」レベルが予想されます。"
   },
   "zh-CN": {
    "LOC_TODAY": "今日",
@@ -99,7 +129,17 @@
    "LOC_HAIL": "冰雹",
    "LOC_AVERAGE": "平均",
    "LOC_AIR_QUALITY_IS_GOOD": "空气状况好",
-   "LOC_AIR_QUALITY_IS_MODERATE": "空气状况一般"
+   "LOC_AIR_QUALITY_IS_MODERATE": "空气状况一般",
+   "LOC_IT_IS_RAINING": "正在下雨。",
+   "LOC_IT_IS_SLEETING": "正在下雨夹雪。",
+   "LOC_IT_IS_SNOWING": "正在下雪。",
+   "LOC_FORECAST": "预报",
+   "LOC_IT_WILL_BE_RAINY_FROM_H": "预计%d点开始下‘雨’。",
+   "LOC_IT_WILL_BE_SLEETING_FROM_H": "预计%d点开始下‘雪’或‘雨’。",
+   "LOC_IT_WILL_BE_SNOWY_FROM_H": "预计%d点开始下‘雪’。",
+   "LOC_AIR_INFORMATION": "空气指数",
+   "LOC_H_POLLUTANT_IS_GRADE": "%d点 %s是%s.",
+   "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "预计%s点开始%s‘%s’程度。"
   },
   "de": {
    "LOC_TODAY": "Heute",
@@ -121,7 +161,17 @@
    "LOC_HAIL": "Hagel",
    "LOC_AVERAGE": "Durchschnittlich",
    "LOC_AIR_QUALITY_IS_GOOD": "Die Luftqualität wird als gut bewertet",
-   "LOC_AIR_QUALITY_IS_MODERATE": "Die Luftqualität wird als befriedigend bewertet"
+   "LOC_AIR_QUALITY_IS_MODERATE": "Die Luftqualität wird als befriedigend bewertet",
+   "LOC_IT_IS_RAINING": "Es regnet.",
+   "LOC_IT_IS_SLEETING": "Es fällt Schneeregen.",
+   "LOC_IT_IS_SNOWING": "Es schneit.",
+   "LOC_FORECAST": "Vorhersage",
+   "LOC_IT_WILL_BE_RAINY_FROM_H": "Ab %d Uhr wird es Regen geben.",
+   "LOC_IT_WILL_BE_SLEETING_FROM_H": "Ab %d Uhr wird es Schnee oder Regen geben.",
+   "LOC_IT_WILL_BE_SNOWY_FROM_H": "Ab %d Uhr wird es Schnee geben.",
+   "LOC_AIR_INFORMATION": "AQI",
+   "LOC_H_POLLUTANT_IS_GRADE": "%d Uhr %s ist %s.",
+   "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "Ab %d Uhr %s für Luftqualität %s werden."
   },
   "zh-TW": {
    "LOC_TODAY": "今日",
@@ -143,7 +193,17 @@
    "LOC_HAIL": "冰雹",
    "LOC_AVERAGE": "平均",
    "LOC_AIR_QUALITY_IS_GOOD": "空氣狀況好",
-   "LOC_AIR_QUALITY_IS_MODERATE": "空氣狀況一般"
+   "LOC_AIR_QUALITY_IS_MODERATE": "空氣狀況一般",
+   "LOC_IT_IS_RAINING": "正在下雨。",
+   "LOC_IT_IS_SLEETING": "正在下雨夾雪。",
+   "LOC_IT_IS_SNOWING": "正在下雪。",
+   "LOC_FORECAST": "預報",
+   "LOC_IT_WILL_BE_RAINY_FROM_H": "預計%d點開始下雨。",
+   "LOC_IT_WILL_BE_SLEETING_FROM_H": "預計%d點開始會下雪或雨。",
+   "LOC_IT_WILL_BE_SNOWY_FROM_H": "預計%d點開始下雪。",
+   "LOC_AIR_INFORMATION": "空氣指數",
+   "LOC_H_POLLUTANT_IS_GRADE": "%d點 %s是%s.",
+   "LOC_POLLUTANT_IS_EXPECTED_TO_BE_AT_GRADE_FROM_H": "預計%d點開始%s‘%s’程度。"
   }
  }
 }

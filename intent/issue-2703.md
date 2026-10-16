@@ -50,3 +50,10 @@ without ever sending one delivery twice.
 
 Out of scope: conditional alerts (S18b-2), the S12-deferred push warning feed (S18b-3), notices
 (S18c), process wiring (S20) and any live provider call.
+
+## S18b-2 conditional alerts (2026-10-16)
+
+Continue the authorized S18 delivery scope with the legacy conditional worker's selection,
+weather/air transitions, localized message and registration-state updates. This slice builds
+on S18a and S18b-1; warning feed (S18b-3) and notices (S18c) remain separate. Endpoint is a
+reviewed PR awaiting root integration, without deployment or live FCM/OAuth/APNs calls.
