@@ -429,12 +429,12 @@ fn live_with(
     let mut settings = AirKoreaSettings::from_vars(&vars, endpoints)
         .unwrap()
         .unwrap();
-    assert_eq!(
-        settings.daily_units,
-        server2::domestic::kma::source::live::AIRKOREA_DAILY_UNITS
-    );
-    // The tests' funding scenarios are sized for 100 units per key.
-    settings.daily_units = 100;
+    // Built in: each AirKorea API's documented development allowance (AK decision 5).
+    use server2::domestic::quota::DataGoKrApi;
+    assert_eq!((settings.units)(DataGoKrApi::AirKoreaArpltn), 500);
+    assert_eq!((settings.units)(DataGoKrApi::AirKoreaMsrstn), 500);
+    // The tests' funding scenarios are sized for 100 units per key and API.
+    settings.units = |_| 100;
     Arc::new(LiveAirKorea::new(
         settings,
         Arc::new(funded),

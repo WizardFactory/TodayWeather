@@ -1052,7 +1052,7 @@ async fn warning_requests_rotate_through_every_key_and_keep_the_one_that_answere
             .iter()
             .map(|k| format!("S15B4A_LOCAL_KEY_{k}+aaaaaaaaaaaaaaaa/="))
             .collect(),
-        5000,
+        server2::domestic::quota::DataGoKrApi::daily_units,
         server2::domestic::family::Endpoints::new(&base, &base, &base).unwrap(),
         Arc::new(server2::budget::SystemClock),
         Arc::new(server2::domestic::metrics::DomesticMetrics::default()),

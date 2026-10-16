@@ -12,10 +12,11 @@ pub mod kma;
 pub mod metrics;
 pub mod mfds;
 pub mod publication;
+pub mod quota;
 pub mod riseset;
 pub mod zone;
 use crate::{budget::BudgetError, providers::Disposition, resolver::Acquisition};
-pub use acquire::{DomesticAcquirer, KeyRing};
+pub use acquire::{DomesticAcquirer, KeyBudgets, KeyRing};
 use std::fmt;
 
 /// Outcome of one acquisition. Only `Complete` carries raw records.

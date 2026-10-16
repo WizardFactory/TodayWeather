@@ -37,6 +37,20 @@ impl Service {
             Self::Asos => t::ASOS,
         }
     }
+    /// The data.go.kr APIs this service's requests call (each with its own daily quota).
+    pub fn apis(self) -> &'static [crate::domestic::quota::DataGoKrApi] {
+        use crate::domestic::quota::DataGoKrApi as A;
+        match self {
+            Self::VilageFcst => &[A::VilageFcst],
+            Self::MidFcst => &[A::MidFcst],
+            Self::LivingWthrIdx => &[A::LivingWthrIdx],
+            Self::HealthWthrIdx => &[A::HealthWthrIdx],
+            Self::AirKorea => &[A::AirKoreaArpltn, A::AirKoreaMsrstn],
+            Self::RiseSet => &[A::RiseSet],
+            Self::ForecastZone => &[A::FcstZone],
+            Self::Asos => &[A::AsosHourly, A::AsosDaily],
+        }
+    }
 }
 /// Provider time an owned acquisition of up to `pages` pages allows: the two HTTP attempts
 /// S08/S13 permit per page, each with the legacy timeout. Owned work (S14 capture, S07 owners)
