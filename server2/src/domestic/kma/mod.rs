@@ -304,3 +304,16 @@ pub(crate) fn to_store(v: &V) -> Value {
         ),
     }
 }
+
+/// NationAir reuses the legacy `KecoController.recalculateValue` port (including property order).
+pub fn recalculate_nation_air(
+    row: &OrderedJson,
+    unit: &OrderedJson,
+) -> Result<OrderedJson, String> {
+    js::catch(|| {
+        let row = js::from_store(row);
+        air::recalculate_value(&row, &js::from_ordered(unit));
+        js::to_json(&row).unwrap_or(OrderedJson::Null)
+    })
+    .map_err(|e| e.0)
+}

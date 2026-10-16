@@ -55,3 +55,52 @@ Order: town recording and S02 cross-check; Red (tests against S17a: missing `api
 `parse_town_path`, `Outcome::Undefined`); town lists, `getSummary`, `dataToFixed`, the
 `rn1Str` `+`; direct routes, envelope and hop; runtime entry; fmt, clippy, tests, smokes,
 placement, artifact policy; PR stacked on S17a; Codex review; CI.
+
+## S17c scenarios and evidence
+
+S17c is a new functional slice following merged S17a/b. Their completed review
+history is retained and is not reset. Declaration: `server2/config/tasks/S17c.json`.
+
+| ID | User goal and actions | Expected result | Evidence |
+| --- | --- | --- | --- |
+| C1 | Open current nation weather | Fifteen native cities in legacy order, city air fields removed, seventeen province rows when all present | Node16 legacy nation oracle; HTTP GET/HEAD/304 smoke |
+| C2 | Open old v000901 nation weather | Same-version internal calls; actual child failure gives legacy 500; healthy calls give 200 | Oracle success and child 500/404 scenarios |
+| C3 | Request several regions while the national provider is slow | One national acquisition, one shared three-second deadline, available response now and saved result next time | Twelve concurrent requests and 3.2-second owned test acquisition |
+| C4 | Restart with providers disabled | New memory reconstructs all seventeen province averages from S3 raw records | Two independent AirInputs instances over the loopback S3 peer |
+| C5 | Stored averages are absent, stale, invalid or future | Correct representative-point fallback, freshness boundaries and safe reason/coverage | Actual legacy NationAir and observation.evaluate oracle; S3 fallback tests |
+| C6 | Revalidate, use HEAD, units or malformed route parameter | Express envelope and rendered error semantics; no legacy call | Real HTTP handler; unit/error oracle; URI regression |
+
+Provider evidence is reused from S15b-3a's actual national observation request
+(2026-10-14, 672 stations, `numOfRows=1000`), because S17c adds no provider method.
+The authoritative API catalog is
+[AirKorea atmospheric observations](https://www.data.go.kr/data/15073861/openapi.do).
+The source register and recording limits are in
+`server2/tests/nation/PROVENANCE.md`. No production request, database write, push
+send, AWS change or deployment is part of this slice.
+
+S17c local verification at integrated base `80ecf56b`: Rust workspace **694 passed,
+0 failed, 2 ignored** (slow image/life boundary sweeps); ten nation tests passed.
+All-targets Clippy with warnings denied, formatting and the placement gate passed.
+The additional actual HTTP smoke uses the public Gateway/DirectRoutes handler,
+with a closed legacy origin and GET/HEAD/revalidation on both nation versions.
+The thirteen-case Node16 oracle was reproduced byte-for-byte. The one-page API
+manual was rendered with PyMuPDF (Poppler unavailable) and inspected; Archify
+artifact checks, actual Chrome inspection and four light/dark viewport captures
+were verified separately. Review and CI remain required before readiness.
+
+S17c QA1 on `1eb3a7bf` found two Required compatibility issues: uppercase-version
+child selection (S17C-R1-F01) and forwarding the parent cookie locale to children
+(S17C-R1-F02). Three actual-legacy cases were added to the pinned oracle (16 total).
+Both new regressions failed before the routing correction and passed afterward;
+all twelve nation tests passed, including the prior ten HTTP/S3/deadline scenarios.
+The earlier 694-test full-workspace result is retained as baseline evidence, not
+claimed rerun for this narrow routing change. Independent QA2 remains pending.
+
+S17c integration with reviewed native/S16 candidate `b029cf80` preserves QA1's
+uppercase child-version default and header-only child locale. The source is shared
+as an Arc and the nation backend receives the same SummarySink-aware KmaBackend.
+The child parser consumes the new typed Result without changing nation error bytes.
+Thirteen nation tests pass, including an additional exact Jade500/HEAD/ETag check;
+the 27 summary tests and existing older-version captured-row integration test pass.
+All sixteen actual-legacy oracle scenarios/source hashes remain byte-identical.
+No full workspace rerun, live provider request or deployment is claimed for this merge.

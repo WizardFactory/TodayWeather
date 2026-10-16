@@ -282,3 +282,6 @@ pub fn public_router_with_gateway(
 pub mod api;
 pub mod push;
 pub mod warnings;
+
+/// S17c native nation weather and air composition.
+pub mod nation;

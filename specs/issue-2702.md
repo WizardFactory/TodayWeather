@@ -111,3 +111,38 @@ and both town routers). Unlisted paths keep the previous 404; other methods are 
   `SERVER2_GATEWAY_LEGACY_URL` with a direct entry refuses startup). The v000705 `/short`, `/shortest`, `/current` replies without
   `midData` are legacy 500s from `next(err)` and are forwarded like every S15 `next(err)`;
   reproducing Express's 500 natively remains open.
+
+## S17c: nation composition
+
+`kma` also claims GET/HEAD `/v000903/nation/:nation`; `kma-v000901` claims
+`/v000901/nation/:nation`. Express case-insensitive mounts and the optional trailing
+slash remain supported. The legacy route returns `nation: "KR"` for every decoded
+nation parameter; the server does not invent a country-validation rule.
+Uppercase `V000903` is claimed but defaults child version to v000901, matching legacy
+query validation. Child locale comes only from `Accept-Language`, defaulting to English
+without the header; the parent locale cookie is not forwarded to child requests.
+
+Fifteen city responses use native KMA backends and legacy version rules with one absolute
+three-second deadline. City `airInfo` and `airInfoList` are removed, preserving all
+other fields and legacy city order. A real failed child request gives the legacy
+500 rendered-error response (AK's approved option b); successful dependencies give
+200. Missing provider branches remain the existing KMA partial-data contract.
+Nation children share the same `KmaBackend` and S16 recorder as direct weather requests.
+When a complete snapshot produces compatible captured `getPastMid` rows, the shared backend
+records its summaries without adding fields to the nation response. Rendered nation errors
+keep the Jade `res.send` ETag/HEAD contract, distinct from native finalhandler errors.
+No native nation request contacts legacy. URI decoding failures give a rendered
+400 response. Error output omits the legacy session ID because native routes do
+not run legacy session middleware; no cookie or arbitrary identifier is invented.
+
+NationAir reuses the process S3 source and the existing nationwide acquisition.
+Only the newest urban-observation hour within each province contributes, with
+per-pollutant denominators and legacy rounding/schema selection. The shared raw
+records also retain the national province label in memory. `전남광주` is separated
+using the station-list address; an unresolved label is not guessed. Fresh stored
+province means take priority. Missing, invalid, future or eight-hour-old means
+fall back to the legacy fixed representative points, at most four concurrently,
+with the correct coverage label and enumerated per-province reasons. Deadline
+release returns available rows; owned acquisition continues and feeds later
+requests. No new provider call method, mode, endpoint setting or durable derived
+weather store is introduced.

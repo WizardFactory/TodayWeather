@@ -1,0 +1,70 @@
+{
+  "task": "S17c",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2702",
+  "server2_paths": [
+    "server2/config/tasks/S17c.json",
+    "server2/src/nation/",
+    "server2/src/lib.rs",
+    "server2/src/api/mod.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/src/domestic/kma/mod.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/air_input.rs",
+    "server2/src/domestic/kma/source/airkorea.rs",
+    "server2/tests/nation.rs",
+    "server2/tests/nation/",
+    "server2/tools/nation_record.cjs",
+    "server2/tools/nation_smoke.py",
+    "server2/Cargo.toml",
+    "server2/Cargo.lock",
+    "server2/.env.example",
+    "server2/src/world/air.rs",
+    "server2/src/world/air_chain.rs"
+  ],
+  "outside": [
+    {
+      "path": "specs/issue-2702.md",
+      "category": "documentation",
+      "reason": "S17c nation contracts and approved failure behavior"
+    },
+    {
+      "path": "plans/issue-2702.md",
+      "category": "documentation",
+      "reason": "S17c scenario/check evidence"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Nation routes and shared AirKorea projection"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-nation.json",
+      "category": "documentation",
+      "reason": "Nation request data flow"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-nation.html",
+      "category": "documentation",
+      "reason": "Generated nation request data flow"
+    },
+    {
+      "path": "docs/operations/server2-nation.md",
+      "category": "documentation",
+      "reason": "Native nation usage and verification manual"
+    },
+    {
+      "path": "docs/operations/server2-nation.pdf",
+      "category": "documentation",
+      "reason": "Rendered and visually verified usage manual"
+    },
+    {
+      "path": "docs/operations/assets/server2-nation-http.png",
+      "category": "documentation",
+      "reason": "Rendered capture of actual HTTP test output embedded in editable manual and PDF"
+    }
+  ],
+  "path_notes": {
+    "server2/src/world/air.rs": "Backward-compatible AirSource detail method and legacy observation rejection reason projection for NationAir per-province status",
+    "server2/src/world/air_chain.rs": "Expose already retained observation or failed outcome reason without altering existing current callers"
+  }
+}
