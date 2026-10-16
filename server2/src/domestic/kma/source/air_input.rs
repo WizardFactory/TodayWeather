@@ -15,6 +15,7 @@ use super::airkorea::{
 use super::doc::{Doc, Val};
 use super::live::{AirKoreaAcquire, Flights};
 use super::records::{Fetched, Reader, months};
+use crate::budget::{Clock, SystemClock};
 use crate::domestic::airkorea::AirKoreaRequest;
 use crate::domestic::publication::{self, Publication};
 use crate::gateway::{BoxFuture, OrderedJson};
@@ -80,10 +81,11 @@ async fn bounded<T>(
 }
 /// The wall clock in ms: acquisitions completed while a request waited for them are visible to
 /// it, although they complete after the request instant.
-fn wall_ms() -> f64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0., |d| d.as_millis() as f64)
+///
+/// S15b-3d: read from the inputs' clock (the system clock unless `with_clock` injects another;
+/// tests fix it).
+fn wall_ms(clock: &dyn Clock) -> f64 {
+    clock.now_ms().map_or(0., |n| n as f64)
 }
 /// KST hour partition `YYYYMMDD-HH00` of an instant.
 fn hour_partition(ms: f64) -> String {
@@ -150,6 +152,8 @@ pub struct AirInputs<T> {
     cpu: Arc<tokio::sync::Semaphore>,
     /// S15b-3c: the AirKorea image hourly forecast.
     images: super::forecast_input::ImageForecasts<T>,
+    /// The wall clock (S15b-3d).
+    clock: Arc<dyn Clock>,
 }
 /// State of the demand-gated hourly capture.
 #[derive(Default)]
@@ -181,6 +185,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             capture: Arc::new(Capture::default()),
             capture_every: CAPTURE_EVERY,
             cpu: Arc::new(tokio::sync::Semaphore::new(2)),
+            clock: Arc::new(SystemClock),
         }
     }
     /// Run CPU work on a blocking worker under the CPU admission. Dropping the returned future
@@ -210,7 +215,15 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             self.reader.transport.clone(),
             self.reader.store.clone(),
             calibration,
-        );
+        )
+        .with_clock(self.clock.clone());
+        self
+    }
+    /// S15b-3d: the wall clock of these inputs and their image fold (the system clock by
+    /// default; tests fix it).
+    pub fn with_clock(mut self, clock: Arc<dyn Clock>) -> Self {
+        self.images = self.images.with_clock(clock.clone());
+        self.clock = clock;
         self
     }
     /// Start (or join) the owned acquisition of one dataset and wait for it until `ready_by`;
@@ -237,15 +250,16 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         };
         self.capture
             .demand_ms
-            .store(wall_ms() as i64, Ordering::Release);
+            .store(wall_ms(&*self.clock) as i64, Ordering::Release);
         if self.capture.started.swap(true, Ordering::AcqRel) {
             return;
         }
-        let (flights, generation, capture, every) = (
+        let (flights, generation, capture, every, clock) = (
             self.flights.clone(),
             self.generation.clone(),
             self.capture.clone(),
             self.capture_every,
+            self.clock.clone(),
         );
         tokio::spawn(async move {
             // The first check is one interval after the first request (that request already
@@ -254,7 +268,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 tick.tick().await;
-                let now = wall_ms();
+                let now = wall_ms(&*clock);
                 if now as i64 - capture.demand_ms.load(Ordering::Acquire) > DEMAND_MS {
                     continue;
                 }
@@ -325,7 +339,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                 && current.is_none()
                 && let Ok(Some(found)) = bounded(
                     deadline,
-                    self.station_fold(now, wall_ms().max(now), false, deadline),
+                    self.station_fold(now, wall_ms(&*self.clock).max(now), false, deadline),
                 )
                 .await
             {
@@ -514,7 +528,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             // A refresh that cannot finish keeps the data read first.
             let refreshed = bounded(
                 deadline,
-                self.observation_fold(now, wall_ms().max(now), deadline),
+                self.observation_fold(now, wall_ms(&*self.clock).max(now), deadline),
             )
             .await;
             return Ok(match refreshed {
@@ -695,7 +709,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         {
             let refreshed = bounded(
                 deadline,
-                self.forecast_fold(now, wall_ms().max(now), date, deadline),
+                self.forecast_fold(now, wall_ms(&*self.clock).max(now), date, deadline),
             )
             .await;
             if let Ok(f) = &refreshed {
