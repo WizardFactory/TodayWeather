@@ -1,7 +1,8 @@
 # Server2 push delivery
 
 Editable operator guide for S18b-2 and S18b-3 (#2703), 2026-10-16. [PDF](server2-push-delivery.pdf)
-and [sequence](../architecture/diagrams/server2-push-delivery.html).
+and [conditional sequence](../architecture/diagrams/server2-push-delivery.html),
+plus the [warning sequence](../architecture/diagrams/server2-warning-push.html).
 
 ## Capability and setup boundary
 

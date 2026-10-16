@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Server2 Warning Push Library",
+    "output": "docs/architecture/diagrams/server2-warning-push.html",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "animation": "none",
+    "viewBox": [
+      1080,
+      680
+    ],
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "2428498226022bd2620efa5a394f0068db4ae599",
+      "provider": "github",
+      "link_mode": "local-only"
+    }
+  },
+  "participants": [
+    {
+      "id": "collector",
+      "type": "backend",
+      "label": "S12 collector",
+      "sublabel": "persisted source rows",
+      "sources": [
+        {
+          "path": "server2/src/warnings/collector.rs",
+          "line": 1,
+          "end_line": 300
+        }
+      ]
+    },
+    {
+      "id": "feed",
+      "type": "backend",
+      "label": "Warning feed",
+      "sublabel": "immutable events + CAS head",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/warning_feed.rs",
+          "line": 202,
+          "end_line": 285
+        }
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "Warning worker",
+      "sublabel": "library, not started",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/warnings.rs",
+          "line": 325,
+          "end_line": 591
+        }
+      ]
+    },
+    {
+      "id": "state",
+      "type": "backend",
+      "label": "Durable state",
+      "sublabel": "durable current state",
+      "sources": [
+        {
+          "path": "server2/src/push/service.rs",
+          "line": 378,
+          "end_line": 462
+        },
+        {
+          "path": "server2/src/warnings/store.rs",
+          "line": 542,
+          "end_line": 595
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "database",
+      "label": "S3",
+      "sublabel": "feed and claims",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/ledger.rs",
+          "line": 64,
+          "end_line": 125
+        }
+      ]
+    },
+    {
+      "id": "fcm",
+      "type": "external",
+      "label": "OAuth / FCM",
+      "sublabel": "prepare then guarded POST",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/fcm.rs",
+          "line": 244,
+          "end_line": 318
+        }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "id": "warning-step-0",
+      "from": "collector",
+      "to": "s3",
+      "y": 170,
+      "label": "Publish raw + catalog",
+      "variant": "security",
+      "note": "Every source page/day must succeed before the feed hook."
+    },
+    {
+      "id": "warning-step-1",
+      "from": "collector",
+      "to": "feed",
+      "y": 206,
+      "label": "Pass persisted rows",
+      "variant": "default",
+      "note": "S18b-3 hook; first durable feed is a silent baseline."
+    },
+    {
+      "id": "warning-step-2",
+      "from": "feed",
+      "to": "s3",
+      "y": 242,
+      "label": "Events then CAS head",
+      "variant": "security",
+      "note": "An event without an acknowledged head is not visible."
+    },
+    {
+      "id": "warning-step-3",
+      "from": "worker",
+      "to": "feed",
+      "y": 278,
+      "label": "Read new feed",
+      "variant": "default",
+      "note": "First worker read is silent; no startup replay."
+    },
+    {
+      "id": "warning-step-4",
+      "from": "worker",
+      "to": "state",
+      "y": 314,
+      "label": "Select eligible alerts",
+      "variant": "default",
+      "note": "Zone + inclusive time window; deduplicate package/token."
+    },
+    {
+      "id": "warning-step-5",
+      "from": "worker",
+      "to": "s3",
+      "y": 350,
+      "label": "Claim endpoint",
+      "variant": "security",
+      "note": "Stop if claim is unavailable or already taken."
+    },
+    {
+      "id": "warning-auth",
+      "from": "worker",
+      "to": "fcm",
+      "label": "Prepare OAuth",
+      "variant": "default",
+      "note": "No FCM POST before final guard.",
+      "y": 386
+    },
+    {
+      "id": "warning-guard",
+      "from": "worker",
+      "to": "state",
+      "label": "Recheck durable state",
+      "variant": "security",
+      "note": "Catch up S3 registration journal and read active S12 zones; error/timeout/expiry stops POST.",
+      "y": 422
+    },
+    {
+      "id": "warning-step-6",
+      "from": "worker",
+      "to": "fcm",
+      "y": 458,
+      "label": "Submit once",
+      "variant": "emphasis",
+      "note": "Current active warning only; no hidden retry."
+    },
+    {
+      "id": "warning-step-7",
+      "from": "fcm",
+      "to": "worker",
+      "y": 494,
+      "label": "Outcome or unknown",
+      "variant": "return",
+      "note": "A lost response never authorizes a second submission."
+    },
+    {
+      "id": "warning-step-8",
+      "from": "worker",
+      "to": "s3",
+      "y": 530,
+      "label": "Record sanitized result",
+      "variant": "dashed",
+      "note": "Claim survives missing result, cancellation and restart."
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Legacy source contract",
+      "items": [
+        "First durable feed is silent; later new source events must be less than five minutes old.",
+        "Release, expiry, active announcement, alert time window and zone govern selection."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "One-shot implementation",
+      "items": [
+        "Endpoint claim before one submission; failed or unknown work is never retried.",
+        "Startup baseline consumes old feed without broadcasting or resuming delivery."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Activation boundary",
+      "items": [
+        "S12 feeds only rows with acknowledged raw and catalog publication.",
+        "S20 owns process wiring. Synthetic HTTP acceptance is not device delivery."
+      ]
+    }
+  ]
+}

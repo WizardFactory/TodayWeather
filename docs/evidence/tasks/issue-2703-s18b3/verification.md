@@ -38,7 +38,8 @@ cases and the urgent payload. Alarm/conditional fixtures remain unchanged.
   current zone table; it was corrected to Seoul's actual `L1100000` code. The
   original failure is retained in ignored task evidence.
 - Clippy: workspace/all targets, warnings denied, passed. Final workspace test
-  outcome and exact commit/CI/review are recorded on the PR after execution.
+  outcome: 784 passed, zero failed, two slow sweeps intentionally ignored. Exact
+  commit/CI/review and current-master focused checks are recorded on the PR.
 - PDF: all three rendered pages visually inspected using PyMuPDF (Poppler was
   unavailable); screenshots are rendered actual stdout with synthetic data.
 
@@ -55,6 +56,9 @@ cargo run --locked --manifest-path server2/Cargo.toml --example warning_push_smo
 [PDF](../../../operations/server2-push-delivery.pdf) preserve existing conditional
 instructions and add the warning scenario. Existing broad S18 review histories
 are not reset; this is a separately declared PR scope.
+
+The source-pinned [warning sequence](../../../architecture/diagrams/server2-warning-push.html)
+passed Archify artifact and browser gates; actual light/dark captures were inspected.
 
 ## Limits
 

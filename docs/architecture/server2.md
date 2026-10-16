@@ -3273,6 +3273,8 @@ records the actual offline comparison and functional checks; it does not claim d
 
 ## S18b-3 warning feed and one-shot delivery (2026-10-16)
 
+[Source-pinned warning sequence](diagrams/server2-warning-push.html).
+
 `push::deliver::warning_feed` ports the actual legacy S3 warning feed, with an
 explicit `WarningCollector::with_push_feed` post-persistence sink. Every fetched
 zone page/day must already be published in S12 before the sink receives its rows.
