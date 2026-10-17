@@ -213,7 +213,7 @@ def run(peer_binary):
         finally:
             stop(process)
         assert dump(s3) == [], 'legacy startup wrote no S3 object'
-        print('PASS startup without the routing entry keeps the legacy world backend and reads no native setting', flush=True)
+        print('PASS startup without the routing entry keeps the legacy world backend with no VC/air fetch or S3 write', flush=True)
         process, base = start(binary, native_env)
         try:
             status, first = request(base, path, headers)

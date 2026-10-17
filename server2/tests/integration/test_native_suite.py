@@ -1,5 +1,6 @@
 """S19b orchestration controls; product checks run separately with real artifacts."""
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -77,6 +78,16 @@ class SuiteControls(unittest.TestCase):
         self.assertEqual(sum(c['status'] == 'PASS' for c in report['checks']), 1)
         self.assertEqual(sum(c['status'] == 'NOT_RUN' for c in report['checks']), 10)
         self.assertEqual(json.loads((self.root / 'run/report.json').read_text()), report)
+
+    def test_failed_full_selection_is_not_reported_as_a_subset(self):
+        for ids, expected in (([c.id for c in suite.CHECKS], 'all checks selected'),
+                              (['notice'], 'selected checks only')):
+            with self.subTest(ids=ids), patch.object(suite, 'run', return_value=(1, {
+                    'verdict': 'FAIL', 'full_coverage': False, 'selected': ids})), \
+                    patch('sys.stdout', new_callable=io.StringIO) as output:
+                code = suite.main(['--artifacts', str(self.manifest), '--out', str(self.root / 'run')])
+                self.assertEqual(code, 1)
+                self.assertIn('FAIL native verification: ' + expected + ';', output.getvalue())
 
     def test_exit_zero_without_expected_output_fails(self):
         def noop(command, log, env, timeout):

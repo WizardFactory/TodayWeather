@@ -318,7 +318,7 @@ def main(argv=None):
     except (OSError, ValueError) as error:
         print('BLOCKED: ' + str(error), file=sys.stderr)
         return 2
-    scope = 'all checks' if report['full_coverage'] else 'selected checks only'
+    scope = 'all checks selected' if len(report.get('selected', [])) == len(CHECKS) else 'selected checks only'
     print(report['verdict'] + ' native verification: ' + scope + '; ' + str(args.out / 'report.json'))
     return code
 
