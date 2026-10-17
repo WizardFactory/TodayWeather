@@ -62,6 +62,7 @@ def main():
     # The all-family operator suite requires an explicit retained-artifact manifest.
     commands.insert(5, [sys.executable, 'tests/integration/test_native_suite.py'])
     commands.insert(6, [sys.executable, 'tests/integration/test_release_recovery.py'])
+    commands.insert(7, [sys.executable, 'tests/integration/test_cutover_deadline.py'])
     os.environ.setdefault('SERVER2_PYTHON', sys.executable)
     commands.append(['bash', 'deploy/smoke.sh', '--binary', 'target/release/server2', '--skip-reused',
                      '--out', str(root/'reports/server2-smoke/ci')])

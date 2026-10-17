@@ -1,0 +1,250 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "server2 S20 \u2014 proposed operational decision flow",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/server2-cutover.html"
+  },
+  "lanes": [
+    {
+      "id": "prep",
+      "label": "Repository preparation \u2014 allowed now"
+    },
+    {
+      "id": "decision",
+      "label": "Evidence and authority \u2014 no automatic approval",
+      "variant": "exception"
+    },
+    {
+      "id": "ops",
+      "label": "Future authorized switch \u2014 not executed"
+    },
+    {
+      "id": "recovery",
+      "label": "Future authorized recovery \u2014 not executed",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "inventory",
+    "bundle",
+    "rehearsal",
+    "gate",
+    "approve"
+  ],
+  "nodes": [
+    {
+      "id": "inventory",
+      "lane": "prep",
+      "col": 0,
+      "type": "database",
+      "label": "Inventory + local proof",
+      "sublabel": "19 routes; notice; /ww gap",
+      "width": 165
+    },
+    {
+      "id": "bundle",
+      "lane": "prep",
+      "col": 1,
+      "type": "database",
+      "label": "Candidate release pair",
+      "sublabel": "code / config / state hashes",
+      "width": 165
+    },
+    {
+      "id": "rehearsal",
+      "lane": "prep",
+      "col": 2,
+      "type": "backend",
+      "label": "Owned local rehearsal",
+      "sublabel": "fresh upstream per request",
+      "width": 165
+    },
+    {
+      "id": "gate",
+      "lane": "decision",
+      "col": 2,
+      "type": "security",
+      "label": "Operational evidence gate",
+      "sublabel": "shadow / host / quota / state",
+      "width": 165
+    },
+    {
+      "id": "hold",
+      "lane": "decision",
+      "col": 3,
+      "type": "security",
+      "label": "Keep cutover blocked",
+      "sublabel": "missing proof or prior bundle",
+      "width": 165
+    },
+    {
+      "id": "approve",
+      "lane": "decision",
+      "col": 4,
+      "type": "external",
+      "label": "Scoped AK authorization",
+      "sublabel": "exact host / release / time",
+      "width": 165
+    },
+    {
+      "id": "drain",
+      "lane": "ops",
+      "col": 4,
+      "type": "backend",
+      "label": "Stop admission + workers",
+      "sublabel": "drain jobs; preserve claims",
+      "width": 165
+    },
+    {
+      "id": "switch",
+      "lane": "ops",
+      "col": 3,
+      "type": "backend",
+      "label": "Activate selected release",
+      "sublabel": "one worker owner; verify state",
+      "width": 165
+    },
+    {
+      "id": "observe",
+      "lane": "ops",
+      "col": 2,
+      "type": "messagebus",
+      "label": "Observe metrics",
+      "sublabel": "errors / latency / durable state",
+      "width": 165
+    },
+    {
+      "id": "rollback",
+      "lane": "recovery",
+      "col": 2,
+      "type": "security",
+      "label": "Rollback decision",
+      "sublabel": "unknown send never replayed",
+      "width": 165
+    },
+    {
+      "id": "prior",
+      "lane": "recovery",
+      "col": 1,
+      "type": "backend",
+      "label": "Eligible prior release",
+      "sublabel": "no legacy; no journal rewind",
+      "width": 165
+    },
+    {
+      "id": "verify",
+      "lane": "recovery",
+      "col": 0,
+      "type": "messagebus",
+      "label": "Verify restored service",
+      "sublabel": "same state; retained claims",
+      "width": 165
+    }
+  ],
+  "edges": [
+    {
+      "id": "inventory-bundle",
+      "from": "inventory",
+      "to": "bundle",
+      "label": "",
+      "variant": "default"
+    },
+    {
+      "id": "bundle-rehearsal",
+      "from": "bundle",
+      "to": "rehearsal",
+      "label": "",
+      "variant": "default"
+    },
+    {
+      "id": "rehearsal-gate",
+      "from": "rehearsal",
+      "to": "gate",
+      "label": "",
+      "variant": "default"
+    },
+    {
+      "id": "gate-hold",
+      "from": "gate",
+      "to": "hold",
+      "label": "missing",
+      "variant": "security"
+    },
+    {
+      "id": "hold-approve",
+      "from": "hold",
+      "to": "approve",
+      "label": "only after proof",
+      "variant": "dashed"
+    },
+    {
+      "id": "approve-drain",
+      "from": "approve",
+      "to": "drain",
+      "label": "separate action",
+      "variant": "dashed"
+    },
+    {
+      "id": "drain-switch",
+      "from": "drain",
+      "to": "switch",
+      "label": "",
+      "variant": "default"
+    },
+    {
+      "id": "switch-observe",
+      "from": "switch",
+      "to": "observe",
+      "label": "",
+      "variant": "default"
+    },
+    {
+      "id": "observe-rollback",
+      "from": "observe",
+      "to": "rollback",
+      "label": "abort threshold",
+      "variant": "security"
+    },
+    {
+      "id": "rollback-prior",
+      "from": "rollback",
+      "to": "prior",
+      "label": "eligible only",
+      "variant": "security"
+    },
+    {
+      "id": "prior-verify",
+      "from": "prior",
+      "to": "verify",
+      "label": "",
+      "variant": "default"
+    },
+    {
+      "id": "gate-approve",
+      "from": "gate",
+      "to": "approve",
+      "label": "all proof",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Evidence scope",
+      "items": [
+        "Local S19 PASS is not seven-day shadow or whole-host rollback eligibility",
+        "nginx rehearsal closes only the reused-connection deadline gap"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Hard stop conditions",
+      "items": [
+        "No eligible previous bundle or incompatible durable state means no cutover",
+        "No live shadow, host action, notification replay or quota measurement in this task"
+      ]
+    }
+  ]
+}
