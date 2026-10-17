@@ -129,7 +129,7 @@
       "server/controllers/controllerManager.js": "b64cdffdb4bd8936d3bd1164000fad8a600e554a1c6ca5faf418d27a4f52d442",
       "server/controllers/controllerPush.js": "0ea6353917b6182bcede0307d712568a479d70bb086c098cd2dfd9f24865ac7e",
       "server/controllers/controllerTown.js": "9d801b07e6686b64ddae0c87e3fc32d50f429e9c6f243ecc0683d7a111d40396",
-      "server/controllers/controllerTown24h.js": "7e551bb88dca224f25877c1d2bf1ab43046238e37bb4c76c78c44ab2dcfd7234",
+      "server/controllers/controllerTown24h.js": "7229549130fa882cbfcfea2ece737a9b7b2eabe8d091691e1460969a67333911",
       "server/controllers/kecoController.js": "2041f9f23a1487008461ff780f9618b5dcc19f67e977a6c1a1cbc056013f904d",
       "server/controllers/kma.specialweather.controller.js": "a8886d197aa306d38388085ed63491871d2802e80eaa55778c589f6e769f1917",
       "server/controllers/kma/kma.town.current.controller.js": "2887d7f30909a12d434186ee1c1d26aebeb1f1e290ad48ff93c3dde738e3c94e",
@@ -170,6 +170,9 @@
       "server/lib/history/recovery.js": "d3894072eb57c876f4a9b28eeb997b8835f64d5dcb0bd3c673c189cfc833d120",
       "server/lib/history/service.js": "dae72a1badff864ebdbb437530dae9aba0728c451cc6a98d1b4c7d4a75a064cb",
       "server/lib/history/store.js": "7892f529d0fe7a0d6db47b72b99795b8b7845be562907c7200887583d0179cd5",
+      "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e",
+      "server/lib/kmaForecastNarrativeResponse.js": "c84ab2a2aa90b00f2340d3499147420b02b196efa25b214e144ae50671a7c2bd",
+      "server/lib/kmaForecastRegions.js": "692027586f9411cb8ffb3eadb2a729e54ee66350d47030b04d2e6eb5b8b30907",
       "server/lib/kmaPrecipitation.js": "2425c15759495f40a1ec376d7d87677bc159f7e307a2edd77f3fb90e2876e1a5",
       "server/lib/kmaTimeLib.js": "e17dc2941e7e03701cebbe05b4cb077d771d9ed022af8a618057a99bb1b5ec61",
       "server/lib/kmaWarningZones.js": "b10f42aec4d4a77b0b2a8017f0c1688a95e82702345752d41ebd1682d0cf059f",
@@ -183,12 +186,13 @@
       "server/locales/ko.json": "1b50fa20563d6986c911bdab20573c93ea1902e67d45142f09450a0a48dc8d02",
       "server/locales/zh-CN.json": "68967b6063ecafb3b086fae485579216444c289c15cdbf271ac256480f7aa703",
       "server/locales/zh-TW.json": "bc47e1dddfe07659f083e15b80f10472ee8ac7899db94b40d1c01df10e037dda",
+      "server/models/modelKmaForecastNarrative.js": "6d5494f57ccbfcfdac6556cdca7d7e836a15e4b6d6ea1e350d25e955b6e8a091",
       "server/models/modelKmaSpecialWeatherSituation.js": "f2f45a8b6a421479838caa7fc8b45d97f2f1f78065b11a0f817a94036b281ce8",
       "server/routes/gateway.js": "90d772e4aa915928be66f3835db9e4db4ffcb266614016b9f903be24f49dba75",
       "server/routes/v000705/index.js": "b29f289fab08549d31ddde85dac03590d6b4137004e475cd7e5da33995dc1154",
       "server/routes/v000705/routePushNotification.js": "c0a52209f6deba75f04107f9346d4039b71e323f01d162356877de1aa3a3fd03",
       "server/routes/v000705/routeTownForecast.js": "032be90a0d284b45bed49e807c4aafd7dc138764302922d24b0c38fdb1ed6599",
-      "server/routes/v000803/route.nation.js": "27a730ad76bdd0e1b270124fe1c28c1e568a4aa71ebc2a5d8370333847a7d60d",
+      "server/routes/v000803/route.nation.js": "d57c5d810a334756d479c8d6fa62b760bc706198c2d3d0adedde5b725b7da779",
       "server/routes/v000803/routeTownForecast.js": "26e1fcdba3e3b85e64376dbcc18a7f1c718317c0e0f9b35c44f6d9cc76f890fe",
       "server/routes/v000901/route.dsf.coord.js": "8f417f7b6f9062c4a094b43e8fcbd800b30cdec4fb96d59d16812b4e6a9fe74e",
       "server/routes/v000901/route.kma.addr.js": "b1aa8e3fbe3bf9eb0ab5e70587630270a59c97c41ed5c94e235320bfaf1fabf8",
@@ -390,6 +394,12 @@
                 "$lte": "20260926"
               }
             }
+          },
+          {
+            "model": "modelKmaForecastNarrative",
+            "query": {
+              "stationId": 109
+            }
           }
         ],
         "middleware": [
@@ -531,7 +541,7 @@
           },
           {
             "name": "layer-34",
-            "implementation_sha256": "d235a30b45832120ad1eaa8e41a4af61cad63473f28d76b298e95160abc2b98d"
+            "implementation_sha256": "750b3bec948e745d72ee993e421500d65be08123cbdbcd755aa0e373e78e2dcd"
           }
         ]
       }
@@ -718,6 +728,12 @@
                 "$lte": "20260926"
               }
             }
+          },
+          {
+            "model": "modelKmaForecastNarrative",
+            "query": {
+              "stationId": 109
+            }
           }
         ],
         "middleware": [
@@ -859,7 +875,7 @@
           },
           {
             "name": "layer-34",
-            "implementation_sha256": "d235a30b45832120ad1eaa8e41a4af61cad63473f28d76b298e95160abc2b98d"
+            "implementation_sha256": "750b3bec948e745d72ee993e421500d65be08123cbdbcd755aa0e373e78e2dcd"
           }
         ]
       }
@@ -1046,6 +1062,12 @@
                 "$lte": "20260926"
               }
             }
+          },
+          {
+            "model": "modelKmaForecastNarrative",
+            "query": {
+              "stationId": 109
+            }
           }
         ],
         "middleware": [
@@ -1195,7 +1217,7 @@
           },
           {
             "name": "layer-36",
-            "implementation_sha256": "d235a30b45832120ad1eaa8e41a4af61cad63473f28d76b298e95160abc2b98d"
+            "implementation_sha256": "750b3bec948e745d72ee993e421500d65be08123cbdbcd755aa0e373e78e2dcd"
           }
         ]
       }
@@ -1487,7 +1509,7 @@
           },
           {
             "name": "layer-26",
-            "implementation_sha256": "d235a30b45832120ad1eaa8e41a4af61cad63473f28d76b298e95160abc2b98d"
+            "implementation_sha256": "750b3bec948e745d72ee993e421500d65be08123cbdbcd755aa0e373e78e2dcd"
           }
         ]
       },
@@ -1630,6 +1652,12 @@
                 "$lte": "20260926"
               }
             }
+          },
+          {
+            "model": "modelKmaForecastNarrative",
+            "query": {
+              "stationId": 109
+            }
           }
         ],
         "middleware": [
@@ -1751,7 +1779,7 @@
           },
           {
             "name": "layer-29",
-            "implementation_sha256": "d235a30b45832120ad1eaa8e41a4af61cad63473f28d76b298e95160abc2b98d"
+            "implementation_sha256": "750b3bec948e745d72ee993e421500d65be08123cbdbcd755aa0e373e78e2dcd"
           }
         ]
       }
@@ -2328,6 +2356,12 @@
                 "$lte": "20260926"
               }
             }
+          },
+          {
+            "model": "modelKmaForecastNarrative",
+            "query": {
+              "stationId": 109
+            }
           }
         ]
       }
@@ -2469,6 +2503,12 @@
                 "$lte": "20260926"
               }
             }
+          },
+          {
+            "model": "modelKmaForecastNarrative",
+            "query": {
+              "stationId": 109
+            }
           }
         ]
       }
@@ -2609,6 +2649,12 @@
                 "$gte": "20260924",
                 "$lte": "20260926"
               }
+            }
+          },
+          {
+            "model": "modelKmaForecastNarrative",
+            "query": {
+              "stationId": 109
             }
           }
         ]
@@ -2801,6 +2847,12 @@
                 "$lte": "20260926"
               }
             }
+          },
+          {
+            "model": "modelKmaForecastNarrative",
+            "query": {
+              "stationId": 109
+            }
           }
         ]
       }
@@ -2941,6 +2993,12 @@
                 "$gte": "20260924",
                 "$lte": "20260926"
               }
+            }
+          },
+          {
+            "model": "modelKmaForecastNarrative",
+            "query": {
+              "stationId": 109
             }
           }
         ]
@@ -3083,6 +3141,12 @@
                 "$lte": "20260926"
               }
             }
+          },
+          {
+            "model": "modelKmaForecastNarrative",
+            "query": {
+              "stationId": 109
+            }
           }
         ]
       }
@@ -3224,6 +3288,12 @@
                 "$lte": "20260926"
               }
             }
+          },
+          {
+            "model": "modelKmaForecastNarrative",
+            "query": {
+              "stationId": 109
+            }
           }
         ]
       }
@@ -3364,6 +3434,12 @@
                 "$gte": "20260924",
                 "$lte": "20260926"
               }
+            }
+          },
+          {
+            "model": "modelKmaForecastNarrative",
+            "query": {
+              "stationId": 109
             }
           }
         ]

@@ -36,3 +36,29 @@ Commands are reproducible from the operator guide. Detailed failures and run rec
 
 The weather input is a selected frozen native KMA snapshot, and national city/air dependencies are doubles. This is not full provider startup, production parity, host/IAM/TLS verification, quota headroom, an installed-widget UI test, or qualification of a complete previous release. Earlier functional-debug3 was a different binary/tool and is not the final receipt. The current inventory retains the historical 19-route traffic denominator and adds prose as a response supplement.
 AK order after this port: actual widget compatibility, an eligible complete server2 rollback bundle, then operational environment verification. Seven-day shadow, production performance/quota, final state/rainfall handover and separately approved cutover remain open. #2724 measurement remains excluded.
+
+## S02 baseline continuation
+
+PR CI initially failed the byte-for-byte S02 baseline comparison after merged
+PR #2805 changed the inspected legacy modules. An explicit isolated recording
+confirmed that all 76 case IDs, HTTP statuses, header arrays and raw body bytes
+were unchanged. Six actual source hash entries changed (four new narrative
+modules and two existing controllers/routers). Thirteen dependency-trace records
+changed only through narrative model queries or the final response middleware
+fingerprint. No verifier rule or HTTP expected result was weakened.
+
+The refreshed record SHA-256 is
+`997e0f8ea76cda2de7a2cb5e142bead9a1f876d9f93ee6037b1ab8a17d1e0a0d`.
+The original workload revision stamp stays unchanged; it is not relabeled onto
+the new implementation head. Two fresh complete recordings match this record,
+and the golden controls ran 18 tests successfully. The original CI failure,
+local baseline failure and before/after records remain retained.
+
+Only the task declaration and this test fixture differ from the 691-path source
+map above. Native runtime, release example and smoke-tool bytes are unchanged;
+the 924-pass/3-ignored whole execution and release build remain bound to their
+original source map. Their reuse does not claim a new whole run or release build.
+Affected native golden consumers and another owned release smoke are renewed
+for the corrected candidate; their exact outcomes, review and current CI are
+recorded in the PR. The manual capture continues to show its labeled original
+final1 execution, rather than being relabeled as the follow-up run.

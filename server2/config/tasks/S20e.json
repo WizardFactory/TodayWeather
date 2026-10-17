@@ -21,6 +21,7 @@
     "server2/tests/narrative.rs",
     "server2/tests/narrative/contract.json",
     "server2/tests/narrative/PROVENANCE.md",
+    "server2/tests/golden/records.json",
     "server2/tests/storage/publication.rs",
     "server2/tests/catalogs.rs",
     "server2/tests/runtime_services.rs",

@@ -65,3 +65,20 @@ PR2805's strict requester requires200. Preserve that Red, reject non-200 in the
 narrative source and retain the actual provider content type in S06 metadata.
 Renew funded-source/real-smoke checks and the final candidate identity. Earlier
 partial tests and whole failures remain separate records, not relabelled PASS.
+
+## Accepted legacy golden refresh (plan iteration 4)
+
+PR CI detected that the S02 recorder now traverses the accepted PR2805 narrative
+middleware. Add the exact `server2/tests/golden/records.json` path to S20e before
+refreshing it from an explicit isolated recording. All 76 HTTP statuses, headers
+and bodies must remain identical. Only actual source provenance and the added
+narrative middleware/model-query traces may change; do not weaken the verifier
+or replace a wire baseline to conceal a behavior difference.
+
+Reproduce the old-baseline failure, inspect every changed case, require two fresh
+recordings to match, and renew the golden controls plus affected native consumers.
+The final runtime source and smoke tool are unchanged. Reuse their 924/3 whole
+test and release/smoke evidence with an explicit input map identifying the changed
+test fixture/declaration; do not relabel the original build onto a new source map.
+Renew the candidate, independent review, CI and main gate after the follow-up
+commit. Preserve both prior review contexts and reviewer-resolved S20E-REV-001.
