@@ -1,0 +1,543 @@
+{
+  "schema": 1,
+  "cases": [
+    {
+      "id": "raw-global-C",
+      "unit": "C",
+      "request_type": "GLOBAL",
+      "date_offsets": false,
+      "body": {
+        "daily": [
+          {
+            "date": "2026.12.30 00:00",
+            "tempMin_c": -5,
+            "tempMax_c": 0,
+            "tempMin_f": 23,
+            "tempMax_f": 32,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "2026.12.31 00:00",
+            "tempMin_c": 0,
+            "tempMax_c": 6,
+            "tempMin_f": 32,
+            "tempMax_f": 43,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "2027.01.01 00:00",
+            "tempMin_c": 1,
+            "tempMax_c": 7,
+            "tempMin_f": 34,
+            "tempMax_f": 45,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "2027.01.02 00:00",
+            "tempMin_c": 2,
+            "tempMax_c": 8,
+            "tempMin_f": 36,
+            "tempMax_f": 46,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "2027.01.03 00:00",
+            "tempMin_c": 3,
+            "tempMax_c": 9,
+            "tempMin_f": 37,
+            "tempMax_f": 48,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "2027.01.04 00:00",
+            "tempMin_c": 4,
+            "tempMax_c": 10,
+            "tempMin_f": 39,
+            "tempMax_f": 50,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "2027.01.05 00:00",
+            "tempMin_c": 99,
+            "tempMax_c": 100,
+            "tempMin_f": 210,
+            "tempMax_f": 212,
+            "skyIcon": "SunSmallCloud"
+          }
+        ]
+      },
+      "expected": {
+        "dates": [
+          "Yesterday",
+          "Today",
+          "Tomorrow",
+          "01/02",
+          "01/03",
+          "01/04"
+        ],
+        "temperatures": [
+          "-5˚/0˚",
+          "0˚/6˚",
+          "1˚/7˚",
+          "2˚/8˚",
+          "3˚/9˚",
+          "4˚/10˚"
+        ],
+        "icons": 6,
+        "selected_rows": 6
+      }
+    },
+    {
+      "id": "raw-global-F",
+      "unit": "F",
+      "request_type": "GLOBAL",
+      "date_offsets": false,
+      "body": {
+        "daily": [
+          {
+            "date": "2026.12.30 00:00",
+            "tempMin_c": -5,
+            "tempMax_c": 0,
+            "tempMin_f": 23,
+            "tempMax_f": 32,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "2026.12.31 00:00",
+            "tempMin_c": 0,
+            "tempMax_c": 6,
+            "tempMin_f": 32,
+            "tempMax_f": 43,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "2027.01.01 00:00",
+            "tempMin_c": 1,
+            "tempMax_c": 7,
+            "tempMin_f": 34,
+            "tempMax_f": 45,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "2027.01.02 00:00",
+            "tempMin_c": 2,
+            "tempMax_c": 8,
+            "tempMin_f": 36,
+            "tempMax_f": 46,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "2027.01.03 00:00",
+            "tempMin_c": 3,
+            "tempMax_c": 9,
+            "tempMin_f": 37,
+            "tempMax_f": 48,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "2027.01.04 00:00",
+            "tempMin_c": 4,
+            "tempMax_c": 10,
+            "tempMin_f": 39,
+            "tempMax_f": 50,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "2027.01.05 00:00",
+            "tempMin_c": 99,
+            "tempMax_c": 100,
+            "tempMin_f": 210,
+            "tempMax_f": 212,
+            "skyIcon": "SunSmallCloud"
+          }
+        ]
+      },
+      "expected": {
+        "dates": [
+          "Yesterday",
+          "Today",
+          "Tomorrow",
+          "01/02",
+          "01/03",
+          "01/04"
+        ],
+        "temperatures": [
+          "23˚/32˚",
+          "32˚/43˚",
+          "34˚/45˚",
+          "36˚/46˚",
+          "37˚/48˚",
+          "39˚/50˚"
+        ],
+        "icons": 6,
+        "selected_rows": 6
+      }
+    },
+    {
+      "id": "normalized-coordinate-C",
+      "unit": "C",
+      "request_type": "GLOBAL",
+      "date_offsets": false,
+      "body": {
+        "daily": [
+          {
+            "date": "20261230",
+            "tmn": -5,
+            "tmx": 0,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "20261231",
+            "tmn": 0,
+            "tmx": 6,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "20270101",
+            "tmn": 1,
+            "tmx": 7,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "20270102",
+            "tmn": 2,
+            "tmx": 8,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "20270103",
+            "tmn": 3,
+            "tmx": 9,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "20270104",
+            "tmn": 4,
+            "tmx": 10,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "20270105",
+            "tmn": 99,
+            "tmx": 100,
+            "skyIcon": "SunSmallCloud"
+          }
+        ]
+      },
+      "expected": {
+        "dates": [
+          "Yesterday",
+          "Today",
+          "Tomorrow",
+          "01/02",
+          "01/03",
+          "01/04"
+        ],
+        "temperatures": [
+          "-5˚/0˚",
+          "0˚/6˚",
+          "1˚/7˚",
+          "2˚/8˚",
+          "3˚/9˚",
+          "4˚/10˚"
+        ],
+        "icons": 6,
+        "selected_rows": 6
+      }
+    },
+    {
+      "id": "normalized-coordinate-F",
+      "unit": "F",
+      "request_type": "GLOBAL",
+      "date_offsets": false,
+      "body": {
+        "daily": [
+          {
+            "date": "20261230",
+            "tmn": 23,
+            "tmx": 32,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "20261231",
+            "tmn": 32,
+            "tmx": 43,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "20270101",
+            "tmn": 34,
+            "tmx": 45,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "20270102",
+            "tmn": 36,
+            "tmx": 46,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "20270103",
+            "tmn": 37,
+            "tmx": 48,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "20270104",
+            "tmn": 39,
+            "tmx": 50,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "20270105",
+            "tmn": 210,
+            "tmx": 212,
+            "skyIcon": "SunSmallCloud"
+          }
+        ]
+      },
+      "expected": {
+        "dates": [
+          "Yesterday",
+          "Today",
+          "Tomorrow",
+          "01/02",
+          "01/03",
+          "01/04"
+        ],
+        "temperatures": [
+          "23˚/32˚",
+          "32˚/43˚",
+          "34˚/45˚",
+          "36˚/46˚",
+          "37˚/48˚",
+          "39˚/50˚"
+        ],
+        "icons": 6,
+        "selected_rows": 6
+      }
+    },
+    {
+      "id": "kma-C",
+      "unit": "C",
+      "request_type": "KR",
+      "date_offsets": true,
+      "body": {
+        "midData": {
+          "dailyData": [
+            {
+              "date": "20261230",
+              "tmn": -5,
+              "tmx": 0,
+              "skyIcon": "SunSmallCloud"
+            },
+            {
+              "date": "20261231",
+              "tmn": 0,
+              "tmx": 6,
+              "skyIcon": "SunSmallCloud"
+            },
+            {
+              "date": "20270101",
+              "tmn": 1,
+              "tmx": 7,
+              "skyIcon": "SunSmallCloud"
+            },
+            {
+              "date": "20270102",
+              "tmn": 2,
+              "tmx": 8,
+              "skyIcon": "SunSmallCloud"
+            },
+            {
+              "date": "20270103",
+              "tmn": 3,
+              "tmx": 9,
+              "skyIcon": "SunSmallCloud"
+            },
+            {
+              "date": "20270104",
+              "tmn": 4,
+              "tmx": 10,
+              "skyIcon": "SunSmallCloud"
+            },
+            {
+              "date": "20270105",
+              "tmn": 99,
+              "tmx": 100,
+              "skyIcon": "SunSmallCloud"
+            }
+          ]
+        },
+        "source": "KMA"
+      },
+      "expected": {
+        "dates": [
+          "Yesterday",
+          "Today",
+          "Tomorrow",
+          "01/02",
+          "01/03",
+          "01/04"
+        ],
+        "temperatures": [
+          "-5˚/0˚",
+          "0˚/6˚",
+          "1˚/7˚",
+          "2˚/8˚",
+          "3˚/9˚",
+          "4˚/10˚"
+        ],
+        "icons": 6,
+        "selected_rows": 6
+      }
+    },
+    {
+      "id": "kma-F",
+      "unit": "F",
+      "request_type": "KR",
+      "date_offsets": true,
+      "body": {
+        "midData": {
+          "dailyData": [
+            {
+              "date": "20261230",
+              "tmn": 23,
+              "tmx": 32,
+              "skyIcon": "SunSmallCloud"
+            },
+            {
+              "date": "20261231",
+              "tmn": 32,
+              "tmx": 43,
+              "skyIcon": "SunSmallCloud"
+            },
+            {
+              "date": "20270101",
+              "tmn": 34,
+              "tmx": 45,
+              "skyIcon": "SunSmallCloud"
+            },
+            {
+              "date": "20270102",
+              "tmn": 36,
+              "tmx": 46,
+              "skyIcon": "SunSmallCloud"
+            },
+            {
+              "date": "20270103",
+              "tmn": 37,
+              "tmx": 48,
+              "skyIcon": "SunSmallCloud"
+            },
+            {
+              "date": "20270104",
+              "tmn": 39,
+              "tmx": 50,
+              "skyIcon": "SunSmallCloud"
+            },
+            {
+              "date": "20270105",
+              "tmn": 210,
+              "tmx": 212,
+              "skyIcon": "SunSmallCloud"
+            }
+          ]
+        },
+        "source": "KMA"
+      },
+      "expected": {
+        "dates": [
+          "Yesterday",
+          "Today",
+          "Tomorrow",
+          "01/02",
+          "01/03",
+          "01/04"
+        ],
+        "temperatures": [
+          "23˚/32˚",
+          "32˚/43˚",
+          "34˚/45˚",
+          "36˚/46˚",
+          "37˚/48˚",
+          "39˚/50˚"
+        ],
+        "icons": 6,
+        "selected_rows": 6
+      }
+    },
+    {
+      "id": "malformed-short-date",
+      "unit": "C",
+      "request_type": "GLOBAL",
+      "date_offsets": false,
+      "body": {
+        "daily": [
+          {
+            "date": "1",
+            "tmn": -5,
+            "tmx": 0,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "1",
+            "tmn": 0,
+            "tmx": 6,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "1",
+            "tmn": 1,
+            "tmx": 7,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "1",
+            "tmn": 2,
+            "tmx": 8,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "1",
+            "tmn": 3,
+            "tmx": 9,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "1",
+            "tmn": 4,
+            "tmx": 10,
+            "skyIcon": "SunSmallCloud"
+          },
+          {
+            "date": "1",
+            "tmn": 99,
+            "tmx": 100,
+            "skyIcon": "SunSmallCloud"
+          }
+        ]
+      },
+      "expected": {
+        "dates": [
+          "Yesterday",
+          "Today",
+          "Tomorrow",
+          "--/--",
+          "--/--",
+          "--/--"
+        ],
+        "temperatures": [
+          "-5˚/0˚",
+          "0˚/6˚",
+          "1˚/7˚",
+          "2˚/8˚",
+          "3˚/9˚",
+          "4˚/10˚"
+        ],
+        "icons": 6,
+        "selected_rows": 6
+      }
+    }
+  ]
+}
