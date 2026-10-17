@@ -1,0 +1,186 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "server2 release recovery \u2014 local verification design",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/server2-release-recovery.html"
+  },
+  "lanes": [
+    {
+      "id": "artifacts",
+      "label": "Release identity and report"
+    },
+    {
+      "id": "contracts",
+      "label": "Fixed family contract layers"
+    },
+    {
+      "id": "api",
+      "label": "Native API recovery"
+    },
+    {
+      "id": "workers",
+      "label": "Durable worker ownership"
+    }
+  ],
+  "mainPath": [
+    "input",
+    "preflight",
+    "family",
+    "report",
+    "eligibility"
+  ],
+  "nodes": [
+    {
+      "id": "input",
+      "lane": "artifacts",
+      "col": 0,
+      "type": "database",
+      "label": "Two release bundles",
+      "sublabel": "explicit hashes and revisions",
+      "width": 160
+    },
+    {
+      "id": "preflight",
+      "lane": "artifacts",
+      "col": 1,
+      "type": "security",
+      "label": "Validate every role",
+      "sublabel": "before any child starts",
+      "width": 160
+    },
+    {
+      "id": "family",
+      "lane": "contracts",
+      "col": 2,
+      "type": "backend",
+      "label": "Nine checks x two",
+      "sublabel": "separate failure/restore layers",
+      "width": 160
+    },
+    {
+      "id": "api",
+      "lane": "api",
+      "col": 2,
+      "type": "backend",
+      "label": "Release A / B / A",
+      "sublabel": "same S3 and disk; legacy=0",
+      "width": 160
+    },
+    {
+      "id": "worker",
+      "lane": "workers",
+      "col": 2,
+      "type": "backend",
+      "label": "Mixed-release workers",
+      "sublabel": "same journal, claims, minute",
+      "width": 160
+    },
+    {
+      "id": "report",
+      "lane": "artifacts",
+      "col": 3,
+      "type": "messagebus",
+      "label": "Bounded evidence report",
+      "sublabel": "layers, failures, hashes, limits",
+      "width": 160
+    },
+    {
+      "id": "eligibility",
+      "lane": "artifacts",
+      "col": 4,
+      "type": "external",
+      "label": "S20 eligibility",
+      "sublabel": "production approval separate",
+      "width": 160
+    }
+  ],
+  "edges": [
+    {
+      "id": "input-preflight",
+      "from": "input",
+      "to": "preflight",
+      "label": "verify pair",
+      "variant": "emphasis"
+    },
+    {
+      "id": "preflight-family",
+      "from": "preflight",
+      "to": "family",
+      "label": "fixed checks",
+      "variant": "default"
+    },
+    {
+      "id": "preflight-api",
+      "from": "preflight",
+      "to": "api",
+      "label": "API pair",
+      "variant": "default"
+    },
+    {
+      "id": "preflight-worker",
+      "from": "preflight",
+      "to": "worker",
+      "label": "real processes",
+      "variant": "default"
+    },
+    {
+      "id": "family-report",
+      "from": "family",
+      "to": "report",
+      "label": "retain layers",
+      "variant": "default"
+    },
+    {
+      "id": "api-report",
+      "from": "api",
+      "to": "report",
+      "label": "exact responses",
+      "variant": "default"
+    },
+    {
+      "id": "worker-report",
+      "from": "worker",
+      "to": "report",
+      "label": "no replay",
+      "variant": "default"
+    },
+    {
+      "id": "report-eligibility",
+      "from": "report",
+      "to": "eligibility",
+      "label": "evidence only",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Local verification only",
+      "items": [
+        "Specification for S19c; no deployment or host rollback eligibility.",
+        "Fixed family tests use their declared library/HTTP/recorded layers."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Durable recovery",
+      "items": [
+        "Actual production lifecycle uses injected NativeFetch and fixed clock.",
+        "A retained delivery claim forbids replay, including unknown results.",
+        "Acknowledged state and claim bytes persist through release changes."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Failure stays visible",
+      "items": [
+        "Reject missing, equal or mismatched artifacts before any execution.",
+        "Keep failed phases and logs; a no-op or absent report is never PASS.",
+        "No legacy service, live provider, device or2724 measurement."
+      ]
+    }
+  ]
+}
