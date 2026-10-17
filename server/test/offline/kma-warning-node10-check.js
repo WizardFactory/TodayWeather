@@ -58,8 +58,10 @@ function memoryModel(statics) {
         },
         update: function (query, doc, options, cb) {
             var existing = docs.filter(function (d) { return matches(d, query); })[0];
-            if (existing) { Object.assign(existing, plain(doc)); } else { docs.push(Object.assign(plain(query), plain(doc))); }
-            setImmediate(function () { cb(null); });
+            if (doc.$setOnInsert) {
+                if (!existing) { docs.push(Object.assign(plain(query), plain(doc.$setOnInsert))); }
+            } else if (existing) { Object.assign(existing, plain(doc)); } else { docs.push(Object.assign(plain(query), plain(doc))); }
+            setImmediate(function () { cb(null, {upserted: existing ? [] : [{_id: query._id}]}); });
         }
     };
     Object.keys(statics || {}).forEach(function (k) { model[k] = statics[k]; });
@@ -100,7 +102,9 @@ assert.deepEqual(zones.zonesForTown({first: '경상북도', second: '군위군',
 // One collection cycle at 2026-09-26 11:30 KST and both readers.
 var wrnMsgDay = items(fixture('wrn-msg-0926'));
 var at1130 = wrnMsgDay.filter(function (i) { return i.tmSeq === 128; })[0];
+var narrativeTime = Math.floor(Date.now()/60000)*60000;
 var bodies = {
+    getWthrSituation: page([{stnId: 108, tmFc: new Date(narrativeTime+9*3600*1000).toISOString().slice(0,16).replace(/\D/g,''), wfSv1: '전국 예보\n<script>unsafe()</script>'}]),
     getPwnStatus: page([{other: at1130.other, t6: at1130.t6, t7: at1130.t7, tmFc: at1130.tmFc, tmSeq: at1130.tmSeq}]),
     getWthrWrnMsg: page(wrnMsgDay),
     getPwnCd: page(items(fixture('pwn-cd-0921-0927')).filter(function (r) { return r.tmFc < 202609261140; })),
@@ -112,17 +116,23 @@ var request = function (url, opts, cb) {
 };
 var situationStatics = {parseSpecialText: Situation.parseSpecialText, parsePreliminaryText: Situation.parsePreliminaryText, TYPE_WEATHER_FLASH: 4};
 var situations = memoryModel(situationStatics), zoneStore = memoryModel();
+var Narrative = load('lib/kmaForecastNarrative.js', {'./kmaWarningRequester': Requester, '../models/modelKmaSpecialWeatherSituation': situations});
 var Collector = load('lib/kmaWarningCollector.js', {async: async, './kmaWarningRequester': Requester, './kmaWarningZones': zones,
     '../models/modelKmaSpecialWeatherSituation': situations, '../models/modelKmaSpecialWeatherZone': zoneStore});
 var Controller = load('controllers/kma.specialweather.controller.js', {async: async, '../models/modelKmaSpecialWeatherSituation': situations,
-    '../models/modelKmaSpecialWeatherZone': zoneStore, '../lib/kmaWarningZones': zones});
+    '../models/modelKmaSpecialWeatherZone': zoneStore, '../lib/kmaWarningZones': zones, '../lib/kmaForecastNarrative': Narrative});
 var collector = new Collector({requester: new Requester({request: request})});
+collector.narrative = new Narrative({requester: new Requester({request: request, strict: true}), model: situations});
 collector.gather(function (err) {
     assert.equal(err, undefined, String(err && err.message));
-    assert.deepEqual(situations.docs.map(function (d) { return d.type; }).sort(), [1, 2, 3, 4]);
+    assert.deepEqual(situations.docs.map(function (d) { return d.type; }).sort(), [1, 2, 3, 4, 5]);
     var controller = new Controller();
     controller.getCurrent({__: function (s) { return s; }}, function (err, list) {
         assert.ifError(err);
+        var narrative = list.filter(function (entry) { return entry.type === 5; })[0];
+        assert.equal(narrative.name, '종합예보');
+        assert.equal(narrative.comment, '전국 예보\n&lt;script&gt;unsafe()&lt;/script&gt;');
+        assert.equal(new Date(narrative.announcement).getTime(), narrativeTime);
         var t1 = list.filter(function (s) { return s.type === 1; })[0];
         assert.equal(new Date(t1.announcement).toISOString(), '2026-09-26T02:30:00.000Z');
         assert.equal(t1.bulletin.title, at1130.t1);

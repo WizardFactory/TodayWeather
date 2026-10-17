@@ -18,6 +18,7 @@ mongodb-memory-server-core10.1.4; local mongod7.0.14. No production config loade
 | `kma-narrative.test.js` green and separate post-refactor execution | 8 tests passed in each execution |
 | Same regression under `TZ=America/Los_Angeles` | 8 passed; KST/UTC policy independent of host timezone |
 | `kma-warning.test.js` | 18 passed; existing warning/zone/collector scheduling behavior retained |
+| Node10 compatibility script | CI exposed an unstubbed new helper; repaired harness runs real narrative acquisition/readback locally on Node24; Node10 rerun is recorded in PR CI |
 | `data-go-kr-keys.test.js` | 33 passed; consolidated key conventions retained |
 | `kma-narrative-smoke.js` | Passed with real loopback HTTP/request, Mongo and mounted v000903 route; 7 provider requests, 2 stored publications |
 | Archify | Schema/artifact/provenance and actual Chrome browser checks passed; light-theme capture visually inspected |
