@@ -75,3 +75,5 @@ Path/PathBuf paths remain guarded. Executable/shebang and .bash/.zsh scripts are
 also checked; compiled fixture tests require the pinned Rust toolchain on PATH.
 
 Character/byte-character escapes and lifetime/label tokens remain distinct; unsupported apostrophes fail incomplete without hiding later resource calls.
+
+Native API release recovery rehearsal: see the [operator guide](../docs/operations/server2-native-recovery.md). It uses an explicitly identified current/previous release pair and owned peers, never a legacy fallback. A passing API rehearsal does not qualify whole-service production rollback; S19/S20 remain separate gates.

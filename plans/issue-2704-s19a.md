@@ -1,0 +1,11 @@
+# Plan
+1. Add manifest validation and fail-closed tests before implementation (Red).
+2. Implement only native API recovery harness using existing loopback process/S3/provider test helpers. Keep no runtime endpoint flags.
+3. Run Python negative controls and actual distinct-release current/previous/current rehearsal on one S3. Retain proof binaries/hashes before cleanup. Reuse one ignored Cargo target under coordinating lease; check free space and 3GiB reserve first.
+4. Update operator source/PDF with actual result capture and limits; update architecture tooling status only. Independent review + CI, then authorized main integration with exact head/base.
+Risk: prior release lacks supervised workers; label API-only, do not qualify full service rollback. Existing world timestamps may change across clock boundary; fail any unexplained difference, never normalize expected bodies or retry to hide it. Previous test example is injected roots, not production executable startup proof.
+Paths: server2/tools/shadow/native_rollback.py, server2/tests/integration/test_native_rollback.py, server2/config/tasks/S19a.json, server2/tools/ci.py (execute new tool tests only). Outside: intent/specs/plans/issue-2704-s19a.md (governing artifacts); docs/operations/server2-native-recovery.md/.pdf and docs/evidence/tasks/issue-2704-s19a/recovery.png (usage); docs/architecture/server2.md (tooling limits). No parent-plan, shared CI, existing peer/oracle/runtime edits.
+
+Before dependent documentation edits: add server2/README.md for command discovery and docs/evidence/tasks/issue-2704-s19a/verification.md for selected actual evidence. No runtime or shared paths added.
+
+Review correction: require the three established cache validators even when both artifacts drop them; preserve notice read without ETag. Add a negative equal-response/no-ETag control before implementation, then renew controls and actual shared-peer rehearsal using unchanged retained Rust binaries. Clarify earlier PASS-with-refusal diagnostics separately from actual FAIL reports. All edits remain in existing declared paths; no runtime/shared-peer/oracle change or new build cache. Renew affected guide/PDF/selected evidence and independent review; keep review1 and all counters.

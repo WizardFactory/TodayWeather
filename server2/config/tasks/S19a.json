@@ -1,0 +1,54 @@
+{
+  "task": "S19a",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2704",
+  "scope": "Native API release recovery harness only; not full production rollback or completion of all S19 families.",
+  "server2_paths": [
+    "server2/config/tasks/S19a.json",
+    "server2/tools/shadow/native_rollback.py",
+    "server2/tests/integration/test_native_rollback.py",
+    "server2/tools/ci.py",
+    "server2/README.md"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2704-s19a.md",
+      "category": "documentation",
+      "reason": "Canonical task contracts, tooling guide/PDF/actual capture or architecture tooling limitation."
+    },
+    {
+      "path": "specs/issue-2704-s19a.md",
+      "category": "documentation",
+      "reason": "Canonical task contracts, tooling guide/PDF/actual capture or architecture tooling limitation."
+    },
+    {
+      "path": "plans/issue-2704-s19a.md",
+      "category": "documentation",
+      "reason": "Canonical task contracts, tooling guide/PDF/actual capture or architecture tooling limitation."
+    },
+    {
+      "path": "docs/operations/server2-native-recovery.md",
+      "category": "documentation",
+      "reason": "Canonical task contracts, tooling guide/PDF/actual capture or architecture tooling limitation."
+    },
+    {
+      "path": "docs/operations/server2-native-recovery.pdf",
+      "category": "documentation",
+      "reason": "Canonical task contracts, tooling guide/PDF/actual capture or architecture tooling limitation."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2704-s19a/recovery.png",
+      "category": "documentation",
+      "reason": "Canonical task contracts, tooling guide/PDF/actual capture or architecture tooling limitation."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Canonical task contracts, tooling guide/PDF/actual capture or architecture tooling limitation."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2704-s19a/verification.md",
+      "category": "documentation",
+      "reason": "Selected actual native recovery observations, identities and limits; raw repeated logs stay ignored."
+    }
+  ]
+}
