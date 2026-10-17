@@ -16,6 +16,7 @@ scheduled acquisition and origin/public readback.
 | Same regression in America/Los_Angeles | 17 passed; publication conversion is host-timezone independent |
 | Existing warning regression | 18 passed; warning/zone behavior preserved |
 | Existing data.go.kr key regression | 33 passed |
+| `npm --prefix server run test:offline` | Complete selected offline regression command passed on the revised source |
 | Node10-compatible warning/narrative replay | Passed locally on Node24.19.0, not an actual local Node10 execution |
 | Existing town coordinate response regression | Passed after explicitly isolating the unrelated narrative helper in its existing harness |
 | Separate real HTTP/Mongo smoke | Passed: 71 synthetic provider requests, 20 immutable publications across 10 offices, all17province mappings, v000901/2/3, coordinate selection, national root, unchanged types1–4 and exact24h expiry |
@@ -54,3 +55,8 @@ See the [operating contract](../../../operations/kma-forecast-narrative.md),
 [capture provenance](../../../operations/kma-forecast-narrative-assets/manifest.json).
 Current exact-head review/CI and retained machine evidence are recorded in
 [PR #2805](https://github.com/WizardFactory/TodayWeather/pull/2805).
+
+The maintained architecture diagram pins the verified runtime/test anchor
+`e69b175a6972b878f7d18dadb019caa875b97651`; its source files match the current candidate. Archify artifact
+validation, delivery/provenance and browser checks passed. Generated captures
+are retained separately from the actual visual inspection record.

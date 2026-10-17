@@ -8,10 +8,10 @@
       1230,
       600
     ],
-    "title": "KMA warnings and nationwide narrative",
+    "title": "KMA warnings and weather forecast narratives",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "5400e56dd8e34d19c5c255dbcf1fd519f4d9f058",
+      "revision": "e69b175a6972b878f7d18dadb019caa875b97651",
       "provider": "github",
       "link_mode": "local-only"
     },
@@ -21,11 +21,11 @@
     {
       "id": "timer",
       "type": "backend",
-      "label": "Scrape timer",
-      "sublabel": "3 min · scrape/local; gather flag",
+      "label": "Scrape schedule",
+      "sublabel": "Existing 3-minute enqueue",
       "pos": [
         35,
-        90
+        70
       ],
       "size": [
         185,
@@ -34,20 +34,17 @@
       "sources": [
         {
           "path": "server/controllers/controllerManager.js"
-        },
-        {
-          "path": "server/app.js"
         }
       ]
     },
     {
-      "id": "collector",
+      "id": "warnings",
       "type": "backend",
       "label": "Warning collector",
-      "sublabel": "Warnings first · narrative last",
+      "sublabel": "Existing work, then dispatch",
       "pos": [
         355,
-        90
+        70
       ],
       "size": [
         185,
@@ -59,75 +56,17 @@
         },
         {
           "path": "server/lib/kmaScraper.js"
-        },
-        {
-          "path": "server/lib/kmaForecastNarrative.js"
         }
       ]
     },
     {
-      "id": "requester",
-      "type": "backend",
-      "label": "API requester",
-      "sublabel": "Keys, paging, error classes",
-      "pos": [
-        685,
-        90
-      ],
-      "size": [
-        185,
-        70
-      ],
-      "sources": [
-        {
-          "path": "server/lib/kmaWarningRequester.js"
-        }
-      ]
-    },
-    {
-      "id": "provider",
-      "type": "external",
-      "label": "KMA data.go.kr",
-      "sublabel": "Warnings + VilageFcstMsgService",
-      "pos": [
-        1020,
-        90
-      ],
-      "size": [
-        185,
-        70
-      ]
-    },
-    {
-      "id": "replay",
-      "type": "backend",
-      "label": "Store and replay",
-      "sublabel": "Bulletins + validated narrative",
-      "pos": [
-        355,
-        270
-      ],
-      "size": [
-        185,
-        70
-      ],
-      "sources": [
-        {
-          "path": "server/lib/kmaWarningZones.js"
-        },
-        {
-          "path": "server/lib/kmaForecastNarrative.js"
-        }
-      ]
-    },
-    {
-      "id": "mongo",
+      "id": "warning-store",
       "type": "database",
-      "label": "MongoDB",
-      "sublabel": "Types 1–5 · separate zone state",
+      "label": "Warning state",
+      "sublabel": "Types 1–4 and active zones",
       "pos": [
         685,
-        270
+        70
       ],
       "size": [
         185,
@@ -143,13 +82,13 @@
       ]
     },
     {
-      "id": "api",
+      "id": "special",
       "type": "backend",
       "label": "Warning readers",
-      "sublabel": "/kma/special · getSpecialInfo",
+      "sublabel": "Special API and town warnings",
       "pos": [
         1020,
-        270
+        70
       ],
       "size": [
         185,
@@ -165,10 +104,93 @@
       ]
     },
     {
-      "id": "zones",
+      "id": "provider",
+      "type": "external",
+      "label": "KMA data.go.kr",
+      "sublabel": "Warning + notification services",
+      "pos": [
+        35,
+        270
+      ],
+      "size": [
+        185,
+        70
+      ]
+    },
+    {
+      "id": "narratives",
       "type": "backend",
-      "label": "Zone table",
-      "sublabel": "KMA 특보구역 2026-06-01",
+      "label": "Narrative batch",
+      "sublabel": "10 offices · no warning wait",
+      "pos": [
+        355,
+        270
+      ],
+      "size": [
+        185,
+        70
+      ],
+      "sources": [
+        {
+          "path": "server/lib/kmaForecastNarrative.js"
+        },
+        {
+          "path": "server/lib/kmaForecastRegions.js"
+        },
+        {
+          "path": "server/lib/kmaWarningRequester.js"
+        }
+      ]
+    },
+    {
+      "id": "narrative-store",
+      "type": "database",
+      "label": "Narrative store",
+      "sublabel": "Immutable office/publication",
+      "pos": [
+        685,
+        270
+      ],
+      "size": [
+        185,
+        70
+      ],
+      "sources": [
+        {
+          "path": "server/models/modelKmaForecastNarrative.js"
+        }
+      ]
+    },
+    {
+      "id": "weather",
+      "type": "backend",
+      "label": "Existing weather APIs",
+      "sublabel": "National / resolved province",
+      "pos": [
+        1020,
+        270
+      ],
+      "size": [
+        185,
+        70
+      ],
+      "sources": [
+        {
+          "path": "server/controllers/controllerTown24h.js"
+        },
+        {
+          "path": "server/routes/v000803/route.nation.js"
+        },
+        {
+          "path": "server/lib/kmaForecastNarrativeResponse.js"
+        }
+      ]
+    },
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "Current mobile client",
+      "sublabel": "New field needs future parser",
       "pos": [
         1020,
         450
@@ -179,118 +201,91 @@
       ],
       "sources": [
         {
-          "path": "server/utils/data/kma_warning_zones.csv"
-        }
-      ]
-    },
-    {
-      "id": "client",
-      "type": "frontend",
-      "label": "client/www",
-      "sublabel": "S12 screen · summary text",
-      "pos": [
-        685,
-        450
-      ],
-      "size": [
-        185,
-        70
-      ],
-      "sources": [
-        {
-          "path": "client/www/js/controller.kma.special.js"
-        },
-        {
-          "path": "client/www/js/controller.forecastctrl.js"
+          "path": "client/www/js/service.weatherutil.js"
         }
       ]
     }
   ],
   "connections": [
     {
-      "id": "timer-collector",
+      "id": "timer-warning",
       "from": "timer",
-      "to": "collector",
-      "label": "gather()"
+      "to": "warnings",
+      "label": "Scheduled gather"
     },
     {
-      "id": "collector-requester",
-      "from": "collector",
-      "to": "requester",
-      "label": "Poll, then on change"
+      "id": "warning-store-write",
+      "from": "warnings",
+      "to": "warning-store",
+      "label": "Existing upserts"
     },
     {
-      "id": "requester-provider",
-      "from": "requester",
+      "id": "special-read",
+      "from": "special",
+      "to": "warning-store",
+      "label": "Read warning state"
+    },
+    {
+      "id": "warning-provider",
+      "from": "warnings",
       "to": "provider",
-      "label": "HTTP GET"
+      "label": "Warning requests"
     },
     {
-      "id": "collector-replay",
-      "from": "collector",
-      "to": "replay",
-      "label": "Bulletins, zone events",
-      "labelDy": 45
+      "id": "warning-dispatch",
+      "from": "warnings",
+      "to": "narratives",
+      "label": "Dispatch, no wait"
     },
     {
-      "id": "replay-mongo",
-      "from": "replay",
-      "to": "mongo",
-      "label": "Upsert"
+      "id": "narrative-provider",
+      "from": "narratives",
+      "to": "provider",
+      "label": "getWthrSituation"
     },
     {
-      "id": "mongo-api",
-      "from": "mongo",
-      "to": "api",
-      "label": "Latest docs, active zones"
+      "id": "narrative-write",
+      "from": "narratives",
+      "to": "narrative-store",
+      "label": "Insert publication"
     },
     {
-      "id": "zones-api",
-      "from": "zones",
-      "to": "api",
-      "label": "Town → zones"
+      "id": "weather-read",
+      "from": "weather",
+      "to": "narrative-store",
+      "label": "Read matching office"
     },
     {
-      "id": "api-client",
-      "from": "api",
-      "to": "client",
-      "label": "JSON"
+      "id": "client-weather",
+      "from": "client",
+      "to": "weather",
+      "label": "Existing weather request"
     }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Change detection (decision 6)",
+      "title": "Warning behavior retained",
       "items": [
-        "getPwnStatus, getWthrPwn, getWthrInfo and getWthrBrkNews every cycle.",
-        "A new tmFc/tmSeq calls getWthrWrnMsg and getPwnCd; stays pending while either lags.",
-        "getPwnCd windows overlap and resync hourly; quota errors stop the cycle."
+        "Types 1–4, zone replay and current.specialInfo stay unchanged.",
+        "Narratives never drive wn/wr warning or push state."
       ]
     },
     {
       "dot": "amber",
-      "title": "Replay rules (decision 7)",
+      "title": "Office selection",
       "items": [
-        "Commands 1/3/6/7 set active, 2/8 clear that zone and type.",
-        "Newest event per zone and warnVar wins; cancelled rows are ignored.",
-        "getPwnCd one KST day per call; 60-day bootstrap; t6 drift logged."
-      ]
-    },
-    {
-      "dot": "amber",
-      "title": "Town mapping (decisions 8, 9)",
-      "items": [
-        "City/county zone, sub-zones and 제주도산지; split parents over-warn.",
-        "warnVar → weather code, warnStress → 주의보/경보/중대경보."
+        "National KR weather uses office108; regional weather uses one of9offices.",
+        "Exact province aliases; no city-substring or foreign-region guesses."
       ]
     },
     {
       "dot": "cyan",
-      "title": "Nationwide narrative (#2798)",
+      "title": "Optional response extension (#2798)",
       "items": [
-        "getWthrSituation stnId=108, one page per 3-minute cycle; bounded key rotation.",
-        "Type 5 follows types 4,1,2,3; publication age <24h; HTML-escaped multiline text.",
-        "No wn/wr replay or push; client presentation and localization deferred."
+        "forecastNarrative: original plain text, trueUTC publication and expiry.",
+        "DB-only read ≤2s; age <24h; cache lifetime ends at expiry.",
+        "No new endpoint or client edits; mobile display/localization is #2803."
       ]
     }
   ]
