@@ -3579,3 +3579,9 @@ See the [runtime operations and safety manual](../operations/server2-runtime-ser
 [diagram](diagrams/server2-runtime-services.html), and
 [S20b evidence](../evidence/tasks/issue-2705-s20b/verification.md).
 This source wiring does not authorize deployment, live sending or #2705 cutover.
+
+## S19a native API release recovery tooling (2026-10-17)
+
+The [native recovery guide](../operations/server2-native-recovery.md) defines a two-artifact current/previous/current rehearsal through the existing `loopback_server` test example. The same owned S3 and disposable disk root survive release changes; exact native geocode, KMA partial, VC/air and notice-read response/header contracts are compared. Weather providers become unavailable after first acquisition, and legacy has no configured URL. Distinct binary hashes, response assertions and clean stop are mandatory. VC disk reuse is measured separately from privacy-excluded air raw S3 reads. No runtime source, mode or production endpoint setting is introduced.
+
+The selected previous S20a source has no later supervised delivery workers. This API-only tool does not certify full release rollback, worker/state-mutation compatibility, live shadow or go-live. Other family tooling and whole-service qualification remain S19/S20 work; existing gateway coexistence rollback remains development-only evidence. See [selected actual verification](../evidence/tasks/issue-2704-s19a/verification.md).

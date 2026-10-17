@@ -53,6 +53,7 @@ def main():
     # S19: shadow tool unit tests, then the integrated release smoke (scenarios, paired
     # replay with self-check, cache-aware rollback). The two reused smokes ran above.
     commands.insert(3, [sys.executable, 'tests/integration/test_shadow.py'])
+    commands.insert(4, [sys.executable, 'tests/integration/test_native_rollback.py'])
     os.environ.setdefault('SERVER2_PYTHON', sys.executable)
     commands.append(['bash', 'deploy/smoke.sh', '--binary', 'target/release/server2', '--skip-reused',
                      '--out', str(root/'reports/server2-smoke/ci')])
