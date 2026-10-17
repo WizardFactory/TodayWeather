@@ -453,3 +453,8 @@ as full-response parity. Empty RAM, disabled providers, cache loss/corruption
 and zero legacy hops remain required scenarios. S18 notice implementation and
 S19 family coverage remain unfinished; warning worker/process wiring and
 deployment/cutover are S20 activation tasks.
+
+
+### S20d widget scope amendment — 2026-10-17
+
+AK selected retained widget support and native migration of `/ww/010000/current/2`. Preserve the current legacy wire contract with the existing world acquisition/storage/budget chain; add it as a required supplement without altering historical 19 route counts. Local parity and empty-memory S3 restore are separate from released iOS UI verification and operational qualification. S20c remains the repository preparation parent. #2805 narrative and #2724 actual quota measurement remain outside this increment. See [S20d plan](issue-2705-s20d.md).

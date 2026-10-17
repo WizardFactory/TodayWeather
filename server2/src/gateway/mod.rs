@@ -100,6 +100,7 @@ pub struct Gateway {
     inner: Arc<Inner>,
     /// S17b: listed legacy direct routes, answered before the gateway routes.
     direct: Option<Arc<crate::api::DirectRoutes>>,
+    widget: Option<Arc<crate::world::WorldBackend>>,
 }
 #[derive(Clone)]
 struct Inner {
@@ -124,6 +125,7 @@ impl Gateway {
                 deadline: PUBLIC_DEADLINE,
             }),
             direct: None,
+            widget: None,
         }
     }
     /// Select a native internal geocoder for weather versions. Public geocode routing keeps
@@ -164,7 +166,13 @@ impl Gateway {
                 deadline,
             }),
             direct: None,
+            widget: None,
         })
+    }
+    /// Retained widget endpoint on the same native world engine and gateway admission.
+    pub fn with_widget(mut self, backend: Arc<crate::world::WorldBackend>) -> Self {
+        self.widget = Some(backend);
+        self
     }
     pub fn inflight(&self) -> usize {
         self.inner.limit - self.inner.slots.available_permits()
@@ -203,6 +211,17 @@ impl Gateway {
         }
         if method != Method::GET && method != Method::HEAD {
             return response::error(&method, &headers, GatewayError::NotFound);
+        }
+        if let Some(widget) = &self.widget
+            && crate::world::widget::claims(request.uri().path())
+        {
+            return crate::world::widget::handle(
+                widget.clone(),
+                request,
+                self.inner.slots.clone(),
+                self.inner.deadline,
+            )
+            .await;
         }
         let route = match input::route(request.uri().path()) {
             Ok(route) => route,

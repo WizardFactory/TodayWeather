@@ -12,3 +12,5 @@ mod requester;
 mod restore;
 #[path = "world/switch.rs"]
 mod switch;
+#[path = "world/widget.rs"]
+mod widget;

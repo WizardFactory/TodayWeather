@@ -42,7 +42,9 @@ class Inventory(unittest.TestCase):
         self.assertEqual(sum(r['observed_requests'] == 1 for r in rows), 2)
         self.assertIn('/v000705/town/{location}', {r['path'] for r in rows})
         self.assertEqual(data['supplements'][0]['path'], '/v000903/notice/latest')
-        self.assertEqual(data['unclassified'][0]['path'], '/ww')
+        self.assertEqual(data['unclassified'], [])
+        self.assertIn('/ww/010000/current/2', {r['path'] for r in data['supplements']})
+        self.assertNotIn('observed_requests', data['supplements'][1])
         self.assertFalse(data['production_eligible'])
         self.assertIn('2724 actual provider quota measurement', data['excluded_changes'])
         for row in rows + data['supplements']:
