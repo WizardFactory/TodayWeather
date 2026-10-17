@@ -34,8 +34,13 @@ def render(template, listen, upstream, pid):
             raise ValueError('explicit unprivileged loopback ports required')
     if listen == upstream:
         raise ValueError('distinct listeners required')
+    pid = Path(pid)
+    if (not pid.is_absolute() or '..' in pid.parts or
+            any(character in str(pid) for character in '\\"$;{}\r\n\0')):
+        raise ValueError('unambiguous absolute owned workspace required')
     text = template
-    for key, value in {'LISTEN_PORT': listen, 'UPSTREAM_PORT': upstream, 'PID': pid}.items():
+    for key, value in {'LISTEN_PORT': listen, 'UPSTREAM_PORT': upstream,
+                       'PID': pid, 'WORKSPACE': pid.parent}.items():
         text = text.replace('{{' + key + '}}', str(value))
     if '{{' in text or '}}' in text:
         raise ValueError('unresolved configuration token')
@@ -49,7 +54,7 @@ def proxy(nginx, upstream, log, workspace):
         port = harness.free_port()
     config = workspace / 'nginx.conf'
     config.write_text(render(TEMPLATE.read_text(), port, upstream, workspace / 'nginx.pid'))
-    command = [str(nginx), '-p', str(workspace) + '/', '-c', str(config)]
+    command = [str(nginx), '-e', 'stderr', '-p', str(workspace) + '/', '-c', str(config)]
     environment = native_suite.child_environment()
     with log.open('w') as output:
         subprocess.run(command + ['-t'], env=environment, stdout=output,
@@ -124,7 +129,8 @@ def transport_probe(nginx, out):
     peer.daemon_threads = True
     thread = threading.Thread(target=peer.serve_forever, daemon=True)
     thread.start()
-    cases = [('POST', '/v000902/push-list', b'synthetic-post'),
+    # Exceed nginx's default client-body buffer, exercising the owned temp path.
+    cases = [('POST', '/v000902/push-list', b'synthetic-post-' * 8192),
              ('PUT', '/v000902/push', b'synthetic-put'),
              ('DELETE', '/v000902/push', b'synthetic-delete'),
              ('OPTIONS', '/v000902/push', b''),
@@ -152,6 +158,7 @@ def transport_probe(nginx, out):
                 finally:
                     client.close()
         return dict(cases=5, mutation_503_attempts=3, options_status=204, conditional_status=304,
+                    largest_body_bytes=max(len(body) for _, _, body in cases),
                     bodies_and_authorization_preserved=True, cors_and_etag_preserved=True,
                     layer='owned transport doubles, not product mutation evidence')
     finally:
@@ -224,7 +231,8 @@ def main(argv=None):
                   started_at_utc=native_suite.utc(), live_actions=False, production_eligible=False,
                   limitations=['Actual nginx and release loopback_server with injected S3/provider roots.',
                                'Recorded backend is a frozen legacy HTTP double; not native-only whole-service proof.',
-                               'No real host, TLS/CloudFront, deployment, quota, shadow or device evidence.'])
+                               'Host placement is not attested by this report; record it separately.',
+                               'No TLS/CloudFront, deployment, quota, shadow or device evidence.'])
     code = 2
     try:
         artifacts = native_suite.load_artifacts(args.artifacts, [CHECK])
