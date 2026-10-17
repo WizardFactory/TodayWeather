@@ -72,7 +72,9 @@ def observed(reply):
             'elapsed_ms': round(reply.elapsed_ms, 3)}
 
 
-def same(expected, actual):
+def same(expected, actual, require_etag=True):
+    if require_etag:
+        assert expected["headers"].get("etag"), "required cache validator missing"
     assert actual['status'] == expected['status'], 'status differs'
     assert actual['body_sha256'] == expected['body_sha256'], 'body bytes differ'
     headers = lambda r: {k: v for k, v in r['headers'].items() if k not in TRANSPORT}
@@ -166,7 +168,7 @@ def run(pair, report):
                         warm = observed(warm_reply)
                         phase['warm'][name] = warm
                         try:
-                            same(phase['responses'][name], warm)
+                            same(phase['responses'][name], warm, name != 'notice-read')
                         except AssertionError as error:
                             phase['failure_metrics'] = process.metrics()
                             phase['s3_errors'] = s3.recovery_errors[-30:]
@@ -176,12 +178,14 @@ def run(pair, report):
                             raise AssertionError(f'phase{number+1}/{name}/warm: {error}') from error
                         if number:
                             old = phases[0]['responses'][name]
-                            same(old, phase['responses'][name])
+                            same(old, phase['responses'][name], name != 'notice-read')
                             # Notice has no ETag contract; its body/cache headers still compare exactly.
                             if 'etag' in old['headers']:
                                 conditional = harness.request(process.public, path, headers=dict(headers, **{'if-none-match': old['headers']['etag']}))
                                 assert conditional.status == 304 and conditional.body == b'', (name, conditional.status)
                                 phase['revalidation'][name] = 304
+                    if number:
+                        assert phase['revalidation'] == {name: 304 for name in PATHS if name != 'notice-read'}, 'three cache revalidations required'
                     phase['metrics'] = process.metrics()
                     phase['s3_connection_refusals'] = s3.connection_refusals
                     phase['s3_errors'] = s3.recovery_errors[-30:]

@@ -69,6 +69,15 @@ class CompareTest(unittest.TestCase):
                         dict(b, headers={}), dict(b, headers={'etag': 'b'})]:
             with self.assertRaises(AssertionError): recovery.same(a, changed)
 
+    def test_equal_responses_without_etag_are_rejected(self):
+        for headers in ({}, {'etag': ''}):
+            reply = dict(status=200, body_sha256='same', headers=headers)
+            with self.assertRaises(AssertionError): recovery.same(reply, reply)
+
+    def test_notice_read_can_compare_without_etag(self):
+        reply = dict(status=200, body_sha256='notice', headers={})
+        recovery.same(reply, reply, require_etag=False)
+
     def test_env_has_no_legacy_or_operator_credentials(self):
         peer = type('S3', (), {'config_values': dict(bucket='server2-local', test_access_key='server2-local', test_secret_key='dummy')})()
         with patch.dict(os.environ, {'SERVER2_GATEWAY_LEGACY_URL': 'https://production.invalid', 'OPENAI_API_KEY': 'private'}):

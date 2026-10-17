@@ -65,8 +65,9 @@ Neither is evidence of complete historical data or notice mutation rollback.
 Each response must preserve exact status, body bytes and the union of functional
 headers. Date, connection/keep-alive and server headers are transport differences;
 ETag, Cache-Control, Content-Length and Vary are checked. Cross-phase conditional
-requests must return 304 with an empty body when the original response had an
-ETag. Unexpected response drift fails; clock-boundary drift is not normalized or
+requests must return 304 with an empty body for geocode, KMA-partial and world-air
+on both restored phases. Each of these three APIs must retain a nonempty ETag;
+matching missing validators fail. Notice-read remains exempt. Unexpected response drift fails; clock-boundary drift is not normalized or
 silently retried. Every phase must stop cleanly.
 
 VC raw must be reused from the verified disk copy across release changes. The two air raws are excluded from disk by the existing privacy policy and are read from authoritative S3 on each restart; these are not provider calls.
