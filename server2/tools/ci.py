@@ -50,6 +50,9 @@ def main():
     commands.append([sys.executable, 'tools/gateway_smoke.py', '--binary', 'target/release/server2'])
     commands.append([sys.executable, 'tools/widget_smoke.py', '--binary', 'target/release/server2',
                      '--output', str(root/'reports/server2-widget/ci')])
+    commands.append(['cargo','build','--locked','--release','--example','narrative_smoke'])
+    commands.append([sys.executable,'tools/narrative_smoke.py','--binary','target/release/examples/narrative_smoke',
+                     '--out',str(root/'reports/server2-narrative/ci')])
     # S15: KMA v000903 routing entry (legacy -> kma -> legacy) on the release binary.
     commands.append([sys.executable, 'tools/kma_smoke.py', '--binary', 'target/release/server2'])
     # S15 O-2 checkpoint: KMA v000903 assembly time, peak RSS and CPU on this (Linux) runner.

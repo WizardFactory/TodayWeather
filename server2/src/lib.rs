@@ -2,6 +2,7 @@
 pub mod cache;
 pub mod dotenv;
 pub mod listener;
+pub mod narrative;
 pub mod observability;
 pub mod process;
 pub mod resolver;

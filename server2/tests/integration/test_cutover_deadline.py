@@ -47,6 +47,9 @@ class Inventory(unittest.TestCase):
         self.assertNotIn('observed_requests', data['supplements'][1])
         self.assertFalse(data['production_eligible'])
         self.assertIn('2724 actual provider quota measurement', data['excluded_changes'])
+        self.assertFalse(any(item.startswith('2805') for item in data['excluded_changes']))
+        self.assertEqual(data['response_supplements'][0]['field'],'forecastNarrative')
+        self.assertEqual(set(data['response_supplements'][0]['families']),{'kma','town','nation'})
         for row in rows + data['supplements']:
             self.assertTrue((ROOT.parent / row['native_source']).is_file())
 

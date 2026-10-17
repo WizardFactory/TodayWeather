@@ -4,6 +4,8 @@ mod common;
 mod feed;
 #[path = "runtime_services/http.rs"]
 mod http;
+#[path = "runtime_services/narrative.rs"]
+mod narrative;
 #[path = "runtime_services/native.rs"]
 mod native;
 #[path = "runtime_services/process.rs"]

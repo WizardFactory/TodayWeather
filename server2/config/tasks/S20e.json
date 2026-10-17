@@ -1,0 +1,107 @@
+{
+  "task": "S20e",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2809",
+  "scope": "Native port of mergedPR2805 original national/regional Korean forecast narratives; background-only funded acquisition, immutable native raw/index S3, optional response enrichment; no live provider/resource/deploy/mirror/send/final-copy or2724 measurement authority. Test-only oracle reads pinned legacy files, never runtime. Local verification repair selects the existing bounded persistent S3 peer at declared high-read test call sites; default peer and production transport remain unchanged.",
+  "server2_paths": [
+    "server2/config/tasks/S20e.json",
+    "server2/src/narrative/mod.rs",
+    "server2/src/narrative/provider.rs",
+    "server2/src/narrative/store.rs",
+    "server2/src/lib.rs",
+    "server2/src/domestic/quota.rs",
+    "server2/src/domestic/kma/source/observe.rs",
+    "server2/src/storage/catalog.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/src/runtime_services.rs",
+    "server2/src/process.rs",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/nation/mod.rs",
+    "server2/src/gateway/response.rs",
+    "server2/src/api/mod.rs",
+    "server2/tests/narrative.rs",
+    "server2/tests/narrative/contract.json",
+    "server2/tests/narrative/PROVENANCE.md",
+    "server2/tests/golden/records.json",
+    "server2/tests/storage/publication.rs",
+    "server2/tests/catalogs.rs",
+    "server2/tests/runtime_services.rs",
+    "server2/tests/runtime_services/narrative.rs",
+    "server2/tools/golden/record_narrative.js",
+    "server2/tools/narrative_smoke.py",
+    "server2/examples/narrative_smoke.rs",
+    "server2/tools/ci.py",
+    "server2/config/cutover/inventory.json",
+    "server2/tests/integration/test_cutover_deadline.py",
+    "server2/tests/domestic/source_s3.rs",
+    "server2/tests/domestic/source_s3_oracle.rs",
+    "server2/tests/domestic/summary_s3.rs",
+    "server2/tests/domestic/towns.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2705-s20e.md",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    },
+    {
+      "path": "specs/issue-2705-s20e.md",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    },
+    {
+      "path": "plans/issue-2705-s20e.md",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-forecast-narrative.json",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-forecast-narrative.html",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    },
+    {
+      "path": "docs/operations/server2-forecast-narrative.md",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    },
+    {
+      "path": "docs/operations/server2-forecast-narrative.pdf",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    },
+    {
+      "path": "docs/operations/server2-cutover.md",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    },
+    {
+      "path": "docs/operations/server2-cutover.pdf",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2705-s20e/verification.md",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2705-s20e/narrative.png",
+      "category": "documentation",
+      "reason": "Maintain narrative intent/spec/plan, architecture, operator contract and selected actual evidence"
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 //! Unknown-town/KR provider-boundary oracle, executed by pinned Node16 against actual legacy
+//! High-read S3 cases reuse the existing bounded peer to avoid local ephemeral-port exhaustion.
 //! functions. This does not represent complete S3-only assembly parity or live provider proof.
 use serde_json::{Value, json};
 use server2::domestic::kma::source::towns::{added_town, remap_address};
@@ -95,7 +96,7 @@ impl Acquire for AddressPeer {
 #[tokio::test]
 async fn dynamic_town_projection_survives_a_provider_free_cold_restart() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = super::source_s3::Peer::new();
+    let peer = super::source_s3::Peer::persistent();
     let provider = Arc::new(AddressPeer {
         calls: AtomicUsize::new(0),
         delay: Duration::ZERO,
@@ -144,7 +145,7 @@ async fn dynamic_town_projection_survives_a_provider_free_cold_restart() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_address_waiters_share_one_owned_projection() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = super::source_s3::Peer::new();
+    let peer = super::source_s3::Peer::persistent();
     let provider = Arc::new(AddressPeer {
         calls: AtomicUsize::new(0),
         delay: Duration::from_millis(80),
@@ -175,7 +176,7 @@ async fn same_address_waiters_share_one_owned_projection() {
 #[tokio::test]
 async fn a_late_address_acquisition_publishes_after_its_waiter_leaves() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = super::source_s3::Peer::new();
+    let peer = super::source_s3::Peer::persistent();
     let provider = Arc::new(AddressPeer {
         calls: AtomicUsize::new(0),
         delay: Duration::from_millis(120),
@@ -242,7 +243,7 @@ async fn fault(peer: &super::source_s3::Peer, mode: &str, key: &str) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn independent_writers_read_the_confirmed_conditional_winner() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = super::source_s3::Peer::new();
+    let peer = super::source_s3::Peer::persistent();
     let address = "서울특별시중구경쟁동";
     fault(&peer, "barrier", &projection_key("town", address)).await;
     let provider = Arc::new(AddressPeer {
@@ -281,7 +282,7 @@ async fn independent_writers_read_the_confirmed_conditional_winner() {
 #[tokio::test]
 async fn rejected_or_unreconciled_conditional_writes_never_admit_a_projection() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = super::source_s3::Peer::new();
+    let peer = super::source_s3::Peer::persistent();
     for mode in ["reject", "conflict409", "unexpected202"] {
         let address = format!("서울특별시중구{mode}동");
         fault(&peer, mode, &projection_key("town", &address)).await;
@@ -318,7 +319,7 @@ async fn rejected_or_unreconciled_conditional_writes_never_admit_a_projection() 
 #[tokio::test]
 async fn corrupt_and_truncated_projections_are_never_used_or_repaired_from_untrusted_values() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = super::source_s3::Peer::new();
+    let peer = super::source_s3::Peer::persistent();
     for (name, bytes) in [
         ("corrupt", b"corrupt".as_slice()),
         ("truncated", b"{\"schema\":1".as_slice()),
@@ -374,7 +375,7 @@ impl Acquire for RemapPeer {
 #[tokio::test]
 async fn expired_remap_metadata_requires_a_new_conditional_projection() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = super::source_s3::Peer::new();
+    let peer = super::source_s3::Peer::persistent();
     let provider = Arc::new(RemapPeer {
         calls: AtomicUsize::new(0),
     });
@@ -417,7 +418,7 @@ async fn expired_remap_metadata_requires_a_new_conditional_projection() {
 #[tokio::test]
 async fn dropping_every_waiter_and_resolver_does_not_cancel_owned_publication() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = super::source_s3::Peer::new();
+    let peer = super::source_s3::Peer::persistent();
     let provider = Arc::new(AddressPeer {
         calls: AtomicUsize::new(0),
         delay: Duration::from_millis(100),
@@ -494,7 +495,7 @@ fn s3_source(
 async fn unknown_town_native_answers_survive_s3_only_restart_with_legacy_absent() {
     use server2::domestic::kma::{AssemblyConfig, Outcome, backend::KmaBackend};
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = super::source_s3::Peer::new();
+    let peer = super::source_s3::Peer::persistent();
     let provider = Arc::new(AddressPeer {
         calls: AtomicUsize::new(0),
         delay: Duration::ZERO,
@@ -546,7 +547,7 @@ async fn unknown_town_native_answers_survive_s3_only_restart_with_legacy_absent(
 async fn kr_remap_preserves_middleware_order_and_original_request_identity() {
     use server2::domestic::kma::{Outcome, backend::KmaSource};
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = super::source_s3::Peer::new();
+    let peer = super::source_s3::Peer::persistent();
     let provider = Arc::new(RemapPeer {
         calls: AtomicUsize::new(0),
     });
@@ -775,7 +776,7 @@ async fn no_town_provider_http_attempt_precedes_funding() {
 async fn missing_and_late_town_locations_leave_fields_absent_without_a_legacy_dependency() {
     use server2::domestic::kma::{AssemblyConfig, Outcome, backend::KmaBackend};
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = super::source_s3::Peer::new();
+    let peer = super::source_s3::Peer::persistent();
     let mut request = super::source_s3::request();
     request.town = Some("지연동".into());
     let unavailable = KmaBackend::new(

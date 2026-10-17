@@ -66,6 +66,7 @@ pub struct NationBackend {
     kma: Arc<dyn CitySource>,
     source: Arc<dyn NationSource>,
     clock: crate::domestic::kma::backend::Clock,
+    narrative: Option<Arc<dyn crate::narrative::Read>>,
 }
 impl NationBackend {
     pub fn new(
@@ -73,9 +74,21 @@ impl NationBackend {
         source: Arc<dyn NationSource>,
         clock: crate::domestic::kma::backend::Clock,
     ) -> Self {
-        Self { kma, source, clock }
+        Self {
+            kma,
+            source,
+            clock,
+            narrative: None,
+        }
+    }
+    pub fn with_narrative(mut self, reader: Option<Arc<dyn crate::narrative::Read>>) -> Self {
+        self.narrative = reader;
+        self
     }
     pub async fn outcome(&self, base: KmaRequest) -> Outcome {
+        self.outcome_for(base, true).await
+    }
+    pub async fn outcome_for(&self, base: KmaRequest, national: bool) -> Outcome {
         let deadline = Instant::now() + Duration::from_secs(3);
         let now = (self.clock)();
         let air = self.source.nation_air(now, deadline);
@@ -116,7 +129,7 @@ impl NationBackend {
                         Ok(Outcome::Json(mut result)) => {
                             if let OrderedJson::Object(fields) = &mut result {
                                 fields.retain(|(k, _)| {
-                                    !["airInfo", "airInfoList"]
+                                    !["airInfo", "airInfoList", "forecastNarrative"]
                                         .iter()
                                         .any(|s| k == &s.encode_utf16().collect::<Vec<_>>())
                                 });
@@ -175,12 +188,20 @@ impl NationBackend {
                 ));
             }
         };
-        Outcome::Json(object(vec![
+        let mut result = object(vec![
             ("nation", text("KR")),
             ("weather", OrderedJson::Array(weather)),
             ("air", OrderedJson::Array(rows)),
             ("airStatus", air.status),
-        ]))
+        ]);
+        crate::narrative::attach(
+            &mut result,
+            national.then_some(108),
+            self.narrative.as_ref(),
+            deadline,
+        )
+        .await;
+        Outcome::Json(result)
     }
 }
 

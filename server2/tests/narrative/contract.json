@@ -1,0 +1,1032 @@
+{
+  "baseline": "9333d196846b1c04989b36128d3a7e06f74aa927",
+  "source_sha256": {
+    "server/lib/kmaForecastRegions.js": "692027586f9411cb8ffb3eadb2a729e54ee66350d47030b04d2e6eb5b8b30907",
+    "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e"
+  },
+  "now_ms": 1792206000000,
+  "offices": [
+    {
+      "stationId": 108,
+      "region": "전국",
+      "provinces": []
+    },
+    {
+      "stationId": 109,
+      "region": "서울·인천·경기도",
+      "provinces": [
+        "서울특별시",
+        "서울",
+        "인천광역시",
+        "인천",
+        "경기도",
+        "경기"
+      ]
+    },
+    {
+      "stationId": 159,
+      "region": "부산·울산·경상남도",
+      "provinces": [
+        "부산광역시",
+        "부산",
+        "울산광역시",
+        "울산",
+        "경상남도",
+        "경남"
+      ]
+    },
+    {
+      "stationId": 143,
+      "region": "대구·경상북도",
+      "provinces": [
+        "대구광역시",
+        "대구",
+        "경상북도",
+        "경북"
+      ]
+    },
+    {
+      "stationId": 156,
+      "region": "광주·전라남도",
+      "provinces": [
+        "광주광역시",
+        "광주",
+        "전라남도",
+        "전남",
+        "전남광주통합특별시"
+      ]
+    },
+    {
+      "stationId": 146,
+      "region": "전북특별자치도",
+      "provinces": [
+        "전라북도",
+        "전북특별자치도",
+        "전북자치도",
+        "전북"
+      ]
+    },
+    {
+      "stationId": 133,
+      "region": "대전·세종·충청남도",
+      "provinces": [
+        "대전광역시",
+        "대전",
+        "세종특별자치시",
+        "세종",
+        "충청남도",
+        "충남"
+      ]
+    },
+    {
+      "stationId": 131,
+      "region": "충청북도",
+      "provinces": [
+        "충청북도",
+        "충북"
+      ]
+    },
+    {
+      "stationId": 105,
+      "region": "강원특별자치도",
+      "provinces": [
+        "강원도",
+        "강원특별자치도",
+        "강원"
+      ]
+    },
+    {
+      "stationId": 184,
+      "region": "제주특별자치도",
+      "provinces": [
+        "제주특별자치도",
+        "제주도",
+        "제주"
+      ]
+    }
+  ],
+  "province_cases": [
+    {
+      "input": "서울특별시",
+      "stationId": 109
+    },
+    {
+      "input": " 서울특별시 ",
+      "stationId": 109
+    },
+    {
+      "input": "﻿서울특별시﻿",
+      "stationId": 109
+    },
+    {
+      "input": "서울",
+      "stationId": 109
+    },
+    {
+      "input": " 서울 ",
+      "stationId": 109
+    },
+    {
+      "input": "﻿서울﻿",
+      "stationId": 109
+    },
+    {
+      "input": "인천광역시",
+      "stationId": 109
+    },
+    {
+      "input": " 인천광역시 ",
+      "stationId": 109
+    },
+    {
+      "input": "﻿인천광역시﻿",
+      "stationId": 109
+    },
+    {
+      "input": "인천",
+      "stationId": 109
+    },
+    {
+      "input": " 인천 ",
+      "stationId": 109
+    },
+    {
+      "input": "﻿인천﻿",
+      "stationId": 109
+    },
+    {
+      "input": "경기도",
+      "stationId": 109
+    },
+    {
+      "input": " 경기도 ",
+      "stationId": 109
+    },
+    {
+      "input": "﻿경기도﻿",
+      "stationId": 109
+    },
+    {
+      "input": "경기",
+      "stationId": 109
+    },
+    {
+      "input": " 경기 ",
+      "stationId": 109
+    },
+    {
+      "input": "﻿경기﻿",
+      "stationId": 109
+    },
+    {
+      "input": "부산광역시",
+      "stationId": 159
+    },
+    {
+      "input": " 부산광역시 ",
+      "stationId": 159
+    },
+    {
+      "input": "﻿부산광역시﻿",
+      "stationId": 159
+    },
+    {
+      "input": "부산",
+      "stationId": 159
+    },
+    {
+      "input": " 부산 ",
+      "stationId": 159
+    },
+    {
+      "input": "﻿부산﻿",
+      "stationId": 159
+    },
+    {
+      "input": "울산광역시",
+      "stationId": 159
+    },
+    {
+      "input": " 울산광역시 ",
+      "stationId": 159
+    },
+    {
+      "input": "﻿울산광역시﻿",
+      "stationId": 159
+    },
+    {
+      "input": "울산",
+      "stationId": 159
+    },
+    {
+      "input": " 울산 ",
+      "stationId": 159
+    },
+    {
+      "input": "﻿울산﻿",
+      "stationId": 159
+    },
+    {
+      "input": "경상남도",
+      "stationId": 159
+    },
+    {
+      "input": " 경상남도 ",
+      "stationId": 159
+    },
+    {
+      "input": "﻿경상남도﻿",
+      "stationId": 159
+    },
+    {
+      "input": "경남",
+      "stationId": 159
+    },
+    {
+      "input": " 경남 ",
+      "stationId": 159
+    },
+    {
+      "input": "﻿경남﻿",
+      "stationId": 159
+    },
+    {
+      "input": "대구광역시",
+      "stationId": 143
+    },
+    {
+      "input": " 대구광역시 ",
+      "stationId": 143
+    },
+    {
+      "input": "﻿대구광역시﻿",
+      "stationId": 143
+    },
+    {
+      "input": "대구",
+      "stationId": 143
+    },
+    {
+      "input": " 대구 ",
+      "stationId": 143
+    },
+    {
+      "input": "﻿대구﻿",
+      "stationId": 143
+    },
+    {
+      "input": "경상북도",
+      "stationId": 143
+    },
+    {
+      "input": " 경상북도 ",
+      "stationId": 143
+    },
+    {
+      "input": "﻿경상북도﻿",
+      "stationId": 143
+    },
+    {
+      "input": "경북",
+      "stationId": 143
+    },
+    {
+      "input": " 경북 ",
+      "stationId": 143
+    },
+    {
+      "input": "﻿경북﻿",
+      "stationId": 143
+    },
+    {
+      "input": "광주광역시",
+      "stationId": 156
+    },
+    {
+      "input": " 광주광역시 ",
+      "stationId": 156
+    },
+    {
+      "input": "﻿광주광역시﻿",
+      "stationId": 156
+    },
+    {
+      "input": "광주",
+      "stationId": 156
+    },
+    {
+      "input": " 광주 ",
+      "stationId": 156
+    },
+    {
+      "input": "﻿광주﻿",
+      "stationId": 156
+    },
+    {
+      "input": "전라남도",
+      "stationId": 156
+    },
+    {
+      "input": " 전라남도 ",
+      "stationId": 156
+    },
+    {
+      "input": "﻿전라남도﻿",
+      "stationId": 156
+    },
+    {
+      "input": "전남",
+      "stationId": 156
+    },
+    {
+      "input": " 전남 ",
+      "stationId": 156
+    },
+    {
+      "input": "﻿전남﻿",
+      "stationId": 156
+    },
+    {
+      "input": "전남광주통합특별시",
+      "stationId": 156
+    },
+    {
+      "input": " 전남광주통합특별시 ",
+      "stationId": 156
+    },
+    {
+      "input": "﻿전남광주통합특별시﻿",
+      "stationId": 156
+    },
+    {
+      "input": "전라북도",
+      "stationId": 146
+    },
+    {
+      "input": " 전라북도 ",
+      "stationId": 146
+    },
+    {
+      "input": "﻿전라북도﻿",
+      "stationId": 146
+    },
+    {
+      "input": "전북특별자치도",
+      "stationId": 146
+    },
+    {
+      "input": " 전북특별자치도 ",
+      "stationId": 146
+    },
+    {
+      "input": "﻿전북특별자치도﻿",
+      "stationId": 146
+    },
+    {
+      "input": "전북자치도",
+      "stationId": 146
+    },
+    {
+      "input": " 전북자치도 ",
+      "stationId": 146
+    },
+    {
+      "input": "﻿전북자치도﻿",
+      "stationId": 146
+    },
+    {
+      "input": "전북",
+      "stationId": 146
+    },
+    {
+      "input": " 전북 ",
+      "stationId": 146
+    },
+    {
+      "input": "﻿전북﻿",
+      "stationId": 146
+    },
+    {
+      "input": "대전광역시",
+      "stationId": 133
+    },
+    {
+      "input": " 대전광역시 ",
+      "stationId": 133
+    },
+    {
+      "input": "﻿대전광역시﻿",
+      "stationId": 133
+    },
+    {
+      "input": "대전",
+      "stationId": 133
+    },
+    {
+      "input": " 대전 ",
+      "stationId": 133
+    },
+    {
+      "input": "﻿대전﻿",
+      "stationId": 133
+    },
+    {
+      "input": "세종특별자치시",
+      "stationId": 133
+    },
+    {
+      "input": " 세종특별자치시 ",
+      "stationId": 133
+    },
+    {
+      "input": "﻿세종특별자치시﻿",
+      "stationId": 133
+    },
+    {
+      "input": "세종",
+      "stationId": 133
+    },
+    {
+      "input": " 세종 ",
+      "stationId": 133
+    },
+    {
+      "input": "﻿세종﻿",
+      "stationId": 133
+    },
+    {
+      "input": "충청남도",
+      "stationId": 133
+    },
+    {
+      "input": " 충청남도 ",
+      "stationId": 133
+    },
+    {
+      "input": "﻿충청남도﻿",
+      "stationId": 133
+    },
+    {
+      "input": "충남",
+      "stationId": 133
+    },
+    {
+      "input": " 충남 ",
+      "stationId": 133
+    },
+    {
+      "input": "﻿충남﻿",
+      "stationId": 133
+    },
+    {
+      "input": "충청북도",
+      "stationId": 131
+    },
+    {
+      "input": " 충청북도 ",
+      "stationId": 131
+    },
+    {
+      "input": "﻿충청북도﻿",
+      "stationId": 131
+    },
+    {
+      "input": "충북",
+      "stationId": 131
+    },
+    {
+      "input": " 충북 ",
+      "stationId": 131
+    },
+    {
+      "input": "﻿충북﻿",
+      "stationId": 131
+    },
+    {
+      "input": "강원도",
+      "stationId": 105
+    },
+    {
+      "input": " 강원도 ",
+      "stationId": 105
+    },
+    {
+      "input": "﻿강원도﻿",
+      "stationId": 105
+    },
+    {
+      "input": "강원특별자치도",
+      "stationId": 105
+    },
+    {
+      "input": " 강원특별자치도 ",
+      "stationId": 105
+    },
+    {
+      "input": "﻿강원특별자치도﻿",
+      "stationId": 105
+    },
+    {
+      "input": "강원",
+      "stationId": 105
+    },
+    {
+      "input": " 강원 ",
+      "stationId": 105
+    },
+    {
+      "input": "﻿강원﻿",
+      "stationId": 105
+    },
+    {
+      "input": "제주특별자치도",
+      "stationId": 184
+    },
+    {
+      "input": " 제주특별자치도 ",
+      "stationId": 184
+    },
+    {
+      "input": "﻿제주특별자치도﻿",
+      "stationId": 184
+    },
+    {
+      "input": "제주도",
+      "stationId": 184
+    },
+    {
+      "input": " 제주도 ",
+      "stationId": 184
+    },
+    {
+      "input": "﻿제주도﻿",
+      "stationId": 184
+    },
+    {
+      "input": "제주",
+      "stationId": 184
+    },
+    {
+      "input": " 제주 ",
+      "stationId": 184
+    },
+    {
+      "input": "﻿제주﻿",
+      "stationId": 184
+    }
+  ],
+  "cases": [
+    {
+      "id": "office-108",
+      "stationId": 108,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        }
+      ],
+      "rejected": false,
+      "value": {
+        "stationId": 108,
+        "region": "전국",
+        "announcement": "2026-10-17T02:00:00.000Z",
+        "expiresAt": "2026-10-18T02:00:00.000Z",
+        "text": "○ 전국 예보\n<안내>\n기온 0°C & 비",
+        "language": "ko",
+        "source": "KMA",
+        "textFormat": "plain"
+      },
+      "value_json": "{\"stationId\":108,\"region\":\"전국\",\"announcement\":\"2026-10-17T02:00:00.000Z\",\"expiresAt\":\"2026-10-18T02:00:00.000Z\",\"text\":\"○ 전국 예보\\n<안내>\\n기온 0°C & 비\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}"
+    },
+    {
+      "id": "office-109",
+      "stationId": 109,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 109
+        }
+      ],
+      "rejected": false,
+      "value": {
+        "stationId": 109,
+        "region": "서울·인천·경기도",
+        "announcement": "2026-10-17T02:00:00.000Z",
+        "expiresAt": "2026-10-18T02:00:00.000Z",
+        "text": "○ 전국 예보\n<안내>\n기온 0°C & 비",
+        "language": "ko",
+        "source": "KMA",
+        "textFormat": "plain"
+      },
+      "value_json": "{\"stationId\":109,\"region\":\"서울·인천·경기도\",\"announcement\":\"2026-10-17T02:00:00.000Z\",\"expiresAt\":\"2026-10-18T02:00:00.000Z\",\"text\":\"○ 전국 예보\\n<안내>\\n기온 0°C & 비\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}"
+    },
+    {
+      "id": "office-159",
+      "stationId": 159,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 159
+        }
+      ],
+      "rejected": false,
+      "value": {
+        "stationId": 159,
+        "region": "부산·울산·경상남도",
+        "announcement": "2026-10-17T02:00:00.000Z",
+        "expiresAt": "2026-10-18T02:00:00.000Z",
+        "text": "○ 전국 예보\n<안내>\n기온 0°C & 비",
+        "language": "ko",
+        "source": "KMA",
+        "textFormat": "plain"
+      },
+      "value_json": "{\"stationId\":159,\"region\":\"부산·울산·경상남도\",\"announcement\":\"2026-10-17T02:00:00.000Z\",\"expiresAt\":\"2026-10-18T02:00:00.000Z\",\"text\":\"○ 전국 예보\\n<안내>\\n기온 0°C & 비\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}"
+    },
+    {
+      "id": "office-143",
+      "stationId": 143,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 143
+        }
+      ],
+      "rejected": false,
+      "value": {
+        "stationId": 143,
+        "region": "대구·경상북도",
+        "announcement": "2026-10-17T02:00:00.000Z",
+        "expiresAt": "2026-10-18T02:00:00.000Z",
+        "text": "○ 전국 예보\n<안내>\n기온 0°C & 비",
+        "language": "ko",
+        "source": "KMA",
+        "textFormat": "plain"
+      },
+      "value_json": "{\"stationId\":143,\"region\":\"대구·경상북도\",\"announcement\":\"2026-10-17T02:00:00.000Z\",\"expiresAt\":\"2026-10-18T02:00:00.000Z\",\"text\":\"○ 전국 예보\\n<안내>\\n기온 0°C & 비\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}"
+    },
+    {
+      "id": "office-156",
+      "stationId": 156,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 156
+        }
+      ],
+      "rejected": false,
+      "value": {
+        "stationId": 156,
+        "region": "광주·전라남도",
+        "announcement": "2026-10-17T02:00:00.000Z",
+        "expiresAt": "2026-10-18T02:00:00.000Z",
+        "text": "○ 전국 예보\n<안내>\n기온 0°C & 비",
+        "language": "ko",
+        "source": "KMA",
+        "textFormat": "plain"
+      },
+      "value_json": "{\"stationId\":156,\"region\":\"광주·전라남도\",\"announcement\":\"2026-10-17T02:00:00.000Z\",\"expiresAt\":\"2026-10-18T02:00:00.000Z\",\"text\":\"○ 전국 예보\\n<안내>\\n기온 0°C & 비\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}"
+    },
+    {
+      "id": "office-146",
+      "stationId": 146,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 146
+        }
+      ],
+      "rejected": false,
+      "value": {
+        "stationId": 146,
+        "region": "전북특별자치도",
+        "announcement": "2026-10-17T02:00:00.000Z",
+        "expiresAt": "2026-10-18T02:00:00.000Z",
+        "text": "○ 전국 예보\n<안내>\n기온 0°C & 비",
+        "language": "ko",
+        "source": "KMA",
+        "textFormat": "plain"
+      },
+      "value_json": "{\"stationId\":146,\"region\":\"전북특별자치도\",\"announcement\":\"2026-10-17T02:00:00.000Z\",\"expiresAt\":\"2026-10-18T02:00:00.000Z\",\"text\":\"○ 전국 예보\\n<안내>\\n기온 0°C & 비\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}"
+    },
+    {
+      "id": "office-133",
+      "stationId": 133,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 133
+        }
+      ],
+      "rejected": false,
+      "value": {
+        "stationId": 133,
+        "region": "대전·세종·충청남도",
+        "announcement": "2026-10-17T02:00:00.000Z",
+        "expiresAt": "2026-10-18T02:00:00.000Z",
+        "text": "○ 전국 예보\n<안내>\n기온 0°C & 비",
+        "language": "ko",
+        "source": "KMA",
+        "textFormat": "plain"
+      },
+      "value_json": "{\"stationId\":133,\"region\":\"대전·세종·충청남도\",\"announcement\":\"2026-10-17T02:00:00.000Z\",\"expiresAt\":\"2026-10-18T02:00:00.000Z\",\"text\":\"○ 전국 예보\\n<안내>\\n기온 0°C & 비\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}"
+    },
+    {
+      "id": "office-131",
+      "stationId": 131,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 131
+        }
+      ],
+      "rejected": false,
+      "value": {
+        "stationId": 131,
+        "region": "충청북도",
+        "announcement": "2026-10-17T02:00:00.000Z",
+        "expiresAt": "2026-10-18T02:00:00.000Z",
+        "text": "○ 전국 예보\n<안내>\n기온 0°C & 비",
+        "language": "ko",
+        "source": "KMA",
+        "textFormat": "plain"
+      },
+      "value_json": "{\"stationId\":131,\"region\":\"충청북도\",\"announcement\":\"2026-10-17T02:00:00.000Z\",\"expiresAt\":\"2026-10-18T02:00:00.000Z\",\"text\":\"○ 전국 예보\\n<안내>\\n기온 0°C & 비\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}"
+    },
+    {
+      "id": "office-105",
+      "stationId": 105,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 105
+        }
+      ],
+      "rejected": false,
+      "value": {
+        "stationId": 105,
+        "region": "강원특별자치도",
+        "announcement": "2026-10-17T02:00:00.000Z",
+        "expiresAt": "2026-10-18T02:00:00.000Z",
+        "text": "○ 전국 예보\n<안내>\n기온 0°C & 비",
+        "language": "ko",
+        "source": "KMA",
+        "textFormat": "plain"
+      },
+      "value_json": "{\"stationId\":105,\"region\":\"강원특별자치도\",\"announcement\":\"2026-10-17T02:00:00.000Z\",\"expiresAt\":\"2026-10-18T02:00:00.000Z\",\"text\":\"○ 전국 예보\\n<안내>\\n기온 0°C & 비\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}"
+    },
+    {
+      "id": "office-184",
+      "stationId": 184,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 184
+        }
+      ],
+      "rejected": false,
+      "value": {
+        "stationId": 184,
+        "region": "제주특별자치도",
+        "announcement": "2026-10-17T02:00:00.000Z",
+        "expiresAt": "2026-10-18T02:00:00.000Z",
+        "text": "○ 전국 예보\n<안내>\n기온 0°C & 비",
+        "language": "ko",
+        "source": "KMA",
+        "textFormat": "plain"
+      },
+      "value_json": "{\"stationId\":184,\"region\":\"제주특별자치도\",\"announcement\":\"2026-10-17T02:00:00.000Z\",\"expiresAt\":\"2026-10-18T02:00:00.000Z\",\"text\":\"○ 전국 예보\\n<안내>\\n기온 0°C & 비\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}"
+    },
+    {
+      "id": "empty",
+      "stationId": 108,
+      "items": [],
+      "rejected": true,
+      "value": null,
+      "value_json": "null"
+    },
+    {
+      "id": "null-row",
+      "stationId": 108,
+      "items": [
+        null
+      ],
+      "rejected": true,
+      "value": null,
+      "value_json": "null"
+    },
+    {
+      "id": "wrong-office",
+      "stationId": 108,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 109
+        }
+      ],
+      "rejected": true,
+      "value": null,
+      "value_json": "null"
+    },
+    {
+      "id": "invalid-date",
+      "stationId": 108,
+      "items": [
+        {
+          "tmFc": "202602301100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        }
+      ],
+      "rejected": true,
+      "value": null,
+      "value_json": "null"
+    },
+    {
+      "id": "future",
+      "stationId": 108,
+      "items": [
+        {
+          "tmFc": "202610171201",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        }
+      ],
+      "rejected": false,
+      "value": null,
+      "value_json": "null"
+    },
+    {
+      "id": "expiry",
+      "stationId": 108,
+      "items": [
+        {
+          "tmFc": "202610161200",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        }
+      ],
+      "rejected": false,
+      "value": null,
+      "value_json": "null"
+    },
+    {
+      "id": "just-fresh",
+      "stationId": 108,
+      "items": [
+        {
+          "tmFc": "202610161201",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        }
+      ],
+      "rejected": false,
+      "value": {
+        "stationId": 108,
+        "region": "전국",
+        "announcement": "2026-10-16T03:01:00.000Z",
+        "expiresAt": "2026-10-17T03:01:00.000Z",
+        "text": "○ 전국 예보\n<안내>\n기온 0°C & 비",
+        "language": "ko",
+        "source": "KMA",
+        "textFormat": "plain"
+      },
+      "value_json": "{\"stationId\":108,\"region\":\"전국\",\"announcement\":\"2026-10-16T03:01:00.000Z\",\"expiresAt\":\"2026-10-17T03:01:00.000Z\",\"text\":\"○ 전국 예보\\n<안내>\\n기온 0°C & 비\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}"
+    },
+    {
+      "id": "no-text",
+      "stationId": 108,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "﻿  ",
+          "stnId": 108
+        }
+      ],
+      "rejected": true,
+      "value": null,
+      "value_json": "null"
+    },
+    {
+      "id": "mixed-invalid",
+      "stationId": 108,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        },
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 109
+        }
+      ],
+      "rejected": true,
+      "value": null,
+      "value_json": "null"
+    },
+    {
+      "id": "too-many",
+      "stationId": 108,
+      "items": [
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        },
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        },
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        },
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        },
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        },
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        },
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        },
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        },
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        },
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        },
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        }
+      ],
+      "rejected": true,
+      "value": null,
+      "value_json": "null"
+    },
+    {
+      "id": "latest",
+      "stationId": 108,
+      "items": [
+        {
+          "tmFc": "202610170500",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": 108
+        },
+        {
+          "tmFc": "202610171100",
+          "wfSv1": "○ 전국 예보\r\n<안내>\r기온 0°C & 비",
+          "stnId": "108"
+        }
+      ],
+      "rejected": false,
+      "value": {
+        "stationId": 108,
+        "region": "전국",
+        "announcement": "2026-10-17T02:00:00.000Z",
+        "expiresAt": "2026-10-18T02:00:00.000Z",
+        "text": "○ 전국 예보\n<안내>\n기온 0°C & 비",
+        "language": "ko",
+        "source": "KMA",
+        "textFormat": "plain"
+      },
+      "value_json": "{\"stationId\":108,\"region\":\"전국\",\"announcement\":\"2026-10-17T02:00:00.000Z\",\"expiresAt\":\"2026-10-18T02:00:00.000Z\",\"text\":\"○ 전국 예보\\n<안내>\\n기온 0°C & 비\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}"
+    }
+  ]
+}
