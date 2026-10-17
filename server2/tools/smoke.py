@@ -115,7 +115,7 @@ def run(binary):
             assert process.wait(timeout=8)==0
             elapsed=time.monotonic()-started
             stderr=process.stderr.read()
-            assert 'signal drain deadline; forced stop' in stderr,stderr
+            assert any(e.get('component')=='process' and e.get('stage')=='shutdown' and e.get('cause')=='timeout' and e.get('action')=='cancel_owner' and e.get('outcome')=='cancelled' for e in (json.loads(line) for line in stderr.splitlines())),stderr
             assert 4.5<=elapsed<=7,elapsed
             assert partial.recv(1)==b''
         print('PASS SIGTERM with partial headers: logged clean forced stop within 4.5..7s')

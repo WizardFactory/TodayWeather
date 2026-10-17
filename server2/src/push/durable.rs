@@ -281,111 +281,123 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
 
     /// Full restore: head snapshot, then the journal after it.
     pub async fn restore(&mut self) -> Result<State, StateError> {
-        let mut state = State::default();
-        self.head_etag = None;
-        self.head_seq = 0;
-        self.pending = None;
-        if let Some(head) = self.get(&head_key()).await? {
-            let v = OrderedJson::parse(&head.body).map_err(|_| StateError::Corrupt("head json"))?;
-            let seq = v
-                .get("seq")
-                .and_then(OrderedJson::number)
-                .ok_or(StateError::Corrupt("head seq"))? as u64;
-            let next_n = v
-                .get("next_n")
-                .and_then(OrderedJson::number)
-                .ok_or(StateError::Corrupt("head next_n"))? as u64;
-            let Some(OrderedJson::Array(parts)) = v.get("parts") else {
-                return Err(StateError::Corrupt("head parts"));
-            };
-            let mut wanted = Vec::with_capacity(parts.len());
-            for p in parts {
-                let key = p
-                    .get("key")
-                    .and_then(OrderedJson::string)
-                    .ok_or(StateError::Corrupt("head part key"))?;
-                let digest = p
-                    .get("sha256")
-                    .and_then(OrderedJson::string)
-                    .ok_or(StateError::Corrupt("head part digest"))?;
-                let count = p
-                    .get("records")
-                    .and_then(OrderedJson::number)
-                    .ok_or(StateError::Corrupt("head part count"))?
-                    as usize;
-                wanted.push((key, digest, count));
-            }
-            let mut set = tokio::task::JoinSet::new();
-            let gate = Arc::new(tokio::sync::Semaphore::new(self.config.parallel.max(1)));
-            for (i, (key, digest, count)) in wanted.into_iter().enumerate() {
-                let transport = self.transport.clone();
-                let gate = gate.clone();
-                let deadline = self.config.op_deadline;
-                set.spawn(async move {
-                    let _permit = gate.acquire_owned().await.map_err(|_| Error::Capacity)?;
-                    let object =
-                        tokio::time::timeout(deadline, transport.get_control(&key, MAX_OBJECT))
+        crate::observability::observe(
+            crate::observability::Component::PushState,
+            crate::observability::Stage::Restore,
+            async {
+                let mut state = State::default();
+                self.head_etag = None;
+                self.head_seq = 0;
+                self.pending = None;
+                if let Some(head) = self.get(&head_key()).await? {
+                    let v = OrderedJson::parse(&head.body)
+                        .map_err(|_| StateError::Corrupt("head json"))?;
+                    let seq =
+                        v.get("seq")
+                            .and_then(OrderedJson::number)
+                            .ok_or(StateError::Corrupt("head seq"))? as u64;
+                    let next_n = v
+                        .get("next_n")
+                        .and_then(OrderedJson::number)
+                        .ok_or(StateError::Corrupt("head next_n"))?
+                        as u64;
+                    let Some(OrderedJson::Array(parts)) = v.get("parts") else {
+                        return Err(StateError::Corrupt("head parts"));
+                    };
+                    let mut wanted = Vec::with_capacity(parts.len());
+                    for p in parts {
+                        let key = p
+                            .get("key")
+                            .and_then(OrderedJson::string)
+                            .ok_or(StateError::Corrupt("head part key"))?;
+                        let digest = p
+                            .get("sha256")
+                            .and_then(OrderedJson::string)
+                            .ok_or(StateError::Corrupt("head part digest"))?;
+                        let count = p
+                            .get("records")
+                            .and_then(OrderedJson::number)
+                            .ok_or(StateError::Corrupt("head part count"))?
+                            as usize;
+                        wanted.push((key, digest, count));
+                    }
+                    let mut set = tokio::task::JoinSet::new();
+                    let gate = Arc::new(tokio::sync::Semaphore::new(self.config.parallel.max(1)));
+                    for (i, (key, digest, count)) in wanted.into_iter().enumerate() {
+                        let transport = self.transport.clone();
+                        let gate = gate.clone();
+                        let deadline = self.config.op_deadline;
+                        set.spawn(crate::observability::inherit(async move {
+                            let _permit =
+                                gate.acquire_owned().await.map_err(|_| Error::Capacity)?;
+                            let object = tokio::time::timeout(
+                                deadline,
+                                transport.get_control(&key, MAX_OBJECT),
+                            )
                             .await
                             .unwrap_or(Err(Error::Timeout))?;
-                    Ok::<_, Error>((i, digest, count, object.body))
-                });
-            }
-            let mut loaded = Vec::new();
-            while let Some(joined) = set.join_next().await {
-                let (i, digest, count, body) =
-                    joined.map_err(|_| StateError::Corrupt("snapshot task"))??;
-                if sha256(&body) != digest {
-                    return Err(StateError::Corrupt("snapshot part digest"));
-                }
-                loaded.push((i, count, body));
-            }
-            loaded.sort_by_key(|(i, ..)| *i);
-            for (_, count, body) in loaded {
-                let mut it = lines(&body);
-                let header = it
-                    .next()
-                    .ok_or(StateError::Corrupt("snapshot part header"))?;
-                let v = OrderedJson::parse(header)
-                    .map_err(|_| StateError::Corrupt("snapshot part json"))?;
-                if v.get("records").and_then(OrderedJson::number) != Some(count as f64) {
-                    return Err(StateError::Corrupt("snapshot part count"));
-                }
-                let mut seen = 0usize;
-                for line in it {
-                    let r = OrderedJson::parse(line)
-                        .map_err(|_| StateError::Corrupt("snapshot record json"))?;
-                    if r.get("removed") == Some(&OrderedJson::Bool(true)) {
-                        let c = r
-                            .get("c")
-                            .and_then(OrderedJson::string)
-                            .and_then(|c| Coll::parse(&c))
-                            .ok_or(StateError::Corrupt("snapshot removal"))?;
-                        let oid = r
-                            .get("_id")
-                            .and_then(OrderedJson::string)
-                            .and_then(|s| super::store::parse_oid(&s))
-                            .ok_or(StateError::Corrupt("snapshot removal"))?;
-                        state.coll_mut(c).mark_deleted(oid);
-                    } else {
-                        let (c, n, record) = ejson::read_record(&r)?;
-                        let imported = ejson::read_imported(&r);
-                        state
-                            .coll_mut(c)
-                            .put_imported(n, record, imported.as_deref());
+                            Ok::<_, Error>((i, digest, count, object.body))
+                        }));
                     }
-                    seen += 1;
+                    let mut loaded = Vec::new();
+                    while let Some(joined) = set.join_next().await {
+                        let (i, digest, count, body) =
+                            joined.map_err(|_| StateError::Corrupt("snapshot task"))??;
+                        if sha256(&body) != digest {
+                            return Err(StateError::Corrupt("snapshot part digest"));
+                        }
+                        loaded.push((i, count, body));
+                    }
+                    loaded.sort_by_key(|(i, ..)| *i);
+                    for (_, count, body) in loaded {
+                        let mut it = lines(&body);
+                        let header = it
+                            .next()
+                            .ok_or(StateError::Corrupt("snapshot part header"))?;
+                        let v = OrderedJson::parse(header)
+                            .map_err(|_| StateError::Corrupt("snapshot part json"))?;
+                        if v.get("records").and_then(OrderedJson::number) != Some(count as f64) {
+                            return Err(StateError::Corrupt("snapshot part count"));
+                        }
+                        let mut seen = 0usize;
+                        for line in it {
+                            let r = OrderedJson::parse(line)
+                                .map_err(|_| StateError::Corrupt("snapshot record json"))?;
+                            if r.get("removed") == Some(&OrderedJson::Bool(true)) {
+                                let c = r
+                                    .get("c")
+                                    .and_then(OrderedJson::string)
+                                    .and_then(|c| Coll::parse(&c))
+                                    .ok_or(StateError::Corrupt("snapshot removal"))?;
+                                let oid = r
+                                    .get("_id")
+                                    .and_then(OrderedJson::string)
+                                    .and_then(|s| super::store::parse_oid(&s))
+                                    .ok_or(StateError::Corrupt("snapshot removal"))?;
+                                state.coll_mut(c).mark_deleted(oid);
+                            } else {
+                                let (c, n, record) = ejson::read_record(&r)?;
+                                let imported = ejson::read_imported(&r);
+                                state
+                                    .coll_mut(c)
+                                    .put_imported(n, record, imported.as_deref());
+                            }
+                            seen += 1;
+                        }
+                        if seen != count {
+                            return Err(StateError::Corrupt("snapshot part count"));
+                        }
+                    }
+                    state.seq = seq;
+                    state.next_n = next_n;
+                    self.head_etag = Some(head.etag);
+                    self.head_seq = seq;
                 }
-                if seen != count {
-                    return Err(StateError::Corrupt("snapshot part count"));
-                }
-            }
-            state.seq = seq;
-            state.next_n = next_n;
-            self.head_etag = Some(head.etag);
-            self.head_seq = seq;
-        }
-        self.catch_up(&mut state).await?;
-        Ok(state)
+                self.catch_up(&mut state).await?;
+                Ok(state)
+            },
+        )
+        .await
     }
 
     /// Apply every journal entry after `state.seq` (restore and conflicts).
@@ -410,7 +422,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
             for probe in next..next + self.config.parallel.max(1) as u64 {
                 let transport = self.transport.clone();
                 let deadline = self.config.op_deadline;
-                set.spawn(async move {
+                set.spawn(crate::observability::inherit(async move {
                     let r = tokio::time::timeout(
                         deadline,
                         transport.get_control(&journal_key(probe), MAX_OBJECT),
@@ -418,7 +430,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
                     .await
                     .unwrap_or(Err(Error::Timeout));
                     (probe, r)
-                });
+                }));
             }
             let mut found = Vec::new();
             while let Some(joined) = set.join_next().await {
@@ -451,25 +463,32 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
     /// Resolve an earlier unknown write before accepting new changes. Returns the journal
     /// entries to apply (the reconciled entry itself, or what another writer committed).
     pub async fn settle(&mut self, seq_now: u64) -> Result<Vec<(u64, Vec<u8>)>, StateError> {
-        let Some((seq, body)) = self.pending.clone() else {
-            return Ok(Vec::new());
-        };
-        match self.reconcile(seq, &body).await {
-            Reconciled::Ours => {
-                self.pending = None;
-                self.counters
-                    .reconciled_committed
-                    .fetch_add(1, Ordering::Relaxed);
-                let mut out = vec![(seq, body)];
-                out.extend(self.fetch_after(seq).await?);
-                Ok(out)
-            }
-            Reconciled::Theirs | Reconciled::Voided => {
-                self.pending = None;
-                self.fetch_after(seq_now).await
-            }
-            Reconciled::Unknown(e) => Err(StateError::Storage(e)),
-        }
+        crate::observability::observe(
+            crate::observability::Component::PushState,
+            crate::observability::Stage::Reconcile,
+            async {
+                let Some((seq, body)) = self.pending.clone() else {
+                    return Ok(Vec::new());
+                };
+                match self.reconcile(seq, &body).await {
+                    Reconciled::Ours => {
+                        self.pending = None;
+                        self.counters
+                            .reconciled_committed
+                            .fetch_add(1, Ordering::Relaxed);
+                        let mut out = vec![(seq, body)];
+                        out.extend(self.fetch_after(seq).await?);
+                        Ok(out)
+                    }
+                    Reconciled::Theirs | Reconciled::Voided => {
+                        self.pending = None;
+                        self.fetch_after(seq_now).await
+                    }
+                    Reconciled::Unknown(e) => Err(StateError::Storage(e)),
+                }
+            },
+        )
+        .await
     }
 
     pub fn unsettled(&self) -> bool {
@@ -478,103 +497,145 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
 
     /// Read back `seq`; when absent, void it so the original write can never commit.
     async fn reconcile(&self, seq: u64, body: &[u8]) -> Reconciled {
-        let key = journal_key(seq);
-        for _ in 0..2 {
-            match self.get(&key).await {
-                Ok(Some(object)) => {
-                    return if object.body == body {
-                        Reconciled::Ours
-                    } else {
-                        Reconciled::Theirs
-                    };
-                }
-                Ok(None) => {
-                    let void = void_bytes(seq, &nonce());
-                    match self
-                        .bounded(
-                            self.transport
-                                .put_control(&key, &void, &WriteCondition::Absent),
-                        )
-                        .await
-                    {
-                        Ok(200) => {
-                            self.counters.voided.fetch_add(1, Ordering::Relaxed);
-                            return Reconciled::Voided;
+        use crate::observability::{Action, Cause, Component, Details, Operation, Outcome, Stage};
+        let mut operation = Operation::new(Component::PushState, Stage::Reconcile);
+        operation.external_pending();
+        let context = operation.context();
+        let outcome = context
+            .scope(async {
+                let key = journal_key(seq);
+                for _ in 0..2 {
+                    match self.get(&key).await {
+                        Ok(Some(object)) => {
+                            return if object.body == body {
+                                Reconciled::Ours
+                            } else {
+                                Reconciled::Theirs
+                            };
                         }
-                        // Someone (possibly our late write) committed meanwhile: read it again.
-                        Ok(409 | 412) => continue,
-                        Ok(status) => return Reconciled::Unknown(Error::Status(status)),
+                        Ok(None) => {
+                            let void = void_bytes(seq, &nonce());
+                            match self
+                                .bounded(self.transport.put_control(
+                                    &key,
+                                    &void,
+                                    &WriteCondition::Absent,
+                                ))
+                                .await
+                            {
+                                Ok(200) => {
+                                    self.counters.voided.fetch_add(1, Ordering::Relaxed);
+                                    crate::observability::event(
+                                        crate::observability::Component::PushState,
+                                        crate::observability::Stage::Void,
+                                        crate::observability::Cause::Ambiguous,
+                                        crate::observability::Action::Void,
+                                        crate::observability::Outcome::Voided,
+                                        crate::observability::Details::default(),
+                                    );
+                                    return Reconciled::Voided;
+                                }
+                                // Someone (possibly our late write) committed meanwhile: read it again.
+                                Ok(409 | 412) => continue,
+                                Ok(status) => return Reconciled::Unknown(Error::Status(status)),
+                                Err(e) => return Reconciled::Unknown(e),
+                            }
+                        }
                         Err(e) => return Reconciled::Unknown(e),
                     }
                 }
-                Err(e) => return Reconciled::Unknown(e),
-            }
-        }
-        Reconciled::Unknown(Error::Ambiguous)
+                Reconciled::Unknown(Error::Ambiguous)
+            })
+            .await;
+        let (cause, action, result) = match &outcome {
+            Reconciled::Ours => (Cause::None, Action::None, Outcome::Reconciled),
+            Reconciled::Theirs => (Cause::ClaimExists, Action::None, Outcome::Conflict),
+            Reconciled::Voided => (Cause::Ambiguous, Action::Void, Outcome::Voided),
+            Reconciled::Unknown(_) => (Cause::Ambiguous, Action::RetainClaim, Outcome::Unknown),
+        };
+        operation.finish(cause, action, result, Details::default());
+        outcome
     }
 
     /// Write `changes` as journal entry `seq` (the state's next sequence).
     pub async fn commit(&mut self, seq: u64, changes: &[Change], next_n: u64) -> Commit {
-        if self.pending.is_some() {
-            return Commit::Failed;
-        }
-        let body = entry_bytes(seq, next_n, &nonce(), changes);
-        if body.len() > MAX_OBJECT {
-            self.counters.failed.fetch_add(1, Ordering::Relaxed);
-            return Commit::Rejected;
-        }
-        // Credentials first (S10f): a failure here means no request was sent.
-        if self.bounded(self.transport.ready()).await.is_err() {
-            self.counters.failed.fetch_add(1, Ordering::Relaxed);
-            return Commit::Rejected;
-        }
-        let key = journal_key(seq);
-        let written = self
-            .bounded(
-                self.transport
-                    .put_control(&key, &body, &WriteCondition::Absent),
-            )
-            .await;
-        match written {
-            Ok(200) => {
-                self.counters.committed.fetch_add(1, Ordering::Relaxed);
-                Commit::Committed
-            }
-            Ok(409 | 412) => {
-                self.counters.conflicts.fetch_add(1, Ordering::Relaxed);
-                Commit::Conflict
-            }
-            // A rejection before the body was accepted (4xx other than conflicts) is not a
-            // commit; anything else may have committed and is reconciled.
-            Ok(status) if (400..500).contains(&status) => {
-                self.counters.failed.fetch_add(1, Ordering::Relaxed);
-                Commit::Rejected
-            }
-            _ => {
-                self.counters.ambiguous.fetch_add(1, Ordering::Relaxed);
-                match self.reconcile(seq, &body).await {
-                    Reconciled::Ours => {
-                        self.counters
-                            .reconciled_committed
-                            .fetch_add(1, Ordering::Relaxed);
+        use crate::observability::{Action, Cause, Component, Details, Operation, Outcome, Stage};
+        let mut operation = Operation::new(Component::PushState, Stage::Publish);
+        operation.external_pending();
+        let context = operation.context();
+        let outcome = context
+            .scope(async {
+                if self.pending.is_some() {
+                    return Commit::Failed;
+                }
+                let body = entry_bytes(seq, next_n, &nonce(), changes);
+                if body.len() > MAX_OBJECT {
+                    self.counters.failed.fetch_add(1, Ordering::Relaxed);
+                    return Commit::Rejected;
+                }
+                // Credentials first (S10f): a failure here means no request was sent.
+                if self.bounded(self.transport.ready()).await.is_err() {
+                    self.counters.failed.fetch_add(1, Ordering::Relaxed);
+                    return Commit::Rejected;
+                }
+                let key = journal_key(seq);
+                let written = self
+                    .bounded(
+                        self.transport
+                            .put_control(&key, &body, &WriteCondition::Absent),
+                    )
+                    .await;
+                match written {
+                    Ok(200) => {
+                        self.counters.committed.fetch_add(1, Ordering::Relaxed);
                         Commit::Committed
                     }
-                    Reconciled::Theirs => {
+                    Ok(409 | 412) => {
                         self.counters.conflicts.fetch_add(1, Ordering::Relaxed);
                         Commit::Conflict
                     }
-                    Reconciled::Voided => {
+                    // A rejection before the body was accepted (4xx other than conflicts) is not a
+                    // commit; anything else may have committed and is reconciled.
+                    Ok(status) if (400..500).contains(&status) => {
                         self.counters.failed.fetch_add(1, Ordering::Relaxed);
-                        Commit::Voided
+                        Commit::Rejected
                     }
-                    Reconciled::Unknown(_) => {
-                        self.pending = Some((seq, body));
-                        self.counters.failed.fetch_add(1, Ordering::Relaxed);
-                        Commit::Failed
+                    _ => {
+                        self.counters.ambiguous.fetch_add(1, Ordering::Relaxed);
+                        match self.reconcile(seq, &body).await {
+                            Reconciled::Ours => {
+                                self.counters
+                                    .reconciled_committed
+                                    .fetch_add(1, Ordering::Relaxed);
+                                Commit::Committed
+                            }
+                            Reconciled::Theirs => {
+                                self.counters.conflicts.fetch_add(1, Ordering::Relaxed);
+                                Commit::Conflict
+                            }
+                            Reconciled::Voided => {
+                                self.counters.failed.fetch_add(1, Ordering::Relaxed);
+                                Commit::Voided
+                            }
+                            Reconciled::Unknown(_) => {
+                                self.pending = Some((seq, body));
+                                self.counters.failed.fetch_add(1, Ordering::Relaxed);
+                                Commit::Failed
+                            }
+                        }
                     }
                 }
-            }
-        }
+            })
+            .await;
+        let (cause, action, result) = match &outcome {
+            Commit::Committed => (Cause::None, Action::None, Outcome::Success),
+            Commit::Conflict => (Cause::ClaimExists, Action::Reconcile, Outcome::Conflict),
+            Commit::Voided => (Cause::Ambiguous, Action::Void, Outcome::Voided),
+            Commit::Rejected => (Cause::Dependency, Action::ReturnError, Outcome::Failed),
+            Commit::Failed => (Cause::Ambiguous, Action::RetainClaim, Outcome::Unknown),
+        };
+        operation.finish(cause, action, result, Details::default());
+        outcome
     }
 
     pub fn needs_snapshot(&self, state: &State) -> bool {
@@ -640,14 +701,21 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
     /// Write a prepared snapshot and point the head at it. Failure leaves the journal
     /// authoritative; a later snapshot retries.
     pub async fn write_snapshot(&mut self, plan: SnapshotPlan) -> Result<(), StateError> {
-        let result = self.write_snapshot_inner(plan).await;
-        let counter = if result.is_ok() {
-            &self.counters.snapshots
-        } else {
-            &self.counters.snapshot_failures
-        };
-        counter.fetch_add(1, Ordering::Relaxed);
-        result
+        crate::observability::observe(
+            crate::observability::Component::PushState,
+            crate::observability::Stage::Snapshot,
+            async {
+                let result = self.write_snapshot_inner(plan).await;
+                let counter = if result.is_ok() {
+                    &self.counters.snapshots
+                } else {
+                    &self.counters.snapshot_failures
+                };
+                counter.fetch_add(1, Ordering::Relaxed);
+                result
+            },
+        )
+        .await
     }
     async fn write_snapshot_inner(&mut self, plan: SnapshotPlan) -> Result<(), StateError> {
         let mut set = tokio::task::JoinSet::new();
@@ -658,7 +726,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
             let transport = self.transport.clone();
             let gate = gate.clone();
             let deadline = self.config.op_deadline * 4;
-            set.spawn(async move {
+            set.spawn(crate::observability::inherit(async move {
                 let _permit = gate.acquire_owned().await.map_err(|_| Error::Capacity)?;
                 match tokio::time::timeout(
                     deadline,
@@ -670,7 +738,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
                     200 => Ok(()),
                     status => Err(Error::Status(status)),
                 }
-            });
+            }));
         }
         while let Some(joined) = set.join_next().await {
             joined.map_err(|_| Error::Transport).and_then(|r| r)?;

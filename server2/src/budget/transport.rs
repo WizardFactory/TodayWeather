@@ -1,5 +1,6 @@
 //! Bounded budget-only JSON wire adapter. No raw/catalog prefix extension or SDK retries.
 use super::BudgetError;
+use crate::observability::ObservedHttp as _;
 use crate::storage::{HttpS3Transport, WriteCondition};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use md5::{Digest, Md5};
@@ -60,6 +61,7 @@ impl BudgetTransport for HttpS3Transport {
             .client
             .get(url)
             .send()
+            .observed(crate::observability::Component::Quota)
             .await
             .map_err(|_| BudgetError::Transport)?;
         match response.status().as_u16() {
@@ -149,6 +151,7 @@ impl BudgetTransport for HttpS3Transport {
             .header("content-type", "application/json")
             .body(body.to_vec())
             .send()
+            .observed(crate::observability::Component::Quota)
             .await
             .map_err(|_| BudgetError::Transport)?;
         let status = response.status().as_u16();

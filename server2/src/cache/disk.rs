@@ -434,34 +434,49 @@ impl DiskCache {
         }
     }
     pub(crate) async fn load(self: &Arc<Self>, id: &RecordId, maximum: usize) -> Option<Object> {
-        if !eligible(id) {
-            return None;
-        }
-        let Ok(key) = id.object_key() else {
-            return None;
-        };
-        let Ok(permit) = self.gate.clone().try_acquire_owned() else {
-            self.counters.misses.fetch_add(1, Ordering::Relaxed);
-            return None;
-        };
-        let cache = self.clone();
-        let found = tokio::task::spawn_blocking(move || {
-            let _permit = permit;
-            cache.load_file(&key, maximum)
-        })
-        .await;
-        match found {
-            Ok(Ok(Some(o))) => Some(o),
-            Ok(Ok(None)) => {
-                self.counters.misses.fetch_add(1, Ordering::Relaxed);
-                None
-            }
-            _ => {
-                self.counters.errors.fetch_add(1, Ordering::Relaxed);
-                self.counters.misses.fetch_add(1, Ordering::Relaxed);
-                None
-            }
-        }
+        crate::observability::work(
+            crate::observability::Component::Cache,
+            crate::observability::Stage::Lookup,
+            async {
+                if !eligible(id) {
+                    return None;
+                }
+                let Ok(key) = id.object_key() else {
+                    return None;
+                };
+                let Ok(permit) = self.gate.clone().try_acquire_owned() else {
+                    self.counters.misses.fetch_add(1, Ordering::Relaxed);
+                    return None;
+                };
+                let cache = self.clone();
+                let found = crate::observability::spawn_blocking(move || {
+                    let _permit = permit;
+                    cache.load_file(&key, maximum)
+                })
+                .await;
+                match found {
+                    Ok(Ok(Some(o))) => Some(o),
+                    Ok(Ok(None)) => {
+                        self.counters.misses.fetch_add(1, Ordering::Relaxed);
+                        None
+                    }
+                    _ => {
+                        crate::observability::event(
+                            crate::observability::Component::Cache,
+                            crate::observability::Stage::Lookup,
+                            crate::observability::Cause::Dependency,
+                            crate::observability::Action::Fallback,
+                            crate::observability::Outcome::Failed,
+                            Default::default(),
+                        );
+                        self.counters.errors.fetch_add(1, Ordering::Relaxed);
+                        self.counters.misses.fetch_add(1, Ordering::Relaxed);
+                        None
+                    }
+                }
+            },
+        )
+        .await
     }
     pub(crate) async fn invalidate(self: &Arc<Self>, id: &RecordId) {
         let Ok(key) = id.object_key() else { return };
@@ -469,7 +484,7 @@ impl DiskCache {
             return;
         };
         let cache = self.clone();
-        let _ = tokio::task::spawn_blocking(move || {
+        let _ = crate::observability::spawn_blocking(move || {
             let _permit = permit;
             let mut s = cache.state.lock().unwrap_or_else(|p| p.into_inner());
             cache.remove(&mut s, &sha256(key.as_bytes()));
@@ -598,7 +613,7 @@ impl Writer {
     pub(crate) fn enqueue(self, object: Object) {
         let Self { cache, key, permit } = self;
         cache.counters.pending.fetch_add(1, Ordering::SeqCst);
-        tokio::task::spawn_blocking(move || {
+        crate::observability::spawn_blocking(move || {
             struct Pending(Arc<DiskCache>);
             impl Drop for Pending {
                 fn drop(&mut self) {

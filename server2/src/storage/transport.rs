@@ -1,5 +1,6 @@
 use super::credentials::InstanceRole;
 use super::{Error, Object, ObjectTransport, PreparedRecord};
+use crate::observability::ObservedHttp as _;
 use reqwest::{Client, Method, redirect::Policy};
 use rusty_s3::{Bucket, Credentials, S3Action, UrlStyle};
 use std::{collections::BTreeMap, net::IpAddr, sync::Arc, time::Duration};
@@ -175,47 +176,55 @@ impl HttpS3Transport {
         Ok((metadata, length))
     }
     async fn read(&self, key: &str, head: bool, maximum: usize) -> Result<Object, Error> {
-        let credentials = self.credentials.snapshot().await?;
-        let url = if head {
-            self.bucket
-                .head_object(Some(&credentials), key)
-                .sign(Duration::from_secs(30))
-        } else {
-            self.bucket
-                .get_object(Some(&credentials), key)
-                .sign(Duration::from_secs(30))
-        };
-        let mut response = self
-            .client
-            .request(if head { Method::HEAD } else { Method::GET }, url)
-            .send()
-            .await
-            .map_err(|_| Error::Transport)?;
-        let status = response.status().as_u16();
-        if status == 404 {
-            return Err(Error::NotFound);
-        }
-        if status != 200 {
-            return Err(Error::Status(status));
-        }
-        let (metadata, length) = Self::headers(&response)?;
-        if length > maximum {
-            return Err(Error::Corrupt("compressed size"));
-        }
-        let mut body = Vec::new();
-        if !head {
-            while let Some(chunk) = response.chunk().await.map_err(|_| Error::Transport)? {
-                if chunk.len() > maximum.saturating_sub(body.len()) {
-                    return Err(Error::Corrupt("compressed stream size"));
+        crate::observability::observe(
+            crate::observability::Component::S3,
+            crate::observability::Stage::Restore,
+            async {
+                let credentials = self.credentials.snapshot().await?;
+                let url = if head {
+                    self.bucket
+                        .head_object(Some(&credentials), key)
+                        .sign(Duration::from_secs(30))
+                } else {
+                    self.bucket
+                        .get_object(Some(&credentials), key)
+                        .sign(Duration::from_secs(30))
+                };
+                let mut response = self
+                    .client
+                    .request(if head { Method::HEAD } else { Method::GET }, url)
+                    .send()
+                    .observed(crate::observability::Component::S3)
+                    .await
+                    .map_err(|_| Error::Transport)?;
+                let status = response.status().as_u16();
+                if status == 404 {
+                    return Err(Error::NotFound);
                 }
-                body.extend_from_slice(&chunk);
-            }
-        }
-        Ok(Object {
-            metadata,
-            length,
-            body,
-        })
+                if status != 200 {
+                    return Err(Error::Status(status));
+                }
+                let (metadata, length) = Self::headers(&response)?;
+                if length > maximum {
+                    return Err(Error::Corrupt("compressed size"));
+                }
+                let mut body = Vec::new();
+                if !head {
+                    while let Some(chunk) = response.chunk().await.map_err(|_| Error::Transport)? {
+                        if chunk.len() > maximum.saturating_sub(body.len()) {
+                            return Err(Error::Corrupt("compressed stream size"));
+                        }
+                        body.extend_from_slice(&chunk);
+                    }
+                }
+                Ok(Object {
+                    metadata,
+                    length,
+                    body,
+                })
+            },
+        )
+        .await
     }
 }
 impl ObjectTransport for HttpS3Transport {
@@ -226,36 +235,44 @@ impl ObjectTransport for HttpS3Transport {
         self.credentials.snapshot().await.map(|_| ())
     }
     async fn put(&self, record: &PreparedRecord) -> Result<u16, Error> {
-        let credentials = self.credentials.signing().await?;
-        let mut action = self.bucket.put_object(Some(&credentials), &record.key);
-        action.headers_mut().insert("if-none-match", "*");
-        action
-            .headers_mut()
-            .insert("content-md5", record.md5.as_str());
-        action
-            .headers_mut()
-            .insert("content-type", "application/gzip");
-        for (key, value) in &record.metadata {
-            action
-                .headers_mut()
-                .insert(format!("x-amz-meta-{key}"), value.as_str());
-        }
-        let url = action.sign(Duration::from_secs(30));
-        let mut request = self
-            .client
-            .put(url)
-            .header("if-none-match", "*")
-            .header("content-md5", &record.md5)
-            .header("content-type", "application/gzip");
-        for (key, value) in &record.metadata {
-            request = request.header(format!("x-amz-meta-{key}"), value);
-        }
-        let response = request
-            .body(record.body.clone())
-            .send()
-            .await
-            .map_err(|_| Error::Transport)?;
-        Ok(response.status().as_u16())
+        crate::observability::observe_status(
+            crate::observability::Component::S3,
+            crate::observability::Stage::Publish,
+            async {
+                let credentials = self.credentials.signing().await?;
+                let mut action = self.bucket.put_object(Some(&credentials), &record.key);
+                action.headers_mut().insert("if-none-match", "*");
+                action
+                    .headers_mut()
+                    .insert("content-md5", record.md5.as_str());
+                action
+                    .headers_mut()
+                    .insert("content-type", "application/gzip");
+                for (key, value) in &record.metadata {
+                    action
+                        .headers_mut()
+                        .insert(format!("x-amz-meta-{key}"), value.as_str());
+                }
+                let url = action.sign(Duration::from_secs(30));
+                let mut request = self
+                    .client
+                    .put(url)
+                    .header("if-none-match", "*")
+                    .header("content-md5", &record.md5)
+                    .header("content-type", "application/gzip");
+                for (key, value) in &record.metadata {
+                    request = request.header(format!("x-amz-meta-{key}"), value);
+                }
+                let response = request
+                    .body(record.body.clone())
+                    .send()
+                    .observed(crate::observability::Component::S3)
+                    .await
+                    .map_err(|_| Error::Transport)?;
+                Ok(response.status().as_u16())
+            },
+        )
+        .await
     }
     async fn head(&self, key: &str) -> Result<Object, Error> {
         self.read(key, true, 65 * 1024 * 1024).await
@@ -280,7 +297,7 @@ mod credential_review_regressions {
             RefreshableCredentials::new(Credentials::new("server2-local", "server2-local-secret"));
         let held = held(&credentials).write_owned().await;
         let c = credentials.clone();
-        let task = tokio::spawn(async move { c.snapshot().await });
+        let task = crate::observability::spawn(async move { c.snapshot().await });
         tokio::time::sleep(Duration::from_millis(40)).await;
         assert!(
             !task.is_finished(),

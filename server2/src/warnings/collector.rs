@@ -142,25 +142,44 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
     }
     /// One legacy `gather` cycle. A quota rejection ends the cycle.
     pub async fn gather(&self) -> Report {
-        let mut state = self.state.lock().await;
-        let mut report = Report::default();
-        let steps: [u8; 5] = [1, 0, 2, 3, 4];
-        for step in steps {
-            let result = match step {
-                1 => self.special_step(&mut state, &mut report).await,
-                0 => self.resync_step(&mut state, &mut report).await,
-                kind => self.bulletin_step(kind, &mut report).await,
-            };
-            if let Err(e) = result {
-                let quota = e.is_quota();
-                report.errors.push(e);
-                if quota {
-                    break;
+        crate::observability::work(
+            crate::observability::Component::Warnings,
+            crate::observability::Stage::Acquire,
+            async {
+                let mut state = self.state.lock().await;
+                let mut report = Report::default();
+                let steps: [u8; 5] = [1, 0, 2, 3, 4];
+                for step in steps {
+                    let result = match step {
+                        1 => self.special_step(&mut state, &mut report).await,
+                        0 => self.resync_step(&mut state, &mut report).await,
+                        kind => self.bulletin_step(kind, &mut report).await,
+                    };
+                    if let Err(e) = result {
+                        let quota = e.is_quota();
+                        crate::observability::event(
+                            crate::observability::Component::Warnings,
+                            crate::observability::Stage::Acquire,
+                            if quota {
+                                crate::observability::Cause::Quota
+                            } else {
+                                crate::observability::Cause::Dependency
+                            },
+                            crate::observability::Action::ReturnError,
+                            crate::observability::Outcome::Failed,
+                            Default::default(),
+                        );
+                        report.errors.push(e);
+                        if quota {
+                            break;
+                        }
+                    }
                 }
-            }
-        }
-        report.pending_cycles = state.pending.as_ref().map_or(0, |p| p.1);
-        report
+                report.pending_cycles = state.pending.as_ref().map_or(0, |p| p.1);
+                report
+            },
+        )
+        .await
     }
     async fn load_progress(&self, state: &mut State, now_ms: i64) -> Result<(), CycleError> {
         if state.progress_loaded {

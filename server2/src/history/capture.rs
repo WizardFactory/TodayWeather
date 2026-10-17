@@ -296,153 +296,168 @@ impl<S: CaptureSource, P: Publisher, D: DemandTransport> CaptureRunner<S, P, D> 
     /// per-tick attempt caps, `concurrency` acquisitions at a time. A funding error stops further
     /// data.go.kr launches in this pass; capped work stays planned for the next tick.
     pub async fn tick(&self, now_ms: i64) -> TickReport {
-        HistoryMetrics::add(&self.metrics.ticks, 1);
-        let active = self.demand.active(now_ms);
-        let planned: Vec<Planned> = {
-            let mut b = self.backfill.lock().unwrap_or_else(|e| e.into_inner());
-            let hour = schedule::hour_of(now_ms);
-            if b.hour != Some(hour) {
-                b.hour = Some(hour);
-                b.attempted.clear();
-            }
-            schedule::plan(now_ms, &active, &self.lock_index())
-                .into_iter()
-                .filter(|x| {
-                    !x.backfill || !b.attempted.contains(&(x.family, x.target, x.publication))
-                })
-                .collect()
-        };
-        let mut r = TickReport {
-            planned: planned.len(),
-            ..TickReport::default()
-        };
-        let (mut funded, mut web) = (0usize, 0usize);
-        let mut pending = planned.into_iter();
-        loop {
-            let mut batch = Vec::new();
-            for item in pending.by_ref() {
-                if self
-                    .lock_index()
-                    .has(item.family, item.target, item.publication)
-                {
-                    r.present_skipped += 1;
-                    continue;
-                }
-                let request = match Self::request(&item) {
-                    Ok(request) => request,
-                    Err(_) => {
-                        r.failed += 1;
-                        continue;
+        crate::observability::root_work(
+            crate::observability::Component::History,
+            crate::observability::Stage::Worker,
+            async {
+                HistoryMetrics::add(&self.metrics.ticks, 1);
+                let active = self.demand.active(now_ms);
+                let planned: Vec<Planned> = {
+                    let mut b = self.backfill.lock().unwrap_or_else(|e| e.into_inner());
+                    let hour = schedule::hour_of(now_ms);
+                    if b.hour != Some(hour) {
+                        b.hour = Some(hour);
+                        b.attempted.clear();
                     }
+                    schedule::plan(now_ms, &active, &self.lock_index())
+                        .into_iter()
+                        .filter(|x| {
+                            !x.backfill
+                                || !b.attempted.contains(&(x.family, x.target, x.publication))
+                        })
+                        .collect()
                 };
-                let (used, cap, charge) = match &request {
-                    Request::Funded(q) => (
-                        &mut funded,
-                        if r.budget_denied {
-                            0
-                        } else {
-                            self.config.max_funded_attempts
-                        },
-                        funded_charge(q.family()),
-                    ),
-                    Request::Web(_) => (&mut web, self.config.max_web_attempts, WEB_CHARGE),
+                let mut r = TickReport {
+                    planned: planned.len(),
+                    ..TickReport::default()
                 };
-                if *used + charge > cap {
-                    r.capped += 1;
-                    continue;
-                }
-                *used += charge;
-                r.attempted += 1;
-                if item.backfill {
-                    self.backfill
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner())
-                        .attempted
-                        .insert((item.family, item.target, item.publication));
-                }
-                batch.push(self.capture_one(item, request));
-                if batch.len() >= self.config.concurrency {
-                    break;
-                }
-            }
-            if batch.is_empty() {
-                break;
-            }
-            for (item, outcome, period) in super::join_all(batch).await {
-                match outcome {
-                    Outcome::Published => {
-                        r.published += 1;
-                        self.lock_index().insert(
-                            item.family,
-                            item.target,
-                            period.unwrap_or(item.publication),
-                        );
+                let (mut funded, mut web) = (0usize, 0usize);
+                let mut pending = planned.into_iter();
+                loop {
+                    let mut batch = Vec::new();
+                    for item in pending.by_ref() {
+                        if self
+                            .lock_index()
+                            .has(item.family, item.target, item.publication)
+                        {
+                            r.present_skipped += 1;
+                            continue;
+                        }
+                        let request = match Self::request(&item) {
+                            Ok(request) => request,
+                            Err(_) => {
+                                r.failed += 1;
+                                continue;
+                            }
+                        };
+                        let (used, cap, charge) = match &request {
+                            Request::Funded(q) => (
+                                &mut funded,
+                                if r.budget_denied {
+                                    0
+                                } else {
+                                    self.config.max_funded_attempts
+                                },
+                                funded_charge(q.family()),
+                            ),
+                            Request::Web(_) => (&mut web, self.config.max_web_attempts, WEB_CHARGE),
+                        };
+                        if *used + charge > cap {
+                            r.capped += 1;
+                            continue;
+                        }
+                        *used += charge;
+                        r.attempted += 1;
+                        if item.backfill {
+                            self.backfill
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .attempted
+                                .insert((item.family, item.target, item.publication));
+                        }
+                        batch.push(self.capture_one(item, request));
+                        if batch.len() >= self.config.concurrency {
+                            break;
+                        }
                     }
-                    Outcome::NotPublished => r.not_published += 1,
-                    Outcome::Stale => r.stale += 1,
-                    Outcome::NoData => r.no_data += 1,
-                    Outcome::Funding => r.budget_denied = true,
-                    Outcome::Failed => r.failed += 1,
+                    if batch.is_empty() {
+                        break;
+                    }
+                    for (item, outcome, period) in super::join_all(batch).await {
+                        match outcome {
+                            Outcome::Published => {
+                                r.published += 1;
+                                self.lock_index().insert(
+                                    item.family,
+                                    item.target,
+                                    period.unwrap_or(item.publication),
+                                );
+                            }
+                            Outcome::NotPublished => r.not_published += 1,
+                            Outcome::Stale => r.stale += 1,
+                            Outcome::NoData => r.no_data += 1,
+                            Outcome::Funding => r.budget_denied = true,
+                            Outcome::Failed => r.failed += 1,
+                        }
+                    }
                 }
-            }
-        }
-        let m = &self.metrics;
-        for (counter, n) in [
-            (&m.planned, r.planned),
-            (&m.attempted, r.attempted),
-            (&m.published, r.published),
-            (&m.not_published, r.not_published),
-            (&m.stale, r.stale),
-            (&m.no_data, r.no_data),
-            (&m.failed, r.failed),
-            (&m.capped, r.capped),
-            (&m.budget_denied, usize::from(r.budget_denied)),
-        ] {
-            HistoryMetrics::add(counter, n as u64);
-        }
-        r
+                let m = &self.metrics;
+                for (counter, n) in [
+                    (&m.planned, r.planned),
+                    (&m.attempted, r.attempted),
+                    (&m.published, r.published),
+                    (&m.not_published, r.not_published),
+                    (&m.stale, r.stale),
+                    (&m.no_data, r.no_data),
+                    (&m.failed, r.failed),
+                    (&m.capped, r.capped),
+                    (&m.budget_denied, usize::from(r.budget_denied)),
+                ] {
+                    HistoryMetrics::add(counter, n as u64);
+                }
+                r
+            },
+        )
+        .await
     }
     /// The national minute page, once per 2-minute bucket while any cell has demand.
     pub async fn minute(&self, now_ms: i64) -> MinuteReport {
-        let mut report = MinuteReport::default();
-        if self.demand.active(now_ms).is_empty() {
-            return report;
-        }
-        let bucket = now_ms.div_euclid(MINUTE_INTERVAL_MS);
-        {
-            let mut last = self.minute_bucket.lock().unwrap_or_else(|e| e.into_inner());
-            if *last == Some(bucket) {
-                return report;
-            }
-            *last = Some(bucket);
-        }
-        HistoryMetrics::add(&self.metrics.minute_ticks, 1);
-        report.attempted = true;
-        let not_before = self
-            .lock_index()
-            .last_minute()
-            .map(|m| schedule::from_ms(schedule::to_ms(m) + 60_000));
-        let minute = WebRequest::aws_minute(not_before);
-        let deadline = Instant::now()
-            + owned_provider_time(minute.family().attempt_timeout(), 1)
-            + self.config.call_timeout;
-        let acquired = self.source.acquire_web(&minute, deadline).await;
-        match self.publish(acquired, deadline).await {
-            (Outcome::Published, Some(observed)) => {
-                report.published = true;
-                self.lock_index().insert_minute(observed);
-                HistoryMetrics::add(&self.metrics.published, 1);
-            }
-            (Outcome::Stale, _) => {
-                report.stale = true;
-                HistoryMetrics::add(&self.metrics.stale, 1);
-            }
-            _ => {
-                report.failed = true;
-                HistoryMetrics::add(&self.metrics.failed, 1);
-            }
-        }
-        report
+        crate::observability::root_work(
+            crate::observability::Component::History,
+            crate::observability::Stage::Worker,
+            async {
+                let mut report = MinuteReport::default();
+                if self.demand.active(now_ms).is_empty() {
+                    return report;
+                }
+                let bucket = now_ms.div_euclid(MINUTE_INTERVAL_MS);
+                {
+                    let mut last = self.minute_bucket.lock().unwrap_or_else(|e| e.into_inner());
+                    if *last == Some(bucket) {
+                        return report;
+                    }
+                    *last = Some(bucket);
+                }
+                HistoryMetrics::add(&self.metrics.minute_ticks, 1);
+                report.attempted = true;
+                let not_before = self
+                    .lock_index()
+                    .last_minute()
+                    .map(|m| schedule::from_ms(schedule::to_ms(m) + 60_000));
+                let minute = WebRequest::aws_minute(not_before);
+                let deadline = Instant::now()
+                    + owned_provider_time(minute.family().attempt_timeout(), 1)
+                    + self.config.call_timeout;
+                let acquired = self.source.acquire_web(&minute, deadline).await;
+                match self.publish(acquired, deadline).await {
+                    (Outcome::Published, Some(observed)) => {
+                        report.published = true;
+                        self.lock_index().insert_minute(observed);
+                        HistoryMetrics::add(&self.metrics.published, 1);
+                    }
+                    (Outcome::Stale, _) => {
+                        report.stale = true;
+                        HistoryMetrics::add(&self.metrics.stale, 1);
+                    }
+                    _ => {
+                        report.failed = true;
+                        HistoryMetrics::add(&self.metrics.failed, 1);
+                    }
+                }
+                report
+            },
+        )
+        .await
     }
     /// Drive both loops until `shutdown` turns true: the minute page every 2 minutes and the
     /// hourly families every 10 minutes, on separate tasks so a long pass cannot delay minutes.

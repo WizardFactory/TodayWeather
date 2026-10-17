@@ -206,97 +206,118 @@ impl<T: CatalogTransport> NoticeStore<T> {
     }
     /// Read failures retain only a fully verified copy. Cold failures are errors.
     pub async fn view(&self) -> Result<State, Error> {
-        match self.current().await {
-            Ok(v) => Ok(v.state),
-            Err(e) => {
-                eprintln!("notice state read failed");
-                self.verified.lock().await.clone().ok_or(e)
-            }
-        }
+        crate::observability::observe(
+            crate::observability::Component::Notice,
+            crate::observability::Stage::Lookup,
+            async {
+                match self.current().await {
+                    Ok(v) => Ok(v.state),
+                    Err(e) => {
+                        crate::observability::event(
+                            crate::observability::Component::Notice,
+                            crate::observability::Stage::Restore,
+                            crate::observability::Cause::Dependency,
+                            crate::observability::Action::UseCache,
+                            crate::observability::Outcome::Failed,
+                            crate::observability::Details::default(),
+                        );
+                        self.verified.lock().await.clone().ok_or(e)
+                    }
+                }
+            },
+        )
+        .await
     }
     /// Operator reads/mutations require canonical state; they never mutate fallback memory.
     pub async fn canonical(&self) -> Result<State, Error> {
         Ok(self.current().await?.state)
     }
     pub async fn apply(&self, operation: &str, mutation: Mutation, now: i64) -> Result<u64, Error> {
-        if !valid_operation(operation) {
-            return Err(Error::Invalid("notice operation identity"));
-        }
-        let mut pending: Option<Pending> = None;
-        for _ in 0..8 {
-            let v = self.current().await.map_err(|e| {
-                if pending.is_some() {
-                    Error::Uncertain
-                } else {
-                    e
+        crate::observability::observe(
+            crate::observability::Component::Notice,
+            crate::observability::Stage::Publish,
+            async {
+                if !valid_operation(operation) {
+                    return Err(Error::Invalid("notice operation identity"));
                 }
-            })?;
-            if let Some(id) = v.state.operations.get(operation) {
-                return Ok(*id);
-            }
-            if pending.as_ref().is_some_and(|p| p.base != v.etag) {
-                // A strong canonical read observed an intervening write. The old
-                // conditional PUT can no longer commit against its prior base.
-                pending = None;
-            }
-            let attempt = if let Some(p) = &pending {
-                p.clone()
-            } else {
-                let mut next = v.state;
-                let id = mutation.apply(&mut next, now)?;
-                next.operations.insert(operation.to_owned(), id);
-                next.validate()?;
-                let body = serde_json::to_vec(&next).map_err(|_| Error::Corrupt)?;
-                if body.len() > CAP {
-                    return Err(Error::Capacity);
-                }
-                Pending {
-                    base: v.etag,
-                    body,
-                    next,
-                    id,
-                }
-            };
-            let condition = attempt
-                .base
-                .clone()
-                .map(WriteCondition::Match)
-                .unwrap_or(WriteCondition::Absent);
-            let outcome = tokio::time::timeout(
-                Duration::from_secs(2),
-                self.transport.put_control(KEY, &attempt.body, &condition),
-            )
-            .await;
-            match outcome {
-                Ok(Ok(200..=299)) => {
-                    *self.verified.lock().await = Some(attempt.next);
-                    return Ok(attempt.id);
-                }
-                Ok(Ok(409 | 412)) => continue,
-                Ok(Ok(status)) if status < 500 => {
-                    return Err(if pending.is_some() {
-                        Error::Uncertain
-                    } else {
-                        Error::Unavailable
-                    });
-                }
-                _ => {
-                    pending = Some(attempt);
-                    let readback = self.current().await.map_err(|_| Error::Uncertain)?;
-                    if let Some(id) = readback.state.operations.get(operation) {
+                let mut pending: Option<Pending> = None;
+                for _ in 0..8 {
+                    let v = self.current().await.map_err(|e| {
+                        if pending.is_some() {
+                            Error::Uncertain
+                        } else {
+                            e
+                        }
+                    })?;
+                    if let Some(id) = v.state.operations.get(operation) {
                         return Ok(*id);
                     }
-                    if pending.as_ref().is_some_and(|p| p.base != readback.etag) {
+                    if pending.as_ref().is_some_and(|p| p.base != v.etag) {
+                        // A strong canonical read observed an intervening write. The old
+                        // conditional PUT can no longer commit against its prior base.
                         pending = None;
                     }
-                    // An unchanged readback does not resolve a delayed PUT.
+                    let attempt = if let Some(p) = &pending {
+                        p.clone()
+                    } else {
+                        let mut next = v.state;
+                        let id = mutation.apply(&mut next, now)?;
+                        next.operations.insert(operation.to_owned(), id);
+                        next.validate()?;
+                        let body = serde_json::to_vec(&next).map_err(|_| Error::Corrupt)?;
+                        if body.len() > CAP {
+                            return Err(Error::Capacity);
+                        }
+                        Pending {
+                            base: v.etag,
+                            body,
+                            next,
+                            id,
+                        }
+                    };
+                    let condition = attempt
+                        .base
+                        .clone()
+                        .map(WriteCondition::Match)
+                        .unwrap_or(WriteCondition::Absent);
+                    let outcome = tokio::time::timeout(
+                        Duration::from_secs(2),
+                        self.transport.put_control(KEY, &attempt.body, &condition),
+                    )
+                    .await;
+                    match outcome {
+                        Ok(Ok(200..=299)) => {
+                            *self.verified.lock().await = Some(attempt.next);
+                            return Ok(attempt.id);
+                        }
+                        Ok(Ok(409 | 412)) => continue,
+                        Ok(Ok(status)) if status < 500 => {
+                            return Err(if pending.is_some() {
+                                Error::Uncertain
+                            } else {
+                                Error::Unavailable
+                            });
+                        }
+                        _ => {
+                            pending = Some(attempt);
+                            let readback = self.current().await.map_err(|_| Error::Uncertain)?;
+                            if let Some(id) = readback.state.operations.get(operation) {
+                                return Ok(*id);
+                            }
+                            if pending.as_ref().is_some_and(|p| p.base != readback.etag) {
+                                pending = None;
+                            }
+                            // An unchanged readback does not resolve a delayed PUT.
+                        }
+                    }
                 }
-            }
-        }
-        Err(if pending.is_some() {
-            Error::Uncertain
-        } else {
-            Error::Conflict
-        })
+                Err(if pending.is_some() {
+                    Error::Uncertain
+                } else {
+                    Error::Conflict
+                })
+            },
+        )
+        .await
     }
 }

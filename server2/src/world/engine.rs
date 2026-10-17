@@ -97,6 +97,7 @@ struct CellEntry {
     cell: Cell,
     db: Mutex<Option<Db>>,
     op: tokio::sync::Mutex<()>,
+    owner: crate::observability::SharedOwner,
     /// Set while an owner is acquiring from the provider (the legacy fetch lock holder).
     fetching: std::sync::atomic::AtomicBool,
     backoff_until: Mutex<f64>,
@@ -205,6 +206,7 @@ impl World {
             cell,
             db: Mutex::new(None),
             op: tokio::sync::Mutex::new(()),
+            owner: crate::observability::SharedOwner::default(),
             fetching: std::sync::atomic::AtomicBool::new(false),
             backoff_until: Mutex::new(f64::NEG_INFINITY),
         });
@@ -249,7 +251,7 @@ impl World {
         }
         let owned = self.clone();
         let task_entry = entry.clone();
-        let task = tokio::spawn(async move {
+        let task = crate::observability::spawn(async move {
             // The entry moves into the load and is released before idle cells trim.
             let _trim = Trim(owned.clone());
             owned.load_cell(task_entry, now).await
@@ -261,40 +263,51 @@ impl World {
     }
     /// The owned cold load of one cell (single flight under the cell lock).
     async fn load_cell(self, task_entry: Arc<CellEntry>, now: f64) -> Result<Db, Failure> {
-        let _op = task_entry.op.lock().await;
-        if let Some(db) = task_entry
-            .db
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone()
-        {
-            return Ok(db);
-        }
-        self.inner
-            .metrics
-            .cold_loads
-            .fetch_add(1, Ordering::Relaxed);
-        let load_deadline = Instant::now() + self.inner.config.load;
-        match self
-            .inner
-            .store
-            .load(task_entry.cell, now, load_deadline)
-            .await
-        {
-            Ok(fetches) => {
-                let mut db = replay(&fetches);
-                db.prune(now);
-                *task_entry.db.lock().unwrap_or_else(|e| e.into_inner()) = Some(db.clone());
-                Ok(db)
-            }
-            Err(_) => {
+        crate::observability::observe(
+            crate::observability::Component::World,
+            crate::observability::Stage::Restore,
+            async {
+                task_entry
+                    .owner
+                    .join(crate::observability::Component::World);
+                let _op = task_entry.op.lock().await;
+                let _owner = task_entry.owner.enter();
+                if let Some(db) = task_entry
+                    .db
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .clone()
+                {
+                    return Ok(db);
+                }
                 self.inner
                     .metrics
-                    .load_failures
+                    .cold_loads
                     .fetch_add(1, Ordering::Relaxed);
-                Err(Failure::Error)
-            }
-        }
+                let load_deadline = Instant::now() + self.inner.config.load;
+                match self
+                    .inner
+                    .store
+                    .load(task_entry.cell, now, load_deadline)
+                    .await
+                {
+                    Ok(fetches) => {
+                        let mut db = replay(&fetches);
+                        db.prune(now);
+                        *task_entry.db.lock().unwrap_or_else(|e| e.into_inner()) = Some(db.clone());
+                        Ok(db)
+                    }
+                    Err(_) => {
+                        self.inner
+                            .metrics
+                            .load_failures
+                            .fetch_add(1, Ordering::Relaxed);
+                        Err(Failure::Error)
+                    }
+                }
+            },
+        )
+        .await
     }
     fn provider_down(&self, now: f64) -> Option<f64> {
         let until = *self
@@ -321,141 +334,153 @@ impl World {
         mut output: Found,
         respond_by: Instant,
     ) -> Flight {
-        let complete = |o: &Found| o.current.is_some() && o.today.is_some();
-        // Another owner is fetching (legacy lock held elsewhere): this request waits for it.
-        // Legacy `_selectRange` runs before the lock, so a waiter that cannot complete from
-        // stored records first learns whether the window is exhausted.
-        let (_op, waiter) = match entry.op.try_lock() {
-            Ok(guard) => (guard, false),
-            Err(_) => {
-                let fetching = entry.fetching.load(Ordering::Acquire);
-                if fetching
-                    && !complete(&output)
-                    && let Some(until) = self.unfundable(range, &output, respond_by).await
-                {
-                    return Flight::Failed(output, Failure::Unavailable(until));
-                }
-                (entry.op.lock().await, fetching)
-            }
-        };
-        let mut no_yesterday = false;
-        if let Some(db) = entry.db.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
-            let found = db.classify(now);
-            output.merge(&found);
-            no_yesterday = db.no_yesterday(now, &output);
-        }
-        // A failed fetch keeps the cell's lock (legacy backoff), so this is also a waiter.
-        let backoff = now
-            < *entry
-                .backoff_until
-                .lock()
-                .unwrap_or_else(|e| e.into_inner());
-        if waiter || backoff {
-            // `_waitForRecords`: stored current and today complete the request; otherwise fall back.
-            if complete(&output) {
-                return Flight::Complete(output);
-            }
-            // Legacy checks the funding window before the lock, so exhaustion outranks backoff.
-            return match self.unfundable(range, &output, respond_by).await {
-                Some(until) => Flight::Failed(output, Failure::Unavailable(until)),
-                None => Flight::Failed(output, Failure::Error),
-            };
-        }
-        if output.has_all(no_yesterday || forecast_only) {
-            return Flight::Complete(output);
-        }
-        let deadline = Instant::now() + self.inner.config.fetch;
-        struct Fetching<'a>(&'a std::sync::atomic::AtomicBool);
-        impl Drop for Fetching<'_> {
-            fn drop(&mut self) {
-                self.0.store(false, Ordering::Release);
-            }
-        }
-        entry.fetching.store(true, Ordering::Release);
-        let _fetching = Fetching(&entry.fetching);
-        let body = loop {
-            self.inner.metrics.fetches[range as usize].fetch_add(1, Ordering::Relaxed);
-            match self.inner.source.fetch(entry.cell, range, deadline).await {
-                Ok(body) => break body,
-                Err(VcError::Exhausted { retry_at_ms }) => {
-                    if range != Range::Forecast && output.current.is_none() && !forecast_only {
-                        forecast_only = true;
-                        range = Range::Forecast;
-                        if output.has_all(true) {
-                            return Flight::Complete(output);
+        crate::observability::work(
+            crate::observability::Component::World,
+            crate::observability::Stage::SharedWork,
+            async {
+                let complete = |o: &Found| o.current.is_some() && o.today.is_some();
+                // Another owner is fetching (legacy lock held elsewhere): this request waits for it.
+                // Legacy `_selectRange` runs before the lock, so a waiter that cannot complete from
+                // stored records first learns whether the window is exhausted.
+                let (_op, waiter) = match entry.op.try_lock() {
+                    Ok(guard) => (guard, false),
+                    Err(_) => {
+                        entry.owner.join(crate::observability::Component::World);
+                        let fetching = entry.fetching.load(Ordering::Acquire);
+                        if fetching
+                            && !complete(&output)
+                            && let Some(until) = self.unfundable(range, &output, respond_by).await
+                        {
+                            return Flight::Failed(output, Failure::Unavailable(until));
                         }
-                        continue;
+                        (entry.op.lock().await, fetching)
                     }
-                    return Flight::Failed(output, Failure::Unavailable(retry_at_ms));
+                };
+                let _owner = entry.owner.enter();
+                let mut no_yesterday = false;
+                if let Some(db) = entry.db.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
+                    let found = db.classify(now);
+                    output.merge(&found);
+                    no_yesterday = db.no_yesterday(now, &output);
                 }
-                Err(VcError::ProviderDown) => {
-                    self.inner
-                        .metrics
-                        .provider_failures
-                        .fetch_add(1, Ordering::Relaxed);
-                    *self
-                        .inner
-                        .provider_down_until
+                // A failed fetch keeps the cell's lock (legacy backoff), so this is also a waiter.
+                let backoff = now
+                    < *entry
+                        .backoff_until
                         .lock()
-                        .unwrap_or_else(|e| e.into_inner()) =
-                        self.inner.clock.now_ms() + PROVIDER_DOWN_MS;
-                    self.back_off(&entry, FAILURE_BACKOFF_MS);
-                    return Flight::Failed(output, Failure::Error);
+                        .unwrap_or_else(|e| e.into_inner());
+                if waiter || backoff {
+                    // `_waitForRecords`: stored current and today complete the request; otherwise fall back.
+                    if complete(&output) {
+                        return Flight::Complete(output);
+                    }
+                    // Legacy checks the funding window before the lock, so exhaustion outranks backoff.
+                    return match self.unfundable(range, &output, respond_by).await {
+                        Some(until) => Flight::Failed(output, Failure::Unavailable(until)),
+                        None => Flight::Failed(output, Failure::Error),
+                    };
                 }
-                Err(VcError::Failed) => {
+                if output.has_all(no_yesterday || forecast_only) {
+                    return Flight::Complete(output);
+                }
+                let deadline = Instant::now() + self.inner.config.fetch;
+                struct Fetching<'a>(&'a std::sync::atomic::AtomicBool);
+                impl Drop for Fetching<'_> {
+                    fn drop(&mut self) {
+                        self.0.store(false, Ordering::Release);
+                    }
+                }
+                entry.fetching.store(true, Ordering::Release);
+                let _fetching = Fetching(&entry.fetching);
+                let body = loop {
+                    self.inner.metrics.fetches[range as usize].fetch_add(1, Ordering::Relaxed);
+                    match self.inner.source.fetch(entry.cell, range, deadline).await {
+                        Ok(body) => break body,
+                        Err(VcError::Exhausted { retry_at_ms }) => {
+                            if range != Range::Forecast
+                                && output.current.is_none()
+                                && !forecast_only
+                            {
+                                forecast_only = true;
+                                range = Range::Forecast;
+                                if output.has_all(true) {
+                                    return Flight::Complete(output);
+                                }
+                                continue;
+                            }
+                            return Flight::Failed(output, Failure::Unavailable(retry_at_ms));
+                        }
+                        Err(VcError::ProviderDown) => {
+                            self.inner
+                                .metrics
+                                .provider_failures
+                                .fetch_add(1, Ordering::Relaxed);
+                            *self
+                                .inner
+                                .provider_down_until
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner()) =
+                                self.inner.clock.now_ms() + PROVIDER_DOWN_MS;
+                            self.back_off(&entry, FAILURE_BACKOFF_MS);
+                            return Flight::Failed(output, Failure::Error);
+                        }
+                        Err(VcError::Failed) => {
+                            self.inner
+                                .metrics
+                                .provider_failures
+                                .fetch_add(1, Ordering::Relaxed);
+                            self.back_off(&entry, FAILURE_BACKOFF_MS);
+                            return Flight::Failed(output, Failure::Error);
+                        }
+                    }
+                };
+                let parsed = OrderedJson::parse(&body).map(|j| Val::from_ordered(&j));
+                let checked = parsed.ok().filter(usable_shape).and_then(|v| {
+                    let first = days_first_date(&v)?;
+                    convert(&v, now, range).ok().map(|c| (first, c))
+                });
+                let Some((first_date, converted)) = checked else {
+                    self.back_off(&entry, BAD_RESPONSE_BACKOFF_MS);
+                    return Flight::Failed(output, Failure::Error);
+                };
+                let fetch = RawFetch {
+                    fetched_at_ms: now as u64,
+                    range,
+                    first_date,
+                    sha256: crate::storage::sha256(&body),
+                    body: body.into(),
+                };
+                if self
+                    .inner
+                    .store
+                    .publish(entry.cell, fetch, deadline)
+                    .await
+                    .is_err()
+                {
+                    // O-9: an undurable provider reply is never a new success.
                     self.inner
                         .metrics
-                        .provider_failures
+                        .publication_failures
                         .fetch_add(1, Ordering::Relaxed);
                     self.back_off(&entry, FAILURE_BACKOFF_MS);
                     return Flight::Failed(output, Failure::Error);
                 }
-            }
-        };
-        let parsed = OrderedJson::parse(&body).map(|j| Val::from_ordered(&j));
-        let checked = parsed.ok().filter(usable_shape).and_then(|v| {
-            let first = days_first_date(&v)?;
-            convert(&v, now, range).ok().map(|c| (first, c))
-        });
-        let Some((first_date, converted)) = checked else {
-            self.back_off(&entry, BAD_RESPONSE_BACKOFF_MS);
-            return Flight::Failed(output, Failure::Error);
-        };
-        let fetch = RawFetch {
-            fetched_at_ms: now as u64,
-            range,
-            first_date,
-            sha256: crate::storage::sha256(&body),
-            body: body.into(),
-        };
-        if self
-            .inner
-            .store
-            .publish(entry.cell, fetch, deadline)
-            .await
-            .is_err()
-        {
-            // O-9: an undurable provider reply is never a new success.
-            self.inner
-                .metrics
-                .publication_failures
-                .fetch_add(1, Ordering::Relaxed);
-            self.back_off(&entry, FAILURE_BACKOFF_MS);
-            return Flight::Failed(output, Failure::Error);
-        }
-        self.inner
-            .metrics
-            .publications
-            .fetch_add(1, Ordering::Relaxed);
-        let fetched = {
-            let mut guard = entry.db.lock().unwrap_or_else(|e| e.into_inner());
-            let db = guard.get_or_insert_with(Db::default);
-            let fetched = db.apply(converted);
-            db.prune(now);
-            fetched
-        };
-        output.merge(&fetched);
-        Flight::Complete(output)
+                self.inner
+                    .metrics
+                    .publications
+                    .fetch_add(1, Ordering::Relaxed);
+                let fetched = {
+                    let mut guard = entry.db.lock().unwrap_or_else(|e| e.into_inner());
+                    let db = guard.get_or_insert_with(Db::default);
+                    let fetched = db.apply(converted);
+                    db.prune(now);
+                    fetched
+                };
+                output.merge(&fetched);
+                Flight::Complete(output)
+            },
+        )
+        .await
     }
     /// `getDsfData`: stored records or an owned acquisition, then `_fallback`.
     pub async fn records(
@@ -476,71 +501,86 @@ impl World {
         now: f64,
         deadline: Instant,
     ) -> Result<Found, Failure> {
-        let started = Instant::now();
-        let Some(cell) = Cell::of(lat, lon) else {
-            return Err(Failure::Error);
-        };
-        let entry = self.entry(cell);
-        let db = self.loaded(&entry, now, deadline).await?;
-        let found = db.classify(now);
-        if found.has_all(false) {
-            return Ok(found);
-        }
-        let no_yesterday = db.no_yesterday(now, &found);
-        if found.has_all(no_yesterday) {
-            return Ok(found);
-        }
-        let range = if no_yesterday {
-            Range::Forecast
-        } else if found.two_days_ago.is_none() {
-            Range::Combined
-        } else if found.yesterday.is_none() {
-            Range::Recent
-        } else {
-            Range::Forecast
-        };
-        let fallback = |found: Found, failure: Failure| {
-            self.inner.metrics.fallbacks.fetch_add(1, Ordering::Relaxed);
-            found.fallback().ok_or(failure)
-        };
-        if let Some(until) = self.provider_down(now) {
-            return fallback(found, Failure::Unavailable(until));
-        }
-        // Funding (the budget part of `_selectRange`) is decided by the source ledger: the owner
-        // falls back to `forecast` on an unfundable range, and a request behind a busy or
-        // backed-off cell checks eligibility before failing.
-        let forecast_only = no_yesterday;
-        // S13d: answer from what is ready shortly before the attempt deadline, so a stored-record
-        // fallback is assembled before the dispatcher's own attempt timeout can turn it into an
-        // error. The owned fetch continues and publishes for the next request.
-        let waiter = deadline
-            .checked_sub(RESPONSE_MARGIN)
-            .unwrap_or(deadline)
-            .min(started + self.inner.config.response);
-        // Leave time to turn a funding outcome into the response before the attempt ends.
-        let respond_by = waiter
-            .checked_sub(Duration::from_millis(50))
-            .unwrap_or(waiter);
-        let world = self.clone();
-        let output = found.clone();
-        let task = tokio::spawn(async move {
-            // A detached owned fetch releases its cell, then trims idle cells when it finishes.
-            let _trim = Trim(world.clone());
-            world
-                .flight(entry, now, range, forecast_only, output, respond_by)
-                .await
-        });
-        match timeout_at(waiter, task).await {
-            Ok(Ok(Flight::Complete(out))) => Ok(out),
-            Ok(Ok(Flight::Failed(out, failure))) => fallback(out, failure),
-            _ => fallback(found, Failure::Error),
-        }
+        crate::observability::observe(
+            crate::observability::Component::World,
+            crate::observability::Stage::Acquire,
+            async {
+                let started = Instant::now();
+                let Some(cell) = Cell::of(lat, lon) else {
+                    return Err(Failure::Error);
+                };
+                let entry = self.entry(cell);
+                let db = self.loaded(&entry, now, deadline).await?;
+                let found = db.classify(now);
+                if found.has_all(false) {
+                    return Ok(found);
+                }
+                let no_yesterday = db.no_yesterday(now, &found);
+                if found.has_all(no_yesterday) {
+                    return Ok(found);
+                }
+                let range = if no_yesterday {
+                    Range::Forecast
+                } else if found.two_days_ago.is_none() {
+                    Range::Combined
+                } else if found.yesterday.is_none() {
+                    Range::Recent
+                } else {
+                    Range::Forecast
+                };
+                let fallback = |found: Found, failure: Failure| {
+                    self.inner.metrics.fallbacks.fetch_add(1, Ordering::Relaxed);
+                    crate::observability::event(
+                        crate::observability::Component::World,
+                        crate::observability::Stage::Acquire,
+                        crate::observability::Cause::Dependency,
+                        crate::observability::Action::Fallback,
+                        crate::observability::Outcome::Pending,
+                        Default::default(),
+                    );
+                    found.fallback().ok_or(failure)
+                };
+                if let Some(until) = self.provider_down(now) {
+                    return fallback(found, Failure::Unavailable(until));
+                }
+                // Funding (the budget part of `_selectRange`) is decided by the source ledger: the owner
+                // falls back to `forecast` on an unfundable range, and a request behind a busy or
+                // backed-off cell checks eligibility before failing.
+                let forecast_only = no_yesterday;
+                // S13d: answer from what is ready shortly before the attempt deadline, so a stored-record
+                // fallback is assembled before the dispatcher's own attempt timeout can turn it into an
+                // error. The owned fetch continues and publishes for the next request.
+                let waiter = deadline
+                    .checked_sub(RESPONSE_MARGIN)
+                    .unwrap_or(deadline)
+                    .min(started + self.inner.config.response);
+                // Leave time to turn a funding outcome into the response before the attempt ends.
+                let respond_by = waiter
+                    .checked_sub(Duration::from_millis(50))
+                    .unwrap_or(waiter);
+                let world = self.clone();
+                let output = found.clone();
+                let task = crate::observability::spawn(async move {
+                    // A detached owned fetch releases its cell, then trims idle cells when it finishes.
+                    let _trim = Trim(world.clone());
+                    world
+                        .flight(entry, now, range, forecast_only, output, respond_by)
+                        .await
+                });
+                match timeout_at(waiter, task).await {
+                    Ok(Ok(Flight::Complete(out))) => Ok(out),
+                    Ok(Ok(Flight::Failed(out, failure))) => fallback(out, failure),
+                    _ => fallback(found, Failure::Error),
+                }
+            },
+        )
+        .await
     }
     /// The air branch with the legacy 4 s release, bounded by the request attempt so a slow air
     /// provider releases the weather (`airStatus` pending) instead of failing it.
     pub async fn air(&self, lat: f64, lon: f64, now: f64, deadline: Instant) -> AirOutcome {
         let source = self.inner.air.clone();
-        let task = tokio::spawn(async move { source.current(lat, lon, now).await });
+        let task = crate::observability::spawn(async move { source.current(lat, lon, now).await });
         let release = (Instant::now() + AIR_DEADLINE).min(
             deadline
                 .checked_sub(Duration::from_millis(100))

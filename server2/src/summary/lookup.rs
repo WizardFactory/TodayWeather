@@ -172,7 +172,7 @@ pub struct Lookup<T> {
 type Ended = watch::Receiver<Option<bool>>;
 /// An on-demand ASOS range: running (its end is signalled) or finished at an instant.
 enum Slot {
-    Running(Ended),
+    Running(Ended, crate::observability::Context),
     Done(std::time::Instant),
 }
 enum Claim<'a> {
@@ -189,6 +189,7 @@ struct ClaimGuard<'a> {
     key: (String, u32),
     done: watch::Sender<Option<bool>>,
     finished: bool,
+    context: crate::observability::Context,
 }
 impl Drop for ClaimGuard<'_> {
     fn drop(&mut self) {
@@ -241,21 +242,26 @@ impl<T: SummaryTransport> Lookup<T> {
         let mut slots = self.attempted.lock().unwrap_or_else(|e| e.into_inner());
         slots.retain(|_, slot| match slot {
             Slot::Done(at) => at.elapsed() < ASOS_RETRY,
-            Slot::Running(_) => true,
+            Slot::Running(..) => true,
         });
         let key = (station.to_owned(), start);
         match slots.get(&key) {
-            Some(Slot::Running(rx)) => return Claim::Running(rx.clone()),
+            Some(Slot::Running(rx, owner)) => {
+                crate::observability::link(crate::observability::Component::Summary, *owner);
+                return Claim::Running(rx.clone());
+            }
             Some(Slot::Done(_)) => return Claim::Recent,
             None => {}
         }
         let (done, rx) = watch::channel(None);
-        slots.insert(key.clone(), Slot::Running(rx));
+        let context = crate::observability::current().child();
+        slots.insert(key.clone(), Slot::Running(rx, context));
         Claim::Mine(ClaimGuard {
             slots: &self.attempted,
             key,
             done,
             finished: false,
+            context,
         })
     }
     /// Acquire `[base-3, base+3]` for `station` once and store its complete days; wait for
@@ -290,23 +296,33 @@ impl<T: SummaryTransport> Lookup<T> {
                 }
             }
         };
-        let Some(fetched) = asos
-            .daily(station.to_owned(), *start, *end, deadline)
-            .await?
-        else {
-            guard.finished = true;
-            return Ok(OnDemand::Nothing);
-        };
-        let summaries = super::asos::summaries(station, &fetched, dates);
-        for s in &summaries {
-            self.store
-                .publish(s, deadline)
-                .await
-                .map_err(LookupError::Storage)?;
-        }
-        guard.finished = true;
-        Ok(OnDemand::Acquired(summaries))
+        let context = guard.context;
+        crate::observability::work_at(
+            context,
+            crate::observability::Component::Summary,
+            crate::observability::Stage::SharedWork,
+            async {
+                let Some(fetched) = asos
+                    .daily(station.to_owned(), *start, *end, deadline)
+                    .await?
+                else {
+                    guard.finished = true;
+                    return Ok(OnDemand::Nothing);
+                };
+                let summaries = super::asos::summaries(station, &fetched, dates);
+                for s in &summaries {
+                    self.store
+                        .publish(s, deadline)
+                        .await
+                        .map_err(LookupError::Storage)?;
+                }
+                guard.finished = true;
+                Ok(OnDemand::Acquired(summaries))
+            },
+        )
+        .await
     }
+
     /// The VC summary of `cell` for `date`: the stored newest revision, replaced by a new
     /// revision when the stored raw records now give other values from newer inputs.
     async fn vc_summary(
@@ -359,62 +375,69 @@ impl<T: SummaryTransport> Lookup<T> {
         today: u32,
         deadline: Instant,
     ) -> Result<Option<Found>, LookupError> {
-        let order = candidates(today);
-        let mut dates: Vec<u32> = order.iter().map(|(_, d)| *d).collect();
-        dates.sort_unstable();
-        let mut acquired: Option<Vec<Summary>> = None;
-        let found = |source, offset, date, summary| {
-            Ok(Some(Found {
-                source,
-                date,
-                offset,
-                summary,
-            }))
-        };
-        for &(offset, date) in &order {
-            if let Some(town) = &target.town {
-                let key = SummaryKey::Grid { town: town.clone() };
-                if let Some(s) = self.stored(&key, date, deadline).await? {
-                    return found(Source::Grid, offset, date, s);
-                }
-            }
-            if let Some(station) = &target.station {
-                let key = SummaryKey::Asos {
-                    station: station.clone(),
+        crate::observability::observe(
+            crate::observability::Component::Summary,
+            crate::observability::Stage::Lookup,
+            async {
+                let order = candidates(today);
+                let mut dates: Vec<u32> = order.iter().map(|(_, d)| *d).collect();
+                dates.sort_unstable();
+                let mut acquired: Option<Vec<Summary>> = None;
+                let found = |source, offset, date, summary| {
+                    Ok(Some(Found {
+                        source,
+                        date,
+                        offset,
+                        summary,
+                    }))
                 };
-                if let Some(s) = acquired
-                    .as_ref()
-                    .and_then(|a| a.iter().find(|s| s.date == date).cloned())
-                {
-                    return found(Source::Asos, offset, date, s);
-                }
-                if let Some(s) = self.stored(&key, date, deadline).await? {
-                    return found(Source::Asos, offset, date, s);
-                }
-                if acquired.is_none() {
-                    match self.asos_on_demand(station, &dates, deadline).await? {
-                        OnDemand::Acquired(a) => {
-                            if let Some(s) = a.iter().find(|s| s.date == date).cloned() {
-                                return found(Source::Asos, offset, date, s);
-                            }
-                            acquired = Some(a);
-                        }
-                        OnDemand::Nothing => {
-                            // Another lookup may have stored the range meanwhile.
-                            if let Some(s) = self.stored(&key, date, deadline).await? {
-                                return found(Source::Asos, offset, date, s);
-                            }
-                            acquired = Some(Vec::new());
+                for &(offset, date) in &order {
+                    if let Some(town) = &target.town {
+                        let key = SummaryKey::Grid { town: town.clone() };
+                        if let Some(s) = self.stored(&key, date, deadline).await? {
+                            return found(Source::Grid, offset, date, s);
                         }
                     }
+                    if let Some(station) = &target.station {
+                        let key = SummaryKey::Asos {
+                            station: station.clone(),
+                        };
+                        if let Some(s) = acquired
+                            .as_ref()
+                            .and_then(|a| a.iter().find(|s| s.date == date).cloned())
+                        {
+                            return found(Source::Asos, offset, date, s);
+                        }
+                        if let Some(s) = self.stored(&key, date, deadline).await? {
+                            return found(Source::Asos, offset, date, s);
+                        }
+                        if acquired.is_none() {
+                            match self.asos_on_demand(station, &dates, deadline).await? {
+                                OnDemand::Acquired(a) => {
+                                    if let Some(s) = a.iter().find(|s| s.date == date).cloned() {
+                                        return found(Source::Asos, offset, date, s);
+                                    }
+                                    acquired = Some(a);
+                                }
+                                OnDemand::Nothing => {
+                                    // Another lookup may have stored the range meanwhile.
+                                    if let Some(s) = self.stored(&key, date, deadline).await? {
+                                        return found(Source::Asos, offset, date, s);
+                                    }
+                                    acquired = Some(Vec::new());
+                                }
+                            }
+                        }
+                    }
+                    if let Some((lat, lon)) = target.cell
+                        && let Some(s) = self.vc_summary(lat, lon, date, deadline).await?
+                    {
+                        return found(Source::Vc, offset, date, s);
+                    }
                 }
-            }
-            if let Some((lat, lon)) = target.cell
-                && let Some(s) = self.vc_summary(lat, lon, date, deadline).await?
-            {
-                return found(Source::Vc, offset, date, s);
-            }
-        }
-        Ok(None)
+                Ok(None)
+            },
+        )
+        .await
     }
 }

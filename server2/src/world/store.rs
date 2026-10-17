@@ -226,13 +226,13 @@ impl<T: CatalogTransport + 'static> WorldStore for CatalogWorldStore<T> {
             for (date, range) in partitions(now_ms) {
                 let id = catalog(cell, date, range).map_err(StoreError::Storage)?;
                 let (store, gate) = (self.catalogs.clone(), gate.clone());
-                tasks.spawn(async move {
+                tasks.spawn(crate::observability::inherit(async move {
                     let _slot = gate
                         .acquire_owned()
                         .await
                         .map_err(|_| StoreError::Incomplete)?;
                     load_partition(store, id, period(date, range), deadline, false).await
-                });
+                }));
             }
             let mut out = Vec::new();
             while let Some(joined) = tasks.join_next().await {

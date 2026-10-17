@@ -1,6 +1,7 @@
 //! Bounded demand-only JSON wire adapter for `state/demand/grid/`. No other prefix, no SDK
 //! retries; the caller reconciles conditional-write conflicts.
 use super::demand::{DemandError, DemandObject, DemandPage, DemandTransport, PREFIX, PUSH_BYTES};
+use crate::observability::ObservedHttp as _;
 use crate::storage::{
     CatalogTransport, Error as StorageError, HttpS3Transport, ListPage, WriteCondition,
 };
@@ -206,6 +207,7 @@ pub(crate) async fn list_page(
         .client
         .get(url)
         .send()
+        .observed(crate::observability::Component::History)
         .await
         .map_err(|_| DemandError::Transport)?;
     if response.status().as_u16() != 200 {
@@ -269,6 +271,7 @@ impl DemandTransport for HttpS3Transport {
             .client
             .get(url)
             .send()
+            .observed(crate::observability::Component::History)
             .await
             .map_err(|_| DemandError::Transport)?;
         match response.status().as_u16() {
@@ -325,6 +328,7 @@ impl DemandTransport for HttpS3Transport {
             .header("content-type", "application/json")
             .body(payload.to_vec())
             .send()
+            .observed(crate::observability::Component::History)
             .await
             .map_err(|_| DemandError::Transport)?;
         let status = response.status().as_u16();

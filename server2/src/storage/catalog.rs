@@ -207,7 +207,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
             .acquire_owned()
             .await
             .map_err(|_| Error::Transport)?;
-        tokio::task::spawn_blocking(move || {
+        crate::observability::spawn_blocking(move || {
             let _permit = permit;
             f()
         })
@@ -682,13 +682,20 @@ impl<T: CatalogTransport> CatalogStore<T> {
         }))
     }
     pub async fn lookup(&self, id: &CatalogId, deadline: Instant) -> Result<LookupOutcome, Error> {
-        id.validate()?;
-        timeout_at(self.deadline(deadline), async {
-            let _admission = self.admit().await?;
-            self.lookup_inner(id, &mut Context::new()).await
-        })
+        crate::observability::observe(
+            crate::observability::Component::S3,
+            crate::observability::Stage::Lookup,
+            async {
+                id.validate()?;
+                timeout_at(self.deadline(deadline), async {
+                    let _admission = self.admit().await?;
+                    self.lookup_inner(id, &mut Context::new()).await
+                })
+                .await
+                .map_err(|_| Error::Timeout)?
+            },
+        )
         .await
-        .map_err(|_| Error::Timeout)?
     }
     fn uncertain(e: Error) -> Error {
         match e {
@@ -831,104 +838,111 @@ impl<T: CatalogTransport> CatalogStore<T> {
         records: Vec<RawRecord>,
         deadline: Instant,
     ) -> Result<CompleteSet, Error> {
-        let mut started = false;
-        let result = timeout_at(self.deadline(deadline), async {
-            let _admission = self.admit().await?;
-            // S10F GROK-1: credentials before the first write; a failure here is definite.
-            self.transport.ready().await?;
-            let l = self.limits.clone();
-            let d = declaration.clone();
-            let (reference, body, records) = self
-                .cpu(move || Ok((d.reference(&l)?, d.bytes(&l)?, d.attach(records, &l)?)))
-                .await?;
-            let total = records.iter().try_fold(0usize, |n, r| {
-                n.checked_add(r.bytes.len()).ok_or(Error::Capacity)
-            })?;
-            if total > self.limits.output_bytes {
-                return Err(Error::Capacity);
-            }
-            let worst = declaration
-                .partitions
-                .len()
-                .checked_mul(self.limits.control_bytes)
-                .and_then(|n| n.checked_add(body.len()))
-                .ok_or(Error::Capacity)?;
-            if worst > self.limits.retained_control_bytes {
-                return Err(Error::Capacity);
-            }
-            let mut preflight = Context::new();
-            let mut required = body.len();
-            let all = self.envelopes(&declaration).await?;
-            for id in &declaration.partitions {
-                let current = self
-                    .catalog(id, &mut preflight)
-                    .await?
-                    .map(|p| p.catalog)
-                    .unwrap_or_else(|| Catalog::empty(id.clone()));
-                let incoming = declaration
-                    .members
-                    .iter()
-                    .zip(&all)
-                    .filter(|(m, _)| m.catalogs.contains(id))
-                    .map(|(_, e)| e.clone())
-                    .collect::<Vec<_>>();
-                let l = self.limits.clone();
-                let n = self
-                    .cpu(move || current.union(&incoming, &l)?.bytes(&l).map(|b| b.len()))
-                    .await
-                    .map_err(|e| match e {
-                        Error::Invalid("catalog bytes")
-                        | Error::Corrupt("catalog schema/entries") => Error::Capacity,
-                        _ => e,
+        crate::observability::observe(
+            crate::observability::Component::S3,
+            crate::observability::Stage::Publish,
+            async {
+                let mut started = false;
+                let result = timeout_at(self.deadline(deadline), async {
+                    let _admission = self.admit().await?;
+                    // S10F GROK-1: credentials before the first write; a failure here is definite.
+                    self.transport.ready().await?;
+                    let l = self.limits.clone();
+                    let d = declaration.clone();
+                    let (reference, body, records) = self
+                        .cpu(move || Ok((d.reference(&l)?, d.bytes(&l)?, d.attach(records, &l)?)))
+                        .await?;
+                    let total = records.iter().try_fold(0usize, |n, r| {
+                        n.checked_add(r.bytes.len()).ok_or(Error::Capacity)
                     })?;
-                required = required.checked_add(n).ok_or(Error::Capacity)?;
-            }
-            if required > self.limits.retained_control_bytes {
-                return Err(Error::Capacity);
-            }
-            let mut context = Context::new();
-            self.immutable(
-                &reference.descriptor_key()?,
-                &body,
-                &mut context,
-                &mut started,
-            )
-            .await?;
-            for record in records {
-                started = true;
-                self.raw.publish(record).await?;
-            }
-            self.publish_catalogs(&declaration, &mut context, &mut started)
-                .await?;
-            // Publication checks the new group only; unrelated retained history must not poison success.
-            let mut context = Context::new();
-            if !self.eligible(&declaration, &mut context).await? {
-                return Err(Error::Ambiguous);
-            }
-            let records = self
-                .group_records(&declaration, &mut context)
-                .await
-                .map_err(Self::uncertain)?;
-            Ok(CompleteSet {
-                coverage: RevisionCoverage::PublishedGroup,
-                acquisitions: vec![CompleteAcquisition {
-                    records,
-                    group: Some(reference.group_sha256),
-                }],
-                dependencies: Self::dependencies(&context),
-                excluded: 0,
-            })
-        })
-        .await;
-        match result {
-            Ok(Err(Error::Capacity)) if started => Err(Error::Ambiguous),
-            Ok(r) => r,
-            Err(_) => Err(if started {
-                Error::Ambiguous
-            } else {
-                Error::Timeout
-            }),
-        }
+                    if total > self.limits.output_bytes {
+                        return Err(Error::Capacity);
+                    }
+                    let worst = declaration
+                        .partitions
+                        .len()
+                        .checked_mul(self.limits.control_bytes)
+                        .and_then(|n| n.checked_add(body.len()))
+                        .ok_or(Error::Capacity)?;
+                    if worst > self.limits.retained_control_bytes {
+                        return Err(Error::Capacity);
+                    }
+                    let mut preflight = Context::new();
+                    let mut required = body.len();
+                    let all = self.envelopes(&declaration).await?;
+                    for id in &declaration.partitions {
+                        let current = self
+                            .catalog(id, &mut preflight)
+                            .await?
+                            .map(|p| p.catalog)
+                            .unwrap_or_else(|| Catalog::empty(id.clone()));
+                        let incoming = declaration
+                            .members
+                            .iter()
+                            .zip(&all)
+                            .filter(|(m, _)| m.catalogs.contains(id))
+                            .map(|(_, e)| e.clone())
+                            .collect::<Vec<_>>();
+                        let l = self.limits.clone();
+                        let n = self
+                            .cpu(move || current.union(&incoming, &l)?.bytes(&l).map(|b| b.len()))
+                            .await
+                            .map_err(|e| match e {
+                                Error::Invalid("catalog bytes")
+                                | Error::Corrupt("catalog schema/entries") => Error::Capacity,
+                                _ => e,
+                            })?;
+                        required = required.checked_add(n).ok_or(Error::Capacity)?;
+                    }
+                    if required > self.limits.retained_control_bytes {
+                        return Err(Error::Capacity);
+                    }
+                    let mut context = Context::new();
+                    self.immutable(
+                        &reference.descriptor_key()?,
+                        &body,
+                        &mut context,
+                        &mut started,
+                    )
+                    .await?;
+                    for record in records {
+                        started = true;
+                        self.raw.publish(record).await?;
+                    }
+                    self.publish_catalogs(&declaration, &mut context, &mut started)
+                        .await?;
+                    // Publication checks the new group only; unrelated retained history must not poison success.
+                    let mut context = Context::new();
+                    if !self.eligible(&declaration, &mut context).await? {
+                        return Err(Error::Ambiguous);
+                    }
+                    let records = self
+                        .group_records(&declaration, &mut context)
+                        .await
+                        .map_err(Self::uncertain)?;
+                    Ok(CompleteSet {
+                        coverage: RevisionCoverage::PublishedGroup,
+                        acquisitions: vec![CompleteAcquisition {
+                            records,
+                            group: Some(reference.group_sha256),
+                        }],
+                        dependencies: Self::dependencies(&context),
+                        excluded: 0,
+                    })
+                })
+                .await;
+                match result {
+                    Ok(Err(Error::Capacity)) if started => Err(Error::Ambiguous),
+                    Ok(r) => r,
+                    Err(_) => Err(if started {
+                        Error::Ambiguous
+                    } else {
+                        Error::Timeout
+                    }),
+                }
+            },
+        )
+        .await
     }
     fn prefix(id: &CatalogId, period: &Period) -> Result<String, Error> {
         let r = RecordId {

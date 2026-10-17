@@ -307,7 +307,7 @@ impl<P: VcTransport, T: BudgetTransport + 'static> FundedVc<P, T> {
         })
     }
     fn spawn_acquire(&self, need: u64, want: Want) -> tokio::task::JoinHandle<Got> {
-        tokio::spawn(acquire(
+        crate::observability::spawn(acquire(
             self.ledger.clone(),
             self.funding.clone(),
             need,
@@ -317,7 +317,7 @@ impl<P: VcTransport, T: BudgetTransport + 'static> FundedVc<P, T> {
     /// Return unconsumed units to the window they were reserved in (never across windows).
     fn release(&self, reservation: Reservation, starts: i64) {
         let ledger = self.ledger.clone();
-        tokio::spawn(async move {
+        crate::observability::spawn(async move {
             let mut guard = ledger.lock().await;
             if let Some(w) = guard.as_mut().filter(|w| w.starts_at_ms == starts) {
                 pool(w, reservation, 2);
@@ -341,6 +341,17 @@ impl<P: VcTransport, T: BudgetTransport + 'static> FundedVc<P, T> {
             let retry = attempt == 1 && time_left;
             let response = match result {
                 Err(VcTransportError::Reset) if retry => {
+                    crate::observability::event(
+                        crate::observability::Component::World,
+                        crate::observability::Stage::Acquire,
+                        crate::observability::Cause::Transport,
+                        crate::observability::Action::Retry,
+                        crate::observability::Outcome::Failed,
+                        crate::observability::Details {
+                            attempt: Some(attempt),
+                            ..Default::default()
+                        },
+                    );
                     sleep(RETRY_DELAY).await;
                     continue;
                 }
@@ -350,6 +361,18 @@ impl<P: VcTransport, T: BudgetTransport + 'static> FundedVc<P, T> {
             match response.status {
                 429 if concurrency_429(&response.body) => {
                     if retry && started.elapsed() < RETRY_WINDOW {
+                        crate::observability::event(
+                            crate::observability::Component::World,
+                            crate::observability::Stage::Acquire,
+                            crate::observability::Cause::Quota,
+                            crate::observability::Action::Retry,
+                            crate::observability::Outcome::Failed,
+                            crate::observability::Details {
+                                attempt: Some(attempt),
+                                status: Some(429),
+                                ..Default::default()
+                            },
+                        );
                         sleep(RETRY_DELAY).await;
                         continue;
                     }

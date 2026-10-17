@@ -5,6 +5,7 @@
 //! runs the same process with services built for loopback test peers (S10e).
 use crate::gateway::GatewayError;
 use crate::listener::BoundedListener;
+use crate::observability::{self as obs, Action, Cause, Component, Details, Outcome, Stage};
 use crate::runtime_services::RuntimeServices;
 use crate::{Config, SharedState, metrics_router};
 use std::{future::IntoFuture, io, sync::Arc, time::Duration};
@@ -15,13 +16,20 @@ pub fn run<F>(config: Config, gateway: F) -> Result<(), Box<dyn std::error::Erro
 where
     F: FnOnce() -> Result<RuntimeServices, GatewayError>,
 {
+    obs::init(&|name| std::env::var(name).ok());
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(config.worker_threads)
         .max_blocking_threads(config.blocking_threads)
         .thread_name("server2")
         .enable_all()
         .build()?;
-    let result = runtime.block_on(serve(config, gateway, |_| {}));
+    let result = runtime.block_on(
+        obs::Context::root(obs::Route::Other, obs::Method::Other).scope(serve(
+            config,
+            gateway,
+            |_| {},
+        )),
+    );
     crate::shutdown_runtime(runtime);
     result?;
     Ok(())
@@ -37,13 +45,17 @@ where
     F: FnOnce() -> Result<RuntimeServices, GatewayError>,
     H: FnOnce(tokio::task::AbortHandle),
 {
+    obs::init(&|name| std::env::var(name).ok());
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(config.worker_threads)
         .max_blocking_threads(config.blocking_threads)
         .thread_name("server2")
         .enable_all()
         .build()?;
-    let result = runtime.block_on(serve(config, gateway, hook));
+    let result = runtime.block_on(
+        obs::Context::root(obs::Route::Other, obs::Method::Other)
+            .scope(serve(config, gateway, hook)),
+    );
     crate::shutdown_runtime(runtime);
     result?;
     Ok(())
@@ -77,7 +89,25 @@ where
 {
     use crate::push::deliver::supervisor::DRAIN;
     let signal = shutdown_signal()?;
-    let gateway = gateway().map_err(|_| io::Error::other("invalid gateway configuration"))?;
+    obs::event(
+        Component::Process,
+        Stage::Startup,
+        Cause::None,
+        Action::None,
+        Outcome::Started,
+        Details::default(),
+    );
+    let gateway = gateway().map_err(|_| {
+        obs::event(
+            Component::Process,
+            Stage::Startup,
+            Cause::Configuration,
+            Action::ReturnError,
+            Outcome::Failed,
+            Details::default(),
+        );
+        io::Error::other("invalid gateway configuration")
+    })?;
     let push = gateway.push.clone();
     // Constructing services is inert for delivery. Both binds precede worker start.
     let bound = async {
@@ -89,6 +119,16 @@ where
     let (public, private) = match bound {
         Ok(listeners) => listeners,
         Err(error) => {
+            use crate::observability::Classify;
+            let (cause, outcome, _) = error.classify();
+            obs::event(
+                Component::Process,
+                Stage::Bind,
+                cause,
+                Action::ReturnError,
+                outcome,
+                Details::default(),
+            );
             if let Some(push) = &push {
                 push.quiesce();
                 let _ = push.drain(tokio::time::Instant::now() + DRAIN).await;
@@ -101,6 +141,14 @@ where
         public.local_addr()?,
         private.local_addr()?
     );
+    obs::event(
+        Component::Process,
+        Stage::Bind,
+        Cause::None,
+        Action::None,
+        Outcome::Success,
+        Details::default(),
+    );
     let lifetime = Duration::from_secs(config.connection_seconds as u64);
     let public = BoundedListener::new(public, config.connection_limit, lifetime);
     let private = BoundedListener::new(private, 16, lifetime);
@@ -109,16 +157,16 @@ where
     let router = gateway.public_router(state.clone());
     let (tx, rx) = watch::channel(false);
     let mut listeners = tokio::task::JoinSet::new();
-    let public = listeners.spawn(
+    let public = listeners.spawn(crate::observability::inherit(
         axum::serve(public, router)
             .with_graceful_shutdown(wait_shutdown(rx.clone()))
             .into_future(),
-    );
-    listeners.spawn(
+    ));
+    listeners.spawn(crate::observability::inherit(
         axum::serve(private, metrics_router(state))
             .with_graceful_shutdown(wait_shutdown(rx))
             .into_future(),
-    );
+    ));
     hook(public);
     let result = tokio::select! {
         result = signal => result,
@@ -137,6 +185,21 @@ where
         Duration::from_secs(5)
     };
     let deadline = tokio::time::Instant::now() + drain;
+    obs::event(
+        Component::Process,
+        Stage::Shutdown,
+        if result.is_ok() {
+            Cause::Shutdown
+        } else {
+            Cause::Transport
+        },
+        Action::Quiesce,
+        Outcome::Started,
+        Details {
+            limit_seconds: Some(if has_push_work { 35 } else { 6 }),
+            ..Default::default()
+        },
+    );
     if let Some(delivery) = &delivery {
         delivery.quiesce();
     }
@@ -168,8 +231,26 @@ where
     let outcome =
         tokio::time::timeout_at(deadline, async { tokio::join!(worker_drain, http_drain) }).await;
     match outcome {
-        Ok(((jobs, writer), http)) => eprintln!(
-            "server2 stop delivery_joined={jobs} writer_joined={writer} http_joined={http}"
+        Ok(((jobs, writer), http)) => obs::event(
+            Component::Process,
+            Stage::Shutdown,
+            if jobs && writer && http {
+                Cause::None
+            } else {
+                Cause::Shutdown
+            },
+            Action::Drain,
+            if jobs && writer && http {
+                Outcome::Success
+            } else {
+                Outcome::Unknown
+            },
+            Details {
+                delivery_joined: Some(jobs),
+                writer_joined: Some(writer),
+                http_joined: Some(http),
+                ..Details::default()
+            },
         ),
         Err(_) => {
             listeners.abort_all();
@@ -179,16 +260,39 @@ where
                 let _ = push.drain(deadline).await;
             }
             if !has_push_work && result.is_ok() {
-                eprintln!("server2 signal drain deadline; forced stop");
+                obs::event(
+                    Component::Process,
+                    Stage::Shutdown,
+                    Cause::Timeout,
+                    Action::CancelOwner,
+                    Outcome::Cancelled,
+                    Details::default(),
+                );
             }
-            eprintln!(
-                "server2 stop deadline: delivery/writer/HTTP may be cancelled/incomplete; durable claims retained"
+            obs::event(
+                Component::Process,
+                Stage::Shutdown,
+                Cause::Timeout,
+                Action::RetainClaim,
+                Outcome::Unknown,
+                Details::default(),
             );
         }
     }
-    eprintln!(
-        "server2 provider completion unverified; unfinished owned acquisitions cancelled at runtime teardown; shutdown limit={}s",
-        if has_push_work { 35 } else { 6 }
+    obs::event(
+        Component::Process,
+        Stage::RuntimeTeardown,
+        Cause::Cancellation,
+        Action::CancelOwner,
+        Outcome::Unknown,
+        Details::default(),
     );
+    // Log flush consumes only unused existing drain allowance; never extends the stop budget.
+    obs::flush(
+        deadline
+            .saturating_duration_since(tokio::time::Instant::now())
+            .min(Duration::from_millis(50)),
+    );
+
     result
 }

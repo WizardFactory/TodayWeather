@@ -1,0 +1,195 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "server2 logging contract \u2014 design",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/server2-logging.html"
+  },
+  "lanes": [
+    {
+      "id": "operation",
+      "label": "Operation and privacy contract"
+    },
+    {
+      "id": "handoff",
+      "label": "Asynchronous ownership"
+    },
+    {
+      "id": "output",
+      "label": "Bounded diagnostic output"
+    },
+    {
+      "id": "loss",
+      "label": "Loss visibility",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "request",
+    "async",
+    "event",
+    "queue",
+    "stderr"
+  ],
+  "nodes": [
+    {
+      "id": "request",
+      "lane": "operation",
+      "col": 0,
+      "type": "frontend",
+      "label": "Request or cycle",
+      "sublabel": "fresh nonsensitive trace",
+      "width": 160
+    },
+    {
+      "id": "async",
+      "lane": "handoff",
+      "col": 1,
+      "type": "backend",
+      "label": "Owned work",
+      "sublabel": "task / blocking / queue",
+      "width": 160
+    },
+    {
+      "id": "shared",
+      "lane": "handoff",
+      "col": 2,
+      "type": "backend",
+      "label": "Shared owner",
+      "sublabel": "joining traces link to owner",
+      "width": 160
+    },
+    {
+      "id": "event",
+      "lane": "operation",
+      "col": 2,
+      "type": "security",
+      "label": "Typed event",
+      "sublabel": "cause / action / outcome",
+      "width": 160
+    },
+    {
+      "id": "queue",
+      "lane": "output",
+      "col": 3,
+      "type": "messagebus",
+      "label": "Bounded try-send",
+      "sublabel": "no producer IO wait",
+      "width": 160
+    },
+    {
+      "id": "stderr",
+      "lane": "output",
+      "col": 4,
+      "type": "external",
+      "label": "NDJSON stderr",
+      "sublabel": "dedicated writer thread",
+      "width": 160
+    },
+    {
+      "id": "loss",
+      "lane": "loss",
+      "col": 3,
+      "type": "security",
+      "label": "Loss counters",
+      "sublabel": "rate / queue / sink errors",
+      "width": 160
+    },
+    {
+      "id": "metrics",
+      "lane": "loss",
+      "col": 4,
+      "type": "backend",
+      "label": "Internal metrics",
+      "sublabel": "independent of stderr",
+      "width": 160
+    }
+  ],
+  "edges": [
+    {
+      "id": "request-work",
+      "from": "request",
+      "to": "async",
+      "label": "inherit IDs",
+      "variant": "emphasis"
+    },
+    {
+      "id": "work-events",
+      "from": "async",
+      "to": "event",
+      "label": "classify",
+      "variant": "default"
+    },
+    {
+      "id": "shared-link",
+      "from": "async",
+      "to": "shared",
+      "label": "join link",
+      "variant": "dashed"
+    },
+    {
+      "id": "shared-events",
+      "from": "shared",
+      "to": "event",
+      "label": "owner context",
+      "variant": "default"
+    },
+    {
+      "id": "safe-events",
+      "from": "event",
+      "to": "queue",
+      "label": "try-send",
+      "variant": "emphasis"
+    },
+    {
+      "id": "writer-output",
+      "from": "queue",
+      "to": "stderr",
+      "label": "bounded records",
+      "variant": "default"
+    },
+    {
+      "id": "dropped-events",
+      "from": "queue",
+      "to": "loss",
+      "label": "not admitted",
+      "variant": "security"
+    },
+    {
+      "id": "observe-loss",
+      "from": "loss",
+      "to": "metrics",
+      "label": "count",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Design scope",
+      "items": [
+        "Specification for issue2802; not implementation or deployment evidence.",
+        "HTTP wire behavior, attempts, deadlines and delivery ownership stay unchanged."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Incident semantics",
+      "items": [
+        "Accepted, durable, failed, cancelled and unknown are distinct outcomes.",
+        "No URL, body, credential, coordinate, registration ID or notification text enters the event API.",
+        "The operator starts from terminal failures and follows parent / shared-owner IDs."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Output failure",
+      "items": [
+        "A blocked stderr sink can lose diagnostics; independent counters expose the gap.",
+        "A loss summary is best-effort when output becomes available; logs are not a durable business ledger."
+      ]
+    }
+  ]
+}

@@ -193,13 +193,13 @@ impl<T: CatalogTransport + 'static> AirStore for CatalogAirStore<T> {
                 for provider in AirProvider::ORDER {
                     let id = catalog(cell, provider, day).map_err(StoreError::Storage)?;
                     let (store, gate) = (self.catalogs.clone(), gate.clone());
-                    tasks.spawn(async move {
+                    tasks.spawn(crate::observability::inherit(async move {
                         let _slot = gate
                             .acquire_owned()
                             .await
                             .map_err(|_| StoreError::Incomplete)?;
                         load_one(store, id, day, deadline).await
-                    });
+                    }));
                 }
             }
             let mut out = Vec::new();

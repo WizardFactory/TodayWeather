@@ -418,7 +418,7 @@ where
             .map_err(|_| DomesticError::Invalid("cpu admission"))?;
         timeout_at(
             deadline,
-            tokio::task::spawn_blocking(move || {
+            crate::observability::spawn_blocking(move || {
                 let _slot = slot;
                 work()
             }),

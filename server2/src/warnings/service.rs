@@ -63,6 +63,7 @@ pub struct WarningService<T> {
     latest: Mutex<HashMap<u8, Cached<Option<Bulletin>>>>,
     zones: ZoneSlot,
     zone_refresh: Arc<Mutex<()>>,
+    zone_owner: Arc<crate::observability::SharedOwner>,
 }
 type ZoneSlot = Arc<std::sync::Mutex<Option<ZoneCache>>>;
 /// Failures keep the legacy 501 contract; `Empty` is legacy `data is empty`.
@@ -89,6 +90,7 @@ impl<T: CatalogTransport> WarningService<T> {
             latest: Mutex::new(HashMap::new()),
             zones: Arc::new(std::sync::Mutex::new(None)),
             zone_refresh: Arc::new(Mutex::new(())),
+            zone_owner: Arc::new(crate::observability::SharedOwner::default()),
         }
     }
     pub fn store(&self) -> &Arc<WarningStore<T>> {
@@ -201,38 +203,48 @@ impl<T: CatalogTransport> WarningService<T> {
             self.zone_refresh.clone(),
             self.config.clone(),
         );
-        let task = tokio::spawn(async move {
-            let _single = refresh.lock_owned().await;
-            if let Some(state) = Self::zone_memory(&zones, &config, true) {
-                return Ok(state);
-            }
-            let previous = zones
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .as_ref()
-                .map(|c| (c.state.clone(), c.full_at));
-            let owned = Instant::now() + config.zone_deadline;
-            let refreshed = match previous {
-                Some((state, full_at)) if full_at.elapsed() < config.zone_full => {
-                    store.recent_zone_rows(now_ms, owned).await.map(|rows| {
-                        let mut state = (*state).clone();
-                        state.apply(&prepare_events(&rows));
-                        (state, full_at)
-                    })
-                }
-                _ => store
-                    .zone_state(now_ms, owned)
-                    .await
-                    .map(|state| (state, Instant::now())),
-            };
-            let (state, full_at) = refreshed.map_err(ServeError::Storage)?;
-            let state = Arc::new(state);
-            *zones.lock().unwrap_or_else(|e| e.into_inner()) = Some(ZoneCache {
-                state: state.clone(),
-                at: Instant::now(),
-                full_at,
-            });
-            Ok(state)
+        let owner = self.zone_owner.clone();
+        let task = crate::observability::spawn(async move {
+            crate::observability::observe(
+                crate::observability::Component::Warnings,
+                crate::observability::Stage::SharedWork,
+                async move {
+                    owner.join(crate::observability::Component::Warnings);
+                    let _single = refresh.lock_owned().await;
+                    let _owner = owner.enter();
+                    if let Some(state) = Self::zone_memory(&zones, &config, true) {
+                        return Ok(state);
+                    }
+                    let previous = zones
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .as_ref()
+                        .map(|c| (c.state.clone(), c.full_at));
+                    let owned = Instant::now() + config.zone_deadline;
+                    let refreshed = match previous {
+                        Some((state, full_at)) if full_at.elapsed() < config.zone_full => {
+                            store.recent_zone_rows(now_ms, owned).await.map(|rows| {
+                                let mut state = (*state).clone();
+                                state.apply(&prepare_events(&rows));
+                                (state, full_at)
+                            })
+                        }
+                        _ => store
+                            .zone_state(now_ms, owned)
+                            .await
+                            .map(|state| (state, Instant::now())),
+                    };
+                    let (state, full_at) = refreshed.map_err(ServeError::Storage)?;
+                    let state = Arc::new(state);
+                    *zones.lock().unwrap_or_else(|e| e.into_inner()) = Some(ZoneCache {
+                        state: state.clone(),
+                        at: Instant::now(),
+                        full_at,
+                    });
+                    Ok(state)
+                },
+            )
+            .await
         });
         let result = match tokio::time::timeout_at(deadline, task).await {
             Ok(Ok(result)) => result,

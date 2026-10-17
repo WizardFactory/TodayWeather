@@ -152,6 +152,7 @@ struct Counters {
 }
 type Terminal = Option<Result<Response, Error>>;
 struct Flight {
+    trace: crate::observability::Context,
     sender: watch::Sender<Terminal>,
 }
 struct Core<T, A, V> {
@@ -462,6 +463,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
             }
             if let Some(flight) = map.get(&key) {
                 self.core.counters.shared.fetch_add(1, Ordering::Relaxed);
+                crate::observability::link(crate::observability::Component::Resolver, flight.trace);
                 flight.sender.subscribe()
             } else {
                 let owner = self.core.owners.clone().try_acquire_owned().map_err(|_| {
@@ -477,7 +479,8 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                         .reserve(self.core.config.operation_bytes)?,
                 );
                 let (sender, receiver) = watch::channel(None);
-                let flight = Arc::new(Flight { sender });
+                let trace = crate::observability::current().child();
+                let flight = Arc::new(Flight { sender, trace });
                 map.insert(key.clone(), flight.clone());
                 let deadline = Instant::now() + self.core.config.deadline;
                 // The bound of the current owner stage: the cold read, then (S13d) the shared
@@ -493,7 +496,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                     _lease: lease.clone(),
                     dirty: publishing.clone(),
                 };
-                tokio::spawn(async move {
+                crate::observability::spawn(async move {
                     let context = OperationContext {
                         deadline,
                         cancelled: core.cancelled.clone(),
@@ -507,15 +510,23 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
                         publishing.clone(),
                         stage.clone(),
                     );
-                    let result = match staged(work, &stage).await {
-                        Some(r) => r,
-                        None => Err(if publishing.load(Ordering::Acquire) {
-                            StorageError::Ambiguous
-                        } else {
-                            StorageError::Timeout
-                        }
-                        .into()),
-                    };
+                    let result = crate::observability::observe_at(
+                        trace,
+                        crate::observability::Component::Resolver,
+                        crate::observability::Stage::Lookup,
+                        async {
+                            match staged(work, &stage).await {
+                                Some(r) => r,
+                                None => Err(if publishing.load(Ordering::Acquire) {
+                                    StorageError::Ambiguous
+                                } else {
+                                    StorageError::Timeout
+                                }
+                                .into()),
+                            }
+                        },
+                    )
+                    .await;
                     if result.is_ok() {
                         publishing.store(false, Ordering::Release);
                     }
@@ -665,7 +676,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
         let config = core.config.clone();
         let retention_gate = core.retention_gate.clone();
         let req = request.clone();
-        let (bytes, dependencies, excluded) = tokio::task::spawn_blocking(move || {
+        let (bytes, dependencies, excluded) = crate::observability::spawn_blocking(move || {
             let _permit = permit;
             let _lease = lease;
             let mut parsed = Vec::new();
@@ -849,7 +860,7 @@ impl<T: CatalogTransport, A: FundedAcquirer, V: ViewBuilder> Resolver<T, A, V> {
         core.counters
             .maintenance_started
             .fetch_add(1, Ordering::Relaxed);
-        tokio::spawn(async move {
+        crate::observability::spawn(async move {
             let guard = MaintenanceGuard {
                 core: core.clone(),
                 dirty,

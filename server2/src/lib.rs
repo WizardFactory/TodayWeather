@@ -2,6 +2,7 @@
 pub mod cache;
 pub mod dotenv;
 pub mod listener;
+pub mod observability;
 pub mod process;
 pub mod resolver;
 pub mod runtime_services;
@@ -175,7 +176,7 @@ impl SharedState {
             .clone()
             .try_acquire_owned()
             .map_err(|_| "CPU capacity exhausted".to_string())?;
-        tokio::task::spawn_blocking(move || {
+        crate::observability::spawn_blocking(move || {
             let _permit = permit;
             work()
         })
@@ -222,6 +223,7 @@ pub fn public_router(state: Arc<SharedState>) -> Router {
         .fallback(|| async { (StatusCode::NOT_FOUND, Body::from("Not Found")) })
         .layer(middleware::from_fn_with_state(state.clone(), admission))
         .layer(middleware::from_fn(cors))
+        .layer(middleware::from_fn(observability::http))
         .with_state(state)
 }
 async fn metrics(State(s): State<Arc<SharedState>>) -> Response {
@@ -235,7 +237,8 @@ async fn metrics(State(s): State<Arc<SharedState>>) -> Response {
         s.config.cpu_limit,
         s.memory_bytes(),
         s.config.cache_bytes
-    ) + &gateway::metrics::render();
+    ) + &gateway::metrics::render()
+        + &observability::render_metrics();
     (
         [
             ("content-type", "text/plain; version=0.0.4; charset=utf-8"),
@@ -249,6 +252,7 @@ pub fn metrics_router(state: Arc<SharedState>) -> Router {
     Router::new()
         .route("/internal/metrics", get(metrics))
         .with_state(state)
+        .layer(middleware::from_fn(observability::http))
 }
 
 /// Bound runtime destruction even when a cancelled CPU closure has not finished.
@@ -283,6 +287,7 @@ pub fn public_router_with_gateway(
             async move { gateway.handle(request).await }
         })
         .with_state(state)
+        .layer(middleware::from_fn(observability::http))
 }
 /// S17b: legacy direct public KMA routes.
 pub mod api;
@@ -303,4 +308,5 @@ pub fn public_router_with_routes(state: Arc<SharedState>, routes: Router) -> Rou
         .route("/health", health_route)
         .with_state(state)
         .merge(routes)
+        .layer(middleware::from_fn(observability::http))
 }

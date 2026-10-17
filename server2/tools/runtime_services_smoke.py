@@ -7,6 +7,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('s20b_peer',ROOT/'tests/runtime_services/peer.py')
 peer_module=importlib.util.module_from_spec(spec);spec.loader.exec_module(peer_module)
 
+def diagnostics(text):
+    """Only operational NDJSON; readiness and Rust test harness stay stdout protocols."""
+    return [json.loads(line) for line in text.splitlines() if line.startswith('{') and '"schema":1' in line]
+
+
 def request(url, value=None, method=None):
     data=None if value is None else json.dumps(value).encode()
     req=urllib.request.Request(url,data=data,method=method,headers={'Content-Type':'application/json'})
@@ -25,9 +30,11 @@ def account(path):
     key='-----BEGIN PRIVATE KEY-----\n'+'\n'.join(der[i:i+64] for i in range(0,len(der),64))+'\n-----END PRIVATE KEY-----\n'
     path.write_text(json.dumps(dict(project_id='synthetic-s20b',client_email='synthetic@example.invalid',private_key=key)))
 
-def start(binary,root,account_path,trigger,log,metrics=None):
+def start(binary,root,account_path,trigger,log,metrics=None,logging=None):
     # Explicit allowlist: private.env, inherited provider credentials and dotenv never enter.
     env={'PATH':'/usr/bin:/bin:/usr/sbin:/sbin','LANG':'en_US.UTF-8','DYLD_LIBRARY_PATH':'/private/tmp/server2-s04-toolchain/rustup/toolchains/1.99.0-aarch64-apple-darwin/lib'}
+    for name in ('SERVER2_LOG_LEVEL', 'SERVER2_LOG_RATE'):
+        if logging and name in logging: env[name]=logging[name]
     p=subprocess.Popen([str(binary),'process::child','--exact','--ignored','--nocapture'],cwd=ROOT,env=env,stdin=subprocess.PIPE,stdout=log,stderr=subprocess.STDOUT,text=True)
     p.stdin.write(json.dumps(dict(root=root,account=str(account_path),listener_failure=trigger=='listener',metrics_addr=metrics)));p.stdin.close()
     return p
@@ -93,7 +100,7 @@ def case(binary,out,phase,trigger):
             peer.release.set()
             assert rc==0,text
             assert elapsed<=35,text
-            assert 'shutdown limit=35s' in text,text
+            assert any(e['component']=='process' and e['stage']=='shutdown' and e['action']=='quiesce' and e.get('limit_seconds')==35 for e in diagnostics(text)),text
             if phase=='weather': assert 'S20B_PROVIDER_CANCELLED incomplete' in text,text
             assert ('listener-error' if trigger=='listener' else 'signal-ok') in text,text
             registration=[]
@@ -175,7 +182,7 @@ def two_workers(binary,out):
                 assert 'upserted' in request('http://'+address+'/v000902/push-list',[dict(type='ios',fcmToken='synthetic-overlap',cityIndex=1,id=1,town={'first':'Seoul'},source='KMA',pushTime=420)])[1]
                 q=start(binary,root,key,'term',second);children.append(q)
                 wait_for(lambda:'server2 public=' in log2.read_text())
-                wait_for(lambda:'already claimed' in log2.read_text() or 'already claimed' in log1.read_text())
+                wait_for(lambda:any(e['cause']=='claim_exists' for e in diagnostics(log2.read_text())+diagnostics(log1.read_text())))
                 assert len([e for e in peer.events if e['kind']=='post'])==1,peer.events
                 for child in children:os.kill(child.pid,signal.SIGTERM)
                 for child in children:assert child.wait(timeout=36)==0

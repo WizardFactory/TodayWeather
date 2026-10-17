@@ -163,6 +163,7 @@ enum Job {
 }
 
 struct Command {
+    context: crate::observability::Context,
     job: Job,
     now_ms: f64,
     deadline: Instant,
@@ -201,7 +202,7 @@ impl PushService {
             config: config.clone(),
         };
         let (stop, stopped) = watch::channel(false);
-        let writer = tokio::spawn(writer.run(rx, stopped));
+        let writer = crate::observability::spawn(writer.run(rx, stopped));
         Arc::new(Self {
             tx,
             clock,
@@ -292,6 +293,7 @@ impl PushService {
         let deadline = Instant::now() + self.config.wait;
         let (reply, answer) = oneshot::channel();
         let command = Command {
+            context: crate::observability::current().child(),
             job: Job::Internal { op, reply },
             now_ms: now_ms as f64,
             deadline,
@@ -322,6 +324,7 @@ impl PushService {
             return failure(&body, &language);
         }
         let command = Command {
+            context: crate::observability::current().child(),
             job: Job::Http {
                 route,
                 body: body.clone(),
@@ -405,9 +408,30 @@ impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
             };
             if !self.ready.load(std::sync::atomic::Ordering::Acquire) {
                 // Dropping the reply makes the caller answer the route's store-error response.
+                command
+                    .context
+                    .scope(async {
+                        crate::observability::event(
+                            crate::observability::Component::PushState,
+                            crate::observability::Stage::Queue,
+                            crate::observability::Cause::StateUnavailable,
+                            crate::observability::Action::RejectBeforeIo,
+                            crate::observability::Outcome::Failed,
+                            Default::default(),
+                        );
+                    })
+                    .await;
                 continue;
             }
-            self.process(command).await;
+            command
+                .context
+                .scope(crate::observability::work_at(
+                    command.context,
+                    crate::observability::Component::PushState,
+                    crate::observability::Stage::Writer,
+                    self.process(command),
+                ))
+                .await;
         }
     }
 

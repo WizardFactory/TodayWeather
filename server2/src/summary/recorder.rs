@@ -115,70 +115,93 @@ impl<T: SummaryTransport> Recorder<T> {
         now_ms: f64,
         deadline: Instant,
     ) -> RecordReport {
-        let _serial = self.inner.serial.lock().await;
-        let mut report = RecordReport::default();
-        for s in candidates {
-            let key = memory_key(&s);
-            let entry = self.memory().get(&key).cloned().unwrap_or_default();
-            if entry.examined.as_deref() == Some(s.inputs.sha256.as_str()) {
-                report.unchanged += 1;
-                continue;
-            }
-            // The newest stored revision now: another process may have written one.
-            let store = &self.inner.store;
-            let newest = match store.names(&s.key, s.date, deadline).await {
-                Ok(names) => match (names.first(), entry.newest) {
-                    (Some((_, first)), Some(known)) if *first == known.0 => Ok(Some(known)),
-                    _ => store
-                        .newest_of(&s.key, s.date, names, deadline)
-                        .await
-                        .map(|f| f.map(|f| (f.name, f.summary.values_sha256()))),
-                },
-                Err(e) => Err(e),
-            };
-            let Ok(newest) = newest else {
-                report.failed += 1;
-                continue;
-            };
-            let values = s.values_sha256();
-            // Newer inputs are always recorded (also with equal values), so the stored newest
-            // revision carries the newest input time and an older input set, from this or
-            // another process, can never supersede it.
-            let keep = newest.as_ref().is_some_and(|(name, digest)| {
-                name.latest > s.inputs.latest_fetched_ms
-                    || (name.latest == s.inputs.latest_fetched_ms && *digest == values)
-            });
-            let newest = if keep {
-                report.unchanged += 1;
-                newest
-            } else {
-                match self.inner.store.publish(&s, deadline).await {
-                    Ok(()) => {
-                        report.written.push(s.object_key());
-                        let written = ObjectName::parse(&s.object_name());
-                        // Never move back: keep the greater of the written and the known newest.
-                        match (written, newest) {
-                            (Some(w), Some(n)) if n.0 > w => Some(n),
-                            (Some(w), _) => Some((w, values)),
-                            (None, n) => n,
-                        }
-                    }
-                    Err(_) => {
-                        report.failed += 1;
+        crate::observability::work(
+            crate::observability::Component::Summary,
+            crate::observability::Stage::Publish,
+            async {
+                let _serial = self.inner.serial.lock().await;
+                let mut report = RecordReport::default();
+                for s in candidates {
+                    let key = memory_key(&s);
+                    let entry = self.memory().get(&key).cloned().unwrap_or_default();
+                    if entry.examined.as_deref() == Some(s.inputs.sha256.as_str()) {
+                        report.unchanged += 1;
                         continue;
                     }
+                    // The newest stored revision now: another process may have written one.
+                    let store = &self.inner.store;
+                    let newest = match store.names(&s.key, s.date, deadline).await {
+                        Ok(names) => match (names.first(), entry.newest) {
+                            (Some((_, first)), Some(known)) if *first == known.0 => Ok(Some(known)),
+                            _ => store
+                                .newest_of(&s.key, s.date, names, deadline)
+                                .await
+                                .map(|f| f.map(|f| (f.name, f.summary.values_sha256()))),
+                        },
+                        Err(e) => Err(e),
+                    };
+                    let Ok(newest) = newest else {
+                        report.failed += 1;
+                        crate::observability::event(
+                            crate::observability::Component::Summary,
+                            crate::observability::Stage::Publish,
+                            crate::observability::Cause::Dependency,
+                            crate::observability::Action::ReturnError,
+                            crate::observability::Outcome::Failed,
+                            Default::default(),
+                        );
+                        continue;
+                    };
+                    let values = s.values_sha256();
+                    // Newer inputs are always recorded (also with equal values), so the stored newest
+                    // revision carries the newest input time and an older input set, from this or
+                    // another process, can never supersede it.
+                    let keep = newest.as_ref().is_some_and(|(name, digest)| {
+                        name.latest > s.inputs.latest_fetched_ms
+                            || (name.latest == s.inputs.latest_fetched_ms && *digest == values)
+                    });
+                    let newest = if keep {
+                        report.unchanged += 1;
+                        newest
+                    } else {
+                        match self.inner.store.publish(&s, deadline).await {
+                            Ok(()) => {
+                                report.written.push(s.object_key());
+                                let written = ObjectName::parse(&s.object_name());
+                                // Never move back: keep the greater of the written and the known newest.
+                                match (written, newest) {
+                                    (Some(w), Some(n)) if n.0 > w => Some(n),
+                                    (Some(w), _) => Some((w, values)),
+                                    (None, n) => n,
+                                }
+                            }
+                            Err(_) => {
+                                report.failed += 1;
+                                crate::observability::event(
+                                    crate::observability::Component::Summary,
+                                    crate::observability::Stage::Publish,
+                                    crate::observability::Cause::Dependency,
+                                    crate::observability::Action::ReturnError,
+                                    crate::observability::Outcome::Failed,
+                                    Default::default(),
+                                );
+                                continue;
+                            }
+                        }
+                    };
+                    self.remember(
+                        key,
+                        Entry {
+                            examined: Some(s.inputs.sha256.clone()),
+                            newest,
+                        },
+                        now_ms,
+                    );
                 }
-            };
-            self.remember(
-                key,
-                Entry {
-                    examined: Some(s.inputs.sha256.clone()),
-                    newest,
-                },
-                now_ms,
-            );
-        }
-        report
+                report
+            },
+        )
+        .await
     }
     fn remember(&self, key: MemoryKey, entry: Entry, now_ms: f64) {
         let mut memory = self.memory();
@@ -221,7 +244,7 @@ impl<T: SummaryTransport> SummarySink for Recorder<T> {
             return;
         };
         let this = self.clone();
-        tokio::spawn(async move {
+        crate::observability::spawn(async move {
             let _permit = permit;
             this.record_now(candidates, now_ms, Instant::now() + TASK_TIME)
                 .await;

@@ -702,145 +702,174 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
         }
     }
     pub async fn run_minute(&self, now_ms: i64) -> MinuteReport {
-        let minute_ms = now_ms - now_ms.rem_euclid(60_000);
-        let minute = (minute_ms / 60_000).rem_euclid(60) as u32;
-        if ![7, 17, 35, 50].contains(&minute) {
-            return MinuteReport::default();
-        }
-        // run_minute remains a directly testable legacy selection API. Admission age uses
-        // the actual clock at entry; the supervisor separately rejects a stale queued tick.
-        let admission_ms = self.clock.now_ms().unwrap_or(now_ms);
-        let at = crate::world::js::iso(minute_ms as f64).unwrap_or_default();
-        if !self.push.ready() {
-            self.diagnostics
-                .minute(&at, "alert state not ready; nothing sent");
-            return MinuteReport::default();
-        }
-        self.push.internal(InternalOp::RemoveDuplicateAlerts).await;
-        let due = {
-            let state = self.push.state();
-            let state = state.read().unwrap_or_else(|e| e.into_inner());
-            state
-                .coll(Coll::Alert)
-                .iter()
-                .filter(|(_, r)| {
-                    eligible(
-                        &r.doc,
-                        (minute_ms.rem_euclid(86_400_000) / 1000) as f64,
-                        now_ms,
-                    )
-                })
-                .collect::<Vec<_>>()
-        };
-        if due.is_empty() {
-            return MinuteReport::default();
-        }
-        let ids = due.iter().map(|(_, r)| oid_hex(&r.oid)).collect::<Vec<_>>();
-        match self.ledger.claim("alert", minute_ms, now_ms, &ids).await {
-            Claim::Owned => (),
-            Claim::Taken => {
-                self.diagnostics
-                    .minute(&at, "alert cycle already claimed; nothing sent");
+        crate::observability::delivery_cycle(crate::observability::DeliveryKind::Alert, async {
+            let minute_ms = now_ms - now_ms.rem_euclid(60_000);
+            let minute = (minute_ms / 60_000).rem_euclid(60) as u32;
+            if ![7, 17, 35, 50].contains(&minute) {
                 return MinuteReport::default();
             }
-            Claim::Unavailable => {
+            // run_minute remains a directly testable legacy selection API. Admission age uses
+            // the actual clock at entry; the supervisor separately rejects a stale queued tick.
+            let admission_ms = self.clock.now_ms().unwrap_or(now_ms);
+            let at = crate::world::js::iso(minute_ms as f64).unwrap_or_default();
+            if !self.push.ready() {
                 self.diagnostics
-                    .minute(&at, "alert ledger unavailable; nothing sent");
+                    .minute(&at, "alert state not ready; nothing sent");
+                crate::observability::event(
+                    crate::observability::Component::Delivery,
+                    crate::observability::Stage::Worker,
+                    crate::observability::Cause::StateUnavailable,
+                    crate::observability::Action::DoNotRetry,
+                    crate::observability::Outcome::Failed,
+                    Default::default(),
+                );
                 return MinuteReport::default();
             }
-        }
-        let gate = Arc::new(Semaphore::new(CONCURRENCY));
-        let mut tasks = Vec::new();
-        for (n, record) in due {
-            let gate = gate.clone();
-            tasks.push(async move {
-                let _permit = gate.acquire_owned().await.expect("open gate");
-                let mut info = record.doc.clone();
-                let result = async {
-                    let body = weather::conditional(&mut info, &self.servers, &*self.fetch)
-                        .await
-                        .map_err(|_| "weather-request")?;
-                    let evaluated_ms = self.clock.now_ms().unwrap_or(now_ms);
-                    let parsed = parse(&info, &body, minute, evaluated_ms).map_err(|_| "parse")?;
-                    let send = compare(&info, &parsed, evaluated_ms).map_err(|_| "compare")?;
-                    update(&mut info, &parsed, send, evaluated_ms).map_err(|_| "update")?;
-                    // The selected document is checked in the single writer, so a concurrent
-                    // app update, token rotation or another cycle is never overwritten.
-                    if !self
-                        .push
-                        .internal(InternalOp::UpdateAlertState {
-                            n,
-                            oid: record.oid,
-                            selected: record.doc.clone(),
-                            precip: info.get("precipAlerts").clone(),
-                            air: info.get("airAlerts").clone(),
-                        })
-                        .await
-                    {
-                        return Err("state-not-committed");
-                    }
-                    if send == Send::None {
-                        return Ok(None);
-                    }
-                    let notification = message(&info, &parsed).map_err(|_| "message")?;
-                    let mut selected = record.doc.clone();
-                    let mut fields = Obj::new();
-                    fields.set("precipAlerts", info.get("precipAlerts").clone());
-                    fields.set("airAlerts", info.get("airAlerts").clone());
-                    let set = crate::push::mongoose::cast_set(Coll::Alert, &fields, false)
-                        .map_err(|_| "state-cast")?;
-                    crate::push::mongoose::apply_set(&mut selected, &set);
-                    Ok(Some(
-                        self.send(n, record.oid, &info, &selected, &notification, admission_ms)
-                            .await,
-                    ))
+            self.push.internal(InternalOp::RemoveDuplicateAlerts).await;
+            let due = {
+                let state = self.push.state();
+                let state = state.read().unwrap_or_else(|e| e.into_inner());
+                state
+                    .coll(Coll::Alert)
+                    .iter()
+                    .filter(|(_, r)| {
+                        eligible(
+                            &r.doc,
+                            (minute_ms.rem_euclid(86_400_000) / 1000) as f64,
+                            now_ms,
+                        )
+                    })
+                    .collect::<Vec<_>>()
+            };
+            if due.is_empty() {
+                return MinuteReport::default();
+            }
+            let ids = due.iter().map(|(_, r)| oid_hex(&r.oid)).collect::<Vec<_>>();
+            match self.ledger.claim("alert", minute_ms, now_ms, &ids).await {
+                Claim::Owned => (),
+                Claim::Taken => {
+                    self.diagnostics
+                        .minute(&at, "alert cycle already claimed; nothing sent");
+                    return MinuteReport::default();
                 }
-                .await;
-                (record.oid, result)
-            });
-        }
-        let mut report = MinuteReport {
-            claimed: true,
-            deliveries: Vec::new(),
-        };
-        let mut rows = Vec::new();
-        for (oid, result) in futures_join(tasks).await {
-            let (outcome, class, status) = match result {
-                Ok(Some(d)) => (d.outcome(), d.class(), d.status()),
-                Ok(None) => ("not-needed", "unchanged".into(), None),
-                Err(class) => ("failed", class.into(), None),
+                Claim::Unavailable => {
+                    self.diagnostics
+                        .minute(&at, "alert ledger unavailable; nothing sent");
+                    return MinuteReport::default();
+                }
+            }
+            let gate = Arc::new(Semaphore::new(CONCURRENCY));
+            let mut tasks = Vec::new();
+            for (n, record) in due {
+                let gate = gate.clone();
+                tasks.push(crate::observability::value(
+                    crate::observability::Component::Delivery,
+                    crate::observability::Stage::Submission,
+                    async move {
+                        let _permit = gate.acquire_owned().await.expect("open gate");
+                        let mut info = record.doc.clone();
+                        let result = async {
+                            let body = weather::conditional(&mut info, &self.servers, &*self.fetch)
+                                .await
+                                .map_err(|_| "weather-request")?;
+                            let evaluated_ms = self.clock.now_ms().unwrap_or(now_ms);
+                            let parsed =
+                                parse(&info, &body, minute, evaluated_ms).map_err(|_| "parse")?;
+                            let send =
+                                compare(&info, &parsed, evaluated_ms).map_err(|_| "compare")?;
+                            update(&mut info, &parsed, send, evaluated_ms).map_err(|_| "update")?;
+                            // The selected document is checked in the single writer, so a concurrent
+                            // app update, token rotation or another cycle is never overwritten.
+                            if !self
+                                .push
+                                .internal(InternalOp::UpdateAlertState {
+                                    n,
+                                    oid: record.oid,
+                                    selected: record.doc.clone(),
+                                    precip: info.get("precipAlerts").clone(),
+                                    air: info.get("airAlerts").clone(),
+                                })
+                                .await
+                            {
+                                return Err("state-not-committed");
+                            }
+                            if send == Send::None {
+                                return Ok(None);
+                            }
+                            let notification = message(&info, &parsed).map_err(|_| "message")?;
+                            let mut selected = record.doc.clone();
+                            let mut fields = Obj::new();
+                            fields.set("precipAlerts", info.get("precipAlerts").clone());
+                            fields.set("airAlerts", info.get("airAlerts").clone());
+                            let set = crate::push::mongoose::cast_set(Coll::Alert, &fields, false)
+                                .map_err(|_| "state-cast")?;
+                            crate::push::mongoose::apply_set(&mut selected, &set);
+                            Ok(Some(
+                                self.send(
+                                    n,
+                                    record.oid,
+                                    &info,
+                                    &selected,
+                                    &notification,
+                                    admission_ms,
+                                )
+                                .await,
+                            ))
+                        }
+                        .await;
+                        (record.oid, result)
+                    },
+                    |(_, result)| match result {
+                        Ok(Some(delivery)) => crate::observability::delivery(delivery),
+                        Ok(None) => crate::observability::skipped(),
+                        Err(class) => crate::observability::failure(class),
+                    },
+                ));
+            }
+            let mut report = MinuteReport {
+                claimed: true,
+                deliveries: Vec::new(),
             };
-            let id = oid_hex(&oid);
-            let event = Event {
-                kind: "alert",
-                minute: at.clone(),
-                id: id.clone(),
-                outcome,
-                class: class.clone(),
-                status,
-            };
-            self.diagnostics.delivery(&event);
-            rows.push(
-                serde_json::json!({"_id":id,"outcome":outcome,"class":class,"status":status}),
-            );
-            report.deliveries.push((id, outcome.into(), class));
-        }
-        if self
-            .ledger
-            .result(
-                "alert",
-                minute_ms,
-                &serde_json::json!({"schema":1,"kind":"alert","minute":at,"deliveries":rows}),
-            )
-            .await
-            != Written::Recorded
-        {
-            self.diagnostics
-                .minute(&at, "alert result unrecorded; claim kept, nothing resent");
-        }
-        // `removeOldAlerts` queries legacy's misspelled updateAt (not a schema field): it removes
-        // nothing. Do not introduce a new deletion policy during the port.
-        report
+            let mut rows = Vec::new();
+            for (oid, result) in futures_join(tasks).await {
+                let (outcome, class, status) = match result {
+                    Ok(Some(d)) => (d.outcome(), d.class(), d.status()),
+                    Ok(None) => ("not-needed", "unchanged".into(), None),
+                    Err(class) => ("failed", class.into(), None),
+                };
+                let id = oid_hex(&oid);
+                let event = Event {
+                    kind: "alert",
+                    minute: at.clone(),
+                    id: id.clone(),
+                    outcome,
+                    class: class.clone(),
+                    status,
+                };
+                self.diagnostics.delivery(&event);
+                rows.push(
+                    serde_json::json!({"_id":id,"outcome":outcome,"class":class,"status":status}),
+                );
+                report.deliveries.push((id, outcome.into(), class));
+            }
+            if self
+                .ledger
+                .result(
+                    "alert",
+                    minute_ms,
+                    &serde_json::json!({"schema":1,"kind":"alert","minute":at,"deliveries":rows}),
+                )
+                .await
+                != Written::Recorded
+            {
+                self.diagnostics
+                    .minute(&at, "alert result unrecorded; claim kept, nothing resent");
+            }
+            // `removeOldAlerts` queries legacy's misspelled updateAt (not a schema field): it removes
+            // nothing. Do not introduce a new deletion policy during the port.
+            report
+        })
+        .await
     }
     /// Boundary scheduler, no catch-up after downtime and no retry of a claimed cycle.
     pub async fn run(self: Arc<Self>) {
@@ -859,9 +888,9 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
                 continue;
             };
             let worker = self.clone();
-            jobs.spawn(async move {
+            jobs.spawn(crate::observability::inherit(async move {
                 worker.run_minute(observed).await;
-            });
+            }));
         }
     }
 }
