@@ -3555,6 +3555,23 @@ See the [operations manual](../operations/server2-runtime-services.md),
 [design](diagrams/server2-runtime-services.html) and
 [selected verification](../evidence/tasks/issue-2705-s20a/verification.md).
 
+### S20h public warning binding (issue #2817)
+
+The explicit native `kma` selection also constructs the existing S12 WarningService
+on the shared bounded WarningStore. `RuntimeServices::public_router` delegates
+GET/HEAD `/v000903/kma/special` before the broader direct-KMA mount. This restores
+the existing warning contract: populated JSON with a 300-second cache age, empty
+501 `data is empty`, case-insensitive matching, one trailing slash, HEAD and
+conditional GET. Push and older-KMA-only construction can share warning data without
+selecting this public route. No acquisition or delivery loop starts for this binding.
+
+The combined factory/router check maps the 19 historical method/path groups and
+notice/WW supplements to explicit cases, then reconstructs acknowledged registration,
+notice and canonical narrative state on the same owned S3 peer. Recorded warning
+publications are tested through fresh public service construction. These isolated
+checks do not qualify fixed-input weather parity, OS-process recovery, production
+shadow or a previous full release. See [selected verification](../evidence/tasks/issue-2705-s20h/verification.md).
+
 ### S20b supervised delivery (issue #2792)
 
 Ordinary push selection now prepares the alarm, conditional and warning workers in
