@@ -1,0 +1,66 @@
+{
+  "task": "S19b",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2704",
+  "scope": "One common execution path/report for existing KMA CORE/Rich, world, warnings, summary, state, notice and delivery-worker checks. No new runtime mode or whole-service rollback qualification. Includes minimal owned world/conditional smoke fixture compatibility repairs observed by first actual suite; preserves product assertions and production Rust.",
+  "server2_paths": [
+    "server2/config/tasks/S19b.json",
+    "server2/tools/native_suite.py",
+    "server2/tests/integration/test_native_suite.py",
+    "server2/tools/ci.py",
+    "server2/README.md",
+    "server2/tools/world_smoke.py",
+    "server2/examples/conditional_alert_smoke.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2704-s19b.md",
+      "category": "documentation",
+      "reason": "Canonical requested outcome and authority."
+    },
+    {
+      "path": "specs/issue-2704-s19b.md",
+      "category": "documentation",
+      "reason": "CLI/report contract and bounded check coverage."
+    },
+    {
+      "path": "plans/issue-2704-s19b.md",
+      "category": "documentation",
+      "reason": "Implementation order, scenarios, verification and placement."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Document verification tooling and limits; runtime topology unchanged."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-native-verification.json",
+      "category": "documentation",
+      "reason": "Editable workflow of manifest preflight, isolated checks and report."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-native-verification.html",
+      "category": "documentation",
+      "reason": "Archify-generated explorable workflow."
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Reproducible operator invocation, coverage and failures."
+    },
+    {
+      "path": "docs/operations/server2-native-verification.pdf",
+      "category": "documentation",
+      "reason": "Visually checked operator manual."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2704-s19b/verification.md",
+      "category": "documentation",
+      "reason": "Selected source/execution identities, actual outcomes and limits."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2704-s19b/suite.png",
+      "category": "documentation",
+      "reason": "Actual command/results capture for operator guide."
+    }
+  ]
+}

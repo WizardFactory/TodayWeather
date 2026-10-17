@@ -77,3 +77,7 @@ also checked; compiled fixture tests require the pinned Rust toolchain on PATH.
 Character/byte-character escapes and lifetime/label tokens remain distinct; unsupported apostrophes fail incomplete without hiding later resource calls.
 
 Native API release recovery rehearsal: see the [operator guide](../docs/operations/server2-native-recovery.md). It uses an explicitly identified current/previous release pair and owned peers, never a legacy fallback. A passing API rehearsal does not qualify whole-service production rollback; S19/S20 remain separate gates.
+
+### Common native verification (S19b)
+
+`python3 tools/native_suite.py --list` lists11 existing checks across KMA CORE/Rich, world, warnings, summary, state, notice and delivery/workers. Run with an explicit release-artifact manifest and a new `--out` directory outside server2. The report preserves selection, actual layers, hashes, errors and per-check evidence; a subset is not all-family coverage. Existing world checks include a frozen legacy coexistence fixture. No previous-release whole-service or production qualification is implied. See the [operator guide](../docs/operations/server2-native-verification.md).

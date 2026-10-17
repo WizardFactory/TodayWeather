@@ -36,6 +36,16 @@ async fn main() {
     doc.set("endTime", 86399.);
     doc.set("geo", Val::Arr(vec![Val::Num(127.), Val::Num(37.)]));
     doc.set("airAlertsBreakPoint", 3.);
+    // Seed the alert-state fields created by the real registration model.
+    // Starting with an incomplete raw document lets the writer and the selected
+    // document insert these fields in different orders; admission correctly
+    // rejects that non-matching selection before any FCM POST.
+    let mut precip = Obj::new();
+    precip.set("lastState", 0.);
+    doc.set("precipAlerts", Val::Obj(precip));
+    let mut air = Obj::new();
+    air.set("lastGrade", 1.);
+    doc.set("airAlerts", Val::Obj(air));
     let rig = rig(
         "conditional-functional-smoke",
         at,
@@ -83,7 +93,18 @@ async fn main() {
     );
     let first = worker.run_minute(now).await;
     assert!(first.claimed);
-    assert_eq!(first.deliveries[0].1, "accepted");
+    assert_eq!(
+        first.deliveries[0].1,
+        "accepted",
+        "diagnostic classes: {:?}",
+        rig.diagnostics
+            .events
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|event| event.class.clone())
+            .collect::<Vec<_>>()
+    );
     let push2 = state_common::start(&rig.s3, rig.clock.clone(), state_common::fast_config()).await;
     let restarted = AlertWorker::new(
         push2,
