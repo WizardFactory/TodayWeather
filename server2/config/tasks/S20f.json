@@ -1,0 +1,48 @@
+{
+  "task": "S20f",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2813",
+  "scope": "Build/export existing Linux native verification inputs for the owned Spot host; no runtime/product behavior or production actions. Dynamic reads: selected Cargo target executables and tracked server2 source; writes: fresh caller-owned bundle/report only. No legacy inputs.",
+  "server2_paths": [
+    "server2/config/tasks/S20f.json",
+    "server2/tools/native_artifact.py",
+    "server2/tools/test_native_artifact.py",
+    "server2/tools/ci.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2813.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, common operator manual and selected source-bound verification evidence"
+    },
+    {
+      "path": "specs/issue-2813.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, common operator manual and selected source-bound verification evidence"
+    },
+    {
+      "path": "plans/issue-2813.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, common operator manual and selected source-bound verification evidence"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, common operator manual and selected source-bound verification evidence"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.pdf",
+      "category": "documentation",
+      "reason": "Maintain task contract, common operator manual and selected source-bound verification evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2813/verification.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, common operator manual and selected source-bound verification evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2813/linux-bundle.png",
+      "category": "documentation",
+      "reason": "Maintain task contract, common operator manual and selected source-bound verification evidence"
+    }
+  ]
+}

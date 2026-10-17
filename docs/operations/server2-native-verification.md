@@ -4,6 +4,72 @@ Run the existing verification layers through one fixed command. The default sele
 
 ## Prepare artifacts
 
+### Retain the Linux verification bundle
+
+On a clean reviewed Linux checkout, run from `server2/`:
+
+```sh
+python3 tools/native_artifact.py --target-dir target --output ../reports/linux-native --archive ../reports/native.tar.gz
+```
+
+The producer reuses the selected Cargo target, builds sequentially, and requires
+3 GiB expected build space plus a 3 GiB reserve. It selects compiler-emitted
+release executable paths for the eleven roles below and the logging/narrative
+probes. It exports `bin/`, `source/server2/`, `artifacts.json` and `bundle.json`.
+Only regular tracked server2 source and fixtures are copied; installed packages,
+ignored caches and account files are excluded. The optional archive contains a
+`native/` directory, including hidden tracked inputs and directory/executable
+modes. CI retains `native.tar.gz` inside the existing
+`server2-linux-musl-verified` artifact; the shared upload is unchanged. Compare
+the archive SHA-256 with the trusted producer/CI receipt before extracting it
+into a fresh owned directory. The original
+two-binary export remains unchanged. Seven-day CI retention is transport only;
+retain selected executable inputs and reports before expiry.
+
+Check `python3 --version` (3.9 or later) and `git --version` on the receiving
+host. The paired replay records revision metadata using the Git executable even
+when the copied source has no Git checkout; an absent Git executable blocks that
+report. Run checks as an unprivileged account. After transfer to a fresh owned directory,
+restore executable permissions on the thirteen declared files if the transport
+stripped them, and preserve the exported source tree's read-only permissions.
+Run `chmod -R a-w BUNDLE/source` after transport and before verification;
+archives that omit directory entries and ZIP transports can lose directory modes.
+Python cache files must not become extra executable inputs. Run:
+
+```sh
+python3 BUNDLE/source/server2/tools/native_artifact.py --verify BUNDLE
+```
+
+Replace `BUNDLE` with the actual directory. Verify the trusted build receipt's
+revision, server2 tree and bundle metadata hash as well: these JSON hashes detect
+changes against that receipt, but are not signed attestations. Missing, changed,
+extra, symlinked, foreign-architecture or dynamically interpreted payloads block
+verification. Exit 2 is BLOCKED. No verification command installs files or starts
+a product process.
+
+Rust integration tests retain `CARGO_MANIFEST_DIR` from compilation. Inspect
+`compiled_source_root` in `bundle.json`. On the empty owned host, map that exact
+location to `BUNDLE/source/server2` before execution; this is explicit operator
+setup, never a manifest-driven installation. Refuse an existing path or symlink
+and keep the frozen source unchanged. Do not overwrite a checkout or map it to a
+different revision. Then require:
+
+```sh
+python3 BUNDLE/source/server2/tools/native_artifact.py --verify BUNDLE --require-source-root
+python3 BUNDLE/source/server2/tools/native_suite.py --artifacts BUNDLE/artifacts.json --out RUNS/native-1
+python3 BUNDLE/source/server2/tools/widget_smoke.py --binary BUNDLE/bin/server2 --peer-binary BUNDLE/bin/examples/loopback_server --output RUNS/widget-1
+python3 BUNDLE/source/server2/tools/narrative_smoke.py --binary BUNDLE/bin/examples/narrative_smoke --out RUNS/narrative-1
+```
+
+Use absolute bundle/run paths and fresh output directories outside the frozen
+source. The copied suite may observe no Git checkout; its declared artifact
+revision and the bundle's exact source tree remain the execution binding. Record
+the actual host, source-map verification and original failed runs separately.
+The bundle producer's PASS means export integrity only. Existing runtime checks
+must actually run; no full previous-release or production eligibility follows.
+
+### Build or declare individual artifacts
+
 Use a reviewed checkout and the coordinator's Cargo target/build lease. Check free disk and keep the expected build plus a 3 GiB reserve. Build the server2 binary, examples `loopback_server`, `kma_s3_replay`, `warnings_smoke`, `notice_smoke`, `conditional_alert_smoke` and `warning_push_smoke` in release mode. Build release test executables with `cargo test --locked --release --test summary --test domestic --test state --test runtime_services --no-run --message-format=json`. Use the emitted executable paths; do not guess a hash-suffixed test filename. The suite does not build or download artifacts.
 
 Record JSON with exactly these top-level fields:
@@ -26,7 +92,7 @@ Replace the illustrative revision, path and hash with actual build provenance an
 
 ## Execute and inspect
 
-Run from the repository root on a POSIX host with Python 3.9 or later and dependencies already present:
+Run from the repository root on a POSIX host with Python 3.9 or later, Git and dependencies already present:
 
 ```sh
 python3 server2/tools/native_suite.py --list
@@ -61,3 +127,11 @@ CI runs the suite's Python controls and retains all existing product gates. The 
 ![Actual common-suite invocation and result](../evidence/tasks/issue-2704-s19b/suite.png)
 
 The capture and selected evidence belong to the recorded execution identity. Neither a static stdout banner nor repeated log bytes establish a second execution. Keep family-specific reports and the original failed outcomes when investigating a run.
+
+## Linux host execution record
+
+[Selected 2026-10-17 Linux bundle/EC2 evidence](../evidence/tasks/issue-2813/verification.md) records the source identities and original failures. Nine native checks passed in the original run; two missing-Git report failures were renewed separately and passed. Neither native report claims full coverage. All eleven checks have passing evidence across the retained runs; the packaging-only source change has unchanged runtime/fixture/harness bytes and all thirteen executable hashes. WW HTTP, narrative and logging also passed. The separate nginx host setup failure is tracked in [#2814](https://github.com/WizardFactory/TodayWeather/issues/2814).
+
+![Typeset actual retained CLI results](../evidence/tasks/issue-2813/linux-bundle.png)
+
+This labelled image is rendered from actual CLI records; browser/window capture was unavailable. It is not an application UI screenshot or another execution. Real S3, live shadow, quota, production listener and eligible previous full-release gates remain open.
