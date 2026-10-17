@@ -11,7 +11,7 @@
     "title": "KMA warnings and nationwide narrative",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "2ded7c9a9c007a1709336b22a4605cd7174e6f98",
+      "revision": "5400e56dd8e34d19c5c255dbcf1fd519f4d9f058",
       "provider": "github",
       "link_mode": "local-only"
     },
@@ -59,6 +59,9 @@
         },
         {
           "path": "server/lib/kmaScraper.js"
+        },
+        {
+          "path": "server/lib/kmaForecastNarrative.js"
         }
       ]
     },
@@ -111,6 +114,9 @@
       "sources": [
         {
           "path": "server/lib/kmaWarningZones.js"
+        },
+        {
+          "path": "server/lib/kmaForecastNarrative.js"
         }
       ]
     },
