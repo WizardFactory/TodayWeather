@@ -67,9 +67,9 @@ NODE_PATH=/tmp/issue2798-deps/node_modules node server/test/offline/kma-narrativ
 ```
 
 The smoke uses actual request/Mongo/Express against loopback, a disposable Mongo7
-and the Mongoose5.13 smoke driver. Production remains Mongoose5.1.2; its schema is
-also checked by the warning regressions, but this does not prove a production
-Mongo deployment. `TW_MONGOD` can select a local Mongo7 binary. All services close
+and the Mongoose5.13 smoke driver. Production remains Mongoose5.1.2. Warning regressions use a fake Mongoose adapter
+to load schema definitions and do not test5.1.2 casting or persistence. The smoke
+does not prove production-driver compatibility or a production Mongo deployment. `TW_MONGOD` can select a local Mongo7 binary. All services close
 at exit. No app startup, live provider, `/gather` route or production DB is used.
 The test excerpt uses the issue-reported October16 17:00 metadata and 30–80mm
 precipitation, plus synthetic text/markup; it is not the complete captured bulletin.

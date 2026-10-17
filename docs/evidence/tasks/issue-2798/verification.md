@@ -15,12 +15,12 @@ mongodb-memory-server-core10.1.4; local mongod7.0.14. No production config loade
 | Check | Actual result |
 | --- | --- |
 | New scheduled-acquisition regression before implementation | Intended failure: existing gather returned `skip`, no type5 row |
-| `kma-narrative.test.js` green and separate post-refactor execution | 8 tests passed in each execution |
-| Same regression under `TZ=America/Los_Angeles` | 8 passed; KST/UTC policy independent of host timezone |
+| `kma-narrative.test.js` green and separate post-refactor execution | 9 tests passed in each execution |
+| Same regression under `TZ=America/Los_Angeles` | 9 passed; KST/UTC policy independent of host timezone |
 | `kma-warning.test.js` | 18 passed; existing warning/zone/collector scheduling behavior retained |
 | Node10 compatibility script | CI exposed an unstubbed new helper; repaired harness runs real narrative acquisition/readback locally on Node24; Node10 rerun is recorded in PR CI |
 | `data-go-kr-keys.test.js` | 33 passed; consolidated key conventions retained |
-| `kma-narrative-smoke.js` | Passed with real loopback HTTP/request, Mongo and mounted v000903 route; 7 provider requests, 2 stored publications |
+| `kma-narrative-smoke.js` | Passed with real loopback HTTP/request, Mongo and mounted v000903 route; 8 provider requests, 2 stored publications |
 | Archify | Schema/artifact/provenance and actual Chrome browser checks passed; light-theme capture visually inspected |
 | API manual | Chrome PDF and screenshot created; PDF page and screenshot visually inspected |
 
@@ -43,8 +43,10 @@ precipitation30–80mm. No complete raw response was supplied. Tests explicitly 
 synthetic excerpt text and malicious markup with that reported metadata; they do
 not claim complete captured-bulletin coverage. No live provider/production DB,
 mobile render/build, deployed overlay, origin/public CDN readback or push send was
-performed. Production Mongoose5.1.2 is used for schema regressions; the real Mongo7
-smoke needs5.13 and does not establish a production-driver integration result.
+performed. The warning regressions and Node10 harness load schema definitions with a fake
+Mongoose adapter; they do not exercise production Mongoose5.1.2 casting or storage.
+The real Mongo7 smoke uses5.13.23 and does not establish production-driver
+integration compatibility.
 CI adds Node16 regression coverage and a real Mongo smoke; local Node16 was absent.
 
 The [editable API manual](../../../operations/kma-forecast-narrative-manual.html),

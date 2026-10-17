@@ -41,11 +41,14 @@ const get=url=>new Promise((resolve,reject)=>http.get(url,r=>{let b='';r.on('dat
  let response=await get(url);assert.deepEqual(response.body.map(r=>r.type),[4,1,2,3,5]);
  const entry=response.body[4];assert.equal(entry.name,'종합예보');assert.equal(entry.announcement,'2026-10-16T08:00:00.000Z');assert.equal(entry.comment,Narrative.escapeText(item.wfSv1.replace(/\r/g,'')));assert(!entry.comment.includes('<img'));
  if(process.argv[2])fs.writeFileSync(process.argv[2],JSON.stringify({command:'GET /v000903/kma/special',status:200,environment:'Isolated loopback HTTP + real Mongo; synthetic narrative excerpt',response:response.body},null,2)+'\n');
- item.tmFc='202610170500';await invoke(collector,'gather');assert.equal(await model.countDocuments({type:5}),2);response=await get(url);assert.equal(response.body[4].announcement,'2026-10-16T20:00:00.000Z');
+ item.tmFc='202610170500';
+ await Promise.all([invoke(collector,'gather'),invoke(new Narrative({requester,model}),'gather')]);assert.equal(await model.countDocuments({type:5}),2);
+ const second=await model.findOne({type:5,announcement:new Date('2026-10-17T05:00:00Z')}).lean();
+ assert.equal(second.comment,item.wfSv1.replace(/\r/g,''));response=await get(url);assert.equal(response.body[4].announcement,'2026-10-16T20:00:00.000Z');
  clock=Date.parse('2026-10-17T19:59:58Z');assert.equal((await get(url)).cache,'max-age=2');
  mode='quota';const before=calls;await assert.rejects(invoke(collector,'gather'),/collection failed/);assert.equal(calls-before,2);assert.equal(await model.countDocuments(),6);
  mode='no-data';await assert.rejects(invoke(collector,'gather'),e=>e==='skip');assert.deepEqual((await get(url)).body.map(r=>r.type),[1,2,3,5]);
  clock=Date.parse('2026-10-17T20:00:00Z');response=await get(url);assert.deepEqual(response.body.map(r=>r.type),[1,2,3]); // flash also expires under its existing policy
  for(const type of [1,2,3,4])assert.equal((await model.findOne({type}).lean()).comment,'legacy-'+type);
- console.log(JSON.stringify({result:'passed',realHttp:true,realMongo:true,driver:mongoose.version,calls,storedPublications:2,warningTypesRetained:[1,2,3,4],exact24hExpiry:true,provider:'synthetic; issue-reported metadata and precipitation, not full captured response'}));
+ console.log(JSON.stringify({result:'passed',realHttp:true,realMongo:true,driver:mongoose.version,calls,storedPublications:2,concurrentInstances:true,warningTypesRetained:[1,2,3,4],exact24hExpiry:true,provider:'synthetic; issue-reported metadata and precipitation, not full captured response'}));
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await close(server);await close(provider);await mongoose.disconnect();if(mongo)await mongo.stop();});

@@ -77,3 +77,14 @@ test('strict requester absolute deadline terminates a never-callback transport o
  await new Promise(resolve=>r.get('getWthrSituation',{},e=>{callbacks++;assert(e);resolve();}));
  late(null,{statusCode:200},page([item]));assert.equal(callbacks,1);assert.equal(aborted,1);
 });
+
+test('separate instances converge on one immutable publication after duplicate-key race',async()=>{
+ const h=harness(),original=h.Model.update;let attempts=0;
+ h.Model.update=(q,doc,opts,cb)=>{
+  if(++attempts===1)return original(q,doc,opts,cb);
+  const e=new Error('concurrent insert lost');e.code=11000;setImmediate(()=>cb(e));
+ };
+ const result=await Promise.all([invoke(narrative(h),'gather'),invoke(narrative(h),'gather')]);
+ assert.deepEqual(result,[true,false]);assert.equal(attempts,2);assert.equal(h.rows.length,1);
+ assert.equal(h.rows[0].announcement,'2026-10-16T17:00:00.000Z');assert.equal(h.rows[0].comment,item.wfSv1.replace(/\r/g,''));
+});
