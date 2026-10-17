@@ -779,11 +779,19 @@ and smoke in the existing AirKorea Mongo job. See [selected evidence](../../../d
 
 ## Nationwide forecast narrative (#2798)
 
-`kma-narrative.test.js` (in `test:offline`) checks the scheduled collector, strict
-publication validation, KST conversion, idempotent publications, optional-read
-expiry, HTML escaping, key rotation/exhaustion and absolute timeout.
-`kma-narrative-smoke.js` separately uses real loopback HTTP, Mongo7/Mongoose5.13
-and the actual v000903 special route. Warning/zone steps use seeded warning rows
-and are covered independently by `kma-warning.test.js`. The provider excerpt is
-synthetic, based on issue-reported publication/precipitation, not a full capture.
-See [commands and limitations](../../../docs/operations/kma-forecast-narrative.md#local-verification).
+`kma-narrative.test.js` (in `test:offline`) checks the ten official national/regional
+offices, complete province aliases, immutable station/publication IDs, KST/UTC, strict
+expiry and malformed data, bounded key/write/read failures, concurrency, independent
+scheduled dispatch and unchanged special types 1–4. It also checks literal untrusted
+plain text, optional late-read suppression and cache expiry.
+
+`kma-narrative-smoke.js` separately uses real loopback HTTP/request and
+Mongo7/Mongoose5.13.23. It verifies a scheduled batch, all17province responses, national
+root selection, coordinate selection, v000901/v000902/v000903 mounted paths, repeat/new
+concurrent publications, expiry/read failure and unchanged weather/special fields.
+Unrelated weather acquisition/geocoder/air collaborators are isolated; no app startup,
+production config, provider key or live regional access is used. The Node10-compatible
+warning script also replays the new collection/response contract.
+
+See [operations](../../../docs/operations/kma-forecast-narrative.md) and the
+[verification record](../../../docs/evidence/tasks/issue-2798/verification.md).

@@ -1,17 +1,15 @@
-# Execution plan (#2798)
+# Execution plan: weather response narratives (#2798)
 
-Owner: Codex /root. Consumes intent and specification; target pre-merge.
+Owner: Codex /root. Consumes amended intent/spec. Same task/PR, pre-merge endpoint; prior special-screen evidence is historical. No merge/deployment/client changes.
 
-1. Write credential-free expected-behavior regressions (AC1/AC2): valid date/text, duplicate/new publication, no-data/expiry/malformed, key rotation/exhaustion, log safety and optional reader behavior. Record intended Red.
-2. Implement isolated narrative helper, requester safe strict mode, collector last-step wiring, type 5 and response handling under server/lib, server/models, server/controllers. Preserve legacy warnings and push.
-3. Green, existing warning/key regressions, post-refactor rerun; separate loopback provider → actual Mongo/Mongoose → actual route HTTP smoke (AC3).
-4. Update docs/architecture/weather-collection.md, kma-warnings Archify source/HTML, docs/operations narrative runbook and API usage manual with actual capture/PDF. Add offline runner and CI smoke invocation. No server2 or client edits.
-5. Reconcile path/dependency scope; staged and outgoing artifact policy checks; commit/push PR, mandatory independent review with optional Grok/Gemini; fix selected findings and verify CI. Leave unmerged.
+1. Confirm official national/regional station list and existing shared nation/KMA response boundaries. Update issues2798/2803 and preserve the old review/findings history.
+2. Design isolated station/publication storage, coalesced background collection, province aliases and bounded optional weather-response reads. Keep warning state and types1–4 unchanged. The conceptual Archify design is validated; regenerate the maintained source-backed diagram after the implementation commit.
+3. Add expected-behavior tests and run intended Red. Implement collector/reader/response additions, remove special response integration, and adjust legacy Node10 compatibility checks. Run focused Green plus warning/key/affected weather regressions; post-refactor rerun.
+4. Run separate real loopback provider → Mongo → existing mounted weather/nation/special HTTP integration. Cover national and all regional offices, address/coordinate selection, expiry, absent data/read failures, unchanged weather/warnings and no new route. No production keys/network.
+5. Update architecture/mobile API/runbook/manual and PDF/captures with actual synthetic HTTP results and honest runtime limits. Reconcile paths/dependencies, staged/outgoing artifact checks, commit and push existing PR. Renew independent required review with stable R3-001/R3-002 history and optional review availability records, then final current-head CI and pre-merge handoff.
 
-SC1: legacy user, seeded warning rows and new provider publication; run scheduled gather then GET special; expect [4,1,2,3,5], Korean narrative and true UTC announcement. Failure: invalid/old narrative omitted, warnings remain. Tests: regression + Mongo/HTTP smoke; AC1/AC2/AC3.
-SC2: operator with dummy configured keys; first key rejected then valid key, repeat/new publication, all rejected; expect bounded calls, one row per publication, no secrets in errors. Tests: regression + HTTP smoke; AC1/AC3.
-SC3: API consumer, clock crosses exact 24h boundary or optional DB query fails; GET endpoint; expect existing types intact and no fresh-looking narrative. Tests: regression + smoke; AC2/AC3.
+SC1: nationwide user requests KR nation weather after a scheduled batch. National root gets station108 and complete publication/text metadata; representative-city weather/air remain intact without duplicate regional narrative fields. Expired/missing national data removes only the extension. AC1/AC2/AC3: station collection tests and real nation HTTP smoke.
+SC2: domestic user requests weather by address or resolved coordinates. Seoul/Incheon/Gyeonggi get109; all other provinces and renamed-province aliases select their official office. Unknown/foreign regions never receive guessed prose. Existing fields/units remain intact. AC1/AC2/AC3: complete mapping tests and address/coordinate HTTP smoke.
+SC3: provider/DB failure, repeated/new/concurrent publications or exact24h boundary. Bounded key rotation terminates, one office failure does not block others, immutable station/publication rows remain, optional2s reads suppress late mutation, and warnings/push are unchanged. AC1/AC2/AC3: regressions and separate persistence/HTTP smoke.
 
-Riskiest part: KST legacy storage and expiry. Could break: older type ordering/parser, offline VM tests and key rotation conventions. Reject HTML scraping and replacing getWthrInfo because official source is separate. No migration required. Live rollout and origin/public readback remain blocked on separate operator approval and do not close #2798.
-
-Generated records: reports/sdlc/issue-2798 and .planning/issue-2798; maintained intent/spec/plan/docs/tests only in commits. Preserve verification inputs and Archify recovery. No Rust builds/cache cleanup.
+Risks: no regional provider access has been live-proven, provider text is untrusted, old ODM and production overlays differ. Collection/readback rollout stays separately approved; keep2798open. Preserve prior stage counters and test/review records under ignored reports; no Rust builds or build-cache cleanup.

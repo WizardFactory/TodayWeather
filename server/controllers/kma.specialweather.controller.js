@@ -49,15 +49,6 @@ class KmaSpecialWeatherController {
     }
 
     _parseSpecialWeatherSituation(specialWeatherSituation, trans) {
-        if (specialWeatherSituation.type === 5) {
-            const narrative = require('../lib/kmaForecastNarrative');
-            if (!narrative.fresh(specialWeatherSituation.announcement, Date.now()) ||
-                typeof specialWeatherSituation.comment !== 'string' || !specialWeatherSituation.comment.trim()) { return null; }
-            specialWeatherSituation.name = '종합예보'; // Localization and client presentation: follow-up to #2798.
-            specialWeatherSituation.announcement = new Date(new Date(specialWeatherSituation.announcement).getTime() - 9*3600*1000);
-            specialWeatherSituation.comment = narrative.escapeText(specialWeatherSituation.comment.replace(/\r\n?/g, '\n'));
-            return specialWeatherSituation;
-        }
         if (specialWeatherSituation.type == 1) {
             specialWeatherSituation.name = trans.__('LOC_TYPE_SPECIAL_WEATHER');
         }
@@ -103,7 +94,7 @@ class KmaSpecialWeatherController {
     }
 
     getCurrent(trans, callback) {
-        let queryList = [4,1,2,3,5];
+        let queryList = [4,1,2,3];
         async.map(queryList,
             (type, callback) => {
                 KmaSpecialWeatherSituation
@@ -113,11 +104,9 @@ class KmaSpecialWeatherController {
                     .lean()
                     .exec((err, list)=> {
                         if (err) {
-                            if (type === 5) { log.warn('kma narrative optional read failed'); return callback(null, null); }
                             return callback(err);
                         }
                         if (list.length < 1) {
-                            if (type === 5) { return callback(null, null); }
                             err = new Error('data is empty');
                             return callback(err);
                         }

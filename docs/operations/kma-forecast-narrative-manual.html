@@ -1,16 +1,23 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><title>Nationwide forecast API usage</title>
-<style>@page{size:A4;margin:16mm}body{font:15px Arial,sans-serif;color:#182b42;max-width:820px;margin:30px auto;line-height:1.5}h1{font-size:26px}h2{font-size:18px;color:#076c80}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#edf4f7;padding:14px;font:13px monospace}.note{color:#536273}img{max-width:100%}</style>
-<h1>Nationwide forecast API usage</h1><p class="note">#2798 · verified locally on 2026-10-17 · operator/API guide</p>
-<p>The special endpoint appends a Korean nationwide narrative as type 5. Client presentation and multilingual support are deferred to <a href="https://github.com/WizardFactory/TodayWeather/issues/2803">#2803</a>.</p>
-<h2>1. Read a current publication</h2><pre>GET /v000903/kma/special
-HTTP 200
-Types: [4, 1, 2, 3, 5]</pre>
-<p>Actual isolated response excerpt: real HTTP and Mongo persistence, synthetic provider text based on issue-reported October16 metadata and precipitation.</p><pre>{
-  &quot;type&quot;: 5,
-  &quot;name&quot;: &quot;종합예보&quot;,
-  &quot;announcement&quot;: &quot;2026-10-16T08:00:00.000Z&quot;,
-  &quot;comment&quot;: &quot;○ 18일 전국 비\n* 수도권 예상 강수량: 30~80mm\n&amp;lt;img src=x onerror=&amp;quot;alert(1)&amp;quot;&amp;gt; &amp;amp; 안내&quot;
-}</pre>
-<h2>2. Interpret time and text</h2><p>17:00 KST is 08:00 UTC. Keep newline characters. The server escapes HTML metacharacters for the existing HTML binding; do not unescape them. The encoded image tag in the excerpt is inert provider text.</p>
-<h2>3. Missing or expired narrative</h2><p>Type5 is omitted when its publication is 24hours old, invalid or unavailable. Warning types1–4 keep their existing behavior. Cache freshness is shortened near expiry. A failed acquisition never re-dates stored content.</p>
-<p class="note">Local smoke also verified repeat/new publications, bounded quota exhaustion, warning preservation and exact24h expiry. No live provider, mobile build, deployment or production readback is claimed. See <a href="kma-forecast-narrative.md">the operator runbook</a> for approved rollout and rollback.</p></html>
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Forecast narrative weather response guide</title><style>@page{size:A4;margin:14mm}*{box-sizing:border-box}body{font:14px Arial,sans-serif;color:#152f43;line-height:1.45;margin:28px auto;max-width:790px}h1{font-size:26px;line-height:1.15}h2{font-size:18px;color:#006f7c;margin-top:22px}pre{font:11px ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:#eff5f8;padding:12px;border-left:3px solid #16a0aa}table{border-collapse:collapse;width:100%;font-size:12px}td,th{padding:6px;border-bottom:1px solid #cbd9e1;text-align:left}.note{color:#536a7a;font-size:12px}.page{break-before:page}.tag{color:#006f7c;font-weight:bold}a{color:#006f7c}@media print{body{margin:0;max-width:none}}</style><h1>Forecast narratives in weather responses</h1><p class="tag">API contract · #2798 · verified locally 2026-10-17</p><p>Existing weather responses gain an optional <code>forecastNarrative</code> object. The warning screen and its types 1–4 stay unchanged. No new endpoint or client code is introduced. A later mobile app update must parse and display the field.</p><p class="note">Actual isolated HTTP/Mongo response excerpts below use synthetic provider prose and unrelated weather collaborators. They are not live provider captures or deployed mobile screenshots.</p><h2>1. Nationwide weather</h2><p><code>GET /v000903/nation/KR</code> returns the national bulletin at the root. Existing weather/air arrays remain; city items omit duplicate regional narratives.</p><pre>{
+  &quot;forecastNarrative&quot;: {
+    &quot;stationId&quot;: 108,
+    &quot;region&quot;: &quot;전국&quot;,
+    &quot;announcement&quot;: &quot;2026-10-16T08:00:00.000Z&quot;,
+    &quot;expiresAt&quot;: &quot;2026-10-17T08:00:00.000Z&quot;,
+    &quot;text&quot;: &quot;office 108\n○ 18일 비\n* 예상 강수량: 30~80mm\n&lt;img src=x onerror=\&quot;alert(1)\&quot;&gt; &amp; 안내&quot;,
+    &quot;language&quot;: &quot;ko&quot;,
+    &quot;source&quot;: &quot;KMA&quot;,
+    &quot;textFormat&quot;: &quot;plain&quot;
+  }
+}</pre><h2>2. Ordinary regional weather</h2><p><code>GET /v000903/kma/addr/서울특별시</code> (also Incheon/Gyeonggi) selects office 109. Address and resolved-coordinate weather use the same province mapping.</p><pre>{
+  &quot;forecastNarrative&quot;: {
+    &quot;stationId&quot;: 109,
+    &quot;region&quot;: &quot;서울·인천·경기도&quot;,
+    &quot;announcement&quot;: &quot;2026-10-16T08:00:00.000Z&quot;,
+    &quot;expiresAt&quot;: &quot;2026-10-17T08:00:00.000Z&quot;,
+    &quot;text&quot;: &quot;office 109\n○ 18일 비\n* 예상 강수량: 30~80mm\n&lt;img src=x onerror=\&quot;alert(1)\&quot;&gt; &amp; 안내&quot;,
+    &quot;language&quot;: &quot;ko&quot;,
+    &quot;source&quot;: &quot;KMA&quot;,
+    &quot;textFormat&quot;: &quot;plain&quot;
+  }
+}</pre><div class="page"><h2>3. Office selection</h2><table><tr><th>Office</th><th>Coverage</th></tr><tr><td>108</td><td>Nationwide</td></tr><tr><td>109</td><td>Seoul / Incheon / Gyeonggi</td></tr><tr><td>159</td><td>Busan / Ulsan / Gyeongnam</td></tr><tr><td>143</td><td>Daegu / Gyeongbuk</td></tr><tr><td>156</td><td>Gwangju / Jeonnam</td></tr><tr><td>146</td><td>Jeonbuk</td></tr><tr><td>133</td><td>Daejeon / Sejong / Chungnam</td></tr><tr><td>131</td><td>Chungbuk</td></tr><tr><td>105</td><td>Gangwon</td></tr><tr><td>184</td><td>Jeju</td></tr></table><p class="note">Source: data.go.kr 15058629, attached 241128 guide, station workbook category 개황, rows 2–11. Current/historical province aliases are supported. Unknown or foreign regions receive no guessed bulletin.</p><h2>4. Interpret time and text</h2><p>17:00 KST is 08:00 UTC. <code>announcement</code> and <code>expiresAt</code> are true UTC ISO instants. Keep the original line breaks and Korean prose. <code>textFormat: plain</code> means literal, untrusted text: bind it as text, never HTML. Markup characters in these examples must remain inert. Prose and its embedded units are not translated or converted.</p><h2>5. Optional availability</h2><p>Missing, invalid, wrong-office, future or age ≥24h data omits only <code>forecastNarrative</code>. A two-second DB read deadline also preserves weather success; late reads cannot change the response. Requests never call the provider. Cache freshness is capped at 300 seconds and the publication’s remaining lifetime.</p><h2>6. What was verified</h2><p>The isolated smoke exercised 10 offices, all 17 provinces, real local HTTP and Mongo/Mongoose 5.13.23, shared v000901/v000902/v000903 responses, coordinate selection, national root selection, repeat/new concurrent publications, DB failure, expiry and unchanged warning types 1–4. It does not prove production Mongoose 5.1.2, live regional access, mobile display or deployed readback.</p><p>Deployment/restart and origin/public readback need separate operator approval. Restore saved overlays and affected workers for rollback; leave isolated narrative rows unused. Keep issue #2798 open until deployed acquisition/readback is verified. Mobile presentation/localization is <a href="https://github.com/WizardFactory/TodayWeather/issues/2803">#2803</a>.</p><p class="note"><a href="kma-forecast-narrative.md">Operator runbook and commands</a> · <a href="https://www.data.go.kr/data/15058629/openapi.do">Official provider documentation</a></p></div></html>

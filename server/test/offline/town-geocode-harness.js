@@ -40,6 +40,9 @@ function controllers(Town, geocode) {
         '../controllers/kaq.hourly.forecast.controller': Unused,
         '../controllers/kma.specialweather.controller': Unused,
         '../lib/AQI/airFallback': Unused,
+        // This fixture verifies coordinates; narrative response behavior has its own HTTP/Mongo smoke.
+        '../lib/kmaForecastRegions': {forProvince: () => null},
+        '../lib/kmaForecastNarrativeResponse': {attach: (result, station, res, done) => done()},
         '../lib/history/policy': require('../../lib/history/policy')
     }), {log: h.logger([])});
     return new Controller24h();

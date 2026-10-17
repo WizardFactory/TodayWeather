@@ -112,27 +112,45 @@ var bodies = {
 };
 var request = function (url, opts, cb) {
     var op = url.split('?')[0].split('/').pop();
-    setImmediate(function () { cb(null, {statusCode: 200}, plain(bodies[op])); });
+    var body = plain(bodies[op]);
+    if (op === 'getWthrSituation') { body.response.body.items.item[0].stnId = Number(/stnId=(\d+)/.exec(url)[1]); }
+    setImmediate(function () { cb(null, {statusCode: 200}, body); });
 };
 var situationStatics = {parseSpecialText: Situation.parseSpecialText, parsePreliminaryText: Situation.parsePreliminaryText, TYPE_WEATHER_FLASH: 4};
 var situations = memoryModel(situationStatics), zoneStore = memoryModel();
-var Narrative = load('lib/kmaForecastNarrative.js', {'./kmaWarningRequester': Requester, '../models/modelKmaSpecialWeatherSituation': situations});
+var narrativeStore = memoryModel();
+load('models/modelKmaForecastNarrative.js', {mongoose: fakeMongoose});
+var regions = require('../../lib/kmaForecastRegions');
+var Narrative = load('lib/kmaForecastNarrative.js', {'./kmaWarningRequester': Requester, './kmaForecastRegions': regions,
+    '../models/modelKmaForecastNarrative': narrativeStore});
+var narrativeCollector = new Narrative({requester: new Requester({request: request, strict: true}), model: narrativeStore});
+var Response = load('lib/kmaForecastNarrativeResponse.js', {'./kmaForecastNarrative': Narrative});
 var Collector = load('lib/kmaWarningCollector.js', {async: async, './kmaWarningRequester': Requester, './kmaWarningZones': zones,
     '../models/modelKmaSpecialWeatherSituation': situations, '../models/modelKmaSpecialWeatherZone': zoneStore});
 var Controller = load('controllers/kma.specialweather.controller.js', {async: async, '../models/modelKmaSpecialWeatherSituation': situations,
     '../models/modelKmaSpecialWeatherZone': zoneStore, '../lib/kmaWarningZones': zones, '../lib/kmaForecastNarrative': Narrative});
 var collector = new Collector({requester: new Requester({request: request})});
-collector.narrative = new Narrative({requester: new Requester({request: request, strict: true}), model: situations});
+collector.narrative = {gather: function (cb) { cb(null, false); }};
+narrativeCollector.gather(function (err) {
+    assert.ifError(err);
+    assert.equal(narrativeStore.docs.length, 10);
+    var weather = {regionName: '서울특별시', current: {t1h: 12}};
+    Response.attach(weather, 109, {setHeader: function () {}}, function () {
+        assert.equal(weather.forecastNarrative.stationId, 109);
+        assert.equal(weather.forecastNarrative.text, '전국 예보\n<script>unsafe()</script>');
+        assert.equal(weather.forecastNarrative.textFormat, 'plain');
+        assert.equal(new Date(weather.forecastNarrative.announcement).getTime(), narrativeTime);
+        checkWarnings();
+    }, narrativeCollector);
+});
+function checkWarnings() {
 collector.gather(function (err) {
     assert.equal(err, undefined, String(err && err.message));
-    assert.deepEqual(situations.docs.map(function (d) { return d.type; }).sort(), [1, 2, 3, 4, 5]);
+    assert.deepEqual(situations.docs.map(function (d) { return d.type; }).sort(), [1, 2, 3, 4]);
     var controller = new Controller();
     controller.getCurrent({__: function (s) { return s; }}, function (err, list) {
         assert.ifError(err);
-        var narrative = list.filter(function (entry) { return entry.type === 5; })[0];
-        assert.equal(narrative.name, '종합예보');
-        assert.equal(narrative.comment, '전국 예보\n&lt;script&gt;unsafe()&lt;/script&gt;');
-        assert.equal(new Date(narrative.announcement).getTime(), narrativeTime);
+        assert.equal(list.filter(function (entry) { return entry.type === 5; }).length, 0);
         var t1 = list.filter(function (s) { return s.type === 1; })[0];
         assert.equal(new Date(t1.announcement).toISOString(), '2026-09-26T02:30:00.000Z');
         assert.equal(t1.bulletin.title, at1130.t1);
@@ -147,3 +165,5 @@ collector.gather(function (err) {
         });
     });
 });
+
+}

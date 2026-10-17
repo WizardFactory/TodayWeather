@@ -134,6 +134,7 @@ function getWeather(req, res, next) {
                 }
                 delete weatherInfo.airInfo;
                 delete weatherInfo.airInfoList;
+                delete weatherInfo.forecastNarrative; // The nation response carries its own national bulletin.
                 callback(undefined, weatherInfo);
             });
         },
@@ -162,7 +163,10 @@ router.get('/:nation', [cTown.checkQueryValidation, getSidoArpltn, getWeather], 
     }
 
     if (result.weather || result.air) {
-        res.send(result);
+        var stationId = String(req.params.nation).toUpperCase() === 'KR' ? 108 : null;
+        require('../../lib/kmaForecastNarrativeResponse').attach(result, stationId, res, function () {
+            res.send(result);
+        });
     }
     else {
         res.status(501).send("Fail to get nation weather");
