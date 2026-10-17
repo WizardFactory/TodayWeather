@@ -1,0 +1,225 @@
+{
+  "schema": 1,
+  "baseline_revision": "6e4436c831a8058896e8f44fd6d4e5d6d56d6c86",
+  "traffic_window": {
+    "from": "2026-08-23T19:53:45Z",
+    "to_exclusive": "2026-09-22T19:53:45Z",
+    "requests": 220583,
+    "groups": 19,
+    "source": "docs/evidence/aws/api-traffic-2026-09-22-routes.csv"
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/weather/coord/{location}",
+      "observed_requests": 155998,
+      "family": "weather-gateway",
+      "native_source": "server2/src/gateway/runtime.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/weather/v000903/coord/{location}",
+      "observed_requests": 39254,
+      "family": "weather-gateway",
+      "native_source": "server2/src/gateway/runtime.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "PUT",
+      "path": "/v000902/push",
+      "observed_requests": 18872,
+      "family": "push",
+      "native_source": "server2/src/push/service.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "POST",
+      "path": "/v000902/push-list",
+      "observed_requests": 2525,
+      "family": "push",
+      "native_source": "server2/src/push/service.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/v000901/kma/addr/{location}",
+      "observed_requests": 1853,
+      "family": "kma",
+      "native_source": "server2/src/domestic/kma/backend.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/v000903/kma/addr/{location}",
+      "observed_requests": 1320,
+      "family": "kma",
+      "native_source": "server2/src/domestic/kma/backend.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/geocode/v000903/coord/{location}",
+      "observed_requests": 209,
+      "family": "geocode",
+      "native_source": "server2/src/gateway/runtime.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/v000803/town/{location}",
+      "observed_requests": 205,
+      "family": "town",
+      "native_source": "server2/src/domestic/kma/backend.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/v000903/nation/KR",
+      "observed_requests": 139,
+      "family": "nation",
+      "native_source": "server2/src/api/mod.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/weather/v000901/coord/{location}",
+      "observed_requests": 51,
+      "family": "weather-gateway",
+      "native_source": "server2/src/gateway/runtime.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/weather/v000902/coord/{location}",
+      "observed_requests": 47,
+      "family": "weather-gateway",
+      "native_source": "server2/src/gateway/runtime.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/geocode/v000903/addr/{location}",
+      "observed_requests": 39,
+      "family": "geocode",
+      "native_source": "server2/src/gateway/runtime.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/v000903/kma/special",
+      "observed_requests": 36,
+      "family": "warnings",
+      "native_source": "server2/src/api/mod.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/v000705/town/{location}",
+      "observed_requests": 12,
+      "family": "town",
+      "native_source": "server2/src/domestic/kma/backend.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "POST",
+      "path": "/v000705/push",
+      "observed_requests": 12,
+      "family": "push",
+      "native_source": "server2/src/push/service.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "OPTIONS",
+      "path": "/v000902/push",
+      "observed_requests": 7,
+      "family": "push",
+      "native_source": "server2/src/push/service.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v000902/push",
+      "observed_requests": 2,
+      "family": "push",
+      "native_source": "server2/src/push/service.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/geocode/v000901/addr/{location}",
+      "observed_requests": 1,
+      "family": "geocode",
+      "native_source": "server2/src/gateway/runtime.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    },
+    {
+      "method": "GET",
+      "path": "/v000901/nation/KR",
+      "observed_requests": 1,
+      "family": "nation",
+      "native_source": "server2/src/api/mod.rs",
+      "local_evidence": "docs/operations/server2-native-verification.md",
+      "qualification": "family-layer evidence; exact production parity remains an S20 gate"
+    }
+  ],
+  "supplements": [
+    {
+      "method": "GET",
+      "path": "/v000903/notice/latest",
+      "family": "notice",
+      "native_source": "server2/src/notice/api.rs",
+      "scope": "Backend supplement; app/web popup activation2623 separate"
+    }
+  ],
+  "operational": [
+    {
+      "method": "GET",
+      "path": "/health",
+      "exposure": "public"
+    },
+    {
+      "method": "GET",
+      "path": "/internal/metrics",
+      "exposure": "private listener only"
+    }
+  ],
+  "unclassified": [
+    {
+      "path": "/ww",
+      "reason": "Outside accepted traffic-report scope; no zero-use or exclusion decision. Blocks complete production inventory qualification."
+    }
+  ],
+  "excluded_changes": [
+    "2805 new nationwide narrative supplement",
+    "2724 actual provider quota measurement"
+  ],
+  "production_eligible": false,
+  "remaining_gates": [
+    "/ww inventory disposition and any new supplements",
+    "exact-revision native contract and zero-legacy proof for every included route",
+    "7day paired shadow with zero unexplained diffs",
+    "EC2 cold latency/capacity/disk and provider quota headroom",
+    "full eligible prior release/config/state compatibility and whole-host recovery rehearsal",
+    "S3/IAM/IMDSv2/readiness and final state copies/rainfall handover",
+    "scoped AK production switch/rollback authority"
+  ]
+}

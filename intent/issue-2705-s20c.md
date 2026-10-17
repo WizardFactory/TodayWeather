@@ -1,0 +1,5 @@
+# S20c: operational preparation after S19
+
+AK: finish S19 verification and prepare S20 in recommended order (2026-10-17). Continue reviewed main integration of repository code/config/docs only. Never deploy or mirror traffic, call live providers/devices, reset existing budgets or claim production readiness. #2724 measurement and #2805 nationwide narrative stay excluded.
+
+Outcomes: INVENTORY maps all19accepted method/path groups, notice supplement and unresolved /ww to source and qualified proof. DEADLINE prepares a one-request-per-upstream nginx configuration and proves a reused frontend connection receives the real release501 after the gateway9s deadline. ROLLBACK specifies immutable current/previous bundles, API+worker transition order, durable-claim/state compatibility, abort/verification and fail-closed release eligibility. BOUNDS separates local proof from7day shadow, EC2/CloudFront/quota/state-copy/host evidence and actual operational authority. PLACEMENT follows S20c.json with no runtime/legacy-source change.

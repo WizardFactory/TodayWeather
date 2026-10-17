@@ -1,0 +1,35 @@
+# S19 reconciliation / S20c operational preparation — 2026-10-17
+
+Baseline main `6e4436c831a8058896e8f44fd6d4e5d6d56d6c86`. Runtime source180paths match the retained build3 source map; no Rust/runtime/storage/retry/worker change. This preparation adds an inventory, candidate nginx template, local deadline rehearsal/controls and operator rollback procedure. It does not complete operational S19/S20 qualification.
+
+## S19 evidence reconciliation
+
+- Accepted traffic inventory:19method/path groups,220583requests in the recorded2026-08-23T19:53:45Z..2026-09-22T19:53:45Zwindow. Both one-request groups and failure-only routes stay included. [Canonical inventory](../../../../server2/config/cutover/inventory.json) adds the notice backend contract and retains `/ww` as unclassified. #2805 new narrative and #2724 actual quota measurements are excluded. Existing used special-route compatibility is retained.
+- [Gateway evidence](../../../operations/server2-smoke-shadow.md): eight gateway scenarios,15request cold/warm paired workload with zero unexplained diffs, explicit acquisition/transport differences, cache-aware development routing rollback and real9sdeadline proof. These are frozen loopback timings, not production seven-day shadow.
+- [Native suite](../issue-2802/verification.md): final native5 report SHA256 `0c20c1624b041ec409331d94ce1c52a0df76749c450d7fe7b22fa4532d13b167`,11PASS including27worker cases. Checks retain individual library/HTTP/coexistence/recorded-provider boundaries.
+- [Paired recovery](../issue-2704-s19c/verification.md): functional1 SHA256 `b094d454c4fff6fbe95814732cb56f014534366bcb12a1f860e7f90717d27409`, explicit16f3dfde/0fc0442d pair. Nine family checks perrelease, fourAPI cases current/previous/current,14mixed-release worker restores, one overlap owner/post. NativeFetch/clock injection and compile-time fixture dependence are disclosed. No full history, notice-mutation or whole-host prior-release eligibility follows.
+- Partial publication/hash/outage/cancellation/state/summary/worker failures remain attached to their existing scenario/corpus and source, not combined into an invented parity denominator. No unchanged product suites were rerun or relabelled onto the latermain binary.
+
+## Actual deadline proof
+
+Command: `python3 server2/tools/cutover/rehearse_deadline.py --artifacts <retained common manifest> --nginx <owned nginx> --nginx-sha256 <recorded SHA256> --out <fresh output>`.
+
+nginx executable `60a5f8a53541b21a006134e9e98abdc19422d067c8c85f221cc8eaa590b22e2a`, `nginx version: nginx/1.30.6`. Official source URL `https://nginx.org/download/nginx-1.30.6.tar.gz`, temporary local build with rewrite/gzip modules disabled. No package or service was installed on the host. nginx is an explicit local test dependency, not the production version decision.
+
+Declared runtime source revision `2ded7c9a9c007a1709336b22a4605cd7174e6f98` is the preserved artifact manifest declaration; dirty build receipt and later source/commit mapping remain unchanged. Actual executed `loopback_server` release SHA256 `535ff89496a7c0df90c7ad6bd8350d4127e2e10e019da1c83eaffa61bcd2560f`; server2 input SHA256 `53e88a4915f38649a916287f28cba59f59d8482c449241d088210997f9e86bde`. The process uses injected loopback roots and a frozen backend fixture. It is not a whole-native production run.
+
+Intended config Red: the original candidate with upstream keepalive/HTTP1.1 failed the fresh-upstream assertion, with1failure/0errors. Green and post controls:5tests OK; unchanged recovery13controls and common-suite14controls also OK. They cover late-request connection policy, no proxy retry/cache/error substitution, accepted route denominator/supplement/unclassified boundary, rendering rejection and all-artifact hash preflight/output reuse refusal. Printed BLOCKED and argparse text are negative controls, not failed verification. Additional actual nginx/release functional2 execution exited0/PASS; initial functional1 is retained unchanged. Five additional owned transport-double cases preserve POST/PUT/DELETE bodies and authorization through503without retries, OPTIONS204/CORS, and conditionalGET304/ETag. Those are proxy transport checks, not product mutation qualification.
+
+Direct reused-client control: `RemoteDisconnected`. Candidate: same frontend socket, second request starts4safter acceptance,501/no-store at9004.35ms, exactS02body/functionalheaders,3backend attempts,1gateway dependency error,0abandoned responses. nginx owns Server and transport headers; it introduces no retry. Report SHA256 `0ff926b47deec3d4c37f85037570ad5ce1ca0e4ffe79786fb50f2d94ff70c3a1`. The [actual capture](deadline.png) is formatted from that report. All task-owned proxy/process/peer instances stopped; executable bytes rechecked after execution. production_eligible=false.
+
+## Read-only existing AWS control plane
+
+Observed `2026-10-17T07:56:01.900380+00:00` under the documented existing account/profile. STS account matched before resource reads. Existing S03 bucket: Seoul region, versioningEnabled, allfourpublicblocks true, AES256 default encryption. Runtime role/profile exist; no attached managed policies, inline permissions limited to documented S3 actions/prefixes, no delete/EC2 write action observed. Bucket policy denies insecure transport and enforces conditional-write headers. No attached EC2 for that profile was returned. This is control-plane metadata, not an assumed-role data-path/IMDSv2/real-host readiness proof. No resource, object, policy, state, role attachment or operational traffic was mutated; s3_readiness write-probes were not invoked.
+
+Control-plane metadata SHA256 `5b774004afc51dbc2a223c07d4ca0240b6358050997bde5922949247b552e289`; inline-role document `1d9756a8d0c165c797cf2e072451eec1b778711b89612949b9e5d9eb2cc96d53`; bucket-policy document `83e7fb46fee501b1fb045e0e8a153696fa9baf7c1adde2f328846e2b32aa895e`. Sanitized observations here remain durable; detailed local receipts contain no credentials.
+
+## Manual, bounds and remaining gates
+
+[Operator source](../../../operations/server2-cutover.md), [PDF](../../../operations/server2-cutover.pdf), [proposed decision flow](../../../architecture/diagrams/server2-cutover.html) and [JSON](../../../architecture/diagrams/server2-cutover.json) separate repository preparation from operational evidence and scoped AK authority. Rollback requires compatible immutable prior executable+config, preserved acknowledged state/claims, ordered admission/scheduler stop, bounded process/writer drain, singular worker ownership and post-restore checks. Failed/unknown sends are never replayed. No eligible previous full bundle means no cutover.
+
+Outstanding: `/ww` disposition and supplements, exact production inventory/parity,7day shadow, actual EC2/CloudFront/listener/capacity/latency/disk, key quota headroom, instance-role/IMDSv2/data-path readiness, complete prior bundle/config/schema eligibility, final state/rainfall handover and separately authorized switch/rollback. Neither a localPASS, this document, nor PR CI closes those gates. No deployment, paid/live provider, device send or mirroring was performed.

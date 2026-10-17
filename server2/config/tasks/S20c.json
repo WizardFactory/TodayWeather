@@ -1,0 +1,70 @@
+{
+  "task": "S20c",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2705",
+  "scope": "S19 evidence/route reconciliation, candidate operational rollback runbook and owned-loopback nginx reused-client deadline rehearsal. No product runtime change, production activation, live mirror/send, quota measurement or2805 narrative.",
+  "server2_paths": [
+    "server2/config/tasks/S20c.json",
+    "server2/config/cutover/inventory.json",
+    "server2/deploy/cutover/nginx.conf.template",
+    "server2/tools/cutover/rehearse_deadline.py",
+    "server2/tests/integration/test_cutover_deadline.py",
+    "server2/tools/ci.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2705-s20c.md",
+      "category": "documentation",
+      "reason": "Maintained S19/S20 contracts, evidence inventory, operational rollback guide/source/PDF, design and selected actual local evidence"
+    },
+    {
+      "path": "specs/issue-2705-s20c.md",
+      "category": "documentation",
+      "reason": "Maintained S19/S20 contracts, evidence inventory, operational rollback guide/source/PDF, design and selected actual local evidence"
+    },
+    {
+      "path": "plans/issue-2705-s20c.md",
+      "category": "documentation",
+      "reason": "Maintained S19/S20 contracts, evidence inventory, operational rollback guide/source/PDF, design and selected actual local evidence"
+    },
+    {
+      "path": "docs/operations/server2-cutover.md",
+      "category": "documentation",
+      "reason": "Maintained S19/S20 contracts, evidence inventory, operational rollback guide/source/PDF, design and selected actual local evidence"
+    },
+    {
+      "path": "docs/operations/server2-cutover.pdf",
+      "category": "documentation",
+      "reason": "Maintained S19/S20 contracts, evidence inventory, operational rollback guide/source/PDF, design and selected actual local evidence"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintained S19/S20 contracts, evidence inventory, operational rollback guide/source/PDF, design and selected actual local evidence"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Maintained S19/S20 contracts, evidence inventory, operational rollback guide/source/PDF, design and selected actual local evidence"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-cutover.json",
+      "category": "documentation",
+      "reason": "Maintained S19/S20 contracts, evidence inventory, operational rollback guide/source/PDF, design and selected actual local evidence"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-cutover.html",
+      "category": "documentation",
+      "reason": "Maintained S19/S20 contracts, evidence inventory, operational rollback guide/source/PDF, design and selected actual local evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2705-s20c/verification.md",
+      "category": "documentation",
+      "reason": "Maintained S19/S20 contracts, evidence inventory, operational rollback guide/source/PDF, design and selected actual local evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2705-s20c/deadline.png",
+      "category": "documentation",
+      "reason": "Maintained S19/S20 contracts, evidence inventory, operational rollback guide/source/PDF, design and selected actual local evidence"
+    }
+  ]
+}
