@@ -1,0 +1,63 @@
+{
+  "task": "S19c",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2704",
+  "scope": "Paired fixed family contract layers, existing native API release recovery, mixed-release durable worker claims/state; no product changes, production qualification, live shadow or2724 measurement.",
+  "server2_paths": [
+    "server2/config/tasks/S19c.json",
+    "server2/tools/shadow/release_recovery.py",
+    "server2/tests/integration/test_release_recovery.py",
+    "server2/tools/ci.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2704-s19c.md",
+      "category": "documentation",
+      "reason": "Canonical recovery contracts, bounded verification flow, operator recovery guide/PDF and selected local evidence."
+    },
+    {
+      "path": "specs/issue-2704-s19c.md",
+      "category": "documentation",
+      "reason": "Canonical recovery contracts, bounded verification flow, operator recovery guide/PDF and selected local evidence."
+    },
+    {
+      "path": "plans/issue-2704-s19c.md",
+      "category": "documentation",
+      "reason": "Canonical recovery contracts, bounded verification flow, operator recovery guide/PDF and selected local evidence."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Canonical recovery contracts, bounded verification flow, operator recovery guide/PDF and selected local evidence."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-release-recovery.json",
+      "category": "documentation",
+      "reason": "Canonical recovery contracts, bounded verification flow, operator recovery guide/PDF and selected local evidence."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-release-recovery.html",
+      "category": "documentation",
+      "reason": "Canonical recovery contracts, bounded verification flow, operator recovery guide/PDF and selected local evidence."
+    },
+    {
+      "path": "docs/operations/server2-release-recovery.md",
+      "category": "documentation",
+      "reason": "Canonical recovery contracts, bounded verification flow, operator recovery guide/PDF and selected local evidence."
+    },
+    {
+      "path": "docs/operations/server2-release-recovery.pdf",
+      "category": "documentation",
+      "reason": "Canonical recovery contracts, bounded verification flow, operator recovery guide/PDF and selected local evidence."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2704-s19c/verification.md",
+      "category": "documentation",
+      "reason": "Canonical recovery contracts, bounded verification flow, operator recovery guide/PDF and selected local evidence."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2704-s19c/recovery.png",
+      "category": "documentation",
+      "reason": "Canonical recovery contracts, bounded verification flow, operator recovery guide/PDF and selected local evidence."
+    }
+  ]
+}
