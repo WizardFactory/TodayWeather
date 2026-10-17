@@ -2,12 +2,12 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "S20b supervised runtime lifecycle",
+    "title": "Shared warning API and delivery lifecycle",
     "output": "docs/architecture/diagrams/server2-runtime-services.html",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "411eb9a8af1aa08a7dc91a343cb17ea4c8ebc874"
+      "revision": "18f69c4123d8aa2cf9dd3021a866a3d8f12ef053"
     }
   },
   "components": [
@@ -17,7 +17,7 @@
       "label": "Process + factory",
       "sublabel": "HTTP-only 5s; push-owned drain 34s",
       "pos": [
-        40,
+        440,
         245
       ],
       "size": [
@@ -27,15 +27,13 @@
       "sources": [
         {
           "path": "server2/src/process.rs",
-          "line": 83
-        },
-        {
-          "path": "server2/src/runtime_services.rs",
-          "line": 116
+          "line": 112,
+          "end_line": 161
         },
         {
           "path": "server2/src/process.rs",
-          "line": 145
+          "line": 183,
+          "end_line": 239
         }
       ]
     },
@@ -45,7 +43,7 @@
       "label": "Registration writer",
       "sublabel": "Quiesce HTTP; close / join / abort",
       "pos": [
-        40,
+        440,
         25
       ],
       "size": [
@@ -55,7 +53,8 @@
       "sources": [
         {
           "path": "server2/src/push/service.rs",
-          "line": 224
+          "line": 224,
+          "end_line": 250
         }
       ]
     },
@@ -65,7 +64,7 @@
       "label": "Owned delivery jobs",
       "sublabel": "UTC alarm/alerts; silent warning baseline",
       "pos": [
-        430,
+        830,
         245
       ],
       "size": [
@@ -75,7 +74,8 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/supervisor.rs",
-          "line": 48
+          "line": 34,
+          "end_line": 101
         }
       ]
     },
@@ -85,7 +85,7 @@
       "label": "OAuth + FCM client",
       "sublabel": "Lazy product files; final stop check",
       "pos": [
-        900,
+        1300,
         245
       ],
       "size": [
@@ -95,7 +95,13 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/fcm.rs",
-          "line": 261
+          "line": 164,
+          "end_line": 242
+        },
+        {
+          "path": "server2/src/push/deliver/fcm.rs",
+          "line": 287,
+          "end_line": 327
         }
       ]
     },
@@ -105,7 +111,7 @@
       "label": "Shared native services",
       "sublabel": "Typed fetch + WarningStore / feed",
       "pos": [
-        430,
+        830,
         480
       ],
       "size": [
@@ -115,15 +121,13 @@
       "sources": [
         {
           "path": "server2/src/runtime_services.rs",
-          "line": 114
-        },
-        {
-          "path": "server2/src/runtime_services.rs",
-          "line": 145
+          "line": 129,
+          "end_line": 174
         },
         {
           "path": "server2/src/push/deliver/native_fetch.rs",
-          "line": 31
+          "line": 31,
+          "end_line": 56
         }
       ]
     },
@@ -133,7 +137,7 @@
       "label": "Shared bounded S3",
       "sublabel": "State / claims / results / warning data",
       "pos": [
-        40,
+        440,
         480
       ],
       "size": [
@@ -143,11 +147,18 @@
       "sources": [
         {
           "path": "server2/src/runtime_services.rs",
-          "line": 60
+          "line": 64,
+          "end_line": 80
         },
         {
           "path": "server2/src/push/deliver/ledger.rs",
-          "line": 59
+          "line": 64,
+          "end_line": 73
+        },
+        {
+          "path": "server2/src/push/deliver/ledger.rs",
+          "line": 125,
+          "end_line": 159
         }
       ]
     },
@@ -157,7 +168,7 @@
       "label": "Notice GET / HEAD",
       "sublabel": "Read only; no Translator client",
       "pos": [
-        40,
+        440,
         710
       ],
       "size": [
@@ -167,7 +178,39 @@
       "sources": [
         {
           "path": "server2/src/notice/api.rs",
-          "line": 25
+          "line": 24,
+          "end_line": 34
+        }
+      ]
+    },
+    {
+      "id": "warning-api",
+      "type": "backend",
+      "label": "Warning GET / HEAD",
+      "sublabel": "Selected kma; empty data -> 501",
+      "pos": [
+        40,
+        245
+      ],
+      "size": [
+        240,
+        110
+      ],
+      "sources": [
+        {
+          "path": "server2/src/runtime_services.rs",
+          "line": 81,
+          "end_line": 96
+        },
+        {
+          "path": "server2/src/runtime_services.rs",
+          "line": 213,
+          "end_line": 225
+        },
+        {
+          "path": "server2/src/warnings/service.rs",
+          "line": 269,
+          "end_line": 318
         }
       ]
     }
@@ -224,6 +267,18 @@
       "from": "notice",
       "to": "s3",
       "label": "read publication"
+    },
+    {
+      "id": "process-warning",
+      "from": "process",
+      "to": "warning-api",
+      "label": "kma GET / HEAD"
+    },
+    {
+      "id": "warning-s3",
+      "from": "warning-api",
+      "to": "s3",
+      "label": "read warning data"
     }
   ],
   "cards": [
@@ -243,6 +298,15 @@
         "Push writer or delivery: shared 34s drain + up to 1s teardown.",
         "Neither present: shared HTTP-only 5s drain + up to 1s teardown.",
         "Long owned acquisitions remain incomplete; durable claims prevent replay."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Public warning boundary",
+      "items": [
+        "Explicit kma selects v000903 special before the direct KMA mount.",
+        "Internal push / older-KMA warning storage does not expose this API.",
+        "Existing S12 service and bounded store; no new acquisition or send loop."
       ]
     }
   ]
