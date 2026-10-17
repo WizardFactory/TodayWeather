@@ -122,7 +122,7 @@
       "path": "/v000903/kma/special",
       "observed_requests": 36,
       "family": "warnings",
-      "native_source": "server2/src/api/mod.rs",
+      "native_source": "server2/src/warnings/service.rs",
       "local_evidence": "docs/operations/server2-native-verification.md",
       "qualification": "family-layer evidence; exact production parity remains an S20 gate"
     },

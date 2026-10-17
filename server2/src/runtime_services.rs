@@ -19,6 +19,7 @@ pub struct RuntimeServices {
     pub push: Option<Arc<crate::push::PushService>>,
     pub notices: Option<Arc<crate::notice::store::NoticeStore<ProcessS3>>>,
     pub warning_store: Option<Arc<ProcessWarnings>>,
+    pub warning_api: Option<Arc<crate::warnings::service::WarningService<ProcessS3>>>,
     pub warning_feed: Option<Arc<ProcessFeed>>,
     pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
     pub narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>>,
@@ -74,6 +75,19 @@ impl RuntimeServices {
                 )
                 .map_err(|_| GatewayError::InvalidConfiguration)?,
             ))
+        } else {
+            None
+        };
+        // Internal warning state also serves push and older KMA versions. Only the
+        // explicit v000903 KMA selection exposes the public special API.
+        let warning_api = if families.kma {
+            Some(Arc::new(crate::warnings::service::WarningService::new(
+                warning_store
+                    .clone()
+                    .ok_or(GatewayError::InvalidConfiguration)?,
+                clock.clone(),
+                crate::warnings::service::ServiceConfig::default(),
+            )))
         } else {
             None
         };
@@ -172,13 +186,18 @@ impl RuntimeServices {
             push,
             notices,
             warning_store,
+            warning_api,
             warning_feed,
             native_fetch,
             s3,
         })
     }
     pub fn public_router(self, state: Arc<crate::SharedState>) -> Router {
-        if self.gateway.is_none() && self.push.is_none() && self.notices.is_none() {
+        if self.gateway.is_none()
+            && self.push.is_none()
+            && self.notices.is_none()
+            && self.warning_api.is_none()
+        {
             return crate::public_router(state);
         }
         let notices = self.notices.clone();
@@ -190,6 +209,15 @@ impl RuntimeServices {
                     && crate::push::PushService::matches(request.uri().path())
                 {
                     return push.handle(request).await.expect("claimed push mount");
+                }
+                // The generic direct-KMA mount also claims this path. Let its
+                // existing warning handler decide GET/HEAD before gateway dispatch.
+                if let Some(warnings) = &services.warning_api
+                    && let Some(reply) = warnings
+                        .handle(request.method(), request.uri().path(), request.headers())
+                        .await
+                {
+                    return reply;
                 }
                 match &services.gateway {
                     Some(gateway) => gateway.handle(request).await,
