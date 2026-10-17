@@ -54,6 +54,20 @@ class Inventory(unittest.TestCase):
             self.assertTrue((ROOT.parent / row['native_source']).is_file())
 
 class Admission(unittest.TestCase):
+    def test_owned_paths_replace_distro_defaults(self):
+        rendered = rehearsal.render(rehearsal.TEMPLATE.read_text(), 8080, 8081,
+                                    '/tmp/owned with space/nginx.pid')
+        for module in ('client_body', 'proxy', 'fastcgi', 'uwsgi', 'scgi'):
+            self.assertIn(module+'_temp_path "/tmp/owned with space/'+module+'";', rendered)
+        self.assertNotIn('/var/lib/nginx', rendered)
+
+    def test_render_refuses_ambiguous_or_injecting_workspace(self):
+        for pid in ('relative/nginx.pid', '/tmp/../outside/nginx.pid', '/tmp/quote"/nginx.pid',
+                    '/tmp/back\\slash/nginx.pid', '/tmp/$variable/nginx.pid',
+                    '/tmp/semi;colon/nginx.pid', '/tmp/new\nline/nginx.pid', '/tmp/nul\0/nginx.pid'):
+            with self.subTest(pid=pid), self.assertRaises(ValueError):
+                rehearsal.render(rehearsal.TEMPLATE.read_text(), 8080, 8081, pid)
+
     def test_render_refuses_injection_or_privileged_port(self):
         template = rehearsal.TEMPLATE.read_text()
         for invalid in [True, 0, 80, 65536, '8080; include secret;']:
