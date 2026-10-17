@@ -48,11 +48,16 @@ def tracked_sources(root, revision):
         if not entry:
             continue
         meta, name = entry.split(b'\t', 1)
-        mode, kind, _oid = meta.decode().split()
+        mode, kind, oid = meta.decode().split()
         relative = Path(os.fsdecode(name)).relative_to('server2')
         if kind != 'blob' or mode not in ('100644', '100755'):
             raise ValueError('only regular tracked server2 inputs may be exported')
-        files[relative.as_posix()] = {'sha256': digest(regular(root/relative, root)), 'mode': mode}
+        payload = regular(root/relative, root).read_bytes()
+        algorithm = 'sha1' if len(oid) == 40 else 'sha256'
+        blob = b'blob '+str(len(payload)).encode()+b'\0'+payload
+        if hashlib.new(algorithm, blob).hexdigest() != oid:
+            raise ValueError('tracked source bytes differ from revision blob')
+        files[relative.as_posix()] = {'sha256': hashlib.sha256(payload).hexdigest(), 'mode': mode}
     if not files:
         raise ValueError('no tracked server2 inputs')
     return files
@@ -280,6 +285,9 @@ def main():
     try:
         if args.archive and (args.archive.exists() or args.archive.is_symlink()):
             raise ValueError('fresh archive required')
+        if args.archive and (args.archive.resolve().is_relative_to(args.output.resolve()) or
+                             args.archive.resolve().is_relative_to(ROOT.resolve())):
+            raise ValueError('archive must be outside the bundle and server2')
         if args.verify:
             data = verify(args.verify, args.require_source_root)
         else:

@@ -50,9 +50,20 @@ a product process.
 Rust integration tests retain `CARGO_MANIFEST_DIR` from compilation. Inspect
 `compiled_source_root` in `bundle.json`. On the empty owned host, map that exact
 location to `BUNDLE/source/server2` before execution; this is explicit operator
-setup, never a manifest-driven installation. Refuse an existing path or symlink
-and keep the frozen source unchanged. Do not overwrite a checkout or map it to a
-different revision. Then require:
+setup, never a manifest-driven installation. Stop if the exact destination already
+exists, including a symlink; never overwrite a checkout or another run's mapping.
+A newly created symlink or bind mount to this bundle is allowed. Local container
+builds record `/work/server2`; CI builds normally record
+`/home/runner/work/TodayWeather/TodayWeather/server2`. Creating those parents can
+require privileged operator setup, but run verification itself as the ordinary
+user. For example, after checking that `/work/server2` does not exist:
+
+```sh
+sudo mkdir -p /work
+sudo ln -s /absolute/BUNDLE/source/server2 /work/server2
+```
+
+Use the actual recorded path, keep the frozen source unchanged, and then require:
 
 ```sh
 python3 BUNDLE/source/server2/tools/native_artifact.py --verify BUNDLE --require-source-root
@@ -133,5 +144,9 @@ The capture and selected evidence belong to the recorded execution identity. Nei
 [Selected 2026-10-17 Linux bundle/EC2 evidence](../evidence/tasks/issue-2813/verification.md) records the source identities and original failures. Nine native checks passed in the original run; two missing-Git report failures were renewed separately and passed. Neither native report claims full coverage. All eleven checks have passing evidence across the retained runs; the packaging-only source change has unchanged runtime/fixture/harness bytes and all thirteen executable hashes. WW HTTP, narrative and logging also passed. The separate nginx host setup failure is tracked in [#2814](https://github.com/WizardFactory/TodayWeather/issues/2814).
 
 ![Typeset actual retained CLI results](../evidence/tasks/issue-2813/linux-bundle.png)
+
+The image retains intermediate packaging snapshot `af6e72af` / tree `dbc3f845`;
+final review corrections change only the producer and its controls. See the linked
+verification record for final source/hash and standalone host mapping admission.
 
 This labelled image is rendered from actual CLI records; browser/window capture was unavailable. It is not an application UI screenshot or another execution. Real S3, live shadow, quota, production listener and eligible previous full-release gates remain open.

@@ -82,6 +82,36 @@ class Bundle(unittest.TestCase):
         data['executable'] = str(extra)
         with self.assertRaises(ValueError):
             bundle.cargo_artifacts('\n'.join(map(json.dumps, self.messages+[data])), self.root, self.target)
+        for field in ('src_path', 'executable'):
+            data = json.loads(json.dumps(self.messages))
+            outside = self.home/'outside-release'
+            outside.write_bytes(elf())
+            if field == 'src_path':
+                data[0]['target'][field] = str(outside)
+            else:
+                data[0][field] = str(outside)
+            with self.assertRaises(ValueError):
+                bundle.cargo_artifacts('\n'.join(map(json.dumps, data)), self.root, self.target)
+
+    def test_archive_inside_payload_rejects_before_build(self):
+        for archive in (self.out/'native.tar.gz', bundle.ROOT/'invalid-native.tar.gz'):
+            args = ['native_artifact.py', '--output', str(self.out), '--archive', str(archive)]
+            with self.subTest(archive=archive), patch.object(sys, 'argv', args), patch.object(bundle, 'build') as child:
+                self.assertEqual(bundle.main(), 2)
+                child.assert_not_called()
+
+    def test_git_index_flags_cannot_hide_changed_source_bytes(self):
+        fixed = self.root/'fixtures/frozen.json'
+        for flag in ('assume-unchanged', 'skip-worktree'):
+            original = fixed.read_bytes()
+            self.git('update-index', '--'+flag, 'server2/fixtures/frozen.json')
+            fixed.write_bytes(original+b'changed')
+            self.assertEqual(bundle.source_identity(self.root), self.source)
+            with self.assertRaises(ValueError):
+                self.export()
+            self.assertFalse(self.out.exists())
+            fixed.write_bytes(original)
+            self.git('update-index', '--no-'+flag, 'server2/fixtures/frozen.json')
 
     def test_actual_cargo_chunks_can_end_with_newlines(self):
         split = len(self.messages)//2
