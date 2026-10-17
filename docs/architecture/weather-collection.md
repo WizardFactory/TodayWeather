@@ -84,6 +84,28 @@ The special-weather job no longer scrapes: the KMA warning status page was retir
 
 In `gather` mode, two opt-in collectors (#2573) run outside that task array. `KMA_STN_MINUTE_ENABLED=true` starts `startMinuteScrape()`, which polls AWS minute observations every `KMA_STN_MINUTE_INTERVAL` minutes (default 2). `KMA_STN_HOURLY_ENABLED=true` starts `startHourlyScrape()`, which runs the AWS hourly table plus city observation page at UTC minutes `KMA_STN_HOURLY_MINUTES` (default `4,9,15,30`). Each keeps one run in flight and logs failures without stopping. Both flags default off; `scrape`/`local` scheduling is unchanged. The city page is decoded by its declared charset (UTF-8 since 2021) and parsed in either layout. If it fails, the AWS hourly rows are still saved. New stations get a `KmaStnInfo` row through Kakao geocoding or, without a Kakao key, the product geocode API at `API_SERVER/geocode/v000903/addr` (unversioned before #2606). New AWS-only stations then feed the nearby-station rain check and `nearStnName`; current `t1h/reh/vec/wsd` still come from city stations. Stations that neither can geocode are saved as observations only and retried at the next hourly run. Storage keeps the legacy KST-as-UTC timestamps and existing retention. See the [operator runbook](../operations/kma-station-observations.md).
 
+The forecast narrative extension (#2798) is collected independently after warning work.
+`kmaForecastNarrative` collects national (108) and all nine regional `getWthrSituation`
+offices from the official guide. After warning work finishes, the collector dispatches
+an independent, coalesced serial batch without holding the warning callback or scrape
+queue. Per-key provider requests have a 30-second deadline and one auth/quota rotation;
+per-publication writes have a two-second deadline. Regional failures do not erase valid
+rows or block other offices. `wn`/`wr` never enter warning/zone/push state.
+
+The separate `KmaForecastNarrative` collection has immutable station/publication IDs,
+true UTC announcement dates and original Korean plain text. Existing national weather
+gets office108 at its response root; assembled domestic weather uses the resolved
+province's office through the shared town sender. The optional `forecastNarrative`
+object includes publication/expiry, region/station, text and language/source/format.
+A two-second DB-only read omits missing, failed, wrong-region or age≥24h data without
+failing weather. Cache freshness cannot extend past expiry. The special endpoint stays
+on types1–4; no new endpoint or client change. App parsing/display and localization
+remain [#2803](https://github.com/WizardFactory/TodayWeather/issues/2803). See the
+[operating contract](../operations/kma-forecast-narrative.md).
+
+This describes repository behavior; rollout/readback is separately approved.
+
+
 Credential-free module loading (#2589): `geo.controller.js` reads Kakao keys only on the first Kakao call. Missing, malformed or empty key lists produce one sanitized warning per loaded module and a callback error naming `KAKAO_SECRET_KEYS`, without a provider request. The config default is `[]`; valid keys retain their configured retry order. `location2address()` passes provider errors to middleware before parsing a response. This permits the module to load on gather hosts without Kakao keys; the existing station API fallback above remains unchanged. Keys are cached after first use, so configuration changes require a process restart. This is a repository contract, not evidence of a host update. See the [offline checks](../../server/test/offline/README.md#credential-free-controller-loading-2589).
 
 The address-to-coordinate utility also parses Kakao keys lazily and defensively. Without usable keys it warns once per module and skips Kakao directly to its existing Google fallback; Google failure can still lead the scraper to the product API fallback. Configured keys retain random selection and provider-error fallback. Google key handling and Keco coordinate requests are unchanged. Offline verification uses synthetic responses and real request/XML/coordinate modules on loopback; it does not establish live Google availability or an updated gather host.
@@ -91,6 +113,7 @@ The address-to-coordinate utility also parses Kakao keys lazily and defensively.
 | Product | Main path | Use at read time |
 | --- | --- | --- |
 | Station minute/hourly | `kmaScraper` → station models | Correct/augment gridded current weather and precipitation |
+| Forecast narratives (#2798) | `kmaForecastNarrative` → separate `kmaforecastnarratives`, station/publication identity | Optional `forecastNarrative` in existing national/domestic weather; no special-screen field |
 | Warnings (#2609) | `kmaWarningCollector` → `kmaspecials` (bulletin types 1–4), `kmaspecialweatherzones` (active zone state) | `/v000903/kma/special`; town `current.specialInfo` via the zone table [`kma_warning_zones.csv`](../../server/utils/data/kma_warning_zones.csv) |
 | Short RSS | `kma.town.short.rss.controller` | Supplement short API forecasts |
 | Legacy mid RSS (retired, #2560) | `midRssKmaRequester` | Collection/storage disabled; cached medium data is not applied |

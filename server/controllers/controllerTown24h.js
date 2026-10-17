@@ -1765,7 +1765,11 @@ function ControllerTown24h() {
 
     this.sendResult = function (req, res) {
         log.info('## - ' + decodeURI(req.originalUrl) + ' sID=' + req.sessionID);
-        res.json(req.result);
+        var regions = require('../lib/kmaForecastRegions');
+        var office = req.result && req.result.source === 'KMA' && regions.forProvince(req.result.regionName);
+        require('../lib/kmaForecastNarrativeResponse').attach(req.result, office && office.stationId, res, function () {
+            res.json(req.result);
+        });
     };
 
     this._convertAirInfo = function (airInfo, airUnit, currentDate) {

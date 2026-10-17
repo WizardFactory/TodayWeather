@@ -536,3 +536,24 @@ provider calls nor changes coordinate order, schema or DB data-version behavior.
 The [isolated verification record](../evidence/tasks/issue-2782/verification.md)
 links the Mongoose-aware regression and local HTTP/Mongo smoke. Production
 incidence and deployment remain unverified.
+
+## Forecast narrative response extension (#2798)
+
+Existing nationwide KR weather adds national `forecastNarrative` at the root;
+representative-city items omit duplicate regional copies. Existing assembled domestic
+KMA weather uses the resolved province, for both address and coordinate requests:
+Seoul/Incheon/Gyeonggi share109, and other provinces use their official regional office.
+The shared town sender covers v000901, v000902 and v000903; older raw formats and
+foreign/unknown regions keep their existing response contracts.
+
+The object contains `stationId`, `region`, true UTC `announcement`/`expiresAt`, original
+`text`, `language:ko`, `source:KMA` and `textFormat:plain`. It is additive and optional:
+missing/invalid/expired/read-failed data never fails weather, and no provider is called
+during a weather request. `/kma/special` remains types1–4. Original provider prose is
+untrusted plain text, not HTML, and retains its original Korean/embedded units.
+
+No client parser, template or translations change in this server feature. Existing
+mobile clients ignore the new field; displaying it requires a later app update under
+[#2803](https://github.com/WizardFactory/TodayWeather/issues/2803). The current manual
+shows isolated API responses, not a deployed mobile UI. See [operations and verification](../operations/kma-forecast-narrative.md)
+for office mapping, cache/expiry, production readback and rollback boundaries.
