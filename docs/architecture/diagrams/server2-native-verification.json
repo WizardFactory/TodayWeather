@@ -1,0 +1,192 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "S19b verification workflow design",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/server2-native-verification.html"
+  },
+  "lanes": [
+    {
+      "id": "operator",
+      "label": "Operator inputs"
+    },
+    {
+      "id": "runner",
+      "label": "Suite runner"
+    },
+    {
+      "id": "checks",
+      "label": "Existing verification"
+    },
+    {
+      "id": "results",
+      "label": "Evidence and result"
+    }
+  ],
+  "mainPath": [
+    "manifest",
+    "preflight",
+    "checks",
+    "validate",
+    "report"
+  ],
+  "nodes": [
+    {
+      "id": "manifest",
+      "lane": "operator",
+      "col": 0,
+      "type": "external",
+      "label": "Release manifest",
+      "sublabel": "explicit paths + hashes",
+      "width": 156
+    },
+    {
+      "id": "selection",
+      "lane": "operator",
+      "col": 1,
+      "type": "frontend",
+      "label": "Check selection",
+      "sublabel": "default: all 11 checks",
+      "width": 156
+    },
+    {
+      "id": "preflight",
+      "lane": "runner",
+      "col": 1,
+      "type": "security",
+      "label": "Preflight",
+      "sublabel": "all prerequisites first",
+      "width": 156
+    },
+    {
+      "id": "blocked",
+      "lane": "runner",
+      "col": 2,
+      "type": "security",
+      "label": "BLOCKED",
+      "sublabel": "no child launched",
+      "width": 156
+    },
+    {
+      "id": "checks",
+      "lane": "checks",
+      "col": 2,
+      "type": "backend",
+      "label": "Fixed check commands",
+      "sublabel": "sequential; owned peers",
+      "width": 156
+    },
+    {
+      "id": "validate",
+      "lane": "checks",
+      "col": 3,
+      "type": "security",
+      "label": "Validate results",
+      "sublabel": "no empty/no-op PASS",
+      "width": 156
+    },
+    {
+      "id": "failed",
+      "lane": "results",
+      "col": 3,
+      "type": "security",
+      "label": "Record failure",
+      "sublabel": "continue remaining checks",
+      "width": 156
+    },
+    {
+      "id": "report",
+      "lane": "results",
+      "col": 4,
+      "type": "database",
+      "label": "New run report",
+      "sublabel": "logs + artifact identity",
+      "width": 140
+    },
+    {
+      "id": "scope",
+      "lane": "operator",
+      "col": 5,
+      "type": "backend",
+      "label": "Scoped verdict",
+      "sublabel": "full or selected coverage",
+      "width": 140
+    }
+  ],
+  "edges": [
+    {
+      "from": "manifest",
+      "to": "preflight",
+      "label": "verify"
+    },
+    {
+      "from": "selection",
+      "to": "preflight"
+    },
+    {
+      "from": "preflight",
+      "to": "blocked",
+      "label": "invalid",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "from": "preflight",
+      "to": "checks",
+      "label": "valid",
+      "variant": "emphasis"
+    },
+    {
+      "from": "checks",
+      "to": "validate"
+    },
+    {
+      "from": "validate",
+      "to": "failed",
+      "label": "error",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "from": "validate",
+      "to": "report",
+      "label": "passed"
+    },
+    {
+      "from": "failed",
+      "to": "report",
+      "variant": "dashed"
+    },
+    {
+      "from": "blocked",
+      "to": "report",
+      "variant": "dashed"
+    },
+    {
+      "from": "report",
+      "to": "scope"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Coverage stays explicit",
+      "items": [
+        "KMA CORE/Rich replay; world coexistence fixture; warnings HTTP",
+        "Summary model/wire; durable state; notice; alert and warning delivery",
+        "Workers: nine phases across TERM, INT and listener failure"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Qualification boundary",
+      "items": [
+        "This is a specification workflow, not deployed topology or a source-pinned runtime diagram.",
+        "Checks keep their real HTTP/process, in-memory and frozen-oracle layers.",
+        "No whole-service earlier-release recovery, live shadow or production activation claim."
+      ]
+    }
+  ]
+}

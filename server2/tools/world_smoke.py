@@ -5,7 +5,7 @@ Starts the release `loopback_server` example (the server2 process; S10e: its S3,
 Crossing and WAQI roots are not settings, so they are given on its command line) with the
 production setting names (routing list, SERVER2_S3_BUCKET, the legacy AWS credentials and the
 legacy VC_SECRET_KEY / WAQI_SECRET_KEY; quotas and owners are built in) and task-owned loopback
-peers: the S06 S3 test peer, a legacy geocoder/backend fixture, a synthetic Visual Crossing
+peers: the S06 S3 test peer, recorded native Google geocoding plus a legacy backend fixture, a synthetic Visual Crossing
 Timeline stub and a synthetic WAQI geo feed. Processes run in an empty working directory, so no
 real server2/.env is read. Checks the legacy default, the routed native world, one funded fetch
 per cell, air from the funded chain, restore of weather and air from S3 with the providers down,
@@ -65,6 +65,7 @@ def timeline(first_day, days, now):
 
 
 WAQI_BODY = json.loads((ROOT / 'tests/air/fixtures/waqi-seoul.json').read_text())
+GOOGLE_BODY = json.loads((ROOT / 'tests/gateway/fixtures/providers.json').read_text())['google.coord.london']
 
 
 class Fixture(http.server.BaseHTTPRequestHandler):
@@ -83,6 +84,10 @@ class Fixture(http.server.BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        if self.path.startswith('/maps/api/geocode/json?'):
+            # Same recorded native provider oracle used by the gateway replay.
+            # This is an owned peer; provider roots are injected into the example.
+            return self.reply(200, GOOGLE_BODY)
         if self.path.startswith('/geocode/v000903/coord/'):
             lat, lon = self.path.rsplit('/', 1)[1].split('?')[0].split(',')
             return self.reply(200, {'name': 'London', 'country': 'GB', 'address': 'London, UK',
@@ -192,9 +197,11 @@ def run(peer_binary):
     # Every native setting is present in both configurations; only the routing list differs.
     base_env.update(PORT='0', SERVER2_GATEWAY_LEGACY_URL=fixture, SERVER2_S3_BUCKET='server2-local',
                     AWS_ACCESS_KEY='server2-local', AWS_SECRET_KEY='server2-local-secret', VC_SECRET_KEY='local-dummy-vc-key',
-                    VC_DAILY_RECORD_LIMIT='1000', WAQI_SECRET_KEY='local-dummy-waqi-key')
-    binary = [peer_binary, '--s3', s3, '--vc', fixture + '/timeline/', '--waqi', fixture + '/']
-    native_env = dict(base_env, SERVER2_NATIVE_FAMILIES='dsf')
+                    VC_DAILY_RECORD_LIMIT='1000', WAQI_SECRET_KEY='local-dummy-waqi-key',
+                    GEOCODER_KAKAO_KEYS='["local-dummy-kakao-key"]', GEOCODER_GOOGLE_KEY='local-dummy-google-key')
+    binary = [peer_binary, '--s3', s3, '--vc', fixture + '/timeline/', '--waqi', fixture + '/',
+              '--google', fixture, '--kakao', fixture, '--geocoder-daily-units', '1000']
+    native_env = dict(base_env, SERVER2_NATIVE_FAMILIES='geocode,dsf')
     path = '/weather/v000903/coord/51.507,-0.128?' + QUERY
     headers = {'Accept-Language': 'ko-KR'}
     try:
