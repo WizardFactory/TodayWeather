@@ -3,11 +3,13 @@ on:
   pull_request:
     paths:
       - "client/**"
+      - "tw.ios/**"
       - ".github/workflows/client-offline.yml"
   push:
     branches: [master, main]
     paths:
       - "client/**"
+      - "tw.ios/**"
       - ".github/workflows/client-offline.yml"
 permissions:
   contents: read
@@ -22,6 +24,7 @@ jobs:
           node-version: 22
       - run: node --test client/test/payment-removal.test.cjs client/test/provider-notice.test.cjs client/test/monetization.test.cjs client/test/privacy-consent.test.cjs client/test/pollen-popup.test.cjs client/test/push-token-refresh.test.cjs
       - run: node client/test/push-token-refresh-smoke.cjs
+      - run: python3 tw.ios/tests/widget/test_project.py
 
   store-release:
     runs-on: ubuntu-latest

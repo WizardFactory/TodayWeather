@@ -294,6 +294,8 @@ TodayWeather and TodayAir widgets use Objective-C request code and their own pat
 
 Sources: [weather widget](../../tw.ios/widget/TodayViewController.m), [air widget](../../ta.ios/widget/TodayViewController.m), [storage bridge](../../client/www/js/service.storage.js), [original README](../../README.md).
 
+The TodayWeather expanded view accepts both raw `/ww` dotted dates with selected `tempMin_c/tempMax_c` or `tempMin_f/tempMax_f`, and normalized coordinate/KMA compact dates with requested-unit `tmn/tmx`. It retains six rows and guards short date substrings. The widget target no longer links the unused Cordova archive; the app link remains. See the [source-built display guide](../operations/server2-widget.md) and [#2811 evidence](../evidence/tasks/issue-2811/verification.md). On iOS 18 and later the legacy Today extension is unavailable; UIKit replay does not establish WidgetKit activation.
+
 ## Daily forecast validity (issue #2560)
 
 The mid-land/temperature collectors preserve available day-3–10 fields without
