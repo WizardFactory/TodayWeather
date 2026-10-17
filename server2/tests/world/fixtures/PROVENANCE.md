@@ -355,3 +355,10 @@ async function run() {
 }
 run().catch(e => { console.error(e.stack); process.exit(1); });
 ```
+
+
+## S20d retained widget supplement (2026-10-17)
+
+`widget.json.gz` SHA-256 `f70690200e6d83ad20268f0702a544ef0bf97ceba585999241c9c4840b9c324e` contains 14 actual HTTP cases from the named S02 recorder `server/test/offline/golden-record.js --widget-only --output <new-dir>`, on pinned Node 16.20.2, UTC/production and the existing isolated S02 dependency lock. Legacy source revision 82f7a4838dda046be966ee9c25c9cb66561d099d and every source file read are recorded inside. This explicit export does not alter the historical 19 groups. It includes raw Tokyo and units metadata, Korean/Japanese/Chinese localization, HEAD/304, missing/malformed input, invalid version, initial provider 401, subsequent provider-down 503, and generic 500. Provider Errors are created in the maintained harness VM realm and 401 carries the actual requester providerDown flag; earlier setup attempts are retained separately. Native tests use the identical already-pinned S11 Tokyo provider body; no runtime legacy source or fixture is read. Session cookie, Date and connection/framing headers are excluded from transport comparison; status/body/functional headers remain exact.
+
+The existing complete S02 baseline may refresh only source.oracle_sha256 after this recorder extension; all old case bodies, headers, inventory and dependency traces must compare equal before that explicit provenance update.

@@ -421,10 +421,12 @@ pub(crate) fn build_shared(
         _ => None,
     };
     let mut versions = families.kma_versions();
+    let mut widget = None;
     if let (Some(s3), true, Some(air)) = (s3.clone(), families.dsf || families.push, air.clone()) {
         let configured = crate::world::runtime::build_with_air(var, s3, air, builtins)?;
         native.dsf = Some(configured.0.clone());
         if families.dsf {
+            widget = Some(configured.0.clone());
             versions.extend(configured.1.iter().copied());
             crate::world::runtime::select(&backend, configured)?;
         }
@@ -500,6 +502,10 @@ pub(crate) fn build_shared(
     versions.sort_by_key(|v| v.as_str());
     versions.dedup();
     let gateway = Gateway::new(geocoder, backend);
+    let gateway = match widget {
+        Some(world) => gateway.with_widget(world),
+        None => gateway,
+    };
     let gateway = match weather_geocoder {
         Some(geocoder) => gateway.with_weather_geocoder(geocoder, versions),
         None => gateway,

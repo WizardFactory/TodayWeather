@@ -76,6 +76,8 @@ impl Default for WorldConfig {
 /// Legacy failure classes after `_fallback`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Failure {
+    /// Initial provider authentication failure; retained for the direct widget wire.
+    Unauthorized,
     /// 503 `EWEATHERUNAVAILABLE` with `retryAt`.
     Unavailable(f64),
     /// Any other legacy error response (400/401/500...).
@@ -422,7 +424,7 @@ impl World {
                                 .unwrap_or_else(|e| e.into_inner()) =
                                 self.inner.clock.now_ms() + PROVIDER_DOWN_MS;
                             self.back_off(&entry, FAILURE_BACKOFF_MS);
-                            return Flight::Failed(output, Failure::Error);
+                            return Flight::Failed(output, Failure::Unauthorized);
                         }
                         Err(VcError::Failed) => {
                             self.inner

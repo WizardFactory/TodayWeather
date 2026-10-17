@@ -1494,7 +1494,7 @@ impl Classify for crate::world::Failure {
         (
             match self {
                 Self::Unavailable(_) => Cause::Quota,
-                Self::Error => Cause::Dependency,
+                Self::Unauthorized | Self::Error => Cause::Dependency,
             },
             Outcome::Failed,
             None,

@@ -188,6 +188,15 @@
       "family": "notice",
       "native_source": "server2/src/notice/api.rs",
       "scope": "Backend supplement; app/web popup activation2623 separate"
+    },
+    {
+      "method": "GET",
+      "path": "/ww/010000/current/2",
+      "family": "widget-world",
+      "native_source": "server2/src/world/widget.rs",
+      "scope": "Required native supplement: AK 2026-10-17 explicitly retained existing widget support. gcode=lat,lon; raw current legacy contract. Historical request volume unknown.",
+      "local_evidence": "docs/operations/server2-widget.md",
+      "qualification": "Local frozen wire/restore layer; exact production revision and shadow remain gates"
     }
   ],
   "operational": [
@@ -202,19 +211,14 @@
       "exposure": "private listener only"
     }
   ],
-  "unclassified": [
-    {
-      "path": "/ww",
-      "reason": "Outside accepted traffic-report scope; no zero-use or exclusion decision. Blocks complete production inventory qualification."
-    }
-  ],
+  "unclassified": [],
   "excluded_changes": [
     "2805 new nationwide narrative supplement",
     "2724 actual provider quota measurement"
   ],
   "production_eligible": false,
   "remaining_gates": [
-    "/ww inventory disposition and any new supplements",
+    "Any additional supplement disposition; retained widget is now a required native target",
     "exact-revision native contract and zero-legacy proof for every included route",
     "7day paired shadow with zero unexplained diffs",
     "EC2 cold latency/capacity/disk and provider quota headroom",
