@@ -1,0 +1,9 @@
+# Linux native artifact contract
+
+Implements [intent](../intent/issue-2813.md). AC1: Linux CI builds static x86_64 musl release examples and four selected integration test targets. Export the eleven native-suite roles and logging/narrative probes. Select executables from successful Cargo compiler-artifact messages (release profile and target identity), never a filename glob. Preserve the native suite schema-1 manifest and examples/kma_s3_replay placement.
+
+A bundle contains bin/, source/server2/, artifacts.json and bundle.json. The latter declares exact revision/server2 tree, compile-time source root, target and SHA-256 for every payload file. Copy only regular tracked server2 inputs. Exclude untracked build caches, accounts and credentials. Require a fresh output and regular files without symlink parents; reject missing roles, bad ELF architecture/interpreter, nonrelease/ambiguous Cargo outputs, source changes and payload tampering. No manifest-specified executable commands or automatic destination installation are accepted.
+
+AC2: operator verifies transferred bytes and maps the frozen source tree to the explicitly recorded compile-time fixture location on the owned empty host. A separate strict-path option confirms that mapping before existing native_suite/widget/narrative invocations. The existing child environment allowlists and loopback peers remain unchanged. Reports keep declared artifact revision, source-checkout observation and actual host/run identities separate. A suite PASS does not qualify complete production parity or previous-release rollback.
+
+AC3: all implementation under server2; exact outside exceptions in config/tasks/S20f.json. Update the common native operator guide with build, verification, fixture placement, execution and failure recovery. Retain original failures and selected source-bound real evidence. No production/live-provider/device/mirror action is introduced. Existing S04/S02 gates remain required.
