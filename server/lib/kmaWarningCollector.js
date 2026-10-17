@@ -400,7 +400,14 @@ KmaWarningCollector.prototype.gather = function (callback) {
         }, result),
         self._bulletinStep.bind(self, 'getWthrBrkNews', TYPE_WEATHER_FLASH, function (item) {
             return {comment: cleanText(item.ann)};
-        }, result)
+        }, result),
+        function (done) {
+            if (!self.narrative) { self.narrative = new (require('./kmaForecastNarrative'))(); }
+            self.narrative.gather(function (err, stored) {
+                if (stored) { result.stored++; }
+                done(err);
+            });
+        }
     ];
     async.eachSeries(steps, function (step, done) {
         step(function (err) {

@@ -775,3 +775,15 @@ Nine provinces use captured inputs (reduced station fixtures use synthetic envel
 counts); eight unaffected provinces use a relabeled Seoul control. This proves
 isolated wiring, not live all-province recovery. CI runs the regression on Node16/22
 and smoke in the existing AirKorea Mongo job. See [selected evidence](../../../docs/evidence/tasks/issue-2758/verification.md).
+
+
+## Nationwide forecast narrative (#2798)
+
+`kma-narrative.test.js` (in `test:offline`) checks the scheduled collector, strict
+publication validation, KST conversion, idempotent publications, optional-read
+expiry, HTML escaping, key rotation/exhaustion and absolute timeout.
+`kma-narrative-smoke.js` separately uses real loopback HTTP, Mongo7/Mongoose5.13
+and the actual v000903 special route. Warning/zone steps use seeded warning rows
+and are covered independently by `kma-warning.test.js`. The provider excerpt is
+synthetic, based on issue-reported publication/precipitation, not a full capture.
+See [commands and limitations](../../../docs/operations/kma-forecast-narrative.md#local-verification).

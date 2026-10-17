@@ -77,7 +77,14 @@ router.get('/special', function (req, res, next) {
            log.error(err);
            return res.status(501).send(err.message);
        }
-       res.setHeader('Cache-Control', 'max-age=300'); //5mins
+       // Cached narratives must also stop being fresh at their publication-based expiry (#2798).
+       var maxAge = 300;
+       list.forEach(function (entry) {
+           if (entry.type === 5) {
+               maxAge = Math.min(maxAge, Math.max(0, Math.floor((new Date(entry.announcement).getTime() + 24*3600*1000 - Date.now()) / 1000)));
+           }
+       });
+       res.setHeader('Cache-Control', 'max-age=' + maxAge);
        res.json(list);
    });
 });

@@ -1,0 +1,8 @@
+{
+  "date": "2026-10-17",
+  "source": "../kma-forecast-narrative-manual.html",
+  "capture": "api-usage.png",
+  "sha256": "62d9f54ab87a38b28d23937b2f3b6c301c81db2ac67aadd3a644527b983ede72",
+  "provenance": "Chrome screenshot of actual isolated HTTP/Mongo response excerpt; synthetic provider text. Not a deployed client screenshot.",
+  "verification": "HTML/PDF rendered and visually inspected; no clipping or unsafe markup execution claimed from image alone."
+}

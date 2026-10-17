@@ -17,7 +17,7 @@ var mongoose = require("mongoose");
  */
 var kmaSpecialWeatherSituationSchema = new mongoose.Schema({
     announcement: Date, //YYYY.MM.DD.HH.ZZ is the same as pubDate
-    type : Number, //1 special, 2 preliminarySpecial, 3 weatherInformation, 4 weatherFlash
+    type : Number, //1 special, 2 preliminarySpecial, 3 weatherInformation, 4 weatherFlash, 5 nationwideNarrative
     imageUrl: String,
     situationList: [{
         weather: Number,            //refer parseSituationType
@@ -239,6 +239,8 @@ kmaSpecialWeatherSituationSchema.statics = {
                 return 'weatherInformation';
             case 4:
                 return 'weatherFlash';
+            case 5:
+                return 'nationwideNarrative';
             default:
                 return '';
         }
@@ -246,7 +248,8 @@ kmaSpecialWeatherSituationSchema.statics = {
     TYPE_SPECIAL: 1,
     TYPE_PRELIMINARY_SPECIAL: 2,
     TYPE_WEATHER_INFORMATION: 3,
-    TYPE_WEATHER_FLASH: 4
+    TYPE_WEATHER_FLASH: 4,
+    TYPE_NATIONWIDE_NARRATIVE: 5
 };
 
 module.exports = mongoose.model('KmaSpecial', kmaSpecialWeatherSituationSchema);
