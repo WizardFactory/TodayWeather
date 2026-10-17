@@ -715,6 +715,14 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
             if !self.push.ready() {
                 self.diagnostics
                     .minute(&at, "alert state not ready; nothing sent");
+                crate::observability::event(
+                    crate::observability::Component::Delivery,
+                    crate::observability::Stage::Worker,
+                    crate::observability::Cause::StateUnavailable,
+                    crate::observability::Action::DoNotRetry,
+                    crate::observability::Outcome::Failed,
+                    Default::default(),
+                );
                 return MinuteReport::default();
             }
             self.push.internal(InternalOp::RemoveDuplicateAlerts).await;

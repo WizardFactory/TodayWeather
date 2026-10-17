@@ -5,6 +5,7 @@ use server2::observability::{
     self as obs, Action, Cause, Component, Context, Method, ObservedHttp, Operation, Outcome,
     Route, Stage,
 };
+use server2::push::deliver::{Diagnostics, StderrDiagnostics};
 use server2::resolver::{OwnedConfig, OwnedFlights};
 use std::{sync::Arc, time::Duration};
 use tokio::time::Instant;
@@ -34,6 +35,16 @@ async fn main() {
     });
     let root = Context::root(Route::Weather, Method::Get);
     root.scope(async {
+        // Legacy callbacks are still invoked, but stderr must not invent another outcome.
+        StderrDiagnostics.minute(
+            "synthetic",
+            "result not recorded; claim kept, nothing resent",
+        );
+        StderrDiagnostics.minute(
+            "synthetic",
+            "result write outcome unknown; claim kept, nothing resent",
+        );
+        StderrDiagnostics.minute("synthetic", "poll unavailable; no unsafe submission");
         let client = reqwest::Client::builder()
             .retry(reqwest::retry::never())
             .build()
