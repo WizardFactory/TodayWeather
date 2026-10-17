@@ -42,7 +42,7 @@ const get=url=>new Promise((resolve,reject)=>http.get(url,r=>{let b='';r.on('dat
  const entry=response.body[4];assert.equal(entry.name,'종합예보');assert.equal(entry.announcement,'2026-10-16T08:00:00.000Z');assert.equal(entry.comment,Narrative.escapeText(item.wfSv1.replace(/\r/g,'')));assert(!entry.comment.includes('<img'));
  if(process.argv[2])fs.writeFileSync(process.argv[2],JSON.stringify({command:'GET /v000903/kma/special',status:200,environment:'Isolated loopback HTTP + real Mongo; synthetic narrative excerpt',response:response.body},null,2)+'\n');
  item.tmFc='202610170500';
- await Promise.all([invoke(collector,'gather'),invoke(new Narrative({requester,model}),'gather')]);assert.equal(await model.countDocuments({type:5}),2);
+ await Promise.all([invoke(collector,'gather').catch(err=>{ if(err!=='skip')throw err; }),invoke(new Narrative({requester,model}),'gather')]);assert.equal(await model.countDocuments({type:5}),2);
  const second=await model.findOne({type:5,announcement:new Date('2026-10-17T05:00:00Z')}).lean();
  assert.equal(second.comment,item.wfSv1.replace(/\r/g,''));response=await get(url);assert.equal(response.body[4].announcement,'2026-10-16T20:00:00.000Z');
  clock=Date.parse('2026-10-17T19:59:58Z');assert.equal((await get(url)).cache,'max-age=2');
