@@ -154,6 +154,10 @@ where
     let private = BoundedListener::new(private, 16, lifetime);
     let state = Arc::new(SharedState::new(&config));
     let mut delivery = gateway.delivery.clone().map(|workers| workers.start());
+    let narrative = gateway
+        .narrative_acquire
+        .clone()
+        .map(|source| crate::narrative::worker(source, Duration::from_secs(180)));
     let router = gateway.public_router(state.clone());
     let (tx, rx) = watch::channel(false);
     let mut listeners = tokio::task::JoinSet::new();
@@ -207,6 +211,9 @@ where
         push.quiesce();
     }
     tx.send_replace(true);
+    if let Some(narrative) = narrative {
+        narrative.stop().await;
+    }
     let worker_drain = async {
         let jobs = if let Some(delivery) = &mut delivery {
             delivery.drain(deadline).await

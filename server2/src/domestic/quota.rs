@@ -13,6 +13,8 @@ use std::fmt;
 pub enum DataGoKrApi {
     /// 기상청_단기예보 조회서비스: current, ultra-short and short grids.
     VilageFcst,
+    /// 기상청_단기예보 통보문 조회서비스 (dataset15058629).
+    VilageFcstMsg,
     /// 기상청_중기예보 조회서비스.
     MidFcst,
     /// 기상청_예보구역정보 조회서비스.
@@ -41,8 +43,9 @@ pub enum DataGoKrApi {
 pub const OPERATING_UNITS: &[(DataGoKrApi, u64)] = &[];
 
 impl DataGoKrApi {
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 13] = [
         Self::VilageFcst,
+        Self::VilageFcstMsg,
         Self::MidFcst,
         Self::FcstZone,
         Self::WthrWrn,
@@ -59,6 +62,7 @@ impl DataGoKrApi {
     pub fn path(self) -> &'static str {
         match self {
             Self::VilageFcst => "1360000/VilageFcstInfoService_2.0",
+            Self::VilageFcstMsg => "1360000/VilageFcstMsgService",
             Self::MidFcst => "1360000/MidFcstInfoService",
             Self::FcstZone => "1360000/FcstZoneInfoService",
             Self::WthrWrn => "1360000/WthrWrnInfoService",
@@ -76,6 +80,7 @@ impl DataGoKrApi {
     pub fn dataset(self) -> u32 {
         match self {
             Self::VilageFcst => 15084084,
+            Self::VilageFcstMsg => 15058629,
             Self::MidFcst => 15059468,
             Self::FcstZone => 15057111,
             Self::WthrWrn => 15000415,

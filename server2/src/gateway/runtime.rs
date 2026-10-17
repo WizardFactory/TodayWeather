@@ -348,6 +348,7 @@ pub(crate) struct BuiltGateway {
     pub gateway: Option<Arc<Gateway>>,
     pub native: NativeHandles,
     pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
+    pub narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>>,
 }
 struct UnavailableGeocoder;
 impl super::Geocoder for UnavailableGeocoder {
@@ -384,6 +385,7 @@ pub(crate) fn build_shared(
             gateway: None,
             native: NativeHandles::default(),
             warning_acquire: None,
+            narrative_acquire: None,
         });
     }
     let backend = match &base {
@@ -433,6 +435,7 @@ pub(crate) fn build_shared(
     }
     let mut direct = None;
     let mut warning_acquire = None;
+    let mut narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>> = None;
     if let (Some(s3), true) = (s3, families.kma_source() || families.push) {
         // S15b: the S3 input source over the shared admission, one for every listed address
         // version (S17a) and the direct routes (S17b). S15b-4 acquires missing forecast inputs at
@@ -444,6 +447,20 @@ pub(crate) fn build_shared(
         // table (production endpoint, no setting).
         let airkorea = kma_airkorea(var, &s3, builtins)?;
         let daily = Arc::new(kma_acquirer(var, s3.clone(), builtins)?);
+        let narrative: Option<Arc<dyn crate::narrative::Read>> = if families.kma_source() {
+            let provider = Arc::new(
+                crate::narrative::provider::Funded::new(daily.clone(), &builtins.data_go_kr)
+                    .map_err(|_| GatewayError::InvalidConfiguration)?,
+            );
+            let service = Arc::new(
+                crate::narrative::store::Service::new(s3.clone(), provider)
+                    .map_err(|_| GatewayError::InvalidConfiguration)?,
+            );
+            narrative_acquire = Some(service.clone());
+            Some(service)
+        } else {
+            None
+        };
         let life = kma_life(&s3, daily.clone(), builtins)?;
         let daily_forecast = daily.clone();
         let air: Option<Arc<dyn crate::world::AirSource>> =
@@ -481,21 +498,25 @@ pub(crate) fn build_shared(
         // the same S3 admission. Nation shares this backend and its summary recorder.
         let summaries: Arc<dyn crate::summary::SummarySink> =
             Arc::new(crate::summary::Recorder::new(s3.clone()));
-        let kma = crate::domestic::kma::backend::select_native_versions_with(
+        let kma = crate::domestic::kma::backend::select_native_versions_with_narrative(
             &backend,
             source.clone(),
             &families.kma_versions(),
             Some(summaries),
+            narrative.clone(),
         )?;
         native.kma = Some(kma.clone());
         if families.direct().any() {
             direct = Some(Arc::new(
                 crate::api::DirectRoutes::new(kma.clone(), families.direct(), backend.clone())
-                    .with_nation(Arc::new(crate::nation::NationBackend::new(
-                        kma,
-                        source,
-                        crate::domestic::kma::backend::system_clock(),
-                    ))),
+                    .with_nation(Arc::new(
+                        crate::nation::NationBackend::new(
+                            kma,
+                            source,
+                            crate::domestic::kma::backend::system_clock(),
+                        )
+                        .with_narrative(narrative),
+                    )),
             ));
         }
     }
@@ -517,6 +538,7 @@ pub(crate) fn build_shared(
         })),
         native,
         warning_acquire,
+        narrative_acquire,
     })
 }
 /// S15b-4: the request-time grid, RSS, mid, forecast-zone and warning acquirer of the KMA source

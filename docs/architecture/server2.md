@@ -3600,7 +3600,7 @@ S19c's [paired release verification](../operations/server2-release-recovery.md) 
 
 ## S20c: operational preparation after S19
 
-The [fixed cutover inventory](../../server2/config/cutover/inventory.json) retains all19accepted method/path groups and220583observed requests, the later notice backend supplement and required health/private metrics. `/ww` remains outside the accepted report's scope and unclassified. Tiny/failure-only groups stay included. #2805's new nationwide narrative and #2724 actual quota measurements are excluded from this preparation; neither silently removes an existing used contract or waives a production gate.
+The [fixed cutover inventory](../../server2/config/cutover/inventory.json) retains all19accepted method/path groups and220583observed requests, the later notice backend supplement and required health/private metrics. `/ww` remains outside the accepted report's historical scope; S20d separately includes the retained widget contract as a native supplement. Tiny/failure-only groups stay included. S20e subsequently includes PR #2805's national/regional narrative as a response supplement through #2809. #2724 actual quota measurement remains excluded; no supplement waives a production gate.
 
 The [candidate nginx configuration](../../server2/deploy/cutover/nginx.conf.template) uses one upstream connection per request while keeping the client connection reusable. The [owned rehearsal](../../server2/tools/cutover/rehearse_deadline.py) verifies exact retained input hashes, actual nginx syntax/process and a release gateway request beginning4safter client connection acceptance. It compares the real9s501body/functionalheaders with S02 and checks existing3backend attempts, no proxy retry and no abandoned response. Injected roots and a frozen backend are explicit local dependencies; this does not qualify native-only production routing, host/TLS/CloudFront, quota or seven-day shadow. Existing runtime timeouts and worker semantics are unchanged.
 
@@ -3612,3 +3612,43 @@ The [operator runbook](../operations/server2-cutover.md), [PDF](../operations/se
 AK explicitly retained existing widget support and included `GET /ww/010000/current/2?gcode=lat,lon` in native migration. This is outside the accepted historical 19 method/path groups; its request volume remains unknown. `dsf` selection enables it on the same world engine, quotas and S3 catalogs, without a geocoder or legacy origin. The native route preserves the current legacy raw `thisTime`/`hourly`/`daily`, original icon case and units metadata; it does not run coordinate-route conversion or summary middleware. Initial provider authentication failure keeps 401, the provider-down window keeps 503 plus retryAt, and generic failure keeps 500. Existing coordinate/gateway outcomes are unchanged.
 
 [Widget operations and limitations](../operations/server2-widget.md) includes frozen wire and owned release/S3 recovery proof. The source iOS parser also contains `current.t1h` references that differ from the current endpoint; this port does not attest a released client build or repair that pre-existing discrepancy. Production revision parity, shadow, host/quota and eligible previous full-release qualification remain required.
+
+## S20e native forecast narrative response supplement (2026-10-17)
+
+AK included the accepted PR #2805 national/regional prose in server2 through
+[#2809](https://github.com/WizardFactory/TodayWeather/issues/2809).
+[`narrative`](../../server2/src/narrative/mod.rs) preserves the ten-office map,
+renamed province aliases, original Korean plain text, strict KST-to-UTC
+announcement and 24-hour expiry. Successful KMA assembly chooses the office
+from the final `source` and `regionName`. National KR uses108 and removes child
+regional prose. Both wire writers cap cache age before HEAD/304 handling.
+
+Runtime construction shares the native S3 admission and daily data.go.kr
+acquirer. Native KMA/town serving has a separate owned worker after listener
+bind, with a delayed first tick and180-second cadence. It is not the warning
+worker or an HTTP-triggered narrative acquisition. Existing S08 funding is per
+VilageFcstMsg API/key/KST day; the documented development default is10000, with
+no actual operating quota measurement. Existing funded retries are preserved.
+Shutdown aborts and joins this worker within the process stop path.
+
+[`narrative/store`](../../server2/src/narrative/store.rs) retains original
+provider bodies in S06 raw records and an existing v2 catalog per office and
+publication. [`CatalogStore::publish_once`](../../server2/src/storage/catalog.rs)
+uses a conditional-absent single-record catalog: the first committed body wins,
+and a losing raw orphan cannot replace it. Ordinary catalog union is unchanged.
+Bounded S3-only discovery/read reconstructs prose after memory loss. Ten office
+caches refresh within30seconds and check expiry on every return; a local
+publication invalidates its office cache. Missing/invalid/expired/unavailable
+optional data is omitted without a weather failure or legacy dependency.
+
+The [operator contract](../operations/server2-forecast-narrative.md),
+[PDF](../operations/server2-forecast-narrative.pdf) and
+[design workflow](diagrams/server2-forecast-narrative.html)
+([source](diagrams/server2-forecast-narrative.json)) separate background
+acquisition, durable originals and optional serving. The diagram cites the
+accepted legacy contract and labels its proposed native ownership; it is not
+runtime execution evidence. The [verification record](../evidence/tasks/issue-2705-s20e/verification.md)
+distinguishes legacy object parity, native storage tests and the owned-peer
+release narrative layer from full provider startup/production qualification.
+This adds a response supplement without changing historical route counts.
+Warnings, zones, registrations, claims and sends retain their existing behavior.

@@ -1680,6 +1680,7 @@ type DailyCurrent<P, W, B> = tokio::sync::Mutex<Option<(i64, Arc<Daily<P, W, B>>
 pub struct Daily<P, W, B> {
     pub acquirer: Arc<crate::domestic::DomesticAcquirer<P, W, B>>,
     pub warnings: Vec<(Arc<crate::budget::BudgetStore<B>>, String)>,
+    pub narratives: Vec<(Arc<crate::budget::BudgetStore<B>>, String)>,
 }
 /// The S08 quota owner of a `DONGNAE_SECRET_KEYS` key and data.go.kr API.
 pub fn data_go_kr_quota_owner(key: &str, api: crate::domestic::quota::DataGoKrApi) -> String {
@@ -1771,6 +1772,11 @@ where
             .iter()
             .map(|key| Ok((store(key, DataGoKrApi::WthrWrn)?, key.clone())))
             .collect::<Result<Vec<_>, DomesticError>>()?;
+        let narratives = self
+            .keys
+            .iter()
+            .map(|key| Ok((store(key, DataGoKrApi::VilageFcstMsg)?, key.clone())))
+            .collect::<Result<Vec<_>, DomesticError>>()?;
         let acquirer = crate::domestic::DomesticAcquirer::new(
             self.funded.clone(),
             self.public.clone(),
@@ -1783,6 +1789,7 @@ where
         Ok(Daily {
             acquirer: Arc::new(acquirer),
             warnings,
+            narratives,
         })
     }
     /// The current KST day (acquirer and budgets).

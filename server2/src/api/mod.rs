@@ -141,7 +141,9 @@ impl DirectRoutes {
             let Some(nation) = &self.nation else {
                 return express(&method, &headers, crate::nation::child_error(500));
             };
-            return express(&method, &headers, nation.outcome(base).await);
+            let national = crate::domestic::kma::js::decode_uri_component(parameter)
+                .is_some_and(|p| p.eq_ignore_ascii_case("KR"));
+            return express(&method, &headers, nation.outcome_for(base, national).await);
         }
         let Some((version, _, rest)) = split_mount(&path_and_query) else {
             return express(
@@ -246,6 +248,10 @@ pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Respon
         Outcome::Defect(_) => unreachable!("defects are rejected by the backend"),
         Outcome::Legacy(_) => unreachable!("forwarded outcomes are not answered natively"),
     };
+    let narrative_age = (200..300)
+        .contains(&status)
+        .then(|| crate::narrative::cache_age(&body, None, crate::narrative::now_ms()))
+        .flatten();
     let not_modified = (200..300).contains(&status) && fresh(request, tag.as_deref());
     let length = body.len();
     let empty = not_modified || *method == Method::HEAD;
@@ -268,6 +274,12 @@ pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Respon
     let h = response.headers_mut();
     h.insert("x-powered-by", HeaderValue::from_static("Express"));
     h.insert("access-control-allow-origin", HeaderValue::from_static("*"));
+    if let Some(age) = narrative_age {
+        h.insert(
+            "cache-control",
+            HeaderValue::from_str(&format!("max-age={age}")).expect("ASCII cache age"),
+        );
+    }
     if finalhandler {
         h.insert(
             "x-content-type-options",

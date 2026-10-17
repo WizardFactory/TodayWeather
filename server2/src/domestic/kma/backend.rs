@@ -63,9 +63,19 @@ pub fn select_native_versions_with(
     versions: &[Version],
     summaries: Option<Arc<dyn crate::summary::SummarySink>>,
 ) -> Result<Arc<KmaBackend>, GatewayError> {
+    select_native_versions_with_narrative(dispatcher, source, versions, summaries, None)
+}
+pub fn select_native_versions_with_narrative(
+    dispatcher: &BackendDispatcher,
+    source: Arc<dyn KmaSource>,
+    versions: &[Version],
+    summaries: Option<Arc<dyn crate::summary::SummarySink>>,
+    narrative: Option<Arc<dyn crate::narrative::Read>>,
+) -> Result<Arc<KmaBackend>, GatewayError> {
     let backend = Arc::new(
         KmaBackend::new(source, system_clock(), AssemblyConfig::default())
-            .with_summaries(summaries),
+            .with_summaries(summaries)
+            .with_narrative(narrative),
     );
     for version in versions {
         backend.register_version(dispatcher, *version);
@@ -91,6 +101,7 @@ pub struct KmaBackend {
     cpu: Arc<Semaphore>,
     /// S16: receives the summary inputs of natively served responses.
     summaries: Option<Arc<dyn crate::summary::SummarySink>>,
+    narrative: Option<Arc<dyn crate::narrative::Read>>,
 }
 impl KmaBackend {
     pub fn new(source: Arc<dyn KmaSource>, clock: Clock, config: AssemblyConfig) -> Self {
@@ -100,11 +111,16 @@ impl KmaBackend {
             config,
             cpu: Arc::new(Semaphore::new(2)),
             summaries: None,
+            narrative: None,
         }
     }
     /// Record S16 summaries after natively served responses (None: no recording).
     pub fn with_summaries(mut self, sink: Option<Arc<dyn crate::summary::SummarySink>>) -> Self {
         self.summaries = sink;
+        self
+    }
+    pub fn with_narrative(mut self, reader: Option<Arc<dyn crate::narrative::Read>>) -> Self {
+        self.narrative = reader;
         self
     }
     /// Register for v000903 (legacy stays selected).
@@ -182,7 +198,7 @@ impl KmaBackend {
             .await
             .map_err(|_| GatewayError::Provider)?
             .map_err(|_| GatewayError::Provider)?;
-        let (outcome, past_days) = match crate::observability::spawn_blocking(move || {
+        let (mut outcome, past_days) = match crate::observability::spawn_blocking(move || {
             let _permit = permit;
             assemble_capturing(&request, store.as_ref(), now, config)
         })
@@ -200,6 +216,17 @@ impl KmaBackend {
             (&outcome, &self.summaries, inputs, past_days)
         {
             sink.record(inputs, rows, now);
+        }
+        if let Outcome::Json(body) = &mut outcome {
+            let office = (body.get("source").and_then(OrderedJson::string).as_deref()
+                == Some("KMA"))
+            .then(|| {
+                body.get("regionName")
+                    .and_then(OrderedJson::string)
+                    .and_then(|p| crate::narrative::office(&p))
+            })
+            .flatten();
+            crate::narrative::attach(body, office, self.narrative.as_ref(), deadline).await;
         }
         Ok(outcome)
     }

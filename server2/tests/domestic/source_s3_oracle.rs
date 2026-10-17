@@ -1,4 +1,5 @@
 //! S15b-1 S3 PATH: the oracle scenarios published to the S06 loopback S3 test peer and read back
+//! High-read S3 cases reuse the existing bounded peer to avoid local ephemeral-port exhaustion.
 //! by the S3 source with empty memory equal the legacy answers (listing windows, partition and
 //! fetch-time filters included), plus the store behaviors review round 1 pinned
 //! (S15b1-R1..R5). TEST ONLY.
@@ -103,7 +104,7 @@ async fn grid_documents_read_from_s3_equal_the_legacy_oracle() {
     for sc in items_of(at(oracle(), &["grid"])) {
         let id = text(at(sc, &["id"]));
         let now = number(at(sc, &["at"]));
-        let peer = Peer::new();
+        let peer = Peer::persistent();
         let store = store(&peer);
         for run in items_of(at(sc, &["runs"])) {
             let (_, kind) = family(&text(at(run, &["family"])));
@@ -144,7 +145,7 @@ async fn rss_and_mid_documents_read_from_s3_equal_the_legacy_oracle() {
     for sc in items_of(at(oracle(), &["rss"])) {
         let id = text(at(sc, &["id"]));
         let now = number(at(sc, &["at"]));
-        let peer = Peer::new();
+        let peer = Peer::persistent();
         let store = store(&peer);
         for run in items_of(at(sc, &["runs"])) {
             let expected = text(at(run, &["expected"]));
@@ -173,7 +174,7 @@ async fn rss_and_mid_documents_read_from_s3_equal_the_legacy_oracle() {
     // Mid: 2026-09-24 20:30 KST, after every run; the latest publication is 1800.
     let now = 1_790_249_400_000.;
     for sc in items_of(at(oracle(), &["mid"])) {
-        let peer = Peer::new();
+        let peer = Peer::persistent();
         let store = store(&peer);
         for run in items_of(at(sc, &["runs"])) {
             let kind = match text(at(run, &["kind"])).as_str() {
@@ -242,7 +243,7 @@ async fn forecast_zones_read_from_s3_equal_the_legacy_oracle() {
     };
     for run in items_of(at(oracle(), &["zones", "runs"])) {
         let id = text(at(run, &["id"]));
-        let peer = Peer::new();
+        let peer = Peer::persistent();
         let store = store(&peer);
         let acquisitions = items_of(at(run, &["acquisitions"]));
         for (i, a) in acquisitions.iter().enumerate() {
@@ -308,7 +309,7 @@ async fn an_acquisition_completed_after_the_request_instant_does_not_apply() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
     // 2026-10-14 10:50 KST; the 1000 publication is complete at 10:41.
     let now = 1_791_942_600_000.;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let store = store(&peer);
     let key = grid().provider_key();
     let put = async |time: &str, pages: &[(f64, Vec<u8>)]| {
@@ -409,7 +410,7 @@ async fn put_zones(store: &Store, date: u32, when: f64, page: Vec<u8>) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn stored_mid_documents_outlive_retirement_and_failed_publications() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let store = store(&peer);
     let key = ProviderKey::Named {
         id: "reg-11b10101".into(),
@@ -479,7 +480,7 @@ async fn stored_mid_documents_outlive_retirement_and_failed_publications() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn forecast_zone_fields_from_older_months_are_kept() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let store = store(&peer);
     put_zones(
         &store,
@@ -532,7 +533,7 @@ fn the_short_lookback_covers_retained_slots_of_old_publications() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_late_zone_list_refolds_instead_of_being_skipped() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let store = store(&peer);
     let t0 = 1_791_849_600_000.; // 2026-10-13 09:00 KST
     let t1 = t0 + 3_600_000.;

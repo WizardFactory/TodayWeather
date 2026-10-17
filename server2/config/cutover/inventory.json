@@ -213,7 +213,6 @@
   ],
   "unclassified": [],
   "excluded_changes": [
-    "2805 new nationwide narrative supplement",
     "2724 actual provider quota measurement"
   ],
   "production_eligible": false,
@@ -225,5 +224,19 @@
     "full eligible prior release/config/state compatibility and whole-host recovery rehearsal",
     "S3/IAM/IMDSv2/readiness and final state copies/rainfall handover",
     "scoped AK production switch/rollback authority"
+  ],
+  "response_supplements": [
+    {
+      "field": "forecastNarrative",
+      "families": [
+        "kma",
+        "town",
+        "nation"
+      ],
+      "native_source": "server2/src/narrative/mod.rs",
+      "local_evidence": "docs/operations/server2-forecast-narrative.md",
+      "scope": "AK 2026-10-17 requested native national/regional port of merged PR2805 in issue2809; original Korean plain text, optional 24-hour publication; no route-count change",
+      "qualification": "Local narrative acquisition/storage/serving layer; exact production parity/shadow and a complete eligible previous bundle remain gates"
+    }
   ]
 }

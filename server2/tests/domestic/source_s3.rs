@@ -1110,7 +1110,7 @@ async fn the_kma_backend_serves_within_the_gateway_attempt_while_every_acquisiti
     use server2::gateway::BackendHandler;
     use server2::gateway::backend::Native;
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
     seed(&store, &["current", "shortest", "short", "rss", "mid"]).await;
     let slow = Arc::new(SlowEverything);

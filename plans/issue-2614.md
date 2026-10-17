@@ -458,3 +458,23 @@ deployment/cutover are S20 activation tasks.
 ### S20d widget scope amendment — 2026-10-17
 
 AK selected retained widget support and native migration of `/ww/010000/current/2`. Preserve the current legacy wire contract with the existing world acquisition/storage/budget chain; add it as a required supplement without altering historical 19 route counts. Local parity and empty-memory S3 restore are separate from released iOS UI verification and operational qualification. S20c remains the repository preparation parent. #2805 narrative and #2724 actual quota measurement remain outside this increment. See [S20d plan](issue-2705-s20d.md).
+
+## S20e - native national and regional narratives (2026-10-17)
+
+After PR #2805 merged at `9333d196`, AK explicitly requested its server2 port in
+[issue #2809](https://github.com/WizardFactory/TodayWeather/issues/2809), before
+actual widget compatibility, eligible complete-release rollback and environment
+verification. This supersedes the earlier narrative exclusion for this new
+increment. The [S20e plan](issue-2705-s20e.md) declares background-only funded
+acquisition, first-committed immutable raw/index S3 originals and optional
+matching-office response enrichment. There is no narrative provider work on the
+HTTP path or dependency on Mongo/legacy runtime assets. National children omit
+regional prose, and cache lifetime respects publication expiry.
+
+The accepted historical 19-route denominator stays unchanged; narrative is a
+response supplement alongside the retained notice/widget route supplements.
+Local narrative proof does not qualify exact production parity, a released
+widget UI or an earlier complete release. #2704/#2705 remain open. #2724 actual
+quota measurement, production/resources/live providers/mirroring/sends/final
+state copies and switch authority remain outside this increment. Earlier dated
+scope and execution records remain historical, not relabelled as S20e runs.

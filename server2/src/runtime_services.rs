@@ -21,6 +21,7 @@ pub struct RuntimeServices {
     pub warning_store: Option<Arc<ProcessWarnings>>,
     pub warning_feed: Option<Arc<ProcessFeed>>,
     pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
+    pub narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>>,
     pub native_fetch: crate::push::deliver::native_fetch::NativeFetch,
     pub s3: Option<ProcessS3>,
     pub delivery: Option<Arc<crate::push::deliver::supervisor::Workers<ProcessS3>>>,
@@ -166,6 +167,7 @@ impl RuntimeServices {
         Ok(Self {
             delivery,
             warning_acquire: built.warning_acquire,
+            narrative_acquire: built.narrative_acquire,
             gateway: built.gateway,
             push,
             notices,
