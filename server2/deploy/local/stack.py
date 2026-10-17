@@ -94,7 +94,8 @@ def run(args):
         # keeps a real server2/.env out of the foundation process. The foundation reads no S3 or
         # provider setting; the peers are published for the stack's clients.
         env = {'PATH':os.defpath,'PORT':'0','AWS_EC2_METADATA_DISABLED':'true'}
-        child = subprocess.Popen([str(binary)],cwd=tempfile.mkdtemp(prefix='server2-local-stack-'),env=env,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+        # Readiness is stdout machine protocol; operational stderr stays on the parent sink.
+        child = subprocess.Popen([str(binary)],cwd=tempfile.mkdtemp(prefix='server2-local-stack-'),env=env,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=None,text=True)
         def read_output():
             for line in child.stdout:lines.put(line.strip())
         reader=threading.Thread(target=read_output,daemon=True);reader.start()

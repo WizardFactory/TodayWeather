@@ -170,13 +170,18 @@ class LocalContract(unittest.TestCase):
 
 
 class ReadyPublication(unittest.TestCase):
-    def run_launcher(self, directory, dump_hook, link_hook=None):
+    def run_launcher(self, directory, dump_hook, link_hook=None, diagnostics=False):
         import stack
         child=SimpleNamespace(pid=424242,stdout=io.StringIO('server2 public=127.0.0.1:12345 metrics=127.0.0.1:12346\n'),returncode=None)
         child.poll=lambda:child.returncode
         child.terminate=lambda:setattr(child,'returncode',0)
         child.kill=child.terminate
         child.wait=lambda **_:child.returncode
+        def launch(*args, **kwargs):
+            # Model the real child's separate stderr diagnostics and stdout protocol.
+            if diagnostics and kwargs.get('stderr') == stack.subprocess.STDOUT:
+                child.stdout=io.StringIO('{"schema":1,"event":"operation.started"}\n'+child.stdout.getvalue())
+            return child
         callbacks={}; peers=[];original_peer=stack.make_peer
         def make(*args):
             peer=original_peer(*args);peers.append(peer);return peer
@@ -184,7 +189,7 @@ class ReadyPublication(unittest.TestCase):
             dump_hook(data,stream,**kwargs)
             callbacks[stack.signal.SIGTERM]()
         try:
-            with patch.object(stack,'binary_path',return_value=OWNED/'target/release/server2'),patch.object(stack.subprocess,'Popen',return_value=child),patch.object(stack.signal,'signal',side_effect=lambda kind,fn:callbacks.update({kind:lambda:fn(None,None)})),patch.object(stack,'probe',side_effect=lambda _,path:b'OK' if path=='/health' else b'metrics'),patch.object(stack,'make_peer',side_effect=make),patch.object(stack.json,'dump',side_effect=dump):
+            with patch.object(stack,'binary_path',return_value=OWNED/'target/release/server2'),patch.object(stack.subprocess,'Popen',side_effect=launch),patch.object(stack.signal,'signal',side_effect=lambda kind,fn:callbacks.update({kind:lambda:fn(None,None)})),patch.object(stack,'probe',side_effect=lambda _,path:b'OK' if path=='/health' else b'metrics'),patch.object(stack,'make_peer',side_effect=make),patch.object(stack.json,'dump',side_effect=dump):
                 if link_hook:
                     with patch.object(stack.os,'link',side_effect=link_hook):result=stack.run(SimpleNamespace(binary='ignored',ready=str(Path(directory)/'ready.json')))
                 else:result=stack.run(SimpleNamespace(binary='ignored',ready=str(Path(directory)/'ready.json')))
@@ -194,6 +199,10 @@ class ReadyPublication(unittest.TestCase):
                 with socket.socket() as client:
                     client.settimeout(.3);self.assertNotEqual(client.connect_ex(peer.server_address),0)
         return result
+
+    def test_diagnostics_cannot_replace_ready_protocol(self):
+        with tempfile.TemporaryDirectory(prefix='server2-s03-') as directory:
+            self.assertEqual(self.run_launcher(directory,json.dump,diagnostics=True),0)
 
     def test_ready_is_complete_at_first_visible_open(self):
         original_dump=json.dump;original_link=os.link;observed=[]

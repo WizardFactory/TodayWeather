@@ -104,40 +104,11 @@ impl Diagnostics for StderrDiagnostics {
         // The anonymous submission span emits the typed terminal record in its own context.
         // Preserve custom Diagnostics callbacks without duplicating item outcomes on the batch.
     }
-    fn minute(&self, _: &str, note: &'static str) {
-        use crate::observability::{
-            self as obs, Action, Cause, Component, Details, Outcome, Stage,
-        };
-        let cause = if note.contains("already claimed") {
-            Cause::ClaimExists
-        } else if note.contains("result unrecorded") {
-            Cause::Ambiguous
-        } else if note.contains("not ready") {
-            Cause::StateUnavailable
-        } else {
-            Cause::Dependency
-        };
-        obs::event(
-            Component::Delivery,
-            if note.contains("result") {
-                Stage::RecordResult
-            } else {
-                Stage::Worker
-            },
-            cause,
-            Action::RetainClaim,
-            if cause == Cause::Ambiguous {
-                Outcome::Unknown
-            } else if note.contains("unavailable")
-                || note.contains("failed")
-                || cause == Cause::StateUnavailable
-            {
-                Outcome::Failed
-            } else {
-                Outcome::Skipped
-            },
-            Details::default(),
-        );
+    fn minute(&self, _: &str, _: &'static str) {
+        // Keep legacy/custom callbacks, but never infer durable outcomes from their prose.
+        // Typed claim/result/poll scopes already emit their actual cause/action/outcome
+        // under the owning cycle. Re-emitting here can contradict those outcomes or
+        // attach a post-await supervisor note to the process root.
     }
 }
 
@@ -386,6 +357,14 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                 .fetch_add(1, Ordering::Relaxed);
             self.diagnostics
                 .minute(&minute, "push state not ready; nothing sent");
+            crate::observability::event(
+                crate::observability::Component::Delivery,
+                crate::observability::Stage::Worker,
+                crate::observability::Cause::StateUnavailable,
+                crate::observability::Action::DoNotRetry,
+                crate::observability::Outcome::Failed,
+                Default::default(),
+            );
             return MinuteReport::default();
         }
         self.push.internal(InternalOp::RemoveDuplicateAlarms).await;

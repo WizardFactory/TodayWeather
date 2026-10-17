@@ -5,6 +5,8 @@
   "server2_paths": [
     "server2/README.md",
     "server2/config/tasks/Logging.json",
+    "server2/deploy/local/stack.py",
+    "server2/deploy/local/test_local.py",
     "server2/examples/logging_smoke.rs",
     "server2/examples/loopback_server.rs",
     "server2/src/api/mod.rs",
