@@ -8,6 +8,7 @@
 //! not, and reports the outcome as unknown instead. reqwest retries are disabled; redirects are not
 //! followed. Responses are classified with firebase-admin's rules
 //! (`FirebaseMessagingRequestHandler`, `FirebaseMessagingError.fromServerError`).
+use crate::observability::ObservedHttp as _;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use ring::{rand::SystemRandom, signature};
 use std::{collections::HashMap, future::Future, sync::Arc, time::Duration};
@@ -218,6 +219,9 @@ impl Fcm {
     /// A cached access token, refreshed when it expires within a minute (one request at a time
     /// per product; a failure is not cached).
     async fn token(&self, product: Product, account: &Account, now_ms: i64) -> Option<String> {
+        use crate::observability::{self as obs, Action, Cause, Component, Outcome, Stage};
+        let mut operation = obs::Operation::new(Component::Delivery, Stage::Oauth);
+        let result = operation.context().scope(async {
         let mut cached = self.tokens.get(&product)?.lock().await;
         if let Some(t) = cached.as_ref()
             && t.expires_ms - 60_000 >= now_ms
@@ -235,6 +239,7 @@ impl Fcm {
             .body(body)
             .timeout(TOKEN_TIMEOUT)
             .send()
+            .observed(crate::observability::Component::Delivery)
             .await
             .ok()?;
         let json: serde_json::Value = serde_json::from_slice(&response.bytes().await.ok()?).ok()?;
@@ -248,6 +253,27 @@ impl Fcm {
             expires_ms: now_ms + (expires_in * 1000.) as i64,
         });
         Some(access)
+
+        }).await;
+        operation.finish(
+            if result.is_some() {
+                Cause::None
+            } else {
+                Cause::Auth
+            },
+            if result.is_some() {
+                Action::None
+            } else {
+                Action::DoNotRetry
+            },
+            if result.is_some() {
+                Outcome::Success
+            } else {
+                Outcome::Failed
+            },
+            Default::default(),
+        );
+        result
     }
 
     /// One `messages:send` request with the given JSON body (`{"message": ...}`).
@@ -263,60 +289,117 @@ impl Fcm {
         G: FnOnce() -> F,
         F: Future<Output = Option<Vec<u8>>>,
     {
-        if self.stopping() {
-            return SendOutcome::NotSent { reason: "shutdown" };
-        }
-        let Some(account) = self.account(product).await else {
-            return SendOutcome::NotSent {
-                reason: "credentials",
-            };
-        };
-        let Some(token) = self.token(product, &account, now_ms).await else {
-            return SendOutcome::NotSent { reason: "oauth" };
-        };
-        let Some(body) = prepare().await else {
-            return SendOutcome::NotSent { reason: "guard" };
-        };
-        if self.stopping() {
-            return SendOutcome::NotSent { reason: "shutdown" };
-        }
-        let url = format!(
-            "{}v1/projects/{}/messages:send",
-            self.endpoints.fcm, account.project_id
-        );
-        let sent = self
-            .client
-            .post(url)
-            .header("content-type", "application/json")
-            .header("access_token_auth", "true")
-            .header("authorization", format!("Bearer {token}"))
-            .body(body)
-            .timeout(self.send_timeout)
-            .send()
-            .await;
-        let response = match sent {
-            Ok(r) => r,
-            Err(e) if e.is_timeout() => return SendOutcome::Unknown { reason: "timeout" },
-            Err(e) if e.is_connect() => return SendOutcome::NotSent { reason: "connect" },
-            Err(_) => {
-                return SendOutcome::Unknown {
-                    reason: "transport",
+        use crate::observability::{Action, Cause, Component, Details, Operation, Outcome, Stage};
+        let mut operation = Operation::new(Component::Delivery, Stage::Send);
+        let context = operation.context();
+        let outcome = context
+            .scope(async {
+                if self.stopping() {
+                    return SendOutcome::NotSent { reason: "shutdown" };
+                }
+                let Some(account) = self.account(product).await else {
+                    return SendOutcome::NotSent {
+                        reason: "credentials",
+                    };
                 };
+                let Some(token) = self.token(product, &account, now_ms).await else {
+                    return SendOutcome::NotSent { reason: "oauth" };
+                };
+                let Some(body) = prepare().await else {
+                    return SendOutcome::NotSent { reason: "guard" };
+                };
+                if self.stopping() {
+                    return SendOutcome::NotSent { reason: "shutdown" };
+                }
+                let url = format!(
+                    "{}v1/projects/{}/messages:send",
+                    self.endpoints.fcm, account.project_id
+                );
+                operation.external_pending();
+                let sent = self
+                    .client
+                    .post(url)
+                    .header("content-type", "application/json")
+                    .header("access_token_auth", "true")
+                    .header("authorization", format!("Bearer {token}"))
+                    .body(body)
+                    .timeout(self.send_timeout)
+                    .send()
+                    .observed(crate::observability::Component::Delivery)
+                    .await;
+                let response = match sent {
+                    Ok(r) => r,
+                    Err(e) if e.is_timeout() => return SendOutcome::Unknown { reason: "timeout" },
+                    Err(e) if e.is_connect() => return SendOutcome::NotSent { reason: "connect" },
+                    Err(_) => {
+                        return SendOutcome::Unknown {
+                            reason: "transport",
+                        };
+                    }
+                };
+                let status = response.status().as_u16();
+                let content_type = response
+                    .headers()
+                    .get("content-type")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("application/json")
+                    .to_owned();
+                let Ok(bytes) = response.bytes().await else {
+                    return SendOutcome::Unknown {
+                        reason: "transport",
+                    };
+                };
+                classify(status, &content_type, &bytes)
+            })
+            .await;
+        let (cause, result, status) = match &outcome {
+            SendOutcome::Accepted => (Cause::None, Outcome::Accepted, None),
+            SendOutcome::Unknown { reason } => (
+                if *reason == "timeout" {
+                    Cause::Timeout
+                } else {
+                    Cause::Transport
+                },
+                Outcome::Unknown,
+                None,
+            ),
+            SendOutcome::NotSent { reason } => (
+                match *reason {
+                    "shutdown" => Cause::Shutdown,
+                    "credentials" | "oauth" => Cause::Auth,
+                    "connect" => Cause::Transport,
+                    _ => Cause::StateUnavailable,
+                },
+                Outcome::Failed,
+                None,
+            ),
+            SendOutcome::Unregistered { status } => {
+                (Cause::NotFound, Outcome::Failed, Some(*status))
             }
+            SendOutcome::Rejected { status, .. } => (
+                if matches!(status, 401 | 403) {
+                    Cause::Auth
+                } else {
+                    Cause::Dependency
+                },
+                Outcome::Failed,
+                Some(*status),
+            ),
         };
-        let status = response.status().as_u16();
-        let content_type = response
-            .headers()
-            .get("content-type")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("application/json")
-            .to_owned();
-        let Ok(bytes) = response.bytes().await else {
-            return SendOutcome::Unknown {
-                reason: "transport",
-            };
-        };
-        classify(status, &content_type, &bytes)
+        operation.finish(
+            cause,
+            if result == Outcome::Accepted {
+                Action::None
+            } else {
+                Action::DoNotRetry
+            },
+            result,
+            Details {
+                status,
+                ..Details::default()
+            },
+        );
+        outcome
     }
 }
 

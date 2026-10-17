@@ -5,6 +5,7 @@ mod format;
 mod provider;
 pub mod storage;
 pub mod town;
+use crate::observability::ObservedHttp as _;
 use cache::{LookupKey, MemoryCache};
 pub use format::{is_korea_area, language_from_header, normalize_loc};
 use provider::Outcome;
@@ -266,7 +267,10 @@ fn endpoint_root(value: &str) -> Option<String> {
 pub struct Geocoder {
     inner: Arc<Inner>,
 }
-type Flight = watch::Receiver<Option<Result<GeoClient, GeocodeError>>>;
+type Flight = (
+    watch::Receiver<Option<Result<GeoClient, GeocodeError>>>,
+    crate::observability::Context,
+);
 struct Inner {
     config: GeocoderConfig,
     client: reqwest::Client,
@@ -366,69 +370,110 @@ impl Geocoder {
         self.lookup(LookupKey::Address(address.into())).await
     }
     async fn lookup(&self, key: LookupKey) -> Result<GeoClient, GeocodeError> {
-        use crate::gateway::metrics::{COUNTERS, add};
-        if let Some(geo) = self.inner.cache.get(&key) {
-            add(&COUNTERS.geocoder_cache_hits);
-            return Ok(geo);
-        }
-        let mut receiver = {
-            let mut flights = self
-                .inner
-                .flights
-                .lock()
-                .map_err(|_| GeocodeError::Capacity)?;
-            // Recheck after acquiring ownership: a preceding owner may have completed between locks.
-            if let Some(geo) = self.inner.cache.get(&key) {
-                add(&COUNTERS.geocoder_cache_hits);
-                return Ok(geo);
-            }
-            if let Some(receiver) = flights.get(&key) {
-                add(&COUNTERS.geocoder_joined);
-                receiver.clone()
-            } else {
-                let permit = self.inner.owners.clone().try_acquire_owned().map_err(|_| {
-                    add(&COUNTERS.capacity_rejections);
-                    GeocodeError::Capacity
-                })?;
-                add(&COUNTERS.geocoder_flights);
-                let (sender, receiver) = watch::channel(None);
-                flights.insert(key.clone(), receiver.clone());
-                let inner = self.inner.clone();
-                tokio::spawn(async move {
-                    let flight = FlightGuard {
-                        inner: inner.clone(),
-                        key: key.clone(),
-                        _permit: permit,
-                    };
-                    let result = tokio::time::timeout(Duration::from_secs(5), inner.acquire(&key))
-                        .await
-                        .unwrap_or(Err(GeocodeError::Provider));
-                    if let Ok(geo) = &result {
-                        let eligible = match key {
-                            LookupKey::Address(_) => true,
-                            LookupKey::Coord { .. } => {
-                                !(geo.country.as_deref() == Some("KR") && geo.kma_address.is_none())
-                            }
-                        };
-                        if eligible {
-                            inner.cache.put(key.clone(), geo.clone());
-                        }
+        crate::observability::observe(
+            crate::observability::Component::Geocode,
+            crate::observability::Stage::Lookup,
+            async {
+                use crate::gateway::metrics::{COUNTERS, add};
+                if let Some(geo) = self.inner.cache.get(&key) {
+                    crate::observability::event(
+                        crate::observability::Component::Geocode,
+                        crate::observability::Stage::Lookup,
+                        crate::observability::Cause::None,
+                        crate::observability::Action::UseCache,
+                        crate::observability::Outcome::Success,
+                        Default::default(),
+                    );
+                    add(&COUNTERS.geocoder_cache_hits);
+                    return Ok(geo);
+                }
+                let mut receiver = {
+                    let mut flights = self
+                        .inner
+                        .flights
+                        .lock()
+                        .map_err(|_| GeocodeError::Capacity)?;
+                    // Recheck after acquiring ownership: a preceding owner may have completed between locks.
+                    if let Some(geo) = self.inner.cache.get(&key) {
+                        crate::observability::event(
+                            crate::observability::Component::Geocode,
+                            crate::observability::Stage::Lookup,
+                            crate::observability::Cause::None,
+                            crate::observability::Action::UseCache,
+                            crate::observability::Outcome::Success,
+                            Default::default(),
+                        );
+                        add(&COUNTERS.geocoder_cache_hits);
+                        return Ok(geo);
                     }
-                    drop(flight);
-                    sender.send_replace(Some(result));
-                });
-                receiver
-            }
-        };
-        loop {
-            if let Some(value) = receiver.borrow().clone() {
-                return value;
-            }
-            receiver
-                .changed()
-                .await
-                .map_err(|_| GeocodeError::Provider)?;
-        }
+                    if let Some((receiver, trace)) = flights.get(&key) {
+                        crate::observability::link(
+                            crate::observability::Component::Geocode,
+                            *trace,
+                        );
+                        add(&COUNTERS.geocoder_joined);
+                        receiver.clone()
+                    } else {
+                        let permit =
+                            self.inner.owners.clone().try_acquire_owned().map_err(|_| {
+                                add(&COUNTERS.capacity_rejections);
+                                GeocodeError::Capacity
+                            })?;
+                        add(&COUNTERS.geocoder_flights);
+                        let (sender, receiver) = watch::channel(None);
+                        let trace = crate::observability::current().child();
+                        flights.insert(key.clone(), (receiver.clone(), trace));
+                        let inner = self.inner.clone();
+                        crate::observability::spawn(async move {
+                            let flight = FlightGuard {
+                                inner: inner.clone(),
+                                key: key.clone(),
+                                _permit: permit,
+                            };
+                            let result = crate::observability::observe_at(
+                                trace,
+                                crate::observability::Component::Geocode,
+                                crate::observability::Stage::Acquire,
+                                async {
+                                    tokio::time::timeout(
+                                        Duration::from_secs(5),
+                                        inner.acquire(&key),
+                                    )
+                                    .await
+                                    .unwrap_or(Err(GeocodeError::Provider))
+                                },
+                            )
+                            .await;
+                            if let Ok(geo) = &result {
+                                let eligible = match key {
+                                    LookupKey::Address(_) => true,
+                                    LookupKey::Coord { .. } => {
+                                        !(geo.country.as_deref() == Some("KR")
+                                            && geo.kma_address.is_none())
+                                    }
+                                };
+                                if eligible {
+                                    inner.cache.put(key.clone(), geo.clone());
+                                }
+                            }
+                            drop(flight);
+                            sender.send_replace(Some(result));
+                        });
+                        receiver
+                    }
+                };
+                loop {
+                    if let Some(value) = receiver.borrow().clone() {
+                        return value;
+                    }
+                    receiver
+                        .changed()
+                        .await
+                        .map_err(|_| GeocodeError::Provider)?;
+                }
+            },
+        )
+        .await
     }
 }
 impl Inner {
@@ -510,6 +555,14 @@ impl Inner {
                 let mut geo = match google {
                     Ok(geo) => geo,
                     Err(_) => {
+                        crate::observability::event(
+                            crate::observability::Component::Geocode,
+                            crate::observability::Stage::Acquire,
+                            crate::observability::Cause::Dependency,
+                            crate::observability::Action::Fallback,
+                            crate::observability::Outcome::Pending,
+                            Default::default(),
+                        );
                         let body = self.call(GeoProvider::Kakao, key, deadline).await?;
                         provider::kakao_addr(&body, address)?
                     }
@@ -567,7 +620,11 @@ impl Inner {
                 );
             }
             let response = tokio::time::timeout(attempt, async {
-                let mut response = request.send().await.map_err(|_| GeocodeError::Provider)?;
+                let mut response = request
+                    .send()
+                    .observed(crate::observability::Component::Geocode)
+                    .await
+                    .map_err(|_| GeocodeError::Provider)?;
                 let status = response.status().as_u16();
                 let mut bytes = Vec::new();
                 while let Some(chunk) =
@@ -588,7 +645,26 @@ impl Inner {
                 match provider::classify(provider, status, body.as_ref()) {
                     Outcome::Success => return body.ok_or(GeocodeError::Provider),
                     Outcome::Terminal => return Err(GeocodeError::Provider),
-                    Outcome::Rotate => {}
+                    Outcome::Rotate => {
+                        crate::observability::event(
+                            crate::observability::Component::Geocode,
+                            crate::observability::Stage::Acquire,
+                            if status == 401 || status == 403 {
+                                crate::observability::Cause::Auth
+                            } else if status == 429 {
+                                crate::observability::Cause::Quota
+                            } else {
+                                crate::observability::Cause::Dependency
+                            },
+                            crate::observability::Action::RotateKey,
+                            crate::observability::Outcome::Failed,
+                            crate::observability::Details {
+                                attempt: Some(offset as u64 + 1),
+                                status: Some(status),
+                                ..Default::default()
+                            },
+                        );
+                    }
                 }
             }
         }

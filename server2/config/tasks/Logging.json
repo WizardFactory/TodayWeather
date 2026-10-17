@@ -1,0 +1,145 @@
+{
+  "task": "Logging",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2802",
+  "scope": "Structured operational diagnostics, async/blocking/queue/shared-work correlation and safe bounded output. Preserve product semantics/retries/deadlines/claims. No quota measurements or production actions.",
+  "server2_paths": [
+    "server2/README.md",
+    "server2/config/tasks/Logging.json",
+    "server2/examples/logging_smoke.rs",
+    "server2/examples/loopback_server.rs",
+    "server2/src/api/mod.rs",
+    "server2/src/bin/server2-notice.rs",
+    "server2/src/budget/store.rs",
+    "server2/src/budget/transport.rs",
+    "server2/src/cache/disk.rs",
+    "server2/src/domestic/acquire.rs",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/domestic/kma/source/air_input.rs",
+    "server2/src/domestic/kma/source/life_input.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/observe.rs",
+    "server2/src/gateway/backend.rs",
+    "server2/src/gateway/mod.rs",
+    "server2/src/geocode/budget.rs",
+    "server2/src/geocode/mod.rs",
+    "server2/src/geocode/provider.rs",
+    "server2/src/geocode/storage.rs",
+    "server2/src/geocode/town.rs",
+    "server2/src/history/capture.rs",
+    "server2/src/history/transport.rs",
+    "server2/src/lib.rs",
+    "server2/src/listener.rs",
+    "server2/src/main.rs",
+    "server2/src/notice/cli.rs",
+    "server2/src/notice/store.rs",
+    "server2/src/notice/translate.rs",
+    "server2/src/observability.rs",
+    "server2/src/process.rs",
+    "server2/src/providers/acquisition.rs",
+    "server2/src/providers/public.rs",
+    "server2/src/providers/transport.rs",
+    "server2/src/push/deliver/alarm.rs",
+    "server2/src/push/deliver/alerts.rs",
+    "server2/src/push/deliver/fcm.rs",
+    "server2/src/push/deliver/ledger.rs",
+    "server2/src/push/deliver/supervisor.rs",
+    "server2/src/push/deliver/warnings.rs",
+    "server2/src/push/deliver/weather.rs",
+    "server2/src/push/durable.rs",
+    "server2/src/push/service.rs",
+    "server2/src/resolver/backend.rs",
+    "server2/src/resolver/flight.rs",
+    "server2/src/resolver/owned.rs",
+    "server2/src/runtime_services.rs",
+    "server2/src/storage/catalog.rs",
+    "server2/src/storage/catalog_transport.rs",
+    "server2/src/storage/credentials.rs",
+    "server2/src/storage/store.rs",
+    "server2/src/storage/transport.rs",
+    "server2/src/summary/lookup.rs",
+    "server2/src/summary/recorder.rs",
+    "server2/src/summary/transport.rs",
+    "server2/src/warnings/collector.rs",
+    "server2/src/warnings/service.rs",
+    "server2/src/warnings/store.rs",
+    "server2/src/world/air_chain.rs",
+    "server2/src/world/air_store.rs",
+    "server2/src/world/air_transport.rs",
+    "server2/src/world/engine.rs",
+    "server2/src/world/source.rs",
+    "server2/src/world/store.rs",
+    "server2/src/world/transport.rs",
+    "server2/tests/foundation.rs",
+    "server2/tests/integration/test_log_diagnosis.py",
+    "server2/tests/integration/test_observability.py",
+    "server2/tests/observability.rs",
+    "server2/tests/storage/catalog_peer.py",
+    "server2/tools/ci.py",
+    "server2/tools/diagnose_logs.py",
+    "server2/tools/logging_smoke.py",
+    "server2/tools/runtime_services_smoke.py",
+    "server2/tools/smoke.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2802.md",
+      "category": "documentation",
+      "reason": "Canonical contracts, subsystem audit, logging flow, operator incident guide and selected executable verification evidence."
+    },
+    {
+      "path": "specs/issue-2802.md",
+      "category": "documentation",
+      "reason": "Canonical contracts, subsystem audit, logging flow, operator incident guide and selected executable verification evidence."
+    },
+    {
+      "path": "plans/issue-2802.md",
+      "category": "documentation",
+      "reason": "Canonical contracts, subsystem audit, logging flow, operator incident guide and selected executable verification evidence."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Canonical contracts, subsystem audit, logging flow, operator incident guide and selected executable verification evidence."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-logging.json",
+      "category": "documentation",
+      "reason": "Canonical contracts, subsystem audit, logging flow, operator incident guide and selected executable verification evidence."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-logging.html",
+      "category": "documentation",
+      "reason": "Canonical contracts, subsystem audit, logging flow, operator incident guide and selected executable verification evidence."
+    },
+    {
+      "path": "docs/operations/server2-logging-audit.md",
+      "category": "documentation",
+      "reason": "Canonical contracts, subsystem audit, logging flow, operator incident guide and selected executable verification evidence."
+    },
+    {
+      "path": "docs/operations/server2-logging.md",
+      "category": "documentation",
+      "reason": "Canonical contracts, subsystem audit, logging flow, operator incident guide and selected executable verification evidence."
+    },
+    {
+      "path": "docs/operations/server2-logging.pdf",
+      "category": "documentation",
+      "reason": "Canonical contracts, subsystem audit, logging flow, operator incident guide and selected executable verification evidence."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2802/verification.md",
+      "category": "documentation",
+      "reason": "Canonical contracts, subsystem audit, logging flow, operator incident guide and selected executable verification evidence."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2802/diagnosis.png",
+      "category": "documentation",
+      "reason": "Canonical contracts, subsystem audit, logging flow, operator incident guide and selected executable verification evidence."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2802/transactions.png",
+      "category": "documentation",
+      "reason": "Selected actual per-submission and uncertain-write incident evidence, with explicit local-only limits."
+    }
+  ]
+}

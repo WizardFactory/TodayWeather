@@ -1,5 +1,6 @@
 //! Translation occurs only in operator publication commands, never the read API.
 use super::{Error, LANGUAGES, Notice, Provenance, Text};
+use crate::observability::ObservedHttp as _;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, future::Future, time::Duration};
 
@@ -59,36 +60,44 @@ impl HttpTransport {
 }
 impl Transport for HttpTransport {
     async fn post(&self, body: Vec<u8>, key: &str) -> Result<Vec<u8>, Error> {
-        let mut response = self
-            .client
-            .post(ENDPOINT)
-            .bearer_auth(key)
-            .header("content-type", "application/json")
-            .body(body)
-            .send()
-            .await
-            .map_err(|_| Error::Translation("notice translation transport"))?;
-        if !response.status().is_success() {
-            return Err(Error::Translation("notice translation HTTP failure"));
-        }
-        if response
-            .content_length()
-            .is_some_and(|n| n > RESPONSE_CAP as u64)
-        {
-            return Err(Error::Translation("notice translation response size"));
-        }
-        let mut bytes = Vec::new();
-        while let Some(chunk) = response
-            .chunk()
-            .await
-            .map_err(|_| Error::Translation("notice translation body"))?
-        {
-            if bytes.len().saturating_add(chunk.len()) > RESPONSE_CAP {
-                return Err(Error::Translation("notice translation response size"));
-            }
-            bytes.extend_from_slice(&chunk)
-        }
-        Ok(bytes)
+        crate::observability::observe(
+            crate::observability::Component::Notice,
+            crate::observability::Stage::Translate,
+            async {
+                let mut response = self
+                    .client
+                    .post(ENDPOINT)
+                    .bearer_auth(key)
+                    .header("content-type", "application/json")
+                    .body(body)
+                    .send()
+                    .observed(crate::observability::Component::Notice)
+                    .await
+                    .map_err(|_| Error::Translation("notice translation transport"))?;
+                if !response.status().is_success() {
+                    return Err(Error::Translation("notice translation HTTP failure"));
+                }
+                if response
+                    .content_length()
+                    .is_some_and(|n| n > RESPONSE_CAP as u64)
+                {
+                    return Err(Error::Translation("notice translation response size"));
+                }
+                let mut bytes = Vec::new();
+                while let Some(chunk) = response
+                    .chunk()
+                    .await
+                    .map_err(|_| Error::Translation("notice translation body"))?
+                {
+                    if bytes.len().saturating_add(chunk.len()) > RESPONSE_CAP {
+                        return Err(Error::Translation("notice translation response size"));
+                    }
+                    bytes.extend_from_slice(&chunk)
+                }
+                Ok(bytes)
+            },
+        )
+        .await
     }
 }
 #[derive(Default)]
@@ -109,6 +118,7 @@ impl<T: Transport> Translator<T> {
         }
     }
     pub async fn fill(&self, notice: &Notice) -> Outcome {
+        crate::observability::work(crate::observability::Component::Notice, crate::observability::Stage::Translate, async {
         let mut out = Outcome::default();
         let Some(key) = &self.settings.key else {
             out.skipped = true;
@@ -139,6 +149,8 @@ impl<T: Transport> Translator<T> {
             }
         }
         out
+
+        }).await
     }
 }
 fn parse(bytes: &[u8], from: &str, configured: &str) -> Result<Text, Error> {

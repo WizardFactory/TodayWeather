@@ -1,6 +1,7 @@
 //! Internal town geocoding contracts: convertGeocode (Kakao then Google XML) and KR
 //! name2address (Google JSON, Korean labels). These operations do not change public addr.
 use super::{BoxFuture, GeoProvider, GeocodeError, GeocoderConfig, ProviderDemand, Quota};
+use crate::observability::ObservedHttp as _;
 use instant_xml::FromXml;
 use serde_json::{Value, json};
 use std::{
@@ -126,7 +127,11 @@ impl Client {
             req = req.header(reqwest::header::AUTHORIZATION, format!("KakaoAK {key}"));
         }
         tokio::time::timeout(cap, async {
-            let mut response = req.send().await.map_err(|_| GeocodeError::Provider)?;
+            let mut response = req
+                .send()
+                .observed(crate::observability::Component::Geocode)
+                .await
+                .map_err(|_| GeocodeError::Provider)?;
             // Both legacy convertGeocode adapters reject HTTP>=400; redirects are disabled.
             if !(200..300).contains(&response.status().as_u16()) {
                 return Err(GeocodeError::Provider);

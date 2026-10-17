@@ -1,5 +1,6 @@
 use super::ProviderKey;
 use crate::budget::Provider;
+use crate::observability::ObservedHttp as _;
 use std::{future::Future, net::IpAddr, time::Duration};
 /// Credential and response-format parameters a data.go.kr-style service declares (S13a).
 /// `DataType` is the S13 default; the others are the legacy forms of services that do not
@@ -181,47 +182,56 @@ impl HttpProviderTransport {
 }
 impl ProviderTransport for HttpProviderTransport {
     async fn send(&self, request: &Request) -> Result<ProviderResponse, ProviderTransportError> {
-        let mut url = request.endpoint.clone();
-        if !valid_endpoint(&url) {
-            return Err(ProviderTransportError::Invalid);
-        }
-        {
-            let mut query = url.query_pairs_mut();
-            match request.provider {
-                Provider::DataGoKr => {
-                    let format = request.format;
-                    if !format.admits(&request.endpoint) {
-                        return Err(ProviderTransportError::Invalid);
-                    }
-                    let (name, value) = format.format_param();
-                    if format.key_first() {
-                        query.append_pair(format.key_param(), &request.key.0);
-                        query.append_pair(name, value);
-                    } else {
-                        query.append_pair(name, value);
-                        query.append_pair(format.key_param(), &request.key.0);
+        crate::observability::observe_response(
+            crate::observability::Component::Provider,
+            crate::observability::Stage::ProviderHttp,
+            |response: &ProviderResponse| response.status,
+            async {
+                let mut url = request.endpoint.clone();
+                if !valid_endpoint(&url) {
+                    return Err(ProviderTransportError::Invalid);
+                }
+                {
+                    let mut query = url.query_pairs_mut();
+                    match request.provider {
+                        Provider::DataGoKr => {
+                            let format = request.format;
+                            if !format.admits(&request.endpoint) {
+                                return Err(ProviderTransportError::Invalid);
+                            }
+                            let (name, value) = format.format_param();
+                            if format.key_first() {
+                                query.append_pair(format.key_param(), &request.key.0);
+                                query.append_pair(name, value);
+                            } else {
+                                query.append_pair(name, value);
+                                query.append_pair(format.key_param(), &request.key.0);
+                            }
+                        }
+                        Provider::VisualCrossing => {
+                            query.append_pair("key", &request.key.0);
+                        }
+                        // Geocoding and air providers use their own transports.
+                        Provider::Kakao
+                        | Provider::Google
+                        | Provider::GoogleAirQuality
+                        | Provider::OpenWeather
+                        | Provider::Waqi => return Err(ProviderTransportError::Invalid),
                     }
                 }
-                Provider::VisualCrossing => {
-                    query.append_pair("key", &request.key.0);
-                }
-                // Geocoding and air providers use their own transports.
-                Provider::Kakao
-                | Provider::Google
-                | Provider::GoogleAirQuality
-                | Provider::OpenWeather
-                | Provider::Waqi => return Err(ProviderTransportError::Invalid),
-            }
-        }
-        let timeout = attempt_timeout(request.provider, &request.endpoint);
-        let response = self
-            .client
-            .get(url)
-            .timeout(timeout)
-            .send()
-            .await
-            .map_err(|_| ProviderTransportError::Transport)?;
-        read_bounded(response, self.maximum).await
+                let timeout = attempt_timeout(request.provider, &request.endpoint);
+                let response = self
+                    .client
+                    .get(url)
+                    .timeout(timeout)
+                    .send()
+                    .observed(crate::observability::Component::Provider)
+                    .await
+                    .map_err(|_| ProviderTransportError::Transport)?;
+                read_bounded(response, self.maximum).await
+            },
+        )
+        .await
     }
 }
 

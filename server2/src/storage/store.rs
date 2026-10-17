@@ -57,7 +57,7 @@ impl<T: ObjectTransport> RawRecordStore<T> {
             .acquire_owned()
             .await
             .map_err(|_| Error::Transport)?;
-        tokio::task::spawn_blocking(move || {
+        crate::observability::spawn_blocking(move || {
             let _permit = permit;
             f()
         })
@@ -125,7 +125,7 @@ impl<T: ObjectTransport> RawRecordStore<T> {
             .acquire_owned()
             .await
             .map_err(|_| Error::Transport)?;
-        let record = tokio::task::spawn_blocking(move || {
+        let record = crate::observability::spawn_blocking(move || {
             let _buffer = buffer;
             let _permit = permit;
             decode(&key, object, &expected, &limits)
@@ -145,96 +145,110 @@ impl<T: ObjectTransport> RawRecordStore<T> {
     }
     /// Success only acknowledges immutable body durability, never catalog/client publication.
     pub async fn publish(&self, record: RawRecord) -> Result<PublishOutcome, Error> {
-        let deadline = Instant::now() + self.limits.deadline;
-        let mut put_started = false;
-        timeout_at(deadline, async {
-            let _io = self
-                .io
-                .clone()
-                .try_acquire_owned()
-                .map_err(|_| Error::Capacity)?;
-            let expected = record.envelope.clone();
-            let limits = self.limits.clone();
-            let prepared = self.cpu(move || record.prepare(&limits)).await?;
-            // S10F GROK-1: a credential failure before the first PUT is definite, not ambiguous.
-            self.transport.ready().await?;
-            let mut uncertain_put = false;
-            for attempt in 0..2 {
-                put_started = true;
-                match self.transport.put(&prepared).await {
-                    Ok(200) => return Ok(PublishOutcome::Created),
-                    Ok(412)
-                    | Ok(409)
-                    | Ok(500..=599)
-                    | Err(Error::Transport)
-                    | Err(Error::Timeout)
-                    | Err(Error::Capacity)
-                    | Err(Error::Ambiguous) => {
-                        // A missing HEAD does not rule out an earlier PUT committing later.
-                        // A subsequent rejection/local error cannot clear this uncertainty.
-                        uncertain_put = true;
-                        match self.transport.head(&prepared.key).await {
-                            Ok(head) => {
-                                if head.length > self.limits.gzip_bytes
-                                    || head.metadata.get("s2-record")
-                                        != prepared.metadata.get("s2-record")
-                                {
-                                    return Err(Error::Corrupt("existing metadata/length"));
+        crate::observability::observe(
+            crate::observability::Component::S3,
+            crate::observability::Stage::Publish,
+            async {
+                let deadline = Instant::now() + self.limits.deadline;
+                let mut put_started = false;
+                timeout_at(deadline, async {
+                    let _io = self
+                        .io
+                        .clone()
+                        .try_acquire_owned()
+                        .map_err(|_| Error::Capacity)?;
+                    let expected = record.envelope.clone();
+                    let limits = self.limits.clone();
+                    let prepared = self.cpu(move || record.prepare(&limits)).await?;
+                    // S10F GROK-1: a credential failure before the first PUT is definite, not ambiguous.
+                    self.transport.ready().await?;
+                    let mut uncertain_put = false;
+                    for attempt in 0..2 {
+                        put_started = true;
+                        match self.transport.put(&prepared).await {
+                            Ok(200) => return Ok(PublishOutcome::Created),
+                            Ok(412)
+                            | Ok(409)
+                            | Ok(500..=599)
+                            | Err(Error::Transport)
+                            | Err(Error::Timeout)
+                            | Err(Error::Capacity)
+                            | Err(Error::Ambiguous) => {
+                                // A missing HEAD does not rule out an earlier PUT committing later.
+                                // A subsequent rejection/local error cannot clear this uncertainty.
+                                uncertain_put = true;
+                                match self.transport.head(&prepared.key).await {
+                                    Ok(head) => {
+                                        if head.length > self.limits.gzip_bytes
+                                            || head.metadata.get("s2-record")
+                                                != prepared.metadata.get("s2-record")
+                                        {
+                                            return Err(Error::Corrupt("existing metadata/length"));
+                                        }
+                                        let restored = self
+                                            .verified(&prepared.key, &expected.identity, Some(head))
+                                            .await
+                                            .map_err(Self::reconciliation_error)?;
+                                        if restored.envelope != expected {
+                                            return Err(Error::Corrupt("existing envelope"));
+                                        }
+                                        return Ok(PublishOutcome::AlreadyPresent);
+                                    }
+                                    Err(Error::NotFound) if attempt == 0 => (),
+                                    Err(Error::NotFound) => return Err(Error::Ambiguous),
+                                    Err(e) => return Err(Self::reconciliation_error(e)),
                                 }
-                                let restored = self
-                                    .verified(&prepared.key, &expected.identity, Some(head))
-                                    .await
-                                    .map_err(Self::reconciliation_error)?;
-                                if restored.envelope != expected {
-                                    return Err(Error::Corrupt("existing envelope"));
-                                }
-                                return Ok(PublishOutcome::AlreadyPresent);
                             }
-                            Err(Error::NotFound) if attempt == 0 => (),
-                            Err(Error::NotFound) => return Err(Error::Ambiguous),
-                            Err(e) => return Err(Self::reconciliation_error(e)),
+                            Ok(status) => {
+                                return Err(if uncertain_put {
+                                    Error::Ambiguous
+                                } else {
+                                    Error::Status(status)
+                                });
+                            }
+                            Err(e) => {
+                                return Err(if uncertain_put {
+                                    Self::reconciliation_error(e)
+                                } else {
+                                    e
+                                });
+                            }
                         }
                     }
-                    Ok(status) => {
-                        return Err(if uncertain_put {
-                            Error::Ambiguous
-                        } else {
-                            Error::Status(status)
-                        });
+                    Err(Error::Transport)
+                })
+                .await
+                .map_err(|_| {
+                    if put_started {
+                        Error::Ambiguous
+                    } else {
+                        Error::Timeout
                     }
-                    Err(e) => {
-                        return Err(if uncertain_put {
-                            Self::reconciliation_error(e)
-                        } else {
-                            e
-                        });
-                    }
-                }
-            }
-            Err(Error::Transport)
-        })
+                })?
+            },
+        )
         .await
-        .map_err(|_| {
-            if put_started {
-                Error::Ambiguous
-            } else {
-                Error::Timeout
-            }
-        })?
     }
     /// A caller/catalog supplies the full expected identity; no short hashes or ETag identity.
     pub async fn load(&self, expected: &RecordId) -> Result<RawRecord, Error> {
-        let deadline = Instant::now() + self.limits.deadline;
-        timeout_at(deadline, async {
-            let _io = self
-                .io
-                .clone()
-                .try_acquire_owned()
-                .map_err(|_| Error::Capacity)?;
-            self.verified(&expected.object_key()?, expected, None).await
-        })
+        crate::observability::observe(
+            crate::observability::Component::S3,
+            crate::observability::Stage::Restore,
+            async {
+                let deadline = Instant::now() + self.limits.deadline;
+                timeout_at(deadline, async {
+                    let _io = self
+                        .io
+                        .clone()
+                        .try_acquire_owned()
+                        .map_err(|_| Error::Capacity)?;
+                    self.verified(&expected.object_key()?, expected, None).await
+                })
+                .await
+                .map_err(|_| Error::Timeout)?
+            },
+        )
         .await
-        .map_err(|_| Error::Timeout)?
     }
 }
 
@@ -312,7 +326,7 @@ mod review_regressions {
                 .unwrap(),
             );
             let s = store.clone();
-            let task = tokio::spawn(async move { s.publish(record()).await });
+            let task = crate::observability::spawn(async move { s.publish(record()).await });
             store.transport.started.notified().await;
             let held = store.cpu.clone().acquire_owned().await.unwrap();
             store.transport.reply.notify_one();
@@ -355,7 +369,7 @@ mod review_regressions {
             .unwrap(),
         );
         let s = store.clone();
-        let task = tokio::spawn(async move { s.publish(record()).await });
+        let task = crate::observability::spawn(async move { s.publish(record()).await });
         store.transport.started.notified().await;
         let held = store.cpu.clone().acquire_owned().await.unwrap();
         store.transport.reply.notify_one();

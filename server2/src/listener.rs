@@ -1,4 +1,5 @@
 //! Foundation socket limits. Connection age bounds slow headers/body draining.
+use crate::observability::{self as obs, Action, Cause, Component, Details, Outcome, Stage};
 use axum::serve::Listener;
 use std::{
     future::Future,
@@ -48,10 +49,32 @@ impl Listener for BoundedListener {
                         );
                     }
                     // Drop excess connections without an application-work queue.
+                    obs::Context::root(obs::Route::Other, obs::Method::Other)
+                        .scope(async {
+                            obs::event(
+                                Component::Listener,
+                                Stage::Admission,
+                                Cause::Capacity,
+                                Action::RejectBeforeIo,
+                                Outcome::Failed,
+                                Details::default(),
+                            );
+                        })
+                        .await;
                     drop(stream);
                     tokio::task::yield_now().await;
                 }
-                Err(_) => sleep(Duration::from_millis(100)).await,
+                Err(_) => {
+                    obs::event(
+                        Component::Listener,
+                        Stage::Bind,
+                        Cause::Transport,
+                        Action::Retry,
+                        Outcome::Failed,
+                        Details::default(),
+                    );
+                    sleep(Duration::from_millis(100)).await;
+                }
             }
         }
     }

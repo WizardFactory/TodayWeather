@@ -182,7 +182,7 @@ impl KmaBackend {
             .await
             .map_err(|_| GatewayError::Provider)?
             .map_err(|_| GatewayError::Provider)?;
-        let (outcome, past_days) = match tokio::task::spawn_blocking(move || {
+        let (outcome, past_days) = match crate::observability::spawn_blocking(move || {
             let _permit = permit;
             assemble_capturing(&request, store.as_ref(), now, config)
         })

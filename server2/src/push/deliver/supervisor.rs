@@ -35,7 +35,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Workers<T> {
     pub fn start(self: Arc<Self>) -> Supervisor {
         let (stop, rx) = watch::channel(false);
         let fcm = self.fcm.clone();
-        let task = tokio::spawn(self.run(rx));
+        let task = crate::observability::spawn(self.run(rx));
         Supervisor {
             stop,
             task: Some(task),
@@ -69,10 +69,10 @@ impl<T: CatalogTransport + Send + Sync + 'static> Workers<T> {
                         if !*stop.borrow() && let Ok(observed) = self.clock.now_ms() {
                             let alarm = self.alarm.clone();
                             let clock = self.clock.clone();
-                            jobs.spawn(async move { if clock.now_ms().is_ok_and(|now| now.div_euclid(60_000) == observed.div_euclid(60_000)) { alarm.run_minute(observed).await; } false });
+                            jobs.spawn(crate::observability::inherit(async move { if clock.now_ms().is_ok_and(|now| now.div_euclid(60_000) == observed.div_euclid(60_000)) { alarm.run_minute(observed).await; } false }));
                             let alerts = self.alerts.clone();
                             let clock = self.clock.clone();
-                            jobs.spawn(async move { if clock.now_ms().is_ok_and(|now| now.div_euclid(60_000) == observed.div_euclid(60_000)) { alerts.run_minute(observed).await; } false });
+                            jobs.spawn(crate::observability::inherit(async move { if clock.now_ms().is_ok_and(|now| now.div_euclid(60_000) == observed.div_euclid(60_000)) { alerts.run_minute(observed).await; } false }));
                         }
                         break;
                     },
@@ -81,10 +81,10 @@ impl<T: CatalogTransport + Send + Sync + 'static> Workers<T> {
                             warning_running = true;
                             let warnings = self.warnings.clone();
                             let diagnostics = self.diagnostics.clone();
-                            jobs.spawn(async move {
+                            jobs.spawn(crate::observability::inherit(async move {
                                 if warnings.poll().await.is_err() { diagnostics.minute("warning-feed", "poll unavailable; no unsafe submission"); }
                                 true
-                            });
+                            }));
                         }
                     }
                 }
@@ -115,9 +115,20 @@ impl Supervisor {
         };
         match tokio::time::timeout_at(deadline, &mut task).await {
             Ok(Ok(report)) => {
-                eprintln!(
-                    "server2 delivery jobs joined={} incomplete={}",
-                    report.completed, report.incomplete
+                crate::observability::event(
+                    crate::observability::Component::Delivery,
+                    crate::observability::Stage::Shutdown,
+                    crate::observability::Cause::Shutdown,
+                    crate::observability::Action::Drain,
+                    if report.incomplete == 0 {
+                        crate::observability::Outcome::Success
+                    } else {
+                        crate::observability::Outcome::Unknown
+                    },
+                    crate::observability::Details {
+                        count: Some(report.completed as u64),
+                        ..Default::default()
+                    },
                 );
                 report.incomplete == 0
             }
@@ -125,8 +136,13 @@ impl Supervisor {
             Err(_) => {
                 task.abort();
                 let _ = tokio::time::timeout_at(deadline, &mut task).await;
-                eprintln!(
-                    "server2 delivery deadline: outstanding jobs cancelled/incomplete; claims retained"
+                crate::observability::event(
+                    crate::observability::Component::Delivery,
+                    crate::observability::Stage::Shutdown,
+                    crate::observability::Cause::Timeout,
+                    crate::observability::Action::RetainClaim,
+                    crate::observability::Outcome::Unknown,
+                    crate::observability::Details::default(),
                 );
                 false
             }

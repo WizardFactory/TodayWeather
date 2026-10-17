@@ -4,6 +4,7 @@ use super::{
     response::{OrderedJson, js_number},
 };
 use crate::geocode::GeoClient;
+use crate::observability::ObservedHttp as _;
 use std::{
     collections::HashMap,
     net::IpAddr,
@@ -98,6 +99,7 @@ impl Http {
             .header("accept", "application/json")
             .timeout(timeout)
             .send()
+            .observed(crate::observability::Component::Gateway)
             .await
             .map_err(|_| GatewayError::Provider)?;
         let status = response.status().as_u16();
@@ -315,7 +317,7 @@ impl BackendDispatcher {
             hyper::client::conn::http1::handshake(hyper_util::rt::TokioIo::new(stream))
                 .await
                 .map_err(|_| GatewayError::Provider)?;
-        tokio::spawn(connection);
+        crate::observability::spawn(connection);
         let target: axum::http::Uri = path_and_query.parse().map_err(|_| GatewayError::Provider)?;
         let mut request = axum::http::Request::builder()
             .method(method.clone())
@@ -356,7 +358,7 @@ impl BackendDispatcher {
             .await
             .map_err(|_| GatewayError::Provider)?
             .map_err(|_| GatewayError::Provider)?;
-        tokio::task::spawn_blocking(move || {
+        crate::observability::spawn_blocking(move || {
             let _cpu = cpu;
             let _owner = owner;
             let bytes = value.to_bytes();
@@ -426,7 +428,7 @@ impl BackendDispatcher {
                 .map_err(|_| GatewayError::Provider)?
                 .map_err(|_| GatewayError::Provider)?;
             let lease = owner.clone();
-            let value = tokio::task::spawn_blocking(move || {
+            let value = crate::observability::spawn_blocking(move || {
                 let _cpu = cpu;
                 let _owner = lease;
                 OrderedJson::parse(&bytes)

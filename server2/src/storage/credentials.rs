@@ -14,6 +14,7 @@
 //! The IMDS root is built in ([`METADATA_ROOT`]). Only tests choose a loopback IMDS double, through
 //! the test-only builders. Nothing here has a Debug implementation or logs a value.
 use super::Error;
+use crate::observability::ObservedHttp as _;
 use reqwest::{Client, Method, redirect::Policy};
 use rusty_s3::Credentials;
 use std::{
@@ -211,7 +212,11 @@ impl InstanceRole {
         if let Some(token) = token {
             request = request.header("x-aws-ec2-metadata-token", token);
         }
-        let mut response = request.send().await.map_err(|_| Error::Transport)?;
+        let mut response = request
+            .send()
+            .observed(crate::observability::Component::S3)
+            .await
+            .map_err(|_| Error::Transport)?;
         let headers = response.headers();
         if response.status().as_u16() != 200
             || headers
@@ -364,7 +369,7 @@ mod tests {
             .with_state(state.clone());
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let root = format!("http://{}/", listener.local_addr().unwrap());
-        tokio::spawn(async move { axum::serve(listener, app).await });
+        crate::observability::spawn(async move { axum::serve(listener, app).await });
         (state, InstanceRole::new(&root).unwrap())
     }
     fn set(d: &Double, f: impl Fn(usize) -> (u16, String) + Send + 'static) {
@@ -546,7 +551,7 @@ mod tests {
         let callers: Vec<_> = (0..8)
             .map(|_| {
                 let role = role.clone();
-                tokio::spawn(async move { role.credentials().await })
+                crate::observability::spawn(async move { role.credentials().await })
             })
             .collect();
         for caller in callers {
@@ -564,7 +569,7 @@ mod tests {
         d.delay_ms.store(1000, Ordering::Release);
         let refreshing = {
             let role = role.clone();
-            tokio::spawn(async move { role.credentials().await })
+            crate::observability::spawn(async move { role.credentials().await })
         };
         tokio::time::sleep(Duration::from_millis(100)).await;
         let started = std::time::Instant::now();

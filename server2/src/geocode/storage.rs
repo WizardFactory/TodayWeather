@@ -1,5 +1,6 @@
 //! Optional bounded S3 address projections. No reverse-geocode persistence API.
 use super::{AddressProjection, AddressStore, GeocodeError};
+use crate::observability::ObservedHttp as _;
 use crate::storage::HttpS3Transport;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use md5::{Digest as _, Md5};
@@ -56,6 +57,7 @@ impl S3AddressStore {
             .client
             .get(url)
             .send()
+            .observed(crate::observability::Component::Geocode)
             .await
             .map_err(|_| GeocodeError::Provider)?;
         if response.status().as_u16() == 404 {
@@ -155,6 +157,7 @@ impl AddressStore for S3AddressStore {
                 .header("content-md5", digest)
                 .body(bytes.clone())
                 .send()
+                .observed(crate::observability::Component::Geocode)
                 .await
                 .map_err(|_| GeocodeError::Provider)?;
             if response.status().as_u16() != 200 {

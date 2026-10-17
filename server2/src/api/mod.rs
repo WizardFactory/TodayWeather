@@ -20,6 +20,8 @@ use crate::domestic::kma::{
     backend::{KmaBackend, parse_path, parse_town_path, split_mount},
 };
 use crate::gateway::{BackendDispatcher, response::etag};
+#[cfg(test)]
+use crate::observability::ObservedHttp as _;
 use axum::{
     body::Body,
     extract::Request,
@@ -313,33 +315,55 @@ mod tests {
             };
             express(request.method(), request.headers(), outcome)
         });
-        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let server =
+            crate::observability::spawn(async move { axum::serve(listener, app).await.unwrap() });
         let client = reqwest::Client::builder()
             .no_proxy()
             .timeout(Duration::from_secs(2))
             .build()
             .unwrap();
         let undefined = format!("http://{address}/undefined");
-        let head = client.head(&undefined).send().await.unwrap();
+        let head = client
+            .head(&undefined)
+            .send()
+            .observed(crate::observability::Component::Provider)
+            .await
+            .unwrap();
         assert_eq!(head.status(), StatusCode::OK);
         assert_eq!(head.headers().get("content-length"), None);
         assert!(head.bytes().await.unwrap().is_empty());
-        let get = client.get(&undefined).send().await.unwrap();
+        let get = client
+            .get(&undefined)
+            .send()
+            .observed(crate::observability::Component::Provider)
+            .await
+            .unwrap();
         assert_eq!(get.status(), StatusCode::OK);
         assert_eq!(get.headers()["content-length"], "0");
         assert!(get.bytes().await.unwrap().is_empty());
         let json = format!("http://{address}/json");
-        let get = client.get(&json).send().await.unwrap();
+        let get = client
+            .get(&json)
+            .send()
+            .observed(crate::observability::Component::Provider)
+            .await
+            .unwrap();
         assert_eq!(get.status(), StatusCode::OK);
         let tag = get.headers()["etag"].clone();
         assert_eq!(get.bytes().await.unwrap().as_ref(), br#"{"ok":true}"#);
-        let head = client.head(&json).send().await.unwrap();
+        let head = client
+            .head(&json)
+            .send()
+            .observed(crate::observability::Component::Provider)
+            .await
+            .unwrap();
         assert_eq!(head.headers()["content-length"], "11");
         assert!(head.bytes().await.unwrap().is_empty());
         let fresh = client
             .get(&json)
             .header("if-none-match", tag)
             .send()
+            .observed(crate::observability::Component::Provider)
             .await
             .unwrap();
         assert_eq!(fresh.status(), StatusCode::NOT_MODIFIED);

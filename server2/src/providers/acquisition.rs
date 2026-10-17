@@ -168,89 +168,223 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
         validator: Arc<W>,
         report: &mut CallReport,
     ) -> Result<AcquisitionOutcome, AcquisitionError> {
-        if self.provider != Provider::DataGoKr && format != ResponseFormat::DataType {
-            return Err(AcquisitionError::Invalid);
-        }
-        if candidates.is_empty()
-            || candidates.len() > 2
-            || (self.provider == Provider::VisualCrossing && candidates.len() != 1)
-            || candidates
-                .iter()
-                .any(|c| c.budget.policy().provider != self.provider)
-        {
-            return Err(AcquisitionError::Invalid);
-        }
-        if candidates.len() == 2 {
-            let (a, b) = (&candidates[0], &candidates[1]);
-            // Quota owner identity is provider + quota_id. A different window for
-            // that owner does not make a second rotation key/quota.
-            if Arc::ptr_eq(&a.budget, &b.budget)
-                || a.key.0 == b.key.0
-                || a.budget.policy().quota_id == b.budget.policy().quota_id
-            {
-                return Err(AcquisitionError::Invalid);
-            }
-        }
-        if !super::transport::valid_endpoint(&endpoint)
-            || (self.provider == Provider::DataGoKr && !format.admits(&endpoint))
-        {
-            return Err(AcquisitionError::Invalid);
-        }
-        let mut admission = timeout_at(deadline, self.admission.clone().acquire_owned())
-            .await
-            .map_err(|_| AcquisitionError::Deadline)?
-            .map_err(|_| AcquisitionError::Invalid)?;
-        // Pre-fund every permitted key, including the unused rotation candidate. No late reservation.
-        let mut funds: Vec<Reservation> = Vec::with_capacity(candidates.len());
-        for (i, c) in candidates.iter().enumerate() {
-            let maximum = if i == 0 { self.units * 2 } else { self.units };
-            funds.push(
-                c.budget
-                    .reserve(maximum, deadline)
-                    .await
-                    .map_err(AcquisitionError::Funding)?,
-            );
-            report.reserved.push(maximum);
-        }
-        let mut key = 0;
-        for attempt in 1..=2 {
-            funds[key]
-                .consume(self.units, deadline)
-                .map_err(AcquisitionError::Funding)?;
-            report.attempts.push((key as u8, AttemptResult::Unsettled));
-            let request = Request {
-                endpoint: endpoint.clone(),
-                key: ProviderKey(candidates[key].key.0.clone()),
-                provider: self.provider,
-                format,
-            };
-            let response = match timeout_at(deadline, self.transport.send(&request)).await {
-                Ok(r) => r,
-                Err(_) => {
-                    report.settle(AttemptResult::Deadline);
-                    return Err(AcquisitionError::Deadline);
+        crate::observability::observe(
+            crate::observability::Component::Provider,
+            crate::observability::Stage::Acquire,
+            async {
+                if self.provider != Provider::DataGoKr && format != ResponseFormat::DataType {
+                    return Err(AcquisitionError::Invalid);
                 }
-            };
-            let response = match response {
-                Ok(r) => r,
-                Err(ProviderTransportError::Response { status }) => {
-                    // Incomplete bytes never reach JSON validation or Data/NoData.
-                    // Preserve only received HTTP priority, not any partial provider code.
-                    // AirKorea (S13b) decides a 401/403 from its body; an unread body is a
-                    // retryable download failure (legacy `RESPONSE_ERROR`), never a key rejection.
-                    let disposition =
-                        if format == ResponseFormat::ReturnType && matches!(status, 401 | 403) {
-                            Disposition::Retryable
-                        } else {
-                            classify_format(
-                                status,
-                                &[],
-                                self.provider == Provider::DataGoKr,
-                                false,
-                                format,
-                            )
-                        };
+                if candidates.is_empty()
+                    || candidates.len() > 2
+                    || (self.provider == Provider::VisualCrossing && candidates.len() != 1)
+                    || candidates
+                        .iter()
+                        .any(|c| c.budget.policy().provider != self.provider)
+                {
+                    return Err(AcquisitionError::Invalid);
+                }
+                if candidates.len() == 2 {
+                    let (a, b) = (&candidates[0], &candidates[1]);
+                    // Quota owner identity is provider + quota_id. A different window for
+                    // that owner does not make a second rotation key/quota.
+                    if Arc::ptr_eq(&a.budget, &b.budget)
+                        || a.key.0 == b.key.0
+                        || a.budget.policy().quota_id == b.budget.policy().quota_id
+                    {
+                        return Err(AcquisitionError::Invalid);
+                    }
+                }
+                if !super::transport::valid_endpoint(&endpoint)
+                    || (self.provider == Provider::DataGoKr && !format.admits(&endpoint))
+                {
+                    return Err(AcquisitionError::Invalid);
+                }
+                let mut admission = timeout_at(deadline, self.admission.clone().acquire_owned())
+                    .await
+                    .map_err(|_| AcquisitionError::Deadline)?
+                    .map_err(|_| AcquisitionError::Invalid)?;
+                // Pre-fund every permitted key, including the unused rotation candidate. No late reservation.
+                let mut funds: Vec<Reservation> = Vec::with_capacity(candidates.len());
+                for (i, c) in candidates.iter().enumerate() {
+                    let maximum = if i == 0 { self.units * 2 } else { self.units };
+                    funds.push(
+                        c.budget
+                            .reserve(maximum, deadline)
+                            .await
+                            .map_err(AcquisitionError::Funding)?,
+                    );
+                    report.reserved.push(maximum);
+                }
+                let mut key = 0;
+                for attempt in 1..=2 {
+                    funds[key]
+                        .consume(self.units, deadline)
+                        .map_err(AcquisitionError::Funding)?;
+                    report.attempts.push((key as u8, AttemptResult::Unsettled));
+                    crate::observability::event(
+                        crate::observability::Component::Provider,
+                        crate::observability::Stage::ProviderHttp,
+                        crate::observability::Cause::None,
+                        crate::observability::Action::None,
+                        crate::observability::Outcome::Started,
+                        crate::observability::Details {
+                            attempt: Some(u64::from(attempt)),
+                            provider: Some(self.provider),
+                            ..Default::default()
+                        },
+                    );
+                    let request = Request {
+                        endpoint: endpoint.clone(),
+                        key: ProviderKey(candidates[key].key.0.clone()),
+                        provider: self.provider,
+                        format,
+                    };
+                    let response = match timeout_at(deadline, self.transport.send(&request)).await {
+                        Ok(r) => r,
+                        Err(_) => {
+                            report.settle(AttemptResult::Deadline);
+                            return Err(AcquisitionError::Deadline);
+                        }
+                    };
+                    let response = match response {
+                        Ok(r) => r,
+                        Err(ProviderTransportError::Response { status }) => {
+                            // Incomplete bytes never reach JSON validation or Data/NoData.
+                            // Preserve only received HTTP priority, not any partial provider code.
+                            // AirKorea (S13b) decides a 401/403 from its body; an unread body is a
+                            // retryable download failure (legacy `RESPONSE_ERROR`), never a key rejection.
+                            let disposition = if format == ResponseFormat::ReturnType
+                                && matches!(status, 401 | 403)
+                            {
+                                Disposition::Retryable
+                            } else {
+                                classify_format(
+                                    status,
+                                    &[],
+                                    self.provider == Provider::DataGoKr,
+                                    false,
+                                    format,
+                                )
+                            };
+                            report.settle(AttemptResult::Disposition(disposition));
+                            if attempt == 2 || disposition == Disposition::Rejected {
+                                return Err(AcquisitionError::Provider(disposition));
+                            }
+                            if matches!(disposition, Disposition::Quota | Disposition::Auth) {
+                                if candidates.len() < 2 {
+                                    return Err(AcquisitionError::Provider(disposition));
+                                }
+                                key = 1;
+                            }
+                            crate::observability::event(
+                                crate::observability::Component::Provider,
+                                crate::observability::Stage::ProviderHttp,
+                                crate::observability::provider_cause(disposition),
+                                if matches!(disposition, Disposition::Quota | Disposition::Auth) {
+                                    crate::observability::Action::RotateKey
+                                } else {
+                                    crate::observability::Action::Retry
+                                },
+                                crate::observability::Outcome::Pending,
+                                crate::observability::Details {
+                                    status: Some(status),
+                                    attempt: Some(u64::from(attempt)),
+                                    provider: Some(self.provider),
+                                    ..Default::default()
+                                },
+                            );
+                            continue;
+                        }
+                        Err(_) => {
+                            report.settle(AttemptResult::Transport);
+                            if attempt == 1 {
+                                crate::observability::event(
+                                    crate::observability::Component::Provider,
+                                    crate::observability::Stage::ProviderHttp,
+                                    crate::observability::Cause::Transport,
+                                    crate::observability::Action::Retry,
+                                    crate::observability::Outcome::Pending,
+                                    crate::observability::Details {
+                                        attempt: Some(u64::from(attempt)),
+                                        provider: Some(self.provider),
+                                        ..Default::default()
+                                    },
+                                );
+                                continue;
+                            }
+                            return Err(AcquisitionError::Transport);
+                        }
+                    };
+                    if response.body.len() > 8 * 1024 * 1024 || response.content_type.len() > 512 {
+                        report.settle(AttemptResult::Transport);
+                        return Err(AcquisitionError::Transport);
+                    }
+                    let slot = match timeout_at(deadline, self.cpu.clone().acquire_owned()).await {
+                        Ok(slot) => slot.map_err(|_| AcquisitionError::Invalid)?,
+                        Err(_) => {
+                            report.settle(AttemptResult::Deadline);
+                            return Err(AcquisitionError::Deadline);
+                        }
+                    };
+                    let validator = validator.clone();
+                    let is_data_go_kr = self.provider == Provider::DataGoKr;
+                    let task = crate::observability::spawn_blocking(move || {
+                        let _slot = slot;
+                        let parsed =
+                            serde_json::from_slice::<serde_json::Value>(&response.body).ok();
+                        let valid = parsed.as_ref().is_some_and(|v| validator.valid(v));
+                        let mut disposition = classify_format(
+                            response.status,
+                            &response.body,
+                            is_data_go_kr,
+                            valid,
+                            format,
+                        );
+                        // Only an invalid successful JSON body may be a family no-data envelope.
+                        if !valid
+                            && disposition == Disposition::Retryable
+                            && (200..300).contains(&response.status)
+                            && parsed.as_ref().is_some_and(|v| validator.no_data(v))
+                        {
+                            disposition = Disposition::NoData;
+                        }
+                        (response, disposition, admission)
+                    });
+                    let (
+                        ProviderResponse {
+                            status,
+                            content_type,
+                            body,
+                        },
+                        disposition,
+                        returned_admission,
+                    ) = match timeout_at(deadline, task).await {
+                        Ok(joined) => joined.map_err(|_| AcquisitionError::Invalid)?,
+                        Err(_) => {
+                            report.settle(AttemptResult::Deadline);
+                            return Err(AcquisitionError::Deadline);
+                        }
+                    };
+                    admission = returned_admission;
+                    if Instant::now() >= deadline {
+                        report.settle(AttemptResult::Deadline);
+                        return Err(AcquisitionError::Deadline);
+                    }
                     report.settle(AttemptResult::Disposition(disposition));
+                    if matches!(disposition, Disposition::Data | Disposition::NoData) {
+                        let raw = AcquiredBody {
+                            body,
+                            status,
+                            content_type,
+                            attempts: attempt,
+                        };
+                        return Ok(if disposition == Disposition::NoData {
+                            AcquisitionOutcome::NoData(raw)
+                        } else {
+                            AcquisitionOutcome::Data(raw)
+                        });
+                    }
                     if attempt == 2 || disposition == Disposition::Rejected {
                         return Err(AcquisitionError::Provider(disposition));
                     }
@@ -260,94 +394,27 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                         }
                         key = 1;
                     }
-                    continue;
+                    crate::observability::event(
+                        crate::observability::Component::Provider,
+                        crate::observability::Stage::ProviderHttp,
+                        crate::observability::provider_cause(disposition),
+                        if matches!(disposition, Disposition::Quota | Disposition::Auth) {
+                            crate::observability::Action::RotateKey
+                        } else {
+                            crate::observability::Action::Retry
+                        },
+                        crate::observability::Outcome::Pending,
+                        crate::observability::Details {
+                            status: Some(status),
+                            attempt: Some(u64::from(attempt)),
+                            provider: Some(self.provider),
+                            ..Default::default()
+                        },
+                    );
                 }
-                Err(_) => {
-                    report.settle(AttemptResult::Transport);
-                    if attempt == 1 {
-                        continue;
-                    }
-                    return Err(AcquisitionError::Transport);
-                }
-            };
-            if response.body.len() > 8 * 1024 * 1024 || response.content_type.len() > 512 {
-                report.settle(AttemptResult::Transport);
-                return Err(AcquisitionError::Transport);
-            }
-            let slot = match timeout_at(deadline, self.cpu.clone().acquire_owned()).await {
-                Ok(slot) => slot.map_err(|_| AcquisitionError::Invalid)?,
-                Err(_) => {
-                    report.settle(AttemptResult::Deadline);
-                    return Err(AcquisitionError::Deadline);
-                }
-            };
-            let validator = validator.clone();
-            let is_data_go_kr = self.provider == Provider::DataGoKr;
-            let task = tokio::task::spawn_blocking(move || {
-                let _slot = slot;
-                let parsed = serde_json::from_slice::<serde_json::Value>(&response.body).ok();
-                let valid = parsed.as_ref().is_some_and(|v| validator.valid(v));
-                let mut disposition = classify_format(
-                    response.status,
-                    &response.body,
-                    is_data_go_kr,
-                    valid,
-                    format,
-                );
-                // Only an invalid successful JSON body may be a family no-data envelope.
-                if !valid
-                    && disposition == Disposition::Retryable
-                    && (200..300).contains(&response.status)
-                    && parsed.as_ref().is_some_and(|v| validator.no_data(v))
-                {
-                    disposition = Disposition::NoData;
-                }
-                (response, disposition, admission)
-            });
-            let (
-                ProviderResponse {
-                    status,
-                    content_type,
-                    body,
-                },
-                disposition,
-                returned_admission,
-            ) = match timeout_at(deadline, task).await {
-                Ok(joined) => joined.map_err(|_| AcquisitionError::Invalid)?,
-                Err(_) => {
-                    report.settle(AttemptResult::Deadline);
-                    return Err(AcquisitionError::Deadline);
-                }
-            };
-            admission = returned_admission;
-            if Instant::now() >= deadline {
-                report.settle(AttemptResult::Deadline);
-                return Err(AcquisitionError::Deadline);
-            }
-            report.settle(AttemptResult::Disposition(disposition));
-            if matches!(disposition, Disposition::Data | Disposition::NoData) {
-                let raw = AcquiredBody {
-                    body,
-                    status,
-                    content_type,
-                    attempts: attempt,
-                };
-                return Ok(if disposition == Disposition::NoData {
-                    AcquisitionOutcome::NoData(raw)
-                } else {
-                    AcquisitionOutcome::Data(raw)
-                });
-            }
-            if attempt == 2 || disposition == Disposition::Rejected {
-                return Err(AcquisitionError::Provider(disposition));
-            }
-            if matches!(disposition, Disposition::Quota | Disposition::Auth) {
-                if candidates.len() < 2 {
-                    return Err(AcquisitionError::Provider(disposition));
-                }
-                key = 1;
-            }
-        }
-        Err(AcquisitionError::Invalid)
+                Err(AcquisitionError::Invalid)
+            },
+        )
+        .await
     }
 }

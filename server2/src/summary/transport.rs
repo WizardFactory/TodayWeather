@@ -2,6 +2,7 @@
 //! GET and paged LIST. No other prefix, no overwrite, no delete, no SDK retries.
 use crate::history::demand::DemandError;
 use crate::history::transport::{body, decode_keys, headers, list_page, segment_ok, token_ok};
+use crate::observability::ObservedHttp as _;
 use crate::storage::{Error, HttpS3Transport, ListPage};
 use crate::world::BoundedS3;
 use base64::{Engine, engine::general_purpose::STANDARD};
@@ -67,6 +68,7 @@ impl SummaryTransport for HttpS3Transport {
             .client
             .get(url)
             .send()
+            .observed(crate::observability::Component::Summary)
             .await
             .map_err(|_| Error::Transport)?;
         match response.status().as_u16() {
@@ -105,6 +107,7 @@ impl SummaryTransport for HttpS3Transport {
             .header("content-type", "application/json")
             .body(payload.to_vec())
             .send()
+            .observed(crate::observability::Component::Summary)
             .await
             .map_err(|_| Error::Ambiguous)?;
         let status = response.status().as_u16();

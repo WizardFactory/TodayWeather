@@ -81,3 +81,7 @@ Native API release recovery rehearsal: see the [operator guide](../docs/operatio
 ### Common native verification (S19b)
 
 `python3 tools/native_suite.py --list` lists11 existing checks across KMA CORE/Rich, world, warnings, summary, state, notice and delivery/workers. Run with an explicit release-artifact manifest and a new `--out` directory outside server2. The report preserves selection, actual layers, hashes, errors and per-check evidence; a subset is not all-family coverage. Existing world checks include a frozen legacy coexistence fixture. No previous-release whole-service or production qualification is implied. See the [operator guide](../docs/operations/server2-native-verification.md).
+
+### Structured operational diagnostics
+
+Operational stderr is bounded schema-1 NDJSON with generated trace/operation IDs, safe cause/action/outcome fields and shared-work links. Set `SERVER2_LOG_LEVEL` and `SERVER2_LOG_RATE` at startup; defaults are info and 100 events/second per severity. Internal metrics report filtering/drops/sink failures independently. See the [incident guide](../docs/operations/server2-logging.md) for tracing a request, retained claims/unknown outcomes, output limits and host retention prerequisites. `tools/diagnose_logs.py --trace ID file.ndjson` follows copied local captures; it performs no recovery mutation. Stdout readiness and notice result protocols remain unchanged. Repository implementation does not establish production collector installation.

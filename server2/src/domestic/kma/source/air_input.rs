@@ -261,7 +261,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             self.capture_every,
             self.clock.clone(),
         );
-        tokio::spawn(async move {
+        crate::observability::spawn(async move {
             // The first check is one interval after the first request (that request already
             // acquires a missing hour itself).
             let mut tick = tokio::time::interval_at(Instant::now() + every, every);
@@ -943,7 +943,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         deadline: Instant,
     ) -> Option<OrderedJson> {
         let air = self.air.clone()?;
-        let task = tokio::spawn(async move { air.current(lat, lon, now).await });
+        let task = crate::observability::spawn(async move { air.current(lat, lon, now).await });
         match tokio::time::timeout_at(deadline, task).await {
             Ok(Ok(AirOutcome::Observation(o))) if usable(&o, lat, lon, now) => fallback_arpltn(&o),
             _ => None,
@@ -960,7 +960,7 @@ pub async fn cpu_task<R: Send + 'static>(
         .acquire_owned()
         .await
         .map_err(|_| "cpu admission closed".to_owned())?;
-    tokio::task::spawn_blocking(move || {
+    crate::observability::spawn_blocking(move || {
         let _permit = permit;
         work()
     })
@@ -1101,7 +1101,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                     let result = if Instant::now() >= until {
                         None
                     } else {
-                        let task = tokio::spawn(async move {
+                        let task = crate::observability::spawn(async move {
                             match air {
                                 Some(air) => air.current_with_reason(lat, lon, now).await,
                                 None => (AirOutcome::None, Some("no-provider")),

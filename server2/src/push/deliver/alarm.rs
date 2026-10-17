@@ -100,21 +100,44 @@ pub trait Diagnostics: Send + Sync {
 /// Standard error lines (the legacy worker logged through `log.error`).
 pub struct StderrDiagnostics;
 impl Diagnostics for StderrDiagnostics {
-    fn delivery(&self, e: &Event) {
-        if e.outcome != "accepted" {
-            eprintln!(
-                "push {} minute={} id={} outcome={} class={} status={}",
-                e.kind,
-                e.minute,
-                e.id,
-                e.outcome,
-                e.class,
-                e.status.map_or_else(|| "-".into(), |s| s.to_string())
-            );
-        }
+    fn delivery(&self, _: &Event) {
+        // The anonymous submission span emits the typed terminal record in its own context.
+        // Preserve custom Diagnostics callbacks without duplicating item outcomes on the batch.
     }
-    fn minute(&self, minute: &str, note: &'static str) {
-        eprintln!("push minute={minute} {note}");
+    fn minute(&self, _: &str, note: &'static str) {
+        use crate::observability::{
+            self as obs, Action, Cause, Component, Details, Outcome, Stage,
+        };
+        let cause = if note.contains("already claimed") {
+            Cause::ClaimExists
+        } else if note.contains("result unrecorded") {
+            Cause::Ambiguous
+        } else if note.contains("not ready") {
+            Cause::StateUnavailable
+        } else {
+            Cause::Dependency
+        };
+        obs::event(
+            Component::Delivery,
+            if note.contains("result") {
+                Stage::RecordResult
+            } else {
+                Stage::Worker
+            },
+            cause,
+            Action::RetainClaim,
+            if cause == Cause::Ambiguous {
+                Outcome::Unknown
+            } else if note.contains("unavailable")
+                || note.contains("failed")
+                || cause == Cause::StateUnavailable
+            {
+                Outcome::Failed
+            } else {
+                Outcome::Skipped
+            },
+            Details::default(),
+        );
     }
 }
 
@@ -235,106 +258,122 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
         stale: &[StaleSelection],
         selection: Option<(u64, Oid, Obj)>,
     ) -> Delivery {
-        let message = match weather::daily_summary(info, &self.servers, &*self.fetch).await {
-            Ok(m) => m,
-            Err(WeatherFailure::Request(what, _)) => {
-                return Delivery::Failed {
-                    class: match what {
-                        "geocode" => "geocode-request",
-                        _ => "weather-request",
-                    },
+        crate::observability::value(
+            crate::observability::Component::Delivery,
+            crate::observability::Stage::Submission,
+            async {
+                let message = match weather::daily_summary(info, &self.servers, &*self.fetch).await
+                {
+                    Ok(m) => m,
+                    Err(WeatherFailure::Request(what, _)) => {
+                        return Delivery::Failed {
+                            class: match what {
+                                "geocode" => "geocode-request",
+                                _ => "weather-request",
+                            },
+                        };
+                    }
+                    Err(WeatherFailure::Build(_)) => return Delivery::Failed { class: "build" },
                 };
-            }
-            Err(WeatherFailure::Build(_)) => return Delivery::Failed { class: "build" },
-        };
-        let token = info.get("fcmToken").clone();
-        if token.truthy() {
-            if !matches!(token, Val::Str(_)) {
-                return Delivery::Failed {
-                    class: "invalid-token",
-                };
-            }
-            let body = fcm_body(&message, info);
-            // The OAuth assertion and token expiry use the time of this send, not the minute's
-            // start: with six in flight a long minute can outlast a cached token.
-            let send_ms = self.clock.now_ms().unwrap_or(now_ms);
-            return match self
-                .fcm
-                .send_guarded(Product::of(info.get("package")), send_ms, || async {
-                    if let Some((n, oid, selected)) = selection {
-                        let at = self.clock.now_ms().ok()?;
-                        if at.div_euclid(60_000) != now_ms.div_euclid(60_000)
-                            || !self
+                let token = info.get("fcmToken").clone();
+                if token.truthy() {
+                    if !matches!(token, Val::Str(_)) {
+                        return Delivery::Failed {
+                            class: "invalid-token",
+                        };
+                    }
+                    let body = fcm_body(&message, info);
+                    // The OAuth assertion and token expiry use the time of this send, not the minute's
+                    // start: with six in flight a long minute can outlast a cached token.
+                    let send_ms = self.clock.now_ms().unwrap_or(now_ms);
+                    return match self
+                        .fcm
+                        .send_guarded(Product::of(info.get("package")), send_ms, || async {
+                            if let Some((n, oid, selected)) = selection {
+                                let at = self.clock.now_ms().ok()?;
+                                if at.div_euclid(60_000) != now_ms.div_euclid(60_000)
+                                    || !self
+                                        .push
+                                        .internal(InternalOp::CheckAlarmSelection {
+                                            n,
+                                            oid,
+                                            selected,
+                                        })
+                                        .await
+                                {
+                                    return None;
+                                }
+                                let at = self.clock.now_ms().ok()?;
+                                if at.div_euclid(60_000) != now_ms.div_euclid(60_000) {
+                                    return None;
+                                }
+                            }
+                            Some(body)
+                        })
+                        .await
+                    {
+                        SendOutcome::Accepted => Delivery::Accepted,
+                        SendOutcome::Unregistered { status } => {
+                            // Legacy disabled the token's alarms without waiting; server2 waits until the
+                            // disable is durable (or failed) so the outcome says which.
+                            let disabled = self
                                 .push
-                                .internal(InternalOp::CheckAlarmSelection { n, oid, selected })
-                                .await
-                        {
-                            return None;
+                                .internal(InternalOp::DisableAlarmsByFcm {
+                                    token: to_string(&token),
+                                    spare: stale
+                                        .iter()
+                                        .filter(|s| s.selected.get("fcmToken") == &token)
+                                        .cloned()
+                                        .collect(),
+                                })
+                                .await;
+                            Delivery::Unregistered { status, disabled }
                         }
-                        let at = self.clock.now_ms().ok()?;
-                        if at.div_euclid(60_000) != now_ms.div_euclid(60_000) {
-                            return None;
+                        SendOutcome::Rejected { status, code } => {
+                            Delivery::Rejected { status, code }
+                        }
+                        SendOutcome::Unknown { reason } => Delivery::Unknown { reason },
+                        SendOutcome::NotSent { reason } => Delivery::Failed {
+                            class: match reason {
+                                "credentials" => "fcm-credentials",
+                                "oauth" => "fcm-oauth",
+                                "shutdown" => "shutdown-before-post",
+                                "guard" => "alarm-admission",
+                                _ => "fcm-connect",
+                            },
+                        },
+                    };
+                }
+                let kind = info.get("type");
+                if js::loose_eq(kind, &Val::Str("ios".into())) {
+                    Delivery::Failed {
+                        class: "ios-without-fcm-token",
+                    }
+                } else if js::loose_eq(kind, &Val::Str("android".into())) {
+                    if info.get("registrationId").truthy() {
+                        // node-gcm used the legacy GCM/FCM HTTP API that Google shut down in 2024.
+                        Delivery::Failed {
+                            class: "gcm-retired",
+                        }
+                    } else {
+                        Delivery::Failed {
+                            class: "gcm-without-registration-id",
                         }
                     }
-                    Some(body)
-                })
-                .await
-            {
-                SendOutcome::Accepted => Delivery::Accepted,
-                SendOutcome::Unregistered { status } => {
-                    // Legacy disabled the token's alarms without waiting; server2 waits until the
-                    // disable is durable (or failed) so the outcome says which.
-                    let disabled = self
-                        .push
-                        .internal(InternalOp::DisableAlarmsByFcm {
-                            token: to_string(&token),
-                            spare: stale
-                                .iter()
-                                .filter(|s| s.selected.get("fcmToken") == &token)
-                                .cloned()
-                                .collect(),
-                        })
-                        .await;
-                    Delivery::Unregistered { status, disabled }
+                } else {
+                    Delivery::Failed {
+                        class: "unknown-type",
+                    }
                 }
-                SendOutcome::Rejected { status, code } => Delivery::Rejected { status, code },
-                SendOutcome::Unknown { reason } => Delivery::Unknown { reason },
-                SendOutcome::NotSent { reason } => Delivery::Failed {
-                    class: match reason {
-                        "credentials" => "fcm-credentials",
-                        "oauth" => "fcm-oauth",
-                        "shutdown" => "shutdown-before-post",
-                        "guard" => "alarm-admission",
-                        _ => "fcm-connect",
-                    },
-                },
-            };
-        }
-        let kind = info.get("type");
-        if js::loose_eq(kind, &Val::Str("ios".into())) {
-            Delivery::Failed {
-                class: "ios-without-fcm-token",
-            }
-        } else if js::loose_eq(kind, &Val::Str("android".into())) {
-            if info.get("registrationId").truthy() {
-                // node-gcm used the legacy GCM/FCM HTTP API that Google shut down in 2024.
-                Delivery::Failed {
-                    class: "gcm-retired",
-                }
-            } else {
-                Delivery::Failed {
-                    class: "gcm-without-registration-id",
-                }
-            }
-        } else {
-            Delivery::Failed {
-                class: "unknown-type",
-            }
-        }
+            },
+            crate::observability::delivery,
+        )
+        .await
     }
 
     /// `sendPush(time)` for the UTC minute containing `now_ms`.
     pub async fn run_minute(&self, now_ms: i64) -> MinuteReport {
+        crate::observability::delivery_cycle(crate::observability::DeliveryKind::Alarm, async {
         let minute_ms = now_ms - now_ms.rem_euclid(60_000);
         let time = ((minute_ms.rem_euclid(DAY_MS)) / 1000) as f64;
         let minute = crate::world::js::iso(minute_ms as f64).unwrap_or_default();
@@ -497,6 +536,8 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
             }
         }
         report
+
+        }).await
     }
 
     /// Run minutes forever, one at each UTC minute boundary (`setInterval(60 s)`); minutes may
@@ -517,9 +558,9 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                 continue;
             };
             let worker = self.clone();
-            jobs.spawn(async move {
+            jobs.spawn(crate::observability::inherit(async move {
                 worker.run_minute(observed).await;
-            });
+            }));
         }
     }
 }

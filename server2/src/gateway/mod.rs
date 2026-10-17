@@ -177,16 +177,23 @@ impl Gateway {
     }
     /// Records aggregate outcome counters around the unchanged request contract.
     pub async fn handle(&self, request: Request<Body>) -> Response {
-        if let Some(direct) = &self.direct
-            && direct.claims(request.method(), request.uri().path())
-        {
-            // Direct routes are not gateway requests: no gateway counters or admission.
-            return direct.handle(request).await;
-        }
-        let outcome = metrics::Outcome::start();
-        let response = self.respond(request).await;
-        outcome.finish(response.status().as_u16());
-        response
+        crate::observability::work(
+            crate::observability::Component::Gateway,
+            crate::observability::Stage::Request,
+            async {
+                if let Some(direct) = &self.direct
+                    && direct.claims(request.method(), request.uri().path())
+                {
+                    // Direct routes are not gateway requests: no gateway counters or admission.
+                    return direct.handle(request).await;
+                }
+                let outcome = metrics::Outcome::start();
+                let response = self.respond(request).await;
+                outcome.finish(response.status().as_u16());
+                response
+            },
+        )
+        .await
     }
     async fn respond(&self, request: Request<Body>) -> Response {
         let method = request.method().clone();
@@ -211,7 +218,7 @@ impl Gateway {
         let deadline = Instant::now() + inner.deadline;
         // The spawned owner survives a disconnected waiter; all owned IO shares its deadline.
         let owned = metrics::Owned::start();
-        let task = tokio::spawn(async move {
+        let task = crate::observability::spawn(async move {
             let _owned = owned;
             let _owner = owner.clone();
             tokio::time::timeout_at(deadline, inner.process(route, lang, query, deadline, owner))

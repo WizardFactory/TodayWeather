@@ -43,6 +43,10 @@ def main():
     if local_tests.exists():
         commands.insert(2, [sys.executable, str(local_tests)])
         commands.append([sys.executable, str(local_smoke), '--binary', 'target/release/server2'])
+    commands.insert(6, [sys.executable, 'tests/integration/test_log_diagnosis.py'])
+    commands.append(['cargo', 'build', '--locked', '--release', '--example', 'logging_smoke'])
+    commands.append([sys.executable, 'tools/logging_smoke.py', '--binary', 'target/release/server2',
+                     '--probe', 'target/release/examples/logging_smoke', '--out', str(root/'reports/server2-logging/ci')])
     commands.append([sys.executable, 'tools/gateway_smoke.py', '--binary', 'target/release/server2'])
     # S15: KMA v000903 routing entry (legacy -> kma -> legacy) on the release binary.
     commands.append([sys.executable, 'tools/kma_smoke.py', '--binary', 'target/release/server2'])

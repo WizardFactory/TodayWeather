@@ -62,64 +62,115 @@ impl<T: CatalogTransport + Send + Sync + 'static> Ledger<T> {
 
     /// Claim `kind`/`minute` for the listed `_id`s.
     pub async fn claim(&self, kind: &str, minute_ms: i64, now_ms: i64, ids: &[String]) -> Claim {
-        let key = format!("{}.json", minute_path(kind, minute_ms));
-        let body = serde_json::to_vec(&serde_json::json!({
-            "schema": 1,
-            "kind": kind,
-            "minute": crate::world::js::iso(minute_ms as f64),
-            "claimedAt": crate::world::js::iso(now_ms as f64),
-            "claim": nonce(),
-            "records": ids,
-        }))
-        .expect("claim json");
-        if self.bounded(self.transport.ready()).await.is_err() {
-            return Claim::Unavailable;
-        }
-        match self
-            .bounded(
-                self.transport
-                    .put_control(&key, &body, &WriteCondition::Absent),
-            )
-            .await
-        {
-            Ok(200) => Claim::Owned,
-            Ok(409 | 412) => Claim::Taken,
-            Ok(status) if (400..500).contains(&status) => Claim::Unavailable,
-            // Unknown outcome: read it back; only our own body is a claim.
-            _ => match self
-                .bounded(self.transport.get_control(&key, MAX_OBJECT))
-                .await
-            {
-                Ok(object) if object.body == body => Claim::Owned,
-                Ok(_) => Claim::Taken,
-                Err(_) => Claim::Unavailable,
+        use crate::observability::{Action, Cause, Component, Details, Operation, Outcome, Stage};
+        let mut operation = Operation::new(Component::Delivery, Stage::Claim);
+        operation.external_pending();
+        let context = operation.context();
+        let outcome = context
+            .scope(async {
+                let key = format!("{}.json", minute_path(kind, minute_ms));
+                let body = serde_json::to_vec(&serde_json::json!({
+                    "schema": 1,
+                    "kind": kind,
+                    "minute": crate::world::js::iso(minute_ms as f64),
+                    "claimedAt": crate::world::js::iso(now_ms as f64),
+                    "claim": nonce(),
+                    "records": ids,
+                }))
+                .expect("claim json");
+                if self.bounded(self.transport.ready()).await.is_err() {
+                    return Claim::Unavailable;
+                }
+                match self
+                    .bounded(
+                        self.transport
+                            .put_control(&key, &body, &WriteCondition::Absent),
+                    )
+                    .await
+                {
+                    Ok(200) => Claim::Owned,
+                    Ok(409 | 412) => Claim::Taken,
+                    Ok(status) if (400..500).contains(&status) => Claim::Unavailable,
+                    // Unknown outcome: read it back; only our own body is a claim.
+                    _ => match self
+                        .bounded(self.transport.get_control(&key, MAX_OBJECT))
+                        .await
+                    {
+                        Ok(object) if object.body == body => Claim::Owned,
+                        Ok(_) => Claim::Taken,
+                        Err(_) => Claim::Unavailable,
+                    },
+                }
+            })
+            .await;
+        let (cause, action, result) = match &outcome {
+            Claim::Owned => (Cause::None, Action::None, Outcome::Success),
+            Claim::Taken => (Cause::ClaimExists, Action::DoNotRetry, Outcome::Skipped),
+            Claim::Unavailable => (Cause::Dependency, Action::DoNotRetry, Outcome::Unknown),
+        };
+        operation.finish(
+            cause,
+            action,
+            result,
+            Details {
+                count: Some(ids.len() as u64),
+                ..Details::default()
             },
-        }
+        );
+        outcome
     }
 
     /// Record the minute's outcomes (best effort; a missing result leaves the claim without
     /// result, which reads as "outcomes unknown"). An unknown write outcome is read back.
     pub async fn result(&self, kind: &str, minute_ms: i64, body: &serde_json::Value) -> Written {
-        let key = format!("{}.result.json", minute_path(kind, minute_ms));
-        let bytes = serde_json::to_vec(body).expect("result json");
-        match self
-            .bounded(
-                self.transport
-                    .put_control(&key, &bytes, &WriteCondition::Absent),
-            )
-            .await
-        {
-            Ok(200) => Written::Recorded,
-            Ok(status) if (400..500).contains(&status) => Written::Refused,
-            _ => match self
-                .bounded(self.transport.get_control(&key, MAX_OBJECT))
-                .await
-            {
-                Ok(object) if object.body == bytes => Written::Recorded,
-                Ok(_) => Written::Refused,
-                Err(Error::NotFound) => Written::Refused,
-                Err(_) => Written::Unknown,
+        use crate::observability::{Action, Cause, Component, Details, Operation, Outcome, Stage};
+        let mut operation = Operation::new(Component::Delivery, Stage::RecordResult);
+        operation.external_pending();
+        let context = operation.context();
+        let outcome = context
+            .scope(async {
+                let key = format!("{}.result.json", minute_path(kind, minute_ms));
+                let bytes = serde_json::to_vec(body).expect("result json");
+                match self
+                    .bounded(
+                        self.transport
+                            .put_control(&key, &bytes, &WriteCondition::Absent),
+                    )
+                    .await
+                {
+                    Ok(200) => Written::Recorded,
+                    Ok(status) if (400..500).contains(&status) => Written::Refused,
+                    _ => match self
+                        .bounded(self.transport.get_control(&key, MAX_OBJECT))
+                        .await
+                    {
+                        Ok(object) if object.body == bytes => Written::Recorded,
+                        Ok(_) => Written::Refused,
+                        Err(Error::NotFound) => Written::Refused,
+                        Err(_) => Written::Unknown,
+                    },
+                }
+            })
+            .await;
+        let (cause, action, result) = match &outcome {
+            Written::Recorded => (Cause::None, Action::None, Outcome::Success),
+            Written::Refused => (Cause::Dependency, Action::RetainClaim, Outcome::Failed),
+            Written::Unknown => (Cause::Ambiguous, Action::RetainClaim, Outcome::Unknown),
+        };
+        let count = body
+            .get("deliveries")
+            .and_then(serde_json::Value::as_array)
+            .map(|items| items.len() as u64)
+            .or_else(|| body.get("outcome").map(|_| 1));
+        operation.finish(
+            cause,
+            action,
+            result,
+            Details {
+                count,
+                ..Details::default()
             },
-        }
+        );
+        outcome
     }
 }

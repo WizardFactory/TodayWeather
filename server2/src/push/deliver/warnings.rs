@@ -395,201 +395,221 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
         }
     }
     pub async fn poll(&self) -> Result<PollReport, Error> {
-        let mut state = self.state.lock().await;
-        let now = self.clock.now_ms().map_err(|_| Error::Invalid("clock"))?;
-        if !self.push.ready() {
-            return Err(Error::Invalid("push state not ready"));
-        }
-        let items = self.feed.items().await?;
-        let retained: HashSet<String> = items.iter().map(|i| i.id.clone()).collect();
-        if !state.initialized {
-            state.seen = retained;
-            state.initialized = true;
-            return Ok(PollReport::default());
-        }
-        state.seen.retain(|id| retained.contains(id));
-        let new = items
-            .iter()
-            .filter(|i| !state.seen.contains(&i.id))
-            .cloned()
-            .collect::<Vec<_>>();
-        for group in groups(&new, now)? {
-            if let Some(open) = state.open.iter_mut().find(|g| g.id == group.id) {
-                for z in group.zones {
-                    if !open.zones.contains(&z) {
-                        open.zones.push(z)
+        crate::observability::delivery_cycle_result(
+            crate::observability::DeliveryKind::Warning,
+            async {
+                let mut state = self.state.lock().await;
+                let now = self.clock.now_ms().map_err(|_| Error::Invalid("clock"))?;
+                if !self.push.ready() {
+                    return Err(Error::Invalid("push state not ready"));
+                }
+                let items = self.feed.items().await?;
+                let retained: HashSet<String> = items.iter().map(|i| i.id.clone()).collect();
+                if !state.initialized {
+                    state.seen = retained;
+                    state.initialized = true;
+                    return Ok(PollReport::default());
+                }
+                state.seen.retain(|id| retained.contains(id));
+                let new = items
+                    .iter()
+                    .filter(|i| !state.seen.contains(&i.id))
+                    .cloned()
+                    .collect::<Vec<_>>();
+                for group in groups(&new, now)? {
+                    if let Some(open) = state.open.iter_mut().find(|g| g.id == group.id) {
+                        for z in group.zones {
+                            if !open.zones.contains(&z) {
+                                open.zones.push(z)
+                            }
+                        }
+                    } else {
+                        state.open.push(group)
                     }
                 }
-            } else {
-                state.open.push(group)
-            }
-        }
-        state.seen.extend(new.iter().map(|i| i.id.clone()));
-        state.open.retain(|g| now - g.observed_at < WINDOW);
-        if state.open.is_empty() {
-            state.regions.clear();
-            return Ok(PollReport::default());
-        }
-        let records = self
-            .push
-            .state()
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
-            .coll(Coll::Alert)
-            .iter()
-            .filter(|(_, r)| {
-                !matches!(r.doc.get("enable"), Val::Bool(false)) && inside(&r.doc, now)
-            })
-            .collect::<Vec<_>>();
-        let gate = Arc::new(Semaphore::new(CONCURRENCY));
-        let mut locations: BTreeMap<Vec<u8>, Vec<(u64, Record)>> = BTreeMap::new();
-        for (n, r) in records {
-            let key = if matches!(r.doc.get("geo"), Val::Arr(_)) {
-                Val::Arr(vec![Val::Str("geo".into()), r.doc.get("geo").clone()]).to_json()
-            } else {
-                Val::Arr(vec![Val::Str("town".into()), r.doc.get("town").clone()]).to_json()
-            };
-            locations.entry(key).or_default().push((n, r));
-        }
-        state.regions.retain(|key, _| locations.contains_key(key));
-        let mut resolved = Vec::new();
-        let mut resolve = Vec::new();
-        for (key, records) in locations {
-            if let Some(ids) = state.regions.get(&key) {
+                state.seen.extend(new.iter().map(|i| i.id.clone()));
+                state.open.retain(|g| now - g.observed_at < WINDOW);
+                if state.open.is_empty() {
+                    state.regions.clear();
+                    return Ok(PollReport::default());
+                }
+                let records = self
+                    .push
+                    .state()
+                    .read()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .coll(Coll::Alert)
+                    .iter()
+                    .filter(|(_, r)| {
+                        !matches!(r.doc.get("enable"), Val::Bool(false)) && inside(&r.doc, now)
+                    })
+                    .collect::<Vec<_>>();
+                let gate = Arc::new(Semaphore::new(CONCURRENCY));
+                let mut locations: BTreeMap<Vec<u8>, Vec<(u64, Record)>> = BTreeMap::new();
                 for (n, r) in records {
-                    resolved.push((n, r, Ok(ids.clone())));
-                }
-            } else {
-                let gate = gate.clone();
-                resolve.push(async move {
-                    let _p = gate.acquire_owned().await.expect("open gate");
-                    let zones = self.locations.zones(&records[0].1.doc, now).await;
-                    (key, records, zones)
-                });
-            }
-        }
-        for (key, records, ids) in futures_join(resolve).await {
-            if let Ok(ids) = &ids {
-                state.regions.insert(key, ids.clone());
-            }
-            for (n, r) in records {
-                resolved.push((n, r, ids.clone()));
-            }
-        }
-        resolved.sort_by_key(|(n, _, _)| *n);
-        let mut report = PollReport::default();
-        for group in &state.open {
-            let mut endpoints = HashSet::new();
-            let mut jobs = Vec::new();
-            // Match the first registration in zone iteration order, then natural record order.
-            for zone in &group.zones {
-                for (n, record, ids) in &resolved {
-                    let Ok(ids) = ids else { continue };
-                    if !ids.contains(zone) {
-                        continue;
-                    }
-                    let Val::Str(token) = record.doc.get("fcmToken") else {
-                        continue;
-                    };
-                    if token.is_empty() {
-                        continue;
-                    }
-                    let package = if Product::of(record.doc.get("package")) == Product::TodayAir {
-                        "todayAir"
+                    let key = if matches!(r.doc.get("geo"), Val::Arr(_)) {
+                        Val::Arr(vec![Val::Str("geo".into()), r.doc.get("geo").clone()]).to_json()
                     } else {
-                        "todayWeather"
+                        Val::Arr(vec![Val::Str("town".into()), r.doc.get("town").clone()]).to_json()
                     };
-                    let endpoint = sha256(
-                        &Val::Arr(vec![Val::Str(package.into()), Val::Str(token.clone())])
-                            .to_json(),
-                    );
-                    if !endpoints.insert(endpoint.clone()) {
-                        continue;
-                    }
-                    jobs.push((*n, record.clone(), ids.clone(), endpoint));
+                    locations.entry(key).or_default().push((n, r));
                 }
-            }
-            report.selected += jobs.len();
-            let mut tasks = Vec::new();
-            for (n, record, ids, endpoint) in jobs {
-                let gate = gate.clone();
-                tasks.push(async move {
-                    let _permit = gate.acquire_owned().await.expect("open gate");
-                    let now = self.clock.now_ms().map_err(|_| Error::Invalid("clock"))?;
-                    if now - group.observed_at >= WINDOW
-                        || !self.current(n, &record)
-                        || !inside(&record.doc, now)
-                    {
-                        return Ok(None);
-                    }
-                    let zones = self.zones.current(now).await?;
-                    if !active(group, &ids, &zones, now) {
-                        return Ok(None);
-                    }
-                    let kind = format!("warning/{}/{}", group.id, endpoint);
-                    let source = published_at(&event_value(&group.event)["tmFc"])
-                        .ok_or(Error::Corrupt("warning source time"))?;
-                    if self
-                        .ledger
-                        .claim(&kind, source, now, &[oid_hex(&record.oid)])
-                        .await
-                        != Claim::Owned
-                    {
-                        return Ok(None);
-                    }
-                    let now = self.clock.now_ms().map_err(|_| Error::Invalid("clock"))?;
-                    // Claims are never released, including cancellation or a concurrent edit.
-                    let result = if !self.current(n, &record)
-                        || !inside(&record.doc, now)
-                        || now - group.observed_at >= WINDOW
-                    {
-                        Delivery::Failed {
-                            class: "registration-changed-or-expired",
+                state.regions.retain(|key, _| locations.contains_key(key));
+                let mut resolved = Vec::new();
+                let mut resolve = Vec::new();
+                for (key, records) in locations {
+                    if let Some(ids) = state.regions.get(&key) {
+                        for (n, r) in records {
+                            resolved.push((n, r, Ok(ids.clone())));
                         }
                     } else {
-                        match self.zones.current(now).await {
-                            Err(_) => Delivery::Failed {
-                                class: "warning-state",
-                            },
-                            Ok(zones) if !active(group, &ids, &zones, now) => Delivery::Failed {
-                                class: "warning-inactive",
-                            },
-                            Ok(_) => self.submit(n, &record, group, &ids, now).await,
+                        let gate = gate.clone();
+                        resolve.push(async move {
+                            let _p = gate.acquire_owned().await.expect("open gate");
+                            let zones = self.locations.zones(&records[0].1.doc, now).await;
+                            (key, records, zones)
+                        });
+                    }
+                }
+                for (key, records, ids) in futures_join(resolve).await {
+                    if let Ok(ids) = &ids {
+                        state.regions.insert(key, ids.clone());
+                    }
+                    for (n, r) in records {
+                        resolved.push((n, r, ids.clone()));
+                    }
+                }
+                resolved.sort_by_key(|(n, _, _)| *n);
+                let mut report = PollReport::default();
+                for group in &state.open {
+                    let mut endpoints = HashSet::new();
+                    let mut jobs = Vec::new();
+                    // Match the first registration in zone iteration order, then natural record order.
+                    for zone in &group.zones {
+                        for (n, record, ids) in &resolved {
+                            let Ok(ids) = ids else { continue };
+                            if !ids.contains(zone) {
+                                continue;
+                            }
+                            let Val::Str(token) = record.doc.get("fcmToken") else {
+                                continue;
+                            };
+                            if token.is_empty() {
+                                continue;
+                            }
+                            let package =
+                                if Product::of(record.doc.get("package")) == Product::TodayAir {
+                                    "todayAir"
+                                } else {
+                                    "todayWeather"
+                                };
+                            let endpoint = sha256(
+                                &Val::Arr(vec![Val::Str(package.into()), Val::Str(token.clone())])
+                                    .to_json(),
+                            );
+                            if !endpoints.insert(endpoint.clone()) {
+                                continue;
+                            }
+                            jobs.push((*n, record.clone(), ids.clone(), endpoint));
                         }
-                    };
-                    let id = oid_hex(&record.oid);
-                    let at = crate::world::js::iso(now as f64).unwrap_or_default();
-                    self.diagnostics.delivery(&Diagnostic {
-                        kind: "warning",
-                        minute: at,
-                        id: id.clone(),
-                        outcome: result.outcome(),
-                        class: result.class(),
-                        status: result.status(),
-                    });
-                    let value = serde_json::json!({"schema":1,"kind":"warning",
+                    }
+                    report.selected += jobs.len();
+                    let mut tasks = Vec::new();
+                    for (n, record, ids, endpoint) in jobs {
+                        let gate = gate.clone();
+                        tasks.push(crate::observability::value(
+                            crate::observability::Component::Delivery,
+                            crate::observability::Stage::Submission,
+                            async move {
+                                let _permit = gate.acquire_owned().await.expect("open gate");
+                                let now =
+                                    self.clock.now_ms().map_err(|_| Error::Invalid("clock"))?;
+                                if now - group.observed_at >= WINDOW
+                                    || !self.current(n, &record)
+                                    || !inside(&record.doc, now)
+                                {
+                                    return Ok(None);
+                                }
+                                let zones = self.zones.current(now).await?;
+                                if !active(group, &ids, &zones, now) {
+                                    return Ok(None);
+                                }
+                                let kind = format!("warning/{}/{}", group.id, endpoint);
+                                let source = published_at(&event_value(&group.event)["tmFc"])
+                                    .ok_or(Error::Corrupt("warning source time"))?;
+                                if self
+                                    .ledger
+                                    .claim(&kind, source, now, &[oid_hex(&record.oid)])
+                                    .await
+                                    != Claim::Owned
+                                {
+                                    return Ok(None);
+                                }
+                                let now =
+                                    self.clock.now_ms().map_err(|_| Error::Invalid("clock"))?;
+                                // Claims are never released, including cancellation or a concurrent edit.
+                                let result = if !self.current(n, &record)
+                                    || !inside(&record.doc, now)
+                                    || now - group.observed_at >= WINDOW
+                                {
+                                    Delivery::Failed {
+                                        class: "registration-changed-or-expired",
+                                    }
+                                } else {
+                                    match self.zones.current(now).await {
+                                        Err(_) => Delivery::Failed {
+                                            class: "warning-state",
+                                        },
+                                        Ok(zones) if !active(group, &ids, &zones, now) => {
+                                            Delivery::Failed {
+                                                class: "warning-inactive",
+                                            }
+                                        }
+                                        Ok(_) => self.submit(n, &record, group, &ids, now).await,
+                                    }
+                                };
+                                let id = oid_hex(&record.oid);
+                                let at = crate::world::js::iso(now as f64).unwrap_or_default();
+                                self.diagnostics.delivery(&Diagnostic {
+                                    kind: "warning",
+                                    minute: at,
+                                    id: id.clone(),
+                                    outcome: result.outcome(),
+                                    class: result.class(),
+                                    status: result.status(),
+                                });
+                                let value = serde_json::json!({"schema":1,"kind":"warning",
                         "event":group.id,"record":id,"outcome":result.outcome(),
                         "class":result.class(),"status":result.status()});
-                    let _ = self.ledger.result(&kind, source, &value).await;
-                    Ok::<_, Error>(Some(result))
-                });
-            }
-            for result in futures_join(tasks).await {
-                match result {
-                    Ok(Some(Delivery::Accepted)) => {
-                        report.attempted += 1;
-                        report.accepted += 1
+                                let _ = self.ledger.result(&kind, source, &value).await;
+                                Ok::<_, Error>(Some(result))
+                            },
+                            |result| match result {
+                                Ok(Some(delivery)) => crate::observability::delivery(delivery),
+                                Ok(None) => crate::observability::skipped(),
+                                Err(error) => crate::observability::error(error),
+                            },
+                        ));
                     }
-                    Ok(Some(_)) => {
-                        report.attempted += 1;
-                        report.failed += 1
+                    for result in futures_join(tasks).await {
+                        match result {
+                            Ok(Some(Delivery::Accepted)) => {
+                                report.attempted += 1;
+                                report.accepted += 1
+                            }
+                            Ok(Some(_)) => {
+                                report.attempted += 1;
+                                report.failed += 1
+                            }
+                            Ok(None) => report.skipped += 1,
+                            Err(_) => report.failed += 1,
+                        }
                     }
-                    Ok(None) => report.skipped += 1,
-                    Err(_) => report.failed += 1,
                 }
-            }
-        }
-        Ok(report)
+                Ok(report)
+            },
+        )
+        .await
     }
     /// Readiness does not start this loop; S20 installs one owner. Every startup's first poll
     /// is silent. An errored/cancelled pass cannot release a durable delivery claim.

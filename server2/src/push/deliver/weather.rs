@@ -5,6 +5,7 @@
 //! request ([`WEATHER_TIMEOUT`]).
 use super::text::{self, Message};
 use crate::gateway::{BoxFuture, OrderedJson};
+use crate::observability::ObservedHttp as _;
 use crate::push::js::{self, Thrown, encode_uri_component, has_own, prop, to_string};
 use crate::push::routes::init_units;
 use crate::world::js::{Obj, Val};
@@ -48,13 +49,17 @@ impl Fetch for HttpFetch {
             if let Some(lang) = lang {
                 request = request.header("accept-language", lang);
             }
-            let response = request.send().await.map_err(|e| {
-                if e.is_timeout() {
-                    "timeout".to_owned()
-                } else {
-                    "transport".to_owned()
-                }
-            })?;
+            let response = request
+                .send()
+                .observed(crate::observability::Component::Delivery)
+                .await
+                .map_err(|e| {
+                    if e.is_timeout() {
+                        "timeout".to_owned()
+                    } else {
+                        "transport".to_owned()
+                    }
+                })?;
             let status = response.status().as_u16();
             let body = response.bytes().await.map_err(|_| "transport".to_owned())?;
             Ok((status, body.to_vec()))

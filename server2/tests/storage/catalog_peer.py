@@ -164,7 +164,8 @@ class PersistentHandler(Handler):
         # The inherited absolute socket lifetime stays bounded. Stop advertising reuse
         # before its timer can interrupt a later request on this connection.
         lifetime = self.server.config['socket_timeout_seconds']
-        if time.monotonic() - self.opened_at >= lifetime / 2:
+        # Early write faults may leave unread request bytes; never reuse that socket.
+        if (self.command in ('PUT', 'POST') and status != 200) or time.monotonic() - self.opened_at >= lifetime / 2:
             headers = dict(headers or {}, **{'Connection': 'close'})
             self.close_connection = True
         return super().send(status, body, headers)
@@ -237,6 +238,17 @@ def check_persistent():
             response = connection.getresponse()
             assert response.status == 412
             response.read()
+            # A fault may return before consuming the PUT body. The next request must
+            # reconnect rather than parse those body bytes as an HTTP method.
+            connection.request('POST', '/__catalog?mode=unexpected202&key=early', body=b'', headers=auth)
+            response = connection.getresponse()
+            assert response.status == 204 and response.read() == b''
+            connection.request('PUT', '/server2-local/early', body, headers)
+            response = connection.getresponse()
+            assert response.status == 202 and response.read() == b''
+            connection.request('GET', path, headers=auth)
+            response = connection.getresponse()
+            assert response.status == 200 and response.read() == body, 'early PUT response corrupted the next HTTP frame'
             print('owned peer', 'persistent' if persistent else 'default', 'reuse/framing/HEAD/204/CAS/fault PASS')
         finally:
             connection.close()

@@ -2,6 +2,7 @@
 //! a fixed timeout and no retry. Google is a JSON POST; OpenWeather and WAQI are GETs. The key
 //! travels only inside the URL and is never logged, stored or returned in an error.
 use crate::gateway::BoxFuture;
+use crate::observability::ObservedHttp as _;
 use std::{net::IpAddr, time::Duration};
 use tokio::time::{Instant, timeout_at};
 
@@ -96,7 +97,11 @@ impl AirTransport for HttpAirTransport {
                 None => self.client.get(request.url),
             };
             let work = async {
-                let response = builder.send().await.map_err(|_| AirHttpError::Transport)?;
+                let response = builder
+                    .send()
+                    .observed(crate::observability::Component::World)
+                    .await
+                    .map_err(|_| AirHttpError::Transport)?;
                 match crate::providers::read_bounded(response, self.maximum).await {
                     Ok(r) => Ok(r),
                     // An error status keeps its class (auth/quota/http) without its body; an

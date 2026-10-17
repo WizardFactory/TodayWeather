@@ -370,7 +370,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                         let fresh = !requested.swap(true, std::sync::atomic::Ordering::SeqCst);
                         async move {
                             if fresh {
-                                let _ = tokio::spawn(async move {
+                                let _ = crate::observability::spawn(async move {
                                     if let Ok(Some(_)) = acquire.acquire(request).await {
                                         cache.lock().await.take();
                                     }
@@ -1099,7 +1099,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     && !running.swap(true, SeqCst);
                 async move {
                     if fresh {
-                        let _ = tokio::spawn(async move {
+                        let _ = crate::observability::spawn(async move {
                             let _running = Running(running);
                             if acquire.acquire(request).await.is_ok() {
                                 // New rows are read again (the service memory holds the
@@ -1419,7 +1419,7 @@ fn publication_flight(
             if !fresh {
                 return None;
             }
-            tokio::spawn(acquire.acquire(request))
+            crate::observability::spawn(acquire.acquire(request))
                 .await
                 .ok()?
                 .ok()

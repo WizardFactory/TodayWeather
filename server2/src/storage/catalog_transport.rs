@@ -1,6 +1,7 @@
 //! Bounded JSON control objects and raw-prefix discovery, separate from raw gzip I/O.
 //! The caller owns operation deadlines, admission, JSON validation and XML CPU work.
 use super::{Error, HttpS3Transport, ObjectTransport};
+use crate::observability::ObservedHttp as _;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use instant_xml::FromXml;
 use md5::{Digest, Md5};
@@ -149,51 +150,59 @@ async fn read_body(
 
 impl CatalogTransport for HttpS3Transport {
     async fn get_control(&self, key: &str, cap: usize) -> Result<ControlObject, Error> {
-        maximum(cap)?;
-        if !key.starts_with("index/v2/") || !owned_path(key, false) {
-            return Err(Error::Invalid("control key"));
-        }
-        let credentials = self.credentials.snapshot().await?;
-        let url = self
-            .bucket
-            .get_object(Some(&credentials), key)
-            .sign(Duration::from_secs(30));
-        let response = self
-            .client
-            .get(url)
-            .send()
-            .await
-            .map_err(|_| Error::Transport)?;
-        match response.status().as_u16() {
-            404 => return Err(Error::NotFound),
-            200 => (),
-            status => return Err(Error::Status(status)),
-        }
-        let length = response_length(&response, "application/json", cap)?;
-        let etag = header(&response, "etag")?
-            .and_then(|v| v.to_str().ok())
-            .filter(|v| valid_etag(v))
-            .ok_or(Error::Corrupt("control etag"))?
-            .to_owned();
-        let version = header(&response, "x-amz-version-id")?
-            .map(|v| {
-                v.to_str()
-                    .ok()
-                    .filter(|v| {
-                        !v.is_empty()
-                            && v.len() <= 256
-                            && v.bytes().all(|b| (0x21..=0x7e).contains(&b))
+        crate::observability::observe(
+            crate::observability::Component::S3,
+            crate::observability::Stage::Restore,
+            async {
+                maximum(cap)?;
+                if !key.starts_with("index/v2/") || !owned_path(key, false) {
+                    return Err(Error::Invalid("control key"));
+                }
+                let credentials = self.credentials.snapshot().await?;
+                let url = self
+                    .bucket
+                    .get_object(Some(&credentials), key)
+                    .sign(Duration::from_secs(30));
+                let response = self
+                    .client
+                    .get(url)
+                    .send()
+                    .observed(crate::observability::Component::S3)
+                    .await
+                    .map_err(|_| Error::Transport)?;
+                match response.status().as_u16() {
+                    404 => return Err(Error::NotFound),
+                    200 => (),
+                    status => return Err(Error::Status(status)),
+                }
+                let length = response_length(&response, "application/json", cap)?;
+                let etag = header(&response, "etag")?
+                    .and_then(|v| v.to_str().ok())
+                    .filter(|v| valid_etag(v))
+                    .ok_or(Error::Corrupt("control etag"))?
+                    .to_owned();
+                let version = header(&response, "x-amz-version-id")?
+                    .map(|v| {
+                        v.to_str()
+                            .ok()
+                            .filter(|v| {
+                                !v.is_empty()
+                                    && v.len() <= 256
+                                    && v.bytes().all(|b| (0x21..=0x7e).contains(&b))
+                            })
+                            .map(str::to_owned)
+                            .ok_or(Error::Corrupt("control version"))
                     })
-                    .map(str::to_owned)
-                    .ok_or(Error::Corrupt("control version"))
-            })
-            .transpose()?;
-        let body = read_body(response, length, cap).await?;
-        Ok(ControlObject {
-            body,
-            etag,
-            version,
-        })
+                    .transpose()?;
+                let body = read_body(response, length, cap).await?;
+                Ok(ControlObject {
+                    body,
+                    etag,
+                    version,
+                })
+            },
+        )
+        .await
     }
 
     async fn put_control(
@@ -202,36 +211,44 @@ impl CatalogTransport for HttpS3Transport {
         body: &[u8],
         condition: &WriteCondition,
     ) -> Result<u16, Error> {
-        maximum(body.len())?;
-        if !key.starts_with("index/v2/") || !owned_path(key, false) {
-            return Err(Error::Invalid("control key"));
-        }
-        let (name, value) = match condition {
-            WriteCondition::Absent => ("if-none-match", "*"),
-            WriteCondition::Match(etag) if valid_etag(etag) => ("if-match", etag.as_str()),
-            WriteCondition::Match(_) => return Err(Error::Invalid("control etag")),
-        };
-        let md5 = STANDARD.encode(Md5::digest(body));
-        let credentials = self.credentials.signing().await?;
-        let mut action = self.bucket.put_object(Some(&credentials), key);
-        action.headers_mut().insert(name, value);
-        action.headers_mut().insert("content-md5", md5.as_str());
-        action
-            .headers_mut()
-            .insert("content-type", "application/json");
-        let url = action.sign(Duration::from_secs(30));
-        let response = self
-            .client
-            .put(url)
-            .header(name, value)
-            .header("content-md5", md5)
-            .header("content-type", "application/json")
-            .body(body.to_vec())
-            .send()
-            .await
-            .map_err(|_| Error::Transport)?;
-        // Preserve exact status. The engine, not the adapter, reconciles CAS/unknown writes.
-        Ok(response.status().as_u16())
+        crate::observability::observe_status(
+            crate::observability::Component::S3,
+            crate::observability::Stage::Publish,
+            async {
+                maximum(body.len())?;
+                if !key.starts_with("index/v2/") || !owned_path(key, false) {
+                    return Err(Error::Invalid("control key"));
+                }
+                let (name, value) = match condition {
+                    WriteCondition::Absent => ("if-none-match", "*"),
+                    WriteCondition::Match(etag) if valid_etag(etag) => ("if-match", etag.as_str()),
+                    WriteCondition::Match(_) => return Err(Error::Invalid("control etag")),
+                };
+                let md5 = STANDARD.encode(Md5::digest(body));
+                let credentials = self.credentials.signing().await?;
+                let mut action = self.bucket.put_object(Some(&credentials), key);
+                action.headers_mut().insert(name, value);
+                action.headers_mut().insert("content-md5", md5.as_str());
+                action
+                    .headers_mut()
+                    .insert("content-type", "application/json");
+                let url = action.sign(Duration::from_secs(30));
+                let response = self
+                    .client
+                    .put(url)
+                    .header(name, value)
+                    .header("content-md5", md5)
+                    .header("content-type", "application/json")
+                    .body(body.to_vec())
+                    .send()
+                    .observed(crate::observability::Component::S3)
+                    .await
+                    .map_err(|_| Error::Transport)?;
+                // Preserve exact status. The engine, not the adapter, reconciles CAS/unknown writes.
+                Ok(response.status().as_u16())
+            },
+        )
+        .await
     }
 
     async fn list_raw_document(
@@ -241,36 +258,44 @@ impl CatalogTransport for HttpS3Transport {
         maximum_keys: usize,
         cap: usize,
     ) -> Result<Vec<u8>, Error> {
-        maximum(cap)?;
-        if !prefix.starts_with("raw/v2/")
-            || !owned_path(prefix, true)
-            || prefix.len() > 1024
-            || !(1..=1000).contains(&maximum_keys)
-            || token.is_some_and(|t| !valid_token(t))
-        {
-            return Err(Error::Invalid("raw list arguments"));
-        }
-        let credentials = self.credentials.snapshot().await?;
-        let mut action = self.bucket.list_objects_v2(Some(&credentials));
-        // Owned raw keys are XML-safe ASCII; do not request URL-encoded response keys.
-        action.query_mut().remove("encoding-type");
-        action.with_prefix(prefix);
-        action.with_max_keys(maximum_keys);
-        if let Some(token) = token {
-            action.with_continuation_token(token);
-        }
-        let url = action.sign(Duration::from_secs(30));
-        let response = self
-            .client
-            .get(url)
-            .send()
-            .await
-            .map_err(|_| Error::Transport)?;
-        if response.status().as_u16() != 200 {
-            return Err(Error::Status(response.status().as_u16()));
-        }
-        let length = response_length(&response, "application/xml", cap)?;
-        read_body(response, length, cap).await
+        crate::observability::observe(
+            crate::observability::Component::S3,
+            crate::observability::Stage::Lookup,
+            async {
+                maximum(cap)?;
+                if !prefix.starts_with("raw/v2/")
+                    || !owned_path(prefix, true)
+                    || prefix.len() > 1024
+                    || !(1..=1000).contains(&maximum_keys)
+                    || token.is_some_and(|t| !valid_token(t))
+                {
+                    return Err(Error::Invalid("raw list arguments"));
+                }
+                let credentials = self.credentials.snapshot().await?;
+                let mut action = self.bucket.list_objects_v2(Some(&credentials));
+                // Owned raw keys are XML-safe ASCII; do not request URL-encoded response keys.
+                action.query_mut().remove("encoding-type");
+                action.with_prefix(prefix);
+                action.with_max_keys(maximum_keys);
+                if let Some(token) = token {
+                    action.with_continuation_token(token);
+                }
+                let url = action.sign(Duration::from_secs(30));
+                let response = self
+                    .client
+                    .get(url)
+                    .send()
+                    .observed(crate::observability::Component::S3)
+                    .await
+                    .map_err(|_| Error::Transport)?;
+                if response.status().as_u16() != 200 {
+                    return Err(Error::Status(response.status().as_u16()));
+                }
+                let length = response_length(&response, "application/xml", cap)?;
+                read_body(response, length, cap).await
+            },
+        )
+        .await
     }
 }
 

@@ -115,6 +115,7 @@ struct Minute {
     current: u64,
     previous: u64,
 }
+type SharedRow = (watch::Receiver<Option<Row>>, crate::observability::Context);
 struct Inner<T> {
     providers: Vec<ProviderState<T>>,
     store: Arc<dyn AirStore>,
@@ -123,7 +124,7 @@ struct Inner<T> {
     clock: Arc<dyn Clock>,
     config: AirConfig,
     rows: Mutex<HashMap<AirCell, Row>>,
-    inflight: Mutex<HashMap<AirCell, watch::Receiver<Option<Row>>>>,
+    inflight: Mutex<HashMap<AirCell, SharedRow>>,
     minute: Mutex<Minute>,
     metrics: AirMetrics,
 }
@@ -341,7 +342,8 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                 .inflight
                 .lock()
                 .unwrap_or_else(|e| e.into_inner());
-            if let Some(rx) = inflight.get(&cell) {
+            if let Some((rx, trace)) = inflight.get(&cell) {
+                crate::observability::link(crate::observability::Component::World, *trace);
                 rx.clone()
             } else if let Some(row) = self.cached(cell, self.now()) {
                 // A resolution finished between the caller's memory check and this lock: its
@@ -349,11 +351,18 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                 return row;
             } else {
                 let (tx, rx) = watch::channel(None);
-                inflight.insert(cell, rx.clone());
+                let trace = crate::observability::current().child();
+                inflight.insert(cell, (rx.clone(), trace));
                 let me = self.clone();
                 // Owned: a released request (air deadline) never cancels the fetch.
-                tokio::spawn(async move {
-                    let row = me.miss(cell, lat, lon, request_ms).await;
+                crate::observability::spawn(async move {
+                    let row = crate::observability::work_at(
+                        trace,
+                        crate::observability::Component::World,
+                        crate::observability::Stage::Acquire,
+                        me.miss(cell, lat, lon, request_ms),
+                    )
+                    .await;
                     me.remember(cell, row.clone());
                     me.inner
                         .inflight
@@ -473,7 +482,16 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                         *state.down_until.lock().unwrap_or_else(|e| e.into_inner()) =
                             self.now() + DOWN_MS;
                     }
-                    Attempt::Failed => {}
+                    Attempt::Failed => {
+                        crate::observability::event(
+                            crate::observability::Component::World,
+                            crate::observability::Stage::Acquire,
+                            crate::observability::Cause::Dependency,
+                            crate::observability::Action::Fallback,
+                            crate::observability::Outcome::Failed,
+                            Default::default(),
+                        );
+                    }
                 }
             }
         }
@@ -613,7 +631,7 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         let body: Arc<[u8]> = response.body.into();
         let parsed = body.clone();
         let Ok(Some(observation)) =
-            tokio::task::spawn_blocking(move || provider.parse(&parsed)).await
+            crate::observability::spawn_blocking(move || provider.parse(&parsed)).await
         else {
             return Attempt::Failed;
         };

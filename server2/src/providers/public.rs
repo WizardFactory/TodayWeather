@@ -1,5 +1,6 @@
 //! Keyless public-page transport (KMA web RSS/HTML). No credential, budget or retry policy here.
 use super::{ProviderResponse, ProviderTransportError, transport::read_bounded};
+use crate::observability::ObservedHttp as _;
 use std::future::Future;
 
 /// A validated keyless GET target. Construction rejects credentials and key parameters.
@@ -103,6 +104,7 @@ impl PublicTransport for HttpPublicTransport {
             .client
             .get(request.endpoint.clone())
             .send()
+            .observed(crate::observability::Component::Provider)
             .await
             .map_err(|_| ProviderTransportError::Transport)?;
         read_bounded(response, self.maximum).await

@@ -93,6 +93,7 @@ struct Entry<T> {
     receiver: watch::Receiver<Outcome<T>>,
     owner_deadline: Instant,
     finished: Arc<Mutex<Option<Instant>>>,
+    trace: crate::observability::Context,
 }
 struct Inner<K, T> {
     config: OwnedConfig,
@@ -259,6 +260,7 @@ where
         if let Some(entry) = map.get(&key) {
             if !finished_before(entry, now) {
                 self.inner.counters.joined.fetch_add(1, Ordering::Relaxed);
+                crate::observability::link(crate::observability::Component::Resolver, entry.trace);
                 return Ok((entry.receiver.clone(), entry.owner_deadline));
             }
             map.remove(&key);
@@ -273,11 +275,13 @@ where
             return Err(Waited::Busy);
         };
         let owner_deadline = now + owned_for.min(MAX_OWNED);
+        let trace = crate::observability::current().child();
         let (sender, receiver) = watch::channel(None);
         let finished = Arc::new(Mutex::new(None));
         map.insert(
             key,
             Entry {
+                trace,
                 receiver: receiver.clone(),
                 owner_deadline,
                 finished: finished.clone(),
@@ -285,9 +289,31 @@ where
         );
         self.inner.counters.started.fetch_add(1, Ordering::Relaxed);
         let work = start(owner_deadline);
-        tokio::spawn(async move {
+        crate::observability::spawn(async move {
             let _permit = permit;
-            let outcome = timeout_at(owner_deadline, work).await.ok();
+            use crate::observability::{
+                Action, Cause, Component, Details, Operation, Outcome, Stage,
+            };
+            let mut operation = Operation::at(trace, Component::Resolver, Stage::SharedWork);
+            let outcome = trace.scope(timeout_at(owner_deadline, work)).await.ok();
+            operation.finish(
+                if outcome.is_some() {
+                    Cause::None
+                } else {
+                    Cause::Timeout
+                },
+                if outcome.is_some() {
+                    Action::None
+                } else {
+                    Action::CancelOwner
+                },
+                if outcome.is_some() {
+                    Outcome::Completed
+                } else {
+                    Outcome::Cancelled
+                },
+                Details::default(),
+            );
             *finished.lock().unwrap_or_else(|e| e.into_inner()) = Some(Instant::now());
             sender.send_replace(Some(outcome));
         });

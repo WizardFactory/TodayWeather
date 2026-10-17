@@ -381,7 +381,9 @@ impl<T: CatalogTransport> WarningStore<T> {
             for (i, date) in wave.iter().enumerate() {
                 let (reader, kind, date, map) =
                     (self.reader.clone(), kind.to_owned(), *date, map(*date));
-                set.spawn(async move { (i, reader.day(&kind, date, &map, deadline).await) });
+                set.spawn(crate::observability::inherit(async move {
+                    (i, reader.day(&kind, date, &map, deadline).await)
+                }));
             }
             let mut results = Vec::new();
             while let Some(joined) = set.join_next().await {

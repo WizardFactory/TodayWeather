@@ -318,7 +318,7 @@ impl<T: CatalogTransport> CatalogBackend<T> {
                         .map_err(|_| crate::storage::Error::Timeout)?
                         .map_err(|_| crate::storage::Error::Capacity)?;
                 let limits = self.limits.clone();
-                tokio::task::spawn_blocking(move || {
+                crate::observability::spawn_blocking(move || {
                     let _permit = permit;
                     let _lease = lease;
                     let c = Catalog::from_bytes(&object.body, &id, &limits)?;

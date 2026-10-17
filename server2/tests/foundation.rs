@@ -303,7 +303,15 @@ fn gateway_process_binds_the_legacy_port_and_refuses_invalid_settings_before_bin
     // Control: valid settings reach the bind and fail on the occupied address.
     let (status, _, stderr) = start_gateway_process(&[("PORT", &port)]);
     assert!(
-        status.is_some_and(|status| !status.success()) && stderr.contains("AddrInUse"),
+        status.is_some_and(|status| !status.success())
+            && stderr
+                .lines()
+                .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+                .any(|event| event["schema"] == 1
+                    && event["component"] == "process"
+                    && event["stage"] == "bind"
+                    && event["cause"] == "address_in_use"
+                    && event["outcome"] == "failed"),
         "{status:?} {stderr}"
     );
     // Port 0 starts on ephemeral loopback ports; stale server2-only settings change nothing.

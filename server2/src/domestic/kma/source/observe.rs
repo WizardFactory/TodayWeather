@@ -245,7 +245,7 @@ pub struct Observations<T> {
     acquire: Arc<dyn Acquire>,
     locate: Arc<dyn Locate>,
     state: Mutex<State>,
-    flights: Mutex<HashMap<Flight, watch::Receiver<bool>>>,
+    flights: Mutex<HashMap<Flight, (watch::Receiver<bool>, crate::observability::Context)>>,
     attempts: Mutex<HashMap<Flight, std::time::Instant>>,
     /// ASOS range acquisitions in flight across stations.
     asos_gate: Arc<tokio::sync::Semaphore>,
@@ -327,7 +327,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         F: FnOnce(Arc<Self>) -> BoxFuture<'static, ()> + Send + 'static,
     {
         let mut flights = self.flights.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(rx) = flights.get(&key) {
+        if let Some((rx, owner)) = flights.get(&key) {
+            crate::observability::link(crate::observability::Component::Domestic, *owner);
             return Some(rx.clone());
         }
         {
@@ -341,11 +342,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             attempts.insert(key.clone(), std::time::Instant::now());
         }
         let (tx, rx) = watch::channel(false);
-        flights.insert(key.clone(), rx.clone());
+        let owner = crate::observability::current().child();
+        flights.insert(key.clone(), (rx.clone(), owner));
         let this = self.clone();
-        tokio::spawn(async move {
+        crate::observability::spawn(async move {
             let done = this.clone();
-            work(this).await;
+            crate::observability::work_at(
+                owner,
+                crate::observability::Component::Domestic,
+                crate::observability::Stage::SharedWork,
+                work(this),
+            )
+            .await;
             done.flights
                 .lock()
                 .unwrap_or_else(|e| e.into_inner())
@@ -438,7 +446,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .get(key)
-            .cloned()
+            .map(|(rx, owner)| {
+                crate::observability::link(crate::observability::Component::Domestic, *owner);
+                rx.clone()
+            })
     }
     /// Read hourly/city day partitions of the 8-day window and the latest minute pages from S3
     /// (at start and every [`RELOAD`]).
@@ -524,7 +535,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             };
             // S16: a group S06 excluded makes the day's read partial.
             let partial = hourly_excluded + city_excluded > 0;
-            let parsed = tokio::task::spawn_blocking(move || {
+            let parsed = crate::observability::spawn_blocking(move || {
                 (
                     hourly
                         .iter()
@@ -617,7 +628,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 found.extend(read);
             }
         }
-        let parsed = tokio::task::spawn_blocking(move || {
+        let parsed = crate::observability::spawn_blocking(move || {
             found
                 .iter()
                 .filter_map(|a| parse_minute(a))
@@ -820,7 +831,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 })
             },
         );
-        tokio::spawn(pass);
+        crate::observability::spawn(pass);
     }
     /// Acquire and publish one KMA page; the published records, or None.
     async fn acquire_web(&self, request: WebRequest, deadline: Instant) -> Option<Vec<RawRecord>> {
@@ -890,7 +901,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             (Some(cached), _) => cached,
             (None, Some((seed, hourly, hourly_at, city, geo, pages))) => {
                 let fold_pages = pages.clone();
-                let Ok((mut fold, reduced)) = tokio::task::spawn_blocking(move || {
+                let Ok((mut fold, reduced)) = crate::observability::spawn_blocking(move || {
                     fold_hourly(
                         seed.as_deref().map(Vec::as_slice),
                         &hourly,
@@ -917,7 +928,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             }
             (None, None) => return,
         };
-        let minutes = tokio::task::spawn_blocking(move || {
+        let minutes = crate::observability::spawn_blocking(move || {
             let mut minutes = RowStore::default();
             for page in minute.values() {
                 minutes.save(page);
@@ -975,7 +986,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 let mut tasks = Vec::new();
                 for address in wanted {
                     let (this, gate) = (this.clone(), gate.clone());
-                    tasks.push(tokio::spawn(async move {
+                    tasks.push(crate::observability::spawn(async move {
                         let _permit = gate.acquire_owned().await;
                         let found = tokio::time::timeout(
                             Duration::from_secs(10),

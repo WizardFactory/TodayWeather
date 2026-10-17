@@ -3,6 +3,7 @@
 //! timeout, and socket resets (`ECONNRESET`/`EPIPE`, including a connection closed before the
 //! response) classified separately so the requester can retry them once.
 use crate::gateway::BoxFuture;
+use crate::observability::ObservedHttp as _;
 use std::{io::Read, time::Duration};
 use tokio::time::{Instant, timeout_at};
 
@@ -92,6 +93,7 @@ impl VcTransport for HttpVcTransport {
                     .get(url)
                     .header("accept-encoding", "gzip")
                     .send()
+                    .observed(crate::observability::Component::World)
                     .await
                     .map_err(|e| classify(&e))?;
                 let status = response.status().as_u16();

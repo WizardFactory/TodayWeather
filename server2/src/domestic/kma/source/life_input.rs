@@ -596,7 +596,7 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
             return;
         }
         let shared = self.shared.clone();
-        tokio::spawn(async move {
+        crate::observability::spawn(async move {
             let every = shared.kasi_every;
             let mut tick = tokio::time::interval_at(Instant::now() + shared.kasi_first, every);
             tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
