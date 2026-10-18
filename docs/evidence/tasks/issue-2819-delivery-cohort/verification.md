@@ -75,7 +75,7 @@ metadata is retained. No new UI or PDF manual is claimed for this worker fix.
 Independent current PR review and exact-head CI remain mandatory before pre-merge
 readiness. No merge/auto-merge/queue, deployment or live action is authorized.
 
-## Current clean inventory and additional executable
+## Earlier review1-time inventory and executable
 
 After the shared-clock correction, all four full targets were renewed on the
 same718-file runtime/source/test/fixture/manifest projection: lib114,
@@ -84,7 +84,7 @@ counted once. Fmt, all-target Clippy `-D warnings` and optimized example build
 exited zero. Focused Greens, prior247/1 and repeated targets are not added to
 that total. No whole-domestic or entire-repository PASS is claimed.
 
-Current actual executable rehearsal is functional2: four cases, four owned FCM
+The earlier review1-time executable rehearsal was functional2: four cases, four owned FCM
 POSTs, five OAuth requests, process exit0 and all four owned loopback listeners
 closed; all718 inputs and executable unchanged. Report SHA-256
 `56ced2c87867bf7305341d1ab2cce7d6590fe28356e7881617e1775ae960cb2e`; retained optimized executable SHA-256
