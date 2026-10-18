@@ -1,8 +1,10 @@
 # server2 foundation operator manual
 
-S04 provides a Rust host foundation for local validation. It serves operational
-health only. Weather/geocode, S3, provider adapters, capture jobs and production
-cutover are later tasks. Keep nginx and production routing on legacy.
+S04 originally provided a health-only Rust foundation. Later tasks added native services;
+the current operational executable rejects bare/partial startup without an explicit
+development legacy origin. Health-only/partial construction remains available through
+code-injected factories and examples. This manual retains foundation checks and labelled
+historical evidence; it does not authorize production routing or cutover.
 
 ## Build and check
 
@@ -19,15 +21,21 @@ python3 tools/smoke.py --binary target/release/server2
 ```
 
 The smoke starts two sequential release processes on ephemeral loopback ports (`PORT=0`)
-in an empty working directory, so no real `server2/.env` is read. It checks GET/HEAD health,
-rejects public metrics, reads private counters, tests the built-in 9-second incomplete-header
+in an empty working directory with an explicit closed-loopback development legacy origin,
+so no real `server2/.env` is read. It checks GET/HEAD health, rejects public metrics, reads
+private counters, and tests the existing gateway-enabled 12-second incomplete-header
 timeout with elapsed bounds, socket-cap (128) rejection/recovery, and both idle and
 partial-header SIGTERM shutdown. It also verifies that an invalid legacy `PORT` fails startup.
 No legacy collectors run.
 
 ## Configure and operate
 
-Start `server2/target/release/server2` from the `server2/` directory. S10e (#2753): the process
+Before starting `server2/target/release/server2`, provide complete native coverage
+(`geocode,dsf,kma,kma-v000901,kma-v000902,town,push,notice` and all three world versions)
+or an explicit development `SERVER2_GATEWAY_LEGACY_URL`. Bare configuration fails
+before services/listeners. `.env` is optional when required process settings are complete;
+missing mandatory settings fail and the file never substitutes for validation.
+S10e (#2753): the process
 reads its environment and then `.env` in the working directory (a copy of the legacy
 `server/.env`, see [server2/.env.example](../../server2/.env.example)) with the legacy dotenv
 rules; a process variable wins over the file. The listener follows legacy `config.js`: address
@@ -53,12 +61,12 @@ in S10e because legacy has no equivalent and no documented operation needs anoth
 Metrics connections have a separate fixed limit 16. Socket limits bound slow headers
 and body draining; a connection expires at its maximum age even with keep-alive.
 This is an absolute connection lifetime, distinct from the S10 per-request
-9-second gateway deadline. When `SERVER2_GATEWAY_LEGACY_URL` is set, the lifetime
-is 12 seconds, which keeps the deadline `501` inside the connection lifetime
+9-second gateway deadline. With the gateway (complete-native or explicit development
+coexistence), the lifetime is 12 seconds, which keeps the deadline `501` inside the connection lifetime
 ([#2730](https://github.com/WizardFactory/TodayWeather/issues/2730)). The guarantee covers a
 request that starts within lifetime minus 9 seconds of the connection being accepted; a later
-keep-alive request can still outlive its connection. Without the gateway the 9-second lifetime
-and socket behavior are unchanged.
+keep-alive request can still outlive its connection. Without the gateway, code-injected partial foundations retain the 9-second lifetime
+and socket behavior; bare operational main no longer starts that foundation.
 The volatile cache is a single byte-bounded slot; keyed/sharded cache algorithms
 are S07. CPU permits remain reserved until blocking work ends after caller cancellation.
 

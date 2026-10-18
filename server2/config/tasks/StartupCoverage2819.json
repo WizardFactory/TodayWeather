@@ -15,7 +15,8 @@
     "server2/tools/startup_coverage_smoke.py",
     "server2/tools/smoke.py",
     "server2/deploy/local/stack.py",
-    "server2/tests/integration/test_observability.py"
+    "server2/tests/integration/test_observability.py",
+    "server2/README.md"
   ],
   "outside": [
     {
@@ -67,6 +68,16 @@
       "path": "docs/architecture/diagrams/server2-runtime-services.html",
       "category": "documentation",
       "reason": "Maintain E1 startup contract, sequence, operator/architecture/design and selected evidence only; no runtime implementation"
+    },
+    {
+      "path": "docs/operations/server2-foundation.md",
+      "category": "documentation",
+      "reason": "Required E1-CLAUDE-001: maintain existing linked startup/optional dotenv/development coexistence operator contract; no server2 implementation"
+    },
+    {
+      "path": "docs/operations/server2-gateway.md",
+      "category": "documentation",
+      "reason": "Required E1-CLAUDE-001: maintain existing linked startup/optional dotenv/development coexistence operator contract; no server2 implementation"
     }
   ]
 }

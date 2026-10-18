@@ -67,3 +67,11 @@ The foundation smoke expects the already existing gateway-enabled12second connec
 lifetime, while HTTP-only process signal drain remains5seconds. Existing full-native
 coverage and no-origin rejection tests remain unchanged. Runtime/test Rust and retained
 release bytes did not change for this harness correction.
+
+Independent review1 accepted the runtime and resolved root E1-ROOT-001 after tracing
+all affected launchers and reading retained results. It requested E1-CLAUDE-001: correct
+the main README and linked foundation/gateway manuals that still described bare startup
+as a health-only foundation. Exact paths were declared before those edits. This correction
+changes documentation/declaration only; executable, tests, tools, fixtures and diagram
+bytes are unchanged. Existing foundation screenshots/PDF remain labelled historical,
+not new verification. Current independent documentation confirmation and CI remain gates.

@@ -22,3 +22,5 @@ Run existing release smoke, local protocol/wire tests and operational logging te
 against the unchanged retained release. Preserve the first harness rejection separately
 from the intended old-main regression. Rust remains byte-identical to94/2 checks;
 final diagram source pin stays valid. No initialpush until this correction passes.
+
+Independent review1 acceptsruntime/root001resolved but requiresE1-CLAUDE-001 README/linkedmanualstartupcorrection. Exact3pathsdeclaredbeforeedit; content/link/declarationchecks anddocs-onlyindependentconfirmation onnewcandidate, no runtime/test/bin/diagramchange or repeatedbuild/smokeclaim. Existingfoundationcapture/PDFremainlabelledhistorical; no newUI/feature.
