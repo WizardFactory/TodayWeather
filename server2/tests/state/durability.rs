@@ -11,6 +11,27 @@ use std::{sync::Arc, time::Duration};
 
 const T0: &str = "2026-10-15T01:00:00.000Z";
 
+#[test]
+fn corrupt_journal_count_cannot_control_allocation_or_advance_state() {
+    let durable = Durable::new(
+        Arc::new(MemS3::new()),
+        DurableConfig::default(),
+        Arc::new(Counters::default()),
+    );
+    let mut state = State::default();
+    let body = br#"{"schema":1,"seq":1,"next_n":0,"changes":1e30}"#;
+    assert!(durable.apply_entry(&mut state, 1, body).is_err());
+    assert_eq!(
+        (
+            state.seq,
+            state.next_n,
+            state.alarms.len(),
+            state.alerts.len()
+        ),
+        (0, 0, 0, 0)
+    );
+}
+
 fn json_request(method: &str, path: &str, body: &serde_json::Value) -> Request {
     Request::builder()
         .method(method)

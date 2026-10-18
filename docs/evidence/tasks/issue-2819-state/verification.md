@@ -11,9 +11,10 @@ production registration copy or provider request was performed.
   regressions failed their intended assertions: poisoned documents were acknowledged.
   A separate Red showed the ready flag remaining true after writer stop.
 - After the correction, the focused regression execution passed 96 library,
-  27 state, 60 delivery and 31 runtime-services tests; one runtime-services test
-  remained ignored (214 passed, 1 ignored). The state tests cover direct commit
+  28 state, 60 delivery and 31 runtime-services tests; one runtime-services test
+  remained ignored (215 passed, 1 ignored). The state tests cover direct commit
   rejection, atomic mixed journal rejection without sequence advance or rewrite,
+  huge journal-header count rejection without untrusted preallocation,
   valid restart, writer stop/panic, BSON round trips, and escaped-size/depth bounds.
   Existing state parity exercises 115 legacy requests. These are synthetic tests,
   not a new production export or parity run against a deployed legacy host.
@@ -37,6 +38,10 @@ loopback executable (Python 3.9+, no production environment or credentials):
 python3 server2/tools/push_state_smoke.py --binary /owned/examples/loopback_server \
   --output reports/my-task/state-smoke
 ```
+
+A second fresh owned store carries a `changes: 1e30` header. The process rejects
+restore with a structured corruption result, no panic and unchanged header bytes.
+This exercises the additional no-panic guard independently of document corruption.
 
 The output directory must be new and outside `server2/`. The child environment is
 synthetic; no Firebase credentials are supplied and scheduled send times are invalid.
@@ -75,3 +80,14 @@ admission and recovery decisions rather than an execution or deployment topology
 Archify showcase validation, delivery, strict artifact checks and real browser
 checks passed. Light/dark endpoint captures were inspected for readable labels,
 clear branches and no horizontal overflow. The diagrams introduce no runtime owner.
+
+## Preserved Linux CI failure
+
+The initial `8ce23e45` foundation run `39088203115` failed the combined native-router
+inventory: cold `/v000901/kma/addr/Seoul` returned502 at the 3-second assembly limit
+rather than the fixture expectation200. All other 30 runtime-services tests passed
+and one was ignored. The whole failure log is retained; no assertion or production
+timeout was relaxed. A bounded unchanged-baseline Linux release experiment passed
+31 passed / 1 ignored with both 2 and 1 test threads; it did not reproduce or establish the failure's
+cause. This is not proof of current-candidate CI success or of native-host performance.
+The latest candidate's full CI remains a separate readiness gate.

@@ -202,7 +202,8 @@ fn parse_entry(seq: u64, body: &[u8]) -> Result<Option<(u64, Vec<Change>)>, Stat
         .get("changes")
         .and_then(OrderedJson::number)
         .ok_or(StateError::Corrupt("journal changes"))? as usize;
-    let mut changes = Vec::with_capacity(count);
+    // The header is untrusted. Grow only from decoded body lines, never its claimed count.
+    let mut changes = Vec::new();
     for line in it {
         let item = OrderedJson::parse(line).map_err(|_| StateError::Corrupt("journal change"))?;
         if item.get("removed") == Some(&OrderedJson::Bool(true)) {

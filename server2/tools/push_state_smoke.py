@@ -157,6 +157,30 @@ def main():
         report["journal_entries"] = len(previous)
         report["corrupt_bytes_preserved"] = True
         report["corrupt_restore_without_panic"] = True
+
+        # A second fresh store isolates header corruption from the bad document above.
+        peer.shutdown()
+        peer.server_close()
+        worker.join(timeout=5)
+        peer = fixture.module.make()
+        worker = threading.Thread(target=peer.serve_forever, daemon=True)
+        worker.start()
+        endpoint = f"http://127.0.0.1:{peer.server_port}/"
+        raw = b'{"schema":1,"seq":1,"next_n":0,"changes":1e30}\n'
+        reply = request(endpoint, "index/v2/push/state/journal/000000000001.json", "PUT", raw=raw)
+        assert reply["status"] == 200, reply
+        count_journal = journal()
+        base = start("corrupt-count")
+        reply = request(base, "/v000902/push", "PUT", {"oldToken": "absent", "newToken": "never-acknowledged"})
+        assert (reply["status"], reply["body"]) == (500, "push state storage unavailable"), reply
+        stop()
+        events = [json.loads(line) for line in (output / "corrupt-count.stderr.log").read_text().splitlines()]
+        assert any(event.get("component") == "push_state" and event.get("stage") == "restore"
+                   and event.get("cause") == "corrupt" and event.get("outcome") == "failed"
+                   for event in events), "restore did not reject the huge header count"
+        assert not any(event.get("event") == "operation.panic" for event in events), "header restore panicked"
+        assert journal() == count_journal, "corrupt header bytes were changed"
+        report["huge_count_restore_without_panic"] = True
         assert digest() == report["binary_sha256"], "executable changed during smoke"
         report["verdict"] = "PASS"
     finally:
