@@ -252,8 +252,10 @@ impl PushService {
     pub fn state(&self) -> Arc<RwLock<State>> {
         self.state.clone()
     }
+    /// Restored state with an open writer receiver. Closing can precede pending-command
+    /// drain completion; this is availability, not a writer-join receipt.
     pub fn ready(&self) -> bool {
-        self.ready.load(std::sync::atomic::Ordering::Acquire)
+        self.ready.load(std::sync::atomic::Ordering::Acquire) && !self.tx.is_closed()
     }
 
     /// Whether a path belongs to the push routes this service answers.

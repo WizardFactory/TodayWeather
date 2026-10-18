@@ -628,3 +628,14 @@ See [intent](../intent/issue-2819-startup-coverage.md),
 [verification](../docs/evidence/tasks/issue-2819-startup-coverage/verification.md).
 Local verification/review/CI is in progress; no merge, global issue closure, full recovery,
 shadow or production qualification is claimed.
+
+### E3a writer availability (#2819)
+
+This child of unmerged E1/E2 PR #2832 (938e5ba9) scopes only stale internal writer
+availability. Use restored state plus the existing channel's receiver-open state; no
+new monitor, retry, state owner or public endpoint. Preserve pending-command drain and
+HTTP storage errors. See [intent](../intent/issue-2819-writer-liveness.md),
+[spec](../specs/issue-2819-writer-liveness.md), [plan](issue-2819-writer-liveness.md) and
+[evidence](../docs/evidence/tasks/issue-2819-writer-liveness/verification.md).
+Local verification/review/CI is in progress. Full E3 readiness endpoint/S3/credential-source
+health and remaining #2819/#2704/#2705 gates stay open; no merge or production authority.

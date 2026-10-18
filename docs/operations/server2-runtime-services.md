@@ -37,6 +37,20 @@ Startup currently reports account rejection as the generic `invalid gateway conf
 
 ## Registration, notices and delivery safety
 
+Internal push availability (`PushService::ready`) requires both successful durable restore
+and an open writer receiver. A writer panic, exit or closed queue cannot leave restored
+memory advertised as available for new writer work. Receiver close can happen while
+already accepted commands still drain; false availability is not a completed-join or
+cancellation receipt. The restore flag, writer queue and process stop/drain order are
+unchanged. Delivery guards use the same predicate; this adds no retry, automatic restart,
+state rewind or send policy. Existing HTTP storage-error contracts remain unchanged,
+including push-list's per-item null failure and token-update's 500 storage error.
+
+This E3a fix is internal writer availability only. `/health` remains basic liveness;
+the full E3 readiness endpoint and S3/credential-source health are still open. See the
+[writer specification](../../specs/issue-2819-writer-liveness.md) and
+[selected checks](../evidence/tasks/issue-2819-writer-liveness/verification.md).
+
 Existing registration routes remain `POST /v000705/push`, `PUT`/`DELETE /v000902/push`, and `POST /v000902/push-list`. Preserve existing payloads/language headers. Acknowledgement follows durable journal publication; cold/unavailable storage keeps the route's existing storage-error response. Quiescing rejects new mutations with those responses. Queued writes may settle during drain; an unacknowledged or cancelled write is incomplete and must be reconciled from authoritative S3.
 
 `GET /v000903/notice/latest` returns `{"notice":null}` for no publication. Explicit lang precedes Accept-Language. GET/HEAD retain public max-age=300 and Vary: Accept-Language; corrupt/unreadable cold storage returns 503/no-store. POST is not publication. The separate notice CLI owns publishing and translation.

@@ -513,3 +513,23 @@ coverage. Gateway-enabled connection lifetime remains12seconds; the HTTP-only sh
 drain remains5seconds. The S03 launcher requires its executable to be owned under
 `server2/`; copy a verified retained executable into an ignored owned output path rather
 than weakening that existing admission rule.
+
+## Writer availability component check
+
+Run the controlled state-writer regressions with owned dependencies. The additional
+functional child is deliberately ignored by the ordinary test target; invoke it explicitly:
+
+```sh
+cd server2
+cargo test --locked --test state liveness::
+cargo test --locked --release --test state peer::owned_writer_liveness_child -- --exact --ignored --nocapture
+```
+
+The latter constructs the public PushService/router and real HttpS3Transport against an
+owned loopback peer, triggers a test-only OidSource panic, checks the unchanged failed-item
+push-list response and token-update storage error, false availability and no acknowledged
+journal, then retires both owned ports. It starts no main, delivery worker or Firebase
+client and is not a public readiness-endpoint check. The panic diagnostic is intentional;
+use the final test exit and `WRITER_AVAILABILITY_RESULT` report to assess the check.
+A retained state integration executable requires its matching compile-time checkout and
+Python peer assets. See the [selected evidence](../evidence/tasks/issue-2819-writer-liveness/verification.md).

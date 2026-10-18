@@ -4011,3 +4011,20 @@ Health remains liveness, not E3 readiness. See the [spec](../../specs/issue-2819
 [design](diagrams/server2-runtime-services.html) and
 [selected checks](../evidence/tasks/issue-2819-startup-coverage/verification.md).
 This is a startup availability fix, not full-native host or cutover qualification.
+
+### E3a writer availability (#2819)
+
+`PushService::ready` now combines the existing successful-restore flag with the existing
+writer sender's open-receiver state. No monitor, mutex lookup or second lifecycle owner
+is introduced. A closed/dead writer cannot advertise writable availability solely because
+memory was restored earlier. Closing a receiver can precede pending-command drain, so
+this predicate never proves a join/cancellation completed. Existing state/HTTP error,
+claim/no-retry and stop-order contracts remain. Delivery admission uses this same gate.
+
+This is only the writer portion of E3, with controlled writer-exit and owned API/S3 checks.
+A public readiness endpoint and S3/credential-source health remain open; health is still
+liveness. See [spec](../../specs/issue-2819-writer-liveness.md),
+[operator contract](../operations/server2-runtime-services.md),
+[design](diagrams/server2-runtime-services.html) and
+[selected evidence](../evidence/tasks/issue-2819-writer-liveness/verification.md).
+No main integration, full E3/recovery/shadow or production qualification is claimed.
