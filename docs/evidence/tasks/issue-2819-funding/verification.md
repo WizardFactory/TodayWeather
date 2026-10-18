@@ -115,3 +115,15 @@ review iterations remain in the ignored task record.
 The Python shadow-tool controls passed31tests. Runtime Rust source and the
 contract JSON/HTML are unchanged since the original successful checks, so their
 clippy, example and diagram evidence is reused by exact hashes.
+
+A second reviewer recommendation (FUND-CLAUDE-005) exposed shared-peer test
+isolation: EMPTY-RESTORE+BUDGET retained3Google objects from the first scenario,
+so a whole-peer zero-object assertion failed on otherwise correct behavior.
+The original order failure is retained. The final oracle compares Google object
+keys against the pre-scenario set. That supported selection passes with3existing
+and0new Google objects; the complete default8-scenario smoke also passes
+(cold/warm, empty restore, single flight, cancellation, outages, budget, pressure,
+SIGTERM drain). The existing one-key quota and no-provider-work checks remain.
+These are owned loopback processes with the same retained release executable,
+not a live mirror, provider call, production Spot interruption or native cutover
+recovery rehearsal.
