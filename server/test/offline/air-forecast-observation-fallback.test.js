@@ -104,3 +104,9 @@ test('every coordinate provider keeps current identity while valid KAQ wins at v
         assert.equal(air.forecastSource,'kaq');assert.equal(air.forecastStationName,'중구');assert.equal(h.calls.length,1);
     }
 });
+test('explicit AirKorea with lagged fresh observation inserts only strictly future hours',async()=>{
+    const air={source:'airkorea',last:{stationName:'중구',dataTime:'2026-09-24 06:00'},pollutants:{pm10:{hourly:[{date:'2026-09-24 06:00',val:20}]}}};
+    const rows=[7,8,9,10,11].map(hour=>row({dataTime:'2026-09-24 '+String(hour).padStart(2,'0')+':00'}));
+    assert.ifError((await harness([],rows).get(air,'airkorea')).error);
+    assert.deepEqual(air.pollutants.pm10.hourly.map(r=>r.date),['2026-09-24 06:00','2026-09-24 10:00','2026-09-24 11:00']);
+});

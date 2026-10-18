@@ -64,7 +64,9 @@ observations use request current-hour +24 h, independently of stale AirKorea
 observations. Empty, expired, malformed or invalid KAQ rows and read errors permit
 stored AirKorea lookup for the same station. Partial usable KAQ remains KAQ;
 sources are selected before insertion and never combined. Explicit AirKorea and
-omitted-source requests apply the same usable-row validation.
+omitted-source requests apply the same usable-row validation. Forecast rows between
+a lagging observation and now are excluded even for explicit AirKorea; source
+selection and concentration/AQI calculations remain unchanged.
 
 Enrichment keeps current `source`, `last`, readings and attribution unchanged. It
 sets `forecastStationName`, actual `forecastSource` and `forecastPubDate` from a

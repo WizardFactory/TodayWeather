@@ -24,7 +24,7 @@ supplies stale domestic observations independently of that current-only snapshot
 
 - `air-forecast-observation-fallback.test.js`: before implementation, 11 of 12
   checks failed for missing station context/forecast enrichment and unsafe absent
-  input. After repair and coverage expansion, 16 checks pass. Covers single/list,
+  input. After repair and coverage expansion, 17 checks pass. Covers single/list,
   omitted/explicit/KAQ selection, stale observations, empty/unnamed metadata,
   provider location-name rejection, invalid/expired/partial data, horizon,
   metadata/observation/forecast store errors, publication provenance and safe current-only behavior.
@@ -43,7 +43,9 @@ supplies stale domestic observations independently of that current-only snapshot
 
 Commands and prerequisites: [operations](../../../operations/air-forecast-fallback.md).
 The full legacy offline suite passed locally on Node 24.19.0. Focused regression
-and real Mongo/HTTP smoke also passed on Node 16.20.2. Archify validation, delivery,
+and real Mongo/HTTP smoke also passed on Node 16.20.2. The added lagging-observation regression pins explicit AirKorea to
+strictly future slots; the HTTP smoke uses the actual legacy air middleware
+chain, while the separate #2770 smoke covers the full weather router. Archify validation, delivery,
 strict artifact and browser checks passed; light/dark captures were visually
 inspected at desktop sizes. CI and independent review are recorded on the PR at the actual candidate revision. Generated detailed
 runs remain local; the fixture, this selected evidence and durable PR comments
