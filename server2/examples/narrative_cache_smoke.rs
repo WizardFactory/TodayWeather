@@ -3,7 +3,7 @@ use server2::{
     gateway::BoxFuture,
     history::IndexListing,
     narrative::{
-        self, Read,
+        self, Acquire, Read,
         provider::{Page, Source},
         store::{Service, Store},
     },
@@ -119,6 +119,21 @@ impl Source for NoProvider {
         Box::pin(async { panic!("a stored narrative read must not call providers") })
     }
 }
+struct FixtureSource {
+    page: Page,
+    calls: Arc<AtomicUsize>,
+}
+impl Source for FixtureSource {
+    fn fetch(
+        &self,
+        station: u16,
+        _: Instant,
+    ) -> BoxFuture<'_, Result<Option<Page>, AcquisitionError>> {
+        self.calls.fetch_add(1, SeqCst);
+        let page = (station == 108).then(|| self.page.clone());
+        Box::pin(async move { Ok(page) })
+    }
+}
 #[tokio::main]
 async fn main() {
     let mut peer = OwnedS3::start();
@@ -136,24 +151,21 @@ async fn main() {
     let tm = format!("{}0000", server2::warnings::provider::kst_date(now, 0));
     let body=serde_json::to_vec(&serde_json::json!({"response":{"header":{"resultCode":"00","resultMsg":"NORMAL_SERVICE"},
         "body":{"items":{"item":[{"stnId":108,"tmFc":tm,"wfSv1":"Owned stored narrative recovery"}]}}}})).unwrap();
+    let page = Page {
+        body: Arc::from(body),
+        fetched_at_ms: now as u64,
+        content_type: "application/json".into(),
+    };
     let expected = Store::new(transport.clone())
         .unwrap()
-        .publish(
-            108,
-            Page {
-                body: Arc::from(body),
-                fetched_at_ms: now as u64,
-                content_type: "application/json".into(),
-            },
-            Instant::now() + Duration::from_secs(5),
-        )
+        .publish(108, page.clone(), Instant::now() + Duration::from_secs(5))
         .await
         .unwrap()
         .expect("owned narrative publication");
     let calls = Arc::new(AtomicUsize::new(0));
     let service = Service::new(
         SlowIndex {
-            inner: transport,
+            inner: transport.clone(),
             calls: calls.clone(),
         },
         Arc::new(NoProvider),
@@ -168,16 +180,30 @@ async fn main() {
     );
     let first_elapsed_ms = started.elapsed().as_millis();
     assert_eq!(calls.load(SeqCst), 1);
+    let fault_finished = Instant::now();
+    assert!(
+        service
+            .read(108, Instant::now() + Duration::from_secs(3))
+            .await
+            .is_none()
+    );
+    assert_eq!(
+        calls.load(SeqCst),
+        1,
+        "short error gate performs no storage work"
+    );
+    tokio::time::sleep(Duration::from_millis(1100)).await;
     let recovered = service
         .read(108, Instant::now() + Duration::from_secs(3))
         .await
-        .expect("next request must recover stored narrative immediately");
+        .expect("eligible request must recover after the short error gate");
     assert_eq!(
         serde_json::to_value(&recovered).unwrap(),
         serde_json::to_value(&expected).unwrap()
     );
     let recovered_indexes = calls.load(SeqCst);
-    assert!(recovered_indexes > 1);
+    assert_eq!(recovered_indexes, 3);
+    let retry_after_fault_ms = fault_finished.elapsed().as_millis();
     let cached = service
         .read(108, Instant::now() + Duration::from_secs(3))
         .await
@@ -191,11 +217,56 @@ async fn main() {
         recovered_indexes,
         "fresh value keeps the existing cache"
     );
+    // A separate service proves a successful publication clears an active error gate.
+    let refresh_calls = Arc::new(AtomicUsize::new(0));
+    let fixture_calls = Arc::new(AtomicUsize::new(0));
+    let publishing = Service::new(
+        SlowIndex {
+            inner: transport,
+            calls: refresh_calls.clone(),
+        },
+        Arc::new(FixtureSource {
+            page,
+            calls: fixture_calls.clone(),
+        }),
+    )
+    .unwrap();
+    assert!(
+        publishing
+            .read(108, Instant::now() + Duration::from_millis(20))
+            .await
+            .is_none()
+    );
+    let refresh_started = Instant::now();
+    assert!(
+        publishing
+            .read(108, Instant::now() + Duration::from_secs(3))
+            .await
+            .is_none()
+    );
+    assert_eq!(refresh_calls.load(SeqCst), 1);
+    publishing.refresh().await;
+    let published = publishing
+        .read(108, Instant::now() + Duration::from_secs(3))
+        .await
+        .unwrap();
+    assert_eq!(
+        serde_json::to_value(published).unwrap(),
+        serde_json::to_value(expected).unwrap()
+    );
+    let refresh_recovery_ms = refresh_started.elapsed().as_millis();
+    assert!(
+        refresh_recovery_ms < 1000,
+        "recovery must independently beat automatic error-gate expiry"
+    );
+    assert_eq!(refresh_calls.load(SeqCst), 3);
+    assert_eq!(fixture_calls.load(SeqCst), narrative::OFFICES.len());
+    drop(publishing);
     drop(service);
     let reaped = peer.stop();
     assert!(reaped);
-    println!("{}",serde_json::to_string(&serde_json::json!({"verdict":"PASS","scope":"public narrative Service with actual owned S3 publication/readback and one injected slow index access",
-        "first_request_omitted":true,"first_request_elapsed_ms":first_elapsed_ms,"recovered_exact_narrative":true,"index_calls_after_recovery":recovered_indexes,
-        "cached_read_added_indexes":0,"owned_s3_child_reaped":reaped,"live_provider_calls":0,"production_eligible":false,
-        "limit":"injected delay before first S3 delegate, not measured provider/S3 host latency; current local wall date and synthetic prose"})).unwrap());
+    println!("{}",serde_json::to_string(&serde_json::json!({"verdict":"PASS","scope":"public narrative Service with separate short error gate and actual owned S3 publication/readback",
+        "first_request_omitted":true,"first_request_elapsed_ms":first_elapsed_ms,"within_error_gate_added_indexes":0,"retry_after_fault_ms":retry_after_fault_ms,"recovered_exact_narrative":true,"index_calls_after_recovery":recovered_indexes,
+        "cached_read_added_indexes":0,"successful_refresh_cleared_error_gate":true,"refresh_recovery_ms":refresh_recovery_ms,"fixture_source_calls":fixture_calls.load(SeqCst),"owned_s3_child_reaped":reaped,"live_provider_calls":0,"production_eligible":false,
+        "limit":"injected pre-delegate delays, current KST date and synthetic prose; second phase calls a fixture Source directly, not provider HTTP or worker cadence"})).unwrap());
 }

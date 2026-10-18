@@ -7,13 +7,13 @@
     "quality_profile": "showcase",
     "locale": "en",
     "viewBox": [
-      960,
-      590
+      1040,
+      665
     ],
     "column_fit": "spread",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "d35ca94535078383bb03cb79eb818d44b1fd6362",
+      "revision": "968205d88fc0f2985f0ee30fc256c80800bfbf66",
       "link_mode": "local-only"
     }
   },
@@ -50,7 +50,7 @@
       "id": "memory",
       "type": "database",
       "label": "Office memory",
-      "sublabel": "confirmed results",
+      "sublabel": "answer + error gate",
       "sources": [
         {
           "path": "server2/src/narrative/store.rs",
@@ -78,13 +78,13 @@
   "segments": [
     {
       "from": 150,
-      "to": 465,
-      "label": "Proposed failure-versus-absence handling"
+      "to": 550,
+      "label": "Proposed distinct answer and error states"
     }
   ],
   "messages": [
     {
-      "id": "cache-step-0",
+      "id": "cache-bound-step-0",
       "from": "caller",
       "to": "service",
       "y": 170,
@@ -92,23 +92,23 @@
       "variant": "default"
     },
     {
-      "id": "cache-step-1",
+      "id": "cache-bound-step-1",
       "from": "service",
       "to": "memory",
       "y": 198,
-      "label": "Check office cache",
+      "label": "Check office state",
       "variant": "default"
     },
     {
-      "id": "cache-step-2",
+      "id": "cache-bound-step-2",
       "from": "memory",
       "to": "service",
       "y": 226,
-      "label": "Expired / miss",
+      "label": "Miss / no active gate",
       "variant": "return"
     },
     {
-      "id": "cache-step-3",
+      "id": "cache-bound-step-3",
       "from": "service",
       "to": "store",
       "y": 254,
@@ -116,58 +116,82 @@
       "variant": "emphasis"
     },
     {
-      "id": "cache-step-4",
+      "id": "cache-bound-step-4",
       "from": "store",
       "to": "service",
       "y": 282,
-      "label": "Error / timed out",
+      "label": "Completed error",
       "variant": "return"
     },
     {
-      "id": "cache-step-5",
+      "id": "cache-bound-step-5",
       "from": "service",
-      "to": "caller",
+      "to": "memory",
       "y": 310,
-      "label": "Omit only this request",
-      "variant": "return"
-    },
-    {
-      "id": "cache-step-6",
-      "from": "caller",
-      "to": "service",
-      "y": 338,
-      "label": "Next request",
+      "label": "Separate error gate: 1s",
       "variant": "default"
     },
     {
-      "id": "cache-step-7",
+      "id": "cache-bound-step-6",
+      "from": "service",
+      "to": "caller",
+      "y": 338,
+      "label": "Omit this request",
+      "variant": "return"
+    },
+    {
+      "id": "cache-bound-step-7",
+      "from": "caller",
+      "to": "service",
+      "y": 366,
+      "label": "Demand during gate",
+      "variant": "default"
+    },
+    {
+      "id": "cache-bound-step-8",
+      "from": "service",
+      "to": "caller",
+      "y": 394,
+      "label": "Omit; no storage work",
+      "variant": "return"
+    },
+    {
+      "id": "cache-bound-step-9",
+      "from": "caller",
+      "to": "service",
+      "y": 422,
+      "label": "After 1s: new demand",
+      "variant": "default"
+    },
+    {
+      "id": "cache-bound-step-10",
       "from": "service",
       "to": "store",
-      "y": 366,
-      "label": "Retry; no failed entry",
+      "y": 450,
+      "label": "Retry within deadline",
       "variant": "emphasis"
     },
     {
-      "id": "cache-step-8",
+      "id": "cache-bound-step-11",
       "from": "store",
       "to": "service",
-      "y": 394,
+      "y": 478,
       "label": "Ok(value / absent)",
       "variant": "return"
     },
     {
-      "id": "cache-step-9",
+      "id": "cache-bound-step-12",
       "from": "service",
       "to": "memory",
-      "y": 422,
-      "label": "Cache confirmed result",
+      "y": 506,
+      "label": "Confirmed answer: 30s",
       "variant": "default"
     },
     {
-      "id": "cache-step-10",
+      "id": "cache-bound-step-13",
       "from": "service",
       "to": "caller",
-      "y": 450,
+      "y": 534,
       "label": "Fresh prose / absent",
       "variant": "return"
     }
@@ -175,29 +199,29 @@
   "cards": [
     {
       "dot": "amber",
-      "title": "Proposed correction, not execution evidence",
+      "title": "Proposed correction to the minimal prototype",
       "items": [
-        "Current committed interface flattens a failed read into cached absence.",
-        "The proposed path omits the failed request without writing a cache entry.",
-        "Only completed Ok results can replace office memory."
+        "The pinned prototype fixes false absence but has no repeated-error hold-back.",
+        "Selected1s completed-error gate is distinct from30s confirmed presence or absence.",
+        "No background retry timer or newly authorized production action."
       ]
     },
     {
       "dot": "emerald",
-      "title": "Keep both valid cache outcomes",
+      "title": "Bound each office and recover",
       "items": [
-        "Ok(Some fresh prose) and Ok(None confirmed absence) retain the existing 30-second cache.",
-        "Each office keeps its own lock; deadline and narrative expiry stay unchanged.",
-        "An expired prior value remains expired after failure; no stale-on-error behavior."
+        "Existing mutex permits one active read per office; gate blocks storage after completed faults.",
+        "Read/lock retain their original deadline; attach caps optional work at the remaining time or2s.",
+        "Successful read or refresh publication clears the error gate; expired answers stay expired."
       ]
     },
     {
       "dot": "slate",
-      "title": "Preserve accepted scope",
+      "title": "Disclose remaining limits",
       "items": [
-        "A late optional field may still be omitted for this request.",
-        "No provider acquisition, timer, verification mode, allowance or storage schema change.",
-        "Nation child-read optimization and whole-bundle rollback/shadow qualification remain separate."
+        "Admitted reads retain existing2date/8page index and catalog/raw bounds, not measured host cost.",
+        "Caller cancellation without a completed error is not cached as absence or manufactured failure.",
+        "Nation child-read work, production capacity, whole-bundle recovery and shadow remain separate."
       ]
     }
   ]

@@ -515,11 +515,12 @@ action is authorized. D2 capacity and #2819/#2704/#2705/shadow remain open.
 #### #2819 narrative cache recovery
 
 [Task plan](issue-2819-narrative-cache.md) and
-[contract](../specs/issue-2819-narrative-cache.md) keep storage-read failures
-separate from confirmed absent prose before the existing 30s cache update.
-Accepted optional deadline, office isolation, fresh-value/absence cache and
-expiry remain; no stale fallback or provider acquisition is added. Local
-source/typed-error tests and an owned S3 readback scenario precede independent
-review and exact CI. This stacks on D1, not an integrated main release.
-Nation child-read optimization and all other #2819, D2, #2704/#2705, shadow and
-whole-bundle rollback gates remain separate. No merge or live action authorized.
+[contract](../specs/issue-2819-narrative-cache.md) separate30s confirmed answers
+from a1s monotonic gate after completed storage errors. Required review1 rejected
+the initial prototype's unbounded repeated-error behavior; the author selected
+short independent backoff, preserved office owner/deadlines/TTL/expiry, and renewed
+persistent-fault, recovery and successful-publication invalidation proofs. No new
+production approval or stale fallback/provider timer is claimed. This stacks on
+D1, not integratedmain. Current re-review and exact-newheadCI remain mandatory;
+Nation childreads, other#2819items, D2/#2704/#2705/shadow and whole-bundle recovery
+remain separate/open. No merge/live action authorized.

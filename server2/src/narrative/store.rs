@@ -185,7 +185,14 @@ fn decode(station: u16, tm: &str, raw: &RawRecord, now: i64) -> Result<Narrative
     }
     Ok(n)
 }
-type Cache = Mutex<Option<(Instant, Option<Narrative>)>>;
+/// Completed storage faults have a short gate, not a confirmed-absence entry.
+const ERROR_RETRY: Duration = Duration::from_secs(1);
+#[derive(Default)]
+struct OfficeCache {
+    answer: Option<(Instant, Option<Narrative>)>,
+    retry_after: Option<Instant>,
+}
+type Cache = Mutex<OfficeCache>;
 pub struct Service<T> {
     store: Store<T>,
     source: Arc<dyn Source>,
@@ -198,7 +205,7 @@ impl<T: IndexListing + Clone> Service<T> {
             store: Store::new(transport)?,
             source,
             cycle: Mutex::new(()),
-            cache: std::array::from_fn(|_| Mutex::new(None)),
+            cache: std::array::from_fn(|_| Mutex::new(OfficeCache::default())),
         })
     }
 }
@@ -210,22 +217,35 @@ impl<T: IndexListing + Clone + 'static> Read for Service<T> {
                 .await
                 .ok()?;
             let now = now_ms();
-            if let Some((until, value)) = cache.as_ref()
+            if let Some((until, value)) = cache.answer.as_ref()
                 && Instant::now() < *until
             {
                 return value.as_ref().filter(|n| n.fresh(now)).cloned();
             }
-            let value = crate::observability::observe(
+            if cache
+                .retry_after
+                .is_some_and(|until| Instant::now() < until)
+            {
+                return None;
+            }
+            let result = crate::observability::observe(
                 crate::observability::Component::Domestic,
                 crate::observability::Stage::Lookup,
                 self.store.read(station, now, deadline),
             )
-            .await
-            .ok()?;
-            // A failed read is not confirmed absence. Leave it retryable by the
-            // next caller; only completed results receive the existing TTL.
-            *cache = Some((Instant::now() + Duration::from_secs(30), value.clone()));
-            value
+            .await;
+            match result {
+                Ok(value) => {
+                    cache.answer = Some((Instant::now() + Duration::from_secs(30), value.clone()));
+                    cache.retry_after = None;
+                    value
+                }
+                Err(_) => {
+                    // Preserve any expired answer without extending its TTL or serving it stale.
+                    cache.retry_after = Some(Instant::now() + ERROR_RETRY);
+                    None
+                }
+            }
         })
     }
 }
@@ -257,7 +277,7 @@ impl<T: IndexListing + Clone + 'static> Acquire for Service<T> {
                     .await
                     .is_ok()
                 {
-                    *self.cache[i].lock().await = None;
+                    *self.cache[i].lock().await = OfficeCache::default();
                 }
             }
         })

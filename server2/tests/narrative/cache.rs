@@ -30,6 +30,8 @@ enum First {
     Capacity,
     Slow,
     Empty,
+    Persistent,
+    AfterEmpty,
 }
 #[derive(Clone)]
 struct Storage {
@@ -66,14 +68,21 @@ impl CatalogTransport for Storage {
 }
 impl IndexListing for Storage {
     async fn list_index(&self, _: &str, _: Option<&str>) -> Result<ListPage, Error> {
-        if self.calls.fetch_add(1, SeqCst) == 0 {
+        let n = self.calls.fetch_add(1, SeqCst);
+        if matches!(self.first, First::AfterEmpty) && n == 2 {
+            return Err(Error::Corrupt("owned fault after expired absence"));
+        }
+        if matches!(self.first, First::Persistent) {
+            return Err(Error::Corrupt("owned persistent fault"));
+        }
+        if n == 0 {
             match self.first {
                 First::Timeout => return Err(Error::Timeout),
                 First::Transport => return Err(Error::Transport),
                 First::Corrupt => return Err(Error::Corrupt("owned malformed index")),
                 First::Capacity => return Err(Error::Capacity),
                 First::Slow => tokio::time::sleep(Duration::from_secs(1)).await,
-                First::Empty => {}
+                First::Empty | First::Persistent | First::AfterEmpty => {}
             }
         }
         Ok(ListPage {
@@ -106,7 +115,7 @@ fn deadline() -> Instant {
     Instant::now() + Duration::from_secs(2)
 }
 
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn failed_reads_do_not_cache_absence_for_the_next_request() {
     for first in [
         First::Timeout,
@@ -120,8 +129,15 @@ async fn failed_reads_do_not_cache_absence_for_the_next_request() {
         assert!(service.read(108, deadline()).await.is_none());
         assert_eq!(
             calls.load(SeqCst),
+            1,
+            "short error gate blocks repeated failed reads"
+        );
+        tokio::time::advance(Duration::from_millis(1100)).await;
+        assert!(service.read(108, deadline()).await.is_none());
+        assert_eq!(
+            calls.load(SeqCst),
             3,
-            "retry must inspect both date indexes, not cached failure"
+            "eligible retry inspects both date indexes, not a false thirty-second absence"
         );
         assert!(service.read(108, deadline()).await.is_none());
         assert_eq!(calls.load(SeqCst), 3, "confirmed absence still caches");
@@ -140,8 +156,15 @@ async fn a_deadline_expired_read_does_not_poison_the_next_request() {
     assert!(service.read(108, deadline()).await.is_none());
     assert_eq!(
         calls.load(SeqCst),
+        1,
+        "completed timeout has the short error gate"
+    );
+    tokio::time::sleep(Duration::from_millis(1100)).await;
+    assert!(service.read(108, deadline()).await.is_none());
+    assert_eq!(
+        calls.load(SeqCst),
         3,
-        "new request retries immediately after the timed-out read"
+        "new eligible request retries after the short error gate"
     );
 }
 #[tokio::test(start_paused = true)]
@@ -162,5 +185,54 @@ async fn confirmed_absence_keeps_office_isolation_and_thirty_second_expiry() {
         calls.load(SeqCst),
         6,
         "confirmed absence expires at the existing TTL"
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn persistent_fault_is_throttled_by_a_separate_short_error_gate() {
+    let (service, calls) = fixture(First::Persistent);
+    for _ in 0..8 {
+        assert!(service.read(108, deadline()).await.is_none());
+    }
+    assert_eq!(
+        calls.load(SeqCst),
+        1,
+        "completed errors must not repeat storage on every request"
+    );
+    tokio::time::advance(Duration::from_millis(1100)).await;
+    service.read(108, deadline()).await;
+    assert_eq!(
+        calls.load(SeqCst),
+        2,
+        "short error gate eventually permits new demand"
+    );
+    service.read(OFFICES[1].0, deadline()).await;
+    assert_eq!(calls.load(SeqCst), 3, "error gate is office-local");
+}
+
+#[tokio::test(start_paused = true)]
+async fn error_after_an_expired_answer_does_not_renew_its_thirty_second_ttl() {
+    let (service, calls) = fixture(First::AfterEmpty);
+    service.read(108, deadline()).await;
+    assert_eq!(calls.load(SeqCst), 2);
+    tokio::time::advance(Duration::from_secs(31)).await;
+    service.read(108, deadline()).await;
+    assert_eq!(
+        calls.load(SeqCst),
+        3,
+        "expired answer reaches the injected fault"
+    );
+    service.read(108, deadline()).await;
+    assert_eq!(
+        calls.load(SeqCst),
+        3,
+        "short error gate, not a new confirmed answer"
+    );
+    tokio::time::advance(Duration::from_millis(1100)).await;
+    service.read(108, deadline()).await;
+    assert_eq!(
+        calls.load(SeqCst),
+        5,
+        "error did not renew thirty-second absence"
     );
 }
