@@ -53,3 +53,17 @@ Cargo target; no cache cleanup is claimed. Independent current review and exact 
 CI remain pre-merge gates. No merge, live provider/device, deployment, issue closure or
 seven-day shadow qualification is authorized. The final as-built diagram must pin committed
 implemented source; an earlier proposed diagram is explicitly design evidence only.
+
+## Existing process-launcher compatibility
+
+Before the first push, a complete Python launcher review found three existing verification
+assets intentionally started bare/partial operational main: `tools/smoke.py`,
+`deploy/local/stack.py`, and `tests/integration/test_observability.py`. Root Required
+E1-ROOT-001 records this compatibility gap. The first existing smoke invocation was
+rejected by the new guard (exit1); it is a harness NOTPASS, separate from the original
+old-runtime Red. Paths were amended before edits. These isolated health/logging checks
+now supply an explicit closed-loopback legacy origin; no runtime bypass or new mode.
+The foundation smoke expects the already existing gateway-enabled12second connection
+lifetime, while HTTP-only process signal drain remains5seconds. Existing full-native
+coverage and no-origin rejection tests remain unchanged. Runtime/test Rust and retained
+release bytes did not change for this harness correction.

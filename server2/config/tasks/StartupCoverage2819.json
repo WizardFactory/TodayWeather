@@ -12,7 +12,10 @@
     "server2/tests/startup.rs",
     "server2/tests/foundation.rs",
     "server2/tests/runtime_services/inventory.rs",
-    "server2/tools/startup_coverage_smoke.py"
+    "server2/tools/startup_coverage_smoke.py",
+    "server2/tools/smoke.py",
+    "server2/deploy/local/stack.py",
+    "server2/tests/integration/test_observability.py"
   ],
   "outside": [
     {

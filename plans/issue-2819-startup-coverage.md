@@ -11,3 +11,14 @@
 7. Actualindependentreview/selectedcorrections andexactparent/currentCI beforepremerge; no merge/automerge/queue, issueclosure, production/fullbundle/shadow qualification.
 
 Scenarios: operator inadvertently starts unservednativeAPIconfiguration (SC1/3); fullacceptedselection passespurecoveragewithoutsideeffects while constructorvalidatesproviderkeys separately (SC1/2); explicitdevelopmentcoexistence andsharedpartialfactories retainbehavior (SC2/3); reviewerreceivescurrentdeclaredsource/binary/diagram/review/CI evidence (SC4). Detailedscenarioactions arein the taskrecords providedtoreviewers. This availabilitybugfix addsno publicUI/newfeature; updateexistingoperatorguide, no unrelatedPDF.
+
+Pre-push consumer correction (root E1-ROOT-001): exhaustive Python process-launch review
+found existing tools/smoke.py, deploy/local/stack.py and integration/test_observability.py
+start the operational executable with intentionally partial/bare settings. Their exact
+paths are declared before edits. Use explicit closed-loopback development coexistence
+for those health/logging checks, retain production strictness and no provider work;
+update gateway-enabled connection lifetime expectation to its existing12seconds.
+Run existing release smoke, local protocol/wire tests and operational logging tests
+against the unchanged retained release. Preserve the first harness rejection separately
+from the intended old-main regression. Rust remains byte-identical to94/2 checks;
+final diagram source pin stays valid. No initialpush until this correction passes.

@@ -91,9 +91,12 @@ def run(args):
         endpoints = dict(zip(['s3_endpoint','provider_endpoint'],['http://127.0.0.1:'+str(p.server_port) for p in peers]))
         # Do not inherit AWS/provider keys, proxy settings, Node modes or collector flags.
         # S10e: the legacy PORT=0 selects ephemeral loopback listeners; an empty working directory
-        # keeps a real server2/.env out of the foundation process. The foundation reads no S3 or
+        # keeps a real server2/.env out of the isolated process. Explicit closed-loopback development
+        # coexistence satisfies the operational coverage guard; health/logging never call it.
+        # The process reads no S3 or
         # provider setting; the peers are published for the stack's clients.
-        env = {'PATH':os.defpath,'PORT':'0','AWS_EC2_METADATA_DISABLED':'true'}
+        env = {'PATH':os.defpath,'PORT':'0','AWS_EC2_METADATA_DISABLED':'true',
+               'SERVER2_GATEWAY_LEGACY_URL':'http://127.0.0.1:9'}
         # Readiness is stdout machine protocol; operational stderr stays on the parent sink.
         child = subprocess.Popen([str(binary)],cwd=tempfile.mkdtemp(prefix='server2-local-stack-'),env=env,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=None,text=True)
         def read_output():

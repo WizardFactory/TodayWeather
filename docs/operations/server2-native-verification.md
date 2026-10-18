@@ -505,3 +505,11 @@ closed-loopback legacy coexistence; no product request, fully native main startu
 provider call, device send or operational readiness is established. Full native API
 inventory remains a separate owned-router test. See the
 [selected startup evidence](../evidence/tasks/issue-2819-startup-coverage/verification.md).
+
+Existing foundation smoke, S03 local-stack and operational logging checks intentionally
+select explicit closed-loopback development coexistence for their health/logging process.
+They do not bypass the operational completeness guard or establish native production
+coverage. Gateway-enabled connection lifetime remains12seconds; the HTTP-only shutdown
+drain remains5seconds. The S03 launcher requires its executable to be owned under
+`server2/`; copy a verified retained executable into an ignored owned output path rather
+than weakening that existing admission rule.
