@@ -1332,8 +1332,8 @@ configuration. Existing injected `GEOCODER_KAKAO_KEYS`
 and `GEOCODER_GOOGLE_KEY` names and the Google fingerprint restriction are
 preserved. Present Kakao key lists must be JSON arrays of nonempty strings;
 malformed entries reject the configuration. S08 adds Kakao/Google budget identities; the geocoder funding bridge
-reserves/consumes every possible key attempt before owned work, while the
-weather-only executor rejects those identities. Configured limits are not measured quotas (#2724).
+funds only the selected provider/key immediately before its HTTP attempt; local
+exhaustion skips to the next configured key. The weather-only executor rejects those identities. Configured limits are not measured quotas (#2724).
 
 Exact coordinate/locale single-flight and results remain bounded volatile RAM.
 The optional address-only S3 adapter stores a bounded 16-KiB projection with
@@ -1627,8 +1627,17 @@ The table records the S10c state.
 | KMA life inputs (S15b-3b) | none new | Read only with `kma`. UV V5, pollen V3 and KASI use the S15b-2 data.go.kr acquirer (its key and unit settings): one S08 quota owner per key and KST day across ASOS and these services, one key ring per service. MFDS is keyless at the production endpoint legacy hard-codes (`https://poisonmap.mfds.go.kr/api/risk.do`); per AK 2026-10-15 no new `SERVER2_*` provider setting is added (S10e converts the existing ones to the legacy names). |
 
 `FundedQuota` now opens one S08 budget store per key and UTC day from configured limits,
-claims at most 50 units per authority block, and still funds every possible attempt of a
-lookup before HTTP without refunds. Without a quota the geocoder denies every acquisition.
+claims at most 50 units per authority block, and funds each selected geocoder key before
+HTTP without refunds. B1 (#2819) removes reservation of unused candidates: a complete
+Kakao result does not debit or depend on Google funding; address lookup remains Google
+first with Kakao fallback. Shared owners/cache hits do not duplicate funding. Admission
+waits stay inside the existing five-second owner deadline; HTTP attempts remain capped
+at three seconds and the remaining owner time. A funded unit can remain spent if the
+deadline expires before send; this is conservative admission, not wire accounting.
+Without a quota the geocoder denies every acquisition. The
+[funding contract flow](diagrams/server2-geocode-funding.html) illustrates this policy,
+not an execution receipt. [Local checks](../evidence/tasks/issue-2819-funding/verification.md)
+use owned HTTP and a volatile S08 peer; production quotas are not measured.
 S08 keeps one policy per owner and window, so a changed limit applies from the next UTC day;
 a restart with another limit inside the same day denies that key until the day ends. A
 provider day that is not the UTC day overlaps two windows; the #2724 limits must account for

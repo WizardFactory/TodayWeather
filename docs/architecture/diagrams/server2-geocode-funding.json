@@ -1,0 +1,263 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Selected Geocoder Funding Contract",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/server2-geocode-funding.html",
+    "legend": {
+      "entries": {
+        "frontend": {
+          "label": "Lookup / result"
+        },
+        "backend": {
+          "label": "Shared owner"
+        },
+        "security": {
+          "label": "Funding / limits"
+        },
+        "cloud": {
+          "label": "Provider HTTP"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "lookup",
+      "label": "Lookup and cache"
+    },
+    {
+      "id": "owned",
+      "label": "Owned acquisition"
+    },
+    {
+      "id": "limits",
+      "label": "Attempt outcome",
+      "variant": "exception"
+    },
+    {
+      "id": "refusal",
+      "label": "Funding refusal",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "lookup",
+    "owner",
+    "select",
+    "fund",
+    "http",
+    "result"
+  ],
+  "nodes": [
+    {
+      "id": "lookup",
+      "lane": "lookup",
+      "col": 0,
+      "type": "frontend",
+      "label": "Request lookup",
+      "sublabel": "Exact shared key",
+      "width": 150
+    },
+    {
+      "id": "cache",
+      "lane": "lookup",
+      "col": 1,
+      "type": "backend",
+      "label": "Cache hit",
+      "sublabel": "No funding or HTTP",
+      "width": 150
+    },
+    {
+      "id": "result",
+      "lane": "lookup",
+      "col": 3,
+      "type": "frontend",
+      "label": "Return result",
+      "sublabel": "Preserve response bytes",
+      "width": 150
+    },
+    {
+      "id": "owner",
+      "lane": "owned",
+      "col": 0,
+      "type": "backend",
+      "label": "One shared owner",
+      "sublabel": "Waiters join existing work",
+      "width": 150
+    },
+    {
+      "id": "select",
+      "lane": "owned",
+      "col": 1,
+      "type": "backend",
+      "label": "Select needed key",
+      "sublabel": "Existing provider order",
+      "width": 150
+    },
+    {
+      "id": "fund",
+      "lane": "owned",
+      "col": 2,
+      "type": "security",
+      "label": "Fund this attempt",
+      "sublabel": "One provider / key / unit",
+      "width": 150
+    },
+    {
+      "id": "http",
+      "lane": "owned",
+      "col": 3,
+      "type": "cloud",
+      "label": "Attempt HTTP",
+      "sublabel": "Funded key only",
+      "width": 150
+    },
+    {
+      "id": "next",
+      "lane": "refusal",
+      "col": 1,
+      "type": "backend",
+      "label": "Next configured key",
+      "sublabel": "Inside owner deadline",
+      "width": 150
+    },
+    {
+      "id": "denied",
+      "lane": "refusal",
+      "col": 2,
+      "type": "security",
+      "label": "Admission denied",
+      "sublabel": "No HTTP for this key",
+      "width": 150
+    },
+    {
+      "id": "failed",
+      "lane": "limits",
+      "col": 3,
+      "type": "security",
+      "label": "Return error",
+      "sublabel": "No eligible work remains",
+      "width": 150
+    }
+  ],
+  "edges": [
+    {
+      "id": "cache-hit",
+      "from": "lookup",
+      "to": "cache",
+      "variant": "default",
+      "label": "hit"
+    },
+    {
+      "id": "cached-result",
+      "from": "cache",
+      "to": "result",
+      "variant": "default"
+    },
+    {
+      "id": "cache-miss",
+      "from": "lookup",
+      "to": "owner",
+      "variant": "default",
+      "label": "miss"
+    },
+    {
+      "id": "owner-select",
+      "from": "owner",
+      "to": "select",
+      "variant": "default"
+    },
+    {
+      "id": "select-fund",
+      "from": "select",
+      "to": "fund",
+      "variant": "default"
+    },
+    {
+      "id": "funded-http",
+      "from": "fund",
+      "to": "http",
+      "variant": "emphasis",
+      "label": "funded"
+    },
+    {
+      "id": "rejected",
+      "from": "fund",
+      "to": "denied",
+      "variant": "security",
+      "label": "denied"
+    },
+    {
+      "id": "try-next",
+      "from": "denied",
+      "to": "next",
+      "variant": "dashed",
+      "label": "key remains"
+    },
+    {
+      "id": "next-selection",
+      "from": "next",
+      "to": "select",
+      "variant": "dashed"
+    },
+    {
+      "id": "no-key",
+      "from": "denied",
+      "to": "failed",
+      "variant": "security",
+      "label": "no key"
+    },
+    {
+      "id": "success",
+      "from": "http",
+      "to": "result",
+      "variant": "default",
+      "label": "complete"
+    },
+    {
+      "id": "no-result",
+      "from": "http",
+      "to": "failed",
+      "variant": "security",
+      "label": "terminal / deadline"
+    },
+    {
+      "id": "needed-more",
+      "from": "http",
+      "to": "select",
+      "variant": "dashed",
+      "label": "rotation / needed fallback"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Provider order",
+      "items": [
+        "Korean coordinates: Kakao; Google only for missing fields",
+        "Other coordinates: Google; addresses: Google then Kakao fallback",
+        "Configured but unused keys consume no logical funding"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Conservative ownership",
+      "items": [
+        "One S08 owner per key and UTC day; authority claims occur in blocks",
+        "Funding waits and HTTP share the five-second owner deadline",
+        "HTTP is capped at three seconds and remaining owner time; no refunds"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Illustrative contract, not execution evidence",
+      "items": [
+        "This diagram states the intended B1 policy, not a source-revision attestation",
+        "Owned HTTP plus volatile S08 smoke has no live provider calls",
+        "Production quotas, data.go.kr funding and cutover remain separate gates"
+      ]
+    }
+  ]
+}

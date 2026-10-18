@@ -1,0 +1,62 @@
+{
+  "task": "Funding2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "B1 selected-provider/key funding immediately before geocoder HTTP attempts. Preserve durable upfront admission, cache/shared-flight behavior, provider order and deadlines; no production quota measurement, funding allowance invention, data.go.kr or publication-policy change. Independent runtime change from C1 PR2820; no merge or production authority.",
+  "server2_paths": [
+    "server2/config/tasks/Funding2819.json",
+    "server2/src/geocode/mod.rs",
+    "server2/src/geocode/budget.rs",
+    "server2/tests/gateway/geocode.rs",
+    "server2/tests/gateway/budget.rs",
+    "server2/tests/gateway/runtime.rs",
+    "server2/examples/geocode_funding_smoke.rs",
+    "server2/Cargo.toml"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-funding.md",
+      "category": "documentation",
+      "reason": "Maintain scoped requirements, selected-key funding contract, verification and illustrative flow; no runtime logic outside server2"
+    },
+    {
+      "path": "specs/issue-2819-funding.md",
+      "category": "documentation",
+      "reason": "Maintain scoped requirements, selected-key funding contract, verification and illustrative flow; no runtime logic outside server2"
+    },
+    {
+      "path": "plans/issue-2819-funding.md",
+      "category": "documentation",
+      "reason": "Maintain scoped requirements, selected-key funding contract, verification and illustrative flow; no runtime logic outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Maintain scoped requirements, selected-key funding contract, verification and illustrative flow; no runtime logic outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain scoped requirements, selected-key funding contract, verification and illustrative flow; no runtime logic outside server2"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Maintain scoped requirements, selected-key funding contract, verification and illustrative flow; no runtime logic outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-geocode-funding.json",
+      "category": "documentation",
+      "reason": "Maintain scoped requirements, selected-key funding contract, verification and illustrative flow; no runtime logic outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-geocode-funding.html",
+      "category": "documentation",
+      "reason": "Maintain scoped requirements, selected-key funding contract, verification and illustrative flow; no runtime logic outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-funding/verification.md",
+      "category": "documentation",
+      "reason": "Maintain scoped requirements, selected-key funding contract, verification and illustrative flow; no runtime logic outside server2"
+    }
+  ]
+}
