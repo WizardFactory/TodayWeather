@@ -571,3 +571,28 @@ are recorded in [selected evidence](../docs/evidence/tasks/issue-2819-delivery-c
 Current independent review and exact CI are separate gates. C1/B1 are not
 ancestors, and later integration needs reconciliation. No merge, main, full-bundle,
 #2819/#2704/#2705, seven-day shadow or production completion is claimed.
+
+#### #2819 C4: bounded warning work
+
+The [task plan](issue-2819-warning-fanout.md) and
+[contract](../specs/issue-2819-warning-fanout.md) retain independent strict
+post-claim and after-OAuth admission, with a poll-local advisory prefilter,
+known-terminal physical-claim memo and at most six constructed delivery futures.
+The memo is bounded and falls back to ordinary CAS when full; uncertainty does
+not establish ownership. Location grouping already exists and stays exact-input,
+geo-first and episode-scoped. No claim release or actual-send retry is added.
+
+An actual untouched 5,000-endpoint run accepts/verifies every result but uses
+195,002 first-pass S3 requests and 65,001 on a repeated poll. The pre-Red budget
+requires at most 126,000 S12 requests, no increase in total requests/body bytes,
+and zero repeated endpoint-specific work. A measured shared-query prototype
+saved only 132 requests beyond the advisory view; the selected implementation
+keeps per-caller fresh reads and removes that coordination surface. Current
+[selected evidence](../docs/evidence/tasks/issue-2819-warning-fanout/verification.md)
+separates prototype results, the final source/executable, actual tests, peer limits
+and fixed-clock/seed-history qualifications.
+
+The parent C2 PR2827 is pre-merge complete and unmerged. C1/B1 are parallel
+branches, not integrated ancestors. Current C4 review/CI, C5/C6/readiness,
+S3/cold-load capacity, later integration/full-bundle qualification and
+#2819/#2704/#2705/shadow remain separate gates. No merge or live action is authorized.

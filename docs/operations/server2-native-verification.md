@@ -341,3 +341,67 @@ service reconstruction in one executable is not an OS-process restart. Zero
 live/device sends follows the forced synthetic loopback setup, not device
 telemetry. This is neither production qualification nor seven-day shadow.
 See [selected evidence](../evidence/tasks/issue-2819-delivery-cohort/verification.md).
+
+## Bounded warning fan-out
+
+From `server2/`, build the fixed owned-peer example with the pinned toolchain and
+lockfile, after checking disk space and the coordinator's shared Cargo target:
+
+```sh
+cargo build --locked --offline --release --example warning_fanout_smoke
+```
+
+Retain its executable outside disposable Cargo output and record its SHA-256.
+Keep the matching checkout available: this QA executable finds child scripts and
+public test-key fixtures through its compile-time `CARGO_MANIFEST_DIR`. Freeze the
+runtime source, helper, peer, deployment/configuration and fixture inputs as well
+as the executable. Run with a sanitized PATH/TMPDIR/locale environment:
+
+```sh
+<retained-warning_fanout_smoke> 5000
+```
+
+The executable seeds 5,000 distinct synthetic endpoints, initializes the worker's
+existing silent baseline, then publishes a fresh warning. Registration journal,
+warning seed/catalog/raw data, feed and delivery claims/results use an actual
+owned HTTP S3 peer. OAuth/FCM are loopback doubles with public test-vector account
+material. `KnownTown` is a counted synthetic location adapter; it is not evidence
+of native geocoder/provider activity or headroom. The test-only peer explicitly
+allows 16,384 objects and 64 MiB of stored bodies for claim/result pairs, with the
+existing 16 connection and two-second socket bounds. Production/local-stack
+configuration defaults do not change.
+
+Require 5,000 accepted posts, unique claims and verified accepted result objects
+in both untouched and candidate runs. Use the same helper/fixture bytes and
+classify actual HTTP operations into S12 catalog/descriptor/raw/LIST/repair, feed,
+journal and ledger. Credential snapshots alone are not S3 HTTP requests. Counts
+exclude setup/status queries using explicit deltas; result-verification GETs are
+reported separately. Bytes mean consumed request bodies and successfully written
+response bodies for the controlled parsed requests, excluding headers/TLS. Chunk
+framing is included only if a fault mode enables it. This is not general malformed
+HTTP or partial socket-write accounting.
+
+The complete synthetic seed replays 2026-10-14 through 2026-10-16. A fixed domain
+clock keeps this finite campaign eligible; record actual wall time separately.
+The untouched first pass has 180,000 S12 requests and 195,002 total requests. The
+pre-Red limits are at most 126,000 S12 requests, total requests/body bytes no greater
+than baseline, and zero endpoint-specific S12/claim/journal work on a later
+known-terminal poll. Feed maintenance remains visible. A small seed-absent strict
+read separately records physical requests/body bytes under a predeclared
+512-request bound; it does not qualify a 5,000-recipient worst-case history.
+
+Keep all failed whole invocations, actual Reds and each executable's source
+binding. Require unchanged static inputs/executable, exit zero and both owned
+listeners closed. The original four-second final guard, post-claim zero-OAuth
+failure, independent-store release, late OAuth completion, quiesce and durable
+claim uncertainty/reconstruction have separate regressions. The reconstruction
+check selects a new feed event in the same campaign after startup, then observes
+an actual `Taken` CAS; initial silence alone is not proof of ledger deduplication.
+
+Local memo saturation uses the ordinary durable path for new keys. Counter API
+key bytes exclude allocator/container overhead and are not HTTP metrics or a
+whole-process memory guarantee. Existing first-poll silence and bool writer API
+limitations remain. No live provider/device telemetry, AWS measurement,
+operational deadline capacity, eligible full recovery release, seven-day shadow,
+merge or deployment is established. See
+[selected evidence](../evidence/tasks/issue-2819-warning-fanout/verification.md).

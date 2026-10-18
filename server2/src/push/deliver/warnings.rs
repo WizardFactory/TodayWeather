@@ -1,10 +1,14 @@
 //! S18b-3 one-shot severe-warning worker. Legacy feed/selection/message contract, without
 //! restart delivery recovery or automatic send retries. This library has no startup wiring.
+pub use super::warning_admission::FanoutSnapshot;
 use super::{
     Delivery, Diagnostics, Event as Diagnostic, Fcm, Fetch, Product, SendOutcome, Servers,
     alarm::{CONCURRENCY, futures_join},
-    ledger::{Claim, Ledger},
+    ledger::{Claim, Ledger, minute_path},
     text::Message,
+    warning_admission::{
+        Counters as FanoutCounters, MEMO_CAPACITY, PassView, TerminalMemo, join_bounded,
+    },
     warning_feed::{Item, WarningFeed, event_value, group_id, published_at},
 };
 use crate::{
@@ -24,7 +28,10 @@ use crate::{
 };
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
     time::Duration,
 };
 use tokio::{
@@ -286,6 +293,8 @@ pub struct WarningWorker<T> {
     clock: Arc<dyn Clock>,
     diagnostics: Arc<dyn Diagnostics>,
     state: Mutex<WorkerState>,
+    terminal: std::sync::Mutex<TerminalMemo>,
+    fanout: Arc<FanoutCounters>,
 }
 impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
     #[allow(clippy::too_many_arguments)]
@@ -309,7 +318,15 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
             clock,
             diagnostics,
             state: Mutex::new(WorkerState::default()),
+            terminal: std::sync::Mutex::new(TerminalMemo::default()),
+            fanout: Arc::new(FanoutCounters::default()),
         }
+    }
+    /// Local counters only; existing HTTP metrics wiring is unchanged. Key bytes
+    /// exclude allocator/container overhead and are not a process RSS bound.
+    pub fn fanout_stats(&self) -> FanoutSnapshot {
+        self.fanout
+            .snapshot(&self.terminal.lock().unwrap_or_else(|e| e.into_inner()))
     }
     fn current(&self, n: u64, record: &Record) -> bool {
         self.push.ready()
@@ -329,6 +346,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
         group: &Group,
         ids: &[String],
         now: i64,
+        view: &PassView,
     ) -> Delivery {
         let info = &record.doc;
         let Val::Str(token) = info.get("fcmToken") else {
@@ -341,7 +359,10 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
             .send_guarded(Product::of(info.get("package")), now, || async {
                 tokio::time::timeout(Duration::from_secs(4), async {
                     let at = self.clock.now_ms().ok()?;
-                    let zones = self.zones.current(at).await.ok()?;
+                    let zones = view
+                        .fresh(self.zones.as_ref(), at, &self.fanout)
+                        .await
+                        .ok()?;
                     // Runs through the writer's journal catch-up, rather than only this
                     // process's RAM snapshot. An unavailable journal fails closed.
                     if !self
@@ -429,6 +450,10 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                 }
                 state.seen.extend(new.iter().map(|i| i.id.clone()));
                 state.open.retain(|g| now - g.observed_at < WINDOW);
+                self.terminal
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .retain(state.open.iter().map(|g| g.id.clone()));
                 if state.open.is_empty() {
                     state.regions.clear();
                     return Ok(PollReport::default());
@@ -481,6 +506,8 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                 }
                 resolved.sort_by_key(|(n, _, _)| *n);
                 let mut report = PollReport::default();
+                let view = Arc::new(PassView::default());
+                let saturated = AtomicBool::new(false);
                 for group in &state.open {
                     let mut endpoints = HashSet::new();
                     let mut jobs = Vec::new();
@@ -510,17 +537,34 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                             if !endpoints.insert(endpoint.clone()) {
                                 continue;
                             }
+                            report.selected += 1;
+                            let kind = format!("warning/{}/{}", group.id, endpoint);
+                            if let Some(source) = published_at(&event_value(&group.event)["tmFc"])
+                                && self
+                                    .terminal
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner())
+                                    .known(
+                                        &group.id,
+                                        &format!("{}.json", minute_path(&kind, source)),
+                                    )
+                            {
+                                report.skipped += 1;
+                                self.fanout.known_terminal.fetch_add(1, Ordering::Relaxed);
+                                continue;
+                            }
                             jobs.push((*n, record.clone(), ids.clone(), endpoint));
                         }
                     }
-                    report.selected += jobs.len();
-                    let mut tasks = Vec::new();
-                    for (n, record, ids, endpoint) in jobs {
+                    let tasks = jobs.into_iter().map(|(n, record, ids, endpoint)| {
                         let gate = gate.clone();
-                        tasks.push(crate::observability::value(
+                        let view = &view;
+                        let saturated = &saturated;
+                        crate::observability::value(
                             crate::observability::Component::Delivery,
                             crate::observability::Stage::Submission,
                             async move {
+                                let _live = self.fanout.job();
                                 let _permit = gate.acquire_owned().await.expect("open gate");
                                 let now =
                                     self.clock.now_ms().map_err(|_| Error::Invalid("clock"))?;
@@ -530,19 +574,40 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                                 {
                                     return Ok(None);
                                 }
-                                let zones = self.zones.current(now).await?;
+                                let zones =
+                                    view.current(self.zones.as_ref(), now, &self.fanout).await?;
                                 if !active(group, &ids, &zones, now) {
                                     return Ok(None);
                                 }
                                 let kind = format!("warning/{}/{}", group.id, endpoint);
                                 let source = published_at(&event_value(&group.event)["tmFc"])
                                     .ok_or(Error::Corrupt("warning source time"))?;
-                                if self
+                                let claimed = self
                                     .ledger
                                     .claim(&kind, source, now, &[oid_hex(&record.oid)])
-                                    .await
-                                    != Claim::Owned
-                                {
+                                    .await;
+                                if matches!(claimed, Claim::Owned | Claim::Taken) {
+                                    let remembered = self
+                                        .terminal
+                                        .lock()
+                                        .unwrap_or_else(|e| e.into_inner())
+                                        .record(
+                                            &group.id,
+                                            format!("{}.json", minute_path(&kind, source)),
+                                            MEMO_CAPACITY,
+                                        );
+                                    if !remembered {
+                                        self.fanout.saturated.fetch_add(1, Ordering::Relaxed);
+                                        if !saturated.swap(true, Ordering::Relaxed) {
+                                            self.diagnostics.minute(
+                                                &crate::world::js::iso(now as f64)
+                                                    .unwrap_or_default(),
+                                                "warning-terminal-memo-saturated",
+                                            );
+                                        }
+                                    }
+                                }
+                                if claimed != Claim::Owned {
                                     return Ok(None);
                                 }
                                 let now =
@@ -556,7 +621,13 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                                         class: "registration-changed-or-expired",
                                     }
                                 } else {
-                                    match self.zones.current(now).await {
+                                    match tokio::time::timeout(
+                                        Duration::from_secs(4),
+                                        view.fresh(self.zones.as_ref(), now, &self.fanout),
+                                    )
+                                    .await
+                                    .unwrap_or(Err(Error::Timeout))
+                                    {
                                         Err(_) => Delivery::Failed {
                                             class: "warning-state",
                                         },
@@ -565,7 +636,9 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                                                 class: "warning-inactive",
                                             }
                                         }
-                                        Ok(_) => self.submit(n, &record, group, &ids, now).await,
+                                        Ok(_) => {
+                                            self.submit(n, &record, group, &ids, now, view).await
+                                        }
                                     }
                                 };
                                 let id = oid_hex(&record.oid);
@@ -589,9 +662,9 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                                 Ok(None) => crate::observability::skipped(),
                                 Err(error) => crate::observability::error(error),
                             },
-                        ));
-                    }
-                    for result in futures_join(tasks).await {
+                        )
+                    });
+                    for result in join_bounded(tasks).await {
                         match result {
                             Ok(Some(Delivery::Accepted)) => {
                                 report.attempted += 1;

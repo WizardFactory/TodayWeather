@@ -189,7 +189,7 @@ use server2::{
 };
 use std::sync::Mutex;
 #[derive(Default)]
-struct Zones(Mutex<Vec<serde_json::Value>>);
+pub(super) struct Zones(pub(super) Mutex<Vec<serde_json::Value>>);
 impl CurrentZones for Zones {
     fn current(&self, _now: i64) -> BoxFuture<'_, Result<ZoneState, Error>> {
         Box::pin(async move {
@@ -199,7 +199,7 @@ impl CurrentZones for Zones {
         })
     }
 }
-struct FixedLocations;
+pub(super) struct FixedLocations;
 impl Locations for FixedLocations {
     fn zones<'a>(
         &'a self,
@@ -209,7 +209,7 @@ impl Locations for FixedLocations {
         Box::pin(async { Ok(vec!["L1010100".into()]) })
     }
 }
-fn registration(n: u8) -> Record {
+pub(super) fn registration(n: u8) -> Record {
     let mut doc = Obj::new();
     for (k, v) in [
         ("fcmToken", "synthetic-warning-token"),
@@ -231,7 +231,7 @@ fn registration(n: u8) -> Record {
     doc.set("precipAlerts", Val::Obj(precip));
     Record { oid: [n; 12], doc }
 }
-fn rows() -> Vec<serde_json::Value> {
+pub(super) fn rows() -> Vec<serde_json::Value> {
     let data = oracle();
     data["feed"]
         .as_array()
@@ -243,7 +243,7 @@ fn rows() -> Vec<serde_json::Value> {
         .unwrap()
         .clone()
 }
-fn worker(
+pub(super) fn worker(
     rig: &Rig,
     push: Arc<PushService>,
     feed: Arc<WarningFeed<MemS3>>,
@@ -262,7 +262,7 @@ fn worker(
         rig.diagnostics.clone(),
     ))
 }
-async fn setup(
+pub(super) async fn setup(
     name: &str,
 ) -> (
     Rig,
@@ -296,7 +296,11 @@ async fn setup(
     assert_eq!(w.poll().await.unwrap().attempted, 0);
     (rig, feed, zones, w)
 }
-async fn publish(feed: &WarningFeed<MemS3>, zones: &Zones, rows: Vec<serde_json::Value>) {
+pub(super) async fn publish(
+    feed: &WarningFeed<MemS3>,
+    zones: &Zones,
+    rows: Vec<serde_json::Value>,
+) {
     *zones.0.lock().unwrap() = rows.clone();
     feed.publish(&rows).await.unwrap();
 }
@@ -381,7 +385,23 @@ async fn unknown_committed_claim_never_authorizes_an_attempt() {
         Fault::CommitLostUnreadable,
     );
     assert_eq!(w.poll().await.unwrap().attempted, 0);
+    assert_eq!(
+        w.fanout_stats().memo_entries,
+        0,
+        "unavailable is not local ownership"
+    );
+    let before = rig.s3.put_count("index/v2/push/delivery/warning/");
     assert_eq!(w.poll().await.unwrap().attempted, 0);
+    assert_eq!(
+        rig.s3.put_count("index/v2/push/delivery/warning/"),
+        before + 1,
+        "uncertain initial claim must be checked through ordinary CAS"
+    );
+    assert_eq!(
+        w.fanout_stats().memo_entries,
+        1,
+        "known Taken is now memoized"
+    );
     assert!(rig.google.sends().is_empty());
     assert_eq!(rig.s3.keys("index/v2/push/delivery/warning/").len(), 1);
 }
@@ -824,7 +844,7 @@ async fn auth_preparation_success_uses_the_final_submission_time_for_apns_expira
     );
 }
 
-async fn publish_s12(
+pub(super) async fn publish_s12(
     store: &server2::warnings::WarningStore<server2::storage::HttpS3Transport>,
     rows: Vec<serde_json::Value>,
     fetched: u64,

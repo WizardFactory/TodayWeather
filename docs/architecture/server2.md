@@ -3872,3 +3872,60 @@ record subsequent execution. This slice is stacked on unmerged lateness PR2826.
 C1/B1 are separate unmerged branches; their later integration must reconcile
 writer/restore paths. No main, whole recovery bundle, shadow or production
 qualification is established.
+
+### #2819 bounded warning fan-out work
+
+The [C4 contract](../../specs/issue-2819-warning-fanout.md) reduces repeated
+admission work while keeping strict S12 checks after the durable claim and again
+inside that caller's original four-second after-OAuth guard. Each admission starts
+its own acquisition. Current writer-journal selection, clock, configured window,
+event activity and FCM stopping checks remain. A warning release published by a
+different S12 store during OAuth must still prevent the pending POST. There is no
+shared in-flight admission, fill timer, detached coordinator, stale fallback or new
+publication head. The existing S12 multi-object reads and read-to-POST gap do not
+establish a globally atomic warning snapshot.
+
+A lazy, poll-local view filters candidates before a claim. Successful later strict
+reads can update it by read-start order. It cannot authorize delivery; an error
+leaves candidates unclaimed, counts their failures, and expires with that poll.
+The next ordinary poll can inspect them again. A newly active event after the
+advisory read may wait until that next poll. Post-claim source errors retain the
+existing `warning-state` class and make no OAuth request.
+
+A local memo stores only exact physical claim identities that returned `Owned`
+or `Taken`, synchronously before the next await. `Unavailable` is never evidence
+of ownership. The existing open-campaign/window calculation prunes entries. The
+65,536-entry cap bounds an optimization, not eligible recipients: a full memo
+keeps existing entries and new targets still use ordinary durable CAS. Claims are
+never released or rewound, and actual failed/unknown sends are never retried.
+Memory loss restores ordinary ledger checks. The memo is separate from the
+async poll-state lock and adds no journal or persistent schema.
+
+Filtering follows the original zone/natural-record order and endpoint deduplication,
+so selected/skipped report meanings remain. Existing exact geo/town success reuse,
+geo precedence, error retry and clearing across quiet episodes stay unchanged.
+Locations were already grouped; a universal per-recipient geocode claim is
+inaccurate. At most six delivery futures are constructed at once. Registration,
+group and location metadata remain proportional to the input, and existing shared
+permits/product-token contention remain. `fanout_stats()` exposes local read,
+error, memo and peak-work counters; it does not wire them into HTTP metrics or
+measure allocator overhead/process RSS.
+
+For a healthy pass with E nonterminal candidates and E' still-current owners,
+strict source calls change from up to E+2E' to at most 1+2E'. Physical S3 requests
+also depend on seed coverage, catalogs, descriptors, raw members, discovery and
+repair; they are measured separately. Already-terminal polls avoid endpoint S12,
+claim and journal work while the memo covers them. Saturation can repeat that
+work without dropping a new notification. The fixed local 5,000-recipient bound
+is not a real-host latency, quota, worst-case history or five-minute throughput
+qualification.
+
+The [proposed flow](diagrams/server2-warning-fanout.html) and
+[editable source](diagrams/server2-warning-fanout.sequence.json) pin existing hooks
+at `2e67d146`. Their design-time comparison is separate from the subsequent
+[current evidence](../evidence/tasks/issue-2819-warning-fanout/verification.md) and
+[owned operator rehearsal](../operations/server2-native-verification.md#bounded-warning-fan-out).
+This task stacks on unmerged C2 PR2827; C1/B1 are separate branches. Initial silent
+warning polling, traffic-independent acquisition, startup credentials, readiness
+and other #2819/cutover gates remain separate. No main, complete recovery bundle,
+seven-day shadow or production qualification is implied.
