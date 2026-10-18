@@ -509,6 +509,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                 let view = Arc::new(PassView::default());
                 let saturated = AtomicBool::new(false);
                 for group in &state.open {
+                    let source = published_at(&event_value(&group.event)["tmFc"]);
                     let mut endpoints = HashSet::new();
                     let mut jobs = Vec::new();
                     // Match the first registration in zone iteration order, then natural record order.
@@ -538,25 +539,28 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                                 continue;
                             }
                             report.selected += 1;
-                            let kind = format!("warning/{}/{}", group.id, endpoint);
-                            if let Some(source) = published_at(&event_value(&group.event)["tmFc"])
+                            // Build the ledger identity once and carry the same physical
+                            // key from memo lookup to insertion after a definite claim.
+                            let identity = source.map(|source| {
+                                let kind = format!("warning/{}/{}", group.id, endpoint);
+                                let key = format!("{}.json", minute_path(&kind, source));
+                                (kind, source, key)
+                            });
+                            if let Some((_, _, key)) = &identity
                                 && self
                                     .terminal
                                     .lock()
                                     .unwrap_or_else(|e| e.into_inner())
-                                    .known(
-                                        &group.id,
-                                        &format!("{}.json", minute_path(&kind, source)),
-                                    )
+                                    .known(&group.id, key)
                             {
                                 report.skipped += 1;
                                 self.fanout.known_terminal.fetch_add(1, Ordering::Relaxed);
                                 continue;
                             }
-                            jobs.push((*n, record.clone(), ids.clone(), endpoint));
+                            jobs.push((*n, record.clone(), ids.clone(), identity));
                         }
                     }
-                    let tasks = jobs.into_iter().map(|(n, record, ids, endpoint)| {
+                    let tasks = jobs.into_iter().map(|(n, record, ids, identity)| {
                         let gate = gate.clone();
                         let view = &view;
                         let saturated = &saturated;
@@ -579,9 +583,8 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                                 if !active(group, &ids, &zones, now) {
                                     return Ok(None);
                                 }
-                                let kind = format!("warning/{}/{}", group.id, endpoint);
-                                let source = published_at(&event_value(&group.event)["tmFc"])
-                                    .ok_or(Error::Corrupt("warning source time"))?;
+                                let (kind, source, key) =
+                                    identity.ok_or(Error::Corrupt("warning source time"))?;
                                 let claimed = self
                                     .ledger
                                     .claim(&kind, source, now, &[oid_hex(&record.oid)])
@@ -591,11 +594,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                                         .terminal
                                         .lock()
                                         .unwrap_or_else(|e| e.into_inner())
-                                        .record(
-                                            &group.id,
-                                            format!("{}.json", minute_path(&kind, source)),
-                                            MEMO_CAPACITY,
-                                        );
+                                        .record(&group.id, key, MEMO_CAPACITY);
                                     if !remembered {
                                         self.fanout.saturated.fetch_add(1, Ordering::Relaxed);
                                         if !saturated.swap(true, Ordering::Relaxed) {
@@ -621,13 +620,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                                         class: "registration-changed-or-expired",
                                     }
                                 } else {
-                                    match tokio::time::timeout(
-                                        Duration::from_secs(4),
-                                        view.fresh(self.zones.as_ref(), now, &self.fanout),
-                                    )
-                                    .await
-                                    .unwrap_or(Err(Error::Timeout))
-                                    {
+                                    match view.fresh(self.zones.as_ref(), now, &self.fanout).await {
                                         Err(_) => Delivery::Failed {
                                             class: "warning-state",
                                         },

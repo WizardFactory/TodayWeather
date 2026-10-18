@@ -3929,3 +3929,14 @@ This task stacks on unmerged C2 PR2827; C1/B1 are separate branches. Initial sil
 warning polling, traffic-independent acquisition, startup credentials, readiness
 and other #2819/cutover gates remain separate. No main, complete recovery bundle,
 seven-day shadow or production qualification is implied.
+
+C4 admission limits: an advisory view can still say active after an external
+release. Such an endpoint can acquire its one-shot claim before the independent
+post-claim read returns `warning-inactive`; that claim remains terminal and is
+not released or retried. Inactive/error advisory results instead leave work
+unclaimed for a later poll. The default `StderrDiagnostics::minute` adapter is
+silent, including the memo-saturation note; `fanout_stats()` is the only library
+snapshot signal until operational metrics are wired. No default stderr/HTTP
+saturation metric is claimed. The post-claim read retains the source's own
+existing deadline; the worker adds no outer timeout there. The separate final
+after-OAuth admission guard retains its original four-second timeout.

@@ -455,3 +455,63 @@ async fn advisory_error_or_inactive_view_leaves_work_unclaimed_for_the_next_poll
         assert_eq!(rig.google.sends().len(), 1);
     }
 }
+
+struct HeldPostclaimRead {
+    calls: std::sync::atomic::AtomicUsize,
+    started: tokio::sync::Notify,
+    resume: tokio::sync::Notify,
+}
+impl CurrentZones for HeldPostclaimRead {
+    fn current(&self, _: i64) -> BoxFuture<'_, Result<ZoneState, Error>> {
+        Box::pin(async move {
+            if self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst) == 1 {
+                self.started.notify_one();
+                self.resume.notified().await;
+            }
+            let mut state = ZoneState::default();
+            state.apply(&prepare_events(&rows()));
+            Ok(state)
+        })
+    }
+}
+#[tokio::test]
+async fn postclaim_read_keeps_the_sources_deadline_without_a_new_outer_timeout() {
+    let (rig, feed, _, _) = setup("warning-postclaim-deadline").await;
+    let zones = Arc::new(HeldPostclaimRead {
+        calls: std::sync::atomic::AtomicUsize::new(0),
+        started: tokio::sync::Notify::new(),
+        resume: tokio::sync::Notify::new(),
+    });
+    let w = worker(
+        &rig,
+        rig.push.clone(),
+        feed.clone(),
+        zones.clone(),
+        Arc::new(FixedLocations),
+    );
+    w.poll().await.unwrap();
+    feed.publish(&rows()).await.unwrap();
+    let running = tokio::spawn({
+        let w = w.clone();
+        async move { w.poll().await }
+    });
+    tokio::time::timeout(std::time::Duration::from_secs(2), zones.started.notified())
+        .await
+        .unwrap();
+    // Fixed domain clock keeps the warning eligible. This injected source owns
+    // its own bound; the worker must not silently impose a new postclaim one.
+    tokio::time::sleep(std::time::Duration::from_millis(4200)).await;
+    zones.resume.notify_one();
+    let result = tokio::time::timeout(std::time::Duration::from_secs(2), running)
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        result.accepted, 1,
+        "a completed strict source must not become a terminal outer-timeout failure"
+    );
+    assert_eq!(rig.google.tokens().len(), 1);
+    assert_eq!(rig.google.sends().len(), 1);
+    assert_eq!(zones.calls.load(std::sync::atomic::Ordering::SeqCst), 3);
+}
