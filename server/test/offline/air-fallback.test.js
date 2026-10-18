@@ -296,7 +296,7 @@ test('middleware leaves the response without air when the chain yields nothing o
     assert.equal(noCoord.current.arpltn, undefined);
 });
 
-test('a non-AirKorea station list becomes an airInfo with that source and skips the station forecast lookup', async () => {
+test('a non-AirKorea station list without nearby metadata keeps its source and skips station forecasts', async () => {
     const t = town24h({});
     const before = logs.length;
     for (const source of ['google', 'openweather', 'visualcrossing', 'aqicn']) {

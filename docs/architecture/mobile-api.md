@@ -43,28 +43,44 @@ The weather `_retryGetHttp` wrapper specifies only `{method:'GET', url, timeout}
 
 Sources: [Units](../../client/www/js/controller.units.js), [HTTP wrapper](../../client/www/js/service.weatherutil.js), [server defaults](../../server/controllers/controllerTown24h.js).
 
-### Stored hourly air forecast fallback (#2770)
+### Stored hourly air forecast fallback (#2770, #2831)
 
-Installed clients still send `airForecastSource=kaq`. Both `AirForecast` and the
-v000903 `AirForecastList` select KAQ only when it has a supported pollutant with a
-finite numeric concentration ≥0 at a valid KST time strictly after now and the
-last observation, through observation +24 hours. Empty, expired, malformed or
-invalid rows do not suppress fallback. A KAQ read error also permits the stored
-AirKorea lookup for the same station. Partial usable KAQ remains KAQ; sources are
-selected before insertion and are never combined.
+Installed clients still send `airForecastSource=kaq`. `getArpLtnInfo` retains the
+nearest named station from its existing ordered AirKorea metadata query
+(`[longitude, latitude]`, `$maxDistance: 1`, limit 6), independently of observation
+availability. `getKeco` carries that name in `req.airForecastStationName`; replacing
+stale observation lists in `getAirFallback` does not replace this metadata.
 
-Fallback keeps observation `source`/`last` unchanged, sets `forecastSource` to
-`airkorea`, and retains the selected source's actual `forecastPubDate` and per-slot
-`pubDate`. If neither source has usable future slots, observations and existing
-daily bulletins remain without invented hourly forecasts or new forecast
-attribution. Explicit AirKorea selection is unchanged. Insertion uses strict KST
-parsing (including `24:00`) and includes the first forecast for pollutants without
-an observation series. There are no provider calls, collection changes or writes
-in this fallback.
+Both `AirForecast` and v000903 `AirForecastList` use the observation station for
+AirKorea current values, or the retained metadata station for coordinate-provider
+current values. A coordinate provider's own `stationName` is never treated as an
+AirKorea identity. Missing metadata leaves those responses current-only. No new
+metadata query, provider call or write is added to request processing.
+
+KAQ is selected only when it has a supported pollutant with a finite numeric
+concentration ≥0 at a valid KST time strictly after now and the current observation.
+AirKorea observations retain the observation +24 h horizon. Coordinate-provider
+observations use request current-hour +24 h, independently of stale AirKorea
+observations. Empty, expired, malformed or invalid KAQ rows and read errors permit
+stored AirKorea lookup for the same station. Partial usable KAQ remains KAQ;
+sources are selected before insertion and never combined. Explicit AirKorea and
+omitted-source requests apply the same usable-row validation.
+
+Enrichment keeps current `source`, `last`, readings and attribution unchanged. It
+sets `forecastStationName`, actual `forecastSource` and `forecastPubDate` from a
+usable displayed row; pollutant and derived AQI slots retain actual `pubDate`.
+Strict KST parsing includes `24:00`. The first valid forecast is included even for
+pollutants without observations. Existing pollutant/AQI conversion and KAQ daily
+summary calculations remain. If neither source has usable future slots, current
+values and existing daily bulletins remain without invented hourly forecasts or
+new forecast attribution. Store errors remain optional middleware warnings.
 
 See the [selection sequence](diagrams/air-forecast-selection.html),
-[editable source](diagrams/air-forecast-selection.json), and
-[verification](../evidence/tasks/issue-2770/verification.md). Source:
+[editable source](diagrams/air-forecast-selection.json),
+[verification](../evidence/tasks/issue-2831/verification.md), and
+[rollout/rollback](../operations/air-forecast-fallback.md). Source:
+[`getArpLtnInfo`](../../server/controllers/kecoController.js),
+[`getKeco`](../../server/controllers/controllerTown.js), and
 [`_getAirForecast` / `_insertForecastPollutants`](../../server/controllers/controllerTown24h.js).
 
 ## Public API and implemented backend

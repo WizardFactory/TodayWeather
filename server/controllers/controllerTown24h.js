@@ -708,13 +708,17 @@ function ControllerTown24h() {
         return latestPastDate;
     }
 
-    this._insertForecastPollutants = function (airInfo, hourlyForecasts, source, airUnit) {
+    this._insertForecastPollutants = function (airInfo, hourlyForecasts, source, airUnit, window) {
         var latestPastDate = _lastAirObservationTime(airInfo);
         airInfo.forecastSource = source;
-        airInfo.forecastPubDate = hourlyForecasts[hourlyForecasts.length-1].pubDate;
+        var futureRows = hourlyForecasts.filter(function (row) {
+            var epoch = KecoController._parseDateTime(row.dataTime);
+            return epoch > window.start && epoch <= window.end;
+        });
+        airInfo.forecastPubDate = futureRows[futureRows.length-1].pubDate;
 
-        var lastEpoch = KecoController._parseDateTime(latestPastDate);
-        var endForecastEpoch = lastEpoch + 24 * 3600000;
+        var lastEpoch = window.start;
+        var endForecastEpoch = window.end;
 
         hourlyForecasts.forEach(function (forecast) {
             if (forecast == null) {
@@ -753,7 +757,7 @@ function ControllerTown24h() {
             pollutant.hourly.push(hourlyData);
 
             var aqiVal = AqiConverter.value2index(airUnit, code, forecast.val);
-            var aqiData = {date: forecastTime, code: code,
+            var aqiData = {date: forecastTime, code: code, pubDate: forecast.pubDate,
                 val: aqiVal,
                 grade: AqiConverter.value2grade(airUnit, 'aqi', aqiVal)};
             _insertHourlyAqiData(airInfo, aqiData);
@@ -1037,6 +1041,7 @@ function ControllerTown24h() {
                     airInfo = self._getAirInfo(req);
                 }
                 airInfo.last = arpltnList[0];
+                airInfo.source = airInfo.last.source || 'airkorea';
                 airInfo.pollutants = {};
                 self._insertHourlyPollutants(airInfo.pollutants, arpltnList, airUnit, airInfo.last.dataTime);
             }
@@ -1198,102 +1203,81 @@ function ControllerTown24h() {
         return this;
     };
 
-    this._getAirForecast = function(airInfo, forecastSource, airUnit, callback) {
-        var ctrl;
-        var stnName;
-        // station forecasts are keyed by AirKorea station name; other providers have none (#2622, #2628)
-        if (airInfo && airInfo.source && airInfo.source !== 'airkorea') {
+    this._getAirForecast = function(airInfo, forecastSource, airUnit, callback, nearbyStationName) {
+        // Only AirKorea observations identify an AirKorea station. Other providers use
+        // the independently retained nearby metadata, never their own location name.
+        if (!airInfo || !airInfo.last || !airInfo.pollutants) {
             return callback(null, airInfo);
         }
-        try {
-            stnName = airInfo.last.stationName;
-            if (forecastSource === 'kaq') {
-                ctrl = new KaqHourlyForecastCtrl();
-            }
-            else if (forecastSource === 'airkorea') {
-                ctrl = new AirkoreaHourlyForecastCtrl();
-            }
-            else {
-                throw new Error('Unknown air forecast source=' + forecastSource);
-            }
+        var isAirkorea = !airInfo.source || airInfo.source === 'airkorea';
+        var stnName = isAirkorea ? airInfo.last.stationName : nearbyStationName;
+        if (typeof stnName !== 'string' || !stnName.trim()) {
+            return callback(null, airInfo);
         }
-        catch (err) {
-            return callback(err);
+        forecastSource = forecastSource || 'airkorea';
+        if (forecastSource !== 'kaq' && forecastSource !== 'airkorea') {
+            return callback(new Error('Unknown air forecast source=' + forecastSource));
         }
-
-        // Explicit AirKorea requests retain their existing selection behavior.
-        if (forecastSource === 'kaq') {
-            var now = Date.now();
-            var lastEpoch = KecoController._parseDateTime(_lastAirObservationTime(airInfo));
-            function usableRows(results) {
-                return (Array.isArray(results) ? results : []).filter(function (row) {
-                    return row && ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].indexOf(row.code) >= 0 &&
-                        typeof row.val === 'number' && isFinite(row.val) && row.val >= 0 &&
-                        isFinite(KecoController._parseDateTime(row.dataTime));
-                }).map(function (row) {
-                    return Object.assign({}, row, {dataTime: _formatAirKstTime(KecoController._parseDateTime(row.dataTime))});
-                });
+        var now = Date.now();
+        var lastEpoch = KecoController._parseDateTime(_lastAirObservationTime(airInfo));
+        if (!isFinite(lastEpoch)) {
+            return callback(null, airInfo);
+        }
+        var window = {
+            start: Math.max(now, lastEpoch),
+            end: (isAirkorea ? lastEpoch : Math.floor(now / 3600000) * 3600000) + 24 * 3600000
+        };
+        function insertIfAvailable(results, source) {
+            // Keep valid history for existing KAQ daily summaries; insertion and
+            // availability share the same future window for hourly rows.
+            var rows = (Array.isArray(results) ? results : []).filter(function (row) {
+                return row && ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'].indexOf(row.code) >= 0 &&
+                    typeof row.val === 'number' && isFinite(row.val) && row.val >= 0 &&
+                    isFinite(KecoController._parseDateTime(row.dataTime));
+            }).map(function (row) {
+                return Object.assign({}, row, {dataTime: _formatAirKstTime(KecoController._parseDateTime(row.dataTime))});
+            });
+            var available = rows.some(function (row) {
+                var epoch = KecoController._parseDateTime(row.dataTime);
+                return epoch > window.start && epoch <= window.end;
+            });
+            if (available) {
+                self._insertForecastPollutants(airInfo, rows, source, airUnit, window);
+                airInfo.forecastStationName = stnName;
             }
-            function insertIfAvailable(results, source) {
-                var rows = usableRows(results);
-                var available = rows.some(function (row) {
-                    var epoch = KecoController._parseDateTime(row.dataTime);
-                    return epoch > now && epoch > lastEpoch && epoch <= lastEpoch + 24 * 3600000;
-                });
-                if (available) {
-                    self._insertForecastPollutants(airInfo, rows, source, airUnit);
+            return available;
+        }
+        function readAirkorea() {
+            new AirkoreaHourlyForecastCtrl().getForecast(stnName, function (err, results) {
+                if (err) {
+                    err.message += ' stnName:' + stnName;
+                    return callback(err);
                 }
-                return available;
-            }
-            return ctrl.getForecast(stnName, function (err, results) {
                 try {
-                    if (!err && insertIfAvailable(results, 'kaq')) {
-                        return callback(null, airInfo);
-                    }
-                    if (err) {
-                        log.warn('KAQ forecast unavailable stnName:' + stnName, err);
-                    }
-                    new AirkoreaHourlyForecastCtrl().getForecast(stnName, function (fallbackError, fallbackResults) {
-                        if (fallbackError) {
-                            fallbackError.message += ' stnName:' + stnName;
-                            return callback(fallbackError);
-                        }
-                        try {
-                            insertIfAvailable(fallbackResults, 'airkorea');
-                        }
-                        catch (error) {
-                            return callback(error);
-                        }
-                        callback(null, airInfo);
-                    });
+                    insertIfAvailable(results, 'airkorea');
                 }
                 catch (error) {
-                    callback(error);
+                    return callback(error);
                 }
+                callback(null, airInfo);
             });
         }
-
-        ctrl.getForecast(stnName, function (err, results) {
-            if (err) {
-                err.message += ' stnName:'+stnName;
-                return callback(err);
-            }
+        if (forecastSource === 'airkorea') {
+            return readAirkorea();
+        }
+        new KaqHourlyForecastCtrl().getForecast(stnName, function (err, results) {
             try {
-                if (results == undefined || results.length <= 0) {
-                    //울릉도 태하리는 아직 예보를 제공하지 않음.
-                    if (stnName === '태하리') {
-                       log.warn("Fail to get forecast stnName="+stnName);
-                       return callback(null, airInfo);
-                    }
-                    throw new Error("Fail to get forecast");
+                if (!err && insertIfAvailable(results, 'kaq')) {
+                    return callback(null, airInfo);
                 }
-                self._insertForecastPollutants(airInfo, results, forecastSource, airUnit);
+                if (err) {
+                    log.warn('KAQ forecast unavailable stnName:' + stnName, err);
+                }
+                readAirkorea();
             }
-            catch(err) {
-                err.message += ' stnName:'+stnName;
-                return callback(err);
+            catch (error) {
+                callback(error);
             }
-            callback(null, airInfo);
         });
     };
 
@@ -1315,7 +1299,7 @@ function ControllerTown24h() {
                 log.error(err);
             }
             next();
-        });
+        }, req.airForecastStationName);
     };
 
     this.AirForecastList = function (req, res, next) {
@@ -1331,7 +1315,7 @@ function ControllerTown24h() {
         var airUnit = req.query.airUnit;
         async.map(req.airInfoList,
             function (airInfo, callback) {
-               self._getAirForecast(airInfo, forecastSource, airUnit, callback)
+               self._getAirForecast(airInfo, forecastSource, airUnit, callback, req.airForecastStationName)
             },
             function (err) {
                 if (err) {

@@ -795,3 +795,33 @@ warning script also replays the new collection/response contract.
 
 See [operations](../../../docs/operations/kma-forecast-narrative.md) and the
 [verification record](../../../docs/evidence/tasks/issue-2798/verification.md).
+
+## Coordinate-provider observations with stored forecasts (#2831)
+
+`air-forecast-observation-fallback.test.js` covers nearby metadata retention,
+stale AirKorea -> coordinate-provider current values, single/list flows, source
+selection, invalid/expired/partial rows, missing identities and store errors.
+It runs in `npm run test:offline`.
+
+`air-forecast-observation-http-smoke.js` opens a real loopback HTTP server and
+isolated MongoDB 7.0.14, seeds production station/observation/forecast schemas,
+executes legacy middleware and runs the installed client's actual chart-data
+block. It replays the retained real OpenWeather current-only snapshot, checking
+unchanged current fields/attribution and numeric future PM10/PM2.5/AQI slots.
+Acquisition is replaced with the captured observation; no live provider is called.
+The fixture provenance distinguishes the coordinate-provider capture from the
+original incident and from local stored forecast fixtures.
+
+```sh
+NODE_PATH=<isolated-dependencies>/node_modules node server/test/offline/air-forecast-observation-fallback.test.js
+NODE_PATH=<isolated-dependencies>/node_modules node server/test/offline/air-forecast-observation-http-smoke.js
+```
+
+The smoke needs `mongodb-memory-server-core@10.1.4`,
+`mongoose-smoke@npm:mongoose@5.13.23`, `async@2.6.4`, and `express@4.13.4`.
+Production Mongoose 5.1 schemas are loaded through the 5.13 test driver for MongoDB
+7 compatibility. `TW_SMOKE_OUTPUT_DIR` optionally retains response JSON under an
+ignored output directory. Temporary DB/listener cleanup runs on success/failure.
+CI runs the smoke in the existing Node 16 air integration job.
+See [verification](../../../docs/evidence/tasks/issue-2831/verification.md) and
+[rollout](../../../docs/operations/air-forecast-fallback.md).

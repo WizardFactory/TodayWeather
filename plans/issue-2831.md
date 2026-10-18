@@ -1,0 +1,14 @@
+# Implementation plan
+One coherent PR, owner /root, base master. [Spec](../specs/issue-2831.md).
+1. Test verified metadata station retention and stale observation/provider fallback; add failing single/list forecast and invalid/missing/error tests (AC1).
+2. Retain nearby metadata name in server/controllers/kecoController.js -> controllerTown.js request field; use it in controllerTown24h.js single/list forecast lookup. Validate both stored forecast sources; preserve source/current. Dependencies: 1 -> 2.
+3. Extend server/test/offline harnesses; real HTTP over loopback and legacy chart-data smoke with current-only baseline and actual response assertions (AC2). Existing full weather-router smoke covers DB 1.0/2.0 and source omitted/KAQ/AirKorea, partial/no station.
+4. Update docs/architecture/mobile-api.md, diagrams/air-forecast-selection JSON/generated HTML and docs/operations/air-forecast-fallback.md; selected evidence in docs/evidence/tasks/issue-2831. Run Archify artifact/browser/visual checks (AC3).
+5. Clean scope, test/offline + smoke, staged/outgoing artifact checks, commit/push/PR, CI, independent reviewer/corrections then fresh pre-merge readiness. No merge/deploy.
+Paths: listed server code/tests; .github/workflows/gather-offline.yml adds the new real HTTP/Mongo smoke to the existing isolated air integration job; intent/specs/plans issue-2831; docs above. Ignored .planning/reports/.archify only for generated state. No new shared implementation.
+Riskiest: station provenance and forecast horizon; reject just removing the guard, fabricating station, stale observation inference or request-time acquisition. Could break #2770 source preference, daily summary, explicit selection or old routes; existing regressions and single/list tests cover these.
+Rollback: approved selective code overlay restore and service restart; no DB migration.
+## User scenarios
+S1 / AC1: legacy app user, stale/empty AirKorea observations and nearby metadata + stored PM rows. Request hourly view, fallback current selected, forecast lookup uses metadata station, numeric future rows returned with unchanged current attribution. Failure: no matching station/store failure leaves current-only safely. Unit regression + HTTP smoke.
+S2 / AC1,AC2: installed client sends KAQ; KAQ absent/invalid, stored AirKorea future rows. Request -> HTTP JSON -> actual chart block. PM/AQI future slots numeric; explicit/omitted AirKorea and valid KAQ preference retained. Failure: neither source gives no invented rows/attribution.
+S3 / AC3: operator, reviewed PR plus separate deployment approval. Snapshot deployed overlay/hashes, apply scoped repair/restart, compare origin/CDN non-AirKorea current response station/hour values against DB; separately report acquisition freshness; restore overlay/restart if invalid. Live steps pending approval, documented only.

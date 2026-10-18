@@ -9,8 +9,9 @@
     "column_fit": "spread",
     "viewBox": [
       1080,
-      600
-    ]
+      670
+    ],
+    "subtitle": "Legacy stored forecasts with independent current-observation provenance"
   },
   "participants": [
     {
@@ -24,6 +25,12 @@
       "type": "backend",
       "label": "Town24h route",
       "sublabel": "AirForecast / AirForecastList"
+    },
+    {
+      "id": "stations",
+      "type": "database",
+      "label": "Station metadata",
+      "sublabel": "existing nearby lookup"
     },
     {
       "id": "kaq",
@@ -41,18 +48,18 @@
   "segments": [
     {
       "from": 146,
-      "to": 268,
-      "label": "KAQ first"
+      "to": 270,
+      "label": "Retain station"
     },
     {
       "from": 280,
-      "to": 400,
-      "label": "Stored fallback"
+      "to": 456,
+      "label": "Select stored forecast"
     },
     {
-      "from": 412,
-      "to": 488,
-      "label": "Response"
+      "from": 468,
+      "to": 550,
+      "label": "Enrich response"
     }
   ],
   "messages": [
@@ -61,65 +68,79 @@
       "from": "client",
       "to": "route",
       "y": 160,
-      "label": "weather request + observations ready",
+      "label": "weather request",
       "variant": "emphasis"
+    },
+    {
+      "id": "nearby",
+      "from": "route",
+      "to": "stations",
+      "y": 200,
+      "label": "existing nearby query"
+    },
+    {
+      "id": "station",
+      "from": "stations",
+      "to": "route",
+      "y": 240,
+      "label": "retain named station",
+      "variant": "return"
     },
     {
       "id": "read-kaq",
       "from": "route",
       "to": "kaq",
-      "y": 200,
-      "label": "getForecast(stationName)",
-      "variant": "default"
+      "y": 300,
+      "label": "KAQ requested: station forecast"
     },
     {
       "id": "kaq-result",
       "from": "kaq",
       "to": "route",
-      "y": 240,
-      "label": "retain if usable; otherwise fallback",
+      "y": 340,
+      "label": "usable KAQ wins; otherwise try AirKorea",
       "variant": "return"
     },
     {
       "id": "read-airkorea",
       "from": "route",
       "to": "airkorea",
-      "y": 300,
-      "label": "KAQ unavailable: getForecast(same station)",
+      "y": 390,
+      "label": "fallback or explicit/default AirKorea",
       "variant": "emphasis"
     },
     {
       "id": "airkorea-result",
       "from": "airkorea",
       "to": "route",
-      "y": 350,
-      "label": "usable stored forecast or no data",
+      "y": 430,
+      "label": "usable stored rows or no data",
       "variant": "return"
     },
     {
       "id": "response",
       "from": "route",
       "to": "client",
-      "y": 440,
-      "label": "observations + one selected forecast timeline",
+      "y": 500,
+      "label": "unchanged current + selected forecast",
       "variant": "return"
     }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Availability",
+      "title": "Verified station and future window",
       "items": [
-        "Supported pollutant with finite numeric value \u22650; KST timestamp strictly after now and the observation, through observation +24 h.",
-        "Valid KAQ stays selected, including partial pollutants. No cross-source timeline merge."
+        "AirKorea current: observation station; other providers: retained nearby metadata. No station: current-only.",
+        "Finite nonnegative supported values; KST after now/current. AirKorea: observation +24 h; fallback: request-hour +24 h."
       ]
     },
     {
       "dot": "amber",
-      "title": "Compatibility",
+      "title": "Source and compatibility",
       "items": [
-        "Fallback uses real AirKorea forecastSource and publication times. Observation source and values remain unchanged.",
-        "Explicit AirKorea behavior stays intact. Neither source usable: no invented forecasts. No provider calls or writes."
+        "Keep current source, readings and attribution. Set forecastStationName and actual forecast source/publication only for usable future rows.",
+        "Valid partial KAQ stays; explicit/default AirKorea shares validation. No usable source: no invented values; no new provider calls or writes."
       ]
     }
   ]
