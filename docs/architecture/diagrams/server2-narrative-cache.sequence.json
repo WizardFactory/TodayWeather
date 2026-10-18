@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Proposed narrative cache error handling",
+    "output": "docs/architecture/diagrams/server2-narrative-cache.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "viewBox": [
+      960,
+      590
+    ],
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "d35ca94535078383bb03cb79eb818d44b1fd6362",
+      "link_mode": "local-only"
+    }
+  },
+  "participants": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "Weather caller",
+      "sublabel": "optional narrative",
+      "sources": [
+        {
+          "path": "server2/src/narrative/store.rs",
+          "line": 206,
+          "end_line": 229,
+          "label": "Existing cache / Result interface"
+        }
+      ]
+    },
+    {
+      "id": "service",
+      "type": "backend",
+      "label": "Narrative service",
+      "sublabel": "per-office deadline",
+      "sources": [
+        {
+          "path": "server2/src/narrative/store.rs",
+          "line": 206,
+          "end_line": 229,
+          "label": "Existing cache / Result interface"
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "type": "database",
+      "label": "Office memory",
+      "sublabel": "confirmed results",
+      "sources": [
+        {
+          "path": "server2/src/narrative/store.rs",
+          "line": 188,
+          "end_line": 229,
+          "label": "Existing cache / Result interface"
+        }
+      ]
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "Stored narrative",
+      "sublabel": "bounded S3 read",
+      "sources": [
+        {
+          "path": "server2/src/narrative/store.rs",
+          "line": 87,
+          "end_line": 168,
+          "label": "Existing cache / Result interface"
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 465,
+      "label": "Proposed failure-versus-absence handling"
+    }
+  ],
+  "messages": [
+    {
+      "id": "cache-step-0",
+      "from": "caller",
+      "to": "service",
+      "y": 170,
+      "label": "Read narrative",
+      "variant": "default"
+    },
+    {
+      "id": "cache-step-1",
+      "from": "service",
+      "to": "memory",
+      "y": 198,
+      "label": "Check office cache",
+      "variant": "default"
+    },
+    {
+      "id": "cache-step-2",
+      "from": "memory",
+      "to": "service",
+      "y": 226,
+      "label": "Expired / miss",
+      "variant": "return"
+    },
+    {
+      "id": "cache-step-3",
+      "from": "service",
+      "to": "store",
+      "y": 254,
+      "label": "Read within deadline",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cache-step-4",
+      "from": "store",
+      "to": "service",
+      "y": 282,
+      "label": "Error / timed out",
+      "variant": "return"
+    },
+    {
+      "id": "cache-step-5",
+      "from": "service",
+      "to": "caller",
+      "y": 310,
+      "label": "Omit only this request",
+      "variant": "return"
+    },
+    {
+      "id": "cache-step-6",
+      "from": "caller",
+      "to": "service",
+      "y": 338,
+      "label": "Next request",
+      "variant": "default"
+    },
+    {
+      "id": "cache-step-7",
+      "from": "service",
+      "to": "store",
+      "y": 366,
+      "label": "Retry; no failed entry",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cache-step-8",
+      "from": "store",
+      "to": "service",
+      "y": 394,
+      "label": "Ok(value / absent)",
+      "variant": "return"
+    },
+    {
+      "id": "cache-step-9",
+      "from": "service",
+      "to": "memory",
+      "y": 422,
+      "label": "Cache confirmed result",
+      "variant": "default"
+    },
+    {
+      "id": "cache-step-10",
+      "from": "service",
+      "to": "caller",
+      "y": 450,
+      "label": "Fresh prose / absent",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Proposed correction, not execution evidence",
+      "items": [
+        "Current committed interface flattens a failed read into cached absence.",
+        "The proposed path omits the failed request without writing a cache entry.",
+        "Only completed Ok results can replace office memory."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Keep both valid cache outcomes",
+      "items": [
+        "Ok(Some fresh prose) and Ok(None confirmed absence) retain the existing 30-second cache.",
+        "Each office keeps its own lock; deadline and narrative expiry stay unchanged.",
+        "An expired prior value remains expired after failure; no stale-on-error behavior."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Preserve accepted scope",
+      "items": [
+        "A late optional field may still be omitted for this request.",
+        "No provider acquisition, timer, verification mode, allowance or storage schema change.",
+        "Nation child-read optimization and whole-bundle rollback/shadow qualification remain separate."
+      ]
+    }
+  ]
+}

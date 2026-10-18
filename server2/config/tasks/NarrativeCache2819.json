@@ -1,0 +1,59 @@
+{
+  "task": "NarrativeCache2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "Narrative cache error-versus-absence only: preserve optional request deadline and confirmed30s cache, avoid caching a failed read as absent. Pre-merge only; no nation fan-out refactor, collection timer, retry flag, operating quota, merge/cloud/live provider/sends/shadow.",
+  "server2_paths": [
+    "server2/config/tasks/NarrativeCache2819.json",
+    "server2/src/narrative/store.rs",
+    "server2/tests/narrative.rs",
+    "server2/tests/narrative/cache.rs",
+    "server2/examples/narrative_cache_smoke.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-narrative-cache.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, cache-error flow, operator procedure and selected evidence; no server2 runtime outside server2"
+    },
+    {
+      "path": "specs/issue-2819-narrative-cache.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, cache-error flow, operator procedure and selected evidence; no server2 runtime outside server2"
+    },
+    {
+      "path": "plans/issue-2819-narrative-cache.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, cache-error flow, operator procedure and selected evidence; no server2 runtime outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, cache-error flow, operator procedure and selected evidence; no server2 runtime outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, cache-error flow, operator procedure and selected evidence; no server2 runtime outside server2"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, cache-error flow, operator procedure and selected evidence; no server2 runtime outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-narrative-cache.sequence.json",
+      "category": "documentation",
+      "reason": "Maintain task contract, cache-error flow, operator procedure and selected evidence; no server2 runtime outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-narrative-cache.html",
+      "category": "documentation",
+      "reason": "Maintain task contract, cache-error flow, operator procedure and selected evidence; no server2 runtime outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-narrative-cache/verification.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, cache-error flow, operator procedure and selected evidence; no server2 runtime outside server2"
+    }
+  ]
+}

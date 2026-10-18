@@ -221,8 +221,9 @@ impl<T: IndexListing + Clone + 'static> Read for Service<T> {
                 self.store.read(station, now, deadline),
             )
             .await
-            .ok()
-            .flatten();
+            .ok()?;
+            // A failed read is not confirmed absence. Leave it retryable by the
+            // next caller; only completed results receive the existing TTL.
             *cache = Some((Instant::now() + Duration::from_secs(30), value.clone()));
             value
         })

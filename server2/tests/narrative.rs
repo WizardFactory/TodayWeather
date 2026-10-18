@@ -227,3 +227,6 @@ fn gateway_caps_existing_age_and_preserves_error_no_store() {
     );
     assert_eq!(error.headers()["cache-control"], "no-store");
 }
+
+#[path = "narrative/cache.rs"]
+mod cache;

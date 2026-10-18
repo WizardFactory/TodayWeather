@@ -3750,3 +3750,22 @@ B3 parent as the existing interface; they do not attest a live execution.
 [Local verification](../operations/server2-native-verification.md#d1-forecast-zone-failure-recovery)
 uses owned peers and a real five-minute retry interval. The slice is stacked
 on B3 and is not an integrated release or D2 capacity qualification.
+
+### #2819 narrative read cache recovery
+
+The [cache contract](../../specs/issue-2819-narrative-cache.md) preserves
+`Store::read` errors until the service decides whether to mutate per-office
+memory. Only a completed `Ok(Some(value))` or confirmed `Ok(None)` receives
+the existing 30-second cache entry. A timeout, transport, corruption or capacity
+error omits the optional field for that request without caching absence. The
+next request can retry within its own original deadline. An expired older value
+remains expired; this adds no stale-on-error policy or provider acquisition.
+
+The [proposed error flow](diagrams/server2-narrative-cache.html) and
+[editable source](diagrams/server2-narrative-cache.sequence.json) pin the
+committed D1 parent as existing interface evidence. The
+[operator scenario](../operations/server2-native-verification.md#narrative-cache-error-recovery)
+uses actual owned S3 publication/readback with an explicitly injected initial
+delay. It does not establish actual S3 outage latency, unconditional narrative
+presence or whole-bundle recovery qualification. Nation's discarded child
+narrative reads remain a separate #2819 item.

@@ -511,3 +511,15 @@ and periodic fold remain. This task stacks on B3, not an integrated master relea
 Focused tests, actual owned HTTP/S3 recovery across a real memo expiry, independent
 review and exact CI are required. No timer, operating allowance, merge or live
 action is authorized. D2 capacity and #2819/#2704/#2705/shadow remain open.
+
+#### #2819 narrative cache recovery
+
+[Task plan](issue-2819-narrative-cache.md) and
+[contract](../specs/issue-2819-narrative-cache.md) keep storage-read failures
+separate from confirmed absent prose before the existing 30s cache update.
+Accepted optional deadline, office isolation, fresh-value/absence cache and
+expiry remain; no stale fallback or provider acquisition is added. Local
+source/typed-error tests and an owned S3 readback scenario precede independent
+review and exact CI. This stacks on D1, not an integrated main release.
+Nation child-read optimization and all other #2819, D2, #2704/#2705, shadow and
+whole-bundle rollback gates remain separate. No merge or live action authorized.

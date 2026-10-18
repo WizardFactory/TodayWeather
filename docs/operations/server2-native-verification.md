@@ -229,3 +229,28 @@ The adapter calls the real acquisition/publication components with a synthetic
 key and volatile budget; it does not exercise runtime environment-key discovery
 or a real provider. No live calls, credentials, push sends, deployment, production
 quota, global readiness or whole-service rollback/shadow qualification is claimed.
+
+## Narrative cache error recovery
+
+From `server2/`, with Python 3 and the pinned Rust toolchain/dependencies:
+
+```sh
+cargo run --locked --offline --example narrative_cache_smoke
+```
+
+The executable starts an owned loopback S3-compatible peer and uses the actual
+narrative Store to publish synthetic prose for the current local KST day. A
+transport wrapper delays only the first index access before delegating to S3.
+The Service's short 20ms request expires, omitting this optional field. The next
+request must immediately recover the exact published narrative from S3; a third
+request must use the existing fresh cache without more index calls. The peer is
+killed/reaped before PASS. No Source provider fetch is allowed.
+
+This deliberately injected delay is not a measured real S3/network outage or
+provider latency. The report records the observed first request duration, index
+calls after recovery, cached-read delta and child cleanup. Separate regression
+controls cover typed failures, a real deadline-expired future, confirmed absence
+with its unchanged 30s TTL and office isolation. A failed request may still omit
+late optional prose under the accepted deadline. No stale-on-error fallback,
+runtime verification flag, acquisition timer, live provider/key, deployment,
+quota or whole-service shadow/rollback proof is introduced.
