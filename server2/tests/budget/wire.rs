@@ -410,7 +410,7 @@ async fn policy_drift_floor_decrease_and_clock_backwards_deny() {
     assert_eq!(a.reserve(1, end()).await.err(), Some(BudgetError::Clock));
 }
 #[tokio::test]
-async fn all_candidate_funding_before_http_and_unused_candidate_burns() {
+async fn selected_candidate_funded_before_http_and_unused_candidate_untouched() {
     let peer = Running::new().await;
     let p = policy(4, 2);
     let a = store(&peer, p.clone(), clock());
@@ -423,19 +423,39 @@ async fn all_candidate_funding_before_http_and_unused_candidate_burns() {
             .is_ok()
     );
     assert_eq!(peer.calls(), 1);
+    // One logical attempt draws an S08 block of2 only for the selected key.
     assert_eq!(peer.used(&p), 2);
-    assert_eq!(peer.used(&p2), 2);
+    assert!(
+        !peer
+            .peer
+            .data
+            .lock()
+            .unwrap()
+            .objects
+            .contains_key(&format!("/server2-s08/{}", p2.authority_key()))
+    );
+
     let a = store(&peer, p.clone(), clock());
-    let mut denied = p2.clone();
-    denied.limit = 1;
-    denied.block_units = 1;
-    let b = store(&peer, denied, clock());
-    assert!(matches!(
-        acquire(&peer, vec![candidate(a, "first"), candidate(b, "denied")]).await,
-        Err(AcquisitionError::Funding(_))
-    ));
-    assert_eq!(peer.calls(), 1);
+    p2.limit = 1;
+    p2.block_units = 1;
+    let b = store(&peer, p2.clone(), clock());
+    drop(b.reserve(1, end()).await.unwrap());
+    assert!(
+        acquire(
+            &peer,
+            vec![candidate(a, "first"), candidate(b, "exhausted-unused")]
+        )
+        .await
+        .is_ok()
+    );
+    assert_eq!(peer.calls(), 2);
+    assert_eq!(
+        peer.used(&p2),
+        1,
+        "unused exhausted authority remains unchanged"
+    );
 }
+
 #[tokio::test]
 async fn rotation_and_same_key_retry_total_two_calls() {
     for (status, body, rotate) in [
@@ -1132,9 +1152,22 @@ async fn received_http_error_status_survives_body_failures() {
                 keys == ["first", "second"]
                     && matches!(result, Ok(AcquisitionOutcome::Data(ref raw)) if raw.attempts == 2 && raw.body == br#"{"ok":true}"#)
             };
-            // Both candidates were reserved before the first HTTP, even terminal 400.
+            // The first key is funded; a terminal400 never touches the unused second key.
+            // S08 authority blocks are4units, distinct from logical per-attempt units.
             assert_eq!(budget.used(&a), 4);
-            assert_eq!(budget.used(&b), 4);
+            if status == 400 {
+                assert!(
+                    !budget
+                        .peer
+                        .data
+                        .lock()
+                        .unwrap()
+                        .objects
+                        .contains_key(&format!("/server2-s08/{}", b.authority_key()))
+                );
+            } else {
+                assert_eq!(budget.used(&b), 4);
+            }
             println!("received status={status} fault={fault} keys={keys:?} correct={correct}");
             if !correct {
                 mismatches.push(format!("{status}/{fault}: {keys:?}"));

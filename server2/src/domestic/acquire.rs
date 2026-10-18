@@ -11,7 +11,7 @@ use super::quota::DataGoKrApi;
 use super::riseset::RiseSetRequest;
 use super::zone::ZoneRequest;
 use super::{Acquired, DomesticError};
-use crate::budget::{BudgetStore, BudgetTransport, Clock, Provider};
+use crate::budget::{BudgetError, BudgetStore, BudgetTransport, Clock, Provider};
 use crate::providers::{
     AcquiredBody, AcquisitionError, AcquisitionOutcome, AttemptResult, CallReport, Candidate,
     Disposition, FundedExecutor, ProviderKey, ProviderTransport, ProviderTransportError,
@@ -197,7 +197,7 @@ impl<B: BudgetTransport> KeyRing<B> {
             .collect::<Result<_, _>>()?;
         Ok((start, candidates))
     }
-    /// Move to the key that answered, or past every key rejected for quota/auth.
+    /// Move to the answering key, or past provider-rejected/known locally exhausted keys.
     fn settle(&self, start: usize, report: &CallReport) {
         let answered = report.attempts.iter().rev().find_map(|(k, r)| {
             matches!(
@@ -216,6 +216,7 @@ impl<B: BudgetTransport> KeyRing<B> {
                 )
             })
             .map(|(k, _)| usize::from(*k) + 1)
+            .chain(report.exhausted_keys.iter().map(|k| usize::from(*k) + 1))
             .max();
         let advance = answered.or(rejected).unwrap_or(0);
         if advance == 0 {
@@ -235,6 +236,12 @@ impl<B: BudgetTransport> KeyRing<B> {
                 )
             })
             .map(|(k, _)| (start + usize::from(*k)) % n)
+            .chain(
+                report
+                    .exhausted_keys
+                    .iter()
+                    .map(|k| (start + usize::from(*k)) % n),
+            )
             .collect();
         let _ = self
             .current
@@ -640,11 +647,13 @@ where
         // then the previous entries with one wrap. A rejected credential moves to the previous
         // key for this call; a quota answer (429 or code 22) also marks the key exhausted until
         // the end of its KST day (S13c, #2745). Either restarts from page 1 within the same
-        // deadline; every other failure stops without changing the key. An exhausted key is
-        // skipped without funding or HTTP.
+        // deadline. A known API-local funding Exhausted also moves to the previous key
+        // without setting the provider-wide quota marker; other funding failures stop.
+        // A provider-exhausted key is skipped without funding or HTTP.
         let n = ring.len();
         let start = ring.legacy_start();
         let mut quota = false;
+        let mut funding_exhausted = false;
         for step in 0..n {
             let index = (start + n - step) % n;
             if ring.exhausted(index, self.now_ms()? as i64) {
@@ -656,6 +665,11 @@ where
                 .collect_pages(request, ring, Some(index), &mut skipped, deadline)
                 .await
             {
+                Err(DomesticError::Funding(BudgetError::Exhausted)) => {
+                    // A local per-API cap is not a provider-wide KST quota answer.
+                    // Try the next legacy key without marking exhausted_until.
+                    funding_exhausted = true;
+                }
                 Err(DomesticError::Provider(Disposition::Auth)) => {}
                 Err(DomesticError::Provider(Disposition::Quota)) => {
                     quota = true;
@@ -675,7 +689,11 @@ where
                 Err(e) => return Err(e),
             }
         }
-        // Quota clears with the next KST day; only an all-credential failure is `Auth`.
+        // Provider quota retains its KST semantics. Local funding denial never
+        // becomes an authentication error or a provider-wide exhaustion marker.
+        if !quota && funding_exhausted {
+            return Err(DomesticError::Funding(BudgetError::Exhausted));
+        }
         Err(DomesticError::Provider(if quota {
             Disposition::Quota
         } else {
@@ -1228,6 +1246,7 @@ mod tests {
                 .iter()
                 .map(|(k, d)| (*k, AttemptResult::Disposition(*d)))
                 .collect(),
+            exhausted_keys: Vec::new(),
         }
     }
     /// S13-R8: two calls started at key 0; the first moved to key 1, the second saw keys 0

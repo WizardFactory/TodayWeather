@@ -150,3 +150,25 @@ final review corrections change only the producer and its controls. See the link
 verification record for final source/hash and standalone host mapping admission.
 
 This labelled image is rendered from actual CLI records; browser/window capture was unavailable. It is not an application UI screenshot or another execution. Real S3, live shadow, quota, production listener and eligible previous full-release gates remain open.
+
+## DataGoKr selected-attempt funding (#2819 B2)
+
+For an isolated local composition check, run from `server2/`:
+
+```sh
+cargo run --locked --offline --example data_go_kr_funding_smoke
+```
+
+The example opens owned loopback HTTP and an in-memory conditional S08 budget
+transport using synthetic one-unit authority blocks. It invokes the real domestic
+page acquirer and keyring. Fresh A completes one page with one HTTP/reservation
+and never creates unused B authority. With A already reserved/exhausted, B completes
+two pages/requests and stays remembered, with no provider-quota outcome. Total
+owned HTTP is3; the process stops its owned listener. Output is a compact JSON
+report; structured runtime diagnostics use stderr. No live provider, S3, key/account
+quota measurement or runtime verification mode is introduced.
+
+Logical per-attempt units differ from normal S08 block claims. Known local
+exhaustion alone can advance key selection; ambiguous/corrupt/transport funding
+remains fail-closed. VC maximum prepayment is unchanged. Operating API allowances
+remain an open deployment prerequisite; this example supplies no production values.

@@ -252,6 +252,28 @@ pub fn ring<B: BudgetTransport + 'static>(
     .unwrap()
 }
 
+/// Actual local exhaustion fixture, distinct from an unfundable maximum retry reservation.
+/// Each tuple is (synthetic key, owner, policy limit, already reserved units (never refunded)).
+pub async fn limited_ring(
+    wire: Arc<Memory>,
+    clock: Arc<TestClock>,
+    keys: &[(&str, char, u64, u64)],
+) -> KeyRing<Memory> {
+    let mut entries = Vec::new();
+    for (key, owner, limit, spent) in keys {
+        let mut policy = policy(*owner, *limit);
+        policy.block_units = (*limit).min(10);
+        let store = Arc::new(BudgetStore::new(wire.clone(), policy, clock.clone()).unwrap());
+        if *spent > 0 {
+            // Dropping an issued ticket does not refund its reserved capacity.
+            // No private consume API or fake provider HTTP is needed for exhaustion.
+            drop(store.reserve(*spent, deadline()).await.unwrap());
+        }
+        entries.push((ProviderKey::new((*key).into()).unwrap(), store));
+    }
+    KeyRing::new(entries).unwrap()
+}
+
 /// Synthetic VilageFcst JSON page in the data.go.kr envelope. Rows are unique by
 /// (category, fcstDate, fcstTime); `base` is the echoed baseDate/baseTime.
 pub fn vilage_page(

@@ -478,3 +478,13 @@ widget UI or an earlier complete release. #2704/#2705 remain open. #2724 actual
 quota measurement, production/resources/live providers/mirroring/sends/final
 state copies and switch authority remain outside this increment. Earlier dated
 scope and execution records remain historical, not relabelled as S20e runs.
+
+### #2819 B2 local correction (pre-merge)
+
+The [DataGoKr funding plan](issue-2819-data-go-kr-funding.md) addresses selected-key
+logical funding and known local exhaustion. VC maximum prepayment, two actual HTTP
+attempts, original deadlines and no-refund ownership stay. AirKorea local API
+funding caps do not become provider-wide KST quota markers. Local regressions and
+an owned HTTP/volatile S08 composition are recorded separately from current CI
+and independent PR review. B3 publication timing, operating allowances, production
+quota/capacity and all cutover/shadow qualification remain open. No merge authority.
