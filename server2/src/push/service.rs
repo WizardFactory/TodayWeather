@@ -294,9 +294,7 @@ impl PushService {
         Some(express::respond(&reply, &method))
     }
 
-    /// Apply one worker state change through the writer; `true` once it is durable (or there
-    /// was nothing to change).
-    /// Unlike the legacy bool API, both queue admission and answer share the writer deadline.
+    /// Unlike the legacy bool API, typed queue admission and answer share one writer deadline.
     async fn owned_answer<R: Send + 'static>(
         &self,
         restore_time: Option<f64>,
@@ -344,6 +342,8 @@ impl PushService {
         .unwrap_or(attempt::Restored::Uncertain)
     }
 
+    /// Apply one worker state change through the writer; `true` once it is durable (or there
+    /// was nothing to change). Queue capacity wait precedes this legacy API's answer timeout.
     pub async fn internal(&self, op: InternalOp) -> bool {
         let Ok(now_ms) = self.clock.now_ms() else {
             return false;
@@ -511,8 +511,8 @@ impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
         let attempts = &mut self.attempts;
         entries.iter().all(|(seq, body)| {
             self.durable
-                .apply_entry_observed(&mut state, *seq, body, |change, before| {
-                    attempts.observe(change, before)
+                .apply_entry_observed(&mut state, *seq, body, |state, change| {
+                    attempts.observe(state, change)
                 })
                 .is_ok()
         })

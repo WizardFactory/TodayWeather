@@ -3823,13 +3823,19 @@ The [C2 contract](../../specs/issue-2819-delivery-cohort.md) adds a private
 writer-issued, single-use receipt after a known committed alert-state update.
 The receipt owns only changed derived leaves of selected sending channels:
 precipitation `lastState`/`pushTime`, and air `lastGrade`/`lastCode`/`pushTime`.
-Message/target preflight precedes that update. Observation-only `Send::None`
-updates retain their existing behavior.
+Message/target preflight precedes that update. A preflight error commits nothing,
+including nonselected observations; a permanently invalid registration therefore
+remains due and can repeat weather work and a failure at each fresh scheduled
+cycle, without OAuth or FCM work for invalid targets. It cannot replay a claimed
+minute. Observation-only `Send::None` updates retain their existing behavior.
 
 Only typed FCM `SendOutcome::NotSent` permits one ordinary journal transaction
 that restores still-owned leaves. Accepted, unregistered, rejected and unknown
 actual POST outcomes keep state and claims; cancellation or panic is not a
-no-POST receipt. Restore preserves user/token edits, other-channel observations,
+no-POST receipt. The connect-refusal undo relies on the existing FCM typed
+`NotSent` classification (`reqwest::Error::is_connect`) meaning the request was
+not written. General transport/reset errors remain `Unknown`; this does not
+reclassify them as safe to undo. Restore preserves user/token edits, other-channel observations,
 newer derived values, exact missingness and newer parent structure. It never
 rewinds the whole document or releases a delivery claim.
 
@@ -3845,8 +3851,9 @@ Typed attempt/restore queue admission and answer share the existing monotonic
 writer wait. A known receipt retains its transaction time solely to construct an
 exact restore if the shared clock later fails: that patch writes no new date or
 ID. New attempts and final POST guards still require a live clock. The older bool
-internal API is unchanged; in particular, preselection duplicate cleanup can wait
-for queue capacity outside its answer timeout. This change establishes no bound
+internal API is unchanged: preselection duplicate cleanup, final selection checks,
+observation-only updates and disable operations can wait for queue capacity
+outside their answer timeout. This change establishes no bound
 for the whole worker under a full queue.
 
 Lost initial acknowledgement, unresolved journal progress or unavailable restore

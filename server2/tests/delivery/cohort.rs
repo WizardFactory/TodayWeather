@@ -1016,3 +1016,65 @@ async fn shared_clock_failure_after_oauth_restores_known_owned_state_without_pos
             .await
     );
 }
+
+/// Invalid targets are rejected before any sending or observation state is committed.
+#[tokio::test]
+async fn invalid_target_preflight_preserves_all_state_and_repeats_only_on_fresh_cycles() {
+    for (kind, token, registration, class) in [
+        ("ios", None, None, "ios-without-fcm-token"),
+        ("android", None, Some("synthetic-gcm"), "gcm-retired"),
+        ("android", None, None, "gcm-without-registration-id"),
+        ("ios", Some(Val::Bool(true)), None, "invalid-token"),
+        ("other", None, None, "unknown-type"),
+    ] {
+        let (rig, worker, _client, before, now) =
+            setup(&format!("cohort-invalid-{class}"), "current-ko-1", None).await;
+        let mut selected = before;
+        selected.set("type", Val::Str(kind.into()));
+        selected.remove("fcmToken");
+        if let Some(token) = token {
+            selected.set("fcmToken", token);
+        }
+        if let Some(registration) = registration {
+            selected.set("registrationId", Val::Str(registration.into()));
+        }
+        remote_record(&rig, selected.clone()).await;
+        for (offset, at, key) in [
+            (
+                0,
+                "2026-10-16T00:07:00Z",
+                "index/v2/push/delivery/alert/20261016/0007.json",
+            ),
+            (
+                600_000,
+                "2026-10-16T00:17:00Z",
+                "index/v2/push/delivery/alert/20261016/0017.json",
+            ),
+        ] {
+            rig.clock.set(at);
+            let report = worker.run_minute(now + offset).await;
+            assert!(report.claimed);
+            assert_eq!(report.deliveries.len(), 1);
+            assert_eq!(report.deliveries[0].1, "failed");
+            assert_eq!(report.deliveries[0].2, class);
+            assert_eq!(
+                stored(&rig),
+                selected,
+                "preflight preserves all selected state, including observations"
+            );
+            assert!(rig.s3.body(key).is_some());
+        }
+        assert_eq!(
+            rig.weather.calls.lock().unwrap().len(),
+            2,
+            "without saved cooldown a permanent invalid target is fetched again on a fresh cycle"
+        );
+        assert!(rig.google.tokens().is_empty());
+        assert!(rig.google.sends().is_empty());
+        assert!(
+            !worker.run_minute(now).await.claimed,
+            "the old claimed minute never replays"
+        );
+        assert_eq!(rig.weather.calls.lock().unwrap().len(), 2);
+    }
+}

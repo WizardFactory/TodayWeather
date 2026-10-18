@@ -92,3 +92,26 @@ closed; all718 inputs and executable unchanged. Report SHA-256
 ignored bin2 directory outside disposable Cargo output. Prior functional1 remains
 bound to the earlier source and executable, not relabelled as the current run.
 Raw logs/maps/exit receipts and both failed whole invocations remain preserved.
+
+## Review1 author-selected refinements
+
+Independent native review1 returned PASS with no Required findings. The author
+selected C2-CLAUDE-001/002/003/004/006: one additional public integration test
+covers five invalid-target forms across two fresh scheduled cycles, pinning no
+OAuth/FCM, exact unchanged state/observations, repeated weather work and retained
+old claims. This is additive coverage of the already implemented preflight,
+not a newly demonstrated Red or changed send policy. Documentation now states
+that consequence, the existing typed connect/no-write classification assumption,
+and all relevant bool-queue callers. A misplaced bool API comment and observer
+parameter names were clarified without behavior change. Recommendation005's
+optional finer nonadmission diagnostics was not selected; no follow-up created.
+
+Current full targets renewed on the same718-file input projection: lib114,
+delivery86, state18 and runtime31, **249 passed / 1 ignored**, counted once.
+Fmt/all-target Clippy/optimized example passed. Additional actual functional3
+repeats the four scenarios,4ownedFCM/5OAuth/process0/fourclosedlisteners,718inputs
+and retained executable unchanged. Report SHA-256 `7eb078e4bb763c159ea5d86c90065355aabaf783e0a0fbee4e326142414313df`;
+retained executable SHA-256 `4b535da8efda01ef4b11105607d60f424d1eb7891dc35bba6a1f23a27ace9565`. Prior
+functional1/2 and248/1 are historical executions, not relabelled or added to the
+current total. Actual independent re-review and exact-newheadCI remain required.
+No per-cohort concurrency number is a global active-lease/process bound.

@@ -331,7 +331,12 @@ unresolved, never a successful undo. There is no background repair or retry of a
 actual failed/unknown send.
 
 The typed command's queue and answer are bounded together, but the existing bool
-preselection command has a separate full-queue limitation. MemS3 is not AWS;
+API retains its full-queue limitation in preselection cleanup, final selection,
+observation-only updates and disables. Target/message preflight errors commit no
+state or observations; permanent invalid targets can repeat weather work and a
+failure on fresh cycles without OAuth/FCM, while old claims still block replay.
+Connect-refusal undo relies on the existing typed `NotSent` classification using
+reqwest `is_connect`; general reset/transport `Unknown` never triggers undo. MemS3 is not AWS;
 service reconstruction in one executable is not an OS-process restart. Zero
 live/device sends follows the forced synthetic loopback setup, not device
 telemetry. This is neither production qualification nor seven-day shadow.
