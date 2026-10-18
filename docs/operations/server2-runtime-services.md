@@ -14,6 +14,8 @@ With `push` selected, `SERVER2_FIREBASE_TODAYWEATHER` must name a readable local
 
 There is no startup OAuth/FCM probe. Local parse does not establish remote authorization, key revocation, later file permissions or production readiness. Parsed accounts stay cached until process exit; restart after rotation, as after the first cached send previously. The low-level FCM constructor retains its legacy per-send missing-account classification for existing direct callers. Token refresh, send admission, error mapping and no retries are unchanged. Development uses only synthetic public test-vector keys. See the [C6 verification](../evidence/tasks/issue-2819-push-credentials/verification.md).
 
+Startup currently reports account rejection as the generic `invalid gateway configuration` error; it does not identify the failed setting. Check the required TodayWeather path and any configured TodayAir path, readability and account structure locally. Do not put paths, file contents or key material into a diagnostic report. This diagnosis limit is separate from the before-state startup rejection.
+
 ## Registration, notices and delivery safety
 
 Existing registration routes remain `POST /v000705/push`, `PUT`/`DELETE /v000902/push`, and `POST /v000902/push-list`. Preserve existing payloads/language headers. Acknowledgement follows durable journal publication; cold/unavailable storage keeps the route's existing storage-error response. Quiescing rejects new mutations with those responses. Queued writes may settle during drain; an unacknowledged or cancelled write is incomplete and must be reconciled from authoritative S3.

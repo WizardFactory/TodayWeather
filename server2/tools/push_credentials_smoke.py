@@ -14,6 +14,7 @@ import re
 import signal
 import socket
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -129,6 +130,8 @@ def main():
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--sha256", required=True)
     parser.add_argument("--out", type=Path, required=True)
+    if sys.flags.optimize:
+        parser.error("Python optimization disables verification assertions; run without -O or PYTHONOPTIMIZE")
     args = parser.parse_args()
     binary, out = args.binary.resolve(), args.out.resolve()
     if not binary.is_file() or sha(binary) != args.sha256:

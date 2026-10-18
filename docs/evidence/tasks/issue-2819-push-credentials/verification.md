@@ -1,6 +1,6 @@
 # C6 push startup credential verification
 
-Scope: [#2819](https://github.com/WizardFactory/TodayWeather/issues/2819), [spec](../../../../specs/issue-2819-push-credentials.md), isolated child of unmerged C5 PR #2829 ba56cd84. Pre-merge only. Current independent review and exact parent/current CI remain pending; no merge, host/production/full-bundle/shadow or issue closure claim.
+Scope: [#2819](https://github.com/WizardFactory/TodayWeather/issues/2819), [spec](../../../../specs/issue-2819-push-credentials.md), isolated child of unmerged C5 PR #2829 ba56cd84. Pre-merge only. Initial independent review PASS/no Required; selected tool/manual corrections are applied and current re-review/CI remain pending; exact C5 parent CI14/14 passed; no merge, host/production/full-bundle/shadow or issue closure claim.
 
 ## Behavior and retained checks
 
@@ -12,14 +12,20 @@ Actual `cargo fmt --all --check`, all-target Clippy `-D warnings` and optimized 
 
 ## Additional actual process rehearsal
 
-`server2/tools/push_credentials_smoke.py` drives the shared production process via an ignored stdin-only integration-test entrypoint. Selected retained test executable SHA-256: `b34cdf5cc2c3a68685a265bdd69a46bfe84b7db1ca4264a4a3a8e0d0f3c45655`. Report SHA-256: `edcb2758b26d13e238e741f7ab8f8765e0eaa13bc6aa66acddb36154185d73bc`. This executable requires its matching compile-time checkout assets and is not a portable eligible recovery bundle.
+`server2/tools/push_credentials_smoke.py` drives the shared production process via an ignored stdin-only integration-test entrypoint. Selected retained test executable SHA-256: `b34cdf5cc2c3a68685a265bdd69a46bfe84b7db1ca4264a4a3a8e0d0f3c45655`. Current functional3 report SHA-256: `cc295ae6343c6fb398afa3eebc9f5ef6c322d7dd622dfdf36076b558e2abe3fd`. This executable requires its matching compile-time checkout assets and is not a portable eligible recovery bundle.
 
 All **8 cases PASS**: missing, malformed, unreadable directory, TodayAir-only and invalid configured TodayAir each exit101 before a readiness line or owned storage request; active-only, both-valid and push-disabled each bind public/private listeners, answer health, TERM/join and exit0. All six bound product ports and all eight owned storage peers close. Startup makes zero OAuth/FCM requests. Zero device sends follows empty registrations and owned/closed endpoints, not a separate live-device counter. Source/tool/peer/public fixture/executable hashes stay unchanged during the run.
 
-The earlier 8-case functional1 result and binary remain historical before the fixture module correction; functional2 is the current result. No test reads dotenv, real Firebase settings/keys or a live provider. The harness error exit is the Rust test harness around actual `process::run`; this is not a production main/dotenv or deployment test.
+The earlier functional1 precedes the fixture module correction. Functional2 passed under ordinary Python and remains historical after the selected optimization guard; functional3 is the current tool run with the same retained Rust executable. No test reads dotenv, real Firebase settings/keys or a live provider. The harness error exit is the Rust test harness around actual `process::run`; this is not a production main/dotenv or deployment test.
 
 ## Documents, diagram and remaining gates
 
 The [runtime operator manual](../../../operations/server2-runtime-services.md), [native verification instructions](../../../operations/server2-native-verification.md), [architecture](../../../architecture/server2.md), `.env.example`, task declaration and parent plan are maintained. The [editable runtime design](../../../architecture/diagrams/server2-runtime-services.json) and [generated HTML](../../../architecture/diagrams/server2-runtime-services.html) pass artifact/provenance/browser gates. Root inspected initial1440/light and current2048/dark main diagrams; source cards and automated viewport checks are distinct claims. No new public feature/UI or unrelated PDF was created.
 
-C5 parent review is independent and its standard CI remains a separate prerequisite. C1/B1 remain parallel branches. Current C6 review/CI, readiness, initial warning baseline, inventory/dotenv, cold/S3 capacity, eligible full recovery release, #2724 (deferred), seven-day shadow and #2704/#2705 remain outside this local PASS.
+C5 parent review is independent and its exact ba56 standard CI14/14 passed; it remains unmerged. C1/B1 remain parallel branches. Current C6 review/CI, readiness, initial warning baseline, inventory/dotenv, cold/S3 capacity, eligible full recovery release, #2724 (deferred), seven-day shadow and #2704/#2705 remain outside this local PASS.
+
+## Selected review corrections
+
+Actual independent native review1 PASS/no Required recommended two changes. The operator manual now states that credential rejection is reported only as generic `invalid gateway configuration`; no new logging/event/schema is added. The tool refuses Python optimization before parsing inputs/output/children. Its original `python3 -O` invocation exited0 and wrote an unqualified PASS report: assertions were disabled, so that report is not verification success. After the correction, `-O`, `-OO` and `PYTHONOPTIMIZE=1` each exit2 with the explicit reason and create no output. Ordinary current functional3 again passes all8 actual process cases. Rust source/test/fixture bytes remain unchanged from the retained runtime2/delivery2/clippy2/release2 executions; these checks are explicitly reused, not rerun.
+
+The Red-time regression source was recovered byte-for-byte from the original patch and matched its retained before-execution digest; it is not claimed to be a contemporaneous source copy. The base/current FCM projection confirms only the checked constructor was inserted: existing constructor/account/token/send bodies are byte-identical. Current independent correction review and exact C6 CI remain required before pre-merge.
