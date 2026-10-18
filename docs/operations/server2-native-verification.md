@@ -416,3 +416,54 @@ snapshot signal until operational metrics are wired. No default stderr/HTTP
 saturation metric is claimed. The post-claim read retains the source's own
 existing deadline; the worker adds no outer timeout there. The separate final
 after-OAuth admission guard retains its original four-second timeout.
+
+
+## Warning acquisition without product HTTP
+
+Use the pinned toolchain and an ignored shared Cargo target after checking free disk
+space and pending consumers. From `server2/`:
+
+```sh
+cargo test --locked --offline --test runtime_services warning_acquisition::
+cargo test --locked --offline --lib warning_
+cargo build --locked --offline --release --example warning_acquisition_smoke
+```
+
+Copy the optimized example executable out of disposable Cargo output, record its
+SHA-256 and the input map, then run that retained executable from the matching
+`server2/` checkout. It requires Python and that checkout's owned catalog peer at its
+compile-time manifest path. It reads no product environment or real account and
+forces every external dependency to an owned or closed loopback endpoint. The
+synthetic registration set is empty. There is no verification mode to enable.
+
+The executable runs four actual bound-process cases: a changed warning published
+without product HTTP; four request-style joins through the exact same source
+capability while its provider is held; and listener failure while collection is
+held, followed by provider release during grace; and a second automatic collection
+using the normal 180-second production memo after another provider change. Each
+fixture first persists an
+explicit quiet warning baseline through the raw collector. It then requires new
+native source writes and one readable feed event, process retirement, and closed
+owned provider/storage listeners. The shared case must not acquire another provider
+cycle. The normal-cadence case takes about three minutes; it uses no shortened
+integration interval. This is not an HTTP route-parity test or a proof of initial
+push delivery.
+
+For normal operation the driver starts only with push after both binds. It follows
+the existing 180-second admission memo rather than an independently phased interval.
+On stop, delivery/FCM quiesce precedes the warning admission fence and HTTP drain.
+Publication may finish during grace; no new send is authorized. Preserve the current
+five-second HTTP-only and 34-second push drain bounds. A warning cancellation request
+is not a successful drain; an incomplete warning drain makes the overall process
+result Unknown even when all three existing joined fields are true.
+
+The tests additionally cover inert construction, failed second bind, push-disabled
+startup, bounded waiters, unpolled/cancelled owners, synchronous and asynchronous
+panics, actual generic tracking expiry, provider destruction before completion,
+stop-guard destruction and the existing HTTP-only stop budget. Private short-period
+protocol tests do not measure a full 600-second tracking run or real provider quotas.
+Keep original failed invocations and their classifications with task evidence.
+
+Do not use this rehearsal as permission for deployment, provider calls, device sends,
+traffic mirroring or cutover. C6 credentials/readiness and the other #2819 findings,
+#2704/#2705, the eligible recovery bundle and operational evidence remain separate.

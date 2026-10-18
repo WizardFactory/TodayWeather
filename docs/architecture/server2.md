@@ -3940,3 +3940,48 @@ snapshot signal until operational metrics are wired. No default stderr/HTTP
 saturation metric is claimed. The post-claim read retains the source's own
 existing deadline; the worker adds no outer timeout there. The separate final
 after-OAuth admission guard retains its original four-second timeout.
+
+
+## C5 traffic-independent warning acquisition (#2819)
+
+The source warning lane is shared by native request assembly and the process-owned
+periodic driver. `RuntimeServices.warning_cycles` carries that controlled capability;
+the raw `warning_acquire` remains for the existing collector/feed recovery test and
+is not called by the production timer. Constructing services starts no acquisition.
+Only a push-enabled process starts the driver, immediately after both listener binds.
+HTTP-only KMA retains request acquisition and does not start a periodic driver.
+
+The lane reuses the source's existing 64-running/8,192-entry OwnedFlights pool,
+three-second retained outcomes, 180-second Attempts memo and epoch window keys.
+After the actual collector finishes, the driver schedules from the memo's remaining
+real monotonic time plus a one-millisecond non-early margin. Busy, retained or
+unadmitted calls use a bounded three-second local fallback. These wakeups do not
+bypass funding or admission. Request joins retain their remaining three-second
+wait; collector step deadlines and the outer 600-second tracking limit are unchanged.
+An inner collector can outlive that outer tracker. Its running lease is reserved
+before an unpolled wrapper and its actual abort handle remains process-owned.
+
+The process installs an inert stop guard before binding. Shutdown quiesces delivery
+and FCM first, closes warning admission before HTTP drain, stops the periodic driver,
+and lets existing collection/publication finish within the same drain allowance.
+HTTP-only processes retain five seconds; push processes retain the 34-second drain
+and 35-second shutdown limit. Timeout and guard destruction request cancellation of
+the actual inner future. Cancellation requests alone are not successful joins.
+A completed warning drain means its collector future was destroyed, not that its
+provider or publication succeeded. Incomplete warning work makes the overall process
+drain Unknown; `delivery_joined`, `writer_joined` and `http_joined` keep their original
+meanings, so those three can all be true while the overall result is Unknown.
+
+Successful collection clears the source warning service's existing memory. The
+separate public warning service, partial-publication errors and concurrent refill
+limits are unchanged; no new common-cache generation fence is claimed. The initial
+feed baseline and first delivery poll remain silent. The owned no-HTTP rehearsal
+therefore records a prior quiet durable baseline and a subsequent new publication;
+it proves acquisition and feed persistence, not initial notification delivery.
+
+See the [proposed ownership flow](diagrams/server2-warning-acquisition.html),
+[editable source](diagrams/server2-warning-acquisition.sequence.json),
+[operator procedure](../operations/server2-native-verification.md#warning-acquisition-without-product-http)
+and [selected evidence](../evidence/tasks/issue-2819-warning-acquisition/verification.md).
+This change is a child of unmerged C4 PR #2828. It does not qualify integrated main,
+an eligible full recovery bundle, live providers, EC2 capacity or seven-day shadow.

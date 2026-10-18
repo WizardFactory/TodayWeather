@@ -52,6 +52,7 @@ pub mod seed;
 pub mod stations;
 pub mod stn;
 pub mod towns;
+mod warning_cycle;
 mod zone;
 
 pub use doc::{Doc, Val};
@@ -178,8 +179,8 @@ pub struct S3Source<T> {
     latest_short: Arc<late::LatestShort>,
     /// A complete readable forecast-zone list was published by this process refresh.
     zones_requested: Arc<std::sync::atomic::AtomicBool>,
-    /// A warning cycle is running (cycles never overlap, as legacy's timer runs one at a time).
-    warning_running: Arc<std::sync::atomic::AtomicBool>,
+    /// Requests and the process timer share one controlled warning cycle owner.
+    warning_cycles: Option<Arc<warning_cycle::WarningCycles<T>>>,
 }
 /// Retry bookkeeping: each key holds the instant its retry bound ends. Expired keys are dropped
 /// when the map has doubled since the last pruning (amortized), and at [`MAX_ATTEMPTS`] live keys
@@ -210,12 +211,15 @@ impl Attempts {
         map.insert(key.to_owned(), now + memo);
         true
     }
-}
-/// Clears a running flag when its task ends (also on a panic).
-struct Running(Arc<std::sync::atomic::AtomicBool>);
-impl Drop for Running {
-    fn drop(&mut self) {
-        self.0.store(false, std::sync::atomic::Ordering::SeqCst);
+    fn remaining(&self, key: &str) -> std::time::Duration {
+        self.state
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .0
+            .get(key)
+            .map_or(std::time::Duration::ZERO, |until| {
+                until.saturating_duration_since(std::time::Instant::now())
+            })
     }
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
@@ -284,7 +288,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             attempts: Arc::new(Attempts::default()),
             latest_short: Arc::new(late::LatestShort::default()),
             zones_requested: Arc::new(std::sync::atomic::AtomicBool::new(false)),
-            warning_running: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            warning_cycles: None,
         })
     }
     /// Address-derived town metadata, independent of public geocode coexistence routing.
@@ -301,8 +305,25 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     }
     /// S15b-4: request-time grid, RSS, mid, forecast-zone and warning acquisitions.
     pub fn with_forecast(mut self, acquire: Option<Arc<dyn fetch::ForecastAcquire>>) -> Self {
+        self.warning_cycles = acquire.as_ref().map(|acquire| {
+            Arc::new(warning_cycle::WarningCycles::new(
+                self.owned.clone(),
+                self.attempts.clone(),
+                self.warnings.clone(),
+                self.clock.clone(),
+                acquire.clone(),
+            ))
+        });
         self.forecast = acquire;
         self
+    }
+    /// The same source-owned admission used by request assembly. No work starts here.
+    pub fn warning_cycles(
+        &self,
+    ) -> Option<Arc<dyn crate::warnings::acquisition_worker::Acquisition>> {
+        self.warning_cycles
+            .clone()
+            .map(|cycles| cycles as Arc<dyn crate::warnings::acquisition_worker::Acquisition>)
     }
     /// Join (or start) the owned acquisition `key` and wait for it until `until`; the published
     /// records as one [`Fetched`], or None (not ready, nothing new, or no acquirer).
@@ -1116,45 +1137,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     }
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
-    /// One legacy warning cycle per 3-minute window while requests arrive, never two at once.
-    /// The cycle runs in its own task (its steps carry the collector's 30 s deadlines), so the
-    /// owned bound never cancels it; a request waits for it until `until` at most.
+    /// Join the shared warning owner, keeping the request's existing bounded wait.
     async fn warning_cycle(&self, until: Instant) {
-        let Some(acquire) = self.forecast.clone() else {
-            return;
-        };
-        let key = format!(
-            "warnings/{}",
-            ((self.clock)() as i64).div_euclid(fetch::WARNING_CYCLE.as_millis() as i64)
-        );
-        let request = fetch::ForecastRequest::Warnings;
-        let owned_for = request.owned_for();
-        let warnings = self.warnings.clone();
-        let attempts = self.attempts.clone();
-        let running = self.warning_running.clone();
-        let _ = self
-            .owned
-            .join(key, until, owned_for, move |_| {
-                use std::sync::atomic::Ordering::SeqCst;
-                let fresh = !running.load(SeqCst)
-                    && attempts.claim("warnings", fetch::WARNING_CYCLE)
-                    && !running.swap(true, SeqCst);
-                async move {
-                    if fresh {
-                        let _ = crate::observability::spawn(async move {
-                            let _running = Running(running);
-                            if acquire.acquire(request).await.is_ok() {
-                                // New rows are read again (the service memory holds the
-                                // previous state).
-                                warnings.clear_memory().await;
-                            }
-                        })
-                        .await;
-                    }
-                    None
-                }
-            })
-            .await;
+        use crate::warnings::acquisition_worker::Acquisition;
+        if let Some(cycles) = &self.warning_cycles {
+            cycles.cycle(until).await;
+        }
     }
 }
 /// S16: the summary inputs of a snapshot whose station state was read completely, or None

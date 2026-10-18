@@ -1,0 +1,17 @@
+# C5 behavior specification
+
+[Intent](../intent/issue-2819-warning-acquisition.md), [issue #2819](https://github.com/WizardFactory/TodayWeather/issues/2819), exact paths in `server2/config/tasks/WarningAcquisition2819.json`. Root owns the existing execution notebook. Endpoint is pre-merge; no deployment, live provider/device traffic or merge.
+
+## Required behavior
+
+WA1: With push enabled, successful process bind starts one process-owned source driver on the existing180s warning cadence, without an HTTP request. A newly changed warning against a declared persisted quiet baseline reaches native S12 storage and the persisted warning feed within the bounded owned fixture's first cycle. Construction, disabled push and bind failure start no periodic acquisition. Test fixtures and any accelerated code-level clock injection must be explicit; there is no operator verification mode. First tick timing must be selected and documented before tests.
+
+WA2: HTTP and timer use the same source's existing acquisition admission, Attempts cadence, running owner and collector/feed. A request waits at most its remaining3s; its timeout/cancellation does not cancel shared collection. Long-running work cannot overlap another cycle or gain extra provider attempts through timer ticks. Keep the current64/8192 source pool, per-key funding, collector step deadlines and publication/error behavior. Owner tracking MAX600s must not silently become a new inner-collector deadline. Busy/error/partial publication remain explicit and are not successes.
+
+WA3: Process quiesce fences both timer and request warning admissions. It accounts for the actual inner collector, including a wrapper not yet polled and a collector detached by the outer tracking bound. Panic/cancellation before first poll must release its owned running lease. Graceful drain observes termination by the existing process deadline; timeout returns incomplete/unknown and aborts the actual owned work. Drop can request cancellation but cannot truthfully claim synchronous async-task join. No task may be launched after the admission fence; failed or uncertain publication is not rewound or reported successful. Existing delivery one-shot/no-retry and shutdown ordering remain.
+
+WA4: Every changed path conforms to its prior declaration and all runtime/test/tool/fixture assets stay under server2. Meaningful test-first regression, current tests and a separate optimized owned-peer executable must demonstrate the selected behavior, source/binary/fixture identity and cleanup. Maintain architecture/operator/sequence and selected evidence, then current independent review/corrections and exact CI before pre-merge acceptance. C4's parent review/CI is a separate prerequisite; C1/B1 are not integrated.
+
+## Preserved limits
+
+Only the underlying warning store is shared today: source and public WarningService caches are different instances. Preserve existing source-service invalidation on success and current partial-error/in-flight refill behavior; do not assert a common cache or generation fence. Initial feed baseline and delivery-worker first poll remain silent in this C5 scope. A source feed event does not establish initial notification delivery or repair that separate medium item. No whole-process performance, quotas, production host, eligible full rollback bundle, seven-day shadow or global #2704/#2705 completion is established. C6 credentials, readiness, shared S3 priorities and remaining #2819 work stay separate.

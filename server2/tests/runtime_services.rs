@@ -14,3 +14,5 @@ mod native;
 mod process;
 #[path = "runtime_services/supervision.rs"]
 mod supervision;
+#[path = "runtime_services/warning_acquisition.rs"]
+mod warning_acquisition;

@@ -596,3 +596,17 @@ The parent C2 PR2827 is pre-merge complete and unmerged. C1/B1 are parallel
 branches, not integrated ancestors. Current C4 review/CI, C5/C6/readiness,
 S3/cold-load capacity, later integration/full-bundle qualification and
 #2819/#2704/#2705/shadow remain separate gates. No merge or live action is authorized.
+
+
+### C5 warning acquisition preparation (#2819)
+
+C4 PR #2828 has independent review PASS and exact-head 14/14 CI at pre-merge,
+with no merge authority. C5 is its separate child: native source requests and a
+push-only post-bind periodic driver share existing warning admission. The process
+owns the inner collector through stop and keeps current drain deadlines. See the
+[C5 plan](issue-2819-warning-acquisition.md), [contract](../specs/issue-2819-warning-acquisition.md)
+and [selected evidence](../docs/evidence/tasks/issue-2819-warning-acquisition/verification.md).
+Current local implementation/verification is in progress; no C5 current-review/CI,
+main integration, full recovery bundle or seven-day shadow qualification is claimed.
+C1 and B1 remain separate unmerged branches. C6 and remaining #2819/#2704/#2705
+work remain open; no live notification or deployment authority is added.

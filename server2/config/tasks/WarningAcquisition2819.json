@@ -1,0 +1,71 @@
+{
+  "task": "WarningAcquisition2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "C5 push-enabled traffic-independent warning acquisition through existing source admission with process-owned start/stop. No new mode/provider/funding/retry/deadline/parallelism/notification policy, merge or deployment.",
+  "server2_paths": [
+    "server2/config/tasks/WarningAcquisition2819.json",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/warning_cycle.rs",
+    "server2/src/domestic/kma/source/warning_cycle_tests.rs",
+    "server2/src/domestic/kma/source/fetch.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/src/runtime_services.rs",
+    "server2/src/process.rs",
+    "server2/src/warnings/acquisition_worker.rs",
+    "server2/src/warnings/mod.rs",
+    "server2/tests/runtime_services.rs",
+    "server2/tests/runtime_services/feed.rs",
+    "server2/tests/runtime_services/process.rs",
+    "server2/tests/runtime_services/warning_acquisition.rs",
+    "server2/tests/runtime_services/common.rs",
+    "server2/tests/domestic/source_s3.rs",
+    "server2/examples/warning_acquisition_smoke.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-warning-acquisition.md",
+      "category": "documentation",
+      "reason": "Maintain the C5 requirements, sequence, operator/design and selected evidence only; no runtime implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2819-warning-acquisition.md",
+      "category": "documentation",
+      "reason": "Maintain the C5 requirements, sequence, operator/design and selected evidence only; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2819-warning-acquisition.md",
+      "category": "documentation",
+      "reason": "Maintain the C5 requirements, sequence, operator/design and selected evidence only; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Maintain the C5 requirements, sequence, operator/design and selected evidence only; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain the C5 requirements, sequence, operator/design and selected evidence only; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Maintain the C5 requirements, sequence, operator/design and selected evidence only; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-warning-acquisition/verification.md",
+      "category": "documentation",
+      "reason": "Maintain the C5 requirements, sequence, operator/design and selected evidence only; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-warning-acquisition.sequence.json",
+      "category": "documentation",
+      "reason": "Maintain the C5 requirements, sequence, operator/design and selected evidence only; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-warning-acquisition.html",
+      "category": "documentation",
+      "reason": "Maintain the C5 requirements, sequence, operator/design and selected evidence only; no runtime implementation outside server2"
+    }
+  ]
+}

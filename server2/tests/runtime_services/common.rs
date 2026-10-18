@@ -147,3 +147,297 @@ async fn fixture_http_reuse_is_case_specific_and_default_is_unchanged() {
         }
     }
 }
+
+/// Real process (including bind/start/stop), an owned provider and native S3 publication.
+/// A prior quiet durable baseline is explicit; this does not test first-poll push delivery.
+pub async fn warning_acquisition_without_http() -> serde_json::Value {
+    warning_process_case("push", false).await
+}
+/// Test-only factory inputs; production has no verification or periodic-work mode flags.
+pub async fn warning_process_case(families: &str, bind_failure: bool) -> serde_json::Value {
+    warning_process_case_inner(families, bind_failure, false, false, false).await
+}
+pub async fn warning_shared_owner_race() -> serde_json::Value {
+    warning_process_case_inner("push", false, true, false, false).await
+}
+pub async fn warning_stop_held_collection() -> serde_json::Value {
+    warning_process_case_inner("push", false, false, true, false).await
+}
+/// Standalone rehearsal only: uses the normal production180s memo, no injected timer period.
+#[allow(
+    dead_code,
+    reason = "The optimized standalone example exercises the normal180s recurrence"
+)]
+pub async fn warning_recurring_acquisition() -> serde_json::Value {
+    warning_process_case_inner("push", false, false, false, true).await
+}
+async fn warning_process_case_inner(
+    families: &str,
+    bind_failure: bool,
+    race: bool,
+    stop_held: bool,
+    repeat: bool,
+) -> serde_json::Value {
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering::SeqCst};
+    let peer = Peer::new();
+    let changed = Arc::new(AtomicUsize::new(1));
+    let calls = Arc::new(AtomicUsize::new(0));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let provider_addr = listener.local_addr().unwrap();
+    let c = changed.clone();
+    let n = calls.clone();
+    let (release, released) = tokio::sync::watch::channel(!(race || stop_held));
+    let entered = Arc::new(AtomicBool::new(false));
+    let e = entered.clone();
+    let app = axum::Router::new().fallback(move |uri: axum::http::Uri| {
+        let c = c.clone();
+        let n = n.clone();
+        let mut released = released.clone();
+        let e = e.clone();
+        async move {
+            n.fetch_add(1, SeqCst);
+            if c.load(SeqCst) > 1 {
+                e.store(true, SeqCst);
+                while !*released.borrow_and_update() {
+                    if released.changed().await.is_err() {
+                        break;
+                    }
+                }
+            }
+            let rows = if uri.path().ends_with("getPwnCd") {
+                serde_json::json!([{"areaCode":"L1082700","areaName":"Synthetic",
+                    "cancel":"0","command":"1","stnId":"108","tmFc":202610162100_i64,
+                    "tmSeq":c.load(SeqCst),"warnVar":1,"warnStress":0,
+                    "startTime":202610162100_i64,"endTime":0,"allEndTime":0}])
+            } else {
+                serde_json::json!([])
+            };
+            axum::Json(serde_json::json!({"response":{"header":{"resultCode":"00"},
+                "body":{"items":{"item":rows},"totalCount":rows.as_array().unwrap().len(),
+                "pageNo":1,"numOfRows":10000}}}))
+        }
+    });
+    let provider = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let mut builtins = peer.builtins();
+    builtins.data_go_kr = format!("http://{provider_addr}/");
+    let defaults = peer.vars("push");
+    let services = RuntimeServices::from_vars_with_fcm(
+        &defaults,
+        &builtins,
+        server2::push::deliver::Endpoints::loopback("http://127.0.0.1:9/"),
+    )
+    .unwrap();
+    assert_eq!(
+        calls.load(SeqCst),
+        0,
+        "factory construction performs no acquisition"
+    );
+    ready(&services).await;
+    let feed = services.warning_feed.clone().unwrap();
+    services
+        .warning_acquire
+        .as_ref()
+        .unwrap()
+        .acquire(server2::domestic::kma::source::fetch::ForecastRequest::Warnings)
+        .await
+        .unwrap();
+    assert!(
+        feed.read().await.unwrap().is_empty(),
+        "declared quiet durable baseline"
+    );
+    if let Some(push) = &services.push {
+        push.quiesce();
+        assert!(
+            push.drain(tokio::time::Instant::now() + Duration::from_secs(3))
+                .await
+        );
+    }
+    let before_counts: serde_json::Value = serde_json::from_slice(
+        &reqwest::get(format!("{}__catalog/status", peer.endpoint))
+            .await
+            .unwrap()
+            .bytes()
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    let source_count = |counts: &serde_json::Value| -> u64 {
+        counts
+            .as_object()
+            .unwrap()
+            .iter()
+            .filter(|(k, _)| k.starts_with("PUT raw/") && k.contains("pwn-cd"))
+            .map(|(_, v)| v.as_u64().unwrap())
+            .sum()
+    };
+    let before_source_puts = source_count(&before_counts);
+    let before = calls.load(SeqCst);
+    changed.store(2, SeqCst);
+    let (started, bound) = tokio::sync::oneshot::channel();
+    let (cycle_sender, cycle_receiver) = tokio::sync::oneshot::channel();
+    let occupied = if bind_failure {
+        Some(std::net::TcpListener::bind("127.0.0.1:0").unwrap())
+    } else {
+        None
+    };
+    let metrics_addr = occupied.as_ref().map_or_else(
+        || "127.0.0.1:0".parse().unwrap(),
+        |l| l.local_addr().unwrap(),
+    );
+    let process_vars = peer.vars(families);
+    let enabled = families == "push";
+    let process = std::thread::spawn(move || {
+        server2::process::run_with_listener_hook(
+            Config {
+                public_addr: "127.0.0.1:0".parse().unwrap(),
+                metrics_addr,
+                ..Config::default()
+            },
+            move || {
+                let services = RuntimeServices::from_vars_with_fcm(
+                    &process_vars,
+                    &builtins,
+                    server2::push::deliver::Endpoints::loopback("http://127.0.0.1:9/"),
+                )?;
+                let _ = cycle_sender.send(services.warning_cycles.clone());
+                Ok(services)
+            },
+            move |listener| {
+                let _ = started.send(listener);
+            },
+        )
+        .map_err(|e| e.to_string())
+    });
+    // A known bind failure never invokes the hook; its captured sender can live through
+    // the pre-existing push-writer34s drain. Do not mistake that for a five-second bind signal.
+    let mut handle = if bind_failure {
+        None
+    } else {
+        tokio::time::timeout(Duration::from_secs(5), bound)
+            .await
+            .unwrap()
+            .ok()
+    };
+    let bound_ok = handle.is_some();
+    let cycles = cycle_receiver.await.unwrap();
+    let mut join_ms = 0;
+    if race && bound_ok {
+        tokio::time::timeout(Duration::from_secs(3), async {
+            while !entered.load(SeqCst) {
+                tokio::time::sleep(Duration::from_millis(2)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let began = tokio::time::Instant::now();
+        let mut joins = tokio::task::JoinSet::new();
+        for _ in 0..4 {
+            let cycles = cycles.clone().unwrap();
+            joins.spawn(async move {
+                cycles
+                    .cycle(tokio::time::Instant::now() + Duration::from_secs(30))
+                    .await;
+            });
+        }
+        while let Some(result) = joins.join_next().await {
+            result.unwrap();
+        }
+        join_ms = began.elapsed().as_millis();
+    }
+    let mut drain_waited_for_provider = false;
+    if stop_held && bound_ok {
+        tokio::time::timeout(Duration::from_secs(3), async {
+            while !entered.load(SeqCst) {
+                tokio::time::sleep(Duration::from_millis(2)).await;
+            }
+        })
+        .await
+        .unwrap();
+        handle.take().unwrap().abort();
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        drain_waited_for_provider = !process.is_finished();
+    }
+    release.send_replace(true);
+
+    // Only the durable test observer reads. No request enters either product listener.
+    let mut events = if bound_ok {
+        tokio::time::timeout(
+            if enabled {
+                Duration::from_secs(4)
+            } else {
+                Duration::from_millis(150)
+            },
+            async {
+                loop {
+                    let events = feed.read().await.unwrap();
+                    if !events.is_empty() {
+                        break events.len();
+                    }
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }
+            },
+        )
+        .await
+        .unwrap_or(0)
+    } else {
+        0
+    };
+    let mut cadence_ms = None;
+    if repeat && events == 1 {
+        let first = tokio::time::Instant::now();
+        changed.store(3, SeqCst);
+        events = tokio::time::timeout(Duration::from_secs(185), async {
+            loop {
+                let events = feed.read().await.unwrap();
+                if events.len() >= 2 {
+                    break events.len();
+                }
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        })
+        .await
+        .unwrap_or(events);
+        cadence_ms = Some(first.elapsed().as_millis());
+    }
+    // Always stop/join before behavioral assertions, including the intended parent Red.
+    if let Some(handle) = handle {
+        handle.abort();
+    }
+    let result = tokio::task::spawn_blocking(move || process.join().unwrap())
+        .await
+        .unwrap();
+    drop(occupied);
+    let counts: serde_json::Value = serde_json::from_slice(
+        &reqwest::get(format!("{}__catalog/status", peer.endpoint))
+            .await
+            .unwrap()
+            .bytes()
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    let source_put = counts
+        .as_object()
+        .unwrap()
+        .keys()
+        .any(|k| k.starts_with("PUT raw/") && k.contains("pwn-cd"));
+    let new_source_puts = source_count(&counts) - before_source_puts;
+    let provider_calls = calls.load(SeqCst) - before;
+    provider.abort();
+    let _ = provider.await;
+    let provider_closed = tokio::net::TcpStream::connect(provider_addr).await.is_err();
+    let peer_addr = reqwest::Url::parse(&peer.endpoint)
+        .unwrap()
+        .socket_addrs(|| None)
+        .unwrap()[0];
+    drop(peer);
+    let storage_closed = tokio::net::TcpStream::connect(peer_addr).await.is_err();
+    serde_json::json!({"provider_calls_after_bind":provider_calls,"baseline_provider_calls":before,
+        "drain_waited_for_provider":drain_waited_for_provider,
+        "shared_waiters":if race {4} else {0},"shared_wait_ms":join_ms,"cadence_ms":cadence_ms,"feed_events":events,
+        "native_source_put":source_put,"new_native_source_puts":new_source_puts,
+        "product_http_requests":0,"fcm_isolation":"empty registrations; endpoints closed loopback:9",
+        "storage_listener_closed":storage_closed,
+        "baseline":"explicit prior quiet durable warning","provider_listener_closed":provider_closed,
+        "process_listener_failure_reported":result.is_err(),"bound":bound_ok,"families":families})
+}

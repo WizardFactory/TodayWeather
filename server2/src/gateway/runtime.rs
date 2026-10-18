@@ -347,6 +347,7 @@ pub struct NativeHandles {
 pub(crate) struct BuiltGateway {
     pub gateway: Option<Arc<Gateway>>,
     pub native: NativeHandles,
+    pub warning_cycles: Option<Arc<dyn crate::warnings::acquisition_worker::Acquisition>>,
     pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
     pub narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>>,
 }
@@ -385,6 +386,7 @@ pub(crate) fn build_shared(
             gateway: None,
             native: NativeHandles::default(),
             warning_acquire: None,
+            warning_cycles: None,
             narrative_acquire: None,
         });
     }
@@ -435,6 +437,7 @@ pub(crate) fn build_shared(
     }
     let mut direct = None;
     let mut warning_acquire = None;
+    let mut warning_cycles = None;
     let mut narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>> = None;
     if let (Some(s3), true) = (s3, families.kma_source() || families.push) {
         // S15b: the S3 input source over the shared admission, one for every listed address
@@ -493,6 +496,7 @@ pub(crate) fn build_shared(
         )
         .with_life(Some(life))
         .with_forecast(Some(forecast));
+        warning_cycles = source.warning_cycles();
         let source = Arc::new(source);
         // S16: daily summaries of natively served towns, written after the response through
         // the same S3 admission. Nation shares this backend and its summary recorder.
@@ -538,6 +542,7 @@ pub(crate) fn build_shared(
         })),
         native,
         warning_acquire,
+        warning_cycles,
         narrative_acquire,
     })
 }
