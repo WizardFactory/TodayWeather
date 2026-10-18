@@ -110,6 +110,10 @@ pub enum Commit {
 pub enum StateError {
     Storage(Error),
     Corrupt(&'static str),
+    Input {
+        position: usize,
+        reason: &'static str,
+    },
 }
 impl From<Error> for StateError {
     fn from(e: Error) -> Self {
@@ -126,6 +130,9 @@ impl std::fmt::Display for StateError {
         match self {
             StateError::Storage(e) => write!(f, "push state storage: {e}"),
             StateError::Corrupt(what) => write!(f, "push state corrupt: {what}"),
+            StateError::Input { position, reason } => {
+                write!(f, "push import input record {position}: {reason}")
+            }
         }
     }
 }

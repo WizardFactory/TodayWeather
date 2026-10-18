@@ -448,16 +448,21 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                     .unwrap_or_else(|e| e.into_inner())
                     .coll(Coll::Alert)
                     .iter()
+                    .filter_map(|entry| match entry {
+                        Ok((n, record))
+                            if !matches!(record.doc.get("enable"), Val::Bool(false))
+                                && inside(&record.doc, now) =>
+                        {
+                            Some(Ok((n, record)))
+                        }
+                        Ok(_) => None,
+                        Err(error) => Some(Err(error)),
+                    })
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(|_| {
                         self.push.invalidate_state();
                         Error::Corrupt("push registration state")
-                    })?
-                    .into_iter()
-                    .filter(|(_, r)| {
-                        !matches!(r.doc.get("enable"), Val::Bool(false)) && inside(&r.doc, now)
-                    })
-                    .collect::<Vec<_>>();
+                    })?;
                 let gate = Arc::new(Semaphore::new(CONCURRENCY));
                 let mut locations: BTreeMap<Vec<u8>, Vec<(u64, Record)>> = BTreeMap::new();
                 for (n, r) in records {

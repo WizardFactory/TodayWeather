@@ -1,7 +1,7 @@
 {
   "task": "Safety2819",
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
-  "scope": "C1 bounded decodable registration state and writer/restore readiness. Fail closed without silent journal skipping, retries, production operations or changes to provider funding. First of the ordered 2819 corrective slices.",
+  "scope": "C1 bounded decodable registration state and writer/restore readiness. Fail closed without silent journal skipping, retries, production operations or changes to provider funding. First of the ordered 2819 corrective slices. Review correction declares observability.rs before adding the sanitized input-error classification for the import-only error variant.",
   "server2_paths": [
     "server2/config/tasks/Safety2819.json",
     "server2/src/push/",
@@ -12,7 +12,8 @@
     "server2/examples/logging_smoke.rs",
     "server2/benches/feasibility.rs",
     "server2/tools/push_state_smoke.py",
-    "server2/tests/runtime_services/"
+    "server2/tests/runtime_services/",
+    "server2/src/observability.rs"
   ],
   "outside": [
     {

@@ -11,8 +11,8 @@ production registration copy or provider request was performed.
   regressions failed their intended assertions: poisoned documents were acknowledged.
   A separate Red showed the ready flag remaining true after writer stop.
 - After the correction, the focused regression execution passed 96 library,
-  25 state, 60 delivery and 31 runtime-services tests; one runtime-services test
-  remained ignored (212 passed, 1 ignored). The state tests cover direct commit
+  27 state, 60 delivery and 31 runtime-services tests; one runtime-services test
+  remained ignored (214 passed, 1 ignored). The state tests cover direct commit
   rejection, atomic mixed journal rejection without sequence advance or rewrite,
   valid restart, writer stop/panic, BSON round trips, and escaped-size/depth bounds.
   Existing state parity exercises 115 legacy requests. These are synthetic tests,
@@ -42,6 +42,16 @@ The output directory must be new and outside `server2/`. The child environment i
 synthetic; no Firebase credentials are supplied and scheduled send times are invalid.
 The tool records the executable digest before/after and terminates its owned child
 and peer. Its report's `production_eligible` and `live_actions` remain false.
+
+The independent review found missing converter reporting for the new limits. A new
+Red showed that all four mixed records were converted instead of only the safe one,
+and that direct import misclassified bad input as corrupt state. The converter now
+reports rejected positions/static reasons without values; its release CLI smoke
+reads four synthetic records, converts the one safe record, reports three rejected
+positions/reasons without input values and creates the import file with mode 0600; edited canonical imports
+fail with a line reason, and direct planning names the one-based input record. The
+whole import remains fail-closed with no state writes. Alert and warning scans retain
+only eligible decoded records, preserving the compact-state memory design.
 
 The original Red, setup failures, correction logs and HTTP reports are retained
 locally under ignored `reports/sdlc/issue-2819-state/` and

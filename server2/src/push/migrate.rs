@@ -136,6 +136,7 @@ fn validate(c: Coll, v: &OrderedJson) -> Result<(Record, bool), String> {
     if !has_token {
         return Err("no fcmToken or registrationId".into());
     }
+    ejson::validate_document(&doc).map_err(|error| error.0.to_owned())?;
     Ok((Record { oid, doc }, extra))
 }
 
@@ -202,6 +203,7 @@ pub fn parse_import(input: &[u8]) -> Result<Vec<(Coll, Record)>, String> {
         let Val::Obj(doc) = read_val(v.get("doc").ok_or_else(bad)?).map_err(|_| bad())? else {
             return Err(bad());
         };
+        ejson::validate_document(&doc).map_err(|error| format!("{}: {}", bad(), error.0))?;
         out.push((c, Record { oid, doc }));
     }
     Ok(out)
@@ -239,8 +241,11 @@ pub fn plan_import(
     let mut next_n = state.next_n;
     let mut counts = ImportCounts::default();
     let mut changes = Vec::new();
-    for (c, record) in records {
-        ejson::validate_document(&record.doc)?;
+    for (position, (c, record)) in records.iter().enumerate() {
+        ejson::validate_document(&record.doc).map_err(|error| StateError::Input {
+            position: position + 1,
+            reason: error.0,
+        })?;
         let mut encoded = String::new();
         ejson::write_obj(&record.doc, &mut encoded);
         let digest = sha256(encoded.as_bytes());
