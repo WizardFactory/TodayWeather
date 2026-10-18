@@ -277,10 +277,16 @@ async fn writer_deadline_cancels_pending_commit_without_acknowledging_or_detachi
 }
 
 #[tokio::test]
-async fn conditional_final_time_guard_rejects_clock_rollover_during_oauth() {
+async fn conditional_final_guard_finishes_admitted_minute_but_preserves_clock_and_window_fences() {
     use server2::{push::deliver::alerts::AlertWorker, world::js::Val};
     use std::io::Read;
-    for changed_time in ["2026-10-16T00:08:00Z", "2026-10-16T00:06:00Z"] {
+    for (label, changed_time, end_time, expected_posts) in [
+        ("next-minute", "2026-10-16T00:08:00Z", 86399., 1),
+        ("rollback", "2026-10-16T00:06:00Z", 86399., 0),
+        ("inclusive-end", "2026-10-16T00:07:59.999Z", 479., 1),
+        ("window-closed", "2026-10-16T00:08:00Z", 479., 0),
+        ("next-day-window", "2026-10-17T00:07:00Z", 1020., 0),
+    ] {
         let mut bytes = Vec::new();
         flate2::read::GzDecoder::new(
             &include_bytes!("../delivery/fixtures/alerts-oracle.json.gz")[..],
@@ -292,12 +298,13 @@ async fn conditional_final_time_guard_rejects_clock_rollover_during_oauth() {
             .iter()
             .find(|c| c.get("id").unwrap().string().unwrap() == "current-ko-1")
             .unwrap();
-        let Val::Obj(doc) = Val::from_ordered(wet.get("record").unwrap()) else {
+        let Val::Obj(mut doc) = Val::from_ordered(wet.get("record").unwrap()) else {
             panic!("record");
         };
+        doc.set("endTime", Val::Num(end_time));
         let record = server2::push::Record { oid: [42; 12], doc };
         let rig = rig(
-            "s20b-conditional-time",
+            &format!("s20b-conditional-time-{label}"),
             "2026-10-16T00:07:00Z",
             &[(Coll::Alert, record)],
             None,
@@ -321,7 +328,10 @@ async fn conditional_final_time_guard_rejects_clock_rollover_during_oauth() {
             rig.push.clone(),
             Arc::new(rig.s3.clone()),
             rig.weather.clone(),
-            Arc::new(fcm(&rig.google, &temp_dir("s20b-conditional-time-fcm"))),
+            Arc::new(fcm(
+                &rig.google,
+                &temp_dir(&format!("s20b-conditional-time-fcm-{label}")),
+            )),
             servers(),
             rig.clock.clone(),
             rig.diagnostics.clone(),
@@ -333,8 +343,14 @@ async fn conditional_final_time_guard_rejects_clock_rollover_during_oauth() {
             .unwrap();
         rig.clock.set(changed_time);
         release.notify_one();
-        assert!(job.await.unwrap().claimed);
-        assert!(rig.google.sends().is_empty());
+        let report = job.await.unwrap();
+        assert!(report.claimed, "{label}");
+        assert_eq!(rig.google.sends().len(), expected_posts, "{label}");
+        if expected_posts == 0 {
+            assert_eq!(report.deliveries[0].2, "alert-admission", "{label}");
+        } else {
+            assert_eq!(report.deliveries[0].1, "accepted", "{label}");
+        }
     }
 }
 

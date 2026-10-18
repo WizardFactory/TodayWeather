@@ -1,6 +1,7 @@
 //! Conditional alerts ported from `alert.push.controller.js` (parse, compare, update and text).
 //! This worker does not retry delivery and never uses a legacy process as a fallback.
 use super::text::{Message, Tr};
+use super::window::{AlertAdmission, inside_window};
 use crate::push::js::{self, Thrown, ge, greater, less, prop, strict_eq, to_string};
 use crate::world::js::{Obj, Val, dot_time, js_sort, parse_dot, parts};
 
@@ -631,7 +632,7 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
         info: &Obj,
         selected: &Obj,
         notification: &Message,
-        now: i64,
+        admission: AlertAdmission,
     ) -> Delivery {
         let token = info.get("fcmToken");
         if token.truthy() {
@@ -644,7 +645,7 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
                 .fcm
                 .send_guarded(
                     Product::of(info.get("package")),
-                    self.clock.now_ms().unwrap_or(now),
+                    self.clock.now_ms().unwrap_or(admission.at_ms),
                     || async {
                         if !self
                             .push
@@ -658,9 +659,7 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
                             return None;
                         }
                         let at = self.clock.now_ms().ok()?;
-                        if at.div_euclid(60_000) != now.div_euclid(60_000)
-                            || !inside_window(info, at)
-                        {
+                        if !admission.permits(at) || !inside_window(info, at) {
                             return None;
                         }
                         Some(fcm_body(notification, info))
@@ -762,6 +761,7 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
             let mut tasks = Vec::new();
             for (n, record) in due {
                 let gate = gate.clone();
+                let admission = AlertAdmission::new(&record.doc, admission_ms);
                 tasks.push(crate::observability::value(
                     crate::observability::Component::Delivery,
                     crate::observability::Stage::Submission,
@@ -811,7 +811,7 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
                                     &info,
                                     &selected,
                                     &notification,
-                                    admission_ms,
+                                    admission,
                                 )
                                 .await,
                             ))
@@ -892,14 +892,5 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
                 worker.run_minute(observed).await;
             }));
         }
-    }
-}
-
-fn inside_window(info: &Obj, now: i64) -> bool {
-    let time = Val::Num((now.rem_euclid(86_400_000) / 1000) as f64);
-    match info.get("reverseTime") {
-        Val::Bool(false) => ge(&time, info.get("startTime")) && js::le(&time, info.get("endTime")),
-        Val::Bool(true) => ge(&time, info.get("startTime")) || js::le(&time, info.get("endTime")),
-        _ => false,
     }
 }

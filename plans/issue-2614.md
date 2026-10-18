@@ -524,3 +524,28 @@ production approval or stale fallback/provider timer is claimed. This stacks on
 D1, not integratedmain. Current re-review and exact-newheadCI remain mandatory;
 Nation childreads, other#2819items, D2/#2704/#2705/shadow and whole-bundle recovery
 remain separate/open. No merge/live action authorized.
+
+
+#### #2819 notification lateness child
+
+The [child plan](issue-2819-delivery-lateness.md) and
+[contract](../specs/issue-2819-delivery-lateness.md) address C3 and the minute-only
+refusal trigger within C2. Finite admitted cohorts can finish in a later minute;
+registration/token/shutdown guards and the same configured alert window occurrence
+remain. No actual-send retry, claim replay, new capacity TTL or runtime legacy
+asset dependency. The design comparison used two actual providers, not three;
+the numeric model and design-time diagram are not execution proof.
+
+Scoped regression inventory: library103 + delivery66 + runtime31 = **200 passed,
+1 ignored**, with unchanged library/delivery projections explicitly reused after
+the separate runtime-supervision policy test changed. The original whole runtime
+30/1/1 failure remains retained. Actual standalone owned HTTP rehearsal observes
+13 rejected posts per cohort, six active weather fetches, retained claims and no
+extra posts on service reconstruction. Exact source, executable and closed peer
+listeners are bound in [selected evidence](../docs/evidence/tasks/issue-2819-delivery-lateness/verification.md).
+
+The parent delivery-cohort task retains unresolved C2 definite-no-POST state
+ownership/compensation and aggregate stage accounting. Current independent review,
+exact CI and any later base reconciliation are separate gates. This branch is
+stacked on N1; C1 and B1 are separate unmerged branches. No merged/full-bundle,
+#2819/#2704/#2705, seven-day shadow or production completion is claimed.

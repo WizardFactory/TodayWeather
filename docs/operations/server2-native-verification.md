@@ -264,3 +264,35 @@ error handling and original30s TTL have separate controls. Cancelled work withou
 a completed Result creates no false absence/error marker. No stale fallback,
 read-path provider fetch, collection timer, verification flag, live key, deployment
 or whole-service shadow/rollback qualification is introduced.
+
+
+## Delivery cohort lateness
+
+Use `server2/examples/delivery_lateness_smoke.rs` as an isolated executable
+rehearsal, not an operational push command. It embeds synthetic credentials and
+tokens, recorded weather, an in-memory conditional-write journal and owned
+loopback OAuth/FCM peers. It does not read operational credential configuration.
+Build with the existing toolchain/lockfile and a verified shared Cargo target;
+retain the executable and record its hash outside that disposable target before
+running. Use a sanitized child environment and a new scratch directory.
+
+The executable admits 13 alarm recipients and 13 conditional-alert recipients.
+It holds the first six weather fetches, advances an injected clock across the
+minute, and requires one owned HTTP POST per admitted recipient. Every owned FCM
+response is 503/rejected. Reconstructing the push service from the same memory
+journal must add zero posts; rejected sends are not retried. Peak six measures
+weather fetches per cohort, not global provider/host capacity. Require process
+exit zero, unchanged binary/source hashes and both loopback listeners closed
+before declaring the rehearsal PASS.
+
+This uses public worker methods, actual loopback HTTP and a real executable
+process, but not AWS S3, a process restart, live provider acquisition, real Firebase
+credentials, a device counter or actual notifications. Service reconstruction
+inside one process is the restore check. The zero-live/device statement follows
+the forced loopback/synthetic setup. Tests separately cover accepted posts,
+inclusive/overnight window ends, next-day refusal and same-minute clock regression.
+See [selected evidence](../evidence/tasks/issue-2819-delivery-lateness/verification.md).
+
+C2 state compensation for other definite no-POST refusals remains open. Do not
+release claims, reset journals, retry failed/unknown sends or treat this as a
+seven-day shadow, suspension-age SLA or full production rollback qualification.

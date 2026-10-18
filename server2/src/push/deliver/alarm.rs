@@ -227,7 +227,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
         info: &mut Obj,
         now_ms: i64,
         stale: &[StaleSelection],
-        selection: Option<(u64, Oid, Obj)>,
+        selection: Option<(u64, Oid, Obj, i64)>,
     ) -> Delivery {
         crate::observability::value(
             crate::observability::Component::Delivery,
@@ -260,9 +260,9 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                     return match self
                         .fcm
                         .send_guarded(Product::of(info.get("package")), send_ms, || async {
-                            if let Some((n, oid, selected)) = selection {
+                            if let Some((n, oid, selected, admitted_ms)) = selection {
                                 let at = self.clock.now_ms().ok()?;
-                                if at.div_euclid(60_000) != now_ms.div_euclid(60_000)
+                                if at < admitted_ms
                                     || !self
                                         .push
                                         .internal(InternalOp::CheckAlarmSelection {
@@ -275,7 +275,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                                     return None;
                                 }
                                 let at = self.clock.now_ms().ok()?;
-                                if at.div_euclid(60_000) != now_ms.div_euclid(60_000) {
+                                if at < admitted_ms {
                                     return None;
                                 }
                             }
@@ -348,6 +348,9 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
         let minute_ms = now_ms - now_ms.rem_euclid(60_000);
         let time = ((minute_ms.rem_euclid(DAY_MS)) / 1000) as f64;
         let minute = crate::world::js::iso(minute_ms as f64).unwrap_or_default();
+        // The selected list is finite. Its UTC minute labels the durable claim, not a send expiry.
+        // Use the actual entry clock independently of the direct selection API argument.
+        let admitted_ms = self.clock.now_ms().unwrap_or(now_ms);
         self.counters.minutes.fetch_add(1, Ordering::Relaxed);
         if !self.push.ready() {
             // The registrations are not restored yet: the due set is unknown, so the minute is
@@ -442,7 +445,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
                 let selected = info.clone();
                 let mut info = info;
                 let delivery = self
-                    .deliver_selected(&mut info, now_ms, &all_stale, Some((n, oid, selected)))
+                    .deliver_selected(&mut info, now_ms, &all_stale, Some((n, oid, selected, admitted_ms)))
                     .await;
                 (n, oid, stale, info, delivery)
             });

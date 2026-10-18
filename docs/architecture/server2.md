@@ -3779,3 +3779,39 @@ The [operator scenario](../operations/server2-native-verification.md#narrative-c
 uses actual owned S3 publication/readback, injected delays and a fixture refresh.
 It does not establish real S3 latency, unconditional prose presence or whole-bundle
 recovery. Nation discardedchildreads, D2/capacity and shadow remain separate.
+
+
+### #2819 finite admitted notification cohorts
+
+The [lateness contract](../../specs/issue-2819-delivery-lateness.md) lets the
+already-selected and durably claimed alarm or conditional-alert list finish after
+its UTC minute. That minute identifies the one-shot claim; it is not the send
+expiry. The list does not grow, stale queued scheduler ticks are not caught up,
+and reconstruction from the same durable state cannot replay a claimed minute.
+Concurrency remains six per cohort, with the existing operation bounds. Failed or
+unknown actual sends are never automatically retried.
+
+Final admission still checks the current registration/token and shutdown state.
+The final clock must not precede the actual cohort entry clock. Conditional alerts
+also remain in the same continuous configured UTC window occurrence, with the
+original JS coercion and inclusive whole-second comparisons. A later day's finite
+window cannot revive the old cohort; an all-day predicate is continuous and has
+no invented midnight expiry. A private constant-size interval calculation captures
+the first excluded second; it does not scan the day at runtime. The explicit
+`run_minute` selection argument is separate from the actual entry clock.
+
+Alarms have no newly invented age cutoff. A suspended live process may therefore
+finish old admitted work; this change establishes no operational lateness SLA or
+whole-process/global concurrency bound. The parent C2 task still owns safe state
+repair after other definite no-POST refusals: this increment does not remove all
+false six-hour suppression. It changes no journal schema, ownership or actual-send
+retry policy. C1 and B1 remain separate unmerged branches, not integrated ancestors.
+
+[Proposed flow](diagrams/server2-delivery-lateness.html) and
+[editable source](diagrams/server2-delivery-lateness.sequence.json) are frozen
+design-time artifacts at `7659b9fa`. Their 60-test baseline/no-new-test-yet card
+records that earlier design point, not current verification. Current
+[selected evidence](../evidence/tasks/issue-2819-delivery-lateness/verification.md)
+and the [owned operator scenario](../operations/server2-native-verification.md#delivery-cohort-lateness)
+record the subsequent implementation and checks. This is a stacked pre-merge
+slice, not main, shadow, capacity or an eligible full recovery release.

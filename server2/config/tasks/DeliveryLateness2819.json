@@ -1,0 +1,64 @@
+{
+  "task": "DeliveryLateness2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "Child of C2/C3 investigation: finite admitted alarm/conditional-alert cohorts complete across minute boundary; preserve configured alert window occurrence, clock/selection/quiesce/stale-tick guards. No unsent-state compensation, claim replay, new scheduler, hard capacity TTL, live sends, merge or production authority.",
+  "server2_paths": [
+    "server2/config/tasks/DeliveryLateness2819.json",
+    "server2/src/push/deliver/alarm.rs",
+    "server2/src/push/deliver/alerts.rs",
+    "server2/src/push/deliver/mod.rs",
+    "server2/src/push/deliver/window.rs",
+    "server2/tests/delivery.rs",
+    "server2/tests/delivery/lateness.rs",
+    "server2/examples/delivery_lateness_smoke.rs",
+    "server2/tests/delivery/lateness_support.rs",
+    "server2/tests/runtime_services/supervision.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-delivery-lateness.md",
+      "category": "documentation",
+      "reason": "Maintain child contract, cohort/window flow, operator procedure and selected verification evidence; no runtime outside server2"
+    },
+    {
+      "path": "specs/issue-2819-delivery-lateness.md",
+      "category": "documentation",
+      "reason": "Maintain child contract, cohort/window flow, operator procedure and selected verification evidence; no runtime outside server2"
+    },
+    {
+      "path": "plans/issue-2819-delivery-lateness.md",
+      "category": "documentation",
+      "reason": "Maintain child contract, cohort/window flow, operator procedure and selected verification evidence; no runtime outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Maintain child contract, cohort/window flow, operator procedure and selected verification evidence; no runtime outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain child contract, cohort/window flow, operator procedure and selected verification evidence; no runtime outside server2"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Maintain child contract, cohort/window flow, operator procedure and selected verification evidence; no runtime outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-delivery-lateness.sequence.json",
+      "category": "documentation",
+      "reason": "Maintain child contract, cohort/window flow, operator procedure and selected verification evidence; no runtime outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-delivery-lateness.html",
+      "category": "documentation",
+      "reason": "Maintain child contract, cohort/window flow, operator procedure and selected verification evidence; no runtime outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-delivery-lateness/verification.md",
+      "category": "documentation",
+      "reason": "Maintain child contract, cohort/window flow, operator procedure and selected verification evidence; no runtime outside server2"
+    }
+  ]
+}
