@@ -18,3 +18,5 @@ mod process;
 mod supervision;
 #[path = "runtime_services/warning_acquisition.rs"]
 mod warning_acquisition;
+#[path = "runtime_services/warning_poll.rs"]
+mod warning_poll;

@@ -82,3 +82,27 @@ See the [S20b verification record](../evidence/tasks/issue-2705-s20b/verificatio
 ![Actual isolated process lifecycle results](../evidence/tasks/issue-2705-s20b/runtime-smoke.png)
 
 CI and eligible independent review are separate exact-head gates. Real providers, AWS/Mongo, device sends, paid translation, deployment/cutover, EC2/quota measurement, seven-day shadow and full S20/#2742 acceptance remain excluded.
+
+
+### Warning delivery poll recovery (E3b)
+
+The delivery supervisor retains the actual warning job ID from its existing JoinSet.
+Only that job's normal completion or failed join releases the warning scheduling slot.
+An alarm or conditional-alert failure cannot release a still-running warning slot.
+After a warning task panic, later regular five-second polling can continue; the original
+failure remains in the drain report. This does not retry failed or unknown notification
+sends, rewind state, or change durable claim/result authority.
+
+The existing missed-tick policy is unchanged. A tick that becomes ready while a warning
+job runs may be consumed immediately after it finishes; this is regular scheduling,
+not evidence of a previously queued duplicate. Stop/quiesce still blocks new scheduling,
+and the same supervisor JoinSet drains or cancels owned work. No watchdog or second owner
+was added. The C5 warning acquisition lease is a different owner and remains unchanged.
+The first successful delivery poll still establishes a silent baseline; this change does
+not qualify warning delivery across deployment or complete the remaining E3 readiness
+endpoint, S3 health or credential-source health work.
+
+Verification uses synthetic owned peers. The test provider now receives graceful shutdown
+and must successfully join before its listener is reported retired. Original parallel
+abort/port-observation failures are retained; a production ownership defect is not inferred
+from those failures. See the [selected E3b evidence](../evidence/tasks/issue-2819-warning-poll-supervision/verification.md).

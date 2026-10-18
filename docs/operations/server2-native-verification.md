@@ -533,3 +533,30 @@ client and is not a public readiness-endpoint check. The panic diagnostic is int
 use the final test exit and `WRITER_AVAILABILITY_RESULT` report to assess the check.
 A retained state integration executable requires its matching compile-time checkout and
 Python peer assets. See the [selected evidence](../evidence/tasks/issue-2819-writer-liveness/verification.md).
+
+
+### Warning poll supervisor regression (E3b)
+
+Run `cargo test --locked --test runtime_services warning_poll::` from `server2/` with the
+pinned Rust toolchain. Three regular tests cover warning panic recovery, ordinary poll
+error recovery, and an unrelated alarm panic while warning work remains live. Tests own
+loopback S3 and synthetic Firebase fixtures; they do not consume host provider credentials.
+The live-warning control uses a bounded test-only blocking dependency through Tokio's
+blocking boundary and releases it on every exit. It quiesces before releasing the held
+poll so a normally pending interval tick is not mistaken for previously queued work.
+
+The separate real-time smoke is explicit and ignored by the regular suite:
+
+```sh
+cargo test --release --locked --test runtime_services   warning_poll::owned_warning_recovery_api_child -- --exact --ignored --nocapture
+```
+
+It waits for the actual five-second scheduler after a synthetic warning panic, then checks
+public push-handler HTTP registration and durable journal acknowledgement against owned S3.
+The HTTP listener is a thin test adapter around the real push handler, not production main
+or the complete public gateway. It confirms owned listener/process retirement and retains
+the original failed task in drain accounting. The retained test executable requires its
+matching compile-time checkout and Python/synthetic fixture assets. No live provider or
+device, readiness endpoint, IAM or full release-bundle qualification is claimed. The main
+release binary is built but not executed by this smoke. See the
+[selected evidence](../evidence/tasks/issue-2819-warning-poll-supervision/verification.md).

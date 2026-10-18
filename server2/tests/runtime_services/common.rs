@@ -250,7 +250,15 @@ pub async fn warning_case(case: WarningCase) -> serde_json::Value {
                 "pageNo":1,"numOfRows":10000}}}))
         }
     });
-    let provider = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let (provider_stop, provider_stopped) = tokio::sync::oneshot::channel::<()>();
+    let mut provider = tokio::spawn(async move {
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async {
+                let _ = provider_stopped.await;
+            })
+            .await
+            .unwrap()
+    });
     let mut builtins = peer.builtins();
     builtins.data_go_kr = format!("http://{provider_addr}/");
     let defaults = peer.vars("push");
@@ -456,9 +464,17 @@ pub async fn warning_case(case: WarningCase) -> serde_json::Value {
         .any(|k| k.starts_with("PUT raw/") && k.contains("pwn-cd"));
     let new_source_puts = source_count(&counts) - before_source_puts;
     let provider_calls = calls.load(SeqCst) - before;
-    provider.abort();
-    let _ = provider.await;
-    let provider_closed = tokio::net::TcpStream::connect(provider_addr).await.is_err();
+    let _ = provider_stop.send(());
+    let provider_joined = match tokio::time::timeout(Duration::from_secs(3), &mut provider).await {
+        Ok(Ok(())) => true,
+        _ => {
+            provider.abort();
+            let _ = provider.await;
+            false
+        }
+    };
+    let provider_closed =
+        provider_joined && tokio::net::TcpStream::connect(provider_addr).await.is_err();
     let peer_addr = reqwest::Url::parse(&peer.endpoint)
         .unwrap()
         .socket_addrs(|| None)
@@ -471,6 +487,6 @@ pub async fn warning_case(case: WarningCase) -> serde_json::Value {
         "native_source_put":source_put,"new_native_source_puts":new_source_puts,
         "product_http_requests":0,"fcm_isolation":"empty registrations; endpoints closed loopback:9",
         "storage_listener_closed":storage_closed,
-        "baseline":"explicit prior quiet durable warning","provider_listener_closed":provider_closed,
+        "baseline":"explicit prior quiet durable warning","provider_listener_closed":provider_closed,"provider_graceful_joined":provider_joined,"provider_port":provider_addr.port(),
         "process_listener_failure_reported":result.is_err(),"bound":bound_ok,"families":families})
 }

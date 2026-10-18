@@ -4028,3 +4028,21 @@ liveness. See [spec](../../specs/issue-2819-writer-liveness.md),
 [design](diagrams/server2-runtime-services.html) and
 [selected evidence](../evidence/tasks/issue-2819-writer-liveness/verification.md).
 No main integration, full E3/recovery/shadow or production qualification is claimed.
+
+
+### Warning delivery supervisor slot (E3b)
+
+The process-owned delivery supervisor tracks its warning poll by the actual Tokio task ID
+inside the same JoinSet. Normal and failed join identities release only the matching
+warning slot. Other job failures leave that slot reserved. A warning panic remains an
+incomplete drain, while later regular polling resumes if the supervisor is accepting work.
+The five-second interval, missed-tick policy, stop-first admission, minute guards, one-shot
+claims and no automatic retry of failed/unknown sends are unchanged. No second monitor or
+persistent state is introduced. C5 source acquisition lease ownership is separate.
+
+[E3b verification](../evidence/tasks/issue-2819-warning-poll-supervision/verification.md)
+covers the bounded supervisor correction and owned fixture retirement. It does not add a
+readiness endpoint or qualify S3/credential-source health, a production recovery bundle,
+shadow or cutover. The [runtime-services diagram](diagrams/server2-runtime-services.html)
+retains process/writer/storage ownership; its final source pin is bound to the implemented
+code before PR review, not to an uncommitted future design.

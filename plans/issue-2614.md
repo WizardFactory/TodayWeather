@@ -639,3 +639,14 @@ HTTP storage errors. See [intent](../intent/issue-2819-writer-liveness.md),
 [evidence](../docs/evidence/tasks/issue-2819-writer-liveness/verification.md).
 Local verification/review/CI is in progress. Full E3 readiness endpoint/S3/credential-source
 health and remaining #2819/#2704/#2705 gates stay open; no merge or production authority.
+
+
+### #2819 E3b warning delivery scheduling
+
+The bounded [E3b plan](issue-2819-warning-poll-supervision.md) continues the unmerged E3a
+writer-availability parent. The actual warning JoinSet task ID replaces the independent
+boolean so a failed warning job can release its slot without letting another job failure
+release live warning work. Existing claim/send/drain policy stays. The selected source,
+owned peer/real-time evidence and final diagram precede independent review and exact
+parent/current CI at pre-merge only. This record does not close full E3, #2819, #2704 or
+#2705, or authorize merge, cloud actions, live provider/device sends, shadow or cutover.
