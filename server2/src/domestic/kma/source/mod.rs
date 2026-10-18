@@ -21,7 +21,7 @@
 //!
 //! S15b-4a acquires missing forecast inputs at request time ([`fetch`]): the latest grid, RSS and
 //! mid publications (waiting at most 3 s), legacy's grid backfill in one owned pass per cell, the
-//! forecast-zone list once per process and the 3-minute warning cycle. A missing input is no
+//! forecast-zone list until one successful process refresh and the 3-minute warning cycle. A missing input is no
 //! longer a forward reason: the snapshot answers what is stored, as legacy answers absent data.
 pub mod air_forecast;
 pub mod air_input;
@@ -176,8 +176,8 @@ pub struct S3Source<T> {
     attempts: Arc<Attempts>,
     /// B3 latest Short slots; generic retries and historical backfill stay independent.
     latest_short: Arc<late::LatestShort>,
-    /// The forecast-zone list was requested by this process (legacy fetches it once at start).
-    zones_requested: std::sync::atomic::AtomicBool,
+    /// A complete readable forecast-zone list was published by this process refresh.
+    zones_requested: Arc<std::sync::atomic::AtomicBool>,
     /// A warning cycle is running (cycles never overlap, as legacy's timer runs one at a time).
     warning_running: Arc<std::sync::atomic::AtomicBool>,
 }
@@ -283,7 +283,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .expect("static backfill pass bounds"),
             attempts: Arc::new(Attempts::default()),
             latest_short: Arc::new(late::LatestShort::default()),
-            zones_requested: std::sync::atomic::AtomicBool::new(false),
+            zones_requested: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             warning_running: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         })
     }
@@ -367,9 +367,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// omits stay, as legacy `$set` keeps them). Memory applies newer acquisitions every
     /// 10 minutes and refolds everything daily.
     pub async fn zones(&self, now: f64, deadline: Instant) -> Result<Arc<Zones>, String> {
-        // Legacy fetches the list once at process start: one owned refresh per process (marked
-        // when it starts), which no request waits for. A published list replaces the memory, so
-        // the next request folds it.
+        // One successful process refresh, without making the request wait. Failed attempts
+        // remain demand-retryable under the existing five-minute admission; only a complete
+        // readable published list invalidates memory and ends this process refresh.
         if let Some(acquire) = self.forecast.clone()
             && !self
                 .zones_requested
@@ -377,7 +377,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         {
             let request = fetch::ForecastRequest::Zones;
             let owned_for = request.owned_for();
-            let requested = &self.zones_requested;
+            let requested = self.zones_requested.clone();
+            let attempts = self.attempts.clone();
             let cache = self.zones.clone();
             let _ = self
                 .owned
@@ -386,12 +387,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     Instant::now(),
                     owned_for,
                     move |_| {
-                        let fresh = !requested.swap(true, std::sync::atomic::Ordering::SeqCst);
+                        let fresh = !requested.load(std::sync::atomic::Ordering::SeqCst)
+                            && attempts.claim("forecast-zones", LATEST_RETRY);
                         async move {
                             if fresh {
                                 let _ = crate::observability::spawn(async move {
-                                    if let Ok(Some(_)) = acquire.acquire(request).await {
-                                        cache.lock().await.take();
+                                    if let Ok(Some(records)) = acquire.acquire(request).await
+                                        && let Some(fetched) = fetched_of(&records)
+                                        && complete_list(&fetched.page_refs()).is_some()
+                                    {
+                                        let mut memory = cache.lock().await;
+                                        memory.take();
+                                        requested.store(true, std::sync::atomic::Ordering::SeqCst);
                                     }
                                 })
                                 .await;
@@ -1917,3 +1924,6 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod zone_retry_tests;

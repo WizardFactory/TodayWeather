@@ -200,3 +200,32 @@ latest policy. This does not qualify historical publication, all API coverage,
 production quotas, rollback, live shadow or capacity. No credentials, environment
 runtime configuration, live providers or push sends are used. Keep those gates
 separate, including the existing #2819 D2 whole-target KMA timing failure.
+
+## D1 forecast-zone failure recovery
+
+From `server2/`, with Python 3 and the pinned Rust toolchain/dependencies:
+
+```sh
+cargo run --locked --offline --example zone_retry_smoke
+```
+
+This local scenario takes slightly more than **five real minutes**. It starts
+owned loopback HTTP and S3-compatible peers, then composes the actual KMA source,
+owned flights, domestic zone acquirer, S08 funding and catalog publication.
+The first acquisition receives two 503 responses. A request after the three-second
+completed-flight retention still must not start another acquisition. After the
+five-minute monotonic memo expires, new demand retries, publishes the complete
+recorded zone fixture and reads three zone documents from S3, including one
+Seoul name match. A later request must not add HTTP.
+
+Expected report: two logical acquisitions, three actual/funded HTTP attempts,
+three logical/authority units using synthetic one-unit blocks, readable S3
+recovery, and both peers stopped/reaped before PASS. The fixed publication date
+is synthetic; the retry wait uses real monotonic time. Unit controls separately
+force test-only memo expiry for None, panic and unreadable results and prove
+success remains latched after expiry. No production retry override is added.
+
+The adapter calls the real acquisition/publication components with a synthetic
+key and volatile budget; it does not exercise runtime environment-key discovery
+or a real provider. No live calls, credentials, push sends, deployment, production
+quota, global readiness or whole-service rollback/shadow qualification is claimed.

@@ -500,3 +500,14 @@ integrated master release. It introduces no collection timer, operating quota
 values, global durable cap or production authority. Exact tests, owned functional
 execution, independent review and current CI remain task gates. #2819/#2704/#2705,
 D2 capacity and seven-day shadow remain open.
+
+#### #2819 D1: forecast-zone retry verification
+
+[Task plan](issue-2819-zone-retry.md) and
+[contract](../specs/issue-2819-zone-retry.md) retain one successful process refresh
+while allowing failed request-triggered attempts after the existing five-minute
+admission. The original owned key/lifetime, immediate waiter, last-good S3 memory
+and periodic fold remain. This task stacks on B3, not an integrated master release.
+Focused tests, actual owned HTTP/S3 recovery across a real memo expiry, independent
+review and exact CI are required. No timer, operating allowance, merge or live
+action is authorized. D2 capacity and #2819/#2704/#2705/shadow remain open.
