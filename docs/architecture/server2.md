@@ -3988,3 +3988,10 @@ See the [proposed ownership flow](diagrams/server2-warning-acquisition.html),
 and [selected evidence](../evidence/tasks/issue-2819-warning-acquisition/verification.md).
 This change is a child of unmerged C4 PR #2828. It does not qualify integrated main,
 an eligible full recovery bundle, live providers, EC2 capacity or seven-day shadow.
+
+
+### C6 checked push account construction (#2819)
+
+The current shared factory validates local Firebase accounts immediately after native-family parsing, before shared S3/native construction or the registration writer. `Fcm::for_push` requires active TodayWeather and checks any configured nonempty TodayAir account; absent retired TodayAir is allowed. Empty active settings, unreadable files, malformed/missing fields or invalid PKCS8 RSA return InvalidConfiguration. Disabled push reads no Firebase settings/files.
+
+Parsed accounts are cached before first send. This makes no OAuth/FCM request and proves no remote authorization/revocation or later filesystem health; rotation requires restart. The existing low-level lazy FCM API and token/send/outcome/one-shot rules are unchanged. This supersedes the historical S20a no-account startup statement for the current push-enabled factory. See the [operator contract](../operations/server2-runtime-services.md), [design](diagrams/server2-runtime-services.html), [C6 spec](../../specs/issue-2819-push-credentials.md) and [selected evidence](../evidence/tasks/issue-2819-push-credentials/verification.md). No production activation or full recovery/shadow qualification follows.

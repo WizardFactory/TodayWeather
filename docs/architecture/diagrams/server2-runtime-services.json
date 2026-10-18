@@ -2,12 +2,12 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Shared warning API and delivery lifecycle",
+    "title": "Shared services: checked push startup and lifecycle",
     "output": "docs/architecture/diagrams/server2-runtime-services.html",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "18f69c4123d8aa2cf9dd3021a866a3d8f12ef053"
+      "revision": "ba56cd84b5546c92f2d8f528b7c9480905ec07f4"
     }
   },
   "components": [
@@ -15,7 +15,7 @@
       "id": "process",
       "type": "backend",
       "label": "Process + factory",
-      "sublabel": "HTTP-only 5s; push-owned drain 34s",
+      "sublabel": "Check accounts before S3 / writer",
       "pos": [
         440,
         245
@@ -26,14 +26,14 @@
       ],
       "sources": [
         {
-          "path": "server2/src/process.rs",
-          "line": 112,
-          "end_line": 161
+          "path": "server2/src/runtime_services.rs",
+          "line": 66,
+          "end_line": 85
         },
         {
           "path": "server2/src/process.rs",
-          "line": 183,
-          "end_line": 239
+          "line": 105,
+          "end_line": 155
         }
       ]
     },
@@ -82,8 +82,8 @@
     {
       "id": "fcm",
       "type": "backend",
-      "label": "OAuth + FCM client",
-      "sublabel": "Lazy product files; final stop check",
+      "label": "Parsed accounts + OAuth",
+      "sublabel": "TW required; configured TA checked",
       "pos": [
         1300,
         245
@@ -95,13 +95,13 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/fcm.rs",
-          "line": 164,
-          "end_line": 242
+          "line": 197,
+          "end_line": 220
         },
         {
           "path": "server2/src/push/deliver/fcm.rs",
-          "line": 287,
-          "end_line": 327
+          "line": 299,
+          "end_line": 352
         }
       ]
     },
@@ -121,8 +121,8 @@
       "sources": [
         {
           "path": "server2/src/runtime_services.rs",
-          "line": 129,
-          "end_line": 174
+          "line": 141,
+          "end_line": 183
         },
         {
           "path": "server2/src/push/deliver/native_fetch.rs",
@@ -147,8 +147,8 @@
       "sources": [
         {
           "path": "server2/src/runtime_services.rs",
-          "line": 64,
-          "end_line": 80
+          "line": 80,
+          "end_line": 96
         },
         {
           "path": "server2/src/push/deliver/ledger.rs",
@@ -199,13 +199,13 @@
       "sources": [
         {
           "path": "server2/src/runtime_services.rs",
-          "line": 81,
-          "end_line": 96
+          "line": 92,
+          "end_line": 107
         },
         {
           "path": "server2/src/runtime_services.rs",
-          "line": 213,
-          "end_line": 225
+          "line": 225,
+          "end_line": 235
         },
         {
           "path": "server2/src/warnings/service.rs",
@@ -220,7 +220,7 @@
       "id": "process-writer",
       "from": "process",
       "to": "writer",
-      "label": "quiesce + drain"
+      "label": "validate first; then restore"
     },
     {
       "id": "process-jobs",
@@ -286,8 +286,8 @@
       "dot": "cyan",
       "title": "Scheduling and admission",
       "items": [
-        "Ordinary push selection; no startup weather precollection.",
-        "Observe UTC minutes; reject stale queued ticks, never catch up.",
+        "Push startup parses active TW and configured TA accounts before state work.",
+        "No OAuth / FCM probe at startup; low-level sends retain their error mapping.",
         "After OAuth: current subscription/time/zones and final stop gate."
       ]
     },
@@ -304,9 +304,18 @@
       "dot": "amber",
       "title": "Public warning boundary",
       "items": [
-        "Explicit kma selects v000903 special before the direct KMA mount.",
-        "Internal push / older-KMA warning storage does not expose this API.",
-        "Existing S12 service and bounded store; no new acquisition or send loop."
+        "Explicit kma selects v000903 special before direct KMA dispatch.",
+        "Internal push / older KMA storage does not expose this public API.",
+        "C5 source-owned acquisition is separate; initial delivery baseline stays silent."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Local validation boundary",
+      "items": [
+        "Absent retired TodayAir is allowed; active TodayWeather is mandatory.",
+        "Parsed accounts stay cached; restart for rotation, no remote-auth proof.",
+        "Disabled push reads no Firebase account settings or files."
       ]
     }
   ]

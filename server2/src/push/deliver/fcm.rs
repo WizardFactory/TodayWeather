@@ -190,6 +190,31 @@ impl Fcm {
         })
     }
 
+    /// Process startup requires the active TodayWeather account. TodayAir is retired;
+    /// validate it only when explicitly configured. Parse/cache locally before any
+    /// registration writer or worker starts, without an OAuth or FCM probe.
+    /// Account rotation requires a process restart, as after the first cached send.
+    pub fn for_push(
+        var: &dyn Fn(&str) -> Option<String>,
+        endpoints: Endpoints,
+    ) -> Result<Self, String> {
+        let mut fcm = Self::from_vars(var, endpoints)?;
+        for product in [Product::TodayWeather, Product::TodayAir] {
+            let Some(path) = fcm.accounts.get(&product).and_then(Option::as_ref) else {
+                if product == Product::TodayWeather {
+                    return Err(format!("{} missing", product.setting()));
+                }
+                continue;
+            };
+            let bytes =
+                std::fs::read(path).map_err(|_| format!("{} unreadable", product.setting()))?;
+            let account =
+                Account::parse(&bytes).map_err(|_| format!("{} invalid", product.setting()))?;
+            fcm.loaded.get_mut().insert(product, Arc::new(account));
+        }
+        Ok(fcm)
+    }
+
     /// Close final POST admission, including sends currently awaiting weather/OAuth/guards.
     pub fn quiesce(&self) {
         self.stopping

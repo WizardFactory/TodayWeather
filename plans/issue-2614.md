@@ -610,3 +610,8 @@ Current local implementation/verification is in progress; no C5 current-review/C
 main integration, full recovery bundle or seven-day shadow qualification is claimed.
 C1 and B1 remain separate unmerged branches. C6 and remaining #2819/#2704/#2705
 work remain open; no live notification or deployment authority is added.
+
+
+### C6 push startup account validation (#2819)
+
+C6 is an isolated child of unmerged C5 PR #2829 (ba56cd84), whose source/records reviews PASS while exact CI remains pending. The shared factory validates/caches active TodayWeather and any configured retired TodayAir account before state work; disabled push reads no account configuration and startup performs no OAuth/FCM request. See [intent](../intent/issue-2819-push-credentials.md), [plan](issue-2819-push-credentials.md), [spec](../specs/issue-2819-push-credentials.md) and [selected evidence](../docs/evidence/tasks/issue-2819-push-credentials/verification.md). Current C6 local verification/review/CI is in progress; no merge, main integration, eligible full recovery bundle, shadow or global #2819/#2704/#2705 completion is claimed.

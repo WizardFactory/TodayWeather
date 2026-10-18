@@ -472,3 +472,12 @@ Keep original failed invocations and their classifications with task evidence.
 Do not use this rehearsal as permission for deployment, provider calls, device sends,
 traffic mirroring or cutover. C6 credentials/readiness and the other #2819 findings,
 #2704/#2705, the eligible recovery bundle and operational evidence remain separate.
+
+
+## C6 push startup credential rehearsal (#2819)
+
+With push enabled, the shared factory now requires a locally valid TodayWeather service-account file before any state construction/restore/writer. A configured TodayAir source is also checked; absent retired TodayAir is allowed. Disabled push does not read account settings. No OAuth or FCM probe occurs. Local validation cannot establish remote authorization; retain separate deployment readiness checks. See the [runtime operator contract](server2-runtime-services.md).
+
+Build the runtime-services integration executable using the scoped task toolchain, retain it outside disposable Cargo output and record its SHA-256. Run `python3 server2/tools/push_credentials_smoke.py --binary RETAINED_RUNTIME_SERVICES --sha256 SHA256 --out NEW_IGNORED_DIRECTORY_OUTSIDE_SERVER2`. It drives the real shared process through an ignored stdin-only test entrypoint, with owned loopback storage and synthetic public RFC7515 accounts. Invalid cases must exit nonzero before storage/listeners; valid cases bind health/public+private listeners then TERM/join and close every owned port. This is not the production main/dotenv path, a portable release bundle, remote Firebase authorization, live notification delivery or EC2 readiness. Do not point it at operational configuration.
+
+The [selected C6 evidence](../evidence/tasks/issue-2819-push-credentials/verification.md) separates intended Red, focused tests, full affected targets and this additional process smoke. Existing C5 warning/lifecycle, no automatic retries and claims remain unchanged. Current parent/current review and CI remain pre-merge requirements; no merge or issue closure.

@@ -63,6 +63,16 @@ impl RuntimeServices {
     ) -> Result<Self, GatewayError> {
         let base = var("SERVER2_GATEWAY_LEGACY_URL");
         let families = NativeFamilies::from_vars(var)?;
+        // Validate/cache accounts before constructing storage or starting the writer.
+        // Disabled push never reads Firebase settings or files. No OAuth/FCM probe.
+        let prepared_fcm = if families.push {
+            Some(Arc::new(
+                crate::push::deliver::Fcm::for_push(var, endpoints)
+                    .map_err(|_| GatewayError::InvalidConfiguration)?,
+            ))
+        } else {
+            None
+        };
         let s3 = if families.any() {
             Some(gateway::runtime::shared_s3(var, builtins)?)
         } else {
@@ -134,10 +144,7 @@ impl RuntimeServices {
             use crate::push::deliver::{self, native_fetch::NativeFetch, supervisor::Workers};
             let transport = Arc::new(s3.clone().ok_or(GatewayError::InvalidConfiguration)?);
             let fetch = Arc::new(native_fetch.clone());
-            let fcm = Arc::new(
-                deliver::Fcm::from_vars(var, endpoints)
-                    .map_err(|_| GatewayError::InvalidConfiguration)?,
-            );
+            let fcm = prepared_fcm.ok_or(GatewayError::InvalidConfiguration)?;
             let diagnostics: Arc<dyn deliver::Diagnostics> = Arc::new(deliver::StderrDiagnostics);
             let servers = NativeFetch::servers();
             Some(Arc::new(Workers {
