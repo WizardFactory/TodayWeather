@@ -452,10 +452,15 @@ push delivery.
 For normal operation the driver starts only with push after both binds. It follows
 the existing 180-second admission memo rather than an independently phased interval.
 On stop, delivery/FCM quiesce precedes the warning admission fence and HTTP drain.
-Publication may finish during grace; no new send is authorized. Preserve the current
+Publication may finish during grace; no new send is authorized. On restart, the
+existing first delivery poll can treat that new event as a silent baseline, so
+that warning may never be notified. This existing initial-baseline gap is unchanged
+by C5. Preserve the current
 five-second HTTP-only and 34-second push drain bounds. A warning cancellation request
 is not a successful drain; an incomplete warning drain makes the overall process
-result Unknown even when all three existing joined fields are true.
+result Unknown even when all three existing joined fields are true. The current
+record does not separately identify the unfinished warning task/step; that diagnosis
+gap remains explicit, with no additional event or schema field.
 
 The tests additionally cover inert construction, failed second bind, push-disabled
 startup, bounded waiters, unpolled/cancelled owners, synchronous and asynchronous

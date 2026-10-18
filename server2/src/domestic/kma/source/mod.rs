@@ -304,6 +304,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         self
     }
     /// S15b-4: request-time grid, RSS, mid, forecast-zone and warning acquisitions.
+    /// Set the shared pool, Attempts, clock and warning service before this call:
+    /// the warning capability captures those handles. Production constructs it last;
+    /// later private zone-only test pool overrides are not warning-admission proofs.
     pub fn with_forecast(mut self, acquire: Option<Arc<dyn fetch::ForecastAcquire>>) -> Self {
         self.warning_cycles = acquire.as_ref().map(|acquire| {
             Arc::new(warning_cycle::WarningCycles::new(

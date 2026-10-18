@@ -148,36 +148,27 @@ async fn fixture_http_reuse_is_case_specific_and_default_is_unchanged() {
     }
 }
 
-/// Real process (including bind/start/stop), an owned provider and native S3 publication.
-/// A prior quiet durable baseline is explicit; this does not test first-poll push delivery.
-pub async fn warning_acquisition_without_http() -> serde_json::Value {
-    warning_process_case("push", false).await
+/// Mutually exclusive owned rehearsal scenarios, not production modes/settings.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum WarningCase {
+    NoHttp,
+    Shared,
+    HeldStop,
+    Recurring,
+    HttpOnly,
+    FailedBind,
 }
-/// Test-only factory inputs; production has no verification or periodic-work mode flags.
-pub async fn warning_process_case(families: &str, bind_failure: bool) -> serde_json::Value {
-    warning_process_case_inner(families, bind_failure, false, false, false).await
-}
-pub async fn warning_shared_owner_race() -> serde_json::Value {
-    warning_process_case_inner("push", false, true, false, false).await
-}
-pub async fn warning_stop_held_collection() -> serde_json::Value {
-    warning_process_case_inner("push", false, false, true, false).await
-}
-/// Standalone rehearsal only: uses the normal production180s memo, no injected timer period.
-#[allow(
-    dead_code,
-    reason = "The optimized standalone example exercises the normal180s recurrence"
-)]
-pub async fn warning_recurring_acquisition() -> serde_json::Value {
-    warning_process_case_inner("push", false, false, false, true).await
-}
-async fn warning_process_case_inner(
-    families: &str,
-    bind_failure: bool,
-    race: bool,
-    stop_held: bool,
-    repeat: bool,
-) -> serde_json::Value {
+/// Real bind/start/stop plus owned provider/native S3. The quiet prior baseline is explicit.
+pub async fn warning_case(case: WarningCase) -> serde_json::Value {
+    let families = if case == WarningCase::HttpOnly {
+        "kma"
+    } else {
+        "push"
+    };
+    let bind_failure = case == WarningCase::FailedBind;
+    let race = case == WarningCase::Shared;
+    let stop_held = case == WarningCase::HeldStop;
+    let repeat = case == WarningCase::Recurring;
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering::SeqCst};
     let peer = Peer::new();
     let changed = Arc::new(AtomicUsize::new(1));

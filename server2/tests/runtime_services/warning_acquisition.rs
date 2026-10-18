@@ -1,6 +1,8 @@
+use super::common::{WarningCase, warning_case};
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn bound_push_process_publishes_changed_warning_without_product_http() {
-    let report = super::common::warning_acquisition_without_http().await;
+    let report = warning_case(WarningCase::NoHttp).await;
     eprintln!("C5_NO_HTTP {report}");
     assert!(report["provider_listener_closed"].as_bool().unwrap());
     assert!(
@@ -20,7 +22,7 @@ async fn bound_push_process_publishes_changed_warning_without_product_http() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn http_only_source_does_not_start_periodic_acquisition() {
-    let report = super::common::warning_process_case("kma", false).await;
+    let report = warning_case(WarningCase::HttpOnly).await;
     assert_eq!(report["bound"], true);
     assert_eq!(report["provider_calls_after_bind"], 0);
     assert_eq!(report["feed_events"], 0);
@@ -30,7 +32,7 @@ async fn http_only_source_does_not_start_periodic_acquisition() {
 }
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn second_bind_failure_never_starts_warning_acquisition() {
-    let report = super::common::warning_process_case("push", true).await;
+    let report = warning_case(WarningCase::FailedBind).await;
     assert_eq!(report["bound"], false);
     assert_eq!(report["provider_calls_after_bind"], 0);
     assert_eq!(report["feed_events"], 0);
@@ -41,7 +43,7 @@ async fn second_bind_failure_never_starts_warning_acquisition() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn request_joiners_share_the_periodic_sources_actual_owned_collection() {
-    let report = super::common::warning_shared_owner_race().await;
+    let report = warning_case(WarningCase::Shared).await;
     eprintln!("C5_SHARED {report}");
     assert_eq!(
         report["provider_calls_after_bind"], report["baseline_provider_calls"],
@@ -60,7 +62,7 @@ async fn request_joiners_share_the_periodic_sources_actual_owned_collection() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn listener_stop_drains_the_actual_held_provider_before_process_exit() {
-    let report = super::common::warning_stop_held_collection().await;
+    let report = warning_case(WarningCase::HeldStop).await;
     eprintln!("C5_STOP {report}");
     assert_eq!(report["drain_waited_for_provider"], true);
     assert_eq!(

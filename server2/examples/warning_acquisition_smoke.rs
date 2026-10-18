@@ -4,20 +4,20 @@
 mod common;
 #[tokio::main]
 async fn main() {
-    let no_http = common::warning_acquisition_without_http().await;
+    let no_http = common::warning_case(common::WarningCase::NoHttp).await;
     assert_eq!(no_http["feed_events"], 1);
     assert!(no_http["provider_calls_after_bind"].as_u64().unwrap() > 0);
     assert!(no_http["new_native_source_puts"].as_u64().unwrap() > 0);
-    let shared = common::warning_shared_owner_race().await;
+    let shared = common::warning_case(common::WarningCase::Shared).await;
     assert_eq!(shared["feed_events"], 1);
     assert_eq!(
         shared["provider_calls_after_bind"],
         shared["baseline_provider_calls"]
     );
-    let stop = common::warning_stop_held_collection().await;
+    let stop = common::warning_case(common::WarningCase::HeldStop).await;
     assert_eq!(stop["drain_waited_for_provider"], true);
     assert_eq!(stop["feed_events"], 1);
-    let recurring = common::warning_recurring_acquisition().await;
+    let recurring = common::warning_case(common::WarningCase::Recurring).await;
     assert_eq!(recurring["feed_events"], 2);
     let ms = recurring["cadence_ms"].as_u64().unwrap();
     assert!(

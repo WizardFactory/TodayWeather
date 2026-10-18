@@ -3978,6 +3978,9 @@ limits are unchanged; no new common-cache generation fence is claimed. The initi
 feed baseline and first delivery poll remain silent. The owned no-HTTP rehearsal
 therefore records a prior quiet durable baseline and a subsequent new publication;
 it proves acquisition and feed persistence, not initial notification delivery.
+In particular, a grace-completed publication may become the next process's silent
+baseline and never be notified. The existing generic Unknown drain record also
+cannot identify the unfinished warning task/step by itself.
 
 See the [proposed ownership flow](diagrams/server2-warning-acquisition.html),
 [editable source](diagrams/server2-warning-acquisition.sequence.json),
