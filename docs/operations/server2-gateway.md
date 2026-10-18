@@ -24,6 +24,12 @@ The gateway test target covers pinned S02 wire records, the runtime configuratio
 
 ## Process configuration
 
+Complete native coverage includes `push`. Selecting it starts supervised delivery and
+warning acquisition after both listeners bind. Do not start main with real credentials
+or endpoints during isolated verification; use the smoke's own dummy environment and
+owned peers. Copying private legacy settings is operational preparation, not a local
+verification command. See the [runtime-services contract](server2-runtime-services.md).
+
 The binary reads the process environment and then `.env` in its working directory (start it from `server2/`; copy the legacy `server/.env` to `server2/.env`), with the legacy dotenv rules: the last duplicate wins and a process variable wins over the file. A complete environment-only deployment may omit `.env`; missing mandatory settings still fail startup. It never opens `server/.env` or imports legacy runtime assets. [server2/.env.example](../../server2/.env.example) lists every variable. A family that is not listed in `SERVER2_NATIVE_FAMILIES` reads none of its native settings. Every invalid or missing required setting stops startup with `invalid gateway configuration` before a listener binds.
 
 | Variable | Behavior |
@@ -71,9 +77,9 @@ For process rollback, keep the existing explicit legacy origin and restart witho
 
 These instructions cover local verification and configuration. They do not authorize deployment, production traffic changes, AWS resource actions or live provider calls.
 
-## Recorded local verification
+## Historical local verification (pre-#2819)
 
-The 2026-10-15 10:18:13 UTC release-process run of the S10f change passed against task-owned
+The historical 2026-10-15 10:18:13 UTC release-process run of the S10f change passed against task-owned
 loopback peers with the S10e/S10f setting names in an empty working directory (static test keys;
 the instance-role path is covered by tests against a loopback IMDS double): 16 same-key cold
 callers shared one Kakao request; 16 distinct keys caused 16 requests; a non-ko locale lookup at a
@@ -86,5 +92,8 @@ second legacy phase added none. The release `server2` binary with native geocode
 passed. The deadline `501` under the built-in lifetime is exercised by the
 [S19 rollback rehearsal](server2-smoke-shadow.md#cache-aware-rollback-rehearsal). The
 [actual terminal capture](../evidence/tasks/server2-gateway/usage.png) is rendered from the
-execution output. The companion PDF is generated from this editable guide and visually checked
-page by page.
+historical execution output. The [companion PDF](server2-gateway.pdf) records the earlier
+guide and predates the #2819 startup guard. It was not regenerated for this correction
+and is not current startup proof or a copy of the current editable guide. The capture remains
+historical evidence only. Use the [current E1/E2 evidence](../evidence/tasks/issue-2819-startup-coverage/verification.md)
+for the complete-configuration checks; this correction claims no new PDF or capture run.

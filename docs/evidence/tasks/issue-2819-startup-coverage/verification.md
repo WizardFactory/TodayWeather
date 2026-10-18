@@ -75,3 +75,12 @@ as a health-only foundation. Exact paths were declared before those edits. This 
 changes documentation/declaration only; executable, tests, tools, fixtures and diagram
 bytes are unchanged. Existing foundation screenshots/PDF remain labelled historical,
 not new verification. Current independent documentation confirmation and CI remain gates.
+
+Review2 resolved the original startup-statement finding, then required explicit push
+activation/provider-free-smoke boundaries and historical labels in the two linked
+manuals (E1-CLAUDE-002/003). Those corrections stay within already declared paths.
+Old provider-free wording is now limited to the isolated smoke; ordinary push selection
+starts supervised work. The old foundation/gateway capture/PDF sections explicitly
+predate#2819 and are not current startup proof. No PDF, screenshot or runtime check
+was rerun for this documentation-only change. Current independent confirmation remains
+required; prior broad historical-label wording is superseded by these specific labels.
