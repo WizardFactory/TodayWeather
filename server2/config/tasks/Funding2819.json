@@ -1,7 +1,7 @@
 {
   "task": "Funding2819",
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
-  "scope": "B1 selected-provider/key funding immediately before geocoder HTTP attempts. Preserve durable upfront admission, cache/shared-flight behavior, provider order and deadlines; no production quota measurement, funding allowance invention, data.go.kr or publication-policy change. Independent runtime change from C1 PR2820; no merge or production authority. Reviewer001 selected before tool edits: align existing GW-BUDGET oracle with selected-key funding; no new runtime mode.",
+  "scope": "B1 selected-provider/key funding immediately before geocoder HTTP attempts. Preserve durable upfront admission, cache/shared-flight behavior, provider order and deadlines; no production quota measurement, funding allowance invention, data.go.kr or publication-policy change. Independent runtime change from C1 PR2820; no merge or production authority. Reviewer001 selected before tool edits: align existing GW-BUDGET oracle with selected-key funding; no new runtime mode. Supporting CI-INVENTORY-001: validate exact established native 502 or successful response for unavailable direct KMA inventory inputs; no runtime changes.",
   "server2_paths": [
     "server2/config/tasks/Funding2819.json",
     "server2/src/geocode/mod.rs",
@@ -11,7 +11,8 @@
     "server2/tests/gateway/runtime.rs",
     "server2/examples/geocode_funding_smoke.rs",
     "server2/Cargo.toml",
-    "server2/tools/shadow/gateway_family.py"
+    "server2/tools/shadow/gateway_family.py",
+    "server2/tests/runtime_services/inventory.rs"
   ],
   "outside": [
     {

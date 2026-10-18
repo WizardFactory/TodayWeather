@@ -127,3 +127,26 @@ SIGTERM drain). The existing one-key quota and no-provider-work checks remain.
 These are owned loopback processes with the same retained release executable,
 not a live mirror, provider call, production Spot interruption or native cutover
 recovery rehearsal.
+
+## Shared inventory oracle correction (CI-INVENTORY-001)
+
+The current C1 and B1 Linux CI runs both reached the combined native factory
+inventory and returned the established direct KMA dependency-error response where
+the test required200. The setup deliberately has no weather history, real time
+and unreachable recorded-provider roots. `api::native` already answers dependency
+failure or its3second deadline with502 `Bad Gateway\n`; the existing public-route
+regression independently verifies that response and zero legacy forwarding.
+
+For only the four direct KMA/town read groups, the inventory now accepts the
+successful native response or that exact502, including body, length, ETag,
+Express/CORS headers and absence of cache-control/nosniff. Every successful-body
+assertion and acknowledged-state restore check remains. It does not accept404,
+arbitrary5xx or empty responses. This corrects a route/error-contract test; it does
+not establish weather availability, cold latency or fix D2. No production timeout,
+peer mode, test-thread policy or runtime behavior changed. Original failed CI
+and bounded diagnostic evidence remain retained; final current CI is still required.
+
+Renewed local verification of the corrected inventory: runtime-services31passed/1ignored,
+existing forced direct-KMA native502 regression1passed, format and all-target
+clippy pass. The unchanged product sources, examples and smoke tools retain prior
+functional evidence by exact hash; no new product execution is claimed.
