@@ -3,6 +3,7 @@
 //! planned against the current state, and a request that changes state is answered only after
 //! its journal entry is durable. A request that cannot be made durable in time receives the
 //! legacy store-error answer of its route, computed without touching the state.
+use super::attempt;
 use super::durable::{Commit, Counters, Durable, DurableConfig};
 use super::express::{self, RAW_LIMIT};
 use super::routes::{self, Body, FailedBackend, Reply, Route, TxnBackend};
@@ -160,6 +161,14 @@ enum Job {
         op: InternalOp,
         reply: oneshot::Sender<bool>,
     },
+    AlertAttempt {
+        input: attempt::Input,
+        reply: oneshot::Sender<attempt::Committed>,
+    },
+    AlertRestore {
+        receipt: attempt::Receipt,
+        reply: oneshot::Sender<attempt::Restored>,
+    },
 }
 
 struct Command {
@@ -200,6 +209,7 @@ impl PushService {
             ids,
             ready: ready.clone(),
             config: config.clone(),
+            attempts: attempt::Tracker::default(),
         };
         let (stop, stopped) = watch::channel(false);
         let writer = crate::observability::spawn(writer.run(rx, stopped));
@@ -286,6 +296,54 @@ impl PushService {
 
     /// Apply one worker state change through the writer; `true` once it is durable (or there
     /// was nothing to change).
+    /// Unlike the legacy bool API, both queue admission and answer share the writer deadline.
+    async fn owned_answer<R: Send + 'static>(
+        &self,
+        restore_time: Option<f64>,
+        job: impl FnOnce(oneshot::Sender<R>) -> Job,
+    ) -> Option<R> {
+        // Only an exact receipt-owned undo can use its known transaction time when the
+        // shared clock fails. That patch writes no new date; attempts and send guards
+        // still require a live clock. Queue and answer retain the monotonic deadline.
+        let now_ms = self
+            .clock
+            .now_ms()
+            .ok()
+            .map(|n| n as f64)
+            .or(restore_time)?;
+        let deadline = Instant::now() + self.config.wait;
+        let (reply, answer) = oneshot::channel();
+        let command = Command {
+            context: crate::observability::current().child(),
+            job: job(reply),
+            now_ms,
+            deadline,
+        };
+        tokio::time::timeout_at(deadline, self.tx.send(command))
+            .await
+            .ok()?
+            .ok()?;
+        tokio::time::timeout_at(deadline, answer).await.ok()?.ok()
+    }
+    pub(crate) async fn alert_attempt(&self, input: attempt::Input) -> attempt::Committed {
+        self.owned_answer(None, |reply| Job::AlertAttempt { input, reply })
+            .await
+            .unwrap_or(attempt::Committed::Uncertain)
+    }
+    pub(crate) async fn restore_alert_attempt(
+        &self,
+        receipt: attempt::Receipt,
+    ) -> attempt::Restored {
+        if !receipt.claim_restore() {
+            return attempt::Restored::Superseded;
+        }
+        self.owned_answer(Some(receipt.transaction_time()), |reply| {
+            Job::AlertRestore { receipt, reply }
+        })
+        .await
+        .unwrap_or(attempt::Restored::Uncertain)
+    }
+
     pub async fn internal(&self, op: InternalOp) -> bool {
         let Ok(now_ms) = self.clock.now_ms() else {
             return false;
@@ -349,15 +407,26 @@ impl PushService {
 enum Answer {
     Http(Reply),
     Internal(bool),
+    AlertAttempt(Option<attempt::Prepared>),
+    AlertRestore(attempt::Restored),
 }
 impl Job {
-    fn answer(self, answer: Answer) {
+    fn answer(self, answer: Answer, attempts: &mut attempt::Tracker) {
         match (self, answer) {
             (Job::Http { reply, .. }, Answer::Http(r)) => {
                 let _ = reply.send(r);
             }
             (Job::Internal { reply, .. }, Answer::Internal(ok)) => {
                 let _ = reply.send(ok);
+            }
+            (Job::AlertAttempt { reply, .. }, Answer::AlertAttempt(prepared)) => {
+                let answer = prepared.map_or(attempt::Committed::NotApplied, |p| {
+                    attempt::Committed::Owned(attempts.issue(p))
+                });
+                let _ = reply.send(answer);
+            }
+            (Job::AlertRestore { reply, .. }, Answer::AlertRestore(answer)) => {
+                let _ = reply.send(answer);
             }
             _ => (),
         }
@@ -370,6 +439,7 @@ struct Writer<T> {
     ids: Box<dyn OidSource>,
     ready: Arc<std::sync::atomic::AtomicBool>,
     config: PushConfig,
+    attempts: attempt::Tracker,
 }
 
 impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
@@ -387,6 +457,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
             {
                 match self.durable.restore().await {
                     Ok(state) => {
+                        self.attempts.revoke_all();
                         *self.state.write().unwrap_or_else(|e| e.into_inner()) = state;
                         self.ready.store(true, std::sync::atomic::Ordering::Release);
                     }
@@ -435,14 +506,20 @@ impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
         }
     }
 
-    fn apply(&self, entries: &[(u64, Vec<u8>)]) -> bool {
+    fn apply(&mut self, entries: &[(u64, Vec<u8>)]) -> bool {
         let mut state = self.state.write().unwrap_or_else(|e| e.into_inner());
-        entries
-            .iter()
-            .all(|(seq, body)| self.durable.apply_entry(&mut state, *seq, body).is_ok())
+        let attempts = &mut self.attempts;
+        entries.iter().all(|(seq, body)| {
+            self.durable
+                .apply_entry_observed(&mut state, *seq, body, |change, before| {
+                    attempts.observe(change, before)
+                })
+                .is_ok()
+        })
     }
 
     async fn process(&mut self, command: Command) {
+        self.attempts.prune();
         if Instant::now() + self.config.min_remaining > command.deadline {
             return;
         }
@@ -489,22 +566,30 @@ impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
                     Job::Internal { op, .. } => {
                         Answer::Internal(super::deliver::ops::plan(op, &mut txn))
                     }
+                    Job::AlertAttempt { input, .. } => {
+                        Answer::AlertAttempt(attempt::prepare(input, &mut txn))
+                    }
+                    Job::AlertRestore { receipt, .. } => {
+                        Answer::AlertRestore(self.attempts.restore(receipt, &mut txn))
+                    }
                 };
                 (reply, txn.changes(), txn.next_n(), state.seq + 1)
             };
             if changes.is_empty() {
-                command.job.answer(reply);
+                command.job.answer(reply, &mut self.attempts);
                 return;
             }
             match self.durable.commit(seq, &changes, next_n).await {
                 Commit::Committed => {
                     {
                         let mut state = self.state.write().unwrap_or_else(|e| e.into_inner());
-                        state.apply(&changes);
+                        state.apply_observed(&changes, |state, change| {
+                            self.attempts.observe(state, change)
+                        });
                         state.next_n = state.next_n.max(next_n);
                         state.seq = seq;
                     }
-                    command.job.answer(reply);
+                    command.job.answer(reply, &mut self.attempts);
                     self.maybe_snapshot().await;
                     return;
                 }
@@ -574,5 +659,110 @@ struct AbortWriter(tokio::task::JoinHandle<()>);
 impl Drop for AbortWriter {
     fn drop(&mut self) {
         self.0.abort();
+    }
+}
+
+#[cfg(test)]
+mod owned_queue_tests {
+    use super::*;
+    struct Fixed;
+    impl Clock for Fixed {
+        fn now_ms(&self) -> Result<i64, crate::budget::BudgetError> {
+            Ok(1_792_109_220_000)
+        }
+    }
+    #[tokio::test]
+    async fn typed_attempt_admission_expires_without_enqueuing_when_the_channel_is_full() {
+        let (tx, mut rx) = mpsc::channel(1);
+        let (stop, _stopped) = watch::channel(false);
+        let config = PushConfig {
+            wait: Duration::from_millis(50),
+            queue: 1,
+            ..PushConfig::default()
+        };
+        let service = PushService {
+            tx,
+            clock: Arc::new(Fixed),
+            config,
+            state: Arc::new(RwLock::new(State::default())),
+            ready: Arc::new(std::sync::atomic::AtomicBool::new(true)),
+            counters: Arc::new(Counters::default()),
+            accepting: std::sync::atomic::AtomicBool::new(true),
+            stop,
+            writer: std::sync::Mutex::new(None),
+        };
+        let (reply, _answer) = oneshot::channel();
+        assert!(
+            service
+                .tx
+                .try_send(Command {
+                    context: crate::observability::current().child(),
+                    job: Job::Internal {
+                        op: InternalOp::RemoveDuplicateAlerts,
+                        reply
+                    },
+                    now_ms: 0.,
+                    deadline: Instant::now() + Duration::from_secs(1)
+                })
+                .is_ok()
+        );
+        let mut selected = crate::world::js::Obj::new();
+        selected.set(
+            "fcmToken",
+            crate::world::js::Val::Str("synthetic-queue-token".into()),
+        );
+        let mut prior = crate::world::js::Obj::new();
+        prior.set("lastState", crate::world::js::Val::Num(0.));
+        selected.set("precipAlerts", crate::world::js::Val::Obj(prior.clone()));
+        service
+            .state
+            .write()
+            .unwrap()
+            .apply(&[crate::push::store::Change {
+                coll: crate::push::Coll::Alert,
+                n: 0,
+                oid: [7; 12],
+                record: Some(crate::push::Record {
+                    oid: [7; 12],
+                    doc: selected.clone(),
+                }),
+                imported: None,
+            }]);
+        let mut after = prior;
+        after.set("lastState", crate::world::js::Val::Num(1.));
+        after.set("pushTime", crate::world::js::Val::Date(1_792_109_220_000.));
+        let input = attempt::Input {
+            n: 0,
+            oid: [7; 12],
+            selected: selected.clone(),
+            precip: crate::world::js::Val::Obj(after),
+            air: crate::world::js::Val::Null,
+            channels: attempt::Channels {
+                precip: true,
+                air: false,
+            },
+        };
+        let outcome =
+            tokio::time::timeout(Duration::from_millis(500), service.alert_attempt(input))
+                .await
+                .expect("typed queue admission must finish while the receiver stays held");
+        assert!(matches!(outcome, attempt::Committed::Uncertain));
+        assert!(matches!(rx.try_recv().unwrap().job, Job::Internal { .. }));
+        assert!(
+            rx.try_recv().is_err(),
+            "cancelled admission must not leave a late command in the queue"
+        );
+        assert_eq!(service.state().read().unwrap().seq, 0);
+        assert_eq!(
+            service
+                .state()
+                .read()
+                .unwrap()
+                .coll(crate::push::Coll::Alert)
+                .get(0)
+                .unwrap()
+                .doc,
+            selected
+        );
     }
 }

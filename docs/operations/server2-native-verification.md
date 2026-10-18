@@ -296,3 +296,43 @@ See [selected evidence](../evidence/tasks/issue-2819-delivery-lateness/verificat
 C2 state compensation for other definite no-POST refusals remains open. Do not
 release claims, reset journals, retry failed/unknown sends or treat this as a
 seven-day shadow, suspension-age SLA or full production rollback qualification.
+
+
+## Conditional-alert no-POST compensation
+
+From `server2/`, build the fixed owned-peer example with the pinned toolchain,
+lockfile and a verified shared Cargo target:
+
+```sh
+cargo build --locked --offline --release --example delivery_cohort_smoke
+```
+
+Retain the executable outside disposable Cargo output, record its hash and the
+runtime/source/test/fixture/manifest map, then execute it in a new scratch TMPDIR
+with PATH/locale/TZ only. It does not read operational Firebase configuration or
+call weather providers. Recorded weather and MemS3 journal storage drive actual
+public worker/service APIs; OAuth/FCM requests use synthetic owned loopback peers.
+
+Require all four cases: OAuth refusal and concurrent metadata/token edit make
+zero first FCM POSTs and restore the still-owned sent transition; a later fresh
+scheduled cycle posts once using the current token. Before that later send,
+reconstruct the service while the restored transition remains due and verify the
+original retained minute claim blocks replay. Actual FCM503/rejected and
+connection-reset/unknown each make one POST and keep sent state. Their later
+suppression also depends on cooldown, so zero added posts alone does not isolate
+claim deduplication in those two cases.
+
+Require exactly four owned FCM POSTs and five OAuth requests in total, successful
+process exit, four closed loopback listeners, and unchanged source/executable
+hashes. Unit/integration controls separately exercise local/settle/conflict ABA,
+leaf ownership, missingness, shutdown, credentials, a shared-clock failure after
+OAuth and journal/answer uncertainty. Failed or unknown restore is explicitly
+unresolved, never a successful undo. There is no background repair or retry of an
+actual failed/unknown send.
+
+The typed command's queue and answer are bounded together, but the existing bool
+preselection command has a separate full-queue limitation. MemS3 is not AWS;
+service reconstruction in one executable is not an OS-process restart. Zero
+live/device sends follows the forced synthetic loopback setup, not device
+telemetry. This is neither production qualification nor seven-day shadow.
+See [selected evidence](../evidence/tasks/issue-2819-delivery-cohort/verification.md).

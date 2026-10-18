@@ -271,6 +271,18 @@ impl State {
             Coll::Alert => &mut self.alerts,
         }
     }
+    /// The live writer observes each intermediate change before applying it.
+    /// Default startup/import callers keep the original application path and cost.
+    pub(crate) fn apply_observed(
+        &mut self,
+        changes: &[Change],
+        mut observe: impl FnMut(&State, &Change),
+    ) {
+        for change in changes {
+            observe(self, change);
+            self.apply(std::slice::from_ref(change));
+        }
+    }
     /// Apply final record states (journal replay and acknowledged commits).
     pub fn apply(&mut self, changes: &[Change]) {
         for change in changes {

@@ -20,3 +20,6 @@ mod warnings;
 mod lateness;
 #[path = "delivery/lateness_support.rs"]
 mod lateness_support;
+
+#[path = "delivery/cohort.rs"]
+mod cohort;

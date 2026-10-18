@@ -2,6 +2,7 @@
 //! This worker does not retry delivery and never uses a legacy process as a fallback.
 use super::text::{Message, Tr};
 use super::window::{AlertAdmission, inside_window};
+use crate::push::attempt::{self, Committed, Restored};
 use crate::push::js::{self, Thrown, ge, greater, less, prop, strict_eq, to_string};
 use crate::world::js::{Obj, Val, dot_time, js_sort, parse_dot, parts};
 
@@ -630,75 +631,70 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
         n: u64,
         oid: crate::push::store::Oid,
         info: &Obj,
-        selected: &Obj,
+        receipt: &attempt::Receipt,
         notification: &Message,
         admission: AlertAdmission,
-    ) -> Delivery {
-        let token = info.get("fcmToken");
-        if token.truthy() {
-            let Val::Str(token) = token else {
-                return Delivery::Failed {
-                    class: "invalid-token",
-                };
+    ) -> Submission {
+        if let Some(class) = invalid_target(info) {
+            return Submission {
+                delivery: Delivery::Failed { class },
+                no_post: true,
             };
-            match self
-                .fcm
-                .send_guarded(
-                    Product::of(info.get("package")),
-                    self.clock.now_ms().unwrap_or(admission.at_ms),
-                    || async {
-                        if !self
+        }
+        let Val::Str(token) = info.get("fcmToken") else {
+            unreachable!("preflight validated token")
+        };
+        let outcome = self
+            .fcm
+            .send_guarded(
+                Product::of(info.get("package")),
+                self.clock.now_ms().unwrap_or(admission.at_ms),
+                || async {
+                    if !receipt.current()
+                        || !self
                             .push
                             .internal(InternalOp::CheckAlertSelection {
                                 n,
                                 oid,
-                                selected: selected.clone(),
+                                selected: receipt.selected().clone(),
                             })
                             .await
-                        {
-                            return None;
-                        }
-                        let at = self.clock.now_ms().ok()?;
-                        if !admission.permits(at) || !inside_window(info, at) {
-                            return None;
-                        }
-                        Some(fcm_body(notification, info))
-                    },
-                )
-                .await
-            {
-                SendOutcome::Accepted => Delivery::Accepted,
-                SendOutcome::Unregistered { status } => Delivery::Unregistered {
-                    status,
-                    disabled: self
-                        .push
-                        .internal(InternalOp::DisableAlertsByFcm {
-                            token: token.clone(),
-                        })
-                        .await,
+                    {
+                        return None;
+                    }
+                    let at = self.clock.now_ms().ok()?;
+                    if !receipt.current() || !admission.permits(at) || !inside_window(info, at) {
+                        return None;
+                    }
+                    Some(fcm_body(notification, info))
                 },
-                SendOutcome::Rejected { status, code } => Delivery::Rejected { status, code },
-                SendOutcome::Unknown { reason } => Delivery::Unknown { reason },
-                SendOutcome::NotSent { reason } => Delivery::Failed {
-                    class: match reason {
-                        "credentials" => "fcm-credentials",
-                        "oauth" => "fcm-oauth",
-                        "shutdown" => "shutdown-before-post",
-                        "guard" => "alert-admission",
-                        _ => "fcm-connect",
-                    },
+            )
+            .await;
+        let no_post = matches!(outcome, SendOutcome::NotSent { .. });
+        let delivery = match outcome {
+            SendOutcome::Accepted => Delivery::Accepted,
+            SendOutcome::Unregistered { status } => Delivery::Unregistered {
+                status,
+                disabled: self
+                    .push
+                    .internal(InternalOp::DisableAlertsByFcm {
+                        token: token.clone(),
+                    })
+                    .await,
+            },
+            SendOutcome::Rejected { status, code } => Delivery::Rejected { status, code },
+            SendOutcome::Unknown { reason } => Delivery::Unknown { reason },
+            SendOutcome::NotSent { reason } => Delivery::Failed {
+                class: match reason {
+                    "credentials" => "fcm-credentials",
+                    "oauth" => "fcm-oauth",
+                    "shutdown" => "shutdown-before-post",
+                    "guard" => "alert-admission",
+                    _ => "fcm-connect",
                 },
-            }
-        } else {
-            Delivery::Failed {
-                class: match info.get("type").str() {
-                    Some("ios") => "ios-without-fcm-token",
-                    Some("android") if info.get("registrationId").truthy() => "gcm-retired",
-                    Some("android") => "gcm-without-registration-id",
-                    _ => "unknown-type",
-                },
-            }
-        }
+            },
+        };
+        Submission { delivery, no_post }
     }
     pub async fn run_minute(&self, now_ms: i64) -> MinuteReport {
         crate::observability::delivery_cycle(crate::observability::DeliveryKind::Alert, async {
@@ -778,43 +774,86 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
                             let send =
                                 compare(&info, &parsed, evaluated_ms).map_err(|_| "compare")?;
                             update(&mut info, &parsed, send, evaluated_ms).map_err(|_| "update")?;
-                            // The selected document is checked in the single writer, so a concurrent
-                            // app update, token rotation or another cycle is never overwritten.
-                            if !self
+                            if send == Send::None {
+                                // Legitimate observation updates are not undo candidates.
+                                if !self
+                                    .push
+                                    .internal(InternalOp::UpdateAlertState {
+                                        n,
+                                        oid: record.oid,
+                                        selected: record.doc.clone(),
+                                        precip: info.get("precipAlerts").clone(),
+                                        air: info.get("airAlerts").clone(),
+                                    })
+                                    .await
+                                {
+                                    return Err("state-not-committed");
+                                }
+                                return Ok(None);
+                            }
+                            // Message/target errors cannot strand a selected sent-state mutation.
+                            let notification = message(&info, &parsed).map_err(|_| "message")?;
+                            if let Some(class) = invalid_target(&info) {
+                                return Err(class);
+                            }
+                            let receipt = match self
                                 .push
-                                .internal(InternalOp::UpdateAlertState {
+                                .alert_attempt(attempt::Input {
                                     n,
                                     oid: record.oid,
                                     selected: record.doc.clone(),
                                     precip: info.get("precipAlerts").clone(),
                                     air: info.get("airAlerts").clone(),
+                                    channels: attempt::Channels {
+                                        precip: matches!(send, Send::Weather | Send::All),
+                                        air: matches!(send, Send::Air | Send::All),
+                                    },
                                 })
                                 .await
                             {
-                                return Err("state-not-committed");
+                                Committed::Owned(receipt) => receipt,
+                                Committed::NotApplied => return Err("state-not-committed"),
+                                Committed::Uncertain => {
+                                    crate::observability::event(
+                                        crate::observability::Component::PushState,
+                                        crate::observability::Stage::Writer,
+                                        crate::observability::Cause::Ambiguous,
+                                        crate::observability::Action::RetainClaim,
+                                        crate::observability::Outcome::Unknown,
+                                        Default::default(),
+                                    );
+                                    return Err("state-commit-uncertain");
+                                }
+                            };
+                            let submission = self
+                                .send(n, record.oid, &info, &receipt, &notification, admission)
+                                .await;
+                            if submission.no_post {
+                                let restored = self.push.restore_alert_attempt(receipt).await;
+                                use crate::observability::{
+                                    Action, Cause, Component, Outcome, Stage,
+                                };
+                                let (cause, outcome) = match restored {
+                                    Restored::Applied { .. } => (Cause::None, Outcome::Completed),
+                                    Restored::Superseded => (Cause::None, Outcome::Conflict),
+                                    Restored::Foreign => {
+                                        (Cause::StateUnavailable, Outcome::Unknown)
+                                    }
+                                    Restored::Uncertain => (Cause::Ambiguous, Outcome::Unknown),
+                                };
+                                crate::observability::event(
+                                    Component::PushState,
+                                    Stage::Writer,
+                                    cause,
+                                    Action::RetainClaim,
+                                    outcome,
+                                    Default::default(),
+                                );
+                                if matches!(restored, Restored::Foreign | Restored::Uncertain) {
+                                    return Err("unsent-state-unresolved");
+                                }
                             }
-                            if send == Send::None {
-                                return Ok(None);
-                            }
-                            let notification = message(&info, &parsed).map_err(|_| "message")?;
-                            let mut selected = record.doc.clone();
-                            let mut fields = Obj::new();
-                            fields.set("precipAlerts", info.get("precipAlerts").clone());
-                            fields.set("airAlerts", info.get("airAlerts").clone());
-                            let set = crate::push::mongoose::cast_set(Coll::Alert, &fields, false)
-                                .map_err(|_| "state-cast")?;
-                            crate::push::mongoose::apply_set(&mut selected, &set);
-                            Ok(Some(
-                                self.send(
-                                    n,
-                                    record.oid,
-                                    &info,
-                                    &selected,
-                                    &notification,
-                                    admission,
-                                )
-                                .await,
-                            ))
+                            Ok(Some(submission.delivery))
                         }
                         .await;
                         (record.oid, result)
@@ -892,5 +931,27 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
                 worker.run_minute(observed).await;
             }));
         }
+    }
+}
+
+struct Submission {
+    delivery: Delivery,
+    no_post: bool,
+}
+fn invalid_target(info: &Obj) -> Option<&'static str> {
+    let token = info.get("fcmToken");
+    if token.truthy() {
+        if matches!(token, Val::Str(_)) {
+            None
+        } else {
+            Some("invalid-token")
+        }
+    } else {
+        Some(match info.get("type").str() {
+            Some("ios") => "ios-without-fcm-token",
+            Some("android") if info.get("registrationId").truthy() => "gcm-retired",
+            Some("android") => "gcm-without-registration-id",
+            _ => "unknown-type",
+        })
     }
 }

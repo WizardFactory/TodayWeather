@@ -3815,3 +3815,53 @@ records that earlier design point, not current verification. Current
 and the [owned operator scenario](../operations/server2-native-verification.md#delivery-cohort-lateness)
 record the subsequent implementation and checks. This is a stacked pre-merge
 slice, not main, shadow, capacity or an eligible full recovery release.
+
+
+### #2819 conditional-alert definite no-POST compensation
+
+The [C2 contract](../../specs/issue-2819-delivery-cohort.md) adds a private
+writer-issued, single-use receipt after a known committed alert-state update.
+The receipt owns only changed derived leaves of selected sending channels:
+precipitation `lastState`/`pushTime`, and air `lastGrade`/`lastCode`/`pushTime`.
+Message/target preflight precedes that update. Observation-only `Send::None`
+updates retain their existing behavior.
+
+Only typed FCM `SendOutcome::NotSent` permits one ordinary journal transaction
+that restores still-owned leaves. Accepted, unregistered, rejected and unknown
+actual POST outcomes keep state and claims; cancellation or panic is not a
+no-POST receipt. Restore preserves user/token edits, other-channel observations,
+newer derived values, exact missingness and newer parent structure. It never
+rewinds the whole document or releases a delivery claim.
+
+The writer observes each individual local, settled and caught-up change before
+application. An actual intervening leaf transition permanently revokes that
+leaf's ownership, including A-to-B-to-A; deletion/recreation or writer replacement
+revokes the relevant live capability. An equal-value no-op filtered by
+`Txn::changes` is not a persisted transition. The tracker holds weak references
+only for live attempts and prunes them on ordinary commands. There is no second
+journal, persisted schema change, cleanup task or repair-on-drop.
+
+Typed attempt/restore queue admission and answer share the existing monotonic
+writer wait. A known receipt retains its transaction time solely to construct an
+exact restore if the shared clock later fails: that patch writes no new date or
+ID. New attempts and final POST guards still require a live clock. The older bool
+internal API is unchanged; in particular, preselection duplicate cleanup can wait
+for queue capacity outside its answer timeout. This change establishes no bound
+for the whole worker under a full queue.
+
+Lost initial acknowledgement, unresolved journal progress or unavailable restore
+returns explicit uncertainty and permits no POST. Such uncertainty can retain
+suppression; no unconditional retryability or successful repair is claimed.
+Owned-cycle typed push-state events distinguish this from external send results.
+The original delivery claim remains one-shot. Later fresh scheduled evaluation
+may send after a successful definite-no-POST restore, never replay that claim.
+
+[Proposed sequence](diagrams/server2-delivery-cohort.html) and
+[editable source](diagrams/server2-delivery-cohort.sequence.json) are frozen design
+time at `e97a5090`; their no-parent-tests-yet card is historical context. Current
+[selected evidence](../evidence/tasks/issue-2819-delivery-cohort/verification.md)
+and [operator scenario](../operations/server2-native-verification.md#conditional-alert-no-post-compensation)
+record subsequent execution. This slice is stacked on unmerged lateness PR2826.
+C1/B1 are separate unmerged branches; their later integration must reconcile
+writer/restore paths. No main, whole recovery bundle, shadow or production
+qualification is established.

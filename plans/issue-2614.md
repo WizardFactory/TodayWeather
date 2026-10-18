@@ -549,3 +549,25 @@ ownership/compensation and aggregate stage accounting. Current independent revie
 exact CI and any later base reconciliation are separate gates. This branch is
 stacked on N1; C1 and B1 are separate unmerged branches. No merged/full-bundle,
 #2819/#2704/#2705, seven-day shadow or production completion is claimed.
+
+
+#### #2819 C2: definite no-POST alert-state restoration
+
+The [parent plan](issue-2819-delivery-cohort.md) and
+[contract](../specs/issue-2819-delivery-cohort.md) continue after lateness child
+PR2826. A known committed writer receipt owns only selected sending-channel
+changed leaves. Typed `NotSent` permits one bounded conditional restore while
+preserving user/token edits, nonselected observations and actual newer state,
+including intermediate local/settled/caught-up ABA. No claim release, persisted
+schema change, actual failed/unknown send retry or automatic repair is added.
+A receipt's known transaction time permits exact undo when the shared clock
+fails; attempts and final send guards still fail closed.
+
+Lost initial acknowledgement or unavailable compensation can retain suppression
+and stays explicitly uncertain. The old bool preselection queue API is unchanged;
+this is not a whole-worker full-queue deadline guarantee. Discriminating public
+Reds, actual scoped regressions and an additional owned-HTTP executable rehearsal
+are recorded in [selected evidence](../docs/evidence/tasks/issue-2819-delivery-cohort/verification.md).
+Current independent review and exact CI are separate gates. C1/B1 are not
+ancestors, and later integration needs reconciliation. No merge, main, full-bundle,
+#2819/#2704/#2705, seven-day shadow or production completion is claimed.

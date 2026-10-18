@@ -451,8 +451,28 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
     }
 
     pub fn apply_entry(&self, state: &mut State, seq: u64, body: &[u8]) -> Result<(), StateError> {
+        self.apply_entry_with(state, seq, body, State::apply)
+    }
+    pub(crate) fn apply_entry_observed(
+        &self,
+        state: &mut State,
+        seq: u64,
+        body: &[u8],
+        observe: impl FnMut(&State, &super::store::Change),
+    ) -> Result<(), StateError> {
+        self.apply_entry_with(state, seq, body, |state, changes| {
+            state.apply_observed(changes, observe)
+        })
+    }
+    fn apply_entry_with(
+        &self,
+        state: &mut State,
+        seq: u64,
+        body: &[u8],
+        apply: impl FnOnce(&mut State, &[super::store::Change]),
+    ) -> Result<(), StateError> {
         if let Some((next_n, changes)) = parse_entry(seq, body)? {
-            state.apply(&changes);
+            apply(state, &changes);
             state.next_n = state.next_n.max(next_n);
         }
         state.seq = seq;
