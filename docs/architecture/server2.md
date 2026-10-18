@@ -3692,3 +3692,42 @@ distinguishes legacy object parity, native storage tests and the owned-peer
 release narrative layer from full provider startup/production qualification.
 This adds a response supplement without changing historical route counts.
 Warnings, zones, registrations, claims and sends retain their existing behavior.
+
+
+### #2819 B3: finite latest Short publication attempts
+
+The request-time KMA source gives the latest `vilage-fcst` publication three
+process-local admission slots: provision+2, +5 and +10 minutes. Existing Short
+bases are 02/05/…/23 and provision is HH10, so the first minute checks are
+HH12/15/20. Demand is required; there is no retry timer or pre-collection. A
+first request arriving after a window consumes only the highest elapsed slot,
+without replaying missed windows. Existing usable S3 data prevents acquisition.
+
+`source::late::LatestShort` keeps the newest admitted publication and at most
+65,536 cell-to-highest-slot entries under one mutex. A newer base clears old
+entries; an older publication or repeated/lower slot cannot reset admission.
+Full capacity refuses a new cell until a newer publication. This is bounded
+process memory, not durable coordination across processes or restarts. After a
+forward clock jump, older publication admission fails closed until time catches
+up; no rollback of this fence is performed.
+
+`PublicationAdmission` runs only in the existing owned-flight creation callback.
+Overlapping callers still join one publication key and caller cancellation does
+not cancel the provider owner. The existing completed-result retention, waits,
+provider deadlines and publication writer are unchanged. Admitted latest Short
+attempts also leave the existing recent-attempt memo for historical backfill;
+that memo does not suppress a later Short slot, since the first two slots are
+only three minutes apart. Historical backfill and current/ultra-short/RSS/mid,
+warning and zone admission retain their original policies.
+
+The cap counts publication acquisitions, not pages or HTTP retries. B2 still
+funds actual attempted keys immediately before HTTP; an always-NotPublished
+first page uses one funded HTTP per slot. The separate local
+[verification command](../operations/server2-native-verification.md#b3-latest-short-publication-windows)
+composes the real source/owner, domestic acquirer and S08 budget with owned S3
+and HTTP peers. Its request clock is synthetic; it does not measure three hours
+of real performance or operating quota. Historical provider calls are stubbed
+in that specific smoke and covered separately by source/history regressions.
+The [proposed contract](diagrams/server2-late-publication.html) and
+[editable source](diagrams/server2-late-publication.sequence.json) preserve their
+pre-implementation base identity; they are not execution or readiness evidence.

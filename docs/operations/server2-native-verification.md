@@ -172,3 +172,31 @@ Logical per-attempt units differ from normal S08 block claims. Known local
 exhaustion alone can advance key selection; ambiguous/corrupt/transport funding
 remains fail-closed. VC maximum prepayment is unchanged. Operating API allowances
 remain an open deployment prerequisite; this example supplies no production values.
+
+
+## B3 latest Short publication windows
+
+From `server2/`, with Python 3, the pinned Rust toolchain and dependencies already
+available, run the isolated local scenario:
+
+```sh
+cargo run --locked --offline --example late_publication_smoke
+```
+
+The executable starts its own loopback S3-compatible peer and NotPublished HTTP
+provider. It composes the real KMA source, owned flights, domestic acquirer and
+S08 budget with synthetic keys and a synthetic request clock. Each minute of
+one Short base is requested; the expected latest HTTP offsets from the base are
+`[12,15,20]` (provision+2/+5/+10). The fixture's allowance is 100 one-unit blocks,
+so a low quota does not conceal excessive attempts. The post-window request is
+repeated after the unchanged completed-result cache expires; no fourth latest
+HTTP is allowed. Expect three funded HTTP attempts, three logical reserved units
+and three authority units, with both owned peers stopped/reaped before PASS.
+
+Advancing the request clock does not physically wait three hours. The scenario
+waits only for the existing short completed-result retention between due slots.
+The injected forecast adapter stubs historical provider work to isolate the
+latest policy. This does not qualify historical publication, all API coverage,
+production quotas, rollback, live shadow or capacity. No credentials, environment
+runtime configuration, live providers or push sends are used. Keep those gates
+separate, including the existing #2819 D2 whole-target KMA timing failure.

@@ -488,3 +488,15 @@ funding caps do not become provider-wide KST quota markers. Local regressions an
 an owned HTTP/volatile S08 composition are recorded separately from current CI
 and independent PR review. B3 publication timing, operating allowances, production
 quota/capacity and all cutover/shadow qualification remain open. No merge authority.
+
+
+#### #2819 B3: latest Short publication verification
+
+[Task plan](issue-2819-late-publication.md) and
+[contract](../specs/issue-2819-late-publication.md) limit demand-triggered latest
+Short acquisition at provision+2/+5/+10, under the original owned-flight and
+request deadline. This task is stacked on the reviewed B2 candidate, not an
+integrated master release. It introduces no collection timer, operating quota
+values, global durable cap or production authority. Exact tests, owned functional
+execution, independent review and current CI remain task gates. #2819/#2704/#2705,
+D2 capacity and seven-day shadow remain open.
