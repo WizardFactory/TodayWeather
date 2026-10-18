@@ -3995,3 +3995,19 @@ an eligible full recovery bundle, live providers, EC2 capacity or seven-day shad
 The current shared factory validates local Firebase accounts immediately after native-family parsing, before shared S3/native construction or the registration writer. `Fcm::for_push` requires active TodayWeather and checks any configured nonempty TodayAir account; absent retired TodayAir is allowed. Empty active settings, unreadable files, malformed/missing fields or invalid PKCS8 RSA return InvalidConfiguration. Disabled push reads no Firebase settings/files.
 
 Parsed accounts are cached before first send. This makes no OAuth/FCM request and proves no remote authorization/revocation or later filesystem health; rotation requires restart. The existing low-level lazy FCM API and token/send/outcome/one-shot rules are unchanged. This supersedes the historical S20a no-account startup statement for the current push-enabled factory. See the [operator contract](../operations/server2-runtime-services.md), [design](diagrams/server2-runtime-services.html), [C6 spec](../../specs/issue-2819-push-credentials.md) and [selected evidence](../evidence/tasks/issue-2819-push-credentials/verification.md). No production activation or full recovery/shadow qualification follows.
+
+### E1/E2 production startup coverage (#2819)
+
+The production main validates complete native API selection after listener configuration
+and before `process::run`. Without an explicit development legacy origin it requires
+all eight accepted family selections and all three world versions. The pure guard reuses
+the existing family parser and the extracted unchanged world-version parser; no state,
+provider or account lookup occurs in that guard. The shared partial/foundation factories
+keep their accepted behavior; constructor/provider/account validation still follows.
+AK confirmed optional `.env` and process precedence: complete environment-only settings
+are valid, missing mandatory configuration fails, and file absence alone is allowed.
+Health remains liveness, not E3 readiness. See the [spec](../../specs/issue-2819-startup-coverage.md),
+[operator contract](../operations/server2-runtime-services.md),
+[design](diagrams/server2-runtime-services.html) and
+[selected checks](../evidence/tasks/issue-2819-startup-coverage/verification.md).
+This is a startup availability fix, not full-native host or cutover qualification.

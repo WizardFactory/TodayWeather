@@ -2,7 +2,7 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Shared services: checked push startup and lifecycle",
+    "title": "Proposed complete-native startup",
     "output": "docs/architecture/diagrams/server2-runtime-services.html",
     "quality_profile": "showcase",
     "repository": {
@@ -14,8 +14,8 @@
     {
       "id": "process",
       "type": "backend",
-      "label": "Process + factory",
-      "sublabel": "Check accounts before S3 / writer",
+      "label": "Entry + shared factory",
+      "sublabel": "Coverage first; then local accounts",
       "pos": [
         440,
         245
@@ -26,14 +26,14 @@
       ],
       "sources": [
         {
-          "path": "server2/src/runtime_services.rs",
-          "line": 66,
-          "end_line": 85
+          "path": "server2/src/main.rs",
+          "line": 12,
+          "end_line": 24
         },
         {
-          "path": "server2/src/process.rs",
-          "line": 105,
-          "end_line": 155
+          "path": "server2/tests/runtime_services/inventory.rs",
+          "line": 8,
+          "end_line": 46
         }
       ]
     },
@@ -282,6 +282,17 @@
     }
   ],
   "cards": [
+    {
+      "dot": "cyan",
+      "title": "Proposed production coverage guard",
+      "items": [
+        "Without explicit legacy: require all8 native selections and all3 world versions.",
+        "Missing coverage stops before services, state, listeners or providers.",
+        "Explicit coexistence keeps existing origin/provider validation.",
+        "Shared code-injected partial/foundation construction is unchanged.",
+        "AK E2: complete env-only settings allowed without .env; mandatory settings still required."
+      ]
+    },
     {
       "dot": "cyan",
       "title": "Scheduling and admission",

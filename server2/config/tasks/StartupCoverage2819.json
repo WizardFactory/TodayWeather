@@ -1,0 +1,69 @@
+{
+  "task": "StartupCoverage2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "E1 production entrypoint requires complete native family/version coverage without explicit legacy origin, before process/state/provider work. Shared code-injected partial/foundation and accepted optional dotenv contracts unchanged; AK confirmed E2: complete environment-only configuration allowed without .env, missing mandatory configuration fails. No new mode, merge/deployment/live action.",
+  "server2_paths": [
+    "server2/config/tasks/StartupCoverage2819.json",
+    "server2/.env.example",
+    "server2/src/lib.rs",
+    "server2/src/main.rs",
+    "server2/src/startup.rs",
+    "server2/src/world/runtime.rs",
+    "server2/tests/startup.rs",
+    "server2/tests/foundation.rs",
+    "server2/tests/runtime_services/inventory.rs",
+    "server2/tools/startup_coverage_smoke.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-startup-coverage.md",
+      "category": "documentation",
+      "reason": "Maintain E1 startup contract, sequence, operator/architecture/design and selected evidence only; no runtime implementation"
+    },
+    {
+      "path": "specs/issue-2819-startup-coverage.md",
+      "category": "documentation",
+      "reason": "Maintain E1 startup contract, sequence, operator/architecture/design and selected evidence only; no runtime implementation"
+    },
+    {
+      "path": "plans/issue-2819-startup-coverage.md",
+      "category": "documentation",
+      "reason": "Maintain E1 startup contract, sequence, operator/architecture/design and selected evidence only; no runtime implementation"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Maintain E1 startup contract, sequence, operator/architecture/design and selected evidence only; no runtime implementation"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain E1 startup contract, sequence, operator/architecture/design and selected evidence only; no runtime implementation"
+    },
+    {
+      "path": "docs/operations/server2-runtime-services.md",
+      "category": "documentation",
+      "reason": "Maintain E1 startup contract, sequence, operator/architecture/design and selected evidence only; no runtime implementation"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Maintain E1 startup contract, sequence, operator/architecture/design and selected evidence only; no runtime implementation"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-startup-coverage/verification.md",
+      "category": "documentation",
+      "reason": "Maintain E1 startup contract, sequence, operator/architecture/design and selected evidence only; no runtime implementation"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.json",
+      "category": "documentation",
+      "reason": "Maintain E1 startup contract, sequence, operator/architecture/design and selected evidence only; no runtime implementation"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.html",
+      "category": "documentation",
+      "reason": "Maintain E1 startup contract, sequence, operator/architecture/design and selected evidence only; no runtime implementation"
+    }
+  ]
+}

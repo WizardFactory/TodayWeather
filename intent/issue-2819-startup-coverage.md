@@ -1,0 +1,9 @@
+# Production startup configuration coverage (E1/E2)
+
+Continue [#2819](https://github.com/WizardFactory/TodayWeather/issues/2819) before seven-day shadow. The production server2 entrypoint must reject incomplete native family/version coverage when no explicit legacy origin is configured; a basic health response is not evidence of accepted API coverage. Preserve deliberate code-injected partial/foundation construction and existing explicit development coexistence. No new mode/verification flag.
+
+Accepted native selection covers current19routegroups, notice and /ww: geocode,dsf,kma,kma-v000901,kma-v000902,town,push,notice, with worldv000901/v000902/v000903. Existing provider/key/origin validators still apply. Reject before process construction/writer/listeners/provider work, without requesting providers to validate settings.
+
+AK confirmed E2: complete environment-only configuration may start without `.env`; missing mandatory configuration must fail startup. Preserve S10e R1 optional-file loading and process precedence. E1 adds mandatory production coverage validation; existing provider/storage/account validators still enforce their required inputs before listeners. Physical file absence alone is not an error. Decision: https://github.com/WizardFactory/TodayWeather/issues/2819#issuecomment-6251530004. Root owns the original primary execution notebook. Exact paths and document exceptions are declared in `server2/config/tasks/StartupCoverage2819.json` before edits.
+
+Parent is unmerged C6 PR #2830 corrected head b080 (diagram-only provenance correction; E1 source inputs unchanged), whose source/correction and records reviews PASS while exact current CI remains pending. Endpoint pre-merge only: no merge/queue, live providers/devices, deployment, global issue closure, full recovery bundle or shadow qualification. C1/B1 remain parallel branches.

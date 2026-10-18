@@ -19,6 +19,7 @@ fn run() -> Result<(), Cause> {
         "invalid OPENSHIFT_NODEJS_IP" => Cause::InvalidIp,
         _ => Cause::Configuration,
     })?;
+    server2::startup::validate_native_coverage(&var).map_err(|_| Cause::Configuration)?;
     server2::process::run(config, move || RuntimeServices::from_vars(&var))
         .map_err(|e| e.classify().0)
 }

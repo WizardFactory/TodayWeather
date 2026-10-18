@@ -4,6 +4,25 @@ S20b connects ordinary push selection to supervised alarm, conditional-alert and
 
 ## Select and start
 
+The operational `server2` executable now validates complete API selection before constructing
+services, restoring state or binding listeners. Without an explicit nonempty
+`SERVER2_GATEWAY_LEGACY_URL`, it requires
+`geocode,dsf,kma,kma-v000901,kma-v000902,town,push,notice` and world
+`v000901,v000902,v000903` (the default world selection). Missing a family/version
+fails startup, including missing unversioned weather coverage. Unknown/duplicate family
+entries retain their existing errors. Explicit development coexistence remains supported;
+it does not authorize legacy fallback after cutover. Shared code-injected partial factories
+and the isolated loopback example retain their existing behavior.
+
+AK confirmed the E2 configuration contract: a complete environment-only deployment may
+start without `.env`. Missing required settings fail validation; file absence alone does
+not. Process environment still precedes an optional working-directory `.env`, and invalid
+listener settings retain their prior error precedence. After the pure coverage check,
+existing constructors validate provider/storage/Firebase settings. Selection completeness
+is not provider authorization or readiness; `/health` remains basic liveness.
+See the [startup specification](../../specs/issue-2819-startup-coverage.md) and
+[verification](../evidence/tasks/issue-2819-startup-coverage/verification.md).
+
 `SERVER2_NATIVE_FAMILIES` uses the existing `push` and `notice` entries. Native-only selection needs no legacy URL. Push builds shared native KMA, DSF and geocoder dependencies even when their public weather routes are unselected; existing provider configuration requirements remain. One bounded S3 transport/credential cache serves registrations, delivery claims/results, warning store/feed and notices. Construction performs no weather precollection, OAuth or FCM request. Notice GET/HEAD never instantiates Translator or a paid client.
 
 Workers use typed NativeFetch with logical origin `http://server2.internal`, existing v000902 weather paths, units and full weather Accept-Language. It makes no self HTTP request; SERVICE_SERVER/API_SERVER and legacy forwarding do not select the worker destination. The existing 12-second native HTTP connection lifetime and 9-second registration wait remain.
