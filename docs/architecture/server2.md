@@ -1634,6 +1634,15 @@ first with Kakao fallback. Shared owners/cache hits do not duplicate funding. Ad
 waits stay inside the existing five-second owner deadline; HTTP attempts remain capped
 at three seconds and the remaining owner time. A funded unit can remain spent if the
 deadline expires before send; this is conservative admission, not wire accounting.
+The existing outer five-second owner timeout is the binding end-to-end limit;
+the per-admission timeout and post-funding remaining-time check are additional guards.
+The paused-clock slow-funding regression establishes the owner boundary and no late
+HTTP, not an independent proof of those inner guards.
+`server2_geocoder_quota_rejections_total` counts denied provider/key admissions,
+not rejected HTTP requests or failed lookups. Several unavailable keys can increment
+it during one lookup, and a later funded key or optional-supplement failure can still
+produce a successful response. Pair it with lookup outcome/HTTP-attempt counters;
+do not use it alone as a failed-request rate.
 Without a quota the geocoder denies every acquisition. The
 [funding contract flow](diagrams/server2-geocode-funding.html) illustrates this policy,
 not an execution receipt. [Local checks](../evidence/tasks/issue-2819-funding/verification.md)

@@ -406,11 +406,11 @@ def scenario_outages(ctx):
 
 
 def scenario_budget_exhaustion(ctx):
-    # 16 Kakao keys plus Google: every Korean reverse lookup reserves one unit of each key's
-    # configured daily quota (S08 budgets in the S3 peer), so a 64-unit limit funds 64 lookups.
+    # One Kakao key plus unused Google: each complete Korean reverse lookup funds only its
+    # selected Kakao key, so a 64-unit per-key limit funds 64 distinct cold lookups.
     # Separate keys: S08 keeps one policy per quota owner and day, so a changed limit for the
     # same key applies from the next UTC day (a mismatch fails closed).
-    with ctx.process('native', keys=16, daily_units=BUDGET_UNITS, key_prefix='budget-dummy-') as p:
+    with ctx.process('native', keys=1, daily_units=BUDGET_UNITS, key_prefix='budget-dummy-') as p:
         rss_before = p.rss_kib()
         before = ctx.observe(p)
         paths = ['/geocode/v000903/coord/' + format(35.0 + i / 1000, '.3f') + ',127.5' for i in range(BUDGET_UNITS + 1)]
@@ -432,9 +432,12 @@ def scenario_budget_exhaustion(ctx):
         growth = (rss_after - rss_before) if rss_before and rss_after else None
         expect(growth is None or growth < 64 * 1024, 'RSS growth during the distinct lookups stays below 64 MiB', growth)
         objects = s3_budget_only(ctx.peers)
+        google_objects = sum(k.startswith('budgets/v2/google/') for k in ctx.peers.s3.objects)
+        expect(google_objects == 0, 'unused Google has no budget objects', google_objects)
         return {'lookups': BUDGET_UNITS + 1, 'ok': BUDGET_UNITS, 'rejected': statuses.count(501), 'metrics': m, 'peers': c,
                 'after': {'metrics': m2, 'peers': c2}, 'rss_kib': {'before': rss_before, 'after': rss_after},
-                'daily_units_per_key': BUDGET_UNITS, 's3_budget_objects': objects}
+                'daily_units_per_key': BUDGET_UNITS, 'kakao_keys': 1, 'unused_google_budget_objects': google_objects,
+                's3_budget_objects': objects}
 
 
 def scenario_pressure(ctx):

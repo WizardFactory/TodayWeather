@@ -18,7 +18,9 @@ After the change: 64 gateway tests and 93 library tests passed (157 total),
 including S08 funding, exact response bytes, address persistence, fallback, key
 rotation, cache/single-flight, waiter cancellation and HTTP/deadline coverage.
 A paused-clock funding delay test stops at the existing five-second owner
-deadline and observes no late HTTP. All-target clippy `-D warnings` and Rust
+deadline and observes no late HTTP. This also follows from the existing outer
+owner timeout: the test does not independently establish the inner funding timeout
+or remaining-time calculation. Those checks are additional source-level guards. All-target clippy `-D warnings` and Rust
 format checks passed. Tests use synthetic credentials and owned peers.
 
 Commands from `server2/` (Rust1.99.0, macOS ARM64, dev/test debug and incremental
@@ -82,3 +84,34 @@ does not resolve B2/B3 or qualify a production/recovery release. C1 PR2820's
 CI is separate; its earlier whole-run weather502 deadline failure is not
 attributed to or fixed by this funding change. Current remote CI and independent
 review are required before readiness.
+
+## Review correction: existing shadow budget oracle
+
+FUND-CLAUDE-001 identifies GW-BUDGET's old assumption that all16Kakao keys and
+Google are charged per lookup. The selected correction uses one Kakao key with
+64units and keeps Google configured but unused. It tests bounded per-key exhaustion
+with65distinct requests, then verifies a warm result and refusal of a new cold
+lookup without provider work. This preserves the purpose without treating per-key
+limits as a shared16-key total. The declaration adds the existing Python tool
+before dependent edits. Its original failure and corrected execution are retained
+in the PR task record.
+
+FUND-CLAUDE-002: quota-rejection metrics now count denied key admissions and can
+increment even when another key succeeds. They are not failed-request counts.
+FUND-CLAUDE-003's downstream integration/towns results are recorded with the
+correction. FUND-CLAUDE-004's outer-timeout limitation is stated above; no
+claim of an independent inner-timeout test is made.
+
+Correction results: the unchanged old GW-BUDGET oracle failed on the new release
+with65successes and0quota failures, reproducing FUND-CLAUDE-001. The corrected
+single-key run passed:64successes,1quota501,64Kakao HTTP,0Google budget objects,
+then1warm hit and1new quota501 with no provider work. Both runs use the same
+optimized native loopback executable; only the Python scenario changed.
+`cargo test --test integration` passed3tests and `cargo test --test domestic towns`
+passed18tests (146filtered); together with the original157,178tests passed locally.
+The filter includes both direct towns and source towns regression cases. These
+macOS results do not replace current Linux CI. Raw reports, hashes and readonly
+review iterations remain in the ignored task record.
+The Python shadow-tool controls passed31tests. Runtime Rust source and the
+contract JSON/HTML are unchanged since the original successful checks, so their
+clippy, example and diagram evidence is reused by exact hashes.
