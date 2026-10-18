@@ -1,7 +1,7 @@
 {
   "task": "Safety2819",
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
-  "scope": "C1 bounded decodable registration state and writer/restore readiness. Fail closed without silent journal skipping, retries, production operations or changes to provider funding. First of the ordered 2819 corrective slices. Review correction declares observability.rs before adding the sanitized input-error classification for the import-only error variant.",
+  "scope": "C1 bounded decodable registration state and writer/restore readiness. Fail closed without silent journal skipping, retries, production operations or changes to provider funding. First of the ordered 2819 corrective slices. Review correction declares observability.rs before adding the sanitized input-error classification for the import-only error variant. Reviewer006 selected before edits: deterministic existing direct-native failure test asserts the exact502 headers, without changing runtime.",
   "server2_paths": [
     "server2/config/tasks/Safety2819.json",
     "server2/src/push/",
@@ -13,7 +13,8 @@
     "server2/benches/feasibility.rs",
     "server2/tools/push_state_smoke.py",
     "server2/tests/runtime_services/",
-    "server2/src/observability.rs"
+    "server2/src/observability.rs",
+    "server2/tests/legacy_versions/kma_direct.rs"
   ],
   "outside": [
     {

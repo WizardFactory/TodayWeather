@@ -105,7 +105,7 @@ For only the four direct KMA/town read groups, the inventory now accepts the
 successful native response or that exact502, including body, length, ETag,
 Express/CORS headers and absence of cache-control/nosniff. Every successful-body
 assertion and acknowledged-state restore check remains. It does not accept404,
-arbitrary5xx or empty responses. This corrects a route/error-contract test; it does
+arbitrary5xx or empty502 error responses. This corrects a route/error-contract test; it does
 not establish weather availability, cold latency or fix D2. No production timeout,
 peer mode, test-thread policy or runtime behavior changed. Original failed CI
 and bounded diagnostic evidence remain retained; final current CI is still required.
@@ -114,3 +114,13 @@ Renewed local verification of the corrected inventory: runtime-services31passed/
 existing forced direct-KMA native502 regression1passed, format and all-target
 clippy pass. The unchanged product sources, examples and smoke tools retain prior
 functional evidence by exact hash; no new product execution is claimed.
+
+Selected reviewer006 adds exact502 content type/length/ETag/Express/CORS and absent
+cache-control/nosniff checks to the existing deterministic direct-native error test.
+The successful v000705 empty200 reply remains accepted. This is wire-contract proof,
+not a new latency bound; the optional per-route elapsed log was not selected.
+
+Deterministic header correction verified locally: the existing direct-route
+forced dependency-failure HTTP test passes for all retained direct goldens with
+exact502 headers/body. Format and all-target clippy pass. Current remote CI and
+independent reviewer confirmation remain required.
