@@ -312,15 +312,23 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
         }
     }
     fn current(&self, n: u64, record: &Record) -> bool {
-        self.push.ready()
-            && self
-                .push
-                .state()
-                .read()
-                .unwrap_or_else(|e| e.into_inner())
-                .coll(Coll::Alert)
-                .get(n)
-                .is_some_and(|r| r.oid == record.oid && r.doc == record.doc)
+        if !self.push.ready() {
+            return false;
+        }
+        match self
+            .push
+            .state()
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .coll(Coll::Alert)
+            .get(n)
+        {
+            Ok(value) => value.is_some_and(|r| r.oid == record.oid && r.doc == record.doc),
+            Err(_) => {
+                self.push.invalidate_state();
+                false
+            }
+        }
     }
     async fn submit(
         &self,
@@ -440,6 +448,12 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningWorker<T> {
                     .unwrap_or_else(|e| e.into_inner())
                     .coll(Coll::Alert)
                     .iter()
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|_| {
+                        self.push.invalidate_state();
+                        Error::Corrupt("push registration state")
+                    })?
+                    .into_iter()
                     .filter(|(_, r)| {
                         !matches!(r.doc.get("enable"), Val::Bool(false)) && inside(&r.doc, now)
                     })

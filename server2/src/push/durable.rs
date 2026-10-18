@@ -380,7 +380,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
                                 let imported = ejson::read_imported(&r);
                                 state
                                     .coll_mut(c)
-                                    .put_imported(n, record, imported.as_deref());
+                                    .put_imported(n, record, imported.as_deref())?;
                             }
                             seen += 1;
                         }
@@ -452,7 +452,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
 
     pub fn apply_entry(&self, state: &mut State, seq: u64, body: &[u8]) -> Result<(), StateError> {
         if let Some((next_n, changes)) = parse_entry(seq, body)? {
-            state.apply(&changes);
+            state.apply(&changes)?;
             state.next_n = state.next_n.max(next_n);
         }
         state.seq = seq;
@@ -567,6 +567,14 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
             .scope(async {
                 if self.pending.is_some() {
                     return Commit::Failed;
+                }
+                if changes
+                    .iter()
+                    .filter_map(|c| c.record.as_ref())
+                    .any(|r| ejson::validate_document(&r.doc).is_err())
+                {
+                    self.counters.failed.fetch_add(1, Ordering::Relaxed);
+                    return Commit::Rejected;
                 }
                 let body = entry_bytes(seq, next_n, &nonce(), changes);
                 if body.len() > MAX_OBJECT {

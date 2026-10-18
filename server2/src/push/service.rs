@@ -246,6 +246,20 @@ impl PushService {
         self.ready.load(std::sync::atomic::Ordering::Acquire)
     }
 
+    /// A decoded view is unusable: stop new claims until the writer restores durable state.
+    pub(crate) fn invalidate_state(&self) {
+        self.ready
+            .store(false, std::sync::atomic::Ordering::Release);
+        crate::observability::event(
+            crate::observability::Component::PushState,
+            crate::observability::Stage::Lookup,
+            crate::observability::Cause::Corrupt,
+            crate::observability::Action::ReturnError,
+            crate::observability::Outcome::Failed,
+            Default::default(),
+        );
+    }
+
     /// Whether a path belongs to the push routes this service answers.
     pub fn matches(path: &str) -> bool {
         express::mount(path).is_some()
@@ -372,6 +386,14 @@ struct Writer<T> {
     config: PushConfig,
 }
 
+impl<T> Drop for Writer<T> {
+    fn drop(&mut self) {
+        // This owner also drops when its future is aborted or unwinds.
+        self.ready
+            .store(false, std::sync::atomic::Ordering::Release);
+    }
+}
+
 impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
     async fn run(mut self, mut rx: mpsc::Receiver<Command>, mut stop: watch::Receiver<bool>) {
         let mut next_restore = Instant::now();
@@ -437,9 +459,14 @@ impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
 
     fn apply(&self, entries: &[(u64, Vec<u8>)]) -> bool {
         let mut state = self.state.write().unwrap_or_else(|e| e.into_inner());
-        entries
+        let applied = entries
             .iter()
-            .all(|(seq, body)| self.durable.apply_entry(&mut state, *seq, body).is_ok())
+            .all(|(seq, body)| self.durable.apply_entry(&mut state, *seq, body).is_ok());
+        if !applied {
+            self.ready
+                .store(false, std::sync::atomic::Ordering::Release);
+        }
+        applied
     }
 
     async fn process(&mut self, command: Command) {
@@ -486,11 +513,24 @@ impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
                         language.as_deref(),
                         &mut TxnBackend { txn: &mut txn },
                     )),
-                    Job::Internal { op, .. } => {
-                        Answer::Internal(super::deliver::ops::plan(op, &mut txn))
+                    Job::Internal { op, .. } => match super::deliver::ops::plan(op, &mut txn) {
+                        Ok(value) => Answer::Internal(value),
+                        Err(_) => {
+                            self.ready
+                                .store(false, std::sync::atomic::Ordering::Release);
+                            return;
+                        }
+                    },
+                };
+                let changes = match txn.changes() {
+                    Ok(changes) => changes,
+                    Err(_) => {
+                        self.ready
+                            .store(false, std::sync::atomic::Ordering::Release);
+                        return;
                     }
                 };
-                (reply, txn.changes(), txn.next_n(), state.seq + 1)
+                (reply, changes, txn.next_n(), state.seq + 1)
             };
             if changes.is_empty() {
                 command.job.answer(reply);
@@ -500,7 +540,11 @@ impl<T: CatalogTransport + Send + Sync + 'static> Writer<T> {
                 Commit::Committed => {
                     {
                         let mut state = self.state.write().unwrap_or_else(|e| e.into_inner());
-                        state.apply(&changes);
+                        if state.apply(&changes).is_err() {
+                            self.ready
+                                .store(false, std::sync::atomic::Ordering::Release);
+                            return;
+                        }
                         state.next_n = state.next_n.max(next_n);
                         state.seq = seq;
                     }

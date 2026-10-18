@@ -216,7 +216,13 @@ async fn import_is_idempotent_and_restores_with_the_registration_api() {
 fn records_of(state: &server2::push::State) -> Vec<(Coll, server2::push::Record)> {
     let mut all: Vec<(u64, Coll, server2::push::Record)> = Vec::new();
     for c in [Coll::Alarm, Coll::Alert] {
-        all.extend(state.coll(c).iter().map(|(n, r)| (n, c, r.clone())));
+        all.extend(
+            state
+                .coll(c)
+                .iter()
+                .map(Result::unwrap)
+                .map(|(n, r)| (n, c, r.clone())),
+        );
     }
     all.sort_by_key(|(n, ..)| *n);
     all.into_iter().map(|(_, c, r)| (c, r)).collect()
@@ -303,6 +309,7 @@ async fn undated_records_keep_server2_changes_and_take_legacy_changes() {
     let tokens: Vec<String> = state
         .coll(Coll::Alarm)
         .iter()
+        .map(Result::unwrap)
         .map(|(_, r)| r.token("fcmToken").unwrap().to_owned())
         .collect();
     assert_eq!(tokens, ["s-1", "s-2", "u-3b"]);

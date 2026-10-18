@@ -478,3 +478,14 @@ widget UI or an earlier complete release. #2704/#2705 remain open. #2724 actual
 quota measurement, production/resources/live providers/mirroring/sends/final
 state copies and switch authority remain outside this increment. Earlier dated
 scope and execution records remain historical, not relabelled as S20e runs.
+
+## #2819 ordered corrective work (2026-10-18)
+
+The [review comment](https://github.com/WizardFactory/TodayWeather/issues/2819#issuecomment-6244183930)
+distinguishes reproduced failures, source findings and unresolved estimates. The
+[first correction](issue-2819-state.md) protects bounded decodable push documents,
+atomic journal application and writer readiness. It preserves compact records and
+failed/unknown delivery claims. This is one slice, not closure of #2819 or S19/S20.
+Funding/publication, notification scheduling, capacity/observability/configuration/CI
+and exact candidate/recovery requalification follow in that order. Seven-day shadow
+qualification and production cutover remain blocked by the unresolved applicable gates.

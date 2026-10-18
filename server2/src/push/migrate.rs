@@ -226,7 +226,10 @@ pub struct ImportCounts {
 /// - the legacy document is the one imported before (only server2 changed it): `kept`;
 /// - server2 left the imported document as it was (only legacy changed it): `updated`;
 /// - both changed: the newer `updatedAt` wins when both have one (`updated`), else `kept`.
-pub fn plan_import(state: &State, records: &[(Coll, Record)]) -> (Vec<Change>, u64, ImportCounts) {
+pub fn plan_import(
+    state: &State,
+    records: &[(Coll, Record)],
+) -> Result<(Vec<Change>, u64, ImportCounts), StateError> {
     let mut by_oid: HashMap<(Coll, Oid), Encoded<'_>> = HashMap::new();
     for c in [Coll::Alarm, Coll::Alert] {
         for e in state.coll(c).iter_encoded() {
@@ -237,6 +240,7 @@ pub fn plan_import(state: &State, records: &[(Coll, Record)]) -> (Vec<Change>, u
     let mut counts = ImportCounts::default();
     let mut changes = Vec::new();
     for (c, record) in records {
+        ejson::validate_document(&record.doc)?;
         let mut encoded = String::new();
         ejson::write_obj(&record.doc, &mut encoded);
         let digest = sha256(encoded.as_bytes());
@@ -264,7 +268,10 @@ pub fn plan_import(state: &State, records: &[(Coll, Record)]) -> (Vec<Change>, u
                 counts.updated += 1;
             }
             Some((n, ..)) => {
-                let existing = state.coll(*c).get(*n).expect("indexed record");
+                let existing = state
+                    .coll(*c)
+                    .get(*n)?
+                    .ok_or(StateError::Corrupt("indexed record"))?;
                 let newer = matches!(
                     (existing.doc.get("updatedAt"), record.doc.get("updatedAt")),
                     (Val::Date(old), Val::Date(new)) if new > old
@@ -278,7 +285,7 @@ pub fn plan_import(state: &State, records: &[(Coll, Record)]) -> (Vec<Change>, u
             }
         }
     }
-    (changes, next_n, counts)
+    Ok((changes, next_n, counts))
 }
 
 /// Merge `records` into the durable state: restore, plan, commit in bounded journal entries
@@ -288,7 +295,7 @@ pub async fn import<T: CatalogTransport + Send + Sync + 'static>(
     records: &[(Coll, Record)],
 ) -> Result<ImportCounts, StateError> {
     let mut state = durable.restore().await?;
-    let (mut changes, _, total) = plan_import(&state, records);
+    let (mut changes, _, total) = plan_import(&state, records)?;
     let mut conflicts = 0;
     let wrote = !changes.is_empty();
     let mut done = 0usize;
@@ -324,7 +331,7 @@ pub async fn import<T: CatalogTransport + Send + Sync + 'static>(
         let seq = state.seq + 1;
         match durable.commit(seq, chunk, chunk_next).await {
             Commit::Committed => {
-                state.apply(chunk);
+                state.apply(chunk)?;
                 state.next_n = state.next_n.max(chunk_next);
                 state.seq = seq;
                 done += take;
@@ -333,7 +340,7 @@ pub async fn import<T: CatalogTransport + Send + Sync + 'static>(
                 // Another writer committed (or our unknown write was voided): plan again.
                 conflicts += 1;
                 durable.catch_up(&mut state).await?;
-                changes = plan_import(&state, records).0;
+                changes = plan_import(&state, records)?.0;
                 done = 0;
             }
             _ => return Err(StateError::Storage(crate::storage::Error::Ambiguous)),

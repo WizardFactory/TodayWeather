@@ -729,9 +729,19 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
             let due = {
                 let state = self.push.state();
                 let state = state.read().unwrap_or_else(|e| e.into_inner());
-                state
+                let records = match state
                     .coll(Coll::Alert)
                     .iter()
+                    .collect::<Result<Vec<_>, _>>()
+                {
+                    Ok(records) => records,
+                    Err(_) => {
+                        self.push.invalidate_state();
+                        return MinuteReport::default();
+                    }
+                };
+                records
+                    .into_iter()
                     .filter(|(_, r)| {
                         eligible(
                             &r.doc,

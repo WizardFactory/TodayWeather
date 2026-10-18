@@ -1,6 +1,7 @@
 //! The alarm worker's store calls, planned in the writer's transaction like the HTTP routes:
 //! `lib/pushStore/mongo.js` `removeDuplicateAlarms`, `disableAlarmsByFcm`, `removeAlarms`
 //! (with `makeRemoveSelector`) and `controllerPush.updatePushInfo` for the `updatedAt` stamp.
+use crate::push::ejson::DecodeError;
 use crate::push::{
     mongoose,
     routes::{self, TxnBackend},
@@ -11,13 +12,13 @@ use crate::world::js::{Obj, Val};
 use std::collections::BTreeMap;
 
 /// Plan one operation; `false` is a store error (legacy logs it and continues).
-pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
-    match op {
+pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> Result<bool, DecodeError> {
+    Ok(match op {
         InternalOp::CheckAlarmSelection { n, oid, selected } => txn
-            .get(Coll::Alarm, *n)
+            .get(Coll::Alarm, *n)?
             .is_some_and(|r| r.oid == *oid && same_alarm_subscription(&r.doc, selected)),
         InternalOp::CheckAlertSelection { n, oid, selected } => txn
-            .get(Coll::Alert, *n)
+            .get(Coll::Alert, *n)?
             .is_some_and(|r| r.oid == *oid && &r.doc == selected),
         InternalOp::UpdateAlertState {
             n,
@@ -26,26 +27,28 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
             precip,
             air,
         } => {
-            let Some(mut record) = txn.get(Coll::Alert, *n) else {
-                return false;
+            let Some(mut record) = txn.get(Coll::Alert, *n)? else {
+                return Ok(false);
             };
             if record.oid != *oid || &record.doc != selected {
-                return false;
+                return Ok(false);
             }
             let mut fields = Obj::new();
             fields.set("airAlerts", air.clone());
             fields.set("precipAlerts", precip.clone());
             let Ok(set) = mongoose::cast_set(Coll::Alert, &fields, false) else {
-                return false;
+                return Ok(false);
             };
             mongoose::apply_set(&mut record.doc, &set);
-            txn.put(Coll::Alert, *n, record);
+            txn.put(Coll::Alert, *n, record)?;
             true
         }
         InternalOp::DisableAlertsByFcm { token } => {
             let query = [("fcmToken".to_owned(), Cond::Eq(Val::Str(token.clone())))];
-            for n in txn.find(Coll::Alert, &query) {
-                let mut record = txn.get(Coll::Alert, n).expect("found record");
+            for n in txn.find(Coll::Alert, &query)? {
+                let mut record = txn
+                    .get(Coll::Alert, n)?
+                    .ok_or(DecodeError("missing record"))?;
                 mongoose::apply_set(
                     &mut record.doc,
                     &[
@@ -54,17 +57,20 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
                         ("updatedBy".into(), Val::Str("push".into())),
                     ],
                 );
-                txn.put(Coll::Alert, n, record);
+                txn.put(Coll::Alert, n, record)?;
             }
             true
         }
         InternalOp::RemoveDuplicateAlerts => {
-            remove_duplicates(txn, Coll::Alert);
+            remove_duplicates(txn, Coll::Alert)?;
             true
         }
         InternalOp::DisableAlarmsByFcm { token, spare } => {
             let now = txn.now_ms;
-            let mut spared: Vec<u64> = spare.iter().flat_map(|s| still_stale(txn, s)).collect();
+            let mut spared = Vec::new();
+            for selection in spare {
+                spared.extend(still_stale(txn, selection)?);
+            }
             spared.sort_unstable();
             spared.dedup();
             let query = [("fcmToken".to_owned(), Cond::Eq(Val::Str(token.clone())))];
@@ -73,10 +79,12 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
             // then removed them the same minute), so no restart or later failure can leave one
             // of them enabled, and disabling one never makes another look recently updated.
             for n in &spared {
-                txn.remove(Coll::Alarm, *n);
+                txn.remove(Coll::Alarm, *n)?;
             }
-            for n in txn.find(Coll::Alarm, &query) {
-                let mut record = txn.get(Coll::Alarm, n).expect("found record");
+            for n in txn.find(Coll::Alarm, &query)? {
+                let mut record = txn
+                    .get(Coll::Alarm, n)?
+                    .ok_or(DecodeError("missing record"))?;
                 mongoose::apply_set(
                     &mut record.doc,
                     &[
@@ -85,23 +93,23 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
                         ("updatedBy".into(), Val::Str("push".into())),
                     ],
                 );
-                txn.put(Coll::Alarm, n, record);
+                txn.put(Coll::Alarm, n, record)?;
             }
             true
         }
         InternalOp::RemoveAlarms(stale) => {
-            let numbers = still_stale(txn, stale);
+            let numbers = still_stale(txn, stale)?;
             for m in &numbers {
-                txn.remove(Coll::Alarm, *m);
+                txn.remove(Coll::Alarm, *m)?;
             }
             !numbers.is_empty()
         }
         InternalOp::StampAlarm { n, oid, info } => {
             let unstamped = txn
-                .get(Coll::Alarm, *n)
+                .get(Coll::Alarm, *n)?
                 .is_some_and(|r| r.oid == *oid && r.doc.get("updatedAt").is_nullish());
             if !unstamped {
-                return false;
+                return Ok(false);
             }
             let mut info = info.clone();
             matches!(
@@ -110,10 +118,10 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
             )
         }
         InternalOp::RemoveDuplicateAlarms => {
-            remove_duplicates(txn, Coll::Alarm);
+            remove_duplicates(txn, Coll::Alarm)?;
             true
         }
-    }
+    })
 }
 
 /// Groups by (registrationId, cityIndex, id) with a defined `registrationId` and more than one
@@ -121,11 +129,11 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> bool {
 /// Legacy compares only the first two `$addToSet` values (unordered) and throws when a group has
 /// a single distinct date; server2 uses the earliest date and skips groups with one date or a
 /// missing date (recorded difference).
-fn remove_duplicates(txn: &mut Txn<'_>, coll: Coll) {
+fn remove_duplicates(txn: &mut Txn<'_>, coll: Coll) -> Result<(), DecodeError> {
     // Group on the indexed key fields (no document is decoded); only the members of a group
     // with more than one record are decoded for their dates. This runs every minute.
     let mut groups: BTreeMap<String, Vec<u64>> = BTreeMap::new();
-    for n in txn.find(coll, &[]) {
+    for n in txn.find(coll, &[])? {
         let keys = txn.keys(coll, n).expect("found record");
         let field = |name: &str| {
             keys[KEY_FIELDS
@@ -148,14 +156,14 @@ fn remove_duplicates(txn: &mut Txn<'_>, coll: Coll) {
         let members: Vec<(u64, Option<f64>)> = numbers
             .iter()
             .map(|n| {
-                let record = txn.get(coll, *n).expect("found record");
+                let record = txn.get(coll, *n)?.ok_or(DecodeError("missing record"))?;
                 let date = match record.doc.get("updatedAt") {
                     Val::Date(ms) => Some(*ms),
                     _ => None,
                 };
-                (*n, date)
+                Ok((*n, date))
             })
-            .collect();
+            .collect::<Result<_, DecodeError>>()?;
         if members.iter().any(|(_, d)| d.is_none()) {
             continue;
         }
@@ -167,28 +175,33 @@ fn remove_duplicates(txn: &mut Txn<'_>, coll: Coll) {
         }
         for (n, d) in members {
             if d == Some(dates[0]) {
-                txn.remove(coll, n);
+                txn.remove(coll, n)?;
             }
         }
     }
+    Ok(())
 }
 
 /// The records of a stale selection's filter that are still stale (see [`StaleSelection`]).
-fn still_stale(txn: &Txn<'_>, stale: &StaleSelection) -> Vec<u64> {
+fn still_stale(txn: &Txn<'_>, stale: &StaleSelection) -> Result<Vec<u64>, DecodeError> {
     let Ok(query) = mongoose::cast_query(Coll::Alarm, &stale.filter) else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
-    txn.find(Coll::Alarm, &query)
-        .into_iter()
-        .filter(|m| {
-            let record = txn.get(Coll::Alarm, *m).expect("found record");
-            if *m == stale.n {
-                record.oid == stale.oid && record.doc == stale.selected
-            } else {
-                matches!(record.doc.get("updatedAt"), Val::Date(ms) if (*ms as i64) < stale.cutoff_ms)
-            }
-        })
-        .collect()
+    let mut found = Vec::new();
+    for n in txn.find(Coll::Alarm, &query)? {
+        let record = txn
+            .get(Coll::Alarm, n)?
+            .ok_or(DecodeError("missing record"))?;
+        let selected = if n == stale.n {
+            record.oid == stale.oid && record.doc == stale.selected
+        } else {
+            matches!(record.doc.get("updatedAt"), Val::Date(ms) if (*ms as i64) < stale.cutoff_ms)
+        };
+        if selected {
+            found.push(n);
+        }
+    }
+    Ok(found)
 }
 
 /// `makeRemoveSelector(pushInfo)` as a filter.

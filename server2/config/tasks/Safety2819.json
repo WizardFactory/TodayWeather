@@ -1,0 +1,64 @@
+{
+  "task": "Safety2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "C1 bounded decodable registration state and writer/restore readiness. Fail closed without silent journal skipping, retries, production operations or changes to provider funding. First of the ordered 2819 corrective slices.",
+  "server2_paths": [
+    "server2/config/tasks/Safety2819.json",
+    "server2/src/push/",
+    "server2/tests/state.rs",
+    "server2/tests/state/",
+    "server2/tests/delivery/",
+    "server2/tests/delivery.rs",
+    "server2/examples/logging_smoke.rs",
+    "server2/benches/feasibility.rs",
+    "server2/tools/push_state_smoke.py",
+    "server2/tests/runtime_services/"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-state.md",
+      "category": "documentation",
+      "reason": "Task intent/spec/plan, affected state/operations contract, state flow diagram and selected regression evidence"
+    },
+    {
+      "path": "specs/issue-2819-state.md",
+      "category": "documentation",
+      "reason": "Task intent/spec/plan, affected state/operations contract, state flow diagram and selected regression evidence"
+    },
+    {
+      "path": "plans/issue-2819-state.md",
+      "category": "documentation",
+      "reason": "Task intent/spec/plan, affected state/operations contract, state flow diagram and selected regression evidence"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Task intent/spec/plan, affected state/operations contract, state flow diagram and selected regression evidence"
+    },
+    {
+      "path": "docs/operations/server2-cutover.md",
+      "category": "documentation",
+      "reason": "Task intent/spec/plan, affected state/operations contract, state flow diagram and selected regression evidence"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Task intent/spec/plan, affected state/operations contract, state flow diagram and selected regression evidence"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-push-state.json",
+      "category": "documentation",
+      "reason": "Task intent/spec/plan, affected state/operations contract, state flow diagram and selected regression evidence"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-push-state.html",
+      "category": "documentation",
+      "reason": "Task intent/spec/plan, affected state/operations contract, state flow diagram and selected regression evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-state/verification.md",
+      "category": "documentation",
+      "reason": "Task intent/spec/plan, affected state/operations contract, state flow diagram and selected regression evidence"
+    }
+  ]
+}

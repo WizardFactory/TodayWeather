@@ -1,0 +1,67 @@
+# Push registration state safety verification (#2819 C1)
+
+2026-10-18 KST. Base `1e31ac1ee91e916f9c36162ff474c4386b36ecd4`.
+This correction does not close #2819, S19 or S20 and does not qualify production
+or the previous complete recovery bundle. No live notification, cloud mutation,
+production registration copy or provider request was performed.
+
+## Behavior and checks
+
+- On the unchanged implementation, the two unsafe insert/existing-alert-update
+  regressions failed their intended assertions: poisoned documents were acknowledged.
+  A separate Red showed the ready flag remaining true after writer stop.
+- After the correction, the focused regression execution passed 96 library,
+  25 state, 60 delivery and 31 runtime-services tests; one runtime-services test
+  remained ignored (212 passed, 1 ignored). The state tests cover direct commit
+  rejection, atomic mixed journal rejection without sequence advance or rewrite,
+  valid restart, writer stop/panic, BSON round trips, and escaped-size/depth bounds.
+  Existing state parity exercises 115 legacy requests. These are synthetic tests,
+  not a new production export or parity run against a deployed legacy host.
+- Native ARM64 release builds of `server2` and `loopback_server` passed, followed
+  by the same separate HTTP smoke on the release executable (including a structured
+  corrupt-restore event and no panic). This does not establish Linux/EC2 compatibility.
+- `cargo clippy --locked --offline -j2 --all-targets -- -D warnings` passed.
+  Rust toolchain 1.99.0, macOS ARM64, process-scoped incremental/debug disabling;
+  the coordinator reused an ignored target directory. No global Cargo settings changed.
+- The additional owned HTTP smoke starts the native loopback process over a fresh
+  local S3-compatible peer. Invalid units returns 500/store-error without a journal;
+  an existing alert's invalid precipAlerts returns 200 `[null]` with unchanged journal.
+  Valid insert/rename and post-restart rename succeed. An injected old corrupt next
+  entry makes registration writes fail without altering original journal bytes.
+  `/health` remains 200 liveness; this is not aggregate readiness.
+
+Run the reusable smoke from the repository root against an explicitly retained
+loopback executable (Python 3.9+, no production environment or credentials):
+
+```sh
+python3 server2/tools/push_state_smoke.py --binary /owned/examples/loopback_server \
+  --output reports/my-task/state-smoke
+```
+
+The output directory must be new and outside `server2/`. The child environment is
+synthetic; no Firebase credentials are supplied and scheduled send times are invalid.
+The tool records the executable digest before/after and terminates its owned child
+and peer. Its report's `production_eligible` and `live_actions` remain false.
+
+The original Red, setup failures, correction logs and HTTP reports are retained
+locally under ignored `reports/sdlc/issue-2819-state/` and
+`reports/verification/issue2819-state/`. Failed offline dependency and test-peer
+setup attempts are not labeled product regressions. Selected durable facts and
+commands are maintained here; no maintained link depends on those local directories.
+
+## Recovery and documentation bounds
+
+The 256 KiB encoded document and depth-32 admission limits are new explicit safety
+bounds, not measured maxima of all production registrations. Existing valid fixture
+and typed EJSON behavior is covered. The converter rejects invalid imported records;
+operators must review rejected counts before the separately authorized final copy.
+A corrupt acknowledged entry is never silently skipped or repaired; preserve it and
+keep admission closed until a compatible repair is approved. Writer readiness is
+cleared on exit/abort/unwind; aggregate S3/credential/private readiness follows later.
+
+The [workflow](../../../architecture/diagrams/server2-push-state.html) and
+[editable contract](../../../architecture/diagrams/server2-push-state.json) describe
+admission and recovery decisions rather than an execution or deployment topology.
+Archify showcase validation, delivery, strict artifact checks and real browser
+checks passed. Light/dark endpoint captures were inspected for readable labels,
+clear branches and no horizontal overflow. The diagrams introduce no runtime owner.

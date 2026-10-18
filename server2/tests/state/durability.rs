@@ -2,10 +2,11 @@
 use super::common::*;
 use axum::{body::Body as HttpBody, extract::Request};
 use server2::push::{
-    Coll, PushConfig,
-    durable::{DurableConfig, journal_key},
+    Coll, OidSource, PushConfig, PushService, Record, State,
+    durable::{Counters, Durable, DurableConfig, journal_key},
     routes::STORAGE_FAILURE,
 };
+use server2::world::js::{Obj, Val};
 use std::{sync::Arc, time::Duration};
 
 const T0: &str = "2026-10-15T01:00:00.000Z";
@@ -50,6 +51,7 @@ fn tokens(state: &server2::push::State, c: Coll) -> Vec<String> {
     state
         .coll(c)
         .iter()
+        .map(Result::unwrap)
         .map(|(_, r)| r.token("fcmToken").unwrap_or_default().to_owned())
         .collect()
 }
@@ -539,4 +541,212 @@ async fn geo_points_outside_the_2d_bounds_are_store_errors() {
     let state = state.read().unwrap();
     assert_eq!(tokens(&state, Coll::Alarm), ["g2"]);
     assert!(tokens(&state, Coll::Alert).is_empty());
+}
+
+#[tokio::test]
+async fn unsafe_units_are_rejected_before_commit_and_leave_the_writer_usable() {
+    for invalid in [
+        serde_json::json!([{"$x": 1}]),
+        serde_json::json!([{"nested": [{"a.b": 1}]}]),
+        serde_json::json!([{"$date": 0}]),
+    ] {
+        let s3 = MemS3::new();
+        let service = start(&s3, FixedClock::at(T0), fast_config()).await;
+        let mut input = alarm("unsafe", 0);
+        input["units"] = invalid;
+        let (status, reply) = call(&service, "POST", "/v000705/push", input).await;
+        assert_eq!((status, reply.as_str()), (500, STORAGE_FAILURE));
+        assert!(s3.keys("index/v2/push/state/journal/").is_empty());
+        assert!(service.ready());
+        let (_, reply) = call(&service, "POST", "/v000705/push", alarm("valid", 1)).await;
+        assert!(reply.contains("\"ok\":1"), "{reply}");
+        assert_eq!(
+            tokens(&service.state().read().unwrap(), Coll::Alarm),
+            vec!["valid"]
+        );
+        assert!(
+            service
+                .drain(tokio::time::Instant::now() + Duration::from_secs(1))
+                .await
+        );
+        let restarted = start(&s3, FixedClock::at(T0), fast_config()).await;
+        assert_eq!(
+            tokens(&restarted.state().read().unwrap(), Coll::Alarm),
+            vec!["valid"]
+        );
+    }
+}
+
+#[tokio::test]
+async fn unsafe_existing_alert_update_does_not_poison_acknowledged_state() {
+    let s3 = MemS3::new();
+    let service = start(&s3, FixedClock::at(T0), fast_config()).await;
+    let mut input = alert("existing", 0);
+    let (_, created) = call(
+        &service,
+        "POST",
+        "/v000902/push-list",
+        serde_json::json!([input.clone()]),
+    )
+    .await;
+    assert!(created.contains("existing"));
+    let before = s3.body(&journal_key(1)).unwrap();
+    input["precipAlerts"] = serde_json::json!([{"$x": 1}]);
+    let (status, reply) = call(
+        &service,
+        "POST",
+        "/v000902/push-list",
+        serde_json::json!([input]),
+    )
+    .await;
+    assert_eq!((status, reply.as_str()), (200, "[null]"));
+    assert_eq!(s3.body(&journal_key(1)), Some(before));
+    assert!(s3.body(&journal_key(2)).is_none());
+    assert!(service.ready());
+    let (status, reply) = call(
+        &service,
+        "PUT",
+        "/v000902/push",
+        serde_json::json!({"oldToken":"existing","newToken":"renamed"}),
+    )
+    .await;
+    assert_eq!(status, 200, "{reply}");
+    assert!(reply.contains("\"nModified\":1"), "{reply}");
+    assert!(
+        service
+            .drain(tokio::time::Instant::now() + Duration::from_secs(1))
+            .await
+    );
+    let restarted = start(&s3, FixedClock::at(T0), fast_config()).await;
+    assert_eq!(
+        tokens(&restarted.state().read().unwrap(), Coll::Alert),
+        vec!["renamed"]
+    );
+}
+
+#[tokio::test]
+async fn writer_stop_clears_readiness() {
+    let s3 = MemS3::new();
+    let service = start(&s3, FixedClock::at(T0), fast_config()).await;
+    assert!(service.ready());
+    assert!(
+        service
+            .drain(tokio::time::Instant::now() + Duration::from_secs(1))
+            .await
+    );
+    assert!(!service.ready());
+}
+
+fn poisoned_changes() -> Vec<server2::push::store::Change> {
+    let mut valid = Obj::new();
+    valid.set("fcmToken", "kept");
+    let mut invalid = Obj::new();
+    invalid.set("$x", 1.);
+    let mut bad = Obj::new();
+    bad.set("units", Val::Arr(vec![Val::Obj(invalid)]));
+    [valid, bad]
+        .into_iter()
+        .enumerate()
+        .map(|(n, doc)| {
+            let oid = [n as u8 + 1; 12];
+            server2::push::store::Change {
+                coll: Coll::Alarm,
+                n: n as u64,
+                oid,
+                record: Some(Record { oid, doc }),
+                imported: None,
+            }
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn direct_commit_rejects_bad_records_without_writing_or_consuming_a_sequence() {
+    use server2::push::durable::Commit;
+    let s3 = MemS3::new();
+    let mut durable = Durable::new(
+        Arc::new(s3.clone()),
+        DurableConfig::default(),
+        Arc::new(Counters::default()),
+    );
+    let mut changes = poisoned_changes();
+    assert_eq!(durable.commit(1, &changes, 2).await, Commit::Rejected);
+    assert!(s3.keys("index/v2/push/state/journal/").is_empty());
+    assert_eq!(s3.put_count("index/v2/push/state/journal/"), 0);
+    changes.truncate(1);
+    assert_eq!(durable.commit(1, &changes, 1).await, Commit::Committed);
+    assert_eq!(durable.restore().await.unwrap().alarms.len(), 1);
+}
+
+#[tokio::test]
+async fn corrupt_entry_fails_atomically_without_rewriting_acknowledged_history() {
+    use server2::push::durable::entry_bytes;
+    let s3 = MemS3::new();
+    let bytes = entry_bytes(1, 2, "owned-corrupt-entry", &poisoned_changes());
+    s3.insert(&journal_key(1), &bytes);
+    let mut durable = Durable::new(
+        Arc::new(s3.clone()),
+        DurableConfig::default(),
+        Arc::new(Counters::default()),
+    );
+    let mut state = State::default();
+    assert!(durable.apply_entry(&mut state, 1, &bytes).is_err());
+    assert_eq!((state.seq, state.next_n, state.alarms.len()), (0, 0, 0));
+    assert!(durable.restore().await.is_err());
+    let service = PushService::start(
+        Arc::new(s3.clone()),
+        FixedClock::at(T0),
+        Box::new(OracleIds(0)),
+        fast_config(),
+    );
+    let (status, body) = call(&service, "POST", "/v000705/push", alarm("valid", 1)).await;
+    assert_eq!((status, body.as_str()), (500, STORAGE_FAILURE));
+    assert!(!service.ready());
+    assert!(
+        service
+            .drain(tokio::time::Instant::now() + Duration::from_secs(1))
+            .await
+    );
+    assert_eq!(s3.body(&journal_key(1)), Some(bytes));
+    assert_eq!(s3.put_count("index/v2/push/state/"), 0);
+}
+
+#[test]
+fn state_application_rejects_the_entire_invalid_change_set() {
+    let mut state = State::default();
+    assert!(state.apply(&poisoned_changes()).is_err());
+    assert_eq!((state.seq, state.next_n, state.alarms.len()), (0, 0, 0));
+}
+
+#[tokio::test]
+async fn writer_panic_clears_readiness_and_cannot_acknowledge_a_mutation() {
+    struct PanicIds;
+    impl OidSource for PanicIds {
+        fn next(&mut self, _: f64) -> server2::push::store::Oid {
+            panic!("owned writer fault")
+        }
+    }
+    let s3 = MemS3::new();
+    let service = PushService::start(
+        Arc::new(s3.clone()),
+        FixedClock::at(T0),
+        Box::new(PanicIds),
+        fast_config(),
+    );
+    for _ in 0..100 {
+        if service.ready() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    assert!(service.ready());
+    let (status, body) = call(&service, "POST", "/v000705/push", alarm("valid", 1)).await;
+    assert_eq!((status, body.as_str()), (500, STORAGE_FAILURE));
+    assert!(!service.ready());
+    assert!(s3.keys("index/v2/push/state/journal/").is_empty());
+    assert!(
+        !service
+            .drain(tokio::time::Instant::now() + Duration::from_secs(1))
+            .await
+    );
 }
