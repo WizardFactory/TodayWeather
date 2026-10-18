@@ -830,8 +830,10 @@ are satisfied. No claim of RPO zero is made for an unacknowledged provider reply
 Following S06 merge, [S08 #2693](https://github.com/WizardFactory/TodayWeather/issues/2693)
 implements internal quota admission and rejection primitives. Its
 [sequence](diagrams/server2-provider-admission.html) and
-[editable source](diagrams/server2-provider-admission.sequence.json) show the
-committed internal execution; no provider route, live quota or production policy is activated.
+[editable source](diagrams/server2-provider-admission.sequence.json) now show the
+selected #2819 B2 DataGoKr funding contract as an illustrative example, not a
+code-revision attestation of the entire S08 CAS/witness protocol. The historical
+S08 diagram remains in Git history. No live quota or production policy is activated.
 
 Each trusted provider/quota-owner/window has a separate versioned
 `budgets/v2/{provider}/{opaque_quota_key_id}/{window_id}/authority.json`.
@@ -862,7 +864,7 @@ fail closed. Stable window/owner configuration, trusted clocks and no external
 delete/reset/version rollback remain deployment prerequisites.
 
 The funded executor sends at most two actual provider HTTP attempts. VC retains its
-maximum prepayment: 98/50/2 records for two attempts of the49/25/1-record modes.
+maximum prepayment: 98/50/2 records for two attempts of the 49/25/1-record modes.
 The #2819 B2 correction reserves one logical data.go.kr unit immediately before
 HTTP on the selected key. An unused rotation candidate is not funded. Known local
 `BudgetError::Exhausted` skips to the next distinct declared candidate without an
@@ -884,7 +886,13 @@ keys with its existing concurrent compare-and-update guard; successful keys stay
 preferred without undoing a concurrent valid advancement. Each call sees at most
 two candidates. In a larger ring, an exhausted pair can fail without HTTP and
 advance to the third key for the next call; it does not scan all keys per call.
-Local denial is never fabricated as a provider HTTP quota outcome.
+Local denial is never fabricated as a provider HTTP quota outcome. If A actually
+answered Quota/Auth and the distinct next key B is only locally exhausted, the
+terminal result preserves A's observed provider classification; the report still
+records B's local denial. Unknown funding on B remains a terminal funding error.
+The report contains skipped local candidates for settlement, but no separate
+successful-skip metric exists. `funding_denied` counts calls ending in a funding
+error; actual HTTP outcome counters retain their own meaning.
 
 If response headers have arrived but encoding, header/body size or download
 validation fails, a typed body failure preserves the received HTTP status.
@@ -1826,13 +1834,16 @@ remembered (`preferred`). Code 23 (per-second limit) is not a daily quota and ke
 The forecast-zone and KASI rings retain their #2604 order. With #2819 B2, a known
 local S08 `Exhausted` also tries the next selected key. AirKorea keeps its reverse
 legacy order and remembered working key, but an API-local funding cap never sets
-the provider-wide KST exhaustion marker. Other funding errors still stop.
+the provider-wide KST exhaustion marker. Other funding errors still stop. AirKorea does not cache an API-local funding
+exhaustion in its provider-wide KST marker: a later call rechecks that key's S08
+authority (an S3 read, no provider HTTP). This avoids carrying one API's cap into
+other APIs or beyond its actual window.
 
 Every actual data.go.kr HTTP attempt now reserves one logical unit on its key;
 an unused transient retry is not prepaid. With *n* keys and *P* pages the upper
 bound remains *n·P* page calls, *2·n·P* actual HTTP attempts/logical units (at most
-20 pages;3keys ×7pages can use at most42actual attempts). A single quota response
-on page1 costs one HTTP/logical unit per rejected key, rather than reserving a
+20 pages; 3 keys × 7 pages can use at most 42 actual attempts). A single quota response
+on page 1 costs one HTTP/logical unit per rejected key, rather than reserving a
 second unused retry unit. Parallel acquisitions already in flight can each receive
 one quota answer. Exhaustion is held in memory per
 acquirer, so after a restart each exhausted key costs one more quota answer per acquisition that

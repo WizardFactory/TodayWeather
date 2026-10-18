@@ -1251,3 +1251,66 @@ async fn incomplete_auth_quota_without_rotation_stops_and_no_status_is_transport
     ));
     assert_eq!(*provider.calls.lock().unwrap(), ["first", "first"]);
 }
+
+/// An ownership/clock/transport error on A must not even consult candidate B.
+struct DenyFirstRead {
+    error: BudgetError,
+    reads: Mutex<Vec<String>>,
+}
+impl BudgetTransport for DenyFirstRead {
+    async fn get_budget(&self, key: &str) -> Result<BudgetObject, BudgetError> {
+        self.reads.lock().unwrap().push(key.into());
+        Err(self.error)
+    }
+    async fn put_budget(
+        &self,
+        _: &str,
+        _: &[u8],
+        _: &server2::storage::WriteCondition,
+    ) -> Result<u16, BudgetError> {
+        panic!("a failed authority read must never permit writes")
+    }
+}
+#[tokio::test]
+async fn funding_review_ambiguous_denial_never_consults_second_key() {
+    for error in [
+        BudgetError::Unknown,
+        BudgetError::Corrupt("owned fault"),
+        BudgetError::Transport,
+        BudgetError::Clock,
+    ] {
+        let peer = Running::new().await;
+        let wire = Arc::new(DenyFirstRead {
+            error,
+            reads: Mutex::new(Vec::new()),
+        });
+        let a = policy(8, 4);
+        let mut b = a.clone();
+        b.quota_id = "b".repeat(64);
+        let a_key = a.authority_key();
+        let candidates = [(a, "first"), (b, "second")]
+            .into_iter()
+            .map(|(p, key)| Candidate {
+                budget: Arc::new(BudgetStore::new(wire.clone(), p, clock()).unwrap()),
+                key: server2::providers::ProviderKey::new(key.into()).unwrap(),
+            })
+            .collect();
+        let executor = FundedExecutor::new(
+            Provider::DataGoKr,
+            1,
+            Arc::new(HttpProviderTransport::new(4096).unwrap()),
+            Arc::new(validator as fn(&serde_json::Value) -> bool),
+        )
+        .unwrap();
+        let result = executor
+            .execute(
+                format!("{}/provider", peer.endpoint).parse().unwrap(),
+                candidates,
+                end(),
+            )
+            .await;
+        assert_eq!(result.err(), Some(AcquisitionError::Funding(error)));
+        assert_eq!(*wire.reads.lock().unwrap(), [a_key]);
+        assert_eq!(peer.calls(), 0);
+    }
+}

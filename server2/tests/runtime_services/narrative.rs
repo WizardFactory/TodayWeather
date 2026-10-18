@@ -277,15 +277,30 @@ async fn funded_calls_rotate_all_keys_and_keep_narrative_quota_separate() {
     // A new quota owner avoids reusing the previous test lease.
     let daily = make(units, vec!["S20E_LIMIT_KEY_C+bbbbbbbbbbbbbbbb/=".into()]);
     let source = narrative::provider::Funded::new(daily.clone(), &root).unwrap();
+    // A one-unit narrative allowance admits exactly one selected HTTP attempt.
+    assert!(
+        source
+            .fetch(108, Instant::now() + Duration::from_secs(5))
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert_eq!(calls.lock().unwrap().len(), 1);
+    assert!(
+        calls.lock().unwrap()[0]
+            .0
+            .contains(DataGoKrApi::VilageFcstMsg.path())
+    );
     assert!(
         source
             .fetch(108, Instant::now() + Duration::from_secs(5))
             .await
             .is_err()
     );
-    assert!(
-        calls.lock().unwrap().is_empty(),
-        "unfunded acquisition must not send HTTP"
+    assert_eq!(
+        calls.lock().unwrap().len(),
+        1,
+        "exhausted call sends no additional HTTP"
     );
     let warnings = FundedSource::new(
         daily.funded_transport(),
@@ -305,7 +320,7 @@ async fn funded_calls_rotate_all_keys_and_keep_narrative_quota_separate() {
             .unwrap()
             .is_none()
     );
-    assert_eq!(calls.lock().unwrap().len(), 1);
-    assert!(calls.lock().unwrap()[0].0.contains("WthrWrnInfoService"));
+    assert_eq!(calls.lock().unwrap().len(), 2);
+    assert!(calls.lock().unwrap()[1].0.contains("WthrWrnInfoService"));
     http.abort();
 }

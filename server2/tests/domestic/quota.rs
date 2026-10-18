@@ -31,8 +31,8 @@ async fn an_exhausted_api_quota_leaves_the_other_apis_of_the_key_funded() {
         axum::serve(listener, router).await.unwrap();
     });
     let peer = Peer::new();
-    // The short-forecast API allows two units per key and day (one funded call: S08 reserves the
-    // call and its one retry); the mid-forecast API keeps its allowance.
+    // This synthetic API allows two selected HTTP units per key/day. An unused
+    // retry is not prepaid; the mid-forecast API keeps its separate allowance.
     fn units(api: DataGoKrApi) -> u64 {
         if api == DataGoKrApi::VilageFcst {
             2
@@ -68,18 +68,31 @@ async fn an_exhausted_api_quota_leaves_the_other_apis_of_the_key_funded() {
             .filter(|p| p.contains(&format!("/{}/", api.path())))
             .count()
     };
-    // The first short-forecast call spends the API's day.
+    // The first actual call spends one of this API's two units.
     let first = acquirer
         .acquire(&grid(DataGoKrFamily::UltraSrtNcst, 900), deadline())
         .await;
     assert!(first.is_ok(), "{first:?}");
     assert_eq!(calls(DataGoKrApi::VilageFcst), 1);
-    // Another call of that API is refused by S08 without reaching the provider…
+    // The second actual call consumes the remaining API unit…
     let second = acquirer
         .acquire(&grid(DataGoKrFamily::VilageFcst, 800), deadline())
         .await;
-    assert!(second.is_err(), "{second:?}");
-    assert_eq!(calls(DataGoKrApi::VilageFcst), 1);
+    assert!(second.is_ok(), "{second:?}");
+    assert_eq!(calls(DataGoKrApi::VilageFcst), 2);
+    let refused = acquirer
+        .acquire(&grid(DataGoKrFamily::VilageFcst, 800), deadline())
+        .await;
+    assert!(
+        matches!(
+            refused,
+            Err(server2::domestic::DomesticError::Funding(
+                server2::budget::BudgetError::Exhausted
+            ))
+        ),
+        "{refused:?}"
+    );
+    assert_eq!(calls(DataGoKrApi::VilageFcst), 2);
     // …while the same key still funds the mid-forecast API.
     let mid = DataGoKrRequest::new(
         DataGoKrFamily::MidFcst,

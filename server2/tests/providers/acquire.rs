@@ -913,3 +913,22 @@ async fn data_go_kr_funding_retry_exhaustion_uses_next_key_with_two_http_cap() {
         (2, 2, 1)
     );
 }
+
+#[tokio::test]
+async fn funding_review_provider_rejection_survives_exhausted_rotation() {
+    for (status, disposition) in [(429, Disposition::Quota), (401, Disposition::Auth)] {
+        let e = funding_env(&[(KEY_A, 'a', 4, 0), (KEY_B, 'b', 1, 1)]).await;
+        e.stub.push(
+            VILAGE,
+            Reply::with(status, "application/json", b"{}".to_vec()),
+        );
+        let result = e.acquirer.acquire(&vilage(), deadline()).await;
+        assert!(
+            matches!(result, Err(DomesticError::Provider(found)) if found == disposition),
+            "{result:?}"
+        );
+        assert_eq!(e.stub.keys(), [KEY_A]);
+        assert_eq!(e.metrics.snapshot().funded_attempts, 1);
+        assert_eq!(e.acquirer.ring(Service::VilageFcst).unwrap().current(), 0);
+    }
+}

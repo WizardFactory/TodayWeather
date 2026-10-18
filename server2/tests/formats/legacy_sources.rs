@@ -1233,20 +1233,14 @@ async fn airkorea_key_exhausted_by_a_parallel_call_is_not_used_for_later_pages()
     );
 }
 
-#[tokio::test]
-async fn data_go_kr_funding_airkorea_local_cap_is_not_provider_quota() {
+async fn funding_airkorea_env(keys: &[(&str, char, u64, u64)]) -> Env {
     use server2::domestic::{DomesticAcquirer, family::Endpoints, metrics::DomesticMetrics};
     use server2::providers::{HttpProviderTransport, HttpPublicTransport};
     use server2::storage::CatalogLimits;
     use std::{collections::BTreeMap, sync::Arc};
     let stub = Stub::start().await;
     let clk = clock(NOW_MS);
-    let ring = limited_ring(
-        Arc::new(Memory::default()),
-        clk.clone(),
-        &[(KEY_A, 'a', 4, 0), (KEY_B, 'b', 1, 1)],
-    )
-    .await;
+    let ring = limited_ring(Arc::new(Memory::default()), clk.clone(), keys).await;
     let metrics = Arc::new(DomesticMetrics::default());
     let acquirer = DomesticAcquirer::new(
         Arc::new(HttpProviderTransport::new(8 * 1024 * 1024).unwrap()),
@@ -1258,18 +1252,45 @@ async fn data_go_kr_funding_airkorea_local_cap_is_not_provider_quota() {
         CatalogLimits::default(),
     )
     .unwrap();
-    stub.push(STATION, Reply::json(local("airkorea-stations.json")));
-    complete(acquirer.acquire_airkorea(&seoul(), deadline()).await);
-    assert_eq!(stub.keys(), [KEY_A]);
-    let ring = acquirer.ring(Service::AirKorea).unwrap();
+    Env {
+        stub,
+        acquirer,
+        metrics,
+        clock: clk,
+    }
+}
+#[tokio::test]
+async fn data_go_kr_funding_airkorea_local_cap_is_not_provider_quota() {
+    let e = funding_airkorea_env(&[(KEY_A, 'a', 4, 0), (KEY_B, 'b', 1, 1)]).await;
+    e.stub
+        .push(STATION, Reply::json(local("airkorea-stations.json")));
+    complete(e.acquirer.acquire_airkorea(&seoul(), deadline()).await);
+    assert_eq!(e.stub.keys(), [KEY_A]);
+    let ring = e.acquirer.ring(Service::AirKorea).unwrap();
     assert_eq!(ring.preferred(), Some(0));
-    assert!(
-        !ring.exhausted(1, KST_MIDNIGHT - 1),
-        "API-local funding cap must not latch a provider-wide KST quota"
-    );
-    let m = metrics.snapshot();
+    assert!(!ring.exhausted(1, KST_MIDNIGHT - 1));
+    let m = e.metrics.snapshot();
     assert_eq!(
         (m.reserved_units, m.funded_attempts, m.attempts_quota),
         (1, 1, 0)
     );
+}
+#[tokio::test]
+async fn funding_review_airkorea_all_local_exhaustion_is_not_auth() {
+    let e = funding_airkorea_env(&[(KEY_A, 'a', 1, 1), (KEY_B, 'b', 1, 1)]).await;
+    let result = e.acquirer.acquire_airkorea(&seoul(), deadline()).await;
+    assert!(
+        matches!(
+            result,
+            Err(DomesticError::Funding(
+                server2::budget::BudgetError::Exhausted
+            ))
+        ),
+        "{result:?}"
+    );
+    assert!(e.stub.calls().is_empty());
+    let ring = e.acquirer.ring(Service::AirKorea).unwrap();
+    assert_eq!(ring.preferred(), None);
+    assert!(!ring.exhausted(0, KST_MIDNIGHT - 1));
+    assert!(!ring.exhausted(1, KST_MIDNIGHT - 1));
 }

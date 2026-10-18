@@ -238,8 +238,24 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                                 Err(BudgetError::Exhausted) => {
                                     report.exhausted_keys.push(key as u8);
                                     if key + 1 == candidates.len() {
-                                        return Err(AcquisitionError::Funding(
-                                            BudgetError::Exhausted,
+                                        // Preserve a real quota/auth answer when its distinct
+                                        // rotation key is only locally exhausted. Unknown
+                                        // funding errors below remain terminal funding errors.
+                                        let rejection =
+                                            report.attempts.last().and_then(|(_, r)| match r {
+                                                AttemptResult::Disposition(d)
+                                                    if matches!(
+                                                        d,
+                                                        Disposition::Quota | Disposition::Auth
+                                                    ) =>
+                                                {
+                                                    Some(*d)
+                                                }
+                                                _ => None,
+                                            });
+                                        return Err(rejection.map_or(
+                                            AcquisitionError::Funding(BudgetError::Exhausted),
+                                            AcquisitionError::Provider,
                                         ));
                                     }
                                     key += 1;
