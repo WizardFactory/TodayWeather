@@ -2,12 +2,12 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Proposed complete-native startup",
+    "title": "Complete-native startup and shared services",
     "output": "docs/architecture/diagrams/server2-runtime-services.html",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "4d44f048bb38d52af7652741c79fdf526bb1c2e7"
+      "revision": "8c968db99b7461ac0e94759bb57336111db3ad0c"
     }
   },
   "components": [
@@ -28,12 +28,17 @@
         {
           "path": "server2/src/main.rs",
           "line": 12,
-          "end_line": 24
+          "end_line": 25
         },
         {
-          "path": "server2/tests/runtime_services/inventory.rs",
-          "line": 8,
-          "end_line": 46
+          "path": "server2/src/startup.rs",
+          "line": 1,
+          "end_line": 36
+        },
+        {
+          "path": "server2/src/runtime_services.rs",
+          "line": 64,
+          "end_line": 85
         }
       ]
     },
@@ -147,7 +152,7 @@
       "sources": [
         {
           "path": "server2/src/runtime_services.rs",
-          "line": 80,
+          "line": 76,
           "end_line": 96
         },
         {
@@ -284,7 +289,7 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Proposed production coverage guard",
+      "title": "Production coverage before runtime",
       "items": [
         "Without explicit legacy: require all8 native selections and all3 world versions.",
         "Missing coverage stops before services, state, listeners or providers.",
