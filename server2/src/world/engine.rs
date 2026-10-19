@@ -9,6 +9,9 @@ use super::{
     vc::convert,
 };
 use crate::gateway::OrderedJson;
+use crate::resolver::{OwnedConfig, OwnedFlights, Waited};
+use futures_util::FutureExt;
+use std::panic::AssertUnwindSafe;
 use std::{
     collections::HashMap,
     sync::{
@@ -99,6 +102,8 @@ struct CellEntry {
     cell: Cell,
     db: Mutex<Option<Db>>,
     op: tokio::sync::Mutex<()>,
+    /// Completed failures belong to this disposable cell identity, never to a Db copy.
+    loads: OwnedFlights<(), Result<(), Failure>>,
     owner: crate::observability::SharedOwner,
     /// Set while an owner is acquiring from the provider (the legacy fetch lock holder).
     fetching: std::sync::atomic::AtomicBool,
@@ -208,6 +213,12 @@ impl World {
             cell,
             db: Mutex::new(None),
             op: tokio::sync::Mutex::new(()),
+            loads: OwnedFlights::new(OwnedConfig {
+                running: 1,
+                entries: 1,
+                retain: Duration::from_secs(3),
+            })
+            .expect("fixed world cold-load bounds"),
             owner: crate::observability::SharedOwner::default(),
             fetching: std::sync::atomic::AtomicBool::new(false),
             backoff_until: Mutex::new(f64::NEG_INFINITY),
@@ -253,18 +264,43 @@ impl World {
         }
         let owned = self.clone();
         let task_entry = entry.clone();
-        let task = crate::observability::spawn(async move {
-            // The entry moves into the load and is released before idle cells trim.
-            let _trim = Trim(owned.clone());
-            owned.load_cell(task_entry, now).await
-        });
-        match timeout_at(deadline, task).await {
-            Ok(Ok(result)) => result,
-            _ => Err(Failure::Error),
+        match entry
+            .loads
+            .join(
+                (),
+                deadline,
+                self.inner.config.load,
+                move |owner_deadline| async move {
+                    let _trim = Trim(owned.clone());
+                    // Keep panics inside the owned result channel too: a failed storage
+                    // owner must not turn the current cohort into sequential retries.
+                    AssertUnwindSafe(owned.load_cell(task_entry, now, owner_deadline))
+                        .catch_unwind()
+                        .await
+                        .unwrap_or(Err(Failure::Error))
+                },
+            )
+            .await
+        {
+            Waited::Ready(Ok(())) => entry
+                .db
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone()
+                .ok_or(Failure::Error),
+            Waited::Ready(Err(error)) => Err(error),
+            Waited::Pending { .. } | Waited::Expired | Waited::Failed | Waited::Busy => {
+                Err(Failure::Error)
+            }
         }
     }
-    /// The owned cold load of one cell (single flight under the cell lock).
-    async fn load_cell(self, task_entry: Arc<CellEntry>, now: f64) -> Result<Db, Failure> {
+    /// One cell-owned restoration. Admission, including lock wait, starts its deadline.
+    async fn load_cell(
+        self,
+        task_entry: Arc<CellEntry>,
+        now: f64,
+        load_deadline: Instant,
+    ) -> Result<(), Failure> {
         crate::observability::observe(
             crate::observability::Component::World,
             crate::observability::Stage::Restore,
@@ -274,19 +310,18 @@ impl World {
                     .join(crate::observability::Component::World);
                 let _op = task_entry.op.lock().await;
                 let _owner = task_entry.owner.enter();
-                if let Some(db) = task_entry
+                if task_entry
                     .db
                     .lock()
                     .unwrap_or_else(|e| e.into_inner())
-                    .clone()
+                    .is_some()
                 {
-                    return Ok(db);
+                    return Ok(());
                 }
                 self.inner
                     .metrics
                     .cold_loads
                     .fetch_add(1, Ordering::Relaxed);
-                let load_deadline = Instant::now() + self.inner.config.load;
                 match self
                     .inner
                     .store
@@ -296,8 +331,8 @@ impl World {
                     Ok(fetches) => {
                         let mut db = replay(&fetches);
                         db.prune(now);
-                        *task_entry.db.lock().unwrap_or_else(|e| e.into_inner()) = Some(db.clone());
-                        Ok(db)
+                        *task_entry.db.lock().unwrap_or_else(|e| e.into_inner()) = Some(db);
+                        Ok(())
                     }
                     Err(_) => {
                         self.inner

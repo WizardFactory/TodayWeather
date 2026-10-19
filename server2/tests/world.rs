@@ -1,5 +1,7 @@
 #[path = "world/chain.rs"]
 mod chain;
+#[path = "world/cold_load.rs"]
+mod cold_load;
 #[path = "world/common.rs"]
 mod common;
 #[path = "world/parity.rs"]

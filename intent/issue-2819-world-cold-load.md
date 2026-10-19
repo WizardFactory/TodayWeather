@@ -1,0 +1,11 @@
+# D3: share and bound world cold restoration
+
+Stable task: `issue-2819-world-cold-load`. Base: master `c1ae9082b2c86f0087727be9872b0cf82b4e3bb1`. Intended branch: `fix/world-cold-load-2819`. Intended endpoint: **pre-merge**, with root owning SDLC state and all shared document integration.
+
+AK authorized this independent D3 slice. Root approved the prepared intent/investigation/spec/design/plan/test design and released build1 for a tests-first implementation and bounded local verification. The current endpoint still prohibits commits, push, external network/tracker/PR publication, stage mutations and shared-document edits by this worker. Root alone advances SDLC state and later delivery authority. No merge, deployment, live provider, AWS, device-send, shadow or global issue-closure authority is granted.
+
+A cold world caller currently spawns a load task before the cell mutex. Success fills the cell Db and followers reuse it; failure leaves Db absent, so queued tasks can each restore storage again. Each load's eight-second deadline begins after its cell lock. The store already reads 21 finite partitions with fanout 4, validates capped bodies and uses bounded S06 operations. Its successful partition results nevertheless accumulate without an explicit whole-load bytes/fetch-count cap, and completed unconsumed results can outlive a released fanout permit.
+
+Make one admitted cold restoration serve its current same-cell cohort, including failure. Its owner survives waiter cancellation, uses the original eight-second load lifetime from admission and shares a completed outcome briefly through existing S07 ownership. Give the load an explicit aggregate policy and four bounded in-flight partition reservations. Preserve exact output, old-version/widget compatibility, S3 durability and the rule that a failed cold storage read never authorizes VC acquisition.
+
+Acceptance and retained contracts are in [the specification](../specs/issue-2819-world-cold-load.md); staged work and proposed checks are in [the plan](../plans/issue-2819-world-cold-load.md). Exact allowed paths are in [the declaration](../server2/config/tasks/WorldColdLoad2819.json). Domestic warm-history D2, a shared CPU budget, runtime metrics, S3 service classes, operating allowances and production-capacity claims remain separate.
