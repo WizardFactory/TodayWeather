@@ -3904,7 +3904,14 @@ may send after a successful definite-no-POST restore, never replay that claim.
 time at `e97a5090`; their no-parent-tests-yet card is historical context. Current
 [selected evidence](../evidence/tasks/issue-2819-delivery-cohort/verification.md)
 and [operator scenario](../operations/server2-native-verification.md#conditional-alert-no-post-compensation)
-record subsequent execution. This slice is stacked on unmerged lateness PR2826.
-C1/B1 are separate unmerged branches; their later integration must reconcile
-writer/restore paths. No main, whole recovery bundle, shadow or production
-qualification is established.
+record subsequent execution. The 2026-10-19 integration parent `774343136`
+includes C1 (fallible state validation/decoding) and B1. C2 attempt/restore now
+propagate those fallible APIs. A decode error clears writer readiness and drops
+the reply: the caller receives uncertainty and permits no POST. A later full
+restore revokes all live receipts. The observed application path validates the
+entire batch before any mutation or ownership observation, then observes each
+valid intermediate change immediately before applying it, preserving ABA guards.
+This reconciles the two existing contracts; it adds no retry or repair policy.
+The C2 source merge is `a5def505`; local execution identities and subsequent
+source-bound integration checks are kept distinct in the selected evidence.
+No main-wide, whole recovery bundle, shadow or production qualification is established.
