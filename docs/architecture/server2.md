@@ -3969,7 +3969,7 @@ The [proposed flow](diagrams/server2-warning-fanout.html) and
 at `2e67d146`. Their design-time comparison is separate from the subsequent
 [current evidence](../evidence/tasks/issue-2819-warning-fanout/verification.md) and
 [owned operator rehearsal](../operations/server2-native-verification.md#bounded-warning-fan-out).
-This task stacks on unmerged C2 PR2827; C1/B1 are separate branches. Initial silent
+This task continues C2 PR2827; the ordered integration includes C1/B1 ancestors. Initial silent
 warning polling, traffic-independent acquisition, startup credentials, readiness
 and other #2819/cutover gates remain separate. No main, complete recovery bundle,
 seven-day shadow or production qualification is implied.
