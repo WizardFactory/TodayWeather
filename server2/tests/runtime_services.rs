@@ -16,6 +16,8 @@ mod narrative;
 mod native;
 #[path = "runtime_services/process.rs"]
 mod process;
+#[path = "runtime_services/readiness.rs"]
+mod readiness;
 #[path = "runtime_services/supervision.rs"]
 mod supervision;
 #[path = "runtime_services/warning_acquisition.rs"]

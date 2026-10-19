@@ -30,6 +30,19 @@ pub struct RuntimeServices {
     pub delivery: Option<Arc<crate::push::deliver::supervisor::Workers<ProcessS3>>>,
 }
 impl RuntimeServices {
+    /// Same canonical services on the existing private metrics listener.
+    pub fn private_router(
+        &self,
+        state: Arc<crate::SharedState>,
+        stop: tokio::sync::watch::Receiver<bool>,
+    ) -> Router {
+        crate::metrics_router(state.clone()).merge(crate::readiness::router(
+            self.push.clone(),
+            self.s3.clone(),
+            state,
+            stop,
+        ))
+    }
     pub fn from_vars(var: &dyn Fn(&str) -> Option<String>) -> Result<Self, GatewayError> {
         Self::from_vars_at(var, &Builtins::production())
     }

@@ -1,0 +1,81 @@
+{
+  "task": "RuntimeReadiness2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "E3c private readiness only; no full API/host/IAM/provider/cutover qualification; pre-merge only",
+  "server2_paths": [
+    "server2/config/tasks/RuntimeReadiness2819.json",
+    "server2/src/lib.rs",
+    "server2/src/process.rs",
+    "server2/src/runtime_services.rs",
+    "server2/src/readiness.rs",
+    "server2/tests/runtime_services.rs",
+    "server2/tests/runtime_services/readiness.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-runtime-readiness.md",
+      "category": "documentation",
+      "reason": "Task intent"
+    },
+    {
+      "path": "specs/issue-2819-runtime-readiness.md",
+      "category": "documentation",
+      "reason": "Observable API/failure contract"
+    },
+    {
+      "path": "plans/issue-2819-runtime-readiness.md",
+      "category": "documentation",
+      "reason": "Scenarios, implementation and verification sequence"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintained private/process contract"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Parent dependency/execution status"
+    },
+    {
+      "path": "docs/operations/server2-runtime-services.md",
+      "category": "documentation",
+      "reason": "Maintained process/worker operator contract"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Maintained verification entry points"
+    },
+    {
+      "path": "docs/operations/server2-readiness.md",
+      "category": "documentation",
+      "reason": "New editable operator screenshot manual"
+    },
+    {
+      "path": "docs/operations/server2-readiness.pdf",
+      "category": "documentation",
+      "reason": "Rendered and visually checked operator manual"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-runtime-readiness/verification.md",
+      "category": "documentation",
+      "reason": "Selected durable evidence and limits"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-runtime-readiness/readiness.png",
+      "category": "documentation",
+      "reason": "Actual owned readiness workflow capture"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.json",
+      "category": "documentation",
+      "reason": "Editable private/process flow diagram"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.html",
+      "category": "documentation",
+      "reason": "Generated validated diagram delivery"
+    }
+  ]
+}
