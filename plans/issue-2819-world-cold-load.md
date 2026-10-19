@@ -4,7 +4,7 @@ Stable task: `issue-2819-world-cold-load`. Owner: delegated worker prepares this
 
 ## Current checkpoint and boundary
 
-Root approved the prepared triage/intent/investigation/spec/design/plan/test design and authorized build1. The worker completed intended tests-only Red, scoped runtime/test implementation and the local checks recorded below. Root alone writes SDLC stage state and owns integration. Commits, push, external network/tracker/PR publication and shared-document writes remain prohibited. Ignored execution evidence is in `reports/sdlc/issue-2819-world-cold-load/build1/`; root links this task into its existing canonical notebook.
+Root approved the prepared triage/intent/investigation/spec/design/plan/test design and authorized build1. The worker completed intended tests-only Red, scoped runtime/test implementation and the local checks recorded below. Root alone writes SDLC stage state and owns integration. The worker had no commit/network/shared-document authority. Root subsequently delivered PR2838 under the existing pre-merge contract; merge/queue and production actions remain prohibited. Ignored execution evidence is in `reports/sdlc/issue-2819-world-cold-load/build1/`; root links this task into its existing canonical notebook.
 
 One coherent PR: same-cell cold restore outcome ownership and aggregate restore limits. Both prevent cold-read amplification without changing provider semantics. Domestic warm-history D2, world CPU offload/shared core admission, metrics export, S3 class fairness and production qualification are separate PRs. No new generic framework, S07 primitive changes or dependencies are planned.
 
@@ -23,11 +23,11 @@ Read-only Python gzip/JSON inspection on 2026-10-19: `tests/world/fixtures/oracl
 
 Default whole-load 32MiB/2048 caps reuse existing S06 source constants rather than inventing measured production allowances and exceed this entire retained VC corpus. The corpus is not a long-lived production-history maximum. Defaults still require actual candidate oracle/recovery regressions and explicit operational qualification; prior legal histories above the new aggregate cap will fail closed. The 160MiB logical raw reservation arithmetic is documented in WC4 and is not a host/RSS estimate.
 
-## Selected small design and proposed interfaces
+## Selected small design and original interface sketch
 
 One settled sketch uses existing ownership primitives; no independent arena/panel selection is claimed. Alternatives rejected: a new generic flight manager (duplicates S07), a process flight retaining `Arc<CellEntry>` (pins idle trim), a retained Db copy keyed only by cell (can revive stale state after eviction), and a load mutex alone (repeats errors). A cell-local flight preserves the existing identity owner and makes completed-error retention disposable with the cell.
 
-Proposed signatures, not implemented code:
+The following sketch was prepared before implementation. The current implemented interface is in world/store.rs; this sketch records the design, not an unimplemented-status claim:
 
 ```rust
 // world/store.rs; public through the existing public world::store module.
@@ -71,7 +71,7 @@ Rolling partition scheduling holds at most 4 scheduled results/reservations, inc
 
 ## Proposed behavior checks and scenarios
 
-All rows are **proposed, not run**. New test code belongs only to `server2/tests/world/cold_load.rs`; existing shared helpers and fixtures are reused without changes. Use small injected policies, explicit barriers/latches and virtual monotonic time where practical; do not sleep 8s/3s per case or generate huge fixtures merely to trip a default.
+The following rows preserve the original pre-implementation test design. Actual runs and residual coverage limits are in the build1 and review1 correction sections below; these proposals are not blanket execution claims. New test code belongs only to `server2/tests/world/cold_load.rs`; existing shared helpers and fixtures are reused without changes. Use small injected policies, explicit barriers/latches and virtual monotonic time where practical; do not sleep 8s/3s per case or generate huge fixtures merely to trip a default.
 
 | ID / requirement | Scenario and independent expected observation |
 | --- | --- |
@@ -90,11 +90,11 @@ For T5's tiny bodies, direct WorldStore loading tests need legal RawRecord/catal
 
 Root owns `docs/architecture/server2.md`, its existing Archify source/generated HTML, `docs/operations/server2-native-verification.md` and `plans/issue-2614.md`; this worker must not edit them. The declaration lists those exact outside paths and reasons for coordinated integration. No new runtime dependency, include, symlink or source/data read may reach legacy. Review every added/modified/renamed path against the declaration before completion.
 
-The new aggregate default can refuse a historical cell that 21 individually bounded partitions previously accepted; this is intentional fail-closed behavior, not measured operating capacity. Per-cell limits do not bound all concurrent cells or RSS. Three-second completed-error retention trades bounded retry traffic for short recovery delay; idle cell eviction can clear the disposable gate. The remaining synchronous CPU sites and cooperative timeout limits are explicit follow-ups. There is no implementation approval, current test result, independent review, CI result, merge-ready status or production qualification at this checkpoint.
+The new aggregate default can refuse a historical cell that 21 individually bounded partitions previously accepted; this is intentional fail-closed behavior, not measured operating capacity. Per-cell limits do not bound all concurrent cells or RSS. Three-second completed-error retention trades bounded retry traffic for short recovery delay; idle cell eviction can clear the disposable gate. The remaining synchronous CPU sites and cooperative timeout limits are explicit follow-ups. This paragraph originally described preparation. Root later approved implementation, delivered PR2838 and received independent review1 Request Changes. Current test-only correction and source evidence are recorded below; no final independent PASS, merge-ready or production qualification is claimed here.
 
-## Preparation content checks (2026-10-19)
+## Historical preparation content checks (before implementation, 2026-10-19)
 
-Only the four preparation files are untracked changes; tracked runtime/tests remain unchanged at the frozen base. Declaration JSON parses, its exact server2 paths are under server2, and links among the preparation files resolve. The placement command first could not start under PATH python3 because tomllib was absent; this is not a passed check. Re-running the existing read-only checker with installed python3.11 and the exact declaration/base exited0 and reported valid task paths/layout/literal boundaries. This is a preparation placement result only, not runtime verification, TDD, independent review, CI or implementation approval. No Cargo, build/test binary, commit, network or tracker command was run. Await the root gate.
+At that preparation checkpoint only four files were untracked and runtime/tests were unchanged at the frozen base. Declaration JSON parses, its exact server2 paths are under server2, and links among the preparation files resolve. The placement command first could not start under PATH python3 because tomllib was absent; this is not a passed check. Re-running the existing read-only checker with installed python3.11 and the exact declaration/base exited0 and reported valid task paths/layout/literal boundaries. This is a preparation placement result only, not runtime verification, TDD, independent review, CI or implementation approval. No Cargo, build/test binary, commit, network or tracker command had run at that preparation checkpoint. The root gate and later actual execution are recorded below.
 
 ## build1 local execution handoff (2026-10-19)
 
@@ -109,3 +109,11 @@ Logs/exits/source maps are in the ignored build1 directory. `before-inputs.json`
 Capacity/process handling: shared target resolved to `/private/tmp/server2-parallel-target`; pre-run free space133GiB and target1.9GiB, final free133GiB and target1.7GiB. Both dev and release server2 package output were cleaned on each worktree switch; shared dependencies were preserved. No additional caches were deleted, and no precise space-recovery attribution is claimed because root borrowed the target for its own F1 Red between runs. Final compiler and owned smoke process checks found no active Cargo/rustc or this task's peer. Two old catalog peers belonged to other Claude worktrees from October15/16 and were left untouched. Root has the Cargo lease back; the shared target is protected for its pending F1 consumers.
 
 Shared architecture/operations/Archify/evidence integration remains root-owned. A draft is in build1/shared-doc-draft.md. No source/test edit followed the successful candidate runs. This plan update changes documentation only; root decides the next stage and review/delivery eligibility.
+
+## Current review1 correction (2026-10-19)
+
+PR2838 review1 requested independent-cell progress coverage (WORLD-REVIEW-001). Root also selected003 pending-sibling abort/sorting coverage and004 this plan status correction. The two new tests and strengthened sorting run pass: world52, owned4, summary27, catalogs33 and raw34 =150distinct checks, not150+11focused. All-target Clippy and format check pass. Production code and optimized smoke inputs remain byte-identical to9bda00c5; the original optimized owned HTTP smoke is reused explicitly, not re-executed or relabelled as main/full-native qualification. Original failed scaffolding runs are retained as test harness failures, not runtime Red.
+
+The new independent-cell case holds A pending while B completes its own recorded restoration and then releases A. The aggregate case overflows128B with two80B partitions while pending siblings exist; Drop guards prove cancellation and dispatch is bounded. Under-cap inputs are deliberately reversed and exact fetched-time/hash output sorting is checked.
+
+Root did not select002 private-cell-lock contention coverage or005 automatically deriving the separate whole-load admission policy from per-operation S06 constants. The existing8s-value waiter test is not a discriminating lock-contention experiment; deadline-before-lock is supported by source. Logical160MiB arithmetic remains distinct from RSS, CPU and concurrent-cell capacity. Original Required/Recommended findings remain open for independent reviewer2 disposition; author application is not reviewer resolution. No additional tracking is created for unselected recommendations.
