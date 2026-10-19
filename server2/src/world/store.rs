@@ -32,6 +32,16 @@ pub enum StoreError {
     /// The scope could not be read completely; absence is not proved.
     Incomplete,
     Storage(Error),
+    /// This invocation observed CPU refusal; the carried storage error retains write uncertainty.
+    LocalPublication(Error),
+}
+impl StoreError {
+    pub(crate) fn local_capacity(&self) -> bool {
+        matches!(
+            self,
+            Self::Storage(Error::LocalCapacity) | Self::LocalPublication(_)
+        )
+    }
 }
 pub trait WorldStore: Send + Sync + 'static {
     /// Every durable fetch that can affect a request at `now_ms` (the legacy 48 h decision window).
@@ -127,15 +137,24 @@ fn fetches(set: &crate::storage::CompleteSet) -> Vec<RawFetch> {
 }
 /// S06-backed store. Absent catalogs are proved empty only by a complete one-period repair.
 pub struct CatalogWorldStore<T> {
+    cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
     catalogs: Arc<CatalogStore<T>>,
     raw_limits: Limits,
 }
 impl<T: CatalogTransport + 'static> CatalogWorldStore<T> {
     pub fn new(transport: T, limits: CatalogLimits) -> Result<Self, Error> {
+        Self::new_with_cpu(transport, limits, None)
+    }
+    pub fn new_with_cpu(
+        transport: T,
+        limits: CatalogLimits,
+        cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
+    ) -> Result<Self, Error> {
         let raw_limits = limits.raw.clone();
         Ok(Self {
-            catalogs: Arc::new(CatalogStore::new(transport, limits)?),
+            catalogs: Arc::new(CatalogStore::new_with_cpu(transport, limits, cpu.clone())?),
             raw_limits,
+            cpu,
         })
     }
     /// Every stored fetch of `cell` whose first local date is in `first_dates` (all ranges),
@@ -249,25 +268,46 @@ impl<T: CatalogTransport + 'static> WorldStore for CatalogWorldStore<T> {
         deadline: Instant,
     ) -> BoxFuture<'_, Result<(), StoreError>> {
         Box::pin(async move {
-            let raw = record(cell, &fetch, &self.raw_limits).map_err(StoreError::Storage)?;
-            let id = CatalogId::for_record(
-                &raw.envelope.identity,
-                &partition(fetch.first_date, fetch.range),
-            )
-            .map_err(StoreError::Storage)?;
-            let declaration = GroupDeclaration::new(
-                vec![GroupMember {
-                    envelope: raw.envelope.clone(),
-                    catalogs: vec![id],
-                }],
-                &CatalogLimits::default(),
-            )
-            .map_err(StoreError::Storage)?;
+            let raw_limits = self.raw_limits.clone();
+            let prepare = move || -> Result<_, Error> {
+                let raw = record(cell, &fetch, &raw_limits)?;
+                let id = CatalogId::for_record(
+                    &raw.envelope.identity,
+                    &partition(fetch.first_date, fetch.range),
+                )?;
+                let declaration = GroupDeclaration::new(
+                    vec![GroupMember {
+                        envelope: raw.envelope.clone(),
+                        catalogs: vec![id],
+                    }],
+                    &CatalogLimits::default(),
+                )?;
+                Ok((declaration, raw))
+            };
+            let prepared = match &self.cpu {
+                Some(cpu) => cpu
+                    .run(
+                        crate::operational_metrics::CpuKind::StorageControl,
+                        deadline,
+                        None,
+                        prepare,
+                    )
+                    .await
+                    .map_err(|_| StoreError::Storage(Error::LocalCapacity))?,
+                None => prepare(),
+            };
+            let (declaration, raw) = prepared.map_err(StoreError::Storage)?;
             self.catalogs
-                .publish(declaration, vec![raw], deadline)
+                .publish_with_local_provenance(declaration, vec![raw], deadline)
                 .await
                 .map(|_| ())
-                .map_err(StoreError::Storage)
+                .map_err(|failure| {
+                    if failure.local_capacity {
+                        StoreError::LocalPublication(failure.error)
+                    } else {
+                        StoreError::Storage(failure.error)
+                    }
+                })
         })
     }
 }

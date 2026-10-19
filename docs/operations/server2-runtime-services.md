@@ -106,3 +106,13 @@ Verification uses synthetic owned peers. The test provider now receives graceful
 and must successfully join before its listener is reported retired. Original parallel
 abort/port-observation failures are retained; a production ownership defect is not inferred
 from those failures. See the [selected E3b evidence](../evidence/tasks/issue-2819-warning-poll-supervision/verification.md).
+
+## Shared CPU and private native metrics
+
+The resource-aware main/factory now creates process CPU admission and one domestic collector
+before building services. Read the [runtime metrics guide](server2-runtime-metrics.md) for
+private listener access, finite labels, cancellation/permit ownership, logical S3 byte counts,
+logging-loss independence and the explicit coverage boundary. Preserve the existing worker
+claims, final send admission and stop/drain behavior. A completed CPU caller does not prove
+that a cancelled blocking closure has exited; the actual closure owns its permits. This
+change is repository preparation and does not start production workers or authorize sends.

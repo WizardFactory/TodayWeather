@@ -290,6 +290,19 @@ pub fn kma_acquirer(
     >,
     GatewayError,
 > {
+    kma_acquirer_with_metrics(
+        var,
+        s3,
+        builtins,
+        Arc::new(crate::domestic::metrics::DomesticMetrics::default()),
+    )
+}
+fn kma_acquirer_with_metrics(
+    var: Var,
+    s3: BoundedS3<HttpS3Transport>,
+    builtins: &Builtins,
+    metrics: Arc<crate::domestic::metrics::DomesticMetrics>,
+) -> Result<DailyKma, GatewayError> {
     let keys = crate::domestic::keys::parse_keys(
         &var("DONGNAE_SECRET_KEYS").ok_or(GatewayError::InvalidConfiguration)?,
     );
@@ -304,7 +317,7 @@ pub fn kma_acquirer(
         units,
         builtins.kma_endpoints()?,
         Arc::new(SystemClock),
-        Arc::new(crate::domestic::metrics::DomesticMetrics::default()),
+        metrics,
     )
     .map_err(|_| GatewayError::InvalidConfiguration)
 }
@@ -378,6 +391,21 @@ pub(crate) fn build_shared(
     warnings: Option<Arc<crate::warnings::store::WarningStore<BoundedS3<HttpS3Transport>>>>,
     feed: Option<Arc<dyn crate::warnings::collector::PersistedWarningFeed>>,
 ) -> Result<BuiltGateway, GatewayError> {
+    build_shared_with_resources(var, builtins, families, base, s3, warnings, feed, None)
+}
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn build_shared_with_resources(
+    var: Var,
+    builtins: &Builtins,
+    families: NativeFamilies,
+    base: Option<String>,
+    s3: Option<BoundedS3<HttpS3Transport>>,
+    warnings: Option<Arc<crate::warnings::store::WarningStore<BoundedS3<HttpS3Transport>>>>,
+    feed: Option<Arc<dyn crate::warnings::collector::PersistedWarningFeed>>,
+    resources: Option<Arc<crate::runtime_resources::ProcessResources>>,
+) -> Result<BuiltGateway, GatewayError> {
+    let cpu = resources.as_ref().map(|r| r.cpu.clone());
+    let domestic = resources.as_ref().map(|r| r.domestic.clone());
     if families.any() && s3.is_none() {
         return Err(GatewayError::InvalidConfiguration);
     }
@@ -419,15 +447,19 @@ pub(crate) fn build_shared(
     let weather_geocoder = needs_weather.then(|| native.geocoder.clone()).flatten();
     // One process air chain for the world family and the KMA air fallback (S15b-3).
     let air = match &s3 {
-        Some(s3) if needs_weather => {
-            Some(crate::world::runtime::live_air(var, s3.clone(), builtins)?)
-        }
+        Some(s3) if needs_weather => Some(crate::world::runtime::live_air_with_cpu(
+            var,
+            s3.clone(),
+            builtins,
+            cpu.clone(),
+        )?),
         _ => None,
     };
     let mut versions = families.kma_versions();
     let mut widget = None;
     if let (Some(s3), true, Some(air)) = (s3.clone(), families.dsf || families.push, air.clone()) {
-        let configured = crate::world::runtime::build_with_air(var, s3, air, builtins)?;
+        let configured =
+            crate::world::runtime::build_with_air_and_cpu(var, s3, air, builtins, cpu.clone())?;
         native.dsf = Some(configured.0.clone());
         if families.dsf {
             widget = Some(configured.0.clone());
@@ -448,8 +480,13 @@ pub(crate) fn build_shared(
         // acquisition (`AIRKOREA_SECRET_KEYS`) and the air fallback through the shared air chain;
         // S15b-3b the life index and KASI on the same data.go.kr acquirer and the keyless MFDS
         // table (production endpoint, no setting).
-        let airkorea = kma_airkorea(var, &s3, builtins)?;
-        let daily = Arc::new(kma_acquirer(var, s3.clone(), builtins)?);
+        let airkorea = kma_airkorea(var, &s3, builtins, domestic.clone())?;
+        let daily = Arc::new(kma_acquirer_with_metrics(
+            var,
+            s3.clone(),
+            builtins,
+            domestic.clone().unwrap_or_default(),
+        )?);
         let narrative: Option<Arc<dyn crate::narrative::Read>> = if families.kma_source() {
             let provider = Arc::new(
                 crate::narrative::provider::Funded::new(daily.clone(), &builtins.data_go_kr)
@@ -464,7 +501,7 @@ pub(crate) fn build_shared(
         } else {
             None
         };
-        let life = kma_life(&s3, daily.clone(), builtins)?;
+        let life = kma_life(&s3, daily.clone(), builtins, domestic.clone())?;
         let daily_forecast = daily.clone();
         let air: Option<Arc<dyn crate::world::AirSource>> =
             air.map(|a| a as Arc<dyn crate::world::AirSource>);
@@ -573,6 +610,7 @@ fn kma_airkorea(
     var: Var,
     s3: &BoundedS3<HttpS3Transport>,
     builtins: &Builtins,
+    metrics: Option<Arc<crate::domestic::metrics::DomesticMetrics>>,
 ) -> Result<Option<Arc<dyn crate::domestic::kma::source::live::AirKoreaAcquire>>, GatewayError> {
     use crate::domestic::kma::source::live::{AirKoreaSettings, LiveAirKorea};
     let Some(settings) = AirKoreaSettings::from_vars(var, builtins.kma_endpoints()?)
@@ -591,13 +629,14 @@ fn kma_airkorea(
     let store =
         crate::storage::CatalogStore::new(s3.clone(), crate::storage::CatalogLimits::default())
             .map_err(|_| GatewayError::InvalidConfiguration)?;
-    Ok(Some(Arc::new(LiveAirKorea::new(
+    Ok(Some(Arc::new(LiveAirKorea::new_with_metrics(
         settings,
         Arc::new(funded),
         Arc::new(public),
         Arc::new(s3.clone()),
         Arc::new(store),
         Arc::new(SystemClock),
+        metrics.unwrap_or_default(),
     ))))
 }
 /// The life-index, KASI and MFDS acquirer of the KMA source on the process data.go.kr acquirer
@@ -612,6 +651,7 @@ fn kma_life(
     s3: &BoundedS3<HttpS3Transport>,
     daily: Arc<DailyKma>,
     builtins: &Builtins,
+    metrics: Option<Arc<crate::domestic::metrics::DomesticMetrics>>,
 ) -> Result<Arc<dyn crate::domestic::kma::source::life_live::LifeAcquire>, GatewayError> {
     use crate::domestic::kma::source::life_live::{LifeSettings, LiveLife};
     let settings = LifeSettings::with_mfds_root(&builtins.mfds)
@@ -619,12 +659,13 @@ fn kma_life(
     let store =
         crate::storage::CatalogStore::new(s3.clone(), crate::storage::CatalogLimits::default())
             .map_err(|_| GatewayError::InvalidConfiguration)?;
-    let mfds = crate::domestic::kma::source::life_live::mfds_acquirer(
+    let mfds = crate::domestic::kma::source::life_live::mfds_acquirer_with_metrics(
         Arc::new(
             crate::providers::HttpProviderTransport::new(1024 * 1024)
                 .map_err(|_| GatewayError::InvalidConfiguration)?,
         ),
         Arc::new(SystemClock),
+        metrics.unwrap_or_default(),
     )
     .map_err(|_| GatewayError::InvalidConfiguration)?;
     Ok(Arc::new(LiveLife::new(
@@ -633,4 +674,50 @@ fn kma_life(
         Arc::new(mfds),
         Arc::new(store),
     )))
+}
+
+#[cfg(test)]
+mod process_resource_tests {
+    use super::*;
+    #[tokio::test]
+    async fn actual_daily_airkorea_and_mfds_factory_helpers_retain_one_domestic_collector() {
+        let resources = crate::runtime_resources::ProcessResources::new(&crate::Config::default());
+        let baseline = Arc::strong_count(&resources.domestic);
+        let roots = Builtins {
+            s3: Some("http://127.0.0.1:9/".into()),
+            data_go_kr: "http://127.0.0.1:9/".into(),
+            kma: "http://127.0.0.1:9/".into(),
+            kma_weather: "http://127.0.0.1:9/".into(),
+            mfds: "http://127.0.0.1:9/".into(),
+            ..Builtins::production()
+        };
+        let var = |name: &str| match name {
+            "DONGNAE_SECRET_KEYS" | "AIRKOREA_SECRET_KEYS" => {
+                Some("[\"owned-unused-test-key\"]".into())
+            }
+            "SERVER2_S3_BUCKET" => Some("server2-local".into()),
+            "AWS_ACCESS_KEY" => Some("server2-local".into()),
+            "AWS_SECRET_KEY" => Some("server2-local-secret".into()),
+            _ => None,
+        };
+        let s3 = shared_s3(&var, &roots).unwrap();
+        let daily = Arc::new(
+            kma_acquirer_with_metrics(&var, s3.clone(), &roots, resources.domestic.clone())
+                .unwrap(),
+        );
+        assert_eq!(Arc::strong_count(&resources.domestic), baseline + 1);
+        let air = kma_airkorea(&var, &s3, &roots, Some(resources.domestic.clone()))
+            .unwrap()
+            .unwrap();
+        assert_eq!(Arc::strong_count(&resources.domestic), baseline + 2);
+        let life = kma_life(&s3, daily.clone(), &roots, Some(resources.domestic.clone())).unwrap();
+        assert_eq!(Arc::strong_count(&resources.domestic), baseline + 3);
+        // Dropping each actual constructed owner releases exactly its retained shared Arc;
+        // no acquirer was run and no provider/S3/credential probe was made.
+        drop(life);
+        assert_eq!(Arc::strong_count(&resources.domestic), baseline + 2);
+        drop(air);
+        drop(daily);
+        assert_eq!(Arc::strong_count(&resources.domestic), baseline);
+    }
 }

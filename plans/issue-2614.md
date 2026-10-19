@@ -683,3 +683,15 @@ release live warning work. Existing claim/send/drain policy stays. The selected 
 owned peer/real-time evidence and final diagram precede independent review and exact
 parent/current CI at pre-merge only. This record does not close full E3, #2819, #2704 or
 #2705, or authorize merge, cloud actions, live provider/device sends, shadow or cutover.
+
+### #2819 resource and metric increment
+
+The process-resource increment shares CPU admission across the resource-aware VC/world/air/
+S06 path and exports fixed native operational metrics privately, independently of stderr
+filter/queue loss. The [operator contract](../docs/operations/server2-runtime-metrics.md)
+records actual owned native HTTP and capacity recovery evidence and the selected coverage
+boundary. Local checks combine10passing targets with an explicitly serial domestic target; the original
+default-concurrency failure remains a stated limitation. Final independent review and CI
+remain separate task gates.
+D2/F2 CPU reconciliation and both genuine eligible full release bundles remain separate
+whole-candidate work. New PRs stop at pre-merge; #2704/#2705/#2819 remain open.

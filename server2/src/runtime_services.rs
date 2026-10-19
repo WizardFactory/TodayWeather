@@ -15,6 +15,7 @@ pub type ProcessWarnings = crate::warnings::store::WarningStore<ProcessS3>;
 pub type ProcessFeed = crate::push::deliver::warning_feed::WarningFeed<ProcessS3>;
 #[derive(Clone)]
 pub struct RuntimeServices {
+    resources: Option<Arc<crate::runtime_resources::ProcessResources>>,
     pub gateway: Option<Arc<Gateway>>,
     pub push: Option<Arc<crate::push::PushService>>,
     pub notices: Option<Arc<crate::notice::store::NoticeStore<ProcessS3>>>,
@@ -39,6 +40,37 @@ impl RuntimeServices {
     ) -> Result<Self, GatewayError> {
         Self::from_vars_with_fcm(var, builtins, crate::push::deliver::Endpoints::production())
     }
+    pub fn from_vars_with_resources(
+        var: &dyn Fn(&str) -> Option<String>,
+        resources: Arc<crate::runtime_resources::ProcessResources>,
+    ) -> Result<Self, GatewayError> {
+        Self::from_vars_at_with_resources(var, &Builtins::production(), resources)
+    }
+    pub fn from_vars_at_with_resources(
+        var: &dyn Fn(&str) -> Option<String>,
+        builtins: &Builtins,
+        resources: Arc<crate::runtime_resources::ProcessResources>,
+    ) -> Result<Self, GatewayError> {
+        Self::from_vars_with_delivery_and_resources(
+            var,
+            builtins,
+            crate::push::deliver::Endpoints::production(),
+            Arc::new(crate::budget::SystemClock),
+            None,
+            Some(resources),
+        )
+    }
+    pub fn metrics_view(&self) -> Option<crate::operational_metrics::NativeMetricsView> {
+        use crate::storage::ObjectTransport;
+        self.resources
+            .as_ref()
+            .map(|resources| crate::operational_metrics::NativeMetricsView {
+                resources: resources.clone(),
+                push: self.push.as_ref().map(|p| p.counters.clone()),
+                s3: self.s3.as_ref().map(|s| (s.metrics(), s.limit())),
+                disk: self.s3.as_ref().and_then(ObjectTransport::raw_cache),
+            })
+    }
     /// Code-injected endpoints for owned loopback peers; no environment override exists.
     pub fn from_vars_with_fcm(
         var: &dyn Fn(&str) -> Option<String>,
@@ -60,6 +92,16 @@ impl RuntimeServices {
         endpoints: crate::push::deliver::Endpoints,
         clock: Arc<dyn crate::budget::Clock>,
         native: Option<crate::push::deliver::native_fetch::NativeFetch>,
+    ) -> Result<Self, GatewayError> {
+        Self::from_vars_with_delivery_and_resources(var, builtins, endpoints, clock, native, None)
+    }
+    pub fn from_vars_with_delivery_and_resources(
+        var: &dyn Fn(&str) -> Option<String>,
+        builtins: &Builtins,
+        endpoints: crate::push::deliver::Endpoints,
+        clock: Arc<dyn crate::budget::Clock>,
+        native: Option<crate::push::deliver::native_fetch::NativeFetch>,
+        resources: Option<Arc<crate::runtime_resources::ProcessResources>>,
     ) -> Result<Self, GatewayError> {
         let base = var("SERVER2_GATEWAY_LEGACY_URL");
         let families = NativeFamilies::from_vars(var)?;
@@ -109,7 +151,7 @@ impl RuntimeServices {
                 Arc::new(crate::budget::SystemClock),
             ))
         });
-        let built = gateway::runtime::build_shared(
+        let built = gateway::runtime::build_shared_with_resources(
             var,
             builtins,
             families,
@@ -119,6 +161,7 @@ impl RuntimeServices {
             warning_feed
                 .clone()
                 .map(|f| f as Arc<dyn crate::warnings::collector::PersistedWarningFeed>),
+            resources.clone(),
         )?;
         // Construct all dependencies before spawning the registration writer. No worker run().
         let notices = if families.notice {
@@ -188,6 +231,7 @@ impl RuntimeServices {
             None
         };
         Ok(Self {
+            resources,
             delivery,
             warning_acquire: built.warning_acquire,
             warning_cycles: built.warning_cycles,

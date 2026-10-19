@@ -67,9 +67,7 @@ impl Default for WorldConfig {
             max_cells: 4096,
             load: Duration::from_secs(8),
             fetch: Duration::from_secs(8),
-            // Legacy answered within 2.5 s and relied on a gateway retry; the native S10 attempt
-            // is single, so the waiter uses the attempt deadline up to 3 s.
-            response: Duration::from_millis(3_000),
+            response: Duration::from_millis(3000),
         }
     }
 }
@@ -103,6 +101,7 @@ struct CellEntry {
     /// Set while an owner is acquiring from the provider (the legacy fetch lock holder).
     fetching: std::sync::atomic::AtomicBool,
     backoff_until: Mutex<f64>,
+    local_until: Mutex<f64>,
 }
 type CellMap = HashMap<(i64, i64), (u64, Arc<CellEntry>)>;
 struct Inner {
@@ -114,6 +113,7 @@ struct Inner {
     cells: Mutex<(u64, CellMap)>,
     provider_down_until: Mutex<f64>,
     metrics: Metrics,
+    cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
 }
 /// Native world weather engine. Cheap to clone; owned tasks hold their own references.
 #[derive(Clone)]
@@ -166,6 +166,16 @@ impl World {
         clock: Arc<dyn Clock>,
         config: WorldConfig,
     ) -> Self {
+        Self::new_with_cpu(store, source, air, clock, config, None)
+    }
+    pub fn new_with_cpu(
+        store: Arc<dyn WorldStore>,
+        source: Arc<dyn VcSource>,
+        air: Arc<dyn AirSource>,
+        clock: Arc<dyn Clock>,
+        config: WorldConfig,
+        cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
+    ) -> Self {
         Self {
             inner: Arc::new(Inner {
                 store,
@@ -176,6 +186,7 @@ impl World {
                 cells: Mutex::new((0, HashMap::new())),
                 provider_down_until: Mutex::new(f64::NEG_INFINITY),
                 metrics: Metrics::default(),
+                cpu,
             }),
         }
     }
@@ -211,6 +222,7 @@ impl World {
             owner: crate::observability::SharedOwner::default(),
             fetching: std::sync::atomic::AtomicBool::new(false),
             backoff_until: Mutex::new(f64::NEG_INFINITY),
+            local_until: Mutex::new(f64::NEG_INFINITY),
         });
         map.insert(key, (*tick, e.clone()));
         e
@@ -243,13 +255,35 @@ impl World {
         now: f64,
         deadline: Instant,
     ) -> Result<Db, Failure> {
-        if let Some(db) = entry.db.lock().unwrap_or_else(|e| e.into_inner()).as_mut() {
-            db.prune(now);
+        let cached = entry.db.lock().unwrap_or_else(|e| e.into_inner()).is_some();
+        if cached {
+            let task_entry = entry.clone();
+            let work = move || {
+                let mut guard = task_entry.db.lock().unwrap_or_else(|e| e.into_inner());
+                let db = guard.as_mut().expect("retained cell DB");
+                db.prune(now);
+                db.clone()
+            };
+            let db = match &self.inner.cpu {
+                Some(cpu) => cpu
+                    .run(
+                        crate::operational_metrics::CpuKind::WorldRestore,
+                        deadline,
+                        None,
+                        work,
+                    )
+                    .await
+                    .map_err(|_| {
+                        local_capacity();
+                        Failure::Error
+                    })?,
+                None => work(),
+            };
             self.inner
                 .metrics
                 .memory_hits
                 .fetch_add(1, Ordering::Relaxed);
-            return Ok(db.clone());
+            return Ok(db);
         }
         let owned = self.clone();
         let task_entry = entry.clone();
@@ -274,19 +308,42 @@ impl World {
                     .join(crate::observability::Component::World);
                 let _op = task_entry.op.lock().await;
                 let _owner = task_entry.owner.enter();
-                if let Some(db) = task_entry
+                let load_deadline = Instant::now() + self.inner.config.load;
+                if task_entry
                     .db
                     .lock()
                     .unwrap_or_else(|e| e.into_inner())
-                    .clone()
+                    .is_some()
                 {
-                    return Ok(db);
+                    let retained = task_entry.clone();
+                    let copy = move || {
+                        retained
+                            .db
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner())
+                            .clone()
+                            .expect("retained cell DB")
+                    };
+                    return match &self.inner.cpu {
+                        Some(cpu) => cpu
+                            .run(
+                                crate::operational_metrics::CpuKind::WorldRestore,
+                                load_deadline,
+                                None,
+                                copy,
+                            )
+                            .await
+                            .map_err(|_| {
+                                local_capacity();
+                                Failure::Error
+                            }),
+                        None => Ok(copy()),
+                    };
                 }
                 self.inner
                     .metrics
                     .cold_loads
                     .fetch_add(1, Ordering::Relaxed);
-                let load_deadline = Instant::now() + self.inner.config.load;
                 match self
                     .inner
                     .store
@@ -294,12 +351,34 @@ impl World {
                     .await
                 {
                     Ok(fetches) => {
-                        let mut db = replay(&fetches);
-                        db.prune(now);
+                        let fold = move || {
+                            let mut db = replay(&fetches);
+                            db.prune(now);
+                            db
+                        };
+                        let db = match &self.inner.cpu {
+                            Some(cpu) => cpu
+                                .run(
+                                    crate::operational_metrics::CpuKind::WorldRestore,
+                                    load_deadline,
+                                    None,
+                                    fold,
+                                )
+                                .await
+                                .map_err(|_| {
+                                    local_capacity();
+                                    Failure::Error
+                                })?,
+                            None => fold(),
+                        };
                         *task_entry.db.lock().unwrap_or_else(|e| e.into_inner()) = Some(db.clone());
                         Ok(db)
                     }
-                    Err(_) => {
+                    Err(error) => {
+                        if error.local_capacity() {
+                            local_capacity();
+                            return Err(Failure::Error);
+                        }
                         self.inner
                             .metrics
                             .load_failures
@@ -326,6 +405,10 @@ impl World {
             .lock()
             .unwrap_or_else(|e| e.into_inner()) = self.inner.clock.now_ms() + ms;
     }
+    fn local_cooldown(&self, entry: &CellEntry) {
+        *entry.local_until.lock().unwrap_or_else(|e| e.into_inner()) =
+            self.inner.clock.now_ms() + 2_000.;
+    }
     /// One owned acquisition attempt for the cell (lock + re-read + fetch + publication).
     async fn flight(
         self,
@@ -341,6 +424,11 @@ impl World {
             crate::observability::Stage::SharedWork,
             async {
                 let complete = |o: &Found| o.current.is_some() && o.today.is_some();
+                if self.inner.clock.now_ms()
+                    < *entry.local_until.lock().unwrap_or_else(|e| e.into_inner())
+                {
+                    return Flight::Failed(output, Failure::Error);
+                }
                 // Another owner is fetching (legacy lock held elsewhere): this request waits for it.
                 // Legacy `_selectRange` runs before the lock, so a waiter that cannot complete from
                 // stored records first learns whether the window is exhausted.
@@ -412,6 +500,11 @@ impl World {
                             }
                             return Flight::Failed(output, Failure::Unavailable(retry_at_ms));
                         }
+                        Err(VcError::LocalCapacity) => {
+                            local_capacity();
+                            self.local_cooldown(&entry);
+                            return Flight::Failed(output, Failure::Error);
+                        }
                         Err(VcError::ProviderDown) => {
                             self.inner
                                 .metrics
@@ -436,11 +529,33 @@ impl World {
                         }
                     }
                 };
-                let parsed = OrderedJson::parse(&body).map(|j| Val::from_ordered(&j));
-                let checked = parsed.ok().filter(usable_shape).and_then(|v| {
-                    let first = days_first_date(&v)?;
-                    convert(&v, now, range).ok().map(|c| (first, c))
-                });
+                let parse_body = body.clone();
+                let parse = move || {
+                    let parsed = OrderedJson::parse(&parse_body).map(|j| Val::from_ordered(&j));
+                    parsed.ok().filter(usable_shape).and_then(|v| {
+                        let first = days_first_date(&v)?;
+                        convert(&v, now, range).ok().map(|c| (first, c))
+                    })
+                };
+                let checked = match &self.inner.cpu {
+                    Some(cpu) => match cpu
+                        .run(
+                            crate::operational_metrics::CpuKind::VcParse,
+                            deadline,
+                            None,
+                            parse,
+                        )
+                        .await
+                    {
+                        Ok(v) => v,
+                        Err(_) => {
+                            local_capacity();
+                            self.local_cooldown(&entry);
+                            return Flight::Failed(output, Failure::Error);
+                        }
+                    },
+                    None => parse(),
+                };
                 let Some((first_date, converted)) = checked else {
                     self.back_off(&entry, BAD_RESPONSE_BACKOFF_MS);
                     return Flight::Failed(output, Failure::Error);
@@ -452,31 +567,49 @@ impl World {
                     sha256: crate::storage::sha256(&body),
                     body: body.into(),
                 };
-                if self
-                    .inner
-                    .store
-                    .publish(entry.cell, fetch, deadline)
-                    .await
-                    .is_err()
-                {
-                    // O-9: an undurable provider reply is never a new success.
-                    self.inner
-                        .metrics
-                        .publication_failures
-                        .fetch_add(1, Ordering::Relaxed);
-                    self.back_off(&entry, FAILURE_BACKOFF_MS);
+                if let Err(error) = self.inner.store.publish(entry.cell, fetch, deadline).await {
+                    if error.local_capacity() {
+                        local_capacity();
+                        self.local_cooldown(&entry);
+                    } else {
+                        self.inner
+                            .metrics
+                            .publication_failures
+                            .fetch_add(1, Ordering::Relaxed);
+                        self.back_off(&entry, FAILURE_BACKOFF_MS);
+                    }
                     return Flight::Failed(output, Failure::Error);
                 }
                 self.inner
                     .metrics
                     .publications
                     .fetch_add(1, Ordering::Relaxed);
-                let fetched = {
-                    let mut guard = entry.db.lock().unwrap_or_else(|e| e.into_inner());
+                let task_entry = entry.clone();
+                let apply = move || {
+                    let mut guard = task_entry.db.lock().unwrap_or_else(|e| e.into_inner());
                     let db = guard.get_or_insert_with(Db::default);
                     let fetched = db.apply(converted);
                     db.prune(now);
                     fetched
+                };
+                let fetched = match &self.inner.cpu {
+                    Some(cpu) => match cpu
+                        .run(
+                            crate::operational_metrics::CpuKind::WorldRestore,
+                            deadline,
+                            None,
+                            apply,
+                        )
+                        .await
+                    {
+                        Ok(v) => v,
+                        Err(_) => {
+                            local_capacity();
+                            self.local_cooldown(&entry);
+                            return Flight::Failed(output, Failure::Error);
+                        }
+                    },
+                    None => apply(),
                 };
                 output.merge(&fetched);
                 Flight::Complete(output)
@@ -542,6 +675,11 @@ impl World {
                     );
                     found.fallback().ok_or(failure)
                 };
+                if self.inner.clock.now_ms()
+                    < *entry.local_until.lock().unwrap_or_else(|e| e.into_inner())
+                {
+                    return fallback(found, Failure::Error);
+                }
                 if let Some(until) = self.provider_down(now) {
                     return fallback(found, Failure::Unavailable(until));
                 }
@@ -616,4 +754,15 @@ impl Drop for Trim {
     fn drop(&mut self) {
         self.0.trim_cells();
     }
+}
+
+fn local_capacity() {
+    crate::observability::event(
+        crate::observability::Component::World,
+        crate::observability::Stage::Acquire,
+        crate::observability::Cause::Capacity,
+        crate::observability::Action::ReturnError,
+        crate::observability::Outcome::Failed,
+        Default::default(),
+    );
 }

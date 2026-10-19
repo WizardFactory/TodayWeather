@@ -79,7 +79,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let env = DotEnv::empty();
     let var = move |name: &str| env.var(name);
     let config = Config::from_vars(&var).map_err(io::Error::other)?;
-    server2::process::run(config, move || {
-        RuntimeServices::from_vars_at(&var, &builtins)
+    server2::process::run_with_resources(config, move |resources| {
+        RuntimeServices::from_vars_at_with_resources(&var, &builtins, resources)
     })
 }

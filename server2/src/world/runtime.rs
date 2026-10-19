@@ -133,6 +133,14 @@ pub fn live_air(
     s3: BoundedS3<HttpS3Transport>,
     builtins: &Builtins,
 ) -> Result<Arc<ProcessAir>, GatewayError> {
+    live_air_with_cpu(var, s3, builtins, None)
+}
+pub fn live_air_with_cpu(
+    var: Var,
+    s3: BoundedS3<HttpS3Transport>,
+    builtins: &Builtins,
+    cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
+) -> Result<Arc<ProcessAir>, GatewayError> {
     // A provider takes part when its legacy key is set (the chain applies legacy `isValidKey`)
     // and its month has units. Google and OpenWeather keep the legacy free-cap rule: calls stop
     // at 95 % of the cap (`calls >= cap * (1 - RESERVE)`), so a cap of 0 leaves the provider out.
@@ -171,10 +179,10 @@ pub fn live_air(
         ),
         ..AirConfig::default()
     };
-    LiveAir::new(
+    LiveAir::new_with_cpu(
         config,
         Arc::new(
-            CatalogAirStore::new(s3.clone(), CatalogLimits::default())
+            CatalogAirStore::new_with_cpu(s3.clone(), CatalogLimits::default(), cpu.clone())
                 .map_err(|_| GatewayError::InvalidConfiguration)?,
         ),
         Arc::new(HttpAirTransport::new().map_err(|_| GatewayError::InvalidConfiguration)?),
@@ -183,6 +191,7 @@ pub fn live_air(
             clock: Arc::new(BudgetClock),
         },
         Arc::new(SystemClock),
+        cpu,
     )
     .map(Arc::new)
     .map_err(|_| GatewayError::InvalidConfiguration)
@@ -203,6 +212,15 @@ pub fn build_with_air(
     air: Arc<ProcessAir>,
     builtins: &Builtins,
 ) -> Result<Configured, GatewayError> {
+    build_with_air_and_cpu(var, s3, air, builtins, None)
+}
+pub fn build_with_air_and_cpu(
+    var: Var,
+    s3: BoundedS3<HttpS3Transport>,
+    air: Arc<ProcessAir>,
+    builtins: &Builtins,
+    cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
+) -> Result<Configured, GatewayError> {
     let key = need(var, "VC_SECRET_KEY")?;
     let units = vc_daily_records(var);
     // One S08 window per UTC day (the legacy usage day); FundedVc opens a fresh store per day.
@@ -213,18 +231,21 @@ pub fn build_with_air(
         block_units: units.clamp(1, 98),
         clock: Arc::new(BudgetClock),
     };
-    let provider =
-        Arc::new(HttpVcTransport::new().map_err(|_| GatewayError::InvalidConfiguration)?);
+    let provider = Arc::new(
+        HttpVcTransport::new_with_cpu(cpu.clone())
+            .map_err(|_| GatewayError::InvalidConfiguration)?,
+    );
     let source = FundedVc::new(&builtins.vc, provider, funding, key)
         .map_err(|_| GatewayError::InvalidConfiguration)?;
-    let store = CatalogWorldStore::new(s3.clone(), CatalogLimits::default())
+    let store = CatalogWorldStore::new_with_cpu(s3.clone(), CatalogLimits::default(), cpu.clone())
         .map_err(|_| GatewayError::InvalidConfiguration)?;
-    let world = World::new(
+    let world = World::new_with_cpu(
         Arc::new(store),
         Arc::new(source),
         air,
         Arc::new(SystemClock),
         WorldConfig::default(),
+        cpu,
     );
     let versions = selected_versions(var)?;
     Ok((Arc::new(WorldBackend::new(world)), versions))

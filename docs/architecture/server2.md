@@ -1408,7 +1408,9 @@ timeout instead of a fixed 3 s (KMA web pages 30 s; data.go.kr services in the S
 Legacy unbounded RSS retries and 10×1 s scrape loops
 are capture scheduling for S14, not acquisition. Aggregate `server2_domestic_*` counters cover
 funded calls, acknowledged reserved and consumed units, per-outcome attempts, funding denials,
-public attempts and complete/incomplete groups; they are not yet exposed on `/internal/metrics`.
+public attempts and complete/incomplete groups. Resource-aware production construction now shares one
+`DomesticMetrics` collector with DailyAcquirer/AirKorea/MFDS and exposes it once on the private
+`/internal/metrics`; standalone constructors retain their earlier collector ownership.
 Each consumed unit is recorded before HTTP, so a caller cancelled after funding or sending is
 still counted (`attempts_unsettled`); concurrent calls cannot move the key ring back onto a key
 another call saw rejected.
@@ -4090,3 +4092,27 @@ readiness endpoint or qualify S3/credential-source health, a production recovery
 shadow or cutover. The [runtime-services diagram](diagrams/server2-runtime-services.html)
 retains process/writer/storage ownership; its final source pin is bound to the implemented
 code before PR review, not to an uncommitted future design.
+
+## Process CPU ownership and private native metrics (#2819)
+
+Resource-aware main construction creates `ProcessResources` before the shared service factory.
+The same CPU admission and domestic collector reach `SharedState` and the resource-aware
+VC/world/air/S06 path. The native offer queue is16; actual blocking closures retain
+local/process permits until they finish, including after caller cancellation. Effective
+deadlines reserve10ms. Local capacity is typed before outward failure mapping; it does not
+fund another provider, become a provider penalty, or authorize uncertain publication replay.
+A spent attempt followed by local capacity loss has a private2s demand cooldown.
+
+Fixed native operation counters update before diagnostic filtering/rate/queue loss.
+An immutable private metrics view reads actual CPU, shared domestic, push, S3 and raw-cache
+counters without acquiring provider/S3/filesystem data. HTTP latency stops at headers;
+S3 payload lengths are logical observations. Fixed schema budgets are2048series,4096u64
+cells and512KiB. Actual enumeration, max-width rendering, owned HTTP captures and their
+limits are described in the [operator guide](../operations/server2-runtime-metrics.md) and
+[local evidence](../evidence/tasks/issue-2819-runtime-resource-metrics/verification.md).
+
+This slice leaves the existing FIFO12 S3 permits and funding rules unchanged. Existing
+standalone constructors preserve their earlier ownership. Nonmigrated local KMA/warning/
+AirKorea CPU and the separate D2/F2 work need whole-candidate reconciliation; neither total
+process CPU nor RSS is bounded by this claim. Repository-local progress is not host, quota,
+shadow, previous-full-release or cutover qualification.

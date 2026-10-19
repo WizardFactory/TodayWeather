@@ -72,3 +72,7 @@ path = "tools/state/push_registration_import.rs"
 [[example]]
 name = "s3_readiness"
 path = "tools/s3_readiness.rs"
+
+[[example]]
+name = "runtime_resource_metrics_smoke"
+path = "examples/runtime_resource_metrics_smoke.rs"

@@ -129,18 +129,31 @@ fn records(set: &crate::storage::CompleteSet) -> Vec<AirRecord> {
 }
 /// S06-backed store. An absent catalog is proved empty only by a complete one-period repair.
 pub struct CatalogAirStore<T> {
+    cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
     catalogs: Arc<CatalogStore<T>>,
     raw_limits: Limits,
     limits: CatalogLimits,
 }
 impl<T: CatalogTransport + 'static> CatalogAirStore<T> {
     /// S3 I/O is capped at 4 concurrent operations for this store.
-    pub fn new(transport: T, mut limits: CatalogLimits) -> Result<Self, Error> {
+    pub fn new(transport: T, limits: CatalogLimits) -> Result<Self, Error> {
+        Self::new_with_cpu(transport, limits, None)
+    }
+    pub fn new_with_cpu(
+        transport: T,
+        mut limits: CatalogLimits,
+        cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
+    ) -> Result<Self, Error> {
         limits.io = limits.io.min(4);
         Ok(Self {
             raw_limits: limits.raw.clone(),
-            catalogs: Arc::new(CatalogStore::new(transport, limits.clone())?),
+            catalogs: Arc::new(CatalogStore::new_with_cpu(
+                transport,
+                limits.clone(),
+                cpu.clone(),
+            )?),
             limits,
+            cpu,
         })
     }
 }
@@ -216,36 +229,57 @@ impl<T: CatalogTransport + 'static> AirStore for CatalogAirStore<T> {
         deadline: Instant,
     ) -> BoxFuture<'_, Result<(), StoreError>> {
         Box::pin(async move {
-            let day = utc_day(record.fetched_at_ms as f64)
-                .ok_or(StoreError::Storage(Error::Invalid("fetch time")))?;
-            let raw = RawRecord::new(
-                record.provider.source(),
-                KIND,
-                &cell.key(),
-                period(day),
-                record.fetched_at_ms,
-                200,
-                &record.content_type,
-                None,
-                record.body.clone(),
-                &self.raw_limits,
-            )
-            .map_err(StoreError::Storage)?;
-            let id = CatalogId::for_record(&raw.envelope.identity, &day.to_string())
-                .map_err(StoreError::Storage)?;
-            let declaration = GroupDeclaration::new(
-                vec![GroupMember {
-                    envelope: raw.envelope.clone(),
-                    catalogs: vec![id],
-                }],
-                &self.limits,
-            )
-            .map_err(StoreError::Storage)?;
+            let raw_limits = self.raw_limits.clone();
+            let limits = self.limits.clone();
+            let prepare = move || -> Result<_, Error> {
+                let day =
+                    utc_day(record.fetched_at_ms as f64).ok_or(Error::Invalid("fetch time"))?;
+                let raw = RawRecord::new(
+                    record.provider.source(),
+                    KIND,
+                    &cell.key(),
+                    period(day),
+                    record.fetched_at_ms,
+                    200,
+                    &record.content_type,
+                    None,
+                    record.body.clone(),
+                    &raw_limits,
+                )?;
+                let id = CatalogId::for_record(&raw.envelope.identity, &day.to_string())?;
+                let declaration = GroupDeclaration::new(
+                    vec![GroupMember {
+                        envelope: raw.envelope.clone(),
+                        catalogs: vec![id],
+                    }],
+                    &limits,
+                )?;
+                Ok((declaration, raw))
+            };
+            let prepared = match &self.cpu {
+                Some(cpu) => cpu
+                    .run(
+                        crate::operational_metrics::CpuKind::StorageControl,
+                        deadline,
+                        None,
+                        prepare,
+                    )
+                    .await
+                    .map_err(|_| StoreError::Storage(Error::LocalCapacity))?,
+                None => prepare(),
+            };
+            let (declaration, raw) = prepared.map_err(StoreError::Storage)?;
             self.catalogs
-                .publish(declaration, vec![raw], deadline)
+                .publish_with_local_provenance(declaration, vec![raw], deadline)
                 .await
                 .map(|_| ())
-                .map_err(StoreError::Storage)
+                .map_err(|failure| {
+                    if failure.local_capacity {
+                        StoreError::LocalPublication(failure.error)
+                    } else {
+                        StoreError::Storage(failure.error)
+                    }
+                })
         })
     }
 }
@@ -257,6 +291,7 @@ pub struct BoundedS3<T> {
     inner: Arc<T>,
     gate: Arc<Semaphore>,
     limit: usize,
+    metrics: Arc<crate::operational_metrics::S3Metrics>,
 }
 impl<T> Clone for BoundedS3<T> {
     fn clone(&self) -> Self {
@@ -264,6 +299,7 @@ impl<T> Clone for BoundedS3<T> {
             inner: self.inner.clone(),
             gate: self.gate.clone(),
             limit: self.limit,
+            metrics: self.metrics.clone(),
         }
     }
 }
@@ -274,7 +310,11 @@ impl<T> BoundedS3<T> {
             inner: Arc::new(inner),
             gate: Arc::new(Semaphore::new(limit)),
             limit,
+            metrics: Arc::new(crate::operational_metrics::S3Metrics::default()),
         }
+    }
+    pub fn metrics(&self) -> Arc<crate::operational_metrics::S3Metrics> {
+        self.metrics.clone()
     }
     pub fn limit(&self) -> usize {
         self.limit
@@ -284,8 +324,18 @@ impl<T> BoundedS3<T> {
         self.gate.available_permits()
     }
     /// One admission permit, for request kinds implemented outside this file (S16 summaries).
-    pub(crate) async fn permit(&self) -> Result<tokio::sync::SemaphorePermit<'_>, Error> {
-        self.gate.acquire().await.map_err(|_| Error::Capacity)
+    pub(crate) async fn permit(
+        &self,
+        kind: crate::operational_metrics::S3Kind,
+        payload: usize,
+    ) -> Result<S3Permit<'_>, Error> {
+        let mut metric = self.metrics.queued(kind);
+        let permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        metric.admit(payload);
+        Ok(S3Permit {
+            _permit: permit,
+            metric,
+        })
     }
     /// The admitted transport.
     pub(crate) fn inner(&self) -> &T {
@@ -297,16 +347,33 @@ impl<T: crate::storage::ObjectTransport> crate::storage::ObjectTransport for Bou
         self.inner.raw_cache()
     }
     async fn put(&self, record: &crate::storage::PreparedRecord) -> Result<u16, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
-        self.inner.put(record).await
+        let mut permit = self
+            .permit(
+                crate::operational_metrics::S3Kind::RawPut,
+                record.body.len(),
+            )
+            .await?;
+        let result = self.inner.put(record).await;
+        permit.metric.result(&result, |code| (Some(*code), 0));
+        result
     }
     async fn head(&self, key: &str) -> Result<crate::storage::Object, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
-        self.inner.head(key).await
+        let mut permit = self
+            .permit(crate::operational_metrics::S3Kind::RawHead, 0)
+            .await?;
+        let result = self.inner.head(key).await;
+        permit.metric.result(&result, |_| (Some(200), 0));
+        result
     }
     async fn get(&self, key: &str, maximum: usize) -> Result<crate::storage::Object, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
-        self.inner.get(key, maximum).await
+        let mut permit = self
+            .permit(crate::operational_metrics::S3Kind::RawGet, 0)
+            .await?;
+        let result = self.inner.get(key, maximum).await;
+        permit
+            .metric
+            .result(&result, |object| (Some(200), object.body.len()));
+        result
     }
     /// Credentials only; no S3 request, so no admission permit.
     async fn ready(&self) -> Result<(), Error> {
@@ -319,8 +386,14 @@ impl<T: CatalogTransport> CatalogTransport for BoundedS3<T> {
         key: &str,
         maximum: usize,
     ) -> Result<crate::storage::ControlObject, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
-        self.inner.get_control(key, maximum).await
+        let mut permit = self
+            .permit(crate::operational_metrics::S3Kind::ControlGet, 0)
+            .await?;
+        let result = self.inner.get_control(key, maximum).await;
+        permit
+            .metric
+            .result(&result, |object| (Some(200), object.body.len()));
+        result
     }
     async fn put_control(
         &self,
@@ -328,8 +401,12 @@ impl<T: CatalogTransport> CatalogTransport for BoundedS3<T> {
         body: &[u8],
         condition: &crate::storage::WriteCondition,
     ) -> Result<u16, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
-        self.inner.put_control(key, body, condition).await
+        let mut permit = self
+            .permit(crate::operational_metrics::S3Kind::ControlPut, body.len())
+            .await?;
+        let result = self.inner.put_control(key, body, condition).await;
+        permit.metric.result(&result, |code| (Some(*code), 0));
+        result
     }
     async fn list_raw_document(
         &self,
@@ -338,10 +415,17 @@ impl<T: CatalogTransport> CatalogTransport for BoundedS3<T> {
         maximum_keys: usize,
         maximum_bytes: usize,
     ) -> Result<Vec<u8>, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
-        self.inner
+        let mut permit = self
+            .permit(crate::operational_metrics::S3Kind::RawList, 0)
+            .await?;
+        let result = self
+            .inner
             .list_raw_document(prefix, token, maximum_keys, maximum_bytes)
-            .await
+            .await;
+        permit
+            .metric
+            .result(&result, |body| (Some(200), body.len()));
+        result
     }
 }
 /// S14 index LISTs (and S15b catalog listings) under the same admission.
@@ -351,8 +435,12 @@ impl<T: crate::history::IndexListing + Send + Sync> crate::history::IndexListing
         prefix: &str,
         token: Option<&str>,
     ) -> Result<crate::storage::ListPage, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
-        self.inner.list_index(prefix, token).await
+        let mut permit = self
+            .permit(crate::operational_metrics::S3Kind::IndexList, 0)
+            .await?;
+        let result = self.inner.list_index(prefix, token).await;
+        permit.metric.result(&result, |_| (Some(200), 0));
+        result
     }
 }
 impl<T: crate::budget::BudgetTransport> crate::budget::BudgetTransport for BoundedS3<T> {
@@ -360,12 +448,15 @@ impl<T: crate::budget::BudgetTransport> crate::budget::BudgetTransport for Bound
         &self,
         key: &str,
     ) -> Result<crate::budget::BudgetObject, crate::budget::BudgetError> {
-        let _permit = self
-            .gate
-            .acquire()
+        let mut permit = self
+            .permit(crate::operational_metrics::S3Kind::BudgetGet, 0)
             .await
             .map_err(|_| crate::budget::BudgetError::Transport)?;
-        self.inner.get_budget(key).await
+        let result = self.inner.get_budget(key).await;
+        permit
+            .metric
+            .result(&result, |object| (Some(200), object.body.len()));
+        result
     }
     async fn put_budget(
         &self,
@@ -373,12 +464,13 @@ impl<T: crate::budget::BudgetTransport> crate::budget::BudgetTransport for Bound
         body: &[u8],
         condition: &crate::storage::WriteCondition,
     ) -> Result<u16, crate::budget::BudgetError> {
-        let _permit = self
-            .gate
-            .acquire()
+        let mut permit = self
+            .permit(crate::operational_metrics::S3Kind::BudgetPut, body.len())
             .await
             .map_err(|_| crate::budget::BudgetError::Transport)?;
-        self.inner.put_budget(key, body, condition).await
+        let result = self.inner.put_budget(key, body, condition).await;
+        permit.metric.result(&result, |code| (Some(*code), 0));
+        result
     }
 }
 /// Volatile in-process store for tests and examples; not a durable store.
@@ -436,5 +528,116 @@ impl AirStore for MemoryAirStore {
                 .push((cell, record));
             Ok(())
         })
+    }
+}
+
+pub(crate) struct S3Permit<'a> {
+    _permit: tokio::sync::SemaphorePermit<'a>,
+    pub(crate) metric: crate::operational_metrics::S3Guard,
+}
+
+#[cfg(test)]
+mod shared_s3_metrics_tests {
+    use super::*;
+    use crate::storage::{
+        CatalogTransport, ControlObject, Object, ObjectTransport, PreparedRecord, WriteCondition,
+    };
+    struct Peer {
+        entered: tokio::sync::Notify,
+        release: tokio::sync::Notify,
+        order: Mutex<Vec<String>>,
+    }
+    impl ObjectTransport for Arc<Peer> {
+        async fn put(&self, _: &PreparedRecord) -> Result<u16, Error> {
+            panic!("no PUT")
+        }
+        async fn head(&self, key: &str) -> Result<Object, Error> {
+            self.order.lock().unwrap().push(key.into());
+            Err(Error::NotFound)
+        }
+        async fn get(&self, key: &str, _: usize) -> Result<Object, Error> {
+            self.order.lock().unwrap().push(key.into());
+            Ok(Object {
+                metadata: Default::default(),
+                length: 4,
+                body: vec![1, 2, 3, 4],
+            })
+        }
+    }
+    impl CatalogTransport for Arc<Peer> {
+        async fn get_control(&self, key: &str, _: usize) -> Result<ControlObject, Error> {
+            self.order.lock().unwrap().push(key.into());
+            if key == "first" {
+                self.entered.notify_one();
+                self.release.notified().await;
+            }
+            Ok(ControlObject {
+                body: vec![1, 2, 3],
+                etag: "\"owned\"".into(),
+                version: None,
+            })
+        }
+        async fn put_control(&self, _: &str, _: &[u8], _: &WriteCondition) -> Result<u16, Error> {
+            panic!("no control PUT")
+        }
+        async fn list_raw_document(
+            &self,
+            _: &str,
+            _: Option<&str>,
+            _: usize,
+            _: usize,
+        ) -> Result<Vec<u8>, Error> {
+            panic!("no LIST")
+        }
+    }
+    async fn until(metrics: &crate::operational_metrics::S3Metrics, line: &str) {
+        tokio::time::timeout(std::time::Duration::from_secs(1), async {
+            while !metrics.render(1).lines().any(|v| v == line) {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+    }
+    #[tokio::test]
+    async fn actual_shared_fifo_preserves_survivor_order_and_classifies_queue_and_active_cancel() {
+        let peer = Arc::new(Peer {
+            entered: tokio::sync::Notify::new(),
+            release: tokio::sync::Notify::new(),
+            order: Mutex::new(Vec::new()),
+        });
+        let store = BoundedS3::new(peer.clone(), 1);
+        let metrics = store.metrics();
+        let first = store.clone();
+        let first = tokio::spawn(async move { first.get_control("first", 10).await });
+        peer.entered.notified().await;
+        let second = store.clone();
+        let second = tokio::spawn(async move { second.head("cancelled").await });
+        until(&metrics, "server2_s3_queued{kind=\"raw_head\"} 1").await;
+        let third = store.clone();
+        let third = tokio::spawn(async move { third.get_control("third", 10).await });
+        until(&metrics, "server2_s3_queued{kind=\"control_get\"} 1").await;
+        let fourth = store.clone();
+        let fourth = tokio::spawn(async move { fourth.get("fourth", 10).await });
+        until(&metrics, "server2_s3_queued{kind=\"raw_get\"} 1").await;
+        second.abort();
+        let _ = second.await;
+        first.abort();
+        let _ = first.await;
+        assert_eq!(third.await.unwrap().unwrap().body.len(), 3);
+        assert_eq!(fourth.await.unwrap().unwrap().body.len(), 4);
+        assert_eq!(&*peer.order.lock().unwrap(), &["first", "third", "fourth"]);
+        let text = metrics.render(1);
+        for line in [
+            "server2_s3_queued_cancelled_total{kind=\"raw_head\"} 1",
+            "server2_s3_active_cancelled_total{kind=\"control_get\"} 1",
+            "server2_s3_terminal_total{kind=\"control_get\",outcome=\"unknown\"} 1",
+            "server2_s3_returned_body_bytes_total{kind=\"control_get\"} 3",
+            "server2_s3_returned_body_bytes_total{kind=\"raw_get\"} 4",
+            "server2_s3_pool_queued 0",
+            "server2_s3_pool_active 0",
+        ] {
+            assert!(text.lines().any(|v| v == line), "missing {line}");
+        }
     }
 }

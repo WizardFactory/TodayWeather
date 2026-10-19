@@ -4,8 +4,10 @@ pub mod dotenv;
 pub mod listener;
 pub mod narrative;
 pub mod observability;
+pub mod operational_metrics;
 pub mod process;
 pub mod resolver;
+pub mod runtime_resources;
 pub mod runtime_services;
 pub mod startup;
 pub mod storage;
@@ -145,17 +147,20 @@ impl Config {
 pub struct SharedState {
     config: Config,
     admission: Arc<Semaphore>,
-    cpu: Arc<Semaphore>,
+    resources: Arc<runtime_resources::ProcessResources>,
     memory: Mutex<Option<Arc<[u8]>>>,
     health_requests: AtomicU64,
     rejected: AtomicU64,
 }
 impl SharedState {
     pub fn new(c: &Config) -> Self {
+        Self::with_resources(c, runtime_resources::ProcessResources::new(c))
+    }
+    pub fn with_resources(c: &Config, resources: Arc<runtime_resources::ProcessResources>) -> Self {
         Self {
             config: c.clone(),
             admission: Arc::new(Semaphore::new(c.inflight_limit)),
-            cpu: Arc::new(Semaphore::new(c.cpu_limit)),
+            resources,
             memory: Mutex::new(None),
             health_requests: AtomicU64::new(0),
             rejected: AtomicU64::new(0),
@@ -165,7 +170,7 @@ impl SharedState {
         self.admission.clone().try_acquire_owned().ok()
     }
     pub fn cpu_available(&self) -> usize {
-        self.cpu.available_permits()
+        self.resources.cpu.available()
     }
     /// CPU permit is moved into the blocking closure: cancellation cannot release it early.
     pub async fn run_cpu<F, T>(&self, work: F) -> Result<T, String>
@@ -173,17 +178,14 @@ impl SharedState {
         F: FnOnce() -> T + Send + 'static,
         T: Send + 'static,
     {
-        let permit = self
+        self.resources
             .cpu
-            .clone()
-            .try_acquire_owned()
-            .map_err(|_| "CPU capacity exhausted".to_string())?;
-        crate::observability::spawn_blocking(move || {
-            let _permit = permit;
-            work()
-        })
-        .await
-        .map_err(|_| "CPU task failed".to_string())
+            .immediate(operational_metrics::CpuKind::Foundation, work)
+            .await
+            .map_err(|error| match error {
+                runtime_resources::CpuFailure::Capacity => "CPU capacity exhausted".to_string(),
+                _ => "CPU task failed".to_string(),
+            })
     }
     /// One bounded volatile slot; S07 owns the eventual keyed/sharded cache implementation.
     pub fn replace_memory(&self, bytes: Arc<[u8]>) -> bool {
@@ -235,12 +237,13 @@ async fn metrics(State(s): State<Arc<SharedState>>) -> Response {
         s.rejected.load(Ordering::Relaxed),
         s.config.inflight_limit - s.admission.available_permits(),
         s.config.inflight_limit,
-        s.config.cpu_limit - s.cpu.available_permits(),
-        s.config.cpu_limit,
+        s.resources.cpu.limit() - s.resources.cpu.available(),
+        s.resources.cpu.limit(),
         s.memory_bytes(),
         s.config.cache_bytes
     ) + &gateway::metrics::render()
-        + &observability::render_metrics();
+        + &observability::render_metrics()
+        + &operational_metrics::render();
     (
         [
             ("content-type", "text/plain; version=0.0.4; charset=utf-8"),
@@ -249,6 +252,30 @@ async fn metrics(State(s): State<Arc<SharedState>>) -> Response {
         text,
     )
         .into_response()
+}
+pub fn metrics_router_with_native(
+    state: Arc<SharedState>,
+    native: operational_metrics::NativeMetricsView,
+) -> Router {
+    Router::new()
+        .route(
+            "/internal/metrics",
+            get(move || {
+                let state = state.clone();
+                let native = native.clone();
+                async move {
+                    let response = metrics(State(state)).await;
+                    let (parts, body) = response.into_parts();
+                    let bytes = axum::body::to_bytes(body, operational_metrics::MAX_TEXT)
+                        .await
+                        .expect("fixed foundation metric body");
+                    let mut text = bytes.to_vec();
+                    text.extend_from_slice(native.render().as_bytes());
+                    Response::from_parts(parts, Body::from(text))
+                }
+            }),
+        )
+        .layer(middleware::from_fn(observability::http))
 }
 pub fn metrics_router(state: Arc<SharedState>) -> Router {
     Router::new()

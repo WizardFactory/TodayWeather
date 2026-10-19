@@ -1,5 +1,11 @@
 use super::{Error, Limits, Object, PreparedRecord, RawRecord, RecordId, decode};
-use std::{future::Future, sync::Arc};
+use std::{
+    future::Future,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+};
 use tokio::{
     sync::Semaphore,
     time::{Instant, timeout_at},
@@ -30,6 +36,8 @@ pub struct RawRecordStore<T> {
     io: Arc<Semaphore>,
     cpu: Arc<Semaphore>,
     buffers: Arc<Semaphore>,
+    shared_cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
+    local_failure: Option<Arc<AtomicBool>>,
 }
 impl<T: ObjectTransport> RawRecordStore<T> {
     pub fn new(transport: T, limits: Limits) -> Result<Self, Error> {
@@ -37,6 +45,13 @@ impl<T: ObjectTransport> RawRecordStore<T> {
     }
     /// Shared transport only; this does not share caches or permit pools with other stores.
     pub fn new_shared(transport: Arc<T>, limits: Limits) -> Result<Self, Error> {
+        Self::new_shared_with_cpu(transport, limits, None)
+    }
+    pub fn new_shared_with_cpu(
+        transport: Arc<T>,
+        limits: Limits,
+        shared_cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
+    ) -> Result<Self, Error> {
         limits.validate()?;
         Ok(Self {
             transport,
@@ -44,13 +59,45 @@ impl<T: ObjectTransport> RawRecordStore<T> {
             buffers: Arc::new(Semaphore::new(limits.io)),
             cpu: Arc::new(Semaphore::new(limits.cpu)),
             limits,
+            shared_cpu,
+            local_failure: None,
         })
     }
-    async fn cpu<F, R>(&self, f: F) -> Result<R, Error>
+    pub(crate) fn invocation(&self, flag: Arc<AtomicBool>) -> Self {
+        Self {
+            transport: self.transport.clone(),
+            limits: self.limits.clone(),
+            io: self.io.clone(),
+            cpu: self.cpu.clone(),
+            buffers: self.buffers.clone(),
+            shared_cpu: self.shared_cpu.clone(),
+            local_failure: Some(flag),
+        }
+    }
+    async fn cpu<F, R>(&self, deadline: Instant, f: F) -> Result<R, Error>
     where
         F: FnOnce() -> Result<R, Error> + Send + 'static,
         R: Send + 'static,
     {
+        if let Some(cpu) = &self.shared_cpu {
+            return match cpu
+                .run(
+                    crate::operational_metrics::CpuKind::StorageCodec,
+                    deadline,
+                    Some(self.cpu.clone()),
+                    f,
+                )
+                .await
+            {
+                Ok(value) => value,
+                Err(_) => {
+                    if let Some(flag) = &self.local_failure {
+                        flag.store(true, Ordering::Release);
+                    }
+                    Err(Error::LocalCapacity)
+                }
+            };
+        }
         let permit = self
             .cpu
             .clone()
@@ -69,6 +116,7 @@ impl<T: ObjectTransport> RawRecordStore<T> {
         key: &str,
         expected: &RecordId,
         head: Option<Object>,
+        deadline: Instant,
     ) -> Result<RawRecord, Error> {
         // A bounded buffer slot spans GET, CPU wait and decode (including cancellation).
         let buffer = Arc::new(
@@ -97,13 +145,15 @@ impl<T: ObjectTransport> RawRecordStore<T> {
                 let limits = self.limits.clone();
                 let cpu_buffer = buffer.clone();
                 let checked = self
-                    .cpu(move || {
+                    .cpu(deadline, move || {
                         let _buffer = cpu_buffer;
                         decode(&key, object, &id, &limits)
                     })
                     .await;
-                if let Ok(record) = checked {
-                    return Ok(record);
+                match checked {
+                    Ok(record) => return Ok(record),
+                    Err(Error::LocalCapacity) => return Err(Error::LocalCapacity),
+                    Err(_) => {}
                 }
             }
             cache.invalidate(expected).await;
@@ -119,19 +169,12 @@ impl<T: ObjectTransport> RawRecordStore<T> {
         let key = key.to_owned();
         let expected = expected.clone();
         let limits = self.limits.clone();
-        let permit = self
-            .cpu
-            .clone()
-            .acquire_owned()
-            .await
-            .map_err(|_| Error::Transport)?;
-        let record = crate::observability::spawn_blocking(move || {
-            let _buffer = buffer;
-            let _permit = permit;
-            decode(&key, object, &expected, &limits)
-        })
-        .await
-        .map_err(|_| Error::Transport)??;
+        let record = self
+            .cpu(deadline, move || {
+                let _buffer = buffer;
+                decode(&key, object, &expected, &limits)
+            })
+            .await?;
         if let (Some(writer), Some(object)) = (writer, cached) {
             writer.enqueue(object);
         }
@@ -145,11 +188,19 @@ impl<T: ObjectTransport> RawRecordStore<T> {
     }
     /// Success only acknowledges immutable body durability, never catalog/client publication.
     pub async fn publish(&self, record: RawRecord) -> Result<PublishOutcome, Error> {
+        self.publish_at(record, Instant::now() + self.limits.deadline)
+            .await
+    }
+    pub async fn publish_at(
+        &self,
+        record: RawRecord,
+        deadline: Instant,
+    ) -> Result<PublishOutcome, Error> {
+        let deadline = deadline.min(Instant::now() + self.limits.deadline);
         crate::observability::observe(
             crate::observability::Component::S3,
             crate::observability::Stage::Publish,
             async {
-                let deadline = Instant::now() + self.limits.deadline;
                 let mut put_started = false;
                 timeout_at(deadline, async {
                     let _io = self
@@ -159,7 +210,7 @@ impl<T: ObjectTransport> RawRecordStore<T> {
                         .map_err(|_| Error::Capacity)?;
                     let expected = record.envelope.clone();
                     let limits = self.limits.clone();
-                    let prepared = self.cpu(move || record.prepare(&limits)).await?;
+                    let prepared = self.cpu(deadline, move || record.prepare(&limits)).await?;
                     // S10F GROK-1: a credential failure before the first PUT is definite, not ambiguous.
                     self.transport.ready().await?;
                     let mut uncertain_put = false;
@@ -186,7 +237,12 @@ impl<T: ObjectTransport> RawRecordStore<T> {
                                             return Err(Error::Corrupt("existing metadata/length"));
                                         }
                                         let restored = self
-                                            .verified(&prepared.key, &expected.identity, Some(head))
+                                            .verified(
+                                                &prepared.key,
+                                                &expected.identity,
+                                                Some(head),
+                                                deadline,
+                                            )
                                             .await
                                             .map_err(Self::reconciliation_error)?;
                                         if restored.envelope != expected {
@@ -231,18 +287,27 @@ impl<T: ObjectTransport> RawRecordStore<T> {
     }
     /// A caller/catalog supplies the full expected identity; no short hashes or ETag identity.
     pub async fn load(&self, expected: &RecordId) -> Result<RawRecord, Error> {
+        self.load_at(expected, Instant::now() + self.limits.deadline)
+            .await
+    }
+    pub async fn load_at(
+        &self,
+        expected: &RecordId,
+        deadline: Instant,
+    ) -> Result<RawRecord, Error> {
+        let deadline = deadline.min(Instant::now() + self.limits.deadline);
         crate::observability::observe(
             crate::observability::Component::S3,
             crate::observability::Stage::Restore,
             async {
-                let deadline = Instant::now() + self.limits.deadline;
                 timeout_at(deadline, async {
                     let _io = self
                         .io
                         .clone()
                         .try_acquire_owned()
                         .map_err(|_| Error::Capacity)?;
-                    self.verified(&expected.object_key()?, expected, None).await
+                    self.verified(&expected.object_key()?, expected, None, deadline)
+                        .await
                 })
                 .await
                 .map_err(|_| Error::Timeout)?

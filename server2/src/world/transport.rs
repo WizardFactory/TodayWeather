@@ -16,6 +16,8 @@ const MAX_DECODED_BYTES: usize = 16 * 1024 * 1024;
 pub enum VcTransportError {
     /// The connection was reset or closed before a complete response (legacy RESET_CODES).
     Reset,
+    /// Local CPU admission/completion failed; never a reset or provider failure.
+    LocalCapacity,
     /// Deadline, refused connection, oversized/undecodable body or any other failure.
     Failed,
 }
@@ -62,9 +64,15 @@ fn classify(error: &reqwest::Error) -> VcTransportError {
 }
 pub struct HttpVcTransport {
     client: reqwest::Client,
+    cpu: Option<std::sync::Arc<crate::runtime_resources::CpuAdmission>>,
 }
 impl HttpVcTransport {
     pub fn new() -> Result<Self, VcTransportError> {
+        Self::new_with_cpu(None)
+    }
+    pub fn new_with_cpu(
+        cpu: Option<std::sync::Arc<crate::runtime_resources::CpuAdmission>>,
+    ) -> Result<Self, VcTransportError> {
         let client = reqwest::Client::builder()
             .http1_max_headers(64)
             .redirect(reqwest::redirect::Policy::none())
@@ -77,7 +85,7 @@ impl HttpVcTransport {
             .pool_idle_timeout(Duration::from_secs(30))
             .build()
             .map_err(|_| VcTransportError::Failed)?;
-        Ok(Self { client })
+        Ok(Self { client, cpu })
     }
 }
 impl VcTransport for HttpVcTransport {
@@ -108,7 +116,13 @@ impl VcTransport for HttpVcTransport {
                     }
                     raw.extend_from_slice(&chunk);
                 }
-                let body = if gzip {
+                Ok((status, gzip, raw))
+            };
+            let (status, gzip, raw) = timeout_at(deadline, call)
+                .await
+                .map_err(|_| VcTransportError::Failed)??;
+            let body = if gzip {
+                let decode = move || {
                     let mut out = Vec::new();
                     flate2::read::GzDecoder::new(raw.as_slice())
                         .take(MAX_DECODED_BYTES as u64 + 1)
@@ -117,15 +131,24 @@ impl VcTransport for HttpVcTransport {
                     if out.len() > MAX_DECODED_BYTES {
                         return Err(VcTransportError::Failed);
                     }
-                    out
-                } else {
-                    raw
+                    Ok(out)
                 };
-                Ok(VcResponse { status, body })
+                match &self.cpu {
+                    Some(cpu) => cpu
+                        .run(
+                            crate::operational_metrics::CpuKind::VcGzip,
+                            deadline,
+                            None,
+                            decode,
+                        )
+                        .await
+                        .map_err(|_| VcTransportError::LocalCapacity)??,
+                    None => decode()?,
+                }
+            } else {
+                raw
             };
-            timeout_at(deadline, call)
-                .await
-                .map_err(|_| VcTransportError::Failed)?
+            Ok(VcResponse { status, body })
         })
     }
 }

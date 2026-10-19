@@ -134,16 +134,36 @@ impl SummaryTransport for HttpS3Transport {
 /// Summary requests under the process S3 admission (12 in flight).
 impl<T: SummaryTransport> SummaryTransport for BoundedS3<T> {
     async fn get_summary(&self, key: &str) -> Result<Option<Vec<u8>>, Error> {
-        let _permit = self.permit().await?;
-        self.inner().get_summary(key).await
+        let mut permit = self
+            .permit(crate::operational_metrics::S3Kind::SummaryGet, 0)
+            .await?;
+        let result = self.inner().get_summary(key).await;
+        permit.metric.result(&result, |body| {
+            (
+                Some(if body.is_some() { 200 } else { 404 }),
+                body.as_ref().map_or(0, Vec::len),
+            )
+        });
+        result
     }
     async fn put_summary(&self, key: &str, payload: &[u8]) -> Result<u16, Error> {
-        let _permit = self.permit().await?;
-        self.inner().put_summary(key, payload).await
+        let mut permit = self
+            .permit(
+                crate::operational_metrics::S3Kind::SummaryPut,
+                payload.len(),
+            )
+            .await?;
+        let result = self.inner().put_summary(key, payload).await;
+        permit.metric.result(&result, |code| (Some(*code), 0));
+        result
     }
     async fn list_summary(&self, prefix: &str, token: Option<&str>) -> Result<ListPage, Error> {
-        let _permit = self.permit().await?;
-        self.inner().list_summary(prefix, token).await
+        let mut permit = self
+            .permit(crate::operational_metrics::S3Kind::SummaryList, 0)
+            .await?;
+        let result = self.inner().list_summary(prefix, token).await;
+        permit.metric.result(&result, |_| (Some(200), 0));
+        result
     }
 }
 impl<T: SummaryTransport> SummaryTransport for std::sync::Arc<T> {

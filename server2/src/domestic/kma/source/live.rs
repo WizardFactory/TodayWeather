@@ -155,6 +155,26 @@ where
         store: Arc<CatalogStore<T>>,
         clock: Arc<dyn Clock>,
     ) -> Self {
+        Self::new_with_metrics(
+            settings,
+            funded,
+            public,
+            budget,
+            store,
+            clock,
+            Arc::new(DomesticMetrics::default()),
+        )
+    }
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_metrics(
+        settings: AirKoreaSettings,
+        funded: Arc<P>,
+        public: Arc<W>,
+        budget: Arc<B>,
+        store: Arc<CatalogStore<T>>,
+        clock: Arc<dyn Clock>,
+        metrics: Arc<DomesticMetrics>,
+    ) -> Self {
         Self {
             inner: Arc::new(Inner {
                 settings,
@@ -163,7 +183,7 @@ where
                 budget,
                 store,
                 clock,
-                metrics: Arc::new(DomesticMetrics::default()),
+                metrics,
                 day: tokio::sync::Mutex::new(None),
             }),
         }

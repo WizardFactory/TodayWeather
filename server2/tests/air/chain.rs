@@ -262,3 +262,86 @@ async fn unconfigured_keys_and_no_provider_never_call_providers() {
     assert!(stub.calls().is_empty());
     assert!(AirConfig::default().google.is_none());
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn actual_funded_parse_cpu_loss_stops_chain_and_uses_only_local_two_second_cooldown() {
+    use server2::{
+        operational_metrics::CpuKind,
+        runtime_resources::CpuAdmission,
+        world::{AirFunding, HttpAirTransport},
+    };
+    use std::time::Duration;
+    let stub = Stub::start().await;
+    stub.push(
+        GOOGLE,
+        Reply::json(fixture("google-seoul.json")).delayed(120),
+    );
+    let clock = Arc::new(FixedClock::new(ms(T)));
+    let budget = Arc::new(Memory::default());
+    let cpu = CpuAdmission::new(1);
+    let mut config = config(&stub, 100);
+    config.provider_timeout = Duration::from_millis(300);
+    let air = Arc::new(
+        LiveAir::new_with_cpu(
+            config,
+            memory(),
+            Arc::new(HttpAirTransport::new().unwrap()),
+            AirFunding {
+                transport: budget.clone(),
+                clock: Arc::new(Linked(clock.clone())),
+            },
+            clock.clone(),
+            Some(cpu.clone()),
+        )
+        .unwrap(),
+    );
+    let first = air.clone();
+    let task = tokio::spawn(async move { first.current(37.5665, 126.978, ms(T)).await });
+    tokio::time::timeout(Duration::from_secs(1), async {
+        while stub.calls().is_empty() {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    let (start, ready) = tokio::sync::oneshot::channel();
+    let (release, wait) = std::sync::mpsc::channel();
+    let held = cpu.clone();
+    let blocker = tokio::spawn(async move {
+        held.immediate(CpuKind::Foundation, move || {
+            let _ = start.send(());
+            wait.recv().unwrap();
+        })
+        .await
+    });
+    ready.await.unwrap();
+    assert!(matches!(task.await.unwrap(), AirOutcome::None));
+    assert_eq!(
+        stub.calls().len(),
+        1,
+        "local parse loss must not fund or try a second provider"
+    );
+    assert_eq!(
+        air.metrics()
+            .publication_failures
+            .load(std::sync::atomic::Ordering::Relaxed),
+        0
+    );
+    release.send(()).unwrap();
+    assert!(blocker.await.unwrap().is_ok());
+    clock.set(ms(T) + 1000.);
+    assert!(matches!(
+        air.current(37.5665, 126.978, clock_now(&clock)).await,
+        AirOutcome::None
+    ));
+    assert_eq!(stub.calls().len(), 1);
+    stub.push(GOOGLE, Reply::json(fixture("google-seoul.json")));
+    clock.set(ms(T) + 2001.);
+    let _ = air.current(37.5665, 126.978, clock_now(&clock)).await;
+    assert_eq!(stub.calls_to(GOOGLE).len(), 2);
+    assert_eq!(
+        stub.calls_to(OWM).len(),
+        0,
+        "local loss is not a provider-down marker"
+    );
+}
