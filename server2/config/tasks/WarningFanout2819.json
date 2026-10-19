@@ -1,0 +1,64 @@
+{
+  "task": "WarningFanout2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "C4 known-terminal memo, poll advisory view and lazy six-job dispatch; independent fresh postclaim/afterOAuth checks unchanged. No sharedquery/driver, CatalogStore/schema/provider/deadline/concurrency change, mode, live calls, merge or deployment.",
+  "server2_paths": [
+    "server2/config/tasks/WarningFanout2819.json",
+    "server2/src/push/deliver/mod.rs",
+    "server2/src/push/deliver/warnings.rs",
+    "server2/src/push/deliver/warning_admission.rs",
+    "server2/tests/delivery.rs",
+    "server2/tests/delivery/warnings.rs",
+    "server2/tests/delivery/warning_fanout.rs",
+    "server2/tests/delivery/warning_fanout_common.rs",
+    "server2/tests/storage/catalog_peer.py",
+    "server2/examples/warning_fanout_smoke.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-warning-fanout.md",
+      "category": "documentation",
+      "reason": "Maintain exact C4 task/design/operator/evidence contracts only; no runtime implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2819-warning-fanout.md",
+      "category": "documentation",
+      "reason": "Maintain exact C4 task/design/operator/evidence contracts only; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2819-warning-fanout.md",
+      "category": "documentation",
+      "reason": "Maintain exact C4 task/design/operator/evidence contracts only; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Maintain exact C4 task/design/operator/evidence contracts only; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain exact C4 task/design/operator/evidence contracts only; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Maintain exact C4 task/design/operator/evidence contracts only; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-warning-fanout.sequence.json",
+      "category": "documentation",
+      "reason": "Maintain exact C4 task/design/operator/evidence contracts only; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-warning-fanout.html",
+      "category": "documentation",
+      "reason": "Maintain exact C4 task/design/operator/evidence contracts only; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-warning-fanout/verification.md",
+      "category": "documentation",
+      "reason": "Maintain exact C4 task/design/operator/evidence contracts only; no runtime implementation outside server2"
+    }
+  ]
+}

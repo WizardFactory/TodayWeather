@@ -23,3 +23,8 @@ mod lateness_support;
 
 #[path = "delivery/cohort.rs"]
 mod cohort;
+
+#[path = "delivery/warning_fanout.rs"]
+mod warning_fanout;
+#[path = "delivery/warning_fanout_common.rs"]
+mod warning_fanout_common;
