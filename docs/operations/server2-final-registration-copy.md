@@ -100,9 +100,9 @@ This is a headless-Chrome capture of a **labelled evidence view**, generated fro
 
 Two synthetic delivery claim/result sentinels remained byte-identical. A reported zero-send condition means no sender/provider was constructed; it is not a measured device counter. The client signs requests, but the peer does not validate SigV4, IAM or TLS.
 
-Report SHA-256: `17699e631f50df6d5d86c5d37c5a3113115d82cd5b221c2495deb838445550bb`.
-Release CLI SHA-256: `8924ad0b704e0d4a2d7e54f0179dc7fd5fa38a342c9a92c927f60a53c5295fe4`.
-Owned launcher SHA-256: `aa6d05eeff9bc0310ec7c8d8f61e47ac0a1435e4272d7270d75c827460a69a8f`.
+Report SHA-256: `17671bf6ab3e8a7b4d78da549f9948251e896b8f9719f2f900a72662db20724d`.
+Release CLI SHA-256: `318308d52f8d6f1f7f0caa0fa380bc8b49ea3fbd058c8c104cf94ef187e410fc`.
+Owned launcher SHA-256: `8873d1a40d65e4678d2e0d0cc9a79904f82af650d88b5fb7b74e5315ae11edf3`.
 
 The source binding is base `c1ae9082b2c86f0087727be9872b0cf82b4e3bb1` plus the retained dirty-source verification map; these hashes are not a claim that an unmodified base binary was exercised. Operational sender/freeze/export evidence, real cloud readiness, eligible full release recovery, final registration copy and cutover approval remain separate gates.
 
@@ -112,4 +112,4 @@ A claimed predecessor chain detects erased or mismatched marker metadata. If bot
 
 ### Current reviewed correction evidence
 
-The repeat-settle regression first failed with STALE instead of NOT_APPLIED. Current state/delivery/runtime regressions pass191tests (4ignored), focused18 included in state48, all-target Clippy and actual fmt--check pass, and current optimized functional3 repeats the four owned CLI cases plus fresh-process repeated settlement. Cross-owner seq-1 compaction followed by a failed final snapshot and cold journal replay preserves the complete state fingerprint, rows/import digests/order/next_n/tombstones/marker and sentinels. No old binary, IAM or whole-release recovery was tested. Historical fmt6 changed source; it is separate from the final actual check and does not describe the current candidate.
+The repeat-settle regression first failed with STALE instead of NOT_APPLIED. Current state/delivery/runtime regressions pass 191 tests (4 ignored), with 18 focused tests included in the 48 state tests, all-target Clippy and actual `fmt --check` pass, and current optimized functional3 repeats the four owned CLI cases plus fresh-process repeated settlement. Cross-owner seq-1 compaction followed by a failed final snapshot and cold journal replay preserves the complete state fingerprint, rows/import digests/order/next_n/tombstones/marker and sentinels. No old binary, IAM or whole-release recovery was tested. Historical fmt6 changed source; it is separate from the final actual check and does not describe the current candidate.

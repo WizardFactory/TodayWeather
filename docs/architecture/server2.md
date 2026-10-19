@@ -4102,8 +4102,8 @@ stopped or editors froze. The [cutover order](../operations/server2-cutover.md#4
 requires those actions before the final export, including gather-host loops.
 
 The preview compares a full native fingerprint and source-owned baseline. Source
-absence deletes only an unchanged provably imported row; native creates/edits and
-tombstones remain protected. The exact encoded one-entry plan must fit existing
+absence deletes only an unchanged provably imported row. Native-created rows and
+tombstones are preserved; a source/native edit conflict rejects the complete plan. The exact encoded one-entry plan must fit existing
 durable limits before readiness/write; no chunking, replan or original retry.
 Apply publishes the same bytes through the existing conditional journal. A private
 create_new/fsync attempt file precedes the original PUT. Existing or uncertain
@@ -4124,4 +4124,4 @@ old-binary compatibility, IAM, a whole eligible release pair or production actio
 Rainfall input has separately been selected as current minute-rns compatibility;
 its durable owner/handover remains separate until implemented and verified.
 
-F1 review correction clarifies that native/source conflicts abort the complete plan, not a partial copy. Repeated settlement recognizes a retained void as NOT_APPLIED without additional PUT. A fresh cold replay test covers planning from journal state, another owner compacting seq-1, and a final snapshot write failure. Marker erasure is detected only with a supplied predecessor chain; state and bundle both lacking one cannot prove first-ever finalization. Marker-dropping writers remain ineligible. Current correction191tests/4ignored and functional3 are separate from the original188-test/functional2 proof.
+F1 review correction clarifies that native/source conflicts abort the complete plan, not a partial copy. Repeated settlement recognizes a retained void as NOT_APPLIED without additional PUT. A fresh cold replay test covers planning from journal state, another owner compacting seq-1, and a final snapshot write failure. Marker erasure is detected only with a supplied predecessor chain; state and bundle both lacking one cannot prove first-ever finalization. Marker-dropping writers remain ineligible. The current correction has 191 passing tests and 4 ignored tests; functional3 is separate from the original 188-test/functional2 proof.
