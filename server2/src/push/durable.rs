@@ -110,6 +110,10 @@ pub enum Commit {
 pub enum StateError {
     Storage(Error),
     Corrupt(&'static str),
+    Input {
+        position: usize,
+        reason: &'static str,
+    },
 }
 impl From<Error> for StateError {
     fn from(e: Error) -> Self {
@@ -126,6 +130,9 @@ impl std::fmt::Display for StateError {
         match self {
             StateError::Storage(e) => write!(f, "push state storage: {e}"),
             StateError::Corrupt(what) => write!(f, "push state corrupt: {what}"),
+            StateError::Input { position, reason } => {
+                write!(f, "push import input record {position}: {reason}")
+            }
         }
     }
 }
@@ -195,7 +202,8 @@ fn parse_entry(seq: u64, body: &[u8]) -> Result<Option<(u64, Vec<Change>)>, Stat
         .get("changes")
         .and_then(OrderedJson::number)
         .ok_or(StateError::Corrupt("journal changes"))? as usize;
-    let mut changes = Vec::with_capacity(count);
+    // The header is untrusted. Grow only from decoded body lines, never its claimed count.
+    let mut changes = Vec::new();
     for line in it {
         let item = OrderedJson::parse(line).map_err(|_| StateError::Corrupt("journal change"))?;
         if item.get("removed") == Some(&OrderedJson::Bool(true)) {
@@ -380,7 +388,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
                                 let imported = ejson::read_imported(&r);
                                 state
                                     .coll_mut(c)
-                                    .put_imported(n, record, imported.as_deref());
+                                    .put_imported(n, record, imported.as_deref())?;
                             }
                             seen += 1;
                         }
@@ -469,10 +477,10 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
         state: &mut State,
         seq: u64,
         body: &[u8],
-        apply: impl FnOnce(&mut State, &[super::store::Change]),
+        apply: impl FnOnce(&mut State, &[super::store::Change]) -> Result<(), super::ejson::DecodeError>,
     ) -> Result<(), StateError> {
         if let Some((next_n, changes)) = parse_entry(seq, body)? {
-            apply(state, &changes);
+            apply(state, &changes)?;
             state.next_n = state.next_n.max(next_n);
         }
         state.seq = seq;
@@ -587,6 +595,14 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
             .scope(async {
                 if self.pending.is_some() {
                     return Commit::Failed;
+                }
+                if changes
+                    .iter()
+                    .filter_map(|c| c.record.as_ref())
+                    .any(|r| ejson::validate_document(&r.doc).is_err())
+                {
+                    self.counters.failed.fetch_add(1, Ordering::Relaxed);
+                    return Commit::Rejected;
                 }
                 let body = entry_bytes(seq, next_n, &nonce(), changes);
                 if body.len() > MAX_OBJECT {
