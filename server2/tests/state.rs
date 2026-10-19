@@ -4,6 +4,8 @@
 mod common;
 #[path = "state/durability.rs"]
 mod durability;
+#[path = "state/liveness.rs"]
+mod liveness;
 #[path = "state/migrate.rs"]
 mod migrate;
 #[path = "state/parity.rs"]

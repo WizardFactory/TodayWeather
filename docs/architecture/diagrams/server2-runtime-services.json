@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "8c968db99b7461ac0e94759bb57336111db3ad0c"
+      "revision": "3f28da89093607f4799a5210eb6355a429d41415"
     }
   },
   "components": [
@@ -46,7 +46,7 @@
       "id": "writer",
       "type": "backend",
       "label": "Registration writer",
-      "sublabel": "Quiesce HTTP; close / join / abort",
+      "sublabel": "Restored state + open receiver",
       "pos": [
         440,
         25
@@ -60,6 +60,11 @@
           "path": "server2/src/push/service.rs",
           "line": 224,
           "end_line": 250
+        },
+        {
+          "path": "server2/src/push/service.rs",
+          "line": 255,
+          "end_line": 259
         }
       ]
     },
@@ -332,6 +337,16 @@
         "Absent retired TodayAir is allowed; active TodayWeather is mandatory.",
         "Parsed accounts stay cached; restart for rotation, no remote-auth proof.",
         "Disabled push reads no Firebase account settings or files."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Writer availability boundary",
+      "items": [
+        "ready requires restored state and the existing writer receiver to remain open.",
+        "Normal close or writer panic makes availability false; no second task owner.",
+        "Receiver closure can precede drain completion; false is not a writer-join receipt.",
+        "Full readiness endpoint and S3 / credential-source health remain open E3 work."
       ]
     }
   ]
