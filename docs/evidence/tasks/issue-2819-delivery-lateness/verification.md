@@ -66,3 +66,16 @@ current independent review and exact-head CI linked on PR2826.
 
 This supporting test correction changes no runtime flow; the existing architecture
 and diagram contracts remain applicable and no new render is claimed.
+
+
+Required independent finding INT-2826-002 identified that the first fast positive
+constructed its nation backend directly and therefore did not prove production
+factory wiring. That finding remains in review history. The added strict control
+now builds `RuntimeServices` and its public router twice over retained canonical
+S3, and requires exact prose on both nation versions each time. It polls actual
+owned I/O while holding Tokio virtual time fixed, with an independent 15-second
+wall watchdog. This isolates wiring from cold-weather deadline cost and claims no
+production latency. A deliberate temporary factory-reader disconnection produced
+the intended missing-prose assertion failure; the exact original runtime bytes
+were restored and the test passed. The earlier hand-wired and late-budget controls
+remain separate. No production source changes from this correction are committed.
