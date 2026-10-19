@@ -135,6 +135,41 @@ class OracleTest(unittest.TestCase):
 
 
 class HarnessTest(unittest.TestCase):
+    def metrics_reply(self, body, status=200):
+        process = object.__new__(harness.Server2)
+        process.private = 'http://127.0.0.1:1'
+        with patch.object(harness, 'request', return_value=harness.Reply(status, {}, body, 0)) as read:
+            result = process.metrics()
+        read.assert_called_once_with(process.private, '/internal/metrics')
+        return result
+
+    def test_metrics_decimal_and_scientific_histograms_preserve_integer_counters(self):
+        samples = (b'server2_gateway_requests_total 18446744073709551615\n'
+                   b'server2_s3_admission_wait_seconds_sum{class="public"} 0.000000\n'
+                   b'server2_s3_admission_wait_seconds_bucket{le="+Inf"} 2e0\n'
+                   b'server2_s3_admission_wait_seconds_sum{class="push"} 1.25e-3\n')
+        values = self.metrics_reply(samples)
+        self.assertEqual(values['server2_gateway_requests_total'], 18446744073709551615)
+        self.assertIs(type(values['server2_gateway_requests_total']), int)
+        self.assertEqual(values['server2_s3_admission_wait_seconds_sum{class="public"}'], 0.0)
+        self.assertEqual(values['server2_s3_admission_wait_seconds_bucket{le="+Inf"}'], 2.0)
+        self.assertEqual(values['server2_s3_admission_wait_seconds_sum{class="push"}'], .00125)
+
+    def test_metrics_comment_metadata_and_blank_lines_are_not_samples(self):
+        values = self.metrics_reply(b'\n  \n# HELP server2_gateway_requests_total Requests.\n'
+                                   b' # TYPE server2_gateway_requests_total counter\n'
+                                   b'server2_gateway_requests_total 7\n')
+        self.assertEqual(values, {'server2_gateway_requests_total': 7})
+
+    def test_metrics_malformed_noncomment_samples_still_fail(self):
+        for sample in (b'counter malformed\n', b'missing_value\n', b'counter 1 unexpected\n'):
+            with self.subTest(sample=sample), self.assertRaises(ValueError):
+                self.metrics_reply(sample)
+
+    def test_metrics_failed_http_read_is_not_an_empty_success(self):
+        with self.assertRaises(AssertionError):
+            self.metrics_reply(b'', status=503)
+
     def test_percentiles_are_nearest_rank(self):
         self.assertEqual(harness.percentiles(range(1, 101)), {'n': 100, 'p50': 50, 'p95': 95, 'p99': 99, 'max': 100})
         self.assertEqual(harness.percentiles([7.0]), {'n': 1, 'p50': 7.0, 'p95': 7.0, 'p99': 7.0, 'max': 7.0})

@@ -54,7 +54,9 @@
     "server2/src/summary/lookup.rs",
     "server2/tools/smoke.py",
     "server2/tests/domestic/source_s3.rs",
-    "server2/tests/integration/test_observability.py"
+    "server2/tests/integration/test_observability.py",
+    "server2/tools/shadow/harness.py",
+    "server2/tests/integration/test_shadow.py"
   ],
   "outside": [
     {
