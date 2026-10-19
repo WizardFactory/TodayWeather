@@ -18,6 +18,7 @@ fn stored(rig: &Rig) -> Obj {
         .coll(Coll::Alert)
         .get(0)
         .unwrap()
+        .unwrap()
         .doc
         .clone()
 }

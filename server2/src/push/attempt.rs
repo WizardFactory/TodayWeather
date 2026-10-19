@@ -1,5 +1,6 @@
 //! Ephemeral writer-issued ownership for one conditional-alert state update.
 //! A receipt permits one conditional undo, never an external send retry.
+use super::ejson::DecodeError;
 use super::store::{Change, Coll, Oid, State, Txn};
 use crate::world::js::{Obj, Val};
 use std::{
@@ -115,15 +116,17 @@ fn leaf(parent: Option<&Val>, key: &str) -> Option<Val> {
     }
 }
 
-pub(crate) fn prepare(input: &Input, txn: &mut Txn<'_>) -> Option<Prepared> {
+pub(crate) fn prepare(input: &Input, txn: &mut Txn<'_>) -> Result<Option<Prepared>, DecodeError> {
     let active = [input.channels.precip, input.channels.air];
     if !active.iter().any(|x| *x)
         || (active[0] && !matches!(input.precip, Val::Obj(_)))
         || (active[1] && !matches!(input.air, Val::Obj(_)))
     {
-        return None;
+        return Ok(None);
     }
-    let before = txn.get(Coll::Alert, input.n)?;
+    let Some(before) = txn.get(Coll::Alert, input.n)? else {
+        return Ok(None);
+    };
     if !super::deliver::ops::update_alert_state(
         txn,
         input.n,
@@ -131,12 +134,12 @@ pub(crate) fn prepare(input: &Input, txn: &mut Txn<'_>) -> Option<Prepared> {
         &input.selected,
         &input.precip,
         &input.air,
-    ) {
-        return None;
+    )? {
+        return Ok(None);
     }
     let after = txn
-        .get(Coll::Alert, input.n)
-        .expect("successful state update keeps its record");
+        .get(Coll::Alert, input.n)?
+        .ok_or(DecodeError("successful state update lost its record"))?;
     let parents_before = [
         present(&before.doc, PARENTS[0]),
         present(&before.doc, PARENTS[1]),
@@ -164,7 +167,7 @@ pub(crate) fn prepare(input: &Input, txn: &mut Txn<'_>) -> Option<Prepared> {
             }
         }
     }
-    Some(Prepared {
+    Ok(Some(Prepared {
         transaction_time: txn.now_ms,
         n: input.n,
         oid: input.oid,
@@ -172,7 +175,7 @@ pub(crate) fn prepare(input: &Input, txn: &mut Txn<'_>) -> Option<Prepared> {
         leaves,
         parents_before,
         prunable,
-    })
+    }))
 }
 impl Tracker {
     pub(crate) fn prune(&mut self) {
@@ -221,7 +224,7 @@ impl Tracker {
             let Some(lease) = weak.upgrade() else {
                 return false;
             };
-            let (Some(before), Some(after)) = (before.as_ref(), change.record.as_ref()) else {
+            let (Ok(Some(before)), Some(after)) = (before.as_ref(), change.record.as_ref()) else {
                 lease.live.store(false, Ordering::Release);
                 return true;
             };
@@ -251,19 +254,23 @@ impl Tracker {
             self.active.remove(&change.n);
         }
     }
-    pub(crate) fn restore(&self, receipt: &Receipt, txn: &mut Txn<'_>) -> Restored {
+    pub(crate) fn restore(
+        &self,
+        receipt: &Receipt,
+        txn: &mut Txn<'_>,
+    ) -> Result<Restored, DecodeError> {
         let lease = &receipt.lease;
         if !Arc::ptr_eq(&self.writer, &lease.writer) {
-            return Restored::Foreign;
+            return Ok(Restored::Foreign);
         }
         if !lease.live.load(Ordering::Acquire) {
-            return Restored::Superseded;
+            return Ok(Restored::Superseded);
         }
-        let Some(mut record) = txn.get(Coll::Alert, lease.prepared.n) else {
-            return Restored::Superseded;
+        let Some(mut record) = txn.get(Coll::Alert, lease.prepared.n)? else {
+            return Ok(Restored::Superseded);
         };
         if record.oid != lease.prepared.oid {
-            return Restored::Superseded;
+            return Ok(Restored::Superseded);
         }
         let valid = lease.valid.load(Ordering::Acquire);
         let mut fields = 0;
@@ -288,7 +295,7 @@ impl Tracker {
             fields += 1;
         }
         if fields == 0 && !lease.prepared.leaves.is_empty() {
-            return Restored::Superseded;
+            return Ok(Restored::Superseded);
         }
         let prunable = lease.prunable.load(Ordering::Acquire);
         for (parent, &key) in PARENTS.iter().enumerate() {
@@ -304,9 +311,9 @@ impl Tracker {
             }
         }
         if fields != 0 {
-            txn.put(Coll::Alert, lease.prepared.n, record);
+            txn.put(Coll::Alert, lease.prepared.n, record)?;
         }
-        Restored::Applied { fields }
+        Ok(Restored::Applied { fields })
     }
 }
 
@@ -333,12 +340,14 @@ mod tests {
         }
     }
     fn image(state: &State) -> Record {
-        state.coll(Coll::Alert).get(0).unwrap()
+        state.coll(Coll::Alert).get(0).unwrap().unwrap()
     }
     fn put(tracker: &mut Tracker, state: &mut State, record: Option<Record>) {
-        state.apply_observed(&[change(record)], |state, change| {
-            tracker.observe(state, change)
-        });
+        state
+            .apply_observed(&[change(record)], |state, change| {
+                tracker.observe(state, change)
+            })
+            .unwrap();
     }
     fn owned(before_parent: Option<Val>) -> (Tracker, State, Receipt) {
         let mut doc = Obj::new();
@@ -350,10 +359,12 @@ mod tests {
         air.set("lastGrade", Val::Num(1.));
         doc.set("airAlerts", Val::Obj(air.clone()));
         let mut state = State::default();
-        state.apply(&[change(Some(Record {
-            oid: [7; 12],
-            doc: doc.clone(),
-        }))]);
+        state
+            .apply(&[change(Some(Record {
+                oid: [7; 12],
+                doc: doc.clone(),
+            }))])
+            .unwrap();
         air.set("lastGrade", Val::Num(2.));
         let input = Input {
             n: 0,
@@ -368,10 +379,12 @@ mod tests {
         };
         let mut ids = ObjectIds::new();
         let mut txn = Txn::new(&state, 42., &mut ids);
-        let prepared = prepare(&input, &mut txn).unwrap();
-        let changes = txn.changes();
+        let prepared = prepare(&input, &mut txn).unwrap().unwrap();
+        let changes = txn.changes().unwrap();
         let mut tracker = Tracker::default();
-        state.apply_observed(&changes, |state, change| tracker.observe(state, change));
+        state
+            .apply_observed(&changes, |state, change| tracker.observe(state, change))
+            .unwrap();
         let receipt = tracker.issue(prepared);
         (tracker, state, receipt)
     }
@@ -379,9 +392,11 @@ mod tests {
         assert!(receipt.claim_restore());
         let mut ids = ObjectIds::new();
         let mut txn = Txn::new(state, 43., &mut ids);
-        let result = tracker.restore(&receipt, &mut txn);
-        let changes = txn.changes();
-        state.apply_observed(&changes, |state, change| tracker.observe(state, change));
+        let result = tracker.restore(&receipt, &mut txn).unwrap();
+        let changes = txn.changes().unwrap();
+        state
+            .apply_observed(&changes, |state, change| tracker.observe(state, change))
+            .unwrap();
         result
     }
     #[test]
@@ -431,10 +446,12 @@ mod tests {
         newer
             .doc
             .set("precipAlerts", parent(9., Some(Val::Date(99.))));
-        state.apply_observed(
-            &[change(Some(newer)), change(Some(original.clone()))],
-            |state, change| tracker.observe(state, change),
-        );
+        state
+            .apply_observed(
+                &[change(Some(newer)), change(Some(original.clone()))],
+                |state, change| tracker.observe(state, change),
+            )
+            .unwrap();
         assert!(!receipt.current());
         assert_eq!(
             undo(&mut tracker, &mut state, receipt),
@@ -535,10 +552,10 @@ mod tests {
         let mut ids = ObjectIds::new();
         let mut txn = Txn::new(&state, 43., &mut ids);
         assert_eq!(
-            Tracker::default().restore(&receipt, &mut txn),
+            Tracker::default().restore(&receipt, &mut txn).unwrap(),
             Restored::Foreign
         );
-        assert!(txn.changes().is_empty());
+        assert!(txn.changes().unwrap().is_empty());
     }
     #[test]
     fn dropped_receipts_do_not_accumulate_historical_registration_entries() {
