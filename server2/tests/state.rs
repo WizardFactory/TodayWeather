@@ -12,3 +12,6 @@ mod migrate;
 mod parity;
 #[path = "state/peer.rs"]
 mod peer;
+
+#[path = "state/final_copy.rs"]
+mod final_copy;

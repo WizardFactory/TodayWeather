@@ -11,6 +11,7 @@
 //! - Restore: head, its parts (bounded parallel reads, digests checked), then journal entries
 //!   from `head.seq + 1` until the first absent sequence.
 use super::ejson::{self, DecodeError};
+use super::final_copy::{SourceMark, header_source};
 use super::store::{Change, Coll, Oid, State};
 use crate::gateway::OrderedJson;
 use crate::storage::{CatalogTransport, Error, WriteCondition, sha256};
@@ -173,6 +174,36 @@ pub fn entry_bytes(seq: u64, next_n: u64, nonce: &str, changes: &[Change]) -> Ve
     }
     s.into_bytes()
 }
+/// Optional metadata stays in the header; unmarked callers retain exactly their old bytes.
+pub fn entry_bytes_with_source(
+    seq: u64,
+    next_n: u64,
+    nonce: &str,
+    changes: &[Change],
+    source: Option<&SourceMark>,
+) -> Result<Vec<u8>, StateError> {
+    let original = entry_bytes(seq, next_n, nonce, changes);
+    let Some(mark) = source else {
+        return Ok(original);
+    };
+    mark.validate()?;
+    if mark.seq != seq || next_n > super::final_copy::MAX_SAFE {
+        return Err(StateError::Corrupt("final copy entry metadata"));
+    }
+    let end = original
+        .iter()
+        .position(|b| *b == b'\n')
+        .ok_or(StateError::Corrupt("journal header"))?;
+    let mut body = original[..end - 1].to_vec();
+    body.extend_from_slice(b",\"source\":");
+    body.extend_from_slice(
+        &serde_json::to_vec(mark).map_err(|_| StateError::Corrupt("final copy marker encoding"))?,
+    );
+    body.extend_from_slice(b"}\n");
+    body.extend_from_slice(&original[end + 1..]);
+    Ok(body)
+}
+
 fn void_bytes(seq: u64, nonce: &str) -> Vec<u8> {
     format!("{{\"schema\":1,\"seq\":{seq},\"nonce\":\"{nonce}\",\"void\":true}}\n").into_bytes()
 }
@@ -181,8 +212,13 @@ fn lines(body: &[u8]) -> impl Iterator<Item = &[u8]> {
     body.split(|b| *b == b'\n').filter(|l| !l.is_empty())
 }
 
-/// A decoded journal entry: `None` for a void entry.
-fn parse_entry(seq: u64, body: &[u8]) -> Result<Option<(u64, Vec<Change>)>, StateError> {
+/// A decoded journal entry. A void has no payload; metadata never enters record lines.
+struct ParsedEntry {
+    next_n: u64,
+    changes: Vec<Change>,
+    source: Option<SourceMark>,
+}
+fn parse_entry(seq: u64, body: &[u8]) -> Result<Option<ParsedEntry>, StateError> {
     let mut it = lines(body);
     let header = it.next().ok_or(StateError::Corrupt("journal header"))?;
     let v = OrderedJson::parse(header).map_err(|_| StateError::Corrupt("journal json"))?;
@@ -191,7 +227,11 @@ fn parse_entry(seq: u64, body: &[u8]) -> Result<Option<(u64, Vec<Change>)>, Stat
     {
         return Err(StateError::Corrupt("journal header"));
     }
+    let source = header_source(header, seq, false)?;
     if v.get("void") == Some(&OrderedJson::Bool(true)) {
+        if source.is_some() {
+            return Err(StateError::Corrupt("source marker on void"));
+        }
         return Ok(None);
     }
     let next_n = v
@@ -242,7 +282,14 @@ fn parse_entry(seq: u64, body: &[u8]) -> Result<Option<(u64, Vec<Change>)>, Stat
     if changes.len() != count {
         return Err(StateError::Corrupt("journal change count"));
     }
-    Ok(Some((next_n, changes)))
+    if source.is_some() && next_n > super::final_copy::MAX_SAFE {
+        return Err(StateError::Corrupt("final copy next_n"));
+    }
+    Ok(Some(ParsedEntry {
+        next_n,
+        changes,
+        source,
+    }))
 }
 
 pub struct Durable<T> {
@@ -398,6 +445,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
                     }
                     state.seq = seq;
                     state.next_n = next_n;
+                    state.source = header_source(&head.body, seq, true)?;
                     self.head_etag = Some(head.etag);
                     self.head_seq = seq;
                 }
@@ -479,9 +527,23 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
         body: &[u8],
         apply: impl FnOnce(&mut State, &[super::store::Change]) -> Result<(), super::ejson::DecodeError>,
     ) -> Result<(), StateError> {
-        if let Some((next_n, changes)) = parse_entry(seq, body)? {
+        if let Some(ParsedEntry {
+            next_n,
+            changes,
+            source,
+        }) = parse_entry(seq, body)?
+        {
+            if let Some(mark) = &source {
+                mark.follows(state.source.as_ref())?;
+                if super::final_copy::native_digest(state)? != mark.base {
+                    return Err(StateError::Corrupt("final copy marker base state"));
+                }
+            }
             apply(state, &changes)?;
             state.next_n = state.next_n.max(next_n);
+            if source.is_some() {
+                state.source = source;
+            }
         }
         state.seq = seq;
         self.counters.replayed.fetch_add(1, Ordering::Relaxed);
@@ -517,6 +579,46 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
             },
         )
         .await
+    }
+
+    pub async fn journal_body(&self, seq: u64) -> Result<Option<Vec<u8>>, StateError> {
+        if seq == 0 || seq > super::final_copy::MAX_SAFE {
+            return Err(StateError::Corrupt("final copy journal sequence"));
+        }
+        Ok(self.get(&journal_key(seq)).await?.map(|o| o.body))
+    }
+
+    pub async fn settle_final(&mut self, seq: u64, body: &[u8]) -> Commit {
+        if body.len() > self.config.entry_bytes
+            || body.len() > MAX_OBJECT
+            || !matches!(
+                parse_entry(seq, body),
+                Ok(Some(ParsedEntry {
+                    source: Some(_),
+                    ..
+                }))
+            )
+        {
+            return Commit::Rejected;
+        }
+        match self.reconcile(seq, body).await {
+            Reconciled::Ours => {
+                self.pending = None;
+                Commit::Committed
+            }
+            Reconciled::Theirs => {
+                self.pending = None;
+                Commit::Conflict
+            }
+            Reconciled::Voided => {
+                self.pending = None;
+                Commit::Voided
+            }
+            Reconciled::Unknown(_) => {
+                self.pending = Some((seq, body.to_vec()));
+                Commit::Failed
+            }
+        }
     }
 
     pub fn unsettled(&self) -> bool {
@@ -587,6 +689,30 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
 
     /// Write `changes` as journal entry `seq` (the state's next sequence).
     pub async fn commit(&mut self, seq: u64, changes: &[Change], next_n: u64) -> Commit {
+        let body = entry_bytes(seq, next_n, &nonce(), changes);
+        self.commit_encoded(seq, body, Some(changes)).await
+    }
+
+    /// Final-only path: validate and bound the exact buffer before readiness or PUT.
+    pub async fn commit_final(&mut self, seq: u64, body: &[u8]) -> Commit {
+        if body.len() > self.config.entry_bytes || body.len() > MAX_OBJECT {
+            return Commit::Rejected;
+        }
+        let valid = matches!(parse_entry(seq, body), Ok(Some(ParsedEntry {ref changes,source:Some(_),..}))
+            if changes.iter().filter_map(|c| c.record.as_ref()).all(|r|ejson::validate_document(&r.doc).is_ok()));
+        if !valid {
+            return Commit::Rejected;
+        }
+        self.commit_encoded(seq, body.to_vec(), None).await
+    }
+
+    /// One original conditional PUT; reconciliation may write a different conditional void.
+    async fn commit_encoded(
+        &mut self,
+        seq: u64,
+        body: Vec<u8>,
+        changes: Option<&[Change]>,
+    ) -> Commit {
         use crate::observability::{Action, Cause, Component, Details, Operation, Outcome, Stage};
         let mut operation = Operation::new(Component::PushState, Stage::Publish);
         operation.external_pending();
@@ -596,15 +722,15 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
                 if self.pending.is_some() {
                     return Commit::Failed;
                 }
-                if changes
-                    .iter()
-                    .filter_map(|c| c.record.as_ref())
-                    .any(|r| ejson::validate_document(&r.doc).is_err())
-                {
+                if changes.is_some_and(|changes| {
+                    changes
+                        .iter()
+                        .filter_map(|c| c.record.as_ref())
+                        .any(|r| ejson::validate_document(&r.doc).is_err())
+                }) {
                     self.counters.failed.fetch_add(1, Ordering::Relaxed);
                     return Commit::Rejected;
                 }
-                let body = entry_bytes(seq, next_n, &nonce(), changes);
                 if body.len() > MAX_OBJECT {
                     self.counters.failed.fetch_add(1, Ordering::Relaxed);
                     return Commit::Rejected;
@@ -731,6 +857,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
             seq: state.seq,
             next_n: state.next_n,
             parts,
+            source: state.source.clone(),
         }
     }
 
@@ -754,6 +881,15 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
         .await
     }
     async fn write_snapshot_inner(&mut self, plan: SnapshotPlan) -> Result<(), StateError> {
+        if let Some(mark) = &plan.source {
+            mark.validate()?;
+            if mark.seq > plan.seq
+                || plan.seq > super::final_copy::MAX_SAFE
+                || plan.next_n > super::final_copy::MAX_SAFE
+            {
+                return Err(StateError::Corrupt("final copy snapshot metadata"));
+            }
+        }
         let mut set = tokio::task::JoinSet::new();
         let gate = Arc::new(tokio::sync::Semaphore::new(self.config.parallel.max(1)));
         let mut listed = Vec::new();
@@ -791,7 +927,15 @@ impl<T: CatalogTransport + Send + Sync + 'static> Durable<T> {
                 "{{\"key\":\"{key}\",\"sha256\":\"{digest}\",\"records\":{records}}}"
             ));
         }
-        head.push_str("]}");
+        head.push(']');
+        if let Some(mark) = &plan.source {
+            head.push_str(",\"source\":");
+            head.push_str(
+                &serde_json::to_string(mark)
+                    .map_err(|_| StateError::Corrupt("final copy marker encoding"))?,
+            );
+        }
+        head.push('}');
         let condition = match &self.head_etag {
             Some(etag) => WriteCondition::Match(etag.clone()),
             None => WriteCondition::Absent,
@@ -827,6 +971,7 @@ pub struct SnapshotPlan {
     pub seq: u64,
     pub next_n: u64,
     parts: Vec<(String, Vec<u8>, usize)>,
+    source: Option<SourceMark>,
 }
 
 enum Reconciled {

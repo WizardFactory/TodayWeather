@@ -72,3 +72,7 @@ path = "tools/state/push_registration_import.rs"
 [[example]]
 name = "s3_readiness"
 path = "tools/s3_readiness.rs"
+
+[[example]]
+name = "push_registration_final_copy"
+path = "tools/state/push_registration_final_copy.rs"

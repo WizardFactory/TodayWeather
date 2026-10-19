@@ -2980,7 +2980,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       body { background: #ffffff !important; padding: 0; }
       .container { max-width: none; }
       .toolbar, .diagram-nav, .focus-chip, .archify-toast, .no-print { display: none !important; }
-      
+
       .diagram-container, .card { box-shadow: none; border-color: #e2e8f0; }
       .diagram-container { --archify-nav-reserve: 0px !important; }
       html[data-preset="signal-flow"] .diagram-container,
@@ -3902,24 +3902,24 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       .route-journey-controls button { min-height: 2.75rem; }
       .route-probe-status { padding: 0.05rem 0.48rem 0.38rem; }
       .route-probe-node { max-width: 7.5rem; }
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
+
+
+
+
+
+
+
+
+
+
+
       html[data-embed="true"][data-share-playback="true"] .diagram-container {
         padding-top: 4.25rem;
       }
       html[data-embed="true"][data-share-moment="true"] .diagram-container {
         padding-top: 4.25rem;
       }
-      
+
       .cards {
         grid-template-columns: 1fr;
         margin-top: 1rem;
@@ -3962,7 +3962,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-      
+
       html[data-present="true"]:not([data-embed="true"]) .diagram-container { padding: 0.5rem 0.5rem 3.75rem; }
       html[data-present="true"]:not([data-embed="true"]) .diagram-container[data-wide-diagram="true"] > svg {
         width: 720px;
@@ -4842,7 +4842,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       .semantic-lens,
       .diagram-guide,
       .overview-map-live { animation: none !important; }
-      
+
       .intent-trace-flow {
         animation: none !important;
         stroke-dasharray: none;
@@ -5036,16 +5036,17 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <!-- Edge paths -->
         <path data-edge-from="approve" data-edge-to="drain" data-edge-label="separate action" data-edge-key="0" data-edge-id="approve-drain" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="1045.3,269;1045.3,341" d="M 1045.3 269 L 1045.3 341" class="a-dashed" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
         <path data-edge-from="bundle" data-edge-to="rehearsal" data-edge-key="1" data-edge-id="bundle-rehearsal" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="406,119;486.4,119" d="M 406 119 L 486.4 119" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="drain" data-edge-to="switch" data-edge-key="2" data-edge-id="drain-switch" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="962.8,367;868,367" d="M 962.8 367 L 868 367" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="gate" data-edge-to="approve" data-edge-label="all proof" data-edge-key="3" data-edge-id="gate-approve" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="568.9,217;568.9,201;1045.3,201;1045.3,217" d="M 568.9 217 L 568.9 201 L 1045.3 201 L 1045.3 217" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="gate" data-edge-to="hold" data-edge-label="missing" data-edge-key="4" data-edge-id="gate-hold" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="651.4,243;703,243" d="M 651.4 243 L 703 243" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="hold" data-edge-to="approve" data-edge-label="only after proof" data-edge-key="5" data-edge-id="hold-approve" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="868,243;962.8,243" d="M 868 243 L 962.8 243" class="a-dashed" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
-        <path data-edge-from="inventory" data-edge-to="bundle" data-edge-key="6" data-edge-id="inventory-bundle" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="213,119;241,119" d="M 213 119 L 241 119" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="observe" data-edge-to="rollback" data-edge-label="abort threshold" data-edge-key="7" data-edge-id="observe-rollback" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="568.9,393;568.9,465" d="M 568.9 393 L 568.9 465" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="prior" data-edge-to="verify" data-edge-key="8" data-edge-id="prior-verify" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="241,491;213,491" d="M 241 491 L 213 491" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="rehearsal" data-edge-to="gate" data-edge-key="9" data-edge-id="rehearsal-gate" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="651.4,119;667.4,119;667.4,166;556.9,166;556.9,217" d="M 651.4 119 L 667.4 119 L 667.4 166 L 556.9 166 L 556.9 217" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="rollback" data-edge-to="prior" data-edge-label="eligible only" data-edge-key="10" data-edge-id="rollback-prior" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="486.4,491;406,491" d="M 486.4 491 L 406 491" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="switch" data-edge-to="observe" data-edge-key="11" data-edge-id="switch-observe" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="703,367;651.4,367" d="M 703 367 L 651.4 367" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="drain" data-edge-to="final-copy" data-edge-key="2" data-edge-id="drain-final" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="962.8,367;868,367" d="M 962.8 367 L 868 367" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="final-copy" data-edge-to="switch" data-edge-key="3" data-edge-id="final-switch" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="703,367;651.4,367" d="M 703 367 L 651.4 367" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="gate" data-edge-to="approve" data-edge-label="all proof" data-edge-key="4" data-edge-id="gate-approve" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="568.9,217;568.9,201;1045.3,201;1045.3,217" d="M 568.9 217 L 568.9 201 L 1045.3 201 L 1045.3 217" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="gate" data-edge-to="hold" data-edge-label="missing" data-edge-key="5" data-edge-id="gate-hold" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="651.4,243;703,243" d="M 651.4 243 L 703 243" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="hold" data-edge-to="approve" data-edge-label="only after proof" data-edge-key="6" data-edge-id="hold-approve" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="868,243;962.8,243" d="M 868 243 L 962.8 243" class="a-dashed" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="inventory" data-edge-to="bundle" data-edge-key="7" data-edge-id="inventory-bundle" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="213,119;241,119" d="M 213 119 L 241 119" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="observe" data-edge-to="rollback" data-edge-label="abort threshold" data-edge-key="8" data-edge-id="observe-rollback" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="323.5,393;323.5,414;568.9,414;568.9,465" d="M 323.5 393 L 323.5 414 L 568.9 414 L 568.9 465" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="prior" data-edge-to="verify" data-edge-key="9" data-edge-id="prior-verify" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="241,491;213,491" d="M 241 491 L 213 491" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="rehearsal" data-edge-to="gate" data-edge-key="10" data-edge-id="rehearsal-gate" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="651.4,119;667.4,119;667.4,166;556.9,166;556.9,217" d="M 651.4 119 L 667.4 119 L 667.4 166 L 556.9 166 L 556.9 217" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="rollback" data-edge-to="prior" data-edge-label="eligible only" data-edge-key="11" data-edge-id="rollback-prior" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="568.9,517;568.9,533;323.5,533;323.5,517" d="M 568.9 517 L 568.9 533 L 323.5 533 L 323.5 517" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="switch" data-edge-to="observe" data-edge-key="12" data-edge-id="switch-observe" data-composition-routing="workflow-v2-auto" data-edge-role="" data-composition-points="568.9,393;568.9,420;311.5,420;311.5,393" d="M 568.9 393 L 568.9 420 L 311.5 420 L 311.5 393" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
 
         <!-- Nodes -->
         <g id="node-inventory" data-node-id="inventory" data-node-label="Inventory + local proof" tabindex="0" role="button" aria-label="Focus Inventory + local proof, 19 routes + widget / notice, Repository preparation — allowed now" aria-pressed="false" data-node-kind="database" data-node-sublabel="19 routes + widget / notice" data-node-context="Repository preparation — allowed now">
@@ -5121,38 +5122,49 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
         <g id="node-observe" data-node-id="observe" data-node-label="Observe metrics" tabindex="0" role="button" aria-label="Focus Observe metrics, errors / latency / durable state, Future authorized switch — not executed" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="errors / latency / durable state" data-node-context="Future authorized switch — not executed">
           <title>Observe metrics · errors / latency / durable state · Future authorized switch — not executed</title>
-          <rect x="486.4" y="341" width="165" height="52" rx="6" class="c-mask"/>
-          <rect x="486.4" y="341" width="165" height="52" rx="6" class="c-messagebus" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(492.4 347) scale(0.6875)">
+          <rect x="241" y="341" width="165" height="52" rx="6" class="c-mask"/>
+          <rect x="241" y="341" width="165" height="52" rx="6" class="c-messagebus" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(247 347) scale(0.6875)">
             <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
             <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
             <circle cx="10.5" cy="8" r="1" class="sigil-fill"/>
             <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="568.9" y="362" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Observe metrics</text>
-          <text data-detail="context" x="568.9" y="379" class="t-muted" font-size="8" text-anchor="middle">errors / latency / durable state</text>
+          <text data-node-label="" data-detail-anchor="" x="323.5" y="362" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Observe metrics</text>
+          <text data-detail="context" x="323.5" y="379" class="t-muted" font-size="8" text-anchor="middle">errors / latency / durable state</text>
         </g>
 
         <g id="node-switch" data-node-id="switch" data-node-label="Activate selected release" tabindex="0" role="button" aria-label="Focus Activate selected release, one worker owner; verify state, Future authorized switch — not executed" aria-pressed="false" data-node-kind="backend" data-node-sublabel="one worker owner; verify state" data-node-context="Future authorized switch — not executed">
           <title>Activate selected release · one worker owner; verify state · Future authorized switch — not executed</title>
+          <rect x="486.4" y="341" width="165" height="52" rx="6" class="c-mask"/>
+          <rect x="486.4" y="341" width="165" height="52" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(492.4 347) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="568.9" y="372.5" class="t-primary" font-size="10.4" font-weight="600" text-anchor="middle">Activate selected release</text>
+          <text data-detail="context" x="568.9" y="387.3" class="t-muted" font-size="8" text-anchor="middle">one worker owner; verify state</text>
+        </g>
+
+        <g id="node-final-copy" data-node-id="final-copy" data-node-label="Final copy + readback" tabindex="0" role="button" aria-label="Focus Final copy + readback, deletes; marker; custody, Future authorized switch — not executed" aria-pressed="false" data-node-kind="backend" data-node-sublabel="deletes; marker; custody" data-node-context="Future authorized switch — not executed">
+          <title>Final copy + readback · deletes; marker; custody · Future authorized switch — not executed</title>
           <rect x="703" y="341" width="165" height="52" rx="6" class="c-mask"/>
           <rect x="703" y="341" width="165" height="52" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(709 347) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="785.5" y="372.5" class="t-primary" font-size="10.4" font-weight="600" text-anchor="middle">Activate selected release</text>
-          <text data-detail="context" x="785.5" y="387.3" class="t-muted" font-size="8" text-anchor="middle">one worker owner; verify state</text>
+          <text data-node-label="" data-detail-anchor="" x="791.3" y="362" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Final copy + readback</text>
+          <text data-detail="context" x="785.5" y="379" class="t-muted" font-size="8" text-anchor="middle">deletes; marker; custody</text>
         </g>
 
-        <g id="node-drain" data-node-id="drain" data-node-label="Stop admission + workers" tabindex="0" role="button" aria-label="Focus Stop admission + workers, drain jobs; preserve claims, Future authorized switch — not executed" aria-pressed="false" data-node-kind="backend" data-node-sublabel="drain jobs; preserve claims" data-node-context="Future authorized switch — not executed">
-          <title>Stop admission + workers · drain jobs; preserve claims · Future authorized switch — not executed</title>
+        <g id="node-drain" data-node-id="drain" data-node-label="Stop + freeze" tabindex="0" role="button" aria-label="Focus Stop + freeze, senders / edits; gather proof, Future authorized switch — not executed" aria-pressed="false" data-node-kind="backend" data-node-sublabel="senders / edits; gather proof" data-node-context="Future authorized switch — not executed">
+          <title>Stop + freeze · senders / edits; gather proof · Future authorized switch — not executed</title>
           <rect x="962.8" y="341" width="165" height="52" rx="6" class="c-mask"/>
           <rect x="962.8" y="341" width="165" height="52" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(968.8 347) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="1045.3" y="373.1" class="t-primary" font-size="10.9" font-weight="600" text-anchor="middle">Stop admission + workers</text>
-          <text data-detail="context" x="1045.3" y="388" class="t-muted" font-size="8" text-anchor="middle">drain jobs; preserve claims</text>
+          <text data-node-label="" data-detail-anchor="" x="1045.3" y="362" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Stop + freeze</text>
+          <text data-detail="context" x="1045.3" y="379" class="t-muted" font-size="8" text-anchor="middle">senders / edits; gather proof</text>
         </g>
 
         <g id="node-verify" data-node-id="verify" data-node-label="Verify restored service" tabindex="0" role="button" aria-label="Focus Verify restored service, same state; retained claims, Future authorized recovery — not executed" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="same state; retained claims" data-node-context="Future authorized recovery — not executed">
@@ -5199,28 +5211,29 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
 
 
-        <g data-detail="context" data-edge-from="gate" data-edge-to="approve" data-edge-label="all proof" data-edge-key="3" data-edge-id="gate-approve">
+
+        <g data-detail="context" data-edge-from="gate" data-edge-to="approve" data-edge-label="all proof" data-edge-key="4" data-edge-id="gate-approve">
           <rect x="780.4999999999999" y="181" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
           <text x="807.0999999999999" y="191" class="t-edge-emphasis" font-size="8" text-anchor="middle">all proof</text>
         </g>
-        <g data-detail="context" data-edge-from="gate" data-edge-to="hold" data-edge-label="missing" data-edge-key="4" data-edge-id="gate-hold">
+        <g data-detail="context" data-edge-from="gate" data-edge-to="hold" data-edge-label="missing" data-edge-key="5" data-edge-id="gate-hold">
           <rect x="655.4000000000001" y="223" width="43.6" height="14" rx="3" class="c-mask"/>
           <text x="677.2" y="233" class="t-edge-security" font-size="8" text-anchor="middle">missing</text>
         </g>
-        <g data-detail="context" data-edge-from="hold" data-edge-to="approve" data-edge-label="only after proof" data-edge-key="5" data-edge-id="hold-approve">
+        <g data-detail="context" data-edge-from="hold" data-edge-to="approve" data-edge-label="only after proof" data-edge-key="6" data-edge-id="hold-approve">
           <rect x="872" y="223" width="86.8" height="14" rx="3" class="c-mask"/>
           <text x="915.4" y="233" class="t-edge-dashed" font-size="8" text-anchor="middle">only after proof</text>
         </g>
 
-        <g data-detail="context" data-edge-from="observe" data-edge-to="rollback" data-edge-label="abort threshold" data-edge-key="7" data-edge-id="observe-rollback">
-          <rect x="527.9" y="419" width="82" height="14" rx="3" class="c-mask"/>
-          <text x="568.9" y="429" class="t-edge-security" font-size="8" text-anchor="middle">abort threshold</text>
+        <g data-detail="context" data-edge-from="observe" data-edge-to="rollback" data-edge-label="abort threshold" data-edge-key="8" data-edge-id="observe-rollback">
+          <rect x="405.2" y="394" width="82" height="14" rx="3" class="c-mask"/>
+          <text x="446.2" y="404" class="t-edge-security" font-size="8" text-anchor="middle">abort threshold</text>
         </g>
 
 
-        <g data-detail="context" data-edge-from="rollback" data-edge-to="prior" data-edge-label="eligible only" data-edge-key="10" data-edge-id="rollback-prior">
-          <rect x="410" y="471" width="72.4" height="14" rx="3" class="c-mask"/>
-          <text x="446.2" y="481" class="t-edge-security" font-size="8" text-anchor="middle">eligible only</text>
+        <g data-detail="context" data-edge-from="rollback" data-edge-to="prior" data-edge-label="eligible only" data-edge-key="11" data-edge-id="rollback-prior">
+          <rect x="410" y="513" width="72.4" height="14" rx="3" class="c-mask"/>
+          <text x="446.2" y="523" class="t-edge-security" font-size="8" text-anchor="middle">eligible only</text>
         </g>
 
 
@@ -5443,6 +5456,20 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <ul>
           <li>No eligible previous bundle or incompatible durable state means no cutover</li>
           <li>No live shadow, host action, notification replay or quota measurement in this task</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>Final-copy and recovery boundary</h3>
+        </div>
+        <ul>
+          <li>Stop every legacy sender and freeze edits before the complete final export</li>
+          <li>One exact payload; repeated void settlement is NOT_APPLIED without another PUT</li>
+          <li>Native/source conflicts block the whole plan; marker-dropping writers remain ineligible</li>
+          <li>Retained CLI proof is not operational freeze, actual Mongo copy or full release eligibility</li>
+          <li>State and bundle both lacking a predecessor cannot detect an erased marker; preserve custody and eligible releases</li>
         </ul>
       </div>
     </div>

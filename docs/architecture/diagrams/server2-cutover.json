@@ -93,14 +93,14 @@
       "lane": "ops",
       "col": 4,
       "type": "backend",
-      "label": "Stop admission + workers",
-      "sublabel": "drain jobs; preserve claims",
+      "label": "Stop + freeze",
+      "sublabel": "senders / edits; gather proof",
       "width": 165
     },
     {
       "id": "switch",
       "lane": "ops",
-      "col": 3,
+      "col": 2,
       "type": "backend",
       "label": "Activate selected release",
       "sublabel": "one worker owner; verify state",
@@ -109,7 +109,7 @@
     {
       "id": "observe",
       "lane": "ops",
-      "col": 2,
+      "col": 1,
       "type": "messagebus",
       "label": "Observe metrics",
       "sublabel": "errors / latency / durable state",
@@ -140,6 +140,15 @@
       "type": "messagebus",
       "label": "Verify restored service",
       "sublabel": "same state; retained claims",
+      "width": 165
+    },
+    {
+      "id": "final-copy",
+      "lane": "ops",
+      "col": 3,
+      "type": "backend",
+      "label": "Final copy + readback",
+      "sublabel": "deletes; marker; custody",
       "width": 165
     }
   ],
@@ -187,9 +196,9 @@
       "variant": "dashed"
     },
     {
-      "id": "drain-switch",
+      "id": "drain-final",
       "from": "drain",
-      "to": "switch",
+      "to": "final-copy",
       "label": "",
       "variant": "default"
     },
@@ -227,6 +236,13 @@
       "to": "approve",
       "label": "all proof",
       "variant": "emphasis"
+    },
+    {
+      "id": "final-switch",
+      "from": "final-copy",
+      "to": "switch",
+      "label": "",
+      "variant": "default"
     }
   ],
   "cards": [
@@ -244,6 +260,17 @@
       "items": [
         "No eligible previous bundle or incompatible durable state means no cutover",
         "No live shadow, host action, notification replay or quota measurement in this task"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Final-copy and recovery boundary",
+      "items": [
+        "Stop every legacy sender and freeze edits before the complete final export",
+        "One exact payload; repeated void settlement is NOT_APPLIED without another PUT",
+        "Native/source conflicts block the whole plan; marker-dropping writers remain ineligible",
+        "Retained CLI proof is not operational freeze, actual Mongo copy or full release eligibility",
+        "State and bundle both lacking a predecessor cannot detect an erased marker; preserve custody and eligible releases"
       ]
     }
   ]

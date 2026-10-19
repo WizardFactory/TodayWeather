@@ -232,6 +232,9 @@ pub fn plan_import(
     state: &State,
     records: &[(Coll, Record)],
 ) -> Result<(Vec<Change>, u64, ImportCounts), StateError> {
+    if state.source.is_some() {
+        return Err(StateError::Corrupt("merge import after final copy"));
+    }
     let mut by_oid: HashMap<(Coll, Oid), Encoded<'_>> = HashMap::new();
     for c in [Coll::Alarm, Coll::Alert] {
         for e in state.coll(c).iter_encoded() {

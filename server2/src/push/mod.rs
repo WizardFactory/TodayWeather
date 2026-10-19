@@ -19,3 +19,5 @@ pub use durable::{Counters, Durable, DurableConfig, StateError};
 pub use routes::{Body, Reply, Route};
 pub use service::{ObjectIds, PushConfig, PushService, router};
 pub use store::{Coll, Oid, OidSource, Record, State};
+
+pub mod final_copy;
