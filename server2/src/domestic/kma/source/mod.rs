@@ -35,6 +35,7 @@ mod grid;
 pub mod html;
 mod items;
 pub mod kasi;
+mod late;
 pub mod life;
 pub mod life_input;
 pub mod life_live;
@@ -173,6 +174,8 @@ pub struct S3Source<T> {
     passes: crate::resolver::OwnedFlights<String, Option<Fetched>>,
     /// Retry bounds of the acquisition keys (failures included).
     attempts: Arc<Attempts>,
+    /// B3 latest Short slots; generic retries and historical backfill stay independent.
+    latest_short: Arc<late::LatestShort>,
     /// The forecast-zone list was requested by this process (legacy fetches it once at start).
     zones_requested: std::sync::atomic::AtomicBool,
     /// A warning cycle is running (cycles never overlap, as legacy's timer runs one at a time).
@@ -279,6 +282,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             })
             .expect("static backfill pass bounds"),
             attempts: Arc::new(Attempts::default()),
+            latest_short: Arc::new(late::LatestShort::default()),
             zones_requested: std::sync::atomic::AtomicBool::new(false),
             warning_running: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         })
@@ -313,9 +317,24 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         memo: std::time::Duration,
         until: Instant,
     ) -> Option<Fetched> {
+        let admission = PublicationAdmission::Retry {
+            attempts: self.attempts.clone(),
+            key: key.clone(),
+            memo,
+        };
+        self.acquire_admitted(key, request, admission, until).await
+    }
+    /// Admission runs under owned-flight creation, after callers have joined by key.
+    async fn acquire_admitted(
+        &self,
+        key: String,
+        request: fetch::ForecastRequest,
+        admission: PublicationAdmission,
+        until: Instant,
+    ) -> Option<Fetched> {
         let acquire = self.forecast.clone()?;
         let owned_for = request.owned_for();
-        let start = publication_flight(acquire, self.attempts.clone(), key.clone(), memo, request);
+        let start = publication_flight(acquire, admission, request);
         let waited = self.owned.join(key, until, owned_for, start).await;
         match waited {
             crate::resolver::Waited::Ready(f) => f,
@@ -568,17 +587,31 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .collect();
             if missing(&latest)
                 && let Some(request) = grid_request(sf, grid, latest)
-                && let Some(f) = self
-                    .acquire(
-                        grid_flight(sf, grid, latest),
-                        fetch::ForecastRequest::DataGoKr(request),
-                        LATEST_RETRY,
+            {
+                let key = grid_flight(sf, grid, latest);
+                let request = fetch::ForecastRequest::DataGoKr(request);
+                let fetched_latest = if sf == schedule::Family::Short {
+                    self.acquire_admitted(
+                        key.clone(),
+                        request,
+                        PublicationAdmission::LatestShort {
+                            gate: self.latest_short.clone(),
+                            attempts: self.attempts.clone(),
+                            key,
+                            cell: grid_key(grid),
+                            publication: latest,
+                            now,
+                        },
                         until,
                     )
                     .await
-            {
-                own = grid_input_id(family, sf.kind(), &f);
-                fetched.push(visible(f, now));
+                } else {
+                    self.acquire(key, request, LATEST_RETRY, until).await
+                };
+                if let Some(f) = fetched_latest {
+                    own = grid_input_id(family, sf.kind(), &f);
+                    fetched.push(visible(f, now));
+                }
             }
             if !backfill.is_empty() {
                 self.backfill(sf, grid, latest, backfill).await;
@@ -654,9 +687,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                                         request.owned_for(),
                                         publication_flight(
                                             acquire.clone(),
-                                            attempts.clone(),
-                                            key.clone(),
-                                            LATEST_RETRY,
+                                            PublicationAdmission::Retry {
+                                                attempts: attempts.clone(),
+                                                key: key.clone(),
+                                                memo: LATEST_RETRY,
+                                            },
                                             request.clone(),
                                         ),
                                     )
@@ -1375,8 +1410,8 @@ pub fn grid_input_id(family: Family, kind: &str, f: &Fetched) -> Option<InputId>
         content_sha256: identity(f).2,
     })
 }
-/// Retry bound of a missing latest publication (legacy re-walks late grids near +5 and +10
-/// minutes, #2676).
+/// Retry bound for generic latest and backfill acquisitions. Latest Short uses
+/// its finite provision+2/+5/+10 slots, while keeping this memo for backfill.
 const LATEST_RETRY: std::time::Duration = std::time::Duration::from_secs(5 * 60);
 /// Retry bound of a backfill publication (legacy's past-condition pass runs hourly).
 const BACKFILL_RETRY: std::time::Duration = std::time::Duration::from_secs(3600);
@@ -1402,19 +1437,60 @@ fn grid_key(grid: crate::history::Grid) -> String {
 fn grid_flight(sf: schedule::Family, grid: crate::history::Grid, p: Publication) -> String {
     format!("{}/{}/{}", sf.kind(), grid_key(grid), p.partition())
 }
-/// The start of a publication's owned acquisition. The retry bound `memo` of `key` is claimed by
-/// the creator of the flight (`OwnedFlights` calls this under its map lock), so a concurrent
-/// caller joins the real acquisition; the provider call and its publication run in their own
-/// task, which no owned bound cancels.
+/// Admission selected by the source; it never changes the owned flight key or deadline.
+/// Latest Short slots also leave the existing memo for historical backfill.
+enum PublicationAdmission {
+    Retry {
+        attempts: Arc<Attempts>,
+        key: String,
+        memo: std::time::Duration,
+    },
+    LatestShort {
+        gate: Arc<late::LatestShort>,
+        attempts: Arc<Attempts>,
+        key: String,
+        cell: String,
+        publication: Publication,
+        now: f64,
+    },
+}
+impl PublicationAdmission {
+    fn claim(self) -> bool {
+        match self {
+            Self::Retry {
+                attempts,
+                key,
+                memo,
+            } => attempts.claim(&key, memo),
+            Self::LatestShort {
+                gate,
+                attempts,
+                key,
+                cell,
+                publication,
+                now,
+            } => {
+                if !gate.claim(&cell, publication, now) {
+                    return false;
+                }
+                // Keep the shared recent-attempt memo for historical backfill.
+                // Its result does not gate the next Short slot (the first two
+                // slots are only three minutes apart, less than this memo).
+                let _ = attempts.claim(&key, LATEST_RETRY);
+                true
+            }
+        }
+    }
+}
+/// Claim admission under owned-flight creation. The provider/publication owner
+/// survives a caller that stops waiting, as before.
 fn publication_flight(
     acquire: Arc<dyn fetch::ForecastAcquire>,
-    attempts: Arc<Attempts>,
-    key: String,
-    memo: std::time::Duration,
+    admission: PublicationAdmission,
     request: fetch::ForecastRequest,
 ) -> impl FnOnce(Instant) -> BoxFuture<'static, Option<Fetched>> {
     move |_| {
-        let fresh = attempts.claim(&key, memo);
+        let fresh = admission.claim();
         Box::pin(async move {
             if !fresh {
                 return None;
