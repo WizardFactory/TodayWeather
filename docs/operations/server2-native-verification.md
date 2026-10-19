@@ -580,3 +580,10 @@ matching compile-time checkout and Python/synthetic fixture assets. No live prov
 device, readiness endpoint, IAM or full release-bundle qualification is claimed. The main
 release binary is built but not executed by this smoke. See the
 [selected evidence](../evidence/tasks/issue-2819-warning-poll-supervision/verification.md).
+
+## Private readiness check
+
+The [readiness manual](server2-readiness.md) describes the existing private listener,
+fixed JSON states and owned optimized process/S3 workflow. This check is separate
+from the eleven-family suite and does not qualify host, real-role IAM, live providers
+or a full earlier-release recovery bundle.

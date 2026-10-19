@@ -46,8 +46,9 @@ unchanged. Delivery guards use the same predicate; this adds no retry, automatic
 state rewind or send policy. Existing HTTP storage-error contracts remain unchanged,
 including push-list's per-item null failure and token-update's 500 storage error.
 
-This E3a fix is internal writer availability only. `/health` remains basic liveness;
-the full E3 readiness endpoint and S3/credential-source health are still open. See the
+The writer predicate is also consumed by the private `/internal/ready` endpoint.
+`/health` remains basic liveness. See the [readiness operator manual](server2-readiness.md)
+for the bounded credential-source/S3 probe and its limits, and the
 [writer specification](../../specs/issue-2819-writer-liveness.md) and
 [selected checks](../evidence/tasks/issue-2819-writer-liveness/verification.md).
 

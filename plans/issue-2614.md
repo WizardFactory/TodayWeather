@@ -683,3 +683,10 @@ release live warning work. Existing claim/send/drain policy stays. The selected 
 owned peer/real-time evidence and final diagram precede independent review and exact
 parent/current CI at pre-merge only. This record does not close full E3, #2819, #2704 or
 #2705, or authorize merge, cloud actions, live provider/device sends, shadow or cutover.
+
+
+E3c follow-up: private `/internal/ready` uses the existing process stop signal, writer
+availability and bounded shared S3 credential-source/LIST check. Local checks and
+pre-merge review are tracked separately in the [plan](issue-2819-runtime-readiness.md)
+and [manual](../docs/operations/server2-readiness.md); this adds no production, shadow,
+real-role IAM or full recovery qualification. #2724 remains deferred.
