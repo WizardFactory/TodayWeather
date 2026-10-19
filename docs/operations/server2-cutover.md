@@ -1,6 +1,6 @@
 # server2 operational preparation and rollback
 
-This is a candidate procedure for #2704 / #2705. It does not authorize or execute deployment, traffic mirroring, provider calls, state replacement or notification sends. The S20c preparation originated at main `6e4436c8`, with S20a/b process and worker wiring, structured logging and local paired recovery. Later widget and narrative additions are described below; their task records bind their own revisions. [Editable inventory](../../server2/config/cutover/inventory.json) and [decision flow](../architecture/diagrams/server2-cutover.html) accompany this guide. [PDF](server2-cutover.pdf).
+This is a candidate procedure for #2704 / #2705. It does not authorize or execute deployment, traffic mirroring, provider calls, state replacement or notification sends. The S20c preparation originated at main `6e4436c8`, with S20a/b process and worker wiring, structured logging and local paired recovery. Later widget and narrative additions are described below; their task records bind their own revisions. [Editable inventory](../../server2/config/cutover/inventory.json) and [decision flow](../architecture/diagrams/server2-cutover.html) accompany this guide. [S20c snapshot PDF](server2-cutover.pdf); later amendments below are maintained in this Markdown source.
 
 ## 1. Readiness before a switch
 
@@ -18,6 +18,23 @@ Reconcile all 19 accepted method/path groups (220,583 observed requests), includ
 | Final state copy, rainfall handover, instance-role/IMDSv2 and keys | Still require target-specific execution evidence; control-plane existence does not prove runtime access |
 
 The local pair remains `16f3dfde` / `0fc0442d`, not a later build. Worker NativeFetch/clock are injected, and compiled fixtures can refer to the build checkout. Native API rollback covers geocode, partial KMA, world-air and empty notice; it does not prove complete history or notice mutation. World coexistence checks use a frozen legacy double. See [common suite](server2-native-verification.md), [paired recovery](server2-release-recovery.md) and [selected S20c evidence](../evidence/tasks/issue-2705-s20c/verification.md). Do not close S19/S20 or authorize cutover from these layers alone.
+
+### Push state admission and corrupt recovery (#2819 C1)
+
+Registration documents must have safe nested field names, at most 256 KiB encoded JSON
+and depth at most 32 below the root. The converter rejects nonconforming records;
+review rejected counts before any separately authorized final copy. Invalid API input
+gets the existing store-error reply and must not change acknowledged state. Normal
+writer stop, cancellation or panic clears push readiness; `/health` 200 alone remains
+insufficient. The aggregate readiness endpoint is not introduced by this correction.
+
+If an existing journal or snapshot cannot decode, preserve its original bytes and
+version identities, keep registration/delivery admission closed and investigate an
+approved compatible repair. Do not delete, silently skip or rewrite the offending
+record/sequence, restore an older snapshot over acknowledged state, or retry a failed
+or unknown delivery. The [state safety evidence](../evidence/tasks/issue-2819-state/verification.md)
+is synthetic local verification, not a repair of production registrations or a complete
+recovery-release qualification.
 
 ## 2. Freeze a release and recovery dossier
 

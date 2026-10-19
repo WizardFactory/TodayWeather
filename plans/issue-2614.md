@@ -3,6 +3,16 @@
 Source: [intent](../intent/issue-2614.md), [spec](../specs/issue-2614.md).
 Current status (2026-10-17, observed main `6e4436c8`): existing backend ports including S15b #2742 and S18 #2703 are integrated/closed. S20a #2789 and S20b #2792 process/API/worker preparation is integrated. Structured logging #2802 is integrated through PR #2804; common native verification and local paired recovery are integrated through S19b/S19c PR #2801/#2806. S19 #2704 and S20 #2705 remain open for operational qualification. S20c reconciles the accepted19route inventory plus notice supplement, preserves the unclassified `/ww` gap, prepares a per-request nginx upstream deadline configuration and an explicit previous-server2/config/state rollback procedure. These preparations do not establish whole-service eligibility. #2724 quota measurement and new #2805 nationwide narrative are excluded from this preparation. Seven-day shadow, exact production inventory/parity, real-host capacity/performance/deadline, final state/rainfall handover and separately approved cutover remain gates. App/web notice popup #2623 is separate. No deployment, live mirroring or device send is claimed. Earlier dated entries remain revision-bound history.
 
+
+Scoped #2819 B1 correction (2026-10-18, pre-merge): move geocoder funding from all
+possible candidates to each selected provider/key before HTTP. Complete Kakao Korean
+lookups do not depend on unused Google funding. Per-key daily ownership, conservative
+no-refund admission, cache/shared owners and deadlines remain.
+[Task plan](issue-2819-funding.md) and
+[local verification](../docs/evidence/tasks/issue-2819-funding/verification.md) track this
+independent correction. B2/B3, notification scheduling, capacity and operational gates
+remain subsequent work; this note does not close #2819, S19 or S20.
+
 ## Current AK amendments (2026-10-14 to 2026-10-16)
 
 These decisions supersede the older cold-cell, key, push-copy, cache and mock-only statements below. In particular, the 2026-10-13 mock-only geocoder description is historical; S10c/S10e replaced those verification modes.
@@ -478,6 +488,17 @@ widget UI or an earlier complete release. #2704/#2705 remain open. #2724 actual
 quota measurement, production/resources/live providers/mirroring/sends/final
 state copies and switch authority remain outside this increment. Earlier dated
 scope and execution records remain historical, not relabelled as S20e runs.
+
+## #2819 ordered corrective work (2026-10-18)
+
+The [review comment](https://github.com/WizardFactory/TodayWeather/issues/2819#issuecomment-6244183930)
+distinguishes reproduced failures, source findings and unresolved estimates. The
+[first correction](issue-2819-state.md) protects bounded decodable push documents,
+atomic journal application and writer readiness. It preserves compact records and
+failed/unknown delivery claims. This is one slice, not closure of #2819 or S19/S20.
+Funding/publication, notification scheduling, capacity/observability/configuration/CI
+and exact candidate/recovery requalification follow in that order. Seven-day shadow
+qualification and production cutover remain blocked by the unresolved applicable gates.
 
 ### #2819 B2 local correction (pre-merge)
 

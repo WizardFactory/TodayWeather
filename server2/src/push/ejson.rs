@@ -87,6 +87,83 @@ pub fn read_imported(v: &OrderedJson) -> Option<String> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecodeError(pub &'static str);
 
+/// Registration documents are small control records, not arbitrary user JSON.
+pub const MAX_DOCUMENT_BYTES: usize = 256 * 1024;
+pub const MAX_DOCUMENT_DEPTH: usize = 32;
+
+/// Check the stored field names and encoded size before writing or admitting a record.
+/// BSON values are typed here: a real date is allowed, an object named `$date` is not.
+pub fn validate_document(doc: &Obj) -> Result<(), DecodeError> {
+    fn charge(left: &mut usize, bytes: usize) -> Result<(), DecodeError> {
+        *left = left.checked_sub(bytes).ok_or(DecodeError("record size"))?;
+        Ok(())
+    }
+    fn string(left: &mut usize, value: &str) -> Result<(), DecodeError> {
+        if value.len() > *left {
+            return Err(DecodeError("record size"));
+        }
+        charge(
+            left,
+            serde_json::to_string(value)
+                .map_err(|_| DecodeError("record string"))?
+                .len(),
+        )
+    }
+    fn object(doc: &Obj, depth: usize, left: &mut usize) -> Result<(), DecodeError> {
+        if depth > MAX_DOCUMENT_DEPTH {
+            return Err(DecodeError("record depth"));
+        }
+        charge(left, 2 + doc.entries().len().saturating_sub(1))?;
+        for (key, value) in doc.entries() {
+            if key.starts_with('$') || key.contains('.') {
+                return Err(DecodeError("record field name"));
+            }
+            string(left, key)?;
+            charge(left, 1)?;
+            visit(value, depth + 1, left)?;
+        }
+        Ok(())
+    }
+    fn visit(value: &Val, depth: usize, left: &mut usize) -> Result<(), DecodeError> {
+        if depth > MAX_DOCUMENT_DEPTH {
+            return Err(DecodeError("record depth"));
+        }
+        match value {
+            Val::Obj(doc) => object(doc, depth, left),
+            Val::Arr(items) => {
+                charge(left, 2 + items.len().saturating_sub(1))?;
+                for item in items {
+                    visit(item, depth + 1, left)?;
+                }
+                Ok(())
+            }
+            Val::Str(value) => string(left, value),
+            Val::Date(ms) if !ms.is_finite() || ms.fract() != 0. || ms.abs() > 8.64e15 => {
+                Err(DecodeError("record date"))
+            }
+            scalar => {
+                let mut encoded = String::new();
+                write_val(scalar, &mut encoded);
+                charge(left, encoded.len())
+            }
+        }
+    }
+    let mut remaining = MAX_DOCUMENT_BYTES;
+    object(doc, 0, &mut remaining)
+}
+
+pub fn decode_document(bytes: &[u8]) -> Result<Obj, DecodeError> {
+    if bytes.len() > MAX_DOCUMENT_BYTES {
+        return Err(DecodeError("record size"));
+    }
+    let parsed = OrderedJson::parse(bytes).map_err(|_| DecodeError("record JSON"))?;
+    let Val::Obj(doc) = read_val(&parsed)? else {
+        return Err(DecodeError("record document"));
+    };
+    validate_document(&doc)?;
+    Ok(doc)
+}
+
 fn key(k: &[u16]) -> String {
     String::from_utf16_lossy(k)
 }
@@ -193,6 +270,7 @@ pub fn read_record(v: &OrderedJson) -> Result<(Coll, u64, Record), DecodeError> 
         Val::Obj(o) => o,
         _ => return Err(DecodeError("record doc")),
     };
+    validate_document(&doc)?;
     Ok((c, n, Record { oid, doc }))
 }
 
@@ -225,5 +303,47 @@ mod tests {
         assert_eq!(back, r);
         let relaxed = OrderedJson::parse(br#"{"$date":"2026-10-15T00:00:00Z"}"#).unwrap();
         assert_eq!(read_val(&relaxed).unwrap(), Val::Date(1_792_022_400_000.));
+    }
+}
+
+#[cfg(test)]
+mod document_safety_tests {
+    use super::*;
+
+    #[test]
+    fn document_limits_include_escaped_bytes_and_nested_arrays() {
+        let mut doc = Obj::new();
+        doc.set("x", "x".repeat(MAX_DOCUMENT_BYTES - 8));
+        assert!(validate_document(&doc).is_ok());
+        doc.set("x", "x".repeat(MAX_DOCUMENT_BYTES - 7));
+        assert!(validate_document(&doc).is_err());
+        doc.set("x", "\n".repeat(MAX_DOCUMENT_BYTES / 2));
+        assert!(validate_document(&doc).is_err());
+        let mut nested = Val::Null;
+        for _ in 0..MAX_DOCUMENT_DEPTH - 1 {
+            nested = Val::Arr(vec![nested]);
+        }
+        doc.set("x", nested.clone());
+        assert!(validate_document(&doc).is_ok());
+        doc.set("x", Val::Arr(vec![nested]));
+        assert!(validate_document(&doc).is_err());
+    }
+
+    #[test]
+    fn stored_names_are_restricted_but_real_bson_types_round_trip() {
+        for name in ["$x", "nested.key", "$date"] {
+            let mut child = Obj::new();
+            child.set(name, 1.);
+            let mut doc = Obj::new();
+            doc.set("units", Val::Arr(vec![Val::Obj(child)]));
+            assert!(validate_document(&doc).is_err());
+        }
+        let mut doc = Obj::new();
+        doc.set("updatedAt", Val::Date(1_792_022_400_000.));
+        doc.set("infinite", Val::Num(f64::INFINITY));
+        validate_document(&doc).unwrap();
+        let mut bytes = String::new();
+        write_obj(&doc, &mut bytes);
+        assert_eq!(decode_document(bytes.as_bytes()).unwrap(), doc);
     }
 }

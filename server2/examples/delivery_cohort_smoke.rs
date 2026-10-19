@@ -67,6 +67,7 @@ fn snapshot(push: &PushService) -> Obj {
         .coll(Coll::Alert)
         .get(0)
         .unwrap()
+        .unwrap()
         .doc
 }
 fn worker(rig: &Rig, push: Arc<PushService>, provider: Arc<Fcm>) -> AlertWorker<MemS3> {
@@ -88,7 +89,7 @@ async fn edit_with_other_writer(rig: &Rig) {
         Arc::new(Counters::default()),
     );
     let state = other.restore().await.unwrap();
-    let mut record = state.coll(Coll::Alert).get(0).unwrap();
+    let mut record = state.coll(Coll::Alert).get(0).unwrap().unwrap();
     record
         .doc
         .set("name", Val::Str("Synthetic edited town".into()));

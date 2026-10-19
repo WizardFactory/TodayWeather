@@ -1329,6 +1329,7 @@ impl Classify for crate::push::durable::StateError {
         match self {
             Self::Storage(error) => error.classify(),
             Self::Corrupt(_) => (Cause::Corrupt, Outcome::Failed, None),
+            Self::Input { .. } => (Cause::InvalidInput, Outcome::Failed, None),
         }
     }
 }

@@ -238,11 +238,13 @@ async fn a_scheduled_minute_matches_the_legacy_worker_and_never_repeats() {
         let tokens: Vec<String> = state
             .coll(Coll::Alarm)
             .iter()
+            .map(Result::unwrap)
             .map(|(_, r)| r.token("fcmToken").unwrap().to_owned())
             .collect();
         let stamped = state
             .coll(Coll::Alarm)
             .iter()
+            .map(Result::unwrap)
             .find(|(_, r)| r.token("fcmToken") == Some("s-6"))
             .unwrap()
             .1;
