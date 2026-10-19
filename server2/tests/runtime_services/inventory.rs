@@ -288,6 +288,8 @@ async fn combined_native_router_inventory_and_acknowledged_state_restore() {
         // This real-clock/no-weather setup can produce native partial weather or the
         // established rendered child-error response. Validate each exact contract below;
         // it is not frozen-input parity. Canonical prose recovery is checked separately.
+        // Late optional prose may be absent; deterministic native/S3 controls require
+        // the exact positive national field and still reject null/changed content.
         let restored_prose = server2::narrative::store::Store::new(s.s3.clone().unwrap())
             .unwrap()
             .read(
@@ -343,18 +345,7 @@ async fn combined_native_router_inventory_and_acknowledged_state_restore() {
             } else if pattern.contains("/nation/") && status == 200 {
                 let value: Value =
                     serde_json::from_slice(&response.bytes().await.unwrap()).unwrap();
-                assert_eq!(value["weather"].as_array().unwrap().len(), 15);
-                assert_eq!(
-                    value["forecastNarrative"],
-                    *expected_prose.as_ref().unwrap()
-                );
-                assert!(
-                    value["weather"]
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .all(|item| item.get("forecastNarrative").is_none())
-                );
+                super::inventory_nation::assert_response(&value, expected_prose.as_ref().unwrap());
             } else if pattern.contains("/nation/") {
                 assert_eq!(
                     response.headers()["content-type"],
