@@ -157,8 +157,21 @@ fn owned_readiness_process_child() {
         "SERVER2_S3_REGION" if configured => Some("ap-northeast-2".to_owned()),
         _ => None,
     };
+    let dead = "http://127.0.0.1:9/".to_owned();
     let builtins = server2::gateway::runtime::Builtins {
         s3: endpoint,
+        instance_metadata: Some(dead.clone()),
+        data_go_kr: dead.clone(),
+        kma: dead.clone(),
+        kma_weather: dead.clone(),
+        mfds: dead.clone(),
+        airkorea_images: dead.clone(),
+        vc: dead.clone(),
+        google_air: dead.clone(),
+        openweather: dead.clone(),
+        waqi: dead.clone(),
+        kakao: dead.clone(),
+        google: dead,
         ..server2::gateway::runtime::Builtins::production()
     };
     server2::process::run(config, move || {

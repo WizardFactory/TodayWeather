@@ -245,17 +245,17 @@
       "sources": [
         {
           "path": "server2/src/runtime_services.rs",
-          "line": 34,
-          "end_line": 47
+          "line": 33,
+          "end_line": 45
         },
         {
           "path": "server2/src/readiness.rs",
-          "line": 38,
-          "end_line": 96
+          "line": 35,
+          "end_line": 91
         },
         {
           "path": "server2/src/readiness.rs",
-          "line": 97,
+          "line": 92,
           "end_line": 119
         }
       ]
@@ -426,8 +426,8 @@
         "GET / HEAD: fixed five-field JSON, no-store; public route stays unmounted.",
         "One 3s budget: credentials, shared queue, raw/v2/ LIST max1 / 64KiB, CPU XML decode.",
         "Recheck local state after await; empty valid LIST succeeds; failure returns503.",
-        "No writes / providers / FCM / cache / monitor; LIST is not full IAM or host readiness.",
-        "Explicit partial factories use not_required; production startup coverage remains required."
+        "No writes / providers / FCM; client-signed peer is not IAM or host proof.",
+        "Partial factory bypasses main; checkout required. 503 logs capacity; LIST polling costs S3."
       ]
     }
   ]

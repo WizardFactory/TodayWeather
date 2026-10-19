@@ -4110,9 +4110,18 @@ OAuth or FCM call occurs. Disabled components in explicit code-injected factorie
 `not_required`; this does not waive production startup coverage.
 
 The fixed five JSON fields and no-store response are documented in the
-[operator manual](../operations/server2-readiness.md). The owned signed-S3 process workflow
+[operator manual](../operations/server2-readiness.md). The owned process workflow with client-signed S3 requests (the peer does not validate signatures)
 checks 200/503/200 recovery, private/public separation and retired listeners; it does not
 establish real-role GET/PUT/missing-key semantics, all prefixes, host capacity, production
 readiness, shadow or cutover. See the [spec](../../specs/issue-2819-runtime-readiness.md),
 [selected evidence](../evidence/tasks/issue-2819-runtime-readiness/verification.md) and
 [maintained flow](diagrams/server2-runtime-services.html).
+
+
+E3c execution boundary: the isolated notice-only process child bypasses main dotenv,
+Config::from_vars and production coverage validation. Its release main is built
+but unexecuted; the retained test executable requires its original compile-time
+checkout and Python peer assets. The public route is unmounted; existing fallback
+responses are unchanged (404 observed in the notice-only fixture). Private503 uses
+the current generic HTTP capacity log classification; component JSON is the
+availability authority. See the operator manual for these limits.
