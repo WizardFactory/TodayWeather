@@ -3841,7 +3841,8 @@ finish old admitted work; this change establishes no operational lateness SLA or
 whole-process/global concurrency bound. The parent C2 task still owns safe state
 repair after other definite no-POST refusals: this increment does not remove all
 false six-hour suppression. It changes no journal schema, ownership or actual-send
-retry policy. C1 and B1 remain separate unmerged branches, not integrated ancestors.
+retry policy. C1 and B1 were parallel during the original lateness verification; both are
+ancestors of the 2026-10-19 integrated source.
 
 [Proposed flow](diagrams/server2-delivery-lateness.html) and
 [editable source](diagrams/server2-delivery-lateness.sequence.json) are frozen
@@ -3968,7 +3969,7 @@ The [proposed flow](diagrams/server2-warning-fanout.html) and
 at `2e67d146`. Their design-time comparison is separate from the subsequent
 [current evidence](../evidence/tasks/issue-2819-warning-fanout/verification.md) and
 [owned operator rehearsal](../operations/server2-native-verification.md#bounded-warning-fan-out).
-This task stacks on unmerged C2 PR2827; C1/B1 are separate branches. Initial silent
+This task continues C2 PR2827; the ordered integration includes C1/B1 ancestors. Initial silent
 warning polling, traffic-independent acquisition, startup credentials, readiness
 and other #2819/cutover gates remain separate. No main, complete recovery bundle,
 seven-day shadow or production qualification is implied.
@@ -4029,7 +4030,7 @@ See the [proposed ownership flow](diagrams/server2-warning-acquisition.html),
 [editable source](diagrams/server2-warning-acquisition.sequence.json),
 [operator procedure](../operations/server2-native-verification.md#warning-acquisition-without-product-http)
 and [selected evidence](../evidence/tasks/issue-2819-warning-acquisition/verification.md).
-This change is a child of unmerged C4 PR #2828. It does not qualify integrated main,
+This change continues the C4 implementation from PR #2828. It does not qualify integrated main,
 an eligible full recovery bundle, live providers, EC2 capacity or seven-day shadow.
 
 
