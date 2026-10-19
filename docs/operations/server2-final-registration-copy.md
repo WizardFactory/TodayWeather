@@ -14,7 +14,7 @@ See the [CLI source](../../server2/tools/state/push_registration_final_copy.rs),
 4. Bind the stable source ID, Mongo store, database and fixed two-collection scope; target bucket/region and fixed state prefix; baseline and final generations/cutoffs; collection counts and raw/canonical/conversion-report hashes; predecessor and full current native fingerprint. Include content-addressed operational evidence references. Input validation checks their content/binding, not whether the named process really stopped or an ingress really froze.
 5. Preserve all original custody files privately. Do not modify server2 registrations between preview and apply. Concurrent native edits invalidate the prepared fingerprint rather than being silently overwritten.
 
-The final-only planner compares the complete baseline with current native state. It removes an absent source row only when its imported ownership and unchanged native document still match the baseline. It preserves unrelated native-created rows, native edits and native tombstones. Incomplete/superseded exports, missing baseline ownership, inconsistent imported records or conflicting identities block destructive planning. Ordinary merge-only import retains its original absence behavior before finalization and is refused after a final-copy marker exists.
+The final-only planner compares the complete baseline with current native state. It removes an absent source row only when its imported ownership and unchanged native document still match the baseline. It preserves unrelated native-created rows and native tombstones. A source-owned row edited natively and absent or also changed in the source is a conflict that blocks the **entire** preview/finalization; it is not skipped while other changes proceed. Retain the error and reconcile a complete authoritative source/baseline under the same stop/freeze gate before preparing a new operation. The error does not report an aggregate conflict count. Incomplete/superseded exports, missing baseline ownership, inconsistent imported records or conflicting identities block destructive planning. Ordinary merge-only import retains its original absence behavior before finalization and is refused after a final-copy marker exists.
 
 ## Runtime assets and input limits
 
@@ -58,7 +58,7 @@ For `SETTLEMENT_REQUIRED`, preserve the immutable operation and all failure evid
 ./push_registration_final_copy settle BUNDLE OPERATION
 ```
 
-Settlement uses the existing journal readback and conditional-void protocol only. It may recognize the exact committed bytes or, after checking the native base and next sequence, conditionally fence an absent original with a **distinct void**. It never submits the original final-copy payload again. A failed read or uncertain void remains `SETTLEMENT_REQUIRED`.
+Settlement uses the existing journal readback and conditional-void protocol only. It may recognize the exact committed bytes or, after checking the native base and next sequence, conditionally fence an absent original with a **distinct void**. It never submits the original final-copy payload again. A failed read or uncertain void remains `SETTLEMENT_REQUIRED`. Repeating settlement after a retained void returns `NOT_APPLIED`, including a lost void response, without another original or void PUT.
 
 `NOT_APPLIED` is a fenced absence outcome, not permission to replay the same plan. Resolve `STALE` or failed settlement and any newly required authorization before preparing another operation. The library also refuses another apply while the same `Durable` owner has an unsettled attempt; this in-memory guard is not a global fence across arbitrary new callers.
 
@@ -89,7 +89,7 @@ Retain the same authoritative S3 state and durable delivery ownership. Never rew
 
 ![Retained owned CLI results; not a product UI](../evidence/tasks/issue-2819-final-registration-copy/final-copy.png)
 
-This is a headless-Chrome capture of a **labelled evidence view**, generated from the retained `functional2` report and real CLI receipts. Capturing it did not rerun the CLI. It shows synthetic exports and an owned loopback S3-compatible peer; no live MongoDB, sender, provider, actual freeze, final production copy or deployment was involved.
+This is a headless-Chrome capture of a **labelled evidence view**, generated from the retained current `functional3` report and real CLI receipts. Capturing it did not rerun the CLI. The earlier functional2 capture and report remain historical evidence. It shows synthetic exports and an owned loopback S3-compatible peer; no live MongoDB, sender, provider, actual freeze, final production copy or deployment was involved.
 
 | Recorded case | Observed outcome |
 | --- | --- |
@@ -105,3 +105,11 @@ Release CLI SHA-256: `8924ad0b704e0d4a2d7e54f0179dc7fd5fa38a342c9a92c927f60a53c5
 Owned launcher SHA-256: `aa6d05eeff9bc0310ec7c8d8f61e47ac0a1435e4272d7270d75c827460a69a8f`.
 
 The source binding is base `c1ae9082b2c86f0087727be9872b0cf82b4e3bb1` plus the retained dirty-source verification map; these hashes are not a claim that an unmodified base binary was exercised. Operational sender/freeze/export evidence, real cloud readiness, eligible full release recovery, final registration copy and cutover approval remain separate gates.
+
+### Marker-erasure boundary
+
+A claimed predecessor chain detects erased or mismatched marker metadata. If both restored state and the supplied bundle omit a predecessor, the tool cannot distinguish a first finalization from metadata erased by an old writer. A read-only regression pins that limit; it does not make such a writer eligible. Preserve custody and use only full releases that retain the marker.
+
+### Current reviewed correction evidence
+
+The repeat-settle regression first failed with STALE instead of NOT_APPLIED. Current state/delivery/runtime regressions pass191tests (4ignored), focused18 included in state48, all-target Clippy and actual fmt--check pass, and current optimized functional3 repeats the four owned CLI cases plus fresh-process repeated settlement. Cross-owner seq-1 compaction followed by a failed final snapshot and cold journal replay preserves the complete state fingerprint, rows/import digests/order/next_n/tombstones/marker and sentinels. No old binary, IAM or whole-release recovery was tested. Historical fmt6 changed source; it is separate from the final actual check and does not describe the current candidate.

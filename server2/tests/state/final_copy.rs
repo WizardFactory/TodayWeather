@@ -809,3 +809,263 @@ fn planner_updates_only_unchanged_imports_and_keeps_native_tombstones() {
     assert_eq!(p.counts.native_deleted_kept, 1);
     assert!(p.changes.is_empty());
 }
+
+#[tokio::test]
+async fn repeated_settle_recognizes_existing_void_without_original_resend() {
+    use super::common::{Fault, MemS3};
+    for void_fault in [
+        None,
+        Some(Fault::CommitLost),
+        Some(Fault::CommitLostUnreadable),
+    ] {
+        let lost_void_response = void_fault.is_some();
+        let unreadable = matches!(void_fault, Some(Fault::CommitLostUnreadable));
+        let s3 = MemS3::new();
+        let b = seed_one(&s3).await;
+        let p = final_copy::preview(&mut durable(&s3), &b).await.unwrap();
+        let op = Operation::prepare(&p).unwrap();
+        let key = server2::push::durable::journal_key(op.mark.seq);
+        s3.fault_put(&key, Fault::LostUnreadable);
+        assert_eq!(
+            final_copy::apply(&mut durable(&s3), &b, &op)
+                .await
+                .unwrap()
+                .status,
+            "SETTLEMENT_REQUIRED"
+        );
+        assert_eq!(s3.put_count(&key), 1);
+        if let Some(fault) = void_fault {
+            s3.fault_put(&key, fault);
+        }
+        let first = final_copy::settle(&mut durable(&s3), &op).await.unwrap();
+        assert_eq!(
+            first.status,
+            if lost_void_response {
+                "SETTLEMENT_REQUIRED"
+            } else {
+                "NOT_APPLIED"
+            }
+        );
+        let retained = s3.body(&key).unwrap();
+        let header: serde_json::Value = serde_json::from_slice(&retained).unwrap();
+        assert_eq!(header["void"], true);
+        assert_ne!(retained, op.encoded);
+        assert_eq!(
+            s3.put_count(&key),
+            2,
+            "one original attempt and one distinct void"
+        );
+        if unreadable {
+            assert!(final_copy::settle(&mut durable(&s3), &op).await.is_err());
+            assert_eq!(
+                s3.put_count(&key),
+                2,
+                "unavailable read must not authorize a write"
+            );
+        }
+        let second = final_copy::settle(&mut durable(&s3), &op).await.unwrap();
+        assert_eq!(
+            second.status, "NOT_APPLIED",
+            "a retained void is terminal even when the first settlement response was lost"
+        );
+        assert_eq!(s3.put_count(&key), 2, "repeat settlement must be read-only");
+        assert_eq!(s3.body(&key).unwrap(), retained);
+    }
+}
+
+#[tokio::test]
+async fn erased_marker_without_claimed_predecessor_is_undetectable_first_finalization() {
+    use super::common::MemS3;
+    let s3 = MemS3::new();
+    let bundle = seed_one(&s3).await;
+    let p = final_copy::preview(&mut durable(&s3), &bundle)
+        .await
+        .unwrap();
+    let op = Operation::prepare(&p).unwrap();
+    final_copy::apply(&mut durable(&s3), &bundle, &op)
+        .await
+        .unwrap();
+    let mut head: serde_json::Value =
+        serde_json::from_slice(&s3.body("index/v2/push/state/head.json").unwrap()).unwrap();
+    head.as_object_mut().unwrap().remove("source");
+    s3.insert(
+        "index/v2/push/state/head.json",
+        &serde_json::to_vec(&head).unwrap(),
+    );
+    let erased = durable(&s3).restore().await.unwrap();
+    assert!(erased.source.is_none());
+    assert!(bundle.previous.is_none());
+    let before = s3.put_count("");
+    // This is the documented limit, not evidence that a marker-erasing writer is eligible.
+    // The same generation can appear to be a first finalization after metadata is erased.
+    let proposed = final_copy::preview(&mut durable(&s3), &bundle)
+        .await
+        .unwrap();
+    assert_eq!(proposed.mark.generation, op.mark.generation);
+    assert_eq!(proposed.mark.seq, op.mark.seq + 1);
+    assert_eq!(proposed.counts.native_deleted_kept, 1);
+    assert_eq!(s3.put_count(""), before, "preview must remain read-only");
+    assert_eq!(
+        final_copy::native_digest(&durable(&s3).restore().await.unwrap()).unwrap(),
+        final_copy::native_digest(&erased).unwrap()
+    );
+}
+
+#[tokio::test]
+async fn journal_planned_fingerprint_survives_separate_writer_predecessor_compaction() {
+    use super::common::MemS3;
+    use server2::push::durable::Commit;
+    let s3 = MemS3::new();
+    let mut first = seed_one(&s3).await;
+    first.final_export.collections[0] = export("pushes", ONE);
+    let first_plan = final_copy::preview(&mut durable(&s3), &first)
+        .await
+        .unwrap();
+    let first_op = Operation::prepare(&first_plan).unwrap();
+    assert_eq!(
+        final_copy::apply(&mut durable(&s3), &first, &first_op)
+            .await
+            .unwrap()
+            .status,
+        "COMMITTED"
+    );
+    let mut writer = durable(&s3);
+    let mut base = writer.restore().await.unwrap();
+    let imported = base.alarms.get(0).unwrap().unwrap();
+    let mut native_alarm = imported.clone();
+    native_alarm.oid = [7; 12];
+    native_alarm.doc.set("name", "native alarm");
+    native_alarm.doc.set("enable", Val::Bool(false));
+    let mut native_alert = imported;
+    native_alert.oid = [9; 12];
+    native_alert.doc.set("name", "native alert");
+    native_alert.doc.set("fraction", Val::Num(1.25));
+    native_alert.doc.set("optional", Val::Null);
+    let next_n = base.next_n + 2;
+    let changes = [
+        Change {
+            coll: Coll::Alarm,
+            n: base.next_n,
+            oid: native_alarm.oid,
+            record: Some(native_alarm),
+            imported: None,
+        },
+        Change {
+            coll: Coll::Alert,
+            n: base.next_n + 1,
+            oid: native_alert.oid,
+            record: Some(native_alert),
+            imported: None,
+        },
+        Change {
+            coll: Coll::Alert,
+            n: next_n,
+            oid: [8; 12],
+            record: None,
+            imported: None,
+        },
+    ];
+    assert_eq!(
+        writer.commit(base.seq + 1, &changes, next_n).await,
+        Commit::Committed
+    );
+    // Apply only by replay, leaving the published snapshot at the earlier finalization.
+    writer.catch_up(&mut base).await.unwrap();
+    assert_eq!(base.source, Some(first_op.mark.clone()));
+    let head_before: serde_json::Value =
+        serde_json::from_slice(&s3.body("index/v2/push/state/head.json").unwrap()).unwrap();
+    assert!(head_before["seq"].as_u64().unwrap() < base.seq);
+    let mut bundle = first.clone();
+    bundle.previous = Some(first_op.mark.predecessor());
+    bundle.baseline = first.final_export.clone();
+    bundle.final_export.generation = 3;
+    bundle.final_export.exported_at_ms = 3000;
+    bundle.final_export.collections[0] = export("pushes", "");
+    let plan = final_copy::preview(&mut durable(&s3), &bundle)
+        .await
+        .unwrap();
+    let op = Operation::prepare(&plan).unwrap();
+    assert_eq!(op.mark.base, final_copy::native_digest(&base).unwrap());
+    assert_eq!(op.mark.seq, base.seq + 1);
+    let mut expected = base.clone();
+    durable(&s3)
+        .apply_entry(&mut expected, op.mark.seq, &op.encoded)
+        .unwrap();
+    assert_eq!(
+        final_copy::native_digest(&expected).unwrap(),
+        op.post_digest
+    );
+    let sentinels = [
+        (
+            "index/v2/push/delivery/synthetic-compaction.json",
+            b"retained claim".as_slice(),
+        ),
+        (
+            "index/v2/push/delivery/synthetic-compaction.result.json",
+            b"retained unknown".as_slice(),
+        ),
+        (
+            "index/v2/budget/synthetic-compaction.json",
+            b"retained budget".as_slice(),
+        ),
+    ];
+    for (key, body) in sentinels {
+        s3.insert(key, body);
+    }
+    // A distinct Durable compacts exactly seq-1 after planning but before apply.
+    let mut compactor = durable(&s3);
+    let replayed = compactor.restore().await.unwrap();
+    assert_eq!(final_copy::native_digest(&replayed).unwrap(), op.mark.base);
+    compactor
+        .write_snapshot(compactor.prepare_snapshot(&replayed))
+        .await
+        .unwrap();
+    let head: serde_json::Value =
+        serde_json::from_slice(&s3.body("index/v2/push/state/head.json").unwrap()).unwrap();
+    assert_eq!(head["seq"].as_u64(), Some(op.mark.seq - 1));
+    let from_snapshot = durable(&s3).restore().await.unwrap();
+    assert_eq!(
+        final_copy::native_digest(&from_snapshot).unwrap(),
+        op.mark.base
+    );
+    // Leave the final entry journal-only, proving cold restore crosses the compacted boundary.
+    s3.fault_put(
+        "index/v2/push/state/head.json",
+        super::common::Fault::Reject(403),
+    );
+    let applied = final_copy::apply(&mut durable(&s3), &bundle, &op)
+        .await
+        .unwrap();
+    assert_eq!(applied.status, "COMMITTED");
+    assert!(applied.snapshot_pending);
+    let cold = durable(&s3).restore().await.unwrap();
+    assert_eq!(final_copy::native_digest(&cold).unwrap(), op.post_digest);
+    assert_eq!(cold.seq, expected.seq);
+    assert_eq!(cold.next_n, expected.next_n);
+    assert_eq!(cold.source, expected.source);
+    for coll in [Coll::Alarm, Coll::Alert] {
+        let encoded = |s: &State| {
+            s.coll(coll)
+                .iter_encoded()
+                .map(|(n, oid, doc, imported)| (n, *oid, doc.to_vec(), imported.map(str::to_owned)))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(encoded(&cold), encoded(&expected));
+        assert_eq!(cold.coll(coll).deleted(), expected.coll(coll).deleted());
+    }
+    assert!(
+        cold.alarms
+            .is_deleted(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+    );
+    assert!(cold.alerts.is_deleted(&[8; 12]));
+    for (key, body) in sentinels {
+        assert_eq!(s3.body(key).unwrap(), body);
+    }
+    assert_eq!(
+        final_copy::verify(&mut durable(&s3), &op)
+            .await
+            .unwrap()
+            .status,
+        "VERIFIED"
+    );
+}

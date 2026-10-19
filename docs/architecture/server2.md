@@ -4123,3 +4123,5 @@ Local188-test/4-case proof does not establish actual operational freeze/export,
 old-binary compatibility, IAM, a whole eligible release pair or production action.
 Rainfall input has separately been selected as current minute-rns compatibility;
 its durable owner/handover remains separate until implemented and verified.
+
+F1 review correction clarifies that native/source conflicts abort the complete plan, not a partial copy. Repeated settlement recognizes a retained void as NOT_APPLIED without additional PUT. A fresh cold replay test covers planning from journal state, another owner compacting seq-1, and a final snapshot write failure. Marker erasure is detected only with a supplied predecessor chain; state and bundle both lacking one cannot prove first-ever finalization. Marker-dropping writers remain ineligible. Current correction191tests/4ignored and functional3 are separate from the original188-test/functional2 proof.

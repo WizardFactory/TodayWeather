@@ -267,9 +267,10 @@
       "title": "Final-copy and recovery boundary",
       "items": [
         "Stop every legacy sender and freeze edits before the complete final export",
-        "One exact payload; unknown uses settle, never original resend or journal rewind",
-        "Preserve native edits and final marker; old dropping writers are ineligible",
-        "Retained CLI proof is not operational freeze, actual Mongo copy or full release eligibility"
+        "One exact payload; repeated void settlement is NOT_APPLIED without another PUT",
+        "Native/source conflicts block the whole plan; marker-dropping writers remain ineligible",
+        "Retained CLI proof is not operational freeze, actual Mongo copy or full release eligibility",
+        "State and bundle both lacking a predecessor cannot detect an erased marker; preserve custody and eligible releases"
       ]
     }
   ]

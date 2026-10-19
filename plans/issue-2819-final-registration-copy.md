@@ -46,3 +46,7 @@ Root design gate must resolve the spec's atomic-size bound, durable source high-
 
 
 Root design gate selects canonical State + journal header + snapshot head metadata (spec2), not retained-history scanning. Independent judge findings same-byte encoding, fingerprint coverage, strict metadata, ownership gaps and bounded predecessor checks are required. Old writers losing the marker are ineligible after finalization; no compatibility PASS inferred. Reuse existing CAS/readback/conditional void for explicit settlement, never resend/chunk/replan. Root owns Cargo and shared manual/diagram integration.
+
+## Selected independent review1 corrections
+
+Original native review1 PASS with no Required remains recorded. Root selects001 repeated-settle existing-void recognition (actual failing behavior before fix),003 pin marker-erasure/no-predecessor boundary in tests/docs,004 whole-plan native conflict documentation,005 plan from journal-replayed state plus other-owner seq-1 compaction then cold restore, and007 exact format check/receipt wording. No new generic custody store or input-file adversary framework is selected for002/006. Existing owner-only retained immutable local inputs remain a prerequisite; unknown/copy/lost custody blocks operational reuse. All original findings carry to independent review2.

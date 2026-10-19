@@ -5466,9 +5466,10 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </div>
         <ul>
           <li>Stop every legacy sender and freeze edits before the complete final export</li>
-          <li>One exact payload; unknown uses settle, never original resend or journal rewind</li>
-          <li>Preserve native edits and final marker; old dropping writers are ineligible</li>
+          <li>One exact payload; repeated void settlement is NOT_APPLIED without another PUT</li>
+          <li>Native/source conflicts block the whole plan; marker-dropping writers remain ineligible</li>
           <li>Retained CLI proof is not operational freeze, actual Mongo copy or full release eligibility</li>
+          <li>State and bundle both lacking a predecessor cannot detect an erased marker; preserve custody and eligible releases</li>
         </ul>
       </div>
     </div>

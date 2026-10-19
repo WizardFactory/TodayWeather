@@ -784,6 +784,8 @@ pub async fn settle<T: CatalogTransport + Send + Sync + 'static>(
         return Ok(receipt(
             if body == op.encoded {
                 "COMMITTED"
+            } else if is_void_entry(&body)? {
+                "NOT_APPLIED"
             } else {
                 "STALE"
             },
@@ -832,6 +834,15 @@ pub async fn verify<T: CatalogTransport + Send + Sync + 'static>(
     }
 }
 
+fn is_void_entry(body: &[u8]) -> Result<bool, StateError> {
+    let first = body
+        .split(|b| *b == b'\n')
+        .next()
+        .ok_or_else(|| bad("final copy status header"))?;
+    let header = OrderedJson::parse(first).map_err(|_| bad("final copy status header"))?;
+    Ok(header.get("void") == Some(&OrderedJson::Bool(true)))
+}
+
 /// Read-only status for retained CLI custody. An absent key proves no terminal outcome.
 pub async fn status<T: CatalogTransport + Send + Sync + 'static>(
     d: &mut Durable<T>,
@@ -852,23 +863,16 @@ pub async fn status<T: CatalogTransport + Send + Sync + 'static>(
                 false,
             ))
         }
-        Some(body) => {
-            let first = body
-                .split(|b| *b == b'\n')
-                .next()
-                .ok_or_else(|| bad("final copy status header"))?;
-            let header = OrderedJson::parse(first).map_err(|_| bad("final copy status header"))?;
-            Ok(receipt(
-                if header.get("void") == Some(&OrderedJson::Bool(true)) {
-                    "NOT_APPLIED"
-                } else {
-                    "STALE"
-                },
-                op,
-                Counts::default(),
-                false,
-            ))
-        }
+        Some(body) => Ok(receipt(
+            if is_void_entry(&body)? {
+                "NOT_APPLIED"
+            } else {
+                "STALE"
+            },
+            op,
+            Counts::default(),
+            false,
+        )),
         None => Ok(receipt("SETTLEMENT_REQUIRED", op, Counts::default(), false)),
     }
 }

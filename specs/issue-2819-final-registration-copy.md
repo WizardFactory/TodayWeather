@@ -53,3 +53,9 @@ Use safe bounded source identifiers and integer generations through 2^53-1, with
 ## Selected root gate
 
 Independent proposal and judge receipts are retained in ignored design reports. Root selects the canonical marker/head design and confirms the one-entry/oversize BLOCKED boundary, bounded predecessor check, original CAS/readback/void settlement and truthful operational provenance limits. Root owns shared manual/diagram integration. Code and tests remain pending current design/plan/test gates; no product, cloud, provider or Mongo operation is authorized by these documents.
+
+## Review1 contract clarification
+
+A source-owned row that was edited natively and is missing or also changed in the final source export is a conflict that blocks the **entire** preview/finalization. No partial plan, conflict-skipping or successful partial copy is returned. Native data remains untouched; retain the error and reconcile a complete authoritative source/baseline under the existing stop/freeze gate before producing a fresh plan. The current error identifies a conflict; no aggregate conflict-count report is claimed.
+
+A retained conditional void is terminal NOT_APPLIED, including repeated settle after a lost void response; neither repeat submits the original payload. Marker erasure is detectable only with a claimed predecessor chain. If state has no marker and the supplied bundle claims no predecessor, code cannot distinguish first finalization from metadata erased by an ineligible old writer. Eligibility/custody forbid that operator sequence; no global marker-erasure detector or copied-operation custody fence is claimed.
