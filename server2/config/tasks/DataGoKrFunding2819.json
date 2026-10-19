@@ -1,0 +1,74 @@
+{
+  "task": "DataGoKrFunding2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "B2 DataGoKr selected-key/attempt funding and rotation on known local Exhausted only. Preserve VC maximum prepayment, S08 ownership/no refunds, provider two-HTTP cap and deadlines. No allowance invention or operating quota measurement; no merge/cloud/live provider authority. Declare before dependent edits. Reviewer001 supporting smoke paths declared before edits;003 preserve prior actual Quota/Auth when a distinct next key has known local exhaustion;005/006 regression expansion. No new allowance or runtime mode. Supporting CI-INVENTORY-001 already reproduced on identical base in C1/B1: transfer exact reviewed native-error inventory/header tests only (no runtime or timing change), renew current full runtime check. Broad regression exposed the same obsolete two-units-per-call oracle in domestic/quota.rs; preserve the two-unit API allowance and require two actual successful calls before exact exhaustion, with other API still funded. Broad runtime-services regression exposed same obsolete one-unit narrative budget oracle; verify one successful actual call then refusal/noextraHTTP, preserving separate warningAPI funding.",
+  "server2_paths": [
+    "server2/config/tasks/DataGoKrFunding2819.json",
+    "server2/src/providers/acquisition.rs",
+    "server2/src/domestic/acquire.rs",
+    "server2/tests/budget/wire.rs",
+    "server2/tests/providers/acquire.rs",
+    "server2/tests/providers/support.rs",
+    "server2/tests/formats/legacy_sources.rs",
+    "server2/examples/data_go_kr_funding_smoke.rs",
+    "server2/examples/provider_budgets_smoke.rs",
+    "server2/tests/budget/peer.py",
+    "server2/tests/runtime_services/inventory.rs",
+    "server2/tests/legacy_versions/kma_direct.rs",
+    "server2/tools/render_provider_budgets_manual.py",
+    "server2/tests/domestic/quota.rs",
+    "server2/tests/runtime_services/narrative.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-data-go-kr-funding.md",
+      "category": "documentation",
+      "reason": "Maintain task contracts, funding semantics, source/contract diagram and selected local verification; no runtime logic outside server2"
+    },
+    {
+      "path": "specs/issue-2819-data-go-kr-funding.md",
+      "category": "documentation",
+      "reason": "Maintain task contracts, funding semantics, source/contract diagram and selected local verification; no runtime logic outside server2"
+    },
+    {
+      "path": "plans/issue-2819-data-go-kr-funding.md",
+      "category": "documentation",
+      "reason": "Maintain task contracts, funding semantics, source/contract diagram and selected local verification; no runtime logic outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Maintain task contracts, funding semantics, source/contract diagram and selected local verification; no runtime logic outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain task contracts, funding semantics, source/contract diagram and selected local verification; no runtime logic outside server2"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Maintain task contracts, funding semantics, source/contract diagram and selected local verification; no runtime logic outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-provider-admission.sequence.json",
+      "category": "documentation",
+      "reason": "Maintain task contracts, funding semantics, source/contract diagram and selected local verification; no runtime logic outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-provider-admission.html",
+      "category": "documentation",
+      "reason": "Maintain task contracts, funding semantics, source/contract diagram and selected local verification; no runtime logic outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-data-go-kr-funding/verification.md",
+      "category": "documentation",
+      "reason": "Maintain task contracts, funding semantics, source/contract diagram and selected local verification; no runtime logic outside server2"
+    },
+    {
+      "path": "docs/operations/server2-provider-budgets.md",
+      "category": "documentation",
+      "reason": "Label original S08 guide/PDF as historical upfront-funding snapshot and link current B2 verification; retain dated captures rather than relabel them."
+    }
+  ]
+}

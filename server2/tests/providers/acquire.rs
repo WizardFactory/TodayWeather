@@ -160,8 +160,8 @@ async fn paged_short_forecast_becomes_one_complete_ordered_group() {
         (m.funded_calls, m.funded_attempts, m.attempts_data),
         (2, 2, 2)
     );
-    // Each page call pre-funds two units on the current key and one on the rotation key.
-    assert_eq!(m.reserved_units, 6);
+    // Each completed page funds only its selected key and actual HTTP attempt.
+    assert_eq!(m.reserved_units, 2);
     assert_eq!((m.groups_complete, m.groups_incomplete), (1, 0));
     assert!(
         e.metrics
@@ -305,7 +305,7 @@ async fn auth_on_every_key_is_terminal_and_stores_nothing() {
         "{r:?}"
     );
     assert_eq!(single.stub.calls().len(), 1);
-    assert_eq!(single.metrics.snapshot().reserved_units, 2);
+    assert_eq!(single.metrics.snapshot().reserved_units, 1);
 }
 
 #[tokio::test]
@@ -389,15 +389,10 @@ async fn deterministic_rejections_retries_deadline_and_funding() {
     assert_eq!(e.metrics.snapshot().attempts_deadline, 1);
 
     // Exhausted funding sends no HTTP and is counted separately from provider outcomes.
-    let e = env_with(&[(KEY_A, 'a')], Some(1)).await;
+    let e = funding_env(&[(KEY_A, 'a', 1, 1)]).await;
     let r = e.acquirer.acquire(&vilage(), deadline()).await;
     assert!(
-        matches!(
-            r,
-            Err(DomesticError::Funding(
-                BudgetError::Invalid(_) | BudgetError::Exhausted
-            ))
-        ),
+        matches!(r, Err(DomesticError::Funding(BudgetError::Exhausted))),
         "{r:?}"
     );
     assert!(e.stub.calls().is_empty());
@@ -642,7 +637,7 @@ async fn cancelled_acquisition_still_counts_funded_units() {
             m.funded_attempts,
             m.attempts_unsettled
         ),
-        (1, 3, 1, 1)
+        (1, 1, 1, 1)
     );
     assert!(
         e.metrics
@@ -805,4 +800,135 @@ async fn pollen_day_three_only_row_is_accepted_and_stored() {
         a.records[0].envelope.identity.kind.as_str(),
         "weeds-pollen-v3"
     );
+}
+
+async fn funding_env(keys: &[(&str, char, u64, u64)]) -> Env {
+    let stub = Stub::start().await;
+    let wire = Arc::new(Memory::default());
+    let clk = clock(NOW_MS);
+    let ring = limited_ring(wire, clk.clone(), keys).await;
+    let metrics = Arc::new(DomesticMetrics::default());
+    let acquirer = DomesticAcquirer::new(
+        Arc::new(HttpProviderTransport::new(8 * 1024 * 1024).unwrap()),
+        Arc::new(HttpPublicTransport::new(8 * 1024 * 1024).unwrap()),
+        BTreeMap::from([(Service::VilageFcst, ring)]),
+        Endpoints::new(&stub.base, &stub.base, &stub.base).unwrap(),
+        clk,
+        metrics.clone(),
+        CatalogLimits::default(),
+    )
+    .unwrap();
+    Env {
+        stub,
+        acquirer,
+        metrics,
+    }
+}
+
+#[tokio::test]
+async fn data_go_kr_funding_first_success_needs_only_one_unit() {
+    let e = funding_env(&[(KEY_A, 'a', 1, 0), (KEY_B, 'b', 4, 0)]).await;
+    e.stub.push(VILAGE, Reply::json(page(1, 50)));
+    complete(e.acquirer.acquire(&vilage(), deadline()).await);
+    assert_eq!(e.stub.keys(), [KEY_A]);
+    assert_eq!(e.metrics.snapshot().reserved_units, 1);
+}
+
+#[tokio::test]
+async fn data_go_kr_funding_unused_exhausted_key_does_not_block_a() {
+    let e = funding_env(&[(KEY_A, 'a', 4, 0), (KEY_B, 'b', 1, 1)]).await;
+    e.stub.push(VILAGE, Reply::json(page(1, 50)));
+    complete(e.acquirer.acquire(&vilage(), deadline()).await);
+    assert_eq!(e.stub.keys(), [KEY_A]);
+    assert_eq!(e.metrics.snapshot().reserved_units, 1);
+}
+
+#[tokio::test]
+async fn data_go_kr_funding_local_exhaustion_rotates_and_remembers_b() {
+    let e = funding_env(&[(KEY_A, 'a', 1, 1), (KEY_B, 'b', 4, 0)]).await;
+    for _ in 0..2 {
+        e.stub.push(VILAGE, Reply::json(page(1, 50)));
+        complete(e.acquirer.acquire(&vilage(), deadline()).await);
+    }
+    assert_eq!(e.stub.keys(), [KEY_B, KEY_B]);
+    assert_eq!(e.acquirer.ring(Service::VilageFcst).unwrap().current(), 1);
+    let m = e.metrics.snapshot();
+    assert_eq!(
+        (
+            m.reserved_units,
+            m.funded_attempts,
+            m.attempts_quota,
+            m.funding_denied
+        ),
+        (2, 2, 0, 0)
+    );
+}
+
+#[tokio::test]
+async fn data_go_kr_funding_exhausted_pair_advances_without_http() {
+    let c = "S13_LOCAL_KEY_C+cccccccccccccccc/=";
+    let e = funding_env(&[(KEY_A, 'a', 1, 1), (KEY_B, 'b', 1, 1), (c, 'c', 4, 0)]).await;
+    let result = e.acquirer.acquire(&vilage(), deadline()).await;
+    assert!(
+        matches!(result, Err(DomesticError::Funding(BudgetError::Exhausted))),
+        "{result:?}"
+    );
+    assert!(e.stub.calls().is_empty());
+    assert_eq!(e.acquirer.ring(Service::VilageFcst).unwrap().current(), 2);
+    e.stub.push(VILAGE, Reply::json(page(1, 50)));
+    complete(e.acquirer.acquire(&vilage(), deadline()).await);
+    assert_eq!(e.stub.keys(), [c]);
+}
+
+#[tokio::test]
+async fn data_go_kr_funding_rotated_rejected_key_is_not_retried() {
+    let e = funding_env(&[(KEY_A, 'a', 1, 1), (KEY_B, 'b', 4, 0)]).await;
+    e.stub.push(VILAGE, Reply::json(fixture("gateway-30.json")));
+    let result = e.acquirer.acquire(&vilage(), deadline()).await;
+    assert!(
+        matches!(result, Err(DomesticError::Provider(Disposition::Auth))),
+        "{result:?}"
+    );
+    assert_eq!(e.stub.keys(), [KEY_B]);
+    let m = e.metrics.snapshot();
+    assert_eq!(
+        (m.reserved_units, m.funded_attempts, m.attempts_auth),
+        (1, 1, 1)
+    );
+}
+
+#[tokio::test]
+async fn data_go_kr_funding_retry_exhaustion_uses_next_key_with_two_http_cap() {
+    let e = funding_env(&[(KEY_A, 'a', 1, 0), (KEY_B, 'b', 1, 0)]).await;
+    e.stub.push(
+        VILAGE,
+        Reply::with(503, "text/plain", b"unavailable".to_vec()),
+    );
+    e.stub.push(VILAGE, Reply::json(page(1, 50)));
+    complete(e.acquirer.acquire(&vilage(), deadline()).await);
+    assert_eq!(e.stub.keys(), [KEY_A, KEY_B]);
+    let m = e.metrics.snapshot();
+    assert_eq!(
+        (m.reserved_units, m.funded_attempts, m.attempts_retryable),
+        (2, 2, 1)
+    );
+}
+
+#[tokio::test]
+async fn funding_review_provider_rejection_survives_exhausted_rotation() {
+    for (status, disposition) in [(429, Disposition::Quota), (401, Disposition::Auth)] {
+        let e = funding_env(&[(KEY_A, 'a', 4, 0), (KEY_B, 'b', 1, 1)]).await;
+        e.stub.push(
+            VILAGE,
+            Reply::with(status, "application/json", b"{}".to_vec()),
+        );
+        let result = e.acquirer.acquire(&vilage(), deadline()).await;
+        assert!(
+            matches!(result, Err(DomesticError::Provider(found)) if found == disposition),
+            "{result:?}"
+        );
+        assert_eq!(e.stub.keys(), [KEY_A]);
+        assert_eq!(e.metrics.snapshot().funded_attempts, 1);
+        assert_eq!(e.acquirer.ring(Service::VilageFcst).unwrap().current(), 0);
+    }
 }

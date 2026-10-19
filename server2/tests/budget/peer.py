@@ -98,8 +98,10 @@ def main():
         with s3.lock:
             authorities = [json.loads(o.body) for k, o in s3.objects.items() if k.endswith('/authority.json')]
             witnesses = [json.loads(o.body) for k, o in s3.objects.items() if '/blocks/' in k]
-            assert len(authorities) == 22 and sum(a['used'] for a in authorities) == 48
-            assert len(witnesses) == 23  # the unknown CAS has no witness
+            # Two terminal400 modes never fund the unused second key.
+            # A explicitly abandons its last block; the other ownership cases stay.
+            assert len(authorities) == 20 and sum(a['used'] for a in authorities) == 44
+            assert len(witnesses) == 21  # the unknown CAS has no witness
             assert len([k for k in s3.objects if k.startswith('raw/v2/')]) == 1
             assert all(a['used'] <= a['policy']['limit'] for a in authorities)
         assert provider.calls == 22
@@ -107,7 +109,7 @@ def main():
         for mode, keys in provider.keys_by_mode.items():
             expected = ['first'] if mode.startswith('http400') else (['first', 'first'] if mode == 'http200-truncated' else ['first', 'second'])
             assert keys == expected, (mode, keys, expected)
-        print('observed peer counters: 22 provider requests, 48 charged units, 23 witnesses; PASS')
+        print('observed peer counters: 22 provider requests, 44 authority units, 21 witnesses; PASS')
     finally:
         for peer in (s3, provider):
             peer.shutdown()

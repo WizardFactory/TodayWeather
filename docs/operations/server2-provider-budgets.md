@@ -1,5 +1,12 @@
 # server2 provider budgets (S08)
 
+
+Historical snapshot: this S08 guide, PDF and captured execution describe the original
+upfront-funding implementation. #2819 B2 now funds only selected data.go.kr attempts;
+VC maximum prepayment is retained. See the [current funding verification](../evidence/tasks/issue-2819-data-go-kr-funding/verification.md)
+and [native verification guide](server2-native-verification.md). The renderer can
+validate the new receipt, but the existing dated PDF/capture is not a new B2 run.
+
 Internal acquisition primitives for [#2693](https://github.com/WizardFactory/TodayWeather/issues/2693).
 They do not enable a weather route, timer, key provisioning or deployment. See the
 [admission sequence](../architecture/diagrams/server2-provider-admission.html) and

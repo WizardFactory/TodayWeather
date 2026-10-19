@@ -499,3 +499,13 @@ failed/unknown delivery claims. This is one slice, not closure of #2819 or S19/S
 Funding/publication, notification scheduling, capacity/observability/configuration/CI
 and exact candidate/recovery requalification follow in that order. Seven-day shadow
 qualification and production cutover remain blocked by the unresolved applicable gates.
+
+### #2819 B2 local correction (pre-merge)
+
+The [DataGoKr funding plan](issue-2819-data-go-kr-funding.md) addresses selected-key
+logical funding and known local exhaustion. VC maximum prepayment, two actual HTTP
+attempts, original deadlines and no-refund ownership stay. AirKorea local API
+funding caps do not become provider-wide KST quota markers. Local regressions and
+an owned HTTP/volatile S08 composition are recorded separately from current CI
+and independent PR review. B3 publication timing, operating allowances, production
+quota/capacity and all cutover/shadow qualification remain open. No merge authority.

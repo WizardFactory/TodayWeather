@@ -929,13 +929,13 @@ async fn airkorea_quota_moves_to_the_next_key_and_is_remembered() {
     assert_eq!(ring.preferred(), Some(1));
     assert!(ring.exhausted(2, KST_MIDNIGHT - 1));
     assert!(!ring.exhausted(2, KST_MIDNIGHT));
-    // Every attempt was funded before HTTP: one call per key, two units reserved per call.
+    // Every selected attempt funds one logical unit; unused retries are not prepaid.
     let m = e.metrics.snapshot();
     assert_eq!(
         (m.funded_calls, m.funded_attempts, m.attempts_quota),
         (2, 2, 1)
     );
-    assert_eq!(m.reserved_units, 4);
+    assert_eq!(m.reserved_units, 2);
 
     // The remembered key serves the next operation first.
     e.stub
@@ -1231,4 +1231,66 @@ async fn airkorea_key_exhausted_by_a_parallel_call_is_not_used_for_later_pages()
             format!("{KEY_B}@2")
         ]
     );
+}
+
+async fn funding_airkorea_env(keys: &[(&str, char, u64, u64)]) -> Env {
+    use server2::domestic::{DomesticAcquirer, family::Endpoints, metrics::DomesticMetrics};
+    use server2::providers::{HttpProviderTransport, HttpPublicTransport};
+    use server2::storage::CatalogLimits;
+    use std::{collections::BTreeMap, sync::Arc};
+    let stub = Stub::start().await;
+    let clk = clock(NOW_MS);
+    let ring = limited_ring(Arc::new(Memory::default()), clk.clone(), keys).await;
+    let metrics = Arc::new(DomesticMetrics::default());
+    let acquirer = DomesticAcquirer::new(
+        Arc::new(HttpProviderTransport::new(8 * 1024 * 1024).unwrap()),
+        Arc::new(HttpPublicTransport::new(8 * 1024 * 1024).unwrap()),
+        BTreeMap::from([(Service::AirKorea, ring)]),
+        Endpoints::new(&stub.base, &stub.base, &stub.base).unwrap(),
+        clk.clone(),
+        metrics.clone(),
+        CatalogLimits::default(),
+    )
+    .unwrap();
+    Env {
+        stub,
+        acquirer,
+        metrics,
+        clock: clk,
+    }
+}
+#[tokio::test]
+async fn data_go_kr_funding_airkorea_local_cap_is_not_provider_quota() {
+    let e = funding_airkorea_env(&[(KEY_A, 'a', 4, 0), (KEY_B, 'b', 1, 1)]).await;
+    e.stub
+        .push(STATION, Reply::json(local("airkorea-stations.json")));
+    complete(e.acquirer.acquire_airkorea(&seoul(), deadline()).await);
+    assert_eq!(e.stub.keys(), [KEY_A]);
+    let ring = e.acquirer.ring(Service::AirKorea).unwrap();
+    assert_eq!(ring.preferred(), Some(0));
+    assert!(!ring.exhausted(1, KST_MIDNIGHT - 1));
+    let m = e.metrics.snapshot();
+    assert_eq!(
+        (m.reserved_units, m.funded_attempts, m.attempts_quota),
+        (1, 1, 0)
+    );
+}
+#[tokio::test]
+async fn funding_review_airkorea_all_local_exhaustion_is_not_auth() {
+    let e = funding_airkorea_env(&[(KEY_A, 'a', 1, 1), (KEY_B, 'b', 1, 1)]).await;
+    let result = e.acquirer.acquire_airkorea(&seoul(), deadline()).await;
+    assert!(
+        matches!(
+            result,
+            Err(DomesticError::Funding(
+                server2::budget::BudgetError::Exhausted
+            ))
+        ),
+        "{result:?}"
+    );
+    assert!(e.stub.calls().is_empty());
+    let ring = e.acquirer.ring(Service::AirKorea).unwrap();
+    assert_eq!(ring.preferred(), None);
+    assert!(!ring.exhausted(0, KST_MIDNIGHT - 1));
+    assert!(!ring.exhausted(1, KST_MIDNIGHT - 1));
 }
