@@ -6,9 +6,48 @@ use std::{
     time::Duration,
 };
 
+mod firebase_fixture {
+    include!("../support/firebase.rs");
+}
+
+/// Owned public test vector; never reads host Firebase settings or credentials.
+struct CredentialFixture {
+    dir: std::path::PathBuf,
+    account: std::path::PathBuf,
+}
+impl CredentialFixture {
+    fn new() -> Self {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        loop {
+            let dir = std::env::temp_dir().join(format!(
+                "server2-runtime-account-{}-{}",
+                std::process::id(),
+                NEXT.fetch_add(1, Ordering::Relaxed)
+            ));
+            match std::fs::create_dir(&dir) {
+                Ok(()) => {
+                    let account =
+                        firebase_fixture::account_file(&dir, "todayWeather", "runtime-oracle");
+                    return Self { dir, account };
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(e) => panic!("owned fixture directory: {e}"),
+            }
+        }
+    }
+}
+impl Drop for CredentialFixture {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.account);
+        let _ = std::fs::remove_dir(&self.dir);
+    }
+}
+
 pub struct Peer {
     child: Child,
     pub endpoint: String,
+    credentials: CredentialFixture,
 }
 impl Peer {
     pub fn new() -> Self {
@@ -34,6 +73,7 @@ impl Peer {
         Self {
             child,
             endpoint: line.trim().to_owned(),
+            credentials: CredentialFixture::new(),
         }
     }
     pub fn builtins(&self) -> Builtins {
@@ -57,6 +97,7 @@ impl Peer {
     }
     pub fn vars(&self, families: &str) -> impl Fn(&str) -> Option<String> + use<> {
         let families = families.to_owned();
+        let account = self.credentials.account.to_str().unwrap().to_owned();
         move |n| match n {
             "SERVER2_NATIVE_FAMILIES" => Some(families.clone()),
             "SERVER2_S3_BUCKET" | "AWS_ACCESS_KEY" => Some("server2-local".into()),
@@ -64,6 +105,7 @@ impl Peer {
             "SERVER2_S3_REGION" => Some("ap-northeast-2".into()),
             "DONGNAE_SECRET_KEYS" => Some(r#"["synthetic-data-go-kr-key-0001"]"#.into()),
             "VC_SECRET_KEY" => Some("synthetic-vc-key".into()),
+            "SERVER2_FIREBASE_TODAYWEATHER" => Some(account.clone()),
             _ => None,
         }
     }
