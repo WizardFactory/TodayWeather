@@ -7,8 +7,8 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "5d4a62c514dd9b465fc8b2dd7fce1b9cbea86e33",
-      "link_mode": "local-only"
+      "revision": "92591a74e114cf73425801374d05fbaa6636c49c",
+      "link_mode": "web"
     }
   },
   "components": [
@@ -449,7 +449,7 @@
         "Operation counts precede log filtering, rate limits and queue loss.",
         "S3 bytes are logical; HTTP duration ends at headers.",
         "Local KMA/warning/AirKorea and D2/F2 reconciliation remain outside CPU sharing.",
-        "Sources use a frozen local evidence commit; not a task/PR revision or production topology."
+        "Sources pin the actual committed runtime; no production topology or host qualification."
       ]
     }
   ]

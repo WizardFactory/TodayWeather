@@ -56,3 +56,7 @@ The capacity flow holds one actual shared CPU permit and leaves its owned diagno
 ![Selected retained local results](../evidence/tasks/issue-2819-runtime-resource-metrics/metrics.png)
 
 The image presents retained actual reports and metric lines; it is not a new live run or an operational dashboard. Production thresholds, host capacity, IAM/SigV4/TLS, quota headroom, seven-day shadow and both eligible full recovery bundles remain separate gates. Keep #2704, #2705 and #2819 open until their full criteria are met.
+
+The [shared factory and resource flow](../architecture/diagrams/server2-runtime-services.html)
+([editable JSON](../architecture/diagrams/server2-runtime-services.json)) pins the committed
+runtime source. It is a repository flow, not a deployed topology.
