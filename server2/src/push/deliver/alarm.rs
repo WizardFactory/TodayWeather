@@ -371,10 +371,14 @@ impl<T: CatalogTransport + Send + Sync + 'static> AlarmWorker<T> {
         let due: Vec<(u64, Oid, Obj)> = {
             let state = self.push.state();
             let state = state.read().unwrap_or_else(|e| e.into_inner());
-            state
-                .coll(Coll::Alarm)
-                .due(time)
-                .into_iter()
+            let due = match state.coll(Coll::Alarm).due(time) {
+                Ok(due) => due,
+                Err(_) => {
+                    self.push.invalidate_state();
+                    return MinuteReport::default();
+                }
+            };
+            due.into_iter()
                 .map(|(n, r)| (n, r.oid, r.doc))
                 .filter(|(_, _, doc)| due_today(doc, now_ms))
                 .collect()
