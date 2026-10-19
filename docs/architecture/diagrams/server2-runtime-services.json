@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "92591a74e114cf73425801374d05fbaa6636c49c",
+      "revision": "59cea0cc2b0aac15c32fb54c21eea9dda026a306",
       "link_mode": "web"
     }
   },
@@ -134,6 +134,11 @@
           "path": "server2/src/push/deliver/native_fetch.rs",
           "line": 31,
           "end_line": 56
+        },
+        {
+          "path": "server2/src/world/engine.rs",
+          "line": 290,
+          "end_line": 407
         }
       ]
     },
@@ -236,8 +241,13 @@
       "sources": [
         {
           "path": "server2/src/runtime_resources.rs",
-          "line": 13,
-          "end_line": 109
+          "line": 24,
+          "end_line": 131
+        },
+        {
+          "path": "server2/src/runtime_resources.rs",
+          "line": 277,
+          "end_line": 315
         },
         {
           "path": "server2/src/runtime_services.rs",
@@ -269,6 +279,11 @@
           "path": "server2/src/operational_metrics.rs",
           "line": 579,
           "end_line": 616
+        },
+        {
+          "path": "server2/src/lib.rs",
+          "line": 275,
+          "end_line": 304
         }
       ]
     }
@@ -435,21 +450,24 @@
       "dot": "cyan",
       "title": "CPU lifetime and typed failures",
       "items": [
-        "10ms completion margin; no CPU permit over provider/S3 IO.",
-        "Queued cancellation releases offer; admitted closure owns permits until exit.",
-        "Post-funded local loss: private2s cooldown, no provider penalty or next attempt.",
-        "After possible writes, CPU loss stays ambiguous; no resend authority."
+        "CPU margin 10 ms; cold owner 8 s and caller 3 s stay unchanged.",
+        "Same-invocation active/interrupted CPU preserves cause in either timer order.",
+        "Queued drop retires offer; blocking closure owns permits until physical exit.",
+        "Panic/stopped remain ordinary failures; only Capacity/Deadline sets local cause.",
+        "Bounded fan-out stops refill and drains; cold local refusal funds no providers.",
+        "Post-write uncertainty stays Ambiguous; definite PUT rejection stays definite."
       ]
     },
     {
       "dot": "amber",
       "title": "Finite private evidence boundary",
       "items": [
-        "Fixed labels and buckets; cap2048series /4096u64 /512KiB.",
-        "Operation counts precede log filtering, rate limits and queue loss.",
-        "S3 bytes are logical; HTTP duration ends at headers.",
-        "Local KMA/warning/AirKorea and D2/F2 reconciliation remain outside CPU sharing.",
-        "Sources pin the actual committed runtime; no production topology or host qualification."
+        "Fixed labels: 2048 samples / 4096 u64 / 512 KiB; bounded complete 500 on overflow.",
+        "Actual build5 HTTP: 1769 samples. All-view test: 1790. Synthetic max width: 164735 B.",
+        "Counts precede log loss; S3 bytes are logical; HTTP timing ends at headers.",
+        "401/403 skip unused gzip. 429 body policy and actual CPU refusal remain distinct.",
+        "Other KMA/warning/AirKorea, D2/F2, host/RSS/quota/full-release gates stay open.",
+        "Source commit 59cea0cc; local source and browser evidence, no deployment claim."
       ]
     }
   ]
