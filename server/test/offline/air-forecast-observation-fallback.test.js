@@ -165,3 +165,17 @@ test('absent history and failed fallback keep existing safe behavior',async()=>{
         assert.equal(req.airInfoList&&req.airInfoList[0].source,fail?undefined:'openweather');
     }
 });
+
+test('history-only pollutant keeps provider current unavailable and restores numeric past series',async()=>{
+    const snapshot=current();
+    const history=[{stationName:'중구',dataTime:'2026-09-23 23:00',o3Value:0.025}];
+    const h=harness([],[],{fallback:{getArpltn(g,d,cb){cb(null,snapshot);}}});
+    const req={params:{},query:{airUnit:'airkorea'},current:{},gCoord:{},arpltnList:history};
+    await invoke(h.detail.getAirFallback,req);await invoke(h.detail.makeAirInfo,req);
+    assert.equal(req.airInfo.last.o3Value,undefined);assert.equal(req.current.arpltn.o3Value,undefined);
+    const hourly=req.airInfo.pollutants.o3.hourly;
+    const past=hourly.find(r=>r.date==='2026-09-23 23:00');
+    assert.equal(past.val,0.025);assert.equal(past.source,'airkorea');assert.equal(past.stationName,'중구');
+    assert.equal(hourly.find(r=>r.date===snapshot.dataTime).val,undefined);
+    assert.equal(history[0].o3Value,0.025);
+});
