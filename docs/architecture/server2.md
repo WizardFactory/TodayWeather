@@ -4106,6 +4106,13 @@ is typed before outward failure mapping; it does not
 fund another provider, become a provider penalty, or authorize uncertain publication replay.
 A spent attempt followed by local capacity loss has a private2s demand cooldown.
 
+Catalog publication and repair keep terminal PUT-rejection evidence inside each invocation.
+Only a known rejection from the actual mutating PUT, or known CAS412 exhaustion with
+a successful final pin, keeps a definite status. A later GET, ready check or generic
+transport status after mutation begins remains ambiguous; an earlier invocation cannot
+lend its status to that read. The private witness changes no public error vocabulary,
+retry policy, funding, admission limit or deadline.
+
 Fixed native operation counters update before diagnostic filtering/rate/queue loss.
 An immutable private metrics view reads actual CPU, shared domestic, push, S3 and raw-cache
 counters without acquiring provider/S3/filesystem data. HTTP latency stops at headers;

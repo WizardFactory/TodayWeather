@@ -210,6 +210,19 @@ impl<T: ObjectTransport> RawRecordStore<T> {
         record: RawRecord,
         deadline: Instant,
     ) -> Result<PublishOutcome, Error> {
+        let mut put_rejection = None;
+        self.publish_at_with_put_rejection(record, deadline, &mut put_rejection)
+            .await
+    }
+    // Private evidence for catalog publication only. Success/ready/read/transport errors leave
+    // no witness; a known direct rejection records its status immediately before returning.
+    pub(super) async fn publish_at_with_put_rejection(
+        &self,
+        record: RawRecord,
+        deadline: Instant,
+        put_rejection: &mut Option<u16>,
+    ) -> Result<PublishOutcome, Error> {
+        *put_rejection = None;
         let deadline = deadline.min(Instant::now() + self.limits.deadline);
         crate::observability::observe(
             crate::observability::Component::S3,
@@ -273,6 +286,7 @@ impl<T: ObjectTransport> RawRecordStore<T> {
                                 return Err(if uncertain_put {
                                     Error::Ambiguous
                                 } else {
+                                    *put_rejection = Some(status);
                                     Error::Status(status)
                                 });
                             }

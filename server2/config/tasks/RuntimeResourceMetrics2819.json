@@ -53,7 +53,8 @@
     "server2/tests/air.rs",
     "server2/src/summary/lookup.rs",
     "server2/tools/smoke.py",
-    "server2/tests/domestic/source_s3.rs"
+    "server2/tests/domestic/source_s3.rs",
+    "server2/tests/integration/test_observability.py"
   ],
   "outside": [
     {

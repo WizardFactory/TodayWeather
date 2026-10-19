@@ -812,6 +812,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
         body: &[u8],
         c: &mut Context,
         started: &mut bool,
+        put_rejection: &mut Option<u16>,
     ) -> Result<(), Error> {
         let mut unknown = false;
         for _ in 0..self.limits.cas_attempts {
@@ -845,6 +846,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
                     return Err(if unknown {
                         Error::Ambiguous
                     } else {
+                        // Terminal known rejection: unwind immediately; no read may inherit this.
+                        *put_rejection = Some(s);
                         Error::Status(s)
                     });
                 }
@@ -859,6 +862,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
         entries: &[Envelope],
         c: &mut Context,
         started: &mut bool,
+        put_rejection: &mut Option<u16>,
     ) -> Result<(), Error> {
         let deadline = c.deadline;
         let mut unknown = false;
@@ -900,6 +904,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
                     return Err(if unknown {
                         Error::Ambiguous
                     } else {
+                        // Terminal known rejection: unwind immediately; no read may inherit this.
+                        *put_rejection = Some(s);
                         Error::Status(s)
                     });
                 }
@@ -912,6 +918,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
             Ok(_) => Err(if unknown {
                 Error::Ambiguous
             } else {
+                // Only known CAS412 responses and a successful final pin lacking these entries.
+                *put_rejection = Some(412);
                 Error::Status(412)
             }),
             Err(e) => Err(if unknown { Self::uncertain(e) } else { e }),
@@ -922,6 +930,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
         d: &GroupDeclaration,
         c: &mut Context,
         started: &mut bool,
+        put_rejection: &mut Option<u16>,
     ) -> Result<(), Error> {
         let all = self.envelopes(d, c.deadline).await?;
         for id in &d.partitions {
@@ -932,7 +941,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
                 .filter(|(m, _)| m.catalogs.contains(id))
                 .map(|(_, e)| e.clone())
                 .collect::<Vec<_>>();
-            self.union(id, &entries, c, started).await?;
+            self.union(id, &entries, c, started, put_rejection).await?;
         }
         Ok(())
     }
@@ -1051,6 +1060,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
             crate::observability::Stage::Publish,
             async {
                 let mut started = false;
+                // Stack-local terminal PUT evidence; unrelated reads/invocations cannot set it.
+                let mut put_rejection = None;
                 let result = timeout_at(deadline, async {
                     let _admission = self.admit().await?;
                     // S10F GROK-1: credentials before the first write; a failure here is definite.
@@ -1115,14 +1126,22 @@ impl<T: CatalogTransport> CatalogStore<T> {
                         &body,
                         &mut context,
                         &mut started,
+                        &mut put_rejection,
                     )
                     .await?;
                     for record in records {
                         started = true;
-                        self.raw.publish_at(record, deadline).await?;
+                        self.raw
+                            .publish_at_with_put_rejection(record, deadline, &mut put_rejection)
+                            .await?;
                     }
-                    self.publish_catalogs(&declaration, &mut context, &mut started)
-                        .await?;
+                    self.publish_catalogs(
+                        &declaration,
+                        &mut context,
+                        &mut started,
+                        &mut put_rejection,
+                    )
+                    .await?;
                     // Publication checks the new group only; unrelated retained history must not poison success.
                     let mut context = Context::new(deadline);
                     if !self
@@ -1148,7 +1167,9 @@ impl<T: CatalogTransport> CatalogStore<T> {
                 })
                 .await;
                 match result {
-                    Ok(Err(Error::Status(status))) => Err(Error::Status(status)),
+                    Ok(Err(Error::Status(status))) if put_rejection == Some(status) => {
+                        Err(Error::Status(status))
+                    }
                     Ok(Err(error)) if started => Err(Self::uncertain(error)),
                     Ok(r) => r,
                     Err(_) => Err(if started {
@@ -1212,6 +1233,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
         scope: &RepairScope,
         c: &mut Context,
         started: &mut bool,
+        put_rejection: &mut Option<u16>,
         materialize: bool,
     ) -> Result<RepairOutcome, Error> {
         let deadline = c.deadline;
@@ -1343,7 +1365,10 @@ impl<T: CatalogTransport> CatalogStore<T> {
             // Discovery retained only envelopes. Each verified group body is discarded before the next group.
             c.output = 0;
             match self.group_records(&descriptor, c).await {
-                Ok(_) => self.publish_catalogs(&descriptor, c, started).await?,
+                Ok(_) => {
+                    self.publish_catalogs(&descriptor, c, started, put_rejection)
+                        .await?;
+                }
                 Err(Error::NotFound) | Err(Error::Corrupt(_)) | Err(Error::Invalid(_)) => {
                     incomplete = true
                 }
@@ -1351,7 +1376,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
             }
         }
         if !singles.is_empty() {
-            self.union(&scope.catalog, &singles, c, started).await?;
+            self.union(&scope.catalog, &singles, c, started, put_rejection)
+                .await?;
         }
         if incomplete {
             return Ok(RepairOutcome::Incomplete);
@@ -1419,6 +1445,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
             }
         }
         let mut started = false;
+        let mut put_rejection = None;
         match timeout_at(deadline, async {
             let _admission = self.admit().await?;
             // S10F GROK-1: credentials before the first write; a failure here is definite.
@@ -1427,13 +1454,16 @@ impl<T: CatalogTransport> CatalogStore<T> {
                 scope,
                 &mut Context::new(deadline),
                 &mut started,
+                &mut put_rejection,
                 materialize,
             )
             .await
         })
         .await
         {
-            Ok(Err(Error::Status(status))) => Err(Error::Status(status)),
+            Ok(Err(Error::Status(status))) if put_rejection == Some(status) => {
+                Err(Error::Status(status))
+            }
             Ok(Err(error)) if started => Err(Self::uncertain(error)),
             Ok(r) => r,
             Err(_) => Err(if started {
@@ -2057,5 +2087,831 @@ mod resource_admission_tests {
             0,
             "repair never resends raw"
         );
+    }
+
+    // RM-CLAUDE-011: statuses must be classified by request origin, not their number.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    enum OriginCase {
+        SecondRead(u16),
+        PreflightRead(u16),
+        SecondPut403,
+        RawPut403,
+        RawReady403,
+        PrewriteReady403,
+        RawError403,
+        Descriptor403,
+        KnownConflict,
+        FinalConflictRead412,
+        LaterGroupRead(u16),
+    }
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    enum OriginEvent {
+        Ready(Option<u16>),
+        ControlGet(String, u16, usize),
+        ControlPut(String, u16),
+        RawPut(String, Option<u16>),
+        RawGet(String, u16, usize),
+        List(String),
+    }
+    struct OriginPeer {
+        case: std::sync::Mutex<OriginCase>,
+        ids: Vec<CatalogId>,
+        descriptors: BTreeMap<String, Vec<u8>>,
+        expected_raw: BTreeMap<String, super::super::Object>,
+        controls: std::sync::Mutex<BTreeMap<String, Vec<u8>>>,
+        raw: std::sync::Mutex<BTreeMap<String, super::super::Object>>,
+        events: std::sync::Mutex<Vec<OriginEvent>>,
+        ready_calls: AtomicUsize,
+        index_acks: AtomicUsize,
+        second_puts: AtomicUsize,
+        faults: AtomicUsize,
+        later_raw: Option<String>,
+    }
+    impl OriginPeer {
+        fn new(
+            groups: &[(GroupDeclaration, Vec<RawRecord>)],
+            case: OriginCase,
+            seed_orphans: bool,
+        ) -> Arc<Self> {
+            let limits = CatalogLimits::default();
+            let mut ids = BTreeSet::new();
+            let mut descriptors = BTreeMap::new();
+            let mut expected_raw = BTreeMap::new();
+            for (declaration, records) in groups {
+                declaration.validate(&limits).unwrap();
+                ids.extend(declaration.partitions.clone());
+                let reference = declaration.reference(&limits).unwrap();
+                assert!(
+                    descriptors
+                        .insert(
+                            reference.descriptor_key().unwrap(),
+                            declaration.bytes(&limits).unwrap()
+                        )
+                        .is_none()
+                );
+                for record in declaration.attach(records.clone(), &limits).unwrap() {
+                    let prepared = record.prepare(&limits.raw).unwrap();
+                    assert!(
+                        expected_raw
+                            .insert(
+                                prepared.key,
+                                super::super::Object {
+                                    metadata: prepared.metadata,
+                                    length: prepared.body.len(),
+                                    body: prepared.body,
+                                },
+                            )
+                            .is_none()
+                    );
+                }
+            }
+            let ids = ids.into_iter().collect::<Vec<_>>();
+            let mut controls = if seed_orphans {
+                descriptors.clone()
+            } else {
+                BTreeMap::new()
+            };
+            if matches!(
+                case,
+                OriginCase::KnownConflict | OriginCase::FinalConflictRead412
+            ) {
+                assert_eq!(ids.len(), 2);
+                controls.insert(
+                    ids[1].key(),
+                    Catalog::empty(ids[1].clone()).bytes(&limits).unwrap(),
+                );
+            }
+            let raw = if seed_orphans {
+                expected_raw.clone()
+            } else {
+                BTreeMap::new()
+            };
+            let later_raw = if matches!(case, OriginCase::LaterGroupRead(_)) {
+                assert_eq!(groups.len(), 2);
+                assert!(
+                    groups[0].0.reference(&limits).unwrap().group_sha256
+                        < groups[1].0.reference(&limits).unwrap().group_sha256
+                );
+                Some(
+                    groups[1].0.envelopes(&limits).unwrap()[0]
+                        .identity
+                        .object_key()
+                        .unwrap(),
+                )
+            } else {
+                None
+            };
+            Arc::new(Self {
+                case: std::sync::Mutex::new(case),
+                ids,
+                descriptors,
+                expected_raw,
+                controls: std::sync::Mutex::new(controls),
+                raw: std::sync::Mutex::new(raw),
+                events: Default::default(),
+                ready_calls: AtomicUsize::new(0),
+                index_acks: AtomicUsize::new(0),
+                second_puts: AtomicUsize::new(0),
+                faults: AtomicUsize::new(0),
+                later_raw,
+            })
+        }
+        fn event(&self, event: OriginEvent) {
+            self.events.lock().unwrap().push(event);
+        }
+        fn etag(body: &[u8]) -> String {
+            format!("\"{}\"", super::super::sha256(body))
+        }
+        fn assert_index(&self, id: &CatalogId, entries: &[Envelope]) {
+            let controls = self.controls.lock().unwrap();
+            let body = controls.get(&id.key()).expect("acknowledged index exists");
+            let catalog = Catalog::from_bytes(body, id, &CatalogLimits::default()).unwrap();
+            assert_eq!(catalog.entries, entries);
+        }
+        fn reset_after_rejection(&self, case: OriginCase) {
+            // The previous future has returned; reuse the SAME peer/store, without a runtime setter.
+            assert!(self.controls.lock().unwrap().is_empty());
+            assert!(self.raw.lock().unwrap().is_empty());
+            *self.case.lock().unwrap() = case;
+            self.events.lock().unwrap().clear();
+            self.ready_calls.store(0, Ordering::SeqCst);
+            self.index_acks.store(0, Ordering::SeqCst);
+            self.second_puts.store(0, Ordering::SeqCst);
+            self.faults.store(0, Ordering::SeqCst);
+        }
+    }
+    impl super::super::ObjectTransport for Arc<OriginPeer> {
+        async fn ready(&self) -> Result<(), Error> {
+            let call = self.ready_calls.fetch_add(1, Ordering::SeqCst) + 1;
+            let case = *self.case.lock().unwrap();
+            let fail = (case == OriginCase::PrewriteReady403 && call == 1)
+                || (case == OriginCase::RawReady403 && call == 2);
+            self.event(OriginEvent::Ready(fail.then_some(403)));
+            if fail {
+                Err(Error::Status(403))
+            } else {
+                Ok(())
+            }
+        }
+        async fn put(&self, prepared: &super::super::PreparedRecord) -> Result<u16, Error> {
+            let expected = self
+                .expected_raw
+                .get(&prepared.key)
+                .expect("declared raw PUT");
+            assert_eq!(prepared.body, expected.body);
+            assert_eq!(prepared.metadata, expected.metadata);
+            let case = *self.case.lock().unwrap();
+            if case == OriginCase::RawError403 {
+                self.event(OriginEvent::RawPut(prepared.key.clone(), None));
+                return Err(Error::Status(403));
+            }
+            if case == OriginCase::RawPut403 {
+                self.event(OriginEvent::RawPut(prepared.key.clone(), Some(403)));
+                return Ok(403);
+            }
+            let mut raw = self.raw.lock().unwrap();
+            assert!(!raw.contains_key(&prepared.key), "no unexpected raw resend");
+            raw.insert(
+                prepared.key.clone(),
+                super::super::Object {
+                    metadata: prepared.metadata.clone(),
+                    length: prepared.body.len(),
+                    body: prepared.body.clone(),
+                },
+            );
+            self.event(OriginEvent::RawPut(prepared.key.clone(), Some(200)));
+            Ok(200)
+        }
+        async fn head(&self, _: &str) -> Result<super::super::Object, Error> {
+            panic!("no HEAD/reconciliation expected in these known-response traces")
+        }
+        async fn get(&self, key: &str, maximum: usize) -> Result<super::super::Object, Error> {
+            assert!(self.expected_raw.contains_key(key), "declared raw GET");
+            let acks = self.index_acks.load(Ordering::SeqCst);
+            let case = *self.case.lock().unwrap();
+            if let OriginCase::LaterGroupRead(status) = case
+                && self.later_raw.as_deref() == Some(key)
+                && acks > 0
+            {
+                self.faults.fetch_add(1, Ordering::SeqCst);
+                self.event(OriginEvent::RawGet(key.into(), status, acks));
+                return Err(Error::Status(status));
+            }
+            let object = self
+                .raw
+                .lock()
+                .unwrap()
+                .get(key)
+                .cloned()
+                .expect("seeded/written raw");
+            assert!(object.body.len() <= maximum);
+            self.event(OriginEvent::RawGet(key.into(), 200, acks));
+            Ok(object)
+        }
+    }
+    impl CatalogTransport for Arc<OriginPeer> {
+        async fn get_control(&self, key: &str, maximum: usize) -> Result<ControlObject, Error> {
+            assert!(
+                self.descriptors.contains_key(key) || self.ids.iter().any(|id| id.key() == key)
+            );
+            let acks = self.index_acks.load(Ordering::SeqCst);
+            let is_second = self.ids.get(1).is_some_and(|id| id.key() == key);
+            let case = *self.case.lock().unwrap();
+            let fault = match case {
+                OriginCase::SecondRead(status) if is_second && acks > 0 => Some(status),
+                OriginCase::PreflightRead(status) if is_second && acks == 0 => Some(status),
+                OriginCase::FinalConflictRead412
+                    if is_second && self.second_puts.load(Ordering::SeqCst) == 4 =>
+                {
+                    Some(412)
+                }
+                _ => None,
+            };
+            if let Some(status) = fault {
+                self.faults.fetch_add(1, Ordering::SeqCst);
+                self.event(OriginEvent::ControlGet(key.into(), status, acks));
+                return Err(Error::Status(status));
+            }
+            let body = self.controls.lock().unwrap().get(key).cloned();
+            self.event(OriginEvent::ControlGet(
+                key.into(),
+                if body.is_some() { 200 } else { 404 },
+                acks,
+            ));
+            match body {
+                Some(body) => {
+                    assert!(body.len() <= maximum);
+                    Ok(ControlObject {
+                        etag: OriginPeer::etag(&body),
+                        body,
+                        version: None,
+                    })
+                }
+                None => Err(Error::NotFound),
+            }
+        }
+        async fn put_control(
+            &self,
+            key: &str,
+            body: &[u8],
+            condition: &WriteCondition,
+        ) -> Result<u16, Error> {
+            let descriptor = self.descriptors.get(key);
+            if let Some(expected) = descriptor {
+                assert_eq!(body, expected);
+            } else {
+                let id = self
+                    .ids
+                    .iter()
+                    .find(|id| id.key() == key)
+                    .expect("declared index PUT");
+                Catalog::from_bytes(body, id, &CatalogLimits::default()).unwrap();
+            }
+            let mut controls = self.controls.lock().unwrap();
+            let matches = match (controls.get(key), condition) {
+                (None, WriteCondition::Absent) => true,
+                (Some(old), WriteCondition::Match(etag)) => *etag == OriginPeer::etag(old),
+                _ => false,
+            };
+            assert!(
+                matches,
+                "test must not conceal an unexpected CAS condition/resend"
+            );
+            let case = *self.case.lock().unwrap();
+            let is_second = self.ids.get(1).is_some_and(|id| id.key() == key);
+            let status = if descriptor.is_some() && case == OriginCase::Descriptor403 {
+                403
+            } else if is_second {
+                let attempt = self.second_puts.fetch_add(1, Ordering::SeqCst) + 1;
+                match case {
+                    OriginCase::SecondPut403 => {
+                        assert_eq!(attempt, 1);
+                        403
+                    }
+                    OriginCase::KnownConflict | OriginCase::FinalConflictRead412 => {
+                        assert!(attempt <= 4, "fixed default CAS cap");
+                        412
+                    }
+                    _ => 200,
+                }
+            } else {
+                200
+            };
+            if status == 200 {
+                assert!(
+                    controls.insert(key.into(), body.to_vec()).is_none(),
+                    "one accepted write per key"
+                );
+                if descriptor.is_none() {
+                    self.index_acks.fetch_add(1, Ordering::SeqCst);
+                }
+            }
+            self.event(OriginEvent::ControlPut(key.into(), status));
+            Ok(status)
+        }
+        async fn list_raw_document(
+            &self,
+            prefix: &str,
+            token: Option<&str>,
+            maximum_keys: usize,
+            cap: usize,
+        ) -> Result<Vec<u8>, Error> {
+            assert!(matches!(
+                *self.case.lock().unwrap(),
+                OriginCase::LaterGroupRead(_)
+            ));
+            assert!(token.is_none());
+            let raw = self.raw.lock().unwrap();
+            assert_eq!(raw.len(), 2);
+            assert!(raw.len() <= maximum_keys);
+            let mut body = format!(
+                r#"<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><IsTruncated>false</IsTruncated><KeyCount>{}</KeyCount>"#,
+                raw.len()
+            );
+            for key in raw.keys() {
+                assert!(key.starts_with(prefix));
+                body.push_str(&format!("<Contents><Key>{key}</Key></Contents>"));
+            }
+            body.push_str("</ListBucketResult>");
+            assert!(body.len() <= cap);
+            self.event(OriginEvent::List(prefix.into()));
+            Ok(body.into_bytes())
+        }
+    }
+    fn origin_two_partitions() -> (GroupDeclaration, Vec<RawRecord>) {
+        let (_, records) = group();
+        let identity = &records[0].envelope.identity;
+        let declaration = GroupDeclaration::new(
+            vec![super::super::GroupMember {
+                envelope: records[0].envelope.clone(),
+                catalogs: vec![
+                    CatalogId::for_record(identity, "owned-a").unwrap(),
+                    CatalogId::for_record(identity, "owned-b").unwrap(),
+                ],
+            }],
+            &CatalogLimits::default(),
+        )
+        .unwrap();
+        assert_eq!(declaration.partitions.len(), 2);
+        assert!(declaration.partitions[0] < declaration.partitions[1]);
+        (declaration, records)
+    }
+    fn origin_deadline() -> Instant {
+        Instant::now() + std::time::Duration::from_secs(3)
+    }
+    fn origin_publish_prefix(
+        declaration: &GroupDeclaration,
+        second_preflight: u16,
+    ) -> Vec<OriginEvent> {
+        vec![
+            OriginEvent::Ready(None),
+            OriginEvent::ControlGet(declaration.partitions[0].key(), 404, 0),
+            OriginEvent::ControlGet(declaration.partitions[1].key(), second_preflight, 0),
+        ]
+    }
+    fn origin_written_prefix(
+        declaration: &GroupDeclaration,
+        second_preflight: u16,
+    ) -> Vec<OriginEvent> {
+        let limits = CatalogLimits::default();
+        let mut events = origin_publish_prefix(declaration, second_preflight);
+        events.extend([
+            OriginEvent::ControlPut(
+                declaration
+                    .reference(&limits)
+                    .unwrap()
+                    .descriptor_key()
+                    .unwrap(),
+                200,
+            ),
+            OriginEvent::Ready(None),
+            OriginEvent::RawPut(
+                declaration.envelopes(&limits).unwrap()[0]
+                    .identity
+                    .object_key()
+                    .unwrap(),
+                Some(200),
+            ),
+            OriginEvent::ControlGet(declaration.partitions[0].key(), 404, 0),
+            OriginEvent::ControlPut(declaration.partitions[0].key(), 200),
+        ]);
+        events
+    }
+    fn origin_assert_late_read(peer: &OriginPeer, declaration: &GroupDeclaration, status: u16) {
+        let mut expected = origin_written_prefix(declaration, 404);
+        expected.push(OriginEvent::ControlGet(
+            declaration.partitions[1].key(),
+            status,
+            1,
+        ));
+        assert_eq!(
+            *peer.events.lock().unwrap(),
+            expected,
+            "setup/operation order, before error classification"
+        );
+        assert_eq!(peer.index_acks.load(Ordering::SeqCst), 1);
+        assert_eq!(peer.second_puts.load(Ordering::SeqCst), 0);
+        assert_eq!(peer.faults.load(Ordering::SeqCst), 1);
+        peer.assert_index(
+            &declaration.partitions[0],
+            &declaration.envelopes(&CatalogLimits::default()).unwrap(),
+        );
+        assert!(
+            !peer
+                .controls
+                .lock()
+                .unwrap()
+                .contains_key(&declaration.partitions[1].key())
+        );
+        assert_eq!(peer.raw.lock().unwrap().len(), 1);
+    }
+    async fn origin_publish_read(status: u16) {
+        let (declaration, records) = origin_two_partitions();
+        let peer = OriginPeer::new(
+            &[(declaration.clone(), records.clone())],
+            OriginCase::SecondRead(status),
+            false,
+        );
+        let store = CatalogStore::new(peer.clone(), CatalogLimits::default()).unwrap();
+        let error = store
+            .publish(declaration.clone(), records, origin_deadline())
+            .await
+            .unwrap_err();
+        origin_assert_late_read(&peer, &declaration, status);
+        assert_eq!(
+            error,
+            Error::Ambiguous,
+            "postwrite second partition GET{status}"
+        );
+    }
+    async fn origin_preflight_read(status: u16) {
+        let (declaration, records) = origin_two_partitions();
+        let peer = OriginPeer::new(
+            &[(declaration.clone(), records.clone())],
+            OriginCase::PreflightRead(status),
+            false,
+        );
+        let store = CatalogStore::new(peer.clone(), CatalogLimits::default()).unwrap();
+        let error = store
+            .publish(declaration.clone(), records, origin_deadline())
+            .await
+            .unwrap_err();
+        assert_eq!(
+            *peer.events.lock().unwrap(),
+            origin_publish_prefix(&declaration, status)
+        );
+        assert!(peer.controls.lock().unwrap().is_empty());
+        assert!(peer.raw.lock().unwrap().is_empty());
+        assert_eq!(peer.index_acks.load(Ordering::SeqCst), 0);
+        assert_eq!(peer.faults.load(Ordering::SeqCst), 1);
+        assert_eq!(error, Error::Status(status));
+    }
+    async fn origin_raw_failure(case: OriginCase, expected_error: Error) {
+        let (declaration, records) = origin_two_partitions();
+        let peer = OriginPeer::new(&[(declaration.clone(), records.clone())], case, false);
+        let store = CatalogStore::new(peer.clone(), CatalogLimits::default()).unwrap();
+        let error = store
+            .publish(declaration.clone(), records, origin_deadline())
+            .await
+            .unwrap_err();
+        let mut expected = origin_publish_prefix(&declaration, 404);
+        let descriptor = declaration
+            .reference(&CatalogLimits::default())
+            .unwrap()
+            .descriptor_key()
+            .unwrap();
+        expected.push(OriginEvent::ControlPut(descriptor.clone(), 200));
+        expected.push(OriginEvent::Ready(
+            (case == OriginCase::RawReady403).then_some(403),
+        ));
+        if case != OriginCase::RawReady403 {
+            let raw = declaration.envelopes(&CatalogLimits::default()).unwrap()[0]
+                .identity
+                .object_key()
+                .unwrap();
+            expected.push(OriginEvent::RawPut(
+                raw,
+                (case == OriginCase::RawPut403).then_some(403),
+            ));
+        }
+        assert_eq!(
+            *peer.events.lock().unwrap(),
+            expected,
+            "setup and raw failure origin"
+        );
+        assert_eq!(peer.controls.lock().unwrap().len(), 1);
+        assert!(peer.controls.lock().unwrap().contains_key(&descriptor));
+        assert!(peer.raw.lock().unwrap().is_empty());
+        assert_eq!(peer.index_acks.load(Ordering::SeqCst), 0);
+        assert_eq!(error, expected_error);
+    }
+    async fn origin_conflict(final_read_fails: bool) {
+        let (declaration, records) = origin_two_partitions();
+        assert_eq!(CatalogLimits::default().cas_attempts, 4);
+        let case = if final_read_fails {
+            OriginCase::FinalConflictRead412
+        } else {
+            OriginCase::KnownConflict
+        };
+        let peer = OriginPeer::new(&[(declaration.clone(), records.clone())], case, false);
+        let store = CatalogStore::new(peer.clone(), CatalogLimits::default()).unwrap();
+        let error = store
+            .publish(declaration.clone(), records, origin_deadline())
+            .await
+            .unwrap_err();
+        let mut expected = origin_written_prefix(&declaration, 200);
+        for _ in 0..4 {
+            expected.push(OriginEvent::ControlGet(
+                declaration.partitions[1].key(),
+                200,
+                1,
+            ));
+            expected.push(OriginEvent::ControlPut(
+                declaration.partitions[1].key(),
+                412,
+            ));
+        }
+        expected.push(OriginEvent::ControlGet(
+            declaration.partitions[1].key(),
+            if final_read_fails { 412 } else { 200 },
+            1,
+        ));
+        assert_eq!(
+            *peer.events.lock().unwrap(),
+            expected,
+            "all known rejections before the final GET"
+        );
+        assert_eq!(peer.second_puts.load(Ordering::SeqCst), 4);
+        assert_eq!(peer.index_acks.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            peer.faults.load(Ordering::SeqCst),
+            usize::from(final_read_fails)
+        );
+        peer.assert_index(
+            &declaration.partitions[0],
+            &declaration.envelopes(&CatalogLimits::default()).unwrap(),
+        );
+        peer.assert_index(&declaration.partitions[1], &[]);
+        assert_eq!(
+            error,
+            if final_read_fails {
+                Error::Ambiguous
+            } else {
+                Error::Status(412)
+            }
+        );
+    }
+    fn origin_two_groups() -> Vec<(GroupDeclaration, Vec<RawRecord>)> {
+        let (first, records) = group();
+        let limits = CatalogLimits::default();
+        let record = RawRecord::new(
+            "vc",
+            "world-weather",
+            &super::super::ProviderKey::Named {
+                id: "owned-grid".into(),
+            },
+            Period {
+                local_date: 20261019,
+                slot: "all".into(),
+            },
+            2,
+            200,
+            "application/json",
+            None,
+            br#"{}"#.to_vec().into(),
+            &limits.raw,
+        )
+        .unwrap();
+        let second = GroupDeclaration::new(
+            vec![super::super::GroupMember {
+                envelope: record.envelope.clone(),
+                catalogs: vec![CatalogId::for_record(&record.envelope.identity, "owned").unwrap()],
+            }],
+            &limits,
+        )
+        .unwrap();
+        assert_eq!(first.partitions, second.partitions);
+        let mut groups = vec![(first, records), (second, vec![record])];
+        groups.sort_by_key(|(d, _)| d.reference(&limits).unwrap().group_sha256);
+        assert_ne!(
+            groups[0].0.reference(&limits).unwrap().group_sha256,
+            groups[1].0.reference(&limits).unwrap().group_sha256
+        );
+        groups
+    }
+    async fn origin_repair_read(status: u16, materialize: bool) {
+        let groups = origin_two_groups();
+        let limits = CatalogLimits::default();
+        let scope = RepairScope {
+            catalog: groups[0].0.partitions[0].clone(),
+            periods: vec![groups[0].0.members[0].envelope.identity.period.clone()],
+        };
+        let peer = OriginPeer::new(&groups, OriginCase::LaterGroupRead(status), true);
+        let store = CatalogStore::new(peer.clone(), limits.clone()).unwrap();
+        let result = if materialize {
+            store.repair(&scope, origin_deadline()).await
+        } else {
+            store.repair_index(&scope, origin_deadline()).await
+        };
+        let mut descriptor_by_raw = BTreeMap::new();
+        for (d, _) in &groups {
+            descriptor_by_raw.insert(
+                d.envelopes(&limits).unwrap()[0]
+                    .identity
+                    .object_key()
+                    .unwrap(),
+                d.reference(&limits).unwrap().descriptor_key().unwrap(),
+            );
+        }
+        let raw_keys = descriptor_by_raw.keys().cloned().collect::<Vec<_>>();
+        let prefix = format!("{}/", raw_keys[0].rsplit_once('/').unwrap().0);
+        let first = groups[0].0.envelopes(&limits).unwrap()[0]
+            .identity
+            .object_key()
+            .unwrap();
+        let later = groups[1].0.envelopes(&limits).unwrap()[0]
+            .identity
+            .object_key()
+            .unwrap();
+        let mut expected = vec![OriginEvent::Ready(None), OriginEvent::List(prefix)];
+        for key in &raw_keys {
+            expected.push(OriginEvent::RawGet(key.clone(), 200, 0));
+        }
+        for key in &raw_keys {
+            expected.push(OriginEvent::ControlGet(
+                descriptor_by_raw[key].clone(),
+                200,
+                0,
+            ));
+        }
+        expected.extend([
+            OriginEvent::RawGet(first, 200, 0),
+            OriginEvent::ControlGet(scope.catalog.key(), 404, 0),
+            OriginEvent::ControlPut(scope.catalog.key(), 200),
+            OriginEvent::RawGet(later, status, 1),
+        ]);
+        assert_eq!(
+            *peer.events.lock().unwrap(),
+            expected,
+            "real discovery/group/write/later-read order before error assertion"
+        );
+        assert_eq!(peer.index_acks.load(Ordering::SeqCst), 1);
+        assert_eq!(peer.faults.load(Ordering::SeqCst), 1);
+        assert_eq!(peer.raw.lock().unwrap().len(), 2);
+        assert_eq!(
+            peer.controls.lock().unwrap().len(),
+            3,
+            "two seeded descriptors and exactly one written index"
+        );
+        peer.assert_index(&scope.catalog, &groups[0].0.envelopes(&limits).unwrap());
+        assert_eq!(
+            result.unwrap_err(),
+            Error::Ambiguous,
+            "later group GET{status}; materialize={materialize}"
+        );
+    }
+    #[tokio::test]
+    async fn status_origin_publish_second_get_503() {
+        origin_publish_read(503).await;
+    }
+    #[tokio::test]
+    async fn status_origin_publish_second_get_403() {
+        origin_publish_read(403).await;
+    }
+    #[tokio::test]
+    async fn status_origin_preflight_get_503() {
+        origin_preflight_read(503).await;
+    }
+    #[tokio::test]
+    async fn status_origin_preflight_get_403() {
+        origin_preflight_read(403).await;
+    }
+    #[tokio::test]
+    async fn status_origin_second_direct_put_403() {
+        let (declaration, records) = origin_two_partitions();
+        let peer = OriginPeer::new(
+            &[(declaration.clone(), records.clone())],
+            OriginCase::SecondPut403,
+            false,
+        );
+        let store = CatalogStore::new(peer.clone(), CatalogLimits::default()).unwrap();
+        let error = store
+            .publish(declaration.clone(), records, origin_deadline())
+            .await
+            .unwrap_err();
+        let mut expected = origin_written_prefix(&declaration, 404);
+        expected.extend([
+            OriginEvent::ControlGet(declaration.partitions[1].key(), 404, 1),
+            OriginEvent::ControlPut(declaration.partitions[1].key(), 403),
+        ]);
+        assert_eq!(*peer.events.lock().unwrap(), expected);
+        assert_eq!(peer.index_acks.load(Ordering::SeqCst), 1);
+        assert_eq!(peer.second_puts.load(Ordering::SeqCst), 1);
+        assert_eq!(peer.faults.load(Ordering::SeqCst), 0);
+        peer.assert_index(
+            &declaration.partitions[0],
+            &declaration.envelopes(&CatalogLimits::default()).unwrap(),
+        );
+        assert!(
+            !peer
+                .controls
+                .lock()
+                .unwrap()
+                .contains_key(&declaration.partitions[1].key())
+        );
+        assert_eq!(error, Error::Status(403));
+    }
+    #[tokio::test]
+    async fn status_origin_raw_ready_status_is_not_put_evidence() {
+        origin_raw_failure(OriginCase::RawReady403, Error::Ambiguous).await;
+    }
+    #[tokio::test]
+    async fn status_origin_raw_transport_error_is_not_put_evidence() {
+        origin_raw_failure(OriginCase::RawError403, Error::Ambiguous).await;
+    }
+    #[tokio::test]
+    async fn status_origin_raw_direct_put_403() {
+        origin_raw_failure(OriginCase::RawPut403, Error::Status(403)).await;
+    }
+    #[tokio::test]
+    async fn status_origin_prewrite_ready_403() {
+        let (declaration, records) = origin_two_partitions();
+        let peer = OriginPeer::new(
+            &[(declaration.clone(), records.clone())],
+            OriginCase::PrewriteReady403,
+            false,
+        );
+        let store = CatalogStore::new(peer.clone(), CatalogLimits::default()).unwrap();
+        let error = store
+            .publish(declaration, records, origin_deadline())
+            .await
+            .unwrap_err();
+        assert_eq!(
+            *peer.events.lock().unwrap(),
+            vec![OriginEvent::Ready(Some(403))]
+        );
+        assert!(peer.controls.lock().unwrap().is_empty());
+        assert!(peer.raw.lock().unwrap().is_empty());
+        assert_eq!(error, Error::Status(403));
+    }
+    #[tokio::test]
+    async fn status_origin_same_store_invocations_do_not_share_put_evidence() {
+        let (declaration, records) = origin_two_partitions();
+        let peer = OriginPeer::new(
+            &[(declaration.clone(), records.clone())],
+            OriginCase::Descriptor403,
+            false,
+        );
+        let store = CatalogStore::new(peer.clone(), CatalogLimits::default()).unwrap();
+        let first = store
+            .publish(declaration.clone(), records.clone(), origin_deadline())
+            .await
+            .unwrap_err();
+        let mut expected = origin_publish_prefix(&declaration, 404);
+        expected.push(OriginEvent::ControlPut(
+            declaration
+                .reference(&CatalogLimits::default())
+                .unwrap()
+                .descriptor_key()
+                .unwrap(),
+            403,
+        ));
+        assert_eq!(*peer.events.lock().unwrap(), expected);
+        assert_eq!(first, Error::Status(403));
+        peer.reset_after_rejection(OriginCase::SecondRead(403));
+        let second = store
+            .publish(declaration.clone(), records, origin_deadline())
+            .await
+            .unwrap_err();
+        origin_assert_late_read(&peer, &declaration, 403);
+        assert_eq!(
+            second,
+            Error::Ambiguous,
+            "previous invocation's terminal403 is not read provenance"
+        );
+    }
+    #[tokio::test]
+    async fn status_origin_known_cas_412_exhaustion() {
+        origin_conflict(false).await;
+    }
+    #[tokio::test]
+    async fn status_origin_final_get_412_is_not_cas_evidence() {
+        origin_conflict(true).await;
+    }
+    #[tokio::test]
+    async fn status_origin_repair_later_group_get_403() {
+        origin_repair_read(403, true).await;
+    }
+    #[tokio::test]
+    async fn status_origin_repair_later_group_get_503() {
+        origin_repair_read(503, true).await;
+    }
+    #[tokio::test]
+    async fn status_origin_repair_index_later_group_get_403() {
+        origin_repair_read(403, false).await;
+    }
+    #[tokio::test]
+    async fn status_origin_repair_index_later_group_get_503() {
+        origin_repair_read(503, false).await;
     }
 }
