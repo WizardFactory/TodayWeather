@@ -6,6 +6,8 @@ mod feed;
 mod http;
 #[path = "runtime_services/inventory.rs"]
 mod inventory;
+#[path = "runtime_services/inventory_nation.rs"]
+mod inventory_nation;
 #[path = "runtime_services/narrative.rs"]
 mod narrative;
 #[path = "runtime_services/native.rs"]
