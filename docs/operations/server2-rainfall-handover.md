@@ -59,3 +59,9 @@ Never use the owned smoke's fixed synthetic activation as production input.
 Rebuild the screenshot PDF from the maintained [manual JSON](../evidence/tasks/issue-2819-rainfall-handover/manual.json)
 and its three relative images with the screenshot-manual builder; no local raw report
 is required. Re-render and inspect all pages after changing the manual.
+
+
+The [runtime ownership diagram](../architecture/diagrams/server2-runtime-services.html)
+shows the demand-driven owner, conditional authority and separately approved
+operator activation. Its source references pin the tested source commit; it does
+not establish a production handover or complete eligible recovery pair.

@@ -92,3 +92,13 @@ Earlier source maps and original failures remain revision-scoped.
 
 The PDF wording distinguishes eligible canonical rain predictions from an observed-dry
 miss. Its3 rendered pages were re-read after that clarification.
+
+
+## Committed architecture binding
+
+The maintained [runtime ownership diagram](../../../architecture/diagrams/server2-runtime-services.html)
+is regenerated from actual committed source `5b935299580d8c7b29a8489fd1587cd78e96e45c`.
+All26 source references are retained. Showcase validation, artifact/provenance and
+real-browser gates passed; four1440/2048 light/dark captures were individually read.
+The selected layout has zero crossings and one readable three-bend shared-S3 branch.
+This diagram documents repository wiring, not an executed production stop/activation.
