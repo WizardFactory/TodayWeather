@@ -22,7 +22,9 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde_json::{Value, json};
-use server2::geocode::{GeocodeError, Geocoder, GeocoderConfig};
+use server2::geocode::{
+    BoxFuture, GeoProvider, GeocodeError, Geocoder, GeocoderConfig, ProviderDemand, Quota,
+};
 use std::{
     collections::VecDeque,
     sync::{
@@ -104,6 +106,178 @@ pub fn service(stub: &Stub) -> Geocoder {
     Geocoder::new(config(stub))
         .unwrap()
         .with_quota(Arc::new(CountingQuota::new(1000)))
+}
+
+#[derive(Default)]
+struct SelectedQuota {
+    requested: Mutex<Vec<ProviderDemand>>,
+    denied: Vec<(GeoProvider, usize)>,
+}
+impl Quota for SelectedQuota {
+    fn reserve(&self, demands: Vec<ProviderDemand>) -> BoxFuture<'_, Result<(), GeocodeError>> {
+        Box::pin(async move {
+            self.requested
+                .lock()
+                .unwrap()
+                .extend(demands.iter().copied());
+            if demands
+                .iter()
+                .any(|d| self.denied.contains(&(d.provider, d.key_index)))
+            {
+                Err(GeocodeError::Quota)
+            } else {
+                Ok(())
+            }
+        })
+    }
+}
+fn selected(provider: GeoProvider, key_index: usize) -> ProviderDemand {
+    ProviderDemand {
+        provider,
+        key_index,
+        attempts: 1,
+    }
+}
+
+#[tokio::test]
+async fn funds_google_then_kakao_only_when_address_falls_back() {
+    let peer = stub(vec![ok("kakao.addr.jamsil")], vec![ok("google.addr.zero")]).await;
+    let quota = Arc::new(SelectedQuota::default());
+    let geo = Geocoder::new(config(&peer))
+        .unwrap()
+        .with_quota(quota.clone());
+    let result = geo.addr("잠실본동", "ko").await.unwrap();
+    assert_eq!(result.country.as_deref(), Some("KR"));
+    assert_eq!(
+        *quota.requested.lock().unwrap(),
+        vec![
+            selected(GeoProvider::Google, 0),
+            selected(GeoProvider::Kakao, 0)
+        ]
+    );
+    assert_eq!(peer.state.count.load(Ordering::Acquire), 2);
+    let calls = peer.state.calls.lock().unwrap();
+    assert!(calls[0].starts_with("/maps/"));
+    assert!(calls[1].starts_with("/v2/local/"));
+}
+
+#[tokio::test]
+async fn funds_no_http_when_all_selected_keys_are_denied() {
+    let peer = stub(vec![], vec![]).await;
+    let mut options = config(&peer);
+    options.kakao_keys.push("synthetic-k1".into());
+    let quota = Arc::new(SelectedQuota {
+        denied: vec![(GeoProvider::Kakao, 0), (GeoProvider::Kakao, 1)],
+        ..Default::default()
+    });
+    let geo = Geocoder::new(options).unwrap().with_quota(quota.clone());
+    assert!(matches!(
+        geo.coord([37.3, 127.0], "ko").await,
+        Err(GeocodeError::Quota)
+    ));
+    assert_eq!(
+        *quota.requested.lock().unwrap(),
+        vec![
+            selected(GeoProvider::Kakao, 0),
+            selected(GeoProvider::Kakao, 1)
+        ]
+    );
+    assert_eq!(peer.state.count.load(Ordering::Acquire), 0);
+}
+
+struct SlowQuota;
+impl Quota for SlowQuota {
+    fn reserve(&self, _: Vec<ProviderDemand>) -> BoxFuture<'_, Result<(), GeocodeError>> {
+        Box::pin(async {
+            tokio::time::sleep(Duration::from_secs(6)).await;
+            Ok(())
+        })
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn funds_admission_wait_cannot_extend_owner_deadline_or_start_late_http() {
+    let peer = stub(vec![], vec![]).await;
+    let geo = Geocoder::new(config(&peer))
+        .unwrap()
+        .with_quota(Arc::new(SlowQuota));
+    let start = tokio::time::Instant::now();
+    assert!(matches!(
+        geo.coord([37.3, 127.0], "ko").await,
+        Err(GeocodeError::Provider)
+    ));
+    assert_eq!(start.elapsed(), Duration::from_secs(5));
+    tokio::time::advance(Duration::from_secs(2)).await;
+    assert_eq!(peer.state.count.load(Ordering::Acquire), 0);
+    assert_eq!(geo.active_owners(), 0);
+}
+
+#[tokio::test]
+async fn funds_kakao_only_without_depending_on_exhausted_google() {
+    let peer = stub(vec![ok("kakao.coord.space")], vec![]).await;
+    let quota = Arc::new(SelectedQuota {
+        denied: vec![(GeoProvider::Google, 0)],
+        ..Default::default()
+    });
+    let geo = Geocoder::new(config(&peer))
+        .unwrap()
+        .with_quota(quota.clone());
+    let first = geo.coord([37.3, 127.0], "ko").await;
+    assert!(
+        first.is_ok(),
+        "complete Kakao does not require Google funding"
+    );
+    let first = first.unwrap();
+    assert_eq!(first.country.as_deref(), Some("KR"));
+    assert!(first.kma_address.is_some());
+    assert_eq!(
+        bytes(&geo.coord([37.3, 127.0], "ko").await.unwrap()),
+        bytes(&first)
+    );
+    assert_eq!(
+        *quota.requested.lock().unwrap(),
+        vec![selected(GeoProvider::Kakao, 0)]
+    );
+    assert_eq!(peer.state.count.load(Ordering::Acquire), 1);
+}
+
+#[tokio::test]
+async fn funds_only_the_google_address_attempt_without_unused_kakao_keys() {
+    let peer = stub(vec![], vec![ok("google.addr.nocountry")]).await;
+    let quota = Arc::new(SelectedQuota {
+        denied: vec![(GeoProvider::Kakao, 0)],
+        ..Default::default()
+    });
+    let geo = Geocoder::new(config(&peer))
+        .unwrap()
+        .with_quota(quota.clone());
+    assert!(geo.addr("Somewhere", "en").await.is_ok());
+    assert_eq!(
+        *quota.requested.lock().unwrap(),
+        vec![selected(GeoProvider::Google, 0)]
+    );
+    assert_eq!(peer.state.count.load(Ordering::Acquire), 1);
+}
+
+#[tokio::test]
+async fn funds_next_kakao_key_after_local_exhaustion_without_unfunded_http() {
+    let peer = stub(vec![ok("kakao.coord.space")], vec![]).await;
+    let mut options = config(&peer);
+    options.kakao_keys = vec!["synthetic-k0".into(), "synthetic-k1".into()];
+    let quota = Arc::new(SelectedQuota {
+        denied: vec![(GeoProvider::Kakao, 0), (GeoProvider::Google, 0)],
+        ..Default::default()
+    });
+    let geo = Geocoder::new(options).unwrap().with_quota(quota.clone());
+    assert!(geo.coord([37.3, 127.0], "ko").await.is_ok());
+    assert_eq!(
+        *quota.requested.lock().unwrap(),
+        vec![
+            selected(GeoProvider::Kakao, 0),
+            selected(GeoProvider::Kakao, 1)
+        ]
+    );
+    assert_eq!(peer.state.count.load(Ordering::Acquire), 1);
 }
 fn ok(name: &str) -> (u16, Value, Duration) {
     (200, fixture(name), Duration::ZERO)
@@ -210,7 +384,7 @@ async fn geocode_kakao_rotates_auth_quota_transient_each_key_once() {
     let geo = Geocoder::new(options).unwrap().with_quota(quota.clone());
     assert!(geo.coord([37.566, 126.978], "ko").await.is_ok());
     assert_eq!(peer.state.count.load(Ordering::Acquire), 3);
-    assert_eq!(quota.remaining(), 0); // entire possible chain consumed once, including unused Google
+    assert_eq!(quota.remaining(), 1); // Three Kakao attempts; unused Google stays available.
 }
 #[tokio::test]
 async fn geocode_same_key_waiter_cancel_does_not_cancel_owner_or_refund_quota() {
@@ -237,7 +411,7 @@ async fn geocode_same_key_waiter_cancel_does_not_cancel_owner_or_refund_quota() 
     first.abort();
     assert!(geo.coord([37.566, 126.978], "ko").await.is_ok());
     assert_eq!(peer.state.count.load(Ordering::Acquire), 1);
-    assert_eq!(quota.remaining(), 0);
+    assert_eq!(quota.remaining(), 1); // One shared Kakao owner remains funded after waiter cancellation.
     assert_eq!(geo.active_owners(), 0);
 }
 #[tokio::test]

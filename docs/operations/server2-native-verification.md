@@ -151,6 +151,26 @@ verification record for final source/hash and standalone host mapping admission.
 
 This labelled image is rendered from actual CLI records; browser/window capture was unavailable. It is not an application UI screenshot or another execution. Real S3, live shadow, quota, production listener and eligible previous full-release gates remain open.
 
+## Selected geocoder funding regression (#2819 B1)
+
+From `server2/`, run the separate owned-peer smoke:
+
+```sh
+cargo run --locked --offline --example geocode_funding_smoke
+```
+
+It composes the real geocoder and S08 funding adapter with an owned loopback HTTP
+provider and volatile conditional budget objects. A synthetic one-unit Google budget
+is exhausted before a Korean Kakao lookup. PASS requires Kakao success with its KMA
+projection, one Kakao HTTP request, no Google HTTP or additional Google authority
+usage, and a matching cache hit with no extra work. A foreign lookup must fail funding
+without HTTP. The one-unit limits expose counts; real S08 authority blocks are not
+HTTP counters. No `.env`, credentials or external service is used. This does not qualify
+production quotas, S3 behavior, shadow, or the rollback release.
+
+See [verification](../evidence/tasks/issue-2819-funding/verification.md) and the
+[illustrative contract flow](../architecture/diagrams/server2-geocode-funding.html).
+
 ## DataGoKr selected-attempt funding (#2819 B2)
 
 For an isolated local composition check, run from `server2/`:
