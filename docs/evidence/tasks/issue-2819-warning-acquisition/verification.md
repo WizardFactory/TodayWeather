@@ -112,3 +112,31 @@ remain unchanged. Actual main light1440/dark2048 views were inspected; off-scree
 card bodies were source-checked only. No new render or production execution is
 claimed. C6, remaining #2819 findings, #2704/#2705, real quotas, EC2, full rollback
 eligibility and seven-day shadow remain open. C1/B1 are separate branches.
+
+
+### 2026-10-19 supporting CI storage-phase control
+
+CI job117884004804 on2e433c43 failed one existing library regression
+(137 passed /1failed): the PUT had committed and the returned result was the
+correct `Ambiguous`, but the test expected one reconciliation GET and saw zero.
+The original100ms request budget could expire while the test coordinator still
+held the PUT reply. This is a fixture timing failure, not a demonstrated product
+classification defect. The complete failure log and source identity are retained.
+
+An isolated150ms blocking pause did not reproduce the failure (not a Red). An
+async150ms reply delay did reproduce the same0-vs-1GET failure while preserving
+the committed body and Ambiguous result. The final cfg(test)-only control holds
+Tokio virtual time while real preparation reaches PUT, GET and the held CPU
+permit, then advances101ms against the unchanged100ms limit. Its companion
+contention case uses observed phases instead of a30ms scheduling assumption.
+An independent10s wall watchdog bounds broken fixtures. Pre-PUT timeout and
+I/O-capacity controls remain distinct. No production storage, deadline,
+acquisition180s or delivery5s policy changes.
+
+The storage implementation before `#[cfg(test)]` is byte-identical. Existing
+release warning-smoke code is consequently unchanged; any retained executable
+reuse is qualified as unchanged production/entrypoint code, not a fresh build or
+raw whole-file source identity. Current run maps, original failed probes, new
+checks, separate smoke and independent review are bound in the PR2829 record.
+The existing runtime diagrams are unchanged; no new runtime flow or render is
+claimed. This does not qualify production, a previous full bundle or issue closure.
