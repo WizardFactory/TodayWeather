@@ -1,5 +1,14 @@
 # C6 push startup credential verification
 
+2026-10-19 integration note: the dated results and source/binary hashes below
+retain their original execution identities. Statements about an unmerged or
+parallel parent describe that original verification point. The integrated source
+now includes C1/B1 and the preceding ordered fixes. Current source-bound checks
+require explicit dev and release package rebuilds, separate owned smoke, independent
+review and exact CI/tree reconciliation. The final [PR2830 integration record](https://github.com/WizardFactory/TodayWeather/pull/2830)
+binds those actual results; this note does not relabel historical checks or
+qualify production, a full recovery bundle, shadow or issue closure.
+
 Scope: [#2819](https://github.com/WizardFactory/TodayWeather/issues/2819), [spec](../../../../specs/issue-2819-push-credentials.md), isolated child of unmerged C5 PR #2829 ba56cd84. Pre-merge only. Initial independent review PASS/no Required; selected tool/manual corrections are applied and current re-review/CI remain pending; exact C5 parent CI14/14 passed; no merge, host/production/full-bundle/shadow or issue closure claim.
 
 ## Behavior and retained checks
