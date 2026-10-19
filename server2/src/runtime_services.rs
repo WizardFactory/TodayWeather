@@ -21,6 +21,8 @@ pub struct RuntimeServices {
     pub warning_store: Option<Arc<ProcessWarnings>>,
     pub warning_api: Option<Arc<crate::warnings::service::WarningService<ProcessS3>>>,
     pub warning_feed: Option<Arc<ProcessFeed>>,
+    /// Controlled source owner; production periodic work never calls the raw collector below.
+    pub warning_cycles: Option<Arc<dyn crate::warnings::acquisition_worker::Acquisition>>,
     pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
     pub narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>>,
     pub native_fetch: crate::push::deliver::native_fetch::NativeFetch,
@@ -181,6 +183,7 @@ impl RuntimeServices {
         Ok(Self {
             delivery,
             warning_acquire: built.warning_acquire,
+            warning_cycles: built.warning_cycles,
             narrative_acquire: built.narrative_acquire,
             gateway: built.gateway,
             push,

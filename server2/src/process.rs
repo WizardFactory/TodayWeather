@@ -109,6 +109,10 @@ where
         io::Error::other("invalid gateway configuration")
     })?;
     let push = gateway.push.clone();
+    let mut warning = gateway
+        .warning_cycles
+        .clone()
+        .map(crate::warnings::acquisition_worker::Owner::new);
     // Constructing services is inert for delivery. Both binds precede worker start.
     let bound = async {
         let public = TcpListener::bind(config.public_addr).await?;
@@ -154,6 +158,11 @@ where
     let private = BoundedListener::new(private, 16, lifetime);
     let state = Arc::new(SharedState::new(&config));
     let mut delivery = gateway.delivery.clone().map(|workers| workers.start());
+    if push.is_some()
+        && let Some(warning) = &mut warning
+    {
+        warning.start();
+    }
     let narrative = gateway
         .narrative_acquire
         .clone()
@@ -210,6 +219,9 @@ where
     if let Some(push) = &push {
         push.quiesce();
     }
+    if let Some(warning) = &mut warning {
+        warning.quiesce();
+    }
     tx.send_replace(true);
     if let Some(narrative) = narrative {
         narrative.stop().await;
@@ -235,19 +247,28 @@ where
         }
         true
     };
-    let outcome =
-        tokio::time::timeout_at(deadline, async { tokio::join!(worker_drain, http_drain) }).await;
+    let warning_drain = async {
+        if let Some(warning) = &warning {
+            warning.drain(deadline).await
+        } else {
+            true
+        }
+    };
+    let outcome = tokio::time::timeout_at(deadline, async {
+        tokio::join!(worker_drain, http_drain, warning_drain)
+    })
+    .await;
     match outcome {
-        Ok(((jobs, writer), http)) => obs::event(
+        Ok(((jobs, writer), http, warning)) => obs::event(
             Component::Process,
             Stage::Shutdown,
-            if jobs && writer && http {
+            if jobs && writer && http && warning {
                 Cause::None
             } else {
                 Cause::Shutdown
             },
             Action::Drain,
-            if jobs && writer && http {
+            if jobs && writer && http && warning {
                 Outcome::Success
             } else {
                 Outcome::Unknown
@@ -260,6 +281,9 @@ where
             },
         ),
         Err(_) => {
+            if let Some(warning) = &warning {
+                warning.abort();
+            }
             listeners.abort_all();
             // Dropping supervisor aborts its owned JoinSet; writer drain below cancels its handle.
             drop(delivery.take());
@@ -302,4 +326,64 @@ where
     );
 
     result
+}
+
+#[cfg(test)]
+mod warning_shutdown_tests {
+    use super::*;
+    use crate::warnings::acquisition_worker::Acquisition;
+    use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
+    struct Held {
+        closed: AtomicBool,
+        aborted: AtomicBool,
+    }
+    impl Acquisition for Held {
+        fn cycle(&self, _: tokio::time::Instant) -> crate::gateway::BoxFuture<'_, ()> {
+            panic!("HTTP-only process cannot start a periodic driver")
+        }
+        fn next_delay(&self) -> Duration {
+            Duration::from_secs(180)
+        }
+        fn idle(&self) -> crate::gateway::BoxFuture<'_, ()> {
+            assert!(self.closed.load(SeqCst), "close precedes HTTP drain");
+            Box::pin(std::future::pending())
+        }
+        fn close(&self) {
+            self.closed.store(true, SeqCst);
+        }
+        fn abort(&self) {
+            self.aborted.store(true, SeqCst);
+        }
+    }
+    #[tokio::test]
+    async fn http_only_keeps_five_second_budget_and_reports_incomplete_warning_drain() {
+        let held = Arc::new(Held {
+            closed: AtomicBool::new(false),
+            aborted: AtomicBool::new(false),
+        });
+        let source = held.clone();
+        let began = tokio::time::Instant::now();
+        let result = serve(
+            Config {
+                public_addr: "127.0.0.1:0".parse().unwrap(),
+                metrics_addr: "127.0.0.1:0".parse().unwrap(),
+                ..Config::default()
+            },
+            move || {
+                let mut services = RuntimeServices::from_vars(&|_| None)?;
+                services.warning_cycles = Some(source);
+                Ok(services)
+            },
+            |listener| listener.abort(),
+        )
+        .await;
+        assert!(result.is_err());
+        assert!(held.closed.load(SeqCst));
+        assert!(
+            held.aborted.load(SeqCst),
+            "deadline/guard must request cancellation of incomplete warning work"
+        );
+        assert!(began.elapsed() >= Duration::from_secs(5));
+        assert!(began.elapsed() < Duration::from_secs(7));
+    }
 }
