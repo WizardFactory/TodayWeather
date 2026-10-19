@@ -56,7 +56,8 @@
     "server2/tests/domestic/source_s3.rs",
     "server2/tests/integration/test_observability.py",
     "server2/tools/shadow/harness.py",
-    "server2/tests/integration/test_shadow.py"
+    "server2/tests/integration/test_shadow.py",
+    "server2/tests/golden/records.json"
   ],
   "outside": [
     {

@@ -30,17 +30,18 @@ function harness(kaq, airkorea, options = {}) {
         };
     }
     const converter = load('lib/aqi.converter.js');
-    const keco = load('controllers/kecoController.js', {'../lib/aqi.converter': converter});
+    const keco = load('controllers/kecoController.js', {'../lib/aqi.converter': converter, async: require('async'), '../models/modelMsrStnInfo.js': options.stationModel || Stub, '../models/arpltnKeco.js': options.observationModel || Stub});
     const Town = load('controllers/controllerTown.js', {'../controllers/kecoController': keco});
     const Detail = load('controllers/controllerTown24h.js', {
         async: require('async'), '../controllers/controllerTown': Town, '../controllers/kecoController': keco,
         '../lib/aqi.converter': converter, '../lib/kmaTimeLib': load('lib/kmaTimeLib.js'),
-        '../controllers/kaq.hourly.forecast.controller': provider('kaq', kaq),
-        '../controllers/airkorea.hourly.forecast.controller': provider('airkorea', airkorea)
+        '../controllers/kaq.hourly.forecast.controller': options.kaqController || provider('kaq', kaq),
+        '../controllers/airkorea.hourly.forecast.controller': options.airkoreaController || provider('airkorea', airkorea),
+        '../lib/AQI/airFallback': options.fallback || Stub
     });
     const detail = new Detail();
-    return {detail, calls, get(info, source = 'kaq') {
-        return new Promise(resolve => detail._getAirForecast(info, source, 'airkorea', (error, result) => resolve({error, result})));
+    return {detail, keco, calls, get(info, source = 'kaq', station) {
+        return new Promise(resolve => detail._getAirForecast(info, source, 'airkorea', (error, result) => resolve({error, result}), station));
     }};
 }
 function airInfo() {
