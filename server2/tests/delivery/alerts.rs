@@ -230,6 +230,7 @@ async fn conditional_worker_commits_state_before_send_and_restart_cannot_resend(
         .coll(Coll::Alert)
         .get(0)
         .unwrap()
+        .unwrap()
         .doc;
     assert_eq!(
         doc.get("precipAlerts").get("pushTime"),
@@ -300,12 +301,14 @@ async fn unregistered_token_disables_all_alerts_without_touching_alarms() {
         state
             .coll(Coll::Alert)
             .iter()
+            .map(Result::unwrap)
             .all(|(_, r)| r.doc.get("enable") == &Val::Bool(false))
     );
     assert_eq!(
         state
             .coll(Coll::Alarm)
             .iter()
+            .map(Result::unwrap)
             .next()
             .unwrap()
             .1
@@ -428,6 +431,7 @@ async fn concurrent_user_update_during_weather_is_preserved_and_not_sent() {
         .coll(Coll::Alert)
         .get(0)
         .unwrap()
+        .unwrap()
         .doc;
     assert_eq!(doc.get("name"), &Val::Str("new name".into()));
     assert!(doc.get("precipAlerts").get("pushTime").is_nullish());
@@ -460,6 +464,7 @@ async fn no_change_still_updates_alert_state_without_a_provider_call() {
         .unwrap()
         .coll(Coll::Alert)
         .get(0)
+        .unwrap()
         .unwrap()
         .doc;
     assert_eq!(doc.get("precipAlerts").get("lastState"), &Val::Num(0.));
