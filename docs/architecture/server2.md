@@ -4090,3 +4090,36 @@ readiness endpoint or qualify S3/credential-source health, a production recovery
 shadow or cutover. The [runtime-services diagram](diagrams/server2-runtime-services.html)
 retains process/writer/storage ownership; its final source pin is bound to the implemented
 code before PR review, not to an uncommitted future design.
+
+
+## Final registration reconciliation (F1 / #2819)
+
+A final-only registration copy is distinct from the earlier merge import. The
+complete two-collection export binds stable source/store/database scope, increasing
+generation, baseline/final/raw/conversion hashes, target state and operational
+evidence references. References are input bindings, not proof legacy senders
+stopped or editors froze. The [cutover order](../operations/server2-cutover.md#4-authorized-activation-sequence)
+requires those actions before the final export, including gather-host loops.
+
+The preview compares a full native fingerprint and source-owned baseline. Source
+absence deletes only an unchanged provably imported row; native creates/edits and
+tombstones remain protected. The exact encoded one-entry plan must fit existing
+durable limits before readiness/write; no chunking, replan or original retry.
+Apply publishes the same bytes through the existing conditional journal. A private
+create_new/fsync attempt file precedes the original PUT. Existing or uncertain
+custody permits read-only observation or existing readback/conditional-void
+settlement, never automatic resubmission. Custody loss/copy is not globally fenced
+across arbitrary new callers; uncertain operator reuse stays blocked.
+
+Canonical State carries the typed source marker in journal/head and snapshot/head,
+through catch-up, later native commits and compaction. Old unmarked encoding stays
+unchanged; merge-only import is refused after finalization. Prior writers that
+discard marker metadata are ineligible. A genuine post-finalization recovery pair
+is still required, preserving forecastNarrative and current claims/state.
+
+See the [CLI/manual](../operations/server2-final-registration-copy.md) and
+[selected owned proof](../evidence/tasks/issue-2819-final-registration-copy/verification.md).
+Local188-test/4-case proof does not establish actual operational freeze/export,
+old-binary compatibility, IAM, a whole eligible release pair or production action.
+Rainfall input has separately been selected as current minute-rns compatibility;
+its durable owner/handover remains separate until implemented and verified.

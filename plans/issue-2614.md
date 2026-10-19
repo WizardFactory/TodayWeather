@@ -683,3 +683,14 @@ release live warning work. Existing claim/send/drain policy stays. The selected 
 owned peer/real-time evidence and final diagram precede independent review and exact
 parent/current CI at pre-merge only. This record does not close full E3, #2819, #2704 or
 #2705, or authorize merge, cloud actions, live provider/device sends, shadow or cutover.
+
+
+F1 / #2819 candidate: complete final registration export reconciliation preserves
+native edits/tombstones and removes unchanged source-owned absent rows through one
+bounded existing-journal operation. Canonical generation marker survives state
+recovery and native compaction; old writers dropping it are ineligible. Actual
+local188passed/4ignored and four owned CLI cases are separate from operational
+sender stop/edit freeze/final Mongo copy or full two-release eligibility. See
+[manual](../docs/operations/server2-final-registration-copy.md). AK selected current
+ASOS minute-rns compatibility for F2, preserving cumulative statistics; implementation
+and nonoverlapping owner/baseline evidence still gate activation. No shadow/switch.

@@ -265,6 +265,8 @@ pub struct State {
     pub seq: u64,
     /// Next natural-order record number.
     pub next_n: u64,
+    /// Final source-copy highwater; carried through journal catch-up and snapshot heads.
+    pub source: Option<super::final_copy::SourceMark>,
 }
 impl State {
     pub fn coll(&self, c: Coll) -> &Collection {

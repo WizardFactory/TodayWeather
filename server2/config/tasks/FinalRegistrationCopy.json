@@ -1,0 +1,93 @@
+{
+  "task": "FinalRegistrationCopy",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "F1 bounded final legacy registration export reconciliation including source-owned absence tombstones through the existing durable state journal; operational stop/edit-freeze evidence is distinct from code input/state validation; no actual host/database/AWS/provider/send/deploy/switch, no F2 rainfall wiring, no quota2724, no merge authority. Preparation gate precedes all runtime/test/tool/manual implementation.",
+  "server2_paths": [
+    "server2/config/tasks/FinalRegistrationCopy.json",
+    "server2/Cargo.toml",
+    "server2/src/push/mod.rs",
+    "server2/src/push/final_copy.rs",
+    "server2/src/push/durable.rs",
+    "server2/tools/state/push_registration_final_copy.rs",
+    "server2/examples/final_registration_copy_smoke.rs",
+    "server2/tools/final_registration_copy_smoke.py",
+    "server2/tests/state.rs",
+    "server2/tests/state/final_copy.rs",
+    "server2/tests/state/fixtures/final-copy.json",
+    "server2/src/push/store.rs",
+    "server2/src/push/migrate.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-final-registration-copy.md",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2819-final-registration-copy.md",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2819-final-registration-copy.md",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-cutover.json",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-cutover.html",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-cutover.md",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-cutover.pdf",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-final-registration-copy.md",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-final-registration-copy.pdf",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-final-registration-copy/verification.md",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-final-registration-copy/final-copy.png",
+      "category": "documentation",
+      "reason": "Task-specific intent/spec/plan or root-owned maintained state/cutover/manual/diagram and synthetic selected evidence; no server2 implementation outside server2"
+    }
+  ],
+  "ownership": {
+    "worker": "Task-specific declaration/intent/spec/plan/test design now; scoped implementation only after root gate",
+    "root": "All lifecycle/stage state, shared notebook, Cargo lease/build schedule, shared architecture/cutover/parent plan/manual/diagram integration, review/network/PR endpoint decisions",
+    "endpoint": "pre-merge; no merge, auto-merge or production action"
+  },
+  "design_gate": "Root must confirm atomic entry size boundary, durable final-copy marker/high-water and compatibility approach before implementation; no new independent writer/control prefix."
+}
