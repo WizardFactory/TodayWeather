@@ -2,6 +2,7 @@
 //! `alertpushes` for alerts) as ordered in-memory records with the MongoDB 3.4 equality-match
 //! semantics the legacy store relies on, and a transaction overlay that plans one request's
 //! changes without touching the shared state until the change is durable.
+use super::ejson::{self, DecodeError};
 use crate::world::js::{Obj, Val};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
@@ -97,22 +98,20 @@ struct Stored {
     imported: Option<Box<str>>,
 }
 impl Stored {
-    fn new(record: &Record, imported: Option<Box<str>>) -> Self {
+    fn new(record: &Record, imported: Option<Box<str>>) -> Result<Self, DecodeError> {
+        ejson::validate_document(&record.doc)?;
         let mut doc = String::new();
         super::ejson::write_obj(&record.doc, &mut doc);
-        Self {
+        Ok(Self {
             oid: record.oid,
             doc: doc.into_bytes().into_boxed_slice(),
             keys: Box::new(KEY_FIELDS.map(|f| record.doc.get(f).clone())),
             imported,
-        }
+        })
     }
-    fn record(&self) -> Record {
-        let parsed = crate::gateway::OrderedJson::parse(&self.doc).expect("stored document");
-        let Ok(Val::Obj(doc)) = super::ejson::read_val(&parsed) else {
-            unreachable!("stored documents are objects");
-        };
-        Record { oid: self.oid, doc }
+    fn record(&self) -> Result<Record, DecodeError> {
+        let doc = ejson::decode_document(&self.doc)?;
+        Ok(Record { oid: self.oid, doc })
     }
     fn token(&self, i: usize) -> Option<&str> {
         self.keys[3 + i].str()
@@ -142,22 +141,24 @@ impl Collection {
     pub fn is_empty(&self) -> bool {
         self.records.is_empty()
     }
-    pub fn get(&self, n: u64) -> Option<Record> {
-        self.records.get(&n).map(Stored::record)
+    pub fn get(&self, n: u64) -> Result<Option<Record>, DecodeError> {
+        self.records.get(&n).map(Stored::record).transpose()
     }
     /// `find({pushTime: time}).$where(enable !== false)`: due alarms in natural order.
-    pub fn due(&self, time: f64) -> Vec<(u64, Record)> {
+    pub fn due(&self, time: f64) -> Result<Vec<(u64, Record)>, DecodeError> {
         self.records
             .iter()
             .filter(|(_, r)| {
                 matches!(r.keys[5], Val::Num(t) if t == time) && r.keys[6] != Val::Bool(false)
             })
-            .map(|(n, r)| (*n, r.record()))
+            .map(|(n, r)| r.record().map(|r| (*n, r)))
             .collect()
     }
     /// Records in natural (insertion) order, decoded.
-    pub fn iter(&self) -> impl Iterator<Item = (u64, Record)> + '_ {
-        self.records.iter().map(|(n, r)| (*n, r.record()))
+    pub fn iter(&self) -> impl Iterator<Item = Result<(u64, Record), DecodeError>> + '_ {
+        self.records
+            .iter()
+            .map(|(n, r)| r.record().map(|r| (*n, r)))
     }
     /// Records in natural order as `(n, _id, encoded document, import digest)` (snapshots,
     /// import planning).
@@ -181,14 +182,20 @@ impl Collection {
         }
     }
     /// Store a record; an existing import digest at `n` is kept unless `imported` replaces it.
-    pub fn put(&mut self, n: u64, record: Record) {
-        self.put_imported(n, record, None);
+    pub fn put(&mut self, n: u64, record: Record) -> Result<(), DecodeError> {
+        self.put_imported(n, record, None)
     }
-    pub fn put_imported(&mut self, n: u64, record: Record, imported: Option<&str>) {
+    pub fn put_imported(
+        &mut self,
+        n: u64,
+        record: Record,
+        imported: Option<&str>,
+    ) -> Result<(), DecodeError> {
         let digest = imported
             .map(Into::into)
             .or_else(|| self.records.get(&n).and_then(|old| old.imported.clone()));
-        self.put_stored(n, Stored::new(&record, digest));
+        self.put_stored(n, Stored::new(&record, digest)?);
+        Ok(())
     }
     fn put_stored(&mut self, n: u64, stored: Stored) {
         if let Some(old) = self.records.remove(&n) {
@@ -215,13 +222,14 @@ impl Collection {
         out.sort_unstable();
         out
     }
-    fn matches(&self, n: u64, query: &[(String, Cond)]) -> bool {
+    fn matches(&self, n: u64, query: &[(String, Cond)]) -> Result<bool, DecodeError> {
         let Some(stored) = self.records.get(&n) else {
-            return false;
+            return Ok(false);
         };
-        stored
-            .matches(query)
-            .unwrap_or_else(|| matches(&stored.record(), query))
+        match stored.matches(query) {
+            Some(value) => Ok(value),
+            None => Ok(matches(&stored.record()?, query)),
+        }
     }
     /// Candidate record numbers for a query: the token index when the query pins a token by
     /// string equality (or `$in` of strings), otherwise every record.
@@ -271,27 +279,34 @@ impl State {
             Coll::Alert => &mut self.alerts,
         }
     }
-    /// The live writer observes each intermediate change before applying it.
-    /// Default startup/import callers keep the original application path and cost.
+    /// Validate the complete batch before applying any change or ownership observation.
+    /// The writer observes each intermediate state immediately before its valid change.
     pub(crate) fn apply_observed(
         &mut self,
         changes: &[Change],
         mut observe: impl FnMut(&State, &Change),
-    ) {
-        for change in changes {
+    ) -> Result<(), DecodeError> {
+        // Construct every replacement first. A bad record must not apply an earlier prefix.
+        let staged = changes
+            .iter()
+            .map(|change| {
+                let imported = change.imported.as_deref().map(Into::into).or_else(|| {
+                    self.coll(change.coll)
+                        .records
+                        .get(&change.n)
+                        .and_then(|old| old.imported.clone())
+                });
+                change
+                    .record
+                    .as_ref()
+                    .map(|r| Stored::new(r, imported))
+                    .transpose()
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        for (change, stored) in changes.iter().zip(staged) {
             observe(self, change);
-            self.apply(std::slice::from_ref(change));
-        }
-    }
-    /// Apply final record states (journal replay and acknowledged commits).
-    pub fn apply(&mut self, changes: &[Change]) {
-        for change in changes {
-            match &change.record {
-                Some(r) => self.coll_mut(change.coll).put_imported(
-                    change.n,
-                    r.clone(),
-                    change.imported.as_deref(),
-                ),
+            match stored {
+                Some(stored) => self.coll_mut(change.coll).put_stored(change.n, stored),
                 None => {
                     let coll = self.coll_mut(change.coll);
                     coll.remove(change.n);
@@ -300,6 +315,11 @@ impl State {
             }
             self.next_n = self.next_n.max(change.n + 1);
         }
+        Ok(())
+    }
+    /// Apply final record states (journal replay and acknowledged commits).
+    pub fn apply(&mut self, changes: &[Change]) -> Result<(), DecodeError> {
+        self.apply_observed(changes, |_, _| {})
     }
 }
 
@@ -418,9 +438,9 @@ impl<'a> Txn<'a> {
     pub fn new_oid(&mut self) -> Oid {
         self.ids.next(self.now_ms)
     }
-    pub fn get(&self, c: Coll, n: u64) -> Option<Record> {
+    pub fn get(&self, c: Coll, n: u64) -> Result<Option<Record>, DecodeError> {
         match self.changes.get(&(c, n)) {
-            Some(r) => r.clone(),
+            Some(r) => Ok(r.clone()),
             None => self.base.coll(c).get(n),
         }
     }
@@ -432,7 +452,7 @@ impl<'a> Txn<'a> {
         }
     }
     /// Matching record numbers in natural order.
-    pub fn find(&self, c: Coll, query: &[(String, Cond)]) -> Vec<u64> {
+    pub fn find(&self, c: Coll, query: &[(String, Cond)]) -> Result<Vec<u64>, DecodeError> {
         let base = self.base.coll(c);
         let mut candidates: BTreeSet<u64> = match base.candidates(query) {
             Some(set) => set,
@@ -444,35 +464,45 @@ impl<'a> Txn<'a> {
                 .filter(|((cc, _), r)| *cc == c && r.is_some())
                 .map(|((_, n), _)| *n),
         );
-        candidates
-            .into_iter()
-            .filter(|n| match self.changes.get(&(c, *n)) {
+        let mut found = Vec::new();
+        for n in candidates {
+            let matched = match self.changes.get(&(c, n)) {
                 Some(r) => r.as_ref().is_some_and(|r| matches(r, query)),
-                None => base.matches(*n, query),
-            })
-            .collect()
+                None => base.matches(n, query)?,
+            };
+            if matched {
+                found.push(n);
+            }
+        }
+        Ok(found)
     }
-    pub fn put(&mut self, c: Coll, n: u64, record: Record) {
+    pub fn put(&mut self, c: Coll, n: u64, record: Record) -> Result<(), DecodeError> {
+        ejson::validate_document(&record.doc)?;
         self.changes.insert((c, n), Some(record));
+        Ok(())
     }
-    pub fn remove(&mut self, c: Coll, n: u64) {
-        if let Some(oid) = self.get(c, n).map(|r| r.oid) {
+    pub fn remove(&mut self, c: Coll, n: u64) -> Result<(), DecodeError> {
+        if let Some(oid) = self.get(c, n)?.map(|r| r.oid) {
             self.removed.insert((c, n), oid);
         }
         self.changes.insert((c, n), None);
+        Ok(())
     }
-    pub fn insert(&mut self, c: Coll, record: Record) -> u64 {
+    pub fn insert(&mut self, c: Coll, record: Record) -> Result<u64, DecodeError> {
+        ejson::validate_document(&record.doc)?;
         let n = self.next_n;
         self.next_n += 1;
         self.changes.insert((c, n), Some(record));
-        n
+        Ok(n)
     }
     /// Final record states that differ from the base state.
-    pub fn changes(&self) -> Vec<Change> {
-        self.changes
-            .iter()
-            .filter(|((c, n), r)| self.base.coll(*c).get(*n) != **r)
-            .map(|((c, n), r)| Change {
+    pub fn changes(&self) -> Result<Vec<Change>, DecodeError> {
+        let mut changes = Vec::new();
+        for ((c, n), r) in &self.changes {
+            if self.base.coll(*c).get(*n)? == *r {
+                continue;
+            }
+            changes.push(Change {
                 coll: *c,
                 n: *n,
                 oid: r
@@ -480,7 +510,68 @@ impl<'a> Txn<'a> {
                     .map_or_else(|| self.removed[&(*c, *n)], |r| r.oid),
                 record: r.clone(),
                 imported: None,
-            })
-            .collect()
+            });
+        }
+        Ok(changes)
+    }
+}
+
+#[cfg(test)]
+mod stored_decode_tests {
+    use super::*;
+    #[test]
+    fn undecodable_compact_record_returns_error_instead_of_panicking_or_disappearing() {
+        let mut doc = Obj::new();
+        doc.set("pushTime", 0.);
+        let mut stored = Stored::new(&Record { oid: [1; 12], doc }, None).unwrap();
+        stored.doc = br#"{"units":[{"$x":1}]}"#.to_vec().into_boxed_slice();
+        assert!(stored.record().is_err());
+        let mut collection = Collection::default();
+        collection.put_stored(0, stored);
+        assert!(collection.get(0).is_err());
+        assert!(collection.due(0.).is_err());
+        assert!(collection.iter().next().unwrap().is_err());
+        assert!(
+            collection
+                .matches(0, &[("units".into(), Cond::Eq(Val::Null))])
+                .is_err()
+        );
+        assert_eq!(collection.len(), 1);
+    }
+    #[test]
+    fn observed_batch_rejects_invalid_tail_without_applying_or_observing_prefix() {
+        let mut valid = Obj::new();
+        valid.set("fcmToken", "kept-private");
+        let mut invalid = Obj::new();
+        invalid.set("$invalid", 1.);
+        let make = |n, doc| Change {
+            coll: Coll::Alert,
+            n,
+            oid: [n as u8; 12],
+            record: Some(Record {
+                oid: [n as u8; 12],
+                doc,
+            }),
+            imported: None,
+        };
+        let mut state = State::default();
+        let mut observed = 0;
+        assert!(
+            state
+                .apply_observed(&[make(1, valid), make(2, invalid)], |_, _| {
+                    observed += 1;
+                })
+                .is_err()
+        );
+        assert_eq!(
+            state.coll(Coll::Alert).len(),
+            0,
+            "invalid batch must not apply its valid prefix"
+        );
+        assert_eq!(
+            observed, 0,
+            "rejected batch must not invalidate ownership receipts"
+        );
+        assert_eq!(state.next_n, 0);
     }
 }
