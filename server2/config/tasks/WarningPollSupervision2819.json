@@ -1,0 +1,64 @@
+{
+  "task": "WarningPollSupervision2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "E3b warning DELIVERY poll task ownership only; no sendretry/newmonitor/endpoint, fullE3 notcomplete; premergeonly",
+  "server2_paths": [
+    "server2/config/tasks/WarningPollSupervision2819.json",
+    "server2/src/push/deliver/supervisor.rs",
+    "server2/tests/runtime_services.rs",
+    "server2/tests/runtime_services/warning_poll.rs",
+    "server2/tests/runtime_services/common.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-warning-poll-supervision.md",
+      "category": "documentation",
+      "reason": "Affected maintained intent/spec/plan/operator/architecture/selectedverification only; no implementationoutside server2"
+    },
+    {
+      "path": "specs/issue-2819-warning-poll-supervision.md",
+      "category": "documentation",
+      "reason": "Affected maintained intent/spec/plan/operator/architecture/selectedverification only; no implementationoutside server2"
+    },
+    {
+      "path": "plans/issue-2819-warning-poll-supervision.md",
+      "category": "documentation",
+      "reason": "Affected maintained intent/spec/plan/operator/architecture/selectedverification only; no implementationoutside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Affected maintained intent/spec/plan/operator/architecture/selectedverification only; no implementationoutside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Affected maintained intent/spec/plan/operator/architecture/selectedverification only; no implementationoutside server2"
+    },
+    {
+      "path": "docs/operations/server2-runtime-services.md",
+      "category": "documentation",
+      "reason": "Affected maintained intent/spec/plan/operator/architecture/selectedverification only; no implementationoutside server2"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Affected maintained intent/spec/plan/operator/architecture/selectedverification only; no implementationoutside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-warning-poll-supervision/verification.md",
+      "category": "documentation",
+      "reason": "Affected maintained intent/spec/plan/operator/architecture/selectedverification only; no implementationoutside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.json",
+      "category": "documentation",
+      "reason": "Affected maintained intent/spec/plan/operator/architecture/selectedverification only; no implementationoutside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.html",
+      "category": "documentation",
+      "reason": "Affected maintained intent/spec/plan/operator/architecture/selectedverification only; no implementationoutside server2"
+    }
+  ]
+}

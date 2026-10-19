@@ -45,7 +45,7 @@ impl<T: CatalogTransport + Send + Sync + 'static> Workers<T> {
     async fn run(self: Arc<Self>, mut stop: watch::Receiver<bool>) -> DrainReport {
         let mut jobs = JoinSet::new();
         let mut report = DrainReport::default();
-        let mut warning_running = false;
+        let mut warning_job = None;
         let mut warning = tokio::time::interval(Duration::from_secs(5));
         warning.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
@@ -58,10 +58,17 @@ impl<T: CatalogTransport + Send + Sync + 'static> Workers<T> {
             loop {
                 tokio::select! { biased;
                     _ = stop.changed() => break,
-                    result = jobs.join_next(), if !jobs.is_empty() => {
+                    result = jobs.join_next_with_id(), if !jobs.is_empty() => {
                         match result {
-                            Some(Ok(is_warning)) => { report.completed += 1; if is_warning { warning_running = false; } },
-                            Some(Err(_)) => { report.incomplete += 1; self.diagnostics.minute("supervisor", "job failed; claim retained, no replay"); },
+                            Some(Ok((id, ()))) => {
+                                report.completed += 1;
+                                if warning_job == Some(id) { warning_job = None; }
+                            },
+                            Some(Err(error)) => {
+                                report.incomplete += 1;
+                                if warning_job == Some(error.id()) { warning_job = None; }
+                                self.diagnostics.minute("supervisor", "job failed; claim retained, no replay");
+                            },
                             None => ()
                         }
                     },
@@ -69,22 +76,21 @@ impl<T: CatalogTransport + Send + Sync + 'static> Workers<T> {
                         if !*stop.borrow() && let Ok(observed) = self.clock.now_ms() {
                             let alarm = self.alarm.clone();
                             let clock = self.clock.clone();
-                            jobs.spawn(crate::observability::inherit(async move { if clock.now_ms().is_ok_and(|now| now.div_euclid(60_000) == observed.div_euclid(60_000)) { alarm.run_minute(observed).await; } false }));
+                            jobs.spawn(crate::observability::inherit(async move { if clock.now_ms().is_ok_and(|now| now.div_euclid(60_000) == observed.div_euclid(60_000)) { alarm.run_minute(observed).await; } }));
                             let alerts = self.alerts.clone();
                             let clock = self.clock.clone();
-                            jobs.spawn(crate::observability::inherit(async move { if clock.now_ms().is_ok_and(|now| now.div_euclid(60_000) == observed.div_euclid(60_000)) { alerts.run_minute(observed).await; } false }));
+                            jobs.spawn(crate::observability::inherit(async move { if clock.now_ms().is_ok_and(|now| now.div_euclid(60_000) == observed.div_euclid(60_000)) { alerts.run_minute(observed).await; } }));
                         }
                         break;
                     },
-                    _ = warning.tick(), if !warning_running => {
+                    _ = warning.tick(), if warning_job.is_none() => {
                         if !*stop.borrow() {
-                            warning_running = true;
                             let warnings = self.warnings.clone();
                             let diagnostics = self.diagnostics.clone();
-                            jobs.spawn(crate::observability::inherit(async move {
+                            let task = jobs.spawn(crate::observability::inherit(async move {
                                 if warnings.poll().await.is_err() { diagnostics.minute("warning-feed", "poll unavailable; no unsafe submission"); }
-                                true
                             }));
+                            warning_job = Some(task.id());
                         }
                     }
                 }

@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "3f28da89093607f4799a5210eb6355a429d41415"
+      "revision": "f6b69e8387b491bc2afc93129570a13272c66edb"
     }
   },
   "components": [
@@ -72,7 +72,7 @@
       "id": "jobs",
       "type": "backend",
       "label": "Owned delivery jobs",
-      "sublabel": "UTC alarm/alerts; silent warning baseline",
+      "sublabel": "Warning task ID owns the poll slot",
       "pos": [
         830,
         245
@@ -85,7 +85,7 @@
         {
           "path": "server2/src/push/deliver/supervisor.rs",
           "line": 34,
-          "end_line": 101
+          "end_line": 111
         }
       ]
     },
@@ -347,6 +347,16 @@
         "Normal close or writer panic makes availability false; no second task owner.",
         "Receiver closure can precede drain completion; false is not a writer-join receipt.",
         "Full readiness endpoint and S3 / credential-source health remain open E3 work."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Warning poll task ownership",
+      "items": [
+        "Only the matching warning job completion or failed join releases its poll slot.",
+        "Alarm or alert failures cannot release live warning work; one JoinSet owns the jobs.",
+        "A pending regular tick may run after completion; stop still blocks new scheduling.",
+        "Original task failure stays incomplete; no failed / unknown send replay or state rewind."
       ]
     }
   ]
