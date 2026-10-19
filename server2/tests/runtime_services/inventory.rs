@@ -274,12 +274,14 @@ async fn combined_native_router_inventory_and_acknowledged_state_restore() {
                 state
                     .coll(server2::push::Coll::Alarm)
                     .iter()
+                    .map(Result::unwrap)
                     .any(|(_, r)| r.token("fcmToken") == Some("s20h-retained-token"))
             );
             assert!(
                 !state
                     .coll(server2::push::Coll::Alarm)
                     .iter()
+                    .map(Result::unwrap)
                     .any(|(_, r)| r.token("fcmToken") == Some("s20h-deleted-token"))
             );
         }
