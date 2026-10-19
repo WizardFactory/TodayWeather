@@ -4030,5 +4030,5 @@ See the [proposed ownership flow](diagrams/server2-warning-acquisition.html),
 [editable source](diagrams/server2-warning-acquisition.sequence.json),
 [operator procedure](../operations/server2-native-verification.md#warning-acquisition-without-product-http)
 and [selected evidence](../evidence/tasks/issue-2819-warning-acquisition/verification.md).
-This change is a child of unmerged C4 PR #2828. It does not qualify integrated main,
+This change continues the C4 implementation from PR #2828. It does not qualify integrated main,
 an eligible full recovery bundle, live providers, EC2 capacity or seven-day shadow.
