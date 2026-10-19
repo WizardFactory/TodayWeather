@@ -79,3 +79,15 @@ production latency. A deliberate temporary factory-reader disconnection produced
 the intended missing-prose assertion failure; the exact original runtime bytes
 were restored and the test passed. The earlier hand-wired and late-budget controls
 remain separate. No production source changes from this correction are committed.
+
+
+A subsequent downstream fresh run exposed an allowed cold-empty child 500 in
+that factory fixture. The final control distinguishes this from reader wiring:
+it permits at most four cold-to-warm attempts per version, recognizes only the
+existing native child-error contract during warmup, and still requires a 200
+with exact original prose for every version in each factory phase. No 500 or
+absent-prose response counts as the positive. A phase-wide 15s wall watchdog
+bounds the held virtual-clock fixture. The original failed run is retained; the
+new disconnected-reader mutation still fails on missing prose, and normal
+runtime regression is repeated before the final review. This is fixture/wiring
+verification, not measured cold-weather availability or deadline qualification.
