@@ -3852,3 +3852,67 @@ records that earlier design point, not current verification. Current
 and the [owned operator scenario](../operations/server2-native-verification.md#delivery-cohort-lateness)
 record the subsequent implementation and checks. This is a stacked pre-merge
 slice, not main, shadow, capacity or an eligible full recovery release.
+
+
+### #2819 conditional-alert definite no-POST compensation
+
+The [C2 contract](../../specs/issue-2819-delivery-cohort.md) adds a private
+writer-issued, single-use receipt after a known committed alert-state update.
+The receipt owns only changed derived leaves of selected sending channels:
+precipitation `lastState`/`pushTime`, and air `lastGrade`/`lastCode`/`pushTime`.
+Message/target preflight precedes that update. A preflight error commits nothing,
+including nonselected observations; a permanently invalid registration therefore
+remains due and can repeat weather work and a failure at each fresh scheduled
+cycle, without OAuth or FCM work for invalid targets. It cannot replay a claimed
+minute. Observation-only `Send::None` updates retain their existing behavior.
+
+Only typed FCM `SendOutcome::NotSent` permits one ordinary journal transaction
+that restores still-owned leaves. Accepted, unregistered, rejected and unknown
+actual POST outcomes keep state and claims; cancellation or panic is not a
+no-POST receipt. The connect-refusal undo relies on the existing FCM typed
+`NotSent` classification (`reqwest::Error::is_connect`) meaning the request was
+not written. General transport/reset errors remain `Unknown`; this does not
+reclassify them as safe to undo. Restore preserves user/token edits, other-channel observations,
+newer derived values, exact missingness and newer parent structure. It never
+rewinds the whole document or releases a delivery claim.
+
+The writer observes each individual local, settled and caught-up change before
+application. An actual intervening leaf transition permanently revokes that
+leaf's ownership, including A-to-B-to-A; deletion/recreation or writer replacement
+revokes the relevant live capability. An equal-value no-op filtered by
+`Txn::changes` is not a persisted transition. The tracker holds weak references
+only for live attempts and prunes them on ordinary commands. There is no second
+journal, persisted schema change, cleanup task or repair-on-drop.
+
+Typed attempt/restore queue admission and answer share the existing monotonic
+writer wait. A known receipt retains its transaction time solely to construct an
+exact restore if the shared clock later fails: that patch writes no new date or
+ID. New attempts and final POST guards still require a live clock. The older bool
+internal API is unchanged: preselection duplicate cleanup, final selection checks,
+observation-only updates and disable operations can wait for queue capacity
+outside their answer timeout. This change establishes no bound
+for the whole worker under a full queue.
+
+Lost initial acknowledgement, unresolved journal progress or unavailable restore
+returns explicit uncertainty and permits no POST. Such uncertainty can retain
+suppression; no unconditional retryability or successful repair is claimed.
+Owned-cycle typed push-state events distinguish this from external send results.
+The original delivery claim remains one-shot. Later fresh scheduled evaluation
+may send after a successful definite-no-POST restore, never replay that claim.
+
+[Proposed sequence](diagrams/server2-delivery-cohort.html) and
+[editable source](diagrams/server2-delivery-cohort.sequence.json) are frozen design
+time at `e97a5090`; their no-parent-tests-yet card is historical context. Current
+[selected evidence](../evidence/tasks/issue-2819-delivery-cohort/verification.md)
+and [operator scenario](../operations/server2-native-verification.md#conditional-alert-no-post-compensation)
+record subsequent execution. The 2026-10-19 integration parent `774343136`
+includes C1 (fallible state validation/decoding) and B1. C2 attempt/restore now
+propagate those fallible APIs. A decode error clears writer readiness and drops
+the reply: the caller receives uncertainty and permits no POST. A later full
+restore revokes all live receipts. The observed application path validates the
+entire batch before any mutation or ownership observation, then observes each
+valid intermediate change immediately before applying it, preserving ABA guards.
+This reconciles the two existing contracts; it adds no retry or repair policy.
+The C2 source merge is `a5def505`; local execution identities and subsequent
+source-bound integration checks are kept distinct in the selected evidence.
+No main-wide, whole recovery bundle, shadow or production qualification is established.

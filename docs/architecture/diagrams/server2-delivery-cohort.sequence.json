@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Proposed alert no-POST recovery",
+    "output": "docs/architecture/diagrams/server2-delivery-cohort.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      690
+    ],
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "e97a50906234e05b87dbdcb28cf87d0959a1e4b1",
+      "link_mode": "web"
+    }
+  },
+  "participants": [
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "Alert worker",
+      "sublabel": "claimed fixed list",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/alerts.rs",
+          "line": 762,
+          "end_line": 819
+        }
+      ]
+    },
+    {
+      "id": "writer",
+      "type": "backend",
+      "label": "State writer",
+      "sublabel": "one commit owner",
+      "sources": [
+        {
+          "path": "server2/src/push/service.rs",
+          "line": 438,
+          "end_line": 529
+        }
+      ]
+    },
+    {
+      "id": "journal",
+      "type": "database",
+      "label": "State journal",
+      "sublabel": "existing protocol",
+      "sources": [
+        {
+          "path": "server2/src/push/durable.rs",
+          "line": 412,
+          "end_line": 461
+        }
+      ]
+    },
+    {
+      "id": "lease",
+      "type": "backend",
+      "label": "Proposed lease",
+      "sublabel": "active leaf ownership",
+      "sources": [
+        {
+          "path": "server2/src/push/store.rs",
+          "line": 443,
+          "end_line": 473
+        }
+      ]
+    },
+    {
+      "id": "fcm",
+      "type": "backend",
+      "label": "FCM client",
+      "sublabel": "typed send outcome",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/fcm.rs",
+          "line": 128,
+          "end_line": 143
+        },
+        {
+          "path": "server2/src/push/deliver/fcm.rs",
+          "line": 285,
+          "end_line": 352
+        }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "id": "prepare",
+      "from": "worker",
+      "to": "writer",
+      "y": 175,
+      "label": "Commit send-state",
+      "variant": "emphasis"
+    },
+    {
+      "id": "commit",
+      "from": "writer",
+      "to": "journal",
+      "y": 205,
+      "label": "Existing journal",
+      "variant": "default"
+    },
+    {
+      "id": "confirmed",
+      "from": "journal",
+      "to": "writer",
+      "y": 235,
+      "label": "Known / uncertain",
+      "variant": "return"
+    },
+    {
+      "id": "install",
+      "from": "writer",
+      "to": "lease",
+      "y": 265,
+      "label": "If known: install",
+      "variant": "emphasis"
+    },
+    {
+      "id": "proof",
+      "from": "writer",
+      "to": "worker",
+      "y": 295,
+      "label": "Owned receipt",
+      "variant": "return"
+    },
+    {
+      "id": "send",
+      "from": "worker",
+      "to": "fcm",
+      "y": 325,
+      "label": "Guarded send once",
+      "variant": "default"
+    },
+    {
+      "id": "unsent",
+      "from": "fcm",
+      "to": "worker",
+      "y": 355,
+      "label": "Typed NotSent ONLY",
+      "variant": "return"
+    },
+    {
+      "id": "restore",
+      "from": "worker",
+      "to": "writer",
+      "y": 385,
+      "label": "Restore once",
+      "variant": "emphasis"
+    },
+    {
+      "id": "owner",
+      "from": "writer",
+      "to": "lease",
+      "y": 415,
+      "label": "Check live ownership",
+      "variant": "default"
+    },
+    {
+      "id": "subset",
+      "from": "lease",
+      "to": "writer",
+      "y": 445,
+      "label": "Valid leaf subset",
+      "variant": "return"
+    },
+    {
+      "id": "patch",
+      "from": "writer",
+      "to": "journal",
+      "y": 475,
+      "label": "If owned: patch",
+      "variant": "emphasis"
+    },
+    {
+      "id": "written",
+      "from": "journal",
+      "to": "writer",
+      "y": 505,
+      "label": "Known / uncertain",
+      "variant": "return"
+    },
+    {
+      "id": "result",
+      "from": "writer",
+      "to": "worker",
+      "y": 535,
+      "label": "Restore disposition",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Proposal, not implementation",
+      "items": [
+        "Source links pin existing interfaces at e97a5090; the receipt and observed-apply protocol are proposed, not present in that code.",
+        "Child lateness is a separate reviewed slice. No parent compensation tests or full release qualification are claimed.",
+        "Sequence phases: proposed confirmed ownership; definite no-POST branch only; preserve newer state and claims."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Ownership, including ABA",
+      "items": [
+        "A writer-issued one-use receipt tracks only sending-channel derived leaves and exact stored presence.",
+        "Every local commit and each caught-up journal change permanently invalidates superseded leaves; A-to-B-to-A cannot restore old ownership.",
+        "Weak active leases are pruned; no per-record historical map, new persisted schema or repair timer."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Actual POST outcomes do not enter recovery",
+      "items": [
+        "Accepted, Unregistered, Rejected and Unknown keep state and claims; never retry or undo them.",
+        "Cancellation/panic without typed NotSent is uncertain external progress, not a compensation receipt.",
+        "No receipt or uncertain writer/restore progress refuses POST and never reports successful state repair."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Required tests before acceptance",
+      "items": [
+        "Exercise OAuth refusal then a later fresh evaluation, while retaining the first minute claim.",
+        "Prove metadata edits survive, exact missingness restores, newer leaves and intermediate journal ABA cannot be overwritten.",
+        "Use an actual isolated executable/owned HTTP; preserve failure evidence and obtain independent review plus exact CI. No live sends or merge."
+      ]
+    }
+  ]
+}

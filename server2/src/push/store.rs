@@ -279,8 +279,13 @@ impl State {
             Coll::Alert => &mut self.alerts,
         }
     }
-    /// Apply final record states (journal replay and acknowledged commits).
-    pub fn apply(&mut self, changes: &[Change]) -> Result<(), DecodeError> {
+    /// Validate the complete batch before applying any change or ownership observation.
+    /// The writer observes each intermediate state immediately before its valid change.
+    pub(crate) fn apply_observed(
+        &mut self,
+        changes: &[Change],
+        mut observe: impl FnMut(&State, &Change),
+    ) -> Result<(), DecodeError> {
         // Construct every replacement first. A bad record must not apply an earlier prefix.
         let staged = changes
             .iter()
@@ -299,6 +304,7 @@ impl State {
             })
             .collect::<Result<Vec<_>, _>>()?;
         for (change, stored) in changes.iter().zip(staged) {
+            observe(self, change);
             match stored {
                 Some(stored) => self.coll_mut(change.coll).put_stored(change.n, stored),
                 None => {
@@ -310,6 +316,10 @@ impl State {
             self.next_n = self.next_n.max(change.n + 1);
         }
         Ok(())
+    }
+    /// Apply final record states (journal replay and acknowledged commits).
+    pub fn apply(&mut self, changes: &[Change]) -> Result<(), DecodeError> {
+        self.apply_observed(changes, |_, _| {})
     }
 }
 
@@ -527,5 +537,41 @@ mod stored_decode_tests {
                 .is_err()
         );
         assert_eq!(collection.len(), 1);
+    }
+    #[test]
+    fn observed_batch_rejects_invalid_tail_without_applying_or_observing_prefix() {
+        let mut valid = Obj::new();
+        valid.set("fcmToken", "kept-private");
+        let mut invalid = Obj::new();
+        invalid.set("$invalid", 1.);
+        let make = |n, doc| Change {
+            coll: Coll::Alert,
+            n,
+            oid: [n as u8; 12],
+            record: Some(Record {
+                oid: [n as u8; 12],
+                doc,
+            }),
+            imported: None,
+        };
+        let mut state = State::default();
+        let mut observed = 0;
+        assert!(
+            state
+                .apply_observed(&[make(1, valid), make(2, invalid)], |_, _| {
+                    observed += 1;
+                })
+                .is_err()
+        );
+        assert_eq!(
+            state.coll(Coll::Alert).len(),
+            0,
+            "invalid batch must not apply its valid prefix"
+        );
+        assert_eq!(
+            observed, 0,
+            "rejected batch must not invalidate ownership receipts"
+        );
+        assert_eq!(state.next_n, 0);
     }
 }

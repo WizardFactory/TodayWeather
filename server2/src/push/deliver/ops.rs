@@ -26,23 +26,7 @@ pub fn plan(op: &InternalOp, txn: &mut Txn<'_>) -> Result<bool, DecodeError> {
             selected,
             precip,
             air,
-        } => {
-            let Some(mut record) = txn.get(Coll::Alert, *n)? else {
-                return Ok(false);
-            };
-            if record.oid != *oid || &record.doc != selected {
-                return Ok(false);
-            }
-            let mut fields = Obj::new();
-            fields.set("airAlerts", air.clone());
-            fields.set("precipAlerts", precip.clone());
-            let Ok(set) = mongoose::cast_set(Coll::Alert, &fields, false) else {
-                return Ok(false);
-            };
-            mongoose::apply_set(&mut record.doc, &set);
-            txn.put(Coll::Alert, *n, record)?;
-            true
-        }
+        } => update_alert_state(txn, *n, *oid, selected, precip, air)?,
         InternalOp::DisableAlertsByFcm { token } => {
             let query = [("fcmToken".to_owned(), Cond::Eq(Val::Str(token.clone())))];
             for n in txn.find(Coll::Alert, &query)? {
@@ -220,4 +204,30 @@ fn same_alarm_subscription(current: &Obj, selected: &Obj) -> bool {
             .collect::<Vec<_>>()
     };
     fields(current) == fields(selected)
+}
+
+/// The same selected-document CAS/cast used by observation updates and owned send attempts.
+pub(crate) fn update_alert_state(
+    txn: &mut Txn<'_>,
+    n: u64,
+    oid: crate::push::Oid,
+    selected: &Obj,
+    precip: &Val,
+    air: &Val,
+) -> Result<bool, DecodeError> {
+    let Some(mut record) = txn.get(Coll::Alert, n)? else {
+        return Ok(false);
+    };
+    if record.oid != oid || &record.doc != selected {
+        return Ok(false);
+    }
+    let mut fields = Obj::new();
+    fields.set("airAlerts", air.clone());
+    fields.set("precipAlerts", precip.clone());
+    let Ok(set) = mongoose::cast_set(Coll::Alert, &fields, false) else {
+        return Ok(false);
+    };
+    mongoose::apply_set(&mut record.doc, &set);
+    txn.put(Coll::Alert, n, record)?;
+    Ok(true)
 }
