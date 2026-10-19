@@ -35,6 +35,8 @@ impl std::error::Error for SeedError {}
 pub struct StationSeed {
     pub exported_at_ms: u64,
     pub source_sha256: String,
+    pub(crate) body_sha256: String,
+    pub(crate) identities: Vec<Option<super::rainfall_store::ObjectId>>,
     pub docs: Vec<Doc>,
 }
 const FIELDS: [&str; 11] = [
@@ -100,12 +102,14 @@ pub fn parse(bytes: &[u8]) -> Result<StationSeed, SeedError> {
         .ok_or(SeedError("sourceSha256"))?
         .to_owned();
     let mut docs = Vec::new();
+    let mut identities = Vec::new();
     for line in lines {
         let doc = OrderedJson::parse(line).map_err(|_| SeedError("document"))?;
         let OrderedJson::Object(entries) = &doc else {
             return Err(SeedError("document"));
         };
         let mut out = Doc::new();
+        let mut identity = None;
         let mut keys = std::collections::BTreeSet::new();
         for (k, v) in entries {
             let k = String::from_utf16_lossy(k);
@@ -113,7 +117,18 @@ pub fn parse(bytes: &[u8]) -> Result<StationSeed, SeedError> {
                 return Err(SeedError("unknown or repeated field"));
             }
             let val = match k.as_str() {
-                "_id" => continue,
+                "_id" => {
+                    if let OrderedJson::Object(fields) = v
+                        && fields.len() == 1
+                        && String::from_utf16_lossy(&fields[0].0) == "$oid"
+                    {
+                        identity = fields[0]
+                            .1
+                            .string()
+                            .and_then(|s| super::rainfall_store::ObjectId::parse(&s));
+                    }
+                    continue;
+                }
                 "stnId" => {
                     let s = v.string().ok_or(SeedError("stnId"))?;
                     if s.is_empty() || s.len() > 8 || !s.bytes().all(|b| b.is_ascii_digit()) {
@@ -144,6 +159,7 @@ pub fn parse(bytes: &[u8]) -> Result<StationSeed, SeedError> {
         if !out.has("stnId") {
             return Err(SeedError("stnId"));
         }
+        identities.push(identity);
         docs.push(out);
     }
     if docs.is_empty() || field("documents")?.as_u64() != Some(docs.len() as u64) {
@@ -152,6 +168,8 @@ pub fn parse(bytes: &[u8]) -> Result<StationSeed, SeedError> {
     Ok(StationSeed {
         exported_at_ms,
         source_sha256,
+        body_sha256: crate::storage::sha256(bytes),
+        identities,
         docs,
     })
 }

@@ -1,0 +1,27 @@
+{
+  "title": "Server2 rainfall hit-rate handover",
+  "scenario": "Issue2819 F2 repository preparation. Review preserved statistics, activation ownership and owned local recovery evidence before requesting a separately authorized operational handover. Screenshots display retained receipts; they are not a new product execution.",
+  "steps": [
+    {
+      "title": "Preserve the calculation and cumulative totals",
+      "instruction": "Use existing national AWS minute web rows mapped to the legacy one-hour/min15/any-true calculation. Only canonical rain predictions (pty >0 or rn1 >0) are evaluated; observed-dry is a miss. Keep original ObjectIds and imported totals. Run the owned local verifier with a retained hashed example and a new output directory. Confirm inactive zero-write behavior, one acknowledged update, repeat/restart idempotence, a later dry window and corrupt-authority partial weather.",
+      "screenshot": "normal.png",
+      "caption": "Retained native normal-flow receipt: six HTTP200 responses; acknowledged4/5 survives repeat and restart, then 4/6 after the observed-dry window.",
+      "expected": "No repeated-window increment; no old seed total after corrupt authority. Actual fixed-clock, denied-provider example; not production factory or signal verification."
+    },
+    {
+      "title": "Return weather while accepted statistics finish",
+      "instruction": "Reuse the same46-record/16MiB physical corpus for inactive and active calls. At the existing Source answer cutoff, omit unconfirmed station statistics and S16 inputs. Let the accepted bounded owner drain, then restart against the same S3 state and verify the acknowledged result. Do not reset or reactivate the authority.",
+      "screenshot": "rainfall.png",
+      "caption": "Retained active call: HTTP200 in2.558s with truthful station partial; actual drain commits3/5 and a fresh process reads3/5.",
+      "expected": "Weather core remains available without an optimistic total. Active whole-child RSS453,967,872B is a measured limitation; logical input bounds do not establish a64MiB heap/RSS bound."
+    },
+    {
+      "title": "Approve the handover and recovery identities separately",
+      "instruction": "Keep legacy statistics authoritative until the approved shutdown cutoff. Review the exact final seed, namespace, epoch, high-water/shutdown evidence and first eligible window. Preview the schema1 activation before any separately authorized write, then verify durable readback. Runtime never creates an absent authority. Qualify both complete recovery bundles with this checkpoint, final-registration marker, claims and forecastNarrative.",
+      "screenshot": "identity.png",
+      "caption": "Operator and recovery boundaries are design instructions, not an executed production switch. The displayed native binary identity binds the retained local receipts.",
+      "expected": "No checkpoint rewind, optimistic acknowledgement or automatic resend. Production activation, host capacity, full recovery qualification, deployment and shadow remain separate gates."
+    }
+  ]
+}

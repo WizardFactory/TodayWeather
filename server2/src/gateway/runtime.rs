@@ -345,6 +345,7 @@ pub struct NativeHandles {
     pub geocoder: Option<Arc<dyn super::Geocoder>>,
 }
 pub(crate) struct BuiltGateway {
+    pub rainfall: Option<Arc<dyn crate::domestic::kma::source::rainfall::Lifecycle>>,
     pub gateway: Option<Arc<Gateway>>,
     pub native: NativeHandles,
     pub warning_cycles: Option<Arc<dyn crate::warnings::acquisition_worker::Acquisition>>,
@@ -383,6 +384,7 @@ pub(crate) fn build_shared(
     }
     if base.is_none() && !families.any() {
         return Ok(BuiltGateway {
+            rainfall: None,
             gateway: None,
             native: NativeHandles::default(),
             warning_acquire: None,
@@ -395,6 +397,7 @@ pub(crate) fn build_shared(
         None => BackendDispatcher::native_only(),
     };
     let mut native = NativeHandles::default();
+    let mut rainfall = None;
     let needs_weather = families.dsf || families.kma_source() || families.push;
     if let Some(s3) = &s3
         && (needs_weather || families.geocode)
@@ -476,6 +479,17 @@ pub(crate) fn build_shared(
             feed,
         )?;
         warning_acquire = Some(forecast.clone());
+        let target_settings = S3Settings::from_vars_with(
+            var,
+            builtins.s3.as_deref(),
+            builtins.instance_metadata.as_deref(),
+        )
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
+        let target = crate::domestic::kma::source::rainfall_store::Namespace::new(
+            target_settings.bucket,
+            target_settings.region,
+        )
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
         let source = crate::domestic::kma::source::S3Source::new_with_warning_store(
             s3.clone(),
             crate::domestic::kma::backend::system_clock(),
@@ -495,7 +509,10 @@ pub(crate) fn build_shared(
             crate::domestic::kma::source::air_forecast::Calibration::from_vars(var),
         )
         .with_life(Some(life))
-        .with_forecast(Some(forecast));
+        .with_forecast(Some(forecast))
+        .with_rainfall(target)
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
+        rainfall = source.rainfall_owner();
         warning_cycles = source.warning_cycles();
         let source = Arc::new(source);
         // S16: daily summaries of natively served towns, written after the response through
@@ -536,6 +553,7 @@ pub(crate) fn build_shared(
         None => gateway,
     };
     Ok(BuiltGateway {
+        rainfall,
         gateway: Some(Arc::new(match direct {
             Some(direct) => gateway.with_direct(direct),
             None => gateway,

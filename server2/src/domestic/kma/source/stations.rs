@@ -181,6 +181,7 @@ pub fn date_of(d: &Doc) -> f64 {
 pub struct Registry {
     docs: Vec<Doc>,
     index: std::collections::HashMap<String, usize>,
+    identities: Vec<Option<super::rainfall_store::ObjectId>>,
 }
 /// Geocoding of a station address (`_recursiveConvertGeoCode`, then the product geocoder):
 /// `[lon, lat]`, or None when it fails (the station is not registered in that run).
@@ -204,6 +205,20 @@ impl Registry {
             if let Some(Val::Str(id)) = d.get("stnId") {
                 out.index.entry(id.clone()).or_insert(out.docs.len());
                 out.docs.push(d.clone());
+                out.identities.push(None);
+            }
+        }
+        out
+    }
+    pub(crate) fn bind_seed(&mut self, seed: &super::seed::StationSeed) {
+        self.identities = seed.identities.clone();
+        self.identities.resize(self.docs.len(), None);
+    }
+    pub(crate) fn overlay(&self, state: &super::rainfall_store::Checkpoint) -> Self {
+        let mut out = self.clone();
+        for (doc, oid) in out.docs.iter_mut().zip(&out.identities) {
+            if let Some(oid) = oid {
+                state.overlay(doc, *oid);
             }
         }
         out
@@ -247,6 +262,7 @@ impl Registry {
                     doc.set("__v", Val::Num(0.));
                     self.index.insert(id.clone(), self.docs.len());
                     self.docs.push(doc);
+                    self.identities.push(None);
                 }
             }
         }

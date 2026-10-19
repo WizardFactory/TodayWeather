@@ -109,6 +109,7 @@ where
         io::Error::other("invalid gateway configuration")
     })?;
     let push = gateway.push.clone();
+    let rainfall = gateway.rainfall.clone();
     let mut warning = gateway
         .warning_cycles
         .clone()
@@ -222,6 +223,9 @@ where
     if let Some(warning) = &mut warning {
         warning.quiesce();
     }
+    if let Some(rainfall) = &rainfall {
+        rainfall.quiesce();
+    }
     tx.send_replace(true);
     if let Some(narrative) = narrative {
         narrative.stop().await;
@@ -248,10 +252,14 @@ where
         true
     };
     let warning_drain = async {
+        let rainfall_drained = match &rainfall {
+            Some(owner) => owner.drain(deadline).await,
+            None => true,
+        };
         if let Some(warning) = &warning {
-            warning.drain(deadline).await
+            warning.drain(deadline).await && rainfall_drained
         } else {
-            true
+            rainfall_drained
         }
     };
     let outcome = tokio::time::timeout_at(deadline, async {

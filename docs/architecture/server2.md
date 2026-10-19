@@ -2180,10 +2180,11 @@ read enabled (85 scenarios byte-identical); request-time tests over the S3 peer 
 3-second answer, completion for the next request, a fresh process served from S3, the seeded
 registry); the release `kma_smoke.py` with provider roots on the loopback origin. Live calls are
 listed in the PR. Not reproduced: legacy re-runs of the hourly page at minutes 4/9/15/30, station
-rows of hours with no city page, `rnsHit`/`rnsCount` updates (legacy runs `_updateRnsHitRate` only
-from `/gather` against the retired `KmaStnMinute`; the rules are ported but not wired, an open
-decision), and the deployed `ASOS_HISTORY_STATIONS` allowlist (every registry city station is a
-candidate).
+rows of hours with no city page and the deployed `ASOS_HISTORY_STATIONS` allowlist (every
+registry city station is a candidate). At this S15b checkpoint, `rnsHit`/`rnsCount` updates were
+not wired: legacy `_updateRnsHitRate` read the retired `KmaStnMinute`. The later F2 preparation
+below records AK's selected compatible input and repository ownership wiring; it does not
+claim that production ownership has changed.
 
 ### S15b-2s station registry seed (2026-10-15)
 
@@ -2200,8 +2201,41 @@ Cutover steps (AK 2026-10-15):
 
 1. A final read-only export is imported at cutover.
 2. Once legacy is retired, server2 takes over updating `rnsHit`/`rnsCount` with the ported
-   `_updateRnsHitRate` (`source/rnshit.rs`). It stays unwired while legacy runs, as legacy
-   behaves on the v000903 path, with no runtime flag.
+   `_updateRnsHitRate` calculation (`source/rnshit.rs`). The later F2 preparation wires an
+   existing-authority owner; no runtime verification flag or implicit activation is added.
+   Production ownership still requires its approved final seed/shutdown handover.
+
+### F2 rainfall-statistics ownership preparation (issue2819)
+
+AK selected compatible mapping of the existing national `kma-web/aws-minute` web rows,
+not a new collector or official-ASOS API. The source uses the assembled canonical
+Current publication end. Per original ObjectId it applies `(end − 1h,end]`, at least 15
+actual minute rows and at least one known rain boolean; any true means observed rain.
+Unknown booleans count toward the row threshold and never become observed-dry.
+Imported cumulative totals and distinct ObjectIds sharing a station are preserved.
+Only eligible canonical rain predictions (`pty > 0` or `rn1 > 0`) are evaluated;
+a dry observation is a miss, not a new dry-forecast statistic.
+
+The shared production factory wires a bounded rainfall owner into the native source.
+An absent authority is inactive: runtime never creates it. The separately authorized
+operator handover binds final seed identity, namespace, shutdown/high-water evidence
+and first eligible window into schema 1 `index/v2/statistics/rns/state.json`. Counters,
+last end and receipts are conditionally committed together. Repeated windows/restart
+are idempotent; conflicts rebase within the owner budget. Ambiguous writes do not
+produce optimistic totals. Corrupt, mismatched or unreadable authority makes station
+statistics partial rather than leaking older seed totals.
+
+The optional caller waits through the existing Source answer boundary while accepted
+work retains its own original 3s budget including queue and CAS. A late result is
+omitted from station statistics and S16 inputs; accepted work can finish for the next
+request. An expired caller is not a verified absent activation.
+
+Local owned HTTP verification preserves normal bodies and the same 46-record/16MiB
+pressure corpus: active weather returns 200 in 2.558s with truthful station partial, then
+a fresh same-S3 process reads acknowledged 3/5. This is not production factory/signal
+or heap qualification: active whole-child RSS was453,967,872B. The logical input
+bounds are not physical allocator/RSS bounds. See the [handover procedure](../operations/server2-rainfall-handover.md)
+and [selected local evidence](../evidence/tasks/issue-2819-rainfall-handover/verification.md).
 
 ### S15b-3b life index, KASI rise/set, MFDS food poisoning and area numbers (2026-10-15)
 
