@@ -87,6 +87,65 @@ where
     F: FnOnce() -> Result<RuntimeServices, GatewayError>,
     H: FnOnce(tokio::task::AbortHandle),
 {
+    serve_inner(config, gateway, hook, None).await
+}
+async fn serve_resources<F, H>(config: Config, gateway: F, hook: H) -> io::Result<()>
+where
+    F: FnOnce(
+        Arc<crate::runtime_resources::ProcessResources>,
+    ) -> Result<RuntimeServices, GatewayError>,
+    H: FnOnce(tokio::task::AbortHandle),
+{
+    let resources = crate::runtime_resources::ProcessResources::new(&config);
+    let state = Arc::new(SharedState::with_resources(&config, resources.clone()));
+    serve_inner(config, move || gateway(resources), hook, Some(state)).await
+}
+/// Production factory receives its one resource owner before constructing any family.
+pub fn run_with_resources<F>(config: Config, factory: F) -> Result<(), Box<dyn std::error::Error>>
+where
+    F: FnOnce(
+        Arc<crate::runtime_resources::ProcessResources>,
+    ) -> Result<RuntimeServices, GatewayError>,
+{
+    run_with_resources_and_listener_hook(config, factory, |_| {})
+}
+pub fn run_with_resources_and_listener_hook<F, H>(
+    config: Config,
+    factory: F,
+    hook: H,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    F: FnOnce(
+        Arc<crate::runtime_resources::ProcessResources>,
+    ) -> Result<RuntimeServices, GatewayError>,
+    H: FnOnce(tokio::task::AbortHandle),
+{
+    obs::init(&|name| std::env::var(name).ok());
+    config.validate().map_err(io::Error::other)?;
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(config.worker_threads)
+        .max_blocking_threads(config.blocking_threads)
+        .thread_name("server2")
+        .enable_all()
+        .build()?;
+    let result = runtime.block_on(
+        obs::Context::root(obs::Route::Other, obs::Method::Other)
+            .scope(serve_resources(config, factory, hook)),
+    );
+    crate::shutdown_runtime(runtime);
+    result?;
+    Ok(())
+}
+async fn serve_inner<F, H>(
+    config: Config,
+    gateway: F,
+    hook: H,
+    shared: Option<Arc<SharedState>>,
+) -> io::Result<()>
+where
+    F: FnOnce() -> Result<RuntimeServices, GatewayError>,
+    H: FnOnce(tokio::task::AbortHandle),
+{
     use crate::push::deliver::supervisor::DRAIN;
     let signal = shutdown_signal()?;
     obs::event(
@@ -156,7 +215,8 @@ where
     let lifetime = Duration::from_secs(config.connection_seconds as u64);
     let public = BoundedListener::new(public, config.connection_limit, lifetime);
     let private = BoundedListener::new(private, 16, lifetime);
-    let state = Arc::new(SharedState::new(&config));
+    let state = shared.unwrap_or_else(|| Arc::new(SharedState::new(&config)));
+    let native_metrics = gateway.metrics_view();
     let mut delivery = gateway.delivery.clone().map(|workers| workers.start());
     if push.is_some()
         && let Some(warning) = &mut warning
@@ -176,9 +236,15 @@ where
             .into_future(),
     ));
     listeners.spawn(crate::observability::inherit(
-        axum::serve(private, metrics_router(state))
-            .with_graceful_shutdown(wait_shutdown(rx))
-            .into_future(),
+        axum::serve(
+            private,
+            match native_metrics {
+                Some(view) => crate::metrics_router_with_native(state, view),
+                None => metrics_router(state),
+            },
+        )
+        .with_graceful_shutdown(wait_shutdown(rx))
+        .into_future(),
     ));
     hook(public);
     let result = tokio::select! {

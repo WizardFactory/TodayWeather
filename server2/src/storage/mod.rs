@@ -33,6 +33,8 @@ pub enum Error {
     /// Bounded admission/read capacity exhausted. A publication admission failure occurs before PUT;
     /// possible prior writes are reported as Ambiguous rather than a safe retry signal.
     Capacity,
+    /// Process CPU admission was refused before any possible write.
+    LocalCapacity,
     /// PUT sent, but durability could not be verified; same identity must be reconciled.
     Ambiguous,
     Timeout,

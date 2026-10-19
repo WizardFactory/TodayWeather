@@ -902,6 +902,7 @@ impl Operation {
         } else {
             Level::Info
         };
+        crate::operational_metrics::started(component, stage);
         let mut r = record(
             context,
             "operation.started",
@@ -939,6 +940,12 @@ impl Operation {
             return;
         }
         self.finished = true;
+        crate::operational_metrics::finished(
+            self.component,
+            self.stage,
+            outcome,
+            self.start.elapsed(),
+        );
         details.source.get_or_insert(self.source);
         details.line.get_or_insert(self.line);
         let mut r = record(
@@ -1136,7 +1143,7 @@ impl Classify for crate::storage::Error {
         let cause = match self {
             E::Invalid(_) => Cause::InvalidInput,
             E::Corrupt(_) => Cause::Corrupt,
-            E::Capacity => Cause::Capacity,
+            E::Capacity | E::LocalCapacity => Cause::Capacity,
             E::Ambiguous => Cause::Ambiguous,
             E::Timeout => Cause::Timeout,
             E::Transport => Cause::Transport,
@@ -1450,6 +1457,7 @@ pub trait ObservedHttp: Future<Output = Result<reqwest::Response, reqwest::Error
         component: Component,
     ) -> impl Future<Output = Result<reqwest::Response, reqwest::Error>> {
         async move {
+            let mut http_metric = crate::operational_metrics::HttpAttempt::start(component);
             let mut operation = Operation::new(component, Stage::ProviderHttp);
             operation.external_pending();
             let context = operation.context();
@@ -1475,6 +1483,7 @@ pub trait ObservedHttp: Future<Output = Result<reqwest::Response, reqwest::Error
                 }
                 Err(error) => error.classify(),
             };
+            http_metric.finish(status);
             operation.finish(
                 cause,
                 Action::None,

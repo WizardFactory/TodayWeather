@@ -31,7 +31,19 @@ pub struct RawFetch {
 pub enum StoreError {
     /// The scope could not be read completely; absence is not proved.
     Incomplete,
+    /// Original Incomplete plus actual CPU refusal within this load; not a storage Error.
+    LocalIncomplete,
     Storage(Error),
+    /// This invocation observed CPU refusal; the carried storage error retains write uncertainty.
+    LocalPublication(Error),
+}
+impl StoreError {
+    pub(crate) fn local_capacity(&self) -> bool {
+        matches!(
+            self,
+            Self::Storage(Error::LocalCapacity) | Self::LocalPublication(_) | Self::LocalIncomplete
+        )
+    }
 }
 pub trait WorldStore: Send + Sync + 'static {
     /// Every durable fetch that can affect a request at `now_ms` (the legacy 48 h decision window).
@@ -41,6 +53,16 @@ pub trait WorldStore: Send + Sync + 'static {
         now_ms: f64,
         deadline: Instant,
     ) -> BoxFuture<'_, Result<Vec<RawFetch>, StoreError>>;
+    /// Explicit per-load CPU view; standalone implementations keep their old contract.
+    fn load_with_cpu(
+        &self,
+        cell: Cell,
+        now_ms: f64,
+        deadline: Instant,
+        _cpu: Arc<crate::runtime_resources::CpuAdmission>,
+    ) -> BoxFuture<'_, Result<Vec<RawFetch>, StoreError>> {
+        self.load(cell, now_ms, deadline)
+    }
     /// Complete raw PUT and catalog publication; Ok only after the group is acknowledged.
     fn publish(
         &self,
@@ -127,15 +149,24 @@ fn fetches(set: &crate::storage::CompleteSet) -> Vec<RawFetch> {
 }
 /// S06-backed store. Absent catalogs are proved empty only by a complete one-period repair.
 pub struct CatalogWorldStore<T> {
+    cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
     catalogs: Arc<CatalogStore<T>>,
     raw_limits: Limits,
 }
 impl<T: CatalogTransport + 'static> CatalogWorldStore<T> {
     pub fn new(transport: T, limits: CatalogLimits) -> Result<Self, Error> {
+        Self::new_with_cpu(transport, limits, None)
+    }
+    pub fn new_with_cpu(
+        transport: T,
+        limits: CatalogLimits,
+        cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
+    ) -> Result<Self, Error> {
         let raw_limits = limits.raw.clone();
         Ok(Self {
-            catalogs: Arc::new(CatalogStore::new(transport, limits)?),
+            catalogs: Arc::new(CatalogStore::new_with_cpu(transport, limits, cpu.clone())?),
             raw_limits,
+            cpu,
         })
     }
     /// Every stored fetch of `cell` whose first local date is in `first_dates` (all ranges),
@@ -167,6 +198,28 @@ impl<T: CatalogTransport + 'static> CatalogWorldStore<T> {
     }
 }
 async fn load_partition<T: CatalogTransport>(
+    store: Arc<CatalogStore<T>>,
+    id: CatalogId,
+    period: Period,
+    deadline: Instant,
+    strict: bool,
+) -> Result<Vec<RawFetch>, StoreError> {
+    let store = Arc::new(store.local_invocation());
+    let result = load_partition_inner(store.clone(), id, period, deadline, strict).await;
+    result.map_err(|error| {
+        if store.cpu_refused() {
+            match error {
+                StoreError::Storage(e) | StoreError::LocalPublication(e) => {
+                    StoreError::LocalPublication(e)
+                }
+                StoreError::Incomplete | StoreError::LocalIncomplete => StoreError::LocalIncomplete,
+            }
+        } else {
+            error
+        }
+    })
+}
+async fn load_partition_inner<T: CatalogTransport>(
     store: Arc<CatalogStore<T>>,
     id: CatalogId,
     period: Period,
@@ -212,6 +265,103 @@ async fn load_partition<T: CatalogTransport>(
         RepairOutcome::Incomplete => Err(StoreError::Incomplete),
     }
 }
+impl<T: CatalogTransport + 'static> CatalogWorldStore<T> {
+    fn load_inner(
+        &self,
+        cell: Cell,
+        now_ms: f64,
+        deadline: Instant,
+        cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
+    ) -> BoxFuture<'_, Result<Vec<RawFetch>, StoreError>> {
+        Box::pin(async move {
+            let cpu = cpu.map(|cpu| cpu.observed_view());
+            let store = match &cpu {
+                Some(cpu) => Arc::new(
+                    self.catalogs
+                        .cpu_view(cpu.clone())
+                        .map_err(StoreError::Storage)?,
+                ),
+                None => self.catalogs.clone(),
+            };
+            let mut pending = (partitions(now_ms)).into_iter();
+            let mut tasks = JoinSet::new();
+            let spawn = |tasks: &mut JoinSet<Result<Vec<RawFetch>, StoreError>>,
+                         (date, range)|
+             -> Result<(), StoreError> {
+                let id = catalog(cell, date, range).map_err(StoreError::Storage)?;
+                let store = store.clone();
+                tasks.spawn(crate::observability::inherit(async move {
+                    load_partition(store, id, period(date, range), deadline, false).await
+                }));
+                Ok(())
+            };
+            let mut first_error = None;
+            let mut local_error = None;
+            for _ in 0..LOAD_FANOUT {
+                if let Some(next) = pending.next()
+                    && let Err(e) = spawn(&mut tasks, next)
+                {
+                    first_error = Some(e);
+                    break;
+                }
+            }
+            let mut out = Vec::new();
+            while !tasks.is_empty() {
+                let joined = match tokio::time::timeout_at(deadline, tasks.join_next()).await {
+                    Ok(Some(result)) => result.map_err(|_| StoreError::Incomplete),
+                    Ok(None) => break,
+                    Err(_) => {
+                        tasks.abort_all();
+                        while tasks.join_next().await.is_some() {}
+                        if first_error.is_none() {
+                            first_error = Some(StoreError::Storage(Error::Timeout));
+                        }
+                        break;
+                    }
+                };
+                let result = joined.and_then(|r| r);
+                match result {
+                    Ok(rows) => {
+                        out.extend(rows);
+                        if first_error.is_none()
+                            && let Some(next) = pending.next()
+                            && let Err(e) = spawn(&mut tasks, next)
+                        {
+                            first_error = Some(e);
+                        }
+                    }
+                    Err(error) => {
+                        if error.local_capacity() && local_error.is_none() {
+                            local_error = Some(error.clone());
+                        }
+                        if first_error.is_none() {
+                            first_error = Some(error);
+                        }
+                    }
+                }
+            }
+            if let Some(error) = local_error.or(first_error) {
+                // The inner catalog deadline can win before the caller's timeout.
+                // Inspect this exact load after admitted jobs have drained/aborted;
+                // their interrupted CPU completion must not become a funded miss.
+                return Err(if cpu.as_ref().is_some_and(|cpu| cpu.local_unavailable()) {
+                    match error {
+                        StoreError::Storage(e) | StoreError::LocalPublication(e) => {
+                            StoreError::LocalPublication(e)
+                        }
+                        StoreError::Incomplete | StoreError::LocalIncomplete => {
+                            StoreError::LocalIncomplete
+                        }
+                    }
+                } else {
+                    error
+                });
+            }
+            out.sort_by(|a, b| (a.fetched_at_ms, &a.sha256).cmp(&(b.fetched_at_ms, &b.sha256)));
+            Ok(out)
+        })
+    }
+}
 impl<T: CatalogTransport + 'static> WorldStore for CatalogWorldStore<T> {
     fn load(
         &self,
@@ -219,28 +369,16 @@ impl<T: CatalogTransport + 'static> WorldStore for CatalogWorldStore<T> {
         now_ms: f64,
         deadline: Instant,
     ) -> BoxFuture<'_, Result<Vec<RawFetch>, StoreError>> {
-        Box::pin(async move {
-            // Bounded fan-out: a few catalog reads at a time rather than all 21 at once.
-            let gate = Arc::new(tokio::sync::Semaphore::new(LOAD_FANOUT));
-            let mut tasks = JoinSet::new();
-            for (date, range) in partitions(now_ms) {
-                let id = catalog(cell, date, range).map_err(StoreError::Storage)?;
-                let (store, gate) = (self.catalogs.clone(), gate.clone());
-                tasks.spawn(crate::observability::inherit(async move {
-                    let _slot = gate
-                        .acquire_owned()
-                        .await
-                        .map_err(|_| StoreError::Incomplete)?;
-                    load_partition(store, id, period(date, range), deadline, false).await
-                }));
-            }
-            let mut out = Vec::new();
-            while let Some(joined) = tasks.join_next().await {
-                out.extend(joined.map_err(|_| StoreError::Incomplete)??);
-            }
-            out.sort_by(|a, b| (a.fetched_at_ms, &a.sha256).cmp(&(b.fetched_at_ms, &b.sha256)));
-            Ok(out)
-        })
+        self.load_inner(cell, now_ms, deadline, self.cpu.clone())
+    }
+    fn load_with_cpu(
+        &self,
+        cell: Cell,
+        now_ms: f64,
+        deadline: Instant,
+        cpu: Arc<crate::runtime_resources::CpuAdmission>,
+    ) -> BoxFuture<'_, Result<Vec<RawFetch>, StoreError>> {
+        self.load_inner(cell, now_ms, deadline, Some(cpu))
     }
     fn publish(
         &self,
@@ -249,25 +387,58 @@ impl<T: CatalogTransport + 'static> WorldStore for CatalogWorldStore<T> {
         deadline: Instant,
     ) -> BoxFuture<'_, Result<(), StoreError>> {
         Box::pin(async move {
-            let raw = record(cell, &fetch, &self.raw_limits).map_err(StoreError::Storage)?;
-            let id = CatalogId::for_record(
-                &raw.envelope.identity,
-                &partition(fetch.first_date, fetch.range),
-            )
-            .map_err(StoreError::Storage)?;
-            let declaration = GroupDeclaration::new(
-                vec![GroupMember {
-                    envelope: raw.envelope.clone(),
-                    catalogs: vec![id],
-                }],
-                &CatalogLimits::default(),
-            )
-            .map_err(StoreError::Storage)?;
+            let raw_limits = self.raw_limits.clone();
+            let prepare = move || -> Result<_, Error> {
+                let raw = record(cell, &fetch, &raw_limits)?;
+                let id = CatalogId::for_record(
+                    &raw.envelope.identity,
+                    &partition(fetch.first_date, fetch.range),
+                )?;
+                let declaration = GroupDeclaration::new(
+                    vec![GroupMember {
+                        envelope: raw.envelope.clone(),
+                        catalogs: vec![id],
+                    }],
+                    &CatalogLimits::default(),
+                )?;
+                Ok((declaration, raw))
+            };
+            let prepared = match &self.cpu {
+                Some(cpu) => cpu
+                    .run(
+                        crate::operational_metrics::CpuKind::StorageControl,
+                        deadline,
+                        None,
+                        prepare,
+                    )
+                    .await
+                    .map_err(|e| {
+                        StoreError::Storage(
+                            if matches!(
+                                e,
+                                crate::runtime_resources::CpuFailure::Capacity
+                                    | crate::runtime_resources::CpuFailure::Deadline
+                            ) {
+                                Error::LocalCapacity
+                            } else {
+                                Error::Transport
+                            },
+                        )
+                    })?,
+                None => prepare(),
+            };
+            let (declaration, raw) = prepared.map_err(StoreError::Storage)?;
             self.catalogs
-                .publish(declaration, vec![raw], deadline)
+                .publish_with_local_provenance(declaration, vec![raw], deadline)
                 .await
                 .map(|_| ())
-                .map_err(StoreError::Storage)
+                .map_err(|failure| {
+                    if failure.local_capacity {
+                        StoreError::LocalPublication(failure.error)
+                    } else {
+                        StoreError::Storage(failure.error)
+                    }
+                })
         })
     }
 }

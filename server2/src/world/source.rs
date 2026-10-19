@@ -48,6 +48,8 @@ pub const ELEMENTS: [&str; 25] = [
 /// Provider outcome classes that change the legacy chain.
 #[derive(Debug, Clone, PartialEq)]
 pub enum VcError {
+    /// The attempted call spent its funding, but local CPU work was refused.
+    LocalCapacity,
     /// Funding denied for this range; `retry_at_ms` is the funding window end.
     Exhausted { retry_at_ms: f64 },
     /// Rejected credentials (legacy providerDown for 401/403).
@@ -340,6 +342,7 @@ impl<P: VcTransport, T: BudgetTransport + 'static> FundedVc<P, T> {
             let time_left = deadline.saturating_duration_since(Instant::now()) > RETRY_DELAY;
             let retry = attempt == 1 && time_left;
             let response = match result {
+                Err(VcTransportError::LocalCapacity) => return Err(VcError::LocalCapacity),
                 Err(VcTransportError::Reset) if retry => {
                     crate::observability::event(
                         crate::observability::Component::World,

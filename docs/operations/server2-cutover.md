@@ -107,3 +107,16 @@ The [2026-10-17 UTC Linux record](../evidence/tasks/issue-2814/verification.md) 
 ![Typeset actual Linux CLI records](../evidence/tasks/issue-2814/nginx.png)
 
 This labelled image renders actual retained CLI reports/logs; it is not an application UI screenshot or another execution. No external live calls, traffic mirror, state copies, device send or production activation occurred.
+
+## Runtime metric evidence before pinning thresholds
+
+Use the [private runtime metrics guide](server2-runtime-metrics.md) to distinguish typed
+operation outcomes, HTTP-header latency, CPU queue/running time, FIFO S3 admission and
+diagnostic line loss. The endpoint must remain private. Counts reset on restart and are
+relaxed snapshots, not a durable delivery ledger. Logical payload bytes do not measure
+AWS billing. The retained owned-peer CPU-pressure/recovery flow does not establish host
+capacity, all-parser sharing or production thresholds. Reconcile D2/F2 CPU ownership and
+measure the exact complete release before accepting operational limits or recovery
+eligibility. The corrected local proofs include explicit typed CPU-capacity and complete
+bounded scrape-error cases; neither changes those operational gates. No metrics result
+authorizes rewind, resend, deployment, shadow or cutover.

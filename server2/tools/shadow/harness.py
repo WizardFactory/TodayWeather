@@ -247,8 +247,16 @@ class Server2:
     def metrics(self):
         reply = request(self.private, '/internal/metrics')
         assert reply.status == 200, reply.status
-        return {name: int(value) for name, value in
-                (line.split() for line in reply.body.decode().splitlines() if line)}
+        values = {}
+        for line in reply.body.decode().splitlines():
+            if not line.strip() or line.lstrip().startswith('#'):
+                continue
+            name, value = line.split()
+            try:
+                values[name] = int(value)
+            except ValueError:
+                values[name] = float(value)
+        return values
 
     def rss_kib(self):
         out = subprocess.run(['ps', '-o', 'rss=', '-p', str(self.process.pid)], capture_output=True, text=True)

@@ -138,8 +138,12 @@ impl<T: CatalogTransport + 'static> VcRecords for CatalogWorldStore<T> {
             self.load_first_dates(cell, &first_dates, deadline)
                 .await
                 .map_err(|e| match e {
-                    crate::world::StoreError::Storage(e) => LookupError::Storage(e),
-                    crate::world::StoreError::Incomplete => LookupError::Storage(Error::Timeout),
+                    crate::world::StoreError::Storage(e)
+                    | crate::world::StoreError::LocalPublication(e) => LookupError::Storage(e),
+                    crate::world::StoreError::Incomplete
+                    | crate::world::StoreError::LocalIncomplete => {
+                        LookupError::Storage(Error::Timeout)
+                    }
                 })
         })
     }

@@ -1,0 +1,27 @@
+{
+  "title": "Server2 private runtime metrics",
+  "scenario": "Repository preparation for operators. The three screenshots show retained actual build5 local loopback receipts and metric text, not a live product dashboard. No deployment, provider traffic, live notifications or production qualification is authorized. This editable source uses only normal.png, capacity.png and metrics.png beside it. These views present previously executed build5 results; they do not claim another product run.",
+  "steps": [
+    {
+      "title": "Read the private metrics listener",
+      "instruction": "Request GET /internal/metrics on the configured private listener. Keep this listener outside the public origin, nginx and CloudFront. Scraping reads attached atomic counters; it performs no provider, S3 or disk acquisition. The HTTP middleware can count the scrape itself.",
+      "screenshot": "normal.png",
+      "caption": "Fresh build5 normal1: binary 14f1afee\u2026, report c39e2751\u2026; cold 43.91 ms, warm and provider-down restart byte equal, zero extra provider work.",
+      "expected": "Actual private scrapes asserted HTTP 200 / no-store; public metrics unmounted. All eleven current metric bodies have 1,769 samples / 130,413\u2013130,616 bytes. Typed counters advance despite filtered logging. This one cold observation is not p95."
+    },
+    {
+      "title": "Distinguish capacity from provider failure",
+      "instruction": "Inspect CPU limit, queued, active, running and admitted-not-running together. The native waiting queue is bounded to 16 offers. An admitted blocking closure retains permits until it actually ends even if its caller leaves. Separate queued cancellation, started cancellation, panic and stopped counters.",
+      "screenshot": "capacity.png",
+      "caption": "Fresh build5 drained-sink typed CPU case (report aca38bfa\u2026): actual capacity before release, 501 at 3,001.26 ms, providers 0. Separate unread-sink case (0b9c8183\u2026): 501 at 2,997.14 ms, then 200 / VC 1 / air 1; 2,048 synthetic diagnostics are labelled separately.",
+      "expected": "Keep the 8 s owner / 3 s caller, 16 offers and closure-owned permits. Interrupted CPU completion remains observable after inner drop. Ordinary I/O, panic and stopped stay distinct. Unread pressure measured queue_full 626 / rate_limited 3,104; holder completion, stderr drain, drainer join and child retirement were actual assertions."
+    },
+    {
+      "title": "Respect metric and recovery limits",
+      "instruction": "Use fixed operation/outcome labels and histogram buckets in seconds. Header latency stops at headers. S3 submitted payload and returned-body byte counters are logical transport observations, not billing. Process restarts reset counters. Saturation limits further interpretation. Preserve typed claims and journal outcomes as the durable authority.",
+      "screenshot": "metrics.png",
+      "caption": "Matching current S3 logical-byte, seconds-bucket and saturation lines from pressure-recovered.prom. The separate synthetic finite test has 1,790 full-view samples, 164,735 max-width bytes and 72 saturation series; do not present them as live traffic.",
+      "expected": "The fixed 2,048 sample / 4,096 u64 / 512 KiB budgets remain. Bounded scrape failure is complete 500 / no-store; Indexed is not CompleteSet. Preserve uncertain writes / no resend. Original Domestic cause, D2/F2 CPU integration, host/RSS/quota/shadow and full release eligibility remain open."
+    }
+  ]
+}

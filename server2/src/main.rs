@@ -20,6 +20,8 @@ fn run() -> Result<(), Cause> {
         _ => Cause::Configuration,
     })?;
     server2::startup::validate_native_coverage(&var).map_err(|_| Cause::Configuration)?;
-    server2::process::run(config, move || RuntimeServices::from_vars(&var))
-        .map_err(|e| e.classify().0)
+    server2::process::run_with_resources(config, move |resources| {
+        RuntimeServices::from_vars_with_resources(&var, resources)
+    })
+    .map_err(|e| e.classify().0)
 }

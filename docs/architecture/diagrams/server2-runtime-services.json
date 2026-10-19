@@ -2,12 +2,13 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Complete-native startup and shared services",
+    "title": "Shared runtime, CPU and private metrics",
     "output": "docs/architecture/diagrams/server2-runtime-services.html",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "f6b69e8387b491bc2afc93129570a13272c66edb"
+      "revision": "59cea0cc2b0aac15c32fb54c21eea9dda026a306",
+      "link_mode": "web"
     }
   },
   "components": [
@@ -15,7 +16,7 @@
       "id": "process",
       "type": "backend",
       "label": "Entry + shared factory",
-      "sublabel": "Coverage first; then local accounts",
+      "sublabel": "Coverage; resources before factory",
       "pos": [
         440,
         245
@@ -27,18 +28,13 @@
       "sources": [
         {
           "path": "server2/src/main.rs",
-          "line": 12,
+          "line": 16,
           "end_line": 25
         },
         {
-          "path": "server2/src/startup.rs",
-          "line": 1,
-          "end_line": 36
-        },
-        {
-          "path": "server2/src/runtime_services.rs",
-          "line": 64,
-          "end_line": 85
+          "path": "server2/src/process.rs",
+          "line": 85,
+          "end_line": 110
         }
       ]
     },
@@ -119,7 +115,7 @@
       "id": "native",
       "type": "backend",
       "label": "Shared native services",
-      "sublabel": "Typed fetch + WarningStore / feed",
+      "sublabel": "VC / world / air / S06 CPU path",
       "pos": [
         830,
         480
@@ -138,6 +134,11 @@
           "path": "server2/src/push/deliver/native_fetch.rs",
           "line": 31,
           "end_line": 56
+        },
+        {
+          "path": "server2/src/world/engine.rs",
+          "line": 290,
+          "end_line": 407
         }
       ]
     },
@@ -145,7 +146,7 @@
       "id": "s3",
       "type": "database",
       "label": "Shared bounded S3",
-      "sublabel": "State / claims / results / warning data",
+      "sublabel": "Same FIFO12; logical byte counters",
       "pos": [
         440,
         480
@@ -223,6 +224,68 @@
           "end_line": 318
         }
       ]
+    },
+    {
+      "id": "resources",
+      "type": "backend",
+      "label": "Process CPU + domestic",
+      "sublabel": "Queue16; permits owned by closure",
+      "pos": [
+        1300,
+        480
+      ],
+      "size": [
+        260,
+        110
+      ],
+      "sources": [
+        {
+          "path": "server2/src/runtime_resources.rs",
+          "line": 24,
+          "end_line": 131
+        },
+        {
+          "path": "server2/src/runtime_resources.rs",
+          "line": 277,
+          "end_line": 315
+        },
+        {
+          "path": "server2/src/runtime_services.rs",
+          "line": 43,
+          "end_line": 73
+        }
+      ]
+    },
+    {
+      "id": "metrics",
+      "type": "backend",
+      "label": "Private native metrics",
+      "sublabel": "Atomic reads; no acquisition",
+      "pos": [
+        830,
+        710
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "server2/src/operational_metrics.rs",
+          "line": 270,
+          "end_line": 312
+        },
+        {
+          "path": "server2/src/operational_metrics.rs",
+          "line": 579,
+          "end_line": 616
+        },
+        {
+          "path": "server2/src/lib.rs",
+          "line": 275,
+          "end_line": 304
+        }
+      ]
     }
   ],
   "connections": [
@@ -289,6 +352,30 @@
       "from": "warning-api",
       "to": "s3",
       "label": "read warning data"
+    },
+    {
+      "id": "resources-native",
+      "from": "resources",
+      "to": "native",
+      "label": "injected CPU / counters"
+    },
+    {
+      "id": "resources-metrics",
+      "from": "resources",
+      "to": "metrics",
+      "label": "immutable view"
+    },
+    {
+      "id": "s3-metrics",
+      "from": "s3",
+      "to": "metrics",
+      "label": "atomic S3 / cache counts"
+    },
+    {
+      "id": "native-metrics",
+      "from": "native",
+      "to": "metrics",
+      "label": "typed outcomes before logs"
     }
   ],
   "cards": [
@@ -357,6 +444,30 @@
         "Alarm or alert failures cannot release live warning work; one JoinSet owns the jobs.",
         "A pending regular tick may run after completion; stop still blocks new scheduling.",
         "Original task failure stays incomplete; no failed / unknown send replay or state rewind."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "CPU lifetime and typed failures",
+      "items": [
+        "CPU margin 10 ms; cold owner 8 s and caller 3 s stay unchanged.",
+        "Same-invocation active/interrupted CPU preserves cause in either timer order.",
+        "Queued drop retires offer; blocking closure owns permits until physical exit.",
+        "Panic/stopped remain ordinary failures; only Capacity/Deadline sets local cause.",
+        "Bounded fan-out stops refill and drains; cold local refusal funds no providers.",
+        "Post-write uncertainty stays Ambiguous; definite PUT rejection stays definite."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Finite private evidence boundary",
+      "items": [
+        "Fixed labels: 2048 samples / 4096 u64 / 512 KiB; bounded complete 500 on overflow.",
+        "Actual build5 HTTP: 1769 samples. All-view test: 1790. Synthetic max width: 164735 B.",
+        "Counts precede log loss; S3 bytes are logical; HTTP timing ends at headers.",
+        "401/403 skip unused gzip. 429 body policy and actual CPU refusal remain distinct.",
+        "Other KMA/warning/AirKorea, D2/F2, host/RSS/quota/full-release gates stay open.",
+        "Source commit 59cea0cc; local source and browser evidence, no deployment claim."
       ]
     }
   ]

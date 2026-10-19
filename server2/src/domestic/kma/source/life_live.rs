@@ -31,6 +31,20 @@ pub fn mfds_acquirer<P: ProviderTransport + 'static, B: BudgetTransport + 'stati
     DomesticAcquirer<P, crate::providers::HttpPublicTransport, B>,
     crate::domestic::DomesticError,
 > {
+    mfds_acquirer_with_metrics(
+        funded,
+        clock,
+        Arc::new(crate::domestic::metrics::DomesticMetrics::default()),
+    )
+}
+pub fn mfds_acquirer_with_metrics<P: ProviderTransport + 'static, B: BudgetTransport + 'static>(
+    funded: Arc<P>,
+    clock: Arc<dyn crate::budget::Clock>,
+    metrics: Arc<crate::domestic::metrics::DomesticMetrics>,
+) -> Result<
+    DomesticAcquirer<P, crate::providers::HttpPublicTransport, B>,
+    crate::domestic::DomesticError,
+> {
     // Legacy `fetchRisk`: one absolute 10 s deadline, connecting included.
     let public = crate::providers::HttpPublicTransport::without_redirects(
         MFDS_MAX_BYTES,
@@ -48,7 +62,7 @@ pub fn mfds_acquirer<P: ProviderTransport + 'static, B: BudgetTransport + 'stati
         Default::default(),
         endpoints,
         clock,
-        Arc::new(crate::domestic::metrics::DomesticMetrics::default()),
+        metrics,
         crate::storage::CatalogLimits::default(),
     )
 }

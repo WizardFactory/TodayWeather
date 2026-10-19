@@ -297,3 +297,127 @@ async fn decoding_and_deadline_boundaries_fail_closed() {
         );
     }
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn funded_gzip_local_capacity_is_not_reset_retry_and_returns_only_unused_funds() {
+    use server2::{
+        operational_metrics::CpuKind,
+        runtime_resources::CpuAdmission,
+        world::{FundedVc, HttpVcTransport, VcFunding},
+    };
+    let s3 = Peer::new();
+    let vc = tcp_peer().await;
+    vc.queue(&[
+        Act::Respond(200, br#"{}"#.to_vec(), true),
+        ok(br#"{"next":true}"#),
+    ]);
+    let cpu = CpuAdmission::new(1);
+    let clock = Arc::new(FixedClock::new(ms("2026-09-26T07:04:30.000Z")));
+    let source = FundedVc::new(
+        &vc.endpoint,
+        Arc::new(HttpVcTransport::new_with_cpu(Some(cpu.clone())).unwrap()),
+        VcFunding {
+            transport: Arc::new(s3.transport()),
+            quota_id: "c".repeat(64),
+            daily_units: 50,
+            block_units: 50,
+            clock: Arc::new(super::chain::ScenarioClock(clock)),
+        },
+        "synthetic-vc-key-0001".into(),
+    )
+    .unwrap();
+    let (start, ready) = tokio::sync::oneshot::channel();
+    let (release, wait) = std::sync::mpsc::channel();
+    let held = cpu.clone();
+    let blocker = tokio::spawn(async move {
+        held.immediate(CpuKind::Foundation, move || {
+            let _ = start.send(());
+            wait.recv().unwrap();
+        })
+        .await
+    });
+    ready.await.unwrap();
+    let first = source.fetch(cell(), Range::Recent, within(500)).await;
+    assert_eq!(first, Err(VcError::LocalCapacity));
+    assert_eq!(vc.count(), 1, "one spent wire attempt, never a Reset retry");
+    release.send(()).unwrap();
+    assert!(blocker.await.unwrap().is_ok());
+    let second = source
+        .fetch(cell(), Range::Forecast, within(3000))
+        .await
+        .unwrap();
+    assert_eq!(second, br#"{"next":true}"#);
+    assert_eq!(
+        vc.count(),
+        2,
+        "unused second-attempt funds must return to the existing pool"
+    );
+    let third = source.fetch(cell(), Range::Recent, within(3000)).await;
+    assert!(
+        matches!(third, Err(VcError::Exhausted { .. })),
+        "spent attempt was not refunded: {third:?}"
+    );
+    assert_eq!(vc.count(), 2);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn definite_gzip_statuses_do_not_spend_cpu_but_429_refusal_stays_local() {
+    use server2::{
+        operational_metrics::CpuKind,
+        runtime_resources::CpuAdmission,
+        world::{FundedVc, HttpVcTransport, VcFunding},
+    };
+    let s3 = Peer::new();
+    let vc = tcp_peer().await;
+    vc.queue(&[
+        Act::Respond(401, b"Unauthorized".to_vec(), true),
+        Act::Respond(403, b"Forbidden".to_vec(), true),
+        Act::Respond(429, b"API calls limit".to_vec(), true),
+    ]);
+    let cpu = CpuAdmission::new(1);
+    let source = FundedVc::new(
+        &vc.endpoint,
+        Arc::new(HttpVcTransport::new_with_cpu(Some(cpu.clone())).unwrap()),
+        VcFunding {
+            transport: Arc::new(s3.transport()),
+            quota_id: "e".repeat(64),
+            daily_units: 200,
+            block_units: 50,
+            clock: Arc::new(super::chain::ScenarioClock(Arc::new(FixedClock::new(ms(
+                "2026-09-26T07:04:30.000Z",
+            ))))),
+        },
+        "synthetic-vc-key-0001".into(),
+    )
+    .unwrap();
+    let (start, ready) = tokio::sync::oneshot::channel();
+    let (release, wait) = std::sync::mpsc::channel();
+    let held = cpu.clone();
+    let blocker = tokio::spawn(async move {
+        held.immediate(CpuKind::Foundation, move || {
+            let _ = start.send(());
+            wait.recv().unwrap();
+        })
+        .await
+    });
+    ready.await.unwrap();
+    let mut results = Vec::new();
+    for _ in 0..3 {
+        results.push(source.fetch(cell(), Range::Recent, within(300)).await);
+    }
+    release.send(()).unwrap();
+    assert!(blocker.await.unwrap().is_ok());
+    assert_eq!(
+        results,
+        vec![
+            Err(VcError::ProviderDown),
+            Err(VcError::ProviderDown),
+            Err(VcError::LocalCapacity)
+        ]
+    );
+    assert_eq!(
+        vc.count(),
+        3,
+        "known status or CPU refusal cannot add a retry/refund"
+    );
+}

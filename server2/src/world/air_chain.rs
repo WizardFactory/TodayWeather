@@ -123,6 +123,7 @@ struct Inner<T> {
     funding: Option<AirFunding<T>>,
     clock: Arc<dyn Clock>,
     config: AirConfig,
+    cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
     rows: Mutex<HashMap<AirCell, Row>>,
     inflight: Mutex<HashMap<AirCell, SharedRow>>,
     minute: Mutex<Minute>,
@@ -188,6 +189,7 @@ enum Attempt {
     /// 401/403/429: the provider is marked down.
     Rejected,
     Failed,
+    LocalCapacity,
 }
 
 impl<T: BudgetTransport + 'static> LiveAir<T> {
@@ -197,6 +199,16 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         http: Arc<dyn AirTransport>,
         funding: AirFunding<T>,
         clock: Arc<dyn Clock>,
+    ) -> Result<Self, AirConfigError> {
+        Self::new_with_cpu(config, store, http, funding, clock, None)
+    }
+    pub fn new_with_cpu(
+        config: AirConfig,
+        store: Arc<dyn AirStore>,
+        http: Arc<dyn AirTransport>,
+        funding: AirFunding<T>,
+        clock: Arc<dyn Clock>,
+        cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
     ) -> Result<Self, AirConfigError> {
         let mut providers = Vec::new();
         for (provider, slot) in
@@ -233,15 +245,17 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         if config.max_cells == 0 {
             return Err(AirConfigError::Invalid("max cells"));
         }
-        Ok(Self::build(
+        Ok(Self::build_with_cpu(
             providers,
             store,
             Some(http),
             Some(funding),
             clock,
             config,
+            cpu,
         ))
     }
+    #[cfg(test)]
     fn build(
         providers: Vec<ProviderState<T>>,
         store: Arc<dyn AirStore>,
@@ -249,6 +263,17 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         funding: Option<AirFunding<T>>,
         clock: Arc<dyn Clock>,
         config: AirConfig,
+    ) -> Self {
+        Self::build_with_cpu(providers, store, http, funding, clock, config, None)
+    }
+    fn build_with_cpu(
+        providers: Vec<ProviderState<T>>,
+        store: Arc<dyn AirStore>,
+        http: Option<Arc<dyn AirTransport>>,
+        funding: Option<AirFunding<T>>,
+        clock: Arc<dyn Clock>,
+        config: AirConfig,
+        cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
     ) -> Self {
         Self {
             inner: Arc::new(Inner {
@@ -258,6 +283,7 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                 funding,
                 clock,
                 config,
+                cpu,
                 rows: Mutex::new(HashMap::new()),
                 inflight: Mutex::new(HashMap::new()),
                 minute: Mutex::new(Minute::default()),
@@ -363,7 +389,10 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                         me.miss(cell, lat, lon, request_ms),
                     )
                     .await;
-                    me.remember(cell, row.clone());
+                    // Pre-funding local refusal is a transient answer, never a retained failure row.
+                    if row.expire_at > 0. {
+                        me.remember(cell, row.clone());
+                    }
                     me.inner
                         .inflight
                         .lock()
@@ -391,31 +420,77 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
     async fn miss(&self, cell: AirCell, lat: f64, lon: f64, request_ms: f64) -> Row {
         let now = self.now();
         let store_deadline = Instant::now() + self.inner.config.store_timeout;
-        if let Ok(Ok(records)) = timeout(
-            self.inner.config.store_timeout,
-            self.inner.store.load(cell, now, store_deadline),
-        )
-        .await
-        {
-            let newest = records
-                .into_iter()
-                .filter(|r| {
-                    let at = r.fetched_at_ms as f64;
-                    at <= now && now < at + TTL_MS
-                })
-                .max_by(|a, b| (a.fetched_at_ms, &a.body[..]).cmp(&(b.fetched_at_ms, &b.body[..])));
-            if let Some(r) = newest {
-                self.inner.metrics.store_hits.fetch_add(1, Relaxed);
-                return Row {
-                    reason: None,
-                    expire_at: r.fetched_at_ms as f64 + TTL_MS,
-                    observation: r.provider.parse(&r.body),
-                };
+        let cpu = self.inner.cpu.as_ref().map(|cpu| cpu.observed_view());
+        let loaded = timeout(self.inner.config.store_timeout, async {
+            match &cpu {
+                Some(cpu) => {
+                    self.inner
+                        .store
+                        .load_with_cpu(cell, now, store_deadline, cpu.clone())
+                        .await
+                }
+                None => self.inner.store.load(cell, now, store_deadline).await,
             }
+        })
+        .await;
+        match loaded {
+            Err(_) if cpu.as_ref().is_some_and(|cpu| cpu.local_unavailable()) => {
+                return self.local_row(false);
+            }
+            Ok(Err(error)) if error.local_capacity() => return self.local_row(false),
+            Ok(Ok(records)) => {
+                let parse = move || {
+                    records
+                        .into_iter()
+                        .filter(|r| {
+                            let at = r.fetched_at_ms as f64;
+                            at <= now && now < at + TTL_MS
+                        })
+                        .max_by(|a, b| {
+                            (a.fetched_at_ms, &a.body[..]).cmp(&(b.fetched_at_ms, &b.body[..]))
+                        })
+                        .map(|r| Row {
+                            reason: None,
+                            expire_at: r.fetched_at_ms as f64 + TTL_MS,
+                            observation: r.provider.parse(&r.body),
+                        })
+                };
+                let row = match &cpu {
+                    Some(cpu) => match cpu
+                        .run(
+                            crate::operational_metrics::CpuKind::AirRestore,
+                            store_deadline,
+                            None,
+                            parse,
+                        )
+                        .await
+                    {
+                        Ok(row) => row,
+                        Err(
+                            crate::runtime_resources::CpuFailure::Capacity
+                            | crate::runtime_resources::CpuFailure::Deadline,
+                        ) => return self.local_row(false),
+                        Err(_) => {
+                            return Row {
+                                reason: Some("fallback-unavailable"),
+                                expire_at: 0.,
+                                observation: None,
+                            };
+                        }
+                    },
+                    None => parse(),
+                };
+                if let Some(row) = row {
+                    self.inner.metrics.store_hits.fetch_add(1, Relaxed);
+                    return row;
+                }
+            }
+            _ => {}
         }
         self.inner.metrics.chains.fetch_add(1, Relaxed);
         let (record, observation) = match self.chain(cell, lat, lon, request_ms).await {
             Ok(found) => found,
+            Err("local-capacity") => return self.local_row(true),
             Err(reason) => {
                 return Row {
                     reason: Some(reason),
@@ -435,6 +510,7 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                     observation: Some(observation),
                 }
             }
+            Err(error) if error.local_capacity() => self.local_row(true),
             Err(_) => {
                 // O-9: an undurable body is not a success.
                 self.inner
@@ -447,6 +523,21 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                     observation: None,
                 }
             }
+        }
+    }
+    fn local_row(&self, funded: bool) -> Row {
+        crate::observability::event(
+            crate::observability::Component::World,
+            crate::observability::Stage::Acquire,
+            crate::observability::Cause::Capacity,
+            crate::observability::Action::Fallback,
+            crate::observability::Outcome::Failed,
+            Default::default(),
+        );
+        Row {
+            reason: Some("fallback-unavailable"),
+            expire_at: if funded { self.now() + 2000. } else { 0. },
+            observation: None,
         }
     }
     /// `providerChain.fetch` free phase: FREE_ORDER, then WAQI again when not yet tried.
@@ -478,6 +569,7 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                         }
                         last = Some((record, o));
                     }
+                    Attempt::LocalCapacity => return Err("local-capacity"),
                     Attempt::Rejected => {
                         *state.down_until.lock().unwrap_or_else(|e| e.into_inner()) =
                             self.now() + DOWN_MS;
@@ -630,9 +722,30 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
         let provider = state.provider;
         let body: Arc<[u8]> = response.body.into();
         let parsed = body.clone();
-        let Ok(Some(observation)) =
-            crate::observability::spawn_blocking(move || provider.parse(&parsed)).await
-        else {
+        let parse = move || provider.parse(&parsed);
+        let result = match &self.inner.cpu {
+            Some(cpu) => match cpu
+                .run(
+                    crate::operational_metrics::CpuKind::AirParse,
+                    deadline,
+                    None,
+                    parse,
+                )
+                .await
+            {
+                Ok(v) => v,
+                Err(
+                    crate::runtime_resources::CpuFailure::Capacity
+                    | crate::runtime_resources::CpuFailure::Deadline,
+                ) => return Attempt::LocalCapacity,
+                Err(_) => return Attempt::Failed,
+            },
+            None => match crate::observability::spawn_blocking(parse).await {
+                Ok(v) => v,
+                Err(_) => return Attempt::Failed,
+            },
+        };
+        let Some(observation) = result else {
             return Attempt::Failed;
         };
         let content_type = Some(response.content_type)

@@ -14,3 +14,6 @@ mod restore;
 mod switch;
 #[path = "world/widget.rs"]
 mod widget;
+
+#[path = "world/resource_admission.rs"]
+mod resource_admission;
