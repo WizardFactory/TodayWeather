@@ -2,8 +2,9 @@
 
 2026-10-18. Parent C2 scope of [#2819](https://github.com/WizardFactory/TodayWeather/issues/2819),
 stacked on lateness PR2826 `e97a50906234e05b87dbdcb28cf87d0959a1e4b1`.
-That child addresses C3 and the minute-refusal trigger, separately reviewed with
-14 successful CI checks. C1/B1 remain parallel unmerged branches, not ancestors.
+That original child addresses C3 and the minute-refusal trigger, separately reviewed
+with 14 successful CI checks. At that original review point C1/B1 were parallel
+unmerged branches; the dated integration note below supersedes that topology.
 This is no main/global, shadow, eligible full recovery release or issue closure.
 
 ## Behavior and discriminating checks
@@ -106,12 +107,46 @@ and all relevant bool-queue callers. A misplaced bool API comment and observer
 parameter names were clarified without behavior change. Recommendation005's
 optional finer nonadmission diagnostics was not selected; no follow-up created.
 
-Current full targets renewed on the same718-file input projection: lib114,
+Historical review1-refinement targets used the same718-file input projection: lib114,
 delivery86, state18 and runtime31, **249 passed / 1 ignored**, counted once.
 Fmt/all-target Clippy/optimized example passed. Additional actual functional3
 repeats the four scenarios,4ownedFCM/5OAuth/process0/fourclosedlisteners,718inputs
 and retained executable unchanged. Report SHA-256 `7eb078e4bb763c159ea5d86c90065355aabaf783e0a0fbee4e326142414313df`;
 retained executable SHA-256 `4b535da8efda01ef4b11105607d60f424d1eb7891dc35bba6a1f23a27ace9565`. Prior
 functional1/2 and248/1 are historical executions, not relabelled or added to the
-current total. Actual independent re-review and exact-newheadCI remain required.
+historical total. Actual independent re-review and exact-newheadCI remain required.
 No per-cohort concurrency number is a global active-lease/process bound.
+
+## 2026-10-19 parent integration and execution provenance
+
+The integration parent `774343136cfcb72f2ca876d6e13f5ad878e46b56` includes C1
+and B1; C2 source merge `a5def505` reconciles their fallible transaction, decode,
+writer and restore APIs. Decode errors clear readiness and drop replies, producing
+explicit uncertainty without a POST. Full restore revokes outstanding receipts.
+Every observed batch is validated before any mutation or ownership callback;
+valid changes are still observed individually, so intermediate ABA transitions
+cannot regain ownership. A focused invalid-tail test first observed partial
+prefix mutation, then passed after the canonical staged application correction.
+
+The original **249 passed / 1 ignored** and functional3 remain historical, with
+the original executable/report hashes above. The first integration attempt recorded
+263/1, all-target lint and a four-case CLI run under ignored task `integration1/`.
+A subsequent cross-worktree Cargo target check found stale package reuse in the
+B3 lane (six source tests listed as zero; cached paths named B2). Those original
+logs remain, but current integration qualification requires a package-only clean
+before switching worktrees, a pre-execution source map and retained executables.
+Shared dependency caches and original evidence are preserved.
+
+The main integration gate requires package-clean source-bound verification;
+no prior run is relabelled as that execution. The final reviewed
+[PR2827 integration record](https://github.com/WizardFactory/TodayWeather/pull/2827)
+binds the actual source parent, test/smoke results, retained binary hash and CI.
+This dated note preserves the earlier evidence identities rather than claiming
+a later execution from its original logs.
+
+The existing diagram remains explicitly frozen design-time context; the two
+retained storage/ownership contracts and user-visible behavior are unchanged.
+This document does not attest a new diagram render, production recovery bundle,
+shadow run or deployment. The later ordered merge instruction authorizes main
+integration only after fresh tests, independent review and exact CI/tree gates;
+the original 2026-10-18 pre-merge-only record above remains historical.
