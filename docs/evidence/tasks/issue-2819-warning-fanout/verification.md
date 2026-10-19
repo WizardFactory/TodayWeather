@@ -1,5 +1,14 @@
 # Bounded warning work: selected local evidence
 
+2026-10-19 integration note: the dated results and source/binary hashes below
+retain their original execution identities. Statements about an unmerged or
+parallel parent describe that original verification point. The integrated source
+now includes C1/B1 and the preceding ordered fixes. Current source-bound checks
+require explicit dev and release package rebuilds, separate owned smoke, independent
+review and exact CI/tree reconciliation. The final [PR2828 integration record](https://github.com/WizardFactory/TodayWeather/pull/2828)
+binds those actual results; this note does not relabel historical checks or
+qualify production, a full recovery bundle, shadow or issue closure.
+
 [Issue #2819](https://github.com/WizardFactory/TodayWeather/issues/2819), C4 only.
 Implementation parent: `2e67d146af033ba9dc51a7e86e1a1f79728260b0` (unmerged
 C2 PR2827). Candidate is bound separately by the commit/review record. The binary
