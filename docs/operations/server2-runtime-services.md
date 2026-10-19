@@ -116,3 +116,7 @@ logging-loss independence and the explicit coverage boundary. Preserve the exist
 claims, final send admission and stop/drain behavior. A completed CPU caller does not prove
 that a cancelled blocking closure has exited; the actual closure owns its permits. This
 change is repository preparation and does not start production workers or authorize sends.
+Cold-load timeout classification retains only the same invocation's actual CPU loss; the
+8s owner/3s caller contract remains. Panic/stopped retain ordinary failure handling.
+The current source-bound guide separates fresh build5 executions from prior matrix7
+equivalence reuse and keeps the original Domestic failure cause unresolved.

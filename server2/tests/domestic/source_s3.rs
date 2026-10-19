@@ -552,7 +552,7 @@ const SEOUL: Coord = Coord { mx: 60., my: 127. };
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn snapshot_answers_sourced_calls_from_s3_raw_records() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport();
     let store = CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap();
     let data = seed(&store, &[]).await;
@@ -1268,7 +1268,7 @@ async fn stored_acquisitions_legacy_would_not_keep_are_acquired_again() {
             Box::pin(async { Ok(None) })
         }
     }
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
     seed(
         &store,
@@ -1381,7 +1381,7 @@ async fn qs_query_structure_is_answered_natively() {
     use server2::gateway::BackendHandler;
     use server2::gateway::backend::Native;
     let _peers = super::source_s3::S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
     seed(&store, &[]).await;
     let backend = KmaBackend::new(

@@ -64,13 +64,20 @@ impl<T: ObjectTransport> RawRecordStore<T> {
         })
     }
     pub(crate) fn invocation(&self, flag: Arc<AtomicBool>) -> Self {
+        self.invocation_with_cpu(flag, self.shared_cpu.clone())
+    }
+    pub(crate) fn invocation_with_cpu(
+        &self,
+        flag: Arc<AtomicBool>,
+        cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
+    ) -> Self {
         Self {
             transport: self.transport.clone(),
             limits: self.limits.clone(),
             io: self.io.clone(),
             cpu: self.cpu.clone(),
             buffers: self.buffers.clone(),
-            shared_cpu: self.shared_cpu.clone(),
+            shared_cpu: cpu,
             local_failure: Some(flag),
         }
     }
@@ -90,12 +97,19 @@ impl<T: ObjectTransport> RawRecordStore<T> {
                 .await
             {
                 Ok(value) => value,
-                Err(_) => {
+                Err(
+                    crate::runtime_resources::CpuFailure::Capacity
+                    | crate::runtime_resources::CpuFailure::Deadline,
+                ) => {
                     if let Some(flag) = &self.local_failure {
                         flag.store(true, Ordering::Release);
                     }
                     Err(Error::LocalCapacity)
                 }
+                Err(
+                    crate::runtime_resources::CpuFailure::Panicked
+                    | crate::runtime_resources::CpuFailure::Stopped,
+                ) => Err(Error::Transport),
             };
         }
         let permit = self

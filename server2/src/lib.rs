@@ -265,17 +265,80 @@ pub fn metrics_router_with_native(
                 let native = native.clone();
                 async move {
                     let response = metrics(State(state)).await;
-                    let (parts, body) = response.into_parts();
-                    let bytes = axum::body::to_bytes(body, operational_metrics::MAX_TEXT)
-                        .await
-                        .expect("fixed foundation metric body");
-                    let mut text = bytes.to_vec();
-                    text.extend_from_slice(native.render().as_bytes());
-                    Response::from_parts(parts, Body::from(text))
+                    native_metrics_response(response, native).await
                 }
             }),
         )
         .layer(middleware::from_fn(observability::http))
+}
+// Unchanged extraction of the existing request composition, for actual oversized-body tests.
+async fn native_metrics_response(
+    response: Response,
+    native: operational_metrics::NativeMetricsView,
+) -> Response {
+    let (parts, body) = response.into_parts();
+    let Ok(bytes) = axum::body::to_bytes(body, operational_metrics::MAX_TEXT).await else {
+        return metrics_unavailable();
+    };
+    let native = native.render();
+    if bytes
+        .len()
+        .checked_add(native.len())
+        .is_none_or(|n| n > operational_metrics::MAX_TEXT)
+    {
+        return metrics_unavailable();
+    }
+    let mut text = bytes.to_vec();
+    text.extend_from_slice(native.as_bytes());
+    Response::from_parts(parts, Body::from(text))
+}
+fn metrics_unavailable() -> Response {
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        [
+            ("content-type", "text/plain; charset=utf-8"),
+            ("cache-control", "no-store"),
+        ],
+        "metrics unavailable\n",
+    )
+        .into_response()
+}
+#[cfg(test)]
+mod native_metrics_response_tests {
+    use super::*;
+    fn view() -> operational_metrics::NativeMetricsView {
+        operational_metrics::NativeMetricsView {
+            resources: runtime_resources::ProcessResources::new(&Config::default()),
+            push: None,
+            s3: None,
+            disk: None,
+        }
+    }
+    #[tokio::test]
+    async fn body_read_limit_is_a_bounded_complete_error_not_a_panic() {
+        let response = native_metrics_response(
+            Response::new(Body::from(vec![b'x'; operational_metrics::MAX_TEXT + 1])),
+            view(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(response.headers()["cache-control"], "no-store");
+        assert!(
+            axum::body::to_bytes(response.into_body(), 128)
+                .await
+                .is_ok()
+        );
+    }
+    #[tokio::test]
+    async fn combined_metrics_limit_is_an_error_not_a_partial_or_oversized_success() {
+        let response = native_metrics_response(
+            Response::new(Body::from(vec![b'x'; operational_metrics::MAX_TEXT])),
+            view(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(response.headers()["cache-control"], "no-store");
+    }
 }
 pub fn metrics_router(state: Arc<SharedState>) -> Router {
     Router::new()

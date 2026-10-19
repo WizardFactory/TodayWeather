@@ -121,7 +121,7 @@ impl VcTransport for HttpVcTransport {
             let (status, gzip, raw) = timeout_at(deadline, call)
                 .await
                 .map_err(|_| VcTransportError::Failed)??;
-            let body = if gzip {
+            let body = if gzip && ((200..=299).contains(&status) || status == 429) {
                 let decode = move || {
                     let mut out = Vec::new();
                     flate2::read::GzDecoder::new(raw.as_slice())
@@ -142,7 +142,17 @@ impl VcTransport for HttpVcTransport {
                             decode,
                         )
                         .await
-                        .map_err(|_| VcTransportError::LocalCapacity)??,
+                        .map_err(|e| {
+                            if matches!(
+                                e,
+                                crate::runtime_resources::CpuFailure::Capacity
+                                    | crate::runtime_resources::CpuFailure::Deadline
+                            ) {
+                                VcTransportError::LocalCapacity
+                            } else {
+                                VcTransportError::Failed
+                            }
+                        })??,
                     None => decode()?,
                 }
             } else {

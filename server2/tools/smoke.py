@@ -57,7 +57,7 @@ def run(binary):
         status,headers,body=get(private+'/internal/metrics')
         assert status==200 and 'access-control-allow-origin' not in headers
         assert headers.get('cache-control')=='no-store'
-        counters=dict(line.split() for line in body.splitlines())
+        counters=dict(line.split() for line in body.splitlines() if line.strip() and not line.lstrip().startswith('#'))
         assert counters['server2_health_requests_total']=='2'
         assert counters['server2_inflight']=='0' and counters['server2_cpu_inflight']=='0'
         print('GET loopback metrics -> 200 no-store; counters: '+json.dumps(counters,sort_keys=True))

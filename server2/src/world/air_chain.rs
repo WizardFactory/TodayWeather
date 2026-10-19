@@ -420,12 +420,23 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
     async fn miss(&self, cell: AirCell, lat: f64, lon: f64, request_ms: f64) -> Row {
         let now = self.now();
         let store_deadline = Instant::now() + self.inner.config.store_timeout;
-        let loaded = timeout(
-            self.inner.config.store_timeout,
-            self.inner.store.load(cell, now, store_deadline),
-        )
+        let cpu = self.inner.cpu.as_ref().map(|cpu| cpu.observed_view());
+        let loaded = timeout(self.inner.config.store_timeout, async {
+            match &cpu {
+                Some(cpu) => {
+                    self.inner
+                        .store
+                        .load_with_cpu(cell, now, store_deadline, cpu.clone())
+                        .await
+                }
+                None => self.inner.store.load(cell, now, store_deadline).await,
+            }
+        })
         .await;
         match loaded {
+            Err(_) if cpu.as_ref().is_some_and(|cpu| cpu.local_unavailable()) => {
+                return self.local_row(false);
+            }
             Ok(Err(error)) if error.local_capacity() => return self.local_row(false),
             Ok(Ok(records)) => {
                 let parse = move || {
@@ -444,7 +455,7 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                             observation: r.provider.parse(&r.body),
                         })
                 };
-                let row = match &self.inner.cpu {
+                let row = match &cpu {
                     Some(cpu) => match cpu
                         .run(
                             crate::operational_metrics::CpuKind::AirRestore,
@@ -455,7 +466,17 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                         .await
                     {
                         Ok(row) => row,
-                        Err(_) => return self.local_row(false),
+                        Err(
+                            crate::runtime_resources::CpuFailure::Capacity
+                            | crate::runtime_resources::CpuFailure::Deadline,
+                        ) => return self.local_row(false),
+                        Err(_) => {
+                            return Row {
+                                reason: Some("fallback-unavailable"),
+                                expire_at: 0.,
+                                observation: None,
+                            };
+                        }
                     },
                     None => parse(),
                 };
@@ -713,7 +734,11 @@ impl<T: BudgetTransport + 'static> LiveAir<T> {
                 .await
             {
                 Ok(v) => v,
-                Err(_) => return Attempt::LocalCapacity,
+                Err(
+                    crate::runtime_resources::CpuFailure::Capacity
+                    | crate::runtime_resources::CpuFailure::Deadline,
+                ) => return Attempt::LocalCapacity,
+                Err(_) => return Attempt::Failed,
             },
             None => match crate::observability::spawn_blocking(parse).await {
                 Ok(v) => v,

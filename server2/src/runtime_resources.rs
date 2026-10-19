@@ -2,7 +2,7 @@
 use crate::operational_metrics::{CpuKind, CpuMetrics};
 use std::sync::{
     Arc,
-    atomic::{AtomicBool, AtomicU8, Ordering},
+    atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering},
 };
 use std::time::{Duration, Instant as WallInstant};
 use tokio::{
@@ -19,11 +19,85 @@ pub enum CpuFailure {
     Panicked,
     Stopped,
 }
+// One load/flight, never a process-global cause. No identity or metric labels.
+#[derive(Default)]
+struct CpuObservation {
+    active: AtomicUsize,
+    refused: AtomicBool,
+    interrupted: AtomicBool,
+}
+struct RunState {
+    scope: Option<Arc<CpuObservation>>,
+    live: AtomicBool,
+    fault: AtomicU8,
+}
+impl RunState {
+    fn new(scope: Option<Arc<CpuObservation>>) -> Arc<Self> {
+        if let Some(scope) = &scope {
+            scope.active.fetch_add(1, Ordering::AcqRel);
+        }
+        Arc::new(Self {
+            scope,
+            live: AtomicBool::new(true),
+            fault: AtomicU8::new(0),
+        })
+    }
+    fn retire(&self) -> bool {
+        let live = self.live.swap(false, Ordering::AcqRel);
+        if live && let Some(scope) = &self.scope {
+            scope.active.fetch_sub(1, Ordering::AcqRel);
+        }
+        live
+    }
+    fn refuse(&self) {
+        if self.fault.load(Ordering::Acquire) == 0
+            && let Some(scope) = &self.scope
+        {
+            scope.refused.store(true, Ordering::Release);
+        }
+        self.retire();
+    }
+    fn fault(&self, panic: bool) {
+        self.fault
+            .store(if panic { 1 } else { 2 }, Ordering::Release);
+        self.retire();
+    }
+    fn known_fault(&self) -> Option<CpuFailure> {
+        match self.fault.load(Ordering::Acquire) {
+            1 => Some(CpuFailure::Panicked),
+            2 => Some(CpuFailure::Stopped),
+            _ => None,
+        }
+    }
+}
+struct RunObservation(Arc<RunState>);
+impl RunObservation {
+    fn finish(&self, error: Option<CpuFailure>) {
+        if matches!(error, Some(CpuFailure::Capacity | CpuFailure::Deadline)) {
+            self.0.refuse();
+        } else {
+            self.0.retire();
+        }
+    }
+}
+impl Drop for RunObservation {
+    fn drop(&mut self) {
+        // timeout_at drops its inner future before its caller can inspect the view.
+        // Retire the gauge while retaining that exact unfinished computation for the
+        // caller's actual timeout branch; an ordinary external abort returns nothing.
+        if self.0.retire()
+            && let Some(scope) = &self.0.scope
+        {
+            scope.interrupted.store(true, Ordering::Release);
+        }
+    }
+}
 pub struct CpuAdmission {
     gate: Arc<Semaphore>,
     offers: Arc<Semaphore>,
     limit: usize,
     metrics: Arc<CpuMetrics>,
+    observation: Option<Arc<CpuObservation>>,
 }
 impl CpuAdmission {
     pub fn new(limit: usize) -> Arc<Self> {
@@ -32,7 +106,40 @@ impl CpuAdmission {
             offers: Arc::new(Semaphore::new(NATIVE_QUEUE)),
             limit,
             metrics: Arc::new(CpuMetrics::default()),
+            observation: None,
         })
+    }
+    /// Reuse an ancestor observation explicitly. Storage adapters must not silently
+    /// replace the enclosing caller's scope with a fresh cause flag.
+    pub(crate) fn same_pool(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.gate, &other.gate)
+            && Arc::ptr_eq(&self.offers, &other.offers)
+            && Arc::ptr_eq(&self.metrics, &other.metrics)
+    }
+    pub(crate) fn observed_view(self: &Arc<Self>) -> Arc<Self> {
+        if self.observation.is_some() {
+            return self.clone();
+        }
+        Arc::new(Self {
+            gate: self.gate.clone(),
+            offers: self.offers.clone(),
+            limit: self.limit,
+            metrics: self.metrics.clone(),
+            observation: Some(Arc::new(CpuObservation::default())),
+        })
+    }
+    pub(crate) fn local_unavailable(&self) -> bool {
+        self.observation.as_ref().is_some_and(|s| {
+            s.active.load(Ordering::Acquire) > 0
+                || s.refused.load(Ordering::Acquire)
+                || s.interrupted.load(Ordering::Acquire)
+        })
+    }
+    #[cfg(test)]
+    pub(crate) fn local_refusal(&self) -> bool {
+        self.observation
+            .as_ref()
+            .is_some_and(|s| s.refused.load(Ordering::Acquire))
     }
     pub fn available(&self) -> usize {
         self.gate.available_permits()
@@ -52,7 +159,7 @@ impl CpuAdmission {
             self.metrics.series[kind.index()].rejected.add(1);
             CpuFailure::Capacity
         })?;
-        self.spawn(kind, permit, None, work, None).await
+        self.spawn(kind, permit, None, work, None, None).await
     }
     pub async fn run<F, R>(
         &self,
@@ -60,6 +167,28 @@ impl CpuAdmission {
         deadline: Instant,
         local: Option<Arc<Semaphore>>,
         work: F,
+    ) -> Result<R, CpuFailure>
+    where
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        let observation = RunObservation(RunState::new(self.observation.clone()));
+        let mut result = self
+            .run_inner(kind, deadline, local, work, observation.0.clone())
+            .await;
+        if let Some(fault) = observation.0.known_fault() {
+            result = Err(fault);
+        }
+        observation.finish(result.as_ref().err().copied());
+        result
+    }
+    async fn run_inner<F, R>(
+        &self,
+        kind: CpuKind,
+        deadline: Instant,
+        local: Option<Arc<Semaphore>>,
+        work: F,
+        observation: Arc<RunState>,
     ) -> Result<R, CpuFailure>
     where
         F: FnOnce() -> R + Send + 'static,
@@ -106,7 +235,8 @@ impl CpuAdmission {
         };
         queued.admit();
         drop(offer);
-        self.spawn(kind, process, local, work, Some(until)).await
+        self.spawn(kind, process, local, work, Some(until), Some(observation))
+            .await
     }
     async fn spawn<F, R>(
         &self,
@@ -115,6 +245,7 @@ impl CpuAdmission {
         local: Option<OwnedSemaphorePermit>,
         work: F,
         until: Option<Instant>,
+        observation: Option<Arc<RunState>>,
     ) -> Result<R, CpuFailure>
     where
         F: FnOnce() -> R + Send + 'static,
@@ -134,6 +265,7 @@ impl CpuAdmission {
             done: false,
             _process: process,
             _local: local,
+            observation: observation.clone(),
         };
         let mut waiter = Waiter {
             metrics: self.metrics.clone(),
@@ -156,6 +288,10 @@ impl CpuAdmission {
             match timeout_at(until, job).await {
                 Ok(r) => r,
                 Err(_) => {
+                    waiter.done = true;
+                    if let Some(fault) = observation.as_ref().and_then(|s| s.known_fault()) {
+                        return Err(fault);
+                    }
                     record_deadline(&deadline_counted, &self.metrics.series[kind.index()]);
                     return Err(CpuFailure::Deadline);
                 }
@@ -257,6 +393,7 @@ struct JobGuard {
     done: bool,
     _process: OwnedSemaphorePermit,
     _local: Option<OwnedSemaphorePermit>,
+    observation: Option<Arc<RunState>>,
 }
 impl JobGuard {
     fn enter(&mut self) {
@@ -266,6 +403,9 @@ impl JobGuard {
     }
     fn expired(&mut self) {
         self.done = true;
+        if let Some(observation) = &self.observation {
+            observation.refuse();
+        }
         record_deadline(
             &self.deadline_counted,
             &self.metrics.series[self.kind.index()],
@@ -291,6 +431,11 @@ impl Drop for JobGuard {
             }
         } else {
             m.stopped.add(1);
+        }
+        if !self.done
+            && let Some(observation) = &self.observation
+        {
+            observation.fault(std::thread::panicking());
         }
         m.active.sub();
         self.phase.store(2, Ordering::Release);
@@ -497,6 +642,13 @@ mod tests {
                 1,
                 "waiter and late closure share one deadline terminal"
             );
+            assert_eq!(
+                cpu.metrics.series[CpuKind::VcParse.index()]
+                    .started_cancelled
+                    .get(),
+                0,
+                "an actual deadline is not caller cancellation"
+            );
         });
     }
     #[tokio::test(start_paused = true)]
@@ -533,5 +685,262 @@ mod tests {
         );
         drop(held);
         assert_eq!(cpu.available(), 1);
+    }
+    #[tokio::test(start_paused = true)]
+    async fn observed_timeout_retains_interrupted_cpu_after_inner_drop_but_retires_active() {
+        let process = CpuAdmission::new(1);
+        let held = process.gate.clone().acquire_owned().await.unwrap();
+        let view = process.observed_view();
+        let owned = view.clone();
+        let until = Instant::now() + Duration::from_secs(3);
+        let task = tokio::spawn(async move {
+            timeout_at(
+                until,
+                owned.run(
+                    CpuKind::AirRestore,
+                    until + Duration::from_secs(5),
+                    None,
+                    || (),
+                ),
+            )
+            .await
+        });
+        while process.metrics.series[CpuKind::AirRestore.index()]
+            .queued
+            .get()
+            == 0
+        {
+            tokio::task::yield_now().await;
+        }
+        tokio::time::advance(Duration::from_secs(3)).await;
+        assert!(task.await.unwrap().is_err());
+        let scope = view.observation.as_ref().unwrap();
+        assert_eq!(
+            scope.active.load(Ordering::Acquire),
+            0,
+            "timeout dropped inner run before this inspection"
+        );
+        assert!(scope.interrupted.load(Ordering::Acquire));
+        assert!(view.local_unavailable());
+        assert!(
+            !view.local_refusal(),
+            "no CpuFailure was polled; this is interrupted completion"
+        );
+        assert_eq!(
+            process.metrics.series[CpuKind::AirRestore.index()]
+                .queued
+                .get(),
+            0
+        );
+        drop(held);
+        assert_eq!(process.available(), 1);
+    }
+    #[tokio::test(start_paused = true)]
+    async fn observed_finished_cpu_then_io_timeout_is_not_local_and_ancestor_is_retained() {
+        let process = CpuAdmission::new(1);
+        let view = process.observed_view();
+        assert!(
+            Arc::ptr_eq(&view, &view.observed_view()),
+            "do not replace ancestor provenance"
+        );
+        assert!(view.same_pool(&process));
+        let owned = view.clone();
+        let task = tokio::spawn(async move {
+            owned
+                .run(
+                    CpuKind::AirRestore,
+                    Instant::now() + Duration::from_secs(8),
+                    None,
+                    || 7,
+                )
+                .await
+        });
+        while !task.is_finished() {
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(task.await.unwrap(), Ok(7));
+        assert!(
+            timeout_at(
+                Instant::now() + Duration::from_secs(3),
+                std::future::pending::<()>()
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            !view.local_unavailable(),
+            "completed CPU is not an I/O or mutex failure"
+        );
+    }
+    #[tokio::test]
+    async fn observation_covers_completed_result_pending_and_excludes_known_panic_or_stopped() {
+        use std::{future::Future, task::Poll};
+        let process = CpuAdmission::new(1);
+        let view = process.observed_view();
+        let mut run = Box::pin(view.run(
+            CpuKind::WorldRestore,
+            Instant::now() + Duration::from_secs(8),
+            None,
+            || 7,
+        ));
+        assert!(
+            std::future::poll_fn(|cx| Poll::Ready(run.as_mut().poll(cx)))
+                .await
+                .is_pending()
+        );
+        while process.metrics.series[CpuKind::WorldRestore.index()]
+            .completed
+            .get()
+            == 0
+        {
+            tokio::task::yield_now().await;
+        }
+        assert!(
+            view.local_unavailable(),
+            "result reception remains a local CPU stage"
+        );
+        assert_eq!(run.await, Ok(7));
+        assert!(!view.local_unavailable());
+        let defect = process.observed_view();
+        let mut run = Box::pin(defect.run::<_, ()>(
+            CpuKind::VcParse,
+            Instant::now() + Duration::from_secs(8),
+            None,
+            || panic!("known local defect"),
+        ));
+        assert!(
+            std::future::poll_fn(|cx| Poll::Ready(run.as_mut().poll(cx)))
+                .await
+                .is_pending()
+        );
+        while process.metrics.series[CpuKind::VcParse.index()]
+            .panicked
+            .get()
+            == 0
+        {
+            tokio::task::yield_now().await;
+        }
+        while process.available() == 0 {
+            tokio::task::yield_now().await;
+        }
+        assert!(
+            !defect.local_unavailable(),
+            "confirmed panic cannot become capacity while its join result waits"
+        );
+        assert_eq!(run.await, Err(CpuFailure::Panicked));
+        let stop = process.observed_view();
+        let local = Arc::new(Semaphore::new(1));
+        local.close();
+        assert_eq!(
+            stop.run(
+                CpuKind::VcParse,
+                Instant::now() + Duration::from_secs(8),
+                Some(local),
+                || ()
+            )
+            .await,
+            Err(CpuFailure::Stopped)
+        );
+        assert!(!stop.local_unavailable());
+    }
+    #[test]
+    fn observation_covers_admitted_prestart_and_running_outer_deadline() {
+        for prestart in [true, false] {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .start_paused(true)
+                .max_blocking_threads(1)
+                .build()
+                .unwrap();
+            rt.block_on(async {
+                let cpu = CpuAdmission::new(1);
+                let view = cpu.observed_view();
+                let (start, ready) = tokio::sync::oneshot::channel();
+                let (release, wait) = std::sync::mpsc::channel();
+                let external = if prestart {
+                    Some(tokio::task::spawn_blocking(move || {
+                        let _ = start.send(());
+                        let _ = wait.recv();
+                    }))
+                } else {
+                    None
+                };
+                let owned = view.clone();
+                let until = Instant::now() + Duration::from_secs(3);
+                // Separate barriers because a prestart closure has not entered CPU work.
+                let (running, entered) = tokio::sync::oneshot::channel();
+                let (finish, stopped) = std::sync::mpsc::channel();
+                let task = tokio::spawn(async move {
+                    timeout_at(
+                        until,
+                        owned.run(
+                            CpuKind::WorldRestore,
+                            until + Duration::from_secs(5),
+                            None,
+                            move || {
+                                let _ = running.send(());
+                                if !prestart {
+                                    let _ = stopped.recv();
+                                }
+                                7
+                            },
+                        ),
+                    )
+                    .await
+                });
+                if prestart {
+                    ready.await.unwrap();
+                } else {
+                    entered.await.unwrap();
+                }
+                while cpu.metrics.series[CpuKind::WorldRestore.index()]
+                    .admitted
+                    .get()
+                    == 0
+                {
+                    tokio::task::yield_now().await;
+                }
+                assert_eq!(
+                    cpu.metrics.series[CpuKind::WorldRestore.index()]
+                        .running
+                        .get(),
+                    if prestart { 0 } else { 1 }
+                );
+                tokio::time::advance(Duration::from_secs(3)).await;
+                assert!(task.await.unwrap().is_err());
+                assert!(
+                    view.local_unavailable(),
+                    "the exact unfinished CPU stage exceeded caller budget"
+                );
+                assert_eq!(
+                    view.observation
+                        .as_ref()
+                        .unwrap()
+                        .active
+                        .load(Ordering::Acquire),
+                    0
+                );
+                assert_eq!(
+                    cpu.available(),
+                    0,
+                    "closure still owns the actual process permit"
+                );
+                if prestart {
+                    let _ = release.send(());
+                    external.unwrap().await.unwrap();
+                } else {
+                    let _ = finish.send(());
+                }
+                while cpu.available() == 0 {
+                    tokio::task::yield_now().await;
+                }
+                assert_eq!(
+                    cpu.metrics.series[CpuKind::WorldRestore.index()]
+                        .active
+                        .get(),
+                    0
+                );
+            });
+        }
     }
 }

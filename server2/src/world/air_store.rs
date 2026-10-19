@@ -72,6 +72,16 @@ pub trait AirStore: Send + Sync + 'static {
         now_ms: f64,
         deadline: Instant,
     ) -> BoxFuture<'_, Result<Vec<AirRecord>, StoreError>>;
+    /// Explicit per-load CPU view; standalone implementations keep their old contract.
+    fn load_with_cpu(
+        &self,
+        cell: AirCell,
+        now_ms: f64,
+        deadline: Instant,
+        _cpu: Arc<crate::runtime_resources::CpuAdmission>,
+    ) -> BoxFuture<'_, Result<Vec<AirRecord>, StoreError>> {
+        self.load(cell, now_ms, deadline)
+    }
     /// Raw PUT and catalog publication; Ok only after the group is acknowledged (O-9).
     fn publish(
         &self,
@@ -163,6 +173,27 @@ async fn load_one<T: CatalogTransport>(
     day: u32,
     deadline: Instant,
 ) -> Result<Vec<AirRecord>, StoreError> {
+    let store = Arc::new(store.local_invocation());
+    let result = load_one_inner(store.clone(), id, day, deadline).await;
+    result.map_err(|error| {
+        if store.cpu_refused() {
+            match error {
+                StoreError::Storage(e) | StoreError::LocalPublication(e) => {
+                    StoreError::LocalPublication(e)
+                }
+                StoreError::Incomplete | StoreError::LocalIncomplete => StoreError::LocalIncomplete,
+            }
+        } else {
+            error
+        }
+    })
+}
+async fn load_one_inner<T: CatalogTransport>(
+    store: Arc<CatalogStore<T>>,
+    id: CatalogId,
+    day: u32,
+    deadline: Instant,
+) -> Result<Vec<AirRecord>, StoreError> {
     if let LookupOutcome::Ready(set) = store
         .lookup(&id, deadline)
         .await
@@ -192,6 +223,111 @@ async fn load_one<T: CatalogTransport>(
         RepairOutcome::Incomplete => Err(StoreError::Incomplete),
     }
 }
+impl<T: CatalogTransport + 'static> CatalogAirStore<T> {
+    fn load_inner(
+        &self,
+        cell: AirCell,
+        now_ms: f64,
+        deadline: Instant,
+        cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
+    ) -> BoxFuture<'_, Result<Vec<AirRecord>, StoreError>> {
+        Box::pin(async move {
+            let cpu = cpu.map(|cpu| cpu.observed_view());
+            let store = match &cpu {
+                Some(cpu) => Arc::new(
+                    self.catalogs
+                        .cpu_view(cpu.clone())
+                        .map_err(StoreError::Storage)?,
+                ),
+                None => self.catalogs.clone(),
+            };
+            let mut pending = (days(now_ms)
+                .into_iter()
+                .flat_map(|day| {
+                    AirProvider::ORDER
+                        .into_iter()
+                        .map(move |provider| (day, provider))
+                })
+                .collect::<Vec<_>>())
+            .into_iter();
+            let mut tasks = JoinSet::new();
+            let spawn = |tasks: &mut JoinSet<Result<Vec<AirRecord>, StoreError>>,
+                         (day, provider)|
+             -> Result<(), StoreError> {
+                let id = catalog(cell, provider, day).map_err(StoreError::Storage)?;
+                let store = store.clone();
+                tasks.spawn(crate::observability::inherit(async move {
+                    load_one(store, id, day, deadline).await
+                }));
+                Ok(())
+            };
+            let mut first_error = None;
+            let mut local_error = None;
+            for _ in 0..LOAD_FANOUT {
+                if let Some(next) = pending.next()
+                    && let Err(e) = spawn(&mut tasks, next)
+                {
+                    first_error = Some(e);
+                    break;
+                }
+            }
+            let mut out = Vec::new();
+            while !tasks.is_empty() {
+                let joined = match tokio::time::timeout_at(deadline, tasks.join_next()).await {
+                    Ok(Some(result)) => result.map_err(|_| StoreError::Incomplete),
+                    Ok(None) => break,
+                    Err(_) => {
+                        tasks.abort_all();
+                        while tasks.join_next().await.is_some() {}
+                        if first_error.is_none() {
+                            first_error = Some(StoreError::Storage(Error::Timeout));
+                        }
+                        break;
+                    }
+                };
+                let result = joined.and_then(|r| r);
+                match result {
+                    Ok(rows) => {
+                        out.extend(rows);
+                        if first_error.is_none()
+                            && let Some(next) = pending.next()
+                            && let Err(e) = spawn(&mut tasks, next)
+                        {
+                            first_error = Some(e);
+                        }
+                    }
+                    Err(error) => {
+                        if error.local_capacity() && local_error.is_none() {
+                            local_error = Some(error.clone());
+                        }
+                        if first_error.is_none() {
+                            first_error = Some(error);
+                        }
+                    }
+                }
+            }
+            if let Some(error) = local_error.or(first_error) {
+                // The inner catalog deadline can win before the caller's timeout.
+                // Inspect this exact load after admitted jobs have drained/aborted;
+                // their interrupted CPU completion must not become a funded miss.
+                return Err(if cpu.as_ref().is_some_and(|cpu| cpu.local_unavailable()) {
+                    match error {
+                        StoreError::Storage(e) | StoreError::LocalPublication(e) => {
+                            StoreError::LocalPublication(e)
+                        }
+                        StoreError::Incomplete | StoreError::LocalIncomplete => {
+                            StoreError::LocalIncomplete
+                        }
+                    }
+                } else {
+                    error
+                });
+            }
+
+            Ok(out)
+        })
+    }
+}
 impl<T: CatalogTransport + 'static> AirStore for CatalogAirStore<T> {
     fn load(
         &self,
@@ -199,28 +335,16 @@ impl<T: CatalogTransport + 'static> AirStore for CatalogAirStore<T> {
         now_ms: f64,
         deadline: Instant,
     ) -> BoxFuture<'_, Result<Vec<AirRecord>, StoreError>> {
-        Box::pin(async move {
-            let gate = Arc::new(Semaphore::new(LOAD_FANOUT));
-            let mut tasks = JoinSet::new();
-            for day in days(now_ms) {
-                for provider in AirProvider::ORDER {
-                    let id = catalog(cell, provider, day).map_err(StoreError::Storage)?;
-                    let (store, gate) = (self.catalogs.clone(), gate.clone());
-                    tasks.spawn(crate::observability::inherit(async move {
-                        let _slot = gate
-                            .acquire_owned()
-                            .await
-                            .map_err(|_| StoreError::Incomplete)?;
-                        load_one(store, id, day, deadline).await
-                    }));
-                }
-            }
-            let mut out = Vec::new();
-            while let Some(joined) = tasks.join_next().await {
-                out.extend(joined.map_err(|_| StoreError::Incomplete)??);
-            }
-            Ok(out)
-        })
+        self.load_inner(cell, now_ms, deadline, self.cpu.clone())
+    }
+    fn load_with_cpu(
+        &self,
+        cell: AirCell,
+        now_ms: f64,
+        deadline: Instant,
+        cpu: Arc<crate::runtime_resources::CpuAdmission>,
+    ) -> BoxFuture<'_, Result<Vec<AirRecord>, StoreError>> {
+        self.load_inner(cell, now_ms, deadline, Some(cpu))
     }
     fn publish(
         &self,
@@ -265,7 +389,19 @@ impl<T: CatalogTransport + 'static> AirStore for CatalogAirStore<T> {
                         prepare,
                     )
                     .await
-                    .map_err(|_| StoreError::Storage(Error::LocalCapacity))?,
+                    .map_err(|e| {
+                        StoreError::Storage(
+                            if matches!(
+                                e,
+                                crate::runtime_resources::CpuFailure::Capacity
+                                    | crate::runtime_resources::CpuFailure::Deadline
+                            ) {
+                                Error::LocalCapacity
+                            } else {
+                                Error::Transport
+                            },
+                        )
+                    })?,
                 None => prepare(),
             };
             let (declaration, raw) = prepared.map_err(StoreError::Storage)?;
@@ -639,5 +775,600 @@ mod shared_s3_metrics_tests {
         ] {
             assert!(text.lines().any(|v| v == line), "missing {line}");
         }
+    }
+}
+
+#[cfg(test)]
+mod load_provenance_tests {
+    use super::*;
+    use crate::{
+        budget::{BudgetError, BudgetObject, BudgetTransport, Clock as BudgetClock},
+        operational_metrics::CpuKind,
+        runtime_resources::{CpuAdmission, CpuFailure},
+        storage::{ControlObject, Object, ObjectTransport, PreparedRecord, WriteCondition},
+        world::{
+            AirConfig, AirFunding, AirHttpError, AirHttpRequest, AirHttpResponse, AirOutcome,
+            AirProviderConfig, AirSource, AirTransport, FixedClock, LiveAir,
+        },
+    };
+    use std::{
+        sync::atomic::{AtomicUsize, Ordering},
+        time::Duration,
+    };
+    const NOW: f64 = 1_792_411_200_000.;
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    enum Case {
+        Ambiguous,
+        IndexedAbsent,
+        OrdinaryIncomplete,
+    }
+    struct Pressure {
+        release: std::sync::mpsc::Sender<()>,
+        held: tokio::task::JoinHandle<Result<(), CpuFailure>>,
+        queued: Vec<tokio::task::JoinHandle<Result<(), CpuFailure>>>,
+    }
+    impl Pressure {
+        async fn start(cpu: Arc<CpuAdmission>) -> Self {
+            let (start, ready) = tokio::sync::oneshot::channel();
+            let (release, wait) = std::sync::mpsc::channel();
+            let held_cpu = cpu.clone();
+            let held = tokio::spawn(async move {
+                held_cpu
+                    .immediate(CpuKind::Foundation, move || {
+                        let _ = start.send(());
+                        let _ = wait.recv();
+                    })
+                    .await
+            });
+            ready.await.unwrap();
+            let mut queued = Vec::new();
+            for _ in 0..16 {
+                let cpu = cpu.clone();
+                queued.push(tokio::spawn(async move {
+                    cpu.run(
+                        CpuKind::VcParse,
+                        Instant::now() + Duration::from_secs(5),
+                        None,
+                        || (),
+                    )
+                    .await
+                }));
+            }
+            while !cpu
+                .render()
+                .lines()
+                .any(|l| l == "server2_cpu_pool_queued 16")
+            {
+                tokio::task::yield_now().await;
+            }
+            Self {
+                release,
+                held,
+                queued,
+            }
+        }
+        async fn stop(self) {
+            for t in self.queued {
+                t.abort();
+                let _ = t.await;
+            }
+            let _ = self.release.send(());
+            assert!(self.held.await.unwrap().is_ok());
+        }
+    }
+    struct Peer {
+        raw: PreparedRecord,
+        control: Mutex<Option<Vec<u8>>>,
+        cpu: Arc<CpuAdmission>,
+        pressure: Mutex<Option<Pressure>>,
+        puts: AtomicUsize,
+        post_reads: AtomicUsize,
+        third: AtomicUsize,
+        case: Case,
+        ordinary_first: bool,
+        ordinary_done: AtomicUsize,
+    }
+    impl Peer {
+        fn new(cpu: Arc<CpuAdmission>, case: Case, ordinary_first: bool) -> Arc<Self> {
+            let cell = AirCell::of(37.5, 127.).unwrap();
+            let day = utc_day(NOW).unwrap();
+            let raw = RawRecord::new(
+                AirProvider::Google.source(),
+                KIND,
+                &cell.key(),
+                period(day),
+                NOW as u64,
+                200,
+                "application/json",
+                None,
+                b"{}".to_vec().into(),
+                &Limits::default(),
+            )
+            .unwrap()
+            .prepare(&Limits::default())
+            .unwrap();
+            Arc::new(Self {
+                raw,
+                control: Mutex::new(None),
+                cpu,
+                pressure: Mutex::new(None),
+                puts: AtomicUsize::new(0),
+                post_reads: AtomicUsize::new(0),
+                third: AtomicUsize::new(0),
+                case,
+                ordinary_first,
+                ordinary_done: AtomicUsize::new(0),
+            })
+        }
+        async fn stop(&self) {
+            let pressure = { self.pressure.lock().unwrap().take() };
+            if let Some(p) = pressure {
+                p.stop().await;
+            }
+        }
+    }
+    impl ObjectTransport for Arc<Peer> {
+        async fn put(&self, _: &PreparedRecord) -> Result<u16, Error> {
+            panic!("repair never republishes raw")
+        }
+        async fn head(&self, _: &str) -> Result<Object, Error> {
+            Ok(Object {
+                metadata: self.raw.metadata.clone(),
+                length: self.raw.body.len(),
+                body: Vec::new(),
+            })
+        }
+        async fn get(&self, _: &str, _: usize) -> Result<Object, Error> {
+            if self.case == Case::OrdinaryIncomplete {
+                return Err(Error::NotFound);
+            }
+            Ok(Object {
+                metadata: self.raw.metadata.clone(),
+                length: self.raw.body.len(),
+                body: self.raw.body.clone(),
+            })
+        }
+    }
+    impl CatalogTransport for Arc<Peer> {
+        async fn get_control(&self, key: &str, _: usize) -> Result<ControlObject, Error> {
+            if key.contains(AirProvider::OpenWeather.source()) && self.case == Case::Ambiguous {
+                while self.puts.load(Ordering::SeqCst) == 0 {
+                    tokio::task::yield_now().await;
+                }
+                if !self.ordinary_first {
+                    while !self.cpu.render().lines().any(|l| {
+                        l.starts_with("server2_cpu_rejected_total{kind=\"storage_control\"}")
+                            && !l.ends_with(" 0")
+                    }) {
+                        tokio::task::yield_now().await;
+                    }
+                }
+                self.ordinary_done.store(1, Ordering::SeqCst);
+                return Err(Error::Transport);
+            }
+            if key.contains(AirProvider::Waqi.source()) {
+                self.third.fetch_add(1, Ordering::SeqCst);
+                return Err(Error::NotFound);
+            }
+            if !key.contains(AirProvider::Google.source()) {
+                return Err(Error::NotFound);
+            }
+            let bytes = { self.control.lock().unwrap().clone() };
+            let Some(bytes) = bytes else {
+                return Err(Error::NotFound);
+            };
+            let n = self.post_reads.fetch_add(1, Ordering::SeqCst);
+            if self.case == Case::Ambiguous && self.ordinary_first {
+                while self.ordinary_done.load(Ordering::SeqCst) == 0 {
+                    tokio::task::yield_now().await;
+                }
+            }
+            if self.case == Case::IndexedAbsent && n == 1 {
+                self.stop().await;
+            }
+            if self.case == Case::IndexedAbsent && n >= 2 {
+                return Err(Error::NotFound);
+            }
+            Ok(ControlObject {
+                body: bytes,
+                etag: "\"owned-index\"".into(),
+                version: None,
+            })
+        }
+        async fn put_control(
+            &self,
+            _: &str,
+            body: &[u8],
+            _: &WriteCondition,
+        ) -> Result<u16, Error> {
+            *self.control.lock().unwrap() = Some(body.to_vec());
+            let pressure = Pressure::start(self.cpu.clone()).await;
+            *self.pressure.lock().unwrap() = Some(pressure);
+            self.puts.fetch_add(1, Ordering::SeqCst);
+            Ok(200)
+        }
+        async fn list_raw_document(
+            &self,
+            prefix: &str,
+            _: Option<&str>,
+            _: usize,
+            _: usize,
+        ) -> Result<Vec<u8>, Error> {
+            let inside = if prefix.contains(AirProvider::Google.source()) {
+                format!(
+                    "<KeyCount>1</KeyCount><Contents><Key>{}</Key></Contents>",
+                    self.raw.key
+                )
+            } else {
+                "<KeyCount>0</KeyCount>".into()
+            };
+            Ok(format!(r#"<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><IsTruncated>false</IsTruncated>{inside}</ListBucketResult>"#).into_bytes())
+        }
+    }
+    #[derive(Default)]
+    struct Budget(AtomicUsize);
+    impl BudgetTransport for Budget {
+        async fn get_budget(&self, _: &str) -> Result<BudgetObject, BudgetError> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Err(BudgetError::Transport)
+        }
+        async fn put_budget(
+            &self,
+            _: &str,
+            _: &[u8],
+            _: &WriteCondition,
+        ) -> Result<u16, BudgetError> {
+            panic!("never fund")
+        }
+    }
+    struct Clock;
+    impl BudgetClock for Clock {
+        fn now_ms(&self) -> Result<i64, BudgetError> {
+            Ok(NOW as i64)
+        }
+    }
+    #[derive(Default)]
+    struct Http(AtomicUsize);
+    impl AirTransport for Http {
+        fn send(
+            &self,
+            _: AirHttpRequest,
+            _: Instant,
+        ) -> BoxFuture<'_, Result<AirHttpResponse, AirHttpError>> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Box::pin(async { Err(AirHttpError::Transport) })
+        }
+    }
+    async fn check(case: Case, ordinary_first: bool) {
+        let cpu = CpuAdmission::new(1);
+        let peer = Peer::new(cpu.clone(), case, ordinary_first);
+        let store = CatalogAirStore::new_with_cpu(
+            peer.clone(),
+            CatalogLimits::default(),
+            Some(cpu.clone()),
+        )
+        .unwrap();
+        let error = store
+            .load(
+                AirCell::of(37.5, 127.).unwrap(),
+                NOW,
+                Instant::now() + Duration::from_secs(2),
+            )
+            .await
+            .unwrap_err();
+        peer.stop().await;
+        if case == Case::OrdinaryIncomplete {
+            assert_eq!(error, StoreError::Incomplete);
+            assert!(!error.local_capacity());
+            return;
+        }
+        assert!(error.local_capacity(), "original cause was lost: {error:?}");
+        if case == Case::Ambiguous {
+            assert_eq!(error, StoreError::LocalPublication(Error::Ambiguous));
+            assert_eq!(
+                peer.third.load(Ordering::SeqCst),
+                0,
+                "no refill after first error"
+            );
+        } else {
+            assert_eq!(
+                error,
+                StoreError::LocalIncomplete,
+                "Indexed is not a serving CompleteSet"
+            );
+        }
+        let cpu = CpuAdmission::new(1);
+        let peer = Peer::new(cpu.clone(), case, ordinary_first);
+        let store = Arc::new(
+            CatalogAirStore::new_with_cpu(
+                peer.clone(),
+                CatalogLimits::default(),
+                Some(cpu.clone()),
+            )
+            .unwrap(),
+        );
+        let budget = Arc::new(Budget::default());
+        let http = Arc::new(Http::default());
+        let config = AirConfig {
+            google: Some(AirProviderConfig {
+                base_url: "http://127.0.0.1:9/".into(),
+                key: "S13A_LOCAL_GOOGLE_KEY".into(),
+                quota_id: "d".repeat(64),
+                monthly_units: 100,
+                block_units: 10,
+            }),
+            ..AirConfig::default()
+        };
+        let air = LiveAir::new_with_cpu(
+            config,
+            store,
+            http.clone(),
+            AirFunding {
+                transport: budget.clone(),
+                clock: Arc::new(Clock),
+            },
+            Arc::new(FixedClock::new(NOW)),
+            Some(cpu),
+        )
+        .unwrap();
+        assert!(matches!(
+            air.current(37.5, 127., NOW).await,
+            AirOutcome::None
+        ));
+        peer.stop().await;
+        assert_eq!(
+            air.metrics().chains.load(Ordering::SeqCst),
+            0,
+            "no funded chain after load CPU refusal"
+        );
+        assert_eq!(budget.0.load(Ordering::SeqCst), 0);
+        assert_eq!(http.0.load(Ordering::SeqCst), 0);
+    }
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn repair_local_cpu_cause_survives_either_fanout_error_order_without_funding() {
+        check(Case::Ambiguous, true).await;
+        check(Case::Ambiguous, false).await;
+    }
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn indexed_after_actual_cpu_refusal_then_incomplete_keeps_both_meanings() {
+        check(Case::IndexedAbsent, true).await;
+        check(Case::OrdinaryIncomplete, true).await;
+    }
+    struct EmptyPeer;
+    impl ObjectTransport for EmptyPeer {
+        async fn put(&self, _: &PreparedRecord) -> Result<u16, Error> {
+            panic!("read only")
+        }
+        async fn head(&self, _: &str) -> Result<Object, Error> {
+            Err(Error::NotFound)
+        }
+        async fn get(&self, _: &str, _: usize) -> Result<Object, Error> {
+            Err(Error::NotFound)
+        }
+    }
+    impl CatalogTransport for EmptyPeer {
+        async fn get_control(&self, _: &str, _: usize) -> Result<ControlObject, Error> {
+            Err(Error::NotFound)
+        }
+        async fn put_control(&self, _: &str, _: &[u8], _: &WriteCondition) -> Result<u16, Error> {
+            panic!("empty scope")
+        }
+        async fn list_raw_document(
+            &self,
+            _: &str,
+            _: Option<&str>,
+            _: usize,
+            _: usize,
+        ) -> Result<Vec<u8>, Error> {
+            Ok(br#"<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><IsTruncated>false</IsTruncated><KeyCount>0</KeyCount></ListBucketResult>"#.to_vec())
+        }
+    }
+    #[tokio::test(start_paused = true)]
+    async fn actual_air_store_outer_timeout_has_no_funding_or_cold_failure_ttl() {
+        let cpu = CpuAdmission::new(1);
+        let (start, ready) = tokio::sync::oneshot::channel();
+        let (release, wait) = std::sync::mpsc::channel();
+        let held = cpu.clone();
+        let blocker = tokio::spawn(async move {
+            held.immediate(CpuKind::Foundation, move || {
+                let _ = start.send(());
+                let _ = wait.recv();
+            })
+            .await
+        });
+        ready.await.unwrap();
+        let store = Arc::new(
+            CatalogAirStore::new_with_cpu(EmptyPeer, CatalogLimits::default(), Some(cpu.clone()))
+                .unwrap(),
+        );
+        let budget = Arc::new(Budget::default());
+        let http = Arc::new(Http::default());
+        let config = AirConfig {
+            google: Some(AirProviderConfig {
+                base_url: "http://127.0.0.1:9/".into(),
+                key: "S13A_LOCAL_GOOGLE_KEY".into(),
+                quota_id: "d".repeat(64),
+                monthly_units: 100,
+                block_units: 10,
+            }),
+            ..AirConfig::default()
+        };
+        assert_eq!(config.store_timeout, Duration::from_secs(2));
+        let air = LiveAir::new_with_cpu(
+            config,
+            store,
+            http.clone(),
+            AirFunding {
+                transport: budget.clone(),
+                clock: Arc::new(Clock),
+            },
+            Arc::new(FixedClock::new(NOW)),
+            Some(cpu.clone()),
+        )
+        .unwrap();
+        let a = air.clone();
+        let call = tokio::spawn(async move { a.current_with_reason(37.5, 127., NOW).await });
+        while !cpu
+            .render()
+            .lines()
+            .any(|l| l == "server2_cpu_pool_queued 2")
+        {
+            tokio::task::yield_now().await;
+        }
+        // Both the concrete catalog CPU deadline and the enclosing Air timeout become ready.
+        tokio::time::advance(Duration::from_secs(2)).await;
+        let outcome = call.await.unwrap();
+        let counters = (
+            air.metrics().chains.load(Ordering::SeqCst),
+            budget.0.load(Ordering::SeqCst),
+            http.0.load(Ordering::SeqCst),
+        );
+        let _ = release.send(());
+        assert!(blocker.await.unwrap().is_ok());
+        while cpu.available() == 0
+            || !cpu
+                .render()
+                .lines()
+                .any(|l| l == "server2_cpu_pool_queued 0")
+        {
+            tokio::task::yield_now().await;
+        }
+        assert!(matches!(
+            outcome,
+            (AirOutcome::None, Some("fallback-unavailable"))
+        ));
+        assert_eq!(
+            counters,
+            (0, 0, 0),
+            "an outer CPU timeout is not a funded provider chain"
+        );
+        assert!(matches!(
+            air.current(37.5, 127., NOW).await,
+            AirOutcome::None
+        ));
+        assert_eq!(
+            air.metrics().chains.load(Ordering::SeqCst),
+            1,
+            "cold load timeout installs no two-minute or local cooldown"
+        );
+        assert_eq!(budget.0.load(Ordering::SeqCst), 1);
+        assert_eq!(http.0.load(Ordering::SeqCst), 0);
+    }
+    #[tokio::test(start_paused = true)]
+    async fn actual_catalog_inner_deadline_retains_interrupted_cpu_cause() {
+        use std::task::Poll;
+        let cpu = CpuAdmission::new(1);
+        let view = cpu.observed_view();
+        let (start, ready) = tokio::sync::oneshot::channel();
+        let (release, wait) = std::sync::mpsc::channel();
+        let held = cpu.clone();
+        let blocker = tokio::spawn(async move {
+            held.immediate(CpuKind::Foundation, move || {
+                let _ = start.send(());
+                let _ = wait.recv();
+            })
+            .await
+        });
+        ready.await.unwrap();
+        let store =
+            CatalogAirStore::new_with_cpu(EmptyPeer, CatalogLimits::default(), Some(cpu.clone()))
+                .unwrap();
+        let mut load = store.load_with_cpu(
+            AirCell::of(37.5, 127.).unwrap(),
+            NOW,
+            Instant::now() + Duration::from_secs(2),
+            view.clone(),
+        );
+        assert!(
+            std::future::poll_fn(|cx| Poll::Ready(load.as_mut().poll(cx)))
+                .await
+                .is_pending()
+        );
+        while !cpu
+            .render()
+            .lines()
+            .any(|l| l == "server2_cpu_pool_queued 2")
+        {
+            tokio::task::yield_now().await;
+        }
+        tokio::time::advance(Duration::from_secs(2)).await;
+        let error = load.await.unwrap_err();
+        let interrupted = view.local_unavailable();
+        let cancelled = cpu.render().lines().any(|l| {
+            l.starts_with("server2_cpu_queued_cancelled_total{kind=\"storage_control\"}")
+                && !l.ends_with(" 0")
+        });
+        let _ = release.send(());
+        assert!(blocker.await.unwrap().is_ok());
+        assert!(
+            cancelled,
+            "inner load deadline aborts admitted child futures before their CPU result is polled"
+        );
+        assert!(
+            interrupted,
+            "actual scoped CPU interruption remains after queue retirement"
+        );
+        assert!(
+            error.local_capacity(),
+            "inner-first timeout must retain its original error and local cause: {error:?}"
+        );
+        assert_eq!(error, StoreError::LocalPublication(Error::Timeout));
+    }
+    #[tokio::test(start_paused = true)]
+    async fn actual_catalog_outer_deadline_drops_cpu_children_before_inspection() {
+        let cpu = CpuAdmission::new(1);
+        let view = cpu.observed_view();
+        let (start, ready) = tokio::sync::oneshot::channel();
+        let (release, wait) = std::sync::mpsc::channel();
+        let held = cpu.clone();
+        let blocker = tokio::spawn(async move {
+            held.immediate(CpuKind::Foundation, move || {
+                let _ = start.send(());
+                let _ = wait.recv();
+            })
+            .await
+        });
+        ready.await.unwrap();
+        let store =
+            CatalogAirStore::new_with_cpu(EmptyPeer, CatalogLimits::default(), Some(cpu.clone()))
+                .unwrap();
+        let observed = view.clone();
+        let call = tokio::spawn(async move {
+            let now = Instant::now();
+            tokio::time::timeout_at(
+                now + Duration::from_secs(1),
+                store.load_with_cpu(
+                    AirCell::of(37.5, 127.).unwrap(),
+                    NOW,
+                    now + Duration::from_secs(2),
+                    observed,
+                ),
+            )
+            .await
+        });
+        while !cpu
+            .render()
+            .lines()
+            .any(|l| l == "server2_cpu_pool_queued 2")
+        {
+            tokio::task::yield_now().await;
+        }
+        tokio::time::advance(Duration::from_secs(1)).await;
+        let timeout = call.await.unwrap();
+        while !cpu
+            .render()
+            .lines()
+            .any(|l| l == "server2_cpu_pool_queued 0")
+        {
+            tokio::task::yield_now().await;
+        }
+        let local = view.local_unavailable();
+        let _ = release.send(());
+        assert!(blocker.await.unwrap().is_ok());
+        assert!(timeout.is_err());
+        assert!(
+            local,
+            "actual outer drop retains interrupted CPU without an active queue"
+        );
     }
 }

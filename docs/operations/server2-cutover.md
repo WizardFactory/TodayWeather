@@ -117,4 +117,6 @@ relaxed snapshots, not a durable delivery ledger. Logical payload bytes do not m
 AWS billing. The retained owned-peer CPU-pressure/recovery flow does not establish host
 capacity, all-parser sharing or production thresholds. Reconcile D2/F2 CPU ownership and
 measure the exact complete release before accepting operational limits or recovery
-eligibility. No metrics result authorizes rewind, resend, deployment, shadow or cutover.
+eligibility. The corrected local proofs include explicit typed CPU-capacity and complete
+bounded scrape-error cases; neither changes those operational gates. No metrics result
+authorizes rewind, resend, deployment, shadow or cutover.

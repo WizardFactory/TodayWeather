@@ -146,10 +146,80 @@ def run(binary,out):
         (out/'report.json').write_text(json.dumps(report,indent=2)+'\n')
     return report
 
+def run_typed_capacity(binary,out):
+    """Same fixed barrier with an actively drained sink; classify before releasing CPU.
+
+    The example's synthetic startup diagnostics are filtered at warn. This case proves
+    actual native Cause::Capacity separately from the unread-sink loss exercise.
+    """
+    out.mkdir(parents=True,exist_ok=False);(out/'empty-cwd').mkdir()
+    report={'verdict':'FAIL','production_eligible':False,'live_actions':False,'binary_sha256':sha(binary),'runner_sha256':sha(__file__),'stderr_actively_drained':True}
+    fixture.Fixture.vc_paths=[];fixture.Fixture.air_paths=[];fixture.Fixture.legacy=0;fixture.Fixture.down=False
+    server=http.server.ThreadingHTTPServer(('127.0.0.1',0),GzipFixture);thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start();provider='http://127.0.0.1:%d/'%server.server_port
+    env={k:v for k,v in os.environ.items() if k in ('PATH','TMPDIR','SYSTEMROOT')};env.update(PORT='0',SERVER2_LOG_LEVEL='warn',SERVER2_LOG_RATE='1000',SERVER2_NATIVE_FAMILIES='geocode,dsf',SERVER2_S3_BUCKET='server2-local',AWS_ACCESS_KEY='server2-local',AWS_SECRET_KEY='server2-local-secret',VC_SECRET_KEY='local-dummy-vc-key',VC_DAILY_RECORD_LIMIT='1000',WAQI_SECRET_KEY='local-dummy-waqi-key',GEOCODER_KAKAO_KEYS='["local-dummy-kakao-key"]',GEOCODER_GOOGLE_KEY='local-dummy-google-key')
+    children=[];process=None;drainer=None;released=False;events=[];handles=[]
+    try:
+        peerlog=open(out/'s3.stderr.log','w');handles.append(peerlog)
+        peer=subprocess.Popen(['python3',str(ROOT/'tests/storage/catalog_peer.py')],cwd=ROOT,env=env,stdout=subprocess.PIPE,stderr=peerlog,text=True,start_new_session=True);children.append(peer)
+        assert select.select([peer.stdout],[],[],10)[0],'S3 readiness timeout'
+        endpoint=peer.stdout.readline().strip();assert re.fullmatch(r'http://127\.0\.0\.1:\d+/',endpoint),endpoint
+        command=[str(binary),'--s3',endpoint,'--vc',provider+'timeline/','--waqi',provider,'--google',provider,'--kakao',provider]
+        process=subprocess.Popen(command,env=env,cwd=out/'empty-cwd',stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True);children.append(process)
+        stderr_file=open(out/'typed-capacity.stderr.log','w');handles.append(stderr_file)
+        def drain():
+            for line in process.stderr:
+                stderr_file.write(line);stderr_file.flush()
+                try:events.append(json.loads(line))
+                except json.JSONDecodeError:pass
+        drainer=threading.Thread(target=drain,daemon=True);drainer.start()
+        assert select.select([process.stdout],[],[],10)[0],'barrier readiness timeout'
+        line=process.stdout.readline().strip();match=re.fullmatch(r'server2 public=(127\.0\.0\.1:\d+) metrics=(127\.0\.0\.1:\d+)',line);assert match,line
+        public='http://'+match[1];private='http://'+match[2]
+        before=metrics(private,out,'before')
+        assert value(before,'server2_cpu_pool_limit')==1 and value(before,'server2_cpu_inflight')==1
+        started=time.monotonic();status,_,body=request(public,'/weather/v000903/coord/51.507,-0.128?'+fixture.QUERY);elapsed=(time.monotonic()-started)*1000
+        assert status==501 and body==b'Not Implemented',(status,body[:200])
+        denied=metrics(private,out,'denied')
+        # The World owner is eight seconds; the public caller is three seconds. A
+        # currently queued operation OR its actual refusal is required, not 501 alone.
+        assert value(denied,'server2_cpu_pool_queued')>0 or sum(v for k,v in denied.items() if k.startswith('server2_cpu_rejected_total{'))>0
+        until=time.monotonic()+1
+        while time.monotonic()<until and not any(e.get('component')=='world' and e.get('cause')=='capacity' and e.get('action')=='return_error' for e in events):time.sleep(.01)
+        typed=[e for e in events if e.get('component')=='world' and e.get('cause')=='capacity' and e.get('action')=='return_error']
+        assert typed,'the actual native CPU failure must be classified before barrier release'
+        assert len(fixture.Fixture.vc_paths)==0 and len(fixture.Fixture.air_paths)==0
+        assert value(denied,'server2_logging_queue_full_total')==0,'typed proof uses a drained sink'
+        process.stdin.write('release\n');process.stdin.flush()
+        until=time.monotonic()+3
+        while time.monotonic()<until:
+            released=value(metrics(private,out,'released'),'server2_cpu_completed_total{kind="foundation"}')==1
+            if released:break
+            time.sleep(.02)
+        assert released
+        report.update(verdict='PASS',status=status,elapsed_ms=round(elapsed,2),typed_capacity_actions=len(typed),typed_actions_before_cpu_release=True,vc_attempts=0,air_attempts=0,queue_at_response=value(denied,'server2_cpu_pool_queued'),queue_full=value(denied,'server2_logging_queue_full_total'))
+    finally:
+        if process is not None and process.poll() is None and process.stdin:
+            try:process.stdin.write('release\n');process.stdin.flush()
+            except (BrokenPipeError,OSError):pass
+        exits=[]
+        for child in reversed(children):
+            exits.append({'pid':child.pid,'exit':stop(child)})
+            if child.stdin:child.stdin.close()
+            if child.stdout:child.stdout.close()
+        if drainer:drainer.join(timeout=3)
+        if process is not None and process.stderr:process.stderr.close()
+        for handle in handles:handle.close()
+        server.shutdown();server.server_close();thread.join(timeout=2)
+        report.update(cpu_holder_completion_observed=released,stderr_drainer_joined=drainer is None or not drainer.is_alive(),owned_children_retired=all(c.poll() is not None for c in children),child_exits=exits,binary_unchanged=sha(binary)==report['binary_sha256'])
+        if report['verdict']=='PASS' and not all(report[k] for k in ('cpu_holder_completion_observed','stderr_drainer_joined','owned_children_retired','binary_unchanged')):report['verdict']='FAIL'
+        (out/'report.json').write_text(json.dumps(report,indent=2)+'\n')
+    return report
+
 def run_capacity(binary,out):
     """Separate fixed CPU barrier and labelled synthetic diagnostics pressure receipt."""
     out.mkdir(parents=True,exist_ok=False);(out/'empty-cwd').mkdir()
-    report={'verdict':'FAIL','production_eligible':False,'live_actions':False,'synthetic_diagnostic_operations':2048,'binary_sha256':sha(binary),'runner_sha256':sha(__file__),'cases':[]}
+    typed=run_typed_capacity(binary,out/'typed-cause');assert typed['verdict']=='PASS'
+    report={'verdict':'FAIL','typed_cause_report_sha256':sha(out/'typed-cause/report.json'),'production_eligible':False,'live_actions':False,'synthetic_diagnostic_operations':2048,'binary_sha256':sha(binary),'runner_sha256':sha(__file__),'cases':[]}
     fixture.Fixture.vc_paths=[];fixture.Fixture.air_paths=[];fixture.Fixture.legacy=0;fixture.Fixture.down=False
     server=http.server.ThreadingHTTPServer(('127.0.0.1',0),GzipFixture);thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start();provider='http://127.0.0.1:%d/'%server.server_port
     env={k:v for k,v in os.environ.items() if k in ('PATH','TMPDIR','SYSTEMROOT')};env.update(PORT='0',SERVER2_LOG_LEVEL='info',SERVER2_LOG_RATE='1000',SERVER2_NATIVE_FAMILIES='geocode,dsf',SERVER2_S3_BUCKET='server2-local',AWS_ACCESS_KEY='server2-local',AWS_SECRET_KEY='server2-local-secret',VC_SECRET_KEY='local-dummy-vc-key',VC_DAILY_RECORD_LIMIT='1000',WAQI_SECRET_KEY='local-dummy-waqi-key',GEOCODER_KAKAO_KEYS='["local-dummy-kakao-key"]',GEOCODER_GOOGLE_KEY='local-dummy-google-key')

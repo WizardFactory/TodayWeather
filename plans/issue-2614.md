@@ -690,8 +690,11 @@ The process-resource increment shares CPU admission across the resource-aware VC
 S06 path and exports fixed native operational metrics privately, independently of stderr
 filter/queue loss. The [operator contract](../docs/operations/server2-runtime-metrics.md)
 records actual owned native HTTP and capacity recovery evidence and the selected coverage
-boundary. Local checks combine10passing targets with an explicitly serial domestic target; the original
-default-concurrency failure remains a stated limitation. Final independent review and CI
-remain separate task gates.
+boundary. Prior matrix7 passed the original11target/default-concurrency command (654/0/6)
+before an equivalent two-file let-chain style correction; build5 refreshed13 affected/metric
+controls, Clippy/fmt and current optimized normal/typed-capacity/unread-sink/main flows. This
+is explicit evidence reuse, not a fresh final-source full matrix. Original Domestic failures
+and their exact-cause uncertainty remain preserved; reviewer2 decides the exact-head gate.
+Final independent review and CI remain separate task gates.
 D2/F2 CPU reconciliation and both genuine eligible full release bundles remain separate
 whole-candidate work. New PRs stop at pre-merge; #2704/#2705/#2819 remain open.

@@ -140,7 +140,10 @@ impl<T: CatalogTransport + 'static> VcRecords for CatalogWorldStore<T> {
                 .map_err(|e| match e {
                     crate::world::StoreError::Storage(e)
                     | crate::world::StoreError::LocalPublication(e) => LookupError::Storage(e),
-                    crate::world::StoreError::Incomplete => LookupError::Storage(Error::Timeout),
+                    crate::world::StoreError::Incomplete
+                    | crate::world::StoreError::LocalIncomplete => {
+                        LookupError::Storage(Error::Timeout)
+                    }
                 })
         })
     }

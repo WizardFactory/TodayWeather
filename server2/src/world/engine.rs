@@ -273,8 +273,10 @@ impl World {
                         work,
                     )
                     .await
-                    .map_err(|_| {
-                        local_capacity();
+                    .map_err(|e| {
+                        if cpu_is_local(e) {
+                            local_capacity();
+                        }
                         Failure::Error
                     })?,
                 None => work(),
@@ -285,20 +287,33 @@ impl World {
                 .fetch_add(1, Ordering::Relaxed);
             return Ok(db);
         }
+        let cpu = self.inner.cpu.as_ref().map(|cpu| cpu.observed_view());
+        let task_cpu = cpu.clone();
         let owned = self.clone();
         let task_entry = entry.clone();
         let task = crate::observability::spawn(async move {
             // The entry moves into the load and is released before idle cells trim.
             let _trim = Trim(owned.clone());
-            owned.load_cell(task_entry, now).await
+            owned.load_cell(task_entry, now, task_cpu).await
         });
         match timeout_at(deadline, task).await {
             Ok(Ok(result)) => result,
-            _ => Err(Failure::Error),
+            Err(_) => {
+                if cpu.as_ref().is_some_and(|c| c.local_unavailable()) {
+                    local_capacity();
+                }
+                Err(Failure::Error)
+            }
+            Ok(Err(_)) => Err(Failure::Error),
         }
     }
     /// The owned cold load of one cell (single flight under the cell lock).
-    async fn load_cell(self, task_entry: Arc<CellEntry>, now: f64) -> Result<Db, Failure> {
+    async fn load_cell(
+        self,
+        task_entry: Arc<CellEntry>,
+        now: f64,
+        cpu: Option<Arc<crate::runtime_resources::CpuAdmission>>,
+    ) -> Result<Db, Failure> {
         crate::observability::observe(
             crate::observability::Component::World,
             crate::observability::Stage::Restore,
@@ -324,7 +339,7 @@ impl World {
                             .clone()
                             .expect("retained cell DB")
                     };
-                    return match &self.inner.cpu {
+                    return match &cpu {
                         Some(cpu) => cpu
                             .run(
                                 crate::operational_metrics::CpuKind::WorldRestore,
@@ -333,8 +348,10 @@ impl World {
                                 copy,
                             )
                             .await
-                            .map_err(|_| {
-                                local_capacity();
+                            .map_err(|e| {
+                                if cpu_is_local(e) {
+                                    local_capacity();
+                                }
                                 Failure::Error
                             }),
                         None => Ok(copy()),
@@ -344,19 +361,28 @@ impl World {
                     .metrics
                     .cold_loads
                     .fetch_add(1, Ordering::Relaxed);
-                match self
-                    .inner
-                    .store
-                    .load(task_entry.cell, now, load_deadline)
-                    .await
-                {
+                let loaded = match &cpu {
+                    Some(cpu) => {
+                        self.inner
+                            .store
+                            .load_with_cpu(task_entry.cell, now, load_deadline, cpu.clone())
+                            .await
+                    }
+                    None => {
+                        self.inner
+                            .store
+                            .load(task_entry.cell, now, load_deadline)
+                            .await
+                    }
+                };
+                match loaded {
                     Ok(fetches) => {
                         let fold = move || {
                             let mut db = replay(&fetches);
                             db.prune(now);
                             db
                         };
-                        let db = match &self.inner.cpu {
+                        let db = match &cpu {
                             Some(cpu) => cpu
                                 .run(
                                     crate::operational_metrics::CpuKind::WorldRestore,
@@ -365,8 +391,10 @@ impl World {
                                     fold,
                                 )
                                 .await
-                                .map_err(|_| {
-                                    local_capacity();
+                                .map_err(|e| {
+                                    if cpu_is_local(e) {
+                                        local_capacity();
+                                    }
                                     Failure::Error
                                 })?,
                             None => fold(),
@@ -548,9 +576,11 @@ impl World {
                         .await
                     {
                         Ok(v) => v,
-                        Err(_) => {
-                            local_capacity();
-                            self.local_cooldown(&entry);
+                        Err(e) => {
+                            if cpu_is_local(e) {
+                                local_capacity();
+                                self.local_cooldown(&entry);
+                            }
                             return Flight::Failed(output, Failure::Error);
                         }
                     },
@@ -603,9 +633,11 @@ impl World {
                         .await
                     {
                         Ok(v) => v,
-                        Err(_) => {
-                            local_capacity();
-                            self.local_cooldown(&entry);
+                        Err(e) => {
+                            if cpu_is_local(e) {
+                                local_capacity();
+                                self.local_cooldown(&entry);
+                            }
                             return Flight::Failed(output, Failure::Error);
                         }
                     },
@@ -765,4 +797,12 @@ fn local_capacity() {
         crate::observability::Outcome::Failed,
         Default::default(),
     );
+}
+
+fn cpu_is_local(error: crate::runtime_resources::CpuFailure) -> bool {
+    matches!(
+        error,
+        crate::runtime_resources::CpuFailure::Capacity
+            | crate::runtime_resources::CpuFailure::Deadline
+    )
 }

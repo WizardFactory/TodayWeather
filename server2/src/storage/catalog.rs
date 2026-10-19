@@ -213,6 +213,47 @@ impl<T: CatalogTransport> CatalogStore<T> {
             local_failure: None,
         })
     }
+    pub(crate) fn local_invocation(&self) -> Self {
+        let flag = Arc::new(AtomicBool::new(false));
+        Self {
+            transport: self.transport.clone(),
+            raw: self.raw.invocation(flag.clone()),
+            limits: self.limits.clone(),
+            io: self.io.clone(),
+            cpu: self.cpu.clone(),
+            shared_cpu: self.shared_cpu.clone(),
+            local_failure: Some(flag),
+        }
+    }
+    pub(crate) fn cpu_view(
+        &self,
+        cpu: Arc<crate::runtime_resources::CpuAdmission>,
+    ) -> Result<Self, Error> {
+        if self
+            .shared_cpu
+            .as_ref()
+            .is_some_and(|original| !original.same_pool(&cpu))
+        {
+            return Err(Error::Invalid("different process CPU pool"));
+        }
+        let flag = Arc::new(AtomicBool::new(false));
+        Ok(Self {
+            transport: self.transport.clone(),
+            raw: self
+                .raw
+                .invocation_with_cpu(flag.clone(), Some(cpu.clone())),
+            limits: self.limits.clone(),
+            io: self.io.clone(),
+            cpu: self.cpu.clone(),
+            shared_cpu: Some(cpu),
+            local_failure: Some(flag),
+        })
+    }
+    pub(crate) fn cpu_refused(&self) -> bool {
+        self.local_failure
+            .as_ref()
+            .is_some_and(|f| f.load(Ordering::Acquire))
+    }
     fn deadline(&self, deadline: Instant) -> Instant {
         deadline.min(Instant::now() + self.limits.deadline)
     }
@@ -232,12 +273,19 @@ impl<T: CatalogTransport> CatalogStore<T> {
                 .await
             {
                 Ok(value) => value,
-                Err(_) => {
+                Err(
+                    crate::runtime_resources::CpuFailure::Capacity
+                    | crate::runtime_resources::CpuFailure::Deadline,
+                ) => {
                     if let Some(flag) = &self.local_failure {
                         flag.store(true, Ordering::Release);
                     }
                     Err(Error::LocalCapacity)
                 }
+                Err(
+                    crate::runtime_resources::CpuFailure::Panicked
+                    | crate::runtime_resources::CpuFailure::Stopped,
+                ) => Err(Error::Transport),
             };
         }
         let permit = self
@@ -1077,7 +1125,11 @@ impl<T: CatalogTransport> CatalogStore<T> {
                         .await?;
                     // Publication checks the new group only; unrelated retained history must not poison success.
                     let mut context = Context::new(deadline);
-                    if !self.eligible(&declaration, &mut context).await? {
+                    if !self
+                        .eligible(&declaration, &mut context)
+                        .await
+                        .map_err(Self::uncertain)?
+                    {
                         return Err(Error::Ambiguous);
                     }
                     let records = self
@@ -1096,9 +1148,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
                 })
                 .await;
                 match result {
-                    Ok(Err(Error::Capacity | Error::LocalCapacity)) if started => {
-                        Err(Error::Ambiguous)
-                    }
+                    Ok(Err(Error::Status(status))) => Err(Error::Status(status)),
+                    Ok(Err(error)) if started => Err(Self::uncertain(error)),
                     Ok(r) => r,
                     Err(_) => Err(if started {
                         Error::Ambiguous
@@ -1307,7 +1358,9 @@ impl<T: CatalogTransport> CatalogStore<T> {
         }
         *c = Context::new(deadline);
         if !materialize {
-            self.pin(&scope.catalog, c).await?;
+            self.pin(&scope.catalog, c)
+                .await
+                .map_err(|e| if *started { Self::uncertain(e) } else { e })?;
             return Ok(RepairOutcome::Indexed {
                 scope: scope.clone(),
                 dependencies: Self::dependencies(c),
@@ -1325,7 +1378,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
                     dependencies: Self::dependencies(&context),
                 })
             }
-            Err(e) => Err(e),
+            Err(e) => Err(if *started { Self::uncertain(e) } else { e }),
             Ok(LookupOutcome::Ready(set)) => Ok(RepairOutcome::Complete(set)),
             Ok(LookupOutcome::Incomplete) => Ok(RepairOutcome::Incomplete),
         }
@@ -1380,7 +1433,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
         })
         .await
         {
-            Ok(Err(Error::LocalCapacity)) if started => Err(Error::Ambiguous),
+            Ok(Err(Error::Status(status))) => Err(Error::Status(status)),
+            Ok(Err(error)) if started => Err(Self::uncertain(error)),
             Ok(r) => r,
             Err(_) => Err(if started {
                 Error::Ambiguous
@@ -1607,6 +1661,8 @@ mod resource_admission_tests {
         post_reads: AtomicUsize,
         puts: AtomicUsize,
         fail_fresh: bool,
+        timeout_after_index: bool,
+        materializing: AtomicBool,
     }
     impl super::super::ObjectTransport for Arc<RepairPeer> {
         async fn put(&self, _: &super::super::PreparedRecord) -> Result<u16, Error> {
@@ -1621,6 +1677,10 @@ mod resource_admission_tests {
         }
         async fn get(&self, key: &str, _: usize) -> Result<super::super::Object, Error> {
             assert_eq!(key, self.raw.key);
+            if self.timeout_after_index && self.control.lock().unwrap().is_some() {
+                self.materializing.store(true, Ordering::SeqCst);
+                return std::future::pending().await;
+            }
             Ok(super::super::Object {
                 metadata: self.raw.metadata.clone(),
                 length: self.raw.body.len(),
@@ -1635,10 +1695,10 @@ mod resource_admission_tests {
                 return Err(Error::NotFound);
             };
             let read = self.post_reads.fetch_add(1, Ordering::SeqCst);
-            if read == 0 {
+            if read == 0 && !self.timeout_after_index {
                 let pressure = Pressure::start(self.cpu.clone()).await;
                 *self.pressure.lock().unwrap() = Some(pressure);
-            } else if read == 1 {
+            } else if read == 1 && !self.timeout_after_index {
                 let pressure = { self.pressure.lock().unwrap().take() };
                 pressure.unwrap().stop().await;
                 if self.fail_fresh {
@@ -1689,6 +1749,8 @@ mod resource_admission_tests {
             post_reads: AtomicUsize::new(0),
             puts: AtomicUsize::new(0),
             fail_fresh,
+            timeout_after_index: false,
+            materializing: AtomicBool::new(false),
         });
         let store =
             CatalogStore::new_with_cpu(peer.clone(), CatalogLimits::default(), Some(cpu.clone()))
@@ -1726,5 +1788,274 @@ mod resource_admission_tests {
             repaired_under_materialization_pressure(true).await,
             Err(Error::Ambiguous)
         ));
+    }
+    #[tokio::test(start_paused = true)]
+    async fn repair_inner_timeout_after_acknowledged_index_is_ambiguous() {
+        let cpu = crate::runtime_resources::CpuAdmission::new(1);
+        let (_, mut records) = group();
+        let raw = records.remove(0);
+        let scope = RepairScope {
+            catalog: CatalogId::for_record(&raw.envelope.identity, "owned").unwrap(),
+            periods: vec![raw.envelope.identity.period.clone()],
+        };
+        let peer = Arc::new(RepairPeer {
+            raw: raw.prepare(&CatalogLimits::default().raw).unwrap(),
+            control: std::sync::Mutex::new(None),
+            cpu,
+            pressure: std::sync::Mutex::new(None),
+            post_reads: AtomicUsize::new(0),
+            puts: AtomicUsize::new(0),
+            fail_fresh: false,
+            timeout_after_index: true,
+            materializing: AtomicBool::new(false),
+        });
+        // This is the original standalone constructor, not only the injected path.
+        let store = CatalogStore::new(peer.clone(), CatalogLimits::default()).unwrap();
+        let until = Instant::now() + std::time::Duration::from_secs(3);
+        let task = tokio::spawn(async move { store.repair(&scope, until).await });
+        while !peer.materializing.load(Ordering::SeqCst) {
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(peer.puts.load(Ordering::SeqCst), 1);
+        tokio::time::advance(std::time::Duration::from_secs(3)).await;
+        let result = task.await.unwrap();
+        assert!(
+            matches!(result, Err(Error::Ambiguous)),
+            "inner raw timeout after index acknowledgement is uncertain: {result:?}"
+        );
+        assert_eq!(
+            peer.puts.load(Ordering::SeqCst),
+            1,
+            "no new publication attempt"
+        );
+    }
+    #[tokio::test]
+    async fn cpu_panic_and_stopped_are_not_local_capacity() {
+        let cpu = crate::runtime_resources::CpuAdmission::new(1);
+        let mut store =
+            CatalogStore::new_with_cpu(Arc::new(Peer::new()), CatalogLimits::default(), Some(cpu))
+                .unwrap();
+        let flag = Arc::new(AtomicBool::new(false));
+        store.local_failure = Some(flag.clone());
+        let panic: Result<(), Error> = store
+            .cpu(Instant::now() + std::time::Duration::from_secs(1), || {
+                panic!("owned CPU defect")
+            })
+            .await;
+        assert_eq!(panic, Err(Error::Transport));
+        assert!(!flag.load(Ordering::Acquire));
+        store.cpu.close();
+        let stopped: Result<(), Error> = store
+            .cpu(
+                Instant::now() + std::time::Duration::from_secs(1),
+                || Ok(()),
+            )
+            .await;
+        assert_eq!(stopped, Err(Error::Transport));
+        assert!(!flag.load(Ordering::Acquire));
+    }
+    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+    enum StatusAt {
+        Descriptor,
+        Raw,
+        Catalog,
+        UnknownDescriptorReadback,
+        AcceptedIndexReadback,
+    }
+    struct StatusPeer {
+        mode: StatusAt,
+        descriptor: String,
+        controls: std::sync::Mutex<BTreeMap<String, Vec<u8>>>,
+        raw: std::sync::Mutex<Option<(String, super::super::Object)>>,
+        descriptor_puts: AtomicUsize,
+        raw_puts: AtomicUsize,
+        index_puts: AtomicUsize,
+    }
+    impl StatusPeer {
+        fn new(mode: StatusAt, declaration: &GroupDeclaration) -> Arc<Self> {
+            Arc::new(Self {
+                mode,
+                descriptor: declaration
+                    .reference(&CatalogLimits::default())
+                    .unwrap()
+                    .descriptor_key()
+                    .unwrap(),
+                controls: Default::default(),
+                raw: Default::default(),
+                descriptor_puts: AtomicUsize::new(0),
+                raw_puts: AtomicUsize::new(0),
+                index_puts: AtomicUsize::new(0),
+            })
+        }
+    }
+    impl super::super::ObjectTransport for Arc<StatusPeer> {
+        async fn put(&self, p: &super::super::PreparedRecord) -> Result<u16, Error> {
+            self.raw_puts.fetch_add(1, Ordering::SeqCst);
+            if self.mode == StatusAt::Raw {
+                return Ok(403);
+            }
+            *self.raw.lock().unwrap() = Some((
+                p.key.clone(),
+                super::super::Object {
+                    metadata: p.metadata.clone(),
+                    length: p.body.len(),
+                    body: p.body.clone(),
+                },
+            ));
+            Ok(200)
+        }
+        async fn head(&self, key: &str) -> Result<super::super::Object, Error> {
+            self.get(key, usize::MAX).await
+        }
+        async fn get(&self, key: &str, _: usize) -> Result<super::super::Object, Error> {
+            self.raw
+                .lock()
+                .unwrap()
+                .as_ref()
+                .filter(|(k, _)| k == key)
+                .map(|(_, o)| super::super::Object {
+                    metadata: o.metadata.clone(),
+                    length: o.length,
+                    body: o.body.clone(),
+                })
+                .ok_or(Error::NotFound)
+        }
+    }
+    impl CatalogTransport for Arc<StatusPeer> {
+        async fn get_control(&self, key: &str, _: usize) -> Result<ControlObject, Error> {
+            if (self.mode == StatusAt::UnknownDescriptorReadback
+                && key == self.descriptor
+                && self.descriptor_puts.load(Ordering::SeqCst) > 0)
+                || (self.mode == StatusAt::AcceptedIndexReadback
+                    && key != self.descriptor
+                    && self.index_puts.load(Ordering::SeqCst) > 0)
+            {
+                return Err(Error::Status(403));
+            }
+            self.controls
+                .lock()
+                .unwrap()
+                .get(key)
+                .cloned()
+                .map(|body| ControlObject {
+                    body,
+                    etag: "\"owned-status\"".into(),
+                    version: None,
+                })
+                .ok_or(Error::NotFound)
+        }
+        async fn put_control(
+            &self,
+            key: &str,
+            body: &[u8],
+            _: &WriteCondition,
+        ) -> Result<u16, Error> {
+            if key == self.descriptor {
+                self.descriptor_puts.fetch_add(1, Ordering::SeqCst);
+                if self.mode == StatusAt::Descriptor {
+                    return Ok(403);
+                }
+                if self.mode == StatusAt::UnknownDescriptorReadback {
+                    return Err(Error::Transport);
+                }
+            } else {
+                self.index_puts.fetch_add(1, Ordering::SeqCst);
+                if self.mode == StatusAt::Catalog {
+                    return Ok(403);
+                }
+            }
+            self.controls
+                .lock()
+                .unwrap()
+                .insert(key.into(), body.into());
+            Ok(200)
+        }
+        async fn list_raw_document(
+            &self,
+            _: &str,
+            _: Option<&str>,
+            _: usize,
+            _: usize,
+        ) -> Result<Vec<u8>, Error> {
+            let raw = self.raw.lock().unwrap();
+            let key = &raw.as_ref().unwrap().0;
+            Ok(format!(r#"<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><IsTruncated>false</IsTruncated><KeyCount>1</KeyCount><Contents><Key>{key}</Key></Contents></ListBucketResult>"#).into_bytes())
+        }
+    }
+    #[tokio::test]
+    async fn definite_put_status_and_uncertain_readback_status_keep_distinct_boundaries() {
+        for mode in [
+            StatusAt::Descriptor,
+            StatusAt::Raw,
+            StatusAt::Catalog,
+            StatusAt::UnknownDescriptorReadback,
+            StatusAt::AcceptedIndexReadback,
+        ] {
+            let (d, raw) = group();
+            let peer = StatusPeer::new(mode, &d);
+            let store = CatalogStore::new(peer.clone(), CatalogLimits::default()).unwrap();
+            let error = store
+                .publish(d, raw, Instant::now() + std::time::Duration::from_secs(3))
+                .await
+                .unwrap_err();
+            let expected = if matches!(
+                mode,
+                StatusAt::UnknownDescriptorReadback | StatusAt::AcceptedIndexReadback
+            ) {
+                Error::Ambiguous
+            } else {
+                Error::Status(403)
+            };
+            assert_eq!(error, expected, "{mode:?}");
+            assert!(
+                peer.descriptor_puts.load(Ordering::SeqCst) <= 1,
+                "no original descriptor resend"
+            );
+            assert!(
+                peer.raw_puts.load(Ordering::SeqCst) <= 1,
+                "no raw payload resend"
+            );
+            assert!(
+                peer.index_puts.load(Ordering::SeqCst) <= 1,
+                "no index resend"
+            );
+        }
+    }
+    #[tokio::test]
+    async fn repair_accepted_index_then_readback_403_remains_ambiguous() {
+        let (d, raw) = group();
+        let peer = StatusPeer::new(StatusAt::AcceptedIndexReadback, &d);
+        let record = raw
+            .into_iter()
+            .next()
+            .unwrap()
+            .prepare(&CatalogLimits::default().raw)
+            .unwrap();
+        *peer.raw.lock().unwrap() = Some((
+            record.key,
+            super::super::Object {
+                metadata: record.metadata,
+                length: record.body.len(),
+                body: record.body,
+            },
+        ));
+        let scope = RepairScope {
+            catalog: d.partitions[0].clone(),
+            periods: vec![d.members[0].envelope.identity.period.clone()],
+        };
+        let store = CatalogStore::new(peer.clone(), CatalogLimits::default()).unwrap();
+        assert_eq!(
+            store
+                .repair(&scope, Instant::now() + std::time::Duration::from_secs(3))
+                .await
+                .unwrap_err(),
+            Error::Ambiguous
+        );
+        assert_eq!(peer.index_puts.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            peer.raw_puts.load(Ordering::SeqCst),
+            0,
+            "repair never resends raw"
+        );
     }
 }

@@ -4099,14 +4099,18 @@ Resource-aware main construction creates `ProcessResources` before the shared se
 The same CPU admission and domestic collector reach `SharedState` and the resource-aware
 VC/world/air/S06 path. The native offer queue is16; actual blocking closures retain
 local/process permits until they finish, including after caller cancellation. Effective
-deadlines reserve10ms. Local capacity is typed before outward failure mapping; it does not
+CPU deadlines reserve10ms, while the cold World owner remains8s and each caller3s.
+Invocation-local CPU observation preserves actual refusal/interrupted completion through outer
+timeout and bounded fan-out; ordinary I/O and panic/stopped are not capacity. Local capacity
+is typed before outward failure mapping; it does not
 fund another provider, become a provider penalty, or authorize uncertain publication replay.
 A spent attempt followed by local capacity loss has a private2s demand cooldown.
 
 Fixed native operation counters update before diagnostic filtering/rate/queue loss.
 An immutable private metrics view reads actual CPU, shared domestic, push, S3 and raw-cache
 counters without acquiring provider/S3/filesystem data. HTTP latency stops at headers;
-S3 payload lengths are logical observations. Fixed schema budgets are2048series,4096u64
+S3 payload lengths are logical observations. Oversized combined scrapes return a bounded
+complete500/no-store response, never a truncated200 or panic. Fixed schema budgets are2048series,4096u64
 cells and512KiB. Actual enumeration, max-width rendering, owned HTTP captures and their
 limits are described in the [operator guide](../operations/server2-runtime-metrics.md) and
 [local evidence](../evidence/tasks/issue-2819-runtime-resource-metrics/verification.md).

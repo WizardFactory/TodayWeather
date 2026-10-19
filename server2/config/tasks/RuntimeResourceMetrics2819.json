@@ -51,7 +51,9 @@
     "server2/tests/storage.rs",
     "server2/tests/storage/resource_admission.rs",
     "server2/tests/air.rs",
-    "server2/src/summary/lookup.rs"
+    "server2/src/summary/lookup.rs",
+    "server2/tools/smoke.py",
+    "server2/tests/domestic/source_s3.rs"
   ],
   "outside": [
     {
@@ -118,6 +120,21 @@
       "path": "docs/evidence/tasks/issue-2819-runtime-resource-metrics/verification.md",
       "category": "documentation",
       "reason": "Root operator metric contract and source-bound local screenshot/PDF/selected verification evidence; no runtimeimplementation"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-runtime-resource-metrics/manual.json",
+      "category": "documentation",
+      "reason": "Portable editable operator PDF source with same-directory maintained screenshots, reproducible from a clean checkout; documentation only, no runtime dependency"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-runtime-resource-metrics/normal.png",
+      "category": "documentation",
+      "reason": "Selected current retained local normal-flow evidence capture for operator manual page 1; synthetic loopback peers, no production qualification"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-runtime-resource-metrics/capacity.png",
+      "category": "documentation",
+      "reason": "Selected current retained typed-capacity and separately labelled synthetic unread-sink evidence capture for operator manual page 2; documentation only"
     }
   ]
 }

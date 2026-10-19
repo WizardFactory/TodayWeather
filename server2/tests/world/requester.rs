@@ -359,3 +359,65 @@ async fn funded_gzip_local_capacity_is_not_reset_retry_and_returns_only_unused_f
     );
     assert_eq!(vc.count(), 2);
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn definite_gzip_statuses_do_not_spend_cpu_but_429_refusal_stays_local() {
+    use server2::{
+        operational_metrics::CpuKind,
+        runtime_resources::CpuAdmission,
+        world::{FundedVc, HttpVcTransport, VcFunding},
+    };
+    let s3 = Peer::new();
+    let vc = tcp_peer().await;
+    vc.queue(&[
+        Act::Respond(401, b"Unauthorized".to_vec(), true),
+        Act::Respond(403, b"Forbidden".to_vec(), true),
+        Act::Respond(429, b"API calls limit".to_vec(), true),
+    ]);
+    let cpu = CpuAdmission::new(1);
+    let source = FundedVc::new(
+        &vc.endpoint,
+        Arc::new(HttpVcTransport::new_with_cpu(Some(cpu.clone())).unwrap()),
+        VcFunding {
+            transport: Arc::new(s3.transport()),
+            quota_id: "e".repeat(64),
+            daily_units: 200,
+            block_units: 50,
+            clock: Arc::new(super::chain::ScenarioClock(Arc::new(FixedClock::new(ms(
+                "2026-09-26T07:04:30.000Z",
+            ))))),
+        },
+        "synthetic-vc-key-0001".into(),
+    )
+    .unwrap();
+    let (start, ready) = tokio::sync::oneshot::channel();
+    let (release, wait) = std::sync::mpsc::channel();
+    let held = cpu.clone();
+    let blocker = tokio::spawn(async move {
+        held.immediate(CpuKind::Foundation, move || {
+            let _ = start.send(());
+            wait.recv().unwrap();
+        })
+        .await
+    });
+    ready.await.unwrap();
+    let mut results = Vec::new();
+    for _ in 0..3 {
+        results.push(source.fetch(cell(), Range::Recent, within(300)).await);
+    }
+    release.send(()).unwrap();
+    assert!(blocker.await.unwrap().is_ok());
+    assert_eq!(
+        results,
+        vec![
+            Err(VcError::ProviderDown),
+            Err(VcError::ProviderDown),
+            Err(VcError::LocalCapacity)
+        ]
+    );
+    assert_eq!(
+        vc.count(),
+        3,
+        "known status or CPU refusal cannot add a retry/refund"
+    );
+}
