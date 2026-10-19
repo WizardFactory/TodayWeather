@@ -683,3 +683,12 @@ release live warning work. Existing claim/send/drain policy stays. The selected 
 owned peer/real-time evidence and final diagram precede independent review and exact
 parent/current CI at pre-merge only. This record does not close full E3, #2819, #2704 or
 #2705, or authorize merge, cloud actions, live provider/device sends, shadow or cutover.
+
+
+D3 / #2819 candidate: entry-owned world cold restore shares failures for3s under
+the existing8s owner/3s waiter contract;32MiB/2048-fetch whole-load output caps and
+four outstanding partitions now bound logical raw retention. Local evidence is
+148 distinct tests plus an optimized owned HTTP example; it does not establish
+RSS, large-city capacity, full previous native recovery, CI, shadow or cutover.
+See [selected verification](../docs/evidence/tasks/issue-2819-world-cold-load/verification.md).
+Domestic D2, shared CPU/S3 metrics and remaining S19/S20 gates stay open.

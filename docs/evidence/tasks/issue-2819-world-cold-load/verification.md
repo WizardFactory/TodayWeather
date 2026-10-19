@@ -1,0 +1,15 @@
+# World cold-load verification
+
+Base `c1ae9082b2c86f0087727be9872b0cf82b4e3bb1`, D3-only candidate. This change shares one cell-owned cold restore outcome and bounds the aggregate logical raw output. Domestic warm memory, process CPU, shared S3/metrics, full earlier-release eligibility, shadow and host capacity remain separate work.
+
+The actual tests-only Red had 16 same-cell callers cause 16 failing storage loads instead of one; its two cohort checks failed with zero provider calls. A separate aggregate Red used two legal 80-byte outputs with a 128-byte whole-load cap and incorrectly accepted 160 bytes. Both exited101. Setup/compiler failures are retained separately and are not claimed as product Red.
+
+After the fix, 148 distinct tests passed: world50 (including nine new cold-load checks), S07 owned4, raw34, catalogs33 and summary27. All-target Clippy with `-D warnings`, format, declared placement and text-diff checks passed. Earlier focused runs overlap these totals and are not added again. Original source maps and actual command/exit logs remain in ignored reports.
+
+A fresh optimized loopback_server was copied outside Cargo target, SHA-256 `30c45a339019116b1f919d3e0e36e4e74cbd3c858775daee7b64005ab5b6359f`. The additional actual `world_smoke.py` run observes17 same-cell requests with one funded recorded VC request, provider-down empty-memory S3 weather/air restoration with exact response bytes,23 objects (two weather raw, three air raw), cell-only identities and explicit development coexistence rollback. The loopback server is an injected example, not production main. That coexistence exercise does not qualify a native full recovery release or an actual device/provider/host. No live requests or state changes occurred outside owned peers.
+
+Production defaults admit32MiB retained raw across at most2048 fetches. Up to four scheduled partitions include completed-unconsumed outputs before joining and charging. The conservative logical allowance is32MiB retained plus4x32MiB in-flight =160MiB. This excludes compressed/control/metadata/parsed/derived buffers, started storage blocking work and concurrent cells; it is not RSS, EC2 sizing or measured busy-city capacity. Overflow fails the whole load and never funds VC or reports truncated success. Sequential summary loads share the same aggregate cap.
+
+One entry-owned S07 flight retains failures for three monotonic seconds. The existing eight-second owner deadline starts at admission including lock wait, while a request waits at most three seconds. Waiter cancellation does not cancel the owner. Success installs Db first and retained results own no Db or entry, so idle eviction/recreation restores afresh. Cooperative timeout does not preempt synchronous parsing; shared CPU work remains a separate increment.
+
+Review the [operator procedure](../../../operations/server2-native-verification.md#bounded-world-cold-restoration) and [contract](../../../../specs/issue-2819-world-cold-load.md). Independent review and exact current CI are required before merge readiness. This local evidence does not complete issues2819/2704/2705 or authorize production actions.
