@@ -217,8 +217,12 @@ pub fn build_with_air(
         Arc::new(HttpVcTransport::new().map_err(|_| GatewayError::InvalidConfiguration)?);
     let source = FundedVc::new(&builtins.vc, provider, funding, key)
         .map_err(|_| GatewayError::InvalidConfiguration)?;
-    let store = CatalogWorldStore::new(s3.clone(), CatalogLimits::default())
-        .map_err(|_| GatewayError::InvalidConfiguration)?;
+    let store = CatalogWorldStore::with_load_limits(
+        s3.clone(),
+        CatalogLimits::default(),
+        super::store::WorldLoadLimits::default(),
+    )
+    .map_err(|_| GatewayError::InvalidConfiguration)?;
     let world = World::new(
         Arc::new(store),
         Arc::new(source),

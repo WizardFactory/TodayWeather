@@ -1,0 +1,61 @@
+{
+  "task": "WorldColdLoad2819",
+  "stable_task": "issue-2819-world-cold-load",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "D3 independent pre-merge slice: share same-cell cold restoration outcomes under the existing eight-second owned load and three-second waiter, preserve cancellation ownership and no VC after storage failure, bound aggregate world load bytes/fetches with four in-flight reservations. Root approved build1 tests-first implementation and bounded local verification; commits, push, external network/tracker/PR publication and worker SDLC stage writes remain prohibited. Root integrates shared documentation. Shared CPU, metrics, S3 class policies, domestic D2 and production qualification are excluded.",
+  "server2_paths": [
+    "server2/config/tasks/WorldColdLoad2819.json",
+    "server2/src/world/engine.rs",
+    "server2/src/world/store.rs",
+    "server2/src/world/runtime.rs",
+    "server2/tests/world.rs",
+    "server2/tests/world/cold_load.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-world-cold-load.md",
+      "category": "documentation",
+      "reason": "Task intent and authority boundary; this worker owns this task-specific document."
+    },
+    {
+      "path": "specs/issue-2819-world-cold-load.md",
+      "category": "documentation",
+      "reason": "Observable cold-load ownership and aggregate-load contract; this worker owns this task-specific document."
+    },
+    {
+      "path": "plans/issue-2819-world-cold-load.md",
+      "category": "documentation",
+      "reason": "Implementation/verification handoff and exact preparation checkpoint; this worker owns this task-specific document."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-world-cold-load/verification.md",
+      "category": "documentation",
+      "reason": "Selected candidate-bound local evidence after implementation approval; no result is claimed by preparation."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Root integration owner updates the maintained world ownership/load bounds; this worker must not edit this shared document."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.json",
+      "category": "documentation",
+      "reason": "Root integration owner updates the existing Archify source for the changed world load flow; this worker must not edit this shared artifact."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.html",
+      "category": "documentation",
+      "reason": "Root integration owner regenerates via Archify and validates/browser-checks/visually checks the generated artifact; no manual HTML patch."
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Root integration owner records scope and operational limitations of the candidate proof; this worker must not edit this shared document."
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Root integration owner reconciles the parent status after candidate verification; this worker must not edit shared status."
+    }
+  ]
+}

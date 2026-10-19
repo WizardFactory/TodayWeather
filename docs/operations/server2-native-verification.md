@@ -580,3 +580,28 @@ matching compile-time checkout and Python/synthetic fixture assets. No live prov
 device, readiness endpoint, IAM or full release-bundle qualification is claimed. The main
 release binary is built but not executed by this smoke. See the
 [selected evidence](../evidence/tasks/issue-2819-warning-poll-supervision/verification.md).
+
+
+## Bounded world cold restoration
+
+D3 shares a cell-owned restoration failure instead of making waiting requests
+repeat the same failed S3 load. Run `cargo test --locked --test world cold_load::`
+for same-cell failure/recovery, cancellation, deadline, eviction and aggregate
+limits. Coordinate Cargo through the shared target lease; retain required inputs
+outside it before cleanup. The existing optimized `world_smoke.py --binary PATH
+--peer-binary PATH` exercises owned HTTP weather/air restore and development
+coexistence. It uses the loopback example, not production main or a complete
+previous native bundle. See [selected commands/results](../evidence/tasks/issue-2819-world-cold-load/verification.md).
+
+Whole-load defaults are32MiB raw/2048 fetches, four partition outputs outstanding,
+including completed results awaiting consumption. Overflow fails without partial
+weather or a funded provider fallback. Three-second completed failures permit one
+new owner after expiry; no new autonomous retry timer is introduced. Inspect the
+existing bounded logs for storage/capacity errors. A busy history over the cap may
+remain unavailable until its supported input is reduced or an independently
+verified capacity change is made; do not weaken integrity or replay unknown work.
+
+The32+4x32MiB logical allowance excludes parsed/compressed/control and concurrent
+cell memory. These local tests are not RSS/EC2 sizing, large real-city performance,
+exact native bundle parity, live provider, shadow or cutover proof. Current full
+CPU/S3 admission and metric work remains separate.

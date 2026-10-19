@@ -4090,3 +4090,29 @@ readiness endpoint or qualify S3/credential-source health, a production recovery
 shadow or cutover. The [runtime-services diagram](diagrams/server2-runtime-services.html)
 retains process/writer/storage ownership; its final source pin is bound to the implemented
 code before PR review, not to an uncommitted future design.
+
+
+## Bounded world cold restoration (D3 / #2819)
+
+Each world CellEntry now owns one existing S07 cold-load flight. One restoration
+outcome is shared by same-cell callers, including storage/capacity/panic failure
+retained for three monotonic seconds; failure never installs an empty Db or funds
+VC. The eight-second owner deadline starts at admission and includes cell-lock
+wait. Request wait remains at most three seconds; waiter cancellation leaves the
+owner running. Success installs Db before result publication; completed results
+retain neither Db nor entry, preserving disposable idle eviction.
+
+CatalogWorldStore applies32MiB/2048-fetch whole-load limits to serving and summary
+restores. At most four scheduled partition outputs include completed but unconsumed
+results, checked before retention/replenishment. Existing per-S06/body/gunzip bounds
+remain. Conservative logical raw allowance is32MiB retained plus4x32MiB in-flight;
+this excludes other buffers/parsed values/concurrent cells and is not process RSS
+or measured production capacity. Exceedance is Capacity, never partial success.
+Synchronous parsing still uses its current cooperative deadline; process CPU and
+shared admission/metrics improvements are separate work.
+
+See the [contract](../../specs/issue-2819-world-cold-load.md),
+[selected local checks](../evidence/tasks/issue-2819-world-cold-load/verification.md)
+and [operator procedure](../operations/server2-native-verification.md#bounded-world-cold-restoration).
+No whole-native previous-release, exact CI, shadow, host or cutover qualification
+is implied by the bounded148-test/owned-example proof.

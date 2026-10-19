@@ -17,6 +17,33 @@ pub const KIND: &str = "timeline";
 const DAY_MS: i64 = 86_400_000;
 const LOAD_FANOUT: usize = 4;
 
+/// Whole-load admission, independent of the existing per-catalog S06 bounds.
+#[derive(Clone, Debug)]
+pub struct WorldLoadLimits {
+    pub raw_bytes: usize,
+    pub fetches: usize,
+}
+impl Default for WorldLoadLimits {
+    fn default() -> Self {
+        Self {
+            raw_bytes: 32 * 1024 * 1024,
+            fetches: 2048,
+        }
+    }
+}
+impl WorldLoadLimits {
+    pub fn validate(&self) -> Result<(), Error> {
+        if self.raw_bytes == 0
+            || self.raw_bytes > 32 * 1024 * 1024
+            || self.fetches == 0
+            || self.fetches > 2048
+        {
+            return Err(Error::Invalid("world load limits"));
+        }
+        Ok(())
+    }
+}
+
 /// One complete raw provider acquisition.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RawFetch {
@@ -107,8 +134,54 @@ fn catalog(cell: Cell, first_date: u32, range: Range) -> Result<CatalogId, Error
     id.validate()?;
     Ok(id)
 }
-fn fetches(set: &crate::storage::CompleteSet) -> Vec<RawFetch> {
-    let mut out = Vec::new();
+/// Logical raw output accounting; S06 controls/compressed buffers keep their own bounds.
+struct LoadOutput {
+    rows: Vec<RawFetch>,
+    bytes: usize,
+    limits: WorldLoadLimits,
+}
+impl LoadOutput {
+    fn new(limits: WorldLoadLimits) -> Self {
+        Self {
+            rows: Vec::new(),
+            bytes: 0,
+            limits,
+        }
+    }
+    fn checked(&self, bytes: usize, count: usize) -> Result<usize, StoreError> {
+        let fail = || StoreError::Storage(Error::Capacity);
+        let bytes = self.bytes.checked_add(bytes).ok_or_else(fail)?;
+        let count = self.rows.len().checked_add(count).ok_or_else(fail)?;
+        if bytes > self.limits.raw_bytes || count > self.limits.fetches {
+            return Err(fail());
+        }
+        Ok(bytes)
+    }
+    fn push(&mut self, row: RawFetch) -> Result<(), StoreError> {
+        self.bytes = self.checked(row.body.len(), 1)?;
+        self.rows.push(row);
+        Ok(())
+    }
+    fn extend(&mut self, rows: Vec<RawFetch>) -> Result<(), StoreError> {
+        let bytes = rows
+            .iter()
+            .try_fold(0usize, |n, row| n.checked_add(row.body.len()))
+            .ok_or(StoreError::Storage(Error::Capacity))?;
+        self.bytes = self.checked(bytes, rows.len())?;
+        self.rows.extend(rows);
+        Ok(())
+    }
+    fn sorted(mut self) -> Vec<RawFetch> {
+        self.rows
+            .sort_by(|a, b| (a.fetched_at_ms, &a.sha256).cmp(&(b.fetched_at_ms, &b.sha256)));
+        self.rows
+    }
+}
+fn fetches(
+    set: &crate::storage::CompleteSet,
+    limits: WorldLoadLimits,
+) -> Result<Vec<RawFetch>, StoreError> {
+    let mut out = LoadOutput::new(limits);
     for a in set.acquisitions() {
         for r in a.records() {
             let id = &r.envelope.identity;
@@ -119,23 +192,38 @@ fn fetches(set: &crate::storage::CompleteSet) -> Vec<RawFetch> {
                     first_date: id.period.local_date,
                     body: r.bytes.clone(),
                     sha256: id.raw_sha256.clone(),
-                });
+                })?;
             }
         }
     }
-    out
+    Ok(out.rows)
 }
 /// S06-backed store. Absent catalogs are proved empty only by a complete one-period repair.
 pub struct CatalogWorldStore<T> {
     catalogs: Arc<CatalogStore<T>>,
     raw_limits: Limits,
+    load_limits: WorldLoadLimits,
 }
 impl<T: CatalogTransport + 'static> CatalogWorldStore<T> {
     pub fn new(transport: T, limits: CatalogLimits) -> Result<Self, Error> {
+        Self::with_load_limits(transport, limits, WorldLoadLimits::default())
+    }
+    pub fn with_load_limits(
+        transport: T,
+        limits: CatalogLimits,
+        load_limits: WorldLoadLimits,
+    ) -> Result<Self, Error> {
+        load_limits.validate()?;
+        limits
+            .output_bytes
+            .checked_mul(LOAD_FANOUT)
+            .and_then(|reserved| reserved.checked_add(load_limits.raw_bytes))
+            .ok_or(Error::Invalid("world load reservation"))?;
         let raw_limits = limits.raw.clone();
         Ok(Self {
             catalogs: Arc::new(CatalogStore::new(transport, limits)?),
             raw_limits,
+            load_limits,
         })
     }
     /// Every stored fetch of `cell` whose first local date is in `first_dates` (all ranges),
@@ -146,7 +234,7 @@ impl<T: CatalogTransport + 'static> CatalogWorldStore<T> {
         first_dates: &[u32],
         deadline: Instant,
     ) -> Result<Vec<RawFetch>, StoreError> {
-        let mut out = Vec::new();
+        let mut out = LoadOutput::new(self.load_limits.clone());
         for &date in first_dates {
             for range in [Range::Combined, Range::Recent, Range::Forecast] {
                 let id = catalog(cell, date, range).map_err(StoreError::Storage)?;
@@ -157,13 +245,13 @@ impl<T: CatalogTransport + 'static> CatalogWorldStore<T> {
                         period(date, range),
                         deadline,
                         true,
+                        self.load_limits.clone(),
                     )
                     .await?,
-                );
+                )?;
             }
         }
-        out.sort_by(|a, b| (a.fetched_at_ms, &a.sha256).cmp(&(b.fetched_at_ms, &b.sha256)));
-        Ok(out)
+        Ok(out.sorted())
     }
 }
 async fn load_partition<T: CatalogTransport>(
@@ -172,6 +260,7 @@ async fn load_partition<T: CatalogTransport>(
     period: Period,
     deadline: Instant,
     strict: bool,
+    limits: WorldLoadLimits,
 ) -> Result<Vec<RawFetch>, StoreError> {
     // S16 (`strict`): a group S06 excluded (not eligible, raw body missing) makes the read
     // partial; world serving keeps the eligible groups.
@@ -179,7 +268,7 @@ async fn load_partition<T: CatalogTransport>(
         if strict && set.excluded_groups() > 0 {
             Err(StoreError::Incomplete)
         } else {
-            Ok(fetches(set))
+            fetches(set, limits.clone())
         }
     };
     match store
@@ -220,26 +309,33 @@ impl<T: CatalogTransport + 'static> WorldStore for CatalogWorldStore<T> {
         deadline: Instant,
     ) -> BoxFuture<'_, Result<Vec<RawFetch>, StoreError>> {
         Box::pin(async move {
-            // Bounded fan-out: a few catalog reads at a time rather than all 21 at once.
-            let gate = Arc::new(tokio::sync::Semaphore::new(LOAD_FANOUT));
+            let mut pending = partitions(now_ms).into_iter();
             let mut tasks = JoinSet::new();
-            for (date, range) in partitions(now_ms) {
-                let id = catalog(cell, date, range).map_err(StoreError::Storage)?;
-                let (store, gate) = (self.catalogs.clone(), gate.clone());
-                tasks.spawn(crate::observability::inherit(async move {
-                    let _slot = gate
-                        .acquire_owned()
-                        .await
-                        .map_err(|_| StoreError::Incomplete)?;
-                    load_partition(store, id, period(date, range), deadline, false).await
-                }));
+            let mut out = LoadOutput::new(self.load_limits.clone());
+            loop {
+                // A slot includes a completed result until it is joined and charged.
+                // Defaults reserve 4*32MiB in-flight plus 32MiB retained logical raw;
+                // this is not total RSS or a process-wide multi-cell budget.
+                while tasks.len() < LOAD_FANOUT {
+                    let Some((date, range)) = pending.next() else {
+                        break;
+                    };
+                    let id = catalog(cell, date, range).map_err(StoreError::Storage)?;
+                    tasks.spawn(crate::observability::inherit(load_partition(
+                        self.catalogs.clone(),
+                        id,
+                        period(date, range),
+                        deadline,
+                        false,
+                        self.load_limits.clone(),
+                    )));
+                }
+                let Some(joined) = tasks.join_next().await else {
+                    break;
+                };
+                out.extend(joined.map_err(|_| StoreError::Incomplete)??)?;
             }
-            let mut out = Vec::new();
-            while let Some(joined) = tasks.join_next().await {
-                out.extend(joined.map_err(|_| StoreError::Incomplete)??);
-            }
-            out.sort_by(|a, b| (a.fetched_at_ms, &a.sha256).cmp(&(b.fetched_at_ms, &b.sha256)));
-            Ok(out)
+            Ok(out.sorted())
         })
     }
     fn publish(
