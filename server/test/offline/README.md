@@ -825,3 +825,5 @@ ignored output directory. Temporary DB/listener cleanup runs on success/failure.
 CI runs the smoke in the existing Node 16 air integration job.
 See [verification](../../../docs/evidence/tasks/issue-2831/verification.md) and
 [rollout](../../../docs/operations/air-forecast-fallback.md).
+
+The #2831 observation fallback suite also checks restored named AirKorea past slots with unchanged provider current, KST midnight/minute collisions, invalid/missing/partial/duplicate history and zero. Its Mongo/HTTP smoke seeds stale 10:00/14:00/15:00/16:00 observations: four stored past rows, three numeric past chart slots per PM/AQI, exact captured OpenWeather current, and 23 future forecast rows (11 visible future slots). Baseline mode suppresses both history restoration and forecasts to replay the captured current-only failure.

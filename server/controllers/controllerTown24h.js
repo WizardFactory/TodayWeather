@@ -1013,6 +1013,63 @@ function ControllerTown24h() {
         return req.airInfo;
     };
 
+    // History is display-only: it must never participate in current selection/freshness.
+    function _restoreAirHistory(airInfo, rows, airUnit) {
+        if (!airInfo || airInfo.source === 'airkorea' || !Array.isArray(rows)) {
+            return;
+        }
+        var currentEpoch = KecoController._parseDateTime(airInfo.last.dataTime);
+        var currentHour = Math.floor(currentEpoch / 3600000) * 3600000;
+        var station = rows.find(function (row) {
+            return row && (!row.source || row.source === 'airkorea') &&
+                typeof row.stationName === 'string' && row.stationName.trim();
+        });
+        if (!station || !isFinite(currentHour)) {
+            return;
+        }
+        var codes = ['pm10', 'pm25', 'o3', 'no2', 'co', 'so2'];
+        var hours = {};
+        rows.filter(function (row) {
+            if (!row || row.stationName !== station.stationName || (row.source && row.source !== 'airkorea')) {
+                return false;
+            }
+            var epoch = KecoController._parseDateTime(row.dataTime);
+            return isFinite(epoch) && epoch % 3600000 === 0 && epoch <= Date.now() &&
+                epoch >= currentHour - 24 * 3600000 && epoch < currentHour;
+        }).slice().sort(function (a, b) {
+            return KecoController._parseDateTime(b.dataTime) - KecoController._parseDateTime(a.dataTime);
+        }).forEach(function (row) {
+            var epoch = KecoController._parseDateTime(row.dataTime);
+            var hour = Math.floor(epoch / 3600000) * 3600000;
+            var data = hours[hour] || (hours[hour] = {stationName: station.stationName, source: 'airkorea', dataTime: _formatAirKstTime(hour)});
+            codes.forEach(function (code) {
+                var value = row[code + 'Value'];
+                if (data[code + 'Value'] === undefined && typeof value === 'number' && isFinite(value) && value >= 0) {
+                    data[code + 'Value'] = value;
+                }
+            });
+        });
+        Object.keys(hours).forEach(function (hour) {
+            // Recalculate a new object; neither stored rows nor provider current are mutated.
+            var data = KecoController.recalculateValue(hours[hour], airUnit);
+            codes.concat(['aqi']).forEach(function (code) {
+                var value = data[code + 'Value'];
+                if (typeof value !== 'number' || !isFinite(value) || value < 0) {
+                    return;
+                }
+                var pollutant = airInfo.pollutants[code] || (airInfo.pollutants[code] = {});
+                var hourly = pollutant.hourly || self._insertEmptyPollutantHourlyObj(airInfo.last.dataTime);
+                // Provider clocks can contain minutes; replace the past placeholder in this hour.
+                pollutant.hourly = hourly.filter(function (slot) {
+                    return Math.floor(KecoController._parseDateTime(slot.date) / 3600000) * 3600000 !== Number(hour);
+                });
+                pollutant.hourly.push({date: data.dataTime, val: value, grade: data[code + 'Grade'],
+                    source: 'airkorea', stationName: data.stationName});
+                pollutant.hourly.sort(function (a, b) { return a.date.localeCompare(b.date); });
+            });
+        });
+    }
+
     function _freshAirDetailRows(rows, now) {
         if (!Array.isArray(rows)) {
             return [];
@@ -1044,6 +1101,7 @@ function ControllerTown24h() {
                 airInfo.source = airInfo.last.source || 'airkorea';
                 airInfo.pollutants = {};
                 self._insertHourlyPollutants(airInfo.pollutants, arpltnList, airUnit, airInfo.last.dataTime);
+                _restoreAirHistory(airInfo, req.airHistoryList, airUnit);
             }
             if ( req.midData && Array.isArray(req.midData.dailyData) ) {
                 var dailyList = req.midData.dailyData.filter(function (value) {
@@ -1080,7 +1138,7 @@ function ControllerTown24h() {
     /**
      * When no nearby AirKorea station has a current observation, ask the air provider chain
      * (#2622 WAQI, #2628 Google/OpenWeather/Visual Crossing/WAQI). The observation replaces the
-     * (stale) AirKorea station lists for makeAirInfoList.
+     * (stale) AirKorea station lists for current assembly; retain history for past chart slots.
      */
     this.getAirFallback = function (req, res, next) {
         var meta = {};
@@ -1114,6 +1172,7 @@ function ControllerTown24h() {
                         log.error(err);
                     }
                     else if (arpltn) {
+                        req.airHistoryList = req.arpltnList || (req.arpltnStnList && req.arpltnStnList[0]);
                         req.current.arpltn = arpltn;
                         req.arpltnList = [arpltn];
                         req.arpltnStnList = [[arpltn]];
@@ -1167,6 +1226,7 @@ function ControllerTown24h() {
                     airInfo.last = arpltnList[0];
                     airInfo.pollutants = {};
                     self._insertHourlyPollutants(airInfo.pollutants, arpltnList, airUnit, airInfo.last.dataTime);
+                    _restoreAirHistory(airInfo, req.airHistoryList, airUnit);
 
                     /**
                      * airkorea의 경우 예보가 측정소별이 아니라 시/도 단위이므로,

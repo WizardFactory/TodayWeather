@@ -6,3 +6,6 @@ AC1: isolated regressions cover stale AirKorea -> fallback current + verified ne
 AC2: separate real local HTTP -> actual legacy chart-data assembly proves numeric future PM/AQI, KST/provenance and unchanged current fields, against captured current-only baseline.
 AC3: document acquisition limitation and approved rollout/rollback; live origin/public proof explicitly deferred until separate deployment approval. Keep issue open.
 Risks: untrusted station identity, stale-observation horizon, accidental current mutation, selective deployed overlays. No observation freshness/quota/KAQ-enable/provider acquisition changes.
+
+## Authorized history extension
+AK requested restoring stored AirKorea past observations to the chart when coordinate-provider current is selected (2026-10-19). Preserve exact current readings/source/attribution and existing future forecast behavior; use already retrieved nearby station history only, without new acquisition or relaxed current freshness. Remains pre-merge only.

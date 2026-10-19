@@ -4980,7 +4980,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <div class="pulse-dot"></div>
         <h1>Stored air forecast selection</h1>
       </div>
-      <p class="subtitle">Legacy stored forecasts with independent current-observation provenance</p>
+      <p class="subtitle">Legacy current, historical observations and stored forecasts with separate provenance</p>
     </div>
 
 
@@ -4990,7 +4990,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
          data-preset-badge-editorial-plate="ARCHIFY / PLATE 04">
       <svg viewBox="0 0 1080 670" data-sequence-column-fit="spread" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-preset="classic" data-quality-profile="showcase">
         <title id="archify-diagram-title">Stored air forecast selection</title>
-        <desc id="archify-diagram-description">Legacy stored forecasts with independent current-observation provenance</desc>
+        <desc id="archify-diagram-description">Legacy current, historical observations and stored forecasts with separate provenance</desc>
         <!-- Definitions -->
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -5087,11 +5087,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="route" data-edge-to="client" data-edge-label="unchanged current + selected forecast" data-edge-key="7" data-edge-id="response">
+        <g data-edge-from="route" data-edge-to="client" data-edge-label="current + past observations + forecast" data-edge-key="7" data-edge-id="response">
           <path data-composition-edge-from="route" data-composition-edge-to="client" data-composition-edge-id="response" data-composition-points="341.25,500;152.5,500" d="M 341.25 500 L 152.5 500" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="118.775" y="480" width="256.2" height="18" rx="3" class="c-mask"/>
-          <text x="246.875" y="490" class="t-muted" font-size="11" text-anchor="middle">unchanged current + selected forecast</text>
+          <rect x="115.47500000000002" y="480" width="262.79999999999995" height="18" rx="3" class="c-mask"/>
+          <text x="246.875" y="490" class="t-muted" font-size="11" text-anchor="middle">current + past observations + forecast</text>
         </g>
         </g>
 
@@ -5380,8 +5380,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Source and compatibility</h3>
         </div>
         <ul>
-          <li>Keep current source, readings and attribution. Set forecastStationName and actual forecast source/publication only for usable future rows.</li>
-          <li>Valid partial KAQ stays; explicit/default AirKorea shares validation. No usable source: no invented values; no new provider calls or writes.</li>
+          <li>Keep provider current/readings/attribution. Restore named AirKorea history before current hour with per-slot source/station; no current freshness change.</li>
+          <li>Stored future rows keep actual forecast station/source/publication. Missing history or forecasts leaves gaps; no extra provider calls or writes.</li>
         </ul>
       </div>
     </div>

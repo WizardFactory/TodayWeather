@@ -37,7 +37,9 @@ function get(url) {
         class StoredKaq extends Base {constructor(){super(null,kaq);}}
         for(const model of [stations,observations,forecasts,kaq]) await model.init();
         await stations.create({stationName:'중구',geo:[126.98,37.56]});
-        await observations.create({stationName:'중구',date:new Date('2026-10-18T01:00:00Z'),dataTime:'2026-10-18 10:00',pm10Value:20,pm25Value:10});
+        await observations.insertMany([10,14,15,16].map(hour=>({stationName:'중구',
+            date:new Date('2026-10-18T'+String(hour-9).padStart(2,'0')+':00:00Z'),
+            dataTime:'2026-10-18 '+hour+':00',pm10Value:20+hour,pm25Value:10+hour})));
         const rows=['pm10','pm25'].flatMap(code=>Array.from({length:23},(_,i)=>({stationName:'중구',code,val:code==='pm10'?35:16,
             dataTime:'2026-10-19 '+String(i+1).padStart(2,'0')+':00',date:new Date(Date.parse('2026-10-18T15:00:00Z')+(i+1)*3600000),pubDate:'2026-10-18 05:00'})));
         await forecasts.insertMany(rows);
@@ -48,7 +50,8 @@ function get(url) {
         const app=express();
         app.get('/v000903/kma/addr/:region/:city/:town',
             (req,res,next)=>{req.current={};req.query.airUnit=req.query.airUnit||'airkorea';next();},h.detail.getKeco,h.detail.getAirFallback,
-            (req,res,next)=>(req.query.flow==='single'?h.detail.makeAirInfo:h.detail.makeAirInfoList)(req,res,next),
+            (req,res,next)=>{if(req.query.baseline)delete req.airHistoryList;
+                (req.query.flow==='single'?h.detail.makeAirInfo:h.detail.makeAirInfoList)(req,res,next);},
             (req,res,next)=>{if(req.query.baseline)return next();(req.query.flow==='single'?h.detail.AirForecast:h.detail.AirForecastList)(req,res,next);},
             (req,res)=>res.json({airInfoList:req.airInfoList||[req.airInfo]}));
         server=http.createServer(app);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -64,15 +67,23 @@ function get(url) {
             assert.deepEqual(info.last,base.last);assert.equal(info.source,base.source);
             assert.equal(info.last.stationName,undefined);assert.equal(info.forecastStationName,'중구');
             assert.equal(info.forecastSource,'airkorea');assert.equal(info.forecastPubDate,'2026-10-18 05:00');
-            const counts={};
+            const counts={},pastCounts={};
             for(const code of ['pm10','pm25','aqi']) {
+                const past=info.pollutants[code].hourly.filter(r=>r.date<base.last.dataTime&&Number.isFinite(r.val));
+                assert.equal(past.length,4);
+                for(const slot of past){assert.equal(slot.source,'airkorea');assert.equal(slot.stationName,'중구');
+                    if(code!=='aqi')assert.equal(slot.val,(code==='pm10'?20:10)+Number(slot.date.slice(11,13)));}
+                pastCounts[code]=clientChart(info,code).data.filter(r=>r.date<base.last.dataTime&&Number.isFinite(r.val)).length;
+                assert.equal(pastCounts[code],3,'numeric stale history visible in client '+code);
+                const currentSlot=info.pollutants[code].hourly.find(r=>r.date===base.last.dataTime);
+                assert.equal(currentSlot.val,base.last[code+'Value']);
                 const future=info.pollutants[code].hourly.filter(r=>r.date>='2026-10-19 01:00');
                 assert.equal(future.length,23);assert(future.every(r=>Number.isFinite(r.val)&&r.val>=0));
                 if(code!=='aqi') for(const row of future){const stored=rows.find(x=>x.code===code&&x.dataTime===row.date);assert.equal(row.val,stored.val);assert.equal(row.pubDate,stored.pubDate);}
                 counts[code]=clientChart(info,code).data.filter(r=>r.date>base.last.dataTime&&Number.isFinite(r.val)).length;
                 assert(counts[code]>0,'numeric client future slots for '+code);
             }
-            reports.push({flow,requestSource:source,currentSource:info.source,forecastSource:info.forecastSource,station:info.forecastStationName,publication:info.forecastPubDate,storedFutureRowsPerPM:23,chartFutureSlots:counts});
+            reports.push({flow,requestSource:source,currentSource:info.source,forecastSource:info.forecastSource,station:info.forecastStationName,publication:info.forecastPubDate,storedFutureRowsPerPM:23,chartFutureSlots:counts,chartPastSlots:pastCounts});
             if(output)fs.writeFileSync(path.join(output,flow+'-'+source+'.json'),JSON.stringify(body,null,2));
         }
         await forecasts.deleteMany({});

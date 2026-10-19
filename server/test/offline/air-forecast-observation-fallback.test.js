@@ -110,3 +110,58 @@ test('explicit AirKorea with lagged fresh observation inserts only strictly futu
     assert.ifError((await harness([],rows).get(air,'airkorea')).error);
     assert.deepEqual(air.pollutants.pm10.hourly.map(r=>r.date),['2026-09-24 06:00','2026-09-24 10:00','2026-09-24 11:00']);
 });
+
+for (const flow of ['single','list']) test(flow+' restores named past AirKorea slots without replacing provider current',async()=>{
+    const snapshot=Object.assign({},require('./fixtures/air/issue-2831-current-only.json').last,{dataTime:'2026-09-24 09:07'});
+    const history=[
+        {stationName:'중구',dataTime:'2026-09-23 23:00',pm10Value:31,pm25Value:15},
+        {stationName:'중구',dataTime:'2026-09-23 24:00',pm10Value:32,pm25Value:16},
+        {stationName:'중구',dataTime:'2026-09-24 09:00',pm10Value:999},
+        {stationName:'중구',dataTime:'2026-09-24 10:00',pm10Value:999},
+        {stationName:'중구',dataTime:'2026-09-23 08:00',pm10Value:999},
+        {dataTime:'2026-09-24 02:00',pm10Value:999},
+        {stationName:'중구',source:'google',dataTime:'2026-09-24 03:00',pm10Value:999},
+        {stationName:'중구',dataTime:'2026-02-30 04:00',pm10Value:999},
+        {stationName:'중구',dataTime:'2026-09-24 01:00',pm10Value:Infinity,pm25Value:-1},
+        {stationName:'중구',dataTime:'2026-09-24 01:30',pm10Value:999},
+        {stationName:'중구',dataTime:'2026-09-24 05:00',pm10Value:'12',pm25Value:NaN},
+        {stationName:'다른측정소',dataTime:'2026-09-24 04:00',pm10Value:999}
+    ];
+    const original=JSON.stringify(history), originalCurrent=JSON.stringify(snapshot);
+    const h=harness([], [row()],{fallback:{getArpltn(g,d,cb){cb(null,snapshot);}}});
+    const req={params:{},query:{airUnit:'airkorea'},current:{},gCoord:{lat:37.56,lon:126.98},arpltnList:history,arpltnStnList:[history],airForecastStationName:'중구'};
+    await invoke(h.detail.getAirFallback,req);
+    await invoke(flow==='single'?h.detail.makeAirInfo:h.detail.makeAirInfoList,req);
+    const air=flow==='single'?req.airInfo:req.airInfoList[0];
+    assert.equal(JSON.stringify(air.last),originalCurrent);assert.equal(air.source,'openweather');
+    for(const code of ['pm10','pm25','aqi']) {
+        const past=air.pollutants[code].hourly.filter(r=>Number.isFinite(r.val)&&r.date<snapshot.dataTime);
+        assert.deepEqual(Array.from(past,r=>r.date),['2026-09-23 23:00','2026-09-24 00:00']);
+        for(const slot of past){assert.equal(slot.source,'airkorea');assert.equal(slot.stationName,'중구');}
+    }
+    assert.equal(air.pollutants.pm10.hourly.find(r=>r.date==='2026-09-24 00:00').val,32);
+    assert.equal(air.pollutants.pm10.hourly.find(r=>r.date===snapshot.dataTime).val,snapshot.pm10Value);
+    assert.equal(JSON.stringify(history),original,'history input is not mutated');
+    await invoke(flow==='single'?h.detail.AirForecast:h.detail.AirForecastList,req);
+    assert.equal(air.forecastSource,'airkorea');assert.equal(air.pollutants.pm10.hourly.find(r=>r.date===row().dataTime).val,32);
+    assert.equal(JSON.stringify(air.last),originalCurrent);
+});
+test('partial history deduplicates per pollutant, keeps finite zero and derives AQI',async()=>{
+    const history=[{stationName:'중구',dataTime:'2026-09-24 00:00',pm10Value:0,pm25Value:-1},
+        {stationName:'중구',dataTime:'2026-09-23 24:00',pm10Value:99,pm25Value:12},null];
+    const h=harness([],[],{fallback:{getArpltn(g,d,cb){cb(null,current());}}});
+    const req={params:{},query:{airUnit:'airkorea'},current:{},gCoord:{},arpltnStnList:[history]};
+    await invoke(h.detail.getAirFallback,req);await invoke(h.detail.makeAirInfoList,req);
+    const air=req.airInfoList[0];
+    assert.equal(air.pollutants.pm10.hourly.find(r=>r.date==='2026-09-24 00:00').val,0);
+    assert.equal(air.pollutants.pm25.hourly.find(r=>r.date==='2026-09-24 00:00').val,12);
+    assert(Number.isFinite(air.pollutants.aqi.hourly.find(r=>r.date==='2026-09-24 00:00').val));
+});
+test('absent history and failed fallback keep existing safe behavior',async()=>{
+    for(const fail of [false,true]) {
+        const h=harness([],[],{fallback:{getArpltn(g,d,cb){cb(null,fail?undefined:current());}}});
+        const req={params:{},query:{},current:{},gCoord:{},arpltnList:[],arpltnStnList:[]};
+        await invoke(h.detail.getAirFallback,req);await invoke(h.detail.makeAirInfoList,req);
+        assert.equal(req.airInfoList&&req.airInfoList[0].source,fail?undefined:'openweather');
+    }
+});

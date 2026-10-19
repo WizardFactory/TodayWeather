@@ -58,3 +58,8 @@ source is non-AirKorea against the DB station/hour values and provenance. Keep
 acquisition freshness separate and keep the issue open until that proof exists.
 [#2636](https://github.com/WizardFactory/TodayWeather/issues/2636) still owns
 observation/publication acquisition limitations.
+
+## AK historical-observation extension (2026-10-19)
+User requested restoring stored AirKorea past observations with provider current. Three new behavior assertions failed before implementation (past rows absent, zero absent), then focused 21 passed. The existing isolated HTTP/Mongo smoke now seeds stale 10:00/14:00/15:00/16:00 KST observations and retains the original captured OpenWeather current-only baseline (history and forecast suppressed for baseline). Six single/list × KAQ/AirKorea/omitted flows return four numeric past PM/AQI slots with actual station/source, three visible past chart slots, exact provider current, 23 stored future PM rows and 11 visible future chart slots. Actual fixture values/provenance and future publication remain unchanged. No live rollout proof or production mutation is claimed.
+
+Executed for this extension: focused21 on Node16.20.2 and Node24.19.0; full `npm --prefix server run test:offline` on Node24; real Mongo/HTTP/chart smoke on both runtimes. Archify finalize passed validate/deliver/strict artifact/browser gates; visual-check passed and 1440 light / 2048 dark captures were inspected. No client implementation, schema, dependency, provider, key, quota, acquisition, deployment or restart change. The unchanged smoke cleanup stops its temporary listener/Mongo. The final independent review and CI status are recorded on PR #2833 at the exact published candidate.

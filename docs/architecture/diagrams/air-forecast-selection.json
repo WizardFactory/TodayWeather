@@ -11,7 +11,7 @@
       1080,
       670
     ],
-    "subtitle": "Legacy stored forecasts with independent current-observation provenance"
+    "subtitle": "Legacy current, historical observations and stored forecasts with separate provenance"
   },
   "participants": [
     {
@@ -122,7 +122,7 @@
       "from": "route",
       "to": "client",
       "y": 500,
-      "label": "unchanged current + selected forecast",
+      "label": "current + past observations + forecast",
       "variant": "return"
     }
   ],
@@ -139,8 +139,8 @@
       "dot": "amber",
       "title": "Source and compatibility",
       "items": [
-        "Keep current source, readings and attribution. Set forecastStationName and actual forecast source/publication only for usable future rows.",
-        "Valid partial KAQ stays; explicit/default AirKorea shares validation. No usable source: no invented values; no new provider calls or writes."
+        "Keep provider current/readings/attribution. Restore named AirKorea history before current hour with per-slot source/station; no current freshness change.",
+        "Stored future rows keep actual forecast station/source/publication. Missing history or forecasts leaves gaps; no extra provider calls or writes."
       ]
     }
   ]

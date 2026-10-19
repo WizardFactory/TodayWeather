@@ -65,3 +65,6 @@ provider/quota/key rollback is required.
 
 [Architecture](../architecture/mobile-api.md#stored-hourly-air-forecast-fallback-2770-2831) ·
 [Selected verification evidence](../evidence/tasks/issue-2831/verification.md)
+
+## Historical chart verification (AK extension)
+After separately approved rollout, also compare numeric past slots with the stored nearby station rows while current source remains non-AirKorea. Check each slot's `source=airkorea`, `stationName`, KST hour and concentration, provider current exact values/attribution, then future forecast source/publication independently. History is limited to available named hourly rows in the preceding 24 hours, before the provider current hour; the installed chart shows only its existing subset. Missing/invalid/partial history stays empty. No new acquisition/freshness/quotas changes; observation acquisition recovery remains #2636. Rollback uses the same saved whole controller files and separately approved restart; no storage migration.
