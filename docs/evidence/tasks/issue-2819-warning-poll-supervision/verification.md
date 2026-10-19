@@ -1,5 +1,14 @@
 # E3b warning delivery polling verification
 
+2026-10-19 integration note: the dated results and source/binary hashes below
+retain their original execution identities. Statements about an unmerged or
+parallel parent describe that original verification point. The integrated source
+now includes C1/B1 and the preceding ordered fixes. Current source-bound checks
+require explicit dev and release package rebuilds, separate owned smoke, independent
+review and exact CI/tree reconciliation. The final [PR2835 integration record](https://github.com/WizardFactory/TodayWeather/pull/2835)
+binds those actual results; this note does not relabel historical checks or
+qualify production, a full recovery bundle, shadow or issue closure.
+
 Scope: [#2819](https://github.com/WizardFactory/TodayWeather/issues/2819), warning delivery
 supervisor scheduling only. Parent is unmerged E3a PR2834 at `cad27de8`; parent review/CI
 are separate gates, not this candidate's review. [Spec](../../../../specs/issue-2819-warning-poll-supervision.md).
