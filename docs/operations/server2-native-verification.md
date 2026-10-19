@@ -503,3 +503,33 @@ Build the runtime-services integration executable using the scoped task toolchai
 Use ordinary Python execution. The tool refuses `-O`, `-OO` or `PYTHONOPTIMIZE` before parsing operational inputs, creating output or starting a child, because those modes remove its verification assertions.
 
 The [selected C6 evidence](../evidence/tasks/issue-2819-push-credentials/verification.md) separates intended Red, focused tests, full affected targets and this additional process smoke. Existing C5 warning/lifecycle, no automatic retries and claims remain unchanged. Current parent/current review and CI remain pre-merge requirements; no merge or issue closure.
+
+## Production startup configuration regression
+
+The ordinary executable requires complete family/world selection when no explicit legacy
+origin is configured. `.env` is optional when required process settings are complete;
+missing mandatory settings fail startup. Partial shared test factories are intentional
+and do not establish production completeness.
+
+For the E1/E2 additional local process check, use a retained native main executable and
+its trusted SHA-256 with fresh output outside `server2/`:
+
+```sh
+python3 server2/tools/startup_coverage_smoke.py --binary /absolute/retained/server2 --sha256 TRUSTED_SHA256 --out /absolute/new-run
+```
+
+The tool supplies its own allowlisted environment and working directories, rejects
+incomplete startup, checks environment-only development coexistence and file/process
+precedence, and retires owned children/listeners. Positive health cases explicitly use
+closed-loopback legacy coexistence; no product request, fully native main startup,
+provider call, device send or operational readiness is established. Full native API
+inventory remains a separate owned-router test. See the
+[selected startup evidence](../evidence/tasks/issue-2819-startup-coverage/verification.md).
+
+Existing foundation smoke, S03 local-stack and operational logging checks intentionally
+select explicit closed-loopback development coexistence for their health/logging process.
+They do not bypass the operational completeness guard or establish native production
+coverage. Gateway-enabled connection lifetime remains12seconds; the HTTP-only shutdown
+drain remains5seconds. The S03 launcher requires its executable to be owned under
+`server2/`; copy a verified retained executable into an ignored owned output path rather
+than weakening that existing admission rule.

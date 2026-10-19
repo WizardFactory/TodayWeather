@@ -226,14 +226,19 @@ pub fn build_with_air(
         Arc::new(SystemClock),
         WorldConfig::default(),
     );
-    let versions = match set(var, "SERVER2_WORLD_VERSIONS") {
+    let versions = selected_versions(var)?;
+    Ok((Arc::new(WorldBackend::new(world)), versions))
+}
+
+/// Shared selection syntax; startup completeness does not construct a world/provider client.
+pub(crate) fn selected_versions(var: Var) -> Result<Vec<Version>, GatewayError> {
+    Ok(match set(var, "SERVER2_WORLD_VERSIONS") {
         None => vec![Version::V000901, Version::V000902, Version::V000903],
         Some(list) => list
             .split(',')
             .map(|v| Version::parse(v.trim()).ok_or(GatewayError::InvalidConfiguration))
             .collect::<Result<_, _>>()?,
-    };
-    Ok((Arc::new(WorldBackend::new(world)), versions))
+    })
 }
 /// Register a configured native world and select it for its versions.
 pub fn select(dispatcher: &BackendDispatcher, configured: Configured) -> Result<(), GatewayError> {

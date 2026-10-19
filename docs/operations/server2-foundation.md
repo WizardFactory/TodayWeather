@@ -1,13 +1,17 @@
 # server2 foundation operator manual
 
-S04 provides a Rust host foundation for local validation. It serves operational
-health only. Weather/geocode, S3, provider adapters, capture jobs and production
-cutover are later tasks. Keep nginx and production routing on legacy.
+S04 originally provided a health-only Rust foundation. Later tasks added native services;
+the current operational executable rejects bare/partial startup without an explicit
+development legacy origin. Health-only/partial construction remains available through
+code-injected factories and examples. This manual retains foundation checks and labelled
+historical evidence; it does not authorize production routing or cutover.
 
 ## Build and check
 
 Prerequisites: pinned Rust 1.99.0 with rustfmt/clippy, Python 3.11+, and an isolated
-checkout. Cargo may download public dependencies; the binary never calls providers.
+checkout. Cargo may download public dependencies. The isolated smoke below uses only
+health/metrics and a closed-loopback development origin; it makes no provider request.
+This does not describe ordinary push-enabled main, which starts supervised work.
 
 ```sh
 cd server2
@@ -19,15 +23,24 @@ python3 tools/smoke.py --binary target/release/server2
 ```
 
 The smoke starts two sequential release processes on ephemeral loopback ports (`PORT=0`)
-in an empty working directory, so no real `server2/.env` is read. It checks GET/HEAD health,
-rejects public metrics, reads private counters, tests the built-in 9-second incomplete-header
+in an empty working directory with an explicit closed-loopback development legacy origin,
+so no real `server2/.env` is read. It checks GET/HEAD health, rejects public metrics, reads
+private counters, and tests the existing gateway-enabled 12-second incomplete-header
 timeout with elapsed bounds, socket-cap (128) rejection/recovery, and both idle and
 partial-header SIGTERM shutdown. It also verifies that an invalid legacy `PORT` fails startup.
 No legacy collectors run.
 
 ## Configure and operate
 
-Start `server2/target/release/server2` from the `server2/` directory. S10e (#2753): the process
+Before starting `server2/target/release/server2`, provide complete native coverage
+(`geocode,dsf,kma,kma-v000901,kma-v000902,town,push,notice` and all three world versions)
+or an explicit development `SERVER2_GATEWAY_LEGACY_URL`. Selecting `push` starts supervised
+delivery and warning acquisition after both listeners bind. Do not use real credentials
+or endpoints for isolated verification. Use the smoke's allowlisted development
+configuration, not a private legacy `.env`; see the [runtime-services contract](server2-runtime-services.md).
+Bare configuration fails before services/listeners. `.env` is optional when required process settings are complete;
+missing mandatory settings fail and the file never substitutes for validation.
+S10e (#2753): the process
 reads its environment and then `.env` in the working directory (a copy of the legacy
 `server/.env`, see [server2/.env.example](../../server2/.env.example)) with the legacy dotenv
 rules; a process variable wins over the file. The listener follows legacy `config.js`: address
@@ -53,13 +66,13 @@ in S10e because legacy has no equivalent and no documented operation needs anoth
 Metrics connections have a separate fixed limit 16. Socket limits bound slow headers
 and body draining; a connection expires at its maximum age even with keep-alive.
 This is an absolute connection lifetime, distinct from the S10 per-request
-9-second gateway deadline. When `SERVER2_GATEWAY_LEGACY_URL` is set, the lifetime
-is 12 seconds, which keeps the deadline `501` inside the connection lifetime
+9-second gateway deadline. With the gateway (complete-native or explicit development
+coexistence), the lifetime is 12 seconds, which keeps the deadline `501` inside the connection lifetime
 ([#2730](https://github.com/WizardFactory/TodayWeather/issues/2730)). The guarantee covers a
 request that starts within lifetime minus 9 seconds of the connection being accepted; a later
-keep-alive request can still outlive its connection. Without the gateway the 9-second lifetime
-and socket behavior are unchanged.
-The volatile cache is a single byte-bounded slot; keyed/sharded cache algorithms
+keep-alive request can still outlive its connection. Without the gateway, code-injected partial foundations retain the 9-second lifetime
+and socket behavior; bare operational main no longer starts that foundation.
+The foundation cache is a single byte-bounded slot; keyed/sharded cache algorithms
 are S07. CPU permits remain reserved until blocking work ends after caller cancellation.
 
 ```sh
@@ -72,14 +85,16 @@ no body, Content-Length 2. Public /internal/metrics returns 404. Private metrics
 returns 200 and no-store, without CORS access, with only finite counters and declared limits.
 OPTIONS /health currently returns 405; legacy CORS preflight (204), session-cookie
 and complete middleware-header parity are deferred to S02 and not asserted here;
-S02 freezes the complete legacy oracle before route ports. SIGTERM/SIGINT drain
-both listeners for at most 5 seconds; a signal-triggered timeout logs a forced stop
+S02 freezes the complete legacy oracle before route ports. In the health/metrics smoke
+with no push writer or delivery workers, SIGTERM/SIGINT drain both listeners for at most 5 seconds; a signal-triggered timeout logs a forced stop
 and exits successfully. Startup, signal-registration and unexpected serving failures
 remain unsuccessful. Tokio
 runtime shutdown then waits at most 1 second for blocking work, including error
 paths, giving a total shutdown bound of 6 seconds plus scheduling overhead. A CPU
 closure may outlive that wait until process exit; this does not claim a durable S3
-or provider drain. Later tasks own their interruption guarantees.
+or provider drain. Push-enabled main follows the shared 34-second drain plus up to
+one-second teardown in the [runtime-services contract](server2-runtime-services.md);
+the smoke's 6-second bound is not that operational guarantee.
 
 ## Enforce placement before task completion
 
@@ -108,14 +123,21 @@ exempt; executable calls, runtime fields and invalid declarations still reject.
 Root Cargo and undeclared outside implementation reject. Git/JSON/TOML failures
 are incomplete checks. Binary executables, computed/aliased paths, custom loaders
 and macro-generated runtime access need human dependency/provenance review. These
-literal checks are a review aid, not an adversarial sandbox. Shared workflow permits checkout@v4/full history and one owned CI command, with a
-30-minute timeout. It runs only on server2-related PRs. Remote branch protection
-is not configured by this task.
+literal checks are a review aid, not an adversarial sandbox. The original S04 workflow
+used checkout@v4/full history and one owned CI command with a 30-minute timeout on
+server2-related PRs. That is historical setup; inspect the maintained
+[workflow](../../.github/workflows/server2.yml) for current triggers and limits. Remote
+branch protection is not configured by this task.
 
-## Actual usage capture
+## Historical foundation usage capture (pre-#2819)
 
-This [capture](../evidence/tasks/server2-foundation/usage.png) comes from the
+This historical [capture](../evidence/tasks/server2-foundation/usage.png) comes from the
 2026-10-06 release smoke on ephemeral ports. Its
 [manifest](../evidence/tasks/server2-foundation/manifest.json) records platform and
 binary/capture hashes. This is local foundation evidence; providers, deployment
 and full client parity were not exercised.
+
+The [companion PDF](server2-foundation.pdf) and this capture predate the #2819 startup
+guard and are not current startup proof. They were not regenerated for this correction.
+Use this editable guide and the [current E1/E2 evidence](../evidence/tasks/issue-2819-startup-coverage/verification.md)
+for the complete-configuration and isolated-smoke boundaries.

@@ -18,12 +18,14 @@ python3 tools/smoke.py --binary target/release/server2
 python3 tools/check_placement.py --root .. --declaration config/tasks/S04.json --base <exact-task-base>
 ```
 
-Start the foundation with `target/release/server2` from `server2/`; the listener follows the
+Start the operational executable with `target/release/server2` from `server2/` only after
+configuring complete native coverage, or an explicit development coexistence origin. The listener follows the
 legacy `config.js` rule (`OPENSHIFT_NODEJS_IP`, `OPENSHIFT_NODEJS_PORT` or `PORT`; default
 127.0.0.1:3000) and metrics listen on loopback at the next port (3001 by default). During
 coexistence set another port, for example `PORT=3002` as in `.env.example` (metrics 3003). Use the [foundation operator manual](../docs/operations/server2-foundation.md)
-for listener/runtime settings. By default only health is mounted and weather paths
-return404. For the opt-in gateway, injected existing geocoder environment,
+for listener/runtime settings. Bare startup now fails before listeners. Health-only/partial
+foundations remain available through code-injected factories and examples, not bare
+operational main. For development coexistence, injected existing geocoder environment,
 local mock verification and legacy rollback, follow the
 [gateway guide](../docs/operations/server2-gateway.md). Native live geocoder
 acquisition stays disabled; production traffic/cutover needs separate authority.
@@ -37,17 +39,22 @@ maintenance remains allowed; this checker is for server2 tasks.
 
 The runtime has no verification-only mode. `SERVER2_NATIVE_FAMILIES` selects ordinary
 native ownership, including `geocode`, `dsf`, KMA version/town entries, `push` and `notice`.
-Selected native services start without a legacy URL. An explicit
-`SERVER2_GATEWAY_LEGACY_URL` retains coexistence for unselected families; with neither
-selection nor legacy URL the process keeps the health foundation. Selected native
-errors never forward. S20a shares one S3 transport and native dependency handles,
-serves durable push registration and read-only notices, and starts no delivery loops.
+Without a legacy URL, operational main requires every accepted family:
+`geocode,dsf,kma,kma-v000901,kma-v000902,town,push,notice` and all three world versions.
+Missing selection fails startup. An explicit nonempty `SERVER2_GATEWAY_LEGACY_URL`
+retains development coexistence for unselected families; selected native errors never
+forward. Shared code-injected partial factories keep their behavior. The shared factory
+serves durable push registration/read-only notices; with `push` selected, supervised
+delivery and warning acquisition start after both listeners bind. Do not start it with
+real credentials/endpoints during isolated verification.
 See the [runtime services manual](../docs/operations/server2-runtime-services.md) and
-[visually checked PDF](../docs/operations/server2-runtime-services.pdf). Since S10e the settings are the
+[historical S20a PDF](../docs/operations/server2-runtime-services.pdf). Since S10e the settings are the
 legacy `server/.env` names and values, read from `server2/.env` in the working directory (a
 private copy of the legacy file; see [.env.example](.env.example) for every variable), plus
 the server2-only `SERVER2_S3_BUCKET`, `SERVER2_S3_REGION` and coexistence routing. Endpoints and
-quotas without a legacy setting are built in. Since S10f, when `AWS_ACCESS_KEY` and
+quotas without a legacy setting are built in. `.env` is optional when required process
+settings are complete; missing mandatory configuration fails startup and process
+variables precede the file. Since S10f, when `AWS_ACCESS_KEY` and
 `AWS_SECRET_KEY` are unset or the legacy placeholder, S3 requests are signed with EC2
 instance-role credentials (IMDSv2, cached and refreshed before expiry); the operator check
 `cargo run --locked --release --example s3_readiness -- LABEL` (from `server2/`) proves the bucket
