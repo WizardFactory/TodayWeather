@@ -1350,8 +1350,8 @@ configuration. Existing injected `GEOCODER_KAKAO_KEYS`
 and `GEOCODER_GOOGLE_KEY` names and the Google fingerprint restriction are
 preserved. Present Kakao key lists must be JSON arrays of nonempty strings;
 malformed entries reject the configuration. S08 adds Kakao/Google budget identities; the geocoder funding bridge
-reserves/consumes every possible key attempt before owned work, while the
-weather-only executor rejects those identities. Configured limits are not measured quotas (#2724).
+funds only the selected provider/key immediately before its HTTP attempt; local
+exhaustion skips to the next configured key. The weather-only executor rejects those identities. Configured limits are not measured quotas (#2724).
 
 Exact coordinate/locale single-flight and results remain bounded volatile RAM.
 The optional address-only S3 adapter stores a bounded 16-KiB projection with
@@ -1645,8 +1645,26 @@ The table records the S10c state.
 | KMA life inputs (S15b-3b) | none new | Read only with `kma`. UV V5, pollen V3 and KASI use the S15b-2 data.go.kr acquirer (its key and unit settings): one S08 quota owner per key and KST day across ASOS and these services, one key ring per service. MFDS is keyless at the production endpoint legacy hard-codes (`https://poisonmap.mfds.go.kr/api/risk.do`); per AK 2026-10-15 no new `SERVER2_*` provider setting is added (S10e converts the existing ones to the legacy names). |
 
 `FundedQuota` now opens one S08 budget store per key and UTC day from configured limits,
-claims at most 50 units per authority block, and still funds every possible attempt of a
-lookup before HTTP without refunds. Without a quota the geocoder denies every acquisition.
+claims at most 50 units per authority block, and funds each selected geocoder key before
+HTTP without refunds. B1 (#2819) removes reservation of unused candidates: a complete
+Kakao result does not debit or depend on Google funding; address lookup remains Google
+first with Kakao fallback. Shared owners/cache hits do not duplicate funding. Admission
+waits stay inside the existing five-second owner deadline; HTTP attempts remain capped
+at three seconds and the remaining owner time. A funded unit can remain spent if the
+deadline expires before send; this is conservative admission, not wire accounting.
+The existing outer five-second owner timeout is the binding end-to-end limit;
+the per-admission timeout and post-funding remaining-time check are additional guards.
+The paused-clock slow-funding regression establishes the owner boundary and no late
+HTTP, not an independent proof of those inner guards.
+`server2_geocoder_quota_rejections_total` counts denied provider/key admissions,
+not rejected HTTP requests or failed lookups. Several unavailable keys can increment
+it during one lookup, and a later funded key or optional-supplement failure can still
+produce a successful response. Pair it with lookup outcome/HTTP-attempt counters;
+do not use it alone as a failed-request rate.
+Without a quota the geocoder denies every acquisition. The
+[funding contract flow](diagrams/server2-geocode-funding.html) illustrates this policy,
+not an execution receipt. [Local checks](../evidence/tasks/issue-2819-funding/verification.md)
+use owned HTTP and a volatile S08 peer; production quotas are not measured.
 S08 keeps one policy per owner and window, so a changed limit applies from the next UTC day;
 a restart with another limit inside the same day denies that key until the day ends. A
 provider day that is not the UTC day overlaps two windows; the #2724 limits must account for
@@ -2987,6 +3005,24 @@ the wait expiring), the route gives its legacy store-error answer with the messa
 `push state storage unavailable`: `POST /push` and `PUT` 500, `DELETE` 501, and `push-list` 200
 with `null` for each affected item (the legacy batch helper swallows store errors). Validation and
 cast-error answers are unchanged because they precede any store call.
+
+**Registration state safety (#2819 C1).** Before a transaction, direct commit or import
+admits a stored document, validate every nested key (no `$` prefix or literal `.`),
+encoded size (at most 256 KiB per document) and nesting depth (at most 32 below the root).
+The limit counts escaped JSON bytes; schema-supported dotted update paths still resolve
+to safe stored fields. Typed BSON dates and non-finite numbers keep their EJSON wrappers.
+Invalid input receives the existing store-error shape and writes no journal entry; later
+valid changes remain usable. Compact record reads return errors instead of panicking.
+Every replacement in a journal entry is checked before any is applied, so a bad entry
+cannot apply an earlier prefix or advance its sequence. Corrupt acknowledged bytes are
+retained: restore stays unready; this does not skip a record or rewind state. Writer
+completion, cancellation and unwind clear the shared ready flag. Public `/health` is
+still liveness only; aggregate production readiness is a separate #2819 increment.
+
+The [state safety contract flow](diagrams/server2-push-state.html)
+([editable JSON](diagrams/server2-push-state.json)) illustrates these admission/recovery
+rules; it is not execution evidence. The [selected verification](../evidence/tasks/issue-2819-state/verification.md)
+records the actual regressions, neighboring suites and owned HTTP restart smoke.
 
 **One-time copy.** `push_registration_convert PUSHES ALERTPUSHES IMPORT REPORT` (offline) reads
 `mongoexport` output of `pushes` and `alertpushes` (lines or `--jsonArray`; relaxed, canonical or
