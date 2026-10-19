@@ -1,5 +1,14 @@
 # E3a writer availability verification
 
+2026-10-19 integration note: the dated results and source/binary hashes below
+retain their original execution identities. Statements about an unmerged or
+parallel parent describe that original verification point. The integrated source
+now includes C1/B1 and the preceding ordered fixes. Current source-bound checks
+require explicit dev and release package rebuilds, separate owned smoke, independent
+review and exact CI/tree reconciliation. The final [PR2834 integration record](https://github.com/WizardFactory/TodayWeather/pull/2834)
+binds those actual results; this note does not relabel historical checks or
+qualify production, a full recovery bundle, shadow or issue closure.
+
 Scope: writer portion of #2819 E3 only, parent unmerged E1/E2 PR2832 at938e5ba9.
 The full readiness endpoint/S3/credential-source health remains open. No main integration,
 full E3/recovery, seven-day shadow or production qualification.
