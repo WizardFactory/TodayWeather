@@ -132,6 +132,7 @@ async fn journal_over_the_s3_transport_reconciles_and_restores() {
     let tokens: Vec<String> = state
         .coll(Coll::Alarm)
         .iter()
+        .map(Result::unwrap)
         .map(|(_, r)| r.token("fcmToken").unwrap().to_owned())
         .collect();
     assert_eq!(tokens, ["p1", "p2", "p3", "p4"]);

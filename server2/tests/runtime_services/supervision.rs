@@ -213,7 +213,7 @@ async fn user_edit_after_post_admission_survives_unregistered_response_and_stale
     assert_eq!(report.deliveries[0].1, "unregistered");
     let state = rig.push.state();
     let state = state.read().unwrap();
-    let record = state.coll(Coll::Alarm).get(0).unwrap();
+    let record = state.coll(Coll::Alarm).get(0).unwrap().unwrap();
     assert_eq!(
         record.doc.get("name"),
         &Val::Str("edited-after-post".into())
@@ -221,7 +221,7 @@ async fn user_edit_after_post_admission_survives_unregistered_response_and_stale
     assert_eq!(record.doc.get("enable"), &Val::Bool(false));
     assert_ne!(record.doc.get("updatedAt"), &Val::Date(1_751_328_000_000.));
     assert_eq!(
-        state.coll(Coll::Alarm).iter().count(),
+        state.coll(Coll::Alarm).iter().map(Result::unwrap).count(),
         1,
         "refreshed selected record not removed by stale cleanup"
     );
