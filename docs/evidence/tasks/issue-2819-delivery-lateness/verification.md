@@ -32,3 +32,37 @@ Actual HTTP is only synthetic OAuth/FCM loopback. Weather is a recorded in-proce
 All19 changed paths match the predeclared/amended task boundary; no runtime legacy asset is introduced. [Contract](../../../../specs/issue-2819-delivery-lateness.md), [operator scenario](../../../operations/server2-native-verification.md#delivery-cohort-lateness), [proposed flow](../../../architecture/diagrams/server2-delivery-lateness.html) and [editable source](../../../architecture/diagrams/server2-delivery-lateness.sequence.json) are maintained. Diagram artifact/provenance/browser checks PASS; actual main light1440 and dark2048 captures were visually inspected; offscreen cards were source-only. Frozen diagram pins base7659b9fa and its earlier60-test/no-new-test-yet card is design-time context, not the current results above. Sidecar/recovery metadata remains archived unchanged.
 
 Independent source/evidence PR review and exact-head CI are still required before pre-merge readiness. No merge/auto-merge/queue, cloud mutation, deployment, live notification, full previous recovery bundle, seven-day shadow or #2819/#2704/#2705 completion authority.
+
+
+### 2026-10-19 CI inventory oracle correction
+
+Current-head CI run 39182238417 failed the combined native inventory's
+unconditional national `forecastNarrative` equality after a 200 response. The
+retained gateway event took 3039 ms. The existing nation request shares a three-second
+weather/air budget and bounds optional prose by the remaining budget; this is
+consistent with late omission, but the CI trace does not identify the exact inner
+omission cause. The failed run remains evidence, not a successful check.
+
+CI-INVENTORY-002 changes test support only. The real-clock inventory still requires
+15 weather rows, no child prose, and exact original prose whenever present. A
+separate fast native-route/canonical-S3 control requires the complete original
+national prose for both API versions across two fresh readers. A paused-clock
+pending-read control proves valid late omission. Negative controls reject null,
+changed or child prose and an invalid row count. The canonical S3 restore equality
+remains strict. No runtime deadline, narrative capability or rollback requirement
+changes.
+
+The explicitly rebuilt package reproduced the old oracle failure (two controls
+passed and the late control failed), then all three controls passed. Current
+lib/delivery/nation/narrative/runtime/state regression: 257 passed, one ignored;
+all-target Clippy with warnings denied passed. A separately compiled release
+`narrative_smoke` exercised actual owned HTTP and S3: ten offices acquired from
+recorded providers, regional and national prose retained across fresh processes,
+HEAD/304 contracts preserved, no read-triggered provider calls, and non-200
+publication rejected. Its city/air inputs are doubles; this is not full startup,
+production latency or an eligible whole-service recovery rehearsal. Original
+failed and green logs, source maps and selected binaries remain local, with
+current independent review and exact-head CI linked on PR2826.
+
+This supporting test correction changes no runtime flow; the existing architecture
+and diagram contracts remain applicable and no new render is claimed.
