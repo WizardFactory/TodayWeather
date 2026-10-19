@@ -2599,6 +2599,7 @@ function ControllerTown() {
                         next();
                         return;
                     }
+                    req.airForecastStationName = arpltnObj.forecastStationName;
                     req.current.arpltn = arpltnObj.arpltn;
                     req.arpltnList = arpltnObj.list;
                     req.arpltnStnList = arpltnObj.stnList;

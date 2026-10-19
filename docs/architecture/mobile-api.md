@@ -43,28 +43,46 @@ The weather `_retryGetHttp` wrapper specifies only `{method:'GET', url, timeout}
 
 Sources: [Units](../../client/www/js/controller.units.js), [HTTP wrapper](../../client/www/js/service.weatherutil.js), [server defaults](../../server/controllers/controllerTown24h.js).
 
-### Stored hourly air forecast fallback (#2770)
+### Stored hourly air forecast fallback (#2770, #2831)
 
-Installed clients still send `airForecastSource=kaq`. Both `AirForecast` and the
-v000903 `AirForecastList` select KAQ only when it has a supported pollutant with a
-finite numeric concentration ≥0 at a valid KST time strictly after now and the
-last observation, through observation +24 hours. Empty, expired, malformed or
-invalid rows do not suppress fallback. A KAQ read error also permits the stored
-AirKorea lookup for the same station. Partial usable KAQ remains KAQ; sources are
-selected before insertion and are never combined.
+Installed clients still send `airForecastSource=kaq`. `getArpLtnInfo` retains the
+nearest named station from its existing ordered AirKorea metadata query
+(`[longitude, latitude]`, `$maxDistance: 1`, limit 6), independently of observation
+availability. `getKeco` carries that name in `req.airForecastStationName`; replacing
+stale observation lists in `getAirFallback` does not replace this metadata.
 
-Fallback keeps observation `source`/`last` unchanged, sets `forecastSource` to
-`airkorea`, and retains the selected source's actual `forecastPubDate` and per-slot
-`pubDate`. If neither source has usable future slots, observations and existing
-daily bulletins remain without invented hourly forecasts or new forecast
-attribution. Explicit AirKorea selection is unchanged. Insertion uses strict KST
-parsing (including `24:00`) and includes the first forecast for pollutants without
-an observation series. There are no provider calls, collection changes or writes
-in this fallback.
+Both `AirForecast` and v000903 `AirForecastList` use the observation station for
+AirKorea current values, or the retained metadata station for coordinate-provider
+current values. A coordinate provider's own `stationName` is never treated as an
+AirKorea identity. Missing metadata leaves those responses current-only. No new
+metadata query, provider call or write is added to request processing.
+
+KAQ is selected only when it has a supported pollutant with a finite numeric
+concentration ≥0 at a valid KST time strictly after now and the current observation.
+AirKorea observations retain the observation +24 h horizon. Coordinate-provider
+observations use request current-hour +24 h, independently of stale AirKorea
+observations. Empty, expired, malformed or invalid KAQ rows and read errors permit
+stored AirKorea lookup for the same station. Partial usable KAQ remains KAQ;
+sources are selected before insertion and never combined. Explicit AirKorea and
+omitted-source requests apply the same usable-row validation. Forecast rows between
+a lagging observation and now are excluded even for explicit AirKorea; source
+selection and concentration/AQI calculations remain unchanged.
+
+Enrichment keeps current `source`, `last`, readings and attribution unchanged. It
+sets `forecastStationName`, actual `forecastSource` and `forecastPubDate` from a
+usable displayed row; pollutant and derived AQI slots retain actual `pubDate`.
+Strict KST parsing includes `24:00`. The first valid forecast is included even for
+pollutants without observations. Existing pollutant/AQI conversion and KAQ daily
+summary calculations remain. If neither source has usable future slots, current
+values and existing daily bulletins remain without invented hourly forecasts or
+new forecast attribution. Store errors remain optional middleware warnings.
 
 See the [selection sequence](diagrams/air-forecast-selection.html),
-[editable source](diagrams/air-forecast-selection.json), and
-[verification](../evidence/tasks/issue-2770/verification.md). Source:
+[editable source](diagrams/air-forecast-selection.json),
+[verification](../evidence/tasks/issue-2831/verification.md), and
+[rollout/rollback](../operations/air-forecast-fallback.md). Source:
+[`getArpLtnInfo`](../../server/controllers/kecoController.js),
+[`getKeco`](../../server/controllers/controllerTown.js), and
 [`_getAirForecast` / `_insertForecastPollutants`](../../server/controllers/controllerTown24h.js).
 
 ## Public API and implemented backend
@@ -156,7 +174,7 @@ Local checks run with `node server/test/offline/rss-wind.test.js` (Node 18+; no 
 
 ### Current air summary (issue #2578)
 
-`getSummaryAfterUnitConverter` fills `current.summaryWeather`, `current.summaryAir` and the combined `current.summary`; the app shows the first two as the lines under the temperature. `summaryAir` is built only from pollutant and integrated-index grades in `current.arpltn`. `getKeco` leaves `arpltn` absent when no nearby AirKorea station has an observation within eight hours of the request, and every station is compared with that same threshold. The [air fallback](#domestic-air-fallback-and-the-air-provider-chain-issues-2622-2628) may then fill it; when it does not, `makeSummaryAir` returns an empty string, and `getSummaryAfterUnitConverter` (and the world-weather `ControllerWWUnits.makeSummary`) omit `summaryAir` from the response. Installed app share text checks `hasOwnProperty('summaryAir')`, so an empty string would add a blank line; the app view hides the line either way (`ng-if="summaryAir"`). Weather or life-index grades on `current` (for example `wsdGrade`) are never treated as air grades, and the combined `summary` does not write air fields onto `current`. AirKorea `dataTime` is parsed as KST (`+09:00`), including `24:00` as the following midnight; the strict elapsed window is less than eight hours on every host timezone, independent of DST. Invalid timestamps are rejected. Hourly detail charts also use the shared KST parser and fixed one-hour steps: 25 consecutive slots ending at the latest observation, with `24:00` normalized to the following midnight. Host DST gaps or repeated hours cannot drop or duplicate a KST slot. `makeAirInfo` and `makeAirInfoList` apply the same predicate to every AirKorea observation row; empty or entirely stale stations are omitted and older hourly slots carry no observed values. Regional daily forecasts remain forecasts. Explicit non-AirKorea rows keep the provider chain's own timestamp validation and source attribution. Sources: [summary builders](../../server/controllers/controllerTown24h.js), [combined summary](../../server/controllers/controllerTown.js), [AirKorea merge](../../server/controllers/kecoController.js); checks: `air-summary.test.js`, `air-summary-smoke.js`, `air-freshness.test.js`, `air-freshness-route.test.js` and `air-freshness-smoke.js` under `server/test/offline`.
+`getSummaryAfterUnitConverter` fills `current.summaryWeather`, `current.summaryAir` and the combined `current.summary`; the app shows the first two as the lines under the temperature. `summaryAir` is built only from pollutant and integrated-index grades in `current.arpltn`. `getKeco` leaves `arpltn` absent when no nearby AirKorea station has an observation within eight hours of the request, and every station is compared with that same threshold. The [air fallback](#domestic-air-fallback-and-the-air-provider-chain-issues-2622-2628) may then fill it; when it does not, `makeSummaryAir` returns an empty string, and `getSummaryAfterUnitConverter` (and the world-weather `ControllerWWUnits.makeSummary`) omit `summaryAir` from the response. Installed app share text checks `hasOwnProperty('summaryAir')`, so an empty string would add a blank line; the app view hides the line either way (`ng-if="summaryAir"`). Weather or life-index grades on `current` (for example `wsdGrade`) are never treated as air grades, and the combined `summary` does not write air fields onto `current`. AirKorea `dataTime` is parsed as KST (`+09:00`), including `24:00` as the following midnight; the strict elapsed window is less than eight hours on every host timezone, independent of DST. Invalid timestamps are rejected. Hourly detail charts also use the shared KST parser and fixed one-hour steps: 25 consecutive slots ending at the latest observation, with `24:00` normalized to the following midnight. Host DST gaps or repeated hours cannot drop or duplicate a KST slot. `makeAirInfo` and `makeAirInfoList` apply the same predicate to AirKorea rows used for current selection; empty or entirely stale stations are omitted when no coordinate fallback succeeds. On successful coordinate fallback, display-only historical restoration below can retain older observed values without affecting current freshness. Regional daily forecasts remain forecasts. Explicit non-AirKorea rows keep the provider chain's own timestamp validation and source attribution. Sources: [summary builders](../../server/controllers/controllerTown24h.js), [combined summary](../../server/controllers/controllerTown.js), [AirKorea merge](../../server/controllers/kecoController.js); checks: `air-summary.test.js`, `air-summary-smoke.js`, `air-freshness.test.js`, `air-freshness-route.test.js` and `air-freshness-smoke.js` under `server/test/offline`.
 
 ### Domestic air fallback and the air provider chain (issues #2622, #2628)
 
@@ -559,3 +577,9 @@ mobile clients ignore the new field; displaying it requires a later app update u
 [#2803](https://github.com/WizardFactory/TodayWeather/issues/2803). The current manual
 shows isolated API responses, not a deployed mobile UI. See [operations and verification](../operations/kma-forecast-narrative.md)
 for office mapping, cache/expiry, production readback and rollback boundaries.
+
+### Historical air chart during coordinate fallback (#2831 extension)
+
+After successful `getAirFallback`, both single/list builders restore the existing selected nearby station history into the preceding 24 hourly slots. This uses the already retrieved list, with no new DB/provider call. Slots strictly precede the provider current hour; invalid/non-hour KST times, unnamed/other-source rows, other stations, negative/nonfinite values and older rows are skipped. Partial pollutants and zero remain valid; duplicate hours take the first valid concentration per pollutant. The existing converter calculates indices/AQI from cloned inputs in the requested air unit. Numeric restored slots carry `source: airkorea` and their actual `stationName`; `date` is the normalized KST hour (`24:00` becomes next midnight). Minute-based provider placeholders are replaced by matching past hour, so chart indexing stays compatible. Current `last`, source/attribution and its exact-minute slot remain unchanged. Future stored forecast selection/publication is independent. Missing history remains a gap; the installed chart displays its existing 24-slot subset.
+
+Historical restoration also retains a valid pollutant absent from provider current. Its past series has real observed values, while current remains unavailable (`-` in the existing partial-data client list); no current reading is fabricated.
