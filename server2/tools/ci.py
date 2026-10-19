@@ -12,8 +12,6 @@ import check_placement as placement
 from verify_artifact import source_identity
 
 
-def output(*args): return subprocess.check_output(args,text=True).strip()
-
 # Positive unrelated scope is bounded; there is deliberately no catch-all else.
 UNRELATED_PREFIXES = ('docs/', 'intent/', 'specs/', 'plans/', 'web/', 'client/',
                       'packages/', 'tw.ios/', 'ta.ios/', 'applewatch/',
@@ -123,8 +121,11 @@ def audit(root, event, event_name, env):
         if errors:
             raise ValueError('full root task range failed: '+'; '.join(errors))
         scope = 'push-range-declaration-union' if selected['kind'] == 'push' else 'full-pr-task-range'
-    source = source_identity(root/'server2', selected['head'])
-    build_environment(env, selected['head'])
+    # Layout-only events build nothing and cannot attest a selected build tree.
+    source = None
+    if heavy:
+        source = source_identity(root/'server2', selected['head'])
+        build_environment(env, selected['head'])
     return dict(selected, paths=paths, scope=scope, declarations=declarations, heavy=heavy,
                 foundation='scheduled' if heavy else 'not-run: unrelated-only',
                 goldens='scheduled' if heavy else 'not-run: unrelated-only', source=source)

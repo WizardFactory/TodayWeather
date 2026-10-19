@@ -22,7 +22,7 @@ jobs:
         run: python3 tools/ci.py --audit-only
   foundation:
     needs: scope
-    if: needs.scope.outputs.heavy == 'true'
+    if: ${{ !cancelled() && needs.scope.outputs.heavy != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
@@ -41,7 +41,7 @@ jobs:
           retention-days: 30
   goldens:
     needs: scope
-    if: needs.scope.outputs.heavy == 'true'
+    if: ${{ !cancelled() && needs.scope.outputs.heavy != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:

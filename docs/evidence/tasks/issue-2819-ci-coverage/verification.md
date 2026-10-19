@@ -11,3 +11,19 @@ An additional actual CLI smoke passed ten isolated synthetic Git/event cases: si
 The full source revision is selected before Cargo, checked against the checkout's server2 tree, and passed to every child as SERVER2_BUILD_REVISION. Logging smoke validates actual emitted schema1 records. Native artifact retention is 30 days at the existing scoped path; preserve required evidence before expiry. No broad reports upload or deployment is introduced.
 
 Current hosted CI, real emitted-record build proof, artifact retrieval and independent review remain task gates; local controls alone do not establish them. Actual master-event execution follows authorized integration and is not claimed before merge. Historical auxiliary fixture provenance (G1) is a separate required task, not silently refreshed here. Raw execution logs and source maps remain ignored task evidence.
+
+
+## Independent review correction
+
+Actual native independent review1 requested CI-REVIEW-001/002 corrections. Both
+were reproduced before changes: scope failure could hide behind skipped heavy
+jobs, and an unrelated-only merge checkout could incorrectly fail source identity.
+The corrected guards and heavy-only identity check pass 24 controller +46 placement
++4 artifact +14 native-artifact controls (88 total). The separate actual Git/CLI
+workflow passes13 cases: seven successful scopes and six exact-reason rejections.
+Report SHA-256 `ce379961beb81e40dac7a43ae909dd01128637f04f5923b93575d30e37b98f82`. These controls still mock heavy
+children and do not qualify emitted Rust diagnostics or actual master events.
+Original setup/expectation errors remain separate from intended Red. Earlier code
+evidence was reused only for identical nine code inputs; the earlier full candidate
+added three documentation paths. Per-file reuse hashes were checked, not relabelled.
+Current hosted CI and independent re-review remain gates.

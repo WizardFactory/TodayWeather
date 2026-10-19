@@ -27,6 +27,14 @@ class WorkflowCoverage(unittest.TestCase):
         self.assertRegex(event, r'(?m)^  push:\n    branches: \[master\]$',
                          'master pushes require an explicit full-range audit')
 
+    def test_scope_failure_never_skips_existing_required_jobs(self):
+        # GitHub skips a dependent job on failure unless its expression overrides
+        # the implicit success() guard. Only an explicit unrelated receipt skips.
+        condition = "if: ${{ !cancelled() && needs.scope.outputs.heavy != 'false' }}"
+        for job in ('foundation', 'goldens'):
+            body = self.workflow.split('  '+job+':\n', 1)[1].split('    runs-on:', 1)[0]
+            self.assertIn(condition, body, job+' must run after failed/missing scope output')
+
     def test_verified_artifact_has_bounded_thirty_day_retention(self):
         self.assertIn('retention-days: 30\n', self.workflow)
         self.assertIn('if-no-files-found: error\n', self.workflow)
@@ -97,6 +105,24 @@ class ScopeControl(unittest.TestCase):
             self.assertEqual(result['goldens'], 'not-run: unrelated-only')
             self.assertEqual(result['paths'], ['docs/fixture.md'])
 
+    def test_unrelated_merge_with_newer_server2_is_layout_only_without_build_identity(self):
+        self.write('docs/fixture.md', 'head documentation')
+        head = self.commit()
+        # Master advanced server2 independently after the docs branch split.
+        self.git('checkout', '--detach', self.base)
+        self.write('server2/src/lib.rs', 'pub fn newer_master() {}')
+        base = self.commit()
+        self.write('docs/fixture.md', 'head documentation')
+        self.commit()  # merge checkout has master server2 plus the docs head
+        event = {'pull_request': {'base': {'sha': base}, 'head': {'sha': head}}}
+        result = self.audit(event=event)
+        self.assertEqual(result['paths'], ['docs/fixture.md'])
+        self.assertFalse(result['heavy'])
+        self.assertEqual(result['scope'], 'layout-only')
+        self.assertIsNone(result['source'], 'layout-only does not attest a build identity')
+        self.assertEqual(result['foundation'], 'not-run: unrelated-only')
+        self.assertEqual(result['goldens'], 'not-run: unrelated-only')
+
     def test_unknown_root_tools_and_unsafe_root_workspace_fail(self):
         self.write('tools/cache.py', 'print("misplaced")')
         self.commit()
@@ -153,11 +179,17 @@ class ScopeControl(unittest.TestCase):
     def test_push_zero_missing_object_and_wrong_ref_fail(self):
         self.write('docs/fixture.md', 'safe')
         self.commit()
-        for before in ('0'*40, 'f'*40, None):
+        for before in ('0'*40, None):
             event = self.event('push')
             event['before'] = before
-            with self.assertRaises((ValueError, subprocess.CalledProcessError)):
+            with self.assertRaisesRegex(ValueError, 'push before: exact nonzero commit required'):
                 self.audit('push', event)
+        event = self.event('push')
+        event['before'] = 'f'*40
+        with self.assertRaises(subprocess.CalledProcessError) as failure:
+            self.audit('push', event)
+        self.assertEqual(failure.exception.cmd[-1], 'f'*40+'^{commit}')
+        self.assertEqual(failure.exception.returncode, 128)
         event = self.event('push')
         event['ref'] = 'refs/heads/topic'
         with self.assertRaisesRegex(ValueError, 'master'):
@@ -189,7 +221,8 @@ class ScopeControl(unittest.TestCase):
             self.audit('push')
 
     def test_matching_tree_pr_merge_uses_head_not_merge_commit(self):
-        self.write('docs/fixture.md', 'head')
+        self.task('ONE', ['server2/src/lib.rs'])
+        self.write('server2/src/lib.rs', 'pub fn head_source() {}')
         head = self.commit()
         self.git('commit', '--allow-empty', '-qm', 'merge checkout representation')
         event = {'pull_request': {'base': {'sha': self.base}, 'head': {'sha': head}}}
@@ -198,8 +231,29 @@ class ScopeControl(unittest.TestCase):
         self.assertEqual(result['source']['revision'], head)
         self.write('server2/src/lib.rs', 'pub fn different() {}')
         self.commit()
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, 'tracked server2 source differs from recorded revision'):
             self.audit(event=event)
+
+    def test_legacy_merge_with_newer_server2_keeps_heavy_identity_gate(self):
+        self.write('server/legacy.js', 'module.exports = {};')
+        head = self.commit()
+        self.git('checkout', '--detach', self.base)
+        self.write('server2/src/lib.rs', 'pub fn newer_master() {}')
+        base = self.commit()
+        self.write('server/legacy.js', 'module.exports = {};')
+        self.commit()
+        event = {'pull_request': {'base': {'sha': base}, 'head': {'sha': head}}}
+        with self.assertRaisesRegex(ValueError, 'tracked server2 source differs from recorded revision'):
+            self.audit(event=event)
+
+    def test_failed_scope_is_reaudited_by_foundation_before_any_child(self):
+        with patch.object(ci, 'audit', side_effect=ValueError('layout audit failed: synthetic root violation')), \
+             patch.object(sys, 'argv', ['ci.py']), \
+             patch.dict(os.environ, {}, clear=True), \
+             patch.object(ci.subprocess, 'run') as child:
+            with self.assertRaisesRegex(ValueError, 'layout audit failed: synthetic root violation'):
+                ci.main()
+        child.assert_not_called()
 
     def test_bad_declaration_and_conflicting_build_stamp_fail_before_children(self):
         self.task('ONE', ['../../server/'])
@@ -214,10 +268,11 @@ class ScopeControl(unittest.TestCase):
 
     def test_unknown_hosted_events_and_missing_local_base_fail(self):
         for name, event, env in [('workflow_dispatch', {}, {}),
-                                 (None, {}, {'GITHUB_ACTIONS': 'true'}),
-                                 (None, {}, {})]:
-            with self.assertRaises(ValueError):
+                                 (None, {}, {'GITHUB_ACTIONS': 'true'})]:
+            with self.assertRaisesRegex(ValueError, 'unsupported or incomplete hosted event'):
                 ci.context(self.root, event, name, env)
+        with self.assertRaisesRegex(ValueError, 'local CI requires explicit SERVER2_BASE'):
+            ci.context(self.root, {}, None, {})
 
     def test_emitted_revision_requires_actual_matching_nonempty_records(self):
         path = self.root/'capture.ndjson'
@@ -225,7 +280,7 @@ class ScopeControl(unittest.TestCase):
         for content in ('', json.dumps({'schema': 1, 'build_revision': 'unknown'}),
                         json.dumps({'schema': 1, 'build_revision': 'f'*40})):
             path.write_text(content)
-            with self.assertRaises(ValueError):
+            with self.assertRaisesRegex(ValueError, 'emitted log revision does not match selected build'):
                 ci.verify_record_revision(path, revision)
         path.write_text(json.dumps({'schema': 1, 'build_revision': revision})+'\n')
         ci.verify_record_revision(path, revision)
