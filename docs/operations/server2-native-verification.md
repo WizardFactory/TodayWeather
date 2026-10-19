@@ -580,3 +580,37 @@ matching compile-time checkout and Python/synthetic fixture assets. No live prov
 device, readiness endpoint, IAM or full release-bundle qualification is claimed. The main
 release binary is built but not executed by this smoke. See the
 [selected evidence](../evidence/tasks/issue-2819-warning-poll-supervision/verification.md).
+
+## Private readiness check
+
+The [readiness manual](server2-readiness.md) describes the existing private listener,
+fixed JSON states and owned optimized process/S3 workflow. This check is separate
+from the eleven-family suite and does not qualify host, real-role IAM, live providers
+or a full earlier-release recovery bundle.
+
+
+### Executable and checkout boundary
+
+The optimized workflow invokes `process::run` and `RuntimeServices::from_vars_at`
+through a code-injected notice-only test child. It bypasses the production main
+entrypoint's `.env` loading, `Config::from_vars`, and
+`startup::validate_native_coverage`. This partial factory is deliberately not a
+complete production selection. The release main `server2` binary was built and
+hashed but was not executed by this workflow.
+
+The retained test executable is not a portable standalone bundle: it uses the
+original compile-time `CARGO_MANIFEST_DIR` checkout and `python3`, including
+`tests/storage/catalog_peer.py`, `deploy/local/peer.py` and
+`config/local-stack.json`. Preserve those matching inputs (or use a separately
+verified exact source-root bundle) before rerunning it. Copying the executable
+out of Cargo target alone does not remove that dependency. All unused provider
+and instance-metadata builtins in the test child point to a dead loopback address.
+
+The client sends SigV4-signed requests; the owned peer does not validate
+signatures, IAM or TLS. This check proves response handling, not authentication
+or permissions. The public route is unmounted and uses the existing fallback;
+404 is the observed notice-only fixture result, not a universal coexistence
+response claim. Readiness503 currently uses the shared HTTP logger's generic
+`cause=capacity`; inspect the fixed component fields before interpreting capacity
+alerts. Each configured probe competes for the same S3 admission, so avoid
+high-frequency polling.

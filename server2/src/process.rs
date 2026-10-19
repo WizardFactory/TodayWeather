@@ -7,7 +7,7 @@ use crate::gateway::GatewayError;
 use crate::listener::BoundedListener;
 use crate::observability::{self as obs, Action, Cause, Component, Details, Outcome, Stage};
 use crate::runtime_services::RuntimeServices;
-use crate::{Config, SharedState, metrics_router};
+use crate::{Config, SharedState};
 use std::{future::IntoFuture, io, sync::Arc, time::Duration};
 use tokio::{net::TcpListener, sync::watch};
 
@@ -167,8 +167,9 @@ where
         .narrative_acquire
         .clone()
         .map(|source| crate::narrative::worker(source, Duration::from_secs(180)));
-    let router = gateway.public_router(state.clone());
     let (tx, rx) = watch::channel(false);
+    let private_router = gateway.private_router(state.clone(), rx.clone());
+    let router = gateway.public_router(state.clone());
     let mut listeners = tokio::task::JoinSet::new();
     let public = listeners.spawn(crate::observability::inherit(
         axum::serve(public, router)
@@ -176,7 +177,7 @@ where
             .into_future(),
     ));
     listeners.spawn(crate::observability::inherit(
-        axum::serve(private, metrics_router(state))
+        axum::serve(private, private_router)
             .with_graceful_shutdown(wait_shutdown(rx))
             .into_future(),
     ));

@@ -4066,8 +4066,8 @@ this predicate never proves a join/cancellation completed. Existing state/HTTP e
 claim/no-retry and stop-order contracts remain. Delivery admission uses this same gate.
 
 This is only the writer portion of E3, with controlled writer-exit and owned API/S3 checks.
-A public readiness endpoint and S3/credential-source health remain open; health is still
-liveness. See [spec](../../specs/issue-2819-writer-liveness.md),
+The later E3c private readiness endpoint consumes this same predicate; health remains
+liveness. Its limited credential-source and S3 read probe is described below. See [spec](../../specs/issue-2819-writer-liveness.md),
 [operator contract](../operations/server2-runtime-services.md),
 [design](diagrams/server2-runtime-services.html) and
 [selected evidence](../evidence/tasks/issue-2819-writer-liveness/verification.md).
@@ -4090,3 +4090,38 @@ readiness endpoint or qualify S3/credential-source health, a production recovery
 shadow or cutover. The [runtime-services diagram](diagrams/server2-runtime-services.html)
 retains process/writer/storage ownership; its final source pin is bound to the implemented
 code before PR review, not to an uncommitted future design.
+
+
+## Private runtime readiness (E3c / #2819)
+
+The shared process composes `RuntimeServices::private_router` before consuming the public
+services and mounts `/internal/ready` alongside `/internal/metrics` on the existing private
+listener. The existing stop channel and `PushService::ready` remain the lifecycle authority;
+there is no new monitor, writer owner, task restart, startup probe, or configuration mode.
+Public `/health` remains liveness and public `/internal/ready` is not mounted.
+
+GET/HEAD perform an uncached snapshot: process serving and push restore/writer availability,
+then configured credential-source readiness and one signed `raw/v2/` LIST through the same
+bounded ProcessS3. One three-second timeout includes queue wait and XML decoding through
+`SharedState::run_cpu`. LIST max-keys is one and the response cap is 64 KiB. Empty valid XML
+succeeds; failed credentials, storage, parsing, or admission fail with fixed private states
+and 503. Local stop/writer state is rechecked after dependencies. No mutation, provider,
+OAuth or FCM call occurs. Disabled components in explicit code-injected factories are
+`not_required`; this does not waive production startup coverage.
+
+The fixed five JSON fields and no-store response are documented in the
+[operator manual](../operations/server2-readiness.md). The owned process workflow with client-signed S3 requests (the peer does not validate signatures)
+checks 200/503/200 recovery, private/public separation and retired listeners; it does not
+establish real-role GET/PUT/missing-key semantics, all prefixes, host capacity, production
+readiness, shadow or cutover. See the [spec](../../specs/issue-2819-runtime-readiness.md),
+[selected evidence](../evidence/tasks/issue-2819-runtime-readiness/verification.md) and
+[maintained flow](diagrams/server2-runtime-services.html).
+
+
+E3c execution boundary: the isolated notice-only process child bypasses main dotenv,
+Config::from_vars and production coverage validation. Its release main is built
+but unexecuted; the retained test executable requires its original compile-time
+checkout and Python peer assets. The public route is unmounted; existing fallback
+responses are unchanged (404 observed in the notice-only fixture). Private503 uses
+the current generic HTTP capacity log classification; component JSON is the
+availability authority. See the operator manual for these limits.

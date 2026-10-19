@@ -5,6 +5,7 @@ pub mod listener;
 pub mod narrative;
 pub mod observability;
 pub mod process;
+pub mod readiness;
 pub mod resolver;
 pub mod runtime_services;
 pub mod startup;
