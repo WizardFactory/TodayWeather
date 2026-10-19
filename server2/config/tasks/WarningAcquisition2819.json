@@ -1,7 +1,7 @@
 {
   "task": "WarningAcquisition2819",
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
-  "scope": "C5 push-enabled traffic-independent warning acquisition through existing source admission with process-owned start/stop. No new mode/provider/funding/retry/deadline/parallelism/notification policy, merge or deployment.",
+  "scope": "C5 push-enabled traffic-independent warning acquisition through existing source admission with process-owned start/stop. No new mode/provider/funding/retry/deadline/parallelism/notification policy, merge or deployment. Supporting CI-STORAGE-001: change only the cfg(test) post-PUT CPU-contention and timeout regressions in storage/store.rs to synchronize PUT/GET/CPU-wait before advancing its existing100ms deadline. Product storage/warning/cadence/deadline behavior stays unchanged.",
   "server2_paths": [
     "server2/config/tasks/WarningAcquisition2819.json",
     "server2/src/domestic/kma/source/mod.rs",
@@ -19,7 +19,8 @@
     "server2/tests/runtime_services/warning_acquisition.rs",
     "server2/tests/runtime_services/common.rs",
     "server2/tests/domestic/source_s3.rs",
-    "server2/examples/warning_acquisition_smoke.rs"
+    "server2/examples/warning_acquisition_smoke.rs",
+    "server2/src/storage/store.rs"
   ],
   "outside": [
     {
