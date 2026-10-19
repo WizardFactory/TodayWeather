@@ -8,9 +8,9 @@
     "locale": "en",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "d4906f674152213c53ffca8419e999efb0ef14cd",
+      "revision": "f1a0e0940f14341b62138f8bf17f568f1c061cfb",
       "provider": "github",
-      "link_mode": "local-only"
+      "link_mode": "web"
     }
   },
   "components": [
