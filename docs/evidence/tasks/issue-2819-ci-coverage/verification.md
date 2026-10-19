@@ -1,0 +1,13 @@
+# G2 CI coverage verification
+
+Base: `c1ae9082b2c86f0087727be9872b0cf82b4e3bb1`. Scope: CI event/range/placement and build provenance only. No runtime, oracle, fixture, dependency or production change. Related #2819 remains open.
+
+The original workflow failed three intended controls: PR path-filter bypass, no master push, and seven-day retention. The updated workflow receives every PR and master push; a minimum whole-root layout audit precedes heavy classification. Known relevant changes retain foundation/goldens. Positively unrelated-only changes explicitly skip heavy jobs. Unknown paths and ambiguous input ranges block. Server2 PRs require one exact changed declaration; master ranges require a valid changed-declaration union. Pure legacy receives layout-only placement plus full foundation/goldens. This does not certify retrospective independent PR approval or branch protections.
+
+Local controls: 20 CI/controller, 46 placement, 4 artifact and 14 native-artifact checks passed (84 total). Controller and exporter tests use synthetic children/files; they do not prove a product binary embeds a revision. The existing placement grammar oracle invokes only the installed standalone rustc, sequentially in owned temporary directories; it does not use Cargo or the shared target.
+
+An additional actual CLI smoke passed ten isolated synthetic Git/event cases: six successful scopes and four intended rejections. These invoke current selector/placement CLI outside unittest. Retained report SHA-256: `4962d44aac84c5006d482d43199e106004b808a88c85a9321fa3e4a7852cc953`. The actual task-range and whole tracked layout check, plus whitespace check, passed. Original Python3.9/tomllib, missing rustc PATH and intermediate fixture-baseline setup failures were preserved separately and are not Red behavior evidence.
+
+The full source revision is selected before Cargo, checked against the checkout's server2 tree, and passed to every child as SERVER2_BUILD_REVISION. Logging smoke validates actual emitted schema1 records. Native artifact retention is 30 days at the existing scoped path; preserve required evidence before expiry. No broad reports upload or deployment is introduced.
+
+Current hosted CI, real emitted-record build proof, artifact retrieval and independent review remain task gates; local controls alone do not establish them. Actual master-event execution follows authorized integration and is not claimed before merge. Historical auxiliary fixture provenance (G1) is a separate required task, not silently refreshed here. Raw execution logs and source maps remain ignored task evidence.

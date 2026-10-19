@@ -349,7 +349,7 @@ def audit_nonrust(path, body):
             if not isinstance(node, ast.Call): continue
             name = node.func.id if isinstance(node.func, ast.Name) else node.func.attr if isinstance(node.func, ast.Attribute) else ''
             if name not in {'open', 'Path', 'read', 'read_text', 'read_bytes', 'write', 'write_text', 'write_bytes', 'run', 'Popen', 'check_output', 'check_call', 'load', 'symlink_to', 'system', 'popen', 'chdir', 'listdir', 'scandir', 'unlink', 'rename', 'replace', 'remove'}: continue
-            fixture = (path == 'server2/tools/test_placement.py' and isinstance(node.func, ast.Attribute)
+            fixture = (path in {'server2/tools/test_placement.py', 'server2/tools/test_ci.py'} and isinstance(node.func, ast.Attribute)
                        and node.func.attr in ('write', 'fixture_symlink') and isinstance(node.func.value, ast.Name)
                        and node.func.value.id == 'self')
             for index, arg in enumerate(node.args):
@@ -383,33 +383,38 @@ def audit_nonrust(path, body):
 
 
 def audit_workflow(body):
-    errors = []
-    if re.search(r'^jobs:\s*$', body, re.M):
-        expected_foundation='name: Server2\non:\n  pull_request:\n    paths:\n      - "server2/**"\n      - ".github/workflows/server2.yml"\npermissions:\n  contents: read\njobs:\n  foundation:\n    runs-on: ubuntu-latest\n    timeout-minutes: 45\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - run: bash tools/ci.sh\n'
-        expected_goldens="  goldens:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '16.20.2'\n      - uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n      - run: python tools/golden/ci.py --install\n"
-        # Exact job/source wiring; no env, expressions, arbitrary actions or run steps.
-        artifact_upload = '      - uses: actions/upload-artifact@v4\n        with:\n          name: server2-linux-musl-verified\n          path: reports/verification/server2-local-first/artifact-native/\n          if-no-files-found: error\n          retention-days: 7\n'
-        if body.strip() in {expected_foundation.strip(), (expected_foundation+expected_goldens).strip(),
-                            (expected_foundation+artifact_upload+expected_goldens).strip()}:
-            return []
-        return ['server2 workflow differs from exact reviewed foundation/goldens wiring']
-    runs = re.findall(r'^[ \t]*-?[ \t]*run:[ \t]*([^\r\n]+)$', body, re.M)
-    uses = re.findall(r'^[ \t]*-?[ \t]*uses:[ \t]*([^\r\n]+)$', body, re.M)
-    dirs = re.findall(r'^[ \t]*working-directory:[ \t]*([^\r\n]+)$', body, re.M)
-    timeouts = re.findall(r'^[ \t]*timeout-minutes:[ \t]*([^\r\n]+)$', body, re.M)
-    if runs != ['bash tools/ci.sh'] or dirs != ['server2']:
-        errors.append('server2 workflow must only invoke bash tools/ci.sh from server2')
-    if uses != ['actions/checkout@v4'] or re.findall(r'^[ \t]*fetch-depth:[ \t]*([^\r\n]+)$', body, re.M) != ['0']:
-        errors.append('server2 workflow permits only actions/checkout@v4 with full history')
-    if timeouts != ['45']:
-        errors.append('server2 foundation workflow requires the exact 45-minute job timeout')
-    return errors
+    """Exact reviewed CI wiring; no path-filter bypass or arbitrary action/env."""
+    expected = "name: Server2\non:\n  pull_request:\n  push:\n    branches: [master]\npermissions:\n  contents: read\njobs:\n  scope:\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n    outputs:\n      heavy: ${{ steps.scope.outputs.heavy }}\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - id: scope\n        run: python3 tools/ci.py --audit-only\n  foundation:\n    needs: scope\n    if: needs.scope.outputs.heavy == 'true'\n    runs-on: ubuntu-latest\n    timeout-minutes: 45\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - run: bash tools/ci.sh\n      - uses: actions/upload-artifact@v4\n        with:\n          name: server2-linux-musl-verified\n          path: reports/verification/server2-local-first/artifact-native/\n          if-no-files-found: error\n          retention-days: 30\n  goldens:\n    needs: scope\n    if: needs.scope.outputs.heavy == 'true'\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '16.20.2'\n      - uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n      - run: python tools/golden/ci.py --install\n"
+    if body.strip() != expected.strip():
+        return ['server2 workflow differs from exact reviewed all-event audit/heavy wiring']
+    return []
 
 
 def check(root, declaration, base):
+    """Compatibility entry point: one reviewed task and the full root range."""
+    return check_declarations(root, [declaration], base)
+
+
+def check_declarations(root, declarations, base):
+    """Push union is explicit; no changed path or rename endpoint is discarded."""
+    if not declarations:
+        return ['task-diff placement requires a declaration']
+    errors = []
+    for declaration in declarations:
+        errors.extend(declaration_errors(declaration))
+    if errors:
+        return errors
+    for path in changed_paths(root, base):
+        if not any(declared(path, declaration) for declaration in declarations):
+            errors.append(f'undeclared changed path: {path}')
+    return errors + check_layout(root, base)
+
+
+def check_layout(root, base):
+    """Whole tracked resource audit only; never claims task-diff approval."""
     root = Path(root).resolve()
-    errors = declaration_errors(declaration)
-    if errors: return errors
+    errors = []
+
     # S09 approved reads stay explicitly audited in every later task's whole tree.
     # The canonical file is never a blanket source, compiler or encoded exception.
     host_reads = set()
@@ -428,8 +433,6 @@ def check(root, declaration, base):
                 return ['canonical S09 policy: ' + e for e in policy_errors]
         except (OSError, ValueError, TypeError):
             return ['incomplete canonical runtime host-read policy']
-    for path in changed_paths(root, base):
-        if not declared(path, declaration): errors.append(f'undeclared changed path: {path}')
     # Audit every tracked asset, including unchanged files; untracked owned files too.
     raw = git(root, 'ls-files', '--stage', '-z').decode()
     modes = {}
@@ -468,16 +471,22 @@ def check(root, declaration, base):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', default='..')
-    parser.add_argument('--declaration', required=True)
+    modes = parser.add_mutually_exclusive_group(required=True)
+    modes.add_argument('--declaration', action='append', help='Repeat only for explicit push-range union')
+    modes.add_argument('--layout-only', action='store_true', help='Whole tracked audit, no task-diff approval')
     parser.add_argument('--base', required=True, help='Exact task base/merge-base, never silently reduced')
     args = parser.parse_args()
     try:
-        errors = check(args.root, json.loads(Path(args.declaration).read_text()), args.base)
+        errors = (check_layout(args.root, args.base) if args.layout_only else
+                  check_declarations(args.root, [json.loads(Path(p).read_text()) for p in args.declaration], args.base))
     except (OSError, ValueError, subprocess.CalledProcessError) as e:
         print(f'incomplete placement check: {e}', file=sys.stderr); return 2
     for error in errors: print(error, file=sys.stderr)
     if errors: return 1
-    print('PASS server2 task paths, full tracked layout and literal dependency/resource boundary')
+    if args.layout_only:
+        print('PASS whole tracked layout/resource audit only; task-diff approval not claimed')
+    else:
+        print('PASS declared full root range, tracked layout and literal dependency/resource boundary')
     return 0
 
 if __name__ == '__main__':

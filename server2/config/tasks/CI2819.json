@@ -1,0 +1,49 @@
+{
+  "task": "CI2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "G2 only: every PR/master push gets full-root scope and whole-tracked layout audit; relevant legacy/oracle/server2/workflow changes also run existing foundation/goldens, known unrelated-only heavy checks explicitly not run, unknown/ambiguous paths fail closed. Full-range placement, build revision binding and approved retention30. No runtime, fixture baseline, provider, host or protection change.",
+  "server2_paths": [
+    "server2/config/tasks/CI2819.json",
+    "server2/tools/ci.py",
+    "server2/tools/test_ci.py",
+    "server2/tools/check_placement.py",
+    "server2/tools/test_placement.py"
+  ],
+  "outside": [
+    {
+      "path": ".github/workflows/server2.yml",
+      "category": "ci-wiring",
+      "reason": "Always-run PR/master-push minimum audit and scoped heavy-check CI wiring, with approved bounded retention; all executable decision logic stays under server2."
+    },
+    {
+      "path": "intent/issue-2819-ci-coverage.md",
+      "category": "documentation",
+      "reason": "Task authority, scope and pre-merge endpoint."
+    },
+    {
+      "path": "specs/issue-2819-ci-coverage.md",
+      "category": "documentation",
+      "reason": "Event/range/placement/revision acceptance contract."
+    },
+    {
+      "path": "plans/issue-2819-ci-coverage.md",
+      "category": "documentation",
+      "reason": "Root-gated implementation and verification handoff."
+    },
+    {
+      "path": "docs/operations/server2-golden.md",
+      "category": "documentation",
+      "reason": "Correct the existing trigger limitation paragraph without changing oracle/parity policy; root serializes shared G1/G2 document edits."
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Describe CI event/range modes, exact build identity and bounded native-artifact retention. Root serializes shared-document integration."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-ci-coverage/verification.md",
+      "category": "documentation",
+      "reason": "Selected sanitized CI/control evidence and scope; raw runs remain ignored."
+    }
+  ]
+}
