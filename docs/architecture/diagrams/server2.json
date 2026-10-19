@@ -2,15 +2,15 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Proposed server2 origin: S3 and disposable caches",
+    "title": "Proposed server2 origin: S3 and bounded forecast memory",
     "output": "docs/architecture/diagrams/server2.html",
     "quality_profile": "showcase",
     "locale": "en",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "732766a8cbfc9e70f3afacaacb61010a881f0cf1",
+      "revision": "d4906f674152213c53ffca8419e999efb0ef14cd",
       "provider": "github",
-      "link_mode": "web"
+      "link_mode": "local-only"
     }
   },
   "components": [
@@ -124,8 +124,8 @@
       "sources": [
         {
           "path": "server2/src/domestic/kma/backend.rs",
-          "line": 127,
-          "end_line": 158,
+          "line": 181,
+          "end_line": 211,
           "label": "Native source and bounded CPU assembly"
         },
         {
@@ -140,7 +140,7 @@
       "id": "memory",
       "type": "database",
       "label": "Disposable caches",
-      "sublabel": "RAM; verified raw disk optional",
+      "sublabel": "Forecast views + verified raw disk",
       "pos": [
         330,
         360
@@ -151,10 +151,16 @@
       ],
       "sources": [
         {
-          "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 3,
-          "end_line": 7,
-          "label": "In-memory view from durable raw records"
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 21,
+          "end_line": 321,
+          "label": "Forecast limits and fresh generation lookup"
+        },
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 856,
+          "end_line": 901,
+          "label": "Actual writer lifetime invalidates generation"
         },
         {
           "path": "server2/src/cache/disk.rs",
@@ -180,8 +186,8 @@
       "sources": [
         {
           "path": "server2/src/geocode/mod.rs",
-          "line": 460,
-          "end_line": 477,
+          "line": 556,
+          "end_line": 603,
           "label": "Reserve before provider HTTP"
         },
         {
@@ -214,9 +220,9 @@
         },
         {
           "path": "server2/src/storage/catalog.rs",
-          "line": 885,
-          "end_line": 927,
-          "label": "Raw writes before catalog publication"
+          "line": 912,
+          "end_line": 985,
+          "label": "Conditional durable acquisition publication"
         }
       ]
     }
@@ -274,7 +280,7 @@
         "Preserve the observed client API contracts",
         "S3 is authoritative; RAM and disk copies are disposable",
         "Precise reverse-geocode keys and bodies stay volatile",
-        "Local disk caching is allowed; S15b-4c implementation pending"
+        "Verified raw disk and forecast memory remain disposable"
       ]
     },
     {
@@ -294,7 +300,17 @@
         "Proposed origin deployment; no route cutover claimed",
         "Cold cells acquire data; no steady-state legacy dependency",
         "Selected native KMA rejects all Forward markers; unknown towns and KR remaps resolve natively",
-        "Verified raw disk cache is bounded and disposable; full-data cold latency remains unmeasured"
+        "Local cold/warm receipt is not host p95 or complete release qualification"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "D2 forecast memory",
+      "items": [
+        "Grid / RSS / Mid complete views; other owners still run",
+        "128 MiB retained; 48 MiB per entry; logical, not RSS",
+        "Epoch plus active writer fence; no stale generation install",
+        "Local CPU / queue limits; global integration remains open"
       ]
     }
   ]

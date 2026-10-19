@@ -292,14 +292,25 @@ fn trailing(family: Family, slot: &Slot, row: &Row, times: &[(String, String)]) 
 fn complete(family: Family, slot: &Slot, rows: &[Row], times: &[(String, String)]) -> bool {
     times.iter().all(|at| {
         let key = format!("{}{}", at.0, at.1);
-        let found: Vec<&Row> = rows.iter().filter(|r| row_at(r) == key).collect();
-        !found.is_empty() && found.iter().all(|r| valid(r, family, at, slot))
+        rows.iter().any(|r| row_at(r) == key)
+            && rows
+                .iter()
+                .filter(|r| row_at(r) == key)
+                .all(|r| valid(r, family, at, slot))
     })
 }
 /// `rawItems(items, product, slot, coord)`.
 fn raw_items(items: &[Item], family: Family, slot: &Slot, coord: Coord) -> bool {
+    raw_items_checked(items, family, slot, coord).unwrap_or(false)
+}
+fn raw_items_checked(
+    items: &[Item],
+    family: Family,
+    slot: &Slot,
+    coord: Coord,
+) -> Result<bool, crate::storage::Error> {
     let Some(times) = expected(family, slot) else {
-        return false;
+        return Ok(false);
     };
     let numbers: &[&str] = if family == Family::Short {
         &[
@@ -310,84 +321,95 @@ fn raw_items(items: &[Item], family: Family, slot: &Slot, coord: Coord) -> bool 
             "T1H", "SKY", "REH", "PTY", "POP", "UUU", "VVV", "VEC", "WSD", "LGT",
         ]
     };
-    let allowed: Vec<String> = times.iter().map(|t| format!("{}{}", t.0, t.1)).collect();
     let last = times.last().map_or(f64::NAN, |t| stamp(&t.0, &t.1));
     let ids = identities(family, slot);
-    let mut echoed: Option<String> = None;
-    let mut slots: std::collections::HashMap<String, std::collections::HashSet<String>> =
+    // Tables borrow bounded typed inputs. Only fixed publication/time strings are copied.
+    let mut slots: std::collections::HashMap<(&str, &str), std::collections::HashSet<&str>> =
         std::collections::HashMap::new();
-    let value = |item: &Item, k: &str| item.get(k).map(str::to_owned);
+    slots
+        .try_reserve(times.len())
+        .map_err(|_| crate::storage::Error::Capacity)?;
+    let mut echoed: Option<String> = None;
     for item in items {
-        // `value(item, 'baseDate') + value(item, 'baseTime')` (undefined prints as text).
-        let part = |k| value(item, k).unwrap_or_else(|| "undefined".into());
-        let publication = part("baseDate") + &part("baseTime");
-        let echo = echoed.get_or_insert_with(|| publication.clone()).clone();
-        if !ids.contains(&publication)
-            || publication != echo
-            || Some(crate::gateway::response::js_number(coord.mx)) != value(item, "nx")
-            || Some(crate::gateway::response::js_number(coord.my)) != value(item, "ny")
-        {
-            return false;
+        let part = |k| item.get(k).unwrap_or("undefined");
+        let date = part("baseDate");
+        let time = part("baseTime");
+        if date.len().checked_add(time.len()) != Some(12) {
+            return Ok(false);
         }
-        let category = value(item, "category").unwrap_or_else(|| "undefined".into());
-        let at = part("fcstDate") + &part("fcstTime");
-        if !allowed.contains(&at) {
-            let t = stamp(&part("fcstDate"), &part("fcstTime"));
+        let mut publication = String::new();
+        publication
+            .try_reserve_exact(12)
+            .map_err(|_| crate::storage::Error::Capacity)?;
+        publication.push_str(date);
+        publication.push_str(time);
+        if !ids.contains(&publication)
+            || echoed.as_ref().is_some_and(|p| p != &publication)
+            || Some(crate::gateway::response::js_number(coord.mx)).as_deref() != item.get("nx")
+            || Some(crate::gateway::response::js_number(coord.my)).as_deref() != item.get("ny")
+        {
+            return Ok(false);
+        }
+        echoed.get_or_insert(publication);
+        let category = item.get("category").unwrap_or("undefined");
+        let at = (part("fcstDate"), part("fcstTime"));
+        if !times.iter().any(|t| t.0 == at.0 && t.1 == at.1) {
+            let t = stamp(at.0, at.1);
             if !(t > last && t <= last + DAY) {
                 continue;
             }
         } else {
-            slots.entry(at).or_default().insert(category.clone());
+            let categories = slots.entry(at).or_default();
+            categories
+                .try_reserve(1)
+                .map_err(|_| crate::storage::Error::Capacity)?;
+            categories.insert(category);
         }
-        let text = value(item, "fcstValue");
-        if numbers.contains(&category.as_str()) {
-            let Some(text) = text else { return false };
+        let text = item.get("fcstValue");
+        if numbers.contains(&category) {
+            let Some(text) = text else { return Ok(false) };
             let t = text.trim_matches(precip::js_ws);
-            if !plain_number(t) || !finite(Some(&Val::Num(string_to_number(&text)))) {
-                return false;
+            if !plain_number(t) || !finite(Some(&Val::Num(string_to_number(text)))) {
+                return Ok(false);
             }
-        } else if ["PCP", "SNO", "RN1", "R06", "S06"].contains(&category.as_str()) {
+        } else if ["PCP", "SNO", "RN1", "R06", "S06"].contains(&category) {
             let snow = category == "SNO" || category == "S06";
-            let v = text.map_or(V::Undef, |t| V::s(&t));
+            let value = text.map_or(V::Undef, V::s);
             if precip::parse(
-                &v,
+                &value,
                 if snow { "cm" } else { "mm" },
                 Some(if snow { "적설없음" } else { "강수없음" }),
             )
             .is_none()
             {
-                return false;
+                return Ok(false);
             }
         }
     }
-    times.iter().all(|at| {
-        let Some(categories) = slots.get(&format!("{}{}", at.0, at.1)) else {
+    Ok(times.iter().all(|at| {
+        let Some(categories) = slots.get(&(at.0.as_str(), at.1.as_str())) else {
             return false;
         };
-        let has = |c: &str| categories.contains(c);
-        let mut required = vec!["SKY", "REH", "PTY", "UUU", "VVV", "VEC", "WSD"];
-        if family == Family::Short {
-            required.push("POP");
-            if at.1 == "0600" && (at.0 != slot.date || slot.time == "0200") {
-                required.push("TMN");
-            }
-            if at.1 == "1500" && (at.0 != slot.date || slot.time.as_str() <= "1100") {
-                required.push("TMX");
-            }
-            if !(has("TMP") || has("T3H"))
-                || !(has("PCP") || has("R06"))
-                || !(has("SNO") || has("S06"))
-            {
-                return false;
-            }
-        } else {
-            required.extend(["T1H", "RN1", "LGT"]);
-            if slot.key().as_str() >= "202606231100" {
-                required.push("POP");
-            }
+        let has = |c| categories.contains(c);
+        if !["SKY", "REH", "PTY", "UUU", "VVV", "VEC", "WSD"]
+            .into_iter()
+            .all(has)
+        {
+            return false;
         }
-        required.into_iter().all(has)
-    })
+        if family == Family::Short {
+            has("POP")
+                && (!(at.1 == "0600" && (at.0 != slot.date || slot.time == "0200")) || has("TMN"))
+                && (!(at.1 == "1500" && (at.0 != slot.date || slot.time.as_str() <= "1100"))
+                    || has("TMX"))
+                && (has("TMP") || has("T3H"))
+                && (has("PCP") || has("R06"))
+                && (has("SNO") || has("S06"))
+        } else {
+            ["T1H", "RN1", "LGT"].into_iter().all(has)
+                && (slot.key().as_str() < "202606231100" || has("POP"))
+        }
+    }))
 }
 /// `/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/`.
 fn plain_number(t: &str) -> bool {
@@ -431,15 +453,83 @@ fn parse_percent(value: &str) -> f64 {
     }
 }
 /// `setPrecipitation(result, field, value, unit, noValue)`.
-fn set_precipitation(row: &mut Row, field: &str, value: &str, unit: &str, no_value: &str) {
+/// Actual row descendants are accounted before each copy; fixed/transient typed scratch is
+/// reserved once from the input shape. This state belongs to one admitted blocking build.
+struct RowLimits {
+    used: usize,
+}
+impl RowLimits {
+    fn charge(&mut self, n: usize) -> Result<(), crate::storage::Error> {
+        self.used = super::forecast_cache::add(self.used, n)?;
+        if self.used > super::forecast_cache::PARSE_BYTES {
+            return Err(crate::storage::Error::Capacity);
+        }
+        Ok(())
+    }
+}
+fn put(
+    row: &mut Row,
+    key: &str,
+    value: Val,
+    limits: Option<&mut RowLimits>,
+) -> Result<(), crate::storage::Error> {
+    if let Some(limits) = limits {
+        let before = row.heap_weight()?;
+        let extra = super::forecast_cache::add(
+            super::forecast_cache::allocation(key.len())?,
+            match &value {
+                Val::Str(s) => super::forecast_cache::allocation(s.capacity())?,
+                _ => 0,
+            },
+        )?;
+        if super::forecast_cache::add(limits.used, extra)? > super::forecast_cache::PARSE_BYTES {
+            return Err(crate::storage::Error::Capacity);
+        }
+        row.try_set(key, &value)?;
+        limits.used = super::forecast_cache::add(limits.used - before, row.heap_weight()?)?;
+    } else {
+        row.set(key, value);
+    }
+    Ok(())
+}
+fn string(s: &str, bounded: bool) -> Result<Val, crate::storage::Error> {
+    if bounded {
+        Val::checked_str(s)
+    } else {
+        Ok(Val::str(s))
+    }
+}
+fn set_precipitation(
+    row: &mut Row,
+    field: &str,
+    value: &str,
+    unit: &str,
+    no_value: &str,
+    mut limits: Option<&mut RowLimits>,
+) -> Result<(), crate::storage::Error> {
     let parsed = precip::parse(&V::s(value), unit, Some(no_value));
-    row.set(field, Val::Num(parsed.as_ref().map_or(-1., |p| p.amount)));
+    put(
+        row,
+        field,
+        Val::Num(parsed.as_ref().map_or(-1., |p| p.amount)),
+        limits.as_deref_mut(),
+    )?;
     let text_field = format!("{field}Text");
     if parsed.is_some_and(|p| p.approx) {
-        row.set(&text_field, Val::str(value.trim_matches(precip::js_ws)));
+        put(
+            row,
+            &text_field,
+            string(value.trim_matches(precip::js_ws), limits.is_some())?,
+            limits,
+        )?;
     } else {
+        let before = row.heap_weight()?;
         row.delete(&text_field);
+        if let Some(l) = limits {
+            l.used = l.used - before + row.heap_weight()?;
+        }
     }
+    Ok(())
 }
 fn num(v: f64) -> Val {
     Val::Num(v)
@@ -450,49 +540,91 @@ fn find_or_create<'a>(
     template: &'static [(&'static str, Tmpl)],
     date: &str,
     time: &str,
-) -> &'a mut Row {
-    let i = list
-        .iter()
-        .position(|r| {
-            r.get("date").as_ref().and_then(Val::as_str) == Some(date)
-                && r.get("time").as_ref().and_then(Val::as_str) == Some(time)
-        })
-        .unwrap_or_else(|| {
-            list.push(Row::new(template));
-            list.len() - 1
-        });
-    &mut list[i]
+    limits: Option<&mut RowLimits>,
+) -> Result<&'a mut Row, crate::storage::Error> {
+    if let Some(i) = list.iter().position(|r| {
+        r.get("date").as_ref().and_then(Val::as_str) == Some(date)
+            && r.get("time").as_ref().and_then(Val::as_str) == Some(time)
+    }) {
+        return Ok(&mut list[i]);
+    }
+    let row = if let Some(limits) = limits {
+        limits.charge(super::forecast_cache::allocation(
+            32 * std::mem::size_of::<(String, Val)>(),
+        )?)?;
+        if list.len() == list.capacity() {
+            return Err(crate::storage::Error::Capacity);
+        }
+        Row::bounded(template)?
+    } else {
+        Row::new(template)
+    };
+    list.push(row);
+    Ok(list.last_mut().expect("just inserted"))
 }
 /// `_emitOrganizedData(index, records, required)`.
-fn emit(records: Vec<Row>, required: &[(&str, f64, f64)]) -> Option<Vec<Row>> {
-    let invalid = records.is_empty()
-        || records.iter().any(|r| {
-            r.materialized().entries().iter().any(|(k, v)| {
-                (k.starts_with("wf")
-                    && !matches!(v, Val::Str(s) if !s.trim_matches(precip::js_ws).is_empty()))
-                    || matches!(v, Val::Num(n) if !n.is_finite())
-            }) || required
-                .iter()
-                .any(|(name, missing, min)| match r.get(name) {
-                    Some(Val::Num(n)) => n == *missing || n < *min,
-                    _ => true,
-                })
-        });
-    (!invalid).then_some(records)
+fn emit(
+    records: Vec<Row>,
+    required: &[(&str, f64, f64)],
+    checked: bool,
+) -> Result<Option<Vec<Row>>, crate::storage::Error> {
+    if records.is_empty() {
+        return Ok(None);
+    }
+    for row in &records {
+        let doc = if checked {
+            row.checked_materialized()?
+        } else {
+            row.materialized()
+        };
+        if doc.entries().iter().any(|(k, v)| {
+            (k.starts_with("wf")
+                && !matches!(v,Val::Str(s) if !s.trim_matches(precip::js_ws).is_empty()))
+                || matches!(v,Val::Num(n) if !n.is_finite())
+        }) || required
+            .iter()
+            .any(|(name, missing, min)| match row.get(name) {
+                Some(Val::Num(n)) => n == *missing || n < *min,
+                _ => true,
+            })
+        {
+            return Ok(None);
+        }
+    }
+    Ok(Some(records))
 }
 fn sort_rows(rows: &mut [Row]) {
-    // `_sortByDateTime` with V8's stable sort.
-    rows.sort_by_key(|r| (r.text("date"), r.text("time")));
+    fn text<'a>(r: &'a Row, k: &str) -> &'a str {
+        r.own().get(k).and_then(Val::as_str).unwrap_or("")
+    }
+    rows.sort_by(|a, b| {
+        text(a, "date")
+            .cmp(text(b, "date"))
+            .then_with(|| text(a, "time").cmp(text(b, "time")))
+    });
 }
 
 /// The organizer of one acquisition; None when legacy fails it (`recvFail`).
-fn organize(family: Family, items: &[Item]) -> Option<Vec<Row>> {
+fn organize(
+    family: Family,
+    items: &[Item],
+    mut list: Vec<Row>,
+    mut limits: Option<RowLimits>,
+) -> Result<Option<Vec<Row>>, crate::storage::Error> {
+    macro_rules! need {
+        ($value:expr) => {
+            match $value {
+                Some(value) => value,
+                None => return Ok(None),
+            }
+        };
+    }
+    let bounded = limits.is_some();
     let template = match family {
         Family::Current => CURRENT_TEMPLATE,
         Family::Shortest => SHORTEST_TEMPLATE,
         Family::Short => SHORT_TEMPLATE,
     };
-    let mut list: Vec<Row> = Vec::new();
     let (date_key, time_key, value_key) = match family {
         Family::Current => ("baseDate", "baseTime", "obsrValue"),
         _ => ("fcstDate", "fcstTime", "fcstValue"),
@@ -505,24 +637,41 @@ fn organize(family: Family, items: &[Item]) -> Option<Vec<Row>> {
             continue;
         }
         // A missing field read is a TypeError caught by the organizer: the grid fails.
-        let date = item.get(date_key)?;
-        let time = item.get(time_key)?;
-        if crate::domestic::kma::js::units(&crate::domestic::kma::js::canon_str(date)).len() <= 1
-            || crate::domestic::kma::js::units(&crate::domestic::kma::js::canon_str(time)).len()
-                <= 1
-        {
+        let date = need!(item.get(date_key));
+        let time = need!(item.get(time_key));
+        if date.encode_utf16().count() <= 1 || time.encode_utf16().count() <= 1 {
             continue;
         }
-        let publication = format!("{}{}", item.get("baseDate")?, item.get("baseTime")?);
-        let mx = parse_int(&V::s(item.get("nx")?));
-        let my = parse_int(&V::s(item.get("ny")?));
-        let category = item.get("category")?;
-        let row = find_or_create(&mut list, template, date, time);
-        row.set("pubDate", Val::str(publication));
-        row.set("date", Val::str(date));
-        row.set("time", Val::str(time));
-        row.set("mx", num(mx));
-        row.set("my", num(my));
+        let bd = need!(item.get("baseDate"));
+        let bt = need!(item.get("baseTime"));
+        let mut publication = String::new();
+        publication
+            .try_reserve_exact(super::forecast_cache::add(bd.len(), bt.len())?)
+            .map_err(|_| crate::storage::Error::Capacity)?;
+        publication.push_str(bd);
+        publication.push_str(bt);
+        let mx = if bounded {
+            super::doc::bounded_int(need!(item.get("nx")))?
+        } else {
+            parse_int(&V::s(need!(item.get("nx"))))
+        };
+        let my = if bounded {
+            super::doc::bounded_int(need!(item.get("ny")))?
+        } else {
+            parse_int(&V::s(need!(item.get("ny"))))
+        };
+        let category = need!(item.get("category"));
+        let row = find_or_create(&mut list, template, date, time, limits.as_mut())?;
+        put(
+            row,
+            "pubDate",
+            string(&publication, bounded)?,
+            limits.as_mut(),
+        )?;
+        put(row, "date", string(date, bounded)?, limits.as_mut())?;
+        put(row, "time", string(time, bounded)?, limits.as_mut())?;
+        put(row, "mx", num(mx), limits.as_mut())?;
+        put(row, "my", num(my), limits.as_mut())?;
         let raw = item.get(value_key);
         let value = || raw.map_or(f64::NAN, parse_float);
         match family {
@@ -541,17 +690,22 @@ fn organize(family: Family, items: &[Item]) -> Option<Vec<Row>> {
                     _ => continue,
                 };
                 // `parseFloat(item.obsrValue[0])`: a missing value is a TypeError.
-                raw?;
-                row.set(field, num(value()));
+                need!(raw);
+                put(row, field, num(value()), limits.as_mut())?;
             }
             Family::Shortest => {
                 let raw_text = raw.unwrap_or("");
                 match category {
-                    "RN1" => set_precipitation(row, "rn1", raw_text, "mm", "강수없음"),
-                    "POP" => row.set("pop", num(parse_percent(raw_text))),
-                    "PTY" | "SKY" | "LGT" | "T1H" | "REH" | "UUU" | "VVV" | "VEC" | "WSD" => {
-                        row.set(&category.to_ascii_lowercase(), num(value()))
+                    "RN1" => {
+                        set_precipitation(row, "rn1", raw_text, "mm", "강수없음", limits.as_mut())?
                     }
+                    "POP" => put(row, "pop", num(parse_percent(raw_text)), limits.as_mut())?,
+                    "PTY" | "SKY" | "LGT" | "T1H" | "REH" | "UUU" | "VVV" | "VEC" | "WSD" => put(
+                        row,
+                        &category.to_ascii_lowercase(),
+                        num(value()),
+                        limits.as_mut(),
+                    )?,
                     _ => (),
                 }
             }
@@ -562,22 +716,36 @@ fn organize(family: Family, items: &[Item]) -> Option<Vec<Row>> {
                     | "UUU" | "VVV" | "WAV" | "VEC" | "WSD" | "PCP" | "SNO" | "TMP" => category,
                     _ => continue,
                 };
-                let raw_text = raw?;
+                let raw_text = need!(raw);
                 match field {
-                    "PCP" => set_precipitation(row, "r06", raw_text, "mm", "강수없음"),
-                    "SNO" => set_precipitation(row, "s06", raw_text, "cm", "적설없음"),
-                    "TMP" => row.set("t3h", num(parse_measurement(raw_text, -50.))),
-                    other => row.set(&other.to_ascii_lowercase(), num(value())),
+                    "PCP" => {
+                        set_precipitation(row, "r06", raw_text, "mm", "강수없음", limits.as_mut())?
+                    }
+                    "SNO" => {
+                        set_precipitation(row, "s06", raw_text, "cm", "적설없음", limits.as_mut())?
+                    }
+                    "TMP" => put(
+                        row,
+                        "t3h",
+                        num(parse_measurement(raw_text, -50.)),
+                        limits.as_mut(),
+                    )?,
+                    other => put(
+                        row,
+                        &other.to_ascii_lowercase(),
+                        num(value()),
+                        limits.as_mut(),
+                    )?,
                 }
             }
         }
     }
-    let first = list.first()?;
+    let first = need!(list.first());
     let t = |k: &str| first.num(k);
     match family {
         Family::Current => {
             if t("rn1") == -1. || t("pty") == -1. || t("t1h") == -50. || t("t1h") < -100. {
-                return None;
+                return Ok(None);
             }
             let row = &mut list[0];
             for k in ["pty", "rn1", "reh"] {
@@ -585,7 +753,7 @@ fn organize(family: Family, items: &[Item]) -> Option<Vec<Row>> {
                     row.delete(k);
                 }
             }
-            emit(list, &[])
+            emit(list, &[], bounded)
         }
         Family::Shortest | Family::Short => {
             let temp = if family == Family::Short {
@@ -602,7 +770,7 @@ fn organize(family: Family, items: &[Item]) -> Option<Vec<Row>> {
                 || t(temp) < -100.
                 || t("reh") < 0.
             {
-                return None;
+                return Ok(None);
             }
             sort_rows(&mut list);
             emit(
@@ -613,6 +781,7 @@ fn organize(family: Family, items: &[Item]) -> Option<Vec<Row>> {
                     ("pty", -1., 0.),
                     (temp, -50., -100.),
                 ],
+                bounded,
             )
         }
     }
@@ -632,23 +801,91 @@ pub enum Organized {
 /// The collector steps of `_recursiveRequestData` for one grid: forecast publication checks,
 /// organizer, `within`, `batch` and the canonical publication.
 pub fn collect(family: Family, items: &[Item], slot: &Slot, coord: Coord) -> Organized {
-    if family != Family::Current && !raw_items(items, family, slot, coord) {
-        return Organized::InvalidForecast;
+    collect_into(family, items, slot, coord, Vec::new(), false, None).unwrap_or(Organized::Failed)
+}
+/// Preflight the complete typed organizer workspace before any input-derived copies. Keys in
+/// the legacy organizer are date/time pairs; no more rows can grow than this admitted set.
+pub(super) fn collect_bounded(
+    family: Family,
+    items: &[Item],
+    slot: &Slot,
+    coord: Coord,
+) -> Result<Organized, crate::storage::Error> {
+    use super::forecast_cache::{add, allocation, reserve};
+    let mut input = allocation(
+        items
+            .len()
+            .checked_mul(std::mem::size_of::<Item>())
+            .ok_or(crate::storage::Error::Capacity)?,
+    )?;
+    let mut payload = 0usize;
+    for item in items {
+        input = add(input, super::forecast_cache::vector(&item.0)?)?;
+        for (k, v) in &item.0 {
+            input = add(
+                input,
+                add(allocation(k.capacity())?, allocation(v.capacity())?)?,
+            )?;
+            payload = add(payload, add(k.len(), v.len())?)?;
+        }
     }
-    let Some(mut rows) = organize(family, items) else {
-        return Organized::Failed;
+    let mut rows = Vec::new();
+    reserve(&mut rows, items.len())?;
+    let mut limits = RowLimits { used: 0 };
+    limits.charge(input)?;
+    limits.charge(super::forecast_cache::vector(&rows)?)?;
+    // One live input-sized value/canonicalization, one materialized row and comparison scratch;
+    // each retained row string originates in an item field (canonical UTF-8 expands at most2x).
+    limits.charge(
+        payload
+            .checked_mul(8)
+            .ok_or(crate::storage::Error::Capacity)?,
+    )?;
+    // Borrowed table slots/categories plus fixed maximum seven-day selector work.
+    limits.charge(
+        items
+            .len()
+            .checked_mul(
+                std::mem::size_of::<(&str, &str)>()
+                    + std::mem::size_of::<std::collections::HashSet<&str>>()
+                    + 64,
+            )
+            .ok_or(crate::storage::Error::Capacity)?,
+    )?;
+    limits.charge(7 * 24 * 256)?;
+    if family != Family::Current && !raw_items_checked(items, family, slot, coord)? {
+        return Ok(Organized::InvalidForecast);
+    }
+    collect_into(family, items, slot, coord, rows, true, Some(limits))
+}
+fn collect_into(
+    family: Family,
+    items: &[Item],
+    slot: &Slot,
+    coord: Coord,
+    rows: Vec<Row>,
+    validated: bool,
+    limits: Option<RowLimits>,
+) -> Result<Organized, crate::storage::Error> {
+    if !validated && family != Family::Current && !raw_items(items, family, slot, coord) {
+        return Ok(Organized::InvalidForecast);
+    }
+    let Some(mut rows) = organize(family, items, rows, limits)? else {
+        return Ok(Organized::Failed);
     };
     if family == Family::Current {
-        return Organized::Rows(rows);
+        return Ok(Organized::Rows(rows));
     }
     let Some(times) = expected(family, slot) else {
-        return Organized::BatchRejected;
+        return Ok(Organized::BatchRejected);
     };
     let allowed: Vec<String> = times.iter().map(|t| format!("{}{}", t.0, t.1)).collect();
     rows.retain(|r| allowed.contains(&row_at(r)) || trailing(family, slot, r, &times));
     let ids = identities(family, slot);
     let first_pub = rows.first().map(|r| r.text("pubDate"));
     let mut seen = std::collections::HashSet::new();
+    seen.try_reserve(rows.len())
+        .map_err(|_| crate::storage::Error::Capacity)?;
     let ok = first_pub.as_ref().is_some_and(|p| ids.contains(p))
         && rows.iter().all(|r| {
             seen.insert(row_at(r))
@@ -659,13 +896,17 @@ pub fn collect(family: Family, items: &[Item], slot: &Slot, coord: Coord) -> Org
         })
         && complete(family, slot, &rows, &times);
     if !ok {
-        return Organized::BatchRejected;
+        return Ok(Organized::BatchRejected);
     }
     for r in &mut rows {
         let p = canonical(family, &r.text("pubDate"));
-        r.set("pubDate", Val::str(p));
+        if validated {
+            r.try_set("pubDate", &Val::checked_str(&p)?)?;
+        } else {
+            r.set("pubDate", Val::str(p));
+        }
     }
-    Organized::Rows(rows)
+    Ok(Organized::Rows(rows))
 }
 
 /// `getKoreaDateObj('YYYYMMDDHHMM')` for a 12-digit string; None otherwise.
@@ -705,6 +946,97 @@ pub struct GridDocs {
     docs: Vec<Doc>,
 }
 impl GridDocs {
+    pub(super) fn save_bounded(
+        &mut self,
+        family: Family,
+        rows: Vec<Row>,
+    ) -> Result<(), crate::storage::Error> {
+        use super::doc::{checked_store, checked_strict};
+        let Some(first) = rows.first() else {
+            return Ok(());
+        };
+        let coord = Coord {
+            mx: first.num("mx"),
+            my: first.num("my"),
+        };
+        let mut publication = korea_date(&first.text("pubDate")).unwrap_or(f64::NAN);
+        for mut row in rows {
+            let Some(fcs) = korea_date(&(row.text("date") + &row.text("time"))) else {
+                break;
+            };
+            let index = self
+                .docs
+                .iter()
+                .position(|d| fcs_of(d) == fcs && d.get("mCoord") == Some(&coord_doc(coord)));
+            if family == Family::Current {
+                if publication.is_nan() {
+                    publication = fcs;
+                }
+                if let Some(i) = index
+                    && let Some(Val::Doc(old)) = self.docs[i].get("currentData")
+                {
+                    for (k, v) in old.entries() {
+                        if !row.has_own(k) {
+                            row.try_set(k, v)?;
+                        }
+                    }
+                }
+            } else {
+                if publication.is_nan() {
+                    break;
+                }
+                let bound = publication
+                    + if family == Family::Shortest {
+                        30. * 60_000.
+                    } else {
+                        0.
+                    };
+                if let Some(i) = index
+                    && !match self.docs[i].get("pubDate") {
+                        Some(Val::Date(p)) => *p <= bound,
+                        None | Some(Val::Null) => true,
+                        _ => false,
+                    }
+                {
+                    continue;
+                }
+            }
+            let data = checked_strict(&row.checked_materialized()?, family.schema())?;
+            let mut d = if let Some(i) = index {
+                self.docs[i].checked_clone()?
+            } else {
+                Doc::new()
+            };
+            if index.is_some() {
+                d.try_set(family.data_key(), &data.into())?;
+                d.try_set("fcsDate", &date_val(fcs))?;
+                d.try_set("pubDate", &date_val(publication))?;
+                d.try_set("mCoord", &coord_doc(coord))?;
+            } else {
+                d.try_set("mCoord", &coord_doc(coord))?;
+                d.try_set("fcsDate", &date_val(fcs))?;
+                if family == Family::Current {
+                    d.try_set("__v", &Val::Num(0.))?;
+                    d.try_set(family.data_key(), &data.into())?;
+                    d.try_set("pubDate", &date_val(publication))?;
+                } else {
+                    d.try_set("pubDate", &date_val(publication))?;
+                    d.try_set(family.data_key(), &data.into())?;
+                    d.try_set("__v", &Val::Num(0.))?;
+                }
+            }
+            checked_store(&mut self.docs, index, d)?;
+        }
+        Ok(())
+    }
+    pub(super) fn into_answer(mut self) -> Vec<Doc> {
+        self.docs.sort_by(|a, b| {
+            fcs_of(a)
+                .partial_cmp(&fcs_of(b))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        self.docs
+    }
     pub fn docs(&self) -> &[Doc] {
         &self.docs
     }
@@ -829,5 +1161,50 @@ impl GridDocs {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         out
+    }
+}
+
+#[cfg(test)]
+mod bounded_tests {
+    use super::*;
+    #[test]
+    fn canonicalization_mismatch_still_respects_the_item_count_row_reservation() {
+        const ITEMS: usize = 64;
+        let raw = "\u{10F800}";
+        let mut rows = Vec::new();
+        super::super::forecast_cache::reserve(&mut rows, ITEMS).unwrap();
+        let capacity = rows.capacity();
+        let mut limits = RowLimits {
+            used: super::super::forecast_cache::vector(&rows).unwrap(),
+        };
+        for _ in 0..ITEMS {
+            let row = find_or_create(&mut rows, CURRENT_TEMPLATE, raw, "1000", Some(&mut limits))
+                .unwrap();
+            put(
+                row,
+                "date",
+                Val::checked_str(raw).unwrap(),
+                Some(&mut limits),
+            )
+            .unwrap();
+            put(
+                row,
+                "time",
+                Val::checked_str("1000").unwrap(),
+                Some(&mut limits),
+            )
+            .unwrap();
+        }
+        assert_eq!(
+            rows.len(),
+            ITEMS,
+            "canonical stored text differs from the raw lookup key"
+        );
+        assert_eq!(
+            rows.capacity(),
+            capacity,
+            "all row roots were reserved before organizer growth"
+        );
+        assert!(limits.used < super::super::forecast_cache::PARSE_BYTES);
     }
 }

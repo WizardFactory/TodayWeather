@@ -683,3 +683,14 @@ release live warning work. Existing claim/send/drain policy stays. The selected 
 owned peer/real-time evidence and final diagram precede independent review and exact
 parent/current CI at pre-merge only. This record does not close full E3, #2819, #2704 or
 #2705, or authorize merge, cloud actions, live provider/device sends, shadow or cutover.
+
+
+- D2 / #2819 pre-merge preparation: complete Source-local Grid/RSS/Mid forecast
+  views now have bounded logical admission, writer-generation invalidation and
+  a bounded duplicate-comparison index. The original 730-acquisition seed (725 forecast acquisitions / 845 pages selected) matches all
+  13 Doc goldens; separate unprimed native HTTP returned 200 at 1.67 seconds,
+  then warm at 18.51 / 17.39 ms with zero forecast I/O/parse/fold. The invalid
+  zone-support fixture still reads per request and is explicitly outside that
+  cache. See [selected evidence](../docs/evidence/tasks/issue-2819-domestic-warm-cache/verification.md).
+  Independent review/CI, integration with the process resource owner, F2 pressure,
+  whole-release eligibility and seven-day shadow remain separate open gates.

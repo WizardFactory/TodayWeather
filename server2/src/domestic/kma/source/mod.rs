@@ -29,6 +29,7 @@ pub mod airkorea;
 pub mod asos;
 mod doc;
 pub mod fetch;
+pub mod forecast_cache;
 pub mod forecast_input;
 pub mod gif;
 mod grid;
@@ -77,6 +78,7 @@ use crate::warnings::{
     store::{StoreConfig, WarningStore},
     zones::ZoneState,
 };
+use forecast_cache::{Documents, Key as ForecastKey};
 pub use records::Fetched;
 use records::Reader;
 use serde_json::Value;
@@ -155,6 +157,7 @@ fn day_before(partition: &str) -> String {
 /// The S3 source. `T` is the process S3 transport behind the shared admission.
 pub struct S3Source<T> {
     reader: Reader<T>,
+    forecast_cache: forecast_cache::Cache<T>,
     /// Safe address-only town and KR-remap projections; owned acquisition survives waiters.
     town_resolver: towns::Resolver<T>,
     warnings: Arc<WarningService<T>>,
@@ -223,6 +226,10 @@ impl Attempts {
     }
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
+    /// D2 logical charges and actual source parse/fold counts; never allocator/RSS measurements.
+    pub fn forecast_cache_stats(&self) -> forecast_cache::Stats {
+        self.forecast_cache.stats()
+    }
     /// `acquire` makes the request-time acquisitions (S15b-2 station pages and ASOS ranges);
     /// `locate` geocodes new station addresses.
     pub fn new(
@@ -256,7 +263,22 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             acquire,
             locate,
         ));
+        let mut forecast_limits = CatalogLimits {
+            io: 2,
+            cpu: 1,
+            ..CatalogLimits::default()
+        };
+        forecast_limits.raw.io = 2;
+        forecast_limits.raw.cpu = 1;
+        forecast_limits.raw.raw_bytes = forecast_cache::PAGE_BYTES;
+        forecast_limits.raw.gzip_bytes = forecast_cache::PAGE_BYTES + 65_536;
+        let forecast_reader = Reader {
+            transport: transport.clone(),
+            store: Arc::new(CatalogStore::new(transport.clone(), forecast_limits)?),
+        };
+        let forecast_cache = forecast_cache::Cache::new(forecast_reader)?;
         Ok(Self {
+            forecast_cache,
             town_resolver: towns::Resolver::new(transport.clone(), None).with_clock({
                 let clock = clock.clone();
                 Arc::new(move || clock().max(0.) as u64)
@@ -308,6 +330,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// the warning capability captures those handles. Production constructs it last;
     /// later private zone-only test pool overrides are not warning-admission proofs.
     pub fn with_forecast(mut self, acquire: Option<Arc<dyn fetch::ForecastAcquire>>) -> Self {
+        let acquire = acquire.map(|inner| self.forecast_cache.wrap(inner));
         self.warning_cycles = acquire.as_ref().map(|acquire| {
             Arc::new(warning_cycle::WarningCycles::new(
                 self.owned.clone(),
@@ -554,7 +577,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     ) -> Result<Vec<Doc>, String> {
         self.grid_answer_by(family, grid, now, deadline, wait_bound(deadline))
             .await
-            .map(|(docs, _)| docs)
+            .map(|(docs, _)| docs.to_vec())
     }
     /// [`Self::grid_answer`] waiting for an acquisition only until `until` (the request's bound),
     /// with the S16 identities of the acquisitions it folded (`None` when S06 excluded a listed
@@ -566,45 +589,22 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         deadline: Instant,
         until: Instant,
-    ) -> Result<(Vec<Doc>, Option<Vec<InputId>>), String> {
-        let coord = Coord {
-            mx: f64::from(grid.nx()),
-            my: f64::from(grid.ny()),
-        };
+    ) -> Result<(Documents, Option<Vec<InputId>>), String> {
         let sf = match family {
             Family::Current => schedule::Family::Current,
             Family::Shortest => schedule::Family::Shortest,
             Family::Short => schedule::Family::Short,
         };
-        let key = grid.provider_key();
-        let from = now - lookback_ms(family);
-        let months = records::months(from, now);
-        let parts = self
-            .reader
-            .partitions(sf.source(), sf.kind(), &key, &months, deadline)
-            .await
-            .map_err(|e| format!("{} listing: {e}", sf.kind()))?;
-        let oldest = schedule::from_ms(from as i64).partition();
-        let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
-        let (mut fetched, excluded) = self
-            .reader
-            .all_counted(sf.source(), sf.kind(), &key, &wanted, deadline)
-            .await
-            .map_err(|e| format!("{} read: {e}", sf.kind()))?;
-        // S16: this request's own acquisition keeps its stored fetch time in its identity (the
-        // fold sees it at the request instant).
-        let mut own: Option<InputId> = None;
+        let key = ForecastKey::Grid(family, grid.nx(), grid.ny());
+        let canonical = self.forecast_cache.get(key.clone(), now, deadline).await?;
+        let mut own = None;
         if let Some(latest) = sf.latest(now as i64) {
             // A stored acquisition legacy would not keep (an invalid forecast, a current
             // observation with a recovery sentinel) leaves its publication missing, so it stays
             // eligible for the bounded retries.
             let missing = |p: &Publication| {
                 let partition = p.partition();
-                !fetched.iter().any(|f| {
-                    f.partition == partition
-                        && f.fetched_at_ms as f64 <= now
-                        && usable(family, coord, f)
-                })
+                !canonical.value.usable.contains(&partition)
             };
             let reach = fetch_reach(sf);
             let required = sf.required(now as i64);
@@ -640,24 +640,22 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     self.acquire(key, request, LATEST_RETRY, until).await
                 };
                 if let Some(f) = fetched_latest {
-                    own = grid_input_id(family, sf.kind(), &f);
-                    fetched.push(visible(f, now));
+                    own = Some(f);
                 }
             }
             if !backfill.is_empty() {
                 self.backfill(sf, grid, latest, backfill).await;
             }
         }
-        let ids = (excluded == 0).then(|| {
-            let stored = fetched.len() - usize::from(own.is_some());
-            fetched[..stored]
-                .iter()
-                .filter(|f| f.fetched_at_ms as f64 <= now)
-                .filter_map(|f| grid_input_id(family, sf.kind(), f))
-                .chain(own)
-                .collect()
-        });
-        Ok((grid_documents(family, coord, &fetched, now), ids))
+        let answer = if let Some(own) = own {
+            self.forecast_cache
+                .overlay(key, canonical, own, now, deadline)
+                .await?
+        } else {
+            canonical
+        };
+        let ids = answer.value.ids.clone();
+        Ok((Documents(Some(answer)), ids))
     }
     /// One owned pass over the missing backfill publications of a cell and family when its latest
     /// publication is `latest` (at most once per [`BACKFILL_RETRY`]), newest first, 3 in flight.
@@ -746,39 +744,22 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     ) -> Result<Vec<Doc>, String> {
         self.rss_answer_by(grid, now, deadline, wait_bound(deadline))
             .await
+            .map(|docs| docs.to_vec())
     }
-    /// [`Self::rss_answer`] waiting for an acquisition only until `until`.
     async fn rss_answer_by(
         &self,
         grid: crate::history::Grid,
         now: f64,
         deadline: Instant,
         until: Instant,
-    ) -> Result<Vec<Doc>, String> {
-        let coord = Coord {
-            mx: f64::from(grid.nx()),
-            my: f64::from(grid.ny()),
-        };
-        let key = grid.provider_key();
-        let from = now - RSS_LOOKBACK_MS;
-        let months = records::months(from, now);
-        let parts = self
-            .reader
-            .partitions("kma-web", "town-rss", &key, &months, deadline)
-            .await
-            .map_err(|e| format!("town-rss listing: {e}"))?;
+    ) -> Result<Documents, String> {
+        let key = ForecastKey::Rss(grid.nx(), grid.ny());
+        let canonical = self.forecast_cache.get(key.clone(), now, deadline).await?;
         let latest = publication::rss_latest(now as i64).ok_or("clock")?;
-        let oldest = schedule::from_ms(from as i64).partition();
-        let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
-        let mut fetched = self
-            .reader
-            .all("kma-web", "town-rss", &key, &wanted, deadline)
-            .await
-            .map_err(|e| format!("town-rss read: {e}"))?;
-        if !present(&fetched, &latest.partition(), now)
+        if !canonical.value.present(&latest.partition(), now)
             && let Ok(request) = crate::domestic::family::WebRequest::town_rss(grid.nx(), grid.ny())
                 .and_then(|r| r.not_before(latest))
-            && let Some(f) = self
+            && let Some(own) = self
                 .acquire(
                     format!("town-rss/{}/{}", grid_key(grid), latest.partition()),
                     fetch::ForecastRequest::Rss(request),
@@ -787,9 +768,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 )
                 .await
         {
-            fetched.push(visible(f, now));
+            return self
+                .forecast_cache
+                .overlay(key, canonical, own, now, deadline)
+                .await
+                .map(|pin| Documents(Some(pin)));
         }
-        Ok(rss_documents(coord, &fetched, now))
+        Ok(Documents(Some(canonical)))
     }
     /// The stored mid document of one region at `now`: the last successfully saved acquisition,
     /// searched month by month back to [`HISTORY_START_MONTH`] (legacy keeps it until a newer
@@ -817,8 +802,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             wait_bound(deadline),
         )
         .await
+        .map(|docs| docs.to_vec())
     }
-    /// [`Self::mid_answer`] waiting for an acquisition only until `until`.
     async fn mid_answer_by(
         &self,
         model: MidModel,
@@ -827,51 +812,40 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         deadline: Instant,
         until: Instant,
-    ) -> Result<Vec<Doc>, String> {
-        let (kind, key) = match model {
-            MidModel::Forecast => ("mid-fcst", format!("stn-{}", reg_id.to_ascii_lowercase())),
-            MidModel::Land => (
-                "mid-land-fcst",
-                format!("reg-{}", reg_id.to_ascii_lowercase()),
-            ),
-            MidModel::Temp => ("mid-ta", format!("reg-{}", reg_id.to_ascii_lowercase())),
-        };
-        let key = ProviderKey::Named { id: key };
-        let latest = publication::mid_tm_fc(now as i64).ok_or("clock")?;
-        let latest_part = latest.partition();
-        for month in history_months(now).into_iter().rev() {
-            let parts = self
-                .reader
-                .partitions("data-go-kr", kind, &key, &[month], deadline)
-                .await
-                .map_err(|e| format!("{kind} listing: {e}"))?;
-            let mut fetched = self
-                .reader
-                .all("data-go-kr", kind, &key, &parts, deadline)
-                .await
-                .map_err(|e| format!("{kind} read: {e}"))?;
-            if collected
-                && month == latest.date() / 100
-                && !present(&fetched, &latest_part, now)
-                && let Some(request) = mid_request(model, reg_id, latest)
-                && let Some(f) = self
-                    .acquire(
-                        format!("{kind}/{}/{latest_part}", reg_id.to_ascii_lowercase()),
-                        fetch::ForecastRequest::DataGoKr(request),
-                        LATEST_RETRY,
-                        until,
-                    )
-                    .await
-            {
-                fetched.push(visible(f, now));
-            }
-            let found = mid_documents(model, reg_id, &fetched, now);
-            if !found.is_empty() {
-                return Ok(found);
-            }
+    ) -> Result<Documents, String> {
+        if reg_id.len() > 256 {
+            return Err("mid region capacity".into());
         }
-        // No acquisition was ever saved: legacy has no document either.
-        Ok(Vec::new())
+        let key = ForecastKey::Mid(
+            model,
+            forecast_cache::copied(reg_id).map_err(|e| e.to_string())?,
+        );
+        let canonical = self.forecast_cache.get(key.clone(), now, deadline).await?;
+        let latest = publication::mid_tm_fc(now as i64).ok_or("clock")?;
+        if collected
+            && !canonical.value.present(&latest.partition(), now)
+            && let Some(request) = mid_request(model, reg_id, latest)
+            && let Some(own) = self
+                .acquire(
+                    format!(
+                        "{}/{}/{}",
+                        key.kind(),
+                        reg_id.to_ascii_lowercase(),
+                        latest.partition()
+                    ),
+                    fetch::ForecastRequest::DataGoKr(request),
+                    LATEST_RETRY,
+                    until,
+                )
+                .await
+        {
+            return self
+                .forecast_cache
+                .overlay(key, canonical, own, now, deadline)
+                .await
+                .map(|pin| Documents(Some(pin)));
+        }
+        Ok(Documents(Some(canonical)))
     }
     async fn load(&self, request: &KmaRequest, deadline: Instant) -> SourceAnswer {
         match self.build(request, deadline).await {
@@ -1024,10 +998,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             async {
                 let Some(grid) = grid else {
                     return (
-                        Ok((Vec::new(), None)),
-                        Ok((Vec::new(), None)),
-                        Ok((Vec::new(), None)),
-                        Ok(Vec::new()),
+                        Ok((Documents::default(), None)),
+                        Ok((Documents::default(), None)),
+                        Ok((Documents::default(), None)),
+                        Ok(Documents::default()),
                     );
                 };
                 tokio::join!(
@@ -1105,7 +1079,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         deadline: Instant,
         until: Instant,
-    ) -> Result<HashMap<(MidModel, String), Vec<Doc>>, String> {
+    ) -> Result<HashMap<(MidModel, String), Documents>, String> {
         let mut mids = HashMap::new();
         if let Ok(row) = region_code(region, city) {
             let mut wanted = vec![
@@ -1377,22 +1351,6 @@ fn organized(family: Family, coord: Coord, f: &Fetched) -> Option<Organized> {
     let list = items(&f.page_refs())?;
     Some(collect(family, &list, &slot, coord))
 }
-/// Whether legacy collection keeps a stored grid acquisition: the collector saves its rows
-/// (`invalidForecast` stays pending, `controllerManager.js:1212-1215`), and a current
-/// observation carries no recovery sentinel (`t1h` -50 or `reh` -1 is collected again,
-/// `PastConditionGather._isInvalid`, `PastConditionGather.js:80-90`).
-fn usable(family: Family, coord: Coord, f: &Fetched) -> bool {
-    match organized(family, coord, f) {
-        Some(Organized::Rows(rows)) => {
-            !rows.is_empty()
-                && (family != Family::Current
-                    || rows
-                        .iter()
-                        .all(|r| r.num("t1h") != -50. && r.num("reh") != -1.))
-        }
-        _ => false,
-    }
-}
 /// The S16 input identity of one grid acquisition: its publication through the last row it can
 /// write, the horizons of [`lookback_ms`] (current: the slot; ultra-short: six hours plus a
 /// trailing day; short: six days).
@@ -1586,11 +1544,6 @@ impl From<String> for Unbuilt {
     }
 }
 /// Whether an acquisition of `partition` was complete at `now`.
-fn present(fetched: &[Fetched], partition: &str, now: f64) -> bool {
-    fetched
-        .iter()
-        .any(|f| f.partition == partition && f.fetched_at_ms as f64 <= now)
-}
 /// `YYYYMMDD-HHMM` to its publication.
 fn partition_publication(p: &str) -> Option<Publication> {
     let (d, t) = p.split_once('-')?;
@@ -1655,8 +1608,8 @@ pub struct Snapshot {
     now: f64,
     town: Doc,
     coord: Coord,
-    models: HashMap<TownModel, Vec<Doc>>,
-    mids: HashMap<(MidModel, String), Vec<Doc>>,
+    models: HashMap<TownModel, Documents>,
+    mids: HashMap<(MidModel, String), Documents>,
     zones: Arc<Zones>,
     /// None: the warning state could not be read (legacy's store error).
     special: Option<Arc<ZoneState>>,
@@ -1671,7 +1624,7 @@ impl Snapshot {
     fn missing_town(
         now: f64,
         zones: Arc<Zones>,
-        mids: HashMap<(MidModel, String), Vec<Doc>>,
+        mids: HashMap<(MidModel, String), Documents>,
         air: air_input::AirAnswers,
         life: life_input::LifeAnswers,
         special: Option<Arc<ZoneState>>,

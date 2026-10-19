@@ -8,6 +8,8 @@ mod air_forecast_s3;
 mod air_s3;
 #[path = "domestic/asos.rs"]
 mod asos;
+#[path = "domestic/forecast_cache.rs"]
+mod forecast_cache;
 #[path = "domestic/late_publication.rs"]
 mod late_publication;
 #[path = "domestic/life.rs"]
