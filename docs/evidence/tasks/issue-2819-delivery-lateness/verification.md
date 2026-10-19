@@ -1,5 +1,14 @@
 # Finite admitted delivery cohorts: selected evidence
 
+2026-10-19 integration note: the dated results and source/binary hashes below
+retain their original execution identities. Statements about an unmerged or
+parallel parent describe that original verification point. The integrated source
+now includes C1/B1 and the preceding ordered fixes. Current source-bound checks
+require explicit dev and release package rebuilds, separate owned smoke, independent
+review and exact CI/tree reconciliation. The final [PR2826 integration record](https://github.com/WizardFactory/TodayWeather/pull/2826)
+binds those actual results; this note does not relabel historical checks or
+qualify production, a full recovery bundle, shadow or issue closure.
+
 2026-10-18. Child scope of [#2819](https://github.com/WizardFactory/TodayWeather/issues/2819): C3 alarms and the minute-refusal trigger inside C2, stacked on N1 `7659b9fa515de04573bcd18581a4a5251266ff16`. C2 compensation after other definite no-POST causes remains unresolved. C1/B1 are separate unmerged branches and are not ancestors. No issue closure or main/global qualification.
 
 ## Behavior and discriminating tests

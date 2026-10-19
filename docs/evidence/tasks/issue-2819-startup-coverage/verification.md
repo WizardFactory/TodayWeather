@@ -1,5 +1,14 @@
 # E1/E2 production startup coverage verification
 
+2026-10-19 integration note: the dated results and source/binary hashes below
+retain their original execution identities. Statements about an unmerged or
+parallel parent describe that original verification point. The integrated source
+now includes C1/B1 and the preceding ordered fixes. Current source-bound checks
+require explicit dev and release package rebuilds, separate owned smoke, independent
+review and exact CI/tree reconciliation. The final [PR2832 integration record](https://github.com/WizardFactory/TodayWeather/pull/2832)
+binds those actual results; this note does not relabel historical checks or
+qualify production, a full recovery bundle, shadow or issue closure.
+
 Scope: #2819 E1 plus AK's confirmed E2 optional-file/mandatory-config contract.
 Parent is unmerged C6 b080bc48; C1/B1 remain separate unmerged branches. This
 records local checks, not main integration, full recovery, shadow or production readiness.

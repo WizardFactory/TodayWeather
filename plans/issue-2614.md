@@ -572,6 +572,18 @@ stacked on N1; C1 and B1 are separate unmerged branches. No merged/full-bundle,
 #2819/#2704/#2705, seven-day shadow or production completion is claimed.
 
 
+### 2026-10-19 ordered #2819 integration records
+
+AK subsequently authorized the ordered main integration of PR2820–2830,
+2832,2834,2835 while retaining warning acquisition180s and delivery polling5s.
+The original per-task pre-merge declarations, parent-status prose and exact
+execution receipts above remain historical. They are not retroactive main or
+production evidence. Current head/base, regression/smoke, independent review, CI
+and actual merge-tree results are recorded on each PR. Live providers/device
+sends, deployment, shadow, deferred #2724 and global issue closure remain outside
+this integration authority.
+
+
 #### #2819 C2: definite no-POST alert-state restoration
 
 The [parent plan](issue-2819-delivery-cohort.md) and
