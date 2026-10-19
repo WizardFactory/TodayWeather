@@ -46,14 +46,16 @@ fn services_at(
 }
 
 // Each GET has a deliberate cold-empty/unavailable input and expected native status.
-// These are route/contract checks, not a replacement for canonical weather parity.
+// Direct KMA may complete with partial weather or its exact dependency-error reply.
+// These are route/contract checks, not weather availability, latency or frozen-input parity.
 #[derive(Clone, Copy, Debug)]
 enum Expected {
     Status(u16),
     Nation,
+    NativeKma,
 }
 fn reads() -> Vec<(&'static str, &'static str, Expected)> {
-    use Expected::{Nation, Status};
+    use Expected::{Nation, NativeKma, Status};
     vec![
         (
             "/weather/coord/{location}",
@@ -68,23 +70,19 @@ fn reads() -> Vec<(&'static str, &'static str, Expected)> {
         (
             "/v000901/kma/addr/{location}",
             "/v000901/kma/addr/Seoul",
-            Status(200),
+            NativeKma,
         ),
         (
             "/v000903/kma/addr/{location}",
             "/v000903/kma/addr/Seoul",
-            Status(200),
+            NativeKma,
         ),
         (
             "/geocode/v000903/coord/{location}",
             "/geocode/v000903/coord/not-a-coordinate",
             Status(400),
         ),
-        (
-            "/v000803/town/{location}",
-            "/v000803/town/Seoul",
-            Status(200),
-        ),
+        ("/v000803/town/{location}", "/v000803/town/Seoul", NativeKma),
         ("/v000903/nation/KR", "/v000903/nation/KR", Nation),
         (
             "/weather/v000901/coord/{location}",
@@ -102,11 +100,7 @@ fn reads() -> Vec<(&'static str, &'static str, Expected)> {
             Status(501),
         ),
         ("/v000903/kma/special", "/v000903/kma/special", Status(501)),
-        (
-            "/v000705/town/{location}",
-            "/v000705/town/Seoul",
-            Status(200),
-        ),
+        ("/v000705/town/{location}", "/v000705/town/Seoul", NativeKma),
         (
             "/geocode/v000901/addr/{location}",
             "/geocode/v000901/addr/Seoul",
@@ -280,12 +274,14 @@ async fn combined_native_router_inventory_and_acknowledged_state_restore() {
                 state
                     .coll(server2::push::Coll::Alarm)
                     .iter()
+                    .map(Result::unwrap)
                     .any(|(_, r)| r.token("fcmToken") == Some("s20h-retained-token"))
             );
             assert!(
                 !state
                     .coll(server2::push::Coll::Alarm)
                     .iter()
+                    .map(Result::unwrap)
                     .any(|(_, r)| r.token("fcmToken") == Some("s20h-deleted-token"))
             );
         }
@@ -318,13 +314,33 @@ async fn combined_native_router_inventory_and_acknowledged_state_restore() {
             let status = response.status().as_u16();
             match expected {
                 Expected::Status(want) => assert_eq!(status, want, "phase{phase} {pattern}"),
+                Expected::NativeKma => assert!(
+                    matches!(status, 200 | 502),
+                    "phase{phase} {pattern}: {status}"
+                ),
                 Expected::Nation => assert!(
                     matches!(status, 200 | 500),
                     "phase{phase} {pattern}: {status}"
                 ),
             }
             println!("S20H_READ phase={phase} path={pattern} status={status}");
-            if pattern.contains("/nation/") && status == 200 {
+            if matches!(expected, Expected::NativeKma) && status == 502 {
+                // api::native's dependency failure is res.status(502).send(text),
+                // distinct from gateway no-store and finalhandler error responses.
+                assert_eq!(
+                    response.headers()["content-type"],
+                    "text/html; charset=utf-8"
+                );
+                assert_eq!(response.headers()["content-length"], "12");
+                assert_eq!(response.headers()["x-powered-by"], "Express");
+                assert_eq!(response.headers()["access-control-allow-origin"], "*");
+                assert!(!response.headers().contains_key("cache-control"));
+                assert!(!response.headers().contains_key("x-content-type-options"));
+                let tag = response.headers()["etag"].to_str().unwrap().to_owned();
+                let body = response.bytes().await.unwrap();
+                assert_eq!(body.as_ref(), b"Bad Gateway\n");
+                assert_eq!(tag, server2::gateway::response::etag(&body));
+            } else if pattern.contains("/nation/") && status == 200 {
                 let value: Value =
                     serde_json::from_slice(&response.bytes().await.unwrap()).unwrap();
                 assert_eq!(value["weather"].as_array().unwrap().len(), 15);

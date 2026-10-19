@@ -577,7 +577,14 @@ async fn a_user_edit_during_region_resolution_is_not_overwritten_or_sent() {
     assert!(rig.google.sends().is_empty());
     let state = rig.push.state();
     let state = state.read().unwrap();
-    let doc = state.coll(Coll::Alert).iter().next().unwrap().1.doc;
+    let doc = state
+        .coll(Coll::Alert)
+        .iter()
+        .map(Result::unwrap)
+        .next()
+        .unwrap()
+        .1
+        .doc;
     assert_eq!(doc.get("enable"), &Val::Bool(false));
     assert_eq!(doc.get("name"), &Val::Str("changed-by-user".into()));
 }
@@ -753,6 +760,7 @@ async fn auth_preparation_changes_never_reach_fcm_and_claims_remain_terminal() {
                         .unwrap()
                         .coll(Coll::Alert)
                         .iter()
+                        .map(Result::unwrap)
                         .next()
                         .unwrap()
                         .1

@@ -729,17 +729,24 @@ impl<T: CatalogTransport + std::marker::Send + Sync + 'static> AlertWorker<T> {
             let due = {
                 let state = self.push.state();
                 let state = state.read().unwrap_or_else(|e| e.into_inner());
-                state
-                    .coll(Coll::Alert)
-                    .iter()
-                    .filter(|(_, r)| {
-                        eligible(
-                            &r.doc,
-                            (minute_ms.rem_euclid(86_400_000) / 1000) as f64,
-                            now_ms,
-                        )
-                    })
-                    .collect::<Vec<_>>()
+                let mut due = Vec::new();
+                for entry in state.coll(Coll::Alert).iter() {
+                    let (n, record) = match entry {
+                        Ok(entry) => entry,
+                        Err(_) => {
+                            self.push.invalidate_state();
+                            return MinuteReport::default();
+                        }
+                    };
+                    if eligible(
+                        &record.doc,
+                        (minute_ms.rem_euclid(86_400_000) / 1000) as f64,
+                        now_ms,
+                    ) {
+                        due.push((n, record));
+                    }
+                }
+                due
             };
             if due.is_empty() {
                 return MinuteReport::default();
