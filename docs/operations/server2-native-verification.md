@@ -249,3 +249,38 @@ The adapter calls the real acquisition/publication components with a synthetic
 key and volatile budget; it does not exercise runtime environment-key discovery
 or a real provider. No live calls, credentials, push sends, deployment, production
 quota, global readiness or whole-service rollback/shadow qualification is claimed.
+
+## Narrative cache error recovery
+
+From `server2/`, with Python3 and the pinned Rust toolchain/dependencies:
+
+```sh
+cargo run --locked --offline --example narrative_cache_smoke
+```
+
+The executable starts an owned loopback S3-compatible peer. The actual narrative
+Store publishes synthetic current-KST-day prose. A wrapper delays the first index
+operation before its S3 delegate; a20ms Service request expires. Demand inside the
+separate1s completed-error gate must perform no more index work. After a real1.1s
+wait, demand must recover the exact published narrative with an asserted3wrapper
+entries (one injected, two actual date indexes). A cached read adds0indexcalls.
+
+A separate service/fixtureSource phase repeats the injected failure, then directly
+invokes successful refresh publication. It must clear the still-active error gate
+and recover the same prose before automatic1s expiry. FixtureSource calls are
+synthetic method calls across the ten offices, not external providerHTTP or an
+observed worker cadence. The first phase forbids Source.fetch. Both phases use
+the owned S3peer; it is killed/reaped before PASS. The report records actual request,
+retry and refresh timings/counters. Injected delays/local timings are not measured
+real S3/network outages or production latency limits.
+
+Completed errors have a short gate independent of30s confirmed values/absence;
+one reader per office and existing read/lock deadlines remain. Public attachment
+still waits at most min(remaining deadline,2s). An admitted Store read retains its
+original two-date/eight-page-per-date bound plus catalog/raw limits. Persistent
+fault tests assert no repeated same-office scan inside the short gate, rather than
+claiming measured quotas/headroom. True absence, office isolation, expired-answer
+error handling and original30s TTL have separate controls. Cancelled work without
+a completed Result creates no false absence/error marker. No stale fallback,
+read-path provider fetch, collection timer, verification flag, live key, deployment
+or whole-service shadow/rollback qualification is introduced.

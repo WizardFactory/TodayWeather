@@ -532,3 +532,16 @@ and periodic fold remain. This task stacks on B3, not an integrated master relea
 Focused tests, actual owned HTTP/S3 recovery across a real memo expiry, independent
 review and exact CI are required. No timer, operating allowance, merge or live
 action is authorized. D2 capacity and #2819/#2704/#2705/shadow remain open.
+
+#### #2819 narrative cache recovery
+
+[Task plan](issue-2819-narrative-cache.md) and
+[contract](../specs/issue-2819-narrative-cache.md) separate30s confirmed answers
+from a1s monotonic gate after completed storage errors. Required review1 rejected
+the initial prototype's unbounded repeated-error behavior; the author selected
+short independent backoff, preserved office owner/deadlines/TTL/expiry, and renewed
+persistent-fault, recovery and successful-publication invalidation proofs. No new
+production approval or stale fallback/provider timer is claimed. This stacks on
+D1, not integratedmain. Current re-review and exact-newheadCI remain mandatory;
+Nation childreads, other#2819items, D2/#2704/#2705/shadow and whole-bundle recovery
+remain separate/open. No merge/live action authorized.

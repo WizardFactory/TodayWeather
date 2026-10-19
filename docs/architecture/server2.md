@@ -3786,3 +3786,32 @@ B3 parent as the existing interface; they do not attest a live execution.
 [Local verification](../operations/server2-native-verification.md#d1-forecast-zone-failure-recovery)
 uses owned peers and a real five-minute retry interval. The slice is stacked
 on B3 and is not an integrated release or D2 capacity qualification.
+
+### #2819 narrative read cache recovery
+
+The [cache contract](../../specs/issue-2819-narrative-cache.md) separates a
+confirmed answer from a short completed-error retry gate under the same
+per-office mutex. Only `Ok(Some(value))` or confirmed `Ok(None)` gets the
+existing30s answer entry. A completed timeout, transport, corruption or capacity
+error preserves the expired prior answer without serving/extending it, and
+sets an independent **1s monotonic retry-after**. Demand inside that gate omits
+the optional field without storage work; later demand can retry. Successful
+read or refresh publication clears the error gate immediately.
+
+This bounds repeated completed failures while retaining the original lock/read
+deadline and public attach cap min(remaining deadline,2s). One reader holds an
+office mutex. Each admitted Store read retains up to8indexpages for each of two
+dates (at most16indexLISTpages), followed by existing catalog/raw limits. These
+are source bounds, not measured outage cost/quota/headroom. Cancellation without
+a completed error does not manufacture an error/absence entry. Recovery may wait
+for the short gate plus existing read/lock bounds; this replaces the initial
+prototype's unbounded immediate retries, rather than accepting their outage cost.
+No stale-on-error, read-path provider acquisition, timer, mode or schema change.
+
+The [proposed flow](diagrams/server2-narrative-cache.html) and
+[editable source](diagrams/server2-narrative-cache.sequence.json) pin prototype
+`968205d8` as existing interface context, not implementation/execution proof.
+The [operator scenario](../operations/server2-native-verification.md#narrative-cache-error-recovery)
+uses actual owned S3 publication/readback, injected delays and a fixture refresh.
+It does not establish real S3 latency, unconditional prose presence or whole-bundle
+recovery. Nation discardedchildreads, D2/capacity and shadow remain separate.
