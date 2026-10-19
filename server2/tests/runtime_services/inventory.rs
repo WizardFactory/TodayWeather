@@ -288,6 +288,8 @@ async fn combined_native_router_inventory_and_acknowledged_state_restore() {
         // This real-clock/no-weather setup can produce native partial weather or the
         // established rendered child-error response. Validate each exact contract below;
         // it is not frozen-input parity. Canonical prose recovery is checked separately.
+        // Late optional prose may be absent; deterministic native/S3 controls require
+        // the exact positive national field and still reject null/changed content.
         let restored_prose = server2::narrative::store::Store::new(s.s3.clone().unwrap())
             .unwrap()
             .read(
@@ -343,18 +345,7 @@ async fn combined_native_router_inventory_and_acknowledged_state_restore() {
             } else if pattern.contains("/nation/") && status == 200 {
                 let value: Value =
                     serde_json::from_slice(&response.bytes().await.unwrap()).unwrap();
-                assert_eq!(value["weather"].as_array().unwrap().len(), 15);
-                assert_eq!(
-                    value["forecastNarrative"],
-                    *expected_prose.as_ref().unwrap()
-                );
-                assert!(
-                    value["weather"]
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .all(|item| item.get("forecastNarrative").is_none())
-                );
+                super::inventory_nation::assert_response(&value, expected_prose.as_ref().unwrap());
             } else if pattern.contains("/nation/") {
                 assert_eq!(
                     response.headers()["content-type"],
@@ -694,5 +685,85 @@ async fn populated_warning_http_survives_shared_service_reconstruction() {
             .unwrap();
         assert_eq!(unchanged.status(), 304);
         assert!(unchanged.bytes().await.unwrap().is_empty());
+    }
+}
+
+// INT-2826-002: exercise the real production factory, not a hand-wired backend.
+// Keep virtual request time fixed while real loopback S3/network I/O is polled;
+// this isolates factory reader wiring from cold-weather wall-clock cost. The
+// separate real-clock inventory and late-read controls retain deadline behavior.
+#[tokio::test]
+async fn factory_national_prose_reader_survives_factory_reconstruction() {
+    let _ = server2::domestic::kma::source::towns();
+    let peer = Peer::new();
+    let mut expected = None;
+    for phase in 0..2 {
+        let services = services(&peer);
+        ready(&services).await;
+        if phase == 0 {
+            expected = Some(populate(&services).await.1);
+        }
+        tokio::time::pause();
+        let router = services.public_router(std::sync::Arc::new(server2::SharedState::new(
+            &server2::Config::default(),
+        )));
+        let phase_started = std::time::Instant::now();
+        for version in ["v000903", "v000901"] {
+            let mut proved = false;
+            for cold_to_warm_attempt in 0..4 {
+                use tower::ServiceExt;
+                let request = axum::http::Request::builder()
+                    .uri(format!("/{version}/nation/KR"))
+                    .header("accept-language", "ko")
+                    .body(axum::body::Body::empty())
+                    .unwrap();
+                let mut response = Box::pin(router.clone().oneshot(request));
+                let response = std::future::poll_fn(|cx| {
+                    assert!(
+                        phase_started.elapsed() < Duration::from_secs(15),
+                        "factory fixture did not complete"
+                    );
+                    match std::future::Future::poll(response.as_mut(), cx) {
+                        std::task::Poll::Ready(result) => std::task::Poll::Ready(result.unwrap()),
+                        std::task::Poll::Pending => {
+                            // A runnable task prevents automatic paused-time advancement.
+                            cx.waker().wake_by_ref();
+                            std::task::Poll::Pending
+                        }
+                    }
+                })
+                .await;
+                let status = response.status();
+                let bytes = axum::body::to_bytes(response.into_body(), 2 << 20)
+                    .await
+                    .unwrap();
+                if status == 500 {
+                    let body = std::str::from_utf8(&bytes).unwrap();
+                    assert!(
+                        body.contains("&quot;getWeather&quot;"),
+                        "unexpected factory child error: {body}"
+                    );
+                    println!(
+                        "FACTORY_PROSE_WARMUP phase={phase} version={version} attempt={cold_to_warm_attempt} child500"
+                    );
+                    continue;
+                }
+                assert_eq!(status, 200);
+                let value: Value = serde_json::from_slice(&bytes).unwrap();
+                assert_eq!(
+                    value.get("forecastNarrative"),
+                    expected.as_ref(),
+                    "factory must attach exact stored prose, phase {phase}, {version}"
+                );
+                super::inventory_nation::assert_response(&value, expected.as_ref().unwrap());
+                proved = true;
+                break;
+            }
+            assert!(
+                proved,
+                "factory fixture must produce a strict positive nation response: phase {phase}, {version}"
+            );
+        }
+        tokio::time::resume();
     }
 }

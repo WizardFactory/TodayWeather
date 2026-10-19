@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Proposed admitted push cohort completion",
+    "output": "docs/architecture/diagrams/server2-delivery-lateness.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      640
+    ],
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "7659b9fa515de04573bcd18581a4a5251266ff16",
+      "link_mode": "web"
+    }
+  },
+  "participants": [
+    {
+      "id": "tick",
+      "type": "backend",
+      "label": "Minute tick",
+      "sublabel": "fresh queued work",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/supervisor.rs",
+          "line": 45,
+          "end_line": 103
+        }
+      ]
+    },
+    {
+      "id": "cohort",
+      "type": "backend",
+      "label": "Cohort",
+      "sublabel": "fixed list, six slots",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/alarm.rs",
+          "line": 346,
+          "end_line": 408
+        },
+        {
+          "path": "server2/src/push/deliver/alerts.rs",
+          "line": 704,
+          "end_line": 763
+        },
+        {
+          "path": "server2/src/push/deliver/alerts.rs",
+          "line": 627,
+          "end_line": 703
+        }
+      ]
+    },
+    {
+      "id": "ledger",
+      "type": "database",
+      "label": "Claim ledger",
+      "sublabel": "durable one-shot",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/ledger.rs",
+          "line": 66,
+          "end_line": 159
+        }
+      ]
+    },
+    {
+      "id": "writer",
+      "type": "backend",
+      "label": "State writer",
+      "sublabel": "current subscription",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/ops.rs",
+          "line": 14,
+          "end_line": 44
+        }
+      ]
+    },
+    {
+      "id": "fcm",
+      "type": "backend",
+      "label": "FCM client",
+      "sublabel": "guard before POST",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/fcm.rs",
+          "line": 285,
+          "end_line": 339
+        }
+      ]
+    },
+    {
+      "id": "peer",
+      "type": "external",
+      "label": "HTTP peer",
+      "sublabel": "owned in verification",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/fcm.rs",
+          "line": 309,
+          "end_line": 339
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 160,
+      "to": 250,
+      "label": "Admit one finite list"
+    },
+    {
+      "from": 260,
+      "to": 340,
+      "label": "Recheck selected state"
+    },
+    {
+      "from": 350,
+      "to": 500,
+      "label": "One-shot result"
+    }
+  ],
+  "messages": [
+    {
+      "id": "fresh",
+      "from": "tick",
+      "to": "cohort",
+      "y": 175,
+      "label": "Fresh tick",
+      "variant": "default"
+    },
+    {
+      "id": "claim",
+      "from": "cohort",
+      "to": "ledger",
+      "y": 205,
+      "label": "Claim once",
+      "variant": "emphasis"
+    },
+    {
+      "id": "owned",
+      "from": "ledger",
+      "to": "cohort",
+      "y": 235,
+      "label": "Owned list",
+      "variant": "return"
+    },
+    {
+      "id": "guarded",
+      "from": "cohort",
+      "to": "fcm",
+      "y": 265,
+      "label": "After minute (alerts: same window)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "selection",
+      "from": "fcm",
+      "to": "writer",
+      "y": 295,
+      "label": "Check selection",
+      "variant": "default"
+    },
+    {
+      "id": "current",
+      "from": "writer",
+      "to": "fcm",
+      "y": 325,
+      "label": "Current state",
+      "variant": "return"
+    },
+    {
+      "id": "post",
+      "from": "fcm",
+      "to": "peer",
+      "y": 355,
+      "label": "POST if running",
+      "variant": "emphasis"
+    },
+    {
+      "id": "outcome",
+      "from": "peer",
+      "to": "fcm",
+      "y": 385,
+      "label": "Typed outcome",
+      "variant": "return"
+    },
+    {
+      "id": "report",
+      "from": "fcm",
+      "to": "cohort",
+      "y": 415,
+      "label": "Keep outcome",
+      "variant": "return"
+    },
+    {
+      "id": "result",
+      "from": "cohort",
+      "to": "ledger",
+      "y": 445,
+      "label": "Write result",
+      "variant": "default"
+    },
+    {
+      "id": "retained",
+      "from": "ledger",
+      "to": "cohort",
+      "y": 475,
+      "label": "Claim retained",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Proposal and source boundary",
+      "items": [
+        "This proposal changes minute-expiry admission, not claim ownership or external retries.",
+        "Source links pin existing interfaces at7659b9fa; they are not implementation or production proof."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Time and window policy",
+      "items": [
+        "An already claimed list can finish after its first UTC minute; no extra member or stale catch-up.",
+        "Alerts retain the same actual admitted configured window occurrence and clock/shutdown checks.",
+        "No alarm lateness SLA or invented sum-of-timeouts completion bound is claimed."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "C2 remains separate",
+      "items": [
+        "This child does not compensate state after other definite no-POST refusals.",
+        "Actual rejected/unknown sends retain durable claims and existing six-hour one-shot behavior."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Checks still required",
+      "items": [
+        "Existing60-test delivery baseline passed; no new fix test has run yet.",
+        "Required proof: more than six members cross a minute, selected edits/windows reject correctly, restart does not resend.",
+        "Use owned peers only; no live providers, devices, merge or deployment authority."
+      ]
+    }
+  ]
+}

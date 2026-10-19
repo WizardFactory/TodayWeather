@@ -1,0 +1,93 @@
+# Finite admitted delivery cohorts: selected evidence
+
+2026-10-19 integration note: the dated results and source/binary hashes below
+retain their original execution identities. Statements about an unmerged or
+parallel parent describe that original verification point. The integrated source
+now includes C1/B1 and the preceding ordered fixes. Current source-bound checks
+require explicit dev and release package rebuilds, separate owned smoke, independent
+review and exact CI/tree reconciliation. The final [PR2826 integration record](https://github.com/WizardFactory/TodayWeather/pull/2826)
+binds those actual results; this note does not relabel historical checks or
+qualify production, a full recovery bundle, shadow or issue closure.
+
+2026-10-18. Child scope of [#2819](https://github.com/WizardFactory/TodayWeather/issues/2819): C3 alarms and the minute-refusal trigger inside C2, stacked on N1 `7659b9fa515de04573bcd18581a4a5251266ff16`. C2 compensation after other definite no-POST causes remains unresolved. C1/B1 are separate unmerged branches and are not ancestors. No issue closure or main/global qualification.
+
+## Behavior and discriminating tests
+
+Against unchanged N1 runtime, three public worker tests failed as intended: seven-member alarms and alerts made zero posts instead of seven after crossing the selecting minute; a same-minute backwards clock posted once instead of zero. Pre-execution input hashes bind all three tests; retained copies were made after launch but before any edit and match those hashes. Minimal Green passed all three. A later next-day window test then failed one versus zero against the uncommitted minimal Green, before adding the captured-window helper. Its own source/test copies and map predate execution. That is a distinct incremental Red, not a run against untouched N1.
+
+Current delivery tests cover more than six members, accepted posts, retained claims and same-service-state reconstruction, inclusive end milliseconds, overnight boundaries, finite next-day refusal and same-minute backwards-clock refusal after owned OAuth. Private unit controls compare a constant-size interval implementation to a test-only scan of the original JS predicate across fifteen coercion/window cases, including negative epochs, and reject closing-time overflow. The production implementation never scans 86,400 seconds. Extraction plus the new guard is feature work following Red; no separate pure-refactor execution is claimed.
+
+The first full runtime target was **30 passed / 1 failed / 1 ignored**: its old test unconditionally rejected the next minute. This is an actual policy-expectation failure, not setup noise or a passed run. The extra test path was declared before editing. Its replacement allows admitted next-minute work and retains backwards-clock refusal, adding inclusive-end, closed-window and next-day negatives. Full renewed runtime is **31 passed / 1 ignored**. All runtime/library/delivery sources and fixtures in the prior map were unchanged except the separate runtime test and declaration, so prior **lib103 + delivery66** are explicitly reused. Total clean scoped inventory is **200 passed / 1 ignored**, counted once; focused Greens, repeated targets and failed whole invocations are excluded. Fmt, all-target Clippy `-D warnings` and optimized example build exited zero. No whole-domestic rerun or PASS is claimed.
+
+## Additional executable rehearsal
+
+Optimized `delivery_lateness_smoke` exited zero under a sanitized PATH/TMPDIR/locale/TZ environment. Thirteen alarms plus thirteen conditional alerts crossed the minute after the first six weather fetches. Each cohort made exactly13 owned FCM POSTs (503/rejected), one owned OAuth request and peak6 active weather fetches. The minute claim remained, and service reconstruction from the same in-memory journal added zero posts. The parent waited for process exit and independently verified both owned loopback listeners closed. All 714 mapped source/data/fixture/manifest inputs and the retained executable matched before/after.
+
+Report SHA-256 `9f50794ba81ad9dbfecc00bb1f8f56c3ec479412eba2b5318bf35e62129120af`. Retained optimized executable SHA-256 `a0b6df6dc55932c6d305fe9557bfb898476117fe3778f1748630f15ecb513b7c`. Raw output, source map, exit and listener checks stay in ignored `reports/sdlc/issue-2819-delivery-lateness/functional1/`; selected executable stays under that task's `bin1/`, outside the disposable Cargo target.
+
+Actual HTTP is only synthetic OAuth/FCM loopback. Weather is a recorded in-process Fetch; journal is MemS3 conditional-write storage, not AWS S3. Restore is service-object reconstruction in one executable, not OS-process restart. Zero live/device sends follows forced loopback/synthetic configuration, not actual-device telemetry. No provider/key/quota, global concurrency, host/capacity, live scheduler cadence or operational suspension-lateness SLA is established.
+
+## Contract and presentation bounds
+
+All19 changed paths match the predeclared/amended task boundary; no runtime legacy asset is introduced. [Contract](../../../../specs/issue-2819-delivery-lateness.md), [operator scenario](../../../operations/server2-native-verification.md#delivery-cohort-lateness), [proposed flow](../../../architecture/diagrams/server2-delivery-lateness.html) and [editable source](../../../architecture/diagrams/server2-delivery-lateness.sequence.json) are maintained. Diagram artifact/provenance/browser checks PASS; actual main light1440 and dark2048 captures were visually inspected; offscreen cards were source-only. Frozen diagram pins base7659b9fa and its earlier60-test/no-new-test-yet card is design-time context, not the current results above. Sidecar/recovery metadata remains archived unchanged.
+
+Independent source/evidence PR review and exact-head CI are still required before pre-merge readiness. No merge/auto-merge/queue, cloud mutation, deployment, live notification, full previous recovery bundle, seven-day shadow or #2819/#2704/#2705 completion authority.
+
+
+### 2026-10-19 CI inventory oracle correction
+
+Current-head CI run 39182238417 failed the combined native inventory's
+unconditional national `forecastNarrative` equality after a 200 response. The
+retained gateway event took 3039 ms. The existing nation request shares a three-second
+weather/air budget and bounds optional prose by the remaining budget; this is
+consistent with late omission, but the CI trace does not identify the exact inner
+omission cause. The failed run remains evidence, not a successful check.
+
+CI-INVENTORY-002 changes test support only. The real-clock inventory still requires
+15 weather rows, no child prose, and exact original prose whenever present. A
+separate fast native-route/canonical-S3 control requires the complete original
+national prose for both API versions across two fresh readers. A paused-clock
+pending-read control proves valid late omission. Negative controls reject null,
+changed or child prose and an invalid row count. The canonical S3 restore equality
+remains strict. No runtime deadline, narrative capability or rollback requirement
+changes.
+
+The explicitly rebuilt package reproduced the old oracle failure (two controls
+passed and the late control failed), then all three controls passed. Current
+lib/delivery/nation/narrative/runtime/state regression: 257 passed, one ignored;
+all-target Clippy with warnings denied passed. A separately compiled release
+`narrative_smoke` exercised actual owned HTTP and S3: ten offices acquired from
+recorded providers, regional and national prose retained across fresh processes,
+HEAD/304 contracts preserved, no read-triggered provider calls, and non-200
+publication rejected. Its city/air inputs are doubles; this is not full startup,
+production latency or an eligible whole-service recovery rehearsal. Original
+failed and green logs, source maps and selected binaries remain local, with
+current independent review and exact-head CI linked on PR2826.
+
+This supporting test correction changes no runtime flow; the existing architecture
+and diagram contracts remain applicable and no new render is claimed.
+
+
+Required independent finding INT-2826-002 identified that the first fast positive
+constructed its nation backend directly and therefore did not prove production
+factory wiring. That finding remains in review history. The added strict control
+now builds `RuntimeServices` and its public router twice over retained canonical
+S3, and requires exact prose on both nation versions each time. It polls actual
+owned I/O while holding Tokio virtual time fixed, with an independent 15-second
+wall watchdog. This isolates wiring from cold-weather deadline cost and claims no
+production latency. A deliberate temporary factory-reader disconnection produced
+the intended missing-prose assertion failure; the exact original runtime bytes
+were restored and the test passed. The earlier hand-wired and late-budget controls
+remain separate. No production source changes from this correction are committed.
+
+
+A subsequent downstream fresh run exposed an allowed cold-empty child 500 in
+that factory fixture. The final control distinguishes this from reader wiring:
+it permits at most four cold-to-warm attempts per version, recognizes only the
+existing native child-error contract during warmup, and still requires a 200
+with exact original prose for every version in each factory phase. No 500 or
+absent-prose response counts as the positive. A phase-wide 15s wall watchdog
+bounds the held virtual-clock fixture. The original failed run is retained; the
+new disconnected-reader mutation still fails on missing prose, and normal
+runtime regression is repeated before the final review. This is fixture/wiring
+verification, not measured cold-weather availability or deadline qualification.
