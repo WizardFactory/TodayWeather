@@ -2451,7 +2451,7 @@ a current observation must carry no recovery sentinel (`t1h` -50 or `reh` -1 is 
 | Grid backfill (earlier publications: 23 current, 23 ultra-short, 7 short; S14 `schedule`) | Missing publications, in one owned pass per cell, family and latest publication (3 acquisitions in flight, 8 passes in their own pool); the request does not wait | Each pass at most hourly. Each publication shares the latest acquisition's flight and 5-minute retry bound. |
 | Latest short RSS (`wid/queryDFS.jsp`) | Not in S3 for the cell | 5 minutes |
 | Latest mid publications (`getMidFcst`, `getMidLandFcst`, `getMidTa` at the 06/18 `tmFc`) | A region legacy collects lacks the latest publication | 5 minutes |
-| Forecast-zone list (`getFcstZoneCd`) | Once per process, like legacy's `getFromKma()` at start; a published list replaces the memory | per process |
+| Forecast-zone list (`getFcstZoneCd`) | Until one complete readable process refresh; success replaces memory, failure remains demand-retryable (#2819 D1) | 5 minutes after an admitted attempt; stop after success |
 | Warning cycle (`WarningCollector.gather`, S12) | Once per 3 minutes, legacy's cadence; never two at once | 3 minutes |
 
 Retry keys are bounded at 65,536. Expired keys are pruned when the map doubles. Beyond the bound,
@@ -3767,3 +3767,22 @@ in that specific smoke and covered separately by source/history regressions.
 The [proposed contract](diagrams/server2-late-publication.html) and
 [editable source](diagrams/server2-late-publication.sequence.json) preserve their
 pre-implementation base identity; they are not execution or readiness evidence.
+
+### #2819 D1 forecast-zone recovery
+
+The [D1 contract](../../specs/issue-2819-zone-retry.md) changes the request-time
+forecast-zone process refresh from “attempted once” to “completed successfully
+once.” The existing `forecast-zones` owned flight still returns to callers
+immediately. Its creator claims the existing five-minute monotonic `Attempts`
+admission before collection. Errors, None, panic and empty/unreadable/incomplete
+results retain retry eligibility and last-good memory; there is no timer or
+pre-collection. A complete readable published list invalidates memory before
+latching success, so a later read folds S3. The ten-minute incremental refresh,
+daily full refold, field merge, original owned lifetime and funding remain.
+
+The [proposed flow](diagrams/server2-zone-refresh.html) and
+[editable source](diagrams/server2-zone-refresh.sequence.json) cite the committed
+B3 parent as the existing interface; they do not attest a live execution.
+[Local verification](../operations/server2-native-verification.md#d1-forecast-zone-failure-recovery)
+uses owned peers and a real five-minute retry interval. The slice is stacked
+on B3 and is not an integrated release or D2 capacity qualification.

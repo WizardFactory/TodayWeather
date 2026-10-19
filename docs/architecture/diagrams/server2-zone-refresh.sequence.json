@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Proposed forecast-zone failure recovery",
+    "output": "docs/architecture/diagrams/server2-zone-refresh.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "viewBox": [
+      1040,
+      665
+    ],
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "f3883e25e94ac97b9226ba1e99b5a23bccd16ecd",
+      "link_mode": "local-only"
+    }
+  },
+  "participants": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "Weather caller",
+      "sublabel": "demand only",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 365,
+          "end_line": 414,
+          "label": "Existing interface / proposed recovery change"
+        }
+      ]
+    },
+    {
+      "id": "source",
+      "type": "backend",
+      "label": "Zone source",
+      "sublabel": "stored data first",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 365,
+          "end_line": 414,
+          "label": "Existing interface / proposed recovery change"
+        }
+      ]
+    },
+    {
+      "id": "owned",
+      "type": "backend",
+      "label": "Owned flight",
+      "sublabel": "one refresh key",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 382,
+          "end_line": 410,
+          "label": "Existing interface / proposed recovery change"
+        }
+      ]
+    },
+    {
+      "id": "gate",
+      "type": "backend",
+      "label": "Retry admission",
+      "sublabel": "existing five minutes",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 198,
+          "end_line": 226,
+          "label": "Existing interface / proposed recovery change"
+        }
+      ]
+    },
+    {
+      "id": "acquire",
+      "type": "external",
+      "label": "Published list",
+      "sublabel": "provider + S3",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 1348,
+          "end_line": 1361,
+          "label": "Existing interface / proposed recovery change"
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 550,
+      "label": "Proposed demand-triggered recovery"
+    }
+  ],
+  "messages": [
+    {
+      "id": "step-0",
+      "from": "caller",
+      "to": "source",
+      "y": 170,
+      "label": "Read zones",
+      "variant": "default"
+    },
+    {
+      "id": "step-1",
+      "from": "source",
+      "to": "owned",
+      "y": 198,
+      "label": "No success: join key",
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-2",
+      "from": "owned",
+      "to": "gate",
+      "y": 226,
+      "label": "New owner: claim memo",
+      "variant": "default"
+    },
+    {
+      "id": "step-3",
+      "from": "gate",
+      "to": "owned",
+      "y": 254,
+      "label": "Due: admit once",
+      "variant": "return"
+    },
+    {
+      "id": "step-4",
+      "from": "owned",
+      "to": "acquire",
+      "y": 282,
+      "label": "Collect and publish",
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-5",
+      "from": "acquire",
+      "to": "owned",
+      "y": 310,
+      "label": "Failure: no success latch",
+      "variant": "return"
+    },
+    {
+      "id": "step-6",
+      "from": "owned",
+      "to": "source",
+      "y": 338,
+      "label": "Keep last-good memory",
+      "variant": "return"
+    },
+    {
+      "id": "step-7",
+      "from": "source",
+      "to": "caller",
+      "y": 366,
+      "label": "Stored / partial result",
+      "variant": "return"
+    },
+    {
+      "id": "step-8",
+      "from": "caller",
+      "to": "source",
+      "y": 394,
+      "label": "Demand after five minutes",
+      "variant": "default"
+    },
+    {
+      "id": "step-9",
+      "from": "source",
+      "to": "owned",
+      "y": 422,
+      "label": "Still no success: join",
+      "variant": "default"
+    },
+    {
+      "id": "step-10",
+      "from": "owned",
+      "to": "gate",
+      "y": 450,
+      "label": "Expired memo: claim",
+      "variant": "default"
+    },
+    {
+      "id": "step-11",
+      "from": "gate",
+      "to": "owned",
+      "y": 478,
+      "label": "Admit next attempt",
+      "variant": "return"
+    },
+    {
+      "id": "step-12",
+      "from": "owned",
+      "to": "acquire",
+      "y": 506,
+      "label": "Complete readable publish",
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-13",
+      "from": "owned",
+      "to": "source",
+      "y": 534,
+      "label": "Invalidate, latch success",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Proposed contract, not runtime evidence",
+      "items": [
+        "Pinned parent marks requested at start; this design moves success after readable publication.",
+        "Error, None, panic, empty or malformed result leaves retry eligibility.",
+        "No new timer, pre-collection, mode or operating allowance."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Preserve the existing owner",
+      "items": [
+        "One forecast-zones flight; immediate request wait and original owned lifetime.",
+        "Five-minute monotonic admission is claimed only by the flight creator.",
+        "Caller cancellation does not cancel acquisition; success stops process refresh."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "S3 remains authoritative",
+      "items": [
+        "Failed refresh retains last-good memory; complete published list invalidates it.",
+        "Existing ten-minute incremental refresh and daily refold are unchanged.",
+        "D2 capacity, live providers, quota, whole-service readiness and shadow are not qualified."
+      ]
+    }
+  ]
+}
