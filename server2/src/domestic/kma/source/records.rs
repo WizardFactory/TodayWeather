@@ -21,6 +21,51 @@ impl Fetched {
     pub fn page_refs(&self) -> Vec<&[u8]> {
         self.pages.iter().map(|p| &p[..]).collect()
     }
+    pub(super) fn checked_clone(&self) -> Result<Self, Error> {
+        let mut pages = Vec::new();
+        super::forecast_cache::reserve(&mut pages, self.pages.len())?;
+        pages.extend(self.pages.iter().cloned());
+        Ok(Self {
+            fetched_at_ms: self.fetched_at_ms,
+            partition: super::forecast_cache::copied(&self.partition)?,
+            pages,
+        })
+    }
+}
+/// Per owned forecast scope, including invalid/rejected and newer fallback-month inputs.
+#[derive(Default)]
+pub(super) struct ForecastScope {
+    partitions: usize,
+    acquisitions: usize,
+    pages: usize,
+    raw: usize,
+}
+impl ForecastScope {
+    fn partition(&mut self) -> Result<(), Error> {
+        self.partitions = super::forecast_cache::add(self.partitions, 1)?;
+        if self.partitions > 1024 {
+            return Err(Error::Capacity);
+        }
+        Ok(())
+    }
+    fn acquisition(&mut self, records: &[RawRecord]) -> Result<(), Error> {
+        use super::forecast_cache::{PAGE_BYTES, add};
+        self.acquisitions = add(self.acquisitions, 1)?;
+        self.pages = add(self.pages, records.len())?;
+        if self.acquisitions > 2048 || self.pages > 8192 {
+            return Err(Error::Capacity);
+        }
+        for r in records {
+            if r.bytes.len() > PAGE_BYTES {
+                return Err(Error::Capacity);
+            }
+            self.raw = add(self.raw, r.bytes.len())?;
+            if self.raw > 32 * 1024 * 1024 {
+                return Err(Error::Capacity);
+            }
+        }
+        Ok(())
+    }
 }
 /// LIST pages allowed per key and month (1,000 keys each; a month of hourly partitions is 744).
 const LIST_PAGES: usize = 4;
@@ -61,6 +106,103 @@ fn ordered(records: &[RawRecord]) -> Vec<RawRecord> {
     records
 }
 impl<T: IndexListing + Clone> Reader<T> {
+    pub(super) async fn forecast_partitions(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        months: &[u32],
+        scope: &mut ForecastScope,
+        deadline: Instant,
+    ) -> Result<Vec<String>, Error> {
+        use super::forecast_cache::{copied, reserve};
+        let prefix = Self::prefix(source, kind, key)?;
+        let mut out = Vec::new();
+        for month in months {
+            let mut token = None;
+            let mut done = false;
+            for _ in 0..LIST_PAGES {
+                let page = tokio::time::timeout_at(
+                    deadline,
+                    self.transport
+                        .list_index(&format!("{prefix}{month:06}"), token.as_deref()),
+                )
+                .await
+                .map_err(|_| Error::Timeout)??;
+                for key in page.keys {
+                    if let Some(p) = key
+                        .strip_prefix(&prefix)
+                        .and_then(|p| p.strip_suffix(".json"))
+                    {
+                        scope.partition()?;
+                        if p.len() > 32 {
+                            return Err(Error::Capacity);
+                        }
+                        reserve(&mut out, 1)?;
+                        out.push(copied(p)?);
+                    }
+                }
+                token = page.next;
+                if token.is_none() {
+                    done = true;
+                    break;
+                }
+            }
+            if !done {
+                return Err(Error::Capacity);
+            }
+        }
+        out.sort();
+        out.dedup();
+        Ok(out)
+    }
+    /// One partition at a time. Existing S06 controls bound its decode buffers; scope admission
+    /// precedes any additional retained handle/identity growth in D2.
+    pub(super) async fn forecast_acquisitions(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        scope: &mut ForecastScope,
+        deadline: Instant,
+    ) -> Result<(Vec<Fetched>, usize), Error> {
+        use super::forecast_cache::{copied, reserve};
+        let id = catalog(source, kind, key, partition)?;
+        let set = match self.store.lookup(&id, deadline).await {
+            Ok(LookupOutcome::Ready(set)) => set,
+            Ok(LookupOutcome::Incomplete) => return Err(Error::Corrupt("incomplete catalog")),
+            // This private path only reads partitions witnessed by LIST. A vanished catalog
+            // is an eligible partial answer, not proof of reusable empty canonical state.
+            Err(Error::NotFound) => return Ok((Vec::new(), 1)),
+            Err(e) => return Err(e),
+        };
+        let mut out = Vec::new();
+        for a in set.acquisitions() {
+            scope.acquisition(a.records())?;
+            let mut ordered = Vec::new();
+            reserve(&mut ordered, a.records().len())?;
+            ordered.extend(a.records().iter());
+            ordered.sort_by_key(|r| r.envelope.pagination.as_ref().map_or(1, |p| p.page));
+            let Some(completed) = ordered
+                .iter()
+                .map(|r| r.envelope.identity.fetched_at_ms)
+                .max()
+            else {
+                continue;
+            };
+            let mut pages = Vec::new();
+            reserve(&mut pages, ordered.len())?;
+            pages.extend(ordered.into_iter().map(|r| r.bytes.clone()));
+            reserve(&mut out, 1)?;
+            out.push(Fetched {
+                fetched_at_ms: completed,
+                partition: copied(partition)?,
+                pages,
+            });
+        }
+        Ok((out, set.excluded_groups()))
+    }
     fn prefix(source: &str, kind: &str, key: &ProviderKey) -> Result<String, Error> {
         Ok(format!(
             "index/v2/{source}/{kind}/{}/",

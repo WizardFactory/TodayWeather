@@ -4090,3 +4090,49 @@ readiness endpoint or qualify S3/credential-source health, a production recovery
 shadow or cutover. The [runtime-services diagram](diagrams/server2-runtime-services.html)
 retains process/writer/storage ownership; its final source pin is bound to the implemented
 code before PR review, not to an uncommitted future design.
+
+
+### D2: complete forecast memory views (#2819, pre-merge)
+
+The task-local Source retains immutable Grid(current/shortest/short), RSS and
+Mid(forecast/land/temp) views rebuilt from complete S3 raw acquisitions. Cache
+keys preserve original mid-region identifiers. Freshness is at most 30 seconds,
+clipped at the existing publication/retry, minute/day/month and source boundaries;
+clock rewind misses. Observation, station, air, life, warning, narrative and zone
+owners remain separate. A cache hit still passes through those owners and native
+response assembly; it is not a final HTTP-body cache.
+
+The forecast acquisition wrapper invalidates the forecast generation at actual
+future start and retirement, including cancellation. Epoch and active-writer
+checks prevent a reader from publishing a generation across that fence. Detached
+work retains its actual write lifetime. Errors do not install partial success or
+serve expired memory. S3 stays authoritative and there is no new provider mode,
+collection schedule or shared-instance cache.
+
+Logical retained admission is 128 MiB / 128 keys, with a 48 MiB entry ceiling
+(raw 32 MiB, Doc 8 MiB and identity 4 MiB sublimits). Two owners each admit at most
+192 MiB workspace; eight queued keys and 128 waiting callers are bounded. The
+8-second owner deadline starts at admission, including queue time. Two local CPU
+permits bound cache parse/fold work. An already running blocking closure keeps its
+permits and workspace after its async caller times out until actual retirement;
+these limits do not establish total RSS, forced CPU termination or a whole-process
+CPU guarantee. The integrated resource-owner task must reconcile that final scope.
+
+Canonical raw scalar Items retain all fields, including unknown identity fields,
+with a separate 64-field raw limit and 32-field Doc limit. A fallible borrowed
+index of at most 4,995 entries replaces quadratic duplicate comparisons. It
+preserves original item order and complete duplicate identity, omitting only the
+existing value fields; requested and actual Vec capacity are charged.
+
+The selected isolated optimized run uses the original seed of 730 acquisitions / 851
+pages, including one zone-support acquisition; diagnostics select 725 forecast
+acquisitions / 845 pages. All 13 source-Doc goldens match. A separate fresh native HTTP Source keeps
+the normal 3-second deadline: cold 200 in 1,670.86 ms, then warm 200 in 18.51 and
+17.39 ms with identical 42,549-byte bodies. All forecast warm I/O/parse/fold deltas
+are zero. The original zone-support fixture is invalid (numOfRows 999 versus the
+parser's required 1000), so it still performs one LIST/catalog/descriptor/raw read
+per request; no valid-zone recovery is claimed. Cold observation stubs are denied
+(194 web + 2 ASOS), with zero external/geocoder calls and no extra warm stubs.
+These are local source/cache results, not complete API parity, host p95 or an
+eligible rollback release. See the [operator guide](../operations/server2-domestic-cache.md)
+and [selected verification](../evidence/tasks/issue-2819-domestic-warm-cache/verification.md).

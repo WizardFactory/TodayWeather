@@ -1,0 +1,96 @@
+{
+  "task": "DomesticWarmCache2819",
+  "stable_task": "issue-2819-domestic-warm-cache",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "status": "root-selected fixed admission and source-cache contract; code/test permissions follow canonical stage and Cargo lease",
+  "base": "c1ae9082b2c86f0087727be9872b0cf82b4e3bb1",
+  "scope": "D2 immutable complete per-family forecast reuse including mid, <=30s boundary-clipped freshness, exact detached writer invalidation and charged pinned raw/Doc handles. No final response/station/air/life/warning/narrative cache, new mode/timer/provider, shared storage/cache/global CPU/S3 metrics change or production/merge action.",
+  "server2_paths": [
+    "server2/config/tasks/DomesticWarmCache2819.json",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/records.rs",
+    "server2/src/domestic/kma/source/forecast_cache.rs",
+    "server2/src/domestic/kma/source/doc.rs",
+    "server2/src/domestic/kma/source/rss.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/forecast_cache.rs",
+    "server2/examples/domestic_warm_cache_smoke.rs",
+    "server2/tools/domestic_warm_cache_smoke.py",
+    "server2/src/domestic/kma/source/items.rs",
+    "server2/src/domestic/kma/source/grid.rs",
+    "server2/src/domestic/kma/source/mid.rs",
+    "server2/tools/test_domestic_warm_cache_smoke.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-domestic-warm-cache.md",
+      "category": "documentation",
+      "reason": "Root materializes the approved task intent after gate"
+    },
+    {
+      "path": "specs/issue-2819-domestic-warm-cache.md",
+      "category": "documentation",
+      "reason": "Root materializes the approved behavior/freshness contract after gate"
+    },
+    {
+      "path": "plans/issue-2819-domestic-warm-cache.md",
+      "category": "documentation",
+      "reason": "Root materializes the approved implementation/verification plan after gate"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Root integrates changed source ownership/freshness/budget semantics"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.json",
+      "category": "documentation",
+      "reason": "Root updates existing Archify source"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.html",
+      "category": "documentation",
+      "reason": "Root regenerates and validates/browser-checks/visually checks via Archify"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Root integrates exact verification procedure and limitations"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-domestic-warm-cache/verification.md",
+      "category": "documentation",
+      "reason": "Root selects actual candidate-bound evidence"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Root alone reconciles parent status"
+    },
+    {
+      "path": "docs/operations/server2-domestic-cache.md",
+      "category": "documentation",
+      "reason": "Maintain operator actions, limits and actual verification reference for new cache/tool"
+    },
+    {
+      "path": "docs/operations/server2-domestic-cache.pdf",
+      "category": "documentation",
+      "reason": "Visually checked operator manual from editable source and actual retained workflow captures"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-domestic-warm-cache/cold-warm.png",
+      "category": "documentation",
+      "reason": "Selected actual native cold/warm receipt capture"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-domestic-warm-cache/cache-view.png",
+      "category": "documentation",
+      "reason": "Selected exact Doc/logical weights and warm forecast I/O receipt capture"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-domestic-warm-cache/limits.png",
+      "category": "documentation",
+      "reason": "Selected actual zone/observation limits receipt capture"
+    }
+  ]
+}

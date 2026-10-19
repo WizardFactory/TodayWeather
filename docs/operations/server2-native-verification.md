@@ -580,3 +580,19 @@ matching compile-time checkout and Python/synthetic fixture assets. No live prov
 device, readiness endpoint, IAM or full release-bundle qualification is claimed. The main
 release binary is built but not executed by this smoke. See the
 [selected evidence](../evidence/tasks/issue-2819-warning-poll-supervision/verification.md).
+
+
+## Complete domestic forecast memory views
+
+Use the [D2 operator guide](server2-domestic-cache.md) and its visually checked
+[three-page manual](server2-domestic-cache.pdf). Build and retain the optimized
+`domestic_warm_cache_smoke` example, then run
+`server2/tools/domestic_warm_cache_smoke.py --binary RETAINED --output NEW_OUTPUT
+--build-variant release --modes seed diagnostic http`. The diagnostic and HTTP
+Sources must stay separate; only the diagnostic phase gets a 60-second inspection
+budget, while actual fresh HTTP keeps 3 seconds. The exact thirteen forecast
+labels must have zero warm I/O/parse/fold deltas. Keep every supporting-zone and
+optional counter visible. Never accept a 502 or weaken the original corpus.
+The [selected receipt](../evidence/tasks/issue-2819-domestic-warm-cache/verification.md)
+records actual current results and original failures. This does not qualify host
+latency, global resource integration, full API parity or production recovery.
