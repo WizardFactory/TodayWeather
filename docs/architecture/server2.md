@@ -2983,6 +2983,24 @@ the wait expiring), the route gives its legacy store-error answer with the messa
 with `null` for each affected item (the legacy batch helper swallows store errors). Validation and
 cast-error answers are unchanged because they precede any store call.
 
+**Registration state safety (#2819 C1).** Before a transaction, direct commit or import
+admits a stored document, validate every nested key (no `$` prefix or literal `.`),
+encoded size (at most 256 KiB per document) and nesting depth (at most 32 below the root).
+The limit counts escaped JSON bytes; schema-supported dotted update paths still resolve
+to safe stored fields. Typed BSON dates and non-finite numbers keep their EJSON wrappers.
+Invalid input receives the existing store-error shape and writes no journal entry; later
+valid changes remain usable. Compact record reads return errors instead of panicking.
+Every replacement in a journal entry is checked before any is applied, so a bad entry
+cannot apply an earlier prefix or advance its sequence. Corrupt acknowledged bytes are
+retained: restore stays unready; this does not skip a record or rewind state. Writer
+completion, cancellation and unwind clear the shared ready flag. Public `/health` is
+still liveness only; aggregate production readiness is a separate #2819 increment.
+
+The [state safety contract flow](diagrams/server2-push-state.html)
+([editable JSON](diagrams/server2-push-state.json)) illustrates these admission/recovery
+rules; it is not execution evidence. The [selected verification](../evidence/tasks/issue-2819-state/verification.md)
+records the actual regressions, neighboring suites and owned HTTP restart smoke.
+
 **One-time copy.** `push_registration_convert PUSHES ALERTPUSHES IMPORT REPORT` (offline) reads
 `mongoexport` output of `pushes` and `alertpushes` (lines or `--jsonArray`; relaxed, canonical or
 legacy Extended JSON) and writes canonical import lines (owner-only file mode) and a report with

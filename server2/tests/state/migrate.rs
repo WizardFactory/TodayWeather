@@ -12,6 +12,71 @@ use server2::{
 };
 use std::sync::Arc;
 
+#[test]
+fn conversion_reports_document_safety_limits_by_position_without_values() {
+    let mut nested = serde_json::Value::Null;
+    for _ in 0..34 {
+        nested = serde_json::json!([nested]);
+    }
+    let extra = [
+        serde_json::json!({"nested": {"dotted.key": "private-value"}}),
+        nested,
+        serde_json::Value::String("private-value".repeat(30_000)),
+        serde_json::json!({"safe": true}),
+    ];
+    let input = extra.iter().enumerate().map(|(i, extra)| {
+        serde_json::json!({"_id": {"$oid": format!("{:024x}", i + 1)}, "fcmToken": "private-token", "extra": extra}).to_string()
+    }).collect::<Vec<_>>().join("\n");
+    let mut output = String::new();
+    let mut report = migrate::Report::default();
+    migrate::convert(Coll::Alarm, input.as_bytes(), &mut output, &mut report);
+    assert_eq!(report.converted.get("pushes"), Some(&1));
+    assert_eq!(
+        report
+            .malformed
+            .iter()
+            .map(|m| m.position)
+            .collect::<Vec<_>>(),
+        vec![1, 2, 3]
+    );
+    assert_eq!(
+        report
+            .malformed
+            .iter()
+            .map(|m| m.reason.as_str())
+            .collect::<Vec<_>>(),
+        vec!["record field name", "record depth", "record size"]
+    );
+    assert!(!report.to_json().contains("private-"));
+    assert_eq!(migrate::parse_import(output.as_bytes()).unwrap().len(), 1);
+    let edited = serde_json::json!({"c": "pushes", "_id": "000000000000000000000001",
+        "doc": {"fcmToken": "private-token", "extra": {"dotted.key": "private-value"}}});
+    assert_eq!(
+        migrate::parse_import(edited.to_string().as_bytes()).unwrap_err(),
+        "import line 1: record field name"
+    );
+}
+
+#[tokio::test]
+async fn import_safety_failure_identifies_input_position_without_state_mutation() {
+    let (out, _) = convert();
+    let mut records = migrate::parse_import(out.as_bytes()).unwrap();
+    records[1].1.doc.set("dotted.key", "private-value");
+    let s3 = MemS3::new();
+    let mut durable = Durable::new(
+        Arc::new(s3.clone()),
+        DurableConfig::default(),
+        Arc::new(Counters::default()),
+    );
+    let error = migrate::import(&mut durable, &records)
+        .await
+        .unwrap_err()
+        .to_string();
+    assert_eq!(error, "push import input record 2: record field name");
+    assert!(s3.keys("index/v2/push/state/").is_empty());
+    assert!(!error.contains("private-value") && !error.contains("corrupt"));
+}
+
 /// Synthetic export lines in the forms `mongoexport` writes (relaxed v2, canonical v2 and the
 /// legacy v1 date form), plus malformed documents (fixtures; no production data).
 const PUSHES: &str = include_str!("fixtures/export-pushes.jsonl");
@@ -216,7 +281,13 @@ async fn import_is_idempotent_and_restores_with_the_registration_api() {
 fn records_of(state: &server2::push::State) -> Vec<(Coll, server2::push::Record)> {
     let mut all: Vec<(u64, Coll, server2::push::Record)> = Vec::new();
     for c in [Coll::Alarm, Coll::Alert] {
-        all.extend(state.coll(c).iter().map(|(n, r)| (n, c, r.clone())));
+        all.extend(
+            state
+                .coll(c)
+                .iter()
+                .map(Result::unwrap)
+                .map(|(n, r)| (n, c, r.clone())),
+        );
     }
     all.sort_by_key(|(n, ..)| *n);
     all.into_iter().map(|(_, c, r)| (c, r)).collect()
@@ -303,6 +374,7 @@ async fn undated_records_keep_server2_changes_and_take_legacy_changes() {
     let tokens: Vec<String> = state
         .coll(Coll::Alarm)
         .iter()
+        .map(Result::unwrap)
         .map(|(_, r)| r.token("fcmToken").unwrap().to_owned())
         .collect();
     assert_eq!(tokens, ["s-1", "s-2", "u-3b"]);
