@@ -687,3 +687,64 @@ async fn populated_warning_http_survives_shared_service_reconstruction() {
         assert!(unchanged.bytes().await.unwrap().is_empty());
     }
 }
+
+// INT-2826-002: exercise the real production factory, not a hand-wired backend.
+// Keep virtual request time fixed while real loopback S3/network I/O is polled;
+// this isolates factory reader wiring from cold-weather wall-clock cost. The
+// separate real-clock inventory and late-read controls retain deadline behavior.
+#[tokio::test]
+async fn factory_national_prose_reader_survives_factory_reconstruction() {
+    let _ = server2::domestic::kma::source::towns();
+    let peer = Peer::new();
+    let mut expected = None;
+    for phase in 0..2 {
+        let services = services(&peer);
+        ready(&services).await;
+        if phase == 0 {
+            expected = Some(populate(&services).await.1);
+        }
+        tokio::time::pause();
+        let router = services.public_router(std::sync::Arc::new(server2::SharedState::new(
+            &server2::Config::default(),
+        )));
+        for version in ["v000903", "v000901"] {
+            use tower::ServiceExt;
+            let request = axum::http::Request::builder()
+                .uri(format!("/{version}/nation/KR"))
+                .header("accept-language", "ko")
+                .body(axum::body::Body::empty())
+                .unwrap();
+            let mut response = Box::pin(router.clone().oneshot(request));
+            let started = std::time::Instant::now();
+            let response = std::future::poll_fn(|cx| {
+                assert!(
+                    started.elapsed() < Duration::from_secs(15),
+                    "factory fixture did not complete"
+                );
+                match std::future::Future::poll(response.as_mut(), cx) {
+                    std::task::Poll::Ready(result) => std::task::Poll::Ready(result.unwrap()),
+                    std::task::Poll::Pending => {
+                        // A runnable task prevents automatic paused-time advancement.
+                        cx.waker().wake_by_ref();
+                        std::task::Poll::Pending
+                    }
+                }
+            })
+            .await;
+            assert_eq!(response.status(), 200);
+            let value: Value = serde_json::from_slice(
+                &axum::body::to_bytes(response.into_body(), 2 << 20)
+                    .await
+                    .unwrap(),
+            )
+            .unwrap();
+            assert_eq!(
+                value.get("forecastNarrative"),
+                expected.as_ref(),
+                "factory must attach exact stored prose, phase {phase}, {version}"
+            );
+            super::inventory_nation::assert_response(&value, expected.as_ref().unwrap());
+        }
+        tokio::time::resume();
+    }
+}
