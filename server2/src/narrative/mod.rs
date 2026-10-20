@@ -181,6 +181,15 @@ pub async fn attach(
     reader: Option<&Arc<dyn Read>>,
     deadline: Instant,
 ) {
+    attach_with_clock(body, station, reader, deadline, &now_ms).await;
+}
+pub(crate) async fn attach_with_clock(
+    body: &mut OrderedJson,
+    station: Option<u16>,
+    reader: Option<&Arc<dyn Read>>,
+    deadline: Instant,
+    clock: &(dyn Fn() -> i64 + Send + Sync),
+) {
     let OrderedJson::Object(fields) = body else {
         return;
     };
@@ -192,7 +201,7 @@ pub async fn attach(
     let deadline = deadline.min(Instant::now() + Duration::from_secs(2));
     if let Ok(Some(n)) = tokio::time::timeout_at(deadline, reader.read(station, deadline)).await
         && n.station_id == station
-        && n.fresh(now_ms())
+        && n.fresh(clock())
         && let Ok(n) = OrderedJson::from_serde(&n)
     {
         fields.push((key, n));
@@ -253,4 +262,156 @@ pub fn worker(acquire: Arc<dyn Acquire>, period: Duration) -> Worker {
             .await;
         }
     }))
+}
+
+#[cfg(test)]
+mod attachment_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+
+    struct Stored(Narrative);
+    impl Read for Stored {
+        fn read(&self, _: u16, _: Instant) -> BoxFuture<'_, Option<Narrative>> {
+            Box::pin(async { Some(self.0.clone()) })
+        }
+    }
+    fn prose(at: i64) -> Narrative {
+        Narrative {
+            station_id: 108,
+            region: "전국".into(),
+            announcement: crate::world::js::iso(at as f64).unwrap(),
+            expires_at: crate::world::js::iso((at + DAY_MS) as f64).unwrap(),
+            text: "literal <b>rain</b>".into(),
+            language: "ko",
+            source: "KMA",
+            text_format: "plain",
+        }
+    }
+    fn body() -> OrderedJson {
+        OrderedJson::parse(br#"{"weather":[],"forecastNarrative":"stale child"}"#).unwrap()
+    }
+
+    #[tokio::test]
+    async fn fixed_attachment_checks_freshness_and_station_at_its_own_clock() {
+        let at = announcement("202610160900").unwrap();
+        let reader: Arc<dyn Read> = Arc::new(Stored(prose(at)));
+        for (now, station, present) in [
+            (at - 1, Some(108), false),
+            (at, Some(108), true),
+            (at + DAY_MS - 1, Some(108), true),
+            (at + DAY_MS, Some(108), false),
+            (at, Some(109), false),
+            (at, None, false),
+        ] {
+            let mut body = body();
+            attach_with_clock(
+                &mut body,
+                station,
+                Some(&reader),
+                Instant::now() + Duration::from_secs(5),
+                &move || now,
+            )
+            .await;
+            assert_eq!(
+                body.get("forecastNarrative").is_some(),
+                present,
+                "{now} {station:?}"
+            );
+            assert_eq!(body.get("weather"), Some(&OrderedJson::Array(vec![])));
+        }
+        let mut body = body();
+        attach_with_clock(&mut body, Some(108), None, Instant::now(), &move || at).await;
+        assert!(body.get("forecastNarrative").is_none());
+    }
+
+    #[tokio::test]
+    async fn attachment_rechecks_time_after_a_pending_read_expires() {
+        struct Held {
+            value: Narrative,
+            started: tokio::sync::Notify,
+            release: tokio::sync::Notify,
+        }
+        impl Read for Held {
+            fn read(&self, _: u16, _: Instant) -> BoxFuture<'_, Option<Narrative>> {
+                Box::pin(async {
+                    self.started.notify_one();
+                    self.release.notified().await;
+                    Some(self.value.clone())
+                })
+            }
+        }
+        let at = announcement("202610160900").unwrap();
+        let now = AtomicI64::new(at + DAY_MS - 1);
+        let calls = AtomicUsize::new(0);
+        let clock = || {
+            calls.fetch_add(1, Ordering::SeqCst);
+            now.load(Ordering::SeqCst)
+        };
+        let held = Arc::new(Held {
+            value: prose(at),
+            started: tokio::sync::Notify::new(),
+            release: tokio::sync::Notify::new(),
+        });
+        let reader: Arc<dyn Read> = held.clone();
+        let mut body = body();
+        tokio::join!(
+            attach_with_clock(
+                &mut body,
+                Some(108),
+                Some(&reader),
+                Instant::now() + Duration::from_secs(5),
+                &clock
+            ),
+            async {
+                held.started.notified().await;
+                assert_eq!(
+                    calls.load(Ordering::SeqCst),
+                    0,
+                    "clock sampled before read completed"
+                );
+                now.store(at + DAY_MS, Ordering::SeqCst);
+                held.release.notify_one();
+            }
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        assert!(body.get("forecastNarrative").is_none());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn attachment_timeout_omits_prose_without_sampling_freshness() {
+        struct Pending;
+        impl Read for Pending {
+            fn read(&self, _: u16, _: Instant) -> BoxFuture<'_, Option<Narrative>> {
+                Box::pin(std::future::pending())
+            }
+        }
+        let reader: Arc<dyn Read> = Arc::new(Pending);
+        let mut body = body();
+        let clock = || panic!("timeout must not sample freshness");
+        attach_with_clock(
+            &mut body,
+            Some(108),
+            Some(&reader),
+            Instant::now() + Duration::from_secs(10),
+            &clock,
+        )
+        .await;
+        assert!(body.get("forecastNarrative").is_none());
+    }
+
+    #[tokio::test]
+    async fn public_attachment_keeps_the_current_system_clock_default() {
+        for (at, present) in [(now_ms() - 60_000, true), (0, false)] {
+            let reader: Arc<dyn Read> = Arc::new(Stored(prose(at)));
+            let mut body = body();
+            attach(
+                &mut body,
+                Some(108),
+                Some(&reader),
+                Instant::now() + Duration::from_secs(5),
+            )
+            .await;
+            assert_eq!(body.get("forecastNarrative").is_some(), present);
+        }
+    }
 }

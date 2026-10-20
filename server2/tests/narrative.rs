@@ -87,6 +87,46 @@ fn publication_calendar_and_cache_boundaries() {
     );
 }
 
+#[test]
+fn current_nation_fixture_cache_age_is_checked_at_its_declared_time() {
+    let fixture: serde_json::Value =
+        serde_json::from_str(include_str!("nation/oracle.json")).unwrap();
+    let now = chrono::DateTime::parse_from_rfc3339(fixture["now"].as_str().unwrap())
+        .unwrap()
+        .timestamp_millis();
+    let mut checked = 0;
+    for case in fixture["scenarios"].as_array().unwrap() {
+        if case.get("narrativeInput").is_none() {
+            continue;
+        }
+        checked += 1;
+        let body = case["body"].as_str().unwrap().as_bytes();
+        if case["id"] == "narrative-fresh-national" {
+            assert_eq!(narrative::cache_age(body, Some(900), now), Some(300));
+            assert_eq!(narrative::cache_age(body, Some(10), now), Some(10));
+            let decoded: serde_json::Value = serde_json::from_slice(body).unwrap();
+            let expiry = chrono::DateTime::parse_from_rfc3339(
+                decoded["forecastNarrative"]["expiresAt"].as_str().unwrap(),
+            )
+            .unwrap()
+            .timestamp_millis();
+            assert_eq!(
+                narrative::cache_age(body, Some(900), expiry - 30_000),
+                Some(30)
+            );
+            assert_eq!(narrative::cache_age(body, Some(900), expiry), Some(0));
+        } else {
+            assert_eq!(
+                narrative::cache_age(body, Some(900), now),
+                None,
+                "{}",
+                case["id"]
+            );
+        }
+    }
+    assert_eq!(checked, 3);
+}
+
 #[tokio::test(start_paused = true)]
 async fn background_first_tick_is_delayed_and_stop_owns_pending_work() {
     use std::sync::{

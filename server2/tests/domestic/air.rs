@@ -226,3 +226,38 @@ fn kst_instant_follows_legacy_parse_date_time() {
         assert!(kst_instant(bad).is_nan(), "{bad}");
     }
 }
+
+/// Current legacy keeps the nearest metadata identity even without any observations.
+/// This is independent of the older collector oracle's observation availability cases.
+#[test]
+fn forecast_station_identity_survives_missing_observations() {
+    let stations = stations();
+    let (lat, lon) = (37.5657, 126.9769);
+    let nearest = stations.near(lon, lat);
+    let name = nearest
+        .iter()
+        .find_map(|s| {
+            s.get("stationName")
+                .and_then(|v| v.as_str())
+                .filter(|v| !v.trim().is_empty())
+        })
+        .expect("fixture has nearby station metadata");
+    let got = arpltn_answer(
+        &stations,
+        &Observations::default(),
+        Some((lat, lon)),
+        1791846000000.,
+    )
+    .unwrap();
+    assert_eq!(
+        got.get("forecastStationName")
+            .and_then(OrderedJson::string)
+            .as_deref(),
+        Some(name)
+    );
+    assert!(
+        got.get("arpltn").is_none(),
+        "metadata must not fabricate a current observation"
+    );
+    assert_eq!(got.get("stnList"), Some(&OrderedJson::Array(vec![])));
+}

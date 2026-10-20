@@ -3,7 +3,7 @@
 //! forecasts. Grades and indexes use the S11 `AqiConverter` port.
 use super::chain::{Cx, Flow};
 use super::js::{
-    Arr, Ob, V, add, catch, from_store, ge, gt, is_finite_number, le, loose_eq, lt, obj, round,
+    Arr, Ob, V, add, catch, from_store, ge, gt, is_finite_number, loose_eq, lt, obj, round,
     strict_eq, sv, throw, to_number, to_str,
 };
 use super::time;
@@ -594,6 +594,7 @@ pub fn get_keco(cx: &mut Cx) -> Flow {
         cx.r("current").set("arpltn", info.get("arpltn"));
         cx.set("arpltnList", info.get("list"));
         cx.set("arpltnStnList", info.get("stnList"));
+        cx.set("airForecastStationName", info.get("forecastStationName"));
     });
     Flow::Next
 }
@@ -607,6 +608,16 @@ fn has_air_value(arpltn: &V) -> bool {
             let v = arpltn.get(&format!("{name}Value"));
             is_finite_number(&v) && !strict_eq(&v, &n(-1.))
         })
+}
+// Legacy `list || (stations && stations[0])`: an empty array remains truthy.
+fn retained_air_history(list: &V, stations: &V) -> V {
+    if list.truthy() {
+        list.clone()
+    } else if stations.truthy() {
+        stations.a().at(0)
+    } else {
+        stations.clone()
+    }
 }
 pub fn get_air_fallback(cx: &mut Cx) -> Flow {
     let _ = catch(|| {
@@ -625,6 +636,10 @@ pub fn get_air_fallback(cx: &mut Cx) -> Flow {
         let arpltn = from_store(&found);
         if arpltn.truthy() {
             let _ = catch(|| {
+                cx.set(
+                    "airHistoryList",
+                    retained_air_history(&cx.r("arpltnList"), &cx.r("arpltnStnList")),
+                );
                 current.set("arpltn", arpltn.clone());
                 cx.set("arpltnList", V::Arr(Arr::from_vec(vec![arpltn.clone()])));
                 cx.set(
@@ -1025,6 +1040,120 @@ fn insert_daily_pollutants(air_info: &V, days: &[V], unit: &V) {
         }
     }
 }
+/// Restore stored past AirKorea readings into external-provider charts (3c37c401).
+/// New row objects are recalculated; stored rows and the selected current remain untouched.
+fn restore_air_history(info: &V, rows: &V, unit: &V, now: f64) {
+    if !info.truthy() || strict_eq(&info.get("source"), &s("airkorea")) {
+        return;
+    }
+    let Some(rows) = rows.as_arr() else {
+        return;
+    };
+    let current_hour =
+        (parse_date_time(&info.get("last").get("dataTime")) / time::HOUR).floor() * time::HOUR;
+    let station = rows.find(|row| {
+        row.truthy()
+            && (!row.get("source").truthy() || strict_eq(&row.get("source"), &s("airkorea")))
+            && row
+                .get("stationName")
+                .str()
+                .is_some_and(|v| !v.trim().is_empty())
+    });
+    if !station.truthy() || !current_hour.is_finite() {
+        return;
+    }
+    let name = station.get("stationName");
+    let codes = ["pm10", "pm25", "o3", "no2", "co", "so2"];
+    let mut past: Vec<_> = rows
+        .items()
+        .into_iter()
+        .filter(|row| {
+            if !row.truthy()
+                || !strict_eq(&row.get("stationName"), &name)
+                || (row.get("source").truthy() && !strict_eq(&row.get("source"), &s("airkorea")))
+            {
+                return false;
+            }
+            let epoch = parse_date_time(&row.get("dataTime"));
+            epoch.is_finite()
+                && epoch % time::HOUR == 0.
+                && epoch <= now
+                && epoch >= current_hour - time::DAY
+                && epoch < current_hour
+        })
+        .collect();
+    past.sort_by(|a, b| {
+        parse_date_time(&b.get("dataTime")).total_cmp(&parse_date_time(&a.get("dataTime")))
+    });
+    let hours = Ob::new();
+    for row in past {
+        let epoch = parse_date_time(&row.get("dataTime"));
+        let key = format!("{epoch:.0}");
+        if !hours.has(&key) {
+            hours.set(
+                &key,
+                V::Obj(obj(vec![
+                    ("stationName", name.clone()),
+                    ("source", s("airkorea")),
+                    ("dataTime", V::from(format_air_kst(epoch))),
+                ])),
+            );
+        }
+        let data = hours.get(&key);
+        for code in codes {
+            let field = format!("{code}Value");
+            let value = row.get(&field);
+            if matches!(data.get(&field), V::Undef)
+                && is_finite_number(&value)
+                && ge(&value, &n(0.))
+            {
+                data.set(&field, value);
+            }
+        }
+    }
+    for key in hours.keys() {
+        let data = recalculate_value(&hours.get(&key), unit);
+        let epoch = parse_date_time(&data.get("dataTime"));
+        for code in codes.into_iter().chain(["aqi"]) {
+            let value = data.get(&format!("{code}Value"));
+            if !is_finite_number(&value) || lt(&value, &n(0.)) {
+                continue;
+            }
+            let pollutants = info.get("pollutants");
+            if !pollutants.get(code).truthy() {
+                pollutants.set(code, V::Obj(Ob::new()));
+            }
+            let pollutant = pollutants.get(code);
+            let hourly = pollutant.get("hourly");
+            let hourly = if hourly.truthy() {
+                hourly.a().clone()
+            } else {
+                empty_hourly(&info.get("last").get("dataTime"))
+            };
+            let hourly = hourly.filter(|slot| {
+                (parse_date_time(&slot.get("date")) / time::HOUR).floor() * time::HOUR != epoch
+            });
+            hourly.push(V::Obj(obj(vec![
+                ("date", data.get("dataTime")),
+                ("val", value),
+                ("grade", data.get(&format!("{code}Grade"))),
+                ("source", s("airkorea")),
+                ("stationName", name.clone()),
+            ])));
+            // Fixed ASCII KST dates have the same order as legacy localeCompare.
+            hourly.sort_by(|a, b| {
+                if lt(&a.get("date"), &b.get("date")) {
+                    -1.
+                } else if gt(&a.get("date"), &b.get("date")) {
+                    1.
+                } else {
+                    0.
+                }
+            });
+            pollutant.set("hourly", V::Arr(hourly));
+        }
+    }
+}
 pub fn make_air_info_list(cx: &mut Cx) -> Flow {
     let _ = catch(|| {
         let unit = cx.query("airUnit");
@@ -1055,6 +1184,7 @@ pub fn make_air_info_list(cx: &mut Cx) -> Flow {
                 &unit,
                 &info.get("last").get("dataTime"),
             );
+            restore_air_history(&info, &cx.r("airHistoryList"), &unit, now);
             let mid = cx.r("midData");
             if mid.truthy() && mid.get("dailyData").as_arr().is_some() {
                 let days: Vec<V> = mid
@@ -1097,6 +1227,15 @@ pub fn make_air_info(cx: &mut Cx) -> Flow {
         if !rows.is_empty() {
             info = air_info(cx);
             info.set("last", rows[0].clone());
+            let source = rows[0].get("source");
+            info.set(
+                "source",
+                if source.truthy() {
+                    source
+                } else {
+                    s("airkorea")
+                },
+            );
             info.set("pollutants", V::Obj(Ob::new()));
             insert_hourly_pollutants(
                 &info.get("pollutants"),
@@ -1104,6 +1243,7 @@ pub fn make_air_info(cx: &mut Cx) -> Flow {
                 &unit,
                 &info.get("last").get("dataTime"),
             );
+            restore_air_history(&info, &cx.r("airHistoryList"), &unit, cx.now);
         }
         let mid = cx.r("midData");
         if mid.truthy() && mid.get("dailyData").as_arr().is_some() {
@@ -1161,21 +1301,33 @@ fn last_air_observation_time(air_info: &V) -> V {
 /// within the day after the last observation, compared and keyed as KST epochs
 /// (`KecoController._parseDateTime`, `_formatAirKstTime`); a pollutant without observation
 /// history keeps its first forecast.
-fn insert_forecast_pollutants(air_info: &V, forecasts: &[V], source: &str, unit: &V) {
+fn insert_forecast_pollutants(
+    air_info: &V,
+    forecasts: &[V],
+    source: &str,
+    unit: &V,
+    start: f64,
+    end: f64,
+) {
     let latest = last_air_observation_time(air_info);
     air_info.set("forecastSource", source);
     air_info.set(
         "forecastPubDate",
-        forecasts[forecasts.len() - 1].get("pubDate"),
+        forecasts
+            .iter()
+            .rfind(|fc| {
+                let epoch = parse_date_time(&fc.get("dataTime"));
+                epoch > start && epoch <= end
+            })
+            .expect("available future forecast")
+            .get("pubDate"),
     );
-    let last_epoch = parse_date_time(&latest);
-    let end_epoch = last_epoch + time::DAY;
     for fc in forecasts {
         if fc.nullish() {
             continue;
         }
         let epoch = parse_date_time(&fc.get("dataTime"));
-        if !epoch.is_finite() || epoch <= last_epoch || epoch > end_epoch {
+        if !epoch.is_finite() || epoch <= start || epoch > end {
             continue;
         }
         let dt = V::from(format_air_kst(epoch));
@@ -1213,6 +1365,7 @@ fn insert_forecast_pollutants(air_info: &V, forecasts: &[V], source: &str, unit:
         let data = obj(vec![
             ("date", dt.clone()),
             ("code", V::from(code.clone())),
+            ("pubDate", fc.get("pubDate")),
             ("val", aqi_val.clone()),
             ("grade", V::Num(value2grade(unit, "aqi", &aqi_val))),
         ]);
@@ -1284,50 +1437,42 @@ fn insert_forecast_pollutants(air_info: &V, forecasts: &[V], source: &str, unit:
         }
     }
 }
-/// `_getAirForecast(airInfo, forecastSource, airUnit)`: Err ends `async.map`.
+/// Current legacy `_getAirForecast`: provider current uses independently retained station
+/// metadata; availability and insertion share the same future window (125dbfef).
 fn get_air_forecast(cx: &Cx, info: &V, source: &V, unit: &V) -> Result<(), ()> {
-    if info.truthy()
-        && info.get("source").truthy()
-        && !strict_eq(&info.get("source"), &s("airkorea"))
-    {
+    if !info.truthy() || !info.get("last").truthy() || !info.get("pollutants").truthy() {
         return Ok(());
     }
-    let station = match catch(|| info.get("last").get("stationName")) {
-        Ok(v) => v,
-        Err(_) => return Err(()),
+    let observation_source = info.get("source");
+    let airkorea = !observation_source.truthy() || strict_eq(&observation_source, &s("airkorea"));
+    let station = if airkorea {
+        info.get("last").get("stationName")
+    } else {
+        cx.r("airForecastStationName")
     };
-    // `forecastSource === 'kaq'` / `=== 'airkorea'`: only those strings select a controller.
+    if station.str().is_none_or(|name| name.trim().is_empty()) {
+        return Ok(());
+    }
+    let source = if source.truthy() {
+        source.clone()
+    } else {
+        s("airkorea")
+    };
     let src = match source.str() {
         Some(x @ ("kaq" | "airkorea")) => x.to_owned(),
         _ => return Err(()),
     };
-    let station_json = super::to_store(&station);
-    if src == "kaq" {
-        return kaq_or_airkorea(cx, info, &station_json, unit);
-    }
-    let results = from_store(&cx.store.air_forecast(&src, &station_json).map_err(|_| ())?);
-    let r = catch(|| {
-        if results.nullish() || le(&results.len(), &n(0.)) {
-            if strict_eq(&station, &s("태하리")) {
-                return Ok(());
-            }
-            throw("Fail to get forecast");
-        }
-        insert_forecast_pollutants(info, &results.a().items(), &src, unit);
-        Ok::<(), ()>(())
-    });
-    match r {
-        Ok(x) => x,
-        Err(_) => Err(()),
-    }
-}
-/// The `kaq` branch of `_getAirForecast` (legacy #2771): the KAQ forecast when it has a usable row
-/// after now and within the day after the last observation, otherwise the stored AirKorea
-/// forecast under the same condition, otherwise none. A KAQ read error falls back too; an AirKorea
-/// read error or an exception ends the list (`callback(err)`).
-fn kaq_or_airkorea(cx: &Cx, info: &V, station: &serde_json::Value, unit: &V) -> Result<(), ()> {
-    let now = cx.now;
     let last_epoch = parse_date_time(&last_air_observation_time(info));
+    if !last_epoch.is_finite() {
+        return Ok(());
+    }
+    let start = cx.now.max(last_epoch);
+    let end = if airkorea {
+        last_epoch
+    } else {
+        (cx.now / time::HOUR).floor() * time::HOUR
+    } + time::DAY;
+    let station_json = super::to_store(&station);
     // `usableRows`: listed pollutants with a finite non-negative number and a valid KST time,
     // copied with that time formatted.
     let usable = |results: &V| -> Vec<V> {
@@ -1362,21 +1507,26 @@ fn kaq_or_airkorea(cx: &Cx, info: &V, station: &serde_json::Value, unit: &V) -> 
             let rows = usable(results);
             let available = rows.iter().any(|row| {
                 let epoch = parse_date_time(&row.get("dataTime"));
-                epoch > now && epoch > last_epoch && epoch <= last_epoch + time::DAY
+                epoch > start && epoch <= end
             });
             if available {
-                insert_forecast_pollutants(info, &rows, source, unit);
+                insert_forecast_pollutants(info, &rows, source, unit, start, end);
+                info.set("forecastStationName", station.clone());
             }
             available
         })
         .map_err(|_| ())
     };
-    if let Ok(results) = cx.store.air_forecast("kaq", station)
+    if src == "kaq"
+        && let Ok(results) = cx.store.air_forecast("kaq", &station_json)
         && insert_if_available(&from_store(&results), "kaq")?
     {
         return Ok(());
     }
-    let fallback = cx.store.air_forecast("airkorea", station).map_err(|_| ())?;
+    let fallback = cx
+        .store
+        .air_forecast("airkorea", &station_json)
+        .map_err(|_| ())?;
     insert_if_available(&from_store(&fallback), "airkorea")?;
     Ok(())
 }
@@ -1398,6 +1548,69 @@ pub fn air_forecast_list(cx: &mut Cx) -> Flow {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn fallback_history_retains_first_station_only_when_primary_is_absent() {
+        let history = V::Arr(Arr::from_vec(vec![V::Obj(obj(vec![(
+            "stationName",
+            s("nearby"),
+        )]))]));
+        let stations = V::Arr(Arr::from_vec(vec![history.clone()]));
+        for absent in [V::Undef, V::Null] {
+            assert!(strict_eq(
+                &retained_air_history(&absent, &stations),
+                &history
+            ));
+        }
+        let empty = V::Arr(Arr::new());
+        assert!(strict_eq(&retained_air_history(&empty, &stations), &empty));
+        assert!(matches!(
+            retained_air_history(&V::Undef, &V::Undef),
+            V::Undef
+        ));
+    }
+    #[test]
+    fn stored_history_is_display_only_and_does_not_mutate_inputs() {
+        let parse = |value: serde_json::Value| {
+            from_store(&crate::gateway::OrderedJson::from_serde(&value).unwrap())
+        };
+        let last = parse(
+            serde_json::json!({"source":"google","stationName":"provider-label","dataTime":"2026-09-24 10:30","pm10Value":70}),
+        );
+        let info = parse(serde_json::json!({"source":"google","pollutants":{}}));
+        info.set("last", last.clone());
+        let rows = parse(serde_json::json!([
+            {"stationName":"nearby","dataTime":"2026-09-24 09:00","pm10Value":22},
+            {"stationName":"nearby","dataTime":"2026-09-24 09:00","pm25Value":-1},
+            {"stationName":"nearby","dataTime":"2026-09-24 10:00","pm10Value":999},
+            {"stationName":"other","dataTime":"2026-09-24 08:00","pm10Value":888},
+            {"stationName":"nearby","source":"google","dataTime":"2026-09-24 08:00","pm10Value":777},
+            {"stationName":"nearby","dataTime":"2026-09-23 09:00","pm10Value":666}
+        ]));
+        let before_rows = super::super::to_store(&rows);
+        let before_last = super::super::to_store(&last);
+        restore_air_history(
+            &info,
+            &rows,
+            &s("airkorea"),
+            parse_date_time(&s("2026-09-24 10:30")),
+        );
+        assert_eq!(super::super::to_store(&rows), before_rows);
+        assert_eq!(super::super::to_store(&last), before_last);
+        assert!(strict_eq(&info.get("source"), &s("google")));
+        let values: Vec<_> = info
+            .get("pollutants")
+            .get("pm10")
+            .get("hourly")
+            .a()
+            .items()
+            .into_iter()
+            .filter(|h| h.has("val"))
+            .collect();
+        assert_eq!(values.len(), 1);
+        assert_eq!(to_number(&values[0].get("val")), 22.);
+        assert!(strict_eq(&values[0].get("stationName"), &s("nearby")));
+        assert!(!info.get("pollutants").has("pm25"));
+    }
     #[test]
     fn non_ascii_mfds_publications_are_rejected_without_panicking() {
         // 14 bytes, not ASCII: `한글날짜ab` (4 x 3 + 2).

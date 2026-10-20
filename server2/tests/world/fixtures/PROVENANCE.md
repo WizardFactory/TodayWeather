@@ -362,3 +362,23 @@ run().catch(e => { console.error(e.stack); process.exit(1); });
 `widget.json.gz` SHA-256 `f70690200e6d83ad20268f0702a544ef0bf97ceba585999241c9c4840b9c324e` contains 14 actual HTTP cases from the named S02 recorder `server/test/offline/golden-record.js --widget-only --output <new-dir>`, on pinned Node 16.20.2, UTC/production and the existing isolated S02 dependency lock. Legacy source revision 82f7a4838dda046be966ee9c25c9cb66561d099d and every source file read are recorded inside. This explicit export does not alter the historical 19 groups. It includes raw Tokyo and units metadata, Korean/Japanese/Chinese localization, HEAD/304, missing/malformed input, invalid version, initial provider 401, subsequent provider-down 503, and generic 500. Provider Errors are created in the maintained harness VM realm and 401 carries the actual requester providerDown flag; earlier setup attempts are retained separately. Native tests use the identical already-pinned S11 Tokyo provider body; no runtime legacy source or fixture is read. Session cookie, Date and connection/framing headers are excluded from transport comparison; status/body/functional headers remain exact.
 
 The existing complete S02 baseline may refresh only source.oracle_sha256 after this recorder extension; all old case bodies, headers, inventory and dependency traces must compare equal before that explicit provenance update.
+
+## G1 current-source whole-record requalification (build24, 2026-10-20)
+
+This is a new whole-corpus G1 qualification, distinct from the historical S20d recorder-extension step above. Three groups were each recorded twice under the sibling rest_http boundary; complete raw documents and output files match exactly within each pair. Adopted fixtures contain the whole second qualified output, with no digest patched into an old record. The first failed world attempt remains UNQUALIFIED and was not used for comparison or adoption.
+
+S02 has three current file SHA changes and twelve middleware implementation SHA changes (six unique literal functions). The recorder hashes `original.toString()`; hashing exact current controller source spans reproduces all twelve values. Old function preimages were not recovered. Responses, status, headers, ordering and all other trace fields are unchanged across this corpus; this does not assert semantic equivalence of the changed functions for arbitrary inputs. World and widget each have two current source-file SHA changes and no other document differences.
+
+Canonical recorder bytes and historical logical revisions remain unchanged: S02 `f568508da68d408a282752f55614407899631c88`, widget `82f7a4838dda046be966ee9c25c9cb66561d099d`. The execution base is `a6fdf1f4d1f869d63c5310646003967571dac6e2`; candidate files, including the declared byte-preserving world export, are identified by their individual hashes, not a clean-checkout assertion. Original scenario clocks, inventory, case order and producer deadlines are retained. The parent120s safety bound is separately disclosed; no original deadline was extended.
+
+Widget packaging is an explicit current decision: gzip level9, mtime0, with decompressed bytes equal to the actual original JSON output. This does not claim reconstruction of the historical compressed preimage. World retains its original Node gzip output; S02 remains uncompressed JSON.
+
+Node16.20.2 SHA256 `83325958463d59cb0b16433eefab0a03fd1ce7d565a27e0274f507b1f3839a6e`, UTC/production; canonical recorder SHA256 `cdadca2821384885388e0a36a20883273735f7c325837bc80a8dd9e381c5ac46`; dependency lock SHA256 `18caa49d992431a51c255b8560870385e1e698177e5cdf89cb81bc21df6ce8b3`. Isolated installed inventory contains4470 regular files and retains the exact locked dependency tree.
+
+| Group | Preserved predecessor SHA256 | Whole actual2 fixture SHA256 |
+| --- | --- | --- |
+| s02 | `997e0f8ea76cda2de7a2cb5e142bead9a1f876d9f93ee6037b1ab8a17d1e0a0d` | `a95f78a100f5b048b05a59b67f4213e268bd4fc3346ead20c4f5f81c05e83fdf` |
+| world-locale | `54825f967c5cd422fd9b625e8c863ab6c519657697f944198ba22524f92fe864` | `502d80524cf6b829226dc07c4f6b31fda078f20a21c170ab208a4ee261f79e76` |
+| widget | `f70690200e6d83ad20268f0702a544ef0bf97ceba585999241c9c4840b9c324e` | `2b6e0b639077960fa7a08f44580cc5787b4ef738e32dfc265d13fbccaf8a6015` |
+
+All prior fixture bytes, histories, failure receipts and the complete world-driver code fence are preserved. Post-adoption freshness/native validation is required separately; these recordings alone do not establish G1 PASS, current CI, independent PR review or final candidate placement.

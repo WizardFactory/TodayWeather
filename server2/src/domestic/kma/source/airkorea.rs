@@ -601,8 +601,13 @@ pub fn arpltn_answer(
     now: f64,
 ) -> Result<OrderedJson, String> {
     let (lat, lon) = g_coord.ok_or("town without gCoord")?;
-    let lists: Vec<Vec<&Doc>> = stations
-        .near(lon, lat)
+    let nearby = stations.near(lon, lat);
+    let forecast_station = nearby.iter().find_map(|s| {
+        s.get("stationName")
+            .and_then(Val::as_str)
+            .filter(|name| !name.trim().is_empty())
+    });
+    let lists: Vec<Vec<&Doc>> = nearby
         .into_iter()
         .filter_map(|s| s.get("stationName").and_then(Val::as_str))
         .map(|name| observations.recent(name, now))
@@ -623,6 +628,12 @@ pub fn arpltn_answer(
         "stnList",
         OrderedJson::Array(top.iter().map(rows).collect()),
     ));
+    if let Some(name) = forecast_station {
+        out.push((
+            "forecastStationName",
+            OrderedJson::String(crate::domestic::kma::js::units(name)),
+        ));
+    }
     Ok(OrderedJson::Object(
         out.into_iter()
             .map(|(k, v)| (crate::domestic::kma::js::units(k), v))

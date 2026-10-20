@@ -151,3 +151,23 @@ const cases=[
  fs.writeFileSync(process.argv[2],JSON.stringify(out,null,1)+'\n');process.exit(0);
 })().catch(e=>{console.error(e);process.exit(1)});
 ```
+
+## Current-source whole-record renewal (build24, 2026-10-20)
+
+Two separately guarded recordings per group produced identical complete document and gzip bytes. The adopted bytes are the second actual recording in full; no source field was patched into an old record. All 20 typed differences across towns, nation and four delivery groups are source metadata (2 + 2 + 4 × 4); body, status, headers, trace and ordering differences are zero in this corpus. Node is 16.20.2 (binary SHA256 `83325958463d59cb0b16433eefab0a03fd1ce7d565a27e0274f507b1f3839a6e`), TZ UTC.
+
+The delivery `source.revision` value `a6fdf1f4d1f869d63c5310646003967571dac6e2` identifies the base commit. Execution also used candidate files, including untracked named recorder exports and existing G1 changes; the actual inputs are identified by per-file SHA256 in the records and guarded policy inventories. This is not a clean-checkout recording claim. Old fixture bytes and all capture/receipt/comparison histories are preserved in the local build24 evidence. Freshness and native acceptance are verified separately after adoption.
+
+| Group | Preserved predecessor SHA256 | Adopted actual2 SHA256 |
+| --- | --- | --- |
+| delivery-alerts | `603abff1b1db40285fb38fe062628c97b6a07549a015adc0c85ce37c20d3f0a0` | `139259f4ba1db02c2834e0bc67291f210c99d39046deb4614211dfbf51110d52` |
+| delivery-malformed | `10de484d8e39a89a10350d338c34eafe83bc6268ade35279d294122af9d6d327` | `6d6ffcbbd356f25c04fb9aa61809ef502bf5b895f07cca7891f5628768105a89` |
+| delivery-air-filter | `fc6f0e3e740b0bf4e5bc09bb0c250ac552abd17f3e48f6ffffe9604102b42d68` | `caaa0645ed775cc186677e2babfa216f757126c25be315b7d5ecb161448001a5` |
+
+Pinned dependency locks (npm lockfile format and exact direct versions retained):
+
+- SHA256 `4e00cbb69b10b72a1a0b1470e98aeca15c16ae9776ee39f7d0cc1a2de7d18c8e`, lockfileVersion 3; direct dependencies: `async@2.6.2`, `body-parser@1.20.6`, `cheerio@0.20.0`, `cookie-parser@1.3.5`, `cors@2.8.5`, `express@4.13.4`, `express-session@1.15.6`, `i18n@0.8.3`, `sprintf@0.1.5`, `xml2js@0.4.19`.
+- SHA256 `aebc9e020a7521cc3cea5f63b7f526f3e19e499c3f22f0faa80f58056c403bd9`, lockfileVersion 3; direct dependencies: `firebase-admin@5.13.1`.
+- SHA256 `056c59c13b4c65c3aa945d1031afac0d5435aabfa78b91549c4efcb2babc88a8`, lockfileVersion 2; direct dependencies: `mongoose@5.1.2`.
+
+Raw build24 receipts are local evidence, not a published CI or whole-G1 PASS. Remaining S02, world and widget qualification and original G1 gates stay open.

@@ -13,6 +13,12 @@ use server2::{
 use std::sync::{Arc, Mutex};
 use tokio::time::Instant;
 
+pub(super) const HEADER_CASE_IDS: [&str; 3] = [
+    "uppercase-v903-child-default",
+    "nation-child-header-over-parent-cookie",
+    "nation-child-cookie-only-default",
+];
+
 struct Cities(Mutex<Vec<(String, String)>>);
 impl CitySource for Cities {
     fn weather(&self, r: KmaRequest, _: Instant) -> BoxFuture<'_, Result<Outcome, GatewayError>> {
@@ -32,6 +38,7 @@ impl CitySource for Cities {
                 ("current", object(vec![("t1h", OrderedJson::Number(20.))])),
                 ("childVersion", text(&r.version)),
                 ("childLocale", text(locale)),
+                ("forecastNarrative", text("private child prose")),
             ])))
         })
     }
@@ -115,10 +122,10 @@ async fn assert_legacy_child_contract(id: &str) {
 }
 #[tokio::test]
 async fn uppercase_v903_nation_uses_the_actual_legacy_v901_child_default() {
-    assert_legacy_child_contract("uppercase-v903-child-default").await;
+    assert_legacy_child_contract(HEADER_CASE_IDS[0]).await;
 }
 #[tokio::test]
 async fn nation_children_use_forwarded_language_header_and_never_the_parent_cookie() {
-    assert_legacy_child_contract("nation-child-header-over-parent-cookie").await;
-    assert_legacy_child_contract("nation-child-cookie-only-default").await;
+    assert_legacy_child_contract(HEADER_CASE_IDS[1]).await;
+    assert_legacy_child_contract(HEADER_CASE_IDS[2]).await;
 }

@@ -4090,3 +4090,55 @@ readiness endpoint or qualify S3/credential-source health, a production recovery
 shadow or cutover. The [runtime-services diagram](diagrams/server2-runtime-services.html)
 retains process/writer/storage ownership; its final source pin is bound to the implemented
 code before PR review, not to an uncommitted future design.
+
+
+## Current legacy air parity: a6 reference (2026-10-20)
+
+Build23 aligns the native air assembly/store with merged legacy changes `125dbfef`
+and `3c37c401` at pinned `a6fdf1f4d1f869d63c5310646003967571dac6e2`.
+This is a compatibility correction under development, not deployment evidence.
+The full22 five-profile corpus was captured twice with identical same-base raw
+and gzip bytes; old/current output equivalence was not accepted. The original
+five fixture bytes were preserved before renewing the reference.
+
+Nearby AirKorea metadata retains `forecastStationName` independently of whether
+an observation exists or is fresh. An external provider's current reading keeps
+its own location label; stored forecasts use the retained AirKorea station.
+Forecast rows must have valid timestamps and finite non-negative values for the
+six supported pollutants. The interval is `(max(now,lastObservation), end]`:
+AirKorea observations use `lastObservation+24h`; external observations use
+`floor(now/hour)+24h`. Only actual future rows determine `forecastPubDate`;
+time-specific AQI rows retain their `pubDate` too.
+
+When fallback replaces current air, stored AirKorea observations remain available
+for display history. Hour-aligned values from the selected station in the previous
+24 hours before the provider current hour, and not in the future, replace chart
+placeholders. If `H` is the provider current observation time rounded down to the
+hour, accepted timestamps satisfy `H-24h <= timestamp < H` and
+`timestamp <= requestNow`. New row objects are recalculated. This does not change provider
+current/freshness or mutate stored observations. If the primary history list is
+absent, the first station list supplies history; an empty primary list remains
+empty, following JavaScript truthiness.
+
+The empty optional legacy narrative lookup is validated at the native replay
+boundary as an empty final read with a fixed station-id argument shape. Native
+narrative behavior remains in its existing subsystem; the KMA store does not add a
+duplicate database call to imitate the legacy recorder's internal call sequence.
+These empty-result fixtures do not establish present-narrative-content parity.
+
+Source: [legacy forecast selection](../../server/controllers/controllerTown24h.js),
+[legacy nearby station identity](../../server/controllers/kecoController.js),
+[native air assembly](../../server2/src/domestic/kma/air.rs),
+[native AirKorea store](../../server2/src/domestic/kma/source/airkorea.rs), and
+[the compatibility specification](../../specs/issue-2819-oracle-provenance.md).
+Current CI, complete G1 oracle/native/strict checks and independent review remain
+required before merge readiness; no live provider, Linux or capacity claim follows
+from local Darwin loopback checks.
+
+The [golden qualification boundary](../operations/server2-golden.md#current-g1-qualification-boundary)
+separates source freshness, actual guarded recording, complete difference
+disposition, native parity and CI/review readiness. All 22 registered fixtures
+were current in the 2026-10-20 local audit after whole-record requalification;
+that dated result is not a promise about later legacy edits or a G1 readiness
+decision. The recorder, guard and declared export exceptions are verification
+assets only. Native serving does not read them or legacy source files.
