@@ -1,0 +1,179 @@
+{
+  "schema": 1,
+  "profile": "nation",
+  "driver": "server/test/offline/record-nation-current.cjs",
+  "exports": {
+    "server/test/offline/record-nation.cjs": "56832af1329dc3fab071fa9d4f52e1692d23da2554b71272f5c176fa861d491a",
+    "server/test/offline/record-nation-current.cjs": "e0928cf90f749b91b9ed65016895d3f3f4acca01096bbbe20f2bfd81b1e2a48e"
+  },
+  "source_paths": [
+    "server/app.js",
+    "server/config/air.js",
+    "server/controllers/controllerTown24h.js",
+    "server/controllers/kecoController.js",
+    "server/lib/AQI/waqiStationName.js",
+    "server/lib/air/nationAir.js",
+    "server/lib/air/observation.js",
+    "server/lib/airkoreaObservation.js",
+    "server/lib/aqi.converter.js",
+    "server/lib/kecoRequester.js",
+    "server/lib/kmaForecastNarrative.js",
+    "server/lib/kmaForecastNarrativeResponse.js",
+    "server/lib/kmaForecastRegions.js",
+    "server/lib/unitConverter.js",
+    "server/locales/de.json",
+    "server/locales/en.json",
+    "server/locales/ja.json",
+    "server/locales/ko.json",
+    "server/locales/zh-CN.json",
+    "server/locales/zh-TW.json",
+    "server/models/arpltnKeco.js",
+    "server/models/sido.arpltn.keco.model.js",
+    "server/routes/v000803/route.nation.js",
+    "server/views/error.jade",
+    "server/views/layout.jade"
+  ],
+  "markers": [
+    [
+      "server/controllers/kecoController.js",
+      "arpltnController.recalculateValue =",
+      "arpltnController._mregeData ="
+    ],
+    [
+      "server/controllers/kecoController.js",
+      "arpltnController._parseDateTime =",
+      "arpltnController._checkDateTime ="
+    ],
+    [
+      "server/controllers/controllerTown24h.js",
+      "    this.checkQueryValidation =",
+      "\n    /**\n     * adjust tmn"
+    ],
+    [
+      "server/lib/kecoRequester.js",
+      "Keco.prototype.saveAvgSidoArpltn =",
+      "\n/**\n *"
+    ],
+    [
+      "server/app.js",
+      "i18n.configure({",
+      "});"
+    ]
+  ],
+  "direct_dependencies": {
+    "mongoose": "5.1.2",
+    "async": "2.6.2",
+    "jade": "1.11.0",
+    "i18n": "0.8.3"
+  },
+  "deadline_seconds": 15,
+  "stream_limit_bytes": 2097152,
+  "record_limit_bytes": 8388608,
+  "inflated_limit_bytes": 8388608,
+  "record_name": "record.json",
+  "encoding": "json",
+  "record_top_keys": [
+    "node",
+    "dependencies",
+    "now",
+    "hash",
+    "averageInputs",
+    "averages",
+    "scenarios"
+  ],
+  "array_lengths": {
+    "/scenarios": 19,
+    "/averageInputs": 4,
+    "/averages": 1,
+    "/scenarios/0/nationwideInputs": 17
+  },
+  "scenario_ids": [
+    "all-provinces",
+    "fresh-province",
+    "unit-airkorea_who",
+    "unit-airnow",
+    "unit-aqicn",
+    "unit-invalid",
+    "empty-no-provider",
+    "v901-success",
+    "v901-child-500",
+    "v903-child-404",
+    "stale",
+    "future",
+    "representative",
+    "uppercase-v903-child-default",
+    "nation-child-header-over-parent-cookie",
+    "nation-child-cookie-only-default",
+    "narrative-fresh-national",
+    "narrative-expired",
+    "narrative-db-error"
+  ],
+  "original_fixture": {
+    "path": "server2/tests/nation/oracle.json",
+    "sha256": "6de9f6f8f41cb9d7456c9f73631b0c8476e9e667f38c735fb5a8c808b35caabc",
+    "inflated_bytes": 134813
+  },
+  "builtins": [
+    "assert",
+    "buffer",
+    "constants",
+    "crypto",
+    "events",
+    "fs",
+    "http",
+    "https",
+    "module",
+    "net",
+    "os",
+    "path",
+    "process",
+    "punycode",
+    "querystring",
+    "stream",
+    "string_decoder",
+    "timers",
+    "tls",
+    "tty",
+    "url",
+    "util",
+    "vm",
+    "zlib",
+    "dns",
+    "dgram",
+    "child_process",
+    "worker_threads",
+    "cluster"
+  ],
+  "clock_policy": "Original fixed full-corpus clock; current narrative reader uses the same FixedDate and controlled in-memory rows. Original recorder preserved.",
+  "transport": "DENY_ALL",
+  "record_source_paths": [
+    "server/app.js",
+    "server/config/air.js",
+    "server/controllers/controllerTown24h.js",
+    "server/controllers/kecoController.js",
+    "server/lib/AQI/waqiStationName.js",
+    "server/lib/air/nationAir.js",
+    "server/lib/air/observation.js",
+    "server/lib/airkoreaObservation.js",
+    "server/lib/aqi.converter.js",
+    "server/lib/kecoRequester.js",
+    "server/lib/kmaForecastNarrative.js",
+    "server/lib/kmaForecastNarrativeResponse.js",
+    "server/lib/kmaForecastRegions.js",
+    "server/lib/unitConverter.js",
+    "server/models/arpltnKeco.js",
+    "server/models/sido.arpltn.keco.model.js",
+    "server/routes/v000803/route.nation.js",
+    "server/views/error.jade",
+    "server/views/layout.jade"
+  ],
+  "record_clock": "2026-10-16T00:10:00.000Z",
+  "absent_metadata_paths": [
+    "server/locales/de.js",
+    "server/locales/en.js",
+    "server/locales/ja.js",
+    "server/locales/ko.js",
+    "server/locales/zh-CN.js",
+    "server/locales/zh-TW.js"
+  ]
+}

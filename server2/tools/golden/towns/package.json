@@ -1,0 +1,9 @@
+{
+  "name": "server2-towns-oracle-deps",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Isolated preflight input only, not canonical manifest",
+  "dependencies": {
+    "mongoose": "5.1.2"
+  }
+}

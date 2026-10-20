@@ -1412,7 +1412,7 @@ async fn answer_body(query: &str) -> String {
     use server2::domestic::kma::backend::KmaBackend;
     use server2::gateway::BackendHandler;
     use server2::gateway::backend::Native;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
     seed(&store, &[]).await;
     let backend = KmaBackend::new(

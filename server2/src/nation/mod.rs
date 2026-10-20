@@ -67,6 +67,7 @@ pub struct NationBackend {
     source: Arc<dyn NationSource>,
     clock: crate::domestic::kma::backend::Clock,
     narrative: Option<Arc<dyn crate::narrative::Read>>,
+    narrative_clock: Arc<dyn Fn() -> i64 + Send + Sync>,
 }
 impl NationBackend {
     pub fn new(
@@ -79,10 +80,16 @@ impl NationBackend {
             source,
             clock,
             narrative: None,
+            narrative_clock: Arc::new(crate::narrative::now_ms),
         }
     }
     pub fn with_narrative(mut self, reader: Option<Arc<dyn crate::narrative::Read>>) -> Self {
         self.narrative = reader;
+        self
+    }
+    /// Narrative freshness uses wall time independently of the weather/air clock.
+    pub fn with_narrative_clock(mut self, clock: Arc<dyn Fn() -> i64 + Send + Sync>) -> Self {
+        self.narrative_clock = clock;
         self
     }
     pub async fn outcome(&self, base: KmaRequest) -> Outcome {
@@ -194,11 +201,12 @@ impl NationBackend {
             ("air", OrderedJson::Array(rows)),
             ("airStatus", air.status),
         ]);
-        crate::narrative::attach(
+        crate::narrative::attach_with_clock(
             &mut result,
             national.then_some(108),
             self.narrative.as_ref(),
             deadline,
+            self.narrative_clock.as_ref(),
         )
         .await;
         Outcome::Json(result)

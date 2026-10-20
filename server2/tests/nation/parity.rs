@@ -3,9 +3,13 @@ use serde_json::Value;
 use server2::{
     domestic::kma::{KmaRequest, Outcome, backend::parse_path},
     gateway::{BoxFuture, GatewayError, OrderedJson},
+    narrative::{self, Narrative, Read},
     nation::{CitySource, NationAir, NationBackend, NationSource, object, text},
 };
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::BTreeSet,
+    sync::{Arc, Mutex},
+};
 use tokio::time::Instant;
 fn oracle() -> Value {
     serde_json::from_str(include_str!("oracle.json")).unwrap()
@@ -34,6 +38,7 @@ impl CitySource for Cities {
                     object(vec![("private", OrderedJson::Bool(true))]),
                 ),
                 ("airInfoList", OrderedJson::Array(vec![object(vec![])])),
+                ("forecastNarrative", text("private child prose")),
             ])))
         })
     }
@@ -41,14 +46,81 @@ impl CitySource for Cities {
 struct Air {
     rows: Vec<OrderedJson>,
     status: OrderedJson,
+    expected_now: f64,
 }
 impl NationSource for Air {
-    fn nation_air(&self, _: f64, _: Instant) -> BoxFuture<'_, NationAir> {
-        Box::pin(async {
+    fn nation_air(&self, now: f64, _: Instant) -> BoxFuture<'_, NationAir> {
+        Box::pin(async move {
+            assert_eq!(
+                now, self.expected_now,
+                "narrative time must not replace weather/air time"
+            );
             NationAir {
                 rows: self.rows.clone(),
                 status: self.status.clone(),
             }
+        })
+    }
+}
+// Read is the normalized stored-prose boundary. Inputs come from recorded DB rows,
+// not expected bodies; provider parsing and S3 recovery have independent checks.
+struct Prose {
+    rows: Vec<Narrative>,
+    calls: Mutex<Vec<u16>>,
+}
+impl Prose {
+    fn from_input(input: &Value) -> Self {
+        let rows = if input["error"] == true {
+            vec![]
+        } else {
+            input["rows"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|row| {
+                    let station_id = row["stationId"].as_u64().unwrap() as u16;
+                    let announcement = row["announcement"].as_str().unwrap();
+                    let at = chrono::DateTime::parse_from_rfc3339(announcement)
+                        .unwrap()
+                        .timestamp_millis();
+                    Narrative {
+                        station_id,
+                        region: narrative::OFFICES
+                            .iter()
+                            .find(|o| o.0 == station_id)
+                            .unwrap()
+                            .1
+                            .into(),
+                        announcement: announcement.into(),
+                        expires_at: server2::world::js::iso((at + narrative::DAY_MS) as f64)
+                            .unwrap(),
+                        text: row["text"]
+                            .as_str()
+                            .unwrap()
+                            .replace("\r\n", "\n")
+                            .replace('\r', "\n"),
+                        language: "ko",
+                        source: "KMA",
+                        text_format: "plain",
+                    }
+                })
+                .collect()
+        };
+        Self {
+            rows,
+            calls: Mutex::new(vec![]),
+        }
+    }
+}
+impl Read for Prose {
+    fn read(&self, station: u16, _: Instant) -> BoxFuture<'_, Option<Narrative>> {
+        Box::pin(async move {
+            self.calls.lock().unwrap().push(station);
+            self.rows
+                .iter()
+                .filter(|n| n.station_id == station)
+                .max_by(|a, b| a.announcement.cmp(&b.announcement))
+                .cloned()
         })
     }
 }
@@ -57,11 +129,20 @@ async fn real_legacy_route_composition_matches_native_bytes_for_each_used_versio
     let oracle = oracle();
     let now =
         server2::world::vc::parse_iso_z(&oracle["now"].as_str().unwrap().replace(".000Z", "Z"));
+    let mut consumed = BTreeSet::new();
+    let mut delegated = BTreeSet::new();
+    let header_ids = BTreeSet::from(super::request_edges::HEADER_CASE_IDS);
+    let mut new_cases = 0;
     for case in oracle["scenarios"].as_array().unwrap() {
+        let id = case["id"].as_str().unwrap();
         // Header/version boundary cases exercise DirectRoutes in request_edges.rs.
         if case.get("headers").is_some() {
+            assert!(header_ids.contains(id), "unhandled header case {id}");
+            assert!(delegated.insert(id), "duplicate case {id}");
             continue;
         }
+        assert!(!header_ids.contains(id), "missing header inputs {id}");
+        assert!(consumed.insert(id), "duplicate case {id}");
         let version = case["version"].as_str().unwrap();
         // This test isolates the route boundary; AirInputs storage/fallback is tested separately.
         let ordered = case
@@ -94,11 +175,25 @@ async fn real_legacy_route_composition_matches_native_bytes_for_each_used_versio
             status: error,
             calls: Mutex::new(Vec::new()),
         });
+        // Deliberately different domains for the three new prose cases.
+        let weather_now = if case.get("narrativeInput").is_some() {
+            0.
+        } else {
+            now
+        };
         let backend = NationBackend::new(
             cities.clone(),
-            Arc::new(Air { rows, status }),
-            Arc::new(move || now),
+            Arc::new(Air {
+                rows,
+                status,
+                expected_now: weather_now,
+            }),
+            Arc::new(move || weather_now),
         );
+        let prose = Arc::new(Prose::from_input(&case["narrativeInput"]));
+        let backend = backend
+            .with_narrative(Some(prose.clone()))
+            .with_narrative_clock(Arc::new(move || now as i64));
         let query = case["query"]
             .as_object()
             .unwrap()
@@ -108,6 +203,20 @@ async fn real_legacy_route_composition_matches_native_bytes_for_each_used_versio
             .join("&");
         let req = parse_path(&format!("/{version}/kma/addr/Seoul?{query}"), "ko").unwrap();
         let outcome = backend.outcome(req).await;
+        let status = match &outcome {
+            Outcome::Json(_) => 200,
+            Outcome::Status(status, _) => *status,
+            other => panic!("unexpected status {id} {other:?}"),
+        };
+        assert_eq!(
+            status,
+            if case.get("error").is_some() {
+                500
+            } else {
+                200
+            },
+            "{id}"
+        );
         match outcome {
             Outcome::Json(body) => assert_eq!(
                 String::from_utf8(body.to_bytes()).unwrap(),
@@ -133,7 +242,17 @@ async fn real_legacy_route_composition_matches_native_bytes_for_each_used_versio
             other => panic!("unexpected {} {other:?}", case["id"]),
         }
         assert!(cities.calls.lock().unwrap().iter().all(|v| v == version));
+        if case.get("narrativeInput").is_some() {
+            new_cases += 1;
+            assert_eq!(*prose.calls.lock().unwrap(), vec![108], "{id}");
+        }
     }
+    assert_eq!(new_cases, 3);
+    assert_eq!(consumed.len(), 16);
+    assert_eq!(delegated, header_ids);
+    assert!(consumed.is_disjoint(&delegated));
+    assert_eq!(consumed.union(&delegated).count(), 19);
+    assert_eq!(oracle["scenarios"].as_array().unwrap().len(), 19);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -166,6 +285,7 @@ async fn actual_http_nation_get_head_and_304_never_contact_legacy() {
         Arc::new(Air {
             rows,
             status: expected.get("airStatus").unwrap().clone(),
+            expected_now: now,
         }),
         Arc::new(move || now),
     ));
@@ -327,6 +447,7 @@ async fn nation_rendered_errors_keep_jade_send_headers_after_native_finalhandler
             Arc::new(Air {
                 rows: vec![],
                 status: OrderedJson::Null,
+                expected_now: 0.,
             }),
             clock,
         )));

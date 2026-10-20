@@ -700,3 +700,10 @@ function ejson(v) {
 module.exports = {FakeCollection, attach, ejson, bson};
 
 ```
+
+
+## Pinned a6 station identity renewal (2026-10-20, build23)
+
+The current recorder pair retained all48 arpltn cases and clocks. Both gzip records are byte-identical at SHA-256 `4e3f4b6af2ee620658da515305f4977cc4dbd544f1b32d4ea5e130c2905a5086`; this fixture is the unchanged actual2 record. The original SHA-256 `cf32bd188181feea9dfeb8277e15f91f68f1a8dcdf8764048c5b4ce6904d42df` remains preserved in local ignored evidence. Forty answers gained `forecastStationName`, independently of observation availability, and the source SHA changed once; no other semantic difference was accepted.
+
+Actual1 has **no Root preflight PASS**: Root launched after its Python3.9 precheck errored. This procedure violation remains disclosed. Internal guard and dependency checks ran before/after, and Root verified predetermined source/protected hashes and retirement afterwards. Actual2 passed the corrected reviewed preflight before execution, followed by matching input policies (only output namespace differs), identical record bytes and protection/retirement checks. The pair is accepted with this explicit evidence limit; no missing preflight record was reconstructed.
