@@ -2225,17 +2225,33 @@ are idempotent; conflicts rebase within the owner budget. Ambiguous writes do no
 produce optimistic totals. Corrupt, mismatched or unreadable authority makes station
 statistics partial rather than leaking older seed totals.
 
+P2 separates 128 authority-read tickets from eight distinct mutation intents. Same-grid,
+same-end callers join an accepted decision before intent capacity is charged; each
+independent decision retains its input cutoff and original deadline. Concurrent reads
+share only a running probe, never a completed/negative authority cache. Missing state
+after an active pin is partial, even on warm no-current requests. Equal fully validated
+checkpoint payloads share storage with at most nine delivered versions. One heavy flight
+shares retained raw/projection work only after each decision independently validates its
+full input scope and exact envelope equality; one CAS writer owns the commit. None of
+these bounds establishes physical heap/RSS or production fleet capacity.
+
 The optional caller waits through the existing Source answer boundary while accepted
 work retains its own original 3s budget including queue and CAS. A late result is
 omitted from station statistics and S16 inputs; accepted work can finish for the next
 request. An expired caller is not a verified absent activation.
 
-Local owned HTTP verification preserves normal bodies and the same 46-record/16MiB
+Historical pre-P2 local owned HTTP verification preserves normal bodies and the same 46-record/16MiB
 pressure corpus: active weather returns 200 in 2.558s with truthful station partial, then
 a fresh same-S3 process reads acknowledged 3/5. This is not production factory/signal
 or heap qualification: active whole-child RSS was453,967,872B. The logical input
 bounds are not physical allocator/RSS bounds. See the [handover procedure](../operations/server2-rainfall-handover.md)
 and [selected local evidence](../evidence/tasks/issue-2819-rainfall-handover/verification.md).
+
+The 2026-10-21 build17 integrated-source run separately passed 1,124 workspace
+tests (zero failures, 9 ignored) and the unchanged normal/physical HTTP scenarios.
+Physical active returned200/0.790s with acknowledged3/5, exact drain/fresh-process
+readback and observed 364,494,848B whole-child RSS. These are local,
+revision-bound checks; CI/review and production qualification remain separate.
 
 ### S15b-3b life index, KASI rise/set, MFDS food poisoning and area numbers (2026-10-15)
 

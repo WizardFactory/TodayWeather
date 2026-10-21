@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "5b935299580d8c7b29a8489fd1587cd78e96e45c"
+      "revision": "3a31a023f21c4e7f62593e7b0b5ffd735518be0a"
     }
   },
   "components": [
@@ -233,7 +233,7 @@
       "id": "rainfall-owner",
       "type": "backend",
       "label": "Rainfall statistics owner",
-      "sublabel": "Demand offer; caller cutoff; owned3s",
+      "sublabel": "Fresh reads; shared replay; one CAS",
       "pos": [
         440,
         710
@@ -245,13 +245,14 @@
       "sources": [
         {
           "path": "server2/src/domestic/kma/source/rainfall.rs",
-          "line": 53,
-          "end_line": 164
+          "line": 208,
+          "end_line": 354
         },
         {
-          "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 1088,
-          "end_line": 1145
+          "path": "server2/src/domestic/kma/source/rainfall.rs",
+          "line": 500,
+          "end_line": 678,
+          "label": "Bounded shared replay and member retirement"
         },
         {
           "path": "server2/src/process.rs",
@@ -286,8 +287,9 @@
         },
         {
           "path": "server2/src/domestic/kma/source/rainfall.rs",
-          "line": 184,
-          "end_line": 355
+          "line": 702,
+          "end_line": 848,
+          "label": "Fresh authority and one conditional writer"
         }
       ]
     },
@@ -490,10 +492,20 @@
       "dot": "amber",
       "title": "Local qualification remains bounded",
       "items": [
-        "Owned same16MiB native input:200/2.558s partial, actual drain, fresh same-S3 process3/5.",
-        "Active whole-child RSS453967872B is not a64MiB heap or host capacity guarantee.",
+        "Historical owned16MiB input: partial200, actual drain, fresh same-S3 process3/5.",
+        "Historical whole-child RSS453967872B is not a64MiB heap or host capacity guarantee.",
         "Complete recovery retains forecastNarrative, F1 marker, this authority and delivery claims.",
         "No production activation, live sends, shadow or full recovery-bundle qualification here."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "P2 decisions and replay ownership",
+      "items": [
+        "128 read tickets; 8 distinct intents; same-grid/end joins before mutation capacity.",
+        "Every authority read is fresh; one overlapping probe, no negative cache or TTL.",
+        "Independent full input validation; one shared heavy projection and one CAS writer.",
+        "Each decision retains its original cutoff and 3s deadline; nine delivered versions are bounded."
       ]
     }
   ]

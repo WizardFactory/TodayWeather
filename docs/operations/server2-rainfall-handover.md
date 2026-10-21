@@ -10,6 +10,14 @@ Only eligible canonical rain predictions (`pty > 0` or `rn1 > 0`) enter the upda
 
 For each original registration/statistics ObjectId, select actual minute rows in the strict window `(prediction end − 1 hour, prediction end]`. Require at least 15 actual rows and at least one known rainfall boolean. A known true anywhere is the observed-rain result; all known booleans false is observed-dry. A row with no rainfall boolean counts as a row and never becomes false. Keep the existing hit/count calculation and preserve imported cumulative totals. Distinct ObjectIds sharing a station number remain distinct.
 
+## Read and mutation ownership
+
+Read classification has 128 bounded tickets, separate from eight distinct mutation intents. No-current and dry requests still validate authority; confirmed absence before an active pin serves baseline without a rainfall write. Same grid and canonical end join the existing accepted decision before mutation capacity is charged. Each independent decision keeps its original three-second deadline and exact input cutoff.
+
+One overlapping authority probe is shared only while it is running. There is no completed authority cache, negative cache or TTL. After an active pin, missing or invalid authority remains a partial failure, including warm no-current requests. Freshly validated equal checkpoint payloads may share storage, with at most nine distinct delivered versions; storage sharing does not authorize skipping reads.
+
+One shared heavy flight retains raw input and projection. Every distinct grid decision independently validates its complete catalog/raw scope; projection is reused only after exact full-envelope equality. One conditional writer preserves unrelated rows and acknowledges only a successful write or validated readback. A logical timeout does not release a still-running parse or extend the original deadline. These are admission and ownership bounds, not a hard heap/RSS or fleet capacity guarantee.
+
 ## Activation and durable recovery
 
 Freeze the final seed/high-water identity after the separately approved legacy stop and edit freeze. Bind the exact seed, namespace, activation epoch and first native prediction window. An operator creates the initial schema 1 authority; runtime must not create it. Preserve the original read-only copied legacy documents.
@@ -38,10 +46,27 @@ Record the exact source/toolchain/binary/runner and fixture hashes first. The no
 
 The large-page scenario reuses the same 46 raw records and 16MiB physical corpus for inactive and active requests. It must return200 core weather and truthful partial statistics before the deadline, then expose the acknowledged result from a fresh child after actual drain. Preserve physical raw/envelope/catalog body/ETag/version equality, original errors and complete child retirement. A terminal diagnostic proves only its observed example/rainfall-permit cutoff; it does not measure exact CPU admission, allocator peak or final network flush.
 
-The pre-correction large-page request returned 502 and the whole active child peaked at453,263,360 bytes. That failed result and sizing limitation remain historical evidence. This caller-boundary change does not rewrite the HTML parser or prove a 64MiB physical heap bound. The corrected selected native run returned HTTP 200 in 2.557937542s, omitted unconfirmed station statistics, then committed 3/5 and returned 3/5 from a fresh same-S3 process. Its whole active-child RSS was453,967,872 bytes. Screenshots and the PDF display retained local receipts; they are not an additional product execution. Independent review and final source binding remain separate gates.
+The pre-correction large-page request returned 502 and the whole active child peaked at453,263,360 bytes. That failed result and sizing limitation remain historical evidence. This caller-boundary change does not rewrite the HTML parser or prove a 64MiB physical heap bound. The historical pre-P2 corrected selected native run returned HTTP 200 in 2.557937542s, omitted unconfirmed station statistics, then committed 3/5 and returned 3/5 from a fresh same-S3 process. Its whole active-child RSS was453,967,872 bytes. Screenshots and the PDF display retained local receipts; they are not an additional product execution. Independent review and final source binding remain separate gates.
 
 
-## Reviewed local record
+## Current-master local verification (2026-10-21)
+
+Build17 source snapshot `3a31a023f21c4e7f62593e7b0b5ffd735518be0a` integrates master `e09672a3`.
+The full workspace passed 1,124 tests with zero failures and 9 ignored,
+using default scheduling; the separate owned operator test and eight diagnostic tests
+also passed. This is a local record, with independent review and current PR CI still
+required before readiness.
+
+The newly built optimized example returned all six normal HTTP200 bodies byte for
+byte equal to build16. On the unchanged 46-record/16MiB corpus, inactive returned200
+in 0.220s with zero rainfall PUT; active returned200 in
+0.790s with acknowledged3/5. Actual drain and a fresh same-S3 process
+retained revision2/3of5 with exactly the same checkpoint bytes. No reset or reactivation
+was used. Active whole-child peak RSS was 364,494,848 bytes, an
+observation rather than a hard memory limit. The prior partial-response measurement
+above remains historical; early acknowledged completion is a valid current result.
+
+## Local verification record and manual
 
 The [three-page screenshot manual](server2-rainfall-handover.pdf) and
 [selected evidence](../evidence/tasks/issue-2819-rainfall-handover/verification.md)
@@ -52,7 +77,7 @@ The retained operator example accepts `preview SEED ACTIVATION_JSON`,
 `activate SEED ACTIVATION_JSON`, and `verify SEED`. `preview` validates and encodes
 the exact checkpoint without an S3 request; the S3 namespace still comes from
 validated server2 settings. `verify` performs a bounded read and reports revision,
-checkpoint/seed hashes and row count. `activate` performs a conditional creation
+checkpoint/seed hashes and row count. Both verify and activate require the exact complete imported S06 seed acquisition/raw proof even when a local file has the expected hash. A local preview does not certify imported seed presence. `activate` performs a conditional creation
 and readback and must run only under separately scoped operational authority.
 Never use the owned smoke's fixed synthetic activation as production input.
 

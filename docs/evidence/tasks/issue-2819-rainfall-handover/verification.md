@@ -4,6 +4,11 @@ This is repository preparation for issue2819. It does not establish production
 activation, actual ASOS provider access, a host memory budget, process signal
 lifecycle, a complete eligible rollback pair or issue2704/2705 completion.
 
+
+The sections below through the historical architecture binding preserve earlier,
+revision-bound runs. The dated build17 section supersedes their current-candidate
+claims; original failures and prior measurements are not replaced.
+
 ## Input and behavior
 
 AK selected compatible mapping of the existing national `kma-web/aws-minute`
@@ -18,7 +23,7 @@ Runtime updates only an existing schema1 authority. Counters, last end and input
 receipts commit together with conditional writes. Absent authority stays inactive.
 Unknown, corrupt or mismatched state does not expose optimistic or stale seed totals.
 
-## Actual owned checks
+## Historical pre-P2 owned checks
 
 The current caller-boundary correction has a meaningful original-API Red for a
 result and timer both ready after the cutoff. Corrected focused checks:8 library
@@ -94,7 +99,7 @@ The PDF wording distinguishes eligible canonical rain predictions from an observ
 miss. Its3 rendered pages were re-read after that clarification.
 
 
-## Committed architecture binding
+## Historical committed architecture binding
 
 The maintained [runtime ownership diagram](../../../architecture/diagrams/server2-runtime-services.html)
 is regenerated from actual committed source `5b935299580d8c7b29a8489fd1587cd78e96e45c`.
@@ -102,3 +107,57 @@ All26 source references are retained. Showcase validation, artifact/provenance a
 real-browser gates passed; four1440/2048 light/dark captures were individually read.
 The selected layout has zero crossings and one readable three-bend shared-S3 branch.
 This diagram documents repository wiring, not an executed production stop/activation.
+
+
+## Current-master P2 verification (2026-10-21, build17)
+
+Source snapshot `3a31a023f21c4e7f62593e7b0b5ffd735518be0a` has parents `17098d1b` and master
+`e09672a3`. The tested identity is `source-sha256:2482c9b20a7e14ead3cc2f4ce238619ecd715b18129dedbc6bab54853002b2fc`: SHA-256 of the explicit base
+and all795 tracked server2 input-file hashes. Documentation is bound separately;
+later matching commit mapping does not relabel an older executable as a new run.
+
+- Full workspace, default scheduling: **1,124 passed / 0 failed / 9 ignored**,
+  31 result rows; fresh locked/offline Rust1.99 compilation. No ignored test is counted
+  as executed. Strict all-target Clippy and formatting passed.
+- Owned operator prerequisite/readback:1 passed; diagnostic controls:8 passed.
+- Normal native TCP: all six HTTP200 bodies equal build16 byte for byte; inactive3/4
+  with zero rainfall PUT, acknowledged4/5 once, repeat/fresh-process4/5, later dry4/6,
+  corrupt authority with truthful partial statistics.
+- Original physical corpus:46 raw records /16,777,216 bytes. Every raw body, complete
+  envelope and catalog body/ETag/version matches build16. Manifest changes are the
+  execution wall cutoff and source-file provenance; all selected fetch times precede
+  both cutoffs. No corpus, deadline, capacity or expected-response relaxation.
+- Inactive200/0.220s/zero rainfall PUT;
+  active200/0.790s/acknowledged3of5. Actual drain and a fresh same-S3
+  child retain revision2/3of5 and checkpoint `4433c58cb1cd3408ca57c3d54bb79cb84aaf0d1965141888a876454a32835ed8`.
+  Whole-child active peak RSS **364,494,848 bytes** remains a measured
+  limitation, not a physical heap/RSS or production throughput guarantee.
+- All owned children exited; provider calls and Mongo writes are zero. The examples
+  use fixed clock/provider denial and Gateway/DirectRoutes/KmaBackend TCP; they do
+  not qualify RuntimeServices signals, a production host or a full recovery pair.
+
+P2 separates128 read tickets from8 mutation intents, joins same-grid/end work,
+shares only overlapping authority probes without a completed/negative cache, and
+retains independent input cutoffs/deadlines and full-scope validation before sharing
+heavy projection work and one conditional writer. Both operator verify and activate
+require complete exact imported S06 seed proof even when a local file matches.
+Prior RF-CLAUDE findings require renewed independent confirmation; these author
+checks are not a reviewer resolution or PR/CI PASS.
+
+Execution identities:
+
+- Native SHA-256: `3f2db44591011092870e793ee4524541748fc1c282cd6d706e35b1f2856d944c`.
+- Runner SHA-256: `2de0de51567323b66f3aaf01bb980e96fa7ea08ffa55e85b029ad69d4b5010c0`.
+- Normal receipt SHA-256: `5f160a352f18c0ad736edf388b4a4022d6b814e1928b5fe9827a296cf600734a`.
+- Physical receipt SHA-256: `eeb6769507d4d50e7ebf3b263ad02b7b986060b8bd95960d7394a8dbd328f0ac`.
+- Full comparison assessment SHA-256: `bb1b59d8715b5a17557aab555fa780aab6dfe87df178422f7c3f728b6838cf14`.
+- Physical manifest SHA-256: `d5c5e6a485511994dd23f7c5f029d954eb887048882d3ce268fb0a4eadc5216d`.
+- Current PDF SHA-256: `c5ebb29ca03940f365c975541938ef7a87286e12259b6ca3d28c5d8365ec0564`.
+
+The editable manual JSON, three receipt captures and all three rendered PDF pages
+were checked against these current results. The source-bound ownership diagram now
+pins `3a31a023f21c4e7f62593e7b0b5ffd735518be0a`; artifact, provenance and real-browser checks passed.
+Four light/dark captures were inspected for the main scene; footer card bodies extend
+below the captured viewport, a retained visual coverage limit. Original pre-P2 layout
+and failed recordings/checks remain preserved. Current CI, eligible PR review and all
+production activation/recovery/capacity gates are separate from this local result.

@@ -71,6 +71,13 @@ inactive; a failed/mismatched/ambiguous authority cannot be replaced by stale se
 statistics. Accepted work may finish after the request's optional Source cutoff, so
 weather returns a truthful station-partial section until acknowledgement is available.
 
+P2 uses separate bounded read tickets and mutation intents. Shared authority reads
+cover only overlapping probes, with no completed or negative cache; missing authority
+after an active pin remains partial. Distinct grid decisions independently validate
+complete input scope before sharing heavy projection work and one conditional writer.
+The original caller and owner deadlines remain in force. For exact admission bounds,
+follow the handover procedure below; logical bounds do not establish a physical RSS limit.
+
 Both recovery bundles must preserve the authority and its receipts along with final
 registration markers, claims and forecastNarrative. This preparation does not qualify
 a production bundle, parser memory capacity or signal drain. Follow the
