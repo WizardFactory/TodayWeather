@@ -322,3 +322,17 @@ unchanged; its town routes do not invoke the changed air-forecast selection.
 
 This refresh records the behavior of the existing legacy driver; it does not insert
 server2 output into the oracle or change a scenario to fit the Rust implementation.
+
+
+## Current a6 renewal (2026-10-20, build23)
+
+This fixture was renewed from the qualified full22 older capture at `a6fdf1f4d1f869d63c5310646003967571dac6e2`. Two independent captures had identical raw and gzip bytes, with no same-base comparison exclusions. SHA-256: `ffbc6c37d4d26ace6518bdfa6f888d84ddef42370eeec8164f82d06daa3df304`. Previous fixture SHA-256: `f86f257bdff84c83f94ce676a79113cc48a84f195774f490df28c87b986e36d6`; original bytes remain in local ignored build23 evidence. Original request cases and clocks are retained.
+
+The old/current comparison excluded only `/source/files`; 880 rows across all five corpora were classified. New legacy stored-air forecast/history/station metadata are intentional current-reference behavior and require native alignment; old/current semantic equivalence is not claimed. Empty optional narrative lookups do not cover present narrative content. Requesttrace arpltn result preimages and two backend body preimages were not retained by the original recorder. Full22 terminal/capture success does not qualify live providers, Linux or production capacity.
+
+
+## Current a6 renewal (2026-10-20, build23)
+
+This fixture was renewed from the qualified full22 town capture at `a6fdf1f4d1f869d63c5310646003967571dac6e2`. Two independent captures had identical raw and gzip bytes, with no same-base comparison exclusions. SHA-256: `c0c1d0b54edbcfe38eaadb3cff43924d3b0127850f48d6c1abbc8f521a301a6b`. Previous fixture SHA-256: `991cf39a229d2e46491652611b331ae2573e6521a8db507f3c132e03b559f904`; original bytes remain in local ignored build23 evidence. Original request cases and clocks are retained.
+
+The old/current comparison excluded only `/source/files`; 880 rows across all five corpora were classified. New legacy stored-air forecast/history/station metadata are intentional current-reference behavior and require native alignment; old/current semantic equivalence is not claimed. Empty optional narrative lookups do not cover present narrative content. Requesttrace arpltn result preimages and two backend body preimages were not retained by the original recorder. Full22 terminal/capture success does not qualify live providers, Linux or production capacity.

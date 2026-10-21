@@ -8,7 +8,7 @@
     "locale": "en",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "732766a8cbfc9e70f3afacaacb61010a881f0cf1",
+      "revision": "a6fdf1f4d1f869d63c5310646003967571dac6e2",
       "provider": "github",
       "link_mode": "web"
     }
@@ -105,6 +105,12 @@
           "line": 156,
           "end_line": 196,
           "label": "Selected native terminal errors, no legacy hop"
+        },
+        {
+          "path": "server/controllers/controllerTown24h.js",
+          "line": 1266,
+          "end_line": 1307,
+          "label": "Pinned a6 air parity target"
         }
       ]
     },
@@ -274,7 +280,7 @@
         "Preserve the observed client API contracts",
         "S3 is authoritative; RAM and disk copies are disposable",
         "Precise reverse-geocode keys and bodies stay volatile",
-        "Local disk caching is allowed; S15b-4c implementation pending"
+        "Air parity target: provider current + stored forecasts/history"
       ]
     },
     {

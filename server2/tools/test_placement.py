@@ -245,6 +245,56 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
                        lambda d:d['cases'][0].update(handler=['server/routes/gateway.js']),
                        lambda d:d['source'].update(files={})]:
             d=self.golden_fixture();mutate(d);self.write('server2/tests/golden/records.json',json.dumps(d));self.assertTrue(self.errors())
+    def test_fingerprint_registry_identity_is_exact_not_a_file_bypass(self):
+        original = Path(__file__).resolve().parents[1]/'config/golden-provenance.json'
+        registry = json.loads(original.read_text())
+        self.write('server2/config/golden-provenance.json',json.dumps(registry))
+        self.assertEqual([],self.errors())
+        for mutate in [lambda r:r.update(runtime_source='../server/private.json'),
+                       lambda r:r['legacy_sources'].__setitem__(0,'../server/private.json'),
+                       lambda r:r['fixtures'][0]['maps'][0].update(runtime_path='../server/private.json'),
+                       lambda r:r['fixtures'][0].update(provenance='../server/private.json'),
+                       lambda r:r.update(reader_sha256='not-sha'),
+                       lambda r:r.update(schema=True),
+                       lambda r:r['verification_exports'].pop(),
+                       lambda r:r['verification_exports'].__setitem__(0,'server/private.js'),
+                       lambda r:r['verification_exports'].append(r['verification_exports'][0])]:
+            bad=json.loads(original.read_text());mutate(bad)
+            self.write('server2/config/golden-provenance.json',json.dumps(bad))
+            self.assertTrue(self.errors())
+        self.write('server2/config/golden-provenance.json',json.dumps(registry))
+        self.write('server2/config/arbitrary.json',json.dumps(registry))
+        self.assertTrue(self.errors())
+
+    def test_reviewed_policy_bytes_are_exact_and_path_bound(self):
+        source = Path(__file__).resolve().parents[1]/'tools/golden/policies'
+        for profile in ['air','nation','delivery','domestic_http','rest_http']:
+            path = f'server2/tools/golden/policies/{profile}.json'
+            raw = (source/(profile+'.json')).read_bytes()
+            self.write(path,raw.decode('utf8'))
+            self.assertEqual([],self.errors())
+            self.write(path,raw.decode('utf8')+'\n')
+            self.assertTrue(any('unreviewed verification policy bytes' in error for error in self.errors()), 'one byte change must revoke policy recognition at the policy pin check')
+            self.write(path,raw.decode('utf8'))
+        other='server2/tools/golden/policies/unknown.json'
+        self.write(other,raw.decode('utf8'))
+        self.assertTrue(self.errors(), 'same bytes at another path must remain scanned')
+        self.write(other,'{"runtime_source":"../server/private.json"}')
+        self.assertTrue(self.errors())
+
+    def test_provenance_fixture_role_never_exempts_runtime_read_or_import_path(self):
+        path='server2/tools/golden/test_provenance.py'
+        self.write(path,"self.write('server/config/synthetic.js','owned fixture bytes')")
+        self.assertEqual([],self.errors())
+        for body in ["open('../server/config/private.json').read()",
+                     "self.read_text('../server/config/private.json')",
+                     "__import__('pathlib').Path('../server/private.py').read_text()",
+                     "self.symlink_to('../server/private.py')"]:
+            self.write(path,body);self.assertTrue(self.errors())
+        self.write(path,"open('../server/config/private.json').read()")
+        self.write('server2/tools/golden/arbitrary.py',"self.write('server/private.py','outside')")
+        self.assertTrue(self.errors())
+
     def golden_workflow(self):
         return "name: Server2\non:\n  pull_request:\n  push:\n    branches: [master]\npermissions:\n  contents: read\njobs:\n  scope:\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n    outputs:\n      heavy: ${{ steps.scope.outputs.heavy }}\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - id: scope\n        run: python3 tools/ci.py --audit-only\n  foundation:\n    needs: scope\n    if: ${{ !cancelled() && needs.scope.outputs.heavy != 'false' }}\n    runs-on: ubuntu-latest\n    timeout-minutes: 45\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - run: bash tools/ci.sh\n      - uses: actions/upload-artifact@v4\n        with:\n          name: server2-linux-musl-verified\n          path: reports/verification/server2-local-first/artifact-native/\n          if-no-files-found: error\n          retention-days: 30\n  goldens:\n    needs: scope\n    if: ${{ !cancelled() && needs.scope.outputs.heavy != 'false' }}\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '16.20.2'\n      - uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n      - run: python tools/golden/ci.py --install\n"
 

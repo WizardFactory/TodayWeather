@@ -112,8 +112,37 @@ async fn recorded_store_is_a_defect_when_the_recording_cannot_answer() {
     );
     let extra = edited(id, |sc| {
         let calls = sc["calls"].as_array_mut().unwrap();
-        let last = calls.last().unwrap().clone();
-        calls.push(last);
+        const NARRATIVE: &str = "unknown_model:modelKmaForecastNarrative";
+        let narratives: Vec<_> = calls
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c["m"] == NARRATIVE)
+            .map(|(i, _)| i)
+            .collect();
+        assert_eq!(narratives.len(), 1);
+        let tail = narratives[0];
+        let last_active = |calls: &[serde_json::Value]| {
+            calls
+                .iter()
+                .rposition(|c| c.get("after_response").is_none())
+                .unwrap()
+        };
+        assert_eq!(last_active(calls), tail);
+        assert_eq!(calls[tail]["result"], serde_json::json!([]));
+        let args = calls[tail]["args"].as_array().unwrap();
+        assert_eq!(args.len(), 1);
+        let station = args[0].as_object().unwrap();
+        assert_eq!(station.len(), 1);
+        assert!(station["stationId"].as_u64().is_some_and(|n| n > 0));
+        // Duplicate a real active store call, leaving the strict optional empty
+        // narrative last. This reaches unconsumed(), rather than a parse defect.
+        let real = calls
+            .iter()
+            .rposition(|c| c["m"] != NARRATIVE && c.get("after_response").is_none())
+            .unwrap();
+        calls.insert(tail, calls[real].clone());
+        assert_eq!(last_active(calls), tail + 1);
+        assert_eq!(calls[tail + 1]["m"], NARRATIVE);
     });
     let o = outcome(&extra, id);
     assert!(forwarded(&o, "reply left recorded calls unused"), "{o:?}");

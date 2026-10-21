@@ -8,6 +8,9 @@
 //! different arguments or beyond the recorded calls, and a reply leaving recorded calls unused,
 //! end the assembly as a defect (`kma::unavailable`, a dependency failure since S15b-4b-1)
 //! instead of assembling from inputs the recording does not contain.
+//! The current legacy's final empty narrative lookup is validated separately: the native
+//! narrative subsystem has its own tests, and this KmaStore replay must not invent a DB read.
+//! Only an empty, successful, last lookup with the exact station-id argument shape is omitted.
 use serde_json::{Value, json};
 use server2::domestic::kma::{
     DbVersion, KmaRequest, KmaStore, MidModel, StoreError, StoreResult, TownModel,
@@ -130,10 +133,34 @@ impl RecordedSource {
                 return Err(RecordingError("calls"));
             };
             let mut replay = Vec::new();
-            for c in calls.iter().filter(|c| c.get("after_response").is_none()) {
+            let active: Vec<_> = calls
+                .iter()
+                .filter(|c| c.get("after_response").is_none())
+                .collect();
+            for (position, c) in active.iter().enumerate() {
                 let args = c.get("args").ok_or(RecordingError("args"))?;
                 let args: Value =
                     serde_json::from_slice(&args.to_bytes()).map_err(|_| RecordingError("args"))?;
+                if text(c, "m").as_deref() == Some("unknown_model:modelKmaForecastNarrative") {
+                    let valid_args = args
+                        .as_array()
+                        .filter(|a| a.len() == 1)
+                        .and_then(|a| a[0].as_object())
+                        .is_some_and(|o| {
+                            o.len() == 1
+                                && o.get("stationId")
+                                    .and_then(Value::as_u64)
+                                    .is_some_and(|n| n > 0)
+                        });
+                    if position + 1 != active.len()
+                        || c.get("error").is_some()
+                        || !matches!(c.get("result"), Some(OrderedJson::Array(a)) if a.is_empty())
+                        || !valid_args
+                    {
+                        return Err(RecordingError("optional narrative tail"));
+                    }
+                    continue;
+                }
                 let answer = match c.get("error") {
                     Some(e) => Err(e.string().unwrap_or_default()),
                     None => Ok(c.get("result").cloned().unwrap_or(OrderedJson::Null)),

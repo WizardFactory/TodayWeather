@@ -27,3 +27,29 @@ Original setup/expectation errors remain separate from intended Red. Earlier cod
 evidence was reused only for identical nine code inputs; the earlier full candidate
 added three documentation paths. Per-file reuse hashes were checked, not relabelled.
 Current hosted CI and independent re-review remain gates.
+
+## Current-master integration (2026-10-21)
+
+The earlier base/hosted results above remain historical. The G2 branch now integrates
+master `e09672a3bd01b47d961479feee6ee0b2a9582c1a` after G1 PR2844 and manuals PR2848.
+The golden guide preserves its integrated G1 result and provenance-first entrypoint;
+the checker combines only the exact reviewed synthetic fixture roles. G1 policy
+pins/registry validation and G2 full-root range/fail-closed workflow remain intact.
+No master runtime, golden tool/guard/policy, fixture or legacy input bytes were
+changed by this resolution.
+
+Fresh local checks passed 24 CI/controller, 49 placement, 4 artifact and 14 native
+export controls (91 total), plus a separate 13-case actual Git/event CLI smoke.
+Its report SHA256 is `da7e70bf7c6e457e322edaacd175ca91f33063efce625ccbb3f36ad4d7a7fcb7`.
+The full current-base placement check passed. A pinned Node16.20.2 hash-only audit
+reported 22 SOURCE_CURRENT / 0 DRIFT; no original recorder ran locally. The first
+local compiler-proxy lookup failed before tests, then the preexisting private
+Rust1.99.0 toolchain was selected with auto-install disabled. That setup failure
+is retained separately; no global toolchain or Cargo target was changed.
+
+The earlier passing 24-controller baseline, review findings CI-REVIEW-001/002 and
+all prior failures remain preserved. These local checks are not a new hosted CI
+result or actual master-push execution. Current-head review, hosted foundation/
+goldens, actual diagnostic stamp and native artifact retrieval remain required
+for renewed pre-merge readiness; their eventual results belong on the PR rather
+than in a recursive evidence-only commit. No deployment/merge/host readiness claim.
