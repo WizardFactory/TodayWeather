@@ -241,9 +241,11 @@ impl<T> Clone for Cache<T> {
         Self(self.0.clone())
     }
 }
+/// Fields drop in declaration order: the bytes return before the owner slot wakes the next
+/// owner, whose reservation refuses rather than waits.
 pub(super) struct Workspace {
-    _slot: OwnedSemaphorePermit,
     _bytes: ByteLease,
+    _slot: OwnedSemaphorePermit,
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> Cache<T> {
     pub(super) fn new(reader: Reader<T>) -> Result<Self, Error> {
@@ -937,6 +939,41 @@ mod tests {
             charge: Charge::default(),
             _parent: None,
         }
+    }
+    #[test]
+    fn an_owner_hand_off_returns_the_workspace_before_waking_the_next_owner() {
+        use std::future::Future;
+        use std::task::{Context, Wake, Waker};
+        /// The workspace in use when the next owner is woken, inside the slot release.
+        struct Observe(Arc<ByteBudget>, Mutex<Option<usize>>);
+        impl Wake for Observe {
+            fn wake(self: Arc<Self>) {
+                self.wake_by_ref();
+            }
+            fn wake_by_ref(self: &Arc<Self>) {
+                *self.1.lock().unwrap() = Some(self.0.used());
+            }
+        }
+        let owners = Arc::new(Semaphore::new(1));
+        let budget = ByteBudget::new(WORKSPACE).unwrap();
+        let workspace = Workspace {
+            _slot: owners.clone().try_acquire_owned().unwrap(),
+            _bytes: budget.reserve(WORKSPACE).unwrap(),
+        };
+        let observe = Arc::new(Observe(budget.clone(), Mutex::new(None)));
+        let waker = Waker::from(observe.clone());
+        let mut next = Box::pin(owners.clone().acquire_owned());
+        assert!(
+            next.as_mut()
+                .poll(&mut Context::from_waker(&waker))
+                .is_pending()
+        );
+        drop(workspace);
+        assert_eq!(
+            *observe.1.lock().unwrap(),
+            Some(0),
+            "the woken owner must find the previous workspace returned"
+        );
     }
     #[test]
     fn freshness_clips_monotonic_wall_minute_and_future_equality() {
