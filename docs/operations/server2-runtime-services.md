@@ -77,7 +77,7 @@ python3 server2/tools/runtime_services_smoke.py \
 
 The tool clears the child environment, loads no dotenv file, and injects owned loopback S3/native/OAuth/FCM peers and synthetic keys through the same production factory/stop code. It exercises public registration/notice/health, scheduled alarm/conditional jobs, silent warning polling, actual TERM/INT/listener failures, queued registration, slow weather/OAuth, final pre-POST guard, in-flight POST/result write, and durable restart/no-replay. Its native test handler uses actual OwnedFlights; an incomplete task's Drop marker proves runtime cancellation. Production endpoint bounds and shared test-peer configuration are unchanged.
 
-See the [S20b verification record](../evidence/tasks/issue-2705-s20b/verification.md), [editable diagram](../architecture/diagrams/server2-runtime-services.json), [interactive diagram](../architecture/diagrams/server2-runtime-services.html) and [PDF manual](server2-runtime-services.pdf). The capture below shows actual isolated usage/results, not device delivery.
+See the [S20b verification record](../evidence/tasks/issue-2705-s20b/verification.md), [editable diagram](../architecture/diagrams/server2-runtime-services.json), [interactive diagram](../architecture/diagrams/server2-runtime-services.html) and [historical PDF snapshot](server2-runtime-services.pdf). The PDF and capture retain their original task scope; later startup, credential and recovery amendments are maintained in this Markdown. The capture below shows actual isolated usage/results, not device delivery.
 
 ![Actual isolated process lifecycle results](../evidence/tasks/issue-2705-s20b/runtime-smoke.png)
 

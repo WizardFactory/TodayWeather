@@ -10,15 +10,44 @@ For standalone S02, the only outside executable is the declared `server/test/off
 
 ## Verify the baseline
 
-The independent golden CI entrypoint creates and removes a temporary dependency prefix. It installs with lifecycle scripts, audit and funding requests disabled, runs negative contract tests, and records twice in fresh Node processes:
+The independent golden CI entrypoint creates and removes a temporary dependency
+prefix. With `--install`, it installs locked packages from npm with lifecycle
+scripts, npm audit and funding requests disabled. After dependency setup, it runs
+the following sequence from the repository root:
+
+1. `test_provenance.py`: provenance boundary/negative controls.
+2. `provenance.py`: the full registered source-freshness audit.
+3. `test_golden.py`: golden contract controls.
+4. `verify.py verify`: two complete recordings in fresh Node processes and exact
+   comparison with the baseline.
+
+Each subprocess uses `check=True` and a 180-second parent timeout. A nonzero exit
+or timeout stops the sequence; later steps are not run. The audit returns 1 for
+`DRIFT` and 2 for invalid input, both of which fail CI. Do not treat an omitted
+later step as passed.
+
+Put Node **16.20.2** on PATH before invoking this entrypoint: the provenance
+audit uses PATH's `node`. `GOLDEN_NODE` selects only the standalone verifier's
+Node and does not override that audit selection. `--install` still needs npm
+registry access.
 
 ```sh
 python3.11 server2/tools/golden/ci.py --install
 ```
 
-This standalone CI path requires its two recordings to match each other and the checked-in `server2/tests/golden/records.json` byte for byte. Its historical completed verification reported 19 observed groups, 76 actual wire cases and 11 backend families. The current G1 baseline was recorded through the qualified rest boundary; equivalence of a fresh standalone `ci.py`/`verify.py` run remains part of the existing current-CI gate, not a result established by schema validation or by the guarded pair alone. Missing coverage, altered raw bytes, status, headers or source/dependency hashes fails verification. The artifact keeps response bodies in base64, so JSON whitespace and non-JSON bodies are preserved.
+Each invocation allocates a unique ignored audit output under
+`reports/verification/server2-golden/provenance-<unique>/audit/report.json`.
+The audit requires a new canonical output path; it does not overwrite an old
+report. The entrypoint retains this report after temporary dependencies are
+removed. Invalid input may fail before any report is written. Local reports are
+not tracked artifacts; the current GitHub job does not upload these reports, so
+preserve selected evidence separately when needed.
 
-For an existing isolated install, explicitly set its node_modules prefix and Node executable:
+This standalone CI path requires its two recordings to match each other and the checked-in `server2/tests/golden/records.json` byte for byte. Its historical completed verification reported 19 observed groups, 76 actual wire cases and 11 backend families. The G1 baseline was recorded through the qualified rest boundary. At the build24 checkpoint, fresh standalone equality was still a separate current-CI gate; the dated integrated result below records its later completion. Schema validation or a guarded pair alone does not establish that equality. Missing coverage, altered raw bytes, status, headers or source/dependency hashes fails verification. The artifact keeps response bodies in base64, so JSON whitespace and non-JSON bodies are preserved.
+
+For a standalone verifier run with an existing isolated install, explicitly set
+its node_modules prefix and Node executable. This runs the golden comparison
+only; use `ci.py` for the complete provenance-first sequence:
 
 ```sh
 NODE_PATH=/tmp/my-golden-deps/node_modules \
@@ -26,7 +55,10 @@ GOLDEN_NODE=/path/to/node-16.20.2 \
 python3.11 server2/tools/golden/verify.py verify
 ```
 
-The following capture is from actual CLI help and a completed offline verification; host-specific paths are omitted from the capture. The PDF version contains the same procedure and evidence.
+The following capture is from historical S02 CLI help and a completed offline
+verification; host-specific paths are omitted. The companion PDF is a historical
+S02 snapshot. This Markdown carries the later provenance-first CI and G1 updates;
+the old capture/PDF is not a current execution receipt.
 
 ![Actual CLI help and offline verification result](../evidence/tasks/server2-golden/usage.png)
 
@@ -62,7 +94,7 @@ A raw-body/hash error, inventory gap, source drift or byte mismatch exits nonzer
 
 Dependency responses are fixed inputs and some existing offline fixtures are synthetic. Real assembly and HTTP middleware execute, but this does not establish provider availability, production credentials, every geographic location, concurrent locale races, complete deployed parity or a new server2 response. The JavaScript guards are a bounded verification safety mechanism, not an adversarial OS sandbox. Resource placement checks supplement manual review and do not prove arbitrary computed paths safe.
 
-The foundation workflow retains fmt, clippy, Rust tests, placement tests, release build and separate release-binary smoke. The additive golden job invokes only its owned CI entrypoint. Essential golden bytes, selected CLI capture and this editable/PDF manual are retained in Git; raw stage runs remain ignored local reports. No broad reports upload is added.
+The foundation workflow retains fmt, clippy, Rust tests, placement tests, release build and separate release-binary smoke. The additive golden job invokes only its owned CI entrypoint. Essential golden bytes, the selected historical CLI capture/PDF and this maintained Markdown are retained in Git; raw stage runs remain ignored local reports. No broad reports upload is added.
 
 The CI event filter is unchanged. Ordinary legacy-only maintenance does not require a server2 task declaration or run this workflow. A later golden invocation detects source drift; this oracle is not continuous legacy drift enforcement.
 
@@ -194,8 +226,8 @@ packaging decision, not reconstruction of a historical compressed preimage.
 
 After adoption, repeat the freshness audit and affected native/functional tests.
 The 2026-10-20 local result was 22 `SOURCE_CURRENT` / 0 `DRIFT`; affected native
-harnesses passed 322 tests with three preexisting ignored tests (two slow sweeps
-and one separate owned flow), and 18 golden
+harnesses passed 322 tests with three ignored tests (two preexisting slow sweeps
+and the newly added `air_s3::owned_normal_air_s3_reconstruction_flow`), and 18 golden
 contract tests passed. The previous parallel domestic failure and resource Red,
 first UNQUALIFIED world capture, and setup/gate failures remain preserved. Of the
 seven original rest invocations, one was UNQUALIFIED and six formed the three
@@ -206,5 +238,43 @@ gates. Local results do not establish whole-G1 or merge readiness.
 The schema check also matched the canonical recorder hash, dependency lock hash
 and complete inventory. These post-adoption results supersede the earlier
 pre-adoption open-state paragraphs while preserving their historical facts.
-The current standalone golden CI equality check and eligible PR review remain
-pending; the guarded recordings and local validators do not replace that job.
+At that local build24 checkpoint, standalone golden CI equality and eligible PR
+review were still pending; guarded recordings and local validators did not
+replace those gates. The integrated result below supersedes that open status.
+
+## Integrated G1 result (2026-10-20 UTC)
+
+[PR #2844](https://github.com/WizardFactory/TodayWeather/pull/2844) completed the
+G1 review and was merged as `821c4ccd6a765da6cb03a0726822a8d6f0bece28`.
+The reviewed head was `085cb2f93a97ed646c4f0fd4618ba6ffa35b0826`; its Git tree and
+the merged tree are identical. The [retained integration result](https://github.com/WizardFactory/TodayWeather/pull/2844#issuecomment-6303765974)
+records the exact-head CI/review and merge outcome. These are revision-bound
+results, not a claim about later source revisions or production activation.
+
+- The [goldens job](https://github.com/WizardFactory/TodayWeather/actions/runs/39506154617/job/118915462026)
+  passed 26 provenance controls, audited 22 `SOURCE_CURRENT` / 0 `DRIFT`, passed
+  18 golden controls, and recorded the original S02 corpus twice. Both complete
+  records matched the baseline SHA256
+  `a95f78a100f5b048b05a59b67f4213e268bd4fc3346ead20c4f5f81c05e83fdf`
+  across 19 groups, 76 cases and 11 backend families. This closes the standalone
+  equality gate left open at build24.
+- The [foundation job](https://github.com/WizardFactory/TodayWeather/actions/runs/39506154617/job/118915461677)
+  passed with 1,078 Rust tests, 0 failures and 7 ignored. Pre-merge CI had 23
+  successful check rows (17 distinct workflow/name pairs), 0 pending and 0 failed
+  across six runs bound to the reviewed head. Eligible Opus review and the
+  additional Gemini/Grok reviews passed with no open Required finding.
+- The owned S3 flow was newly added in G1, not a preexisting ignored test. It
+  remains ignored by ordinary runs, including foundation CI. A separate explicit
+  execution passed 1 test using a retained shared-target binary copy (SHA256
+  `1373cd6f5a4a858faa6147beefc9cc099c0a9462ceb95aa05b7d20157b898059`).
+  This was not a clean rebuild. It checked component cold/warm/reconstruction
+  equality against owned loopback S3, not a process restart or the
+  `restore_air_history` path. It does not change the earlier 322-test result or
+  turn the CI ignore into an executed CI test.
+
+Earlier parallel/resource failures, the first UNQUALIFIED world recording and
+setup/preflight/placement failures remain part of the history; later PASS does
+not relabel them. `SOURCE_CURRENT` still means freshness, not semantic
+equivalence. G1 integration does not close the parent issue's other work or the
+real-host, seven-day shadow, quota and complete rollback-bundle gates in the
+[cutover guide](server2-cutover.md).

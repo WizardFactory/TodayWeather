@@ -6,6 +6,11 @@ changes authorizes production cutover.
 All server2-owned code, configuration, dependencies, tests, tools and deployment
 assets stay here. The repository root is not a Cargo workspace.
 
+Start with the [installation and operations entrypoint](../docs/operations/server2-install.md)
+for prerequisites, build/configuration, isolated start/check/stop and the separate
+operational activation procedure. Its reading path links the current Markdown
+manuals; labelled PDFs retain their historical task scope.
+
 Use the pinned Rust toolchain and Python3.11+:
 
 ```sh
