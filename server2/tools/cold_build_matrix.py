@@ -189,7 +189,7 @@ def main():
     (output/'inputs.json').write_text(json.dumps(inputs, indent=2)+'\n')
     peer = subprocess.Popen([sys.executable, 'tests/storage/catalog_peer.py', '--persistent'], cwd=SERVER2,
                             stdout=subprocess.PIPE, stderr=(output/'peer.stderr').open('w'), text=True)
-    rows, exits = [], {}
+    rows, exits, stopped = [], {}, None
     try:
         ready, _, _ = select.select([peer.stdout], [], [], 5)
         if not ready:
@@ -218,7 +218,9 @@ def main():
                                           'phases': {r['phase']: [r['status'], round(r['elapsed_ms'])]
                                                      for r in rows if (r['binary'], r['mode'], r['delay_ms'], r['run']) == (name, mode, delay, run)}}),
                               flush=True)
-        latency(endpoint, 0)
+    except Exception as error:
+        # Keep every finished run: the report below still covers them.
+        stopped = repr(error)
     finally:
         peer.terminate()
         try:
@@ -227,7 +229,7 @@ def main():
             peer.kill()
             peer.wait()
     summary = summarize(rows, args.reference)
-    found = problems(rows, exits, args.reference)
+    found = problems(rows, exits, args.reference) + ([f'stopped early: {stopped}'] if stopped else [])
     (output/'matrix.json').write_text(json.dumps({'inputs': inputs, 'rows': rows, 'summary': summary,
                                                    'problems': found, 'peer_exit': peer.returncode}, indent=2)+'\n')
     for s in summary:
