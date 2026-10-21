@@ -410,6 +410,22 @@ impl Row {
             _ => String::new(),
         }
     }
+    /// The string [`Self::get`] reads, without copying it: a template string is borrowed unless
+    /// it needs the value layer's canonical form ([`Val::str`]).
+    pub(super) fn str_ref(&self, k: &str) -> Option<std::borrow::Cow<'_, str>> {
+        use std::borrow::Cow;
+        match self.own.get(k) {
+            Some(Val::Str(s)) => Some(Cow::Borrowed(s)),
+            Some(_) => None,
+            None => match self.template.iter().find(|(name, _)| *name == k) {
+                Some((_, Tmpl::Str(s))) if s.as_bytes().contains(&0xF4) => {
+                    Some(Cow::Owned(crate::domestic::kma::js::canon_str(s)))
+                }
+                Some((_, Tmpl::Str(s))) => Some(Cow::Borrowed(s)),
+                _ => None,
+            },
+        }
+    }
     pub fn set(&mut self, k: &str, v: Val) {
         self.own.set(k, v);
     }
