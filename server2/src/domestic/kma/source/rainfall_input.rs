@@ -16,10 +16,7 @@ use crate::{
 };
 use serde_json::{Value, json};
 use std::{collections::BTreeSet, sync::Arc};
-use tokio::{
-    sync::OwnedSemaphorePermit,
-    time::{Instant, timeout_at},
-};
+use tokio::time::{Instant, timeout_at};
 
 pub(super) const MAX_ACQUISITIONS: usize = 256;
 pub(super) const MAX_RAW: usize = 16 * 1024 * 1024;
@@ -105,8 +102,6 @@ pub(super) struct Minute {
 pub(super) enum MinuteResult {
     Ready(Vec<Minute>),
     NotEligible,
-    Incomplete,
-    Unavailable,
 }
 struct Pin {
     id: CatalogId,
@@ -143,33 +138,15 @@ async fn get<T: CatalogTransport>(
         Err(e) => Err(e),
     }
 }
-pub(super) async fn read<T: CatalogTransport + Clone + Send + Sync + 'static>(
+/// Independent complete proof. A consumer of an existing projection retains no raw vector.
+pub(super) async fn validate<T: CatalogTransport + Clone + Send + Sync + 'static>(
     transport: &T,
     store: &CatalogStore<T>,
     current: &Current,
-    sensors: Vec<f64>,
     cutoff: u64,
     deadline: Instant,
-    guard: Arc<OwnedSemaphorePermit>,
-) -> MinuteResult {
-    match read_inner(transport, store, current, sensors, cutoff, deadline, guard).await {
-        Ok(v) => v,
-        Err(Error::Corrupt(_) | Error::NotFound) => MinuteResult::Incomplete,
-        Err(_) => MinuteResult::Unavailable,
-    }
-}
-async fn read_inner<T: CatalogTransport + Clone + Send + Sync + 'static>(
-    transport: &T,
-    store: &CatalogStore<T>,
-    current: &Current,
-    sensors: Vec<f64>,
-    cutoff: u64,
-    deadline: Instant,
-    guard: Arc<OwnedSemaphorePermit>,
-) -> Result<MinuteResult, Error> {
-    if sensors.is_empty() || sensors.len() > 1024 {
-        return Ok(MinuteResult::NotEligible);
-    }
+    retain_raws: bool,
+) -> Result<Plan, Error> {
     let end = current.end;
     let start = end
         .checked_sub(3_600_000)
@@ -247,18 +224,18 @@ async fn read_inner<T: CatalogTransport + Clone + Send + Sync + 'static>(
                 &b.key_sha256,
             ))
     });
-    let mut raws: Vec<RawRecord> = Vec::with_capacity(selected.len());
+    let mut raws: Vec<RawRecord> = Vec::new();
     let mut total = 0usize;
     for (id, e) in &selected {
         let PageOutcome::Ready(page) = store.lookup_acquisition(id, &e.identity, deadline).await?
         else {
-            return Ok(MinuteResult::Incomplete);
+            return Err(Error::Corrupt("rainfall incomplete minute view"));
         };
         if page.excluded_groups() != 0
             || page.acquisitions().len() != 1
             || page.acquisitions()[0].records().len() != 1
         {
-            return Ok(MinuteResult::Incomplete);
+            return Err(Error::Corrupt("rainfall incomplete minute view"));
         }
         let r = &page.acquisitions()[0].records()[0];
         if r.envelope
@@ -266,16 +243,16 @@ async fn read_inner<T: CatalogTransport + Clone + Send + Sync + 'static>(
             .as_ref()
             .is_some_and(|p| p.page != 1 || p.pages != 1 || !p.complete)
         {
-            return Ok(MinuteResult::Incomplete);
+            return Err(Error::Corrupt("rainfall incomplete minute view"));
         }
-        if r.envelope.identity != e.identity || r.bytes.len() > MAX_PAGE {
-            return Err(Error::Capacity);
-        }
+        check_selected(e, r)?;
         total = total.checked_add(r.bytes.len()).ok_or(Error::Capacity)?;
         if total > MAX_RAW {
             return Err(Error::Capacity);
         }
-        raws.push(r.clone());
+        if retain_raws {
+            raws.push(r.clone());
+        }
     }
     // Recheck the exact metadata view, including confirmed absent day catalogs.
     for pin in &pins {
@@ -285,7 +262,7 @@ async fn read_inner<T: CatalogTransport + Clone + Send + Sync + 'static>(
             (Some(a), Some(b)) => a.body != b.body || a.etag != b.etag || a.version != b.version,
             _ => true,
         } {
-            return Ok(MinuteResult::Incomplete);
+            return Err(Error::Corrupt("rainfall incomplete minute view"));
         }
     }
     let catalog_bindings: Vec<_> = pins
@@ -301,24 +278,120 @@ async fn read_inner<T: CatalogTransport + Clone + Send + Sync + 'static>(
         })
         .collect();
     let bindings: Vec<_> = selected.iter().map(|(_, e)| raw_tuple(e)).collect();
-    let parse = Parse {
+    Ok(Plan {
         raws,
-        sensors,
+        ordered: selected.into_iter().map(|(_, e)| e).collect(),
         start,
         end,
         catalog_bindings,
         bindings,
         cutoff,
-        deadline,
+    })
+}
+
+fn check_selected(expected: &Envelope, raw: &RawRecord) -> Result<(), Error> {
+    if raw.envelope != *expected {
+        return Err(Error::Corrupt("rainfall selected envelope"));
     }
-    .spawn(guard);
-    timeout_at(deadline, parse)
-        .await
-        .map_err(|_| Error::Timeout)?
-        .map_err(|_| Error::Corrupt("rainfall parse task"))?
+    if raw.bytes.len() > MAX_PAGE {
+        return Err(Error::Capacity);
+    }
+    Ok(())
+}
+
+pub(super) struct Plan {
+    pub ordered: Vec<Envelope>,
+    raws: Vec<RawRecord>,
+    start: u64,
+    end: u64,
+    catalog_bindings: Vec<Value>,
+    bindings: Vec<Value>,
+    cutoff: u64,
+}
+type SensorRows = (f64, Vec<(u64, Option<bool>)>);
+
+pub(super) struct Projection {
+    pub ordered: Vec<Envelope>,
+    rows: Vec<SensorRows>,
+    // The blocking result itself may outlive its cancelled JoinHandle. Keep the workspace,
+    // not the validator cursor, until the projection actually retires.
+    _workspace: Option<Arc<dyn Send + Sync>>,
+}
+impl Plan {
+    pub fn project<G: Send + Sync + 'static>(
+        &mut self,
+        sensors: Vec<f64>,
+        deadline: Instant,
+        guard: Arc<G>,
+        workspace: Arc<dyn Send + Sync>,
+    ) -> tokio::task::JoinHandle<Result<Projection, Error>> {
+        let raws = std::mem::take(&mut self.raws);
+        let ordered = self.ordered.clone();
+        let (start, end) = (self.start, self.end);
+        crate::observability::spawn_blocking(move || {
+            let result = project(raws, sensors, start, end, deadline).map(|rows| Projection {
+                ordered,
+                rows,
+                _workspace: Some(workspace),
+            });
+            drop(guard);
+            result
+        })
+    }
+    pub fn materialize<G: Send + Sync + 'static>(
+        self,
+        projection: Arc<Projection>,
+        deadline: Instant,
+        guard: Arc<G>,
+    ) -> tokio::task::JoinHandle<Result<MinuteResult, Error>> {
+        crate::observability::spawn_blocking(move || {
+            let result = projection.minutes(&self, deadline);
+            drop(projection);
+            drop(self);
+            drop(guard);
+            result
+        })
+    }
+}
+impl Projection {
+    fn minutes(&self, plan: &Plan, deadline: Instant) -> Result<MinuteResult, Error> {
+        let mut ready = Vec::new();
+        for (sensor, rows) in &self.rows {
+            if Instant::now() >= deadline {
+                return Err(Error::Timeout);
+            }
+            let values: Vec<_> = rows.iter().map(|(_, value)| *value).collect();
+            if values.len() < 15 || values.iter().all(Option::is_none) {
+                continue;
+            }
+            let projection: Vec<_> = rows
+                .iter()
+                .map(|(date, value)| json!([sensor, date, value]))
+                .collect();
+            ready.push(Minute {
+                sensor: *sensor,
+                values,
+                digest: digest(json!([
+                    "rns-minute-v1",
+                    POLICY,
+                    plan.cutoff,
+                    sensor,
+                    plan.catalog_bindings,
+                    plan.bindings,
+                    projection
+                ])),
+            });
+        }
+        Ok(if ready.is_empty() {
+            MinuteResult::NotEligible
+        } else {
+            MinuteResult::Ready(ready)
+        })
+    }
 }
 
 /// A bounded owned CPU projection, split so cancellation/drain checks exercise the real task.
+#[cfg(test)]
 pub(super) struct Parse {
     pub raws: Vec<RawRecord>,
     pub sensors: Vec<f64>,
@@ -329,118 +402,118 @@ pub(super) struct Parse {
     pub cutoff: u64,
     pub deadline: Instant,
 }
+#[cfg(test)]
 impl Parse {
-    pub fn spawn(
+    pub fn spawn<G: Send + Sync + 'static>(
         self,
-        guard: Arc<OwnedSemaphorePermit>,
+        guard: Arc<G>,
     ) -> tokio::task::JoinHandle<Result<MinuteResult, Error>> {
-        let Self {
-            raws,
-            sensors,
-            start,
-            end,
-            catalog_bindings,
-            bindings,
-            cutoff,
-            deadline,
-        } = self;
         crate::observability::spawn_blocking(move || {
-            // The owner reservation outlives cancellation and remains held through actual parse completion.
-            let _guard = guard;
-            let mut rows = RowStore::default();
-            for r in raws {
-                if Instant::now() >= deadline {
-                    return Err(Error::Timeout);
-                }
-                let page = pages::parse_aws(&r.bytes, None)
-                    .map_err(|_| Error::Corrupt("rainfall minute HTML"))?;
-                let p = Publication::parse_dotted(&page.pub_date)
-                    .ok_or(Error::Corrupt("rainfall minute page date"))?;
-                if Some(p) != publication(&r.envelope) {
-                    return Err(Error::Corrupt("rainfall minute envelope/page disagreement"));
-                }
-                let expected = pages::page_date(&page.pub_date);
-                if page.rows.iter().any(|d| date_of(d) != expected) {
-                    return Err(Error::Corrupt("rainfall minute row date"));
-                }
-                if Instant::now() >= deadline {
-                    return Err(Error::Timeout);
-                }
-                let wanted: Vec<_> = page
-                    .rows
-                    .into_iter()
-                    .filter_map(|d| {
-                        let id = d.get("stnId")?;
-                        if !id
-                            .as_str()
-                            .map(crate::world::js::string_to_number)
-                            .is_some_and(|n| sensors.contains(&n))
-                        {
-                            return None;
-                        }
-                        let mut projection = Doc::new()
-                            .with("stnId", id.clone())
-                            .with("date", d.get("date")?.clone());
-                        if let Some(Val::Bool(value)) = d.get("rns") {
-                            projection.set("rns", Val::Bool(*value));
-                        }
-                        Some(projection)
-                    })
-                    .collect();
-                rows.save(&wanted);
-                if rows.docs().len() > 60 * 1024 {
-                    return Err(Error::Capacity);
-                }
-            }
-            let mut ready = Vec::new();
-            for sensor in sensors {
-                if Instant::now() >= deadline {
-                    return Err(Error::Timeout);
-                }
-                let window: Vec<_> = rows
-                    .after(sensor, start as f64)
-                    .into_iter()
-                    .filter(|d| date_of(d) <= end as f64)
-                    .collect();
-                if window.len() > 60 {
-                    return Err(Error::Capacity);
-                }
-                let values: Vec<_> = window
-                    .iter()
-                    .map(|d| match d.get("rns") {
-                        Some(Val::Bool(b)) => Some(*b),
-                        _ => None,
-                    })
-                    .collect();
-                if values.len() < 15 || values.iter().all(Option::is_none) {
-                    continue;
-                }
-                let projection: Vec<_> = window
-                    .iter()
-                    .zip(&values)
-                    .map(|(d, r)| json!([sensor, date_of(d) as u64, r]))
-                    .collect();
-                ready.push(Minute {
-                    sensor,
-                    values,
-                    digest: digest(json!([
-                        "rns-minute-v1",
-                        POLICY,
-                        cutoff,
-                        sensor,
-                        catalog_bindings,
-                        bindings,
-                        projection
-                    ])),
-                });
-            }
-            Ok(if ready.is_empty() {
-                MinuteResult::NotEligible
-            } else {
-                MinuteResult::Ready(ready)
-            })
+            let rows = project(self.raws, self.sensors, self.start, self.end, self.deadline)?;
+            let projection = Projection {
+                ordered: Vec::new(),
+                rows,
+                _workspace: None,
+            };
+            let plan = Plan {
+                ordered: Vec::new(),
+                raws: Vec::new(),
+                start: self.start,
+                end: self.end,
+                catalog_bindings: self.catalog_bindings,
+                bindings: self.bindings,
+                cutoff: self.cutoff,
+            };
+            let result = projection.minutes(&plan, self.deadline);
+            drop(projection);
+            drop(plan);
+            drop(guard);
+            result
         })
     }
+}
+fn project(
+    raws: Vec<RawRecord>,
+    sensors: Vec<f64>,
+    start: u64,
+    end: u64,
+    deadline: Instant,
+) -> Result<Vec<SensorRows>, Error> {
+    let mut rows = RowStore::default();
+    for r in raws {
+        if Instant::now() >= deadline {
+            return Err(Error::Timeout);
+        }
+        let page =
+            pages::parse_aws(&r.bytes, None).map_err(|_| Error::Corrupt("rainfall minute HTML"))?;
+        let p = Publication::parse_dotted(&page.pub_date)
+            .ok_or(Error::Corrupt("rainfall minute page date"))?;
+        if Some(p) != publication(&r.envelope) {
+            return Err(Error::Corrupt("rainfall minute envelope/page disagreement"));
+        }
+        let expected = pages::page_date(&page.pub_date);
+        if page.rows.iter().any(|d| date_of(d) != expected) {
+            return Err(Error::Corrupt("rainfall minute row date"));
+        }
+        if Instant::now() >= deadline {
+            return Err(Error::Timeout);
+        }
+        let wanted: Vec<_> = page
+            .rows
+            .into_iter()
+            .filter_map(|d| {
+                let id = d.get("stnId")?;
+                if !id
+                    .as_str()
+                    .map(crate::world::js::string_to_number)
+                    .is_some_and(|n| sensors.contains(&n))
+                {
+                    return None;
+                }
+                let mut projection = Doc::new()
+                    .with("stnId", id.clone())
+                    .with("date", d.get("date")?.clone());
+                if let Some(Val::Bool(value)) = d.get("rns") {
+                    projection.set("rns", Val::Bool(*value));
+                }
+                Some(projection)
+            })
+            .collect();
+        rows.save(&wanted);
+        if rows.docs().len() > 60 * 1024 {
+            return Err(Error::Capacity);
+        }
+    }
+    let mut projected = Vec::new();
+    for sensor in sensors {
+        if Instant::now() >= deadline {
+            return Err(Error::Timeout);
+        }
+        let window: Vec<_> = rows
+            .after(sensor, start as f64)
+            .into_iter()
+            .filter(|d| date_of(d) <= end as f64)
+            .collect();
+        if window.len() > 60 {
+            return Err(Error::Capacity);
+        }
+        projected.push((
+            sensor,
+            window
+                .iter()
+                .map(|d| {
+                    (
+                        date_of(d) as u64,
+                        match d.get("rns") {
+                            Some(Val::Bool(b)) => Some(*b),
+                            _ => None,
+                        },
+                    )
+                })
+                .collect(),
+        ));
+    }
+    Ok(projected)
 }
 
 #[derive(Default)]
@@ -709,8 +782,6 @@ mod tests {
             let outcome=match result {
                 Some(Ok(MinuteResult::Ready(rows)))=>json!({"kind":"Ready","sensors":rows.len(),"row_counts":rows.iter().map(|r|r.values.len()).collect::<Vec<_>>()}),
                 Some(Ok(MinuteResult::NotEligible))=>json!({"kind":"NotEligible"}),
-                Some(Ok(MinuteResult::Incomplete))=>json!({"kind":"Incomplete"}),
-                Some(Ok(MinuteResult::Unavailable))=>json!({"kind":"Unavailable"}),
                 Some(Err(error))=>json!({"kind":"typed failure","error":error.to_string()}),
                 None=>json!({"kind":"actual closure did not retire within observation deadline"}),
             };
@@ -736,5 +807,43 @@ mod tests {
         }
         assert!(total.include(1).is_err());
         assert_eq!(total.bytes, 16 * 1024 * 1024);
+    }
+    #[test]
+    fn selected_envelope_mismatch_is_corrupt_and_page_capacity_is_distinct() {
+        let at = Publication::new(20261017, 901).unwrap();
+        let mut raw = RawRecord::new(
+            "kma-web",
+            "aws-minute",
+            &ProviderKey::Named {
+                id: "aws-national".into(),
+            },
+            at.period(),
+            schedule::to_ms(at) as u64,
+            200,
+            "text/html",
+            None,
+            Vec::from(b"owned").into(),
+            &CatalogLimits::default().raw,
+        )
+        .unwrap();
+        let mut changed = raw.envelope.clone();
+        changed.identity.fetched_at_ms += 1;
+        assert!(matches!(
+            check_selected(&changed, &raw),
+            Err(Error::Corrupt(_))
+        ));
+        let mut metadata = raw.envelope.clone();
+        metadata.content_type = "text/html;charset=euc-kr".into();
+        assert_eq!(metadata.identity, raw.envelope.identity);
+        assert!(
+            matches!(check_selected(&metadata, &raw), Err(Error::Corrupt(_))),
+            "full metadata differs even though ordered raw identity/hash is equal"
+        );
+        let original = raw.envelope.clone();
+        raw.bytes = vec![b'x'; MAX_PAGE + 1].into();
+        assert!(matches!(
+            check_selected(&original, &raw),
+            Err(Error::Capacity)
+        ));
     }
 }

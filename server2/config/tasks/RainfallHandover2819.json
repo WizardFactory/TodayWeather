@@ -111,5 +111,6 @@
     "worker": "Only declared source/tests/examples/tools after current rootgate; no Cargo until explicit lease"
   },
   "runtime_boundary": "No legacy source/data imports. Existing migration exporter retains byte-exact ObjectId and remains unchanged.",
-  "activation": "Operator example validates/prepares/submits/readbacks only when separately authorized; normal runtime never creates absent authority. Fixed key index/v2/statistics/rns/state.json."
+  "activation": "Operator example validates/prepares/submits/readbacks only when separately authorized; normal runtime never creates absent authority. Fixed key index/v2/statistics/rns/state.json.",
+  "base": "e09672a3bd01b47d961479feee6ee0b2a9582c1a"
 }

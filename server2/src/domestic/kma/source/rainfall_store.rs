@@ -395,53 +395,61 @@ impl<T: CatalogTransport> Store<T> {
     /// Mongo database name (that name and shutdown truth remain operator evidence).
     pub async fn resolve(
         &self,
-        candidate: std::sync::Arc<StationSeed>,
+        _candidate: std::sync::Arc<StationSeed>,
         catalog: &crate::storage::CatalogStore<T>,
         deadline: Instant,
     ) -> Result<Option<(Checkpoint, ControlObject, std::sync::Arc<StationSeed>)>, Error> {
         let Some((state, object)) = self.read_intrinsic(deadline).await? else {
             return Ok(None);
         };
-        let seed = if candidate.body_sha256 == state.activation.seed_body_sha256 {
-            candidate
-        } else {
-            let a = &state.activation;
-            let day = export_day(a.seed_exported_at_ms)?;
-            let key = super::seed::key();
-            let id = crate::storage::RecordId {
-                source: super::seed::SOURCE.into(),
-                kind: super::seed::KIND.into(),
-                key_sha256: sha256(&key.canonical_bytes()?),
-                period: crate::storage::Period {
-                    local_date: day,
-                    slot: "0000".into(),
-                },
-                fetched_at_ms: a.seed_exported_at_ms,
-                raw_sha256: a.seed_body_sha256.clone(),
-            };
-            let control = crate::storage::CatalogId::for_record(&id, &day.to_string())?;
-            let crate::storage::PageOutcome::Ready(page) =
-                catalog.lookup_acquisition(&control, &id, deadline).await?
-            else {
-                return Err(Error::Corrupt("rainfall exact seed incomplete"));
-            };
-            if page.excluded_groups() != 0
-                || page.acquisitions().len() != 1
-                || page.acquisitions()[0].records().len() != 1
-            {
-                return Err(Error::Corrupt("rainfall exact seed scope"));
-            }
-            let raw = &page.acquisitions()[0].records()[0];
-            if raw.envelope.identity != id {
-                return Err(Error::Corrupt("rainfall exact seed identity"));
-            }
-            std::sync::Arc::new(
-                super::seed::parse(&raw.bytes)
-                    .map_err(|_| Error::Corrupt("rainfall exact seed body"))?,
-            )
-        };
+        let seed = self.exact_seed(&state, catalog, deadline).await?;
         state.validate(&seed, &self.target)?;
         Ok(Some((state, object, seed)))
+    }
+    /// Local file equality never substitutes for complete imported S06 membership.
+    pub async fn exact_seed(
+        &self,
+        state: &Checkpoint,
+        catalog: &crate::storage::CatalogStore<T>,
+        deadline: Instant,
+    ) -> Result<std::sync::Arc<StationSeed>, Error> {
+        state.validate_intrinsic(&self.target)?;
+        let a = &state.activation;
+        let day = export_day(a.seed_exported_at_ms)?;
+        let key = super::seed::key();
+        let id = crate::storage::RecordId {
+            source: super::seed::SOURCE.into(),
+            kind: super::seed::KIND.into(),
+            key_sha256: sha256(&key.canonical_bytes()?),
+            period: crate::storage::Period {
+                local_date: day,
+                slot: "0000".into(),
+            },
+            fetched_at_ms: a.seed_exported_at_ms,
+            raw_sha256: a.seed_body_sha256.clone(),
+        };
+        let control = crate::storage::CatalogId::for_record(&id, &day.to_string())?;
+        let crate::storage::PageOutcome::Ready(page) =
+            catalog.lookup_acquisition(&control, &id, deadline).await?
+        else {
+            return Err(Error::Corrupt("rainfall exact seed incomplete"));
+        };
+        if page.excluded_groups() != 0
+            || page.acquisitions().len() != 1
+            || page.acquisitions()[0].records().len() != 1
+        {
+            return Err(Error::Corrupt("rainfall exact seed scope"));
+        }
+        let raw = &page.acquisitions()[0].records()[0];
+        if raw.envelope.identity != id {
+            return Err(Error::Corrupt("rainfall exact seed identity"));
+        }
+        let seed = std::sync::Arc::new(
+            super::seed::parse(&raw.bytes)
+                .map_err(|_| Error::Corrupt("rainfall exact seed body"))?,
+        );
+        state.validate(&seed, &self.target)?;
+        Ok(seed)
     }
     pub async fn read(
         &self,
@@ -478,11 +486,19 @@ impl<T: CatalogTransport> Store<T> {
         state: &Checkpoint,
         seed: &StationSeed,
         deadline: Instant,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Error>
+    where
+        T: Clone,
+    {
         state.validate(seed, &self.target)?;
         if state.revision != 1 {
             return Err(Error::Invalid("rainfall activation revision"));
         }
+        let catalog = crate::storage::CatalogStore::new(
+            self.transport.clone(),
+            crate::storage::CatalogLimits::default(),
+        )?;
+        self.exact_seed(state, &catalog, deadline).await?;
         let bytes = state.encode()?;
         let status = timeout_at(
             deadline,

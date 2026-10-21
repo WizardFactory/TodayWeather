@@ -20,6 +20,12 @@ fn bounded(path: &Path) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     Ok(bytes)
 }
 pub async fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    run_with_settings(args, || S3Settings::from_vars(&|k| std::env::var(k).ok())).await
+}
+async fn run_with_settings(
+    args: &[String],
+    settings: impl FnOnce() -> Result<S3Settings, server2::storage::Error>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let usage = "usage: rainfall_handover_smoke preview|activate SEED ACTIVATION_JSON; verify SEED";
     let operation = args.first().ok_or(usage)?;
     if !matches!(operation.as_str(), "preview" | "activate" | "verify") {
@@ -28,7 +34,7 @@ pub async fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     if args.len() != if operation == "verify" { 2 } else { 3 } {
         return Err(usage.into());
     }
-    let settings = S3Settings::from_vars(&|k| std::env::var(k).ok())?;
+    let settings = settings()?;
     let target = Namespace::new(settings.bucket.clone(), settings.region.clone())?;
     let bytes = bounded(Path::new(&args[1]))?;
     let seed = seed::parse(&bytes)?;
@@ -61,6 +67,7 @@ pub async fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let state = Checkpoint::initial(activation, &seed, &target)?;
     let body = state.encode()?;
     if operation == "preview" {
+        // File-only preview is not imported S06 membership proof. Activate/verify require the exact complete import.
         // Exact bytes reviewed here are encoded by the same schema used for conditional PUT.
         println!("{}", String::from_utf8(body)?);
         return Ok(());
@@ -72,7 +79,7 @@ pub async fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         return Err("shutdown is in the future".into());
     }
     let store = Store {
-        transport: settings.transport()?,
+        transport: server2::world::BoundedS3::new(settings.transport()?, 4),
         target,
     };
     store
@@ -2559,5 +2566,276 @@ pub mod owned {
             _ => return Err("unknown owned operation".into()),
         }
         Ok(())
+    }
+    #[cfg(test)]
+    mod operator_tests {
+        use super::*;
+        use server2::storage::{Error, PageOutcome, S3Settings};
+        use std::{
+            io::{BufRead, BufReader},
+            path::PathBuf,
+            process::{Child, Command, Stdio},
+            sync::mpsc,
+            thread::JoinHandle,
+        };
+
+        // Test-local ownership only; the outer controller separately bounds/reaps its PG.
+        struct Owned {
+            child: Option<Child>,
+            reader: Option<JoinHandle<()>>,
+            directory: PathBuf,
+        }
+        impl Drop for Owned {
+            fn drop(&mut self) {
+                if let Some(child) = &mut self.child {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                }
+                if let Some(reader) = self.reader.take() {
+                    let _ = reader.join();
+                }
+                let _ = std::fs::remove_dir_all(&self.directory);
+            }
+        }
+        fn settings(endpoint: &str) -> Result<S3Settings, Error> {
+            let settings = S3Settings::from_vars_at(
+                &|name| match name {
+                    "AWS_ACCESS_KEY" => Some("server2-local".into()),
+                    "AWS_SECRET_KEY" => Some("server2-local-secret".into()),
+                    "SERVER2_S3_BUCKET" => Some("server2-local".into()),
+                    "SERVER2_S3_REGION" => Some("ap-northeast-2".into()),
+                    _ => None,
+                },
+                Some(endpoint),
+            )?;
+            assert_eq!(settings.endpoint, endpoint);
+            assert!(!settings.uses_instance_role());
+            Ok(settings)
+        }
+        async fn state_puts(client: &reqwest::Client, endpoint: &str) -> u64 {
+            let mut response = client
+                .get(format!("{endpoint}__catalog/status"))
+                .send()
+                .await
+                .expect("SETUP_FAILURE: owned peer status transport");
+            assert_eq!(
+                response.status().as_u16(),
+                200,
+                "SETUP_FAILURE: peer status"
+            );
+            let mut bytes = Vec::new();
+            while let Some(chunk) = response.chunk().await.expect("owned status body") {
+                assert!(chunk.len() <= (1024 * 1024usize).saturating_sub(bytes.len()));
+                bytes.extend_from_slice(&chunk);
+            }
+            let status: Value = serde_json::from_slice(&bytes).expect("owned status JSON");
+            assert!(status.is_object(), "SETUP_FAILURE: owned status shape");
+            status
+                .get(format!("PUT {STATE_KEY}"))
+                .map(|n| n.as_u64().expect("owned PUT count"))
+                .unwrap_or(0)
+        }
+        #[tokio::test]
+        async fn ordinary_activate_requires_import_and_exact_readback() {
+            let nonce = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let directory = std::env::temp_dir().join(format!(
+                "server2-rainfall-ordinary-{}-{nonce}",
+                std::process::id()
+            ));
+            std::fs::create_dir(&directory).expect("SETUP_FAILURE: exclusive test directory");
+            let mut owned = Owned {
+                child: None,
+                reader: None,
+                directory,
+            };
+            owned.child = Some(
+                Command::new("python3")
+                    .args(["tests/storage/catalog_peer.py", "--persistent"])
+                    .current_dir(env!("CARGO_MANIFEST_DIR"))
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::inherit())
+                    .spawn()
+                    .expect("SETUP_FAILURE: owned peer spawn"),
+            );
+            let stdout = owned.child.as_mut().unwrap().stdout.take().unwrap();
+            let (tx, rx) = mpsc::channel();
+            owned.reader = Some(std::thread::spawn(move || {
+                let mut line = String::new();
+                let result = BufReader::new(stdout).read_line(&mut line).map(|_| line);
+                let _ = tx.send(result);
+            }));
+            let endpoint = rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("SETUP_FAILURE: owned peer ready timeout")
+                .expect("SETUP_FAILURE: owned peer ready I/O")
+                .trim()
+                .to_owned();
+            owned.reader.take().unwrap().join().unwrap();
+            let url = reqwest::Url::parse(&endpoint).expect("SETUP_FAILURE: owned endpoint");
+            assert_eq!(url.scheme(), "http");
+            assert_eq!(url.host_str(), Some("127.0.0.1"));
+            assert!(url.port().is_some_and(|port| port > 0));
+            assert_eq!(url.path(), "/");
+            assert!(url.query().is_none() && url.fragment().is_none());
+            assert!(url.username().is_empty() && url.password().is_none());
+            let t = transport(&endpoint).expect("SETUP_FAILURE: explicit owned transport");
+            let status = reqwest::Client::builder()
+                .timeout(Duration::from_secs(2))
+                .redirect(reqwest::redirect::Policy::none())
+                .no_proxy()
+                .build()
+                .unwrap();
+            let bytes = seed_bytes();
+            let seed = seed::parse(&bytes).expect("SETUP_FAILURE: synthetic seed");
+            let target = Namespace::new("server2-local".into(), "ap-northeast-2".into()).unwrap();
+            let state = state_for_seed(&bytes, &target);
+            state.validate(&seed, &target).unwrap();
+            assert_eq!((state.schema, state.revision, state.rows.len()), (1, 1, 1));
+            assert_eq!(state.rows[0].oid.text(), OID);
+            assert_eq!(
+                (state.rows[0].rns_hit, state.rows[0].rns_count),
+                (Some(3.), Some(4.))
+            );
+            assert!(state.rows[0].last_end_ms.is_none() && state.rows[0].receipt.is_none());
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis();
+            assert!(
+                now >= u128::from(state.activation.shutdown_at_ms),
+                "SETUP_FAILURE: shutdown future"
+            );
+            let expected = state.encode().unwrap();
+            let seed_path = owned.directory.join("seed.ndjson");
+            let activation_path = owned.directory.join("activation.json");
+            std::fs::write(&seed_path, &bytes).unwrap();
+            std::fs::write(
+                &activation_path,
+                serde_json::to_vec(&state.activation).unwrap(),
+            )
+            .unwrap();
+            assert!(
+                bytes.len() <= 1024 * 1024
+                    && std::fs::metadata(&activation_path).unwrap().len() <= 1024 * 1024
+            );
+            let args = vec![
+                "activate".into(),
+                seed_path.to_str().unwrap().into(),
+                activation_path.to_str().unwrap().into(),
+            ];
+            settings(&endpoint).unwrap(); // validate the explicit synthetic factory before behavior
+            assert!(matches!(
+                t.get_control(STATE_KEY, 1024 * 1024).await,
+                Err(Error::NotFound)
+            ));
+            assert_eq!(state_puts(&status, &endpoint).await, 0);
+
+            // Valid local files alone must not authorize a PUT.
+            let missing = super::super::run_with_settings(&args, || settings(&endpoint))
+                .await
+                .expect_err("missing S06 import must fail");
+            assert!(matches!(
+                missing.downcast_ref::<Error>(),
+                Some(Error::Corrupt("rainfall exact seed incomplete"))
+            ));
+            assert!(matches!(
+                t.get_control(STATE_KEY, 1024 * 1024).await,
+                Err(Error::NotFound)
+            ));
+            assert_eq!(
+                state_puts(&status, &endpoint).await,
+                0,
+                "missing import must perform zero authority PUT"
+            );
+
+            // Establish actual complete S06 membership before the positive operation.
+            let imported = seed::acquisition(&bytes).unwrap();
+            assert_eq!(imported.records.len(), 1);
+            let ungrouped = imported.records[0].envelope.clone();
+            assert!(ungrouped.fetch_group.is_none());
+            let limits = CatalogLimits::default();
+            let expected_group = imported.declaration.reference(&limits).unwrap();
+            assert_eq!(expected_group.members, 1);
+            let mut envelope = ungrouped.clone();
+            envelope.fetch_group = Some(expected_group.clone());
+            assert_eq!(
+                imported.declaration.envelopes(&limits).unwrap(),
+                vec![envelope.clone()]
+            );
+            let id = CatalogId::for_record(
+                &envelope.identity,
+                &envelope.identity.period.local_date.to_string(),
+            )
+            .unwrap();
+            let catalog = CatalogStore::new(t.clone(), CatalogLimits::default()).unwrap();
+            catalog
+                .publish(
+                    imported.declaration,
+                    imported.records,
+                    Instant::now() + Duration::from_secs(3),
+                )
+                .await
+                .expect("SETUP_FAILURE: S06 seed publication");
+            let PageOutcome::Ready(page) = catalog
+                .lookup_acquisition(
+                    &id,
+                    &envelope.identity,
+                    Instant::now() + Duration::from_secs(3),
+                )
+                .await
+                .expect("SETUP_FAILURE: S06 membership read")
+            else {
+                panic!("SETUP_FAILURE: incomplete S06 import")
+            };
+            assert_eq!(page.excluded_groups(), 0);
+            assert_eq!(page.acquisitions().len(), 1);
+            assert_eq!(page.acquisitions()[0].records().len(), 1);
+            assert_eq!(
+                page.acquisitions()[0].group(),
+                Some(expected_group.group_sha256.as_str())
+            );
+            assert_eq!(page.acquisitions()[0].records()[0].envelope, envelope);
+            assert_eq!(
+                page.acquisitions()[0].records()[0].bytes.as_ref(),
+                bytes.as_slice()
+            );
+            assert_eq!(state_puts(&status, &endpoint).await, 0);
+
+            super::super::run_with_settings(&args, || settings(&endpoint))
+                .await
+                .expect("ordinary activate must acknowledge exact imported seed");
+            let object = t.get_control(STATE_KEY, 1024 * 1024).await.unwrap();
+            assert_eq!(
+                object.body, expected,
+                "ordinary conditional creation/readback exact bytes"
+            );
+            let decoded = Checkpoint::decode(&object.body, &seed, &target).unwrap();
+            assert_eq!(decoded, state);
+            assert_eq!(state_puts(&status, &endpoint).await, 1);
+            let verify = vec!["verify".into(), seed_path.to_str().unwrap().into()];
+            super::super::run_with_settings(&verify, || settings(&endpoint))
+                .await
+                .unwrap();
+            assert_eq!(
+                t.get_control(STATE_KEY, 1024 * 1024).await.unwrap().body,
+                expected
+            );
+            assert_eq!(
+                state_puts(&status, &endpoint).await,
+                1,
+                "ordinary verify remains read-only"
+            );
+            let child = owned.child.as_mut().unwrap();
+            assert!(child.try_wait().unwrap().is_none());
+            child.kill().unwrap();
+            let exit = child.wait().unwrap();
+            assert!(child.try_wait().unwrap().is_some(), "owned peer reaped");
+            eprintln!(
+                "ordinary-activate owned peer reaped: {exit}; no provider/cloud/production runtime"
+            );
+        }
     }
 }

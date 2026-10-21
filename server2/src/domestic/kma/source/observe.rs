@@ -235,6 +235,7 @@ struct State {
 }
 #[derive(Clone)]
 struct HourlyFold {
+    seed: Option<Arc<super::seed::StationSeed>>,
     registry: Arc<Registry>,
     hourly: Arc<RowStore>,
     national: Arc<HashMap<String, Vec<(f64, Doc)>>>,
@@ -935,9 +936,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     return;
                 };
                 fold.pages = pages;
-                if let Some(seed) = registry_seed {
-                    Arc::make_mut(&mut fold.registry).bind_seed(&seed);
+                if let Some(seed) = &registry_seed {
+                    Arc::make_mut(&mut fold.registry).bind_seed(seed);
                 }
+                fold.seed = registry_seed;
                 let mut s = self.state();
                 // Non-city stations' hourly rows are kept as registry facts only.
                 for (h, rows) in reduced {
@@ -975,11 +977,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         s.registry_id = Some(registry_id.clone());
         s.folded = Some(Arc::new(Folded {
             registry: hourly_fold.registry.clone(),
-            seed: Some(
-                s.seed
-                    .clone()
-                    .unwrap_or_else(|| Arc::new(super::seed::embedded().clone())),
-            ),
+            seed: hourly_fold.seed.clone(),
             hourly: hourly_fold.hourly.clone(),
             minute: Arc::new(minutes),
             national: hourly_fold.national.clone(),
@@ -1565,6 +1563,7 @@ fn fold_hourly(
     }
     (
         HourlyFold {
+            seed: None,
             registry: Arc::new(registry),
             hourly: Arc::new(rows),
             national: Arc::new(national),
@@ -1874,5 +1873,98 @@ where
         deadline: Instant,
     ) -> BoxFuture<'_, Result<Acquired, DomesticError>> {
         Box::pin(async move { self.today().await?.acquire_asos(&request, deadline).await })
+    }
+}
+
+#[cfg(test)]
+mod rainfall_seed_tests {
+    use super::super::rainfall::tests::{Memory, p2_seed};
+    use super::*;
+    use crate::storage::CatalogLimits;
+    struct NoAcquire;
+    impl Acquire for NoAcquire {
+        fn web(&self, _: WebRequest, _: Instant) -> BoxFuture<'_, Result<Acquired, DomesticError>> {
+            Box::pin(async { panic!("owned fold must not acquire web data") })
+        }
+        fn asos(
+            &self,
+            _: AsosRequest,
+            _: Instant,
+        ) -> BoxFuture<'_, Result<Acquired, DomesticError>> {
+            Box::pin(async { panic!("owned fold must not acquire ASOS data") })
+        }
+    }
+    struct NoLocate;
+    impl Locate for NoLocate {
+        fn locate(&self, _: String) -> BoxFuture<'_, Option<(f64, f64)>> {
+            Box::pin(async { None })
+        }
+    }
+    #[test]
+    fn captured_seed_survives_pin_race_and_cached_hourly_reuse() {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .max_blocking_threads(1)
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(async {
+            let memory = Memory::default();
+            let catalog =
+                Arc::new(CatalogStore::new(memory.clone(), CatalogLimits::default()).unwrap());
+            let observations = Arc::new(Observations::new(
+                memory,
+                catalog,
+                Arc::new(NoAcquire),
+                Arc::new(NoLocate),
+            ));
+            let x = Arc::new(p2_seed(0));
+            let y = Arc::new(p2_seed(1));
+            // X is the current imported seed before activation, as in load_disk.
+            // Y below must be the FIRST active pin; active seeds cannot be replaced.
+            {
+                let mut state = observations.state();
+                assert!(
+                    state.pinned_seed.is_none(),
+                    "setup: no active seed is pinned yet"
+                );
+                state.seed = Some(x.clone());
+                state.pages.dirty = true;
+                state.pages.hourly_dirty = true;
+            }
+            let (release, wait) = std::sync::mpsc::channel();
+            let (started, ready) = std::sync::mpsc::channel();
+            let blocker = crate::observability::spawn_blocking(move || {
+                started.send(()).unwrap();
+                wait.recv().unwrap();
+            });
+            ready.recv_timeout(Duration::from_secs(1)).unwrap();
+            let now = schedule::to_ms(Publication::new(20261017, 1047).unwrap());
+            let fold = tokio::spawn(observations.clone().fold(now));
+            while observations.state().pages.dirty {
+                tokio::task::yield_now().await;
+            }
+            // The state mutex was released only after capturing X. Its actual blocking fold is queued.
+            observations.pin_seed(y.clone());
+            release.send(()).unwrap();
+            blocker.await.unwrap();
+            fold.await.unwrap();
+            let captured = observations.state().folded.clone().unwrap();
+            assert_eq!(captured.seed.as_ref().unwrap().body_sha256, x.body_sha256);
+            assert!(captured.registry.docs().iter().all(|d| {
+                d.get("addr")
+                    .and_then(Val::as_str)
+                    .is_some_and(|a| a.starts_with("owned-p2-0-"))
+            }));
+            // Exercise the real cached branch: its seed must come from the cached hourly fold.
+            observations.state().pages.hourly_dirty = false;
+            observations.clone().fold(now).await;
+            let cached = observations.state().folded.clone().unwrap();
+            assert_eq!(cached.seed.as_ref().unwrap().body_sha256, x.body_sha256);
+            assert_eq!(
+                observations.state().seed.as_ref().unwrap().body_sha256,
+                y.body_sha256
+            );
+        });
     }
 }

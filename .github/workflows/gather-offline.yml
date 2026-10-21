@@ -134,6 +134,7 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/airkorea-offline/node_modules
           MONGOMS_DOWNLOAD_DIR: ${{ runner.temp }}/airkorea-mongodb
         run: |
+          node server/test/offline/air-forecast-observation-http-smoke.js
           node server/test/offline/airkorea-nation-smoke.js
           node server/test/offline/airkorea-rejections-smoke.js
           node server/test/offline/kma-narrative-smoke.js

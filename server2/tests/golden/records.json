@@ -128,9 +128,9 @@
       "server/controllers/controllerKmaStnWeather.js": "c7bd8b7848bf2f3a10c6f2b87f6dec3c6a06151da0aee8b22282254f495f5163",
       "server/controllers/controllerManager.js": "b64cdffdb4bd8936d3bd1164000fad8a600e554a1c6ca5faf418d27a4f52d442",
       "server/controllers/controllerPush.js": "0ea6353917b6182bcede0307d712568a479d70bb086c098cd2dfd9f24865ac7e",
-      "server/controllers/controllerTown.js": "9d801b07e6686b64ddae0c87e3fc32d50f429e9c6f243ecc0683d7a111d40396",
-      "server/controllers/controllerTown24h.js": "7229549130fa882cbfcfea2ece737a9b7b2eabe8d091691e1460969a67333911",
-      "server/controllers/kecoController.js": "2041f9f23a1487008461ff780f9618b5dcc19f67e977a6c1a1cbc056013f904d",
+      "server/controllers/controllerTown.js": "e337c2eae987901eb975c3bb9f5274bb4be05d4d5309c91f43ae7e28d9878013",
+      "server/controllers/controllerTown24h.js": "ef4ad5804d5d1cec94e8880e6d9d93597408ae9035f5bfd086c4e80563b4f708",
+      "server/controllers/kecoController.js": "17c1eef79eb86d25ff5aaed346cc1480f35afc4432b8ddd9e76cb92e185cffb9",
       "server/controllers/kma.specialweather.controller.js": "a8886d197aa306d38388085ed63491871d2802e80eaa55778c589f6e769f1917",
       "server/controllers/kma/kma.town.current.controller.js": "2887d7f30909a12d434186ee1c1d26aebeb1f1e290ad48ff93c3dde738e3c94e",
       "server/controllers/kma/kma.town.mid.controller.js": "5b9c06658411e8eadac2302d6f1bc9b883eba30f3c0b6eee5e9938d28708fe87",
@@ -493,7 +493,7 @@
           },
           {
             "name": "layer-22",
-            "implementation_sha256": "8fc7d498111a5efbf71b039362d6fc769ad1d23a0c2998b86fc49f45a6758fee"
+            "implementation_sha256": "1a670d5808a0eed103c1ae69fb0c9f4e1916c8f0d4ec766e8a9e106ff7747e96"
           },
           {
             "name": "layer-23",
@@ -509,11 +509,11 @@
           },
           {
             "name": "layer-26",
-            "implementation_sha256": "b6c6e11f1a07f567fb3acd563b202716803b2c979e780e8e0cd976986c3a985c"
+            "implementation_sha256": "7d1b77953347ed6d64ef887cbf7bd7719fbc28d6c210b361c30f41d4d03227f9"
           },
           {
             "name": "layer-27",
-            "implementation_sha256": "24604c5b08ae1c0e2b0949e1c5c831d6791cd7b3c80e28b7f5519917f879a954"
+            "implementation_sha256": "55c4e95d5552952536ac5e838970a562465b5ce5150edf94ba833fcd4d761cf4"
           },
           {
             "name": "layer-28",
@@ -827,7 +827,7 @@
           },
           {
             "name": "layer-22",
-            "implementation_sha256": "8fc7d498111a5efbf71b039362d6fc769ad1d23a0c2998b86fc49f45a6758fee"
+            "implementation_sha256": "1a670d5808a0eed103c1ae69fb0c9f4e1916c8f0d4ec766e8a9e106ff7747e96"
           },
           {
             "name": "layer-23",
@@ -843,11 +843,11 @@
           },
           {
             "name": "layer-26",
-            "implementation_sha256": "b6c6e11f1a07f567fb3acd563b202716803b2c979e780e8e0cd976986c3a985c"
+            "implementation_sha256": "7d1b77953347ed6d64ef887cbf7bd7719fbc28d6c210b361c30f41d4d03227f9"
           },
           {
             "name": "layer-27",
-            "implementation_sha256": "24604c5b08ae1c0e2b0949e1c5c831d6791cd7b3c80e28b7f5519917f879a954"
+            "implementation_sha256": "55c4e95d5552952536ac5e838970a562465b5ce5150edf94ba833fcd4d761cf4"
           },
           {
             "name": "layer-28",
@@ -1161,11 +1161,11 @@
           },
           {
             "name": "layer-22",
-            "implementation_sha256": "8fc7d498111a5efbf71b039362d6fc769ad1d23a0c2998b86fc49f45a6758fee"
+            "implementation_sha256": "1a670d5808a0eed103c1ae69fb0c9f4e1916c8f0d4ec766e8a9e106ff7747e96"
           },
           {
             "name": "layer-23",
-            "implementation_sha256": "e840d978d8a28f3557634477ff1353ebe17a592f8aabf8c6af638585bfcd4aee"
+            "implementation_sha256": "965cc341b11c5d1fdca0a31f72f9b2b275df14d0fbca8818763d830757c13cd5"
           },
           {
             "name": "layer-24",
@@ -1181,11 +1181,11 @@
           },
           {
             "name": "layer-27",
-            "implementation_sha256": "1f27958be88b39fbaf04b1ba36213c708d09b535af88ab4f81fda1b88fbafed9"
+            "implementation_sha256": "a87d2aee9baaf777e2d1c959e2273d6b57baa84674f95a7486d613d59b756b31"
           },
           {
             "name": "layer-28",
-            "implementation_sha256": "a536248344abd1b6814af4e73c09c976601f807eaa9016aca9288c35715d0d8f"
+            "implementation_sha256": "a6f60c6de1237de71bc1ca928e81581bc210d9f4169b2b2cac24f15508714898"
           },
           {
             "name": "layer-29",
@@ -1481,7 +1481,7 @@
           },
           {
             "name": "layer-19",
-            "implementation_sha256": "8fc7d498111a5efbf71b039362d6fc769ad1d23a0c2998b86fc49f45a6758fee"
+            "implementation_sha256": "1a670d5808a0eed103c1ae69fb0c9f4e1916c8f0d4ec766e8a9e106ff7747e96"
           },
           {
             "name": "layer-20",
@@ -1747,7 +1747,7 @@
           },
           {
             "name": "layer-21",
-            "implementation_sha256": "8fc7d498111a5efbf71b039362d6fc769ad1d23a0c2998b86fc49f45a6758fee"
+            "implementation_sha256": "1a670d5808a0eed103c1ae69fb0c9f4e1916c8f0d4ec766e8a9e106ff7747e96"
           },
           {
             "name": "layer-22",

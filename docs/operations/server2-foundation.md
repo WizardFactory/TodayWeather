@@ -6,6 +6,9 @@ development legacy origin. Health-only/partial construction remains available th
 code-injected factories and examples. This manual retains foundation checks and labelled
 historical evidence; it does not authorize production routing or cutover.
 
+For the ordered installation, configuration, local start/check/stop and operational
+handoff procedure, begin with the [installation guide](server2-install.md).
+
 ## Build and check
 
 Prerequisites: pinned Rust 1.99.0 with rustfmt/clippy, Python 3.11+, and an isolated
@@ -80,12 +83,13 @@ curl -i http://127.0.0.1:3000/health
 curl -i http://127.0.0.1:3001/internal/metrics
 ```
 
-Health returns 200 with exact body OK, text/html; charset=utf-8 and CORS *. HEAD returns 200,
+In the isolated health/metrics configuration, health returns 200 with exact body OK, text/html; charset=utf-8 and CORS *. HEAD returns 200,
 no body, Content-Length 2. Public /internal/metrics returns 404. Private metrics
 returns 200 and no-store, without CORS access, with only finite counters and declared limits.
-OPTIONS /health currently returns 405; legacy CORS preflight (204), session-cookie
-and complete middleware-header parity are deferred to S02 and not asserted here;
-S02 freezes the complete legacy oracle before route ports. In the health/metrics smoke
+OPTIONS /health returns 405 in that configuration. This foundation smoke does not
+assert legacy CORS preflight (204), session-cookie or complete middleware-header
+parity; the separate [golden procedure](server2-golden.md) checks the legacy corpus.
+In the health/metrics smoke
 with no push writer or delivery workers, SIGTERM/SIGINT drain both listeners for at most 5 seconds; a signal-triggered timeout logs a forced stop
 and exits successfully. Startup, signal-registration and unexpected serving failures
 remain unsuccessful. Tokio

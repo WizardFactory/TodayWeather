@@ -1667,3 +1667,420 @@ fn full_catalog_decode_admits_2048_entries_and_rejects_2049_without_truncation()
         Err(server2::storage::Error::Capacity)
     ));
 }
+
+// Review preparation: current public S3Source API, ordinary S06 records and owned peer only.
+async fn prepare_review_replay(
+    peer: &Peer,
+    current: bool,
+    count: u16,
+    inside_rain: bool,
+    active: bool,
+) {
+    let transport = peer.transport_limited(4);
+    let store = CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap();
+    // seed_forecasts takes SKIPPED families. Do not accidentally publish September Current.
+    seed_forecasts(&store, &["current", "shortest", "short", "rss", "mid"]).await;
+    let bytes = seed_bytes();
+    let acquired = seed::acquisition(&bytes).unwrap();
+    store
+        .publish(acquired.declaration, acquired.records, deadline())
+        .await
+        .unwrap();
+    if current {
+        publish_record(
+            &store,
+            record(
+                "data-go-kr",
+                "ultra-srt-ncst",
+                &Grid::new(60, 127).unwrap().provider_key(),
+                publication(1000),
+                utc(1040) as u64,
+                current_page(),
+                "application/json",
+            ),
+        )
+        .await;
+    }
+    let key = ProviderKey::Named {
+        id: "aws-national".into(),
+    };
+    let mut rows = RowStore::default();
+    let mut identities = Vec::new();
+    let minutes = std::iter::once((0, true))
+        .chain((1..=count).map(|n| (n, inside_rain && n == 1)))
+        .chain(std::iter::once((106, false)));
+    for (offset, rain) in minutes {
+        let at = schedule::from_ms(utc(900) + i64::from(offset) * 60_000);
+        let body = minute_page(at, rain);
+        let page = pages::parse_aws(&body, None).expect("setup: real EUC-KR AWS page");
+        assert_eq!(page.rows.len(), 1);
+        assert_eq!(page.rows[0].get("rns"), Some(&Val::Bool(rain)));
+        rows.save(&page.rows);
+        let raw = record(
+            "kma-web",
+            "aws-minute",
+            &key,
+            at,
+            (schedule::to_ms(at) + 30_000) as u64,
+            body,
+            "text/html;charset=euc-kr",
+        );
+        identities.push(raw.envelope.identity.clone());
+        publish_record(&store, raw).await;
+    }
+    let end = pages::page_date("2026.10.17.10:00");
+    let actual: Vec<_> = rows
+        .after(108., end - 3_600_000.)
+        .into_iter()
+        .filter(|d| server2::domestic::kma::source::stations::date_of(d) <= end)
+        .collect();
+    assert_eq!(
+        actual.len(),
+        usize::from(count),
+        "setup: actual unique (09:00,10:00] rows"
+    );
+    assert_eq!(
+        actual
+            .iter()
+            .filter(|d| d.get("rns") == Some(&Val::Bool(true)))
+            .count(),
+        usize::from(inside_rain)
+    );
+    assert_eq!(
+        identities.len(),
+        usize::from(count) + 2,
+        "setup: exact-left true and public-only 10:46 false are separate raw identities"
+    );
+    println!(
+        "review replay setup current={current} rows={count} inside_rain={inside_rain} raw_ids={}",
+        serde_json::to_string(&identities).unwrap()
+    );
+    if active {
+        let body = checkpoint(&bytes);
+        assert_eq!(
+            transport
+                .put_control(STATE_KEY, &body, &WriteCondition::Absent)
+                .await
+                .unwrap(),
+            200
+        );
+        assert_eq!(
+            transport
+                .get_control(STATE_KEY, 1024 * 1024)
+                .await
+                .unwrap()
+                .body,
+            body
+        );
+    } else {
+        assert!(
+            matches!(
+                transport.get_control(STATE_KEY, 1024 * 1024).await,
+                Err(server2::storage::Error::NotFound)
+            ),
+            "setup: authority really absent"
+        );
+    }
+}
+
+#[derive(Clone)]
+struct ReviewAuthorityDelay {
+    inner: Transport,
+    first: Arc<std::sync::atomic::AtomicBool>,
+}
+impl server2::storage::ObjectTransport for ReviewAuthorityDelay {
+    async fn put(
+        &self,
+        r: &server2::storage::PreparedRecord,
+    ) -> Result<u16, server2::storage::Error> {
+        server2::storage::ObjectTransport::put(&self.inner, r).await
+    }
+    async fn head(&self, key: &str) -> Result<server2::storage::Object, server2::storage::Error> {
+        server2::storage::ObjectTransport::head(&self.inner, key).await
+    }
+    async fn get(
+        &self,
+        key: &str,
+        maximum: usize,
+    ) -> Result<server2::storage::Object, server2::storage::Error> {
+        server2::storage::ObjectTransport::get(&self.inner, key, maximum).await
+    }
+}
+impl CatalogTransport for ReviewAuthorityDelay {
+    async fn get_control(
+        &self,
+        key: &str,
+        maximum: usize,
+    ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
+        if key == STATE_KEY && self.first.swap(false, Ordering::SeqCst) {
+            // Only schedule overlapping checkpoint demand, below the unchanged owned3s.
+            // This is not a 250ms performance assertion or a larger product deadline.
+            tokio::time::sleep(Duration::from_millis(250)).await;
+        }
+        self.inner.get_control(key, maximum).await
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put_control(key, body, condition).await
+    }
+    async fn list_raw_document(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+        maximum_keys: usize,
+        maximum_bytes: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        self.inner
+            .list_raw_document(prefix, token, maximum_keys, maximum_bytes)
+            .await
+    }
+}
+impl server2::history::IndexListing for ReviewAuthorityDelay {
+    async fn list_index(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+    ) -> Result<server2::storage::ListPage, server2::storage::Error> {
+        server2::history::IndexListing::list_index(&self.inner, prefix, token).await
+    }
+}
+fn review_station(store: &dyn KmaStore, current: bool) -> Result<OrderedJson, String> {
+    let value = store
+        .town_model(TownModel::Current, &json!(60), &json!(127))
+        .expect("setup: Current model readable");
+    let OrderedJson::Array(values) = value else {
+        panic!("setup: Current array")
+    };
+    if current {
+        let data = values
+            .last()
+            .expect("setup: canonical Current present")
+            .get("currentData")
+            .unwrap();
+        assert_eq!(
+            data.get("time").and_then(OrderedJson::string).as_deref(),
+            Some("1000")
+        );
+        assert_eq!(data.get("pty").unwrap().to_bytes(), b"1");
+    } else {
+        assert!(
+            values.is_empty(),
+            "setup: no Current means no witness, not a dry/future Current"
+        );
+    }
+    store
+        .stn_hourly_and_min_rns(
+            &json!({"gCoord":{"lon":126.9658,"lat":37.5714}}),
+            "202610171047",
+            &json!({}),
+        )
+        .map_err(|e| format!("{e:?}"))
+}
+async fn review_warm<T: server2::history::IndexListing + Clone + Send + Sync + 'static>(
+    source: &S3Source<T>,
+    current: bool,
+) {
+    // Warm the actual same Source BEFORE enabling rainfall; no counter expectation is retried.
+    for _ in 0..12 {
+        let store = snapshot(source).await;
+        if let Ok(value) = review_station(&*store, current)
+            && value.get("addr").and_then(OrderedJson::string).as_deref() == Some(SEED_ADDRESS)
+        {
+            assert_eq!(value.get("rns"), Some(&OrderedJson::Bool(false)));
+            assert_eq!(counters(&value), (b"3".to_vec(), b"4".to_vec()));
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    panic!("setup: pre-owner Source station fold did not become ready");
+}
+async fn review_forty_sources(current: bool, active: bool, delayed_authority: bool) {
+    let peer = Peer::persistent();
+    prepare_review_replay(&peer, current, 30, true, active).await;
+    let transport = ReviewAuthorityDelay {
+        inner: peer.transport_limited(4),
+        first: Arc::new(std::sync::atomic::AtomicBool::new(delayed_authority)),
+    };
+    let source = S3Source::new(
+        transport,
+        Arc::new(|| utc(1047) as f64),
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+    )
+    .unwrap();
+    review_warm(&source, current).await;
+    assert_eq!(put_count(&peer).await, u64::from(active));
+    let source = Arc::new(
+        source
+            .with_rainfall(
+                server2::domestic::kma::source::rainfall_store::Namespace::new(
+                    "server2-local".into(),
+                    "ap-northeast-2".into(),
+                )
+                .unwrap(),
+            )
+            .unwrap(),
+    );
+    let barrier = Arc::new(tokio::sync::Barrier::new(41));
+    let mut tasks = Vec::new();
+    for _ in 0..40 {
+        let source = source.clone();
+        let barrier = barrier.clone();
+        tasks.push(tokio::spawn(async move {
+            barrier.wait().await;
+            let store = snapshot(&source).await;
+            review_station(&*store, current)
+        }));
+    }
+    barrier.wait().await;
+    let mut answers = Vec::new();
+    for task in tasks {
+        answers.push(task.await);
+    }
+    let owner = source.rainfall_owner().unwrap();
+    owner.quiesce();
+    assert!(
+        owner
+            .drain(tokio::time::Instant::now() + Duration::from_secs(4))
+            .await,
+        "setup: rainfall-owned work physically retired before outcome assertions"
+    );
+    let expected = if active && current {
+        (b"4".to_vec(), b"5".to_vec())
+    } else {
+        (b"3".to_vec(), b"4".to_vec())
+    };
+    let mut successes = 0;
+    let mut unexpected = Vec::new();
+    for answer in answers {
+        let answer = answer.expect("setup: every Source task must finish without panic");
+        match answer {
+            Ok(value) => {
+                assert_eq!(counters(&value), expected);
+                successes += 1;
+            }
+            Err(error) => {
+                println!("review001 station partial: {error}");
+                if !error.contains("raw storage: Capacity") {
+                    unexpected.push(error);
+                }
+            }
+        }
+    }
+    let puts = put_count(&peer).await;
+    if active {
+        let object = peer
+            .transport()
+            .get_control(STATE_KEY, 1024 * 1024)
+            .await
+            .unwrap();
+        let value: Value = serde_json::from_slice(&object.body).unwrap();
+        assert_eq!(value["revision"], if current { 2 } else { 1 });
+        assert_eq!(puts, if current { 2 } else { 1 });
+    } else {
+        assert_eq!(puts, 0, "absent runtime must never initialize authority");
+    }
+    assert!(
+        unexpected.is_empty(),
+        "unexpected station errors are a separate blocker, not the intended001 Capacity Red: {unexpected:?}"
+    );
+    assert_eq!(
+        successes, 40,
+        "forty normal Source callers must not consume forty mutation slots"
+    );
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn absent_authority_forty_sources_with_or_without_current_preserve_readable_baseline() {
+    let _peers = S3_PEERS.lock().await;
+    for current in [false, true] {
+        for delayed in [false, true] {
+            review_forty_sources(current, false, delayed).await;
+        }
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn active_authority_forty_no_current_sources_share_validated_overlay() {
+    let _peers = S3_PEERS.lock().await;
+    for delayed in [false, true] {
+        review_forty_sources(false, true, delayed).await;
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn active_same_grid_forty_sources_join_one_canonical_current_decision() {
+    let _peers = S3_PEERS.lock().await;
+    for delayed in [false, true] {
+        review_forty_sources(true, true, delayed).await;
+    }
+}
+async fn review_window_boundary(count: u16) {
+    let peer = Peer::persistent();
+    prepare_review_replay(&peer, true, count, false, true).await;
+    let source = S3Source::new(
+        peer.transport_limited(4),
+        Arc::new(|| utc(1047) as f64),
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+    )
+    .unwrap();
+    review_warm(&source, true).await;
+    let source = source
+        .with_rainfall(
+            server2::domestic::kma::source::rainfall_store::Namespace::new(
+                "server2-local".into(),
+                "ap-northeast-2".into(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let value = station(&source).await;
+    let owner = source.rainfall_owner().unwrap();
+    owner.quiesce();
+    assert!(
+        owner
+            .drain(tokio::time::Instant::now() + Duration::from_secs(4))
+            .await
+    );
+    let object = peer
+        .transport()
+        .get_control(STATE_KEY, 1024 * 1024)
+        .await
+        .unwrap();
+    let saved: Value = serde_json::from_slice(&object.body).unwrap();
+    if count == 14 {
+        assert_eq!(
+            counters(&value),
+            (b"3".to_vec(), b"4".to_vec()),
+            "09:00 true is excluded; fourteen actual window rows do not qualify"
+        );
+        assert_eq!(saved["revision"], 1);
+        assert!(saved["rows"][0]["last_end_ms"].is_null());
+        assert!(saved["rows"][0]["receipt"].is_null());
+        assert_eq!(put_count(&peer).await, 1);
+    } else {
+        assert_eq!(count, 15);
+        assert_eq!(
+            counters(&value),
+            (b"3".to_vec(), b"5".to_vec()),
+            "fifteen false rows qualify as a miss; exact-left true must not turn it into a hit"
+        );
+        assert_eq!(saved["revision"], 2);
+        assert_eq!(saved["rows"][0]["receipt"]["row_count"], 15);
+        assert_eq!(saved["rows"][0]["receipt"]["sensor_count"], 15);
+        assert_eq!(saved["rows"][0]["receipt"]["hit"], false);
+        assert_eq!(put_count(&peer).await, 2);
+    }
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn complete_s06_replay_fourteen_rows_excludes_exact_left_and_does_not_count() {
+    let _peers = S3_PEERS.lock().await;
+    review_window_boundary(14).await;
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn complete_s06_replay_fifteen_false_rows_excludes_exact_left_and_counts_miss() {
+    let _peers = S3_PEERS.lock().await;
+    review_window_boundary(15).await;
+}

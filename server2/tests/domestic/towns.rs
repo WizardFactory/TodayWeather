@@ -123,7 +123,7 @@ async fn dynamic_town_projection_survives_a_provider_free_cold_restart() {
         )
         .await
         .unwrap();
-    assert_eq!(oracle()["lifecycle"]["first"]["gCoord"]["lat"], "37.566");
+    assert_eq!(oracle()["lifecycle"]["first"]["gCoord"]["lat"], 37.566);
     assert_eq!(
         first["lat"],
         oracle()["lifecycle"]["coldLean"]["gCoord"]["lat"]
@@ -511,18 +511,10 @@ async fn unknown_town_native_answers_survive_s3_only_restart_with_legacy_absent(
         .outcome(request.clone(), Instant::now() + Duration::from_secs(3))
         .await
         .unwrap();
-    assert_eq!(oracle()["lifecycle"]["makeResult"]["first"]["status"], 500);
-    assert!(
-        matches!(first, Outcome::Json(_)),
-        "AK-approved canonical first admission: {first:?}"
-    );
-    assert_eq!(
-        live.outcome(request.clone(), Instant::now() + Duration::from_secs(3))
-            .await
-            .unwrap(),
-        first,
-        "same-process numeric response is stable"
-    );
+    let same = live
+        .outcome(request.clone(), Instant::now() + Duration::from_secs(3))
+        .await
+        .unwrap();
     drop(live);
     let cold = KmaBackend::new(
         Arc::new(s3_source(&peer, None)),
@@ -533,15 +525,41 @@ async fn unknown_town_native_answers_survive_s3_only_restart_with_legacy_absent(
         .outcome(request, Instant::now() + Duration::from_secs(3))
         .await
         .unwrap();
+    let mut bodies = Vec::new();
+    for (phase, outcome) in [
+        ("first", &first),
+        ("sameProcess", &same),
+        ("coldLean", &restored),
+    ] {
+        let expected = &oracle()["lifecycle"]["makeResult"][phase];
+        assert_eq!(expected["status"], 200, "{phase}");
+        assert_eq!(expected["errorType"], Value::Null, "{phase}");
+        let Outcome::Json(body) = outcome else {
+            panic!("current legacy {phase} succeeds: {outcome:?}")
+        };
+        let bytes = body.to_bytes();
+        let actual: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(actual["location"], expected["location"], "{phase}");
+        assert!(actual["location"]["lat"].is_number(), "{phase}");
+        assert!(actual["location"]["long"].is_number(), "{phase}");
+        bodies.push(bytes);
+    }
+    assert_eq!(bodies[0], bodies[1], "same-process complete response bytes");
     assert_eq!(
-        oracle()["lifecycle"]["makeResult"]["coldLean"]["status"],
-        200
-    );
-    assert_eq!(
-        restored, first,
-        "first/same/cold native bytes are identical; legacy hot500 is preserved only in oracle evidence"
+        bodies[0], bodies[2],
+        "provider-free cold complete response bytes"
     );
     assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
+    eprintln!(
+        "TOWNS_CURRENT_CONTRACT {}",
+        json!({
+            "phases": ["first", "sameProcess", "coldLean"],
+            "bodies": bodies.iter().map(|bytes| String::from_utf8(bytes.clone()).unwrap()).collect::<Vec<_>>(),
+            "body_sha256": bodies.iter().map(|bytes| server2::storage::sha256(bytes)).collect::<Vec<_>>(),
+            "provider_calls": provider.calls.load(Ordering::SeqCst),
+            "cold_provider_configured": false,
+        })
+    );
 }
 #[tokio::test]
 async fn kr_remap_preserves_middleware_order_and_original_request_identity() {

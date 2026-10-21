@@ -34,13 +34,85 @@ def http(url, method='GET', headers=None):
 
 
 def pressure_current(current):
-    """The selected active pressure response retains core weather and never leaks baseline stats."""
-    assert current.get('rn1') == .5 and current.get('pty') == 1, ('pressure core weather', current)
+    """Check this fixture's forecast/live merge and never leak baseline statistics."""
+    assert current.get('pty') == 1, ('pressure precipitation type', current)
     if 'rnsHit' in current or 'rnsCount' in current:
         assert [current.get('rnsHit'), current.get('rnsCount')] == [3, 5], ('pressure acknowledged counters', current)
+        assert current.get('rn1') == 0 and current.get('rs1h') == 0, ('pressure live rainfall override', current)
+        assert current.get('rns') is False and current.get('hourlyMissing') is True, ('pressure minute-only fixture', current)
+        assert current.get('overwrite') is True and current.get('liveTime') == '1046', ('pressure newer station merge', current)
+        assert current.get('stnDateTime') == '2026.10.17.10:46', ('pressure station publication', current)
+        forecast = current.get('dongnae')
+        assert isinstance(forecast, dict) and forecast.get('rn1') == .5 and forecast.get('pty') == 1, ('pressure original Current retained', current)
+        assert forecast.get('date') == '20261017' and forecast.get('time') == '1000', ('pressure original Current publication', current)
+        station = current.get('cityMinAws')
+        assert isinstance(station, dict) and [station.get('rnsHit'), station.get('rnsCount')] == [3, 5], ('pressure acknowledged station section', current)
+        assert station.get('date') == '2026.10.17.10:46' and station.get('rs1h') == 0 and station.get('rns') is False, ('pressure live station rainfall', current)
         return 'acknowledged3/5'
+    assert current.get('rn1') == .5, ('pressure partial retains original Current rain', current)
     assert 'cityMinAws' not in current, ('pressure partial station fields', current)
     return 'stationpartial; rnsHit/rnsCount/cityMinAws absent'
+
+
+
+def pressure_acknowledged_authority(value):
+    """The selected pressure gate requires the durable one-window miss, not baseline."""
+    assert value['schema'] == 1 and value['revision'] == 2, ('pressure final schema/revision', value)
+    assert len(value['rows']) == 1, ('pressure final identity count', value)
+    row = value['rows'][0]
+    assert row['oid'] == '000000000000000000000108', ('pressure final original identity', row)
+    assert [row['rns_hit'], row['rns_count']] == [3, 5], ('pressure final acknowledged counters', row)
+    receipt = row['receipt']
+    assert isinstance(receipt, dict) and receipt['hit'] is False, ('pressure final miss receipt', row)
+    assert row['last_end_ms'] == receipt['end_ms'] == value['activation']['first_end_ms'], ('pressure final canonical end', row)
+    return row
+
+
+def pressure_acknowledged_current(current):
+    """Check fresh-child public station application; top-level rn1 may be station-overwritten."""
+    assert current.get('pty') == 1, ('pressure fresh core weather', current)
+    assert [current.get('rnsHit'), current.get('rnsCount')] == [3, 5], ('pressure fresh acknowledged counters', current)
+    station = current.get('cityMinAws')
+    assert isinstance(station, dict), ('pressure fresh acknowledged station section', current)
+    assert [station.get('rnsHit'), station.get('rnsCount')] == [3, 5], ('pressure fresh station counters', station)
+    return 'freshchild acknowledged3/5; public station applied'
+
+
+def pressure_handover_controls():
+    """Eight pure selected-gate controls; no processes, clocks, HTTP or state changes."""
+    import copy
+    valid = {'schema': 1, 'revision': 2, 'activation': {'first_end_ms': 1792231200000},
+             'rows': [{'oid': '000000000000000000000108', 'rns_hit': 3, 'rns_count': 5,
+                       'last_end_ms': 1792231200000, 'receipt': {'end_ms': 1792231200000, 'hit': False}}]}
+    pressure_acknowledged_authority(valid)
+    for change in ('baseline', 'wrong-counter', 'missing-receipt'):
+        wrong = copy.deepcopy(valid)
+        if change == 'baseline':
+            wrong['revision'] = 1
+            wrong['rows'][0]['rns_count'] = 4
+        elif change == 'wrong-counter': wrong['rows'][0]['rns_hit'] = 4
+        else: wrong['rows'][0]['receipt'] = None
+        try:
+            pressure_acknowledged_authority(wrong)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError(('must reject unacknowledged pressure authority', change))
+    public = {'pty': 1, 'rn1': 0, 'rnsHit': 3, 'rnsCount': 5,
+              'cityMinAws': {'rnsHit': 3, 'rnsCount': 5}}
+    pressure_acknowledged_current(public)
+    for change in ('baseline', 'missing-station', 'missing-core'):
+        wrong = copy.deepcopy(public)
+        if change == 'baseline': wrong['rnsCount'] = 4
+        elif change == 'missing-station': del wrong['cityMinAws']
+        else: del wrong['pty']
+        try:
+            pressure_acknowledged_current(wrong)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError(('must reject incomplete fresh pressure application', change))
+    return {'controls': 8, 'meaning': 'exact final revision2/3/5 miss receipt + fresh public station application; not native execution'}
 
 
 
@@ -543,17 +615,22 @@ def main():
             final_state, final_digest = state(endpoint)
             final_pair = [final_state['rows'][0]['rns_hit'], final_state['rows'][0]['rns_count']]
             receipt['after_drain_authority'] = {'revision': final_state['revision'], 'counters': final_pair, 'checkpoint_sha256': final_digest}
-            if final_state['revision'] == 2:
-                assert final_pair == [3, 5], final_pair
-                server, public, acknowledged = acknowledged_after_drain(
-                    server, endpoint, retire,
-                    lambda same_s3: line_process([str(binary), 'owned-server', same_s3, '1047'],
-                                                 'pressure-after-drain-server', 'OWNED_HTTP_READY '),
-                    request)
-                receipt['after_drain_sequence'] = 'real drain -> retire old child -> fresh native child/same S3 -> acknowledged read; no reactivation/reset'
-                scenarios.append(acknowledged)
-            else:
-                assert final_state['revision'] == 1 and final_pair == [3, 4], final_state['revision']
+            pressure_acknowledged_authority(final_state)
+            server, public, acknowledged = acknowledged_after_drain(
+                server, endpoint, retire,
+                lambda same_s3: line_process([str(binary), 'owned-server', same_s3, '1047'],
+                                             'pressure-after-drain-server', 'OWNED_HTTP_READY '),
+                request)
+            receipt['after_drain_sequence'] = 'real drain -> retire old child -> fresh native child/same S3 -> acknowledged read; no reactivation/reset'
+            scenarios.append(acknowledged)
+            fresh_current = json.loads((output / 'pressure-after-drain.body').read_bytes())['current']
+            receipt['after_drain_public_statistics'] = pressure_acknowledged_current(fresh_current)
+            fresh_state, fresh_digest = state(endpoint)
+            pressure_acknowledged_authority(fresh_state)
+            receipt['after_drain_fresh_authority'] = {'revision': fresh_state['revision'],
+                'counters': [fresh_state['rows'][0]['rns_hit'], fresh_state['rows'][0]['rns_count']],
+                'checkpoint_sha256': fresh_digest}
+            assert fresh_digest == final_digest, 'fresh same-end read must not mutate/recount the acknowledged authority'
             profiles = [json.loads(line) for line in (output / 'pressure-prepare.stdout.log').read_text().splitlines() if line.startswith('{')]
             receipt['physical_profile'] = next(item for item in profiles if item.get('profile') == args.pressure)
             receipt['checkpoint_sha256'] = digest
