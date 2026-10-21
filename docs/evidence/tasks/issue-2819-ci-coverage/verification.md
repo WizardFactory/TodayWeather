@@ -1,0 +1,55 @@
+# G2 CI coverage verification
+
+Base: `c1ae9082b2c86f0087727be9872b0cf82b4e3bb1`. Scope: CI event/range/placement and build provenance only. No runtime, oracle, fixture, dependency or production change. Related #2819 remains open.
+
+The original workflow failed three intended controls: PR path-filter bypass, no master push, and seven-day retention. The updated workflow receives every PR and master push; a minimum whole-root layout audit precedes heavy classification. Known relevant changes retain foundation/goldens. Positively unrelated-only changes explicitly skip heavy jobs. Unknown paths and ambiguous input ranges block. Server2 PRs require one exact changed declaration; master ranges require a valid changed-declaration union. Pure legacy receives layout-only placement plus full foundation/goldens. This does not certify retrospective independent PR approval or branch protections.
+
+Local controls: 20 CI/controller, 46 placement, 4 artifact and 14 native-artifact checks passed (84 total). Controller and exporter tests use synthetic children/files; they do not prove a product binary embeds a revision. The existing placement grammar oracle invokes only the installed standalone rustc, sequentially in owned temporary directories; it does not use Cargo or the shared target.
+
+An additional actual CLI smoke passed ten isolated synthetic Git/event cases: six successful scopes and four intended rejections. These invoke current selector/placement CLI outside unittest. Retained report SHA-256: `4962d44aac84c5006d482d43199e106004b808a88c85a9321fa3e4a7852cc953`. The actual task-range and whole tracked layout check, plus whitespace check, passed. Original Python3.9/tomllib, missing rustc PATH and intermediate fixture-baseline setup failures were preserved separately and are not Red behavior evidence.
+
+The full source revision is selected before Cargo, checked against the checkout's server2 tree, and passed to every child as SERVER2_BUILD_REVISION. Logging smoke validates actual emitted schema1 records. Native artifact retention is 30 days at the existing scoped path; preserve required evidence before expiry. No broad reports upload or deployment is introduced.
+
+Current hosted CI, real emitted-record build proof, artifact retrieval and independent review remain task gates; local controls alone do not establish them. Actual master-event execution follows authorized integration and is not claimed before merge. Historical auxiliary fixture provenance (G1) is a separate required task, not silently refreshed here. Raw execution logs and source maps remain ignored task evidence.
+
+
+## Independent review correction
+
+Actual native independent review1 requested CI-REVIEW-001/002 corrections. Both
+were reproduced before changes: scope failure could hide behind skipped heavy
+jobs, and an unrelated-only merge checkout could incorrectly fail source identity.
+The corrected guards and heavy-only identity check pass 24 controller +46 placement
++4 artifact +14 native-artifact controls (88 total). The separate actual Git/CLI
+workflow passes13 cases: seven successful scopes and six exact-reason rejections.
+Report SHA-256 `ce379961beb81e40dac7a43ae909dd01128637f04f5923b93575d30e37b98f82`. These controls still mock heavy
+children and do not qualify emitted Rust diagnostics or actual master events.
+Original setup/expectation errors remain separate from intended Red. Earlier code
+evidence was reused only for identical nine code inputs; the earlier full candidate
+added three documentation paths. Per-file reuse hashes were checked, not relabelled.
+Current hosted CI and independent re-review remain gates.
+
+## Current-master integration (2026-10-21)
+
+The earlier base/hosted results above remain historical. The G2 branch now integrates
+master `e09672a3bd01b47d961479feee6ee0b2a9582c1a` after G1 PR2844 and manuals PR2848.
+The golden guide preserves its integrated G1 result and provenance-first entrypoint;
+the checker combines only the exact reviewed synthetic fixture roles. G1 policy
+pins/registry validation and G2 full-root range/fail-closed workflow remain intact.
+No master runtime, golden tool/guard/policy, fixture or legacy input bytes were
+changed by this resolution.
+
+Fresh local checks passed 24 CI/controller, 49 placement, 4 artifact and 14 native
+export controls (91 total), plus a separate 13-case actual Git/event CLI smoke.
+Its report SHA256 is `da7e70bf7c6e457e322edaacd175ca91f33063efce625ccbb3f36ad4d7a7fcb7`.
+The full current-base placement check passed. A pinned Node16.20.2 hash-only audit
+reported 22 SOURCE_CURRENT / 0 DRIFT; no original recorder ran locally. The first
+local compiler-proxy lookup failed before tests, then the preexisting private
+Rust1.99.0 toolchain was selected with auto-install disabled. That setup failure
+is retained separately; no global toolchain or Cargo target was changed.
+
+The earlier passing 24-controller baseline, review findings CI-REVIEW-001/002 and
+all prior failures remain preserved. These local checks are not a new hosted CI
+result or actual master-push execution. Current-head review, hosted foundation/
+goldens, actual diagnostic stamp and native artifact retrieval remain required
+for renewed pre-merge readiness; their eventual results belong on the PR rather
+than in a recursive evidence-only commit. No deployment/merge/host readiness claim.

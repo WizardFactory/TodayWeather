@@ -96,7 +96,21 @@ Dependency responses are fixed inputs and some existing offline fixtures are syn
 
 The foundation workflow retains fmt, clippy, Rust tests, placement tests, release build and separate release-binary smoke. The additive golden job invokes only its owned CI entrypoint. Essential golden bytes, the selected historical CLI capture/PDF and this maintained Markdown are retained in Git; raw stage runs remain ignored local reports. No broad reports upload is added.
 
-The CI event filter is unchanged. Ordinary legacy-only maintenance does not require a server2 task declaration or run this workflow. A later golden invocation detects source drift; this oracle is not continuous legacy drift enforcement.
+The G2 Server2 workflow starts a full-root scope/layout audit for every PR and every master push, without a workflow-level path filter. Known server2, legacy/oracle or `.github/workflows/server2.yml` changes also run the independent current golden and full foundation jobs. The golden job retains the provenance-first sequence above: event coverage does not replace strict G1 source checking or imply semantic equivalence. Known unrelated-only changes keep the minimum layout audit and explicitly record heavy checks not run; unknown paths fail closed. A pure-legacy change does not invent a server2 task declaration: its placement receipt is layout-only, while relevant golden/foundation checks still run. Server2 PRs retain the full root PR range and exactly one reviewed task declaration; master pushes use the exact before..after range and valid changed-declaration union. No golden baseline is automatically refreshed or derived from Rust output.
+
+### Failed audit and unrelated-only outcomes
+
+The heavy jobs skip only on an explicit `heavy=false` scope output. Their job guard
+includes `!cancelled()` and `heavy != 'false'`; failed or missing scope output
+runs foundation, whose independent audit fails closed before children. Cancellation
+is respected. No protection settings are changed. Unrelated-only events build
+nothing and report `source: null`, even when the PR merge checkout includes newer
+server2 bytes than its head. Heavy events, including legacy-only PRs, must have
+a server2 checkout tree matching the selected head; update an outdated branch
+before building. Only server2.yml is the relevant workflow here; other workflow
+YAML receives the minimum layout audit. The upload requests 30 days; repository
+or organization retention maxima may cap its effective duration. Those settings
+and hosted expiry were not inspected or changed locally.
 
 
 ## Current provenance domains (build23, 2026-10-20)

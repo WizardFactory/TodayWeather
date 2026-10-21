@@ -23,7 +23,7 @@ modes. CI retains `native.tar.gz` inside the existing
 `server2-linux-musl-verified` artifact; the shared upload is unchanged. Compare
 the archive SHA-256 with the trusted producer/CI receipt before extracting it
 into a fresh owned directory. The original
-two-binary export remains unchanged. Seven-day CI retention is transport only;
+two-binary export remains unchanged. Thirty-day CI retention is transport only;
 retain selected executable inputs and reports before expiry.
 
 Check `python3 --version` (3.9 or later) and `git --version` on the receiving
@@ -580,3 +580,27 @@ matching compile-time checkout and Python/synthetic fixture assets. No live prov
 device, readiness endpoint, IAM or full release-bundle qualification is claimed. The main
 release binary is built but not executed by this smoke. See the
 [selected evidence](../evidence/tasks/issue-2819-warning-poll-supervision/verification.md).
+
+
+## CI scope and build identity
+
+Every PR/master event receives the same minimum full-root layout/resource audit. Only positively classified unrelated-only changes skip the expensive jobs, with explicit not-run evidence. Relevant changes retain the existing foundation/goldens command suites and safe artifact upload path; unknown classification, missing objects, task-scope gaps, changed task deletion/rename, or ambiguous ranges fail closed. Master push union coverage verifies the complete actual range; it does not certify retrospective independent PR approval or change branch protections.
+
+Heavy CI selects one full40 source revision (actual PR head or master after), verifies the checkout's server2 tree, rejects a conflicting build stamp, and passes process-scoped SERVER2_BUILD_REVISION to every Cargo child and existing artifact exporter. It checks actual schema1 diagnostic records from both existing logging captures against that revision after the logging smoke. Manifest identity alone is not proof of embedded diagnostics, and local controller mocks are not actual Rust execution. Fresh hosted CI remains required for the actual binary/record proof.
+
+The existing verified native artifact upload is scoped to reports/verification/server2-local-first/artifact-native/ with 30-day retention and missing-file failure. Its existing native.tar.gz preserves hidden source files/modes, 11 native roles and logging/narrative probes. Required evidence and recovery inputs must be preserved by the root owner before expiry in an authorized durable record; 30 days is neither an indefinite recovery guarantee nor an eligible prior full release. No new exporter, broad reports upload, deployment/provider action, host configuration or permission mutation is introduced.
+
+
+### Failed audit and unrelated-only outcomes
+
+The heavy jobs skip only on an explicit `heavy=false` scope output. Their job guard
+includes `!cancelled()` and `heavy != 'false'`; failed or missing scope output
+runs foundation, whose independent audit fails closed before children. Cancellation
+is respected. No protection settings are changed. Unrelated-only events build
+nothing and report `source: null`, even when the PR merge checkout includes newer
+server2 bytes than its head. Heavy events, including legacy-only PRs, must have
+a server2 checkout tree matching the selected head; update an outdated branch
+before building. Only server2.yml is the relevant workflow here; other workflow
+YAML receives the minimum layout audit. The upload requests 30 days; repository
+or organization retention maxima may cap its effective duration. Those settings
+and hosted expiry were not inspected or changed locally.

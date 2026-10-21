@@ -68,7 +68,7 @@ class PlacementTests(unittest.TestCase):
         self.assertTrue(self.errors())
     def test_shared_workflow_wiring_only(self):
         self.d['outside'].append(dict(path='.github/workflows/server2.yml',category='ci-wiring',reason='shared CI'))
-        self.write('.github/workflows/server2.yml','timeout-minutes: 45\ndefaults:\n  run:\n    working-directory: server2\nsteps:\n  - uses: actions/checkout@v4\n    with:\n      fetch-depth: 0\n  - run: bash tools/ci.sh\n');self.assertEqual([],self.errors())
+        self.write('.github/workflows/server2.yml', self.golden_workflow());self.assertEqual([],self.errors())
         self.write('.github/workflows/server2.yml','working-directory: server2\nsteps:\n  - run: |\n      python3 -c "business logic"\n');self.assertTrue(self.errors())
 
     def test_encoded_compiler_and_runtime_literals_rejected(self):
@@ -296,44 +296,8 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
         self.assertTrue(self.errors())
 
     def golden_workflow(self):
-        return """name: Server2
-on:
-  pull_request:
-    paths:
-      - \"server2/**\"
-      - \".github/workflows/server2.yml\"
-permissions:
-  contents: read
-jobs:
-  foundation:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    defaults:
-      run:
-        working-directory: server2
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - run: bash tools/ci.sh
-  goldens:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    defaults:
-      run:
-        working-directory: server2
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '16.20.2'
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: python tools/golden/ci.py --install
-"""
+        return "name: Server2\non:\n  pull_request:\n  push:\n    branches: [master]\npermissions:\n  contents: read\njobs:\n  scope:\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n    outputs:\n      heavy: ${{ steps.scope.outputs.heavy }}\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - id: scope\n        run: python3 tools/ci.py --audit-only\n  foundation:\n    needs: scope\n    if: ${{ !cancelled() && needs.scope.outputs.heavy != 'false' }}\n    runs-on: ubuntu-latest\n    timeout-minutes: 45\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - run: bash tools/ci.sh\n      - uses: actions/upload-artifact@v4\n        with:\n          name: server2-linux-musl-verified\n          path: reports/verification/server2-local-first/artifact-native/\n          if-no-files-found: error\n          retention-days: 30\n  goldens:\n    needs: scope\n    if: ${{ !cancelled() && needs.scope.outputs.heavy != 'false' }}\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '16.20.2'\n      - uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n      - run: python tools/golden/ci.py --install\n"
+
     def test_foundation_45_and_goldens_30_are_exact_independent_budgets(self):
         self.d['outside'].append(dict(path='.github/workflows/server2.yml', category='ci-wiring', reason='reviewed foundation budget'))
         good = self.golden_workflow()
@@ -353,10 +317,9 @@ jobs:
         self.write('.github/workflows/server2.yml',self.golden_workflow());self.assertEqual([],self.errors())
     def test_verified_artifact_upload_is_exact_wiring(self):
         self.d['outside'].append(dict(path='.github/workflows/server2.yml',category='ci-wiring',reason='reviewed artifact upload'))
-        upload = '      - uses: actions/upload-artifact@v4\n        with:\n          name: server2-linux-musl-verified\n          path: reports/verification/server2-local-first/artifact-native/\n          if-no-files-found: error\n          retention-days: 7\n'
-        good = self.golden_workflow().replace('  goldens:\n', upload+'  goldens:\n')
+        good = self.golden_workflow()
         self.write('.github/workflows/server2.yml',good);self.assertEqual([],self.errors())
-        for bad in (good.replace('retention-days: 7','retention-days: 90'),
+        for bad in (good.replace('retention-days: 30','retention-days: 90'),
                     good.replace('artifact-native/','../../.aws/'),
                     good.replace('actions/upload-artifact@v4','unknown/upload@main')):
             self.write('.github/workflows/server2.yml',bad);self.assertTrue(self.errors())
@@ -371,6 +334,32 @@ jobs:
                     good.replace('timeout-minutes: 30','timeout-minutes: 300')]:
             self.write('.github/workflows/server2.yml',bad);self.assertTrue(self.errors())
 
+
+    def test_all_event_scope_job_cannot_be_bypassed(self):
+        good = self.golden_workflow()
+        for bad in (good.replace('  pull_request:\n', '  pull_request:\n    paths: ["server2/**"]\n'),
+                    good.replace('  push:\n    branches: [master]\n', ''),
+                    good.replace("    if: ${{ !cancelled() && needs.scope.outputs.heavy != 'false' }}\n", ''),
+                    good.replace("if: ${{ !cancelled() && needs.scope.outputs.heavy != 'false' }}", "if: needs.scope.outputs.heavy == 'true'"),
+                    good.replace('python3 tools/ci.py --audit-only', 'echo safe'),
+                    good.replace('timeout-minutes: 10', 'timeout-minutes: 45')):
+            self.assertTrue(placement.audit_workflow(bad))
+
+    def test_layout_only_does_not_claim_task_diff_approval(self):
+        self.write('docs/unrelated.md', 'unrelated')
+        self.assertEqual([], placement.check_layout(self.root, self.base))
+        self.write('Cargo.toml', '[workspace]')
+        self.assertTrue(placement.check_layout(self.root, self.base))
+
+    def test_push_union_covers_every_outside_and_rename_endpoint(self):
+        first = dict(task='one', issue='#1', server2_paths=['server2/src/one.rs'], outside=[])
+        second = dict(task='two', issue='#2', server2_paths=['server2/src/two.rs'], outside=[])
+        self.write('server2/src/one.rs', 'fn one() {}')
+        self.write('server2/src/two.rs', 'fn two() {}')
+        self.assertEqual([], placement.check_declarations(self.root, [first, second], self.base))
+        self.write('docs/not-declared.md', 'outside')
+        self.assertTrue(placement.check_declarations(self.root, [first, second], self.base))
+        self.assertTrue(placement.check_declarations(self.root, [], self.base))
 
     def host_policy(self):
         roles=[('Path::new','/opt/server2-s09','private-owned-manifest'),
