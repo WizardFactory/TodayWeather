@@ -1,6 +1,6 @@
 # Forecast cache retention verification (#2850)
 
-Date: 2026-10-22 KST. Base `307defeb706886217ab67ea858dc7c7b0435752f`, dependent on open PR #2841. Runtime/test/tool/declaration candidate `sha256:2272b0f4d6c4b92fd8fa59fd3c99856fe44822b1ead40471749e9679e7b97ba9`. Maintained docs are assessed separately. Local Darwin ARM64, Rust 1.99.0 release; this is not an EC2 or live S3 measurement.
+Date: 2026-10-22 KST. Base `307defeb706886217ab67ea858dc7c7b0435752f`, dependent on open PR #2841. Measurement runtime/test/tool/declaration candidate `sha256:2272b0f4d6c4b92fd8fa59fd3c99856fe44822b1ead40471749e9679e7b97ba9`. Maintained docs are assessed separately. Local Darwin ARM64, Rust 1.99.0 release; this is not an EC2 or live S3 measurement.
 
 Copied executable SHA-256 `78ed4cb02d57306cccd7567375a9bf4c96dd2b7304949e697549479e8454dcdb`; runner `9074092d251389c2a24a700b23a3baa8ce2ab476ee5aaa7522dc1bf3aa51b1c9`. Fixture manifest remains `11606b79c26365e4ba8a5a906d5801f717845f853bafc971c2f099d27b7bbe3f`; input identity digest `a83f63716e6b73c997c6ded2cca81e23c50e97b770408f0c2580a7d2241c4a00`. No runtime verification flag or dependency was added.
 
@@ -61,7 +61,7 @@ Archify proposed workflow passed artifact validation/delivery/strict check and a
 No live S3/provider request, deployment, shadow traffic, host performance/capacity qualification, mobile build or merge is claimed. S3 identities remain authoritative; disk loss/schema mismatch is a normal miss. No source or dependency path outside the declared server2 ownership was introduced.
 
 
-Current additional checks: 16 focused library tests, 8 shared DiskCache fault/ownership
+The 66be97c8 measurement candidate additional checks: 16 focused library tests, 8 shared DiskCache fault/ownership
 regressions, 9 cache/source integration tests, 10 S16 summary integrations and
 9 compatibility checks (6 late-publication, 2 backfill, 1 concurrent acquisition)
 passed: **52 Rust checks total**.
@@ -78,3 +78,19 @@ pass in the compatibility run above. The corrected six-child13-view/disk/boundar
 HTTP smoke and an additional fresh three-child13-view/HTTP run both exited0 and
 kept the original hashes. The old candidate, initial review and failed logs remain
 retained; final review/CI applies only to the corrected revision.
+
+
+A subsequent foundation CI39685398826 exposed one existing S16 own-acquisition
+identity failure (176 passed, 1 failed, 2 ignored). Its exact local single-test
+invocation passed once, so that complete scenario is scheduling sensitive. A new
+held same-key writer test deterministically failed: the final canonical fence also
+removed the immutable request-local overlay's complete input identity. The repair
+applies this downgrade only to non-overlay reconstruction. Complete parents keep
+the original IDs; partial parents remain partial; overlays never enter memory/SSD.
+All canonical writer/generation/control/restore/renewal gates are unchanged.
+The new test passed after the repair. Its runtime/test/tool/declaration candidate is
+`sha256:b81fd394848a38f4fa56a36f06169e2c37c9a2b9a9ee6a2cefdb19f170e41cab`. Full renewed checks and six-mode smoke results are retained in
+the PR candidate receipts; the performance tables above remain the explicitly
+identified 66be97c8 measurement run, not a newly timed execution. Existing spec,
+architecture/operator guide and maintained diagram already require preservation
+of request-local overlays and original S16 identities; their contract is unchanged.

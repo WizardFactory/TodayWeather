@@ -625,9 +625,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Cache<T> {
         if state.poisoned {
             return Err(Error::Capacity);
         }
-        if state.writers != 0 || state.value != epoch {
+        if view._parent.is_none() && (state.writers != 0 || state.value != epoch) {
             // Request-local reconstruction remains usable while acquisition runs, but
             // its set cannot attest completeness or enter either canonical cache.
+            // An overlay keeps its immutable parent's completeness and original IDs;
+            // concurrent backfill cannot change the inputs this request already read.
             view.complete = false;
             view.ids = None;
         }
@@ -1704,6 +1706,57 @@ mod retention_tests {
         assert!(canonical.value.complete);
         assert!(canonical.value.ids.is_some());
         assert_eq!(cache.stats().mapped_entries, 1);
+    }
+    #[tokio::test]
+    async fn overlay_preserves_complete_parent_identity_during_same_key_backfill() {
+        let cache = Cache::new(reader(Empty::default())).unwrap();
+        let key = Key::Rss(60, 127);
+        let parent = cache.get(key.clone(), NOW, until()).await.unwrap();
+        assert!(parent.value.complete);
+        // Hold the exact same-key writer fence through overlay construction. An overlay
+        // describes the already-read parent plus this request's acquisition, not a new
+        // canonical read that could attest concurrent writes.
+        let state = cache.state(&key).unwrap();
+        {
+            let mut fence = state.lock().unwrap();
+            fence.value += 1;
+            fence.writers += 1;
+            cache.0.map.remove(&key);
+        }
+        let writing = Writing {
+            cache: cache.clone(),
+            key: key.clone(),
+            state,
+        };
+        let own = Fetched {
+            fetched_at_ms: NOW as u64 + 5_000,
+            partition: schedule::from_ms(NOW as i64).partition(),
+            pages: vec![],
+        };
+        let overlay = cache
+            .overlay(
+                key.clone(),
+                parent,
+                own.checked_clone().unwrap(),
+                NOW,
+                until(),
+            )
+            .await
+            .unwrap();
+        assert!(overlay.value.complete, "complete parent remains complete");
+        assert!(overlay.value.ids.is_some());
+        assert!(cache.0.map.get(&key).is_none(), "overlay is request-local");
+        // This exemption cannot promote a parent read while a writer was active.
+        let partial = cache.get(key.clone(), NOW, until()).await.unwrap();
+        assert!(!partial.value.complete);
+        let partial_overlay = cache
+            .overlay(key.clone(), partial, own, NOW, until())
+            .await
+            .unwrap();
+        assert!(!partial_overlay.value.complete);
+        assert!(partial_overlay.value.ids.is_none());
+        assert!(cache.0.map.get(&key).is_none());
+        drop(writing);
     }
     #[test]
     fn registry_is_bounded_and_cannot_recycle_a_live_state_identity() {
