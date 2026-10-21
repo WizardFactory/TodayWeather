@@ -98,6 +98,17 @@ class Handler(base.Handler):
                 return self.error(403, 'OnlyLocalTestControl')
             mode = query.get('mode', [''])[0]
             key = query.get('key', [''])[0]
+            if mode == 'latency':
+                # Measurement aid: one fixed delay for every GET/HEAD/LIST; fault modes stay.
+                try:
+                    delay = float(query.get('ms', [''])[0]) / 1000
+                except ValueError:
+                    return self.error(400, 'InvalidTestFault')
+                if not 0 <= delay <= 1 or not base.valid_key(key):
+                    return self.error(400, 'InvalidTestFault')
+                with self.server.lock:
+                    self.server.latency = delay
+                return self.send(204)
             if mode not in ('commit500', 'conflict409', 'forget', 'corrupt', 'clear', 'reject', 'drop-commit', 'late-reject', 'barrier', 'bad-list', 'repeat-token', 'delay', 'unexpected202', 'chunked-list', 'empty-page', 'slow-all', 'delay-after-first', 'wrong-key', 'eof-list', 'short-list') or (not base.valid_key(key) and mode not in ('bad-list','repeat-token')):
                 return self.error(400, 'InvalidTestFault')
             with self.server.lock:
@@ -136,6 +147,8 @@ class Handler(base.Handler):
             counter = self.command + ' ' + key
             self.server.counts[counter] = self.server.counts.get(counter, 0) + 1
             pending = self.server.pending
+            latency = self.server.latency
+        if latency and self.command in ('GET', 'HEAD'): time.sleep(latency)
         if mode == 'slow-all' and self.command == 'GET': time.sleep(0.02)
         if self.command == 'GET' and query.get('list-type') == ['2']:
             if mode == 'empty-page' and 'continuation-token' not in query:
@@ -230,6 +243,7 @@ def make(persistent=False, fanout_capacity=False):
     peer = base.Peer('s3', config, {})
     peer.RequestHandlerClass = PersistentHandler if persistent else Handler
     peer.mode, peer.fault_key, peer.pending, peer.barrier_puts = '', '', None, 0
+    peer.latency = 0.0
     peer.counts = {}
     peer.response_lock = threading.Lock()
     peer.response_counts = {}
@@ -306,7 +320,26 @@ def check_persistent():
             connection.request('GET', path, headers=auth)
             response = connection.getresponse()
             assert response.status == 200 and response.read() == body, 'early PUT response corrupted the next HTTP frame'
-            print('owned peer', 'persistent' if persistent else 'default', 'reuse/framing/HEAD/204/CAS/fault/payload-counters PASS')
+            # Measurement latency: GET, HEAD and LIST wait the set milliseconds; PUT does not,
+            # and 0 restores immediate answers.
+            def timed(method, target, payload=None, extra=None):
+                started = time.monotonic()
+                connection.request(method, target, body=payload, headers=dict(auth, **(extra or {})))
+                response = connection.getresponse()
+                response.read()
+                return response.status, time.monotonic() - started
+            for ms in ('-1', '1001', 'x', ''):
+                assert timed('POST', f'/__catalog?mode=latency&key=owned&ms={ms}')[0] == 400, ms
+            assert timed('POST', '/__catalog?mode=latency&key=owned&ms=40')[0] == 204, 'latency control'
+            for method, target in (('GET', path), ('HEAD', path), ('GET', '/server2-local?list-type=2&prefix=reuse')):
+                status, seconds = timed(method, target)
+                assert status == 200 and seconds >= 0.04, (method, target, status, seconds)
+            status, seconds = timed('PUT', '/server2-local/latency-put', body, headers)
+            assert status == 200 and seconds < 0.04, ('PUT must not wait', status, seconds)
+            assert timed('POST', '/__catalog?mode=latency&key=owned&ms=0')[0] == 204
+            status, seconds = timed('GET', path)
+            assert status == 200 and seconds < 0.04, ('latency 0 restores immediate answers', seconds)
+            print('owned peer', 'persistent' if persistent else 'default', 'reuse/framing/HEAD/204/CAS/fault/payload-counters/latency PASS')
         finally:
             connection.close()
             peer.shutdown()

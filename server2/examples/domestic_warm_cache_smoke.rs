@@ -1,6 +1,8 @@
 //! Full-window synthetic S06 baseline. Loopback only; no dotenv or live providers.
 //! seed publishes exact raw formats; diagnostic uses public source answers with60s,
 //! native uses KmaBackend's unchanged3s ceiling; http serves the normal direct route.
+//! aged repeats the cold request once the 30-second view freshness has passed, so the
+//! forecast views are rebuilt in an already warm process.
 //! Neither diagnostic nor this owned HTTP harness is a capacity qualification.
 use rusty_s3::Credentials;
 use serde_json::{Value, json};
@@ -40,6 +42,8 @@ use tokio::time::Instant;
 const NOW: i64 = 1_790_214_600_000; // 2026-09-24 10:50 KST.
 const HOUR: i64 = 3_600_000;
 type Transport = BoundedS3<HttpS3Transport>;
+/// The process S3 admission of the server (`S3_IN_FLIGHT` in `gateway/runtime.rs`).
+const S3_PERMITS: usize = 12;
 fn transport(endpoint: &str) -> Transport {
     BoundedS3::new(
         HttpS3Transport::new(
@@ -49,7 +53,7 @@ fn transport(endpoint: &str) -> Transport {
             Credentials::new("server2-local", "server2-local-secret"),
         )
         .unwrap(),
-        4,
+        S3_PERMITS,
     )
 }
 #[derive(Default)]
@@ -645,7 +649,7 @@ impl server2::gateway::Geocoder for NoGeo {
         Box::pin(async { Err(server2::gateway::GatewayError::Provider) })
     }
 }
-async fn http(endpoint: &str, manifest: &Path) {
+async fn http(endpoint: &str, manifest: &Path, phases: &[&str]) {
     use server2::{
         api::{DirectFamilies, DirectRoutes},
         gateway::{BackendDispatcher, Gateway},
@@ -704,7 +708,12 @@ async fn http(endpoint: &str, manifest: &Path) {
     ]);
     let mut complete = true;
     let mut first_warm_success: Option<Vec<u8>> = None;
-    for phase in ["cold", "warm1", "warm2"] {
+    for &phase in phases {
+        if phase == "aged" {
+            // Outside every request timing: wait out the 30-second view freshness so this
+            // request rebuilds the forecast views in a warm process.
+            tokio::time::sleep(Duration::from_secs(31)).await;
+        }
         let before = status(endpoint).await;
         let cache_before = source.forecast_cache_stats();
         let denied_before = [
@@ -778,7 +787,9 @@ async fn http(endpoint: &str, manifest: &Path) {
             denied_after[1] - denied_before[1],
             denied_after[2] - denied_before[2],
         ];
-        if phase != "cold" {
+        // An aged request rebuilds after the freshness bound; its denied stub calls are
+        // recorded, not treated as warm-path work.
+        if phase.starts_with("warm") {
             complete &= denied_delta[0] == 0;
         }
         println!(
@@ -837,7 +848,7 @@ async fn main() {
     assert_eq!(
         args.len(),
         3,
-        "ENDPOINT seed|diagnostic|native|http MANIFEST"
+        "ENDPOINT seed|diagnostic|native|http|aged MANIFEST"
     );
     assert!(args[0].starts_with("http://127.0.0.1:"));
     match args[1].as_str() {
@@ -850,7 +861,8 @@ async fn main() {
             .await
         }
         "native" => native(&args[0]).await,
-        "http" => http(&args[0], Path::new(&args[2])).await,
+        "http" => http(&args[0], Path::new(&args[2]), &["cold", "warm1", "warm2"]).await,
+        "aged" => http(&args[0], Path::new(&args[2]), &["cold", "aged"]).await,
         _ => panic!("unknown mode"),
     }
 }
