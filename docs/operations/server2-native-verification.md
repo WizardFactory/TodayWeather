@@ -596,3 +596,5 @@ optional counter visible. Never accept a 502 or weaken the original corpus.
 The [selected receipt](../evidence/tasks/issue-2819-domestic-warm-cache/verification.md)
 records actual current results and original failures. This does not qualify host
 latency, global resource integration, full API parity or production recovery.
+Empty-cache build time at modeled S3 latency (#2849) has its own base-versus-candidate
+procedure in the operator guide, [measure empty-cache builds](server2-domestic-cache.md#measure-empty-cache-builds-at-modeled-s3-latency).

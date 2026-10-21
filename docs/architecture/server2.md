@@ -4136,3 +4136,52 @@ per request; no valid-zone recovery is claimed. Cold observation stubs are denie
 These are local source/cache results, not complete API parity, host p95 or an
 eligible rollback release. See the [operator guide](../operations/server2-domestic-cache.md)
 and [selected verification](../evidence/tasks/issue-2819-domestic-warm-cache/verification.md).
+
+### D2 empty-cache reads (#2849, local candidate)
+
+An empty forecast cache rebuilds a view from every partition in its lookback; the
+Seoul fixture town needs about 700 partition lookups (about 2,220 forecast GETs).
+D2 read them one at a time through a forecast store that admitted two lookups, so
+one request grew by about 2 s per millisecond of S3 latency. The
+[cold-read sequence](diagrams/server2-cold-read.html)
+([editable source](diagrams/server2-cold-read.sequence.json)) shows the change.
+
+- A view build keeps up to 12 partition lookups (`READ_AHEAD`) in flight and
+  consumes them in ascending partition order. Retained acquisitions, the scope
+  caps (1,024 partitions, 2,048 acquisitions, 8,192 pages, 1 MiB pages, 32 MiB raw)
+  and the first error therefore equal the sequential read; an error, a cap or the
+  owner deadline drops the lookups still in flight.
+- The forecast store admits 12 lookups and 12 raw loads (a raw load beyond its
+  permits is refused, not queued) and bounds each lookup to 4 MiB of records and
+  1 MiB of catalog and descriptor bytes. With one compressed body per load, its
+  in-flight bytes over all views are at most 12 × (4 + 1 + 1.0625) MiB = 72.75 MiB,
+  below D2's 2 × (32 + 8 + 1.0625) MiB = 82.125 MiB; one view may now hold all of
+  it (D2: 41.06 MiB). A partition above 4 MiB is a `Capacity` error; fixture
+  partitions decode to at most about 0.2 MiB. The 12-permit process S3 gate is
+  unchanged and shared, so a cold build can occupy it while it reads.
+- Retained-Doc accounting is linear: a Doc keeps its exact weight once known
+  (bounded field sets maintain it; other changes and clones start unknown), so a
+  store no longer re-walks the collection. The same data weighs 8 bytes more per
+  Doc and per stored field. Grid row reads compare date and time without copying.
+- A retiring owner returns its 192 MiB workspace before its slot wakes the next
+  owner. D2 released the slot first, and an owner woken on another worker could
+  fail with `forecast cache: raw storage: Capacity` under load.
+
+Owner, queue, waiter, workspace, freshness and lookback limits are unchanged. Local
+evidence (macOS, owned loopback peer with modeled per-operation latency): 130
+partitions at 10 ms take 0.55 s with 12 lookups in flight against a 3.9 s
+sequential estimate; the fold of `short` falls from 1,171 to 687 ms and `shortest`
+from 418 to 297 ms with all 13 golden Docs unchanged. An empty-cache request at 0 ms
+takes 1.10 s instead of 1.78 s in a fresh process and 1.03 s instead of 1.52 s in a
+running server whose views went stale. At a modeled 10 ms the candidate's views are
+ready after 3.1 s in a running server (one of five such requests answered inside
+3 s) and after 4.7 s in a fresh process, while D2's owners stop at their 8-second
+bound with at most one of seven views; at 20 ms the running-server rebuild needs
+5.4 s. Through
+the 12-permit process gate, a fresh request's 3,628 S3 operations cannot finish in
+under about 3.0 s at 10 ms, and a running-server rebuild's 2,245 in under about
+1.9 s, so the 2.5-second goal needs fewer S3 operations per view or more S3
+concurrency, both separate decisions. These are not host p95, real S3/TLS or
+capacity results. See the
+[operator guide](../operations/server2-domestic-cache.md#measure-empty-cache-builds-at-modeled-s3-latency)
+and [selected verification](../evidence/tasks/issue-2849-cold-build-speed/verification.md).

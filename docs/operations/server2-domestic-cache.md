@@ -15,8 +15,10 @@ Freshness is at most 30 seconds and clips at the relevant minute, day, month, pr
 |2 active owners + 8 queued keys|Ten admitted keys, 192 MiB logical workspace per owner ; 8-second owner deadline starts at admission, including queue time|
 |128 waiting callers / local CPU 2|Bounded per-Source demand; each caller keeps its own deadline|
 |4995 comparison indices|At most 39,960 requested payload bytes on 64-bit plus charged allocation allowance; fallible growth and actual Vec capacity check|
+|12 partition lookups per build (#2849)|Consumed in partition order, so acquisitions, scope caps and the first error equal a sequential read; an error, cap or owner deadline drops the rest|
+|Forecast store 12 lookups / 12 raw loads|4 MiB of records and 1 MiB of catalog/descriptor bytes per lookup: at most 72.75 MiB in flight over all views (D2: 82.125 MiB). A larger partition is a `Capacity` error. The 12-permit process S3 gate is unchanged and shared|
 
-A caller or owner timeout does not forcibly stop an already running blocking closure. Its workspace and permits remain owned until the actual closure retires.
+A caller or owner timeout does not forcibly stop an already running blocking closure. Its workspace and permits remain owned until the actual closure retires. A retiring owner returns its workspace before its slot wakes the next owner (#2849); D2 released the slot first, and the woken owner could fail with `forecast cache: raw storage: Capacity` under load.
 
 These are logical admission limits, not an allocator/RSS or total process CPU guarantee. Existing catalog/raw gates remain. D2/F2 must be reconciled with the shared process resource owner in the integrated candidate; this branch alone does not establish that global claim.
 
@@ -33,11 +35,30 @@ python3 -B tools/domestic_warm_cache_smoke.py \
   --build-variant release --modes seed diagnostic http
 ```
 
-Use a new output directory. The runner owns a persistent IPv4 loopback S3 peer and separate seed, diagnostic and native HTTP children. It verifies their input identities, captures complete counters and reaps its children. No live endpoint or provider credentials are required. The Off provider reports denied observation stub calls separately from external network calls. A diagnostic Source run uses 60 seconds to inspect all 13 golden datasets; the separate unprimed Gateway -> DirectRoutes -> KmaBackend HTTP flow retains its normal 3-second deadline.
+Use a new output directory. The runner owns a persistent IPv4 loopback S3 peer and separate seed, diagnostic and native HTTP children; the example's S3 transport admits 12 requests at once, the server's process gate (it admitted 4 before #2849). It verifies their input identities, captures complete counters and reaps its children. No live endpoint or provider credentials are required. The Off provider reports denied observation stub calls separately from external network calls. A diagnostic Source run uses 60 seconds to inspect all 13 golden datasets; the separate unprimed Gateway -> DirectRoutes -> KmaBackend HTTP flow retains its normal 3-second deadline.
 
 A passing run requires the original seed of 730 acquisitions / 851 pages (including one zone-support acquisition) and the diagnostic selection of 725 forecast acquisitions / 845 pages and all 13 expected Doc views. Every warm forecast LIST/catalog/descriptor/raw GET/returned byte, parse and fold delta must be 0. The complete classified label universe is exactly those 13 plus zone-support; missing or unknown labels fail. Cold HTTP must be 200; both warm responses must have identical bytes. Provider/geocoder counters, final owner/queue/workspace/waiter state and process retirement are checked. Never accept 502 as a successful partial response or prime the HTTP Source with the diagnostic Source.
 
+## Measure empty-cache builds at modeled S3 latency
+
+This compares two builds of the same example, for example the D2 product code and a candidate, on one seeded corpus. Build each at its own commit in its own clean target (a target shared between worktrees of the same package can report the second build fresh and reuse the first one's binary), copy and hash both executables, then run:
+
+```sh
+cd server2
+python3 -B tools/cold_build_matrix.py \
+  --binary base=/absolute/path/to/copied/base_smoke \
+  --binary candidate=/absolute/path/to/copied/candidate_smoke \
+  --output /absolute/path/to/new/ignored/matrix-run \
+  --delays 0 10 20 --runs 5
+```
+
+The tool starts one persistent loopback peer, seeds the original corpus without delay, then sets the peer's latency control so every GET, HEAD and LIST waits the modeled milliseconds (PUT does not). For each delay and run it starts every binary in turn in `http` mode (fresh process: cold, warm1, warm2) and in `aged` mode (cold, then a rebuild after the 30-second view freshness, i.e. an empty forecast cache in a warm process). It keeps each run's bodies, compares every 200 body with the reference SHA-256 and reports status, median and p95 time, forecast LIST/catalog/descriptor/raw counts and, for cold and aged requests, when the views were ready, in `matrix.json`. A 502 after about 3 s is the unchanged native deadline and is recorded as a result; the owners of a cut answer keep building up to their 8-second bound, so the ready time and the number of mapped views show how far the build really was from the deadline. An `http` run then stops; an `aged` run still makes its rebuild request after the cold one was cut, because the forecast views of a running server go stale after 30 seconds and that rebuild (with about 20 other S3 operations instead of about 1,400 in a fresh process) is the common empty-cache case. Exit 1 means a harness problem (missing phases, a failed child after successful answers, a wrong body), never a slow answer.
+
+The delay is modeled on loopback: it has no TLS, connection setup or real S3 variance, and the host CPU decides the fold time. It is not a host p95 or capacity qualification. The selected local result of #2849 is in its [verification record](../evidence/tasks/issue-2849-cold-build-speed/verification.md).
+
 ## Read the actual retained result
+
+These are the figures of the D2 base run (#2819), kept as recorded. Since #2849 the same data weighs 8 bytes more per Doc and per stored field (each Doc carries its cached weight), and the example's S3 admission is 12.
 
 The selected optimized executable is SHA-256 `f131044392694657919864caee1a95539359c736d4f0e6225127235a8069d68b`, built on the task's exact runtime source above base `c1ae9082`. The current runner is `a9b1e1a194188e3fb31c325b0fdd128f5b566cd58d2bfe6b0c3cdc1282272a84`. The retained original fixture manifest is `11606b79c26365e4ba8a5a906d5801f717845f853bafc971c2f099d27b7bbe3f`.
 

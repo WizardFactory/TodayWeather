@@ -1,6 +1,6 @@
 # Empty-cache forecast build speed (issue #2849 follow-through)
 
-Base `307defeb706886217ab67ea858dc7c7b0435752f` (PR #2841, D2). Intent: `intent/issue-2849-cold-build-speed.md` revision 2 (AC1–AC5). Evidence: investigation of the same task (local sweep, profile, 2026-10-21 EC2 record). Revision 4, 2026-10-22 (revision 2 amended decision D3; revision 3 refined R2.2/D1 with the control-byte bound; revision 4 corrects the R2.2 memory comparison to the process-wide store bound, adds the raw admission constraint to R2.1 and states the logical-weight shift; acceptance follows intent revision 2). Status: complete; decisions D1–D5 below are made for design, none blocks it.
+Base `307defeb706886217ab67ea858dc7c7b0435752f` (PR #2841, D2). Intent: `intent/issue-2849-cold-build-speed.md` revision 3 (AC1–AC5). Evidence: investigation of the same task (local sweep, profile, 2026-10-21 EC2 record). Revision 5, 2026-10-22 (revision 2 amended decision D3; revision 3 refined R2.2/D1 with the control-byte bound; revision 4 corrected the R2.2 memory comparison to the process-wide store bound, added the raw admission constraint to R2.1 and the logical-weight shift; revision 5 adds R5, the owner hand-off order, following intent revision 3). Status: complete; decisions D1–D5 below are made for design, none blocks it.
 
 ## Problem and outcome
 
@@ -42,6 +42,8 @@ Excluded: retention, SSD tier and warm-up (#2850); packs or rollups (#2707); the
 3. The grid collector's row lookup (`find_or_create`) compares `date` and `time` without allocating strings; any other per-read string copy in the hot collector path is removed if it keeps results identical.
 4. Local fold time of `short` and `shortest` on the 730-acquisition corpus falls by at least 25% against the base with no output change (stretch is set by the AC4 gap).
 
+**R5 — Owner hand-off (AC2).** A retiring owner returns its 192 MiB workspace lease before it releases its owner slot, so the owner woken by that release always obtains its workspace; no build fails with `Capacity` because the previous owner's lease was still counted. The owner, queue, waiter and workspace sizes do not change.
+
 **R4 — Evidence and documentation (AC4, AC5).**
 1. A repeatable harness reports empty-cache time at modeled delays 0, 10 and 20 ms, fresh-process and warm-process, with body hash and S3 operation counts, for the candidate and for D2 as published, locally and on the Seoul t3.small.
 2. The D2 architecture section, the operator guide and the diagram state the new read concurrency, the store admission and the in-flight bound. No new runtime setting or mode: the constants live in code with the same justification as the existing `LOOKUPS`.
@@ -73,6 +75,7 @@ Excluded: retention, SSD tier and warm-up (#2850); packs or rollups (#2707); the
 | --- | --- | --- |
 | AC1 | integration over the owned S06 peer | counting/delaying transport wrapper: peak in-flight lookups ≥ 8 and elapsed ≤ ⅓ of the sequential estimate for ≥120 synthetic partitions; result equality against the 13 goldens; fault injection (missing, corrupt, timeout, over-cap) compares error and partition of failure; cancellation test drops the build mid-read and checks no install and no leaked in-flight count |
 | AC2 | existing suites + goldens | existing exact-boundary and D2 tests stay green; diagnostic mode (13 Docs) and HTTP body hashes; a 4 MiB+1 partition returns `Capacity`; the forecast store limits are checked (lookups = raw loads = `READ_AHEAD`, 4 MiB, 1 MiB) |
+| AC2 (R5) | unit | a waker that observes the workspace budget when the next owner is woken sees the previous lease already returned |
 | AC3 | unit + local timing | test-only counter of `heap_weight` calls shows linear growth in Doc count and field count; equality tests of borrowed row lookup against the old accessor; local fold timing against base binary |
 | AC4 | harness on host | latency-injected matrix on Seoul t3.small (EC2) and locally; body hash equality; operation counts |
 | AC5 | review + gates | placement gate, artifact policy checker, doc/diagram review, no new flags (grep), clean checkout links |
