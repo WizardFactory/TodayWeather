@@ -19,16 +19,16 @@ LABELS = {
 }
 
 
-def record(phase, status=200, sha=REFERENCE, elapsed=100.0, ops=None, parses=(0, 0)):
+def record(phase, status=200, sha=REFERENCE, elapsed=100.0, ops=None, parses=(0, 0), ready=None, mapped=7):
     after = {'OP GET index/v2/data-go-kr/vilage-fcst/k/20260924-0500.json': 2,
              'OP GET index/v2/groups/g1.json': 3, 'OP GET raw/v2/data-go-kr/vilage-fcst/a.raw.gz': 4,
              'OP LIST index/v2/data-go-kr/vilage-fcst/k/202609': 1,
              'OP GET raw/v2/data-go-kr/forecast-zone/z.raw.gz': 5, 'OP GET index/v2/kasi/unknown.json': 6}
     after.update(ops or {})
     outcome = {'http_status': status, 'sha256': sha, 'bytes': 42549} if status else {'transport_error': 'timed out'}
-    return {'phase': phase, 'elapsed_ms': elapsed, 'outcome': outcome, 'status_before': {}, 'status_after': after,
-            'forecast_cache_before': {'parse_acquisitions': parses[0], 'folds': 0},
-            'forecast_cache_after': {'parse_acquisitions': parses[1], 'folds': 7}}
+    return {'phase': phase, 'elapsed_ms': elapsed, 'views_ready_ms': ready, 'outcome': outcome, 'status_before': {},
+            'status_after': after, 'forecast_cache_before': {'parse_acquisitions': parses[0], 'folds': 0},
+            'forecast_cache_after': {'parse_acquisitions': parses[1], 'folds': 7, 'mapped_entries': mapped}}
 
 
 def rows_of(binary, mode, delay, run, records):
@@ -73,6 +73,18 @@ class Report(unittest.TestCase):
         self.assertEqual(d2['hash_mismatches'], 0, 'a failed answer is not an identity mismatch')
         self.assertEqual(summary[('cand', 'cold')]['hash_mismatches'], 1)
         self.assertEqual(d2['forecast_io_median']['GET_raw'], 4)
+
+    def test_ready_times_report_how_long_the_views_really_took(self):
+        rows = []
+        for run, (status, ready, mapped) in enumerate([(502, 3400.0, 7), (502, 3600.0, 7), (502, None, 2)], 1):
+            rows += rows_of('c', 'aged', 10, run, [record('cold', status=status, elapsed=3002.0, sha='x', ready=ready,
+                                                         mapped=mapped)])
+        [s] = matrix.summarize(rows, REFERENCE)
+        self.assertEqual((s['ready_runs'], s['ready_median_ms'], s['ready_p95_ms']), (2, 3500.0, 3600.0))
+        self.assertEqual(s['not_ready_runs'], 1, 'owners still busy after 10 s are counted, not dropped')
+        self.assertEqual(s['mapped_median'], 7)
+        [warm] = matrix.summarize(rows_of('c', 'http', 0, 1, [record('warm1')]), REFERENCE)
+        self.assertEqual((warm['ready_runs'], warm['not_ready_runs'], warm['ready_median_ms']), (0, 0, None))
 
     def test_problems_are_harness_integrity_not_measured_failures(self):
         complete = rows_of('c', 'http', 0, 1, [record('cold'), record('warm1'), record('warm2')])

@@ -5,7 +5,8 @@ Owned loopback only: one persistent S06 peer, one seeded corpus, then for every 
 and run each binary's `http` (fresh process: cold, warm1, warm2) and `aged` (cold, then
 a rebuild after the 30-second freshness) modes, interleaved. The peer delays every
 GET/HEAD/LIST by the modeled milliseconds; seeding runs without delay. Bodies are kept
-per run and compared with the reference hash. Works on Linux and macOS; no provider,
+per run and compared with the reference hash. A cold or aged answer cut by the 3-second
+deadline leaves its owners building; the example reports when they were idle (views ready). Works on Linux and macOS; no provider,
 credential or AWS access.
 """
 import argparse
@@ -72,7 +73,8 @@ def phase_rows(stdout_text, labels, classify):
         before, after = record['forecast_cache_before'], record['forecast_cache_after']
         rows.append({'phase': record['phase'], 'status': outcome.get('http_status'),
                      'transport_error': outcome.get('transport_error'),
-                     'elapsed_ms': record['elapsed_ms'], 'sha256': outcome.get('sha256'),
+                     'elapsed_ms': record['elapsed_ms'], 'views_ready_ms': record.get('views_ready_ms'),
+                     'mapped': after.get('mapped_entries'), 'sha256': outcome.get('sha256'),
                      'bytes': outcome.get('bytes'), 'forecast_io': forecast,
                      'other_io_operations': sum(unknown.values()),
                      'parses': after['parse_acquisitions'] - before['parse_acquisitions'],
@@ -90,6 +92,10 @@ def summarize(rows, reference):
     for (binary, mode, delay, phase), group in sorted(groups.items()):
         ok = [r for r in group if r['status'] == 200]
         times = [r['elapsed_ms'] for r in group]
+        # Cold and aged answers leave owners building after a cut answer: when the views were ready.
+        rebuilt = phase in ('cold', 'aged')
+        ready = [r['views_ready_ms'] for r in group if rebuilt and r.get('views_ready_ms') is not None]
+        mapped = [r['mapped'] for r in group if r.get('mapped') is not None]
         summary.append({
             'binary': binary, 'mode': mode, 'delay_ms': delay, 'phase': phase, 'runs': len(group),
             'status_counts': {str(s): sum(1 for r in group if r['status'] == s)
@@ -98,6 +104,10 @@ def summarize(rows, reference):
             'min_ms': min(times), 'max_ms': max(times),
             'ok_median_ms': statistics.median([r['elapsed_ms'] for r in ok]) if ok else None,
             'hash_mismatches': sum(1 for r in ok if r['sha256'] != reference),
+            'ready_runs': len(ready), 'not_ready_runs': sum(1 for r in group if rebuilt and r.get('views_ready_ms') is None),
+            'ready_median_ms': statistics.median(ready) if ready else None,
+            'ready_p95_ms': percentile(ready, 0.95) if ready else None,
+            'mapped_median': statistics.median(mapped) if mapped else None,
             'forecast_io_median': {c: statistics.median(r['forecast_io'][c] for r in group) for c in IO_CLASSES},
         })
     return summary
@@ -150,6 +160,8 @@ def child(binary, endpoint, mode, manifest, directory):
 
 
 def main():
+    # A stopped run still reaps its children and peer (the `finally` blocks below).
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=parse_binary, action='append', required=True,
                         help='NAME=PATH of a copied domestic_warm_cache_smoke executable; first one seeds')
@@ -216,8 +228,9 @@ def main():
     (output/'matrix.json').write_text(json.dumps({'inputs': inputs, 'rows': rows, 'summary': summary,
                                                    'problems': found, 'peer_exit': peer.returncode}, indent=2)+'\n')
     for s in summary:
+        ready = '' if s['ready_median_ms'] is None else f"  views ready {s['ready_median_ms']:.0f} ms ({s['ready_runs']}/{s['runs']}, {s['mapped_median']} mapped)"
         print(f"{s['binary']:>10} {s['mode']:>4} {s['delay_ms']:>3}ms {s['phase']:>5}  status {s['status_counts']}"
-              f"  median {s['median_ms']:.0f} ms  p95 {s['p95_ms']:.0f} ms  forecast GET {s['forecast_io_median']}")
+              f"  median {s['median_ms']:.0f} ms  p95 {s['p95_ms']:.0f} ms{ready}  forecast GET {s['forecast_io_median']}")
     for problem in found:
         print('PROBLEM', problem)
     return 1 if found else 0

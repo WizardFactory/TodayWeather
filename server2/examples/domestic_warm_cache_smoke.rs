@@ -748,6 +748,24 @@ async fn http(endpoint: &str, manifest: &Path, phases: &[&str]) {
         }
         .await;
         let elapsed = start.elapsed().as_secs_f64() * 1000.;
+        // Outside the request timing: an answer cut by the 3-second deadline leaves its owners
+        // building (until their 8-second bound). Wait until they are idle, so the record shows
+        // when the views were ready and the counters hold their whole reads.
+        let views_ready_ms = if phase == "cold" || phase == "aged" {
+            let until = start + Duration::from_secs(10);
+            loop {
+                let state = source.forecast_cache_stats();
+                if state.active_owners == 0 && state.queued_keys == 0 && state.admitted_keys == 0 {
+                    break Some(start.elapsed().as_secs_f64() * 1000.);
+                }
+                if Instant::now() >= until {
+                    break None;
+                }
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        } else {
+            None
+        };
         let after = status(endpoint).await;
         let cache_after = source.forecast_cache_stats();
         let outcome = match result {
@@ -794,7 +812,7 @@ async fn http(endpoint: &str, manifest: &Path, phases: &[&str]) {
         }
         println!(
             "{}",
-            json!({"mode":"normal-native-direct-HTTP","phase":phase,"deadline_seconds":3,"client_timeout_seconds":10,"elapsed_ms":elapsed,"outcome":outcome,"status_before":before,"status_after":after,"forecast_cache_before":cache_before,"forecast_cache_after":cache_after,"provider_stub_invocations":denied_after[0],"denied_observation_web_total":denied_after[1],"denied_observation_asos_total":denied_after[2],"denied_observation_delta":{"aggregate":denied_delta[0],"web":denied_delta[1],"asos":denied_delta[2]},"provider_external_calls":0,"external_provider_guard":"injected Off methods return Transport without an HTTP client","geocoder_stub_invocations":geo.0.load(Ordering::SeqCst),"source_prewarmed":false,"native_latency_pass":false,"baseline_context":"original native baseline aggregate cold196/warm additional0; family split previously not measured"})
+            json!({"mode":"normal-native-direct-HTTP","phase":phase,"deadline_seconds":3,"client_timeout_seconds":10,"elapsed_ms":elapsed,"views_ready_ms":views_ready_ms,"outcome":outcome,"status_before":before,"status_after":after,"forecast_cache_before":cache_before,"forecast_cache_after":cache_after,"provider_stub_invocations":denied_after[0],"denied_observation_web_total":denied_after[1],"denied_observation_asos_total":denied_after[2],"denied_observation_delta":{"aggregate":denied_delta[0],"web":denied_delta[1],"asos":denied_delta[2]},"provider_external_calls":0,"external_provider_guard":"injected Off methods return Transport without an HTTP client","geocoder_stub_invocations":geo.0.load(Ordering::SeqCst),"source_prewarmed":false,"native_latency_pass":false,"baseline_context":"original native baseline aggregate cold196/warm additional0; family split previously not measured"})
         );
         // Stop after the first actual failure; preserve it and retire owned work before root
         // diagnosis. No later warm success can turn a failed cold request into acceptance.
