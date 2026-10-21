@@ -152,6 +152,9 @@ impl From<Doc> for Val {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Doc(Vec<(String, Val)>);
 impl Doc {
+    pub(super) fn from_entries(fields: Vec<(String, Val)>) -> Self {
+        Self(fields)
+    }
     /// Fallible cache-path copy; callers own an admitted parse/fold workspace.
     pub(super) fn checked_clone(&self) -> Result<Self, crate::storage::Error> {
         let mut out = Self::new();

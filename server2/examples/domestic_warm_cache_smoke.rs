@@ -52,6 +52,21 @@ fn transport(endpoint: &str) -> Transport {
         4,
     )
 }
+fn disk_transport(endpoint: &str, directory: &Path) -> Transport {
+    let settings = server2::storage::S3Settings::from_vars_at(
+        &|name| match name {
+            "AWS_ACCESS_KEY" => Some("server2-local".into()),
+            "AWS_SECRET_KEY" => Some("server2-local-secret".into()),
+            "SERVER2_S3_BUCKET" => Some("server2-local".into()),
+            "SERVER2_LOCAL_CACHE_DIR" => Some(directory.to_str().unwrap().into()),
+            _ => None,
+        },
+        Some(endpoint),
+    )
+    .unwrap();
+    BoundedS3::new(settings.transport().unwrap(), 4)
+}
+
 #[derive(Default)]
 // Aggregate, web and ASOS denied adapter invocations. These methods have no HTTP client;
 // they cannot make external provider requests. Counts are observations, never194/2 assumptions.
@@ -645,7 +660,7 @@ impl server2::gateway::Geocoder for NoGeo {
         Box::pin(async { Err(server2::gateway::GatewayError::Provider) })
     }
 }
-async fn http(endpoint: &str, manifest: &Path) {
+async fn http(endpoint: &str, manifest: &Path, disk_enabled: bool) {
     use server2::{
         api::{DirectFamilies, DirectRoutes},
         gateway::{BackendDispatcher, Gateway},
@@ -654,7 +669,11 @@ async fn http(endpoint: &str, manifest: &Path) {
     let geo = Arc::new(NoGeo::default());
     let source = Arc::new(
         S3Source::new(
-            transport(endpoint),
+            if disk_enabled {
+                disk_transport(endpoint, &manifest.parent().unwrap().join("folded-cache"))
+            } else {
+                transport(endpoint)
+            },
             Arc::new(|| NOW as f64),
             off.clone(),
             off.clone(),
@@ -702,6 +721,7 @@ async fn http(endpoint: &str, manifest: &Path) {
         "종로구",
         "청운효자동",
     ]);
+    let body_prefix = if disk_enabled { "http-disk" } else { "http" };
     let mut complete = true;
     let mut first_warm_success: Option<Vec<u8>> = None;
     for phase in ["cold", "warm1", "warm2"] {
@@ -747,7 +767,7 @@ async fn http(endpoint: &str, manifest: &Path) {
                     manifest
                         .parent()
                         .unwrap()
-                        .join(format!("http-{phase}.body")),
+                        .join(format!("{body_prefix}-{phase}.body")),
                     &bytes,
                 )
                 .unwrap();
@@ -756,12 +776,15 @@ async fn http(endpoint: &str, manifest: &Path) {
                     || first_warm_success
                         .as_ref()
                         .is_none_or(|first| *first == bytes);
-                let success = status == 200 && valid_json && same;
+                let reference = bytes.len() == 42_549
+                    && sha256(&bytes)
+                        == "a6462aba8ad9ec34d8efdcab4ccd2f37b00339a301fd17caa7c1e5485d45b283";
+                let success = status == 200 && valid_json && same && reference;
                 if phase != "cold" && status == 200 && valid_json && first_warm_success.is_none() {
                     first_warm_success = Some(bytes.clone());
                 }
                 complete &= success;
-                json!({"http_status":status,"headers":headers,"bytes":bytes.len(),"body_file":format!("http-{phase}.body"),"sha256":sha256(&bytes),"valid_json":valid_json,"same_as_first_warm_success":if phase=="cold" { None } else {Some(same)},"successful_json":success})
+                json!({"http_status":status,"headers":headers,"bytes":bytes.len(),"body_file":format!("{body_prefix}-{phase}.body"),"sha256":sha256(&bytes),"valid_json":valid_json,"same_as_first_warm_success":if phase=="cold" { None } else {Some(same)},"successful_json":success})
             }
             Err(error) => {
                 complete = false;
@@ -783,8 +806,13 @@ async fn http(endpoint: &str, manifest: &Path) {
         }
         println!(
             "{}",
-            json!({"mode":"normal-native-direct-HTTP","phase":phase,"deadline_seconds":3,"client_timeout_seconds":10,"elapsed_ms":elapsed,"outcome":outcome,"status_before":before,"status_after":after,"forecast_cache_before":cache_before,"forecast_cache_after":cache_after,"provider_stub_invocations":denied_after[0],"denied_observation_web_total":denied_after[1],"denied_observation_asos_total":denied_after[2],"denied_observation_delta":{"aggregate":denied_delta[0],"web":denied_delta[1],"asos":denied_delta[2]},"provider_external_calls":0,"external_provider_guard":"injected Off methods return Transport without an HTTP client","geocoder_stub_invocations":geo.0.load(Ordering::SeqCst),"source_prewarmed":false,"native_latency_pass":false,"baseline_context":"original native baseline aggregate cold196/warm additional0; family split previously not measured"})
+            json!({"mode":"normal-native-direct-HTTP","phase":phase,"deadline_seconds":3,"client_timeout_seconds":10,"elapsed_ms":elapsed,"outcome":outcome,"status_before":before,"status_after":after,"forecast_cache_before":cache_before,"forecast_cache_after":cache_after,"provider_stub_invocations":denied_after[0],"denied_observation_web_total":denied_after[1],"denied_observation_asos_total":denied_after[2],"denied_observation_delta":{"aggregate":denied_delta[0],"web":denied_delta[1],"asos":denied_delta[2]},"provider_external_calls":0,"external_provider_guard":"injected Off methods return Transport without an HTTP client","geocoder_stub_invocations":geo.0.load(Ordering::SeqCst),"source_prewarmed":false,"folded_disk_configured":disk_enabled,"native_latency_pass":false,"baseline_context":"original native baseline aggregate cold196/warm additional0; family split previously not measured"})
         );
+        if disk_enabled && phase == "cold" {
+            complete &= cache_after.parse_acquisitions == 0
+                && cache_after.folds == 0
+                && cache_after.disk_restores == 7;
+        }
         // Stop after the first actual failure; preserve it and retire owned work before root
         // diagnosis. No later warm success can turn a failed cold request into acceptance.
         if !complete {
@@ -831,6 +859,158 @@ async fn http(endpoint: &str, manifest: &Path) {
         "retain all actual cold/warm HTTP failures; no failed response is a native success"
     );
 }
+/// Independent pure replay at another clock, outside measured Source counters.
+fn expected_at(now: i64) -> BTreeMap<String, Value> {
+    let all = inputs();
+    let mut expected = BTreeMap::new();
+    for (label, family, hours) in [
+        ("current", Family::Current, 217),
+        ("shortest", Family::Shortest, 247),
+        ("short", Family::Short, 361),
+    ] {
+        let oldest = schedule::from_ms(now - hours * HOUR).partition();
+        let raw: Vec<_> = all
+            .iter()
+            .filter(|i| i.label == label && i.p.partition() >= oldest)
+            .map(|i| Fetched {
+                fetched_at_ms: i.fetched,
+                partition: i.p.partition(),
+                pages: raw_pages(i).into_iter().map(Arc::from).collect(),
+            })
+            .collect();
+        expected.insert(
+            label.into(),
+            doc_summary(&source::grid_documents(
+                family,
+                Coord { mx: 60., my: 127. },
+                &raw,
+                now as f64,
+            )),
+        );
+    }
+    let oldest = schedule::from_ms(now - 312 * HOUR).partition();
+    let raw: Vec<_> = all
+        .iter()
+        .filter(|i| i.label == "rss" && i.p.partition() >= oldest)
+        .map(|i| Fetched {
+            fetched_at_ms: i.fetched,
+            partition: i.p.partition(),
+            pages: raw_pages(i).into_iter().map(Arc::from).collect(),
+        })
+        .collect();
+    expected.insert(
+        "rss".into(),
+        doc_summary(&source::rss_documents(
+            Coord { mx: 60., my: 127. },
+            &raw,
+            now as f64,
+        )),
+    );
+    for (model, id, kind, _) in mids() {
+        let label = format!("{kind}/{id}");
+        let raw: Vec<_> = all
+            .iter()
+            .filter(|i| i.label == label)
+            .map(|i| Fetched {
+                fetched_at_ms: i.fetched,
+                partition: i.p.partition(),
+                pages: raw_pages(i).into_iter().map(Arc::from).collect(),
+            })
+            .collect();
+        expected.insert(
+            label,
+            doc_summary(&source::mid_documents(model, id, &raw, now as f64)),
+        );
+    }
+    expected
+}
+async fn disk_diagnostic(endpoint: &str, manifest_path: &Path, boundaries: bool) {
+    use server2::storage::ObjectTransport;
+    let manifest: Value = serde_json::from_slice(&std::fs::read(manifest_path).unwrap()).unwrap();
+    let root = manifest_path.parent().unwrap().join("folded-cache");
+    assert_eq!(
+        root.exists(),
+        boundaries,
+        "fill owns a new root; boundary check reuses it"
+    );
+    let off = Arc::new(Off::default());
+    let mut held = None;
+    let phases = if boundaries {
+        vec![("boundary-prime", NOW), ("boundary", NOW + 3 * HOUR)]
+    } else {
+        vec![("fill", NOW), ("restore", NOW), ("renew", NOW + 60_000)]
+    };
+    for (phase, now) in phases {
+        if matches!(phase, "fill" | "restore" | "boundary-prime") {
+            let t = disk_transport(endpoint, &root);
+            let disk = t.raw_cache().unwrap();
+            let source =
+                S3Source::new(t, Arc::new(|| NOW as f64), off.clone(), off.clone()).unwrap();
+            held = Some((source, disk));
+        }
+        let (source, disk) = held.as_ref().unwrap();
+        let expected = if phase == "boundary" {
+            serde_json::to_value(expected_at(now)).unwrap()
+        } else {
+            manifest["expected_source_documents"].clone()
+        };
+        let mut selections = vec![
+            ("current".into(), Some(Family::Current), None),
+            ("shortest".into(), Some(Family::Shortest), None),
+            ("short".into(), Some(Family::Short), None),
+            ("rss".into(), None, None),
+        ];
+        selections.extend(
+            mids()
+                .into_iter()
+                .map(|(m, id, kind, _)| (format!("{kind}/{id}"), None, Some((m, id)))),
+        );
+        for (label, family, mid) in selections {
+            let before = status(endpoint).await;
+            let cache_before = source.forecast_cache_stats();
+            let start = Instant::now();
+            let deadline = start + Duration::from_secs(60);
+            let grid = Grid::new(60, 127).unwrap();
+            let docs = if let Some(f) = family {
+                source.grid_answer(f, grid, now as f64, deadline).await
+            } else if let Some((m, id)) = mid {
+                source.mid_answer(m, id, true, now as f64, deadline).await
+            } else {
+                source.rss_answer(grid, now as f64, deadline).await
+            }
+            .unwrap();
+            let elapsed = start.elapsed().as_secs_f64() * 1000.;
+            let actual = doc_summary(&docs);
+            assert_eq!(actual, expected[&label], "{phase}/{label}");
+            assert!(disk.idle(Instant::now() + Duration::from_secs(5)).await);
+            let cache_after = source.forecast_cache_stats();
+            if matches!(phase, "restore" | "renew") {
+                assert_eq!(
+                    cache_after.parse_acquisitions,
+                    cache_before.parse_acquisitions
+                );
+                assert_eq!(cache_after.folds, cache_before.folds);
+            }
+            println!(
+                "{}",
+                json!({"mode":"folded-view-disk","phase":phase,"dataset":label,"elapsed_ms":elapsed,
+                "exact_expected_documents":true,"documents":actual,"status_before":before,"status_after":status(endpoint).await,
+                "forecast_cache_before":cache_before,"forecast_cache_after":cache_after,"disk_cache":disk.metrics(),
+                "parse_acquisition_invocations":cache_after.parse_acquisitions-cache_before.parse_acquisitions,
+                "fold_invocations":cache_after.folds-cache_before.folds,"provider_external_calls":0,"native_latency_pass":false})
+            );
+        }
+        if phase == "fill" {
+            held = None;
+        } else if phase == "restore" {
+            assert_eq!(source.forecast_cache_stats().disk_restores, 13);
+        } else if phase == "renew" {
+            assert_eq!(source.forecast_cache_stats().identity_renewals, 13);
+        }
+    }
+    assert_eq!(off.0.load(Ordering::SeqCst), 0);
+}
+
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() {
     let args: Vec<_> = std::env::args().skip(1).collect();
@@ -850,7 +1030,10 @@ async fn main() {
             .await
         }
         "native" => native(&args[0]).await,
-        "http" => http(&args[0], Path::new(&args[2])).await,
+        "http" => http(&args[0], Path::new(&args[2]), false).await,
+        "http-disk" => http(&args[0], Path::new(&args[2]), true).await,
+        "disk" => disk_diagnostic(&args[0], Path::new(&args[2]), false).await,
+        "disk-boundary" => disk_diagnostic(&args[0], Path::new(&args[2]), true).await,
         _ => panic!("unknown mode"),
     }
 }

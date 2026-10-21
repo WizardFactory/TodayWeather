@@ -1,0 +1,338 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Proposed forecast view retention (#2850)",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/server2-domestic-cache.html",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "307defeb706886217ab67ea858dc7c7b0435752f"
+    }
+  },
+  "lanes": [
+    {
+      "id": "memory",
+      "label": "Source memory"
+    },
+    {
+      "id": "restore",
+      "label": "SSD and controls"
+    },
+    {
+      "id": "rebuild",
+      "label": "Reconstruction"
+    },
+    {
+      "id": "write",
+      "label": "Known writer",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "request",
+    "interval",
+    "identity",
+    "serve"
+  ],
+  "nodes": [
+    {
+      "id": "request",
+      "lane": "memory",
+      "col": 0,
+      "type": "frontend",
+      "label": "View request",
+      "sublabel": "one key and generation",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 304,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    },
+    {
+      "id": "interval",
+      "lane": "memory",
+      "col": 1,
+      "type": "security",
+      "label": "Selector interval",
+      "sublabel": "rewind / boundary misses",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 148,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    },
+    {
+      "id": "identity",
+      "lane": "memory",
+      "col": 2,
+      "type": "cloud",
+      "label": "Identity check",
+      "sublabel": "due every 30 seconds",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 494,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    },
+    {
+      "id": "serve",
+      "lane": "memory",
+      "col": 3,
+      "type": "backend",
+      "label": "Return folded view",
+      "sublabel": "unchanged inputs renew",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 304,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    },
+    {
+      "id": "disk",
+      "lane": "restore",
+      "col": 0,
+      "type": "database",
+      "label": "Disposable SSD",
+      "sublabel": "hash / schema / key",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 393,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    },
+    {
+      "id": "controls",
+      "lane": "restore",
+      "col": 1,
+      "type": "cloud",
+      "label": "S3 identities",
+      "sublabel": "LIST + catalog GET only",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 494,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    },
+    {
+      "id": "admit",
+      "lane": "restore",
+      "col": 3,
+      "type": "security",
+      "label": "Admit restored view",
+      "sublabel": "generation fence",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 471,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    },
+    {
+      "id": "raw",
+      "lane": "rebuild",
+      "col": 0,
+      "type": "cloud",
+      "label": "Read S3 originals",
+      "sublabel": "capture identity scope",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 494,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    },
+    {
+      "id": "fold",
+      "lane": "rebuild",
+      "col": 1,
+      "type": "backend",
+      "label": "Parse and fold",
+      "sublabel": "existing pure selectors",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 605,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "lane": "rebuild",
+      "col": 2,
+      "type": "security",
+      "label": "Recheck identities",
+      "sublabel": "reject moved inputs",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 471,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    },
+    {
+      "id": "fill",
+      "lane": "rebuild",
+      "col": 3,
+      "type": "database",
+      "label": "Memory and SSD fill",
+      "sublabel": "complete / no overlay",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 471,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    },
+    {
+      "id": "writer",
+      "lane": "write",
+      "col": 0,
+      "type": "backend",
+      "label": "Acquisition future",
+      "sublabel": "start and retirement",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 874,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    },
+    {
+      "id": "fence",
+      "lane": "write",
+      "col": 1,
+      "type": "security",
+      "label": "Invalidate one key",
+      "sublabel": "cancel / panic safe",
+      "width": 150,
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 861,
+          "label": "Baseline hook; proposed change"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "request",
+      "to": "interval"
+    },
+    {
+      "from": "interval",
+      "to": "identity",
+      "label": "check due"
+    },
+    {
+      "from": "identity",
+      "to": "serve",
+      "label": "same set"
+    },
+    {
+      "from": "request",
+      "to": "disk",
+      "label": "miss",
+      "role": "branch"
+    },
+    {
+      "from": "disk",
+      "to": "controls"
+    },
+    {
+      "from": "controls",
+      "to": "admit",
+      "label": "match"
+    },
+    {
+      "from": "disk",
+      "to": "raw",
+      "label": "miss / bad file",
+      "role": "error"
+    },
+    {
+      "from": "controls",
+      "to": "raw",
+      "label": "changed",
+      "role": "branch"
+    },
+    {
+      "from": "raw",
+      "to": "fold"
+    },
+    {
+      "from": "fold",
+      "to": "verify"
+    },
+    {
+      "from": "verify",
+      "to": "fill"
+    },
+    {
+      "from": "writer",
+      "to": "fence"
+    },
+    {
+      "from": "interval",
+      "to": "serve",
+      "label": "not due"
+    },
+    {
+      "from": "identity",
+      "to": "raw",
+      "label": "changed",
+      "role": "error"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Proposed contract",
+      "items": [
+        "S3 remains authoritative; no live execution claim",
+        "Unchanged identity: zero raw GET, parse or fold",
+        "Disk shares the existing private owner and allocated-byte cap"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Invalidation and failure",
+      "items": [
+        "Known writes fence only the affected grid/family or mid key",
+        "Expired or failed validation rebuilds; overlays remain request-local",
+        "Other keys continue serving; no verification runtime flag"
+      ]
+    }
+  ]
+}

@@ -4095,19 +4095,39 @@ code before PR review, not to an uncommitted future design.
 ### D2: complete forecast memory views (#2819, pre-merge)
 
 The task-local Source retains immutable Grid(current/shortest/short), RSS and
-Mid(forecast/land/temp) views rebuilt from complete S3 raw acquisitions. Cache
-keys preserve original mid-region identifiers. Freshness is at most 30 seconds,
-clipped at the existing publication/retry, minute/day/month and source boundaries;
-clock rewind misses. Observation, station, air, life, warning, narrative and zone
-owners remain separate. A cache hit still passes through those owners and native
-response assembly; it is not a final HTTP-body cache.
+Mid(forecast/land/temp) views rebuilt from complete S3 raw acquisitions. Keys
+preserve original mid-region identifiers. [#2850 retention](../../specs/issue-2850.md)
+replaces D2's global invalidation and minute/30-second refold rule: a view lasts
+until the next actual pure-selector change (publication/retention anchor, included
+oldest partition, RSS run, day/month or future-fetched visibility). Clock rewind
+misses. Observation, station, air, life, warning, narrative and zone owners stay
+separate; source views do not cache the final HTTP body or skip native assembly.
 
-The forecast acquisition wrapper invalidates the forecast generation at actual
-future start and retirement, including cancellation. Epoch and active-writer
-checks prevent a reader from publishing a generation across that fence. Detached
-work retains its actual write lifetime. Errors do not install partial success or
-serve expired memory. S3 stays authoritative and there is no new provider mode,
-collection schedule or shared-instance cache.
+The acquisition future fences only its grid/family, RSS grid or mid-region key
+at entry and retirement, including abort/panic. A bounded registry retains live
+key-state identities; generation-separated flights and final active-writer checks
+prevent stale installation. Other keys keep serving. Request-local own-write
+overlays and original S16 identities are unchanged and are never persisted.
+
+At most 30 seconds after the previous check starts (wall or monotonic time),
+revalidate the searched monthly LIST scope and canonical catalog envelopes.
+Unchanged identities renew with zero raw/descriptor GET, raw parse or fold;
+changed or failed controls rebuild. Checks include empty newer mid months and
+existing-partition updates. Cold builds compare their complete raw-envelope
+identities with controls again before admission. This amends source-view lifetime;
+S07 final-response TTL still never extends.
+
+When the existing local-cache setting is enabled, complete non-overlay views use
+the same private DiskCache owner, LRU, operation gate and root-wide allocated-byte
+cap as immutable raw objects. The bounded binary payload preserves folded ordered
+Docs, float bits/undefined, raw pages required by overlays/presence, summary IDs,
+searched identities and parser/schema revision. Restoration after eviction or
+process restart checks hash, key/revision, selector interval and current S3
+identities before memory admission. Bad/missing/stale/over-cap copies rebuild from
+S3. Disk is disposable and never establishes stored truth; no new setting, mode,
+collection schedule, legacy dependency or shared-instance cache is introduced.
+See the [retention workflow](diagrams/server2-domestic-cache.html)
+([editable source](diagrams/server2-domestic-cache.json)).
 
 Logical retained admission is 128 MiB / 128 keys, with a 48 MiB entry ceiling
 (raw 32 MiB, Doc 8 MiB and identity 4 MiB sublimits). Two owners each admit at most
@@ -4124,7 +4144,7 @@ index of at most 4,995 entries replaces quadratic duplicate comparisons. It
 preserves original item order and complete duplicate identity, omitting only the
 existing value fields; requested and actual Vec capacity are charged.
 
-The selected isolated optimized run uses the original seed of 730 acquisitions / 851
+The prior #2819 isolated optimized baseline uses the original seed of 730 acquisitions / 851
 pages, including one zone-support acquisition; diagnostics select 725 forecast
 acquisitions / 845 pages. All 13 source-Doc goldens match. A separate fresh native HTTP Source keeps
 the normal 3-second deadline: cold 200 in 1,670.86 ms, then warm 200 in 18.51 and

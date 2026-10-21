@@ -1,0 +1,69 @@
+{
+  "task": "ForecastRetention2850",
+  "stable_task": "issue-2850",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2850",
+  "status": "implementation and isolated pre-merge verification; no merge/deployment/live S3/provider authority",
+  "base": "307defeb706886217ab67ea858dc7c7b0435752f",
+  "scope": "Per-key forecast fences, selector intervals,30s catalog-only renewal and shared disposable folded-view disk restoration. Preserve wire and S16 identities; one process, no new mode/dependency/provider/legacy logic.",
+  "server2_paths": [
+    "server2/config/tasks/ForecastRetention2850.json",
+    "server2/src/domestic/kma/source/forecast_cache.rs",
+    "server2/src/domestic/kma/source/forecast_manifest.rs",
+    "server2/src/domestic/kma/source/forecast_disk.rs",
+    "server2/src/domestic/kma/source/records.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/doc.rs",
+    "server2/src/cache/disk.rs",
+    "server2/tests/domestic/forecast_cache.rs",
+    "server2/examples/domestic_warm_cache_smoke.rs",
+    "server2/tools/domestic_warm_cache_smoke.py",
+    "server2/tools/test_domestic_warm_cache_smoke.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2850.md",
+      "category": "documentation",
+      "reason": "Record delegated outcome, authority and initial placement"
+    },
+    {
+      "path": "specs/issue-2850.md",
+      "category": "documentation",
+      "reason": "Maintain selector/identity/disk behavior contract"
+    },
+    {
+      "path": "plans/issue-2850.md",
+      "category": "documentation",
+      "reason": "Maintain implementation/scenario/test plan"
+    },
+    {
+      "path": "plans/issue-2850.scenarios.json",
+      "category": "documentation",
+      "reason": "Map actual user scenarios to acceptance"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Update D2 retention and S3 authority"
+    },
+    {
+      "path": "docs/operations/server2-domestic-cache.md",
+      "category": "documentation",
+      "reason": "Maintain operational actions and measurements"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-domestic-cache.json",
+      "category": "documentation",
+      "reason": "Editable retention workflow with frozen baseline hooks"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-domestic-cache.html",
+      "category": "documentation",
+      "reason": "Generated/validated retention workflow"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2850/verification.md",
+      "category": "documentation",
+      "reason": "Selected candidate-bound test/smoke measurements and limitations"
+    }
+  ]
+}

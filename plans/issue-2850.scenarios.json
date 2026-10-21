@@ -1,0 +1,90 @@
+{
+  "scenarios": [
+    {
+      "id": "S1",
+      "user": "API caller",
+      "goal": "Reuse town B while town A acquires",
+      "prerequisites": "Two populated keys and held acquisition",
+      "steps": [
+        "Read both views",
+        "Start A acquisition",
+        "Read B and inspect raw/parse/fold deltas",
+        "Abort/panic/complete A and read A again"
+      ],
+      "expected": "B unchanged with zero work; A cannot install stale view",
+      "failure": "Global invalidation or old generation admission",
+      "criteria": [
+        "AC1"
+      ]
+    },
+    {
+      "id": "S2",
+      "user": "API caller",
+      "goal": "Reuse until exact selector change",
+      "prerequisites": "Fixed clock and retained 13-view oracle",
+      "steps": [
+        "Read view",
+        "Advance across arbitrary minute",
+        "Advance to publication/oldest/month/day/future boundary",
+        "Rewind clock"
+      ],
+      "expected": "Reuse before equality, rebuild at equality/rewind; golden bytes match",
+      "failure": "Premature refold or stale boundary result",
+      "criteria": [
+        "AC2"
+      ]
+    },
+    {
+      "id": "S3",
+      "user": "API caller",
+      "goal": "Observe external publications cheaply",
+      "prerequisites": "Owned S3 peer and mutable wall clock",
+      "steps": [
+        "Read view",
+        "Advance 30 seconds with unchanged catalogs",
+        "Publish newer acquisition in existing partition",
+        "Advance delay and read again",
+        "Inject control failure"
+      ],
+      "expected": "Unchanged: zero raw GET/parse/fold; newer input visible after delay; failed check never renews",
+      "failure": "Partition-only check or stale renewal",
+      "criteria": [
+        "AC3"
+      ]
+    },
+    {
+      "id": "S4",
+      "user": "API operator",
+      "goal": "Restore evicted/restarted folded views",
+      "prerequisites": "Owned peer, configured shared disk and small memory working set",
+      "steps": [
+        "Build 13 views and wait disk idle",
+        "Evict/restart Source",
+        "Read views and compare counters/HTTP bytes",
+        "Corrupt/truncate/change identity/lower cap and retry"
+      ],
+      "expected": "Valid restore has zero raw GET/parse/fold; invalid files rebuild identically; allocated use within cap",
+      "failure": "Disk trusted without S3 or corrupt bytes served",
+      "criteria": [
+        "AC4"
+      ]
+    },
+    {
+      "id": "S5",
+      "user": "Maintainer",
+      "goal": "Reproduce and review safely",
+      "prerequisites": "Task branch and declared placement",
+      "steps": [
+        "Run fmt/Clippy, regressions and isolated HTTP smoke",
+        "Record sizes/timings and shared-cap capacity",
+        "Validate docs/diagram/placement/artifacts",
+        "Review PR/CI without merge"
+      ],
+      "expected": "All evidence current and paths declared, no runtime flag or external production effects",
+      "failure": "Undeclared source path, stale docs or unverified readiness",
+      "criteria": [
+        "AC5"
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-//! Disposable, bounded cache of already verified immutable weather raw S3 objects.
+//! Disposable, bounded cache of verified immutable weather raw objects and forecast views.
 //! Catalogs, absence, credentials, geocode and push state are never cached here.
 use crate::storage::{Error, Object, RecordId, sha256};
 use serde::{Deserialize, Serialize};
@@ -195,6 +195,11 @@ fn capacity_lock(root: &Path) -> io::Result<File> {
     let lock = private_file(&root.join(".capacity"), false)?;
     lock.try_lock().map_err(|_| failed())?;
     Ok(lock)
+}
+
+fn forecast_key(key: &str) -> bool {
+    key.strip_prefix("forecast-view-v1/")
+        .is_some_and(|h| h.len() == 64 && h.bytes().all(|c| c.is_ascii_hexdigit()))
 }
 
 impl DiskCache {
@@ -434,16 +439,38 @@ impl DiskCache {
         }
     }
     pub(crate) async fn load(self: &Arc<Self>, id: &RecordId, maximum: usize) -> Option<Object> {
+        if !eligible(id) {
+            return None;
+        }
+        self.load_key(id.object_key().ok()?, maximum).await
+    }
+    /// Folded forecast copies share this owner's private files, LRU, gates and root cap.
+    /// Their consumer must validate canonical S3 identities before use.
+    pub(crate) async fn load_forecast(
+        self: &Arc<Self>,
+        key: &str,
+        maximum: usize,
+    ) -> Option<Object> {
+        if !forecast_key(key) {
+            return None;
+        }
+        self.load_key(key.to_owned(), maximum).await
+    }
+    pub(crate) fn forecast_writer(self: &Arc<Self>, key: &str) -> Option<Writer> {
+        if !forecast_key(key) {
+            return None;
+        }
+        Some(Writer {
+            cache: self.clone(),
+            key: key.to_owned(),
+            permit: self.gate.clone().try_acquire_owned().ok()?,
+        })
+    }
+    async fn load_key(self: &Arc<Self>, key: String, maximum: usize) -> Option<Object> {
         crate::observability::work(
             crate::observability::Component::Cache,
             crate::observability::Stage::Lookup,
             async {
-                if !eligible(id) {
-                    return None;
-                }
-                let Ok(key) = id.object_key() else {
-                    return None;
-                };
                 let Ok(permit) = self.gate.clone().try_acquire_owned() else {
                     self.counters.misses.fetch_add(1, Ordering::Relaxed);
                     return None;

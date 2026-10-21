@@ -205,7 +205,59 @@ async fn warm_current_reuses_docs_without_forecast_list_or_get() {
 }
 
 #[tokio::test]
-async fn wall_rewind_and_oldest_partition_minute_force_fresh_reads() {
+async fn unchanged_controls_renew_without_raw_parse_or_fold() {
+    let _serial = S3_PEERS.lock().await;
+    let Fixture {
+        peer,
+        source,
+        expected,
+        providers,
+    } = fixture().await;
+    let grid = Grid::new(60, 127).unwrap();
+    source
+        .grid_answer(Family::Current, grid, NOW, deadline())
+        .await
+        .unwrap();
+    let before = forecast_reads(&counts(&peer).await);
+    let stats = source.forecast_cache_stats();
+    let answer = source
+        .grid_answer(Family::Current, grid, NOW + 60_000., deadline())
+        .await
+        .unwrap();
+    same(&docs_json(&answer), &expected, "renewed Current");
+    let after = forecast_reads(&counts(&peer).await);
+    assert!(
+        after
+            .iter()
+            .any(|(k, n)| k.starts_with("OP LIST ") && *n > before.get(k).copied().unwrap_or(0)),
+        "external check must really list"
+    );
+    assert!(
+        after.iter().any(
+            |(k, n)| k.starts_with("OP GET index/v2/data-go-kr/ultra-srt-ncst/")
+                && *n > before.get(k).copied().unwrap_or(0)
+        ),
+        "must check catalog contents, not only partition names"
+    );
+    for (k, n) in &after {
+        if k.starts_with("OP GET raw/") || k.starts_with("OP GET index/v2/groups/") {
+            assert_eq!(
+                *n,
+                before.get(k).copied().unwrap_or(0),
+                "renewal must not fetch {k}"
+            );
+        }
+    }
+    assert_eq!(
+        source.forecast_cache_stats().parse_acquisitions,
+        stats.parse_acquisitions
+    );
+    assert_eq!(source.forecast_cache_stats().folds, stats.folds);
+    assert_eq!(providers.0.load(SeqCst), 0);
+}
+
+#[tokio::test]
+async fn wall_rewind_refolds_and_later_unchanged_minute_only_revalidates() {
     let _serial = S3_PEERS.lock().await;
     let Fixture {
         peer,
@@ -240,7 +292,7 @@ async fn wall_rewind_and_oldest_partition_minute_force_fresh_reads() {
         "next oldest-partition minute Doc",
     );
     assert_ne!(forecast_reads(&counts(&peer).await), after_rewind);
-    assert_eq!(source.forecast_cache_stats().folds, 3);
+    assert_eq!(source.forecast_cache_stats().folds, 2);
     assert_eq!(providers.0.load(SeqCst), 0);
 }
 
@@ -435,4 +487,302 @@ async fn distinct_cold_keys_have_two_active_owners_and_eight_queued_keys() {
     assert_eq!(state.active_owners, 0);
     assert_eq!(state.active_workspace_logical_bytes, 0);
     assert_eq!(providers.0.load(SeqCst), 0);
+}
+
+fn disk_source(
+    peer: &Peer,
+    root: &std::path::Path,
+    providers: Arc<DenyProviders>,
+) -> (Source, Arc<server2::cache::disk::DiskCache>) {
+    disk_source_with_cap(peer, root, providers, 8 * 1024 * 1024 * 1024)
+}
+fn disk_source_with_cap(
+    peer: &Peer,
+    root: &std::path::Path,
+    providers: Arc<DenyProviders>,
+    cap: u64,
+) -> (Source, Arc<server2::cache::disk::DiskCache>) {
+    use server2::storage::{ObjectTransport, S3Settings};
+    let settings = S3Settings::from_vars_at(
+        &|name| match name {
+            "AWS_ACCESS_KEY" => Some("server2-local".into()),
+            "AWS_SECRET_KEY" => Some("server2-local-secret".into()),
+            "SERVER2_S3_BUCKET" => Some("server2-local".into()),
+            "SERVER2_LOCAL_CACHE_DIR" => Some(root.to_str().unwrap().into()),
+            "SERVER2_LOCAL_CACHE_MAX_BYTES" => Some(cap.to_string()),
+            _ => None,
+        },
+        Some(peer.endpoint()),
+    )
+    .unwrap();
+    let transport = settings.transport().unwrap();
+    let disk = transport.raw_cache().unwrap();
+    let source = S3Source::new(
+        server2::world::BoundedS3::new(transport, 4),
+        Arc::new(|| NOW),
+        providers,
+        Arc::new(Unreachable),
+    )
+    .unwrap();
+    (source, disk)
+}
+#[tokio::test]
+async fn process_restart_restores_folded_current_without_parse_or_fold() {
+    let _serial = S3_PEERS.lock().await;
+    let Fixture {
+        peer,
+        source,
+        expected,
+        providers,
+    } = fixture().await;
+    drop(source);
+    let root = std::env::temp_dir().join(format!("server2-2850-restart-{}", std::process::id()));
+    assert!(!root.exists(), "test must own a new cache root");
+    let grid = Grid::new(60, 127).unwrap();
+    let (first, disk) = disk_source(&peer, &root, providers.clone());
+    let cold = first
+        .grid_answer(Family::Current, grid, NOW, deadline())
+        .await
+        .unwrap();
+    same(&docs_json(&cold), &expected, "disk fill Current");
+    assert!(disk.idle(deadline()).await);
+    drop(cold);
+    drop(first);
+    drop(disk);
+    let before = forecast_reads(&counts(&peer).await);
+    let (second, disk) = disk_source(&peer, &root, providers.clone());
+    let restored = second
+        .grid_answer(Family::Current, grid, NOW, deadline())
+        .await
+        .unwrap();
+    same(&docs_json(&restored), &expected, "disk restored Current");
+    assert_eq!(
+        second.forecast_cache_stats().parse_acquisitions,
+        0,
+        "restart must restore folded Docs"
+    );
+    assert_eq!(second.forecast_cache_stats().folds, 0);
+    let after = forecast_reads(&counts(&peer).await);
+    for (k, n) in after {
+        if k.starts_with("OP GET raw/") || k.starts_with("OP GET index/v2/groups/") {
+            assert_eq!(
+                n,
+                before.get(&k).copied().unwrap_or(0),
+                "restore must not fetch {k}"
+            );
+        }
+    }
+    assert_eq!(providers.0.load(SeqCst), 0);
+    assert!(disk.idle(deadline()).await);
+    drop(restored);
+    drop(second);
+    drop(disk);
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+async fn newer_current(peer: &Peer) {
+    let g = items_of(at(oracle(), &["grid"]))
+        .iter()
+        .find(|g| text(at(g, &["id"])) == "current")
+        .unwrap();
+    let run = items_of(at(g, &["runs"])).last().unwrap();
+    let mut body: serde_json::Value = serde_json::from_slice(&pages(run)[0]).unwrap();
+    let rows = body["response"]["body"]["items"]["item"]
+        .as_array_mut()
+        .unwrap();
+    let row = rows.iter_mut().find(|r| r["category"] == "T1H").unwrap();
+    row["obsrValue"] = serde_json::json!("31.5");
+    let limits = CatalogLimits::default();
+    let p = Publication::new(20260924, 1000).unwrap();
+    let record = RawRecord::new(
+        "data-go-kr",
+        "ultra-srt-ncst",
+        &Grid::new(60, 127).unwrap().provider_key(),
+        p.period(),
+        (NOW + 1.) as u64,
+        200,
+        "application/json",
+        None,
+        serde_json::to_vec(&body).unwrap().into(),
+        &limits.raw,
+    )
+    .unwrap();
+    let id = CatalogId::for_record(&record.envelope.identity, &p.partition()).unwrap();
+    let declaration = GroupDeclaration::new(
+        vec![GroupMember {
+            envelope: record.envelope.clone(),
+            catalogs: vec![id],
+        }],
+        &limits,
+    )
+    .unwrap();
+    CatalogStore::new(peer.transport(), limits)
+        .unwrap()
+        .publish(declaration, vec![record], deadline())
+        .await
+        .unwrap();
+}
+#[tokio::test]
+async fn external_same_partition_write_is_visible_after_delay_and_failed_check_never_renews() {
+    let _serial = S3_PEERS.lock().await;
+    let Fixture {
+        peer,
+        source,
+        expected,
+        providers,
+    } = fixture().await;
+    let grid = Grid::new(60, 127).unwrap();
+    source
+        .grid_answer(Family::Current, grid, NOW, deadline())
+        .await
+        .unwrap();
+    newer_current(&peer).await;
+    let before = source
+        .grid_answer(Family::Current, grid, NOW + 29_999., deadline())
+        .await
+        .unwrap();
+    same(
+        &docs_json(&before),
+        &expected,
+        "bounded observation interval",
+    );
+    let after = source
+        .grid_answer(Family::Current, grid, NOW + 30_000., deadline())
+        .await
+        .unwrap();
+    assert_ne!(docs_json(&after), expected);
+    assert!(after.iter().any(
+        |d| matches!(d.get("currentData").and_then(|v|v.as_doc()).and_then(|v|v.get("t1h")),Some(server2::domestic::kma::source::Val::Num(n)) if *n==31.5)
+    ));
+    assert_eq!(source.forecast_cache_stats().folds, 2);
+    let renewals = source.forecast_cache_stats().identity_renewals;
+    reqwest::Client::new()
+        .post(format!(
+            "{}/__catalog?mode=bad-list&key=owned",
+            peer.endpoint()
+        ))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap();
+    assert!(
+        source
+            .grid_answer(Family::Current, grid, NOW + 60_000., deadline())
+            .await
+            .is_err()
+    );
+    assert_eq!(source.forecast_cache_stats().identity_renewals, renewals);
+    assert_eq!(providers.0.load(SeqCst), 0);
+}
+fn stored_view_path(peer: &Peer, root: &std::path::Path) -> std::path::PathBuf {
+    let namespace = format!(
+        "raw-cache-v1\n{}\nserver2-local\nap-northeast-2",
+        peer.endpoint()
+    );
+    let key = format!("forecast-view-v1/{}", sha256(b"Grid(Current, 60, 127)"));
+    root.join(sha256(namespace.as_bytes()))
+        .join(format!("{}.raw", sha256(key.as_bytes())))
+}
+fn rehash_local(bytes: &mut [u8]) {
+    use sha2::{Digest, Sha256};
+    let digest = Sha256::digest(&bytes[52..]);
+    bytes[20..52].copy_from_slice(&digest);
+}
+#[tokio::test]
+async fn disk_faults_and_changed_s3_identity_rebuild_identical_docs_under_the_cap() {
+    let _serial = S3_PEERS.lock().await;
+    let Fixture {
+        peer,
+        source,
+        expected,
+        providers,
+    } = fixture().await;
+    drop(source);
+    let root = std::env::temp_dir().join(format!("server2-2850-faults-{}", std::process::id()));
+    assert!(!root.exists());
+    let grid = Grid::new(60, 127).unwrap();
+    let (s, d) = disk_source(&peer, &root, providers.clone());
+    s.grid_answer(Family::Current, grid, NOW, deadline())
+        .await
+        .unwrap();
+    assert!(d.idle(deadline()).await);
+    drop(s);
+    drop(d);
+    let path = stored_view_path(&peer, &root);
+    assert!(path.is_file());
+    for fault in ["hash", "truncate", "key", "schema", "identities"] {
+        let mut bytes = std::fs::read(&path).unwrap();
+        let header = u32::from_le_bytes(bytes[8..12].try_into().unwrap()) as usize;
+        let body = 52 + header;
+        match fault {
+            "hash" => *bytes.last_mut().unwrap() ^= 1,
+            "truncate" => {
+                bytes.pop();
+            }
+            "schema" => {
+                bytes[body + 7] = b'2';
+                rehash_local(&mut bytes);
+            }
+            "key" => {
+                let start = body + 8 + 4;
+                assert_eq!(&bytes[start..start + 7], b"Grid(Cu");
+                let at = bytes[start..].windows(2).position(|v| v == b"60").unwrap() + start;
+                bytes[at + 1] = b'1';
+                rehash_local(&mut bytes);
+            }
+            "identities" => {
+                let n = bytes.len() - 1;
+                bytes[n] = if bytes[n] == b'0' { b'1' } else { b'0' };
+                rehash_local(&mut bytes);
+            }
+            _ => unreachable!(),
+        }
+        std::fs::write(&path, bytes).unwrap();
+        let (s, d) = disk_source(&peer, &root, providers.clone());
+        let answer = s
+            .grid_answer(Family::Current, grid, NOW, deadline())
+            .await
+            .unwrap();
+        same(&docs_json(&answer), &expected, fault);
+        assert_eq!(s.forecast_cache_stats().disk_restores, 0, "{fault}");
+        assert_eq!(s.forecast_cache_stats().folds, 1, "{fault}");
+        assert!(d.idle(deadline()).await);
+        drop(s);
+        drop(d);
+    }
+    newer_current(&peer).await;
+    let (s, d) = disk_source(&peer, &root, providers.clone());
+    let changed = s
+        .grid_answer(Family::Current, grid, NOW + 30_000., deadline())
+        .await
+        .unwrap();
+    assert_ne!(docs_json(&changed), expected);
+    assert_eq!(s.forecast_cache_stats().disk_restores, 0);
+    assert_eq!(s.forecast_cache_stats().folds, 1);
+    assert!(d.idle(deadline()).await);
+    drop(s);
+    drop(d);
+    // A pre-existing entry larger than a lowered cap must be evicted on open.
+    let mut bytes = std::fs::read(&path).unwrap();
+    bytes.resize(16384, 0);
+    std::fs::write(&path, bytes).unwrap();
+    let (s, d) = disk_source_with_cap(&peer, &root, providers.clone(), 4096);
+    let answer = s
+        .grid_answer(Family::Current, grid, NOW + 30_000., deadline())
+        .await
+        .unwrap();
+    same(
+        &docs_json(&answer),
+        &docs_json(&changed),
+        "over-cap fallback",
+    );
+    assert_eq!(s.forecast_cache_stats().disk_restores, 0);
+    assert!(d.idle(deadline()).await);
+    assert!(d.metrics().bytes <= 4096);
+    assert!(d.metrics().evictions > 0);
+    drop(s);
+    drop(d);
+    std::fs::remove_dir_all(root).unwrap();
 }
