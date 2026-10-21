@@ -23,7 +23,8 @@ def record(phase, status=200, sha=REFERENCE, elapsed=100.0, ops=None, parses=(0,
     after = {'OP GET index/v2/data-go-kr/vilage-fcst/k/20260924-0500.json': 2,
              'OP GET index/v2/groups/g1.json': 3, 'OP GET raw/v2/data-go-kr/vilage-fcst/a.raw.gz': 4,
              'OP LIST index/v2/data-go-kr/vilage-fcst/k/202609': 1,
-             'OP GET raw/v2/data-go-kr/forecast-zone/z.raw.gz': 5, 'OP GET index/v2/kasi/unknown.json': 6}
+             'OP GET raw/v2/data-go-kr/forecast-zone/z.raw.gz': 5, 'OP GET index/v2/kasi/unknown.json': 6,
+             'BODYOUT GET index/v2/kasi/unknown.json': 900}
     after.update(ops or {})
     outcome = {'http_status': status, 'sha256': sha, 'bytes': 42549} if status else {'transport_error': 'timed out'}
     return {'phase': phase, 'elapsed_ms': elapsed, 'views_ready_ms': ready, 'outcome': outcome, 'status_before': {},
@@ -55,6 +56,7 @@ class Report(unittest.TestCase):
         [row] = rows_of('cand', 'http', 10, 1, [record('cold', parses=(10, 735))])
         self.assertEqual(row['forecast_io'], {'LIST': 1, 'GET_catalog': 2, 'GET_descriptor': 3, 'GET_raw': 4})
         self.assertEqual(row['other_io_operations'], 6, 'unlabelled reads are kept, not hidden')
+        self.assertEqual(row['other_io_bytes'], 900, 'returned bytes are not operations')
         self.assertEqual((row['parses'], row['folds']), (725, 7))
         self.assertEqual((row['status'], row['sha256'], row['bytes']), (200, REFERENCE, 42549))
         [failed] = rows_of('cand', 'http', 10, 1, [record('cold', status=None)])
@@ -73,6 +75,7 @@ class Report(unittest.TestCase):
         self.assertEqual(d2['hash_mismatches'], 0, 'a failed answer is not an identity mismatch')
         self.assertEqual(summary[('cand', 'cold')]['hash_mismatches'], 1)
         self.assertEqual(d2['forecast_io_median']['GET_raw'], 4)
+        self.assertEqual(d2['other_io_median'], 6)
 
     def test_ready_times_report_how_long_the_views_really_took(self):
         rows = []
@@ -96,12 +99,16 @@ class Report(unittest.TestCase):
             'all 200 but failed exit': (rows_of('c', 'aged', 0, 1, [record('cold'), record('aged')]), 101),
             'timeout after 200': (rows_of('c', 'aged', 0, 1, [record('cold')]), 'TIMEOUT'),
             'wrong body': (rows_of('c', 'aged', 0, 1, [record('cold'), record('aged', sha='e' * 64)]), 0),
-            'continued after failure': (rows_of('c', 'aged', 0, 1, [record('cold', status=502), record('aged')]), 101),
+            'continued after failure': (rows_of('c', 'http', 0, 1, [record('cold', status=502), record('warm1')]), 101),
             'phase order': (rows_of('c', 'aged', 0, 1, [record('aged'), record('cold')]), 0),
         }
         for name, (rows, code) in cases.items():
             with self.subTest(name):
-                self.assertTrue(matrix.problems(rows, {('c', 'aged', 0, 1): code}, REFERENCE), name)
+                mode = rows[0]['mode'] if rows else 'aged'
+                self.assertTrue(matrix.problems(rows, {('c', mode, 0, 1): code}, REFERENCE), name)
+        # An aged rebuild after a cut cold request is the measured scenario, not a problem.
+        cut = rows_of('c', 'aged', 10, 1, [record('cold', status=502, sha='x'), record('aged', status=502, sha='y')])
+        self.assertEqual(matrix.problems(cut, {('c', 'aged', 10, 1): 101}, REFERENCE), [])
 
 
 if __name__ == '__main__':

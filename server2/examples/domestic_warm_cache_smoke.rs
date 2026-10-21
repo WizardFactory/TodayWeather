@@ -816,7 +816,9 @@ async fn http(endpoint: &str, manifest: &Path, phases: &[&str]) {
         );
         // Stop after the first actual failure; preserve it and retire owned work before root
         // diagnosis. No later warm success can turn a failed cold request into acceptance.
-        if !complete {
+        // The aged rebuild still runs after a cut cold request: the cold owners finish in the
+        // background, and the run stays failed.
+        if !complete && !(phase == "cold" && phases.contains(&"aged")) {
             break;
         }
     }

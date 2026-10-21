@@ -76,7 +76,8 @@ def phase_rows(stdout_text, labels, classify):
                      'elapsed_ms': record['elapsed_ms'], 'views_ready_ms': record.get('views_ready_ms'),
                      'mapped': after.get('mapped_entries'), 'sha256': outcome.get('sha256'),
                      'bytes': outcome.get('bytes'), 'forecast_io': forecast,
-                     'other_io_operations': sum(unknown.values()),
+                     'other_io_operations': sum(v for k, v in unknown.items() if k.startswith('OP ')),
+                     'other_io_bytes': sum(v for k, v in unknown.items() if k.startswith('BODYOUT ')),
                      'parses': after['parse_acquisitions'] - before['parse_acquisitions'],
                      'folds': after['folds'] - before['folds']})
     return rows
@@ -109,6 +110,7 @@ def summarize(rows, reference):
             'ready_p95_ms': percentile(ready, 0.95) if ready else None,
             'mapped_median': statistics.median(mapped) if mapped else None,
             'forecast_io_median': {c: statistics.median(r['forecast_io'][c] for r in group) for c in IO_CLASSES},
+            'other_io_median': statistics.median(r['other_io_operations'] for r in group),
         })
     return summary
 
@@ -125,7 +127,8 @@ def problems(rows, exits, reference):
             found.append(f'{where}: phases {list(phases)}, exit {code}')
             continue
         failed = [r for r in mine if r['status'] != 200]
-        if failed and failed[0] is not mine[-1]:
+        # Only the aged rebuild runs after a cut cold request (the example's rule).
+        if failed and failed[0] is not mine[-1] and not (mode == 'aged' and failed[0]['phase'] == 'cold'):
             found.append(f'{where}: continued after a failed {failed[0]["phase"]}')
         if not failed and (code != 0 or len(phases) < len(MODES[mode])):
             found.append(f'{where}: exit {code} after {list(phases)} all 200')
