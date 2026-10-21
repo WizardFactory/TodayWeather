@@ -15,6 +15,7 @@ pub type ProcessWarnings = crate::warnings::store::WarningStore<ProcessS3>;
 pub type ProcessFeed = crate::push::deliver::warning_feed::WarningFeed<ProcessS3>;
 #[derive(Clone)]
 pub struct RuntimeServices {
+    pub rainfall: Option<Arc<dyn crate::domestic::kma::source::rainfall::Lifecycle>>,
     pub gateway: Option<Arc<Gateway>>,
     pub push: Option<Arc<crate::push::PushService>>,
     pub notices: Option<Arc<crate::notice::store::NoticeStore<ProcessS3>>>,
@@ -188,6 +189,7 @@ impl RuntimeServices {
             None
         };
         Ok(Self {
+            rainfall: built.rainfall,
             delivery,
             warning_acquire: built.warning_acquire,
             warning_cycles: built.warning_cycles,

@@ -22,6 +22,8 @@ mod parity;
 mod qs;
 #[path = "domestic/quota.rs"]
 mod quota;
+#[path = "domestic/rainfall.rs"]
+mod rainfall;
 #[path = "domestic/replay.rs"]
 mod replay;
 #[path = "domestic/source.rs"]

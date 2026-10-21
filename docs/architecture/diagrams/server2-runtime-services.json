@@ -2,12 +2,12 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Complete-native startup and shared services",
+    "title": "Shared native runtime and rainfall ownership",
     "output": "docs/architecture/diagrams/server2-runtime-services.html",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "f6b69e8387b491bc2afc93129570a13272c66edb"
+      "revision": "3a31a023f21c4e7f62593e7b0b5ffd735518be0a"
     }
   },
   "components": [
@@ -17,7 +17,7 @@
       "label": "Entry + shared factory",
       "sublabel": "Coverage first; then local accounts",
       "pos": [
-        440,
+        40,
         245
       ],
       "size": [
@@ -48,7 +48,7 @@
       "label": "Registration writer",
       "sublabel": "Restored state + open receiver",
       "pos": [
-        440,
+        40,
         25
       ],
       "size": [
@@ -74,7 +74,7 @@
       "label": "Owned delivery jobs",
       "sublabel": "Warning task ID owns the poll slot",
       "pos": [
-        830,
+        440,
         245
       ],
       "size": [
@@ -95,7 +95,7 @@
       "label": "Parsed accounts + OAuth",
       "sublabel": "TW required; configured TA checked",
       "pos": [
-        1300,
+        840,
         245
       ],
       "size": [
@@ -121,7 +121,7 @@
       "label": "Shared native services",
       "sublabel": "Typed fetch + WarningStore / feed",
       "pos": [
-        830,
+        440,
         480
       ],
       "size": [
@@ -138,6 +138,11 @@
           "path": "server2/src/push/deliver/native_fetch.rs",
           "line": 31,
           "end_line": 56
+        },
+        {
+          "path": "server2/src/gateway/runtime.rs",
+          "line": 488,
+          "end_line": 517
         }
       ]
     },
@@ -147,8 +152,8 @@
       "label": "Shared bounded S3",
       "sublabel": "State / claims / results / warning data",
       "pos": [
-        440,
-        480
+        40,
+        710
       ],
       "size": [
         240,
@@ -178,8 +183,8 @@
       "label": "Notice GET / HEAD",
       "sublabel": "Read only; no Translator client",
       "pos": [
-        440,
-        710
+        40,
+        980
       ],
       "size": [
         240,
@@ -200,7 +205,7 @@
       "sublabel": "Selected kma; empty data -> 501",
       "pos": [
         40,
-        245
+        480
       ],
       "size": [
         240,
@@ -223,6 +228,96 @@
           "end_line": 318
         }
       ]
+    },
+    {
+      "id": "rainfall-owner",
+      "type": "backend",
+      "label": "Rainfall statistics owner",
+      "sublabel": "Fresh reads; shared replay; one CAS",
+      "pos": [
+        440,
+        710
+      ],
+      "size": [
+        240,
+        110
+      ],
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/rainfall.rs",
+          "line": 208,
+          "end_line": 354
+        },
+        {
+          "path": "server2/src/domestic/kma/source/rainfall.rs",
+          "line": 500,
+          "end_line": 678,
+          "label": "Bounded shared replay and member retirement"
+        },
+        {
+          "path": "server2/src/process.rs",
+          "line": 226,
+          "end_line": 262
+        }
+      ]
+    },
+    {
+      "id": "rainfall-authority",
+      "type": "database",
+      "label": "F2 authority in shared S3",
+      "sublabel": "Counters + end + input receipts",
+      "pos": [
+        840,
+        710
+      ],
+      "size": [
+        280,
+        110
+      ],
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/rainfall_store.rs",
+          "line": 9,
+          "end_line": 15
+        },
+        {
+          "path": "server2/src/domestic/kma/source/rainfall_store.rs",
+          "line": 377,
+          "end_line": 495
+        },
+        {
+          "path": "server2/src/domestic/kma/source/rainfall.rs",
+          "line": 702,
+          "end_line": 848,
+          "label": "Fresh authority and one conditional writer"
+        }
+      ]
+    },
+    {
+      "id": "rainfall-operator",
+      "type": "backend",
+      "label": "Explicit operator handover",
+      "sublabel": "Final seed / epoch / shutdown bound",
+      "pos": [
+        840,
+        980
+      ],
+      "size": [
+        280,
+        110
+      ],
+      "sources": [
+        {
+          "path": "server2/tools/state/rainfall_activation.rs",
+          "line": 22,
+          "end_line": 85
+        },
+        {
+          "path": "server2/src/domestic/kma/source/rainfall_store.rs",
+          "line": 211,
+          "end_line": 225
+        }
+      ]
     }
   ],
   "connections": [
@@ -242,9 +337,7 @@
       "id": "jobs-writer",
       "from": "jobs",
       "to": "writer",
-      "label": "current state guard",
-      "fromSide": "top",
-      "toSide": "right"
+      "label": "current state guard"
     },
     {
       "id": "jobs-fcm",
@@ -262,9 +355,7 @@
       "id": "jobs-s3",
       "from": "jobs",
       "to": "s3",
-      "label": "durable claim / result",
-      "fromSide": "bottom",
-      "toSide": "top"
+      "label": "durable claim / result"
     },
     {
       "id": "native-s3",
@@ -289,6 +380,24 @@
       "from": "warning-api",
       "to": "s3",
       "label": "read warning data"
+    },
+    {
+      "id": "native-rainfall",
+      "from": "native",
+      "to": "rainfall-owner",
+      "label": "bounded demand offer"
+    },
+    {
+      "id": "rainfall-state",
+      "from": "rainfall-owner",
+      "to": "rainfall-authority",
+      "label": "conditional counters + receipts"
+    },
+    {
+      "id": "operator-rainfall",
+      "from": "rainfall-operator",
+      "to": "rainfall-authority",
+      "label": "approved activation only"
     }
   ],
   "cards": [
@@ -357,6 +466,46 @@
         "Alarm or alert failures cannot release live warning work; one JoinSet owns the jobs.",
         "A pending regular tick may run after completion; stop still blocks new scheduling.",
         "Original task failure stays incomplete; no failed / unknown send replay or state rewind."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Legacy-compatible rainfall input",
+      "items": [
+        "Use existing national AWS minute web rows, not a new collector or official ASOS API.",
+        "Count only canonical rain predictions: pty > 0 or rn1 > 0; observed dry is a miss.",
+        "Canonical Current end; strict preceding hour, min15 actual rows and one known boolean.",
+        "Any true means observed rain; preserve original ObjectId totals and duplicate stations."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Optional answer and durable ownership",
+      "items": [
+        "Caller waits through the existing Source boundary; accepted work keeps its original3s owner.",
+        "Late or unknown state is station-partial, never stale seed or optimistic totals.",
+        "Runtime never creates absent authority; operator activation requires separate approval.",
+        "Factory retains the owner; process quiesces and drains it at the existing stop deadline."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Local qualification remains bounded",
+      "items": [
+        "Historical owned16MiB input: partial200, actual drain, fresh same-S3 process3/5.",
+        "Historical whole-child RSS453967872B is not a64MiB heap or host capacity guarantee.",
+        "Complete recovery retains forecastNarrative, F1 marker, this authority and delivery claims.",
+        "No production activation, live sends, shadow or full recovery-bundle qualification here."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "P2 decisions and replay ownership",
+      "items": [
+        "128 read tickets; 8 distinct intents; same-grid/end joins before mutation capacity.",
+        "Every authority read is fresh; one overlapping probe, no negative cache or TTL.",
+        "Independent full input validation; one shared heavy projection and one CAS writer.",
+        "Each decision retains its original cutoff and 3s deadline; nine delivered versions are bounded."
       ]
     }
   ]

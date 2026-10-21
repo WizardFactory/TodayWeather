@@ -1,0 +1,3 @@
+# F2 rainfall-statistics handover
+
+AK selected current ASOS minute observations compatibly mapped to the existing one-hour/minimum15/anytrue rainfall calculation, preserving cumulative values. Implement source-owned native statistics without new provider collection/timers/Mongo writes. Preserve original private ObjectId identity and require a separately approved finalseed/shutdown/first-window activation before any native statistic writes. Absent activation serves baseline, invalid active authority gives station partialfailure. Exact schema1 must survive two genuine future full-feature releases; pre-F2 releases ineligible. Current work is pre-merge preparation only, no operational activation, cloud mutation,7day shadow,live notification,2724quota or merge authority.

@@ -216,13 +216,23 @@ class PersistentHandler(Handler):
         return super().send(status, body, headers)
 
 
-def make(persistent=False, fanout_capacity=False):
-    config = base.load_config(OWNED/'config/local-stack.json')
-    if fanout_capacity:
-        # Explicit finite TEST-only capacity for5000 claim+result objects; ordinary
-        # local stack defaults and every runtime configuration remain unchanged.
-        config['max_objects'] = 16384
-        config['max_store_bytes'] = 64 * 1024 * 1024
+def select_config(config, fanout_capacity=False, rainfall_capacity=False):
+    """Pure finite TEST-only profile selection; ordinary configuration is never mutated."""
+    if fanout_capacity and rainfall_capacity:
+        raise ValueError('conflicting owned test capacity profiles')
+    selected = dict(config)
+    if fanout_capacity or rainfall_capacity:
+        selected['max_objects'] = 16384
+        selected['max_store_bytes'] = 64 * 1024 * 1024
+    if rainfall_capacity:
+        # One-member S06 publications rewrite the same day catalog up to256 times.
+        selected['max_versions'] = 512
+    return selected
+
+
+def make(persistent=False, fanout_capacity=False, rainfall_capacity=False):
+    config = select_config(base.load_config(OWNED/'config/local-stack.json'),
+                           fanout_capacity, rainfall_capacity)
     # Linux drops connection attempts beyond the listen backlog (socketserver default 5) and the
     # S3 client connects within 1 s, so a few concurrent readers failed with Transport on CI.
     # Admission stays bounded by the peer's connection slots.
@@ -319,12 +329,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--smoke', help='Built catalogs_smoke executable')
     parser.add_argument('--persistent', action='store_true', help='Reuse owned HTTP connections within unchanged admission/socket bounds')
-    parser.add_argument('--fanout-capacity', action='store_true', help='Bounded TEST-only16384 objects/64MiB for5000 warning claim+result pairs')
+    profiles = parser.add_mutually_exclusive_group()
+    profiles.add_argument('--fanout-capacity', action='store_true', help='Bounded TEST-only16384 objects/64MiB for5000 warning claim+result pairs')
+    profiles.add_argument('--rainfall-capacity', action='store_true', help='Bounded TEST-only16384 objects/64MiB/512versions for complete rainfall pressure inputs')
     parser.add_argument('--check-persistent', action='store_true', help='Run isolated framing/reuse/default/fault checks and exit')
     args = parser.parse_args()
     if args.check_persistent:
         return check_persistent()
-    peer = make(args.persistent, args.fanout_capacity)
+    peer = make(args.persistent, args.fanout_capacity, args.rainfall_capacity)
     endpoint = f'http://127.0.0.1:{peer.server_port}/'
     if args.smoke:
         thread = threading.Thread(target=peer.serve_forever, daemon=True)

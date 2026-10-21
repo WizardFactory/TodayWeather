@@ -44,6 +44,9 @@ pub mod mfds;
 mod mid;
 pub mod observe;
 pub mod pages;
+pub mod rainfall;
+mod rainfall_input;
+pub mod rainfall_store;
 mod records;
 mod reference;
 pub mod rnshit;
@@ -161,6 +164,7 @@ pub struct S3Source<T> {
     clock: Clock,
     zones: Arc<tokio::sync::Mutex<Option<ZoneCache>>>,
     observations: Arc<observe::Observations<T>>,
+    rainfall: Option<Arc<rainfall::Owner<T>>>,
     /// S15b-3: AirKorea national datasets and the air-provider fallback.
     air: air_input::AirInputs<T>,
     /// S15b-3b: life index, MFDS food poisoning and KASI rise/set national datasets.
@@ -238,6 +242,24 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         )?);
         Self::new_with_warning_store(transport, clock, acquire, locate, warnings)
     }
+    /// Enable the F2 owner with the actual configured S3 namespace. Compatibility constructors
+    /// remain seed-only; production construction always injects this typed dependency.
+    pub fn with_rainfall(
+        mut self,
+        target: rainfall_store::Namespace,
+    ) -> Result<Self, crate::storage::Error> {
+        self.rainfall = Some(rainfall::Owner::new(
+            self.reader.transport.clone(),
+            target,
+            self.clock.clone(),
+        )?);
+        Ok(self)
+    }
+    pub fn rainfall_owner(&self) -> Option<Arc<dyn rainfall::Lifecycle>> {
+        self.rainfall
+            .clone()
+            .map(|o| o as Arc<dyn rainfall::Lifecycle>)
+    }
     /// Reuse the process warning store for request acquisition and warning response reads.
     pub fn new_with_warning_store(
         transport: T,
@@ -262,6 +284,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 Arc::new(move || clock().max(0.) as u64)
             }),
             observations,
+            rainfall: None,
             air: air_input::AirInputs::new(transport.clone(), store.clone()),
             life: life_input::LifeInputs::new(transport.clone(), store.clone()),
             reader: Reader { transport, store },
@@ -1061,6 +1084,66 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         );
         let (zones, mids) = zones_and_mids?;
         let (current, current_ids) = current?;
+        let witness = grid.and_then(|g| {
+            rainfall_input::Current::from_docs(
+                [g.nx(), g.ny()],
+                &current,
+                current_ids.as_deref(),
+                now,
+            )
+        });
+        let mut stations = stations;
+        let mut stations_error = None;
+        let mut statistics_seed_changed = false;
+        if let Some(owner) = &self.rainfall {
+            let seed = stations.as_ref().and_then(|f| f.seed.clone());
+            let result = match seed {
+                Some(seed) => owner.offer(seed, witness, deadline, until).await,
+                None => Err(crate::storage::Error::Corrupt(
+                    "rainfall station seed unavailable",
+                )),
+            };
+            match result {
+                Ok(None) => (),
+                Ok(Some(overlay)) => {
+                    self.observations.pin_seed(overlay.seed.clone());
+                    if stations.as_ref().is_none_or(|f| {
+                        f.seed
+                            .as_ref()
+                            .is_none_or(|s| s.body_sha256 != overlay.seed.body_sha256)
+                    }) {
+                        statistics_seed_changed = true;
+                        stations = self.observations.stations(now as i64, until).await;
+                    }
+                    if let Some(folded) = stations.as_ref().filter(|f| {
+                        f.seed
+                            .as_ref()
+                            .is_some_and(|s| s.body_sha256 == overlay.seed.body_sha256)
+                    }) {
+                        let mut next = (**folded).clone();
+                        next.registry = Arc::new(next.registry.overlay(&overlay.state));
+                        let mut identity = Vec::new();
+                        for d in next.registry.docs() {
+                            identity.extend_from_slice(&d.json().to_bytes());
+                            identity.push(b'\n');
+                        }
+                        let hash = crate::storage::sha256(&identity);
+                        let since =
+                            folded
+                                .registry_id
+                                .as_ref()
+                                .map_or(overlay.since, |(old, since)| {
+                                    if old == &hash { *since } else { overlay.since }
+                                });
+                        next.registry_id = Some((hash, since));
+                        stations = Some(Arc::new(next));
+                    } else {
+                        stations_error = Some("rainfall pinned seed refold pending".into());
+                    }
+                }
+                Err(error) => stations_error = Some(error.to_string()),
+            }
+        }
         let (shortest, shortest_ids) = shortest?;
         let (short, short_ids) = short?;
         // S16: None when any grid family read was partial.
@@ -1075,7 +1158,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         models.insert(TownModel::Shortest, shortest);
         models.insert(TownModel::Short, short);
         models.insert(TownModel::ShortRss, rss?);
-        let summary = match (settled, ids, grid) {
+        let summary = match (
+            settled && stations_error.is_none() && !statistics_seed_changed,
+            ids,
+            grid,
+        ) {
             (true, Some(ids), Some(grid)) => {
                 summary_inputs(&town, grid, &history, ids, stations.as_deref(), asos)
             }
@@ -1091,6 +1178,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             zones,
             special,
             stations,
+            stations_error,
             history,
             air,
             life,
@@ -1662,6 +1750,7 @@ pub struct Snapshot {
     special: Option<Arc<ZoneState>>,
     /// Station collections (None before the first fold: answered over empty collections).
     stations: Option<Arc<observe::Folded>>,
+    stations_error: Option<String>,
     /// `history.loadForTown` for the snapshot's town.
     history: OrderedJson,
     air: air_input::AirAnswers,
@@ -1689,6 +1778,7 @@ impl Snapshot {
             zones,
             special,
             stations: None,
+            stations_error: None,
             history: OrderedJson::Null,
             air,
             life,
@@ -1750,6 +1840,9 @@ impl KmaStore for Snapshot {
         Ok(list(&self.zones.find_by_name(region, city)))
     }
     fn stn_hourly_and_min_rns(&self, town: &Value, date_time: &str, _: &Value) -> StoreResult {
+        if let Some(error) = &self.stations_error {
+            return Err(StoreError(error.clone()));
+        }
         let empty = observe::Folded::default();
         let f = self.stations.as_deref().unwrap_or(&empty);
         stn::Stations {
@@ -1762,6 +1855,9 @@ impl KmaStore for Snapshot {
         .map_err(|e| StoreError(e.0))
     }
     fn city_hourly(&self, town: &Value) -> StoreResult {
+        if let Some(error) = &self.stations_error {
+            return Err(StoreError(error.clone()));
+        }
         let empty = observe::Folded::default();
         let f = self.stations.as_deref().unwrap_or(&empty);
         stn::Stations {

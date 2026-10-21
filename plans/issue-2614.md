@@ -683,3 +683,20 @@ release live warning work. Existing claim/send/drain policy stays. The selected 
 owned peer/real-time evidence and final diagram precede independent review and exact
 parent/current CI at pre-merge only. This record does not close full E3, #2819, #2704 or
 #2705, or authorize merge, cloud actions, live provider/device sends, shadow or cutover.
+
+
+### Issue2819 F2 preparation: compatible rainfall input and durable ownership
+
+AK selected the current national AWS minute web rows through a compatibility mapping,
+preserving the original one-hour/min15/any-true calculation and cumulative totals.
+The repository preparation wires a demand-triggered bounded owner and an explicit
+operator-created schema1 authority. Existing authority is required; construction
+and absent-state requests do not activate or create it. Native local evidence covers
+normal idempotence, truthful partial weather at the caller cutoff and acknowledged
+state after fresh-process recovery. It does not qualify the observed453,967,872B
+active whole-child RSS, production ownership or the complete eligible recovery pair.
+See the [task plan](issue-2819-rainfall-handover.md),
+[operator procedure](../docs/operations/server2-rainfall-handover.md) and
+[selected local evidence](../docs/evidence/tasks/issue-2819-rainfall-handover/verification.md).
+S19/S20 and issue2819 remain open; final copies, host/shadow/capacity and cutover
+retain their separate gates.

@@ -130,6 +130,7 @@ impl Locate for ProductGeocoder {
 #[derive(Debug, Clone, Default)]
 pub struct Folded {
     pub registry: Arc<Registry>,
+    pub(crate) seed: Option<Arc<super::seed::StationSeed>>,
     pub hourly: Arc<RowStore>,
     pub minute: Arc<RowStore>,
     /// City stations' AWS hourly rows with their fetch instants (ongoing ASOS hours).
@@ -214,7 +215,8 @@ struct AsosEntry {
 struct State {
     pages: Pages,
     /// The registry seed (legacy `kmastninfos` copy), when one was imported.
-    seed: Option<Arc<Vec<Doc>>>,
+    seed: Option<Arc<super::seed::StationSeed>>,
+    pinned_seed: Option<Arc<super::seed::StationSeed>>,
     folded: Option<Arc<Folded>>,
     /// Address -> coordinates; failures are retried after an hour (legacy retries each run).
     geo: HashMap<String, (Option<(f64, f64)>, std::time::Instant)>,
@@ -233,6 +235,7 @@ struct State {
 }
 #[derive(Clone)]
 struct HourlyFold {
+    seed: Option<Arc<super::seed::StationSeed>>,
     registry: Arc<Registry>,
     hourly: Arc<RowStore>,
     national: Arc<HashMap<String, Vec<(f64, Doc)>>>,
@@ -441,6 +444,21 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         // Before the first fold the carried seed alone is the registry (no pages yet).
         Some(self.state().folded.clone().unwrap_or_else(seed_only))
     }
+    /// Once acknowledged activation binds the final seed, later imports cannot reset its counters.
+    pub(crate) fn pin_seed(&self, seed: Arc<super::seed::StationSeed>) {
+        let mut s = self.state();
+        if s.pinned_seed.is_none() {
+            s.pinned_seed = Some(seed.clone());
+            if s.seed
+                .as_ref()
+                .is_none_or(|old| old.body_sha256 != seed.body_sha256)
+            {
+                s.seed = Some(seed);
+                s.pages.dirty = true;
+                s.pages.hourly_dirty = true;
+            }
+        }
+    }
     fn flight(&self, key: &Flight) -> Option<watch::Receiver<bool>> {
         self.flights
             .lock()
@@ -590,9 +608,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         self.state().seed_failed = !matches!(seed, Ok((_, false)));
         if let Ok((Some(seed), _)) = seed {
             let mut s = self.state();
-            if s.seed
-                .as_ref()
-                .is_none_or(|old| old.len() != seed.len() || **old != *seed)
+            if s.pinned_seed.is_none()
+                && s.seed
+                    .as_ref()
+                    .is_none_or(|old| old.body_sha256 != seed.body_sha256)
             {
                 s.seed = Some(Arc::new(seed));
                 s.pages.dirty = true;
@@ -653,7 +672,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         &self,
         now_ms: i64,
         deadline: Instant,
-    ) -> Result<(Option<Vec<Doc>>, bool), ()> {
+    ) -> Result<(Option<super::seed::StationSeed>, bool), ()> {
         use super::seed;
         let mut partial = false;
         let carried = seed::embedded().exported_at_ms;
@@ -680,7 +699,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     .and_then(|r| seed::parse(&r.bytes).ok())
                     .filter(|s| s.exported_at_ms > carried)
                 {
-                    return Ok((Some(parsed.docs), partial));
+                    return Ok((Some(parsed), partial));
                 }
             }
         }
@@ -887,7 +906,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 (
                     s.seed
                         .clone()
-                        .or_else(|| Some(Arc::new(super::seed::embedded().docs.clone()))),
+                        .or_else(|| Some(Arc::new(super::seed::embedded().clone()))),
                     s.pages.hourly.clone(),
                     s.pages.hourly_at.clone(),
                     s.pages.city.clone(),
@@ -901,9 +920,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             (Some(cached), _) => cached,
             (None, Some((seed, hourly, hourly_at, city, geo, pages))) => {
                 let fold_pages = pages.clone();
+                let registry_seed = seed.clone();
                 let Ok((mut fold, reduced)) = crate::observability::spawn_blocking(move || {
                     fold_hourly(
-                        seed.as_deref().map(Vec::as_slice),
+                        seed.as_ref().map(|s| s.docs.as_slice()),
                         &hourly,
                         &hourly_at,
                         &city,
@@ -916,6 +936,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     return;
                 };
                 fold.pages = pages;
+                if let Some(seed) = &registry_seed {
+                    Arc::make_mut(&mut fold.registry).bind_seed(seed);
+                }
+                fold.seed = registry_seed;
                 let mut s = self.state();
                 // Non-city stations' hourly rows are kept as registry facts only.
                 for (h, rows) in reduced {
@@ -953,6 +977,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         s.registry_id = Some(registry_id.clone());
         s.folded = Some(Arc::new(Folded {
             registry: hourly_fold.registry.clone(),
+            seed: hourly_fold.seed.clone(),
             hourly: hourly_fold.hourly.clone(),
             minute: Arc::new(minutes),
             national: hourly_fold.national.clone(),
@@ -1538,6 +1563,7 @@ fn fold_hourly(
     }
     (
         HourlyFold {
+            seed: None,
             registry: Arc::new(registry),
             hourly: Arc::new(rows),
             national: Arc::new(national),
@@ -1553,7 +1579,12 @@ fn seed_only() -> Arc<Folded> {
     static ONLY: std::sync::OnceLock<Arc<Folded>> = std::sync::OnceLock::new();
     ONLY.get_or_init(|| {
         Arc::new(Folded {
-            registry: Arc::new(Registry::seeded(&super::seed::embedded().docs)),
+            registry: Arc::new({
+                let mut r = Registry::seeded(&super::seed::embedded().docs);
+                r.bind_seed(super::seed::embedded());
+                r
+            }),
+            seed: Some(Arc::new(super::seed::embedded().clone())),
             ..Folded::default()
         })
     })
@@ -1842,5 +1873,98 @@ where
         deadline: Instant,
     ) -> BoxFuture<'_, Result<Acquired, DomesticError>> {
         Box::pin(async move { self.today().await?.acquire_asos(&request, deadline).await })
+    }
+}
+
+#[cfg(test)]
+mod rainfall_seed_tests {
+    use super::super::rainfall::tests::{Memory, p2_seed};
+    use super::*;
+    use crate::storage::CatalogLimits;
+    struct NoAcquire;
+    impl Acquire for NoAcquire {
+        fn web(&self, _: WebRequest, _: Instant) -> BoxFuture<'_, Result<Acquired, DomesticError>> {
+            Box::pin(async { panic!("owned fold must not acquire web data") })
+        }
+        fn asos(
+            &self,
+            _: AsosRequest,
+            _: Instant,
+        ) -> BoxFuture<'_, Result<Acquired, DomesticError>> {
+            Box::pin(async { panic!("owned fold must not acquire ASOS data") })
+        }
+    }
+    struct NoLocate;
+    impl Locate for NoLocate {
+        fn locate(&self, _: String) -> BoxFuture<'_, Option<(f64, f64)>> {
+            Box::pin(async { None })
+        }
+    }
+    #[test]
+    fn captured_seed_survives_pin_race_and_cached_hourly_reuse() {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .max_blocking_threads(1)
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(async {
+            let memory = Memory::default();
+            let catalog =
+                Arc::new(CatalogStore::new(memory.clone(), CatalogLimits::default()).unwrap());
+            let observations = Arc::new(Observations::new(
+                memory,
+                catalog,
+                Arc::new(NoAcquire),
+                Arc::new(NoLocate),
+            ));
+            let x = Arc::new(p2_seed(0));
+            let y = Arc::new(p2_seed(1));
+            // X is the current imported seed before activation, as in load_disk.
+            // Y below must be the FIRST active pin; active seeds cannot be replaced.
+            {
+                let mut state = observations.state();
+                assert!(
+                    state.pinned_seed.is_none(),
+                    "setup: no active seed is pinned yet"
+                );
+                state.seed = Some(x.clone());
+                state.pages.dirty = true;
+                state.pages.hourly_dirty = true;
+            }
+            let (release, wait) = std::sync::mpsc::channel();
+            let (started, ready) = std::sync::mpsc::channel();
+            let blocker = crate::observability::spawn_blocking(move || {
+                started.send(()).unwrap();
+                wait.recv().unwrap();
+            });
+            ready.recv_timeout(Duration::from_secs(1)).unwrap();
+            let now = schedule::to_ms(Publication::new(20261017, 1047).unwrap());
+            let fold = tokio::spawn(observations.clone().fold(now));
+            while observations.state().pages.dirty {
+                tokio::task::yield_now().await;
+            }
+            // The state mutex was released only after capturing X. Its actual blocking fold is queued.
+            observations.pin_seed(y.clone());
+            release.send(()).unwrap();
+            blocker.await.unwrap();
+            fold.await.unwrap();
+            let captured = observations.state().folded.clone().unwrap();
+            assert_eq!(captured.seed.as_ref().unwrap().body_sha256, x.body_sha256);
+            assert!(captured.registry.docs().iter().all(|d| {
+                d.get("addr")
+                    .and_then(Val::as_str)
+                    .is_some_and(|a| a.starts_with("owned-p2-0-"))
+            }));
+            // Exercise the real cached branch: its seed must come from the cached hourly fold.
+            observations.state().pages.hourly_dirty = false;
+            observations.clone().fold(now).await;
+            let cached = observations.state().folded.clone().unwrap();
+            assert_eq!(cached.seed.as_ref().unwrap().body_sha256, x.body_sha256);
+            assert_eq!(
+                observations.state().seed.as_ref().unwrap().body_sha256,
+                y.body_sha256
+            );
+        });
     }
 }

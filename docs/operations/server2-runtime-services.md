@@ -57,6 +57,32 @@ Existing registration routes remain `POST /v000705/push`, `PUT`/`DELETE /v000902
 
 Delivery claims are durable before FCM POST and remain immutable across overlapping workers/restart. Alarm admission rechecks current subscription/minute after OAuth; timestamp-only refresh does not change the subscription. Conditional admission rechecks the committed alert selection and current time/window without changing legacy normalization/filter semantics. Warning admission retains writer catch-up plus current zones/time checks. Stop is checked again after asynchronous guards, immediately before POST. Stop-before-POST is NotSent; a POST whose response is lost/times out is Unknown. Neither failed nor ambiguous work is automatically resent. An edit after POST admission remains protected from stale cleanup; the send may already have occurred.
 
+## Rainfall-statistics ownership
+
+The shared factory constructs the F2 rainfall owner for native KMA source answers.
+Construction does not activate statistics, create the authority or collect weather.
+AK selected the existing national AWS minute web rows with legacy-compatible
+one-hour/min15/any-true calculation and preserved cumulative values.
+
+Keep legacy authoritative until its approved shutdown boundary. The operator must
+review the final seed/high-water/namespace activation and verify its exact durable
+readback. Runtime only updates existing schema1 authority. An absent authority is
+inactive; a failed/mismatched/ambiguous authority cannot be replaced by stale seed
+statistics. Accepted work may finish after the request's optional Source cutoff, so
+weather returns a truthful station-partial section until acknowledgement is available.
+
+P2 uses separate bounded read tickets and mutation intents. Shared authority reads
+cover only overlapping probes, with no completed or negative cache; missing authority
+after an active pin remains partial. Distinct grid decisions independently validate
+complete input scope before sharing heavy projection work and one conditional writer.
+The original caller and owner deadlines remain in force. For exact admission bounds,
+follow the handover procedure below; logical bounds do not establish a physical RSS limit.
+
+Both recovery bundles must preserve the authority and its receipts along with final
+registration markers, claims and forecastNarrative. This preparation does not qualify
+a production bundle, parser memory capacity or signal drain. Follow the
+[rainfall handover procedure](server2-rainfall-handover.md).
+
 ## Stop and inspect
 
 SIGTERM, SIGINT and listener failure share one stop path. Signals are registered before service/listener startup. Stop closes scheduling and new FCM POST admission, quiesces registrations and closes HTTP listeners. The supervisor owns all spawned minute/poll jobs; the writer has an explicit close/join/abort handle. Listener failure still reports an error after cleanup.
