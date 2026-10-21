@@ -28,6 +28,9 @@ const ID_BYTES: usize = 4 * MIB;
 const ENTRY_BYTES: usize = 48 * MIB;
 const WORKSPACE: usize = 192 * MIB;
 const OWNER: Duration = Duration::from_secs(8);
+/// Partition lookups in flight per view build: the forecast store's lookup and raw-load
+/// admission, not above the process S3 gate (`S3_IN_FLIGHT` in `gateway/runtime.rs`, 12).
+pub(super) const READ_AHEAD: usize = 12;
 
 pub(super) fn add(a: usize, b: usize) -> Result<usize, Error> {
     a.checked_add(b).ok_or(Error::Capacity)
@@ -510,21 +513,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Cache<T> {
                         deadline,
                     )
                     .await?;
-                for part in parts.into_iter().filter(|p| *p >= oldest) {
-                    let (mut found, e) = reader
-                        .forecast_acquisitions(
-                            key.source(),
-                            key.kind(),
-                            &provider,
-                            &part,
-                            &mut scope,
-                            deadline,
-                        )
-                        .await?;
-                    excluded = add(excluded, e)?;
-                    reserve(&mut raw, found.len())?;
-                    raw.append(&mut found);
-                }
+                let parts = parts.into_iter().filter(|p| *p >= oldest);
+                let (mut found, e) =
+                    read_partitions(reader, key, &provider, parts, &mut scope, deadline).await?;
+                excluded = add(excluded, e)?;
+                reserve(&mut raw, found.len())?;
+                raw.append(&mut found);
             }
             Key::Mid(..) => {
                 for month in checked_months(now)?.into_iter().rev() {
@@ -538,21 +532,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Cache<T> {
                             deadline,
                         )
                         .await?;
-                    for part in parts {
-                        let (mut found, e) = reader
-                            .forecast_acquisitions(
-                                key.source(),
-                                key.kind(),
-                                &provider,
-                                &part,
-                                &mut scope,
-                                deadline,
-                            )
+                    let (mut found, e) =
+                        read_partitions(reader, key, &provider, parts, &mut scope, deadline)
                             .await?;
-                        excluded = add(excluded, e)?;
-                        reserve(&mut raw, found.len())?;
-                        raw.append(&mut found);
-                    }
+                    excluded = add(excluded, e)?;
+                    reserve(&mut raw, found.len())?;
+                    raw.append(&mut found);
                     // The older fallback must retain exclusions from every searched newer month.
                     if let Key::Mid(model, code) = key {
                         let mut inputs = Vec::new();
@@ -595,6 +580,37 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Cache<T> {
         });
         Ok((raw, excluded))
     }
+}
+
+/// The acquisitions and excluded groups of `parts` (ascending). Up to [`READ_AHEAD`] lookups
+/// overlap, but results are consumed in partition order: the retained acquisitions, the
+/// partition whose scope totals fail and the first error equal a sequential read. Returning
+/// early drops the lookups still in flight.
+async fn read_partitions<T: IndexListing + Clone>(
+    reader: &Reader<T>,
+    key: &Key,
+    provider: &ProviderKey,
+    parts: impl IntoIterator<Item = String>,
+    scope: &mut super::records::ForecastScope,
+    deadline: Instant,
+) -> Result<(Vec<Fetched>, usize), Error> {
+    use futures_util::{StreamExt, stream};
+    let mut lookups = stream::iter(parts)
+        .map(|part| async move {
+            reader
+                .forecast_lookup(key.source(), key.kind(), provider, &part, deadline)
+                .await
+        })
+        .buffered(READ_AHEAD);
+    let (mut raw, mut excluded) = (Vec::new(), 0usize);
+    while let Some(looked) = lookups.next().await {
+        let mut looked = looked?;
+        scope.admit(&looked.counted)?;
+        excluded = add(excluded, looked.excluded)?;
+        reserve(&mut raw, looked.found.len())?;
+        raw.append(&mut looked.found);
+    }
+    Ok((raw, excluded))
 }
 
 // Keep canonical set/completeness, wall+monotonic expiry, writer epoch, overlay

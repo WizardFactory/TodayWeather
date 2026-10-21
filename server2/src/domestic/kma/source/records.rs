@@ -48,24 +48,50 @@ impl ForecastScope {
         }
         Ok(())
     }
-    fn acquisition(&mut self, records: &[RawRecord]) -> Result<(), Error> {
-        use super::forecast_cache::{PAGE_BYTES, add};
-        self.acquisitions = add(self.acquisitions, 1)?;
-        self.pages = add(self.pages, records.len())?;
-        if self.acquisitions > 2048 || self.pages > 8192 {
+    /// One consumed partition, in partition order. Every total only grows and every violation
+    /// is `Capacity`, so this fails at the same partition as checking each acquisition did.
+    pub(super) fn admit(&mut self, counted: &Counted) -> Result<(), Error> {
+        use super::forecast_cache::add;
+        self.acquisitions = add(self.acquisitions, counted.acquisitions)?;
+        self.pages = add(self.pages, counted.pages)?;
+        self.raw = add(self.raw, counted.raw)?;
+        if counted.oversize
+            || self.acquisitions > 2048
+            || self.pages > 8192
+            || self.raw > 32 * 1024 * 1024
+        {
             return Err(Error::Capacity);
-        }
-        for r in records {
-            if r.bytes.len() > PAGE_BYTES {
-                return Err(Error::Capacity);
-            }
-            self.raw = add(self.raw, r.bytes.len())?;
-            if self.raw > 32 * 1024 * 1024 {
-                return Err(Error::Capacity);
-            }
         }
         Ok(())
     }
+}
+/// Scope totals of one looked-up partition: every acquisition of its S06 set, including one
+/// that yields no [`Fetched`].
+#[derive(Default)]
+pub(super) struct Counted {
+    acquisitions: usize,
+    pages: usize,
+    raw: usize,
+    oversize: bool,
+}
+impl Counted {
+    /// One acquisition with pages of these byte lengths.
+    fn acquisition(&mut self, pages: impl ExactSizeIterator<Item = usize>) -> Result<(), Error> {
+        use super::forecast_cache::{PAGE_BYTES, add};
+        self.acquisitions = add(self.acquisitions, 1)?;
+        self.pages = add(self.pages, pages.len())?;
+        for bytes in pages {
+            self.oversize |= bytes > PAGE_BYTES;
+            self.raw = add(self.raw, bytes)?;
+        }
+        Ok(())
+    }
+}
+/// One partition lookup: acquisitions in S06 order, excluded groups and scope totals.
+pub(super) struct Looked {
+    pub(super) found: Vec<Fetched>,
+    pub(super) excluded: usize,
+    pub(super) counted: Counted,
 }
 /// LIST pages allowed per key and month (1,000 keys each; a month of hourly partitions is 744).
 const LIST_PAGES: usize = 4;
@@ -156,17 +182,16 @@ impl<T: IndexListing + Clone> Reader<T> {
         out.dedup();
         Ok(out)
     }
-    /// One partition at a time. Existing S06 controls bound its decode buffers; scope admission
-    /// precedes any additional retained handle/identity growth in D2.
-    pub(super) async fn forecast_acquisitions(
+    /// One partition. Its S06 limits bound the lookup's records and controls while it is in
+    /// flight; the caller admits its scope totals in partition order before retaining it.
+    pub(super) async fn forecast_lookup(
         &self,
         source: &str,
         kind: &str,
         key: &ProviderKey,
         partition: &str,
-        scope: &mut ForecastScope,
         deadline: Instant,
-    ) -> Result<(Vec<Fetched>, usize), Error> {
+    ) -> Result<Looked, Error> {
         use super::forecast_cache::{copied, reserve};
         let id = catalog(source, kind, key, partition)?;
         let set = match self.store.lookup(&id, deadline).await {
@@ -174,12 +199,19 @@ impl<T: IndexListing + Clone> Reader<T> {
             Ok(LookupOutcome::Incomplete) => return Err(Error::Corrupt("incomplete catalog")),
             // This private path only reads partitions witnessed by LIST. A vanished catalog
             // is an eligible partial answer, not proof of reusable empty canonical state.
-            Err(Error::NotFound) => return Ok((Vec::new(), 1)),
+            Err(Error::NotFound) => {
+                return Ok(Looked {
+                    found: Vec::new(),
+                    excluded: 1,
+                    counted: Counted::default(),
+                });
+            }
             Err(e) => return Err(e),
         };
+        let mut counted = Counted::default();
         let mut out = Vec::new();
         for a in set.acquisitions() {
-            scope.acquisition(a.records())?;
+            counted.acquisition(a.records().iter().map(|r| r.bytes.len()))?;
             let mut ordered = Vec::new();
             reserve(&mut ordered, a.records().len())?;
             ordered.extend(a.records().iter());
@@ -201,7 +233,11 @@ impl<T: IndexListing + Clone> Reader<T> {
                 pages,
             });
         }
-        Ok((out, set.excluded_groups()))
+        Ok(Looked {
+            found: out,
+            excluded: set.excluded_groups(),
+            counted,
+        })
     }
     fn prefix(source: &str, kind: &str, key: &ProviderKey) -> Result<String, Error> {
         Ok(format!(
@@ -446,4 +482,113 @@ pub fn months(from_ms: f64, to_ms: f64) -> Vec<u32> {
         t = (t + 86_400_000.).min(to_ms);
     }
     out
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domestic::kma::source::forecast_cache::PAGE_BYTES;
+    const MIB: usize = 1024 * 1024;
+    /// A partition: its acquisitions, each the byte lengths of its pages.
+    type Partition = Vec<Vec<usize>>;
+    /// The D2 accounting: every acquisition checked in order while partitions were read one at
+    /// a time. The index of the partition whose acquisition failed.
+    fn sequential(parts: &[Partition]) -> Option<usize> {
+        let (mut acquisitions, mut pages, mut raw) = (0usize, 0usize, 0usize);
+        for (i, part) in parts.iter().enumerate() {
+            for acquisition in part {
+                acquisitions += 1;
+                pages += acquisition.len();
+                if acquisitions > 2048 || pages > 8192 {
+                    return Some(i);
+                }
+                for &bytes in acquisition {
+                    if bytes > PAGE_BYTES {
+                        return Some(i);
+                    }
+                    raw += bytes;
+                    if raw > 32 * MIB {
+                        return Some(i);
+                    }
+                }
+            }
+        }
+        None
+    }
+    fn admitted(parts: &[Partition]) -> Option<usize> {
+        let mut scope = ForecastScope::default();
+        for (i, part) in parts.iter().enumerate() {
+            let mut counted = Counted::default();
+            for acquisition in part {
+                counted.acquisition(acquisition.iter().copied()).unwrap();
+            }
+            if let Err(e) = scope.admit(&counted) {
+                assert_eq!(e, Error::Capacity);
+                return Some(i);
+            }
+        }
+        None
+    }
+    #[test]
+    fn partition_totals_keep_every_exact_scope_boundary() {
+        let one = |acquisitions, pages, raw, oversize| Counted {
+            acquisitions,
+            pages,
+            raw,
+            oversize,
+        };
+        for (at, above) in [
+            (one(2048, 0, 0, false), one(1, 0, 0, false)),
+            (one(0, 8192, 0, false), one(0, 1, 0, false)),
+            (one(0, 0, 32 * MIB, false), one(0, 0, 1, false)),
+        ] {
+            let mut scope = ForecastScope::default();
+            scope.admit(&at).unwrap();
+            assert_eq!(scope.admit(&above), Err(Error::Capacity));
+        }
+        let mut page = Counted::default();
+        page.acquisition([PAGE_BYTES].into_iter()).unwrap();
+        ForecastScope::default().admit(&page).unwrap();
+        page.acquisition([PAGE_BYTES + 1].into_iter()).unwrap();
+        assert_eq!(ForecastScope::default().admit(&page), Err(Error::Capacity));
+        // An acquisition without pages still counts toward the 2048.
+        let mut empty = Counted::default();
+        for _ in 0..2049 {
+            empty.acquisition(std::iter::empty()).unwrap();
+        }
+        assert_eq!(ForecastScope::default().admit(&empty), Err(Error::Capacity));
+    }
+    #[test]
+    fn partition_totals_fail_at_the_same_partition_as_per_acquisition_checks() {
+        let mut state = 0x2545_f491_4f6c_dd1d_u64;
+        let mut next = |bound: u64| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state % bound
+        };
+        for case in 0..3000 {
+            // Bias each case toward one of the caps: many acquisitions, many pages, large pages.
+            let (acquisitions, pages, large) = match case % 3 {
+                0 => (40, 2, false),
+                1 => (4, 40, false),
+                _ => (3, 3, true),
+            };
+            let parts: Vec<Partition> = (0..next(120) as usize + 1)
+                .map(|_| {
+                    (0..next(acquisitions))
+                        .map(|_| {
+                            (0..next(pages))
+                                .map(|_| match (large, next(100)) {
+                                    (true, 0) => PAGE_BYTES + 1,
+                                    (true, n) if n < 50 => PAGE_BYTES - next(2) as usize,
+                                    (_, _) => next(64 * 1024) as usize,
+                                })
+                                .collect()
+                        })
+                        .collect()
+                })
+                .collect();
+            assert_eq!(admitted(&parts), sequential(&parts), "case {case}");
+        }
+    }
 }

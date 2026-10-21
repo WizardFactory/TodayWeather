@@ -111,6 +111,24 @@ fn lookback_ms(family: Family) -> f64 {
 }
 /// RSS rows reach two days after their publication day; retention is 216 h before the run.
 const RSS_LOOKBACK_MS: f64 = grid::RETENTION_MS + 4. * DAY_MS;
+/// The catalog store of the forecast views, shared by every view of the source. It admits
+/// the read-ahead of a view build; a raw load beyond `raw.io` is refused rather than queued,
+/// so `raw.io` equals `io` (each lookup loads one record at a time). Small per-lookup records
+/// and controls keep 12 lookups in flight below D2's two large ones.
+fn forecast_limits() -> CatalogLimits {
+    let mut limits = CatalogLimits {
+        io: forecast_cache::READ_AHEAD,
+        cpu: 1,
+        output_bytes: 4 * 1024 * 1024,
+        retained_control_bytes: 1024 * 1024,
+        ..CatalogLimits::default()
+    };
+    limits.raw.io = forecast_cache::READ_AHEAD;
+    limits.raw.cpu = 1;
+    limits.raw.raw_bytes = forecast_cache::PAGE_BYTES;
+    limits.raw.gzip_bytes = forecast_cache::PAGE_BYTES + 65_536;
+    limits
+}
 /// KST months (`YYYYMM`) from [`HISTORY_START_MONTH`] through `now`, ascending.
 pub(crate) fn history_months(now: f64) -> Vec<u32> {
     let end = records::months(now, now)
@@ -263,18 +281,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             acquire,
             locate,
         ));
-        let mut forecast_limits = CatalogLimits {
-            io: 2,
-            cpu: 1,
-            ..CatalogLimits::default()
-        };
-        forecast_limits.raw.io = 2;
-        forecast_limits.raw.cpu = 1;
-        forecast_limits.raw.raw_bytes = forecast_cache::PAGE_BYTES;
-        forecast_limits.raw.gzip_bytes = forecast_cache::PAGE_BYTES + 65_536;
         let forecast_reader = Reader {
             transport: transport.clone(),
-            store: Arc::new(CatalogStore::new(transport.clone(), forecast_limits)?),
+            store: Arc::new(CatalogStore::new(transport.clone(), forecast_limits())?),
         };
         let forecast_cache = forecast_cache::Cache::new(forecast_reader)?;
         Ok(Self {
@@ -1866,6 +1875,24 @@ mod tests {
         ] {
             assert_eq!(at(mx, my), None, "{mx},{my}");
         }
+    }
+    /// Twelve lookups and twelve raw loads (a raw load beyond its permits is refused, not
+    /// queued), each bounded to 4 MiB of records and 1 MiB of controls: 12 x (4 + 1 + 1.0625)
+    /// MiB in flight over all views, below D2's 2 x (32 + 8 + 1.0625) MiB.
+    #[test]
+    fn forecast_store_admits_the_read_ahead_with_small_lookups() {
+        const MIB: usize = 1024 * 1024;
+        let limits = forecast_limits();
+        limits.validate().unwrap();
+        assert_eq!((limits.io, limits.raw.io), (12, 12));
+        assert_eq!((limits.cpu, limits.raw.cpu), (1, 1));
+        assert_eq!(limits.output_bytes, 4 * MIB);
+        assert_eq!(limits.retained_control_bytes, MIB);
+        assert_eq!(limits.raw.raw_bytes, forecast_cache::PAGE_BYTES);
+        assert_eq!(limits.raw.gzip_bytes, forecast_cache::PAGE_BYTES + 65_536);
+        let in_flight = limits.io
+            * (limits.output_bytes + limits.retained_control_bytes + limits.raw.gzip_bytes);
+        assert!(in_flight < 2 * (32 * MIB + 8 * MIB + forecast_cache::PAGE_BYTES + 65_536));
     }
 }
 
