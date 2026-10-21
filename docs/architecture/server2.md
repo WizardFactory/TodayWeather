@@ -4106,8 +4106,10 @@ separate; source views do not cache the final HTTP body or skip native assembly.
 The acquisition future fences only its grid/family, RSS grid or mid-region key
 at entry and retirement, including abort/panic. A bounded registry retains live
 key-state identities; generation-separated flights and final active-writer checks
-prevent stale installation. Other keys keep serving. Request-local own-write
-overlays and original S16 identities are unchanged and are never persisted.
+prevent stale installation. Same-key reconstruction remains request-local while a
+writer runs, without complete S16 identity or cache admission. Retired flights
+rejoin the current generation within the original caller deadline. Other keys
+keep serving. Request-local own-write overlays and original S16 identities are unchanged and are never persisted.
 
 At most 30 seconds after the previous check starts (wall or monotonic time),
 revalidate the searched monthly LIST scope and canonical catalog envelopes.

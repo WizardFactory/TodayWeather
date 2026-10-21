@@ -339,30 +339,39 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Cache<T> {
         if !now.is_finite() {
             return Err("forecast clock".into());
         }
-        {
-            let fence = self.state(&key).map_err(|_| "forecast epoch capacity")?;
-            let mut state = fence.lock().map_err(|_| "forecast epoch")?;
-            if state.poisoned {
-                return Err("forecast epoch capacity".into());
-            }
-            if state.writers == 0
-                && let Some(pin) = self.0.map.get(&key)
+        loop {
             {
-                if pin.value.epoch == state.value && pin.value.fresh(now) {
-                    if pin.value.validated(now) {
-                        return Ok(pin);
+                let fence = self.state(&key).map_err(|_| "forecast epoch capacity")?;
+                let mut state = fence.lock().map_err(|_| "forecast epoch")?;
+                if state.poisoned {
+                    return Err("forecast epoch capacity".into());
+                }
+                if state.writers == 0
+                    && let Some(pin) = self.0.map.get(&key)
+                {
+                    if pin.value.epoch == state.value && pin.value.fresh(now) {
+                        if pin.value.validated(now) {
+                            return Ok(pin);
+                        }
+                    } else {
+                        if let Ok(checked) = pin.value.checked.lock()
+                            && now < checked.wall
+                        {
+                            state.disk_wall_floor = state.disk_wall_floor.max(checked.wall);
+                        }
+                        self.0.map.remove(&key);
                     }
-                } else {
-                    if let Ok(checked) = pin.value.checked.lock()
-                        && now < checked.wall
-                    {
-                        state.disk_wall_floor = state.disk_wall_floor.max(checked.wall);
-                    }
-                    self.0.map.remove(&key);
                 }
             }
+            match self.join(key.clone(), now, until, None).await {
+                Err(reason) if reason == "forecast view boundary" && Instant::now() < until => {
+                    // A concurrent writer or a different selector clock can retire this
+                    // flight. Rejoin the current generation within the original deadline.
+                    tokio::task::yield_now().await;
+                }
+                result => return result,
+            }
         }
-        self.join(key, now, until, None).await
     }
     pub(super) async fn overlay(
         &self,
@@ -424,7 +433,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Cache<T> {
                 let state = fence.lock().map_err(|_| "forecast epoch")?;
                 if pin.value.fresh(now)
                     && (is_overlay
-                        || (!state.poisoned && state.writers == 0 && state.value == epoch))
+                        || (!state.poisoned
+                            && state.value == epoch
+                            && (state.writers == 0
+                                || (!pin.value.complete && pin.value.ids.is_none()))))
                 {
                     Ok(pin)
                 } else {
@@ -612,6 +624,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Cache<T> {
         let state = fence.lock().map_err(|_| Error::Transport)?;
         if state.poisoned {
             return Err(Error::Capacity);
+        }
+        if state.writers != 0 || state.value != epoch {
+            // Request-local reconstruction remains usable while acquisition runs, but
+            // its set cannot attest completeness or enter either canonical cache.
+            view.complete = false;
+            view.ids = None;
         }
         let weight = view.charge.total;
         {
@@ -1646,13 +1664,46 @@ mod retention_tests {
             .await
             .unwrap();
         pause.2.notify_one();
-        assert!(
-            pending.await.unwrap().is_err(),
-            "post-write caller cannot receive the old flight"
-        );
-        assert!(c.0.map.get(&key).is_none());
+        drop(pending.await.unwrap().unwrap());
+        assert_eq!(c.stats().folds, 2, "retired flight requires a fresh build");
         drop(c.get(key, NOW, until()).await.unwrap());
         assert_eq!(c.stats().mapped_entries, 1);
+    }
+    #[tokio::test]
+    async fn active_writer_allows_request_local_reconstruction_without_complete_ids() {
+        struct Pending(Arc<tokio::sync::Notify>);
+        impl fetch::ForecastAcquire for Pending {
+            fn acquire(
+                &self,
+                _: fetch::ForecastRequest,
+            ) -> crate::gateway::BoxFuture<'static, Result<fetch::Published, String>> {
+                let started = self.0.clone();
+                Box::pin(async move {
+                    started.notify_one();
+                    std::future::pending().await
+                })
+            }
+        }
+        let cache = Cache::new(reader(Empty::default())).unwrap();
+        let started = Arc::new(tokio::sync::Notify::new());
+        let writer = cache.wrap(Arc::new(Pending(started.clone())));
+        let task = tokio::spawn(writer.acquire(fetch::ForecastRequest::Rss(
+            crate::domestic::family::WebRequest::town_rss(60, 127).unwrap(),
+        )));
+        started.notified().await;
+        let key = Key::Rss(60, 127);
+        let transient = cache.get(key.clone(), NOW, until()).await.unwrap();
+        assert!(!transient.value.complete);
+        assert!(transient.value.ids.is_none());
+        assert!(cache.0.map.get(&key).is_none());
+        assert_eq!(cache.stats().folds, 1);
+        task.abort();
+        assert!(task.await.unwrap_err().is_cancelled());
+        drop(transient);
+        let canonical = cache.get(key, NOW, until()).await.unwrap();
+        assert!(canonical.value.complete);
+        assert!(canonical.value.ids.is_some());
+        assert_eq!(cache.stats().mapped_entries, 1);
     }
     #[test]
     fn registry_is_bounded_and_cannot_recycle_a_live_state_identity() {

@@ -12,6 +12,11 @@ views/builds/writers so registry eviction cannot recycle a fence. Unrelated town
 and families keep serving from memory. Other observation/station/air/life/warning/
 narrative/zone owners still run; this is not a final HTTP-body cache.
 
+While a same-key acquisition runs, fresh request-local reconstruction can still
+serve and join that acquisition. It carries no complete S16 identity and enters
+neither memory nor SSD. A retired-generation result is retried in the current
+generation within the caller's original deadline.
+
 A view survives arbitrary minute changes until an existing pure selector can
 change it: latest publication/retention anchor, removal of an included oldest
 partition, RSS run, KST day/month or future-fetched visibility. Equality and clock
