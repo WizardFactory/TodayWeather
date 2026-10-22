@@ -104,7 +104,7 @@
       "id": "fold",
       "type": "backend",
       "label": "Fold",
-      "sublabel": "blocking, linear accounting",
+      "sublabel": "blocking, cached Doc weights",
       "sources": [
         {
           "path": "server2/src/domestic/kma/source/forecast_cache.rs",
@@ -219,7 +219,7 @@
       "from": "fold",
       "to": "owner",
       "y": 468,
-      "label": "Same Docs, linear accounting",
+      "label": "Same Docs, cached Doc weights",
       "variant": "return"
     }
   ],

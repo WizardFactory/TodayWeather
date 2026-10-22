@@ -4159,10 +4159,13 @@ one request grew by about 2 s per millisecond of S3 latency. The
   it (D2: 41.06 MiB). A partition above 4 MiB is a `Capacity` error; fixture
   partitions decode to at most about 0.2 MiB. The 12-permit process S3 gate is
   unchanged and shared, so a cold build can occupy it while it reads.
-- Retained-Doc accounting is linear: a Doc keeps its exact weight once known
-  (bounded field sets maintain it; other changes and clones start unknown), so a
-  store no longer re-walks the collection. The same data weighs 8 bytes more per
-  Doc and per stored field. Grid row reads compare date and time without copying.
+- A Doc keeps its exact weight once known (bounded field sets maintain it; other
+  changes and clones start unknown), so a store sums one cached weight per
+  retained Doc instead of walking every Doc's fields: full Doc walks now grow
+  linearly with the stores (768 for 256 stores; D2 67,840). The per-store sum
+  still reads every retained Doc's cached weight. The same data weighs 8 bytes
+  more per Doc and per stored field. Grid row reads compare date and time
+  without copying.
 - A retiring owner returns its 192 MiB workspace before its slot wakes the next
   owner. D2 released the slot first, and an owner woken on another worker could
   fail with `forecast cache: raw storage: Capacity` under load.
