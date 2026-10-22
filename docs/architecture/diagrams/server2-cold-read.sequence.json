@@ -13,7 +13,7 @@
     "column_fit": "spread",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "8946cecd899228b8585bfc2c16de3fd6f1b20321",
+      "revision": "78bd845c21ba83cfb98b124419c180c538d73c14",
       "link_mode": "local-only"
     }
   },
@@ -104,7 +104,7 @@
       "id": "fold",
       "type": "backend",
       "label": "Fold",
-      "sublabel": "blocking, cached Doc weights",
+      "sublabel": "deferred outer Docs",
       "sources": [
         {
           "path": "server2/src/domestic/kma/source/forecast_cache.rs",
@@ -117,6 +117,12 @@
           "line": 175,
           "end_line": 300,
           "label": "Exact cached Doc weight"
+        },
+        {
+          "path": "server2/src/domestic/kma/source/grid_fold.rs",
+          "line": 1,
+          "end_line": 178,
+          "label": "Eager validation and deferred Docs"
         }
       ]
     }
@@ -219,7 +225,7 @@
       "from": "fold",
       "to": "owner",
       "y": 468,
-      "label": "Same Docs, cached Doc weights",
+      "label": "Strict rows; final outer Docs",
       "variant": "return"
     }
   ],
@@ -230,7 +236,8 @@
       "items": [
         "Lookups overlap; results are consumed in partition order, so Docs, order and errors equal the sequential read.",
         "Store admission rises 2 to 12 (raw loads too); per-lookup output falls 32 to 4 MiB and controls 8 to 1 MiB: in-flight reads of all views stay within 72.75 MiB (D2: 82.125 MiB).",
-        "No new mode, timer, retry or provider call."
+        "No new mode, timer, retry or provider call.",
+        "Short/Shortest keep eager row/byte/count checks; only retained outer Docs are materialized. Current keeps its eager merge."
       ]
     },
     {
