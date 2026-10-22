@@ -5630,12 +5630,12 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <div class="card">
         <div class="card-header">
           <div class="card-dot slate"></div>
-          <h3>Local evidence only</h3>
+          <h3>Loopback evidence</h3>
         </div>
         <ul>
           <li>130 partitions at 10 ms per operation: 0.55 s with 12 lookups in flight, 3.9 s sequential.</li>
-          <li>Request at a modeled 10 ms: views ready after 3.1 s in a running server (D2: none within its 8 s owner bound); the 3 s deadline is still missed.</li>
-          <li>Seoul t3.small, real S3 and TLS latency are not yet measured.</li>
+          <li>Local, modeled 10 ms: views ready after 3.1 s in a running server (D2: none within its 8 s owner bound); the 3 s deadline is still missed.</li>
+          <li>Seoul t3.small: views ready after 4.6 s even at 0 ms (D2: about 3 of 7 by its 8 s bound); fold CPU sets the floor. Real S3 and TLS are not measured.</li>
         </ul>
       </div>
     </div>

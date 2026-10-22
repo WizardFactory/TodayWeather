@@ -4137,7 +4137,7 @@ These are local source/cache results, not complete API parity, host p95 or an
 eligible rollback release. See the [operator guide](../operations/server2-domestic-cache.md)
 and [selected verification](../evidence/tasks/issue-2819-domestic-warm-cache/verification.md).
 
-### D2 empty-cache reads (#2849, local candidate)
+### D2 empty-cache reads (#2849)
 
 An empty forecast cache rebuilds a view from every partition in its lookback; the
 Seoul fixture town needs about 700 partition lookups (about 2,220 forecast GETs).
@@ -4184,7 +4184,19 @@ bound with at most one of seven views; at 20 ms the running-server rebuild needs
 the 12-permit process gate, a fresh request's 3,628 S3 operations cannot finish in
 under about 3.0 s at 10 ms, and a running-server rebuild's 2,245 in under about
 1.9 s, so the 2.5-second goal needs fewer S3 operations per view or more S3
-concurrency, both separate decisions. These are not host p95, real S3/TLS or
-capacity results. See the
+concurrency, both separate decisions.
+
+On the Seoul t3.small (2 vCPUs, Unlimited; same loopback peer on the same host, so
+the peer shares the CPUs) no binary answered an empty-cache request inside 3 s at
+0, 10 or 20 ms, in 20 fresh-process and 10 running-server runs per cell. Views
+were ready in a running server after 4.6 / 5.3 / 6.4 s with the candidate and
+6.7 / 8.2 / 8.3 s with D2 (D2's owners stop at their 8 s bound with a median of 3.5, 1 and
+0.5 of 7 views mapped);
+in a fresh process after 5.7 / 6.6 / 8.7 s and 7.7 / 8.2 / 8.4 s. Even at 0 ms
+the candidate needs 4.6 s, so on this host class parse and fold CPU, not S3
+concurrency, sets the floor. An uncommitted variant with a 24-permit gate and
+read-ahead measured 4.6 / 4.8 / 5.3 s; the largest resident set of any process
+stayed about 88 MiB for all three. These are loopback measurements, not real
+S3/TLS, p95 capacity or production results. See the
 [operator guide](../operations/server2-domestic-cache.md#measure-empty-cache-builds-at-modeled-s3-latency)
 and [selected verification](../evidence/tasks/issue-2849-cold-build-speed/verification.md).

@@ -3,9 +3,9 @@
 Scope: #2849 on the D2 branch (PR #2841 head `307defeb706886217ab67ea858dc7c7b0435752f`).
 Ordered concurrent partition lookups, forecast store admission and per-lookup bounds,
 an exact cached Doc weight, borrowed grid row reads and the owner hand-off order. Local
-pre-merge evidence on macOS arm64 (10 cores) with the owned loopback S3 peer and
-modeled per-operation latency; it is not a Seoul host, real S3/TLS, p95 capacity or
-production result. Raw logs, receipts and copied executables stay in the ignored task
+pre-merge evidence with the owned loopback S3 peer and modeled per-operation latency,
+on macOS arm64 (10 cores) and on one Seoul t3.small; it is not a real S3/TLS, p95
+capacity or production result. Raw logs, receipts and copied executables stay in the ignored task
 record.
 
 ## Candidate and input identities
@@ -20,6 +20,8 @@ record.
 | Matrix tool (`54aad593`) | `1da1ac083483d0ce1cd9c407571e54b668b84402c24e1b629351bbb676db46fe` |
 | Loopback peer | `66aa32d8ef2fef5237d6b5824eb745966cc127668f6c58069389c5735415d9de` |
 | Original fixture manifest (730 acquisitions / 851 pages) | `11606b79c26365e4ba8a5a906d5801f717845f853bafc971c2f099d27b7bbe3f` |
+| SM3 static musl examples: D2 + harness / candidate / `gate24` | `dddbc035a5277d08cc330c8e03b37f926e0a619873351317baaca7a5dd805859` / `ca42aa82cb6bdf4371db5ec4d4b9f5b8aef60f2513d7dee153fd42ef31e1c311` / `408a0cf2ed98e438b9219b0afa2a6e74c5a5e2a84aba509cb286cd6a97cdf116` |
+| SM3 host package / retrieved results archive | `1104f185e4e5fc6c2de1890832f6e7d97a8cb152250e238f741b4a3bb1c1109a` / `84c2064a51396c120fba8b16f3e30f9f6fb5e1bee9cedf63738e66ca8272297f` |
 
 ## Behavior checks
 
@@ -94,19 +96,70 @@ unchanged 12-permit process S3 gate, 2,245 operations at 10 ms need at least
 2,245 × 10 ms ÷ 12 ≈ 1.9 s and 3,628 need ≈ 3.0 s before any fold work, so the
 remaining gap needs fewer S3 operations per view or more S3 concurrency.
 
+## Seoul t3.small host (SM3)
+
+One task-owned, role-less Spot t3.small (Unlimited, 2 vCPUs, 1.9 GiB, Amazon Linux
+2023 kernel 6.18) in ap-northeast-2d, SSH from the operator address only, egress
+revoked before the workload, a 4-hour termination timer; 2026-10-22 02:08–03:51 UTC,
+then terminated with its security group and root volume deleted (read back). The
+workload ran under a systemd unit with 1,536 MiB memory and no swap. Static musl
+x86-64 builds of the same three sources: D2 + harness (`307defeb` product code with
+the final example), the candidate (`54aad593`), and an uncommitted measurement
+variant `gate24` (the candidate with the process gate, `READ_AHEAD` and the example
+gate at 24 and an idle connection pool of 32). The packaged peer copy accepted 32
+connections (tracked default 16) so the variant is not refused; the other two keep
+at most 16 open. The matrix tool is the `207b176d` version. Matrix: 20 fresh-process
+`http` runs and 10 `aged` runs per binary and delay, interleaved, no harness problem.
+The Python peer runs on the same two vCPUs as the server, so these times include its
+CPU; real S3 would not.
+
+No request of any binary was answered inside the 3 s deadline at 0, 10 or 20 ms
+(0 of 270 cold requests and 0 of 90 aged rebuilds), so no body could be compared on
+the host; the same Linux builds returned the reference body inside an emulated
+amd64 container during qualification. Views ready (median, p95 in parentheses),
+mapped views of 7 where fewer:
+
+| Delay | Request | D2 + harness | Candidate | gate24 variant |
+| --- | --- | --- | --- | --- |
+| 0 ms | running server | 6.73 s (7.02), 3.5 of 7 | 4.63 s (4.73) | 4.58 s (4.71) |
+| 10 ms | running server | 8.15 s (9.46), 1 of 7 | 5.32 s (5.45) | 4.77 s (4.93) |
+| 20 ms | running server | 8.28 s (8.29), 0.5 of 7 | 6.44 s (6.68) | 5.28 s (5.43) |
+| 0 ms | fresh process | 7.65 s (7.93), 3 of 7 | 5.73 s (5.88) | 5.55 s (5.67) |
+| 10 ms | fresh process | 8.24 s (9.93), 3 of 7 | 6.58 s (6.70) | 5.75 s (5.93) |
+| 20 ms | fresh process | 8.36 s (8.39), 2 of 7 | 8.71 s (8.93), 6 of 7 | 6.28 s (6.39) |
+
+D2's times are its owners stopping at the 8-second bound with the views shown; D2
+read fewer objects for the same reason (1,875 / 1,402 / 739 forecast operations
+against the candidate's 2,227). The candidate's floor at 0 ms, 4.6 s in a running
+server, is parse and fold CPU on this host class (about 4.5 times the local 1.03 s),
+not S3 concurrency: the 2.5-second goal is not met on t3.small at any modeled
+delay. A 24-permit gate removes most of the latency-dependent part (10 ms: 5.32 →
+4.77 s; 20 ms: 6.44 → 5.28 s) and does not lower the floor. The largest resident
+set of any process (server, peer or tool) was 78.8 MiB for D2, 87.5 MiB for the
+candidate and 88.1 MiB for `gate24` in the per-binary memory runs; the unit's
+`memory.peak` (1.46 GiB) includes the page cache of 2.4 GiB of written run output
+and is not a process size. CloudWatch showed at most 74 % average CPU per 5 minutes
+and no surplus credits charged at the final snapshot; the host cost is estimated at
+about USD 0.10 (Spot, surplus credits, root volume, public IPv4 and the result
+download), not an invoice.
+
 ## Tests and gates on the candidate
 
 On the candidate `server2/` tree: `cargo fmt --check` and all-target Clippy with
 warnings denied pass; the placement gate passes for `ColdBuildSpeed2849.json`; the
 peer self-check (with its latency control), 6 matrix-tool tests and 6 D2 runner tests
-pass; the 8 cold-read integration tests and 63 source unit tests pass. The whole
-workspace with 4 test threads and `--no-fail-fast`: 1,112 passed, 6 ignored, 1 failed.
-The failure, `runtime_services::inventory::factory_national_prose_reader_survives_factory_reconstruction`,
-fails the same way on the D2 head `307defeb` and passes on its merge base `c1ae9082`:
-it is pre-existing in D2 and unrelated to this change (two owned flights panic during
-`/v000903/nation/KR`). With that one test skipped by name, the workspace passes:
-1,112 passed, 6 ignored, 0 failed across 30 test binaries. `tools/test_placement.py` did not run here: its self-tests call
-`rustc +1.99.0`, which needs the rustup proxy this host lacks.
+pass; the 8 cold-read integration tests and 63 source unit tests pass. The D2 test
+`runtime_services::inventory::factory_national_prose_reader_survives_factory_reconstruction`
+fails on the D2 head `307defeb` and passes on its merge base `c1ae9082` (two owned
+flights panic during `/v000903/nation/KR`); its fixture is ported unchanged from
+PR #2851 (`0c163912`, test only), after which `runtime_services` passes 48/0. At
+`7eadefb6` the whole workspace with 4 test threads and `--no-fail-fast` passed
+1,111 tests with 6 ignored and failed 2 `domestic::source_s3` tests with
+`address_unavailable`: these tests alone leave about 33,500 loopback TIME_WAIT
+sockets on macOS, the D2 base peaks at the same count and fails the same way when
+run back to back, and the `domestic` binary rerun alone passes 181/0. PR CI at
+`7eadefb6` (Linux) passes every check. `tools/test_placement.py` did not run here:
+its self-tests call `rustc +1.99.0`, which needs the rustup proxy this host lacks.
 
 Base observations: D2 CI run `39243883911` failed 4 `domestic` tests with
 `forecast cache: raw storage: Capacity`, the owner hand-off defect fixed here. With
@@ -116,9 +169,8 @@ threads: base 173 passed, candidate 181 passed (8 new), none failed.
 
 ## Limits
 
-The latency is modeled on loopback: no TLS, connection setup or S3 variance, and the
-local CPU is faster than the Seoul t3.small. The Seoul host matrix has not run; it
-waits for AK's launch confirmation. The process S3 gate (12) is unchanged and shared,
+The latency is modeled on loopback: no TLS, connection setup or S3 variance, and on
+the Seoul host the peer shares the server's two vCPUs. The process S3 gate (12) is unchanged and shared,
 so one cold build can hold all its permits while it reads. Logical weights of the same
 data grow by 8 bytes per Doc and per stored field. Real-partition sizes are taken from
 the fixture (at most about 0.2 MiB decoded against the new 4 MiB bound).

@@ -19,6 +19,7 @@ Intended `server2/` paths:
 | `server2/src/domestic/kma/source/items.rs`, `rss.rs` (conditional) | only if the profile of the new baseline shows a remaining shared per-read copy; unchanged otherwise |
 | `server2/tests/domestic.rs`, `server2/tests/domestic/forecast_cold_read.rs` (new) | delayed/counting transport double, ordered-concurrency, fault, cap and cancellation tests |
 | `server2/tests/storage/catalog_peer.py` | runtime `latency` control of the loopback peer for the measurement harness, with its own loopback self-check |
+| `server2/tests/runtime_services/inventory.rs` | correction 2026-10-22: D2 factory prose reconstruction fixture ported unchanged from PR #2851 (`0c163912`, test only) so stacked CI reaches a verdict |
 | `server2/examples/domestic_warm_cache_smoke.rs` | transport gate 4 → 12 (the product's `S3_IN_FLIGHT`), `aged` mode (cold, then a request after the 30 s freshness bound) |
 | `server2/tools/domestic_warm_cache_smoke.py` (+ its test only if affected) | the runner records the example's S3 transport admission (`s3_transport_admission`), which becomes 12 |
 | `server2/tools/cold_build_matrix.py`, `server2/tools/test_cold_build_matrix.py` (new) | repeatable base-versus-candidate matrix at modeled S3 delays, with pure report-check tests |
