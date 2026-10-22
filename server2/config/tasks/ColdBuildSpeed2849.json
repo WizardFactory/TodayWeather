@@ -2,9 +2,9 @@
   "task": "ColdBuildSpeed2849",
   "stable_task": "issue-2849-cold-build-speed",
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/2849",
-  "status": "local implementation under the canonical SDLC stages; external writes pending the pre-merge authority record",
+  "status": "pre-merge under the canonical SDLC stages (AK delegation 2026-10-22): PR #2852 stacked on #2841; no merge or deployment",
   "base": "307defeb706886217ab67ea858dc7c7b0435752f",
-  "scope": "Empty-cache D2 forecast view build: ordered concurrent partition lookups (READ_AHEAD 12) with forecast store admission 12/12, 4 MiB output and 1 MiB controls per lookup; exact cached Doc weight and borrowed row lookup in the fold; latency control of the owned loopback peer, aged smoke mode and a base-versus-candidate matrix tool. No process S3 gate, owner/waiter, lookback, retention, freshness, provider, mode, timer or production/merge change.",
+  "scope": "Empty-cache D2 forecast view build: ordered concurrent partition lookups (READ_AHEAD 12) with forecast store admission 12/12, 4 MiB output and 1 MiB controls per lookup; exact cached Doc weight and borrowed row lookup in the fold; latency control of the owned loopback peer, aged smoke mode and a base-versus-candidate matrix tool. No process S3 gate, owner/waiter, lookback, retention, freshness, provider, mode, timer or production/merge change. Correction: the factory prose reconstruction test fixture of D2 is ported unchanged from PR #2851 (test only) so the stacked CI reaches a verdict.",
   "server2_paths": [
     "server2/config/tasks/ColdBuildSpeed2849.json",
     "server2/src/domestic/kma/source/forecast_cache.rs",
@@ -21,7 +21,8 @@
     "server2/tools/domestic_warm_cache_smoke.py",
     "server2/tools/test_domestic_warm_cache_smoke.py",
     "server2/tools/cold_build_matrix.py",
-    "server2/tools/test_cold_build_matrix.py"
+    "server2/tools/test_cold_build_matrix.py",
+    "server2/tests/runtime_services/inventory.rs"
   ],
   "outside": [
     {
