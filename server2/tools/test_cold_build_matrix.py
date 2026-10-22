@@ -101,6 +101,11 @@ class Report(unittest.TestCase):
             'wrong body': (rows_of('c', 'aged', 0, 1, [record('cold'), record('aged', sha='e' * 64)]), 0),
             'continued after failure': (rows_of('c', 'http', 0, 1, [record('cold', status=502), record('warm1')]), 101),
             'phase order': (rows_of('c', 'aged', 0, 1, [record('aged'), record('cold')]), 0),
+            # A cut cold request never excuses a hung or killed child, or a missing aged rebuild.
+            'timeout after a cut aged cold': (rows_of('c', 'aged', 0, 1, [record('cold', status=502, sha='x')]), 'TIMEOUT'),
+            'aged rebuild missing after a cut cold': (rows_of('c', 'aged', 0, 1, [record('cold', status=502, sha='x')]), 101),
+            'timeout after a cut http cold': (rows_of('c', 'http', 0, 1, [record('cold', status=502, sha='x')]), 'TIMEOUT'),
+            'signal after a cut http cold': (rows_of('c', 'http', 0, 1, [record('cold', status=502, sha='x')]), -9),
         }
         for name, (rows, code) in cases.items():
             with self.subTest(name):

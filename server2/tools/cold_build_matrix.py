@@ -126,7 +126,15 @@ def problems(rows, exits, reference):
         if not phases or phases != MODES[mode][:len(phases)]:
             found.append(f'{where}: phases {list(phases)}, exit {code}')
             continue
+        # A hung or killed child is never a measured result.
+        if code == 'TIMEOUT' or (isinstance(code, int) and code < 0):
+            found.append(f'{where}: child {code} after {list(phases)}')
+            continue
         failed = [r for r in mine if r['status'] != 200]
+        # The aged mode answers its rebuild even after a cut cold request.
+        if mode == 'aged' and len(phases) < len(MODES[mode]):
+            found.append(f'{where}: phases {list(phases)}, exit {code}')
+            continue
         # Only the aged rebuild runs after a cut cold request (the example's rule).
         if failed and failed[0] is not mine[-1] and not (mode == 'aged' and failed[0]['phase'] == 'cold'):
             found.append(f'{where}: continued after a failed {failed[0]["phase"]}')
