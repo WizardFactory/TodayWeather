@@ -958,6 +958,10 @@ fn coord_doc(c: Coord) -> Val {
 pub struct GridDocs {
     docs: Vec<Doc>,
 }
+#[path = "grid_fold.rs"]
+mod fold;
+pub(super) use fold::DeferredGridDocs;
+
 impl GridDocs {
     pub(super) fn save_bounded(
         &mut self,

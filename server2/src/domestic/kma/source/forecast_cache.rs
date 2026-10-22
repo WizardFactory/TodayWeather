@@ -736,6 +736,7 @@ fn fold_grid(
         Family::Short => schedule::Family::Short,
     };
     let mut docs = super::GridDocs::default();
+    let mut deferred = super::grid::DeferredGridDocs::default();
     for f in raw.iter().filter(|f| f.fetched_at_ms as f64 <= now) {
         let Some(p) = super::partition_publication(&f.partition) else {
             continue;
@@ -763,18 +764,29 @@ fn fold_grid(
                 reserve(usable, 1)?;
                 usable.push(copied(&f.partition)?);
             }
-            docs.save_bounded(family, rows)?;
+            if family == Family::Current {
+                docs.save_bounded(family, rows)?;
+            } else {
+                deferred.save(family, rows)?;
+            }
         }
     }
-    if let Some(latest) = sf.latest(now as i64) {
+    let anchor = sf.latest(now as i64).map(|latest| {
         let anchor = if family == Family::Shortest {
             sf.request_publication(latest)
         } else {
             latest
         };
-        docs.retain(schedule::to_ms(anchor) as f64);
+        schedule::to_ms(anchor) as f64
+    });
+    if family == Family::Current {
+        if let Some(anchor) = anchor {
+            docs.retain(anchor);
+        }
+        Ok(docs.into_answer())
+    } else {
+        deferred.finish(family, anchor)
     }
-    Ok(docs.into_answer())
 }
 fn fold_rss(
     coord: Coord,

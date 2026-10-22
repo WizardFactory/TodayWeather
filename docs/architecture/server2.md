@@ -4201,3 +4201,22 @@ stayed about 88 MiB for all three. These are loopback measurements, not real
 S3/TLS, p95 capacity or production results. See the
 [operator guide](../operations/server2-domestic-cache.md#measure-empty-cache-builds-at-modeled-s3-latency)
 and [selected verification](../evidence/tasks/issue-2849-cold-build-speed/verification.md).
+
+### Deferred outer Grid Docs (#2849, stacked follow-up to #2852)
+
+The cold-build fold keeps eagerly validated, schema-cast data for Short and
+Shortest in an indexed accumulator. Publication fences and each pre-retention
+row/count/byte admission still run in acquisition order. A virtual outer-Doc
+ledger mirrors the eager saver, including the temporary coordinate charge on
+updates. The data vector retains the eager collection-root layout; slot/index
+metadata is bounded by the same 4,096-key cap. Unknown Row fields are discarded
+after validation. Final outer Docs are built once for retained winners. Current
+continues its eager missing-field merge. The bounded parser transfers Node keys
+and scalar Strings to Items while retaining the original conservative charges,
+unknown-field identity, duplicate and page rules.
+
+This reduces CPU work without changing the S3 request count, cache lifetime,
+workspace/admission limits or deadlines. See the [selected evidence](../evidence/tasks/issue-2849-structural-fold/verification.md)
+and [cold-read flow](diagrams/server2-cold-read.html). The overall 2.5-second
+p95 objective remains unmet; local loopback timings do not establish EC2 or real
+S3 latency.

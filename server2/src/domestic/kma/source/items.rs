@@ -213,6 +213,24 @@ pub(super) fn bounded(pages: &[&[u8]]) -> Result<Option<Vec<Item>>, crate::stora
                 None
             }
         }
+        fn take(&mut self, k: &str) -> Option<Node> {
+            if let Self::Obj(o) = self {
+                o.iter_mut()
+                    .find(|(n, _)| n == k)
+                    .map(|(_, v)| std::mem::replace(v, Self::Null))
+            } else {
+                None
+            }
+        }
+        fn into_scalar(self) -> Option<String> {
+            Some(match self {
+                Self::Str(s) => s,
+                Self::Null => String::new(),
+                Self::Bool(b) => b.to_string(),
+                Self::Num(n) => js_number(n),
+                _ => return None,
+            })
+        }
         fn scalar(&self) -> Result<Option<String>, Error> {
             Ok(Some(match self {
                 Self::Str(s) => copied(s)?,
@@ -358,7 +376,7 @@ pub(super) fn bounded(pages: &[&[u8]]) -> Result<Option<Vec<Item>>, crate::stora
             return Err(Error::Capacity);
         }
         let mut d = serde_json::Deserializer::from_slice(bytes);
-        let node = match (Seed {
+        let mut node = match (Seed {
             plan: &mut plan,
             depth: 1,
         })
@@ -382,7 +400,7 @@ pub(super) fn bounded(pages: &[&[u8]]) -> Result<Option<Vec<Item>>, crate::stora
         {
             return Ok(None);
         }
-        let Some(body) = response.get("body") else {
+        let Some(mut body) = node.take("response").and_then(|mut r| r.take("body")) else {
             return Ok(None);
         };
         let Some(total) = body
@@ -405,16 +423,20 @@ pub(super) fn bounded(pages: &[&[u8]]) -> Result<Option<Vec<Item>>, crate::stora
         if total > 4995 {
             return Err(Error::Capacity);
         }
-        let Some(list) = body.get("items").and_then(|i| i.get("item")) else {
+        let Some(list) = body.take("items").and_then(|mut i| i.take("item")) else {
             return Ok(None);
         };
-        let refs: &[Node] = match list {
-            Node::Arr(a) => a,
-            other => std::slice::from_ref(other),
+        let (mut many, mut one) = match list {
+            Node::Arr(a) => (Some(a.into_iter()), None),
+            other => (None, Some(other)),
         };
+        let count = many.as_ref().map_or(1, ExactSizeIterator::len);
         let mut converted = Vec::new();
-        reserve(&mut converted, refs.len())?;
-        for item in refs {
+        reserve(&mut converted, count)?;
+        for item in std::iter::from_fn(|| match &mut many {
+            Some(a) => a.next(),
+            None => one.take(),
+        }) {
             let Node::Obj(fields) = item else {
                 return Ok(None);
             };
@@ -435,17 +457,17 @@ pub(super) fn bounded(pages: &[&[u8]]) -> Result<Option<Vec<Item>>, crate::stora
                 if !plan.take(
                     k.len()
                         + 64
-                        + match v {
+                        + match &v {
                             Node::Str(s) => s.len(),
                             _ => 32,
                         },
                 ) {
                     return Err(Error::Capacity);
                 }
-                let Some(value) = v.scalar()? else {
+                let Some(value) = v.into_scalar() else {
                     return Ok(None);
                 };
-                out.push((copied(k)?, value));
+                out.push((k, value));
             }
             out.sort_by(|a, b| a.0.cmp(&b.0));
             converted.push(Item(out));
@@ -696,5 +718,35 @@ mod bounded_tests {
         ];
         assert_eq!(bounded(&refs).unwrap(), items(&refs));
         assert_eq!(bounded(&refs).unwrap().unwrap().len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod structural_parser_contract_tests {
+    use super::*;
+    #[test]
+    fn structural_parser_scalars_escapes_unknown_fields_and_duplicate_json_keys() {
+        let scalars = [
+            r#""plain""#,
+            r#""line\nwith\"escape""#,
+            "null",
+            "true",
+            "-0",
+            "1.234567890123456e40",
+            r#""\uD83D\uDE00""#,
+        ];
+        for scalar in scalars {
+            let raw = format!(
+                r#"{{"response":{{"header":{{"resultCode":"00"}},"body":{{"totalCount":1,"pageNo":1,"numOfRows":999,"items":{{"item":[{{"category":"old","category":"T1H","baseDate":"20260924","providerExtra":{scalar},"fcstValue":{scalar}}}]}}}}}}}}"#
+            );
+            let refs = [raw.as_bytes()];
+            assert_eq!(bounded(&refs).unwrap(), items(&refs), "{scalar}");
+        }
+        for raw in [
+            b"{invalid".as_slice(),
+            br#"{"response":{"header":{"resultCode":"99"}}}"#.as_slice(),
+        ] {
+            assert_eq!(bounded(&[raw]).unwrap(), items(&[raw]));
+        }
     }
 }

@@ -75,3 +75,14 @@ The original supporting zone fixture uses numOfRows 999; the existing zone parse
 The cold native flow invokes 196 denied observation stubs (194 web, 2 ASOS); warm adds 0. External provider calls and geocoder calls are 0. Other absent optional inputs and their counters remain in the record. Full source-Doc goldens and repeated HTTP body identity do not establish complete production API parity, live-provider behavior, concurrent p95, EC2 capacity or an eligible rollback bundle.
 
 The original debug 8-second owner timeout, pre-correction cold 502 and overbroad warm-checker exit 1 remain failed evidence. The current success is a new run after the bounded duplicate-check correction and an exact cache-boundary checker correction, not a relabeling of those failures. Use the [selected verification record](../evidence/tasks/issue-2819-domestic-warm-cache/verification.md) and the separate S19/S20 gates before any operational decision.
+
+## Structural fold follow-up to #2852
+
+Short/Shortest now defer outer-document construction until after revision
+selection and retention, while still performing eager strict-row validation and
+the original pre-retention byte/count admissions. Current keeps its eager merge.
+The parser moves already validated strings into Items with unchanged charges.
+No new environment variable, data format or operator action is introduced.
+See [verification and limits](../evidence/tasks/issue-2849-structural-fold/verification.md).
+Revert this child change to restore #2852's fold/parser; no stored-data migration
+is required. The 3-second request and 8-second owner deadlines are unchanged.

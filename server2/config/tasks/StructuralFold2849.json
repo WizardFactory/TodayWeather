@@ -1,0 +1,56 @@
+{
+  "task": "StructuralFold2849",
+  "stable_task": "issue-2849-structural-fold",
+  "base": "bd7122ae55fa87106b607e67c0b38f5e733219b2",
+  "scope": "Behavior-preserving Short/Shortest fold and bounded parser ownership optimization. Stacked on PR #2852; no lifetime, S3 schema, admission limit or deadline changes.",
+  "server2_paths": [
+    "server2/config/tasks/StructuralFold2849.json",
+    "server2/src/domestic/kma/source/grid.rs",
+    "server2/src/domestic/kma/source/grid_fold.rs",
+    "server2/src/domestic/kma/source/items.rs",
+    "server2/src/domestic/kma/source/forecast_cache.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2849-structural-fold.md",
+      "category": "documentation",
+      "reason": "Task contract, architecture/operations explanation or selected verification evidence"
+    },
+    {
+      "path": "specs/issue-2849-structural-fold.md",
+      "category": "documentation",
+      "reason": "Task contract, architecture/operations explanation or selected verification evidence"
+    },
+    {
+      "path": "plans/issue-2849-structural-fold.md",
+      "category": "documentation",
+      "reason": "Task contract, architecture/operations explanation or selected verification evidence"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Task contract, architecture/operations explanation or selected verification evidence"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-cold-read.sequence.json",
+      "category": "documentation",
+      "reason": "Task contract, architecture/operations explanation or selected verification evidence"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-cold-read.html",
+      "category": "documentation",
+      "reason": "Task contract, architecture/operations explanation or selected verification evidence"
+    },
+    {
+      "path": "docs/operations/server2-domestic-cache.md",
+      "category": "documentation",
+      "reason": "Task contract, architecture/operations explanation or selected verification evidence"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2849-structural-fold/verification.md",
+      "category": "documentation",
+      "reason": "Task contract, architecture/operations explanation or selected verification evidence"
+    }
+  ],
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2849"
+}
