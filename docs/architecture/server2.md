@@ -4177,8 +4177,8 @@ sequential estimate; the fold of `short` falls from 1,171 to 687 ms and `shortes
 from 418 to 297 ms with all 13 golden Docs unchanged. An empty-cache request at 0 ms
 takes 1.10 s instead of 1.78 s in a fresh process and 1.03 s instead of 1.52 s in a
 running server whose views went stale. At a modeled 10 ms the candidate's views are
-ready after 3.1 s in a running server (one of five such requests answered inside
-3 s) and after 4.7 s in a fresh process, while D2's owners stop at their 8-second
+ready after 3.1 s in a running server (one of five such requests answered 200, at
+a client-measured 3.003 s) and after 4.7 s in a fresh process, while D2's owners stop at their 8-second
 bound with at most one of seven views; at 20 ms the running-server rebuild needs
 5.4 s. Through
 the 12-permit process gate, a fresh request's 3,628 S3 operations cannot finish in

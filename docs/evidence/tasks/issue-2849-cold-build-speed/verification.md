@@ -86,7 +86,7 @@ the owners started by the request were idle, measured outside the request timing
 | 0 ms | fresh process | 200 in 1,784 ms (2,195) | 200 in 1,096 ms (1,413) |
 | 0 ms | running server | 200 in 1,516 ms (1,606) | 200 in 1,026 ms (1,160) |
 | 10 ms | fresh process | 502 at 3.0 s; owners stop at the 8 s bound with 1 of 7 views | 502 at 3.0 s; 7/7 views ready at 4.66 s (4.75) |
-| 10 ms | running server | 502 at 3.0 s; 0 of 7 views | 7/7 views ready at 3.12 s (3.14); 1 of 5 answered 200 inside 3 s, 4 answered 502 |
+| 10 ms | running server | 502 at 3.0 s; 0 of 7 views | 7/7 views ready at 3.12 s (3.14); 1 of 5 answered 200 (client-measured 3.003 s), 4 answered 502 |
 | 20 ms | fresh process | 502 at 3.0 s; 2 of 7 views | 502 at 3.0 s; 6 of 7 views by 8.02 s |
 | 20 ms | running server | 502 at 3.0 s; 0 of 7 views | 502 at 3.0 s; 7/7 views ready at 5.41 s |
 
@@ -130,9 +130,11 @@ where fewer:
 | 10 ms | fresh process | 8.24 s (9.93), 3 of 7 | 6.58 s (6.70) | 5.75 s (5.93) |
 | 20 ms | fresh process | 8.36 s (8.39), 2 of 7 | 8.71 s (8.93), 6 of 7 | 6.28 s (6.39) |
 
-D2's owners went idle with only the views shown mapped and read fewer objects
-(1,875 / 1,402 / 739 forecast operations against the candidate's 2,227). At 10 and
-20 ms they reached the 8-second owner bound; at 0 ms they went idle earlier, and two
+D2's owners went idle with only the views shown mapped and read fewer objects:
+1,875 / 1,402 / 739 forecast operations per fresh-process request and 1,876 / 1,471 /
+773 per running-server rebuild, against the candidate's 2,227. At 10 and 20 ms they
+went idle at or after the 8-second owner bound (two 10 ms rebuilds only at 9.46 s);
+at 0 ms they went idle earlier, and two
 of D2's ten 0 ms running-server rebuilds failed early (502 after 2.21 and 2.37 s,
 with 2 and 4 views mapped). The info-level log records no cause for these early
 stops: they are consistent with the owner hand-off defect fixed here, but that is
