@@ -4,7 +4,7 @@
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/2850",
   "status": "implementation and isolated pre-merge verification; no merge/deployment/live S3/provider authority",
   "base": "307defeb706886217ab67ea858dc7c7b0435752f",
-  "scope": "Per-key forecast fences, selector intervals,30s catalog-only renewal and shared disposable folded-view disk restoration. Preserve wire and S16 identities; one process, no new mode/dependency/provider/legacy logic.",
+  "scope": "Per-key forecast fences, selector intervals,30s catalog-only renewal and shared disposable folded-view disk restoration. Preserve wire and S16 identities; one process, no new mode/dependency/provider/legacy logic. Test-only sequential city preparation and per-phase runtime teardown for the fixed-time factory national prose fixture (original base/head failure reproduced); preserve all strict positives and runtime bounds.",
   "server2_paths": [
     "server2/config/tasks/ForecastRetention2850.json",
     "server2/src/domestic/kma/source/forecast_cache.rs",
@@ -17,7 +17,8 @@
     "server2/tests/domestic/forecast_cache.rs",
     "server2/examples/domestic_warm_cache_smoke.rs",
     "server2/tools/domestic_warm_cache_smoke.py",
-    "server2/tools/test_domestic_warm_cache_smoke.py"
+    "server2/tools/test_domestic_warm_cache_smoke.py",
+    "server2/tests/runtime_services/inventory.rs"
   ],
   "outside": [
     {
