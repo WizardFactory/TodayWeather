@@ -115,9 +115,11 @@ CPU; real S3 would not.
 
 No request of any binary was answered inside the 3 s deadline at 0, 10 or 20 ms
 (0 of 270 cold requests and 0 of 90 aged rebuilds), so no body could be compared on
-the host; the same Linux builds returned the reference body inside an emulated
-amd64 container during qualification. Views ready (median, p95 in parentheses),
-mapped views of 7 where fewer:
+the host. During qualification in an emulated amd64 container the Linux candidate and
+`gate24` builds returned the reference body; the D2 build answered no request with
+200 there either, so its Linux body is not verified. Views ready (median, p95 in
+parentheses) is when the owners started by the request went idle; mapped views of 7
+where fewer:
 
 | Delay | Request | D2 + harness | Candidate | gate24 variant |
 | --- | --- | --- | --- | --- |
@@ -128,13 +130,19 @@ mapped views of 7 where fewer:
 | 10 ms | fresh process | 8.24 s (9.93), 3 of 7 | 6.58 s (6.70) | 5.75 s (5.93) |
 | 20 ms | fresh process | 8.36 s (8.39), 2 of 7 | 8.71 s (8.93), 6 of 7 | 6.28 s (6.39) |
 
-D2's times are its owners stopping at the 8-second bound with the views shown; D2
-read fewer objects for the same reason (1,875 / 1,402 / 739 forecast operations
-against the candidate's 2,227). The candidate's floor at 0 ms, 4.6 s in a running
-server, is parse and fold CPU on this host class (about 4.5 times the local 1.03 s),
-not S3 concurrency: the 2.5-second goal is not met on t3.small at any modeled
-delay. A 24-permit gate removes most of the latency-dependent part (10 ms: 5.32 →
-4.77 s; 20 ms: 6.44 → 5.28 s) and does not lower the floor. The largest resident
+D2's owners went idle with only the views shown mapped and read fewer objects
+(1,875 / 1,402 / 739 forecast operations against the candidate's 2,227). At 10 and
+20 ms they reached the 8-second owner bound; at 0 ms they went idle earlier, and two
+of D2's ten 0 ms running-server rebuilds failed early (502 after 2.21 and 2.37 s,
+with 2 and 4 views mapped). The info-level log records no cause for these early
+stops: they are consistent with the owner hand-off defect fixed here, but that is
+not confirmed. The candidate and `gate24` had no early failure. The candidate's
+0 ms time, 4.6 s in a running server (about 4.5 times the local 1.03 s), is a floor
+of this setup, in which the server, the Python peer and loopback HTTP share the two
+vCPUs; it points to CPU rather than S3 concurrency, but parse and fold time alone
+was not separated on the host. The 2.5-second goal is not met on t3.small at any
+modeled delay. A 24-permit gate removes most of the latency-dependent part (10 ms:
+5.32 → 4.77 s; 20 ms: 6.44 → 5.28 s) and does not lower the 0 ms time. The largest resident
 set of any process (server, peer or tool) was 78.8 MiB for D2, 87.5 MiB for the
 candidate and 88.1 MiB for `gate24` in the per-binary memory runs; the unit's
 `memory.peak` (1.46 GiB) includes the page cache of 2.4 GiB of written run output

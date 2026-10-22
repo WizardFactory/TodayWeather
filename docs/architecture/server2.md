@@ -4189,12 +4189,13 @@ concurrency, both separate decisions.
 On the Seoul t3.small (2 vCPUs, Unlimited; same loopback peer on the same host, so
 the peer shares the CPUs) no binary answered an empty-cache request inside 3 s at
 0, 10 or 20 ms, in 20 fresh-process and 10 running-server runs per cell. Views
-were ready in a running server after 4.6 / 5.3 / 6.4 s with the candidate and
-6.7 / 8.2 / 8.3 s with D2 (D2's owners stop at their 8 s bound with a median of 3.5, 1 and
-0.5 of 7 views mapped);
-in a fresh process after 5.7 / 6.6 / 8.7 s and 7.7 / 8.2 / 8.4 s. Even at 0 ms
-the candidate needs 4.6 s, so on this host class parse and fold CPU, not S3
-concurrency, sets the floor. An uncommitted variant with a 24-permit gate and
+were ready (owners idle) in a running server after 4.6 / 5.3 / 6.4 s with the
+candidate and 6.7 / 8.2 / 8.3 s with D2, whose owners mapped a median of only 3.5,
+1 and 0.5 of 7 views (two of its 0 ms rebuilds failed early without a logged
+cause); in a fresh process after 5.7 / 6.6 / 8.7 s and 7.7 / 8.2 / 8.4 s. Even at
+0 ms the candidate needs 4.6 s with the server, peer and loopback HTTP on the same
+two vCPUs, which points to CPU rather than S3 concurrency; parse and fold alone were
+not timed on the host. An uncommitted variant with a 24-permit gate and
 read-ahead measured 4.6 / 4.8 / 5.3 s; the largest resident set of any process
 stayed about 88 MiB for all three. These are loopback measurements, not real
 S3/TLS, p95 capacity or production results. See the
