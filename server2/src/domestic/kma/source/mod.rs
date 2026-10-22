@@ -2,9 +2,10 @@
 //!
 //! For a request the source resolves the town, loads the raw records the store calls need from
 //! S3 and returns an in-memory [`Snapshot`] answering every `KmaStore` call the assembly makes.
-//! Legacy documents are rebuilt in memory from server2's own raw records (S13/S13b provider
-//! acquisitions, S12 warnings) and from repository data copied under `data/`; no normalized
-//! weather view is stored. Legacy is shut down at cutover, so nothing here reads legacy data.
+//! Legacy documents are rebuilt from server2's own raw records (S13/S13b provider acquisitions,
+//! S12 warnings) and repository data under `data/`. Forecast views may use disposable folded
+//! copies validated against current S3 identities; canonical weather remains original raw data.
+//! Legacy is shut down at cutover, so nothing here reads legacy data.
 //!
 //! S15b-1 sources the town list, region code, forecast zone, the DB 2.0 grid and short RSS
 //! documents, the mid documents and the warning zones. Later increments add station observations
@@ -30,7 +31,9 @@ pub mod asos;
 mod doc;
 pub mod fetch;
 pub mod forecast_cache;
+mod forecast_disk;
 pub mod forecast_input;
+mod forecast_manifest;
 pub mod gif;
 mod grid;
 pub mod html;

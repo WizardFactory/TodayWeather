@@ -133,17 +133,31 @@ def check_warm_forecast_io(record, manifest):
         raise RuntimeError('warm complete forecast performed classified source IO; preserve actual counters')
 
 
+def check_folded_forecast_io(record, manifest):
+    validate_forecast_labels(manifest)
+    rows, _ = io_delta(record['status_before'], record['status_after'], manifest['io_object_labels'])
+    if any(row['GET_raw'] or row['GET_descriptor'] for label, row in rows.items() if label in FORECAST_LABELS):
+        raise RuntimeError('folded restore/renew fetched raw or group descriptors')
+    after = record['forecast_cache_after']; before = record['forecast_cache_before']
+    if after['parse_acquisitions'] != before['parse_acquisitions'] or after['folds'] != before['folds']:
+        raise RuntimeError('folded restore/renew parsed or folded')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--build-variant', choices=['debug', 'release'], required=True)
-    parser.add_argument('--modes', nargs='+', choices=['seed', 'diagnostic', 'native', 'http'], default=['seed', 'diagnostic'])
+    parser.add_argument('--modes', nargs='+', choices=['seed', 'diagnostic', 'native', 'http', 'disk', 'http-disk', 'disk-boundary'], default=['seed', 'diagnostic'])
     args = parser.parse_args()
     if args.modes[0] != 'seed' or len(set(args.modes)) != len(args.modes):
         raise RuntimeError('Use seed first and each mode once; every run owns a fresh peer')
     if 'http' in args.modes and (args.build_variant != 'release' or 'diagnostic' not in args.modes or args.modes.index('diagnostic') > args.modes.index('http')):
         raise RuntimeError('HTTP requires a release binary and complete default diagnostic first')
+    if 'http-disk' in args.modes and ('disk' not in args.modes or args.modes.index('disk') > args.modes.index('http-disk') or args.build_variant != 'release'):
+        raise RuntimeError('HTTP disk restart requires release and prior complete disk corpus')
+    if 'disk-boundary' in args.modes and (args.modes[-1] != 'disk-boundary' or 'disk' not in args.modes):
+        raise RuntimeError('boundary clock checks must follow disk and run last')
     binary = args.binary.resolve()
     if binary.is_relative_to(Path('/private/tmp/server2-parallel-target')):
         raise RuntimeError('copy and hash the selected executable outside shared target first')
@@ -183,7 +197,7 @@ def main():
         (output/'inputs.json').write_text(json.dumps({'binary':str(binary),'binary_sha256':digest(binary),
             'runner_sha256':digest(Path(__file__)), 'example_source_sha256':digest(SERVER2/'examples/domestic_warm_cache_smoke.rs'),
             'peer_script_sha256':digest(SERVER2/'tests/storage/catalog_peer.py'), 'endpoint':endpoint,
-            'persistent_peer':True,'source_before_sha256':source_before,'peer_limits':expected_peer,'s3_transport_admission':4,'build_variant':args.build_variant,'modes':args.modes,'verification_scope':VERIFICATION_SCOPE,'scope':'current candidate; logical D2 admission; no production capacity claim'},indent=2)+'\n')
+            'persistent_peer':True,'source_before_sha256':source_before,'peer_limits':expected_peer,'s3_transport_admission':12,'build_variant':args.build_variant,'modes':args.modes,'verification_scope':VERIFICATION_SCOPE,'scope':'current candidate; logical D2 admission; no production capacity claim'},indent=2)+'\n')
         manifest = output/'fixture-manifest.json'
         for mode in args.modes:
             receipt = child(binary, endpoint, mode, manifest, output)
@@ -191,12 +205,14 @@ def main():
             print(json.dumps({'mode':mode,'exit':receipt['exit'],'seconds':receipt['elapsed_seconds'],'peak_rss_bytes':receipt['peak_rss_bytes']}),flush=True)
             if receipt['exit'] != 0:
                 return 1
-            if mode in ('diagnostic', 'http'):
+            if mode in ('diagnostic', 'http', 'http-disk', 'disk', 'disk-boundary'):
                 data = json.loads(manifest.read_text())
                 for line in (output/(mode+'.stdout')).read_text().splitlines():
                     record = json.loads(line)
                     if record['phase'].startswith('warm'):
                         check_warm_forecast_io(record, data)
+                    if (mode == 'disk' and record['phase'] in ('restore', 'renew')) or (mode == 'http-disk' and record['phase'] == 'cold'):
+                        check_folded_forecast_io(record, data)
             if mode == 'seed':
                 data = json.loads(manifest.read_text())
                 if digest(manifest) != '11606b79c26365e4ba8a5a906d5801f717845f853bafc971c2f099d27b7bbe3f' or data['input_manifest_sha256'] != 'a83f63716e6b73c997c6ded2cca81e23c50e97b770408f0c2580a7d2241c4a00':
@@ -218,7 +234,7 @@ def main():
         if manifest.exists():
             try:
                 data = json.loads(manifest.read_text())
-                for mode in ['diagnostic', 'native', 'http']:
+                for mode in ['diagnostic', 'native', 'http', 'disk', 'http-disk', 'disk-boundary']:
                     stdout = output/(mode+'.stdout')
                     if not stdout.exists():
                         continue

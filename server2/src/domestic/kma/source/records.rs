@@ -39,6 +39,7 @@ pub(super) struct ForecastScope {
     acquisitions: usize,
     pages: usize,
     raw: usize,
+    pub(super) manifest: super::forecast_manifest::Manifest,
 }
 impl ForecastScope {
     fn partition(&mut self) -> Result<(), Error> {
@@ -119,6 +120,8 @@ impl<T: IndexListing + Clone> Reader<T> {
         let prefix = Self::prefix(source, kind, key)?;
         let mut out = Vec::new();
         for month in months {
+            super::forecast_cache::reserve(&mut scope.manifest.months, 1)?;
+            scope.manifest.months.push(*month);
             let mut token = None;
             let mut done = false;
             for _ in 0..LIST_PAGES {
@@ -177,6 +180,13 @@ impl<T: IndexListing + Clone> Reader<T> {
             Err(Error::NotFound) => return Ok((Vec::new(), 1)),
             Err(e) => return Err(e),
         };
+        let digest = super::forecast_manifest::fingerprint(
+            set.acquisitions()
+                .iter()
+                .flat_map(|a| a.records().iter().map(|r| &r.envelope)),
+        )?;
+        reserve(&mut scope.manifest.catalogs, 1)?;
+        scope.manifest.catalogs.push((copied(partition)?, digest));
         let mut out = Vec::new();
         for a in set.acquisitions() {
             scope.acquisition(a.records())?;
@@ -202,6 +212,26 @@ impl<T: IndexListing + Clone> Reader<T> {
             });
         }
         Ok((out, set.excluded_groups()))
+    }
+    /// Validate catalog contents only; raw bodies and descriptors remain untouched.
+    pub(super) async fn forecast_identity(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        deadline: Instant,
+    ) -> Result<String, Error> {
+        let id = catalog(source, kind, key, partition)?;
+        let limits = crate::storage::CatalogLimits::default();
+        let object = tokio::time::timeout_at(
+            deadline,
+            self.transport.get_control(&id.key(), limits.control_bytes),
+        )
+        .await
+        .map_err(|_| Error::Timeout)??;
+        let c = crate::storage::Catalog::from_bytes(&object.body, &id, &limits)?;
+        super::forecast_manifest::fingerprint(c.entries.iter())
     }
     fn prefix(source: &str, kind: &str, key: &ProviderKey) -> Result<String, Error> {
         Ok(format!(
