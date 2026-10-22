@@ -49,7 +49,7 @@ fn transport(endpoint: &str) -> Transport {
             Credentials::new("server2-local", "server2-local-secret"),
         )
         .unwrap(),
-        4,
+        12,
     )
 }
 fn disk_transport(endpoint: &str, directory: &Path) -> Transport {
@@ -64,7 +64,7 @@ fn disk_transport(endpoint: &str, directory: &Path) -> Transport {
         Some(endpoint),
     )
     .unwrap();
-    BoundedS3::new(settings.transport().unwrap(), 4)
+    BoundedS3::new(settings.transport().unwrap(), 12)
 }
 
 #[derive(Default)]
@@ -924,21 +924,22 @@ fn expected_at(now: i64) -> BTreeMap<String, Value> {
     }
     expected
 }
-async fn disk_diagnostic(endpoint: &str, manifest_path: &Path, boundaries: bool) {
+async fn disk_diagnostic(endpoint: &str, manifest_path: &Path, mode: &str) {
     use server2::storage::ObjectTransport;
     let manifest: Value = serde_json::from_slice(&std::fs::read(manifest_path).unwrap()).unwrap();
     let root = manifest_path.parent().unwrap().join("folded-cache");
     assert_eq!(
         root.exists(),
-        boundaries,
-        "fill owns a new root; boundary check reuses it"
+        matches!(mode, "disk-boundary" | "disk-check"),
+        "prime/fill owns a new root; restore/boundary checks reuse it"
     );
     let off = Arc::new(Off::default());
     let mut held = None;
-    let phases = if boundaries {
-        vec![("boundary-prime", NOW), ("boundary", NOW + 3 * HOUR)]
-    } else {
-        vec![("fill", NOW), ("restore", NOW), ("renew", NOW + 60_000)]
+    let phases = match mode {
+        "disk-boundary" => vec![("boundary-prime", NOW), ("boundary", NOW + 3 * HOUR)],
+        "disk-prime" => vec![("fill", NOW)],
+        "disk-check" => vec![("restore", NOW), ("warm", NOW), ("renew", NOW + 60_000)],
+        _ => vec![("fill", NOW), ("restore", NOW), ("renew", NOW + 60_000)],
     };
     for (phase, now) in phases {
         if matches!(phase, "fill" | "restore" | "boundary-prime") {
@@ -984,7 +985,7 @@ async fn disk_diagnostic(endpoint: &str, manifest_path: &Path, boundaries: bool)
             assert_eq!(actual, expected[&label], "{phase}/{label}");
             assert!(disk.idle(Instant::now() + Duration::from_secs(5)).await);
             let cache_after = source.forecast_cache_stats();
-            if matches!(phase, "restore" | "renew") {
+            if matches!(phase, "restore" | "renew" | "warm") {
                 assert_eq!(
                     cache_after.parse_acquisitions,
                     cache_before.parse_acquisitions
@@ -1032,8 +1033,9 @@ async fn main() {
         "native" => native(&args[0]).await,
         "http" => http(&args[0], Path::new(&args[2]), false).await,
         "http-disk" => http(&args[0], Path::new(&args[2]), true).await,
-        "disk" => disk_diagnostic(&args[0], Path::new(&args[2]), false).await,
-        "disk-boundary" => disk_diagnostic(&args[0], Path::new(&args[2]), true).await,
+        "disk" | "disk-prime" | "disk-check" | "disk-boundary" => {
+            disk_diagnostic(&args[0], Path::new(&args[2]), &args[1]).await
+        }
         _ => panic!("unknown mode"),
     }
 }

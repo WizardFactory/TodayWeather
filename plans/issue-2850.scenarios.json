@@ -85,6 +85,26 @@
       "criteria": [
         "AC5"
       ]
+    },
+    {
+      "id": "S6",
+      "user": "Performance operator",
+      "goal": "Measure target-host retention and restoration without production traffic",
+      "prerequisites": "Approved dedicated Seoul t3.small and source-bound binaries/corpus",
+      "steps": [
+        "Verify host/profile/corpus hashes",
+        "Prime the disposable cache at zero fixture delay",
+        "Collect20independent restore/renewal/native samples per modeled delay with failures",
+        "Compare base/current/corrected candidates and exact output/counters",
+        "Export evidence and verify task-only cloud cleanup"
+      ],
+      "expected": "Nearest-rankp95, CPU/RSS and operation costs identify the measured improvement; all exactoutput/deadline/capacity rules remain",
+      "failure": "Wrongprofile orunit,hiddenfailure,unboundedhost,staleidentity orchangedgolden causes explicitfailure/insufficientresult",
+      "criteria": [
+        "AC3",
+        "AC4",
+        "AC5"
+      ]
     }
   ]
 }

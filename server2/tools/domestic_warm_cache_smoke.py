@@ -197,7 +197,7 @@ def main():
         (output/'inputs.json').write_text(json.dumps({'binary':str(binary),'binary_sha256':digest(binary),
             'runner_sha256':digest(Path(__file__)), 'example_source_sha256':digest(SERVER2/'examples/domestic_warm_cache_smoke.rs'),
             'peer_script_sha256':digest(SERVER2/'tests/storage/catalog_peer.py'), 'endpoint':endpoint,
-            'persistent_peer':True,'source_before_sha256':source_before,'peer_limits':expected_peer,'s3_transport_admission':4,'build_variant':args.build_variant,'modes':args.modes,'verification_scope':VERIFICATION_SCOPE,'scope':'current candidate; logical D2 admission; no production capacity claim'},indent=2)+'\n')
+            'persistent_peer':True,'source_before_sha256':source_before,'peer_limits':expected_peer,'s3_transport_admission':12,'build_variant':args.build_variant,'modes':args.modes,'verification_scope':VERIFICATION_SCOPE,'scope':'current candidate; logical D2 admission; no production capacity claim'},indent=2)+'\n')
         manifest = output/'fixture-manifest.json'
         for mode in args.modes:
             receipt = child(binary, endpoint, mode, manifest, output)

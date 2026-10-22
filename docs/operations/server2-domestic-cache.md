@@ -121,3 +121,54 @@ The original supporting zone fixture uses numOfRows 999; the existing zone parse
 The cold native flow invokes 196 denied observation stubs (194 web, 2 ASOS); warm adds 0. External provider calls and geocoder calls are 0. Other absent optional inputs and their counters remain in the record. Full source-Doc goldens and repeated HTTP body identity do not establish complete production API parity, live-provider behavior, concurrent p95, EC2 capacity or an eligible rollback bundle.
 
 The original debug 8-second owner timeout, pre-correction cold 502 and overbroad warm-checker exit 1 remain failed evidence. The current success is a new run after the bounded duplicate-check correction and an exact cache-boundary checker correction, not a relabeling of those failures. Use the [selected verification record](../evidence/tasks/issue-2819-domestic-warm-cache/verification.md) and the separate S19/S20 gates before any operational decision.
+
+## Dedicated-host retention measurement
+
+`server2/tools/forecast_retention_matrix.py` runs the synthetic corpus against an
+owned loopback peer on Linux or macOS. Supply a release
+`domestic_warm_cache_smoke` example built from the matching source. The tool
+records the binary, runtime source, example, lockfile and runner hashes; keep the
+build receipt that connects those source bytes to the binary. Cloud lifecycle
+requires a separately approved operator scope and is outside this tool.
+
+```sh
+python3 server2/tools/forecast_retention_matrix.py \
+  --binary /path/to/domestic_warm_cache_smoke \
+  --output reports/forecast-retention/run-1 --revision COMMIT_OR_BUILD_ID \
+  --samples 20 --delays 0 5 10 20 \
+  --phases disk-check http-disk --total-seconds 2200
+```
+
+The output directory must be new. `disk-prime` prepares the disposable SSD before
+independent child processes test 13-view restore, memory reuse and unchanged
+renewal. `http-disk` checks the original native HTTP response after restart.
+`disk-boundary` instead restores the primed view and moves the fixed request
+clock three hours forward, verifying the independently expected boundary Docs
+and recording the resulting rebuild cost. Its per-view diagnostic deadline is
+60 seconds, while the original eight-second owner limit remains active. It
+cannot satisfy a native HTTP latency target.
+Run it alone with `--phases disk-boundary` in a separate output directory. The
+runner restores the original primed SSD snapshot before every independent child,
+so one future-clock rebuild cannot change the next trial's cache input.
+`--phases http` instead measures a process without folded SSD and also works
+with a baseline that has no SSD implementation. The injected read delay models
+control/raw read latency; it is not a live S3 measurement. Providers are deny
+stubs and the peer is restricted to loopback.
+
+Read `report.json`, not just the command exit code. A successful coordinator can
+contain failed native samples. Every failed child remains in `receipts.json`. If it fails before emitting any
+phase row, `report.json` records a `missing-output` group; the individual phase
+then has fewer observations. Read both the full child-attempt denominator and
+phase counts. Missing phases and fewer than twenty successful independent
+observations remain insufficient; never treat missing rows as zero latency. One summed 13-view corpus is one observation. p95 uses nearest
+rank. Functional acceptance and the native 2,500 ms p95 target are separate
+fields. The original three-second native deadline and exact response oracle stay
+active. Whole-child CPU and peak RSS include startup, expected documents,
+serialization and output; they are not phase-only resource measurements.
+
+Full JSONL evidence is compressed after row-by-row IO/oracle validation. Receipts
+retain its original hash, archive hash and compact classified IO counters. This
+avoids holding copies of large documents and status maps on a 2 GiB host. A peer
+active-handler peak is not a client in-flight count and does not establish a
+connection-refusal count. Retain failures and source bindings before cleaning
+task-owned cache and cloud resources.

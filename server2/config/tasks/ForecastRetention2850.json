@@ -2,9 +2,9 @@
   "task": "ForecastRetention2850",
   "stable_task": "issue-2850",
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/2850",
-  "status": "implementation and isolated pre-merge verification; no merge/deployment/live S3/provider authority",
+  "status": "Approved dedicated Seoul t3.small performance campaign; no merge/production/live S3/provider authority",
   "base": "307defeb706886217ab67ea858dc7c7b0435752f",
-  "scope": "Per-key forecast fences, selector intervals,30s catalog-only renewal and shared disposable folded-view disk restoration. Preserve wire and S16 identities; one process, no new mode/dependency/provider/legacy logic. Test-only sequential city preparation and per-phase runtime teardown for the fixed-time factory national prose fixture (original base/head failure reproduced); preserve all strict positives and runtime bounds.",
+  "scope": "Per-key forecast fences, selector intervals,30s catalog-only renewal and shared disposable folded-view disk restoration. Preserve wire and S16 identities; one process, no new mode/dependency/provider/legacy logic. Test-only sequential city preparation and per-phase runtime teardown for the fixed-time factory national prose fixture (original base/head failure reproduced); preserve all strict positives and runtime bounds. AK-approved EC2 performance measurement: portable CPU/RSS and bounded modeled-delay matrix, example-only prime/check phases; actual measured retention/validation/restore improvements. One dedicated t3.small/max2hours/root32GiB, totalcampaign belowUSD100; task-only SSH resources cleaned. Run both reusable forecast smoke/matrix Python control suites from the existing server2 CI entrypoint; no shared workflow or runtime-bound change.",
   "server2_paths": [
     "server2/config/tasks/ForecastRetention2850.json",
     "server2/src/domestic/kma/source/forecast_cache.rs",
@@ -18,7 +18,10 @@
     "server2/examples/domestic_warm_cache_smoke.rs",
     "server2/tools/domestic_warm_cache_smoke.py",
     "server2/tools/test_domestic_warm_cache_smoke.py",
-    "server2/tests/runtime_services/inventory.rs"
+    "server2/tests/runtime_services/inventory.rs",
+    "server2/tools/forecast_retention_matrix.py",
+    "server2/tools/test_forecast_retention_matrix.py",
+    "server2/tools/ci.py"
   ],
   "outside": [
     {

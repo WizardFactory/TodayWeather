@@ -31,6 +31,9 @@ def main():
         declared=[Path(provided)]
     if len(declared)!=1: raise SystemExit('one reviewed task declaration is required per PR')
     commands=[[sys.executable,'tools/check_placement.py','--root','..','--declaration',str(declared[0]),'--base',base],[sys.executable,'tools/test_placement.py'],[sys.executable,'tools/test_verify_artifact.py'],['cargo','fmt','--check'],['cargo','clippy','--locked','--workspace','--all-targets','--','-D','warnings'],['cargo','test','--locked','--workspace'],['cargo','build','--locked','--release'],['cargo','build','--locked','--release','--example','loopback_server'],[sys.executable,'tools/smoke.py','--binary','target/release/server2']]
+    # Forecast measurement controls use only owned temporary files and child processes.
+    commands[2:2] = [[sys.executable, 'tools/test_domestic_warm_cache_smoke.py'],
+                     [sys.executable, 'tools/test_forecast_retention_matrix.py']]
     # Operational tests must never run on the CI host. Missing bubblewrap or
     # namespaces fail closed; no direct unittest fallback is permitted.
     sandbox = 'deploy/benchmark/run_isolated.py'

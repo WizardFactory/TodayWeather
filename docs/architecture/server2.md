@@ -4158,3 +4158,15 @@ per request; no valid-zone recovery is claimed. Cold observation stubs are denie
 These are local source/cache results, not complete API parity, host p95 or an
 eligible rollback release. See the [operator guide](../operations/server2-domestic-cache.md)
 and [selected verification](../evidence/tasks/issue-2819-domestic-warm-cache/verification.md).
+
+### Forecast identity validation scheduling
+
+Catalog-only validation fills a rolling window of up to twelve active reads,
+matching the existing shared S3 transport admission. A slow catalog does not hold
+completed slots idle until a batch finishes. Catalog futures borrow the bounded
+manifest entries (at most 1,024); mismatch or error drops pending futures without
+spawning detached work. Each read still uses the original deadline and hashes
+the complete current envelope set. Partition listing/filtering and the final
+writer/epoch fence remain the authority for canonical memory and SSD admission.
+This scheduling change does not change the retention workflow topology or the
+storage/identity contract shown in `diagrams/server2-domestic-cache.html`.

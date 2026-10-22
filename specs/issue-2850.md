@@ -84,3 +84,13 @@ revalidation races, boundary equality/rewind, disk eviction/restart and corrupt 
 capacity misses. Compare all 13 goldens and exact HTTP bytes. Update D2, operator
 guide and generated Archify lifecycle. Placement matches the intent declaration.
 Local measurements do not attest EC2, production parity, live providers or S19/S20.
+
+## Target-host performance amendment (AC3–AC5, 2026-10-22)
+
+AK requested and approved a dedicated Seoul t3.small/2GiB/CPU Unlimited campaign. Compare the source-bound base307defeb, current0c163912 and any measured correction on the same deterministic corpus. Collect20independent observations per applicable scenario at modeled fixture delays0/5/10/20ms, nearest-rank p95, exact sample/error counts, phase latency, childCPU/peakRSS and S3 operations by kind. Label pilot/underpowered or unsupported baseline scenarios explicitly. Base has no folded-disk restoration; do not fabricate that baseline.
+
+Qualify cold/process startup, retained memory reuse, unchanged renewal, eviction/process-restart SSD restoration and selector-boundary rebuild separately. Keep product3s/8s deadlines; any diagnostic-only relaxed copy is separately source-bound and never satisfies a native latency gate. State whether each native HTTP scenario meets the2.5s benchmark target with the original42549-byte body. This target is separate from KmaBackend::outcome's unchanged3s request ceiling; a target miss is not automatically a runtime timeout. Preserve failures and the unattributed remainder.
+
+The current smoke transport gate4 differs from production12. Record the original profile separately; product-representative comparisons use the same12permit bound for both candidates without changing the runtime gate. Existing identity validation already joins batches of8 catalogs, so a claim of fully serialized revalidation is unsupported. Measure actual in-flight counts/waits before selecting a concurrency or decode optimization. Performance improvements must preserve canonical identity/race fences, bounded catalog memory/work and every existing wire/Doc oracle.
+
+The approved host is task-only, one at a time, at most2hours/root32GiB; campaign spending stays belowUSD100. Runtime providers and S3 remain replaced by loopback fixture peers, with no production or IAM mutation. Preserve source/binary/corpus and metric-unit provenance; export selected evidence and verify task-owned cloud/build cleanup. Renew affected tests, independent reviews and current CI after tracked changes. The prior local endpoint is historical evidence, not proof of this target-host requirement.

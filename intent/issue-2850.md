@@ -60,3 +60,13 @@ Risks: catalog/build races, writer ABA after state eviction, clock boundaries,
 non-finite document values during serialization, shared disk-cap contention and
 restore memory admission. Verify each with isolated dependencies; local evidence
 cannot establish t3.small or production performance.
+
+## AK amendment: target-host performance campaign (2026-10-22)
+
+After the local/CI endpoint at0c163912, AK explicitly requested Seoul t3.small measurement and performance improvements like #2849, then approved the dedicated-host proposal and instructed proceeding without further questions while total spending remains below USD100. This amendment supersedes the earlier exclusion of new cloud resources only for this task's isolated benchmark resources.
+
+Use one dedicated Linux x86_64 t3.small (2vCPU/2GiB), CPU Unlimited, at most32GiB disposable root storage and at most2hours per host. The campaign ceiling is USD100; keep an internal USD2 per-host spending stop. Temporary task-owned SSH key/security-group resources and verified termination/root-volume cleanup are included. Do not modify production hosts, IAM/account permissions or call real S3/weather/geocoder providers. Fixture services run on loopback. No merge, auto-merge, queue or production deployment is authorized.
+
+Compare base307defeb and source-bound current/corrected candidates with the same Seoul corpus and HTTP reference. Record independent sample counts, nearest-rank p95, failures, CPU/RSS, per-phase costs and LIST/catalog/descriptor/raw operations at modeled S3 delays0/5/10/20ms. Cover empty memory, valid memory reuse, unchanged identity renewal, SSD restore after eviction/restart and selector boundaries. Product deadlines remain3s caller/8s owner; any diagnostic-only relaxed copy must be identified separately. Report the2.5s benchmark target separately from the actual3s request ceiling; do not infer target-host gains from Mac results or relabel a target miss as a runtime timeout.
+
+Select performance fixes from reproduced costs in #2850's retention/identity/restore paths, preserve canonical S3 authority, bounded work/memory, all13view goldens and exact HTTP bytes. Compare #2849's separately owned cold-read/fold work before overlapping it. Renew affected regression/smoke checks, independent review and current CI. Keep historical completion evidence revision-bound and do not claim this extended endpoint complete until the target measurements, selected fixes and task-only resource cleanup are verified.

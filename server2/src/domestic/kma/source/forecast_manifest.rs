@@ -90,22 +90,138 @@ impl Manifest {
         {
             return Ok(false);
         }
-        for chunk in self.catalogs.chunks(super::records::LOOKUPS) {
-            let reads = crate::history::join_all(
-                chunk
-                    .iter()
-                    .map(|(p, _)| {
-                        reader.forecast_identity(key.source(), key.kind(), &provider, p, deadline)
-                    })
-                    .collect(),
-            )
-            .await;
-            for (found, (_, expected)) in reads.into_iter().zip(chunk) {
-                if found? != *expected {
-                    return Ok(false);
-                }
+        let reads: Vec<crate::gateway::BoxFuture<'_, Result<bool, Error>>> = self
+            .catalogs
+            .iter()
+            .map(|(partition, expected)| {
+                Box::pin(async {
+                    reader
+                        .forecast_identity(key.source(), key.kind(), &provider, partition, deadline)
+                        .await
+                        .map(|found| found == *expected)
+                }) as crate::gateway::BoxFuture<'_, Result<bool, Error>>
+            })
+            .collect();
+        all_identities_match(reads).await
+    }
+}
+
+async fn all_identities_match<F>(reads: impl IntoIterator<Item = F>) -> Result<bool, Error>
+where
+    F: std::future::Future<Output = Result<bool, Error>>,
+{
+    use futures_util::{StreamExt, stream};
+    // Match the existing shared S3 gate. Futures borrow their inputs and are
+    // dropped on rejection; no detached validation work survives this call.
+    let mut pending = stream::iter(reads).buffer_unordered(12);
+    while let Some(found) = pending.next().await {
+        if !found? {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering::SeqCst},
+    };
+
+    #[tokio::test]
+    async fn slow_catalog_does_not_block_other_available_validation_slots() {
+        let started = Arc::new(AtomicUsize::new(0));
+        let active = Arc::new(AtomicUsize::new(0));
+        let peak = Arc::new(AtomicUsize::new(0));
+        let release = Arc::new(tokio::sync::Notify::new());
+        let progress = Arc::new(tokio::sync::Notify::new());
+        let task = tokio::spawn({
+            let (started, active, peak, release, progress) = (
+                started.clone(),
+                active.clone(),
+                peak.clone(),
+                release.clone(),
+                progress.clone(),
+            );
+            async move {
+                all_identities_match((0..25).map(|i| {
+                    let (started, active, peak, release, progress) = (
+                        started.clone(),
+                        active.clone(),
+                        peak.clone(),
+                        release.clone(),
+                        progress.clone(),
+                    );
+                    async move {
+                        started.fetch_add(1, SeqCst);
+                        let count = active.fetch_add(1, SeqCst) + 1;
+                        peak.fetch_max(count, SeqCst);
+                        if i == 0 {
+                            release.notified().await;
+                        } else {
+                            tokio::task::yield_now().await;
+                        }
+                        active.fetch_sub(1, SeqCst);
+                        if i == 24 {
+                            progress.notify_one();
+                        }
+                        Ok(true)
+                    }
+                }))
+                .await
+            }
+        });
+        tokio::time::timeout(std::time::Duration::from_secs(1), progress.notified())
+            .await
+            .expect("remaining catalogs must finish while one catalog is still pending");
+        assert_eq!(started.load(SeqCst), 25);
+        assert_eq!(active.load(SeqCst), 1);
+        assert!(peak.load(SeqCst) <= 12);
+        release.notify_one();
+        assert!(task.await.unwrap().unwrap());
+    }
+
+    #[tokio::test]
+    async fn mismatch_or_error_cancels_pending_catalog_reads() {
+        use std::sync::atomic::AtomicBool;
+        struct Dropped(Arc<AtomicBool>);
+        impl Drop for Dropped {
+            fn drop(&mut self) {
+                self.0.store(true, SeqCst);
             }
         }
-        Ok(true)
+        for error in [false, true] {
+            let dropped = Arc::new(AtomicBool::new(false));
+            let result = tokio::time::timeout(
+                std::time::Duration::from_secs(1),
+                all_identities_match((0..2).map(|i| {
+                    let dropped = dropped.clone();
+                    async move {
+                        if i == 0 {
+                            let _guard = Dropped(dropped);
+                            std::future::pending::<()>().await;
+                        }
+                        if error {
+                            Err(Error::Capacity)
+                        } else {
+                            Ok(false)
+                        }
+                    }
+                })),
+            )
+            .await
+            .expect("rejection must cancel pending reads without waiting for their deadlines");
+            assert!(if error {
+                result.is_err()
+            } else {
+                matches!(result, Ok(false))
+            });
+            assert!(
+                dropped.load(SeqCst),
+                "no detached validation read may survive rejection"
+            );
+        }
     }
 }
