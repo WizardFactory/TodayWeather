@@ -8,7 +8,7 @@
     "locale": "en",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "f1a0e0940f14341b62138f8bf17f568f1c061cfb",
+      "revision": "8946cecd899228b8585bfc2c16de3fd6f1b20321",
       "provider": "github",
       "link_mode": "web"
     }
@@ -153,13 +153,13 @@
         {
           "path": "server2/src/domestic/kma/source/forecast_cache.rs",
           "line": 21,
-          "end_line": 321,
-          "label": "Forecast limits and fresh generation lookup"
+          "end_line": 618,
+          "label": "Limits, lookup and ordered partition read-ahead"
         },
         {
           "path": "server2/src/domestic/kma/source/forecast_cache.rs",
-          "line": 856,
-          "end_line": 901,
+          "line": 874,
+          "end_line": 921,
           "label": "Actual writer lifetime invalidates generation"
         },
         {
@@ -308,6 +308,7 @@
       "title": "D2 forecast memory",
       "items": [
         "Grid / RSS / Mid complete views; other owners still run",
+        "12 partition lookups read ahead, consumed in order",
         "128 MiB retained; 48 MiB per entry; logical, not RSS",
         "Epoch plus active writer fence; no stale generation install",
         "Local CPU / queue limits; global integration remains open"

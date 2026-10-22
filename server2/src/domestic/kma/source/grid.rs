@@ -250,9 +250,12 @@ fn fields(family: Family, at: &(String, String), slot: &Slot) -> Vec<&'static st
     }
     list
 }
+/// The row's `date` and `time` strings, as [`Row::get`] reads them, equal these.
+fn row_is(row: &Row, date: &str, time: &str) -> bool {
+    row.str_ref("date").as_deref() == Some(date) && row.str_ref("time").as_deref() == Some(time)
+}
 fn valid(row: &Row, family: Family, at: &(String, String), slot: &Slot) -> bool {
-    row.get("date").as_ref().and_then(Val::as_str) == Some(at.0.as_str())
-        && row.get("time").as_ref().and_then(Val::as_str) == Some(at.1.as_str())
+    row_is(row, &at.0, &at.1)
         && fields(family, at, slot)
             .into_iter()
             .all(|f| accepts(f, row.get(f).as_ref()))
@@ -280,6 +283,12 @@ fn canonical(family: Family, publication: &str) -> String {
 fn row_at(row: &Row) -> String {
     row.text("date") + &row.text("time")
 }
+/// `row_at(row) == key` without building the row's stamp.
+fn row_at_is(row: &Row, key: &str) -> bool {
+    let date = row.str_ref("date").unwrap_or_default();
+    let time = row.str_ref("time").unwrap_or_default();
+    key.len() == date.len() + time.len() && key.starts_with(&*date) && key.ends_with(&*time)
+}
 /// `trailing(product, slot, row)`.
 fn trailing(family: Family, slot: &Slot, row: &Row, times: &[(String, String)]) -> bool {
     let Some(last) = times.last() else {
@@ -292,10 +301,10 @@ fn trailing(family: Family, slot: &Slot, row: &Row, times: &[(String, String)]) 
 fn complete(family: Family, slot: &Slot, rows: &[Row], times: &[(String, String)]) -> bool {
     times.iter().all(|at| {
         let key = format!("{}{}", at.0, at.1);
-        rows.iter().any(|r| row_at(r) == key)
+        rows.iter().any(|r| row_at_is(r, &key))
             && rows
                 .iter()
-                .filter(|r| row_at(r) == key)
+                .filter(|r| row_at_is(r, &key))
                 .all(|r| valid(r, family, at, slot))
     })
 }
@@ -329,6 +338,9 @@ fn raw_items_checked(
     slots
         .try_reserve(times.len())
         .map_err(|_| crate::storage::Error::Capacity)?;
+    // The same for every item: the coordinate text and, once seen, the echoed publication.
+    let nx = crate::gateway::response::js_number(coord.mx);
+    let ny = crate::gateway::response::js_number(coord.my);
     let mut echoed: Option<String> = None;
     for item in items {
         let part = |k| item.get(k).unwrap_or("undefined");
@@ -337,20 +349,24 @@ fn raw_items_checked(
         if date.len().checked_add(time.len()) != Some(12) {
             return Ok(false);
         }
-        let mut publication = String::new();
-        publication
-            .try_reserve_exact(12)
-            .map_err(|_| crate::storage::Error::Capacity)?;
-        publication.push_str(date);
-        publication.push_str(time);
-        if !ids.contains(&publication)
-            || echoed.as_ref().is_some_and(|p| p != &publication)
-            || Some(crate::gateway::response::js_number(coord.mx)).as_deref() != item.get("nx")
-            || Some(crate::gateway::response::js_number(coord.my)).as_deref() != item.get("ny")
+        // `date + time`, compared without building it.
+        let publication = |p: &str| p.len() == 12 && p.starts_with(date) && p.ends_with(time);
+        if !ids.iter().any(|id| publication(id))
+            || echoed.as_deref().is_some_and(|p| !publication(p))
+            || Some(nx.as_str()) != item.get("nx")
+            || Some(ny.as_str()) != item.get("ny")
         {
             return Ok(false);
         }
-        echoed.get_or_insert(publication);
+        if echoed.is_none() {
+            let mut first = String::new();
+            first
+                .try_reserve_exact(12)
+                .map_err(|_| crate::storage::Error::Capacity)?;
+            first.push_str(date);
+            first.push_str(time);
+            echoed = Some(first);
+        }
         let category = item.get("category").unwrap_or("undefined");
         let at = (part("fcstDate"), part("fcstTime"));
         if !times.iter().any(|t| t.0 == at.0 && t.1 == at.1) {
@@ -542,10 +558,7 @@ fn find_or_create<'a>(
     time: &str,
     limits: Option<&mut RowLimits>,
 ) -> Result<&'a mut Row, crate::storage::Error> {
-    if let Some(i) = list.iter().position(|r| {
-        r.get("date").as_ref().and_then(Val::as_str) == Some(date)
-            && r.get("time").as_ref().and_then(Val::as_str) == Some(time)
-    }) {
+    if let Some(i) = list.iter().position(|r| row_is(r, date, time)) {
         return Ok(&mut list[i]);
     }
     let row = if let Some(limits) = limits {
@@ -1167,6 +1180,67 @@ impl GridDocs {
 #[cfg(test)]
 mod bounded_tests {
     use super::*;
+    #[test]
+    fn rows_are_found_by_their_date_and_time_as_get_reads_them() {
+        let mut rows = vec![Row::new(CURRENT_TEMPLATE); 4];
+        rows[0].set("date", Val::str("20260924"));
+        rows[0].set("time", Val::str("1000"));
+        // rows[1] keeps the template's empty date and time.
+        rows[2].set("date", Val::Num(20260924.));
+        rows[2].set("time", Val::str("1000"));
+        rows[3].set("date", Val::checked_str("\u{10F800}").unwrap());
+        rows[3].set("time", Val::str("1100"));
+        let canonical = rows[3].text("date");
+        let found = |rows: &mut Vec<Row>, date: &str, time: &str| {
+            let n = rows.len();
+            find_or_create(rows, CURRENT_TEMPLATE, date, time, None)
+                .unwrap()
+                .set("mark", Val::Num(1.));
+            let at = rows.iter().position(|r| r.has_own("mark")).unwrap();
+            rows[at].delete("mark");
+            (at, rows.len() - n)
+        };
+        assert_eq!(found(&mut rows, "20260924", "1000"), (0, 0));
+        assert_eq!(found(&mut rows, "", ""), (1, 0));
+        assert_eq!(found(&mut rows, &canonical, "1100"), (3, 0));
+        // A raw stand-in key never equals its canonical stored form; a number is not text.
+        assert_eq!(found(&mut rows, "\u{10F800}", "1100"), (4, 1));
+        assert_eq!(found(&mut rows, "20260924", "1100"), (5, 1));
+    }
+    #[test]
+    fn borrowed_row_text_equals_the_copied_reads() {
+        const STAND_IN: &[(&str, Tmpl)] = &[
+            ("date", Tmpl::Str("\u{10F800}")),
+            ("time", Tmpl::Str("0900")),
+            ("mx", Tmpl::Num(1.)),
+        ];
+        let mut rows = vec![Row::new(CURRENT_TEMPLATE), Row::new(STAND_IN)];
+        rows[0].set("date", Val::str("2026092"));
+        rows[0].set("time", Val::str("41500"));
+        let mut number = Row::new(STAND_IN);
+        number.set("date", Val::Num(1.));
+        rows.push(number);
+        for row in &rows {
+            for key in ["date", "time", "mx", "pubDate", "absent"] {
+                assert_eq!(
+                    row.str_ref(key).as_deref(),
+                    row.get(key).as_ref().and_then(Val::as_str),
+                    "{key}"
+                );
+            }
+            for stamp in [
+                "202609241500",
+                "20260924",
+                "1500",
+                "",
+                "\u{10F800}0900",
+                &crate::domestic::kma::js::canon_str("\u{10F800}0900"),
+                "0900",
+            ] {
+                assert_eq!(row_at_is(row, stamp), row_at(row) == stamp, "{stamp:?}");
+            }
+        }
+    }
     #[test]
     fn canonicalization_mismatch_still_respects_the_item_count_row_reservation() {
         const ITEMS: usize = 64;

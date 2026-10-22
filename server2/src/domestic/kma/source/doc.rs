@@ -4,6 +4,7 @@
 //! `{"$date": ms}` like every `KmaStore` answer. Key order never reaches a response (the readers
 //! project fixed fields) but answers keep it, as the S15 store contract requires.
 use crate::gateway::OrderedJson;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// The scalar parseInt semantics used by bounded grid/RSS builders, without allocating a
 /// bit vector proportional to an untrusted hexadecimal string. Significant hex values beyond
@@ -148,9 +149,52 @@ impl From<Doc> for Val {
     }
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Docs whose fields `heap_weight` walked on this thread (tests only).
+    static WALKS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// The backing allocations of one stored value (a Doc's cached weight is reused).
+fn value_weight(v: &Val) -> Result<usize, crate::storage::Error> {
+    use super::forecast_cache::{add, vector};
+    Ok(match v {
+        Val::Str(s) => super::forecast_cache::allocation(s.capacity())?,
+        Val::Doc(d) => d.heap_weight()?,
+        Val::Arr(a) => {
+            let mut n = vector(a)?;
+            for v in a {
+                n = add(n, value_weight(v)?)?;
+            }
+            n
+        }
+        _ => 0,
+    })
+}
+/// The exact `heap_weight` of a Doc once known; 0 is unknown (a real weight is at least 64).
+/// A clone owns other capacities, so it starts unknown; the cache never affects equality.
+/// Retained views share their Docs across threads, hence the atomic.
+#[derive(Default)]
+struct Weight(AtomicUsize);
+impl Clone for Weight {
+    fn clone(&self) -> Self {
+        Self::default()
+    }
+}
+impl PartialEq for Weight {
+    fn eq(&self, _: &Self) -> bool {
+        true
+    }
+}
+
 /// An insertion-ordered document.
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct Doc(Vec<(String, Val)>);
+#[derive(Clone, Default, PartialEq)]
+pub struct Doc(Vec<(String, Val)>, Weight);
+impl std::fmt::Debug for Doc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Doc").field(&self.0).finish()
+    }
+}
 impl Doc {
     /// Fallible cache-path copy; callers own an admitted parse/fold workspace.
     pub(super) fn checked_clone(&self) -> Result<Self, crate::storage::Error> {
@@ -206,47 +250,54 @@ impl Doc {
                 .checked_mul(std::mem::size_of::<(String, Val)>())
                 .ok_or(Error::Capacity)?,
         )?;
+        let current = self.heap_weight()?;
         let projected = add(
-            add(self.heap_weight()? - old, extra)?,
+            add(current - old, extra)?,
             add(root - before, if is_new { allocation(k.len())? } else { 0 })?,
         )?;
         if projected > 8 * 1024 * 1024 {
             return Err(Error::Capacity);
         }
         let value = clone_val(v, 0)?;
-        if let Some((_, slot)) = self.0.iter_mut().find(|(key, _)| key == k) {
+        let stored = value_weight(&value)?;
+        // From the first mutation until the exact delta is stored, the weight is unknown: a
+        // failed push can leave a grown capacity behind.
+        *self.1.0.get_mut() = 0;
+        let weight = if let Some((_, slot)) = self.0.iter_mut().find(|(key, _)| key == k) {
+            let replaced = value_weight(slot)?;
             *slot = value;
+            add(current - replaced, stored)?
         } else {
             reserve(&mut self.0, 1)?;
             self.0.push((copied(k)?, value));
-        }
+            let key = allocation(self.0.last().map_or(0, |(key, _)| key.capacity()))?;
+            add(
+                add(current, stored)?,
+                add(key, super::forecast_cache::vector(&self.0)? - before)?,
+            )?
+        };
+        *self.1.0.get_mut() = weight;
         Ok(())
     }
-    /// Backing allocations only: the containing Vec/Val already charges inline headers.
+    /// Backing allocations only: the containing Vec/Val already charges inline headers. Known
+    /// after the first walk or an exact `try_set`, until an unchecked change.
     pub(super) fn heap_weight(&self) -> Result<usize, crate::storage::Error> {
         use super::forecast_cache::{add, allocation, vector};
-        fn value(v: &Val) -> Result<usize, crate::storage::Error> {
-            Ok(match v {
-                Val::Str(s) => allocation(s.capacity())?,
-                Val::Doc(d) => d.heap_weight()?,
-                Val::Arr(a) => {
-                    let mut n = vector(a)?;
-                    for v in a {
-                        n = add(n, value(v)?)?;
-                    }
-                    n
-                }
-                _ => 0,
-            })
+        let known = self.1.0.load(Ordering::Relaxed);
+        if known != 0 {
+            return Ok(known);
         }
+        #[cfg(test)]
+        WALKS.with(|w| w.set(w.get() + 1));
         let mut n = vector(&self.0)?;
         for (k, v) in &self.0 {
-            n = add(n, add(allocation(k.capacity())?, value(v)?)?)?;
+            n = add(n, add(allocation(k.capacity())?, value_weight(v)?)?)?;
         }
+        self.1.0.store(n, Ordering::Relaxed);
         Ok(n)
     }
     pub fn new() -> Self {
-        Self(Vec::new())
+        Self::default()
     }
     pub fn with(mut self, k: &str, v: Val) -> Self {
         self.set(k, v);
@@ -260,6 +311,7 @@ impl Doc {
     }
     /// `$set` of one field: replaced in place, or appended.
     pub fn set(&mut self, k: &str, v: Val) {
+        *self.1.0.get_mut() = 0;
         match self.0.iter_mut().find(|(key, _)| key == k) {
             Some((_, slot)) => *slot = v,
             None => self.0.push((k.to_owned(), v)),
@@ -267,6 +319,7 @@ impl Doc {
     }
     /// `$unset` / `delete`.
     pub fn remove(&mut self, k: &str) {
+        *self.1.0.get_mut() = 0;
         self.0.retain(|(key, _)| key != k);
     }
     pub fn keys(&self) -> impl Iterator<Item = &str> {
@@ -315,7 +368,7 @@ impl Row {
         super::forecast_cache::reserve(&mut fields, 32)?;
         Ok(Self {
             template,
-            own: Doc(fields),
+            own: Doc(fields, Weight::default()),
         })
     }
     pub(super) fn heap_weight(&self) -> Result<usize, crate::storage::Error> {
@@ -355,6 +408,22 @@ impl Row {
         match self.get(k) {
             Some(Val::Str(s)) => s,
             _ => String::new(),
+        }
+    }
+    /// The string [`Self::get`] reads, without copying it: a template string is borrowed unless
+    /// it needs the value layer's canonical form ([`Val::str`]).
+    pub(super) fn str_ref(&self, k: &str) -> Option<std::borrow::Cow<'_, str>> {
+        use std::borrow::Cow;
+        match self.own.get(k) {
+            Some(Val::Str(s)) => Some(Cow::Borrowed(s)),
+            Some(_) => None,
+            None => match self.template.iter().find(|(name, _)| *name == k) {
+                Some((_, Tmpl::Str(s))) if s.as_bytes().contains(&0xF4) => {
+                    Some(Cow::Owned(crate::domestic::kma::js::canon_str(s)))
+                }
+                Some((_, Tmpl::Str(s))) => Some(Cow::Borrowed(s)),
+                _ => None,
+            },
         }
     }
     pub fn set(&mut self, k: &str, v: Val) {
@@ -536,5 +605,172 @@ mod tests {
             bounded_int(&format!("0x{}", "f".repeat(256 * 1024))).unwrap(),
             f64::INFINITY
         );
+    }
+    struct Rng(u64);
+    impl Rng {
+        fn next(&mut self, bound: u64) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0 % bound
+        }
+    }
+    /// Any value, with varied string capacities, nested Docs and (rejected by `try_set`) arrays.
+    fn any_value(rng: &mut Rng, depth: usize) -> Val {
+        match rng.next(if depth < 2 { 7 } else { 5 }) {
+            0 => Val::Num(rng.next(1000) as f64),
+            1 => {
+                let mut s = String::with_capacity(rng.next(200) as usize);
+                for _ in 0..rng.next(40) {
+                    s.push('x');
+                }
+                Val::Str(s)
+            }
+            2 => Val::Date(rng.next(1_000_000) as f64),
+            3 => Val::Null,
+            4 => Val::Bool(rng.next(2) == 0),
+            5 => {
+                let mut d = Doc::new();
+                for i in 0..rng.next(5) {
+                    d.set(&format!("n{i}"), any_value(rng, depth + 1));
+                }
+                Val::Doc(d)
+            }
+            _ => Val::Arr(
+                (0..rng.next(4))
+                    .map(|_| any_value(rng, depth + 1))
+                    .collect(),
+            ),
+        }
+    }
+    /// An independent full walk of the backing allocations: the oracle of every Doc weight.
+    fn fresh(doc: &Doc) -> usize {
+        use super::super::forecast_cache::{allocation, vector};
+        fn value(v: &Val) -> usize {
+            match v {
+                Val::Str(s) => allocation(s.capacity()).unwrap(),
+                Val::Doc(d) => fresh(d),
+                Val::Arr(a) => vector(a).unwrap() + a.iter().map(value).sum::<usize>(),
+                _ => 0,
+            }
+        }
+        vector(&doc.0).unwrap()
+            + doc
+                .0
+                .iter()
+                .map(|(k, v)| allocation(k.capacity()).unwrap() + value(v))
+                .sum::<usize>()
+    }
+    #[test]
+    fn doc_weights_equal_a_full_walk_after_every_change() {
+        let mut rng = Rng(0x9E37_79B9_7F4A_7C15);
+        for _ in 0..300 {
+            let mut doc = Doc::new();
+            for _ in 0..60 {
+                let key = format!("k{}", rng.next(40));
+                match rng.next(7) {
+                    // Refused sets (arrays, a 33rd field) must leave a correct weight too.
+                    0..=2 => {
+                        let _ = doc.try_set(&key, &any_value(&mut rng, 0));
+                    }
+                    3 => doc.set(&key, any_value(&mut rng, 0)),
+                    4 => doc.remove(&key),
+                    5 => doc = doc.clone(),
+                    _ => doc = doc.checked_clone().unwrap_or_else(|_| doc.clone()),
+                }
+                assert_eq!(doc.heap_weight().unwrap(), fresh(&doc));
+            }
+        }
+    }
+    #[test]
+    fn collection_admission_equals_a_full_recomputation_at_every_limit() {
+        use super::super::forecast_cache::allocation;
+        fn scalar(rng: &mut Rng) -> Val {
+            loop {
+                let v = any_value(rng, 1);
+                if !matches!(v, Val::Arr(_)) {
+                    break v;
+                }
+            }
+        }
+        let mut rng = Rng(0x2545_F491_4F6C_DD1D);
+        for _ in 0..300 {
+            let mut docs = Vec::new();
+            for _ in 0..rng.next(12) {
+                let mut d = Doc::new();
+                for i in 0..rng.next(6) {
+                    d.try_set(&format!("f{i}"), &scalar(&mut rng)).unwrap();
+                }
+                docs.push(d);
+            }
+            let mut doc = Doc::new();
+            for i in 0..rng.next(6) {
+                doc.try_set(&format!("g{i}"), &scalar(&mut rng)).unwrap();
+            }
+            let index = (!docs.is_empty() && rng.next(2) == 0)
+                .then(|| rng.next(docs.len() as u64) as usize);
+            for (delta, admitted) in [(-1_isize, false), (0, true), (1, true)] {
+                let mut target = docs.clone();
+                let n = target.len() + usize::from(index.is_none());
+                let exact = allocation(target.capacity().max(n) * std::mem::size_of::<Doc>())
+                    .unwrap()
+                    + target
+                        .iter()
+                        .enumerate()
+                        .filter(|(i, _)| Some(*i) != index)
+                        .map(|(_, d)| fresh(d))
+                        .sum::<usize>()
+                    + fresh(&doc);
+                let before = target.clone();
+                let result = checked_store_with_limit(
+                    &mut target,
+                    index,
+                    doc.clone(),
+                    exact.saturating_add_signed(delta),
+                );
+                assert_eq!(result.is_ok(), admitted, "limit {delta:+} of {exact}");
+                if !admitted {
+                    assert_eq!(target, before);
+                } else if let Some(i) = index {
+                    assert_eq!(target[i], doc);
+                } else {
+                    assert_eq!(target.last(), Some(&doc));
+                }
+            }
+        }
+    }
+    #[test]
+    fn stores_and_field_sets_walk_each_doc_a_bounded_number_of_times() {
+        fn walks() -> usize {
+            WALKS.with(std::cell::Cell::get)
+        }
+        fn store(n: usize) -> usize {
+            let start = walks();
+            let mut docs = Vec::new();
+            for i in 0..n {
+                let coord = Doc::new()
+                    .with("mx", Val::Num(60.))
+                    .with("my", Val::Num(127.));
+                let mut d = Doc::new();
+                d.try_set("mCoord", &Val::Doc(coord)).unwrap();
+                d.try_set("fcsDate", &Val::Date(i as f64)).unwrap();
+                d.try_set("data", &Val::str(format!("value {i}"))).unwrap();
+                checked_store(&mut docs, None, d).unwrap();
+            }
+            walks() - start
+        }
+        let (small, large) = (store(64), store(256));
+        assert!(
+            large <= 8 * 256,
+            "storing 256 Docs walked {large} Docs (64 Docs: {small})"
+        );
+        let start = walks();
+        let mut wide = Doc::new();
+        for i in 0..32 {
+            wide.try_set(&format!("f{i}"), &Val::Num(i as f64)).unwrap();
+        }
+        let sets = walks() - start;
+        eprintln!("Doc walks: 64 stores {small}, 256 stores {large}, 32 field sets {sets}");
+        assert!(sets <= 2, "32 field sets walked the Doc {sets} times");
     }
 }

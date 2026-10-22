@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Empty-cache forecast build: ordered concurrent partition lookups",
+    "output": "docs/architecture/diagrams/server2-cold-read.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "viewBox": [
+      1040,
+      590
+    ],
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "8946cecd899228b8585bfc2c16de3fd6f1b20321",
+      "link_mode": "local-only"
+    }
+  },
+  "participants": [
+    {
+      "id": "owner",
+      "type": "backend",
+      "label": "Cache owner",
+      "sublabel": "one flight per view",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 389,
+          "end_line": 486,
+          "label": "Owner admission, workspace and install"
+        }
+      ]
+    },
+    {
+      "id": "reader",
+      "type": "backend",
+      "label": "Partition reader",
+      "sublabel": "ordered consumer",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 487,
+          "end_line": 618,
+          "label": "Read and ordered partition read-ahead"
+        },
+        {
+          "path": "server2/src/domestic/kma/source/records.rs",
+          "line": 35,
+          "end_line": 95,
+          "label": "Scope totals admitted in partition order"
+        }
+      ]
+    },
+    {
+      "id": "store",
+      "type": "backend",
+      "label": "Forecast store",
+      "sublabel": "admission 12 lookups",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 114,
+          "end_line": 131,
+          "label": "Store admission 12 and lookup bounds"
+        },
+        {
+          "path": "server2/src/storage/catalog.rs",
+          "line": 684,
+          "end_line": 700,
+          "label": "Lookup chain"
+        }
+      ]
+    },
+    {
+      "id": "gate",
+      "type": "backend",
+      "label": "Process S3 gate",
+      "sublabel": "12 permits, unchanged",
+      "sources": [
+        {
+          "path": "server2/src/gateway/runtime.rs",
+          "line": 30,
+          "end_line": 32,
+          "label": "Existing combined in-flight limit"
+        }
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "database",
+      "label": "S3 records",
+      "sublabel": "authoritative",
+      "sources": [
+        {
+          "path": "server2/src/storage/catalog.rs",
+          "line": 684,
+          "end_line": 700,
+          "label": "Catalog, descriptor and raw reads"
+        }
+      ]
+    },
+    {
+      "id": "fold",
+      "type": "backend",
+      "label": "Fold",
+      "sublabel": "blocking, cached Doc weights",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/forecast_cache.rs",
+          "line": 619,
+          "end_line": 711,
+          "label": "build_view on the blocking pool"
+        },
+        {
+          "path": "server2/src/domestic/kma/source/doc.rs",
+          "line": 175,
+          "end_line": 300,
+          "label": "Exact cached Doc weight"
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 240,
+      "to": 410,
+      "label": "Overlapped reads, ordered results"
+    },
+    {
+      "from": 420,
+      "to": 475,
+      "label": "Fold"
+    }
+  ],
+  "messages": [
+    {
+      "id": "step-0",
+      "from": "owner",
+      "to": "reader",
+      "y": 170,
+      "label": "Build key (workspace held)",
+      "variant": "default"
+    },
+    {
+      "id": "step-1",
+      "from": "reader",
+      "to": "s3",
+      "y": 198,
+      "label": "LIST partitions by month",
+      "variant": "default"
+    },
+    {
+      "id": "step-2",
+      "from": "s3",
+      "to": "reader",
+      "y": 226,
+      "label": "Sorted partition ids",
+      "variant": "return"
+    },
+    {
+      "id": "step-3",
+      "from": "reader",
+      "to": "store",
+      "y": 254,
+      "label": "Start lookups 1..12 in order",
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-4",
+      "from": "store",
+      "to": "gate",
+      "y": 282,
+      "label": "Per lookup: catalog, descriptor, raw",
+      "variant": "default"
+    },
+    {
+      "id": "step-5",
+      "from": "gate",
+      "to": "s3",
+      "y": 310,
+      "label": "At most 12 operations in flight",
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-6",
+      "from": "s3",
+      "to": "store",
+      "y": 338,
+      "label": "Objects, decoded and verified",
+      "variant": "return"
+    },
+    {
+      "id": "step-7",
+      "from": "store",
+      "to": "reader",
+      "y": 366,
+      "label": "Lookup n ready (any finish order)",
+      "variant": "return"
+    },
+    {
+      "id": "step-8",
+      "from": "reader",
+      "to": "owner",
+      "y": 394,
+      "label": "Partition order; caps; first error wins",
+      "variant": "return"
+    },
+    {
+      "id": "step-9",
+      "from": "owner",
+      "to": "fold",
+      "y": 440,
+      "label": "build_view on blocking thread",
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-10",
+      "from": "fold",
+      "to": "owner",
+      "y": 468,
+      "label": "Same Docs, cached Doc weights",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Contract",
+      "items": [
+        "Lookups overlap; results are consumed in partition order, so Docs, order and errors equal the sequential read.",
+        "Store admission rises 2 to 12 (raw loads too); per-lookup output falls 32 to 4 MiB and controls 8 to 1 MiB: in-flight reads of all views stay within 72.75 MiB (D2: 82.125 MiB).",
+        "No new mode, timer, retry or provider call."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Preserved",
+      "items": [
+        "Owner deadline, 3 second waiter, writer fences and install rules are unchanged; the next owner wakes after the workspace returns.",
+        "The 12-permit process S3 gate is shared with other families and is not resized here.",
+        "Every capacity cap keeps its exact boundary."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Loopback evidence",
+      "items": [
+        "130 partitions at 10 ms per operation: 0.55 s with 12 lookups in flight, 3.9 s sequential.",
+        "Local, modeled 10 ms: views ready after 3.1 s in a running server (D2: none within its 8 s owner bound); the 3 s deadline is still missed.",
+        "Seoul t3.small: views ready after 4.6 s even at 0 ms (D2: about 3 of 7 views); host CPU, shared with the loopback peer, sets the floor. Real S3 and TLS are not measured."
+      ]
+    }
+  ]
+}
