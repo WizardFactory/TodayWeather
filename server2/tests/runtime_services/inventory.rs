@@ -720,54 +720,60 @@ fn factory_national_prose_reader_survives_factory_reconstruction() {
                 )));
                 let phase_started = std::time::Instant::now();
                 let virtual_before = tokio::time::Instant::now();
-                for version in ["v000903", "v000901"] {
-                    // Prepare weather through this same factory/router, one city at a time.
-                    // A cold 15-city fanout can reject keys before detached owners finish;
-                    // that is separate from the national prose reader wiring checked below.
-                    // The first pass can start missing-publication owners which invalidate
-                    // their canonical view. The second reads after those one-shot claims.
-                    for _pass in 0..2 {
-                        for city in server2::nation::CITIES {
-                            use tower::ServiceExt;
-                            let city_path: String = city
-                                .bytes()
-                                .map(|byte| match byte {
-                                    b'/' => "/".to_owned(),
-                                    _ if byte.is_ascii_alphanumeric() => (byte as char).to_string(),
-                                    _ => format!("%{byte:02X}"),
-                                })
-                                .collect();
-                            let request = axum::http::Request::builder()
-                                .uri(format!("/{version}/kma/addr/{city_path}"))
-                                .header("accept-language", "ko")
-                                .body(axum::body::Body::empty())
-                                .unwrap();
-                            let mut response = Box::pin(router.clone().oneshot(request));
-                            let response = std::future::poll_fn(|cx| {
-                                assert!(phase_started.elapsed() < Duration::from_secs(15));
-                                match std::future::Future::poll(response.as_mut(), cx) {
-                                    std::task::Poll::Ready(result) => {
-                                        std::task::Poll::Ready(result.unwrap())
-                                    }
-                                    std::task::Poll::Pending => {
-                                        cx.waker().wake_by_ref();
-                                        std::task::Poll::Pending
-                                    }
-                                }
+                // Both API versions share these canonical weather inputs. Prepare once
+                // per phase so version conversion checks do not repeat cold setup work.
+                let version = "v000903";
+                // Prepare weather through this same factory/router, one city at a time.
+                // A cold 15-city fanout can reject keys before detached owners finish;
+                // that is separate from the national prose reader wiring checked below.
+                // The first pass can start missing-publication owners which invalidate
+                // their canonical view. The second reads after those one-shot claims.
+                for _pass in 0..2 {
+                    for city in server2::nation::CITIES {
+                        use tower::ServiceExt;
+                        let city_path: String = city
+                            .bytes()
+                            .map(|byte| match byte {
+                                b'/' => "/".to_owned(),
+                                _ if byte.is_ascii_alphanumeric() => (byte as char).to_string(),
+                                _ => format!("%{byte:02X}"),
                             })
-                            .await;
-                            let status = response.status();
-                            let bytes = axum::body::to_bytes(response.into_body(), 2 << 20)
-                                .await
-                                .unwrap();
-                            assert_eq!(
-                                status,
-                                200,
-                                "city setup: {phase}, {version}, {city}: {}",
-                                String::from_utf8_lossy(&bytes[..bytes.len().min(2048)])
+                            .collect();
+                        let request = axum::http::Request::builder()
+                            .uri(format!("/{version}/kma/addr/{city_path}"))
+                            .header("accept-language", "ko")
+                            .body(axum::body::Body::empty())
+                            .unwrap();
+                        let mut response = Box::pin(router.clone().oneshot(request));
+                        let response = std::future::poll_fn(|cx| {
+                            assert!(
+                                phase_started.elapsed() < Duration::from_secs(15),
+                                "city preparation did not complete: phase {phase}, {city}, pass {_pass}"
                             );
-                        }
+                            match std::future::Future::poll(response.as_mut(), cx) {
+                                std::task::Poll::Ready(result) => {
+                                    std::task::Poll::Ready(result.unwrap())
+                                }
+                                std::task::Poll::Pending => {
+                                    cx.waker().wake_by_ref();
+                                    std::task::Poll::Pending
+                                }
+                            }
+                        })
+                        .await;
+                        let status = response.status();
+                        let bytes = axum::body::to_bytes(response.into_body(), 2 << 20)
+                            .await
+                            .unwrap();
+                        assert_eq!(
+                            status,
+                            200,
+                            "city setup: {phase}, {version}, {city}: {}",
+                            String::from_utf8_lossy(&bytes[..bytes.len().min(2048)])
+                        );
                     }
+                }
+                for version in ["v000903", "v000901"] {
                     let mut proved = false;
                     for cold_to_warm_attempt in 0..4 {
                         use tower::ServiceExt;
@@ -816,7 +822,8 @@ fn factory_national_prose_reader_survives_factory_reconstruction() {
                         );
                         super::inventory_nation::assert_response(&value, expected.as_ref().unwrap());
                         println!(
-                            "FACTORY_PROSE_READY phase={phase} version={version} attempt={cold_to_warm_attempt}"
+                            "FACTORY_PROSE_READY phase={phase} version={version} attempt={cold_to_warm_attempt} elapsed_ms={}",
+                            phase_started.elapsed().as_millis()
                         );
                         proved = true;
                         break;
