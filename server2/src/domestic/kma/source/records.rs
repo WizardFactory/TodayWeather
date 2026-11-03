@@ -16,6 +16,8 @@ pub struct Fetched {
     /// The catalog partition (publication `YYYYMMDD-HHMM` or KST day).
     pub partition: String,
     pub pages: Vec<Arc<[u8]>>,
+    /// Full canonical RawId keys, parallel to pages. Empty only for synthetic legacy fixtures.
+    pub raw_ids: Vec<String>,
 }
 impl Fetched {
     pub fn page_refs(&self) -> Vec<&[u8]> {
@@ -165,6 +167,10 @@ impl<T: IndexListing + Clone> Reader<T> {
                 fetched_at_ms: completed,
                 partition: partition.into(),
                 pages: records.iter().map(|r| r.bytes.clone()).collect(),
+                raw_ids: records
+                    .iter()
+                    .map(|r| r.envelope.identity.object_key())
+                    .collect::<Result<_, _>>()?,
             });
         }
         Ok((out, set.excluded_groups()))
@@ -287,6 +293,31 @@ impl<T: IndexListing + Clone> Reader<T> {
         Ok((out, excluded))
     }
 }
+/// Complete groups have already been validated. Fold each original raw body once
+/// when a discovery and a RAM handoff both include that same full identity.
+pub fn deduplicate(fetched: &mut Vec<Fetched>) {
+    let mut seen = std::collections::HashSet::new();
+    for acquisition in fetched.iter_mut() {
+        if acquisition.raw_ids.len() != acquisition.pages.len() || acquisition.raw_ids.is_empty() {
+            continue;
+        }
+        let mut ids = Vec::new();
+        let mut pages = Vec::new();
+        for (id, page) in acquisition
+            .raw_ids
+            .drain(..)
+            .zip(acquisition.pages.drain(..))
+        {
+            if seen.insert(id.clone()) {
+                ids.push(id);
+                pages.push(page);
+            }
+        }
+        acquisition.raw_ids = ids;
+        acquisition.pages = pages;
+    }
+    fetched.retain(|f| !f.pages.is_empty());
+}
 /// KST months (`YYYYMM`) from `from_ms` through `to_ms`.
 pub fn months(from_ms: f64, to_ms: f64) -> Vec<u32> {
     let mut out = Vec::new();
@@ -304,4 +335,29 @@ pub fn months(from_ms: f64, to_ms: f64) -> Vec<u32> {
         t = (t + 86_400_000.).min(to_ms);
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn canonical_and_ram_fold_a_full_raw_identity_once() {
+        let make = |id: &str| Fetched {
+            fetched_at_ms: 1,
+            partition: "20261025-1200".into(),
+            pages: vec![Arc::from(&b"same body"[..])],
+            raw_ids: vec![id.into()],
+        };
+        let mut copies = vec![
+            make("kma/grid60/127/1200/1/hash"),
+            make("kma/grid60/127/1200/1/hash"),
+            make("kma/grid61/127/1200/1/hash"),
+        ];
+        deduplicate(&mut copies);
+        assert_eq!(
+            copies.len(),
+            2,
+            "same digest/time in another full RawId must remain distinct"
+        );
+    }
 }

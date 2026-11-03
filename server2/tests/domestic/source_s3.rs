@@ -49,11 +49,14 @@ pub struct Peer {
     endpoint: String,
 }
 impl Peer {
+    /// Domestic restore sweeps otherwise exhaust loopback ephemeral addresses.
+    /// Reuse stays within the owned peer's unchanged 16-slot/two-second bounds;
+    /// dedicated storage fault tests retain the peer's nonpersistent default.
     pub fn new() -> Self {
-        Self::spawn(false)
+        Self::persistent()
     }
     /// Rich cold restores read thousands of catalogs. Reuse bounded owned HTTP connections
-    /// instead of exhausting ephemeral ports; ordinary/fault tests retain their default peer.
+    /// instead of opening a new connection for every catalog/raw response.
     pub fn persistent() -> Self {
         Self::spawn(true)
     }
@@ -172,14 +175,14 @@ async fn publish(
         .await
         .unwrap();
 }
-fn envelope(items: Vec<serde_json::Value>) -> Vec<u8> {
+pub(super) fn envelope(items: Vec<serde_json::Value>) -> Vec<u8> {
     serde_json::to_vec(&json!({"response": {
         "header": {"resultCode": "00", "resultMsg": "NORMAL_SERVICE"},
         "body": {"dataType": "JSON", "items": {"item": items}, "pageNo": 1, "numOfRows": 999,
                  "totalCount": items.len()}}}))
     .unwrap()
 }
-fn current_page(date: &str, time: &str, t1h: &str) -> Vec<u8> {
+pub(super) fn current_page(date: &str, time: &str, t1h: &str) -> Vec<u8> {
     let values = [
         ("PTY", "0"),
         ("REH", "60"),
@@ -201,7 +204,7 @@ fn current_page(date: &str, time: &str, t1h: &str) -> Vec<u8> {
     )
 }
 /// (date, HH00) slots `hours` after `start` (KST wall clock).
-fn slots(start_date: u32, start_time: u16, hours: &[i64]) -> Vec<(String, String)> {
+pub(super) fn slots(start_date: u32, start_time: u16, hours: &[i64]) -> Vec<(String, String)> {
     let base = Publication::new(start_date, start_time).unwrap();
     hours
         .iter()
@@ -213,7 +216,7 @@ fn slots(start_date: u32, start_time: u16, hours: &[i64]) -> Vec<(String, String
 }
 /// Category values of one forecast slot (date, time).
 type Values = dyn Fn(&str, &str) -> Vec<(&'static str, String)>;
-fn forecast_items(
+pub(super) fn forecast_items(
     base: (&str, &str),
     at: &[(String, String)],
     values: &Values,
@@ -248,7 +251,7 @@ fn shortest_page() -> Vec<u8> {
         ]
     }))
 }
-fn short_page() -> Vec<u8> {
+pub(super) fn short_page() -> Vec<u8> {
     // Base 0800: hourly to the third midnight, then three-hourly for one day.
     let mut hours: Vec<i64> = (1..=63).collect();
     hours.extend((0..8).map(|i| 64 + i * 3));
@@ -277,7 +280,7 @@ fn short_page() -> Vec<u8> {
     }))
 }
 /// A `queryDFS.jsp` document (one line; raw literals keep the placement gate's plain-text rule).
-fn rss_xml() -> Vec<u8> {
+pub(super) fn rss_xml() -> Vec<u8> {
     let mut rows = String::new();
     for i in 0..8 {
         let h = 12 + i * 3;
@@ -293,10 +296,10 @@ fn rss_xml() -> Vec<u8> {
     )
     .into_bytes()
 }
-fn mid_page(items: Vec<serde_json::Value>) -> Vec<u8> {
+pub(super) fn mid_page(items: Vec<serde_json::Value>) -> Vec<u8> {
     envelope(items)
 }
-fn land_item() -> serde_json::Value {
+pub(super) fn land_item() -> serde_json::Value {
     let mut o = serde_json::Map::new();
     o.insert("regId".into(), json!("11B00000"));
     for d in 3..=10 {
@@ -308,7 +311,7 @@ fn land_item() -> serde_json::Value {
     }
     serde_json::Value::Object(o)
 }
-fn temp_item() -> serde_json::Value {
+pub(super) fn temp_item() -> serde_json::Value {
     let mut o = serde_json::Map::new();
     o.insert("regId".into(), json!("11B10101"));
     for d in 3..=10 {
@@ -317,7 +320,7 @@ fn temp_item() -> serde_json::Value {
     }
     serde_json::Value::Object(o)
 }
-fn zone_page() -> Vec<u8> {
+pub(super) fn zone_page() -> Vec<u8> {
     let zone = |id: &str, name: &str, sp: &str| {
         json!({"regId": id, "tmSt": "201601010000", "tmEd": "210012310000", "regSp": sp,
                "regName": name, "regEn": name, "regUp": "11B10000", "lat": "37.57", "lon": "126.97"})
@@ -346,6 +349,7 @@ pub struct Data {
 }
 fn fetched(at: f64, partition: &str, page: Vec<u8>) -> Fetched {
     Fetched {
+        raw_ids: Vec::new(),
         fetched_at_ms: at as u64,
         partition: partition.into(),
         pages: vec![Arc::from(page)],

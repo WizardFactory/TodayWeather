@@ -762,3 +762,44 @@ async fn independent_kma_and_dsf_merge_adds_missing_fields_and_replaces_in_place
         assert_eq!(to_bytes(response.into_body(),1000).await.unwrap().as_ref(),expected.as_bytes());
     }
 }
+
+/// Native weather retains the public budget after the independent geocode cap.
+struct FullBudget;
+impl BackendHandler for FullBudget {
+    fn request_budget(&self) -> Duration {
+        Duration::from_secs(8)
+    }
+    fn fetch(
+        &self,
+        _: String,
+        _: String,
+        deadline: Instant,
+    ) -> BoxFuture<'_, Result<OrderedJson, GatewayError>> {
+        Box::pin(async move {
+            assert!(deadline.saturating_duration_since(Instant::now()) > Duration::from_secs(7));
+            OrderedJson::parse(b"{}")
+        })
+    }
+}
+#[tokio::test]
+async fn native_weather_geocode_cap_does_not_shorten_the_full_history_handler_budget() {
+    let geo = Arc::new(FixedGeo {
+        geo: oracle_geo("gateway-domestic-v000903-coord"),
+        error: None,
+        delay: Duration::ZERO,
+    });
+    let backends = BackendDispatcher::legacy("http://127.0.0.1:9").unwrap();
+    backends.register_native(Version::V000903, Family::Kma, Arc::new(FullBudget));
+    backends
+        .set_backend(Version::V000903, Family::Kma, BackendMode::Native)
+        .unwrap();
+    let gateway =
+        Gateway::new(geo.clone(), backends).with_weather_geocoder(geo, vec![Version::V000903]);
+    assert_eq!(
+        gateway
+            .handle(request("/weather/v000903/coord/37.566,126.978"))
+            .await
+            .status(),
+        StatusCode::OK
+    );
+}

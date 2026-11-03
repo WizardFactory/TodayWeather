@@ -1,8 +1,9 @@
 # S13 provider fixtures
 
 Test-only inputs for `tests/providers.rs`. They are not read by the runtime. Copied
-files keep their bytes; their origin is the legacy offline suite at base `ca8735cf`
-(same repository and MIT license). No provider was called to produce them here.
+files keep their bytes. The original S13 inputs came from the legacy offline
+suite at base `ca8735cf` (same repository and MIT license), without a new provider
+call. The separately dated 2026-10-25 observation capture below is a later input.
 
 | File | Origin | Kind |
 | --- | --- | --- |
@@ -18,3 +19,27 @@ files keep their bytes; their origin is the legacy offline suite at base `ca8735
 Multi-page VilageFcst JSON pages are generated deterministically in `support.rs`
 following the data.go.kr JSON envelope shape of the captured UV/pollen responses;
 they are synthetic, not a VilageFcst capture.
+
+## Current city midnight original, 2026-10-25
+
+`city-obs-2026-10-25-midnight.html` is one unedited, unauthenticated KMA public
+[city-observation response](https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.25.00%3A00),
+captured 2026-10-25T12:54:03Z during the declared four-time public-city profile.
+It contains public nationwide station data and the site's HTML; no service key,
+user location or response headers were copied. Its size is 115,731 bytes and
+SHA-256 is `be23990a77db86c038bbe71358fbe1059efbf713d2d9d2fab3b825bccd68789f`.
+Source attribution: Korea Meteorological Administration. This selected reusable
+fixture proves native format/city parsing at the midnight boundary, including
+preservation of blank Seoul daily rain. It does not certify seven-day coverage,
+all-weather semantics, automatic station-batch acquisition or client latency.
+
+`city-obs-2026-10-25-future-23.html` is a second unedited public
+[city response](https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.25.23%3A00),
+captured at 2026-10-25T13:44:41Z (22:44 KST), before the requested 23:00 hour.
+It returned a complete nationwide table with **22:00** in the observation header
+and form. It is 116,009 bytes, SHA-256
+`e515751a8c285ff46cf842dfbe775b3a2dbfb8a7570f4c8613ac8b88048082b7`.
+The native loopback test verifies `Stale(22:00)`, no raw group and no retry.
+This one future-hour shape does not establish every current-hour release-delay
+response or the site's complete historical reach. No additional network call
+is made by the test. Source attribution: Korea Meteorological Administration.

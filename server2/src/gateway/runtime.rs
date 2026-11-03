@@ -348,6 +348,7 @@ pub(crate) struct BuiltGateway {
     pub gateway: Option<Arc<Gateway>>,
     pub native: NativeHandles,
     pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
+    pub raw_writer: Option<Arc<crate::storage::response_first::Writer>>,
 }
 struct UnavailableGeocoder;
 impl super::Geocoder for UnavailableGeocoder {
@@ -384,6 +385,7 @@ pub(crate) fn build_shared(
             gateway: None,
             native: NativeHandles::default(),
             warning_acquire: None,
+            raw_writer: None,
         });
     }
     let backend = match &base {
@@ -431,6 +433,7 @@ pub(crate) fn build_shared(
     }
     let mut direct = None;
     let mut warning_acquire = None;
+    let mut raw_writer = None;
     if let (Some(s3), true) = (s3, families.kma_source() || families.push) {
         // S15b: the S3 input source over the shared admission, one for every listed address
         // version (S17a) and the direct routes (S17b). S15b-4 acquires missing forecast inputs at
@@ -442,6 +445,18 @@ pub(crate) fn build_shared(
         // table (production endpoint, no setting).
         let airkorea = kma_airkorea(var, &s3, builtins)?;
         let daily = Arc::new(kma_acquirer(var, s3.clone(), builtins)?);
+        let writer = crate::storage::response_first::Writer::new(
+            Arc::new(
+                crate::storage::CatalogStore::new(
+                    s3.clone(),
+                    crate::storage::CatalogLimits::default(),
+                )
+                .map_err(|_| GatewayError::InvalidConfiguration)?,
+            ),
+            crate::storage::response_first::Config::default(),
+        )
+        .map_err(|_| GatewayError::InvalidConfiguration)?;
+        raw_writer = Some(writer.clone());
         let life = kma_life(&s3, daily.clone(), builtins)?;
         let daily_forecast = daily.clone();
         let air: Option<Arc<dyn crate::world::AirSource>> =
@@ -452,9 +467,10 @@ pub(crate) fn build_shared(
             builtins,
             warnings.clone().ok_or(GatewayError::InvalidConfiguration)?,
             feed,
+            writer.clone(),
         )?;
         warning_acquire = Some(forecast.clone());
-        let source = crate::domestic::kma::source::S3Source::new_with_warning_store(
+        let source = crate::domestic::kma::source::S3Source::new_observed_with_warning_store(
             s3.clone(),
             crate::domestic::kma::backend::system_clock(),
             daily,
@@ -467,6 +483,7 @@ pub(crate) fn build_shared(
             warnings.clone().ok_or(GatewayError::InvalidConfiguration)?,
         )
         .map_err(|_| GatewayError::InvalidConfiguration)?
+        .with_raw_writer(writer)
         .with_town_geocoder(town_geocoder(var, s3.clone(), builtins)?)
         .with_air(airkorea, air)
         .with_image_calibration(
@@ -511,6 +528,7 @@ pub(crate) fn build_shared(
         })),
         native,
         warning_acquire,
+        raw_writer,
     })
 }
 /// S15b-4: the request-time grid, RSS, mid, forecast-zone and warning acquirer of the KMA source
@@ -521,6 +539,7 @@ fn kma_forecast(
     builtins: &Builtins,
     warnings: Arc<crate::warnings::store::WarningStore<BoundedS3<HttpS3Transport>>>,
     feed: Option<Arc<dyn crate::warnings::collector::PersistedWarningFeed>>,
+    writer: Arc<crate::storage::response_first::Writer>,
 ) -> Result<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>, GatewayError> {
     let invalid = |_| GatewayError::InvalidConfiguration;
     let limits = crate::storage::CatalogLimits::default();
@@ -532,7 +551,8 @@ fn kma_forecast(
             warnings,
             &builtins.data_go_kr,
             feed,
-        ),
+        )
+        .with_raw_writer(writer),
     ))
 }
 /// The request-time AirKorea acquirer of the KMA source; None without `AIRKOREA_SECRET_KEYS`.

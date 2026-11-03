@@ -1,0 +1,261 @@
+{
+  "task": "KMA-FULL-RESPONSE",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "ASOS-primary full historical weather, current public cadence and response-first canonical raw; grid combination generation deferred. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-FULL-RESPONSE.json",
+    "server2/tools/verification/kma_full_response_contract.py",
+    "server2/tools/verification/test_kma_full_response_contract.py",
+    "server2/src/domestic/kma/source/asos.rs",
+    "server2/src/domestic/kma/source/asos/phenomena.rs",
+    "server2/src/domestic/kma/source/observe.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/policy.rs",
+    "server2/src/domestic/kma/short.rs",
+    "server2/src/domestic/kma/mid.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/tests/domestic/asos.rs",
+    "server2/tests/domestic/observed_history.rs",
+    "server2/tests/domestic/recorded.rs",
+    "server2/tests/domestic.rs",
+    "server2/src/storage/response_first.rs",
+    "server2/src/storage/mod.rs",
+    "server2/src/gateway/mod.rs",
+    "server2/src/observability.rs",
+    "server2/src/runtime_services.rs",
+    "server2/src/process.rs",
+    "server2/src/domestic/kma/source/fetch.rs",
+    "server2/tests/response_first.rs",
+    "server2/tests/runtime_services/process.rs",
+    "server2/tools/verification/kma_asos_qualification.py",
+    "server2/src/lib.rs",
+    "server2/src/domestic/kma/source/required.rs",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/gateway/backend.rs",
+    "server2/src/api/mod.rs",
+    "server2/src/domestic/kma/source/records.rs",
+    "server2/tests/domestic/source.rs",
+    "server2/tests/domestic/source_s3.rs",
+    "server2/tests/summary/derive.rs",
+    "server2/examples/kma_response_first_measure/source.rs",
+    "server2/src/summary/recorder.rs",
+    "server2/tests/domestic/observe.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/gateway/wire.rs",
+    "server2/src/summary/lookup.rs",
+    "server2/tests/summary/lookup.rs",
+    "server2/tests/domestic/fixtures/asos-hourly-108-20261018-20261024.json",
+    "server2/tests/domestic/fixtures/asos-daily-108-20261018-20261024.json",
+    "server2/tests/domestic/fixtures/ASOS-20261025-PROVENANCE.md",
+    "server2/tests/domestic/fixtures/asos-hourly-108-20241126-20241128.json",
+    "server2/tests/domestic/fixtures/asos-daily-108-20241126-20241128.json",
+    "server2/tests/summary/record.rs",
+    "server2/tools/verification/kma_public_history_qualification.py",
+    "server2/tools/verification/test_kma_public_history_qualification.py",
+    "server2/src/domestic/family.rs",
+    "server2/src/domestic/format.rs",
+    "server2/src/domestic/kma/source/pages.rs",
+    "server2/tests/providers/acquire.rs",
+    "server2/tests/providers/formats.rs",
+    "server2/tests/providers/requests.rs",
+    "server2/tests/providers/fixtures/city-obs-2026-10-25-midnight.html",
+    "server2/tests/providers/fixtures/PROVENANCE.md",
+    "server2/tests/providers/fixtures/city-obs-2026-10-25-future-23.html",
+    "server2/tools/verification/kma_asos_journal.py",
+    "server2/tools/verification/test_kma_asos_journal.py",
+    "server2/tests/domestic/fixtures/asos-hourly-159-20261018-20261024.json",
+    "server2/tests/domestic/fixtures/asos-daily-159-20261018-20261024.json",
+    "server2/tests/domestic/fixtures/asos-hourly-184-20261018-20261024.json",
+    "server2/tests/domestic/fixtures/asos-daily-184-20261018-20261024.json",
+    "server2/tests/domestic/fixtures/asos-hourly-112-20250127-20250130.json",
+    "server2/tests/domestic/fixtures/asos-daily-112-20250127-20250130.json",
+    "server2/tests/domestic/fixtures/asos-hourly-105-20250302-20250305.json",
+    "server2/tests/domestic/fixtures/asos-daily-105-20250302-20250305.json",
+    "server2/tests/domestic/fixtures/asos-hourly-165-20261011-20261014.json",
+    "server2/tests/domestic/fixtures/asos-daily-165-20261011-20261014.json",
+    "server2/config/contracts/kma-history.v1.json",
+    "server2/tests/domestic/fixtures/asos-hourly-101-20260701-20260731.json",
+    "server2/tests/domestic/fixtures/asos-daily-101-20260701-20260731.json",
+    "server2/tests/domestic/fixtures/asos-hourly-143-20260701-20260731.json",
+    "server2/tests/domestic/fixtures/asos-daily-143-20260701-20260731.json",
+    "server2/tests/domestic/fixtures/asos-hourly-156-20260701-20260731.json",
+    "server2/tests/domestic/fixtures/asos-daily-156-20260701-20260731.json",
+    "server2/config/contracts/kma-client-wire.v1.json",
+    "server2/tools/verification/kma_client_eval.py",
+    "server2/tools/verification/test_kma_client_eval.py",
+    "server2/tests/legacy_versions.rs",
+    "server2/tests/legacy_versions/client_eval.rs",
+    "server2/src/domestic/kma/source/representative.rs",
+    "server2/src/domestic/kma/source/data/town_elevations.csv",
+    "server2/src/domestic/kma/source/data/PROVENANCE.md",
+    "server2/src/domestic/kma/source/stn.rs",
+    "server2/tools/migration/build_town_elevations.py",
+    "server2/tools/verification/test_build_town_elevations.py",
+    "server2/tests/domestic/stations.rs",
+    "server2/examples/kma_cold_measure.rs",
+    "server2/examples/kma_cold_measure/scope.rs",
+    "server2/examples/kma_response_first_measure.rs",
+    "server2/examples/kma_response_first_measure/pending.rs",
+    "server2/tools/verification/kma_cold_measure.py",
+    "server2/tools/verification/kma_response_first_measure.py",
+    "server2/tools/verification/test_kma_cold_measure.py",
+    "server2/tools/verification/test_kma_response_first_measure.py"
+  ],
+  "outside": [
+    {
+      "path": "docs/evidence/research/kma-full-response-implementation-2026-10-25.md",
+      "category": "documentation",
+      "reason": "Selected implementation and verification evidence."
+    },
+    {
+      "path": "docs/evidence/research/kma-full-response-implementation-2026-10-25.json",
+      "category": "documentation",
+      "reason": "Non-secret machine-readable results and exact remaining gates."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "Approved ASOS-primary numeric-value and cadence decision, implementation status."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Native historical source and later response-first ownership contract."
+    },
+    {
+      "path": "docs/architecture/README.md",
+      "category": "documentation",
+      "reason": "Updated reading entry."
+    },
+    {
+      "path": "docs/reference/external-apis/kma.md",
+      "category": "documentation",
+      "reason": "ASOS field mapping and qualification limits."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.json",
+      "category": "documentation",
+      "reason": "Editable actual/proposed state distinction."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.html",
+      "category": "documentation",
+      "reason": "Archify-generated diagram, never hand-patched."
+    },
+    {
+      "path": "docs/evidence/research/kma-asos-closure-qualification-2026-10-25.md",
+      "category": "documentation",
+      "reason": "Primary-source and actual field/period closure qualification for required seven-day history."
+    },
+    {
+      "path": "docs/evidence/research/kma-asos-closure-qualification-2026-10-25.json",
+      "category": "documentation",
+      "reason": "Primary-source and actual field/period closure qualification for required seven-day history."
+    },
+    {
+      "path": "docs/reference/external-apis/inventory.json",
+      "category": "documentation",
+      "reason": "Keep KMA09/10 consumed-field inventory aligned with qualified observed rain and daily event/duration guards; no new API."
+    },
+    {
+      "path": "docs/evidence/research/kma-history-gap-options-2026-10-30.md",
+      "category": "documentation",
+      "reason": "Dated best-option research for undeterminable seven-day history values (QC9 structure, code-less stations, alternatives); no runtime change."
+    },
+    {
+      "path": "docs/architecture/mobile-api.md",
+      "category": "documentation",
+      "reason": "Maintained table of response fields the app and iOS widgets read, with source lines; the client wire contract and eval reference it instead of naming client sources."
+    },
+    {
+      "path": "intent/issue-2614-kma-full-response.md",
+      "category": "documentation",
+      "reason": "Canonical intent, acceptance and plan for this task."
+    },
+    {
+      "path": "specs/issue-2614-kma-full-response.md",
+      "category": "documentation",
+      "reason": "Canonical intent, acceptance and plan for this task."
+    },
+    {
+      "path": "plans/issue-2614-kma-full-response.md",
+      "category": "documentation",
+      "reason": "Canonical intent, acceptance and plan for this task."
+    },
+    {
+      "path": "docs/evidence/research/external-api-inventory-2026-10-24.md",
+      "category": "documentation",
+      "reason": "Linked evidence behind the maintained KMA design and API reference; no implementation outside server2."
+    },
+    {
+      "path": "docs/evidence/research/kma-full-response-reassessment-2026-10-25.md",
+      "category": "documentation",
+      "reason": "Linked evidence behind the maintained KMA design and API reference; no implementation outside server2."
+    },
+    {
+      "path": "docs/evidence/research/kma-provider-review-2026-10-24.md",
+      "category": "documentation",
+      "reason": "Linked evidence behind the maintained KMA design and API reference; no implementation outside server2."
+    },
+    {
+      "path": "docs/evidence/research/kma-response-first-measurement-2026-10-24.json",
+      "category": "documentation",
+      "reason": "Linked evidence behind the maintained KMA design and API reference; no implementation outside server2."
+    },
+    {
+      "path": "docs/evidence/research/kma-response-first-measurement-2026-10-24.md",
+      "category": "documentation",
+      "reason": "Linked evidence behind the maintained KMA design and API reference; no implementation outside server2."
+    },
+    {
+      "path": "docs/evidence/research/kma-response-first-review-2026-10-24.md",
+      "category": "documentation",
+      "reason": "Linked evidence behind the maintained KMA design and API reference; no implementation outside server2."
+    },
+    {
+      "path": "docs/evidence/research/kma-storage-reassessment-2026-10-24.md",
+      "category": "documentation",
+      "reason": "Linked evidence behind the maintained KMA design and API reference; no implementation outside server2."
+    },
+    {
+      "path": "docs/evidence/research/kma-validation-measurement-2026-10-24.json",
+      "category": "documentation",
+      "reason": "Linked evidence behind the maintained KMA design and API reference; no implementation outside server2."
+    },
+    {
+      "path": "docs/evidence/research/kma-validation-measurement-2026-10-24.md",
+      "category": "documentation",
+      "reason": "Linked evidence behind the maintained KMA design and API reference; no implementation outside server2."
+    },
+    {
+      "path": "docs/reference/external-apis/README.md",
+      "category": "documentation",
+      "reason": "External API reference linked from the KMA reference and inventory."
+    },
+    {
+      "path": "docs/reference/external-apis/geography-media.md",
+      "category": "documentation",
+      "reason": "External API reference linked from the KMA reference and inventory."
+    },
+    {
+      "path": "docs/reference/external-apis/platform.md",
+      "category": "documentation",
+      "reason": "External API reference linked from the KMA reference and inventory."
+    },
+    {
+      "path": "docs/reference/external-apis/retired.md",
+      "category": "documentation",
+      "reason": "External API reference linked from the KMA reference and inventory."
+    },
+    {
+      "path": "docs/reference/external-apis/weather-air-life.md",
+      "category": "documentation",
+      "reason": "External API reference linked from the KMA reference and inventory."
+    },
+    {
+      "path": "docs/architecture/diagrams/.gitignore",
+      "category": "documentation",
+      "reason": "Keeps Archify provenance beside the diagram out of version control."
+    }
+  ]
+}

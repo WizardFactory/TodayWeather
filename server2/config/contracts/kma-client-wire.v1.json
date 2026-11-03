@@ -1,0 +1,251 @@
+{
+  "contract": "kma-client-wire",
+  "version": 1,
+  "scope": "KMA weather response bodies delivered to clients, for every weather API version observed in production traffic from 2026-08-23 to 2026-09-22.",
+  "not_a_claim": "Passing does not prove value correctness, latency, HTTP headers, or the behavior of client builds that are not in this repository.",
+  "checked_at": "2026-10-30",
+  "evidence": [
+    "docs/evidence/aws/api-traffic-2026-09-22.md",
+    "server2/config/contracts/kma-history.v1.json"
+  ],
+  "legacy_corpora": [
+    {
+      "path": "server2/tests/golden/records.json",
+      "kind": "golden"
+    },
+    {
+      "path": "server2/tests/domestic/fixtures/oracle.json.gz",
+      "kind": "oracle",
+      "version": "v000903",
+      "surface": "addr"
+    },
+    {
+      "path": "server2/tests/legacy_versions/fixtures/kma-older.json.gz",
+      "kind": "oracle",
+      "surface": "addr"
+    },
+    {
+      "path": "server2/tests/legacy_versions/fixtures/kma-town.json.gz",
+      "kind": "oracle",
+      "surface": "town"
+    }
+  ],
+  "versions": {
+    "v000705": {
+      "routes": [
+        "/v000705/town/{region}/{city}/{town}"
+      ],
+      "requests_2026_09": 12,
+      "body": "empty",
+      "note": "Legacy answers town weather with HTTP 200 and an empty application/json body; only the usage route returns JSON."
+    },
+    "v000803": {
+      "routes": [
+        "/v000803/town/{region}/{city}/{town}"
+      ],
+      "requests_2026_09": 205,
+      "body": "json"
+    },
+    "v000901": {
+      "routes": [
+        "/v000901/kma/addr/{region}/{city}/{town}",
+        "/weather/v000901/coord/{location}",
+        "/weather/coord/{location} (gateway default)"
+      ],
+      "requests_2026_09": 157902,
+      "body": "json"
+    },
+    "v000902": {
+      "routes": [
+        "/v000902/kma/addr/{region}/{city}/{town}",
+        "/weather/v000902/coord/{location}"
+      ],
+      "requests_2026_09": 47,
+      "body": "json"
+    },
+    "v000903": {
+      "routes": [
+        "/v000903/kma/addr/{region}/{city}/{town}",
+        "/weather/v000903/coord/{location}"
+      ],
+      "requests_2026_09": 40574,
+      "body": "json"
+    }
+  },
+  "surfaces": {
+    "addr": "Direct /{version}/kma/addr body",
+    "town": "Direct /{version}/town body",
+    "gateway": "/weather/... coord body, which adds gateway location fields"
+  },
+  "required": {
+    "$": [
+      "regionName",
+      "cityName",
+      "townName",
+      "current",
+      "short",
+      "midData"
+    ],
+    "$.short[]": [
+      "date",
+      "time",
+      "pty",
+      "sky",
+      "pop",
+      "t3h",
+      "skyIcon"
+    ],
+    "$.midData.dailyData[]": [
+      "date"
+    ]
+  },
+  "slot_times": {
+    "number": [
+      3,
+      6,
+      9,
+      12,
+      15,
+      18,
+      21,
+      24
+    ],
+    "string": [
+      "0300",
+      "0600",
+      "0900",
+      "1200",
+      "1500",
+      "1800",
+      "2100",
+      "2400"
+    ]
+  },
+  "consumers": {
+    "ios-widget": {
+      "versions": [
+        "v000901"
+      ],
+      "null_sensitive": true,
+      "note": "NSDictionary returns NSNull for JSON null; intValue on NSNull aborts the widget.",
+      "evidence": "docs/architecture/mobile-api.md#fields-read-by-clients",
+      "reads": [
+        {
+          "path": "$.cityName",
+          "type": "string"
+        },
+        {
+          "path": "$.regionName",
+          "type": "string"
+        },
+        {
+          "path": "$.townName",
+          "type": "string"
+        },
+        {
+          "path": "$.current.date",
+          "type": "string"
+        },
+        {
+          "path": "$.current.time",
+          "type": "number|string"
+        },
+        {
+          "path": "$.current.skyIcon",
+          "type": "string"
+        },
+        {
+          "path": "$.current.t1h",
+          "type": "number"
+        },
+        {
+          "path": "$.short[].date",
+          "type": "string"
+        },
+        {
+          "path": "$.short[].time",
+          "type": "number|string"
+        },
+        {
+          "path": "$.midData.dailyData[].date",
+          "type": "string"
+        },
+        {
+          "path": "$.midData.dailyData[].skyIcon",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "path": "$.midData.dailyData[].pop",
+          "type": "number",
+          "optional": true
+        }
+      ]
+    },
+    "app": {
+      "versions": [
+        "v000903"
+      ],
+      "null_sensitive": false,
+      "evidence": "docs/architecture/mobile-api.md#fields-read-by-clients",
+      "reads": [
+        {
+          "path": "$.short[].skyIcon",
+          "type": "string"
+        },
+        {
+          "path": "$.short[].pop",
+          "type": "number"
+        },
+        {
+          "path": "$.short[].pty",
+          "type": "number"
+        },
+        {
+          "path": "$.short[].rn1",
+          "type": "number",
+          "optional": true
+        },
+        {
+          "path": "$.short[].fromToday",
+          "type": "number",
+          "optional": true,
+          "note": "absent in legacy model-error responses"
+        },
+        {
+          "path": "$.midData.dailyData[].fromToday",
+          "type": "number",
+          "optional": true,
+          "note": "absent in legacy model-error responses"
+        },
+        {
+          "path": "$.midData.dailyData[].skyAm",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "path": "$.midData.dailyData[].skyPm",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "path": "$.midData.dailyData[].rn1",
+          "type": "number",
+          "optional": true
+        }
+      ]
+    }
+  },
+  "rules": {
+    "W1": "No JSON null where the legacy corpus of that version and surface never carries null.",
+    "W2": "Every value has a JSON type the legacy corpus uses at the same path.",
+    "W3": "Required paths are present.",
+    "W4": "Paths absent from the legacy corpus are reported as additive information, not violations.",
+    "A1": "Three-hour slots are ordered by date and time and use the legacy slot time values.",
+    "A2": "Daily rows have unique, ascending dates.",
+    "C1": "Every consumer read path has its expected type; non-optional paths are present; null-sensitive consumers never receive null. A type that legacy also sends at that path is information.",
+    "H1": "Observed history (a body with historyStatus): a past day with measured rain never shows two dry halves, and a past slot with measured rain never has PTY 0.",
+    "H2": "Observed history: a past day without an AM or PM weather icon is listed in historyStatus.missingDailyDates.",
+    "E1": "v000705 town weather keeps the legacy empty body."
+  }
+}

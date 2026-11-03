@@ -127,7 +127,7 @@ fn invalid_publications_and_targets_are_rejected_before_funding() {
 }
 
 #[test]
-fn kma_web_arguments_match_legacy_urls() {
+fn kma_web_arguments_preserve_queries_with_current_city_uri() {
     let e = Endpoints::default();
     assert_eq!(
         WebRequest::town_rss(60, 127)
@@ -155,7 +155,7 @@ fn kma_web_arguments_match_legacy_urls() {
             .endpoint(&e)
             .unwrap()
             .as_str(),
-        "https://www.weather.go.kr/weather/observation/currentweather.jsp?tm=2026.10.13.14:00"
+        "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.13.14:00"
     );
     assert!(WebRequest::aws_hourly(p(20261013, 1430)).is_err());
     assert!(WebRequest::town_rss(0, 1).is_err());

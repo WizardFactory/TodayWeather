@@ -66,6 +66,7 @@ pub fn same(actual: &OrderedJson, expected: &OrderedJson, what: &str) {
 }
 fn fetched(at_ms: f64, partition: &str, pages: Vec<Vec<u8>>) -> Fetched {
     Fetched {
+        raw_ids: Vec::new(),
         fetched_at_ms: at_ms as u64,
         partition: partition.into(),
         pages: pages.into_iter().map(Arc::from).collect(),

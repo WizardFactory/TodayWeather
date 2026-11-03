@@ -81,3 +81,12 @@ Byte-identical copies, copied at master `7ca6f002`; `20160704_AreaNoResutl` last
   needed a Kakao geocode, and the script calls `toFixed` on the string coordinates Kakao returns,
   so no new town was stored. `areaNoList` is therefore these two files only.
 
+## `town_elevations.csv` (station altitude rule)
+
+Terrain elevation of each town in whole metres, used only by `representative.rs`. Each listed town has the median within 500 m, the lower quartile within 2 km and the point value, with negative values clamped to 0. sha256 `b03b816004fc554681dcbab9d4214b10c364e45150d404501c191f5e70473931`.
+
+- **Terrain:** skadi SRTM tiles from the public `elevation-tiles-prod` bucket, fetched on 2026-11-03 without credentials. SRTM data courtesy of the U.S. Geological Survey; the [attribution page](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) describes SRTM as public domain.
+- **Coordinates:** the official KMA grid and coordinate workbook (2026-10 edition) in `기상청41_단기예보 조회서비스_오픈API활용가이드_2610.zip` from [data.go.kr 15084084](https://www.data.go.kr/data/15084084/openapi.do), archive sha256 `9dfd7dc2d422318154d3484fb00142afa3c5271fc14d079adf997043a14b86ba`. The table holds elevations only, not the workbook's rows.
+- **Coverage:** 4,067 of the 4,366 towns in `part.csv` and `base.csv` join an official row or its numbered parts by name. The other 299 are not listed and keep their nearest station.
+
+Rebuild outside the runtime with `server2/tools/migration/build_town_elevations.py --tiles <dir> --guide <zip> --data server2/src/domestic/kma/source/data --out <csv>`. A rebuilt table needs a new version in `OBSERVED_HISTORY_POLICY`.

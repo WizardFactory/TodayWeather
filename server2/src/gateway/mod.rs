@@ -177,23 +177,32 @@ impl Gateway {
     }
     /// Records aggregate outcome counters around the unchanged request contract.
     pub async fn handle(&self, request: Request<Body>) -> Response {
-        crate::observability::work(
-            crate::observability::Component::Gateway,
-            crate::observability::Stage::Request,
-            async {
-                if let Some(direct) = &self.direct
-                    && direct.claims(request.method(), request.uri().path())
-                {
-                    // Direct routes are not gateway requests: no gateway counters or admission.
-                    return direct.handle(request).await;
-                }
-                let outcome = metrics::Outcome::start();
-                let response = self.respond(request).await;
-                outcome.finish(response.status().as_u16());
-                response
-            },
-        )
-        .await
+        let scope = crate::storage::response_first::ResponseScope::default();
+        let guard = crate::storage::response_first::ResponseGuard::new(scope.clone());
+        let mut response = scope
+            .run(crate::observability::work(
+                crate::observability::Component::Gateway,
+                crate::observability::Stage::Request,
+                async {
+                    if let Some(direct) = &self.direct
+                        && direct.claims(request.method(), request.uri().path())
+                    {
+                        // Direct routes are not gateway requests: no gateway counters or admission.
+                        return direct.handle(request).await;
+                    }
+                    let outcome = metrics::Outcome::start();
+                    let response = self.respond(request).await;
+                    outcome.finish(response.status().as_u16());
+                    response
+                },
+            ))
+            .await;
+        let body = std::mem::replace(response.body_mut(), Body::empty());
+        *response.body_mut() = scope.body(body);
+        // In-process measurement can retain metadata without changing public headers/body.
+        response.extensions_mut().insert(scope.clone());
+        guard.disarm();
+        response
     }
     async fn respond(&self, request: Request<Body>) -> Response {
         let method = request.method().clone();
@@ -274,7 +283,7 @@ impl Inner {
             )),
             input::Route::Weather(version, loc) => {
                 let native = self.native_weather_versions.contains(&version);
-                let deadline = if native {
+                let geocode_deadline = if native {
                     deadline.min(Instant::now() + Duration::from_secs(3))
                 } else {
                     deadline
@@ -284,13 +293,14 @@ impl Inner {
                 } else {
                     &self.geocoder
                 };
-                let geo = tokio::time::timeout_at(deadline, geocoder.coord(loc, lang.clone()))
-                    .await
-                    .map_err(|_| GatewayError::Provider)?
-                    .map_err(|error| match error {
-                        GatewayError::Unavailable(_) if native => GatewayError::Provider,
-                        other => other,
-                    })?;
+                let geo =
+                    tokio::time::timeout_at(geocode_deadline, geocoder.coord(loc, lang.clone()))
+                        .await
+                        .map_err(|_| GatewayError::Provider)?
+                        .map_err(|error| match error {
+                            GatewayError::Unavailable(_) if native => GatewayError::Provider,
+                            other => other,
+                        })?;
                 let (family, mut path) = backend::backend_path(version, &geo)?;
                 path.push_str(&query);
                 let mut value = self

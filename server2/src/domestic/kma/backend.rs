@@ -20,6 +20,10 @@ pub enum SourceAnswer {
 }
 /// Supplies request inputs (S15b: [`super::source::S3Source`]).
 pub trait KmaSource: Send + Sync {
+    /// Full-history sources may use more of the existing public request budget.
+    fn request_budget(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(3)
+    }
     /// Async legacy parameter remap before snapshot reads. Default sources need no remap.
     fn prepare(
         &self,
@@ -131,6 +135,9 @@ impl KmaBackend {
     pub fn assemble_with(&self, request: &KmaRequest, store: &dyn KmaStore) -> Outcome {
         assemble(request, store, (self.clock)(), self.config)
     }
+    pub fn request_budget(&self) -> std::time::Duration {
+        self.source.request_budget()
+    }
     async fn serve(
         &self,
         path: String,
@@ -158,7 +165,7 @@ impl KmaBackend {
         request: KmaRequest,
         deadline: Instant,
     ) -> Result<Outcome, GatewayError> {
-        let deadline = deadline.min(Instant::now() + std::time::Duration::from_secs(3));
+        let deadline = deadline.min(Instant::now() + self.request_budget());
         if let Some(reply) = super::chain::preflight(&request) {
             return Ok(reply);
         }
@@ -205,6 +212,9 @@ impl KmaBackend {
     }
 }
 impl BackendHandler for KmaBackend {
+    fn request_budget(&self) -> std::time::Duration {
+        KmaBackend::request_budget(self)
+    }
     fn fetch(
         &self,
         path: String,

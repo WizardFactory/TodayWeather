@@ -38,7 +38,7 @@ fn row(id: &str, name: &str, rain: bool, addr: &str) -> Vec<String> {
     .map(|s| s.to_string())
     .collect()
 }
-fn aws_page(publication: &str, rain_410: bool) -> Vec<u8> {
+pub(super) fn aws_page(publication: &str, rain_410: bool) -> Vec<u8> {
     let rows = [
         row("108", "서울", false, "서울특별시 종로구 송월동"),
         row("400", "강남", false, "서울특별시 강남구 일원동"),
@@ -67,13 +67,13 @@ fn aws_page(publication: &str, rain_410: bool) -> Vec<u8> {
     }
     encoding_rs::EUC_KR.encode(&html).0.into_owned()
 }
-fn city_page(publication: &str) -> Vec<u8> {
+pub(super) fn city_page(publication: &str) -> Vec<u8> {
     format!(
         r#"<html><head><meta charset="utf-8"></head><body><div class="cmp-table-topinfo"><strong>기상실황표</strong>{publication}</div><table id="weather_table"><thead><tr id="table_header2"><th>이름</th><th>현재일기</th><th>운량<br/>1/10</th><th>현재<br/>기온</th><th>습도<br/>%</th><th>풍향</th><th>풍속</th></tr></thead><tbody><tr><td><a href="city-obs.do?stn=108">서울</a></td><td>맑음</td><td>3</td><td>18.0</td><td>60</td><td>남서</td><td>2.0</td></tr></tbody></table></body></html>"#
     )
     .into_bytes()
 }
-fn asos_body(items: Vec<serde_json::Value>) -> Vec<u8> {
+pub(super) fn asos_body(items: Vec<serde_json::Value>) -> Vec<u8> {
     serde_json::to_vec(&serde_json::json!({"response": {
         "header": {"resultCode": "00", "resultMsg": "NORMAL_SERVICE"},
         "body": {"dataType": "JSON", "items": {"item": items}, "pageNo": 1, "numOfRows": 999,
@@ -132,7 +132,7 @@ impl Scripted {
         self.calls.lock().unwrap().clone()
     }
 }
-fn acquisition(
+pub(super) fn acquisition(
     source: &str,
     kind: &str,
     key: &server2::storage::ProviderKey,
@@ -639,6 +639,7 @@ async fn a_newer_imported_seed_replaces_the_carried_one() {
 fn asos_acquisitions_outside_the_window_are_dropped() {
     use server2::domestic::kma::source::asos::AsosFetched;
     let f = |end: &str| AsosFetched {
+        raw_ids: Vec::new(),
         kind: AsosKind::Hourly,
         start: "202609100000".into(),
         end: end.into(),

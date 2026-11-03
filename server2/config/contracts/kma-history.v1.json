@@ -1,0 +1,453 @@
+{
+  "contract": "kma-history",
+  "version": 1,
+  "slice": "precipitation-1",
+  "scope": "Seven completed KST days of Korean (KMA) history in the existing mobile response: precipitation presence and type from hourly rows through the public three-hour slots to the AM/PM day halves.",
+  "not_a_claim": "This contract does not certify seven-day history, source completeness, SKY, snow or LGT values, or latency.",
+  "checked_at": "2026-11-03",
+  "aggregation_policy_version": "station-altitude-v1",
+  "evidence": [
+    "docs/evidence/research/kma-history-gap-options-2026-10-30.md",
+    "docs/evidence/research/kma-asos-closure-qualification-2026-10-25.md",
+    "docs/architecture/server2-kma-data-design.md"
+  ],
+  "sources": {
+    "asos-hourly": {
+      "api": "KMA-09 AsosHourlyInfoService/getWthrDataList",
+      "nature": "observed",
+      "granularity": "station",
+      "evidence_label": "observation",
+      "history_allowed": true,
+      "availability": {
+        "reach": "completed KST dates",
+        "release": "D-1 after 11:00 KST per the official guide"
+      },
+      "interval": {
+        "apr-oct": "rain over the preceding hour",
+        "nov-mar": "rain over the preceding three hours, reported only at the 03..24 marks"
+      },
+      "fields": {
+        "rn": {
+          "normal-qc blank": "no precipitation",
+          "numeric 0.0": "trace precipitation",
+          "qc 9": "missing amount",
+          "qc 1": "error"
+        },
+        "dmstMtphNo": {
+          "meaning": "phenomena of the preceding hour, taken from the observation journal",
+          "coverage": "staffed hours only; absent at stations without phenomenon recording"
+        },
+        "dc10Tca": {
+          "meaning": "total cloud in tenths"
+        }
+      }
+    },
+    "asos-daily": {
+      "api": "KMA-10 AsosDalyInfoService/getWthrDataList",
+      "nature": "observed",
+      "granularity": "station",
+      "evidence_label": "observation",
+      "history_allowed": true,
+      "availability": {
+        "reach": "completed KST dates",
+        "release": "D-1 after 11:00 KST per the official guide"
+      },
+      "fields": {
+        "sumRn": {
+          "blank": "no precipitation only with an empty iscs and no positive sumRnDur"
+        }
+      }
+    },
+    "odam": {
+      "api": "VilageFcstInfoService_2.0/getUltraSrtNcst",
+      "nature": "observed",
+      "granularity": "grid, matched to a representative AWS station",
+      "evidence_label": "odam",
+      "history_allowed": true,
+      "availability": {
+        "reach": "most recent day"
+      },
+      "not_provided": [
+        "SKY",
+        "LGT"
+      ]
+    },
+    "vsrt": {
+      "api": "VilageFcstInfoService_2.0/getUltraSrtFcst",
+      "nature": "forecast",
+      "granularity": "grid",
+      "evidence_label": "vsrt",
+      "history_allowed": true,
+      "availability": {
+        "reach": "most recent three days per APIHub guidance; data.go.kr reach unverified"
+      },
+      "fields": {
+        "RN1": {
+          "meaning": "categorical text, not an exact amount"
+        }
+      }
+    },
+    "shrt": {
+      "api": "VilageFcstInfoService_2.0/getVilageFcst",
+      "nature": "forecast",
+      "granularity": "grid",
+      "evidence_label": "shrt",
+      "history_allowed": false
+    },
+    "mid": {
+      "api": "MidFcstInfoService",
+      "nature": "forecast",
+      "granularity": "region",
+      "evidence_label": "mid",
+      "history_allowed": false
+    }
+  },
+  "nodes": {
+    "hourly.pty": {
+      "stage": "hourly",
+      "values": "0..7",
+      "missing": "internal -1"
+    },
+    "hourly.rn1": {
+      "stage": "hourly",
+      "unit": "mm",
+      "interval": "preceding hour",
+      "missing": "internal -1; omitted on the wire for recovered rows"
+    },
+    "hourly.rn3h": {
+      "stage": "hourly",
+      "unit": "mm",
+      "interval": "preceding three hours, November to March marks only",
+      "missing": "absent"
+    },
+    "hourly.sky": {
+      "stage": "hourly",
+      "values": "1..4",
+      "missing": "internal -1",
+      "coverage": "input-condition-only"
+    },
+    "hourly.precipitation-evidence": {
+      "stage": "hourly",
+      "internal": true,
+      "wire": "never",
+      "inputs": [
+        "hourly.pty",
+        "hourly.rn1",
+        "hourly.rn3h"
+      ],
+      "rule": "evidence-v1"
+    },
+    "slot.pty": {
+      "stage": "slot",
+      "window": "hours T-2..T; 0000 belongs to the previous day as 2400",
+      "inputs": [
+        "hourly.pty",
+        "hourly.precipitation-evidence"
+      ],
+      "rule": "summary-to-3h",
+      "missing": "internal -1"
+    },
+    "half.pty": {
+      "stage": "half",
+      "window": "AM 0100..1200, PM 1300..2400",
+      "inputs": [
+        "hourly.pty",
+        "slot.pty",
+        "hourly.precipitation-evidence"
+      ],
+      "rule": "day-summaries",
+      "missing": "absent"
+    },
+    "half.sky": {
+      "stage": "half",
+      "inputs": [
+        "hourly.sky"
+      ],
+      "rule": "day-summaries",
+      "coverage": "input-condition-only",
+      "missing": "absent"
+    },
+    "half.wf": {
+      "stage": "half",
+      "inputs": [
+        "half.sky",
+        "half.pty"
+      ],
+      "rule": "sky-to-kor",
+      "missing": "absent"
+    },
+    "wire.half-icon": {
+      "stage": "wire",
+      "inputs": [
+        "half.sky",
+        "half.pty"
+      ],
+      "rule": "sky-icon",
+      "missing": "omitted; the shared client shows the other half or no icon"
+    },
+    "day.rn1": {
+      "stage": "day",
+      "unit": "mm",
+      "coverage": "partial: dry-day total (D1) only"
+    }
+  },
+  "edges": [
+    {
+      "id": "E1",
+      "node": "hourly.pty",
+      "source": "asos-hourly",
+      "field": "dmstMtphNo",
+      "transform": "phenomena-code-v1: supported unambiguous codes; non-precipitation codes become 0; unknown codes stay missing",
+      "precedence": 1,
+      "approval": "approved",
+      "verification": "verified"
+    },
+    {
+      "id": "E2",
+      "node": "hourly.pty",
+      "source": "asos-hourly",
+      "field": "rn, rnQcflg, dmstMtphNo",
+      "transform": "qualified-blank-dry: a normal-QC blank with another valid measured field and a compatible code becomes 0 (winter only at marks)",
+      "precedence": 1,
+      "approval": "approved",
+      "verification": "verified"
+    },
+    {
+      "id": "E3",
+      "node": "hourly.pty",
+      "source": "odam",
+      "field": "PTY",
+      "transform": "none",
+      "precedence": 2,
+      "approval": "approved",
+      "verification": "existing"
+    },
+    {
+      "id": "E4",
+      "node": "hourly.pty",
+      "source": "vsrt",
+      "field": "PTY",
+      "transform": "fills missing values only",
+      "precedence": 3,
+      "approval": "approved",
+      "verification": "existing"
+    },
+    {
+      "id": "E5",
+      "node": "hourly.precipitation-evidence",
+      "source": "asos-hourly",
+      "field": "rn, rnQcflg",
+      "transform": "numeric-including-trace: a normal-QC numeric amount, including 0.0, is precipitation unless ASOS itself set PTY 0",
+      "precedence": 1,
+      "approval": "approved",
+      "verification": "verified"
+    },
+    {
+      "id": "E6",
+      "node": "hourly.precipitation-evidence",
+      "source": "hourly.pty",
+      "field": "pty",
+      "transform": "typed: PTY 1..7 is precipitation",
+      "precedence": 1,
+      "approval": "approved",
+      "verification": "verified"
+    },
+    {
+      "id": "E7",
+      "node": "hourly.sky",
+      "source": "asos-hourly",
+      "field": "dc10Tca",
+      "transform": "derived-from-observation: tenths 0-2/3-5/6-8/9-10 become SKY 1/2/3/4",
+      "precedence": 1,
+      "approval": "approved",
+      "verification": "unverified"
+    },
+    {
+      "id": "E8",
+      "node": "hourly.sky",
+      "source": "vsrt",
+      "field": "SKY",
+      "transform": "fills missing values only",
+      "precedence": 2,
+      "approval": "approved",
+      "verification": "existing"
+    },
+    {
+      "id": "R2",
+      "node": "hourly.pty",
+      "source": "asos-hourly",
+      "field": "rn, ta",
+      "transform": "temperature-qualified-rain: an uncoded normal-QC amount at ta >= 5 C becomes PTY 1",
+      "precedence": 4,
+      "approval": "proposed",
+      "verification": "failed",
+      "holdout": "docs/evidence/research/kma-history-gap-options-2026-10-30.md#held-out-validation-of-proposed-rules-2026-10-31 (second holdout: sleet at ta 5.1 C, Jeju 2026-01-08); third holdout: a wet-bulb >= 2.5 C variant also failed, 3 of 198 hours"
+    },
+    {
+      "id": "R2s",
+      "node": "hourly.pty",
+      "source": "asos-hourly",
+      "field": "rn, ta, hm",
+      "transform": "season-limited-wet-bulb-rain: in an April-October hour, an uncoded normal-QC amount at wet-bulb >= 5.0 C (Stull 2011) becomes PTY 1; a recorded type stays and the rule replaces a PTY 0 that the ASOS amount contradicts",
+      "precedence": 4,
+      "approval": "approved",
+      "verification": "verified",
+      "holdout": "docs/evidence/research/kma-history-gap-options-2026-10-30.md#fourth-held-out-sample-april-october-wet-bulb-rule-r2s-2026-11-02",
+      "rule": "wet-bulb-rain-v1"
+    },
+    {
+      "id": "R1b",
+      "node": "hourly.pty",
+      "source": "asos-hourly",
+      "field": "rn, rnQcflg, dmstMtphNo with asos-daily sumRn",
+      "transform": "qc9-closure-dry: April-October QC9 blank without a precipitation code is PTY 0 when hourly amounts equal the official daily total",
+      "precedence": 4,
+      "approval": "approved",
+      "verification": "verified",
+      "rule": "dry-closure-v1",
+      "holdout": "docs/evidence/research/kma-history-gap-options-2026-10-30.md#held-out-validation-of-proposed-rules-2026-10-31"
+    },
+    {
+      "id": "W1",
+      "node": "slot.pty",
+      "source": "asos-hourly",
+      "field": "rn, rnQcflg, dmstMtphNo with asos-daily sumRn",
+      "transform": "winter-window-dry: a November-March QC9 mark with no precipitation code in its three hours is a dry window under the same closure",
+      "precedence": 4,
+      "approval": "proposed",
+      "verification": "failed",
+      "holdout": "docs/evidence/research/kma-history-gap-options-2026-10-30.md#held-out-validation-of-proposed-rules-2026-10-31 (second holdout: 2 of 221 windows had snow)"
+    },
+    {
+      "id": "D1",
+      "node": "day.rn1",
+      "source": "asos-daily",
+      "field": "sumRn with hourly rn and dmstMtphNo",
+      "transform": "dry-daily-total: a blank daily total is 0 mm when the day has no numeric hourly amount and no precipitation code",
+      "precedence": 2,
+      "approval": "approved",
+      "verification": "verified",
+      "rule": "dry-closure-v1",
+      "holdout": "docs/evidence/research/kma-history-gap-options-2026-10-30.md#held-out-validation-of-proposed-rules-2026-10-31"
+    }
+  ],
+  "rules": {
+    "evidence-v1": {
+      "implementation": "server2/src/domestic/kma/policy.rs",
+      "summary": "Precipitation evidence is a typed PTY, or an ASOS-provenance rain amount (rn1 or rn3h) on a row whose PTY ASOS did not set to 0."
+    },
+    "summary-to-3h": {
+      "implementation": "server2/src/domestic/kma/short.rs",
+      "summary": "Legacy partial rule for recovered rows: PTY is the summary of known hours; unknown only when no hour is known."
+    },
+    "day-summaries": {
+      "implementation": "server2/src/domestic/kma/mid.rs",
+      "summary": "day_summary_list (hourly rows, the only path for past days under ASOS-primary) and day_summary_list_by_short (three-hour slots); both skip unknown values."
+    },
+    "sky-to-kor": {
+      "implementation": "server2/src/domestic/kma/mid.rs",
+      "summary": "AM/PM text from SKY and PTY."
+    },
+    "sky-icon": {
+      "implementation": "server2/src/domestic/kma/present.rs",
+      "summary": "AM/PM icon from numeric SKY, PTY and LGT."
+    },
+    "precipitation-guard-v1": {
+      "implementation": "server2/src/domestic/kma/policy.rs",
+      "summary": "Under ASOS-primary only: a slot with precipitation evidence and no typed PTY gets PTY -1; such a half loses its PTY, SKY and text, keeps its date and is listed in missingDailyDates."
+    },
+    "dry-closure-v1": {
+      "implementation": "server2/src/domestic/kma/source/asos.rs",
+      "summary": "Under ASOS-primary only, per observation day 01:00..24:00 KST with all 24 latest hourly originals: when numeric hourly amounts (any QC) sum to sumRn, or sumRn is blank with no numeric hour, an April-October blank QC9 hour without a precipitation code gets rn1 0 and PTY 0 (R1b); a blank sumRn without numeric or coded hourly precipitation and without rain duration gets rn1 0 (D1). Days whose stored rain fields differ from their latest originals are skipped; only absent fields are filled. Hourly results are derived values, as below."
+    },
+    "wet-bulb-rain-v1": {
+      "implementation": "server2/src/domestic/kma/source/asos.rs",
+      "summary": "Under ASOS-primary only, per April-October hour of the latest originals: a normal-QC numeric amount without a phenomenon code, with unflagged temperature and humidity of at least 5 %, gets a derived PTY 1 when the wet-bulb temperature (Stull 2011, humidity at most 99) is at least 5 C. November-March stays unknown."
+    },
+    "derived-precedence": {
+      "implementation": "server2/src/domestic/kma/policy.rs",
+      "summary": "Hourly rule-derived values stay in the ASOS record field inferred, apart from measured values. merge_hourly applies them after measured ASOS, ODAM and VSRT, only where their fields are missing; a derived rain type also replaces PTY 0, and a recorded type always stays."
+    },
+    "station-altitude-v1": {
+      "implementation": "server2/src/domestic/kma/source/representative.rs",
+      "summary": "Under ASOS-primary only, AK 2026-11-03: a town listed in data/town_elevations.csv keeps its nearest city station when any of three elevation estimates lies within 200 m of the station altitude. Otherwise it takes the nearest station within 35 km that all three estimates accept, or no station. An island station serves only its county and keeps it; Jeju stations serve only Jeju. Unlisted towns keep the nearest station. Stations 185 and 188 keep their measurements but not wind."
+    }
+  },
+  "invariants": [
+    {
+      "id": "I1",
+      "statement": "Precipitation evidence in a slot or half window never yields aggregate PTY 0 or a dry AM/PM text or icon; an unknown type stays missing.",
+      "checked_by": [
+        "server2/tests/domestic/observed_history.rs"
+      ]
+    },
+    {
+      "id": "I2",
+      "statement": "A zero rain amount alone never means no precipitation; trace and a qualified dry blank stay distinguishable.",
+      "checked_by": [
+        "server2/tests/domestic/asos.rs",
+        "server2/tests/domestic/observed_history.rs"
+      ]
+    },
+    {
+      "id": "I3",
+      "statement": "Missing rain never becomes 0; existing missing behavior for snow and LGT is preserved.",
+      "checked_by": [
+        "server2/tests/domestic/asos.rs"
+      ]
+    },
+    {
+      "id": "I4",
+      "statement": "Winter three-hour accumulations are neither split into hours nor counted twice.",
+      "checked_by": [
+        "server2/tests/domestic/asos.rs"
+      ]
+    },
+    {
+      "id": "I5",
+      "statement": "KST 0000 belongs to the previous day as 2400, and AM includes 1200.",
+      "checked_by": [
+        "server2/tests/domestic/observed_history.rs"
+      ]
+    },
+    {
+      "id": "I6",
+      "statement": "Sources without history permission and proposed rules are never selected for history.",
+      "checked_by": [
+        "server2/tools/verification/kma_full_response_contract.py",
+        "server2/tests/domestic/observed_history.rs"
+      ]
+    },
+    {
+      "id": "I7",
+      "statement": "A rule-derived hourly value never replaces a measured value or a recorded precipitation type from ASOS, ODAM or VSRT.",
+      "checked_by": [
+        "server2/src/domestic/kma/policy.rs",
+        "server2/tests/domestic/asos.rs"
+      ]
+    },
+    {
+      "id": "I8",
+      "statement": "Under ASOS-primary, a listed town never reads a non-island station when all three of its elevation estimates lie more than 200 m from that station altitude.",
+      "checked_by": [
+        "server2/src/domestic/kma/source/representative.rs",
+        "server2/tests/domestic/stations.rs"
+      ]
+    }
+  ],
+  "budgets": {
+    "request-wait": {
+      "required": "3 s (AK, 2026-10-14)",
+      "implemented": "8 s observed-history handler budget (server2/src/domestic/kma/source/mod.rs request_budget)",
+      "conformance": "failed",
+      "scope": "outside slice 1"
+    }
+  },
+  "not_declared": [
+    "SKY values and their source accuracy",
+    "snow amounts (ASOS hr3Fhsc, dsnw and sumDpthFhsc are unmapped)",
+    "LGT",
+    "daily rain totals other than the dry-day rule D1",
+    "temperature, humidity and wind"
+  ]
+}

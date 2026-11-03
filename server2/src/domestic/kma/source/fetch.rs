@@ -80,6 +80,10 @@ pub type Published = Option<Vec<RawRecord>>;
 /// Request-time forecast acquisition (tests inject doubles).
 pub trait ForecastAcquire: Send + Sync + 'static {
     fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>>;
+    /// Process overlay; never conveys canonical eligibility or dependency tokens.
+    fn cached(&self, _request: &ForecastRequest) -> Published {
+        None
+    }
 }
 
 /// A warning source on the KST-day `WthrWrnInfoService` budgets of the process data.go.kr
@@ -147,6 +151,7 @@ pub struct LiveForecast<P, W, B, T> {
     daily: Arc<DailyAcquirer<P, W, B>>,
     store: Arc<CatalogStore<T>>,
     warnings: Arc<WarningCollector<dyn WarningSource, T>>,
+    writer: Option<Arc<crate::storage::response_first::Writer>>,
 }
 impl<P, W, B, T> LiveForecast<P, W, B, T>
 where
@@ -194,7 +199,12 @@ where
             daily,
             store,
             warnings: Arc::new(collector),
+            writer: None,
         }
+    }
+    pub fn with_raw_writer(mut self, writer: Arc<crate::storage::response_first::Writer>) -> Self {
+        self.writer = Some(writer);
+        self
     }
     async fn publish(&self, outcome: Result<Acquired, DomesticError>) -> Result<Published, String> {
         match outcome.map_err(|e| e.to_string())? {
@@ -210,6 +220,47 @@ where
         }
     }
     async fn run(&self, request: ForecastRequest) -> Result<Published, String> {
+        if let Some(writer) = &self.writer
+            && !matches!(request, ForecastRequest::Warnings)
+        {
+            let key = raw_key(&request);
+            let pages = match &request {
+                ForecastRequest::DataGoKr(r) => r.family().max_pages(),
+                ForecastRequest::Rss(_) => 1,
+                ForecastRequest::Zones => 10,
+                ForecastRequest::Warnings => unreachable!(),
+            };
+            let reserve = pages as usize * crate::storage::Limits::default().raw_bytes
+                + crate::storage::CatalogLimits::default().retained_control_bytes;
+            let daily = self.daily.clone();
+            let deadline = Instant::now() + request.owned_for() - PUBLISH_BUDGET;
+            let ready = writer
+                .acquire(key, reserve, deadline, async move {
+                    let acquirer = daily
+                        .today()
+                        .await
+                        .map_err(|_| crate::storage::Error::Transport)?;
+                    let outcome = match request {
+                        ForecastRequest::DataGoKr(r) => acquirer.acquire(&r, deadline).await,
+                        ForecastRequest::Rss(r) => acquirer.acquire_web(&r, deadline).await,
+                        ForecastRequest::Zones => {
+                            acquirer.acquire_zones(&ZoneRequest::new(), deadline).await
+                        }
+                        ForecastRequest::Warnings => unreachable!(),
+                    }
+                    .map_err(|_| crate::storage::Error::Transport)?;
+                    Ok(match outcome {
+                        Acquired::Complete(a) => Some(crate::storage::response_first::Batch {
+                            declaration: a.declaration,
+                            records: a.records,
+                        }),
+                        _ => None,
+                    })
+                })
+                .await
+                .map_err(|e| e.to_string())?;
+            return Ok(ready.map(|r| r.records.clone()));
+        }
         let deadline = Instant::now() + request.owned_for() - PUBLISH_BUDGET;
         match request {
             ForecastRequest::DataGoKr(r) => {
@@ -250,7 +301,18 @@ where
             daily: self.daily.clone(),
             store: self.store.clone(),
             warnings: self.warnings.clone(),
+            writer: self.writer.clone(),
         };
         Box::pin(async move { this.run(request).await })
     }
+    fn cached(&self, request: &ForecastRequest) -> Published {
+        self.writer
+            .as_ref()?
+            .cached(&raw_key(request))
+            .map(|r| r.records.clone())
+    }
+}
+
+fn raw_key(request: &ForecastRequest) -> String {
+    format!("forecast/{request:?}")
 }

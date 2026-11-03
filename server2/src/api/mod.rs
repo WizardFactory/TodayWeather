@@ -33,7 +33,6 @@ use tokio::time::Instant;
 
 /// The native attempt of a direct request, as for a gateway backend (S10: 3 s); the source's own
 /// request wait (S13d) is inside it. Expiry is a terminal native dependency error.
-const NATIVE_ATTEMPT: Duration = Duration::from_secs(3);
 /// Historical coexistence adapter timeout retained for API compatibility. Selected native
 /// DirectRoutes do not invoke that adapter.
 pub const LEGACY_HOP: Duration = Duration::from_secs(30);
@@ -168,7 +167,7 @@ impl DirectRoutes {
     }
     /// Native outcome; dependency failures are terminal 502 replies.
     async fn native(&self, request: KmaRequest) -> Outcome {
-        let deadline = Instant::now() + NATIVE_ATTEMPT;
+        let deadline = Instant::now() + self.kma.request_budget();
         match tokio::time::timeout_at(deadline, self.kma.outcome(request, deadline)).await {
             Ok(Ok(Outcome::Legacy(_))) => Outcome::Status(502, "Bad Gateway\n".into()),
             Ok(Err(_)) | Err(_) => Outcome::Status(502, "Bad Gateway\n".into()),

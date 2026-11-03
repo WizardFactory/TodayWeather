@@ -88,6 +88,7 @@ impl AsosOnDemand for FakeAsos {
                     )
                     .unwrap();
                     Ok(Some(vec![AsosFetched {
+                        raw_ids: Vec::new(),
                         kind: AsosKind::Daily,
                         start: format!("{start:08}"),
                         end: format!("{end:08}"),
@@ -149,7 +150,8 @@ async fn grid_wins_at_a_date_and_dates_win_over_sources() {
     let asos = server2::summary::asos::summaries(
         "108",
         &[AsosFetched {
-            kind: AsosKind::Daily,
+            raw_ids: Vec::new(),
+kind: AsosKind::Daily,
             start: "20251015".into(),
             end: "20251015".into(),
             fetched_at_ms: 1.,

@@ -4,6 +4,7 @@
 //! `KmaStnMinute2` collections. Answers are the objects legacy hands to the controller (insertion
 //! order, `undefined` kept, Dates as Dates).
 use super::doc::{Doc, Val};
+use super::representative::{self, Verdict};
 use super::stations::{Registry, RowStore, date_of};
 use crate::domestic::kma::js::{V, parse_int};
 
@@ -16,6 +17,8 @@ pub struct Stations<'a> {
     pub registry: &'a Registry,
     pub hourly: &'a RowStore,
     pub minute: &'a RowStore,
+    /// ASOS-primary: apply `station-altitude-v1` and the cape wind rule; legacy replay does not.
+    pub representative: bool,
 }
 /// A legacy callback error (the controller logs it and continues without station data).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -86,6 +89,44 @@ fn copy_into(target: &mut Doc, source: &Doc) {
 }
 
 impl Stations<'_> {
+    /// `getStnList(coords, true)`, under ASOS-primary through `station-altitude-v1`.
+    fn city_station(&self, town: &serde_json::Value, lon: f64, lat: f64) -> Result<Doc, StnError> {
+        let name = |k: &str| town.get("town")?.get(k)?.as_str();
+        if self.representative
+            && let (Some(first), Some(second), Some(third)) =
+                (name("first"), name("second"), name("third"))
+        {
+            let docs = self.registry.docs();
+            match representative::verdict(first, second, third, lat, lon, docs) {
+                Verdict::Nearest => (),
+                Verdict::NoStation => return Err(no_station(lon, lat)),
+                Verdict::Station(id) => {
+                    if let Some(mut doc) =
+                        representative::only_station(docs, &id).into_iter().next()
+                    {
+                        doc.remove("__v");
+                        return Ok(doc);
+                    }
+                }
+            }
+        }
+        self.registry
+            .near(lon, lat, Some(1.), true, 1)
+            .into_iter()
+            .next()
+            .ok_or_else(|| no_station(lon, lat))
+    }
+    /// A cape station's row without its wind under ASOS-primary.
+    fn local_wind(&self, stn: &Doc, mut row: Doc) -> Doc {
+        if self.representative
+            && representative::station_id(stn)
+                .is_some_and(|id| representative::wind_unrepresentative(&id))
+        {
+            row.remove("wsd");
+            row.remove("vec");
+        }
+        row
+    }
     /// `_getStnMinute2(stn, dateTime)`: the station object with the newest minute row of the
     /// last 20 minutes copied in (date as text) and `rns` true when any row had rain.
     fn minute2(&self, stn: &Doc, date_time: &str) -> Result<Doc, StnError> {
@@ -121,24 +162,20 @@ impl Stations<'_> {
         let stn_date_time = dotted(date_time, false);
         let stn_date_hour = dotted(date_time, true);
         let mut w = Doc::new();
-        let stn = self
-            .registry
-            .near(lon, lat, Some(1.), true, 1)
-            .into_iter()
-            .next()
-            .ok_or_else(|| no_station(lon, lat))?;
+        let stn = self.city_station(town, lon, lat)?;
         copy_into(&mut w, &stn);
         let from = super::pages::page_date(&stn_date_hour) - 2. * HOUR;
         let hourly = self.hourly.after(stn_number(&stn), from);
         match hourly.last() {
             None => w.set("hourlyMissing", Val::Bool(true)),
             Some(row) => {
-                copy_into(&mut w, row);
+                let row = self.local_wind(&stn, row.clone());
+                copy_into(&mut w, &row);
                 rns_rule(&mut w);
-                w.set("cityHourAws", Val::Doc(row.clone()));
+                w.set("cityHourAws", Val::Doc(row));
             }
         }
-        let minute = self.minute2(&stn, &stn_date_time)?;
+        let minute = self.local_wind(&stn, self.minute2(&stn, &stn_date_time)?);
         copy_into(&mut w, &minute);
         rns_rule(&mut w);
         w.set("cityMinAws", Val::Doc(minute));
@@ -210,19 +247,17 @@ impl Stations<'_> {
     /// `getCityHourlyList(townInfo)` at `now_ms`.
     pub fn city_hourly(&self, town: &serde_json::Value, now_ms: f64) -> Result<Vec<Doc>, StnError> {
         let (lon, lat) = coords(town)?;
-        let stn = self
-            .registry
-            .near(lon, lat, Some(1.), true, 1)
-            .into_iter()
-            .next()
-            .ok_or_else(|| no_station(lon, lat))?;
+        let stn = self.city_station(town, lon, lat)?;
         // `toTimeZone(9, new Date())` then `setDate(getDate() - 8)`.
         let from = now_ms + 9. * HOUR - 8. * DAY;
         let rows = self.hourly.after(stn_number(&stn), from);
         if rows.is_empty() {
             return Err(StnError("Fail to find hourlies".into()));
         }
-        Ok(rows)
+        Ok(rows
+            .into_iter()
+            .map(|row| self.local_wind(&stn, row))
+            .collect())
     }
 }
 /// `getStnList`'s empty-result error (`"..." + coords` joins the array).

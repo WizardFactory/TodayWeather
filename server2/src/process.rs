@@ -109,6 +109,7 @@ where
         io::Error::other("invalid gateway configuration")
     })?;
     let push = gateway.push.clone();
+    let raw_writer = gateway.raw_writer.clone();
     // Constructing services is inert for delivery. Both binds precede worker start.
     let bound = async {
         let public = TcpListener::bind(config.public_addr).await?;
@@ -178,7 +179,7 @@ where
     };
     // HTTP-only processes retain the foundation 5s forced stop. A push writer or delivery
     // supervisor needs the shared 34s drain; listener failure takes this same owned stop path.
-    let has_push_work = push.is_some() || delivery.is_some();
+    let has_push_work = push.is_some() || delivery.is_some() || raw_writer.is_some();
     let drain = if has_push_work {
         DRAIN
     } else {
@@ -206,6 +207,9 @@ where
     if let Some(push) = &push {
         push.quiesce();
     }
+    if let Some(raw_writer) = &raw_writer {
+        raw_writer.quiesce();
+    }
     tx.send_replace(true);
     let worker_drain = async {
         let jobs = if let Some(delivery) = &mut delivery {
@@ -218,7 +222,12 @@ where
         } else {
             true
         };
-        (jobs, writer)
+        let raw = if let Some(raw_writer) = &raw_writer {
+            raw_writer.drain(deadline).await
+        } else {
+            true
+        };
+        (jobs, writer && raw)
     };
     let http_drain = async {
         while let Some(result) = listeners.join_next().await {

@@ -14,6 +14,8 @@ mod life;
 mod life_s3;
 #[path = "domestic/observe.rs"]
 mod observe;
+#[path = "domestic/observed_history.rs"]
+mod observed_history;
 #[path = "domestic/parity.rs"]
 mod parity;
 #[path = "domestic/qs.rs"]
@@ -43,3 +45,6 @@ mod v8_date;
 
 #[path = "domestic/towns.rs"]
 mod towns;
+
+#[path = "domestic/full_response.rs"]
+mod full_response;

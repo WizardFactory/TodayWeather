@@ -107,6 +107,12 @@ impl<T: CatalogTransport + 'static> AsosOnDemand for PublishingAsos<T> {
                 .iter()
                 .map(|r| r.bytes.clone())
                 .collect();
+            let raw_ids = acquisition
+                .records
+                .iter()
+                .map(|r| r.envelope.identity.object_key())
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(LookupError::Storage)?;
             let fetched_at = acquisition
                 .records
                 .iter()
@@ -118,6 +124,7 @@ impl<T: CatalogTransport + 'static> AsosOnDemand for PublishingAsos<T> {
                 .await
                 .map_err(LookupError::Storage)?;
             Ok(Some(vec![AsosFetched {
+                raw_ids,
                 kind: AsosKind::Daily,
                 start: a,
                 end: b,
