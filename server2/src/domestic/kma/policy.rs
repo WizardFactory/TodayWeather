@@ -356,6 +356,26 @@ pub fn daily_health(mid: &V, now: f64) -> V {
     ]))
 }
 
+/// Under ASOS-primary, a completed day the window filter omitted is listed too (#2560).
+pub fn list_missing_history(status: &V, mid: &V, now: f64) {
+    let Some((start, end, _)) = window(now) else {
+        return;
+    };
+    let served: Vec<String> = mid
+        .get("dailyData")
+        .a()
+        .items()
+        .iter()
+        .map(|row| to_str(&row.get("date")))
+        .collect();
+    let omitted: Vec<V> = range(true, &start, &end)
+        .into_iter()
+        .filter(|date| !served.contains(date))
+        .map(V::from)
+        .collect();
+    status.get("unavailableDates").a().unshift(omitted);
+}
+
 // ---- history/policy ----
 
 /// `policy.valid(field, value)`.
@@ -1188,6 +1208,39 @@ mod tests {
         assert_eq!(to_number(&missing.get("t1h")), -5.);
         assert_eq!(to_number(&missing.get("pty")), 1.);
         assert_eq!(to_number(&measured.get("t1h")), 7.);
+    }
+    #[test]
+    fn omitted_completed_days_are_listed_before_the_forecast_days() {
+        let now = instant(&V::s("202610240300"));
+        let (start, end, today) = window(now).unwrap();
+        assert_eq!((start.as_str(), end.as_str()), ("20261017", "20261023"));
+        let row = |date: &str| V::Obj(obj(vec![("date", V::s(date))]));
+        let mid = V::Obj(obj(vec![(
+            "dailyData",
+            V::Arr(Arr::from_vec(vec![
+                row("20261022"),
+                row("20261023"),
+                row(&today),
+            ])),
+        )]));
+        let status = V::Obj(obj(vec![(
+            "unavailableDates",
+            V::Arr(Arr::from_vec(vec![V::s("20261030")])),
+        )]));
+        list_missing_history(&status, &mid, now);
+        let listed: Vec<String> = status
+            .get("unavailableDates")
+            .a()
+            .items()
+            .iter()
+            .map(to_str)
+            .collect();
+        assert_eq!(
+            listed,
+            [
+                "20261017", "20261018", "20261019", "20261020", "20261021", "20261030"
+            ]
+        );
     }
     #[test]
     fn derived_asos_values_fill_only_what_measured_and_forecast_sources_left_missing() {

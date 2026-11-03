@@ -754,7 +754,11 @@ pub fn merge_mid_with_short(cx: &mut Cx) -> Flow {
         "dailyData",
         V::Arr(Arr::from_vec(by_date.into_iter().map(|(_, r)| r).collect())),
     );
-    mid.set("dailyStatus", policy::daily_health(&mid, now));
+    let status = policy::daily_health(&mid, now);
+    if policy::observations_primary(&cx.req) {
+        policy::list_missing_history(&status, &mid, now);
+    }
+    mid.set("dailyStatus", status);
     Flow::Next
 }
 pub fn update_mid_temp_max_min(cx: &mut Cx) -> Flow {

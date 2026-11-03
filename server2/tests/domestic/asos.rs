@@ -1281,6 +1281,37 @@ fn a_row_with_only_a_rain_report_is_kept_under_observed_history() {
 }
 
 #[test]
+fn an_hour_ever_reported_with_rain_never_keeps_a_dry_type() {
+    // A numeric report, trace included, means precipitation occurred. Field-wise merging of
+    // originals could otherwise keep rn1 0 with a later blank report's PTY 0, in either order.
+    let (tm, key) = ("2026-10-13 10:00", "202610131000");
+    let hour = |rn: &str| {
+        serde_json::json!({"stnId":"108","tm":tm,"ta":"3","hm":"20","dc10Tca":"10",
+            "rn":rn,"rnQcflg":"","dmstMtphNo":""})
+    };
+    for acquisitions in [
+        [vec![hour("0.0")], vec![hour("")]],
+        [vec![hour("")], vec![hour("0.0")]],
+    ] {
+        let store = hours_only(&acquisitions);
+        assert_eq!(pty(&store, key), None, "{acquisitions:?}");
+    }
+    let dry = hours_only(&[vec![hour("")], vec![hour("")]]);
+    assert_eq!(
+        hour_values(&dry, key),
+        (Some(0.), Some(0.)),
+        "repeated dry reports stay dry"
+    );
+    let coded = serde_json::json!({"stnId":"108","tm":tm,"ta":"3","hm":"20","rn":"0.0",
+        "rnQcflg":"","dmstMtphNo":"05"});
+    assert_eq!(
+        pty(&hours_only(&[vec![coded], vec![hour("")]]), key),
+        Some(3.),
+        "a type stays"
+    );
+}
+
+#[test]
 fn a_cape_station_keeps_its_measurements_but_not_its_wind() {
     let replay = |station: &str| {
         let hour = serde_json::json!({"stnId":station,"tm":"2026-10-13 10:00","ta":"12","hm":"80",

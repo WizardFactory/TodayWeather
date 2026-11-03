@@ -319,6 +319,8 @@ pub struct AsosStore {
     docs: Vec<Doc>,
     observed: bool,
     provided: BTreeSet<String>,
+    /// Hours any acquisition reported with a normal-QC numeric amount, trace included.
+    reported_rain: BTreeSet<String>,
 }
 fn id(kind: AsosKind, station: &str, key: &str) -> String {
     format!("{}:{station}:{key}", kind_name(kind))
@@ -489,6 +491,9 @@ impl AsosStore {
                 && covered.contains(&key)
             {
                 self.provided.insert(id(f.kind, station, &key));
+                if f.kind == AsosKind::Hourly && reports_rain(item) {
+                    self.reported_rain.insert(id(f.kind, station, &key));
+                }
             }
 
             let normalizer = if self.observed {
@@ -659,6 +664,7 @@ fn replay_with_policy(
     if observed {
         let hourly = latest_items(station, fetched, AsosKind::Hourly);
         let daily = latest_items(station, fetched, AsosKind::Daily);
+        store.clear_contradicted_dry_types();
         store.close_dry_days(station, &hourly, &daily);
         store.type_warm_rain(station, &hourly);
         if super::representative::wind_unrepresentative(station) {
@@ -695,6 +701,12 @@ fn latest_items(station: &str, fetched: &[AsosFetched], kind: AsosKind) -> BTree
         }
     }
     out
+}
+/// A normal-QC numeric hourly amount, trace included.
+fn reports_rain(item: &Value) -> bool {
+    !flag_set(item.get("rnQcflag"))
+        && !flag_set(item.get("rnQcflg"))
+        && number(item.get("rn")).is_some_and(|n| valid("rn1", n))
 }
 /// No phenomenon was recorded for the hour.
 fn uncoded(item: &Value) -> bool {
@@ -809,9 +821,7 @@ impl AsosStore {
     fn type_warm_rain(&mut self, station: &str, hourly: &BTreeMap<String, Value>) {
         let all: BTreeSet<String> = hourly.keys().cloned().collect();
         for (key, item) in hourly {
-            let quality = !flag_set(item.get("rnQcflag")) && !flag_set(item.get("rnQcflg"));
-            let measured = quality && number(item.get("rn")).is_some_and(|n| valid("rn1", n));
-            if !warm_season(key) || !measured || !uncoded(item) {
+            if !warm_season(key) || !reports_rain(item) || !uncoded(item) {
                 continue;
             }
             let Some((_, values)) = normalize(AsosKind::Hourly, item, station, &all) else {
@@ -823,6 +833,22 @@ impl AsosStore {
                 && wet_bulb(t, humidity) >= 5.
             {
                 self.fill(AsosKind::Hourly, station, key, &[("pty", 1.)]);
+            }
+        }
+    }
+    /// Field-wise merging can keep a later blank report's PTY 0 beside an earlier numeric report,
+    /// or the reverse. A reported amount, trace included, means precipitation occurred.
+    fn clear_contradicted_dry_types(&mut self) {
+        for at in 0..self.docs.len() {
+            if !self.reported_rain.contains(&text(&self.docs[at], "_id")) {
+                continue;
+            }
+            let doc = &mut self.docs[at];
+            if let Some(mut values) = doc.get("values").and_then(Val::as_doc).cloned()
+                && values.get("pty").and_then(Val::as_num) == Some(0.)
+            {
+                values.remove("pty");
+                doc.set("values", Val::Doc(values));
             }
         }
     }

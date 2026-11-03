@@ -357,7 +357,7 @@ optional precipitation probabilities. Mid composition joins by each source's
 KST target date, with independent 36-hour publication limits and no future or
 mismatched identity. Short daily overlays have a 24-hour publication limit. When primary short data is stale or its publication is absent, a request-local snapshot of fields actually copied from matched short RSS slots supplies daily input. Its own KST publication determines freshness and the publication-date+4 target ceiling. Later mixed-hourly extrema cannot revive untouched stale values; incomplete RSS-only days remain unavailable. The accepted feed timestamp alone is never sufficient.
 The seven-day observation history remains; unavailable days are omitted and
-listed in additive `midData.dailyStatus.unavailableDates`. The captured day-4
+listed in additive `midData.dailyStatus.unavailableDates`; under ASOS-primary the list also holds omitted completed days, before the forecast days. The captured day-4
 forecast remains September 28, with September 27 unavailable unless an actual
 valid source supplies it. Existing v000903 `tmn`/`tmx` output conversion remains.
 
