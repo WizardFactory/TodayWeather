@@ -99,7 +99,8 @@
     "server2/tools/verification/kma_cold_measure.py",
     "server2/tools/verification/kma_response_first_measure.py",
     "server2/tools/verification/test_kma_cold_measure.py",
-    "server2/tools/verification/test_kma_response_first_measure.py"
+    "server2/tools/verification/test_kma_response_first_measure.py",
+    "server2/config/golden-provenance.json"
   ],
   "outside": [
     {
