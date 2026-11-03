@@ -1,0 +1,1362 @@
+{
+  "schema": 1,
+  "observed_utc": {
+    "started": "2026-10-24T06:31:31.548390+00:00",
+    "finished": "2026-10-24T06:54:56.498595+00:00"
+  },
+  "source_revision": "82f7a4838dda046be966ee9c25c9cb66561d099d",
+  "environment": {
+    "host": "macOS arm64 workstation",
+    "aws_region": "ap-northeast-2",
+    "deployment_class_verified": false,
+    "index_list_transport": "instrumented same signer/limits/XML validation, separate HTTP client pool",
+    "http_timing_scope": "Full loopback response body after Source/route construction; shared process/TLS state and asynchronous work can continue between samples."
+  },
+  "artifacts": {
+    "server2/examples/kma_cold_measure.rs": "eb548c6e85cfe3d304ef47a74a9101a6f2fdc96ba1f8cee372dffe8d6dcfc896",
+    "server2/examples/kma_cold_measure/scope.rs": "40bcb5cb566889b812a2f041b19871bc7df967d57176046aa2b805ec12b1c167",
+    "server2/tools/verification/kma_cold_measure.py": "6c8fa8140dd9fe1e00126334edd0998e7bfdc5de0c6e7987b6711afb8b9d4276",
+    "server2/Cargo.lock": "e9e198c01688599f9fcdfdf4847314ca6556f5dab89c98884b3f93bf85e9bd51",
+    "binary": "805ba40fc2f7406f40d569bf2dde51b8995a28ca1c6c1f838557a7b327002d42"
+  },
+  "actual_source_and_binary_unchanged_during_live_run": true,
+  "native_replay": [
+    {
+      "id": "kma-core",
+      "verdict": "PASS",
+      "candidate_oracle_checked": 220,
+      "candidate_mismatches": 0,
+      "self_check_detected": true,
+      "report_sha256": "75be6a2cbce181fb99305ede1f0a3545ec87a09b0f7f5fb5ecc782bf09c68e2d",
+      "limitations": "Owned-loopback library HTTP example with test-injected clock/providers; not production startup, AWS/EC2 p95, quota, seven-day live shadow or cutover evidence. Original 98 dependency-oracle cases remain assembly-only. Current canonical corpus includes grid/RSS/mid; station/air/life/ASOS rows/images are absent. Rollback is UNSUPPORTED here; S20 must verify recovery to an earlier server2 release/config without legacy."
+    },
+    {
+      "id": "kma-rich",
+      "verdict": "PASS",
+      "candidate_oracle_checked": 92,
+      "candidate_mismatches": 0,
+      "self_check_detected": true,
+      "report_sha256": "201da7cb59c61813a1cf4603f4c3d611c177b58d8ee4c9bd34ee6f1f1e493a04",
+      "limitations": "Owned-loopback library HTTP example with test-injected clock/providers; not production startup, AWS/EC2 p95, quota, seven-day live shadow or cutover evidence. Original 98 dependency-oracle cases remain assembly-only. Rich corpus includes three grid regions, stations/ASOS, air/life/KASI/MFDS/images and separately counted cold coordinate geocoding. Rollback is UNSUPPORTED here; S20 must verify recovery to an earlier server2 release/config without legacy."
+    }
+  ],
+  "capture": {
+    "logical_acquisitions": 17,
+    "published": 14,
+    "elapsed_ms": 2346.9601660000003,
+    "acquisitions": [
+      {
+        "acquire_ms": 319.050084,
+        "coverage": {
+          "categories": {},
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 0,
+          "measured_first": null,
+          "measured_last": null,
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823492520,
+              "key_sha256": "fac6152edcda234d8953f366d7423e8e8cc595a6224cadcfb53ca68a5ff9e9a3",
+              "kind": "mid-fcst",
+              "period": {
+                "local_date": 20261024,
+                "slot": "0600"
+              },
+              "raw_sha256": "68c5d358914e4fa568e4c463e1066f8c43bb8f47d763660d971bef34c22eecfa",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 1
+        },
+        "elapsed_ms": 561.614792,
+        "error": null,
+        "id": "mid-forecast",
+        "outcome": "published",
+        "publish_ms": 242.552833
+      },
+      {
+        "acquire_ms": 312.36575,
+        "coverage": {
+          "categories": {
+            "PTY": 1,
+            "REH": 1,
+            "RN1": 1,
+            "T1H": 1,
+            "UUU": 1,
+            "VEC": 1,
+            "VVV": 1,
+            "WSD": 1
+          },
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 0,
+          "measured_first": null,
+          "measured_last": null,
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823492513,
+              "key_sha256": "dd14d9e0872cb43de15e598385c474cabc126d09b7a4799f9fb20d86875379a3",
+              "kind": "ultra-srt-ncst",
+              "period": {
+                "local_date": 20261024,
+                "slot": "1400"
+              },
+              "raw_sha256": "b69920c4ab74aa9b396af4a2ed7f730efd24b341cd1d93e9cdb4528ae5aae439",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 8
+        },
+        "elapsed_ms": 580.2629999999999,
+        "error": null,
+        "id": "current",
+        "outcome": "published",
+        "publish_ms": 267.872542
+      },
+      {
+        "acquire_ms": 360.554292,
+        "coverage": {
+          "categories": {
+            "LGT": 6,
+            "POP": 6,
+            "PTY": 6,
+            "REH": 6,
+            "RN1": 6,
+            "SKY": 6,
+            "T1H": 6,
+            "UUU": 6,
+            "VEC": 6,
+            "VVV": 6,
+            "WSD": 6
+          },
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 0,
+          "measured_first": null,
+          "measured_last": null,
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823492561,
+              "key_sha256": "dd14d9e0872cb43de15e598385c474cabc126d09b7a4799f9fb20d86875379a3",
+              "kind": "ultra-srt-fcst",
+              "period": {
+                "local_date": 20261024,
+                "slot": "1400"
+              },
+              "raw_sha256": "d68c248568f2e9eec3bd30f36d790307ec63b5c79f8f8c631c6af4060979e44a",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 66
+        },
+        "elapsed_ms": 680.5717089999999,
+        "error": null,
+        "id": "shortest",
+        "outcome": "published",
+        "publish_ms": 319.90070799999995
+      },
+      {
+        "acquire_ms": 30.531167,
+        "coverage": {
+          "categories": {},
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 0,
+          "measured_first": null,
+          "measured_last": null,
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823492811,
+              "key_sha256": "b74cfae71406e0bcccb66956ec0a52c3f469d8e1666fbbb2264f6185676c99fe",
+              "kind": "mid-ta",
+              "period": {
+                "local_date": 20261024,
+                "slot": "0600"
+              },
+              "raw_sha256": "85f286bea65317a31a9f15c90d2c6366e236408957fa9b6f6ef3716590ca4520",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 1
+        },
+        "elapsed_ms": 273.463625,
+        "error": null,
+        "id": "mid-temperature",
+        "outcome": "published",
+        "publish_ms": 242.910417
+      },
+      {
+        "acquire_ms": 32.299625,
+        "coverage": {
+          "categories": {},
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 0,
+          "measured_first": null,
+          "measured_last": null,
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823492795,
+              "key_sha256": "df21d390cf493960e71b55aed3782916028416ba00cb950ba461fbf1f281c27b",
+              "kind": "mid-land-fcst",
+              "period": {
+                "local_date": 20261024,
+                "slot": "0600"
+              },
+              "raw_sha256": "7ba802ced471f5b456db3848d790c23fdab7ec9b61abff66272261ceeca46e9f",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 1
+        },
+        "elapsed_ms": 292.992333,
+        "error": null,
+        "id": "mid-land",
+        "outcome": "published",
+        "publish_ms": 260.678416
+      },
+      {
+        "acquire_ms": 38.176916,
+        "coverage": {
+          "categories": {
+            "PTY": 1,
+            "REH": 1,
+            "RN1": 1,
+            "T1H": 1,
+            "UUU": 1,
+            "VEC": 1,
+            "VVV": 1,
+            "WSD": 1
+          },
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 0,
+          "measured_first": null,
+          "measured_last": null,
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823492920,
+              "key_sha256": "dd14d9e0872cb43de15e598385c474cabc126d09b7a4799f9fb20d86875379a3",
+              "kind": "ultra-srt-ncst",
+              "period": {
+                "local_date": 20261024,
+                "slot": "1300"
+              },
+              "raw_sha256": "3ff5576cbe87a1b217385508bbdd42e2ffe19a6f1da18f695875612b62ecac7f",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 8
+        },
+        "elapsed_ms": 279.621041,
+        "error": null,
+        "id": "reach-current-1h",
+        "outcome": "published",
+        "publish_ms": 241.414917
+      },
+      {
+        "acquire_ms": 39.827458,
+        "coverage": {
+          "categories": {
+            "PTY": 1,
+            "REH": 1,
+            "RN1": 1,
+            "T1H": 1,
+            "UUU": 1,
+            "VEC": 1,
+            "VVV": 1,
+            "WSD": 1
+          },
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 0,
+          "measured_first": null,
+          "measured_last": null,
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823493096,
+              "key_sha256": "dd14d9e0872cb43de15e598385c474cabc126d09b7a4799f9fb20d86875379a3",
+              "kind": "ultra-srt-ncst",
+              "period": {
+                "local_date": 20261024,
+                "slot": "0800"
+              },
+              "raw_sha256": "25129e42c311f143abff013e1ddcc1c34cb52469971dfc5ba83281137347303e",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 8
+        },
+        "elapsed_ms": 302.905375,
+        "error": null,
+        "id": "reach-current-6h",
+        "outcome": "published",
+        "publish_ms": 263.052
+      },
+      {
+        "elapsed_ms": 27.0795,
+        "error": "domestic acquisition: Provider(Rejected)",
+        "id": "reach-current-24h",
+        "outcome": "acquisition_error"
+      },
+      {
+        "acquire_ms": 107.701166,
+        "coverage": {
+          "categories": {
+            "LGT": 6,
+            "POP": 6,
+            "PTY": 6,
+            "REH": 6,
+            "RN1": 6,
+            "SKY": 6,
+            "T1H": 6,
+            "UUU": 6,
+            "VEC": 6,
+            "VVV": 6,
+            "WSD": 6
+          },
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 0,
+          "measured_first": null,
+          "measured_last": null,
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823493161,
+              "key_sha256": "dd14d9e0872cb43de15e598385c474cabc126d09b7a4799f9fb20d86875379a3",
+              "kind": "ultra-srt-fcst",
+              "period": {
+                "local_date": 20261024,
+                "slot": "1300"
+              },
+              "raw_sha256": "004b701b8465d4f629e553e0ad5d28ccf86bd48d6535600c96304ec9af8a4bb9",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 66
+        },
+        "elapsed_ms": 394.710125,
+        "error": null,
+        "id": "reach-shortest-1h",
+        "outcome": "published",
+        "publish_ms": 286.86841699999997
+      },
+      {
+        "elapsed_ms": 30.489084,
+        "error": "domestic acquisition: Provider(Rejected)",
+        "id": "reach-current-168h",
+        "outcome": "acquisition_error"
+      },
+      {
+        "elapsed_ms": 25.960583,
+        "error": "domestic acquisition: Provider(Rejected)",
+        "id": "reach-shortest-168h",
+        "outcome": "acquisition_error"
+      },
+      {
+        "acquire_ms": 129.10316699999998,
+        "coverage": {
+          "categories": {
+            "LGT": 6,
+            "POP": 6,
+            "PTY": 6,
+            "REH": 6,
+            "RN1": 6,
+            "SKY": 6,
+            "T1H": 6,
+            "UUU": 6,
+            "VEC": 6,
+            "VVV": 6,
+            "WSD": 6
+          },
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 0,
+          "measured_first": null,
+          "measured_last": null,
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823493290,
+              "key_sha256": "dd14d9e0872cb43de15e598385c474cabc126d09b7a4799f9fb20d86875379a3",
+              "kind": "ultra-srt-fcst",
+              "period": {
+                "local_date": 20261024,
+                "slot": "0800"
+              },
+              "raw_sha256": "6984fba634bbf2f73fb72173a123a1d53aa00c39f1314f9a64a1173fd152b0c2",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 66
+        },
+        "elapsed_ms": 401.79254199999997,
+        "error": null,
+        "id": "reach-shortest-6h",
+        "outcome": "published",
+        "publish_ms": 272.58125
+      },
+      {
+        "acquire_ms": 1242.837833,
+        "coverage": {
+          "categories": {
+            "PCP": 66,
+            "POP": 66,
+            "PTY": 66,
+            "REH": 66,
+            "SKY": 66,
+            "SNO": 66,
+            "TMN": 3,
+            "TMP": 66,
+            "TMX": 3,
+            "UUU": 66,
+            "VEC": 66,
+            "VVV": 66,
+            "WAV": 66,
+            "WSD": 66
+          },
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 0,
+          "measured_first": null,
+          "measured_last": null,
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823493439,
+              "key_sha256": "dd14d9e0872cb43de15e598385c474cabc126d09b7a4799f9fb20d86875379a3",
+              "kind": "vilage-fcst",
+              "period": {
+                "local_date": 20261024,
+                "slot": "1400"
+              },
+              "raw_sha256": "7999c5188457116a64289983a0a711d3ac7b1b3dee8bb30152ad7b170d30d9ab",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 798
+        },
+        "elapsed_ms": 1522.932167,
+        "error": null,
+        "id": "short",
+        "outcome": "published",
+        "publish_ms": 278.680875
+      },
+      {
+        "acquire_ms": 109.110708,
+        "coverage": {
+          "categories": {
+            "LGT": 6,
+            "POP": 6,
+            "PTY": 6,
+            "REH": 6,
+            "RN1": 6,
+            "SKY": 6,
+            "T1H": 6,
+            "UUU": 6,
+            "VEC": 6,
+            "VVV": 6,
+            "WSD": 6
+          },
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 0,
+          "measured_first": null,
+          "measured_last": null,
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823493495,
+              "key_sha256": "dd14d9e0872cb43de15e598385c474cabc126d09b7a4799f9fb20d86875379a3",
+              "kind": "ultra-srt-fcst",
+              "period": {
+                "local_date": 20261023,
+                "slot": "1400"
+              },
+              "raw_sha256": "34117d3dbf8e26b5c9e204919d62f47eeb4a3f0316aa877092972506ef7a47ca",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 66
+        },
+        "elapsed_ms": 375.730416,
+        "error": null,
+        "id": "reach-shortest-24h",
+        "outcome": "published",
+        "publish_ms": 266.504166
+      },
+      {
+        "acquire_ms": 60.584041,
+        "coverage": {
+          "categories": {},
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 0,
+          "measured_first": null,
+          "measured_last": null,
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823493785,
+              "key_sha256": "dd14d9e0872cb43de15e598385c474cabc126d09b7a4799f9fb20d86875379a3",
+              "kind": "town-rss",
+              "period": {
+                "local_date": 20261024,
+                "slot": "1400"
+              },
+              "raw_sha256": "4d3bfb6d57a8c6d0d2b543f07eec926d8f2e7ae033743ec188ed102d8ac3a188",
+              "source": "kma-web"
+            }
+          ],
+          "rows": 0
+        },
+        "elapsed_ms": 317.763791,
+        "error": null,
+        "id": "rss",
+        "outcome": "published",
+        "publish_ms": 257.16229200000004
+      },
+      {
+        "acquire_ms": 276.59520799999996,
+        "coverage": {
+          "categories": {},
+          "cloud_field_present": 0,
+          "distinct_measured_timestamps": 7,
+          "measured_first": "2026-10-17",
+          "measured_last": "2026-10-23",
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 0,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823493840,
+              "key_sha256": "a88704dc60cfc9e36542ddde566090960969651f4f423904b284c2551f4fd17a",
+              "kind": "asos-daily",
+              "period": {
+                "local_date": 20261017,
+                "slot": "0000"
+              },
+              "raw_sha256": "f555545e703a879d2da432677ac5993b8a438b6d78a598ca2e1308047d62ac5e",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 7
+        },
+        "elapsed_ms": 561.617292,
+        "error": null,
+        "id": "asos-daily-7-completed-dates",
+        "outcome": "published",
+        "publish_ms": 284.884458
+      },
+      {
+        "acquire_ms": 797.33475,
+        "coverage": {
+          "categories": {},
+          "cloud_field_present": 168,
+          "distinct_measured_timestamps": 168,
+          "measured_first": "2026-10-17 00:00",
+          "measured_last": "2026-10-23 23:00",
+          "phenomenon_mapping_qualified": false,
+          "phenomenon_number_nonempty": 25,
+          "raw_ids": [
+            {
+              "fetched_at_ms": 1792823494301,
+              "key_sha256": "a88704dc60cfc9e36542ddde566090960969651f4f423904b284c2551f4fd17a",
+              "kind": "asos-hourly",
+              "period": {
+                "local_date": 20261017,
+                "slot": "0000"
+              },
+              "raw_sha256": "9a1c13dd04b6c637586d6101ae4b093e3b4b64bc61059123dffe54e09fb9b01c",
+              "source": "data-go-kr"
+            }
+          ],
+          "rows": 168
+        },
+        "elapsed_ms": 1041.915042,
+        "error": null,
+        "id": "asos-hourly-7-completed-dates",
+        "outcome": "published",
+        "publish_ms": 243.230375
+      }
+    ],
+    "operations": {
+      "get_budget": 8,
+      "get_control": 42,
+      "get_raw": 14,
+      "list": 1,
+      "list_index": 1,
+      "provider": 17,
+      "put_budget": 16,
+      "put_control": 28,
+      "put_raw": 14
+    },
+    "empty_scope_preflight_lists": 3,
+    "native_empty_scope_lists": 2,
+    "scope": "Fixed Seoul owners and17diagnostic logical jobs, not complete automatic provider-to-client acquisition."
+  },
+  "restore_pilot": {
+    "status": "STOPPED_ON_CONCURRENT_BYTE_RESERVATION_PRESSURE",
+    "planned_per_phase": 30,
+    "phases": {
+      "fresh_source_no_disk": {
+        "attempts": 13,
+        "http_200": 13,
+        "other": 0,
+        "all_http_attempt_ms": {
+          "p50": 2717.846291,
+          "p95": 2721.135916,
+          "p99": 2721.135916
+        },
+        "http_200_ms": {
+          "p50": 2717.846291,
+          "p95": 2721.135916,
+          "p99": 2721.135916
+        },
+        "history_complete": 0,
+        "history_completion_percentiles": null,
+        "forecast_client_completeness": "NOT_QUALIFIED",
+        "percentile_scope": "nearest-rank empirical pilot; underpowered for production p95/p99"
+      },
+      "same_source_no_disk": {
+        "attempts": 1,
+        "http_200": 1,
+        "other": 0,
+        "all_http_attempt_ms": {
+          "p50": 2331.711292,
+          "p95": 2331.711292,
+          "p99": 2331.711292
+        },
+        "http_200_ms": {
+          "p50": 2331.711292,
+          "p95": 2331.711292,
+          "p99": 2331.711292
+        },
+        "history_complete": 0,
+        "history_completion_percentiles": null,
+        "forecast_client_completeness": "NOT_QUALIFIED",
+        "percentile_scope": "nearest-rank empirical pilot; underpowered for production p95/p99",
+        "actual_source_reuse_attempts": 0,
+        "source_reuse_only_ms": null,
+        "interpretation": "Only trial0 setup request; does not measure Source reuse."
+      }
+    },
+    "http_body_hash_counts": {
+      "dc19b48a251ca003af20783b0e9cca6530f3d9e74776b85d66d6d6d01152f797": 14
+    },
+    "operations": {
+      "get_budget": 8,
+      "get_control": 1946,
+      "get_group": 182,
+      "get_raw": 196,
+      "list": 1653,
+      "list_index": 15356,
+      "provider": 17,
+      "put_budget": 16,
+      "put_control": 28,
+      "put_raw": 14
+    },
+    "conservative_application_body_and_header_bytes": 167065013,
+    "denials": 13,
+    "final_inflight_reserved_bytes": 0,
+    "guard_explanation": "Concurrent reservation pressure: up to8MiB reserved per index response plus accumulated conservative charges. The159.326MiB final conservative charge is not measured network transfer or provider quota exhaustion. This profile did not exercise actual Source reuse.",
+    "s3_concurrency": 12
+  },
+  "past_source_probe": {
+    "clock": "2026-09-24T06:31:00.000Z",
+    "input_change": "removed complete short and rss raw acquisitions; all other inputs and native code unchanged",
+    "baseline_status": 200,
+    "changed_input_status": 200,
+    "weather_field_difference_count": 82,
+    "distinct_past_short_slots": 9,
+    "weather_fields": [
+      "pop",
+      "r06",
+      "r06Approx",
+      "r06Hours",
+      "reh",
+      "s06",
+      "s06Approx",
+      "s06Hours",
+      "t3h",
+      "tmn",
+      "vec",
+      "wav",
+      "wsd"
+    ],
+    "weather_field_differences": [
+      {
+        "view": "short",
+        "slot": "20260922:24",
+        "field": "pop",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260922:24",
+        "field": "r06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260922:24",
+        "field": "r06Approx",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260922:24",
+        "field": "r06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260922:24",
+        "field": "reh",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260922:24",
+        "field": "s06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260922:24",
+        "field": "t3h",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260922:24",
+        "field": "vec",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260922:24",
+        "field": "wav",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260922:24",
+        "field": "wsd",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:12",
+        "field": "pop",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:12",
+        "field": "r06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:12",
+        "field": "r06Approx",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:12",
+        "field": "r06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:12",
+        "field": "s06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:12",
+        "field": "s06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:15",
+        "field": "pop",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:15",
+        "field": "r06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:15",
+        "field": "r06Approx",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:15",
+        "field": "r06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:15",
+        "field": "reh",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:15",
+        "field": "s06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:15",
+        "field": "s06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:15",
+        "field": "t3h",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:15",
+        "field": "vec",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:15",
+        "field": "wsd",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:18",
+        "field": "pop",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:18",
+        "field": "r06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:18",
+        "field": "r06Approx",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:18",
+        "field": "r06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:18",
+        "field": "s06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:18",
+        "field": "s06Approx",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:18",
+        "field": "s06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:21",
+        "field": "pop",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:21",
+        "field": "r06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:21",
+        "field": "r06Approx",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:21",
+        "field": "r06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:21",
+        "field": "reh",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:21",
+        "field": "s06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:21",
+        "field": "s06Approx",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:21",
+        "field": "s06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:21",
+        "field": "t3h",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:21",
+        "field": "vec",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:21",
+        "field": "wsd",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:24",
+        "field": "pop",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:24",
+        "field": "r06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:24",
+        "field": "r06Approx",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:24",
+        "field": "r06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:24",
+        "field": "reh",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:24",
+        "field": "s06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:24",
+        "field": "t3h",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:24",
+        "field": "tmn",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:24",
+        "field": "vec",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:24",
+        "field": "wsd",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:3",
+        "field": "pop",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:3",
+        "field": "r06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:3",
+        "field": "r06Approx",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:3",
+        "field": "r06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:3",
+        "field": "reh",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:3",
+        "field": "s06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:3",
+        "field": "s06Approx",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:3",
+        "field": "s06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:3",
+        "field": "t3h",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:3",
+        "field": "vec",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:3",
+        "field": "wav",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:3",
+        "field": "wsd",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:6",
+        "field": "pop",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:6",
+        "field": "r06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:6",
+        "field": "r06Approx",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:6",
+        "field": "r06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:6",
+        "field": "s06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:6",
+        "field": "s06Approx",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:6",
+        "field": "s06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:6",
+        "field": "tmn",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:9",
+        "field": "pop",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:9",
+        "field": "r06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:9",
+        "field": "reh",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:9",
+        "field": "s06",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:9",
+        "field": "s06Hours",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:9",
+        "field": "t3h",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:9",
+        "field": "vec",
+        "change": "value_or_presence_changed"
+      },
+      {
+        "view": "short",
+        "slot": "20260923:9",
+        "field": "wsd",
+        "change": "value_or_presence_changed"
+      }
+    ],
+    "fixtures": {
+      "baseline": "65d4d8a9a4737e58e84c9967dbe5d0f815a894ad48fd820c4a2ae1c75e30adae",
+      "without-short-and-rss": "b988c578fcbb9b48b480af20e07849288602f3756be7735868c294912336f753"
+    },
+    "scope": "one CORE fixture, removal of full short/RSS families; comparator limited to dates before fixture KST today; not a minimally changed production policy or live affected-date census",
+    "past_daily_field_difference_count": 0,
+    "absence_of_daily_difference_scope": "Only this frozen CORE fixture; does not qualify general daily overlay equivalence."
+  },
+  "qualification": {
+    "whole_empty_s3_provider_to_client": false,
+    "seven_completed_dates_hourly_phenomena": false,
+    "live_provider_value_equivalence": false,
+    "production_p95_p99": false,
+    "pack_benefit": false,
+    "shared_ram_closure": false,
+    "full_forecast_client_output": false,
+    "production_startup_network": false
+  },
+  "retention": {
+    "s3_prefixes": [
+      "raw/v2/verification/kma-20261024-2088bed9a96e4f62/",
+      "index/v2/verification/kma-20261024-2088bed9a96e4f62/",
+      "budgets/v2/verification/kma-20261024-2088bed9a96e4f62/"
+    ],
+    "deletes_performed": false,
+    "production_object_overwrites": false
+  },
+  "receipt_hashes": {
+    "live-1": {
+      "raw-report.json": "1aba2ae06ea00c5edd7ffc8621b00ff864b23b42b844aa8f4a2667c148820604",
+      "provenance.json": "d9be2207a55682b811ddc60baa8ecf59f35670a0bfaa6fd02560ee07962e4912",
+      "summary.json": "3daa238df228e89ec83cdbe12643d870a50811fa121309085b6cc6ab16b2d3cd"
+    },
+    "readonly-2": {
+      "raw-report.json": "2607a1ceff6a029a9ddee3699baeb1f4f66f9612ccc6339254abc57a7bd0d9d6",
+      "provenance.json": "a5d8a5ad7ac33b869709eabff705ae829afa70b5fc02e403e7929bb025c3b870",
+      "summary.json": "0b59d18327e47577081ac96defe6f15fbda7d032f34e6006e5ec0a1637846904"
+    },
+    "past_source_probe_summary": "38f2d5c3e112f2a623da78619e6fb70469b1040201ba57477f2041ba7bd0d382"
+  },
+  "artifacts_scope": "First pilot as-run identities. Continuation as-run identities below; final XML test raw-string edit was made only after both live runs and preserves literal bytes.",
+  "read_only_continuation": {
+    "observed_utc": {
+      "started": "2026-10-24T06:54:46.315472+00:00",
+      "finished": "2026-10-24T06:54:56.498595+00:00"
+    },
+    "artifacts": {
+      "server2/examples/kma_cold_measure.rs": "d95410e215a3c485b9fef98ad28b50c02983964d5acfc5ba64a2d858f3a6cc67",
+      "server2/examples/kma_cold_measure/scope.rs": "9224a0c8e3eef9e48a923b1c7fb7c464d6e6dbf2c07b611e1f3b7ca4f5db6aac",
+      "server2/tools/verification/kma_cold_measure.py": "93ff2515060f182838226625a28993f02eed959d2f506b94fa674e7c8d45dd63",
+      "server2/Cargo.lock": "e9e198c01688599f9fcdfdf4847314ca6556f5dab89c98884b3f93bf85e9bd51",
+      "binary": "1d9dc8e2c1992ea73f97b2de5b752f8170e9fcd853c2700c95f6cabefa20ac59"
+    },
+    "actual_source_and_binary_unchanged_during_live_run": true,
+    "parent_report_sha256": "1aba2ae06ea00c5edd7ffc8621b00ff864b23b42b844aa8f4a2667c148820604",
+    "s3_concurrency": 4,
+    "provider_transport_sends_added": 0,
+    "s3_writes_added": 0,
+    "setup_request_ms": 2717.284875,
+    "actual_source_reuse_request_ms": [
+      2717.120875,
+      2509.164917,
+      1723.191125
+    ],
+    "summary": {
+      "attempts": 4,
+      "http_200": 4,
+      "other": 0,
+      "all_http_attempt_ms": {
+        "p50": 2509.164917,
+        "p95": 2717.284875,
+        "p99": 2717.284875
+      },
+      "http_200_ms": {
+        "p50": 2509.164917,
+        "p95": 2717.284875,
+        "p99": 2717.284875
+      },
+      "history_complete": 0,
+      "history_completion_percentiles": null,
+      "forecast_client_completeness": "NOT_QUALIFIED",
+      "actual_source_reuse_attempts": 3,
+      "source_reuse_only_ms": {
+        "p50": 2509.164917,
+        "p95": 2717.120875,
+        "p99": 2717.120875
+      },
+      "percentile_scope": "nearest-rank empirical pilot; underpowered for production p95/p99"
+    },
+    "operations_added": {
+      "get_budget": 0,
+      "get_control": 169,
+      "get_group": 46,
+      "get_raw": 46,
+      "list": 118,
+      "list_index": 1393,
+      "provider": 0,
+      "put_budget": 0,
+      "put_control": 0,
+      "put_raw": 0
+    },
+    "new_denials": 0,
+    "interpretation": "Separate four-permit profile; not pooled with12-permit pilot; three Source-reuse requests do not qualify a RAM-closure speedup or production tails."
+  },
+  "cumulative_campaign": {
+    "original_deadline_utc": "2026-10-24T07:01:31.548390+00:00",
+    "provider_transport_sends": 17,
+    "provider_wire_attempt_upper_bound": 68,
+    "wire_redirect_hops_measured": false,
+    "operations": {
+      "get_budget": 8,
+      "get_control": 2115,
+      "get_group": 228,
+      "get_raw": 242,
+      "list": 1771,
+      "list_index": 16749,
+      "provider": 17,
+      "put_budget": 16,
+      "put_control": 28,
+      "put_raw": 14
+    },
+    "native_s3_reads_including_list": 21113,
+    "initial_cli_empty_prefix_lists": 3,
+    "s3_writes": 58,
+    "native_list_operations": 18520,
+    "list_share_of_native_reads": 0.877184672950315,
+    "conservative_application_body_and_header_bytes": 182347980,
+    "conservative_charge_is_actual_network_bytes": false,
+    "denials_first_pilot": 13,
+    "new_denials_continuation": 0,
+    "final_inflight_reserved_bytes": 0,
+    "http_attempts": 18,
+    "http_200": 18,
+    "history_complete_attempts": 0,
+    "http_body_bytes": [
+      44230
+    ],
+    "http_body_hash_counts": {
+      "dc19b48a251ca003af20783b0e9cca6530f3d9e74776b85d66d6d6d01152f797": 18
+    },
+    "limits": {
+      "bytes": 262144000,
+      "external_preflight_lists": 3,
+      "native_s3_reads": 49997,
+      "provider_admissions": 64,
+      "provider_wire_attempt_upper_bound": 256,
+      "s3_writes": 5000,
+      "wall_seconds": 1800
+    },
+    "precondition_bucket_location_read_included_in_benchmark_counts": false
+  },
+  "verification": {
+    "rust_guard_tests_passed": 4,
+    "python_control_tests_passed": 3,
+    "release_clippy_warnings_denied": "PASS",
+    "rustfmt": "PASS",
+    "task_scoped_placement": "PASS",
+    "full_worktree_placement": "FAIL:18 pre-existing unrelated documentation paths outside this task declaration; task implementation issue corrected",
+    "selected_temporary_index_artifact_policy": "PASS; actual index unchanged; isolated temporary object directory",
+    "local_links_and_fragments_checked": 328,
+    "source_line_targets_checked": 63,
+    "offline_evidence_consistency_checks_passed": 55,
+    "review_kind": "lead self-review; no new independent review or merge approval"
+  },
+  "build_cleanup": {
+    "target": "server2/target",
+    "target_size_display": "5.5G",
+    "target_disposition": "protected pre-existing shared target; other consumers not ruled out",
+    "final_free_bytes": 140928839680,
+    "recovered_bytes": 0,
+    "required_release_executables_retained_with_hashes": true,
+    "runtime_dependency_audit": "retained server2/kma_s3_replay link only system libraries; both executed in native suite"
+  }
+}

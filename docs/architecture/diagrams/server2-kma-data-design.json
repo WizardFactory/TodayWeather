@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "KMA response-first contract and qualification",
+    "locale": "en",
+    "output": "docs/architecture/diagrams/server2-kma-data-design.html",
+    "quality_profile": "showcase"
+  },
+  "participants": [
+    {
+      "id": "client",
+      "type": "external",
+      "label": "Client",
+      "sublabel": "Existing weather API"
+    },
+    {
+      "id": "owner",
+      "type": "backend",
+      "label": "Coordinator",
+      "sublabel": "Full required closure"
+    },
+    {
+      "id": "provider",
+      "type": "external",
+      "label": "KMA sources",
+      "sublabel": "Latest + required history"
+    },
+    {
+      "id": "assembly",
+      "type": "backend",
+      "label": "RAM assembly",
+      "sublabel": "Coverage and value gates"
+    },
+    {
+      "id": "s3",
+      "type": "database",
+      "label": "Canonical S3",
+      "sublabel": "Raw + group controls"
+    }
+  ],
+  "segments": [
+    {
+      "from": 140,
+      "to": 1078,
+      "label": "Selected live order; implemented locally, real full coverage unqualified"
+    },
+    {
+      "from": 1098,
+      "to": 1523,
+      "label": "Canonical replay: scripted wet/dry proof; live qualification open"
+    },
+    {
+      "from": 1548,
+      "to": 1948,
+      "label": "Failure and restart: charged originals, bounded recovery"
+    }
+  ],
+  "messages": [
+    {
+      "id": "request",
+      "from": "client",
+      "to": "owner",
+      "y": 165,
+      "label": "Full weather request",
+      "variant": "emphasis"
+    },
+    {
+      "id": "discovery",
+      "from": "owner",
+      "to": "s3",
+      "y": 210,
+      "label": "Discover required originals",
+      "note": "Real bounded LIST and catalog checks stay inside latency. No initial grid head."
+    },
+    {
+      "id": "inventory",
+      "from": "s3",
+      "to": "owner",
+      "y": 295,
+      "label": "Empty weather inventory",
+      "variant": "return"
+    },
+    {
+      "id": "quota",
+      "from": "owner",
+      "to": "s3",
+      "y": 340,
+      "label": "Reserve provider quota",
+      "variant": "security",
+      "note": "Reserve retained bytes before HTTP. Quota/control I/O remains on the request path."
+    },
+    {
+      "id": "quota-ready",
+      "from": "s3",
+      "to": "owner",
+      "y": 425,
+      "label": "Funding admitted",
+      "variant": "return"
+    },
+    {
+      "id": "provider-http",
+      "from": "owner",
+      "to": "provider",
+      "y": 470,
+      "label": "Fetch missing required inputs",
+      "variant": "emphasis"
+    },
+    {
+      "id": "raw-ready",
+      "from": "provider",
+      "to": "owner",
+      "y": 520,
+      "label": "Complete original groups",
+      "variant": "return",
+      "note": "City/hourly require exact header time; no form echo. Writer owns charged originals before RamReady."
+    },
+    {
+      "id": "assemble",
+      "from": "owner",
+      "to": "assembly",
+      "y": 613,
+      "label": "Pinned full input closure",
+      "variant": "emphasis",
+      "note": "ASOS primary; ODAM/VSRT cover elapsed hours. Preserve public 3h slots; past SHRT/RSS weather is removed."
+    },
+    {
+      "id": "full-ready",
+      "from": "assembly",
+      "to": "owner",
+      "y": 698,
+      "label": "Coverage and value result",
+      "variant": "return",
+      "note": "Integrity, required fields/hours and parity are separate gates. Missing history fails full-response qualification."
+    },
+    {
+      "id": "reply",
+      "from": "owner",
+      "to": "client",
+      "y": 783,
+      "label": "Full required response",
+      "variant": "return",
+      "note": "Conditional full-success branch. Current sources are unqualified; no new client failure API is implied."
+    },
+    {
+      "id": "response-gate",
+      "from": "assembly",
+      "to": "owner",
+      "y": 868,
+      "label": "Eligible body terminal",
+      "variant": "return",
+      "note": "Use the declared server hook, not claimed app receipt. Freeze waiters; bound dormancy and shutdown."
+    },
+    {
+      "id": "persist",
+      "from": "owner",
+      "to": "s3",
+      "y": 953,
+      "label": "Persist original group",
+      "variant": "dashed",
+      "note": "One supervised writer; exact bytes, original owners, CAS and verified publication after response."
+    },
+    {
+      "id": "durable",
+      "from": "s3",
+      "to": "owner",
+      "y": 1038,
+      "label": "Verified durable receipt",
+      "variant": "return"
+    },
+    {
+      "id": "restore-request",
+      "from": "client",
+      "to": "owner",
+      "y": 1128,
+      "label": "Later full request",
+      "variant": "emphasis"
+    },
+    {
+      "id": "restore-read",
+      "from": "owner",
+      "to": "s3",
+      "y": 1173,
+      "label": "Normal canonical discovery",
+      "note": "Count LIST, catalogs, descriptors and raw. Provider fallback is disabled in the restore test."
+    },
+    {
+      "id": "restore-raw",
+      "from": "s3",
+      "to": "owner",
+      "y": 1258,
+      "label": "Complete canonical raw",
+      "variant": "return"
+    },
+    {
+      "id": "restore-assemble",
+      "from": "owner",
+      "to": "assembly",
+      "y": 1303,
+      "label": "Same full value assembly",
+      "variant": "emphasis",
+      "note": "Run the same value assembly from original canonical groups. Per-grid combination generation remains deferred."
+    },
+    {
+      "id": "restore-check",
+      "from": "assembly",
+      "to": "owner",
+      "y": 1388,
+      "label": "Coverage and replay checks",
+      "variant": "return",
+      "note": "Scripted wet/dry history replays exactly. Real QC9, winter and pre-release coverage is not yet qualified."
+    },
+    {
+      "id": "restore-reply",
+      "from": "owner",
+      "to": "client",
+      "y": 1473,
+      "label": "Full required response",
+      "variant": "return"
+    },
+    {
+      "id": "write-error",
+      "from": "s3",
+      "to": "owner",
+      "y": 1583,
+      "label": "If write fails: retry same raw",
+      "variant": "return",
+      "note": "Retain charged bytes; bounded retries and drain. Dormant batches hold no writer slots."
+    },
+    {
+      "id": "restart",
+      "from": "client",
+      "to": "owner",
+      "y": 1668,
+      "label": "Request after restart"
+    },
+    {
+      "id": "repair",
+      "from": "owner",
+      "to": "s3",
+      "y": 1713,
+      "label": "Read and bounded repair",
+      "note": "Protect discovery generations through promotion/removal. Never combine different vintages."
+    },
+    {
+      "id": "reacquire",
+      "from": "owner",
+      "to": "provider",
+      "y": 1798,
+      "label": "If gap: qualified reacquisition",
+      "note": "Source-specific reach and new identity. Accepted crash loss never waives required response history."
+    },
+    {
+      "id": "repair-result",
+      "from": "provider",
+      "to": "owner",
+      "y": 1883,
+      "label": "New raw or explicit gap",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Full-response qualification is open",
+      "items": [
+        "Seven completed days and current public 3h slots stay required; historical numbers may change from acquired ASOS.",
+        "Scripted wet/dry history proves response-before-raw-PUT and replay. Real QC9, winter, pre-release and p95/p99 remain open.",
+        "ASOS normal blanks mean dry; trace0 stays precipitation. Apr-Oct QC9 hours on closed days read dry (dry-closure-v1); winter QC9 and midnight gaps remain.",
+        "Apr-Oct uncoded rain at wet-bulb 5C or more reads rain; other untyped rain never reads dry: slot PTY -1, AM/PM omitted (history contract v1).",
+        "A town reads a station within 200 m of its elevation, or none (station-altitude-v1); island stations serve only their county."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Client first; owned raw afterwards",
+      "items": [
+        "Writer owns charged raw before Ready; server body end/drop, no waiters, a10s cap or shutdown releases S3 publication.",
+        "Default virtual reservation768MiB, shrunk to actual retained bytes; retries preserve originals. S16 waits for a frozen durability fence after the body."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Canonical reuse; conditional candidates",
+      "items": [
+        "Canonical v2 raw/catalog/group controls remain the restore authority. Same selected original closure must replay exactly.",
+        "Per-grid optimal combinations, source plans, day locators, heads and packs remain deferred. No live full-response timing is qualified."
+      ]
+    }
+  ]
+}

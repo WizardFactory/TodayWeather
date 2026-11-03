@@ -1,0 +1,3088 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-24",
+  "timezone": "Asia/Seoul",
+  "source_revision": "82f7a4838dda046be966ee9c25c9cb66561d099d",
+  "scope": "Application-runtime operations and confirmed historical-native callers;inactive/research groups separated. SDK rows group named methods;not a transport-endpoint census.",
+  "verification": "Source and public documentation review only;no authenticated data/provider call,build,device/cloud/deployment or percentile measurement.",
+  "records": [
+    {
+      "id": "KMA-01",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst",
+      "request": "serviceKey,pageNo,numOfRows; nx,ny,base_date,base_time",
+      "response": "category,obsrValue; T1H,RN1,UUU,VVV,REH,PTY,VEC,WSD",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "999 rows/page, max 5 pages; legacy 10s/page; manager key retries are separate.",
+      "notes": "Legacy base is HTTP; server2 HTTPS. Publication, valid time and fetch revision are distinct.",
+      "sources": [
+        {
+          "path": "server/lib/collectTownForecast.js",
+          "line": 952
+        },
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 1438
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15084084/openapi.do"
+      ],
+      "manual": "kma.md#grid-observations-and-forecasts"
+    },
+    {
+      "id": "KMA-02",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst",
+      "request": "serviceKey,pageNo,numOfRows; nx,ny,base_date,base_time",
+      "response": "fcstDate,fcstTime,category,fcstValue; PTY,RN1,SKY,LGT,T1H,REH,UUU,VVV,VEC,WSD,POP",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "999 rows/page, max 5 pages; legacy 10s/page; manager key retries are separate.",
+      "notes": "Legacy base is HTTP; server2 HTTPS. Publication, valid time and fetch revision are distinct.",
+      "sources": [
+        {
+          "path": "server/lib/collectTownForecast.js",
+          "line": 835
+        },
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 1440
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15084084/openapi.do"
+      ],
+      "manual": "kma.md#grid-observations-and-forecasts"
+    },
+    {
+      "id": "KMA-03",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst",
+      "request": "serviceKey,pageNo,numOfRows; nx,ny,base_date,base_time",
+      "response": "fcstDate,fcstTime,category,fcstValue; POP,PTY,REH,SKY,TMN,TMX,UUU,VVV,WAV,VEC,WSD,TMP,PCP,SNO",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "999 rows/page, max 5 pages; legacy 10s/page; manager key retries are separate.",
+      "notes": "Legacy base is HTTP; server2 HTTPS. Publication, valid time and fetch revision are distinct.",
+      "sources": [
+        {
+          "path": "server/lib/collectTownForecast.js",
+          "line": 706
+        },
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 1441
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15084084/openapi.do"
+      ],
+      "manual": "kma.md#grid-observations-and-forecasts"
+    },
+    {
+      "id": "KMA-04",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/MidFcstInfoService/getMidFcst",
+      "request": "serviceKey,pageNo,numOfRows; tmFc,stnId",
+      "response": "wfSv",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "Distinct natural owners; legacy HTTP/server2 HTTPS. MidSea is not a native ordinary request acquisition.",
+      "sources": [
+        {
+          "path": "server/lib/collectTownForecast.js",
+          "line": 1068
+        },
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 1462
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15059468/openapi.do"
+      ],
+      "manual": "kma.md#mid-range-products"
+    },
+    {
+      "id": "KMA-05",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst",
+      "request": "serviceKey,pageNo,numOfRows; tmFc,regId (land)",
+      "response": "wf3Am/Pm..wf7Am/Pm,wf8..10,rnSt*",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "Distinct natural owners; legacy HTTP/server2 HTTPS. MidSea is not a native ordinary request acquisition.",
+      "sources": [
+        {
+          "path": "server/lib/collectTownForecast.js",
+          "line": 1112
+        },
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 1463
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15059468/openapi.do"
+      ],
+      "manual": "kma.md#mid-range-products"
+    },
+    {
+      "id": "KMA-06",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa",
+      "request": "serviceKey,pageNo,numOfRows; tmFc,regId (temperature)",
+      "response": "taMin3..10,taMax3..10",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "Distinct natural owners; legacy HTTP/server2 HTTPS. MidSea is not a native ordinary request acquisition.",
+      "sources": [
+        {
+          "path": "server/lib/collectTownForecast.js",
+          "line": 1112
+        },
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 1464
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15059468/openapi.do"
+      ],
+      "manual": "kma.md#mid-range-products"
+    },
+    {
+      "id": "KMA-07",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/MidFcstInfoService/getMidSeaFcst",
+      "request": "serviceKey,pageNo,numOfRows; tmFc,regId (marine)",
+      "response": "wf*,wh* wave bounds",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "adapter_only"
+      },
+      "has_application_invoker": true,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "Distinct natural owners; legacy HTTP/server2 HTTPS. MidSea is not a native ordinary request acquisition.",
+      "sources": [
+        {
+          "path": "server/lib/collectTownForecast.js",
+          "line": 1127
+        },
+        {
+          "path": "server2/src/domestic/family.rs",
+          "line": 114
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15059468/openapi.do"
+      ],
+      "manual": "kma.md#mid-range-products"
+    },
+    {
+      "id": "KMA-08",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/FcstZoneInfoService/getFcstZoneCd",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows; all zones",
+      "response": "regId,regName,regSp; regEn,regUp,stnWn,stnF3,stnFd,stnFw,tmEd,tmSt,seq,ht,lat,lon",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "1000 rows/page, max10 pages;10s, at most3 transient attempts.",
+      "notes": "totalCount interpreted as page count; retire absent zones only after full validated list.",
+      "sources": [
+        {
+          "path": "server/controllers/kma/kma.forecast.zone.controller.js",
+          "line": 105
+        },
+        {
+          "path": "server2/src/domestic/zone.rs",
+          "line": 153
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15057111/openapi.do"
+      ],
+      "manual": "kma.md#forecast-zone-metadata"
+    },
+    {
+      "id": "KMA-09",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/AsosHourlyInfoService/getWthrDataList",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows,dataCd=ASOS,dateCd=HR,stnIds,startDt,endDt,startHh,endHh",
+      "response": "stnId,tm,ta,hm,rn,ws,wd,dc10Tca,QC flags,dmstMtphNo",
+      "credential_names": [
+        "ASOS_HISTORY_SERVICE_KEY (legacy)",
+        "DONGNAE_SECRET_KEYS (server2)"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Local1..7 dates;999 rows/page,max8;legacy10s,2MiB,3 transient attempts.",
+      "notes": "Matched ASOS rows; legacy missing-only replay unchanged. Observed policy distinguishes qualified blank dry from trace numeric0 and QC1/9 missing; winter cadence qualified separately.",
+      "sources": [
+        {
+          "path": "server/lib/history/provider.js",
+          "line": 46
+        },
+        {
+          "path": "server/lib/history/policy.js",
+          "line": 92
+        },
+        {
+          "path": "server2/src/domestic/asos.rs",
+          "line": 218
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15057210/openapi.do"
+      ],
+      "manual": "kma.md#asos-measured-historical-observations"
+    },
+    {
+      "id": "KMA-10",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/AsosDalyInfoService/getWthrDataList",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows,dataCd=ASOS,dateCd=DAY,stnIds,startDt,endDt",
+      "response": "stnId,tm,minTa,maxTa,avgTa,avgRhm,sumRn,avgWs,iscs,sumRnDur",
+      "credential_names": [
+        "ASOS_HISTORY_SERVICE_KEY (legacy)",
+        "DONGNAE_SECRET_KEYS (server2)"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Local1..7 dates;999 rows/page,max8;legacy10s,2MiB,3 transient attempts.",
+      "notes": "Completed KST dates. Legacy missing-only replay unchanged; observed blank-dry totals require other measured values, empty iscs and nonconflicting sumRnDur.",
+      "sources": [
+        {
+          "path": "server/lib/history/provider.js",
+          "line": 46
+        },
+        {
+          "path": "server/lib/history/policy.js",
+          "line": 92
+        },
+        {
+          "path": "server2/src/domestic/asos.rs",
+          "line": 218
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15059093/openapi.do"
+      ],
+      "manual": "kma.md#asos-measured-historical-observations"
+    },
+    {
+      "id": "KMA-11",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/LivingWthrIdxServiceV5/getUVIdxV5",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows,areaNo=,time=YYYYMMDDHH",
+      "response": "areaNo,date,h0,h3..h78",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy1000 rows/page,30s/page;server2 max8 pages;complete issuance validation.",
+      "notes": "Blank area=all; portal4.0 versus actualV5 path; legacy URL is HTTP, native HTTPS.",
+      "sources": [
+        {
+          "path": "server/lib/lifeIndexKmaRequester.js",
+          "line": 26
+        },
+        {
+          "path": "server/lib/lifeIndexKmaRequester.js",
+          "line": 1063
+        },
+        {
+          "path": "server2/src/domestic/kma/source/life_live.rs",
+          "line": 176
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15085288/openapi.do"
+      ],
+      "manual": "kma.md#uv-and-pollen-indices"
+    },
+    {
+      "id": "KMA-12",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/HealthWthrIdxServiceV3/getOakPollenRiskIdxV3",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows,areaNo=,time=YYYYMMDDHH",
+      "response": "areaNo,date,today,tomorrow,dayaftertomorrow,todaysaftertomorrow",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy1000 rows/page,30s/page;server2 max8 pages;complete issuance validation.",
+      "notes": "Blank area=all; UV portal title4.0 vs V5 path; actual weeds Riskndx spelling.",
+      "sources": [
+        {
+          "path": "server/lib/lifeIndexKmaRequester.js",
+          "line": 26
+        },
+        {
+          "path": "server/lib/lifeIndexKmaRequester.js",
+          "line": 1063
+        },
+        {
+          "path": "server2/src/domestic/kma/source/life_live.rs",
+          "line": 176
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15085289/openapi.do"
+      ],
+      "manual": "kma.md#uv-and-pollen-indices"
+    },
+    {
+      "id": "KMA-13",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/HealthWthrIdxServiceV3/getPinePollenRiskIdxV3",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows,areaNo=,time=YYYYMMDDHH",
+      "response": "same pollen daily fields",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy1000 rows/page,30s/page;server2 max8 pages;complete issuance validation.",
+      "notes": "Blank area=all; UV portal title4.0 vs V5 path; actual weeds Riskndx spelling.",
+      "sources": [
+        {
+          "path": "server/lib/lifeIndexKmaRequester.js",
+          "line": 26
+        },
+        {
+          "path": "server/lib/lifeIndexKmaRequester.js",
+          "line": 1063
+        },
+        {
+          "path": "server2/src/domestic/kma/source/life_live.rs",
+          "line": 176
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15085289/openapi.do"
+      ],
+      "manual": "kma.md#uv-and-pollen-indices"
+    },
+    {
+      "id": "KMA-14",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/HealthWthrIdxServiceV3/getWeedsPollenRiskndxV3",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows,areaNo=,time=YYYYMMDDHH",
+      "response": "same pollen daily fields",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy1000 rows/page,30s/page;server2 max8 pages;complete issuance validation.",
+      "notes": "Blank area=all; UV portal title4.0 vs V5 path; actual weeds Riskndx spelling.",
+      "sources": [
+        {
+          "path": "server/lib/lifeIndexKmaRequester.js",
+          "line": 26
+        },
+        {
+          "path": "server/lib/lifeIndexKmaRequester.js",
+          "line": 1063
+        },
+        {
+          "path": "server2/src/domestic/kma/source/life_live.rs",
+          "line": 176
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15085289/openapi.do"
+      ],
+      "manual": "kma.md#uv-and-pollen-indices"
+    },
+    {
+      "id": "KMA-15",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/WthrWrnInfoService/getPwnStatus",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows; pageNo=1,numOfRows=10",
+      "response": "tmFc,tmSeq,t6,other",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Status request10rows,page1;legacy30s/page;03=no data;3minpoll.",
+      "notes": "LegacyHTTP/server2HTTPS. Status/detail/events have separate acquisition and replay semantics.",
+      "sources": [
+        {
+          "path": "server/lib/kmaWarningCollector.js",
+          "line": 217
+        },
+        {
+          "path": "server2/src/warnings/provider.rs",
+          "line": 35
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15000415/openapi.do"
+      ],
+      "manual": "kma.md#weather-warnings-and-bulletins"
+    },
+    {
+      "id": "KMA-16",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/WthrWrnInfoService/getWthrWrnMsg",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows; stnId=108,fromTmFc,toTmFc (one date)",
+      "response": "tmFc,tmSeq,t1,t2,t3,t4",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy30s/page,max20 pages;1000 ordinary rows,10000 zone events;03=no data.",
+      "notes": "LegacyHTTP/server2HTTPS. Status/detail/events have separate acquisition and replay semantics.",
+      "sources": [
+        {
+          "path": "server/lib/kmaWarningCollector.js",
+          "line": 248
+        },
+        {
+          "path": "server2/src/warnings/provider.rs",
+          "line": 35
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15000415/openapi.do"
+      ],
+      "manual": "kma.md#weather-warnings-and-bulletins"
+    },
+    {
+      "id": "KMA-17",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/WthrWrnInfoService/getPwnCd",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows; fromTmFc,toTmFc (same date)",
+      "response": "areaCode,areaName,tmFc,tmSeq,warnVar,warnStress,command,cancel,endTime,allEndTime",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Zone events10000rows/page,max20pages;legacy30s/page;one-date windows with60day bootstrap/10days percycle.",
+      "notes": "LegacyHTTP/server2HTTPS. Status/detail/events have separate acquisition and replay semantics.",
+      "sources": [
+        {
+          "path": "server/lib/kmaWarningCollector.js",
+          "line": 149
+        },
+        {
+          "path": "server2/src/warnings/provider.rs",
+          "line": 35
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15000415/openapi.do"
+      ],
+      "manual": "kma.md#weather-warnings-and-bulletins"
+    },
+    {
+      "id": "KMA-18",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/WthrWrnInfoService/getWthrPwn",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows; stnId=108,fromTmFc=yesterday,toTmFc=today",
+      "response": "tmFc,tmSeq,pwn,rem",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy30s/page,max20 pages;1000 ordinary rows,10000 zone events;03=no data.",
+      "notes": "LegacyHTTP/server2HTTPS. Status/detail/events have separate acquisition and replay semantics.",
+      "sources": [
+        {
+          "path": "server/lib/kmaWarningCollector.js",
+          "line": 395
+        },
+        {
+          "path": "server2/src/warnings/provider.rs",
+          "line": 35
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15000415/openapi.do"
+      ],
+      "manual": "kma.md#weather-warnings-and-bulletins"
+    },
+    {
+      "id": "KMA-19",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/WthrWrnInfoService/getWthrInfo",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows; same two-day window",
+      "response": "tmFc,tmSeq,t1",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy30s/page,max20 pages;1000 ordinary rows,10000 zone events;03=no data.",
+      "notes": "LegacyHTTP/server2HTTPS. Status/detail/events have separate acquisition and replay semantics.",
+      "sources": [
+        {
+          "path": "server/lib/kmaWarningCollector.js",
+          "line": 398
+        },
+        {
+          "path": "server2/src/warnings/provider.rs",
+          "line": 35
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15000415/openapi.do"
+      ],
+      "manual": "kma.md#weather-warnings-and-bulletins"
+    },
+    {
+      "id": "KMA-20",
+      "provider": "KMA",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/1360000/WthrWrnInfoService/getWthrBrkNews",
+      "request": "serviceKey,dataType=JSON,pageNo,numOfRows; same two-day window",
+      "response": "tmFc,tmSeq,ann",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy30s/page,max20 pages;1000 ordinary rows,10000 zone events;03=no data.",
+      "notes": "LegacyHTTP/server2HTTPS. Status/detail/events have separate acquisition and replay semantics.",
+      "sources": [
+        {
+          "path": "server/lib/kmaWarningCollector.js",
+          "line": 401
+        },
+        {
+          "path": "server2/src/warnings/provider.rs",
+          "line": 35
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15000415/openapi.do"
+      ],
+      "manual": "kma.md#weather-warnings-and-bulletins"
+    },
+    {
+      "id": "KMA-21",
+      "provider": "KMA",
+      "kind": "website_xml",
+      "method": "GET",
+      "endpoint": "https://www.kma.go.kr/wid/queryDFS.jsp",
+      "request": "gridx,gridy",
+      "response": "XML header tm; per-day/hour temperature,sky,pty,pop,rain,snow,wind,humidity",
+      "credential_names": [],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy no explicit HTTP timeout;hourly minute2;local retention216h.",
+      "notes": "Keyless grid XML; legacy HTTP, native HTTPS. Retained local slots do not prove historical provider lookup.",
+      "sources": [
+        {
+          "path": "server/controllers/kma/kma.town.short.rss.controller.js",
+          "line": 99
+        },
+        {
+          "path": "server2/src/domestic/family.rs",
+          "line": 360
+        }
+      ],
+      "official_documentation": [],
+      "manual": "kma.md#keyless-kma-website-inputs"
+    },
+    {
+      "id": "KMA-22",
+      "provider": "KMA",
+      "kind": "website_html",
+      "method": "GET",
+      "endpoint": "https://www.weather.go.kr/cgi-bin/aws/nph-aws_txt_min",
+      "request": "none (latest minute)",
+      "response": "Nationwide station minute HTML",
+      "credential_names": [],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy30s attempts;even-minute scrape;gather opt-in has separate schedule.",
+      "notes": "Keyless nationwide latest-minute HTML; not a historical range endpoint.",
+      "sources": [
+        {
+          "path": "server/lib/kmaScraper.js",
+          "line": 188
+        },
+        {
+          "path": "server2/src/domestic/family.rs",
+          "line": 360
+        }
+      ],
+      "official_documentation": [],
+      "manual": "kma.md#keyless-kma-website-inputs"
+    },
+    {
+      "id": "KMA-23",
+      "provider": "KMA",
+      "kind": "website_html",
+      "method": "GET",
+      "endpoint": "https://www.weather.go.kr/cgi-bin/aws/nph-aws_txt_min",
+      "request": "positional YYYYMMDDHHmm&0&MINDB_60M&0&m",
+      "response": "Nationwide hourly station HTML",
+      "credential_names": [],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy30s perattempt,max10 attempts includingfirst (retry only marked errors),1s delays;local192hourlyslots;manual8daybackfill.",
+      "notes": "Keyless timestamped nationwide hourly HTML shared across grids; local retention differs from provider history guarantee.",
+      "sources": [
+        {
+          "path": "server/lib/kmaScraper.js",
+          "line": 195
+        },
+        {
+          "path": "server2/src/domestic/family.rs",
+          "line": 360
+        }
+      ],
+      "official_documentation": [],
+      "manual": "kma.md#keyless-kma-website-inputs"
+    },
+    {
+      "id": "KMA-24",
+      "provider": "KMA",
+      "kind": "website_html",
+      "method": "GET",
+      "endpoint": "https://www.weather.go.kr/weather/observation/currentweather.jsp",
+      "request": "tm=YYYY.MM.DD.HH:00",
+      "response": "City observation HTML/weather text/cloud/visibility/temp/rain/wind/humidity/pressure",
+      "credential_names": [],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy30s attempts,max10attempts/1sdelays;UTF8/EUCKR parser.",
+      "notes": "City HTML enrichment; old/current redirect path /w/weather/land/city-obs.do supported; AWS-alone save on city failure.",
+      "sources": [
+        {
+          "path": "server/lib/kmaScraper.js",
+          "line": 262
+        },
+        {
+          "path": "server2/src/domestic/family.rs",
+          "line": 360
+        }
+      ],
+      "official_documentation": [],
+      "manual": "kma.md#keyless-kma-website-inputs"
+    },
+    {
+      "id": "AIR-STATION",
+      "provider": "AirKorea",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty",
+      "request": "serviceKey,returnType=json,pageNo,numOfRows; sidoName,ver=1.3",
+      "response": "stationName,mangName,sidoName,dataTime,pollutants,PM24h,KHAI,grades",
+      "credential_names": [
+        "AIRKOREA_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy5s/attempt,2MiB,100rows,max20pages/2000rows,30slogical;server2 independently bounded.",
+      "notes": "Source-wired,not deployment verified; nearby helper has no current caller.",
+      "sources": [
+        {
+          "path": "server/lib/kecoRequester.js",
+          "line": 785
+        },
+        {
+          "path": "server/lib/airkoreaObservation.js",
+          "line": 5
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15073861/openapi.do"
+      ],
+      "manual": "weather-air-life.md#airkorea--keco"
+    },
+    {
+      "id": "AIR-SIDO",
+      "provider": "AirKorea",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/B552584/ArpltnStatsSvc/getCtprvnMesureSidoLIst",
+      "request": "serviceKey,returnType=json,pageNo,numOfRows; sidoName,searchCondition=HOUR",
+      "response": "sidoName,cityName,cityNameEng,dataTime,pollutants,KHAI",
+      "credential_names": [
+        "AIRKOREA_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "adapter_only"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy5s/attempt,2MiB,100rows,max20pages/2000rows,30slogical;server2 independently bounded.",
+      "notes": "Legacy invoked regional-statistics collector; native request adapter exists without an acquisition caller.",
+      "sources": [
+        {
+          "path": "server/lib/kecoRequester.js",
+          "line": 959
+        },
+        {
+          "path": "server/lib/airkoreaObservation.js",
+          "line": 5
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15073855/openapi.do"
+      ],
+      "manual": "weather-air-life.md#airkorea--keco"
+    },
+    {
+      "id": "AIR-FORECAST",
+      "provider": "AirKorea",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getMinuDustFrcstDspth",
+      "request": "serviceKey,returnType=json,pageNo,numOfRows; searchDate,ver=1.1",
+      "response": "dataTime,informCode,informData,informGrade,informCause,informOverall,actionKnack,imageUrl1..9",
+      "credential_names": [
+        "AIRKOREA_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy5s/attempt,2MiB,100rows,max20pages/2000rows,30slogical;server2 independently bounded.",
+      "notes": "Source-wired,not deployment verified; nearby helper has no current caller.",
+      "sources": [
+        {
+          "path": "server/lib/kecoRequester.js",
+          "line": 531
+        },
+        {
+          "path": "server/lib/airkoreaObservation.js",
+          "line": 5
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15073861/openapi.do"
+      ],
+      "manual": "weather-air-life.md#airkorea--keco"
+    },
+    {
+      "id": "AIR-STATIONS",
+      "provider": "AirKorea",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getMsrstnList",
+      "request": "serviceKey,returnType=json,pageNo,numOfRows; all stations,no ver",
+      "response": "stationName,dmX(latitude),dmY(longitude),addr",
+      "credential_names": [
+        "AIRKOREA_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy5s/attempt,2MiB,100rows,max20pages/2000rows,30slogical;server2 independently bounded.",
+      "notes": "Source-wired,not deployment verified; nearby helper has no current caller.",
+      "sources": [
+        {
+          "path": "server/lib/kecoRequester.js",
+          "line": 256
+        },
+        {
+          "path": "server/lib/airkoreaObservation.js",
+          "line": 5
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15073877/openapi.do"
+      ],
+      "manual": "weather-air-life.md#airkorea--keco"
+    },
+    {
+      "id": "AIR-NEARBY",
+      "provider": "AirKorea",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getNearbyMsrstnList",
+      "request": "serviceKey,returnType=json,pageNo,numOfRows; tmX,tmY,ver=1.1",
+      "response": "nearby station rows",
+      "credential_names": [
+        "AIRKOREA_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "adapter_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "Legacy helper has no current caller; no native operation variant. Shared requester limits are capability only.",
+      "notes": "Source-wired,not deployment verified; nearby helper has no current caller.",
+      "sources": [
+        {
+          "path": "server/lib/kecoRequester.js",
+          "line": 835
+        },
+        {
+          "path": "server/lib/airkoreaObservation.js",
+          "line": 5
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15073877/openapi.do"
+      ],
+      "manual": "weather-air-life.md#airkorea--keco"
+    },
+    {
+      "id": "AIR-GIF",
+      "provider": "AirKorea",
+      "kind": "asset",
+      "method": "GET",
+      "endpoint": "https://www.airkorea.or.kr/{returned-image-path}",
+      "request": "Exact imageUrl7(PM10)/imageUrl8(PM2.5) from forecast",
+      "response": "GIF frames/color bins -> station hourly model forecast",
+      "credential_names": [],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "server2 public body8MiB;legacy parser bounds differ.",
+      "notes": "No fixed GIF path contract verified; model forecast,not observation. S2 AirKorea host allowlist.",
+      "sources": [
+        {
+          "path": "server/controllers/airkorea.hourly.forecast.controller.js",
+          "line": 74
+        },
+        {
+          "path": "server2/src/domestic/airkorea_image.rs",
+          "line": 19
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15073861/openapi.do"
+      ],
+      "manual": "weather-air-life.md#air-forecast-gifs-and-kaq"
+    },
+    {
+      "id": "KAQ-GIF",
+      "provider": "KAQ",
+      "kind": "asset",
+      "method": "GET",
+      "endpoint": "https://{configured-s3-host}/{folder}/{case}.{species}.09KM.animation.gif",
+      "request": "S3-discovered folder/case;PM10,PM2_5,O3,NO2,SO2",
+      "response": "GIF frames/colors -> station hourly forecast",
+      "credential_names": [],
+      "source_status": {
+        "server": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "No explicit legacy image HTTP timeout.",
+      "notes": "GATHER_AIR_FORECAST_ENABLED; S3 list recorded once as AWS-S3-LIST.",
+      "sources": [
+        {
+          "path": "server/controllers/kaq.hourly.forecast.controller.js",
+          "line": 174
+        }
+      ],
+      "official_documentation": [],
+      "manual": "weather-air-life.md#air-forecast-gifs-and-kaq"
+    },
+    {
+      "id": "KAQ-MAPCASE",
+      "provider": "KAQ",
+      "kind": "website_html",
+      "method": "GET",
+      "endpoint": "http://www.kaq.or.kr/map_case.asp",
+      "request": "",
+      "response": "model case text",
+      "credential_names": [],
+      "source_status": {
+        "server": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "3s/attempt,at most3 attempts,no delay.",
+      "notes": "",
+      "sources": [
+        {
+          "path": "server/controllers/kaq.hourly.forecast.controller.js",
+          "line": 209
+        },
+        {
+          "path": "server/controllers/kaq.hourly.forecast.controller.js",
+          "line": 386
+        }
+      ],
+      "official_documentation": [],
+      "manual": "weather-air-life.md#air-forecast-gifs-and-kaq"
+    },
+    {
+      "id": "GLOBAL-GOOGLE-AIR",
+      "provider": "Google",
+      "kind": "openapi",
+      "method": "POST",
+      "endpoint": "https://airquality.googleapis.com/v1/currentConditions:lookup",
+      "request": "key;JSON location,extraComputations=LOCAL_AQI/POLLUTANT_CONCENTRATION,universalAqi,languageCode",
+      "response": "dateTime,pollutants[].code/concentration,indexes",
+      "credential_names": [
+        "GOOGLE_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Modern legacy default3s/provider,no retry,4s optional-air branch;shared local budgets/cache.",
+      "notes": "Configured modern chain; accepted concentrations normalize to PM micrograms/m3 and gases ppm.",
+      "sources": [
+        {
+          "path": "server/lib/air/providers/google.js",
+          "line": 41
+        },
+        {
+          "path": "server/lib/air/providerChain.js",
+          "line": 46
+        }
+      ],
+      "official_documentation": [
+        "https://developers.google.com/maps/documentation/air-quality/reference/rest/v1/currentConditions/lookup"
+      ],
+      "manual": "weather-air-life.md#current-global-air-providers"
+    },
+    {
+      "id": "GLOBAL-OWM-AIR",
+      "provider": "OpenWeather",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://api.openweathermap.org/data/2.5/air_pollution",
+      "request": "lat,lon,appid",
+      "response": "list[0].dt,components(pm2_5,pm10,o3,no2,so2,co),main.aqi",
+      "credential_names": [
+        "OWM_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Modern legacy default3s/provider,no retry,4s optional-air branch;shared local budgets/cache.",
+      "notes": "Configured modern chain; accepted concentrations normalize to PM micrograms/m3 and gases ppm.",
+      "sources": [
+        {
+          "path": "server/lib/air/providers/openweather.js",
+          "line": 20
+        },
+        {
+          "path": "server/lib/air/providerChain.js",
+          "line": 46
+        }
+      ],
+      "official_documentation": [
+        "https://openweathermap.org/api/air-pollution"
+      ],
+      "manual": "weather-air-life.md#current-global-air-providers"
+    },
+    {
+      "id": "GLOBAL-WAQI",
+      "provider": "WAQI",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://api.waqi.info/feed/geo:{lat};{lon}/",
+      "request": "token",
+      "response": "status,data.time,iaqi.*.v,city,aqi,attributions",
+      "credential_names": [
+        "WAQI_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Modern legacy default3s/provider,no retry,4s optional-air branch;shared local budgets/cache.",
+      "notes": "Pollutant numbers are subindices; inverse concentration conversion is an estimate. Older geo route has separate retry/TLS policy.",
+      "sources": [
+        {
+          "path": "server/lib/air/providers/waqi.js",
+          "line": 24
+        },
+        {
+          "path": "server/lib/air/providerChain.js",
+          "line": 46
+        }
+      ],
+      "official_documentation": [
+        "https://aqicn.org/api/"
+      ],
+      "manual": "weather-air-life.md#current-global-air-providers"
+    },
+    {
+      "id": "GLOBAL-VC-AIR",
+      "provider": "Visual Crossing",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{lat},{lon}/today",
+      "request": "key,unitGroup=metric,include=current,elements=air allowlist",
+      "response": "currentConditions.datetimeEpoch,pollutants,aqius,aqieur,queryCost",
+      "credential_names": [
+        "VC_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Modern legacy default3s/provider,no retry,4s optional-air branch;shared local budgets/cache.",
+      "notes": "Legacy opt-in paid phase only; no native VC-air adapter; shared VC usage accounting.",
+      "sources": [
+        {
+          "path": "server/lib/air/providers/visualcrossing.js",
+          "line": 20
+        },
+        {
+          "path": "server/lib/air/providerChain.js",
+          "line": 46
+        }
+      ],
+      "official_documentation": [
+        "https://www.visualcrossing.com/resources/documentation/weather-api/timeline-weather-api/"
+      ],
+      "manual": "weather-air-life.md#current-global-air-providers"
+    },
+    {
+      "id": "WORLD-VC",
+      "provider": "Visual Crossing",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{lat},{lon}/{range}",
+      "request": "key,unitGroup=us,lang=en,include=days/hours/current,elements; combined/recent/forecast ranges",
+      "response": "days,hours,currentConditions,weather allowlist,timezone,tzoffset,queryCost",
+      "credential_names": [
+        "VC_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy2.5s wholecall,4MiB,one retry after300ms;estimated allowance check then actual queryCost accounting. Native pre-funds fixed49/25/1units perattempt,up to2;no actual queryCost reconciliation.",
+      "notes": "Retained /dsf product route uses VC,not Dark Sky; local-time/DST and US units preserved.",
+      "sources": [
+        {
+          "path": "server/lib/VC/vcRequester.js",
+          "line": 14
+        },
+        {
+          "path": "server2/src/world/source.rs",
+          "line": 88
+        }
+      ],
+      "official_documentation": [
+        "https://www.visualcrossing.com/resources/documentation/weather-api/timeline-weather-api/"
+      ],
+      "manual": "weather-air-life.md#visual-crossing-world-weather"
+    },
+    {
+      "id": "LIFE-MFDS",
+      "provider": "MFDS",
+      "kind": "website_json",
+      "method": "GET",
+      "endpoint": "https://poisonmap.mfds.go.kr/api/risk.do",
+      "request": "none;Accept JSON",
+      "response": "success,data[].sd/sgg/baseDate/regDatetime/todayRisk/tomorrowRisk/afterTomorrowRisk",
+      "credential_names": [],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "10s HTTP,1MiB,no redirect/retry;KST target-day expiry.",
+      "notes": "Website-backed,no normative OpenAPI spec retrieved;legacy response-read does not fetch.",
+      "sources": [
+        {
+          "path": "server/lib/foodPoisoning.js",
+          "line": 28
+        },
+        {
+          "path": "server2/src/domestic/mfds.rs",
+          "line": 1
+        }
+      ],
+      "official_documentation": [],
+      "manual": "weather-air-life.md#mfds-food-poisoning-risk"
+    },
+    {
+      "id": "ASTRO-KASI-AREA",
+      "provider": "KASI",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/B090041/openapi/service/RiseSetInfoService/getAreaRiseSetInfo",
+      "request": "ServiceKey,_type=json; location,locdate",
+      "response": "location,locdate,longitudeNum,latitudeNum;sun/moon/twilight HHmm events",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy5s/attempt,auth/quota key traversal;102-area job polls minute55.",
+      "notes": "LegacyHTTP/nativeHTTPS; exact ServiceKey case; missing events omitted; native area path is invoked.",
+      "sources": [
+        {
+          "path": "server/controllers/kasi.riseset.controller.js",
+          "line": 193
+        },
+        {
+          "path": "server2/src/domestic/riseset.rs",
+          "line": 119
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15012688/openapi.do"
+      ],
+      "manual": "weather-air-life.md#kasi-riseset-astronomy"
+    },
+    {
+      "id": "ASTRO-KASI-COORD",
+      "provider": "KASI",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://apis.data.go.kr/B090041/openapi/service/RiseSetInfoService/getLCRiseSetInfo",
+      "request": "ServiceKey,_type=json; longitude,latitude,locdate,dnYn=Y",
+      "response": "location,locdate,longitudeNum,latitudeNum;sun/moon/twilight HHmm events",
+      "credential_names": [
+        "DONGNAE_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "adapter_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "No current invocation; helper requester capability5s/attempt. No102-area coordinate schedule.",
+      "notes": "LegacyHTTP helper; fallback unreachable at length>=0 return;not ported to native.",
+      "sources": [
+        {
+          "path": "server/controllers/kasi.riseset.controller.js",
+          "line": 233
+        },
+        {
+          "path": "server/controllers/kasi.riseset.controller.js",
+          "line": 601
+        },
+        {
+          "path": "server2/src/domestic/riseset.rs",
+          "line": 4
+        }
+      ],
+      "official_documentation": [
+        "https://www.data.go.kr/data/15012688/openapi.do"
+      ],
+      "manual": "weather-air-life.md#kasi-riseset-astronomy"
+    },
+    {
+      "id": "GEO-GOOGLE-FORWARD",
+      "provider": "Google",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://maps.googleapis.com/maps/api/geocode/json",
+      "request": "address,key,language",
+      "response": "status,results.geometry,address_components,formatted_address",
+      "credential_names": [
+        "GEOCODER_GOOGLE_KEY",
+        "GOOGLE_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "wired",
+        "server2": "conditional",
+        "native": "historical_native"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy public gateway3s/attempt,5s/lookup,30daycache;native provider3s/1MiB with separate acquisition/budget state.",
+      "notes": "Provider order differs between public forward, Korea reverse and town address lookup;see manual. Historical native forward builders have no appended key/sensor/language.",
+      "sources": [
+        {
+          "path": "server/lib/geocoder/google.js",
+          "line": 245
+        }
+      ],
+      "official_documentation": [
+        "https://developers.google.com/maps/documentation/geocoding/requests-geocoding"
+      ],
+      "manual": "geography-media.md#operation-reference"
+    },
+    {
+      "id": "GEO-GOOGLE-REVERSE",
+      "provider": "Google",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://maps.googleapis.com/maps/api/geocode/json",
+      "request": "latlng,key,language",
+      "response": "status,results.geometry,address_components,formatted_address",
+      "credential_names": [
+        "GEOCODER_GOOGLE_KEY",
+        "GOOGLE_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "wired",
+        "server2": "conditional",
+        "native": "historical_native"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy public gateway3s/attempt,5s/lookup,30daycache;native provider3s/1MiB with separate acquisition/budget state.",
+      "notes": "Provider order differs between public forward, Korea reverse and town address lookup;see manual. Historical applewatch reverse adds sensor=true/language=ko without key;widget helper invocation not established.",
+      "sources": [
+        {
+          "path": "server/lib/geocoder/google.js",
+          "line": 236
+        }
+      ],
+      "official_documentation": [
+        "https://developers.google.com/maps/documentation/geocoding/requests-geocoding"
+      ],
+      "manual": "geography-media.md#operation-reference"
+    },
+    {
+      "id": "GEO-GOOGLE-XML",
+      "provider": "Google",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://maps.googleapis.com/maps/api/geocode/xml",
+      "request": "address,key,language=ko",
+      "response": "XML status,result.geometry.location",
+      "credential_names": [
+        "GOOGLE_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy town XML has no explicit HTTP timeout;native3s/attempt within9s town deadline.",
+      "notes": "Town resolver uses Kakao address then Google XML,not public gateway order.",
+      "sources": [
+        {
+          "path": "server/utils/convertGeocode.js",
+          "line": 170
+        }
+      ],
+      "official_documentation": [
+        "https://developers.google.com/maps/documentation/geocoding/requests-geocoding"
+      ],
+      "manual": "geography-media.md#operation-reference"
+    },
+    {
+      "id": "GEO-KAKAO-REGION",
+      "provider": "Kakao",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json",
+      "request": "x=lon,y=lat,input_coord=WGS84;KakaoAK header",
+      "response": "meta.total_count,documents.region_type/region_Ndepth_name/address_name",
+      "credential_names": [
+        "GEOCODER_KAKAO_KEYS",
+        "KAKAO_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "wired",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy public gateway3s/attempt,5s/lookup,30daycache;native provider3s/1MiB with separate acquisition/budget state.",
+      "notes": "Provider order differs between public forward, Korea reverse and town address lookup;see manual.",
+      "sources": [
+        {
+          "path": "server/lib/geocoder/kakao.js",
+          "line": 81
+        }
+      ],
+      "official_documentation": [
+        "https://developers.kakao.com/docs/latest/ko/local/dev-guide"
+      ],
+      "manual": "geography-media.md#operation-reference"
+    },
+    {
+      "id": "GEO-KAKAO-ADDRESS",
+      "provider": "Kakao",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://dapi.kakao.com/v2/local/search/address.json",
+      "request": "query;KakaoAK header",
+      "response": "documents[0].x/y",
+      "credential_names": [
+        "GEOCODER_KAKAO_KEYS",
+        "KAKAO_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "wired",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy public gateway3s/attempt,5s/lookup,30daycache;native provider3s/1MiB with separate acquisition/budget state.",
+      "notes": "Provider order differs between public forward, Korea reverse and town address lookup;see manual.",
+      "sources": [
+        {
+          "path": "server/lib/geocoder/kakao.js",
+          "line": 86
+        }
+      ],
+      "official_documentation": [
+        "https://developers.kakao.com/docs/latest/ko/local/dev-guide"
+      ],
+      "manual": "geography-media.md#operation-reference"
+    },
+    {
+      "id": "GEO-KAKAO-TM",
+      "provider": "Kakao",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://dapi.kakao.com/v2/local/geo/transcoord.json",
+      "request": "x,y,input_coord=WGS84,output_coord=TM;KakaoAK header",
+      "response": "meta.total_count,documents[0]",
+      "credential_names": [
+        "KAKAO_SECRET_KEYS"
+      ],
+      "source_status": {
+        "server": "legacy_route"
+      },
+      "has_application_invoker": true,
+      "bounds": "No explicit legacy axios timeout;source URL is malformed.",
+      "notes": "Actual builder appends &x= without initial ?;source-wired station-search path,not verified functional.",
+      "sources": [
+        {
+          "path": "server/lib/kecoRequester.js",
+          "line": 868
+        }
+      ],
+      "official_documentation": [
+        "https://developers.kakao.com/docs/latest/ko/local/dev-guide"
+      ],
+      "manual": "geography-media.md#operation-reference"
+    },
+    {
+      "id": "GEO-GOOGLE-TIMEZONE",
+      "provider": "Google",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "https://maps.googleapis.com/maps/api/timezone/json",
+      "request": "location,timestamp,key",
+      "response": "rawOffset,dstOffset",
+      "credential_names": [
+        "GOOGLE_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "legacy_route"
+      },
+      "has_application_invoker": true,
+      "bounds": "Main legacy10s/HTTP,old world requester20s;DB cache/asynchronous update;maintenance15days.",
+      "notes": "Timestamp-specific rawOffset+dstOffset;minutes in timezonecontroller,hours in old requester;no native transport.",
+      "sources": [
+        {
+          "path": "server/controllers/timezone.controller.js",
+          "line": 362
+        }
+      ],
+      "official_documentation": [
+        "https://developers.google.com/maps/documentation/timezone/requests-timezone"
+      ],
+      "manual": "geography-media.md#operation-reference"
+    },
+    {
+      "id": "GEO-PLACES",
+      "provider": "Google",
+      "kind": "sdk",
+      "method": "SDK",
+      "endpoint": "https://maps.googleapis.com/maps/api/js",
+      "request": "libraries=places,key;getPlacePredictions(input,types=(regions))",
+      "response": "predictions[].description,PlacesServiceStatus",
+      "credential_names": [
+        "clientConfig.googleapikey"
+      ],
+      "source_status": {
+        "client": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "SDK-owned transport;no JS timeout/retry;OK keep,ZERO_RESULTS ignore,other status log.",
+      "notes": "Legacy MapsJS Places autocomplete;not PlacesNew;web PWA uses local catalog/own geocoder.",
+      "sources": [
+        {
+          "path": "client/www/js/controller.searchctrl.js",
+          "line": 24
+        }
+      ],
+      "official_documentation": [
+        "https://developers.google.com/maps/documentation/javascript/legacy/place-autocomplete"
+      ],
+      "manual": "geography-media.md#operation-reference"
+    },
+    {
+      "id": "PUSH-FCM",
+      "provider": "Firebase",
+      "kind": "openapi",
+      "method": "POST",
+      "endpoint": "https://fcm.googleapis.com/v1/projects/{project}/messages:send",
+      "request": "Bearer OAuth;JSON message.token,notification,data,platform options",
+      "response": "Normal provider name/error. Coordinator requires2xx+name;native accepts parseable nontext2xx JSON without error and does not require name.",
+      "credential_names": [
+        "product Firebase service-account configuration",
+        "SERVER2_FIREBASE_TODAYWEATHER",
+        "SERVER2_FIREBASE_TODAYAIR"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Coordinator15s/64KiB;native10s;no ambiguous send retry.",
+      "notes": "SDK/direct/coordinator/native are variants of one operation;acceptance!=device delivery;no direct APNs.",
+      "sources": [
+        {
+          "path": "server/controllers/controllerPush.js",
+          "line": 181
+        },
+        {
+          "path": "server/lib/pushCoordinator/transport.js",
+          "line": 39
+        },
+        {
+          "path": "server2/src/push/deliver/fcm.rs",
+          "line": 279
+        }
+      ],
+      "official_documentation": [
+        "https://firebase.google.com/docs/cloud-messaging/send/v1-api"
+      ],
+      "manual": "platform.md#push-delivery-and-authentication"
+    },
+    {
+      "id": "PUSH-OAUTH",
+      "provider": "Google",
+      "kind": "auth",
+      "method": "POST",
+      "endpoint": "https://oauth2.googleapis.com/token",
+      "request": "Form JWT bearer grant_type,assertion;RS256 service-account JWT",
+      "response": "access_token,expires_in,error",
+      "credential_names": [
+        "product Firebase service-account configuration",
+        "SERVER2_FIREBASE_TODAYWEATHER",
+        "SERVER2_FIREBASE_TODAYAIR"
+      ],
+      "source_status": {
+        "server": "conditional",
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Native10s,per-productlock/cache,refresh expiry-60s;failed fetch notcached.",
+      "notes": "Legacy installed SDK endpoint accounts.google.com/o/oauth2/token;not another send operation.",
+      "sources": [
+        {
+          "path": "server/lib/pushCoordinator/runtime.js",
+          "line": 130
+        },
+        {
+          "path": "server2/src/push/deliver/fcm.rs",
+          "line": 221
+        }
+      ],
+      "official_documentation": [
+        "https://developers.google.com/identity/protocols/oauth2/service-account"
+      ],
+      "manual": "platform.md#push-delivery-and-authentication"
+    },
+    {
+      "id": "PUSH-GCM",
+      "provider": "Google",
+      "kind": "sdk",
+      "method": "SDK",
+      "endpoint": "node-gcm.Sender.send",
+      "request": "Legacy registrationId,title,body,cityIndex,notId,content-available;TTL86400",
+      "response": "SDK callback",
+      "credential_names": [
+        "GCM_ACCESS_KEY"
+      ],
+      "source_status": {
+        "server": "legacy_route"
+      },
+      "has_application_invoker": true,
+      "bounds": "Source passes retry count5.",
+      "notes": "Source-wired old Android branch;provider service viability notverified.",
+      "sources": [
+        {
+          "path": "server/controllers/controllerPush.js",
+          "line": 151
+        }
+      ],
+      "official_documentation": [],
+      "manual": "platform.md#push-delivery-and-authentication"
+    },
+    {
+      "id": "CLIENT-FCM",
+      "provider": "Firebase",
+      "kind": "sdk",
+      "method": "SDK",
+      "endpoint": "Firebasex Messaging",
+      "request": "getToken,hasPermission,grantPermission,unregister,onTokenRefresh,onMessageReceived",
+      "response": "token,message/tap,permission callbacks",
+      "credential_names": [
+        "native Firebase platform configuration"
+      ],
+      "source_status": {
+        "client": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "SDK-owned transport;no JS timeout/retry.",
+      "notes": "",
+      "sources": [
+        {
+          "path": "client/www/js/service.firebase.js",
+          "line": 23
+        }
+      ],
+      "official_documentation": [
+        "https://firebase.google.com/docs/cloud-messaging/send/v1-api"
+      ],
+      "manual": "platform.md#push-delivery-and-authentication"
+    },
+    {
+      "id": "CLIENT-ADMOB",
+      "provider": "Google",
+      "kind": "sdk",
+      "method": "SDK",
+      "endpoint": "emi AdMob plugin",
+      "request": "initialize,loadBannerAd,showBannerAd,hideBannerAd,removeBannerAd",
+      "response": "banner load/failure events",
+      "credential_names": [
+        "native platform/plugin configuration"
+      ],
+      "source_status": {
+        "client": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Minimum5s banner spacing;native load/failure callback;current banner-only adapter.",
+      "notes": "SDK group,not a count of undocumented internal REST endpoints;native build/run unverified.",
+      "sources": [
+        {
+          "path": "client/www/js/service.admobemi.js",
+          "line": 22
+        }
+      ],
+      "official_documentation": [
+        "https://developers.google.com/admob/android/quick-start"
+      ],
+      "manual": "platform.md#advertising-and-client-telemetry"
+    },
+    {
+      "id": "CLIENT-UMP",
+      "provider": "Google",
+      "kind": "sdk",
+      "method": "SDK",
+      "endpoint": "Google User Messaging Platform via emi plugin",
+      "request": "native consent initialization/readiness",
+      "response": "consent/ad readiness",
+      "credential_names": [
+        "native platform/plugin configuration"
+      ],
+      "source_status": {
+        "client": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Consent gates release ads;one reinitialization1s afterconsent;bounded test-unit fallback only.",
+      "notes": "SDK group,not a count of undocumented internal REST endpoints;native build/run unverified.",
+      "sources": [
+        {
+          "path": "client/www/js/service.admobemi.js",
+          "line": 83
+        }
+      ],
+      "official_documentation": [
+        "https://developers.google.com/admob/android/privacy"
+      ],
+      "manual": "platform.md#advertising-and-client-telemetry"
+    },
+    {
+      "id": "CLIENT-GA4",
+      "provider": "Firebase",
+      "kind": "sdk",
+      "method": "SDK",
+      "endpoint": "FirebasexAnalytics",
+      "request": "logEvent,isAnalyticsCollectionEnabled,setAnalyticsCollectionEnabled,setAnalyticsConsentMode",
+      "response": "consent/event callbacks",
+      "credential_names": [
+        "native platform/plugin configuration"
+      ],
+      "source_status": {
+        "client": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Explicit persisted opt-in plus nativeflag;fixed events/bounded values;no bridge timeout configured.",
+      "notes": "SDK group,not a count of undocumented internal REST endpoints;native build/run unverified.",
+      "sources": [
+        {
+          "path": "client/www/js/service.monetization.js",
+          "line": 23
+        }
+      ],
+      "official_documentation": [
+        "https://firebase.google.com/docs/analytics"
+      ],
+      "manual": "platform.md#advertising-and-client-telemetry"
+    },
+    {
+      "id": "CLIENT-RC",
+      "provider": "Firebase",
+      "kind": "sdk",
+      "method": "SDK",
+      "endpoint": "Firebase Remote Config",
+      "request": "setDefaults,setConfigSettings,getAll,fetchAndActivate",
+      "response": "tw_banner_enabled,tw_banner_delay_seconds",
+      "credential_names": [
+        "native platform/plugin configuration"
+      ],
+      "source_status": {
+        "client": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "12s appgate;10s SDKfetch,3600sminimuminterval;cached validated pair/defaults retained;late ignored.",
+      "notes": "SDK group,not a count of undocumented internal REST endpoints;native build/run unverified.",
+      "sources": [
+        {
+          "path": "client/www/js/service.monetization.js",
+          "line": 151
+        }
+      ],
+      "official_documentation": [
+        "https://firebase.google.com/docs/remote-config"
+      ],
+      "manual": "platform.md#advertising-and-client-telemetry"
+    },
+    {
+      "id": "CLIENT-CRASH",
+      "provider": "Firebase",
+      "kind": "sdk",
+      "method": "SDK",
+      "endpoint": "Firebase Crashlytics",
+      "request": "native automatic crash collection enabled by manifest",
+      "response": "SDK-owned crash report upload",
+      "credential_names": [
+        "native platform/plugin configuration"
+      ],
+      "source_status": {
+        "client": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Native auto collection enabled bymanifest;no app-specific upload bound or direct shared JS invocation established.",
+      "notes": "SDK group,not a count of undocumented internal REST endpoints;native build/run unverified.",
+      "sources": [
+        {
+          "path": "client/package.json",
+          "line": 120
+        }
+      ],
+      "official_documentation": [
+        "https://firebase.google.com/docs/crashlytics"
+      ],
+      "manual": "platform.md#advertising-and-client-telemetry"
+    },
+    {
+      "id": "CLIENT-BRANCH",
+      "provider": "Branch",
+      "kind": "sdk",
+      "method": "SDK",
+      "endpoint": "Branch SDK initSession",
+      "request": "device lifecycle;optional helper methods retained",
+      "response": "clicked link metadata/favorite navigation",
+      "credential_names": [
+        "native Branch SDK configuration"
+      ],
+      "source_status": {
+        "client": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "No app timeout/retry.",
+      "notes": "Returns without window.Branch;plugin absent current shared manifest;not default build traffic.",
+      "sources": [
+        {
+          "path": "client/www/js/service.branch.js",
+          "line": 29
+        },
+        {
+          "path": "client/www/js/app.js",
+          "line": 223
+        }
+      ],
+      "official_documentation": [
+        "https://help.branch.io/developer-hub/docs/cordova-phonegap-ionic"
+      ],
+      "manual": "platform.md#deep-links-and-os-sharing"
+    },
+    {
+      "id": "CLIENT-SHARE",
+      "provider": "OS",
+      "kind": "os",
+      "method": "OS",
+      "endpoint": "socialsharing.share",
+      "request": "message,null,null,null",
+      "response": "OS share sheet",
+      "credential_names": [],
+      "source_status": {
+        "client": "os_delegated"
+      },
+      "has_application_invoker": true,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "No direct Kakao/Facebook/Twitter HTTP operation implied.",
+      "sources": [
+        {
+          "path": "client/www/js/controller.tabctrl.js",
+          "line": 219
+        }
+      ],
+      "official_documentation": [],
+      "manual": "platform.md#deep-links-and-os-sharing"
+    },
+    {
+      "id": "NOTICE-OPENAI",
+      "provider": "OpenAI",
+      "kind": "openapi",
+      "method": "POST",
+      "endpoint": "https://api.openai.com/v1/responses",
+      "request": "Bearer key;model,store=false,max_output_tokens,instructions,input,strict text.format JSONschema,optional reasoning",
+      "response": "status=completed,output.message.content.output_text,model;refusal/incomplete/error",
+      "credential_names": [
+        "OPENAI_SECRET_KEY",
+        "TRANSLATION_LLM_MODEL",
+        "TRANSLATION_LLM_REASONING_EFFORT"
+      ],
+      "source_status": {
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "5sconnect,30sHTTP/outer perlanguage,1MiB,noretry;missing languages sequential.",
+      "notes": "Operator notice publication only;missing key skips;existing translations retained;model literal not availability claim.",
+      "sources": [
+        {
+          "path": "server2/src/notice/translate.rs",
+          "line": 7
+        },
+        {
+          "path": "server2/src/notice/translate.rs",
+          "line": 120
+        }
+      ],
+      "official_documentation": [
+        "https://developers.openai.com/api/reference/typescript/resources/responses/methods/create",
+        "https://developers.openai.com/api/docs/guides/structured-outputs"
+      ],
+      "manual": "platform.md#openai-notice-translation"
+    },
+    {
+      "id": "AWS-S3-GET",
+      "provider": "AWS",
+      "kind": "cloud",
+      "method": "GET",
+      "endpoint": "https://s3.{region}.amazonaws.com/{bucket}/{key}",
+      "request": "bucket,key;SigV4",
+      "response": "object body,ETag,metadata",
+      "credential_names": [
+        "AWS_ACCESS_KEY",
+        "AWS_SECRET_KEY",
+        "instance-role temporary credentials"
+      ],
+      "source_status": {
+        "server2": "conditional",
+        "server": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Native1sconnect/3sHTTP,30ssignature,no automaticretry;listmax1000;pushSDK2retries/2sconnect/5stimeout.",
+      "notes": "Native raw404=>NotFound;legacy pushmiss=>null;generic legacy helper propagates SDK rejection. Typed stores differ.",
+      "sources": [
+        {
+          "path": "server2/src/storage/transport.rs",
+          "line": 178
+        }
+      ],
+      "official_documentation": [
+        "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html"
+      ],
+      "manual": "platform.md#aws-storage-and-operational-apis"
+    },
+    {
+      "id": "AWS-S3-HEAD",
+      "provider": "AWS",
+      "kind": "cloud",
+      "method": "HEAD",
+      "endpoint": "https://s3.{region}.amazonaws.com/{bucket}/{key}",
+      "request": "bucket,key;SigV4",
+      "response": "ETag,metadata,existence;no body",
+      "credential_names": [
+        "AWS_ACCESS_KEY",
+        "AWS_SECRET_KEY",
+        "instance-role temporary credentials"
+      ],
+      "source_status": {
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Native1sconnect/3sHTTP,30ssignature,no automaticretry;listmax1000;pushSDK2retries/2sconnect/5stimeout.",
+      "notes": "Typed stores differ in conditional write/reconciliation;legacy generic SDK vs native signed URL transport.",
+      "sources": [
+        {
+          "path": "server2/src/storage/transport.rs",
+          "line": 184
+        }
+      ],
+      "official_documentation": [
+        "https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html"
+      ],
+      "manual": "platform.md#aws-storage-and-operational-apis"
+    },
+    {
+      "id": "AWS-S3-PUT",
+      "provider": "AWS",
+      "kind": "cloud",
+      "method": "PUT",
+      "endpoint": "https://s3.{region}.amazonaws.com/{bucket}/{key}",
+      "request": "bucket,key,body,conditional headers,metadata;SigV4",
+      "response": "ETag/status",
+      "credential_names": [
+        "AWS_ACCESS_KEY",
+        "AWS_SECRET_KEY",
+        "instance-role temporary credentials"
+      ],
+      "source_status": {
+        "server2": "conditional",
+        "server": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Native1sconnect/3sHTTP,30ssignature,no automaticretry;listmax1000;pushSDK2retries/2sconnect/5stimeout.",
+      "notes": "Typed stores differ in conditional write/reconciliation;legacy generic SDK vs native signed URL transport.",
+      "sources": [
+        {
+          "path": "server2/src/storage/transport.rs",
+          "line": 237
+        }
+      ],
+      "official_documentation": [
+        "https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html"
+      ],
+      "manual": "platform.md#aws-storage-and-operational-apis"
+    },
+    {
+      "id": "AWS-S3-LIST",
+      "provider": "AWS",
+      "kind": "cloud",
+      "method": "GET",
+      "endpoint": "https://s3.{region}.amazonaws.com/{bucket}/?list-type=2",
+      "request": "list-type=2,prefix,delimiter,max-keys,continuation-token;SigV4",
+      "response": "keys,IsTruncated,NextContinuationToken",
+      "credential_names": [
+        "AWS_ACCESS_KEY",
+        "AWS_SECRET_KEY",
+        "instance-role temporary credentials"
+      ],
+      "source_status": {
+        "server2": "conditional",
+        "server": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "Native1sconnect/3sHTTP,30ssignature,no automaticretry;listmax1000;pushSDK2retries/2sconnect/5stimeout.",
+      "notes": "Typed stores differ in conditional write/reconciliation;legacy generic SDK vs native signed URL transport.",
+      "sources": [
+        {
+          "path": "server2/src/storage/catalog_transport.rs",
+          "line": 254
+        }
+      ],
+      "official_documentation": [
+        "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html"
+      ],
+      "manual": "platform.md#aws-storage-and-operational-apis"
+    },
+    {
+      "id": "AWS-S3-COPY",
+      "provider": "AWS",
+      "kind": "sdk",
+      "method": "SDK",
+      "endpoint": "S3 copyObject",
+      "request": "helper arguments",
+      "response": "SDK result",
+      "credential_names": [
+        "AWS_ACCESS_KEY",
+        "AWS_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "utility_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "Definition only,no current caller established;managed multipart internals notcounted.",
+      "sources": [
+        {
+          "path": "server/s3/controller.s3.js",
+          "line": 38
+        }
+      ],
+      "official_documentation": [],
+      "manual": "platform.md#aws-storage-and-operational-apis"
+    },
+    {
+      "id": "AWS-S3-UPLOAD",
+      "provider": "AWS",
+      "kind": "sdk",
+      "method": "SDK",
+      "endpoint": "S3 managed upload after URL fetch",
+      "request": "helper arguments",
+      "response": "SDK result",
+      "credential_names": [
+        "AWS_ACCESS_KEY",
+        "AWS_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "utility_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "Definition only,no current caller established;managed multipart internals notcounted.",
+      "sources": [
+        {
+          "path": "server/s3/controller.s3.js",
+          "line": 66
+        }
+      ],
+      "official_documentation": [],
+      "manual": "platform.md#aws-storage-and-operational-apis"
+    },
+    {
+      "id": "AWS-IMDS-TOKEN",
+      "provider": "AWS",
+      "kind": "auth",
+      "method": "PUT",
+      "endpoint": "IMDSv2 link-local/latest/api/token",
+      "request": "TTL header21600",
+      "response": "session token",
+      "credential_names": [],
+      "source_status": {
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "1sconnect,2sHTTP,3srefreshwait,>=10s retry spacing;refresh within5minexpiry.",
+      "notes": "Only when real static pair absent;no IMDSv1fallback or runtimeSTSAssumeRole.",
+      "sources": [
+        {
+          "path": "server2/src/storage/credentials.rs",
+          "line": 148
+        },
+        {
+          "path": "server2/src/storage/credentials.rs",
+          "line": 200
+        }
+      ],
+      "official_documentation": [
+        "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html"
+      ],
+      "manual": "platform.md#aws-storage-and-operational-apis"
+    },
+    {
+      "id": "AWS-IMDS-ROLE",
+      "provider": "AWS",
+      "kind": "auth",
+      "method": "GET",
+      "endpoint": "IMDSv2 link-local/latest/meta-data/iam/security-credentials/",
+      "request": "session-token header",
+      "response": "role name",
+      "credential_names": [],
+      "source_status": {
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "1sconnect,2sHTTP,3srefreshwait,>=10s retry spacing;refresh within5minexpiry.",
+      "notes": "Only when real static pair absent;no IMDSv1fallback or runtimeSTSAssumeRole.",
+      "sources": [
+        {
+          "path": "server2/src/storage/credentials.rs",
+          "line": 148
+        },
+        {
+          "path": "server2/src/storage/credentials.rs",
+          "line": 200
+        }
+      ],
+      "official_documentation": [
+        "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html"
+      ],
+      "manual": "platform.md#aws-storage-and-operational-apis"
+    },
+    {
+      "id": "AWS-IMDS-CREDS",
+      "provider": "AWS",
+      "kind": "auth",
+      "method": "GET",
+      "endpoint": "IMDSv2 link-local/latest/meta-data/iam/security-credentials/{role}",
+      "request": "session-token header",
+      "response": "Code,temporary credentials,Token,Expiration",
+      "credential_names": [],
+      "source_status": {
+        "server2": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "1sconnect,2sHTTP,3srefreshwait,>=10s retry spacing;refresh within5minexpiry.",
+      "notes": "Only when real static pair absent;no IMDSv1fallback or runtimeSTSAssumeRole.",
+      "sources": [
+        {
+          "path": "server2/src/storage/credentials.rs",
+          "line": 148
+        },
+        {
+          "path": "server2/src/storage/credentials.rs",
+          "line": 200
+        }
+      ],
+      "official_documentation": [
+        "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html"
+      ],
+      "manual": "platform.md#aws-storage-and-operational-apis"
+    },
+    {
+      "id": "AWS-CLOUDFRONT",
+      "provider": "AWS",
+      "kind": "cloud",
+      "method": "SDK",
+      "endpoint": "CloudFront createInvalidation",
+      "request": "DistributionId,CallerReference,Paths.Quantity/Items;ALL maps /town/*",
+      "response": "SDK result/error",
+      "credential_names": [
+        "AWS_ACCESS_KEY",
+        "AWS_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "No wrapper timeout/retry;error callback completion issue unexercised.",
+      "notes": "Manual gather mutation,current official RESTPOST date2020-05-31;installed SDK API version separately configured.",
+      "sources": [
+        {
+          "path": "server/routes/v000001/routeGather.js",
+          "line": 273
+        },
+        {
+          "path": "server/utils/awsCloudFront.js",
+          "line": 50
+        }
+      ],
+      "official_documentation": [
+        "https://docs.aws.amazon.com/cloudfront/latest/APIReference/API_CreateInvalidation.html"
+      ],
+      "manual": "platform.md#aws-storage-and-operational-apis"
+    },
+    {
+      "id": "OPS-LOGENTRIES",
+      "provider": "Rapid7",
+      "kind": "sdk",
+      "method": "SDK",
+      "endpoint": "le_node Winston Logentries transport",
+      "request": "mode-selected token;info+ log messages",
+      "response": "SDK-owned delivery",
+      "credential_names": [
+        "LOGENTRIES_GATHER_TOKEN",
+        "LOGENTRIES_SERVICE_TOKEN"
+      ],
+      "source_status": {
+        "server": "conditional"
+      },
+      "has_application_invoker": true,
+      "bounds": "No wrapper flush/deadline/retry configured.",
+      "notes": "Nonempty token adds transport,including nonempty placeholder;SDK endpoint/protocol not directappREST.",
+      "sources": [
+        {
+          "path": "server/lib/log.js",
+          "line": 6
+        },
+        {
+          "path": "server/lib/log.js",
+          "line": 28
+        }
+      ],
+      "official_documentation": [
+        "https://docs.rapid7.com/insightops/nodejs/"
+      ],
+      "manual": "platform.md#log-shipping"
+    },
+    {
+      "id": "WAQI-OBS-UNDOCUMENTED",
+      "provider": "WAQI",
+      "kind": "website_json",
+      "method": "GET",
+      "endpoint": "https://api.waqi.info/api/feed/@{stationIndex}/obs.en.json",
+      "request": "stationIndex,no token",
+      "response": "rxs station history envelope",
+      "credential_names": [],
+      "source_status": {
+        "server": "legacy_route"
+      },
+      "has_application_invoker": true,
+      "bounds": "Legacy2s,up to3attempts.",
+      "notes": "No normative public specification retrieved;older /ww flow ifstored AQI>60min.",
+      "sources": [
+        {
+          "path": "server/controllers/worldWeather/controllerAqi.js",
+          "line": 291
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#still-wired-older-weather-routes"
+    },
+    {
+      "id": "OLD-WU-CURRENT",
+      "provider": "Weather Unlocked",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "http://api.weatherunlocked.com/api/current/{lat},{lon}",
+      "request": "app_id,app_key",
+      "response": "legacy weather JSON",
+      "credential_names": [
+        "WU_SECRET_ID",
+        "WU_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "legacy_route"
+      },
+      "has_application_invoker": true,
+      "bounds": "5s,no retry.",
+      "notes": "Older /req add-location only;official present specification not retrieved.",
+      "sources": [
+        {
+          "path": "server/lib/WU/wuRequester.js",
+          "line": 18
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#still-wired-older-weather-routes"
+    },
+    {
+      "id": "OLD-WU-FORECAST",
+      "provider": "Weather Unlocked",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "http://api.weatherunlocked.com/api/forecast/{lat},{lon}",
+      "request": "app_id,app_key",
+      "response": "legacy weather JSON",
+      "credential_names": [
+        "WU_SECRET_ID",
+        "WU_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "legacy_route"
+      },
+      "has_application_invoker": true,
+      "bounds": "5s,no retry.",
+      "notes": "Older /req add-location only;official present specification not retrieved.",
+      "sources": [
+        {
+          "path": "server/lib/WU/wuRequester.js",
+          "line": 41
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#still-wired-older-weather-routes"
+    },
+    {
+      "id": "NATIVE-IONIC-KEY",
+      "provider": "Ionic",
+      "kind": "sdk",
+      "method": "GET",
+      "endpoint": "https://apps.ionic.io/api/v1/app/{app_id}/keys/write",
+      "request": "Basic auth app_id/api_key",
+      "response": "write key",
+      "credential_names": [
+        "historical native Ionic SDK app configuration"
+      ],
+      "source_status": {
+        "native": "historical_native"
+      },
+      "has_application_invoker": true,
+      "bounds": "SDK-owned queue/status rules;no app HTTP timeout established.",
+      "notes": "Confirmed old-bundle invoker,not current shared app;present normative docs/availability unverified.",
+      "sources": [
+        {
+          "path": "applewatch/www/lib/ionic-platform-web-client/src/analytics/analytics.js",
+          "line": 113
+        },
+        {
+          "path": "applewatch/www/js/controllers.js",
+          "line": 372
+        },
+        {
+          "path": "applewatch/www/js/app.js",
+          "line": 19
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#historical-native-services"
+    },
+    {
+      "id": "NATIVE-IONIC-EVENT",
+      "provider": "Ionic",
+      "kind": "sdk",
+      "method": "POST",
+      "endpoint": "https://analytics.ionic.io/api/v1/events/{app_id}",
+      "request": "write key,queued events",
+      "response": "SDK status",
+      "credential_names": [
+        "historical native Ionic SDK app configuration"
+      ],
+      "source_status": {
+        "native": "historical_native"
+      },
+      "has_application_invoker": true,
+      "bounds": "SDK-owned queue/status rules;no app HTTP timeout established.",
+      "notes": "Confirmed old-bundle invoker,not current shared app;present normative docs/availability unverified.",
+      "sources": [
+        {
+          "path": "applewatch/www/lib/ionic-platform-web-client/src/analytics/analytics.js",
+          "line": 126
+        },
+        {
+          "path": "applewatch/www/js/controllers.js",
+          "line": 372
+        },
+        {
+          "path": "applewatch/www/js/app.js",
+          "line": 19
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#historical-native-services"
+    },
+    {
+      "id": "NATIVE-IONIC-IDENTIFY",
+      "provider": "Ionic",
+      "kind": "sdk",
+      "method": "POST",
+      "endpoint": "https://apps.ionic.io/api/v1/app/{app_id}/users/identify",
+      "request": "fresh-user JSON API body",
+      "response": "user state",
+      "credential_names": [
+        "historical native Ionic SDK app configuration"
+      ],
+      "source_status": {
+        "native": "historical_native"
+      },
+      "has_application_invoker": true,
+      "bounds": "SDK-owned queue/status rules;no app HTTP timeout established.",
+      "notes": "Confirmed old-bundle invoker,not current shared app;present normative docs/availability unverified.",
+      "sources": [
+        {
+          "path": "applewatch/www/lib/ionic-platform-web-client/src/core/user.js",
+          "line": 385
+        },
+        {
+          "path": "applewatch/www/js/controllers.js",
+          "line": 372
+        },
+        {
+          "path": "applewatch/www/js/app.js",
+          "line": 19
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#historical-native-services"
+    },
+    {
+      "id": "NATIVE-IONIC-SAVE",
+      "provider": "Ionic",
+      "kind": "sdk",
+      "method": "PUT",
+      "endpoint": "https://apps.ionic.io/api/v1/app/{app_id}/users/{id}",
+      "request": "existing-user JSON API body",
+      "response": "user state",
+      "credential_names": [
+        "historical native Ionic SDK app configuration"
+      ],
+      "source_status": {
+        "native": "historical_native"
+      },
+      "has_application_invoker": true,
+      "bounds": "SDK-owned queue/status rules;no app HTTP timeout established.",
+      "notes": "Confirmed old-bundle invoker,not current shared app;present normative docs/availability unverified.",
+      "sources": [
+        {
+          "path": "applewatch/www/lib/ionic-platform-web-client/src/core/user.js",
+          "line": 385
+        },
+        {
+          "path": "applewatch/www/js/controllers.js",
+          "line": 372
+        },
+        {
+          "path": "applewatch/www/js/app.js",
+          "line": 19
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#historical-native-services"
+    },
+    {
+      "id": "NATIVE-IONIC-DEPLOY",
+      "provider": "Ionic",
+      "kind": "sdk",
+      "method": "POST",
+      "endpoint": "https://apps.ionic.io/api/v1/apps/{app_id}/updates/check/",
+      "request": "device_app_version,device_deploy_uuid,device_platform,channel_tag",
+      "response": "update flag,url",
+      "credential_names": [
+        "historical native Ionic SDK app configuration"
+      ],
+      "source_status": {
+        "native": "historical_native"
+      },
+      "has_application_invoker": true,
+      "bounds": "SDK-owned queue/status rules;no app HTTP timeout established.",
+      "notes": "Confirmed old-bundle invoker,not current shared app;present normative docs/availability unverified.",
+      "sources": [
+        {
+          "path": "applewatch/TodayWeather/Plugins/ionic-plugin-deploy/IonicDeploy.m",
+          "line": 351
+        },
+        {
+          "path": "applewatch/www/js/controllers.js",
+          "line": 372
+        },
+        {
+          "path": "applewatch/www/js/app.js",
+          "line": 19
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#historical-native-services"
+    },
+    {
+      "id": "NATIVE-IONIC-DOWNLOAD",
+      "provider": "Ionic",
+      "kind": "sdk",
+      "method": "GET",
+      "endpoint": "{provider-returned-update-url}",
+      "request": "conditional on update and useracceptance",
+      "response": "package bytes",
+      "credential_names": [
+        "historical native Ionic SDK app configuration"
+      ],
+      "source_status": {
+        "native": "historical_native"
+      },
+      "has_application_invoker": true,
+      "bounds": "SDK-owned queue/status rules;no app HTTP timeout established.",
+      "notes": "Confirmed old-bundle invoker,not current shared app;present normative docs/availability unverified.",
+      "sources": [
+        {
+          "path": "applewatch/TodayWeather/Plugins/ionic-plugin-deploy/IonicDeploy.m",
+          "line": 195
+        },
+        {
+          "path": "applewatch/www/js/controllers.js",
+          "line": 372
+        },
+        {
+          "path": "applewatch/www/js/app.js",
+          "line": 19
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#historical-native-services"
+    },
+    {
+      "id": "KMA-X01",
+      "provider": "KMA",
+      "kind": "website",
+      "method": "GET",
+      "endpoint": "https://www.kma.go.kr/wid/queryDFSRSS.jsp",
+      "request": "zone",
+      "response": "inactive",
+      "credential_names": [],
+      "source_status": {
+        "server": "adapter_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "No current acquisition;guard/unsupported/no-caller details in manual.",
+      "sources": [
+        {
+          "path": "server/controllers/kma/kma.town.short.rss.controller.js",
+          "line": 39
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#kma-inactive-and-research-only"
+    },
+    {
+      "id": "KMA-X02",
+      "provider": "KMA",
+      "kind": "website",
+      "method": "GET",
+      "endpoint": "https://www.kma.go.kr/weather/forecast/mid-term-rss3.jsp",
+      "request": "stnId",
+      "response": "inactive",
+      "credential_names": [],
+      "source_status": {
+        "server": "retired"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "No current acquisition;guard/unsupported/no-caller details in manual.",
+      "sources": [
+        {
+          "path": "server/lib/midForecastPolicy.js",
+          "line": 14
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#kma-inactive-and-research-only"
+    },
+    {
+      "id": "KMA-X03",
+      "provider": "KMA",
+      "kind": "website",
+      "method": "GET",
+      "endpoint": "https://www.weather.go.kr/cgi-bin/aws/nph-aws_txt_day",
+      "request": "positional day query",
+      "response": "inactive",
+      "credential_names": [],
+      "source_status": {
+        "server": "adapter_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "No current acquisition;guard/unsupported/no-caller details in manual.",
+      "sources": [
+        {
+          "path": "server/lib/kmaScraper.js",
+          "line": 166
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#kma-inactive-and-research-only"
+    },
+    {
+      "id": "KMA-X04",
+      "provider": "KMA",
+      "kind": "website",
+      "method": "GET",
+      "endpoint": "https://www.weather.go.kr/weather/warning/status.jsp",
+      "request": "",
+      "response": "inactive",
+      "credential_names": [],
+      "source_status": {
+        "server": "retired"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "No current acquisition;guard/unsupported/no-caller details in manual.",
+      "sources": [
+        {
+          "path": "server/lib/kmaWarningCollector.js",
+          "line": 1
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#kma-inactive-and-research-only"
+    },
+    {
+      "id": "KMA-X05",
+      "provider": "KMA",
+      "kind": "operation_group",
+      "method": "GET",
+      "endpoint": "Legacy KMA life/health operation group",
+      "request": "legacy parameters",
+      "response": "inactive",
+      "credential_names": [],
+      "source_status": {
+        "server": "retired"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "No current acquisition;guard/unsupported/no-caller details in manual.",
+      "sources": [
+        {
+          "path": "server/lib/lifeIndexKmaRequester.js",
+          "line": 283
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#kma-inactive-and-research-only"
+    },
+    {
+      "id": "KMA-P01",
+      "provider": "KMA",
+      "kind": "operation_group",
+      "method": "not integrated",
+      "endpoint": "APIHub nph-dfs_odam_grd/nph-dfs_vsrt_grd/nph-dfs_shrt_grd",
+      "request": "provider-specific access;authKey distinct from serviceKey",
+      "response": "research candidate data",
+      "credential_names": [
+        "APIHub/archive approval (not established)"
+      ],
+      "source_status": {
+        "server2": "research_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "No runtime adapter/caller;equivalence,automation,license/access and latency unqualified.",
+      "sources": [
+        {
+          "path": "docs/architecture/server2-kma-data-design.md",
+          "line": 1
+        }
+      ],
+      "official_documentation": [
+        "https://apihub.kma.go.kr/apiList.do?seqApi=10"
+      ],
+      "manual": "retired.md#kma-inactive-and-research-only"
+    },
+    {
+      "id": "KMA-P02",
+      "provider": "KMA",
+      "kind": "operation_group",
+      "method": "not integrated",
+      "endpoint": "APIHub kma_sfctm3.php/kma_sfcdd3.php/nph-aws2_min/awsh.php/sfc_aws_day.php",
+      "request": "provider-specific access;authKey distinct from serviceKey",
+      "response": "research candidate data",
+      "credential_names": [
+        "APIHub/archive approval (not established)"
+      ],
+      "source_status": {
+        "server2": "research_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "No runtime adapter/caller;equivalence,automation,license/access and latency unqualified.",
+      "sources": [
+        {
+          "path": "docs/architecture/server2-kma-data-design.md",
+          "line": 1
+        }
+      ],
+      "official_documentation": [
+        "https://apihub.kma.go.kr/apiList.do?seqApi=2",
+        "https://apihub.kma.go.kr/apiList.do?seqApi=2&seqApiSub=239"
+      ],
+      "manual": "retired.md#kma-inactive-and-research-only"
+    },
+    {
+      "id": "KMA-P03",
+      "provider": "KMA",
+      "kind": "operation_group",
+      "method": "not integrated",
+      "endpoint": "APIHub stn_inf.php",
+      "request": "provider-specific access;authKey distinct from serviceKey",
+      "response": "research candidate data",
+      "credential_names": [
+        "APIHub/archive approval (not established)"
+      ],
+      "source_status": {
+        "server2": "research_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "No runtime adapter/caller;equivalence,automation,license/access and latency unqualified.",
+      "sources": [
+        {
+          "path": "docs/architecture/server2-kma-data-design.md",
+          "line": 1
+        }
+      ],
+      "official_documentation": [
+        "https://apihub.kma.go.kr/apiList.do?seqApi=2&seqApiSub=317"
+      ],
+      "manual": "retired.md#kma-inactive-and-research-only"
+    },
+    {
+      "id": "KMA-P04",
+      "provider": "KMA",
+      "kind": "operation_group",
+      "method": "not integrated",
+      "endpoint": "VSRT/ODAM historical file archives",
+      "request": "Archive-specific browse/download access;automated file-access contract notqualified.",
+      "response": "research candidate data",
+      "credential_names": [
+        "archive access/approval (not established)"
+      ],
+      "source_status": {
+        "server2": "research_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "No runtime adapter/caller;equivalence,automation,license/access and latency unqualified.",
+      "sources": [
+        {
+          "path": "docs/architecture/server2-kma-data-design.md",
+          "line": 1
+        }
+      ],
+      "official_documentation": [
+        "https://data.kma.go.kr/data/rmt/rmtList.do?code=410&pgmNo=571",
+        "https://data.kma.go.kr/data/rmt/rmtList.do?code=400&pgmNo=570"
+      ],
+      "manual": "retired.md#kma-inactive-and-research-only"
+    },
+    {
+      "id": "OLD-OWM-FCST",
+      "provider": "OpenWeather",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "http://api.openweathermap.org/data/2.5/forecast",
+      "request": "lat,lon,APPID,mode=xml",
+      "response": "XML response; inactive module path",
+      "credential_names": [
+        "OWM_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "adapter_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "Legacy helper5s,no retry;not instantiated by current application.",
+      "notes": "No current app acquisition established;test-only/notinstantiated;official old-version contract unverified.",
+      "sources": [
+        {
+          "path": "server/lib/OWM/owmRequester.js",
+          "line": 20
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#other-adapter-only-and-test-only-integrations"
+    },
+    {
+      "id": "OLD-MET",
+      "provider": "MET",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "http://api.yr.no/weatherapi/locationforecast/1.9/",
+      "request": "lat,lon",
+      "response": "XML response; inactive module path",
+      "credential_names": [],
+      "source_status": {
+        "server": "adapter_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "Legacy helper5s,no retry;not instantiated by current application.",
+      "notes": "No current app acquisition established;test-only/notinstantiated;official old-version contract unverified.",
+      "sources": [
+        {
+          "path": "server/lib/MET/metRequester.js",
+          "line": 29
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#other-adapter-only-and-test-only-integrations"
+    },
+    {
+      "id": "OLD-AW-GEO",
+      "provider": "AccuWeather",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "http://dataservice.accuweather.com/locations/v1/cities/geoposition/search",
+      "request": "apikey,q",
+      "response": "Legacy AccuWeather JSON response;test-only module",
+      "credential_names": [
+        "AW_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "adapter_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "Legacy helper5s;no production key caller established.",
+      "notes": "No current app acquisition established;test-only/notinstantiated;official old-version contract unverified.",
+      "sources": [
+        {
+          "path": "server/lib/AW/awRequester.js",
+          "line": 18
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#other-adapter-only-and-test-only-integrations"
+    },
+    {
+      "id": "OLD-AW-DAILY",
+      "provider": "AccuWeather",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "http://dataservice.accuweather.com/forecasts/v1/daily/{n}day/{locationKey}",
+      "request": "apikey,details=true",
+      "response": "Legacy AccuWeather JSON response;test-only module",
+      "credential_names": [
+        "AW_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "adapter_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "Legacy helper5s;no production key caller established.",
+      "notes": "No current app acquisition established;test-only/notinstantiated;official old-version contract unverified.",
+      "sources": [
+        {
+          "path": "server/lib/AW/awRequester.js",
+          "line": 41
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#other-adapter-only-and-test-only-integrations"
+    },
+    {
+      "id": "OLD-AW-HOURLY",
+      "provider": "AccuWeather",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "http://dataservice.accuweather.com/forecasts/v1/hourly/{n}hour/{locationKey}",
+      "request": "apikey,details=true",
+      "response": "Legacy AccuWeather JSON response;test-only module",
+      "credential_names": [
+        "AW_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "adapter_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "Legacy helper5s;no production key caller established.",
+      "notes": "No current app acquisition established;test-only/notinstantiated;official old-version contract unverified.",
+      "sources": [
+        {
+          "path": "server/lib/AW/awRequester.js",
+          "line": 70
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#other-adapter-only-and-test-only-integrations"
+    },
+    {
+      "id": "OLD-AW-CURRENT",
+      "provider": "AccuWeather",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "http://dataservice.accuweather.com/currentconditions/v1/{locationKey}",
+      "request": "apikey,details=true",
+      "response": "Legacy AccuWeather JSON response;test-only module",
+      "credential_names": [
+        "AW_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "adapter_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "Legacy helper5s;no production key caller established.",
+      "notes": "No current app acquisition established;test-only/notinstantiated;official old-version contract unverified.",
+      "sources": [
+        {
+          "path": "server/lib/AW/awRequester.js",
+          "line": 97
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#other-adapter-only-and-test-only-integrations"
+    },
+    {
+      "id": "OLD-FORECA",
+      "provider": "Foreca",
+      "kind": "openapi",
+      "method": "GET",
+      "endpoint": "http://apitest.foreca.net/",
+      "request": "lon,lat,key,format=json",
+      "response": "Legacy Foreca JSON response",
+      "credential_names": [
+        "FC_SECRET_KEY"
+      ],
+      "source_status": {
+        "server": "adapter_only"
+      },
+      "has_application_invoker": false,
+      "bounds": "5s,up to5reset/timeout retries;testhost only.",
+      "notes": "No current app acquisition established;test-only/notinstantiated;official old-version contract unverified.",
+      "sources": [
+        {
+          "path": "server/lib/FC/fcRequester.js",
+          "line": 19
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#other-adapter-only-and-test-only-integrations"
+    },
+    {
+      "id": "OLD-DSF",
+      "provider": "Dark Sky",
+      "kind": "operation_group",
+      "method": "none",
+      "endpoint": "retired requester;no outbound operation",
+      "request": "retired",
+      "response": "none",
+      "credential_names": [],
+      "source_status": {
+        "server": "retired"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "Do not count removed/helper text as currently used API.",
+      "sources": [
+        {
+          "path": "server/lib/DSF/dsfRequester.js",
+          "line": 14
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#removed-services-and-compatibility-code"
+    },
+    {
+      "id": "OLD-DAUM",
+      "provider": "Daum",
+      "kind": "operation_group",
+      "method": "none",
+      "endpoint": "apis.daum.net/local/geo/{coord2addr,addr2coord,transcoord}",
+      "request": "retired",
+      "response": "none",
+      "credential_names": [],
+      "source_status": {
+        "server": "retired"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "Do not count removed/helper text as currently used API.",
+      "sources": [
+        {
+          "path": "server/controllers/geo.controller.js",
+          "line": 575
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#removed-services-and-compatibility-code"
+    },
+    {
+      "id": "OLD-PURCHASE",
+      "provider": "Apple/Google",
+      "kind": "operation_group",
+      "method": "none",
+      "endpoint": "removed server purchase validation;historical native remnants",
+      "request": "retired",
+      "response": "none",
+      "credential_names": [],
+      "source_status": {
+        "server": "retired"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "Do not count removed/helper text as currently used API.",
+      "sources": [
+        {
+          "path": "docs/architecture/service-overview.md",
+          "line": 82
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#removed-services-and-compatibility-code"
+    },
+    {
+      "id": "OLD-APNS",
+      "provider": "Apple",
+      "kind": "operation_group",
+      "method": "none",
+      "endpoint": "removed direct APNs sender",
+      "request": "retired",
+      "response": "none",
+      "credential_names": [],
+      "source_status": {
+        "server": "retired"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "Do not count removed/helper text as currently used API.",
+      "sources": [
+        {
+          "path": "docs/architecture/push-notifications.md",
+          "line": 1
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#removed-services-and-compatibility-code"
+    },
+    {
+      "id": "OLD-NEWRELIC",
+      "provider": "New Relic",
+      "kind": "operation_group",
+      "method": "none",
+      "endpoint": "removed agent integration",
+      "request": "retired",
+      "response": "none",
+      "credential_names": [],
+      "source_status": {
+        "server": "retired"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "Do not count removed/helper text as currently used API.",
+      "sources": [
+        {
+          "path": "server/test/offline/runtime-node16.test.js",
+          "line": 70
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#removed-services-and-compatibility-code"
+    },
+    {
+      "id": "OLD-UA-FABRIC",
+      "provider": "Google/Fabric",
+      "kind": "operation_group",
+      "method": "none",
+      "endpoint": "inert shared compatibility methods",
+      "request": "retired",
+      "response": "none",
+      "credential_names": [],
+      "source_status": {
+        "client": "retired"
+      },
+      "has_application_invoker": false,
+      "bounds": "See the linked manual section; policies differ by consumer.",
+      "notes": "Do not count removed/helper text as currently used API.",
+      "sources": [
+        {
+          "path": "client/www/js/service.util.js",
+          "line": 11
+        }
+      ],
+      "official_documentation": [],
+      "manual": "retired.md#removed-services-and-compatibility-code"
+    }
+  ]
+}

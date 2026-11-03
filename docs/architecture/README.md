@@ -10,6 +10,36 @@ Proposed replacement origin: [server2 memory and S3 design](server2.md), with
 [overview diagram](diagrams/server2.html) and [editable source](diagrams/server2.json).
 This is a 2026-10-06 design amendment to #2614, not deployed behavior.
 
+The 2026-10-24 [Korean acquisition and S3 retrieval proposal](server2-kma-data-design.md)
+selects canonical raw/catalog replay, public source candidates and one shared RAM
+input closure. The [manual-backed independent reassessment](../evidence/research/kma-storage-reassessment-2026-10-24.md)
+keeps packs conditional and defers grid heads/day locators.
+The later [response-first review](../evidence/research/kma-response-first-review-2026-10-24.md)
+selects validated RAM response before supervised S3 persistence, with accepted
+crash loss and bounded recovery. Its [sequence](diagrams/server2-kma-data-design.html)
+describes the proposed order; current runtime, provider equivalence, archive
+automation and new end-to-end latency remain separately qualified.
+The 2026-10-25 [full-response reassessment](../evidence/research/kma-full-response-reassessment-2026-10-25.md)
+keeps all requested history: current native empty-S3 acquisition is BLOCKED and
+full restore is NOT_QUALIFIED. Latest-only timings are excluded; three separate
+gates cover raw integrity, required coverage and value parity. Archive/APIHub
+candidates and the historical-source/value conflict remain open.
+
+The [2026-10-25 implementation record](../evidence/research/kma-full-response-implementation-2026-10-25.md)
+supersedes the earlier unresolved value/granularity decisions: AK permits acquired
+ASOS historical values to differ and retains the current public three-hour axis.
+ASOS-primary and response-first now exist locally with scripted full-history
+response/store/restore tests. Actual dry/winter/pre-release completeness and full
+live cold/restore p95/p99 remain unqualified; grid combination generation is deferred.
+The subsequent [source qualification](../evidence/research/kma-asos-closure-qualification-2026-10-25.md)
+records ASOS-specific blank/trace/QC meanings, their bounded observed normalization,
+public-city limits and remaining44 QC9 hours/midnight boundary. APIHub is optional;
+its key is absent. No complete live sample or tail qualification is added.
+
+The 2026-10-24 [external API manual](../reference/external-apis/README.md) inventories
+KMA and all source-wired weather/support services, with request/response contracts,
+consumer-specific bounds, official references and separate legacy/inactive status.
+
 1. [Service overview](service-overview.md): components, server modes, persistence, platform variants and deployment evidence.
 2. [Weather collection](weather-collection.md): domestic schedules, requesters, parsing, persistence, retries, and on-demand world weather.
 3. [Mobile API flow](mobile-api.md): location selection, exact URL contracts, verified AWS gateway mapping, backend middleware and response handling.
@@ -27,6 +57,7 @@ Files ending in `.visual-check.html` are local screenshot contact sheets, not th
 
 | View | Standalone HTML | Source |
 | --- | --- | --- |
+| Selected Korean response-first and S3 recovery contract | [Full-data gates, response-first and recovery](diagrams/server2-kma-data-design.html) | [JSON](diagrams/server2-kma-data-design.json) |
 | Food-poisoning recovery | [Collector and response design](diagrams/food-poisoning.html) | [JSON](diagrams/food-poisoning.json) |
 | Nation air recovery | [DB and global providers](diagrams/nation-air-recovery.html) | [JSON](diagrams/nation-air-recovery.json) |
 | AirKorea collector repair | [Observation and page validation](diagrams/airkorea-observation-recovery.html) | [JSON](diagrams/airkorea-observation-recovery.json) |
