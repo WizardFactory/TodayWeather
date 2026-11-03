@@ -1,7 +1,7 @@
 //! KMA observation pages as the legacy scraper reads them (`server/lib/kmaScraper.js`):
 //! `getAWSWeather` + `_parseStnMinInfo` for the AWS minute/hourly page (`nph-aws_txt_min`, all
 //! stations nationwide in one page), `getCityWeather` + `_decodeKmaHtml` + `_parseCityWeatherHtml`
-//! for the city observation page (`currentweather.jsp`, all city stations in one page) and
+//! for the city observation page (`city-obs.do`, all city stations in one page) and
 //! `_mergeAWSandCity`. Rows are the plain objects legacy builds (insertion-ordered fields,
 //! `date` a Date in the KST wall clock as UTC fields).
 use super::doc::{Doc, Val};

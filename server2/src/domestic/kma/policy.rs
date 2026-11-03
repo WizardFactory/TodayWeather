@@ -1,7 +1,7 @@
 //! `lib/midForecastPolicy.js`, `lib/history/policy.js` and `lib/history/observations.js` as used
 //! by the v000903 chain (the ASOS history read is enabled when the store supplies it; see
 //! `KmaStore::history`).
-use super::js::{Arr, Ob, V, gt, is_finite_number, obj, strict_eq, to_str};
+use super::js::{Arr, Ob, V, gt, is_finite_number, obj, strict_eq, to_number, to_str};
 use super::time::{DAY, HOUR, make_date};
 use crate::world::js as wjs;
 
@@ -356,6 +356,26 @@ pub fn daily_health(mid: &V, now: f64) -> V {
     ]))
 }
 
+/// Under ASOS-primary, a completed day the window filter omitted is listed too (#2560).
+pub fn list_missing_history(status: &V, mid: &V, now: f64) {
+    let Some((start, end, _)) = window(now) else {
+        return;
+    };
+    let served: Vec<String> = mid
+        .get("dailyData")
+        .a()
+        .items()
+        .iter()
+        .map(|row| to_str(&row.get("date")))
+        .collect();
+    let omitted: Vec<V> = range(true, &start, &end)
+        .into_iter()
+        .filter(|date| !served.contains(date))
+        .map(V::from)
+        .collect();
+    status.get("unavailableDates").a().unshift(omitted);
+}
+
 // ---- history/policy ----
 
 /// `policy.valid(field, value)`.
@@ -363,15 +383,20 @@ pub fn valid(field: &str, v: &V) -> bool {
     let (lo, hi) = match field {
         "t1h" | "t1d" | "taMin" | "taMax" => (-50., 60.),
         "reh" => (0., 100.),
-        "rn1" => (0., 5000.),
+        "rn1" | "rn3h" => (0., 5000.),
         "wsd" => (0., 100.),
         "vec" => (0., 360.),
         "sky" => (1., 4.),
+        "pty" => (0., 7.),
         _ => return false,
     };
     match v {
         V::Num(n) => {
-            n.is_finite() && *n >= lo && *n <= hi && (!field.starts_with('t') || *n > -50.)
+            n.is_finite()
+                && *n >= lo
+                && *n <= hi
+                && (!field.starts_with('t') || *n > -50.)
+                && (field != "pty" || n.fract() == 0.)
         }
         _ => false,
     }
@@ -485,6 +510,21 @@ pub fn record(row: &V, source: &V, fields: &[&str]) {
             ])),
         );
     }
+}
+
+/// `record` for fields added to a row that may already list the source's measured fields.
+fn record_more(row: &V, source: &V, fields: &[&str]) {
+    let history = row.get("historyObservation");
+    let earlier = if history.truthy() && history.get("fields").truthy() {
+        history.get("fields").a().items()
+    } else {
+        Vec::new()
+    };
+    record(row, source, fields);
+    row.get("historyObservation")
+        .get("fields")
+        .a()
+        .unshift(earlier);
 }
 
 // ---- history/observations ----
@@ -685,12 +725,30 @@ fn is_asos(r: &V, kind: &str) -> bool {
         && strict_eq(&r.get("timeBasis"), &V::s("UTC"))
         && strict_eq(&r.get("kind"), &V::s(kind))
 }
+/// AK 2026-10-25: historical values may change; measured data is primary.
+pub fn observations_primary(req: &V) -> bool {
+    let data = req.get("_history");
+    data.truthy() && strict_eq(&data.get("policy"), &V::s("asos-primary-v1"))
+}
+pub fn daily_observation(req: &V, date: &V, field: &str) -> V {
+    req.get("_history")
+        .get("daily")
+        .as_arr()
+        .map(Arr::items)
+        .unwrap_or_default()
+        .into_iter()
+        .find(|r| is_asos(r, "daily") && strict_eq(&r.get("key"), date))
+        .map(|r| r.get("values").get(field))
+        .filter(|v| valid(field, v))
+        .unwrap_or_default()
+}
 /// `service.mergeHourly(req, data)` + `policy.mergeHourly(req, data.hourly)`.
 pub fn merge_hourly(req: &V, data: &V) {
     if !data.truthy() {
         return;
     }
     req.set("_history", data.clone());
+    let primary = observations_primary(req);
     let records = data.get("hourly");
     let Some(records) = records.as_arr() else {
         super::js::throw("records.forEach is not a function");
@@ -716,7 +774,7 @@ pub fn merge_hourly(req: &V, data: &V) {
         let mut fields = Vec::new();
         for f in values.o().keys() {
             let fv = values.get(&f);
-            if !valid(&f, &row.get(&f)) && valid(&f, &fv) {
+            if (primary || !valid(&f, &row.get(&f))) && valid(&f, &fv) {
                 row.set(&f, fv);
                 fields.push(f);
             }
@@ -724,6 +782,78 @@ pub fn merge_hourly(req: &V, data: &V) {
         if !fields.is_empty() {
             let refs: Vec<&str> = fields.iter().map(String::as_str).collect();
             record(&row, source, &refs);
+        }
+    }
+    if primary {
+        let end = data.get("endDate");
+        let mut yesterday_min = daily_observation(req, &end, "taMin");
+        if yesterday_min.is_undef() {
+            let yesterday = to_str(&end);
+            let mut temperatures = Vec::new();
+            for row in list.as_arr().map(Arr::items).unwrap_or_default() {
+                if to_str(&row.get("date")) == yesterday && valid("t1h", &row.get("t1h")) {
+                    temperatures.push(to_number(&row.get("t1h")));
+                }
+            }
+            if !temperatures.is_empty() {
+                yesterday_min = V::Num(temperatures.into_iter().fold(f64::INFINITY, f64::min));
+            }
+        }
+        if yesterday_min.is_undef() {
+            req.del("yesterdayMinTemperature");
+        } else {
+            req.set("yesterdayMinTemperature", yesterday_min);
+        }
+        // VSRT is an allowed historical source. Fill missing hourly values only; measured
+        // ASOS/ODAM fields retain precedence. The public three-hour axis is assembled later.
+        let shortest = req.get("shortestList");
+        for row in list.as_arr().map(Arr::items).unwrap_or_default() {
+            let forecast = shortest
+                .as_arr()
+                .map(|a| {
+                    a.find(|r| {
+                        strict_eq(&r.get("date"), &row.get("date"))
+                            && strict_eq(&r.get("time"), &row.get("time"))
+                    })
+                })
+                .unwrap_or_default();
+            if forecast.is_undef() {
+                continue;
+            }
+            for field in ["t1h", "reh", "rn1", "sky", "pty", "wsd", "vec"] {
+                let value = forecast.get(field);
+                if !valid(field, &row.get(field)) && valid(field, &value) {
+                    row.set(field, value);
+                }
+            }
+        }
+        // Contract precedence 4: a rule-derived ASOS value applies only where measured ASOS,
+        // ODAM and VSRT left its whole set of fields missing. A derived rain type also replaces
+        // their PTY 0, which the ASOS amount behind that type contradicts (invariant I1); a
+        // recorded type always stays.
+        for row in list.as_arr().map(Arr::items).unwrap_or_default() {
+            let Some(s) = slot(&row) else { continue };
+            let Some((_, source)) = by_key.iter().find(|(k, _)| *k == s) else {
+                continue;
+            };
+            let inferred = source.get("inferred");
+            if !inferred.truthy() {
+                continue;
+            }
+            let fields = inferred.o().keys();
+            let keeps = |f: &String| {
+                let rain_over_dry =
+                    f == "pty" && typed_pty(&inferred.get(f)) && !typed_pty(&row.get(f));
+                valid(f, &row.get(f)) && !rain_over_dry
+            };
+            if fields.iter().any(keeps) {
+                continue;
+            }
+            for f in &fields {
+                row.set(f, inferred.get(f));
+            }
+            let refs: Vec<&str> = fields.iter().map(String::as_str).collect();
+            record_more(&row, source, &refs);
         }
     }
 }
@@ -734,6 +864,7 @@ pub fn merge_daily(req: &V, records: &V, now: f64) {
     };
     let daily = req.get("midData").get("dailyData");
     let daily = daily.a();
+    let primary = observations_primary(req);
     for source in records.as_arr().map(Arr::items).unwrap_or_default() {
         let k = source.get("key");
         let ks = to_str(&k);
@@ -760,7 +891,7 @@ pub fn merge_daily(req: &V, records: &V, now: f64) {
         let mut fields = Vec::new();
         for f in values.o().keys() {
             let fv = values.get(&f);
-            if !valid(&f, &row.get(&f)) && valid(&f, &fv) {
+            if (primary || !valid(&f, &row.get(&f))) && valid(&f, &fv) {
                 row.set(&f, fv);
                 fields.push(f);
             }
@@ -797,6 +928,7 @@ pub fn merge_daily(req: &V, records: &V, now: f64) {
 }
 /// `policy.status(req, now)`.
 pub fn status(req: &V, now: f64) -> V {
+    let primary = observations_primary(req);
     let (start, end) = window(now).map_or_else(Default::default, |(s, e, _)| (s, e));
     let mut hours: Vec<(String, V)> = Vec::new();
     for r in req
@@ -830,13 +962,38 @@ pub fn status(req: &V, now: f64) -> V {
     }
     let gaps = Arr::new();
     let missing_hours = Arr::new();
-    for k in range(false, &start, &end) {
+    let expected_hours = range(false, &start, &end).into_iter().filter_map(|k| {
+        if primary {
+            key(instant(&V::s(&k)) + HOUR, false)
+        } else {
+            Some(k)
+        }
+    });
+    for k in expected_hours {
         let r = hours
             .iter()
             .find(|(x, _)| *x == k)
             .map_or(V::Undef, |(_, r)| r.clone());
         let field = |f: &str| if r.truthy() { r.get(f) } else { V::Undef };
-        let missing: Vec<V> = ["t1h", "reh", "rn1", "wsd", "vec", "sky"]
+        let mut required = vec!["t1h", "reh", "wsd", "vec", "sky"];
+        let winter = k
+            .get(4..6)
+            .and_then(|m| m.parse::<u16>().ok())
+            .is_some_and(|m| m <= 3 || m >= 11);
+        if primary && winter && !valid("rn1", &field("rn1")) {
+            if k.get(8..10)
+                .and_then(|h| h.parse::<u16>().ok())
+                .is_some_and(|h| h.is_multiple_of(3))
+            {
+                required.insert(2, "rn3h");
+            }
+        } else {
+            required.insert(2, "rn1");
+        }
+        if primary {
+            required.push("pty");
+        }
+        let missing: Vec<V> = required
             .into_iter()
             .filter(|f| !valid(f, &field(f)))
             .map(V::s)
@@ -847,7 +1004,10 @@ pub fn status(req: &V, now: f64) -> V {
                 ("fields", V::Arr(Arr::from_vec(missing))),
             ])));
         }
-        if !valid("t1h", &field("t1h")) || !valid("reh", &field("reh")) {
+        if !valid("t1h", &field("t1h"))
+            || !valid("reh", &field("reh"))
+            || (primary && (!valid("sky", &field("sky")) || !valid("pty", &field("pty"))))
+        {
             missing_hours.push(V::from(k));
         }
     }
@@ -858,6 +1018,10 @@ pub fn status(req: &V, now: f64) -> V {
             .find(|(x, _)| *x == k)
             .map_or(V::Undef, |(_, r)| r.clone());
         if !complete_values(true, &row)
+            || (primary
+                && (!valid("rn1", &row.get("rn1"))
+                    || !weather(&row.get("wfAm"))
+                    || !weather(&row.get("wfPm"))))
             || (strict_eq(&row.get("observationType"), &V::s("hourly-summary"))
                 && super::js::lt(&row.get("observationHours"), &V::Num(24.)))
         {
@@ -874,6 +1038,92 @@ pub fn status(req: &V, now: f64) -> V {
     ]))
 }
 /// `service.mergeDaily(req)`: the daily merge and `historyStatus`.
+fn typed_pty(v: &V) -> bool {
+    valid("pty", v) && to_number(v) >= 1.
+}
+/// Field provenance recorded by `record`; rows without it (ODAM, VSRT) are not ASOS.
+fn asos_field(row: &V, field: &str) -> bool {
+    let observations = row.get("fieldObservations");
+    if !observations.truthy() {
+        return false;
+    }
+    let provenance = observations.get(field);
+    provenance.truthy() && strict_eq(&provenance.get("source"), &V::s("KMA_ASOS"))
+}
+/// Contract `evidence-v1` (`server2/config/contracts/kma-history.v1.json`): a typed PTY, or an
+/// ASOS rain amount, trace `0.0` included. A qualified dry blank sets PTY 0 and amount 0, so a
+/// zero amount under an ASOS PTY 0 is no evidence. A positive amount still is: originals of
+/// different sources can leave both on one hour.
+fn precipitation_evidence(row: &V) -> bool {
+    if typed_pty(&row.get("pty")) {
+        return true;
+    }
+    let dry_type = asos_field(row, "pty") && strict_eq(&row.get("pty"), &V::Num(0.));
+    ["rn1", "rn3h"].iter().any(|f| {
+        asos_field(row, f) && valid(f, &row.get(f)) && (!dry_type || to_number(&row.get(f)) > 0.)
+    })
+}
+/// Contract `precipitation-guard-v1`, ASOS-primary only. Partial aggregation skips unknown
+/// values, so an untyped measured precipitation hour next to dry hours used to summarize as
+/// PTY 0. A three-hour slot (hours T-2..T) with such evidence and no typed PTY becomes -1; an
+/// AM (0100..1200) or PM (1300..2400) half loses its PTY, SKY and text, so no dry text or icon
+/// is shown, while the date stays and `status` lists it in `missingDailyDates`.
+pub fn guard_precipitation(req: &V) {
+    if !observations_primary(req) {
+        return;
+    }
+    let hours: Vec<f64> = req
+        .get("currentList")
+        .as_arr()
+        .map(Arr::items)
+        .unwrap_or_default()
+        .iter()
+        .filter(|row| row.truthy() && precipitation_evidence(row))
+        .filter_map(slot)
+        .map(|k| instant(&V::s(&k)))
+        .filter(|t| t.is_finite())
+        .collect();
+    let wet = |from: f64, to: f64| hours.iter().any(|t| *t >= from && *t <= to);
+    for row in req
+        .get("short")
+        .as_arr()
+        .map(Arr::items)
+        .unwrap_or_default()
+    {
+        let end = slot(&row).map_or(f64::NAN, |k| instant(&V::s(&k)));
+        if end.is_finite() && wet(end - 2. * HOUR, end) && !typed_pty(&row.get("pty")) {
+            row.set("pty", -1.);
+        }
+    }
+    let mid = req.get("midData");
+    if !mid.truthy() {
+        return;
+    }
+    for row in mid
+        .get("dailyData")
+        .as_arr()
+        .map(Arr::items)
+        .unwrap_or_default()
+    {
+        let midnight = if row.truthy() {
+            instant(&row.get("date"))
+        } else {
+            f64::NAN
+        };
+        if !midnight.is_finite() {
+            continue;
+        }
+        for (half, first, last) in [("Am", 1., 12.), ("Pm", 13., 24.)] {
+            if wet(midnight + first * HOUR, midnight + last * HOUR)
+                && !typed_pty(&row.get(&format!("pty{half}")))
+            {
+                for field in ["pty", "sky", "wf"] {
+                    row.del(&format!("{field}{half}"));
+                }
+            }
+        }
+    }
+}
 pub fn merge_daily_status(req: &V, now: f64) {
     let data = req.get("_history");
     if !data.truthy() {
@@ -921,6 +1171,230 @@ pub fn yesterday(current: &V, rows: &V) -> V {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn measured_yesterday_min_precedes_ultra_short_missing_field_repair() {
+        let measured = V::Obj(obj(vec![
+            ("date", V::s("20261024")),
+            ("time", V::s("2300")),
+            ("t1h", V::Num(7.)),
+        ]));
+        let missing = V::Obj(obj(vec![
+            ("date", V::s("20261024")),
+            ("time", V::s("2200")),
+            ("t1h", V::Num(-50.)),
+            ("pty", V::Num(-1.)),
+        ]));
+        let ultra = V::Obj(obj(vec![
+            ("date", V::s("20261024")),
+            ("time", V::s("2200")),
+            ("t1h", V::Num(-5.)),
+            ("pty", V::Num(1.)),
+        ]));
+        let req = V::Obj(obj(vec![
+            (
+                "currentList",
+                V::Arr(Arr::from_vec(vec![measured.clone(), missing.clone()])),
+            ),
+            ("shortestList", V::Arr(Arr::from_vec(vec![ultra]))),
+        ]));
+        let history = V::Obj(obj(vec![
+            ("policy", V::s("asos-primary-v1")),
+            ("endDate", V::s("20261024")),
+            ("hourly", V::Arr(Arr::new())),
+            ("daily", V::Arr(Arr::new())),
+        ]));
+        merge_hourly(&req, &history);
+        assert_eq!(to_number(&req.get("yesterdayMinTemperature")), 7.);
+        assert_eq!(to_number(&missing.get("t1h")), -5.);
+        assert_eq!(to_number(&missing.get("pty")), 1.);
+        assert_eq!(to_number(&measured.get("t1h")), 7.);
+    }
+    #[test]
+    fn omitted_completed_days_are_listed_before_the_forecast_days() {
+        let now = instant(&V::s("202610240300"));
+        let (start, end, today) = window(now).unwrap();
+        assert_eq!((start.as_str(), end.as_str()), ("20261017", "20261023"));
+        let row = |date: &str| V::Obj(obj(vec![("date", V::s(date))]));
+        let mid = V::Obj(obj(vec![(
+            "dailyData",
+            V::Arr(Arr::from_vec(vec![
+                row("20261022"),
+                row("20261023"),
+                row(&today),
+            ])),
+        )]));
+        let status = V::Obj(obj(vec![(
+            "unavailableDates",
+            V::Arr(Arr::from_vec(vec![V::s("20261030")])),
+        )]));
+        list_missing_history(&status, &mid, now);
+        let listed: Vec<String> = status
+            .get("unavailableDates")
+            .a()
+            .items()
+            .iter()
+            .map(to_str)
+            .collect();
+        assert_eq!(
+            listed,
+            [
+                "20261017", "20261018", "20261019", "20261020", "20261021", "20261030"
+            ]
+        );
+    }
+    #[test]
+    fn derived_asos_values_fill_only_what_measured_and_forecast_sources_left_missing() {
+        let hour = |time: &str, pty: f64| {
+            V::Obj(obj(vec![
+                ("date", V::s("20261023")),
+                ("time", V::s(time)),
+                ("t1h", V::Num(7.)),
+                ("pty", V::Num(pty)),
+            ]))
+        };
+        let (odam, forecast, empty, measured) = (
+            hour("0100", 1.),
+            hour("0200", -1.),
+            hour("0300", -1.),
+            hour("0400", -1.),
+        );
+        let (typed_snow, odam_dry) = (hour("0500", 3.), hour("0600", 0.));
+        odam.set("rn1", 0.5);
+        let ultra = V::Obj(obj(vec![
+            ("date", V::s("20261023")),
+            ("time", V::s("0200")),
+            ("pty", V::Num(3.)),
+            ("rn1", V::Num(0.2)),
+        ]));
+        let req = V::Obj(obj(vec![
+            (
+                "currentList",
+                V::Arr(Arr::from_vec(vec![
+                    odam.clone(),
+                    forecast.clone(),
+                    empty.clone(),
+                    measured.clone(),
+                    typed_snow.clone(),
+                    odam_dry.clone(),
+                ])),
+            ),
+            ("shortestList", V::Arr(Arr::from_vec(vec![ultra]))),
+        ]));
+        let record = |time: &str, values: Vec<(&str, V)>, inferred: Vec<(&str, V)>| {
+            V::Obj(obj(vec![
+                ("source", V::s("KMA_ASOS")),
+                ("timeBasis", V::s("UTC")),
+                ("kind", V::s("hourly")),
+                ("stationId", V::s("108")),
+                ("key", V::s(&format!("20261023{time}"))),
+                ("values", V::Obj(obj(values))),
+                ("inferred", V::Obj(obj(inferred))),
+            ]))
+        };
+        let dry = || vec![("rn1", V::Num(0.)), ("pty", V::Num(0.))];
+        let history = V::Obj(obj(vec![
+            ("policy", V::s("asos-primary-v1")),
+            ("endDate", V::s("20261023")),
+            (
+                "hourly",
+                V::Arr(Arr::from_vec(vec![
+                    record("0100", vec![], dry()),
+                    record("0200", vec![], dry()),
+                    record("0300", vec![], dry()),
+                    record(
+                        "0400",
+                        vec![("rn1", V::Num(0.7))],
+                        vec![("pty", V::Num(1.))],
+                    ),
+                    record(
+                        "0500",
+                        vec![("rn1", V::Num(0.7))],
+                        vec![("pty", V::Num(1.))],
+                    ),
+                    record(
+                        "0600",
+                        vec![("rn1", V::Num(0.7))],
+                        vec![("pty", V::Num(1.))],
+                    ),
+                ])),
+            ),
+            ("daily", V::Arr(Arr::new())),
+        ]));
+        merge_hourly(&req, &history);
+        assert_eq!(
+            to_number(&odam.get("pty")),
+            1.,
+            "ODAM precedes a derived value"
+        );
+        assert_eq!(to_number(&odam.get("rn1")), 0.5);
+        assert_eq!(
+            to_number(&forecast.get("pty")),
+            3.,
+            "VSRT precedes a derived value"
+        );
+        assert_eq!(to_number(&forecast.get("rn1")), 0.2);
+        assert_eq!(
+            to_number(&empty.get("pty")),
+            0.,
+            "nothing else: the derived value fills"
+        );
+        assert_eq!(to_number(&empty.get("rn1")), 0.);
+        assert!(asos_field(&empty, "pty") && asos_field(&empty, "rn1"));
+        assert_eq!(to_number(&measured.get("pty")), 1.);
+        assert!(asos_field(&measured, "pty") && asos_field(&measured, "rn1"));
+        assert_eq!(
+            to_number(&typed_snow.get("pty")),
+            3.,
+            "a recorded type stays"
+        );
+        assert_eq!(
+            to_number(&odam_dry.get("pty")),
+            1.,
+            "measured rain contradicts PTY 0"
+        );
+        let fields = measured.get("historyObservation").get("fields");
+        assert_eq!(
+            fields.a().items().len(),
+            2,
+            "measured and derived fields are both listed"
+        );
+    }
+    #[test]
+    fn observed_winter_gaps_respect_three_hour_rain_intervals() {
+        let mut rows = Vec::new();
+        for hour in 1..=3 {
+            let row = V::Obj(obj(vec![
+                ("date", V::s("20260101")),
+                ("time", V::s(&format!("{hour:02}00"))),
+                ("t1h", V::Num(7.)),
+                ("reh", V::Num(60.)),
+                ("sky", V::Num(4.)),
+                ("pty", V::Num(1.)),
+                ("wsd", V::Num(2.)),
+                ("vec", V::Num(180.)),
+            ]));
+            if hour == 3 {
+                row.set("rn3h", 0.5);
+            }
+            rows.push(row);
+        }
+        let req = V::Obj(obj(vec![
+            ("currentList", V::Arr(Arr::from_vec(rows))),
+            (
+                "_history",
+                V::Obj(obj(vec![("policy", V::s("asos-primary-v1"))])),
+            ),
+        ]));
+        let report = status(&req, instant(&V::s("202601080000")));
+        let gaps = report.get("hourlyFieldGaps").a().items();
+        for hour in 1..=3 {
+            let key = format!("20260101{hour:02}00");
+            assert!(
+                !gaps.iter().any(|r| to_str(&r.get("key")) == key),
+                "{key} has a measured period, not a missing hourly value"
+            );
+        }
+    }
     #[test]
     fn non_ascii_publication_strings_are_rejected_without_panicking() {
         // midForecastPolicy returns NaN for these; 4 is not a character boundary here.

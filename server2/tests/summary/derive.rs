@@ -12,6 +12,7 @@ use std::sync::Arc;
 fn grid_acquisitions_concern_every_date_their_rows_can_reach() {
     use server2::domestic::kma::source::{Family, Fetched, grid_input_id};
     let fetched = |partition: &str| Fetched {
+        raw_ids: Vec::new(),
         fetched_at_ms: 1,
         partition: partition.into(),
         pages: vec![Arc::from(b"{}".to_vec())],
@@ -84,6 +85,19 @@ fn grid_keeps_complete_days_of_today_minus_six_to_minus_one() {
     assert_eq!(out[0].inputs.latest_fetched_ms, 5);
 }
 
+#[test]
+fn a_minute_only_midnight_value_cannot_enter_a_stored_grid_day() {
+    let midnight = kst_midnight_ms(20261015).unwrap();
+    let minute = inputs(vec![input("aws-minute", midnight, midnight, 100)]);
+    // Even a complete-looking row carrying the live 00:00 value is outside
+    // summary admission: yesterday's 24:00 and today are both excluded at 00:30.
+    let rows = vec![
+        day_row("20261014", 24., 99., 10.),
+        day_row("20261015", 24., 99., 10.),
+    ];
+    assert!(grid::summaries(&minute, &rows, kst(20261015, 30)).is_empty());
+}
+
 fn live_asos() -> AsosFetched {
     let body = std::fs::read(
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -91,6 +105,7 @@ fn live_asos() -> AsosFetched {
     )
     .unwrap();
     AsosFetched {
+        raw_ids: Vec::new(),
         kind: AsosKind::Daily,
         start: "20251012".into(),
         end: "20251018".into(),
@@ -127,6 +142,7 @@ fn asos_requires_valid_ordered_extremes_and_keeps_rain_optional() {
         .unwrap()
     };
     let fetched = AsosFetched {
+        raw_ids: Vec::new(),
         kind: AsosKind::Daily,
         start: "20251012".into(),
         end: "20251014".into(),

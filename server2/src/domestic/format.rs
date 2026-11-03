@@ -413,14 +413,9 @@ pub fn inspect_web(request: &WebRequest, content_type: &str, body: &[u8]) -> Web
                         .collect();
                     Publication::parse_dotted(&stamp)
                 });
-                let stamp = topinfo.or_else(|| {
-                    tags(&view)
-                        .find(|t| t.name == "input" && t.attr("name") == Some("tm"))
-                        .and_then(|t| {
-                            let value = t.attr("value")?.split_whitespace().collect::<String>();
-                            Publication::parse_dotted(&value)
-                        })
-                });
+                // A search-form value may only echo the requested hour. Admission requires
+                // the observation header; it cannot certify the data from an echoed input.
+                let stamp = topinfo;
                 // The observation table must be closed and hold at least one data cell.
                 let table = table_section(&view, false, |t| {
                     t.attr("id") == Some("weather_table") || class_has(t, "table_develop3")
@@ -443,8 +438,15 @@ pub fn inspect_web(request: &WebRequest, content_type: &str, body: &[u8]) -> Web
                 (stamp.and_then(|s| Publication::parse_dotted(&s)), table)
             };
             let table = table && complete;
+            if !table {
+                return WebVerdict::Invalid("observation table");
+            }
             let Some(publication) = publication else {
-                return WebVerdict::NotPublished;
+                return if family == WebFamily::CityObservation {
+                    WebVerdict::Invalid("observation header")
+                } else {
+                    WebVerdict::NotPublished
+                };
             };
             if request
                 .publication()
@@ -452,8 +454,12 @@ pub fn inspect_web(request: &WebRequest, content_type: &str, body: &[u8]) -> Web
             {
                 return WebVerdict::Stale(publication);
             }
-            if !table {
-                return WebVerdict::Invalid("observation table");
+            if matches!(family, WebFamily::AwsHourly | WebFamily::CityObservation)
+                && request
+                    .publication()
+                    .is_some_and(|wanted| publication != wanted)
+            {
+                return WebVerdict::Invalid("observation publication");
             }
             WebVerdict::Valid(publication)
         }

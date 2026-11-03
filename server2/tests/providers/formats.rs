@@ -308,7 +308,113 @@ fn recorded_city_page_uses_its_declared_utf8_charset() {
     let no_time = replace_ascii(&body, b"2026.09.25.19:00", b"");
     assert_eq!(
         inspect_web(&city, "text/html", &no_time),
-        WebVerdict::NotPublished
+        WebVerdict::Invalid("observation header")
+    );
+}
+
+#[test]
+fn fixed_hour_city_query_rejects_a_newer_observation() {
+    let body = fixture("city-obs-2026-09-25.html");
+    let request = WebRequest::city(p(20260925, 1800)).unwrap();
+    assert_eq!(
+        inspect_web(&request, "text/html;charset=UTF-8", &body),
+        WebVerdict::Invalid("observation publication")
+    );
+}
+
+#[test]
+fn fixed_hour_city_form_echo_is_not_an_observation_publication() {
+    let request = WebRequest::city(p(20260925, 1900)).unwrap();
+    let form_only = br#"<html><input name="tm" value="2026.09.25.19:00"><table id="weather_table"><tr><td>18.0</td></tr></table></html>"#;
+    assert_eq!(
+        inspect_web(&request, "text/html;charset=UTF-8", form_only),
+        WebVerdict::Invalid("observation header")
+    );
+}
+
+#[test]
+fn captured_current_city_midnight_keeps_measured_fields_and_blank_rain() {
+    use server2::domestic::kma::source::pages::parse_city;
+
+    let body = fixture("city-obs-2026-10-25-midnight.html");
+    assert_eq!(
+        inspect_web(
+            &WebRequest::city(p(20261025, 0)).unwrap(),
+            "text/html;charset=UTF-8",
+            &body
+        ),
+        WebVerdict::Valid(p(20261025, 0))
+    );
+    assert_eq!(
+        inspect_web(
+            &WebRequest::city(p(20261024, 2300)).unwrap(),
+            "text/html;charset=UTF-8",
+            &body
+        ),
+        WebVerdict::Invalid("observation publication")
+    );
+    assert_eq!(
+        inspect_web(
+            &WebRequest::city(p(20261025, 100)).unwrap(),
+            "text/html;charset=UTF-8",
+            &body
+        ),
+        WebVerdict::Stale(p(20261025, 0))
+    );
+    let page = parse_city(&body, "text/html;charset=UTF-8", Some("2026.10.25.00:00")).unwrap();
+    let seoul = page
+        .rows
+        .iter()
+        .find(|r| r.get("stnId").and_then(|v| v.as_str()) == Some("108"))
+        .unwrap();
+    assert_eq!(seoul.get("weather").and_then(|v| v.as_str()), Some("흐림"));
+    assert_eq!(seoul.get("cloud").and_then(|v| v.as_num()), Some(10.0));
+    assert_eq!(seoul.get("t1h").and_then(|v| v.as_num()), Some(15.2));
+    assert!(
+        !seoul.has("r1d"),
+        "a blank daily total is not a measured zero"
+    );
+}
+
+#[test]
+fn fixed_hour_aws_query_rejects_newer_but_minute_minimum_can_advance() {
+    let body = fixture("aws-minute-euckr.html");
+    let request = WebRequest::aws_hourly(p(20261013, 1400)).unwrap();
+    assert_eq!(
+        inspect_web(&request, "text/html", &body),
+        WebVerdict::Invalid("observation publication")
+    );
+    let exact = replace_ascii(&body, b"2026.10.13.14:32", b"2026.10.13.14:00");
+    assert_eq!(
+        inspect_web(&request, "text/html", &exact),
+        WebVerdict::Valid(p(20261013, 1400))
+    );
+    assert_eq!(
+        inspect_web(
+            &WebRequest::aws_minute(Some(p(20261013, 1400))),
+            "text/html",
+            &body
+        ),
+        WebVerdict::Valid(p(20261013, 1432))
+    );
+}
+
+#[test]
+fn minute_structural_faults_are_invalid_before_publication_aging() {
+    let body = fixture("aws-minute-euckr.html");
+    let broken = replace_ascii(&body, b"<table border=\"1\">", b"<div>");
+    let no_stamp = replace_ascii(&broken, b"2026.10.13.14:32", b"");
+    assert_eq!(
+        inspect_web(&WebRequest::aws_minute(None), "text/html", &no_stamp),
+        WebVerdict::Invalid("observation table")
+    );
+    assert_eq!(
+        inspect_web(
+            &WebRequest::aws_minute(Some(p(20261013, 1500))),
+            "text/html",
+            &broken
+        ),
+        WebVerdict::Invalid("observation table")
     );
 }
 

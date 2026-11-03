@@ -281,6 +281,7 @@ pub fn current() -> Context {
 /// Capture before handing work to another task/JoinSet. Does not change its lifetime.
 pub fn inherit<F: Future>(future: F) -> impl Future<Output = F::Output> {
     let context = current();
+    let future = crate::storage::response_first::inherit(future);
     async move { context.scope(future).await }
 }
 pub fn spawn<F>(future: F) -> tokio::task::JoinHandle<F::Output>

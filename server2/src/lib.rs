@@ -240,7 +240,8 @@ async fn metrics(State(s): State<Arc<SharedState>>) -> Response {
         s.memory_bytes(),
         s.config.cache_bytes
     ) + &gateway::metrics::render()
-        + &observability::render_metrics();
+        + &observability::render_metrics()
+        + &storage::response_first::render_metrics();
     (
         [
             ("content-type", "text/plain; version=0.0.4; charset=utf-8"),

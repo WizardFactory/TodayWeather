@@ -23,6 +23,8 @@ use tokio::time::Instant;
 /// Record tasks running at once; a request finding both busy records nothing (a later request
 /// of the town repeats the work).
 pub const TASKS: usize = 2;
+/// Response/durability waiters are bounded separately from summary S3 writers.
+const WAITING: usize = 32;
 /// Memory entries kept; beyond this, entries of dates before today-8 are dropped first.
 pub const MEMORY_ENTRIES: usize = 65_536;
 /// Bound of one record task (S3 reads and writes, not a provider call).
@@ -55,6 +57,7 @@ struct Inner<T> {
     store: SummaryStore<T>,
     memory: Mutex<HashMap<MemoryKey, Entry>>,
     tasks: Arc<Semaphore>,
+    waiting: Arc<Semaphore>,
     dropped: AtomicU64,
     /// Serializes record work, so revisions of one key and date are decided in order.
     serial: tokio::sync::Mutex<()>,
@@ -80,6 +83,7 @@ impl<T: SummaryTransport> Recorder<T> {
                 store: SummaryStore::new(transport),
                 memory: Mutex::new(HashMap::new()),
                 tasks: Arc::new(Semaphore::new(TASKS)),
+                waiting: Arc::new(Semaphore::new(WAITING)),
                 dropped: AtomicU64::new(0),
                 serial: tokio::sync::Mutex::new(()),
             }),
@@ -88,7 +92,7 @@ impl<T: SummaryTransport> Recorder<T> {
     pub fn store(&self) -> &SummaryStore<T> {
         &self.inner.store
     }
-    /// Record calls dropped because both tasks were busy.
+    /// Record calls dropped at the bounded wait or write admission.
     pub fn dropped(&self) -> u64 {
         self.inner.dropped.load(Ordering::Relaxed)
     }
@@ -216,6 +220,12 @@ impl<T: SummaryTransport> Recorder<T> {
     }
     /// Wait until no record task runs (tests and shutdown); false at the deadline.
     pub async fn idle(&self, deadline: Instant) -> bool {
+        let Ok(Ok(_waiting)) =
+            tokio::time::timeout_at(deadline, self.inner.waiting.acquire_many(WAITING as u32))
+                .await
+        else {
+            return false;
+        };
         matches!(
             tokio::time::timeout_at(deadline, self.inner.tasks.acquire_many(TASKS as u32)).await,
             Ok(Ok(_))
@@ -239,15 +249,36 @@ impl<T: SummaryTransport> SummarySink for Recorder<T> {
         if candidates.is_empty() {
             return;
         }
-        let Ok(permit) = self.inner.tasks.clone().try_acquire_owned() else {
+        let scope = crate::storage::response_first::ResponseScope::current();
+        let admission = if scope.is_some() {
+            &self.inner.waiting
+        } else {
+            &self.inner.tasks
+        };
+        let Ok(permit) = admission.clone().try_acquire_owned() else {
             self.inner.dropped.fetch_add(1, Ordering::Relaxed);
             return;
         };
         let this = self.clone();
         crate::observability::spawn(async move {
-            let _permit = permit;
-            this.record_now(candidates, now_ms, Instant::now() + TASK_TIME)
-                .await;
+            let deadline = Instant::now() + TASK_TIME;
+            let _permit = if let Some(scope) = scope {
+                let waiting = permit;
+                scope.after_response().await;
+                if !scope.wait_durable(deadline).await {
+                    this.inner.dropped.fetch_add(1, Ordering::Relaxed);
+                    return;
+                }
+                let Ok(work) = this.inner.tasks.clone().try_acquire_owned() else {
+                    this.inner.dropped.fetch_add(1, Ordering::Relaxed);
+                    return;
+                };
+                drop(waiting);
+                work
+            } else {
+                permit
+            };
+            this.record_now(candidates, now_ms, deadline).await;
         });
     }
 }

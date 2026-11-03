@@ -32,6 +32,9 @@ pub enum Native {
     Forward,
 }
 pub trait BackendHandler: Send + Sync {
+    fn request_budget(&self) -> Duration {
+        Duration::from_secs(3)
+    }
     fn fetch(
         &self,
         path: String,
@@ -385,7 +388,7 @@ impl BackendDispatcher {
                 .and_then(|s| s.native.clone())
         };
         if let Some(native) = native {
-            let attempt_deadline = deadline.min(Instant::now() + Duration::from_secs(3));
+            let attempt_deadline = deadline.min(Instant::now() + native.request_budget());
             match tokio::time::timeout_at(
                 attempt_deadline,
                 native.fetch_or_forward(path.clone(), lang.clone(), attempt_deadline),

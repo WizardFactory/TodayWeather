@@ -1,0 +1,667 @@
+{
+  "schema": 1,
+  "qualification": {
+    "status": "NOT_VALID_FOR_REQUESTED_FULL_CLIENT_RESPONSE",
+    "corrected_on": "2026-10-25",
+    "scope_reduction_authorized": false,
+    "client_data_requirement_changed": false,
+    "requested_full_response_verification_complete": false,
+    "timings_usable_as_full_response_latency": false,
+    "reason": "The lead used a latest-only diagnostic profile that omitted all 168 historical hourly slots and seven historical daily dates. This did not satisfy the unchanged client-data requirement. The measured partial responses are retained only as diagnostic evidence."
+  },
+  "revision": "82f7a4838dda046be966ee9c25c9cb66561d099d",
+  "observed_start_utc": "2026-10-24T14:49:58.136719+00:00",
+  "observed_finish_utc": "2026-10-24T14:50:12.894224+00:00",
+  "campaign_elapsed_seconds": 14.756893332581967,
+  "method": "continuous reqwest send-to-full-body timers, native providers/pure fold/assembly/canonical S3, loopback client on macOS arm64; latest-only Seoul7",
+  "native_runtime_switched": false,
+  "history_complete": false,
+  "production_p95_ms": null,
+  "production_p99_ms": null,
+  "cases": [
+    {
+      "profile": "P1_provider_response_first",
+      "trial": 0,
+      "case": "p1-0",
+      "result": {
+        "body_bytes": 44321,
+        "body_sha256": "a477c058b00b70032023c2d5f39f963e7d57fd978c137630c225777117d8acf9",
+        "elapsed_ms": 1700.5970000000002,
+        "full_body_received": true,
+        "functional_headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "status": 200
+      },
+      "phase_counter_delta": {
+        "get_budget": 4,
+        "provider": 7,
+        "put_budget": 8
+      },
+      "background_native_discovery_possible": false,
+      "canonical_groups": 7,
+      "durable_groups": 7,
+      "writer_drain_after_client_ms": 556.887291,
+      "timeline": [
+        {
+          "event": "raw_capacity_reserved_before_provider",
+          "ms": 14.291333
+        },
+        {
+          "event": "validated_writer_owned",
+          "ms": 1681.864125
+        },
+        {
+          "event": "ram_ready",
+          "ms": 1681.865708
+        },
+        {
+          "event": "server_body_dropped",
+          "ms": 1701.14425
+        },
+        {
+          "event": "test_client_terminal",
+          "ms": 1701.561417
+        },
+        {
+          "event": "test_client_terminal",
+          "ms": 1701.586
+        },
+        {
+          "event": "canonical_publication_started",
+          "ms": 1701.586375
+        },
+        {
+          "event": "canonical_publication_finished",
+          "ms": 2258.365
+        }
+      ],
+      "weather_puts_before_client": {
+        "put_raw": 0,
+        "put_control": 0
+      },
+      "raw_bytes": 149884,
+      "raw_within_reservation": true,
+      "raw_key_set_sha256": "d83a590b601b9601fd9cf763ceff00ae2825857ac86a656b4532a8d923180114",
+      "jobs": [
+        {
+          "name": "current",
+          "complete": true,
+          "ms": 398.843791,
+          "raw_bytes": 909
+        },
+        {
+          "name": "mid-forecast",
+          "complete": true,
+          "ms": 382.113583,
+          "raw_bytes": 1033
+        },
+        {
+          "name": "mid-land",
+          "complete": true,
+          "ms": 33.276624999999996,
+          "raw_bytes": 467
+        },
+        {
+          "name": "mid-temperature",
+          "complete": true,
+          "ms": 36.792458,
+          "raw_bytes": 674
+        },
+        {
+          "name": "rss",
+          "complete": true,
+          "ms": 53.698625,
+          "raw_bytes": 6348
+        },
+        {
+          "name": "short",
+          "complete": true,
+          "ms": 1666.6115000000002,
+          "raw_bytes": 131468
+        },
+        {
+          "name": "shortest",
+          "complete": true,
+          "ms": 450.388083,
+          "raw_bytes": 8985
+        }
+      ]
+    },
+    {
+      "profile": "S1_targeted_canonical_restore",
+      "trial": 0,
+      "case": "p1-0",
+      "result": {
+        "body_bytes": 44321,
+        "body_sha256": "a477c058b00b70032023c2d5f39f963e7d57fd978c137630c225777117d8acf9",
+        "elapsed_ms": 301.402709,
+        "full_body_received": true,
+        "functional_headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "status": 200
+      },
+      "phase_counter_delta": {
+        "get_control": 7,
+        "get_group": 7,
+        "get_raw": 7
+      },
+      "background_native_discovery_possible": false,
+      "body_equal_to_provider": true,
+      "functional_headers_equal": true
+    },
+    {
+      "profile": "S0_unmodified_native_discovery",
+      "trial": 0,
+      "case": "p1-0",
+      "result": {
+        "body_bytes": 44321,
+        "body_sha256": "a477c058b00b70032023c2d5f39f963e7d57fd978c137630c225777117d8acf9",
+        "elapsed_ms": 2715.386083,
+        "full_body_received": true,
+        "functional_headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "status": 200
+      },
+      "phase_counter_delta": {
+        "get_control": 9,
+        "get_group": 6,
+        "get_raw": 6,
+        "list": 47,
+        "list_index": 422
+      },
+      "background_native_discovery_possible": false,
+      "body_equal_to_provider": true,
+      "functional_headers_equal": true
+    },
+    {
+      "profile": "P1_provider_response_first",
+      "trial": 1,
+      "case": "p1-1",
+      "result": {
+        "body_bytes": 44321,
+        "body_sha256": "a477c058b00b70032023c2d5f39f963e7d57fd978c137630c225777117d8acf9",
+        "elapsed_ms": 1514.66425,
+        "full_body_received": true,
+        "functional_headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "status": 200
+      },
+      "phase_counter_delta": {
+        "get_budget": 4,
+        "get_control": 43,
+        "list": 30,
+        "list_index": 212,
+        "provider": 7,
+        "put_budget": 8
+      },
+      "background_native_discovery_possible": true,
+      "canonical_groups": 7,
+      "durable_groups": 7,
+      "writer_drain_after_client_ms": 525.525209,
+      "timeline": [
+        {
+          "event": "raw_capacity_reserved_before_provider",
+          "ms": 1.050833
+        },
+        {
+          "event": "validated_writer_owned",
+          "ms": 1498.069833
+        },
+        {
+          "event": "ram_ready",
+          "ms": 1498.07225
+        },
+        {
+          "event": "server_body_dropped",
+          "ms": 1514.7994580000002
+        },
+        {
+          "event": "test_client_terminal",
+          "ms": 1515.277417
+        },
+        {
+          "event": "test_client_terminal",
+          "ms": 1515.470417
+        },
+        {
+          "event": "canonical_publication_started",
+          "ms": 1515.470708
+        },
+        {
+          "event": "canonical_publication_finished",
+          "ms": 2040.8985830000001
+        }
+      ],
+      "weather_puts_before_client": {
+        "put_raw": 0,
+        "put_control": 0
+      },
+      "raw_bytes": 149884,
+      "raw_within_reservation": true,
+      "raw_key_set_sha256": "f4da6317ea70c75c93e0903bc151354ef3ee4f65e63e59a3292f4c5b0c260de6",
+      "jobs": [
+        {
+          "name": "current",
+          "complete": true,
+          "ms": 1054.6090829999998,
+          "raw_bytes": 909
+        },
+        {
+          "name": "mid-forecast",
+          "complete": true,
+          "ms": 323.17033299999997,
+          "raw_bytes": 1033
+        },
+        {
+          "name": "mid-land",
+          "complete": true,
+          "ms": 35.6965,
+          "raw_bytes": 467
+        },
+        {
+          "name": "mid-temperature",
+          "complete": true,
+          "ms": 31.109125000000002,
+          "raw_bytes": 674
+        },
+        {
+          "name": "rss",
+          "complete": true,
+          "ms": 59.07825,
+          "raw_bytes": 6348
+        },
+        {
+          "name": "short",
+          "complete": true,
+          "ms": 1496.757417,
+          "raw_bytes": 131468
+        },
+        {
+          "name": "shortest",
+          "complete": true,
+          "ms": 415.68487500000003,
+          "raw_bytes": 8985
+        }
+      ]
+    },
+    {
+      "profile": "S1_targeted_canonical_restore",
+      "trial": 1,
+      "case": "p1-1",
+      "result": {
+        "body_bytes": 44321,
+        "body_sha256": "a477c058b00b70032023c2d5f39f963e7d57fd978c137630c225777117d8acf9",
+        "elapsed_ms": 295.510708,
+        "full_body_received": true,
+        "functional_headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "status": 200
+      },
+      "phase_counter_delta": {
+        "get_control": 20,
+        "get_group": 7,
+        "get_raw": 7,
+        "list": 4,
+        "list_index": 42
+      },
+      "background_native_discovery_possible": true,
+      "body_equal_to_provider": true,
+      "functional_headers_equal": true
+    },
+    {
+      "profile": "P1_provider_response_first",
+      "trial": 2,
+      "case": "p1-2",
+      "result": {
+        "body_bytes": 44321,
+        "body_sha256": "a477c058b00b70032023c2d5f39f963e7d57fd978c137630c225777117d8acf9",
+        "elapsed_ms": 1471.5582920000002,
+        "full_body_received": true,
+        "functional_headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "status": 200
+      },
+      "phase_counter_delta": {
+        "get_budget": 4,
+        "get_control": 44,
+        "list": 24,
+        "list_index": 207,
+        "provider": 7,
+        "put_budget": 8
+      },
+      "background_native_discovery_possible": true,
+      "canonical_groups": 7,
+      "durable_groups": 7,
+      "writer_drain_after_client_ms": 524.772542,
+      "timeline": [
+        {
+          "event": "raw_capacity_reserved_before_provider",
+          "ms": 0.768583
+        },
+        {
+          "event": "validated_writer_owned",
+          "ms": 1454.9196659999998
+        },
+        {
+          "event": "ram_ready",
+          "ms": 1454.923083
+        },
+        {
+          "event": "server_body_dropped",
+          "ms": 1471.6879999999999
+        },
+        {
+          "event": "test_client_terminal",
+          "ms": 1472.158958
+        },
+        {
+          "event": "test_client_terminal",
+          "ms": 1472.4338750000002
+        },
+        {
+          "event": "canonical_publication_started",
+          "ms": 1472.434041
+        },
+        {
+          "event": "canonical_publication_finished",
+          "ms": 1997.110625
+        }
+      ],
+      "weather_puts_before_client": {
+        "put_raw": 0,
+        "put_control": 0
+      },
+      "raw_bytes": 149884,
+      "raw_within_reservation": true,
+      "raw_key_set_sha256": "d00666f3874c5d6057a2ad89afdb1a4c443df4e1b5cb3b4313be6f720b4d23e3",
+      "jobs": [
+        {
+          "name": "current",
+          "complete": true,
+          "ms": 328.323083,
+          "raw_bytes": 909
+        },
+        {
+          "name": "mid-forecast",
+          "complete": true,
+          "ms": 320.05212500000005,
+          "raw_bytes": 1033
+        },
+        {
+          "name": "mid-land",
+          "complete": true,
+          "ms": 31.009042,
+          "raw_bytes": 467
+        },
+        {
+          "name": "mid-temperature",
+          "complete": true,
+          "ms": 39.760709,
+          "raw_bytes": 674
+        },
+        {
+          "name": "rss",
+          "complete": true,
+          "ms": 122.629084,
+          "raw_bytes": 6348
+        },
+        {
+          "name": "short",
+          "complete": true,
+          "ms": 1453.93225,
+          "raw_bytes": 131468
+        },
+        {
+          "name": "shortest",
+          "complete": true,
+          "ms": 382.593041,
+          "raw_bytes": 8985
+        }
+      ]
+    },
+    {
+      "profile": "S1_targeted_canonical_restore",
+      "trial": 2,
+      "case": "p1-2",
+      "result": {
+        "body_bytes": 44321,
+        "body_sha256": "a477c058b00b70032023c2d5f39f963e7d57fd978c137630c225777117d8acf9",
+        "elapsed_ms": 282.011,
+        "full_body_received": true,
+        "functional_headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "status": 200
+      },
+      "phase_counter_delta": {
+        "get_control": 7,
+        "get_group": 7,
+        "get_raw": 7,
+        "list_index": 56
+      },
+      "background_native_discovery_possible": true,
+      "body_equal_to_provider": true,
+      "functional_headers_equal": true
+    },
+    {
+      "profile": "A0_durable_first_control",
+      "trial": 3,
+      "case": "a0",
+      "result": {
+        "body_bytes": 44321,
+        "body_sha256": "a477c058b00b70032023c2d5f39f963e7d57fd978c137630c225777117d8acf9",
+        "elapsed_ms": 2057.329708,
+        "full_body_received": true,
+        "functional_headers": {
+          "content-type": "application/json; charset=utf-8"
+        },
+        "status": 200
+      },
+      "phase_counter_delta": {
+        "get_budget": 4,
+        "get_control": 21,
+        "get_raw": 7,
+        "list_index": 177,
+        "provider": 7,
+        "put_budget": 8,
+        "put_control": 14,
+        "put_raw": 7
+      },
+      "background_native_discovery_possible": true,
+      "canonical_groups": 7,
+      "durable_groups": 7,
+      "writer_drain_after_client_ms": 0.003333,
+      "timeline": [
+        {
+          "event": "raw_capacity_reserved_before_provider",
+          "ms": 0.851458
+        },
+        {
+          "event": "validated_writer_owned",
+          "ms": 1487.42925
+        },
+        {
+          "event": "canonical_publication_started",
+          "ms": 1487.429792
+        },
+        {
+          "event": "ram_ready",
+          "ms": 2036.335583
+        },
+        {
+          "event": "canonical_publication_finished",
+          "ms": 2036.336125
+        },
+        {
+          "event": "server_body_dropped",
+          "ms": 2057.459125
+        },
+        {
+          "event": "test_client_terminal",
+          "ms": 2058.212042
+        }
+      ],
+      "weather_puts_before_client": {
+        "put_raw": 7,
+        "put_control": 14
+      },
+      "raw_bytes": 149884,
+      "raw_within_reservation": true,
+      "raw_key_set_sha256": "af4e2ce500af53b8fc1431d1fc5f9163cf9d6fee6918a8032656838fb5b0aac8",
+      "jobs": [
+        {
+          "name": "current",
+          "complete": true,
+          "ms": 323.947834,
+          "raw_bytes": 909
+        },
+        {
+          "name": "mid-forecast",
+          "complete": true,
+          "ms": 316.33612500000004,
+          "raw_bytes": 1033
+        },
+        {
+          "name": "mid-land",
+          "complete": true,
+          "ms": 34.844083,
+          "raw_bytes": 467
+        },
+        {
+          "name": "mid-temperature",
+          "complete": true,
+          "ms": 39.180042,
+          "raw_bytes": 674
+        },
+        {
+          "name": "rss",
+          "complete": true,
+          "ms": 75.25058399999999,
+          "raw_bytes": 6348
+        },
+        {
+          "name": "short",
+          "complete": true,
+          "ms": 1486.3752909999998,
+          "raw_bytes": 131468
+        },
+        {
+          "name": "shortest",
+          "complete": true,
+          "ms": 399.188708,
+          "raw_bytes": 8985
+        }
+      ]
+    }
+  ],
+  "coverage": {
+    "body_bytes": 44321,
+    "body_sha256": "a477c058b00b70032023c2d5f39f963e7d57fd978c137630c225777117d8acf9",
+    "all_eight_bodies_identical": true,
+    "short_slots": 41,
+    "shortest_slots": 6,
+    "mid_daily_slots": 11,
+    "historical_hourly_missing": 168,
+    "historical_daily_missing": 7,
+    "paired_full_RawId_match_enforced": true,
+    "raw_bytes_per_provider_trial": 149884
+  },
+  "native_ledger_checkpoint": {
+    "admitted": {
+      "get_budget": 16,
+      "get_control": 234,
+      "get_group": 27,
+      "get_raw": 55,
+      "list": 118,
+      "list_index": 1282,
+      "provider": 28,
+      "put_budget": 32,
+      "put_control": 56,
+      "put_raw": 28
+    },
+    "conservative_body_and_header_bytes": 16848021,
+    "denied": 0,
+    "inflight_reserved_bytes": 0,
+    "limits": {
+      "bytes": 262144000,
+      "external_preflight_lists": 3,
+      "native_s3_reads": 49997,
+      "provider_admissions": 64,
+      "provider_wire_attempt_upper_bound": 256,
+      "s3_writes": 5000,
+      "wall_seconds": 1800
+    }
+  },
+  "checkpoint_native_s3_reads": 1732,
+  "checkpoint_native_s3_writes": 116,
+  "external_empty_prefix_lists": 3,
+  "native_runtime_shutdown_settlement_recorded": false,
+  "limits": {
+    "provider_wire_upper": 256,
+    "provider_admissions": 64,
+    "s3_reads": 50000,
+    "writes": 5000,
+    "conservative_bytes": 262144000,
+    "seconds": 1800
+  },
+  "artifacts_unchanged_during_live_run": true,
+  "as_run_artifacts": {
+    "server2/examples/kma_response_first_measure.rs": "45bd17a29397254a75d2e5d7e65c4391e8fd223dbe8c674f335ca694b454a010",
+    "server2/examples/kma_response_first_measure/source.rs": "d3f0dd5a3026888727df11ff719a781eea1cc410d9584b7a036c5b670a59d94f",
+    "server2/examples/kma_response_first_measure/pending.rs": "b812634fa80231b2869bd816d4c789839af1c3a5cffe293754f9f0b096aec92c",
+    "server2/examples/kma_cold_measure/scope.rs": "8e4932ae16474b8e2d13be946cabbd0d23ed42e27fd3e954206cf3f4b6f2ab7c",
+    "server2/tools/verification/kma_response_first_measure.py": "a44481b938ecd1a4798a6b788d612c80370ec6deba04d9ce6155dde0ffbba7fc",
+    "server2/tools/verification/kma_cold_measure.py": "93ff2515060f182838226625a28993f02eed959d2f506b94fa674e7c8d45dd63",
+    "server2/Cargo.lock": "e9e198c01688599f9fcdfdf4847314ca6556f5dab89c98884b3f93bf85e9bd51",
+    "binary": "1a611f5544d6cb23d34b657ba71a4992188060e82f23d58153f89f0c34a68531"
+  },
+  "evidence_sha256": {
+    "raw-report.json": "f3eaadc1feed97a4e2b76e25e837102f7b9ab33de4a387ed597fc2188373a586",
+    "provenance.json": "a0905cf33ca0b2c78ece971cb61d49fed860cc6ac0feedb8666b765675af36c2"
+  },
+  "limitations": [
+    "Only P1 trial0 and S1 trial0 precede native S0 background discovery; later trials include possible contention. Do not infer an uncontended paired speedup from all samples.",
+    "The as-run final ledger is a pre-runtime-shutdown checkpoint, with zero in-flight reservations at that instant; later native cancellation charges/admissions were not separately settled. Native hard caps still guarded operations.",
+    "The maintained harness was subsequently changed to run S0 last and snapshot counters after runtime drop; no new live campaign was run for that revision.",
+    "P1 skips canonical weather discovery via an empty native context and directly fetches the fixed7 latest products. S1 receives target catalog metadata. Neither is an unchanged production route.",
+    "S08 quota GET/CAS PUT occurs before provider calls under task-only budget keys; these measurements do not qualify deployed shared quota.",
+    "All168 historical hourly slots and7 historical daily dates are absent in this forecast-only profile; no seven-day PTY/LGT or source-vintage equivalence claim.",
+    "Three samples per new path and one per control cannot qualify production p95/p99. OS/upstream caches and external mobile hops are outside the test boundary.",
+    "Only one pending batch and test client per trial; production generation pins, multi-waiter gates, retry recovery and shutdown drain remain unimplemented."
+  ],
+  "post_run_tool_candidate": {
+    "baseline": "82f7a4838dda046be966ee9c25c9cb66561d099d",
+    "current_tool_sha256": {
+      "server2/examples/kma_response_first_measure.rs": "9fe634dd801042a33eaafe84ae2369da38ce80261ffd00f3e9be23c9e160547d",
+      "server2/examples/kma_response_first_measure/source.rs": "d3f0dd5a3026888727df11ff719a781eea1cc410d9584b7a036c5b670a59d94f",
+      "server2/examples/kma_response_first_measure/pending.rs": "b812634fa80231b2869bd816d4c789839af1c3a5cffe293754f9f0b096aec92c",
+      "server2/tools/verification/kma_response_first_measure.py": "a64e8ea453d136afc400ab0cccf9361005db68121eb4bb21c1dac5615abdba72",
+      "server2/tools/verification/test_kma_response_first_measure.py": "f4ea9e218675a7dbbccff1f208d75287d392ee7f070f42ee16a1c5dab3fe79fa",
+      "server2/config/tasks/KMA-RESPONSE-FIRST-MEASURE.json": "684af35f399fb9066f27b18bd3371592916da0862f7b0427b3bc010b50912ab8"
+    },
+    "measured_executable_sha256": "1a611f5544d6cb23d34b657ba71a4992188060e82f23d58153f89f0c34a68531",
+    "corrected_executable_sha256": "d91b91656bd8a62f349c35f79528ee8291db29ca86aa4fcdd2e0202044d54786",
+    "corrected_revision_live_executed": false
+  },
+  "local_verification": {
+    "rust_tests": 10,
+    "python_tests": 6,
+    "locked_offline_build": true,
+    "clippy_warnings_denied": true,
+    "formatting": true,
+    "scoped_placement_errors": 0,
+    "evidence_checks": 105,
+    "local_reference_checks": 365,
+    "source_line_checks": 82,
+    "artifact_policy_isolated_index": "PASS",
+    "real_index_unchanged": true,
+    "whole_worktree_clean_claim": false,
+    "cargo_target_cleanup_recovered_bytes": 0
+  }
+}

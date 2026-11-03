@@ -37,6 +37,16 @@ Privacy/label proof, measured costs, keys and cutovers keep their named gates.
 The approved legacy push-registration continuity difference is limited to that
 state; used API contracts and weather-history compatibility still hold.
 
+The 2026-10-24 [Korean acquisition and retrieval review](server2-kma-data-design.md)
+selects original canonical raw/catalog replay, public reference candidates and
+one shared RAM input closure. Its [manual-backed reassessment](../evidence/research/kma-storage-reassessment-2026-10-24.md)
+keeps lossless packs conditional and defers grid heads/day locators. The
+[diagram](diagrams/server2-kma-data-design.html) is a design
+proposal. Original group ownership, raw-only persistence and public-value
+compatibility remain constraints; historical source parity, archive automation
+and real empty-S3 p95/p99 still require qualification. This review does not
+activate a new storage or serving path.
+
 ### Implementation placement
 
 AK's binding direction is broader than Rust source placement: **all new assets
@@ -180,9 +190,9 @@ the historical traffic report does not identify each request's backend version.
 `/weather` and `/geocode` move together because legacy loopback bypasses nginx.
 An explicit family/version switch retains unmigrated backends over loopback.
 No family switches until exact fixture parity, seven-day paired shadow with
-zero unexplained differences, measured cold p95 <= 2.5s, quota headroom and AK
+zero unexplained differences, measured cold p95 <= 2.5 s, quota headroom and AK
 cutover approval. Whole-gateway gates remain: 501 rate <= legacy, p95 <= legacy
-+ 10%, >= 99.9% within 9s, and cache-aware rollback. This design executes none
++ 10%, >= 99.9% within 9 s, and cache-aware rollback. This design executes none
 of those cutover checks and asserts no production response parity.
 
 S19 ([#2704](https://github.com/WizardFactory/TodayWeather/issues/2704)) provides
@@ -298,6 +308,59 @@ A brief retention gate coordinates epoch checks with response admission, without
 holding a lock across asynchronous work. Concurrent durable publications on
 unrelated keys remain successful.
 
+**KMA response-first working-tree implementation (2026-10-25):** native KMA
+construction selects ASOS-primary historical assembly and foreground RAM-ready
+raw groups, followed by supervised canonical weather publication. AK permits
+changed acquired historical numbers, preserves public three-hour slots, and
+accepts crash loss before persistence. No deployment or full live-data qualification
+is claimed. The durable-first rule above still governs other owners, canonical
+restore, result/disk caches and dependency tokens; RAM readiness is not an S06 receipt.
+
+The [2026-10-25 source qualification](../evidence/research/kma-asos-closure-qualification-2026-10-25.md)
+also repairs native city collection to `/w/weather/land/city-obs.do`. The observation
+header must exactly match the requested hourly/city publication before raw
+construction; a city search-form timestamp does not prove publication. Older
+pages remain `Stale`; newer mismatches are invalid. Minute/RSS requests continue
+to accept publications newer than their minimum. No APIHub data call or complete
+real seven-day source/latency qualification is claimed.
+
+The 2026-10-26 KST continuation applies ASOS-specific KMA QnA definitions to
+normal rain blanks, trace zero and QC, with another valid measurement and daily
+event/duration guards. API transfer is an explicit inference, not a general rule
+for missing/null, minute or HTML fields. Raw bytes and legacy replay are unchanged;
+the observed grid S16 dependency digest changes. The retained originals now
+support124 of 168hourly rain/PTY rows and7 daily totals;44 QC9 hours and the required
+midnight still prevent actual seven-day qualification. APIHub is optional.
+
+One writer owns charged raw before readiness, retains the pending overlay across
+flight expiry and protects S3/overlay transitions with generation pins and full
+RawId deduplication. Default admission is 768 MiB of logical worst-case reservations
+(shrunk to validated retained bytes), 88 MiB/group and 4,096 entries, with three S3
+writers. A 616 MiB worst-case one-grid fan-out is tested before any provider finishes.
+This is a real maximum memory commitment, not preallocated memory; production
+instance headroom remains unqualified. Normal retries retain the same original
+bytes (9 s attempts, backoff capped at 30 s). Deterministic invalid input parks
+until shutdown; corrupt stored/control reads remain eligible for retry.
+Body end/error/drop releases publication; a 10 s dormancy cap, no-waiter detection
+and shutdown also release it. The hook proves server body termination, not remote
+receipt. Quiesce rejects queued misses and a 34 s shutdown drain counts abandoned
+served originals. No durable copy means exact crash recovery can be impossible.
+
+S16 freezes a durability fence for the snapshot's own full RawIds, including RAM
+copies retained in grid and station state. It waits after the body for those
+original receipts and publishes only after they are durable. Unrelated parked
+failures and later acquisitions do not extend that fence. Existing two-task/30 s
+storage-work bounds remain, with a separate maximum of 32 response/durability
+waiters. Waiting consumes no storage-worker permit. Deterministic raw rejection
+wakes and skips affected summaries immediately. A summary can still be skipped
+on wait/write admission or timeout, and a later request retries unexamined inputs.
+Legacy optional backfill
+remains durable-before-visible. The public gateway stays 9 s; ASOS-primary KMA gets
+an 8 s handler budget and a 500 ms assembly reserve, while geocode retains its own 3 s
+cap. Other handlers keep their existing budgets. These are limits, not latency
+measurements. See the [current implementation record](../evidence/research/kma-full-response-implementation-2026-10-25.md)
+and [selected protocol](server2-kma-data-design.md#response-first-durability-and-recovery).
+
 Current defaults account for 128 MiB retained cache and four owners reserving
 64 MiB each, separately from 128 waiter admission. Concrete insertions charge
 keys, envelopes, dependency metadata and payload; generic cache callers must
@@ -408,9 +471,9 @@ old versions. Canonical raw data remains `If-None-Match: *`, with content
 integrity checked; an ambiguous/412 result is reconciled by metadata/body verification.
 
 Retained catalog versions also have growing-copy cost. With 512-byte identity
-entries and one append per write, 192 revisions retain about 9.05MiB across
-versions versus 96KiB in the final catalog; 1,000 retain about 244.4MiB versus
-500KiB. Headers, page lists and pack updates add more. In general retained bytes
+entries and one append per write, 192 revisions retain about 9.05 MiB across
+versions versus 96 KiB in the final catalog; 1,000 retain about 244.4 MiB versus
+500 KiB. Headers, page lists and pack updates add more. In general retained bytes
 are `sum(version_header + entry_size * entries_in_that_version)`, not just final
 catalog size. These are sizing examples, not observed traffic. P2 measures write
 cadence, revision count and serialized size per partition; deterministic finer
@@ -791,18 +854,18 @@ the published record. The attempt cap itself is unchanged.
 For a new-data miss, bound the chain explicitly:
 
 ```text
-total <= geocode_lookup + backend_attempts + final_response_work <= 9s
+total <= geocode_lookup + backend_attempts + final_response_work <= 9 s
 backend_attempt = budget_reservation + weather_provider
                 + raw_PUT_batches + catalog_GET + catalog_CAS_PUT
-                + conflict_reconcile + verification/assembly <= 3s per waiter
+                + conflict_reconcile + verification/assembly <= 3 s per waiter
 ```
 
-For illustration, a single-owner miss with reservation 0.1–0.2s, weather
-provider 0.5–1.5s, three S3 waves 0.3–0.6s and CPU 0.2s needs 1.1–2.5s backend
-work before transfer/queues. One CAS conflict adds GET + PUT (0.2–0.4s).
-Adding a one-provider geocode acquisition/reservation of 0.4–1.4s gives
-1.5–3.9s total before those excluded costs; one backend attempt still caps at
-3s. These inputs are assumptions, not a timeout guarantee. Multiple provider
+For illustration, a single-owner miss with reservation 0.1–0.2 s, weather
+provider 0.5–1.5 s, three S3 waves 0.3–0.6 s and CPU 0.2 s needs 1.1–2.5 s backend
+work before transfer/queues. One CAS conflict adds GET + PUT (0.2–0.4 s).
+Adding a one-provider geocode acquisition/reservation of 0.4–1.4 s gives
+1.5–3.9 s total before those excluded costs; one backend attempt still caps at
+3 s. These inputs are assumptions, not a timeout guarantee. Multiple provider
 dependencies, raw batches, sibling catalogs and geocoder fallbacks add their
 actual waves. Budget remaining time before every stage; if raw/group publication
 cannot finish, the new result is not acknowledged. Work ownership, interruption
@@ -937,10 +1000,10 @@ T = waves * assumed_wave_latency + compressed_MiB / effective_MiB_per_sec
     + decompression/verification/parsing/assembly allowance
 ```
 
-Use 100–200ms per wave and 50MiB/s effective bandwidth for comparison. A wave
+Use 100–200 ms per wave and 50 MiB/s effective bandwidth for comparison. A wave
 means a batch's completion, not a claim that parallel GET tails equal one GET.
 Transfer and CPU allowances simplify overlap into an illustrative additive model.
-The 240-object case assumes 12MiB and 0.20s CPU/router work, plus two persistable
+The 240-object case assumes 12 MiB and 0.20 s CPU/router work, plus two persistable
 location-lookup waves and one catalog wave (all needed catalogs fit that wave).
 Counts are scenarios, not a deployed inventory: 8x24 hourly grid slots alone
 are 192 identities; sky/station/minute inputs, revisions and pages can add more.
@@ -957,7 +1020,7 @@ protocol; paginated LISTs or more prefixes would increase it.
 | Prepared raw packs, compact scenario | 16 | 32 | 4 | 0.84–1.24 |
 | Prepared raw packs plus open/late data | 48 | 32 | 5 | 0.94–1.44 |
 | Individual bodies, constrained concurrency | 240 | 16 | 18 | 2.24–4.04 |
-| Many revisions: 40MiB, 0.45s CPU/router | 1000 | 32 | 35 | 4.75–8.25 |
+| Many revisions: 40 MiB, 0.45 s CPU/router | 1000 | 32 | 35 | 4.75–8.25 |
 
 Pack scenarios assume the same total bytes/CPU as 240 bodies and packs already
 exist; over-read, decompression and unfinished current-day blocks can worsen
@@ -969,9 +1032,9 @@ corresponds to the individual p99.84, not p95. Measure full request percentiles.
 
 For the 88.56% coordinate-weather group, replace the two persistable location
 waves with actual volatile-cache-miss geocoder acquisition. Assume only for
-comparison 0.3–1.2s per successful provider call and 0.1–0.2s per synchronous
-quota-reservation wave. One provider is 0.4–1.4s; a sequential Kakao/Google chain
-is 0.8–2.8s. The per-call/lookup/gateway caps still apply; retries and queues are
+comparison 0.3–1.2 s per successful provider call and 0.1–0.2 s per synchronous
+quota-reservation wave. One provider is 0.4–1.4 s; a sequential Kakao/Google chain
+is 0.8–2.8 s. The per-call/lookup/gateway caps still apply; retries and queues are
 excluded. No geocoder raw body is durably published. These assumptions are not
 provider measurements and cannot establish the cutover p95 gate.
 The two-provider case conservatively counts two sequential provider-specific
@@ -981,10 +1044,10 @@ term; failed admission must prevent unreserved provider calls.
 
 | Coordinate-weather case | Geocoder + weather waves | Estimated seconds |
 | --- | --- | ---: |
-| One provider; 240 individual weather bodies at concurrency 32 | 1 geocode acquisition + 9 weather S3 waves + 0.44s allowance | 1.74–3.64 |
-| Two sequential providers; same individual bodies | 2 geocode acquisitions + 9 weather S3 waves + 0.44s | 2.14–5.04 |
-| One provider; 16 prepared weather blocks | 1 geocode acquisition + 2 weather S3 waves + 0.44s | 1.04–2.24 |
-| Two sequential providers; 16 prepared weather blocks | 2 geocode acquisitions + 2 weather S3 waves + 0.44s | 1.44–3.64 |
+| One provider; 240 individual weather bodies at concurrency 32 | 1 geocode acquisition + 9 weather S3 waves + 0.44 s allowance | 1.74–3.64 |
+| Two sequential providers; same individual bodies | 2 geocode acquisitions + 9 weather S3 waves + 0.44 s | 2.14–5.04 |
+| One provider; 16 prepared weather blocks | 1 geocode acquisition + 2 weather S3 waves + 0.44 s | 1.04–2.24 |
+| Two sequential providers; 16 prepared weather blocks | 2 geocode acquisitions + 2 weather S3 waves + 0.44 s | 1.44–3.64 |
 
 An acquisition above includes its reservation wave. The prior table remains
 conditional on usable persistable location lookups; it is not the dominant
@@ -2185,7 +2248,7 @@ from `/gather` against the retired `KmaStnMinute`; the rules are ported but not 
 decision), and the deployed `ASOS_HISTORY_STATIONS` allowlist (every registry city station is a
 candidate).
 
-### S15b-2s station registry seed (2026-10-15)
+### S15b-2 s station registry seed (2026-10-15)
 
 AK authorized a one-time read-only export of the legacy `kmastninfos` on 2026-10-15. It ran with
 `find` only, and the connection URL was loaded in-process and never printed or stored. It returned
@@ -3232,7 +3295,7 @@ S17b serves the legacy direct public routes, which reach Express through nginx r
   cookie (S12 precedent).
 - **Forwards.** Since S15b-4a listed direct routes answer natively with request-time
   acquisition. Outcomes legacy must still answer (a town absent from the town list, the S15
-  `next(err)` forwards, including the v000705 `/short`, `/shortest`, `/current` 500s) take the
+  `next(err)` forwards, including the v000705 `/short`, `/shortest`, `/current` 500 s) take the
   legacy hop unchanged (`BackendDispatcher::proxy`: verbatim request target to the plain-HTTP
   loopback origin, which direct entries require at startup, hop-by-hop and `Connection`-listed headers dropped, 30-second CloudFront origin timeout).
 
@@ -3437,7 +3500,7 @@ clock. A missing result never releases
 its claim. Unregistered FCM tokens disable conditional alerts, leaving alarms alone.
 Korean titles use the legacy weather/level names; other languages use legacy
 English text. The first matched zone supplies the body. The urgent HTTP-v1 envelope
-preserves `data.eventId`, Android TTL `300s`/priority `HIGH` and APNs expiry at
+preserves `data.eventId`, Android TTL `300 s`/priority `HIGH` and APNs expiry at
 submission time plus 300 seconds; see the [official message reference](https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages).
 
 The new feed/claim paths fall inside the repository S03/S10f `index/v2/*` IAM
@@ -3524,7 +3587,7 @@ update, withdrawal, list/show/latest and missing-language translation. S20 owns
 process/router mounting. This is not a claim that a notice route or popup is deployed.
 
 `index/v2/notices/state.json` retains numeric IDs, operator records and operation
-identities under an 8MiB/10000-record cap. Absent/ETag conditional writes plus unknown
+identities under an 8 MiB/10000-record cap. Absent/ETag conditional writes plus unknown
 outcome readback preserve acknowledgements across concurrent writers. An unchanged
 readback retains pending bytes/identity/precondition; later read failure, refusal or
 retry exhaustion remains uncertain until success or a changed base rules out the old CAS. Mutable notice

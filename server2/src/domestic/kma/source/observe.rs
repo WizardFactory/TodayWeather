@@ -21,6 +21,7 @@ use super::asos::{AsosFetched, AsosStore};
 use super::doc::{Doc, Val};
 use super::pages::{merge_aws_city, parse_aws, parse_city};
 use super::records::Reader;
+use super::representative::{self, Verdict};
 use super::stations::{Registry, RowStore, StationGeo};
 use crate::domestic::asos::{AsosKind, AsosRequest};
 use crate::domestic::family::WebRequest;
@@ -149,16 +150,19 @@ pub struct PageId {
     pub hour: Publication,
     pub fetched_at_ms: f64,
     pub sha256: String,
+    /// Full canonical identity retained with this page's RAM copy.
+    pub raw_id: String,
 }
-type PageIds = BTreeMap<(&'static str, Publication), (f64, String)>;
+type PageIds = BTreeMap<(&'static str, Publication), (f64, String, String)>;
 fn page_ids(ids: &PageIds) -> Arc<Vec<PageId>> {
     Arc::new(
         ids.iter()
-            .map(|((kind, hour), (at, sha))| PageId {
+            .map(|((kind, hour), (at, sha, raw_id))| PageId {
                 kind,
                 hour: *hour,
                 fetched_at_ms: *at,
                 sha256: sha.clone(),
+                raw_id: raw_id.clone(),
             })
             .collect(),
     )
@@ -251,6 +255,8 @@ pub struct Observations<T> {
     asos_gate: Arc<tokio::sync::Semaphore>,
     /// Owned request-time acquisitions: one task per key, surviving every waiter (S13d).
     owned: crate::resolver::OwnedFlights<Acq, ()>,
+    observed_history: bool,
+    raw_writer: Option<Arc<crate::storage::response_first::Writer>>,
 }
 fn aws_key() -> ProviderKey {
     ProviderKey::Named {
@@ -310,7 +316,17 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 retain: Duration::from_secs(3),
             })
             .expect("static owned acquisition bounds"),
+            observed_history: false,
+            raw_writer: None,
         }
+    }
+    /// Select the ASOS-primary history contract before sharing this owner.
+    pub fn observed_history(mut self) -> Self {
+        self.observed_history = true;
+        self
+    }
+    pub fn set_raw_writer(&mut self, writer: Arc<crate::storage::response_first::Writer>) {
+        self.raw_writer = Some(writer);
     }
     fn state(&self) -> std::sync::MutexGuard<'_, State> {
         self.state.lock().unwrap_or_else(|e| e.into_inner())
@@ -415,7 +431,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         if let Some(previous) = latest.add_hours(-1) {
             owned.extend(self.ensure_hourly(previous, until));
         }
-        self.backfill_hours(now_ms);
+        // ASOS owns completed history under the observed policy. A speculative 192-hour
+        // AWS sweep would compete with the foreground sources without proving missing fields.
+        if !self.observed_history {
+            self.backfill_hours(now_ms);
+        }
         crate::history::join_all(owned).await;
         // Pages beyond the readers' reach make the collections out of date by themselves.
         {
@@ -549,7 +569,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             .await
             .unwrap_or_default();
             let mut s = self.state();
-            for (p, rows, at, sha) in parsed.0 {
+            for (p, rows, at, sha, raw_id) in parsed.0 {
                 if s.pages
                     .hourly_at
                     .get(&p)
@@ -557,17 +577,17 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 {
                     s.pages.hourly.insert(p, rows);
                     s.pages.hourly_at.insert(p, at);
-                    s.pages.ids.insert(("aws-hourly", p), (at, sha));
+                    s.pages.ids.insert(("aws-hourly", p), (at, sha, raw_id));
                 }
             }
-            for (p, rows, at, sha) in parsed.1 {
+            for (p, rows, at, sha, raw_id) in parsed.1 {
                 if s.pages
                     .ids
                     .get(&("city-obs", p))
-                    .is_none_or(|(previous, _)| *previous < at)
+                    .is_none_or(|(previous, _, _)| *previous < at)
                 {
                     s.pages.city.insert(p, rows);
-                    s.pages.ids.insert(("city-obs", p), (at, sha));
+                    s.pages.ids.insert(("city-obs", p), (at, sha, raw_id));
                 }
             }
             s.pages.days.insert(day, std::time::Instant::now());
@@ -750,12 +770,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         if let Some(records) = self
             .acquire_web(request, Instant::now() + page_time())
             .await
-            && let Some((p, rows, at, sha)) = parse_hourly(&records)
+            && let Some((p, rows, at, sha, raw_id)) = parse_hourly(&records)
         {
             let mut s = self.state();
             s.pages.hourly.insert(p, rows);
             s.pages.hourly_at.insert(p, at);
-            s.pages.ids.insert(("aws-hourly", p), (at, sha));
+            s.pages.ids.insert(("aws-hourly", p), (at, sha, raw_id));
             s.pages.dirty = true;
             s.pages.hourly_dirty = true;
         }
@@ -779,11 +799,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 if let Some(records) = this
                     .acquire_web(request, Instant::now() + page_time())
                     .await
-                    && let Some((p, rows, at, sha)) = parse_city_record(&records)
+                    && let Some((p, rows, at, sha, raw_id)) = parse_city_record(&records)
                 {
                     let mut s = this.state();
                     s.pages.city.insert(p, rows);
-                    s.pages.ids.insert(("city-obs", p), (at, sha));
+                    s.pages.ids.insert(("city-obs", p), (at, sha, raw_id));
                     s.pages.dirty = true;
                     s.pages.hourly_dirty = true;
                 }
@@ -835,6 +855,30 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     }
     /// Acquire and publish one KMA page; the published records, or None.
     async fn acquire_web(&self, request: WebRequest, deadline: Instant) -> Option<Vec<RawRecord>> {
+        if let Some(writer) = &self.raw_writer {
+            let key = format!("station/{request:?}");
+            let acquire = self.acquire.clone();
+            let reserve = crate::storage::Limits::default().raw_bytes
+                + crate::storage::CatalogLimits::default().retained_control_bytes;
+            return writer
+                .acquire(key, reserve, deadline, async move {
+                    match acquire
+                        .web(request, deadline)
+                        .await
+                        .map_err(|_| crate::storage::Error::Transport)?
+                    {
+                        Acquired::Complete(a) => Ok(Some(crate::storage::response_first::Batch {
+                            declaration: a.declaration,
+                            records: a.records,
+                        })),
+                        _ => Ok(None),
+                    }
+                })
+                .await
+                .ok()
+                .flatten()
+                .map(|r| r.records.clone());
+        }
         match self.acquire.web(request, deadline).await {
             Ok(Acquired::Complete(acquisition)) => {
                 let records = acquisition.records.clone();
@@ -1036,6 +1080,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     ) -> (OrderedJson, Option<AsosView>) {
         let reason = |r: &str, mapping: Option<OrderedJson>| {
             let mut out = Vec::new();
+            if self.observed_history {
+                out.push((
+                    "policy",
+                    OrderedJson::String("asos-primary-v1".encode_utf16().collect()),
+                ));
+            }
             if let Some(m) = mapping {
                 out.push(("mapping", m));
             }
@@ -1048,7 +1098,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             // The station list is still loading: legacy's read budget expired.
             return (reason("cache-read-timeout", None), None);
         };
-        let Some(mapping) = nearest(town, folded.registry.docs(), ASOS_MAX_KM) else {
+        let chosen = if self.observed_history {
+            match representative_mapping(town, folded.registry.docs(), ASOS_MAX_KM) {
+                Ok(chosen) => chosen,
+                Err(Unrepresentative) => return (reason("station-unrepresentative", None), None),
+            }
+        } else {
+            nearest(town, folded.registry.docs(), ASOS_MAX_KM)
+        };
+        let Some(mapping) = chosen else {
             // Station coordinates still being resolved are late data, not an absent station.
             if self.flight(&Flight::Geocode).is_some() {
                 return (reason("cache-read-timeout", None), None);
@@ -1099,14 +1157,23 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         let station_c = station.clone();
         let folded_c = folded.clone();
         let (start_c, end_c) = (start.clone(), end.clone());
-        let run_key = Flight::AsosRun(station.clone());
+        let run_key = Flight::AsosRun(format!("{station}/{end}"));
+        // A pre-release miss must become eligible at the documented 11:00 API boundary.
+        let release = Publication::new(schedule::from_ms(now_ms as i64).date(), 1100)
+            .map(schedule::to_ms)
+            .unwrap_or(now_ms as i64);
+        let retry = if release > now_ms as i64 {
+            ASOS_RUN_RETRY.min(Duration::from_millis((release - now_ms as i64) as u64))
+        } else {
+            ASOS_RUN_RETRY
+        };
         self.own(
             Acq::AsosRun(station.clone()),
             crate::resolver::owned::MAX_OWNED,
             until,
             move |this| {
                 Box::pin(async move {
-                    if this.claim(&run_key, ASOS_RUN_RETRY) {
+                    if this.claim(&run_key, retry) {
                         this.recover_asos(&station_c, &folded_c, &start_c, &end_c)
                             .await;
                     }
@@ -1130,14 +1197,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     && !s.asos_failed.contains_key(&station),
             )
         };
-        let store = station_store(&station, &fetched, folded);
+        let store = station_store(&station, &fetched, folded, self.observed_history);
         let view = AsosView {
             station: station.clone(),
             fetched: fetched.clone(),
             settled,
         };
         let docs = |d: Vec<Doc>| OrderedJson::Array(d.iter().map(Doc::json).collect());
-        let answer = object(vec![
+        let mut answer = vec![
             ("mapping", mapping.json()),
             (
                 "hourly",
@@ -1152,8 +1219,19 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 "daily",
                 docs(store.read(AsosKind::Daily, &station, &start, &end)),
             ),
-        ]);
-        (answer, Some(view))
+        ];
+        if self.observed_history {
+            answer.push((
+                "policy",
+                OrderedJson::String("asos-primary-v1".encode_utf16().collect()),
+            ));
+            answer.push((
+                "startDate",
+                OrderedJson::String(start.encode_utf16().collect()),
+            ));
+            answer.push(("endDate", OrderedJson::String(end.encode_utf16().collect())));
+        }
+        (object(answer), Some(view))
     }
     async fn load_asos(self: Arc<Self>, station: &str, now_ms: f64) {
         let deadline = Instant::now() + READ_DEADLINE;
@@ -1215,9 +1293,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             .map(|e| e.fetched.clone())
             .unwrap_or_default();
         for f in mine {
-            if !fetched.iter().any(|g| {
-                g.fetched_at_ms == f.fetched_at_ms && g.start == f.start && g.kind == f.kind
-            }) {
+            if !fetched.iter().any(|g| g.same_original(&f)) {
                 fetched.push(f);
             }
         }
@@ -1243,28 +1319,60 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             .get(station)
             .map(|e| e.fetched.clone())
             .unwrap_or_default();
-        let plan = station_store(station, &fetched, folded).plan(station, start, end);
+        let plan = station_store(station, &fetched, folded, self.observed_history)
+            .plan(station, start, end);
         for (kind, a, b) in plan {
             let Ok(request) = AsosRequest::new(kind, station, &a, &b) else {
                 continue;
             };
             let _permit = self.asos_gate.clone().acquire_owned().await;
             let deadline = Instant::now() + range_time();
-            let Ok(Acquired::Complete(acquisition)) =
-                self.acquire.asos(request.clone(), deadline).await
-            else {
-                continue;
+            let records = if let Some(writer) = &self.raw_writer {
+                let acquire = self.acquire.clone();
+                let wanted = request.clone();
+                let key = format!("asos/{kind:?}/{station}/{a}/{b}");
+                let reserve = crate::domestic::asos::MAX_PAGES as usize
+                    * crate::storage::Limits::default().raw_bytes
+                    + crate::storage::CatalogLimits::default().retained_control_bytes;
+                let Ok(Some(ready)) = writer
+                    .acquire(key, reserve, deadline, async move {
+                        match acquire
+                            .asos(wanted, deadline)
+                            .await
+                            .map_err(|_| crate::storage::Error::Transport)?
+                        {
+                            Acquired::Complete(a) => {
+                                Ok(Some(crate::storage::response_first::Batch {
+                                    declaration: a.declaration,
+                                    records: a.records,
+                                }))
+                            }
+                            _ => Ok(None),
+                        }
+                    })
+                    .await
+                else {
+                    continue;
+                };
+                ready.records.clone()
+            } else {
+                let Ok(Acquired::Complete(acquisition)) =
+                    self.acquire.asos(request.clone(), deadline).await
+                else {
+                    continue;
+                };
+                let records = acquisition.records.clone();
+                if self
+                    .reader
+                    .store
+                    .publish(acquisition.declaration, acquisition.records, deadline)
+                    .await
+                    .is_err()
+                {
+                    continue;
+                }
+                records
             };
-            let records = acquisition.records.clone();
-            if self
-                .reader
-                .store
-                .publish(acquisition.declaration, acquisition.records, deadline)
-                .await
-                .is_err()
-            {
-                continue;
-            }
             let f = asos_fetched(kind, request.start(), request.end(), &records);
             if let Some(entry) = self.state().asos.get_mut(station) {
                 entry.fetched.push(f);
@@ -1360,16 +1468,30 @@ pub fn retain_window(fetched: &mut Vec<AsosFetched>, start: &str) {
 }
 /// The station's `asos_history` rows: its data.go.kr acquisitions and the ongoing-hour AWS page
 /// rows in fetch order.
-fn station_store(station: &str, fetched: &[AsosFetched], folded: &Folded) -> AsosStore {
+fn station_store(
+    station: &str,
+    fetched: &[AsosFetched],
+    folded: &Folded,
+    observed: bool,
+) -> AsosStore {
     let national = folded
         .national
         .get(station)
         .map(Vec::as_slice)
         .unwrap_or_default();
-    super::asos::replay(station, fetched, national)
+    if observed {
+        super::asos::replay_observed(station, fetched, national)
+    } else {
+        super::asos::replay(station, fetched, national)
+    }
 }
 fn asos_fetched(kind: AsosKind, start: &str, end: &str, records: &[RawRecord]) -> AsosFetched {
     AsosFetched {
+        raw_ids: records
+            .iter()
+            .map(|r| r.envelope.identity.object_key())
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap_or_default(),
         kind,
         start: start.to_owned(),
         end: end.to_owned(),
@@ -1389,7 +1511,7 @@ fn object(pairs: Vec<(&str, OrderedJson)>) -> OrderedJson {
             .collect(),
     )
 }
-type ParsedPage = (Publication, Arc<Vec<Doc>>, f64, String);
+type ParsedPage = (Publication, Arc<Vec<Doc>>, f64, String, String);
 fn parse_hourly(records: &[RawRecord]) -> Option<ParsedPage> {
     let r = records.first()?;
     let requested = record_publication(r)?;
@@ -1399,6 +1521,7 @@ fn parse_hourly(records: &[RawRecord]) -> Option<ParsedPage> {
         Arc::new(page.rows),
         r.envelope.identity.fetched_at_ms as f64,
         r.envelope.identity.raw_sha256.clone(),
+        r.envelope.identity.object_key().ok()?,
     ))
 }
 fn parse_city_record(records: &[RawRecord]) -> Option<ParsedPage> {
@@ -1410,6 +1533,7 @@ fn parse_city_record(records: &[RawRecord]) -> Option<ParsedPage> {
         Arc::new(page.rows),
         r.envelope.identity.fetched_at_ms as f64,
         r.envelope.identity.raw_sha256.clone(),
+        r.envelope.identity.object_key().ok()?,
     ))
 }
 fn parse_minute(records: &[RawRecord]) -> Option<(Publication, Arc<Vec<Doc>>)> {
@@ -1642,6 +1766,26 @@ pub fn nearest(town: &Doc, stations: &[Doc], max_km: f64) -> Option<Mapping> {
         }
     }
     best
+}
+
+/// No city station represents the town (`station-altitude-v1`).
+#[derive(Debug, PartialEq, Eq)]
+pub struct Unrepresentative;
+/// [`nearest`] under ASOS-primary: the station the altitude rule allows for the town.
+pub fn representative_mapping(
+    town: &Doc,
+    stations: &[Doc],
+    max_km: f64,
+) -> Result<Option<Mapping>, Unrepresentative> {
+    match representative::verdict_for_doc(town, stations) {
+        Verdict::Nearest => Ok(nearest(town, stations, max_km)),
+        Verdict::NoStation => Err(Unrepresentative),
+        Verdict::Station(id) => Ok(nearest(
+            town,
+            &representative::only_station(stations, &id),
+            max_km,
+        )),
+    }
 }
 
 /// The services the KMA source calls with `DONGNAE_SECRET_KEYS` (S15b-2 ASOS; S15b-3b UV V5,

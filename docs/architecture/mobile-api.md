@@ -314,6 +314,41 @@ Sources: [weather widget](../../tw.ios/widget/TodayViewController.m), [air widge
 
 The TodayWeather expanded view accepts both raw `/ww` dotted dates with selected `tempMin_c/tempMax_c` or `tempMin_f/tempMax_f`, and normalized coordinate/KMA compact dates with requested-unit `tmn/tmx`. It retains six rows and guards short date substrings. The widget target no longer links the unused Cordova archive; the app link remains. See the [source-built display guide](../operations/server2-widget.md) and [#2811 evidence](../evidence/tasks/issue-2811/verification.md). On iOS 18 and later the legacy Today extension is unavailable; UIKit replay does not establish WidgetKit activation.
 
+### Fields read by clients
+
+The [client delivery eval](../../server2/tools/verification/kma_client_eval.py) and its
+[wire contract](../../server2/config/contracts/kma-client-wire.v1.json) check these reads.
+Both iOS widgets request `v000901/kma/addr`, and the app requests v000903. In
+Objective-C, a JSON null becomes `NSNull`, and `intValue` on it aborts the widget,
+so widget fields must never be null. The table records the TodayWeather widget lines. The
+TodayAir widget has the same request constant and daily date read (`TodayWeatherUtil.m:383`);
+its other reads are not mapped. Older app builds and the unidentified callers of the
+unversioned path are checked only against the legacy wire profile.
+
+| Consumer | Response path | Type | Source |
+| --- | --- | --- | --- |
+| ios-widget | `$.cityName` | string | [TodayViewController.m:1580](../../tw.ios/widget/TodayViewController.m#L1580) |
+| ios-widget | `$.regionName` | string | [TodayViewController.m:1581](../../tw.ios/widget/TodayViewController.m#L1581) |
+| ios-widget | `$.townName` | string | [TodayViewController.m:1582](../../tw.ios/widget/TodayViewController.m#L1582) |
+| ios-widget | `$.current.date` | string | [TodayWeatherUtil.m:257](../../tw.ios/widget/TodayWeatherUtil.m#L257) |
+| ios-widget | `$.current.time` | number or string | [TodayWeatherUtil.m:259](../../tw.ios/widget/TodayWeatherUtil.m#L259) |
+| ios-widget | `$.current.skyIcon` | string | [TodayViewController.m:1603](../../tw.ios/widget/TodayViewController.m#L1603) |
+| ios-widget | `$.current.t1h` | number | [TodayViewController.m:1640](../../tw.ios/widget/TodayViewController.m#L1640) |
+| ios-widget | `$.short[].date` | string | [TodayWeatherUtil.m:272](../../tw.ios/widget/TodayWeatherUtil.m#L272) |
+| ios-widget | `$.short[].time` | number or string | [TodayWeatherUtil.m:274](../../tw.ios/widget/TodayWeatherUtil.m#L274) |
+| ios-widget | `$.midData.dailyData[].date` | string | [TodayWeatherUtil.m:383](../../tw.ios/widget/TodayWeatherUtil.m#L383) |
+| ios-widget | `$.midData.dailyData[].skyIcon` | string (optional) | [TodayViewController.m:1659](../../tw.ios/widget/TodayViewController.m#L1659) |
+| ios-widget | `$.midData.dailyData[].pop` | number (optional) | [TodayViewController.m:1679](../../tw.ios/widget/TodayViewController.m#L1679) |
+| app | `$.short[].skyIcon` | string | [service.weatherutil.js:361](../../client/www/js/service.weatherutil.js#L361) |
+| app | `$.short[].pop` | number | [service.weatherutil.js:364](../../client/www/js/service.weatherutil.js#L364) |
+| app | `$.short[].pty` | number | [controller.forecastctrl.js:234](../../client/www/js/controller.forecastctrl.js#L234) |
+| app | `$.short[].rn1` | number (optional) | [controller.forecastctrl.js:253](../../client/www/js/controller.forecastctrl.js#L253) |
+| app | `$.short[].fromToday` | number (optional) | [service.weatherutil.js:350](../../client/www/js/service.weatherutil.js#L350) |
+| app | `$.midData.dailyData[].fromToday` | number (optional) | [service.weatherutil.js:423](../../client/www/js/service.weatherutil.js#L423) |
+| app | `$.midData.dailyData[].skyAm` | string (optional) | [app.js:1277](../../client/www/js/app.js#L1277) |
+| app | `$.midData.dailyData[].skyPm` | string (optional) | [app.js:1298](../../client/www/js/app.js#L1298) |
+| app | `$.midData.dailyData[].rn1` | number (optional) | [service.weatherutil.js:441](../../client/www/js/service.weatherutil.js#L441) |
+
 ## Daily forecast validity (issue #2560)
 
 The mid-land/temperature collectors preserve available day-3–10 fields without
@@ -322,7 +357,7 @@ optional precipitation probabilities. Mid composition joins by each source's
 KST target date, with independent 36-hour publication limits and no future or
 mismatched identity. Short daily overlays have a 24-hour publication limit. When primary short data is stale or its publication is absent, a request-local snapshot of fields actually copied from matched short RSS slots supplies daily input. Its own KST publication determines freshness and the publication-date+4 target ceiling. Later mixed-hourly extrema cannot revive untouched stale values; incomplete RSS-only days remain unavailable. The accepted feed timestamp alone is never sufficient.
 The seven-day observation history remains; unavailable days are omitted and
-listed in additive `midData.dailyStatus.unavailableDates`. The captured day-4
+listed in additive `midData.dailyStatus.unavailableDates`; under ASOS-primary the list also holds omitted completed days, before the forecast days. The captured day-4
 forecast remains September 28, with September 27 unavailable unless an actual
 valid source supplies it. Existing v000903 `tmn`/`tmx` output conversion remains.
 

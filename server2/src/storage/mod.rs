@@ -4,6 +4,7 @@ mod catalog_model;
 mod catalog_transport;
 mod codec;
 mod credentials;
+pub mod response_first;
 mod settings;
 pub use catalog::{
     CatalogStore, CompleteAcquisition, CompletePage, CompleteSet, DependencyToken, LookupOutcome,

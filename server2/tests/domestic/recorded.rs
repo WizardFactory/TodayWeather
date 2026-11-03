@@ -227,6 +227,7 @@ pub struct RecordedStore {
     zones_recorded: bool,
     calls: Arc<[Call]>,
     next: Mutex<usize>,
+    injected_history: Option<OrderedJson>,
 }
 impl RecordedStore {
     fn new(s: &Recorded) -> Self {
@@ -236,7 +237,13 @@ impl RecordedStore {
             zones_recorded: s.calls.iter().any(|c| c.method == "special_zones"),
             calls: s.calls.clone(),
             next: Mutex::new(0),
+            injected_history: None,
         }
+    }
+    /// New-policy assembly tests retain the full recorded dependencies and clock.
+    pub fn with_history(mut self, history: OrderedJson) -> Self {
+        self.injected_history = Some(history);
+        self
     }
     fn answer(&self, m: &str, args: Value) -> StoreResult {
         let mut next = self.next.lock().unwrap_or_else(|e| e.into_inner());
@@ -316,6 +323,9 @@ impl KmaStore for RecordedStore {
         self.answer("city_hourly", json!([town]))
     }
     fn history(&self, town: &Value) -> StoreResult {
+        if let Some(history) = &self.injected_history {
+            return Ok(history.clone());
+        }
         if !self.calls.iter().any(|c| c.method == "history") {
             // Recorded with ASOS history reads disabled: legacy makes no read.
             return Ok(OrderedJson::Null);

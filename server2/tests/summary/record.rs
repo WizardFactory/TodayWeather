@@ -62,6 +62,51 @@ fn inputs_at(fetched: u64) -> GridInputs {
 }
 
 #[tokio::test]
+async fn pending_responses_do_not_take_summary_storage_worker_permits() {
+    use server2::storage::response_first::ResponseScope;
+    let t = Arc::new(MemorySummaries::new());
+    let recorder = Recorder::new(t.clone());
+    let now = kst(20261015, 1200);
+    let rows = vec![day_row("20261014", 24., 20., 10.)];
+    let first = ResponseScope::default();
+    let second = ResponseScope::default();
+    first
+        .run(async { recorder.record(inputs_at(100), rows.clone(), now) })
+        .await;
+    second
+        .run(async { recorder.record(inputs_at(200), rows.clone(), now) })
+        .await;
+    tokio::task::yield_now().await;
+    assert!(
+        t.keys().is_empty(),
+        "unfinished response bodies must defer recording"
+    );
+    let ready = ResponseScope::default();
+    ready.terminal();
+    ready
+        .run(async { recorder.record(inputs_at(300), rows, now) })
+        .await;
+    tokio::time::timeout(std::time::Duration::from_secs(1), async {
+        while t.keys().is_empty() {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("a ready snapshot must have access to the S16 storage workers");
+    first.terminal();
+    second.terminal();
+    assert!(recorder.idle(deadline()).await);
+    let key = server2::summary::SummaryKey::Grid { town: town() };
+    let newest = recorder
+        .store()
+        .newest(&key, 20261014, deadline())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(newest.name.latest, 300);
+}
+
+#[tokio::test]
 async fn recorder_writes_late_revisions_and_never_supersedes_newer_inputs() {
     let t = Arc::new(MemorySummaries::new());
     let recorder = Recorder::new(t.clone());

@@ -18,8 +18,101 @@ const SHORTEST: &str = "1360000/VilageFcstInfoService_2.0/getUltraSrtFcst";
 const UV: &str = "1360000/LivingWthrIdxServiceV5/getUVIdxV5";
 const RSS: &str = "wid/queryDFS.jsp";
 const AWS: &str = "cgi-bin/aws/nph-aws_txt_min";
-const CITY: &str = "weather/observation/currentweather.jsp";
+const CITY: &str = "w/weather/land/city-obs.do";
 const NOW_MS: i64 = 1_791_000_000_000;
+
+#[tokio::test]
+async fn fixed_hour_mismatch_never_becomes_a_raw_record() {
+    let e = env().await;
+    e.stub.push(
+        CITY,
+        Reply::with(
+            200,
+            "text/html;charset=UTF-8",
+            fixture("city-obs-2026-09-25.html"),
+        ),
+    );
+    let result = e
+        .acquirer
+        .acquire_web(&WebRequest::city(p(20260925, 1800)).unwrap(), deadline())
+        .await;
+    assert!(
+        matches!(
+            result,
+            Err(DomesticError::Invalid("observation publication"))
+        ),
+        "{result:?}"
+    );
+    assert_eq!(e.metrics.snapshot().groups_complete, 0);
+    assert_eq!(e.stub.calls().len(), 1, "a mismatched page is not retried");
+}
+
+#[tokio::test]
+async fn current_city_midnight_acquisition_preserves_actual_publication_and_bytes() {
+    let e = env().await;
+    let body = fixture("city-obs-2026-10-25-midnight.html");
+    for _ in 0..3 {
+        e.stub.push(
+            CITY,
+            Reply::with(200, "text/html;charset=UTF-8", body.clone()),
+        );
+    }
+    let acquisition = complete(
+        e.acquirer
+            .acquire_web(&WebRequest::city(p(20261025, 0)).unwrap(), deadline())
+            .await,
+    );
+    assert_eq!(&acquisition.records[0].bytes[..], &body[..]);
+    assert_eq!(
+        acquisition.records[0].envelope.identity.period,
+        p(20261025, 0).period()
+    );
+    assert!(matches!(
+        e.acquirer
+            .acquire_web(&WebRequest::city(p(20261024, 2300)).unwrap(), deadline())
+            .await,
+        Err(DomesticError::Invalid("observation publication"))
+    ));
+    assert!(matches!(
+        e.acquirer.acquire_web(&WebRequest::city(p(20261025, 100)).unwrap(), deadline()).await,
+        Ok(Acquired::Stale(found)) if found == p(20261025, 0)
+    ));
+    assert_eq!(e.metrics.snapshot().groups_complete, 1);
+    assert_eq!(e.stub.calls().len(), 3);
+    assert_eq!(
+        e.stub
+            .calls()
+            .iter()
+            .map(|c| c.raw_query.as_str())
+            .collect::<Vec<_>>(),
+        [
+            "tm=2026.10.25.00:00",
+            "tm=2026.10.24.23:00",
+            "tm=2026.10.25.01:00"
+        ]
+    );
+}
+
+#[tokio::test]
+async fn actual_future_city_query_is_stale_and_creates_no_raw() {
+    let e = env().await;
+    e.stub.push(
+        CITY,
+        Reply::with(
+            200,
+            "text/html;charset=UTF-8",
+            fixture("city-obs-2026-10-25-future-23.html"),
+        ),
+    );
+    let result = e
+        .acquirer
+        .acquire_web(&WebRequest::city(p(20261025, 2300)).unwrap(), deadline())
+        .await;
+    assert!(matches!(result, Ok(Acquired::Stale(found)) if found == p(20261025, 2200)));
+    assert_eq!(e.metrics.snapshot().groups_complete, 0);
+    assert_eq!(e.stub.calls().len(), 1);
+    assert_eq!(e.stub.calls()[0].raw_query, "tm=2026.10.25.23:00");
+}
 
 fn p(date: u32, time: u16) -> Publication {
     Publication::new(date, time).unwrap()
@@ -484,10 +577,10 @@ async fn kma_web_redirects_errors_and_invalid_bodies() {
     let city = fixture("city-obs-2026-09-25.html");
     e.stub.push(
         CITY,
-        Reply::redirect(e.stub.url("w/weather/land/city-obs.do").to_string()),
+        Reply::redirect(e.stub.url("w/weather/land/city-obs-final.do").to_string()),
     );
     e.stub.push(
-        "w/weather/land/city-obs.do",
+        "w/weather/land/city-obs-final.do",
         Reply::with(200, "text/html;charset=UTF-8", city.clone()),
     );
     let request = WebRequest::city(p(20260925, 1900)).unwrap();

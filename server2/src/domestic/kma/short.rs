@@ -1357,6 +1357,22 @@ pub fn convert_0h_to_24h(cx: &mut Cx) -> Flow {
 /// `_mergeShortWithCurrent(shortList, currentList)`.
 fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
     let (req_date, _) = cx.time_value(9.);
+    let primary = policy::observations_primary(&cx.req);
+    let winter_rain: std::collections::HashMap<String, V> = if primary {
+        current
+            .items()
+            .into_iter()
+            .filter_map(|row| {
+                if policy::valid("rn3h", &row.get("rn3h")) {
+                    Some((policy::slot(&row)?, row.get("rn3h")))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    } else {
+        Default::default()
+    };
     let days = Arr::new();
     let first_date = short.at(0).get("date");
     for cur in current.items() {
@@ -1388,6 +1404,43 @@ fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
         }
     }
     for item in short.items() {
+        let historical =
+            primary && policy::slot(&item).is_some_and(|key| policy::instant(&s(&key)) <= cx.now);
+        if historical {
+            // No past SHRT/RSS fallback. Unsupported historical forecast-only fields
+            // remain explicit sentinels; measured rain below carries its true 3h interval.
+            for (field, missing) in [
+                ("pop", -1.),
+                ("pty", -1.),
+                ("r06", -1.),
+                ("s06", -1.),
+                ("reh", -1.),
+                ("sky", -1.),
+                ("t3h", -50.),
+                ("tmn", -50.),
+                ("tmx", -50.),
+                ("uuu", -100.),
+                ("vvv", -100.),
+                ("wav", -1.),
+                ("vec", -1.),
+                ("wsd", -1.),
+                ("rn1", -1.),
+                ("lgt", -1.),
+            ] {
+                item.set(field, missing);
+            }
+            for field in ["r06Approx", "s06Approx"] {
+                item.set(field, false);
+            }
+            for field in ["r06Hours", "s06Hours"] {
+                item.set(field, 0.);
+            }
+            // Qualitative forecast amounts are also weather values. Leaving these
+            // behind lets finalization turn an unknown measurement into forecast zero.
+            for field in ["r06Text", "s06Text", "rn1Text"] {
+                item.del(field);
+            }
+        }
         let matched = match (item.get("date"), item.get("time")) {
             (V::Str(d), V::Str(tm)) => slots.get(&(d.to_string(), tm.to_string())).cloned(),
             _ => None,
@@ -1402,10 +1455,29 @@ fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
                     }
                 }
             }
+            if historical && policy::valid("rn1", &t.get("rn1")) {
+                item.set("r06", t.get("rn1"));
+                item.set("r06Hours", 3.);
+            }
         }
+        if historical && let Some(rain) = policy::slot(&item).and_then(|k| winter_rain.get(&k)) {
+            item.set("rn1", rain.clone());
+            item.set("r06", rain.clone());
+            item.set("r06Hours", 3.);
+        }
+        item.del("rn3h");
         let req_day = s(&req_date);
         if strict_eq(&item.get("time"), &s("0600")) {
-            let mut tmn = day_summary(&days, &item.get("date")).get("taMin");
+            let mut tmn = if historical {
+                let daily = policy::daily_observation(&cx.req, &item.get("date"), "taMin");
+                if daily.is_undef() {
+                    day_summary(&days, &item.get("date")).get("taMin")
+                } else {
+                    daily
+                }
+            } else {
+                day_summary(&days, &item.get("date")).get("taMin")
+            };
             if tmn.is_undef() {
                 tmn = V::Num(-50.);
             }
@@ -1422,7 +1494,16 @@ fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
             item.set("tmn", fixed(&item.get("tmn"), 1));
         }
         if strict_eq(&item.get("time"), &s("1500")) {
-            let mut tmx = day_summary(&days, &item.get("date")).get("taMax");
+            let mut tmx = if historical {
+                let daily = policy::daily_observation(&cx.req, &item.get("date"), "taMax");
+                if daily.is_undef() {
+                    day_summary(&days, &item.get("date")).get("taMax")
+                } else {
+                    daily
+                }
+            } else {
+                day_summary(&days, &item.get("date")).get("taMax")
+            };
             if tmx.is_undef() {
                 tmx = V::Num(-50.);
             }
@@ -1576,7 +1657,9 @@ pub fn adjust_short(cx: &mut Cx) -> Flow {
     let n50 = V::Num(-50.);
     for row in list.items() {
         if row.get("pop").nullish() || loose_eq(&row.get("pop"), &V::Num(-1.)) {
-            row.set("pop", 0.);
+            let past_observed = policy::observations_primary(&cx.req)
+                && policy::slot(&row).is_some_and(|key| policy::instant(&s(&key)) <= cx.now);
+            row.set("pop", if past_observed { -1. } else { 0. });
         }
         let day = day_summary(&days, &row.get("date"));
         if day.get("taMax").is_undef() {

@@ -1,0 +1,1950 @@
+{
+  "schema": 1,
+  "observed_date_kst": "2026-10-25",
+  "verdict": "SEVEN_DAY_CLOSURE_NOT_QUALIFIED",
+  "api_hub_key_available": false,
+  "key_availability_basis": "AK confirmed no APIHub key exists in this conversation",
+  "scope": "source feasibility, current-city/exact-hour admission and ASOS observed blank/trace/missing normalization; raw bytes/schema unchanged; no full live response/tail qualification",
+  "qualified_full_cold_samples": 0,
+  "qualified_full_restore_samples": 0,
+  "p95_ms": null,
+  "p99_ms": null,
+  "primary_documents": [
+    {
+      "file": "faq-1.html",
+      "url": "https://data.kma.go.kr/community/board/selectBoardList.do?bbrdTypeNo=3&pgmNo=95",
+      "bytes": 124322,
+      "sha256": "4629506c5f8ab4f327b7f291697389bc0756fe0d8e85a5218b5cb08b1b007fb0",
+      "status": 200
+    },
+    {
+      "file": "apihub-asos.html",
+      "url": "https://apihub.kma.go.kr/apiList.do?seqApi=2",
+      "bytes": 255954,
+      "sha256": "57a4eadce6a0bab5ea75e24d34884e6892f5569dff6287f1cf794a586bc3d068",
+      "status": 200
+    },
+    {
+      "file": "apihub-sfc-api.pdf",
+      "url": "https://apihub.kma.go.kr/getAttachFile.do?fileName=API.pdf",
+      "bytes": 229365,
+      "sha256": "5d25dcbca3b73208d3f675ef4e866a270134f0a483c599271f8b105ecfd157b6",
+      "status": 200
+    },
+    {
+      "file": "faq-2.html",
+      "url": "https://data.kma.go.kr/community/board/selectBoardList.do?bbrdTypeNo=3&pgmNo=95",
+      "method": "POST",
+      "form": {
+        "menuNo": "96",
+        "pageIndex": "2",
+        "bbrdTypeNo": "3",
+        "pgmNo": "95",
+        "bbrdNo": ""
+      },
+      "status": 200,
+      "bytes": 112129,
+      "sha256": "4603870518765cbe25662ec854f79954271f548664048fad48db6cc291f9ec18"
+    },
+    {
+      "file": "qna-66383.html",
+      "url": "https://data.kma.go.kr/community/board/detailBoard.do?bbrdTypeNo=1&pgmNo=96&bbrdNo=66383",
+      "method": "POST",
+      "form": {
+        "menuNo": "97",
+        "pageIndex": "1",
+        "bbrdTypeNo": "1",
+        "bbrdNo": "66383",
+        "pgmNo": "96"
+      },
+      "bytes": 106593,
+      "sha256": "25e8c78a8b07c538fdc4a57fa1ecf0ade2e62c1f3c4ed68d958ce77789117eea",
+      "status": 200
+    },
+    {
+      "file": "qna-30942.html",
+      "url": "https://data.kma.go.kr/community/board/detailBoard.do?bbrdTypeNo=1&pgmNo=96&bbrdNo=30942",
+      "method": "POST",
+      "form": {
+        "menuNo": "97",
+        "pageIndex": "1",
+        "bbrdTypeNo": "1",
+        "bbrdNo": "30942",
+        "pgmNo": "96"
+      },
+      "bytes": 106510,
+      "sha256": "c428424181be106774ac1635dd434efb55b29ccaf326d38420bb6a671d2b6819",
+      "status": 200
+    },
+    {
+      "file": "qna-29442.html",
+      "url": "https://data.kma.go.kr/community/board/detailBoard.do?bbrdTypeNo=1&pgmNo=96&bbrdNo=29442",
+      "method": "POST",
+      "form": {
+        "menuNo": "97",
+        "pageIndex": "1",
+        "bbrdTypeNo": "1",
+        "bbrdNo": "29442",
+        "pgmNo": "96"
+      },
+      "bytes": 107040,
+      "sha256": "72ed9d5a55e46dc93c9914bb9c1d7f54334fd0d7e5e39f0faed37f2c928b4e92",
+      "status": 200
+    },
+    {
+      "file": "asos-portal-current.html",
+      "url": "https://data.kma.go.kr/data/grnd/selectAsosList.do?pgmNo=36",
+      "method": "GET",
+      "bytes": 199915,
+      "sha256": "bbf343372ca12922a77dd0fef295393952044bd6db679a8f40c0c34c62d5b16e",
+      "status": 200
+    }
+  ],
+  "public_profiles": [
+    {
+      "profile": "city-legacy-uri-four-times",
+      "request_cap": 4,
+      "logical_requests": 4,
+      "http_transactions_including_followed_redirects": 12,
+      "attempts": [
+        {
+          "requested_kst": "202610180100",
+          "url": "https://www.weather.go.kr/weather/observation/currentweather.jsp?tm=2026.10.18.01%3A00",
+          "outcome": "failed",
+          "error": "ValueError",
+          "redirects": [
+            "https://www.weather.go.kr/w/obs-climate/land/city-obs.do",
+            "https://www.weather.go.kr/w/observation/land/city-obs.do"
+          ],
+          "provider_http_ms": 131.608
+        },
+        {
+          "requested_kst": "202610240300",
+          "url": "https://www.weather.go.kr/weather/observation/currentweather.jsp?tm=2026.10.24.03%3A00",
+          "outcome": "failed",
+          "error": "ValueError",
+          "redirects": [
+            "https://www.weather.go.kr/w/obs-climate/land/city-obs.do",
+            "https://www.weather.go.kr/w/observation/land/city-obs.do"
+          ],
+          "provider_http_ms": 126.011
+        },
+        {
+          "requested_kst": "202601010300",
+          "url": "https://www.weather.go.kr/weather/observation/currentweather.jsp?tm=2026.01.01.03%3A00",
+          "outcome": "failed",
+          "error": "ValueError",
+          "redirects": [
+            "https://www.weather.go.kr/w/obs-climate/land/city-obs.do",
+            "https://www.weather.go.kr/w/observation/land/city-obs.do"
+          ],
+          "provider_http_ms": 169.863
+        },
+        {
+          "requested_kst": "202610250000",
+          "url": "https://www.weather.go.kr/weather/observation/currentweather.jsp?tm=2026.10.25.00%3A00",
+          "outcome": "failed",
+          "error": "ValueError",
+          "redirects": [
+            "https://www.weather.go.kr/w/obs-climate/land/city-obs.do",
+            "https://www.weather.go.kr/w/observation/land/city-obs.do"
+          ],
+          "provider_http_ms": 161.998
+        }
+      ],
+      "offline_analysis": []
+    },
+    {
+      "profile": "city-current-uri-20261025-four-times",
+      "request_cap": 4,
+      "logical_requests": 4,
+      "http_transactions_including_followed_redirects": 4,
+      "attempts": [
+        {
+          "requested_kst": "202610180100",
+          "url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.18.01%3A00",
+          "outcome": "captured",
+          "status": 200,
+          "final_url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.18.01%3A00",
+          "content_type": "text/html;charset=UTF-8",
+          "bytes": 116151,
+          "sha256": "04a875f32c3e9afdd7350f3f993931b2e4dc719b75e970ed0ac37558b366153d",
+          "redirects": [],
+          "provider_http_ms": 145.084
+        },
+        {
+          "requested_kst": "202610240300",
+          "url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.24.03%3A00",
+          "outcome": "captured",
+          "status": 200,
+          "final_url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.24.03%3A00",
+          "content_type": "text/html;charset=UTF-8",
+          "bytes": 115760,
+          "sha256": "5bded00720916ce462fb4757b00ec47a28c00bdf5887ac1608040454e4f242d8",
+          "redirects": [],
+          "provider_http_ms": 145.009
+        },
+        {
+          "requested_kst": "202601010300",
+          "url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.01.01.03%3A00",
+          "outcome": "captured",
+          "status": 200,
+          "final_url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.01.01.03%3A00",
+          "content_type": "text/html;charset=UTF-8",
+          "bytes": 117566,
+          "sha256": "6119efc32b0a48aadf4d3d9f596da494db7fe55a3d3f4a4054d072ffb632edc7",
+          "redirects": [],
+          "provider_http_ms": 132.481
+        },
+        {
+          "requested_kst": "202610250000",
+          "url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.25.00%3A00",
+          "outcome": "captured",
+          "status": 200,
+          "final_url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.25.00%3A00",
+          "content_type": "text/html;charset=UTF-8",
+          "bytes": 115731,
+          "sha256": "be23990a77db86c038bbe71358fbe1059efbf713d2d9d2fab3b825bccd68789f",
+          "redirects": [],
+          "provider_http_ms": 111.552
+        }
+      ],
+      "offline_analysis": [
+        {
+          "requested_kst": "202610180100",
+          "encoding": "utf-8",
+          "form_values": {
+            "stn": "0",
+            "tm": "2026.10.18.01:00"
+          },
+          "displayed_dates": [
+            "2026.10.18.01:00"
+          ],
+          "single_page_time_match": true,
+          "row_count": 99,
+          "time_and_field_qualified": false,
+          "station_summary": {
+            "rows": 1,
+            "explicit_weather_rows": 1,
+            "explicit_cloud_rows": 1,
+            "blank_daily_rain_rows": 1
+          }
+        },
+        {
+          "requested_kst": "202610240300",
+          "encoding": "utf-8",
+          "form_values": {
+            "stn": "0",
+            "tm": "2026.10.24.03:00"
+          },
+          "displayed_dates": [
+            "2026.10.24.03:00"
+          ],
+          "single_page_time_match": true,
+          "row_count": 99,
+          "time_and_field_qualified": false,
+          "station_summary": {
+            "rows": 1,
+            "explicit_weather_rows": 1,
+            "explicit_cloud_rows": 1,
+            "blank_daily_rain_rows": 1
+          }
+        },
+        {
+          "requested_kst": "202601010300",
+          "encoding": "utf-8",
+          "form_values": {
+            "stn": "0",
+            "tm": "2026.01.01.03:00"
+          },
+          "displayed_dates": [
+            "2026.01.01.03:00"
+          ],
+          "single_page_time_match": true,
+          "row_count": 99,
+          "time_and_field_qualified": false,
+          "station_summary": {
+            "rows": 1,
+            "explicit_weather_rows": 1,
+            "explicit_cloud_rows": 1,
+            "blank_daily_rain_rows": 1
+          }
+        },
+        {
+          "requested_kst": "202610250000",
+          "encoding": "utf-8",
+          "form_values": {
+            "stn": "0",
+            "tm": "2026.10.25.00:00"
+          },
+          "displayed_dates": [
+            "2026.10.25.00:00"
+          ],
+          "single_page_time_match": true,
+          "row_count": 99,
+          "time_and_field_qualified": false,
+          "station_summary": {
+            "rows": 1,
+            "explicit_weather_rows": 1,
+            "explicit_cloud_rows": 1,
+            "blank_daily_rain_rows": 1
+          }
+        }
+      ]
+    },
+    {
+      "profile": "city-station-day-20261025-two-pages",
+      "request_cap": 2,
+      "logical_requests": 2,
+      "http_transactions_including_followed_redirects": 2,
+      "attempts": [
+        {
+          "requested_kst": "202610242300",
+          "url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.24.23%3A00&type=t99&mode=0&reg=100&auto_man=m&stn=108",
+          "outcome": "captured",
+          "status": 200,
+          "final_url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.24.23%3A00&type=t99&mode=0&reg=100&auto_man=m&stn=108",
+          "content_type": "text/html;charset=UTF-8",
+          "bytes": 90135,
+          "sha256": "4272c569253e9e569c9c998369f8bcc88a63ff8740b2fe676b7da819322fcd71",
+          "redirects": [],
+          "provider_http_ms": 127.312
+        },
+        {
+          "requested_kst": "202601012300",
+          "url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.01.01.23%3A00&type=t99&mode=0&reg=100&auto_man=m&stn=108",
+          "outcome": "captured",
+          "status": 200,
+          "final_url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.01.01.23%3A00&type=t99&mode=0&reg=100&auto_man=m&stn=108",
+          "content_type": "text/html;charset=UTF-8",
+          "bytes": 91019,
+          "sha256": "45911983b4637ed9fba6ce3e5bb2822ba4447bdc6e51cd303a54729e48b19917",
+          "redirects": [],
+          "provider_http_ms": 111.67
+        }
+      ],
+      "offline_analysis": [
+        {
+          "requested_kst": "202610242300",
+          "encoding": "utf-8",
+          "form_values": {
+            "stn": "108",
+            "tm": "2026.10.24.23:00"
+          },
+          "displayed_dates": [
+            "2026.10.24.23:00"
+          ],
+          "single_page_time_match": true,
+          "row_count": 50,
+          "time_and_field_qualified": false,
+          "station_summary": {
+            "rows": 48,
+            "explicit_weather_rows": 36,
+            "explicit_cloud_rows": 36,
+            "blank_daily_rain_rows": 48
+          }
+        },
+        {
+          "requested_kst": "202601012300",
+          "encoding": "utf-8",
+          "form_values": {
+            "stn": "108",
+            "tm": "2026.01.01.23:00"
+          },
+          "displayed_dates": [
+            "2026.01.01.23:00"
+          ],
+          "single_page_time_match": true,
+          "row_count": 50,
+          "time_and_field_qualified": false,
+          "station_summary": {
+            "rows": 48,
+            "explicit_weather_rows": 36,
+            "explicit_cloud_rows": 36,
+            "blank_daily_rain_rows": 48
+          }
+        }
+      ]
+    },
+    {
+      "profile": "city-future-hour-20261025-one-page",
+      "request_cap": 1,
+      "logical_requests": 1,
+      "http_transactions_including_followed_redirects": 1,
+      "attempts": [
+        {
+          "requested_kst": "202610252300",
+          "url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.25.23%3A00",
+          "outcome": "captured",
+          "status": 200,
+          "final_url": "https://www.weather.go.kr/w/weather/land/city-obs.do?tm=2026.10.25.23%3A00",
+          "content_type": "text/html;charset=UTF-8",
+          "bytes": 116009,
+          "sha256": "e515751a8c285ff46cf842dfbe775b3a2dbfb8a7570f4c8613ac8b88048082b7",
+          "redirects": [],
+          "provider_http_ms": 127.716
+        }
+      ],
+      "offline_analysis": [
+        {
+          "requested_kst": "202610252300",
+          "encoding": "utf-8",
+          "form_values": {
+            "stn": "0",
+            "tm": "2026.10.25.22:00"
+          },
+          "displayed_dates": [
+            "2026.10.25.22:00"
+          ],
+          "single_page_time_match": false,
+          "row_count": 99,
+          "time_and_field_qualified": false,
+          "station_summary": {
+            "rows": 1,
+            "explicit_weather_rows": 0,
+            "explicit_cloud_rows": 0,
+            "blank_daily_rain_rows": 1
+          },
+          "expected_native_outcome": "Stale20261025-2200; no raw group; one attempt"
+        }
+      ]
+    }
+  ],
+  "retained_asos_inputs": [
+    {
+      "kind": "hourly",
+      "path": "server2/tests/domestic/fixtures/asos-hourly-108-20261018-20261024.json",
+      "sha256": "0f632a75700f91e629793cc742624f28ce7d325b01b26a575ccf1688772fa0c0",
+      "rows": 168,
+      "fields": {
+        "rn": {
+          "blank": 150,
+          "explicit": 18
+        },
+        "dc10Tca": {
+          "explicit": 168
+        },
+        "dmstMtphNo": {
+          "blank": 150,
+          "explicit": 18
+        },
+        "rnQcflg": {
+          "blank": 124,
+          "9": 44
+        }
+      },
+      "required_window": "2026-10-18T01:00:00+09:00..2026-10-25T00:00:00+09:00",
+      "required_slots": 168,
+      "matching_required_slots": 167,
+      "missing_required_slots": [
+        "2026-10-25 00:00"
+      ],
+      "rain_phenomenon_QC_combinations": [
+        {
+          "rn": "",
+          "rnQcflg": "",
+          "dmstMtphNo": "",
+          "rows": 106
+        },
+        {
+          "rn": "0.0",
+          "rnQcflg": "",
+          "dmstMtphNo": "01",
+          "rows": 8
+        },
+        {
+          "rn": "",
+          "rnQcflg": "9",
+          "dmstMtphNo": "",
+          "rows": 44
+        },
+        {
+          "rn": "0.1",
+          "rnQcflg": "",
+          "dmstMtphNo": "01",
+          "rows": 3
+        },
+        {
+          "rn": "1.2",
+          "rnQcflg": "",
+          "dmstMtphNo": "01",
+          "rows": 1
+        },
+        {
+          "rn": "4.8",
+          "rnQcflg": "",
+          "dmstMtphNo": "01",
+          "rows": 1
+        },
+        {
+          "rn": "32.6",
+          "rnQcflg": "",
+          "dmstMtphNo": "01",
+          "rows": 1
+        },
+        {
+          "rn": "5.0",
+          "rnQcflg": "",
+          "dmstMtphNo": "01",
+          "rows": 1
+        },
+        {
+          "rn": "5.9",
+          "rnQcflg": "",
+          "dmstMtphNo": "01",
+          "rows": 1
+        },
+        {
+          "rn": "1.7",
+          "rnQcflg": "",
+          "dmstMtphNo": "01",
+          "rows": 1
+        },
+        {
+          "rn": "0.2",
+          "rnQcflg": "",
+          "dmstMtphNo": "01",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "kind": "daily",
+      "path": "server2/tests/domestic/fixtures/asos-daily-108-20261018-20261024.json",
+      "sha256": "7837028411118dfc528f78ecb3c28a6f86cff4e1c77852a7c42f32eeb84ddc3f",
+      "rows": 7,
+      "fields": {
+        "minTa": {
+          "explicit": 7
+        },
+        "maxTa": {
+          "explicit": 7
+        },
+        "sumRn": {
+          "explicit": 3,
+          "blank": 4
+        },
+        "iscs": {
+          "explicit": 3,
+          "blank": 4
+        }
+      }
+    }
+  ],
+  "source_findings": [
+    "ASOS-specific KMA QnA66383/29442 distinguish hourly/daily blank rain from numeric trace zero; QnA30942 identifies blank QC as normal. This is a source-based inference for data.go.kr JSON, corroborated by retained ASOS originals; not a universal serialization guarantee.",
+    "APIHub IX documents included/omitted/missing, but no actual response was fetched without its dedicated key.",
+    "APIHub manual has conflicting IR=3 descriptions; no IR=3-to-zero rule is qualified.",
+    "Two actual station tables each return48hour rows with36explicit weather/cloud and12blank weather/cloud; all48daily-rain cells are blank.",
+    "ASOS daily2026-10-20 reports sumRn=0.0 together with explicit rain events; zero quantity alone must not override an explicit phenomenon.",
+    "Public national AWS numeric rain is a candidate; instantaneous rns cannot certify an entire hour without precipitation.",
+    "Official current ASOS description documents November–March precipitation at three-hour intervals. Minute missing/error semantics are different and unchanged."
+  ],
+  "runtime_followups": [
+    "Implemented current city URI and exact city/hourly publication admission.",
+    "Missing/malformed city header is a distinct format fault; form echoes are rejected.",
+    "Minute valid-page minimum semantics retained; broken-page classification is pinned.",
+    "Station-batch adapter/raw identity and existing-original semantic validation remain unimplemented qualification boundaries.",
+    "Observed ASOS normalization now accepts qualified dry blanks with another valid measurement; daily additionally requires empty iscs and nonconflicting duration. Numeric zero alone does not produce PTY0. Raw bytes/schema and legacy replay unchanged."
+  ],
+  "remaining_acceptance": [
+    "Close44explicit QC9 hourly gaps and exact midnight boundary using actual allowed observations, without interpreting missing as zero; qualify mixed/winter/unmanned/pre-release fields. APIHub is optional, not a proven mandatory source.",
+    "Demonstrate actual168required-hour and7day field/source/output closure, including current-midnight, dry, wet, mixed, winter and release-before11:00 cases.",
+    "Complete auxiliary response-first owners.",
+    "Then run the full Gateway client cold/restore timing pair; only qualified full samples may enter p95/p99."
+  ],
+  "verification": {
+    "offline_tool_tests_passed": 10,
+    "original_hash_replays": 6,
+    "all_six_displayed_page_times_match": true,
+    "native_runtime_or_rust_run": true,
+    "actual_aws_s3_calls": 0,
+    "full_client_response_timing_run": false,
+    "scope": "Narrow native repair tests plus source/verification-tool checks; no full actual source-coverage certification",
+    "rust_scope": "51provider tests and1scripted full-response regression on final native repair; no production/live source-closure timing",
+    "providers_passed": 51,
+    "scripted_full_response_passed": 1,
+    "existing_offline_coverage_checks_passed": 9,
+    "clippy_all_targets_deny_warnings": true,
+    "rustfmt_changed_files": 6,
+    "public_body_hash_replays": 7,
+    "six_requested_timestamp_matches": true,
+    "one_future_query_returns_stale_hour": true,
+    "document_links": {
+      "checked": 320,
+      "missing": 0
+    },
+    "placement": {
+      "declared_paths": 66,
+      "changed_task_paths": 65,
+      "manual_task_scope": "PASS",
+      "whole_dirty_tree_gate": "30pre-existing undeclared paths; not a whole-tree pass",
+      "declaration_sha256": "6013cd5a8484b112b176eda1e22cb97db7ce52671b7ded18c66b8fd79a9824f6",
+      "dependencies_changed": false
+    },
+    "artifact_policy": {
+      "passed": true,
+      "command": "python3 scripts/check-artifact-policy.py --staged",
+      "scope": "Current actual index only;0staged task paths; not candidate-commit validation"
+    },
+    "tracked_diff_whitespace": "PASS; exact captured original fixtures preserve their bytes"
+  },
+  "keyless_repair": {
+    "state": "IMPLEMENTED_LOCALLY",
+    "deployed": false,
+    "runtime_input_hashes": {
+      "server2/src/domestic/family.rs": "7d01bae09fc565af0114f9c045d29a0b2275dd576888166a5d37534265455677",
+      "server2/src/domestic/format.rs": "cbcb65294212e0a90bcbdc92a3bc05a5ff47072de03f33a81a3a50c77638761d",
+      "server2/src/domestic/kma/source/pages.rs": "a03d820867d7ae0564be0f7c5a8153ce3595a775e258f83fc0848bd1f160604f",
+      "server2/tests/providers/acquire.rs": "304c1ec85ee682bb29724979438deeafc319822e08c434b4ab4cae7bdaafe473",
+      "server2/tests/providers/formats.rs": "1de818ad20c13dc54eeb90eb8a1fa5af1e9517d11c1f719e5741b370f069f27f",
+      "server2/tests/providers/requests.rs": "739f07907efe732ca4c97497c54eaf99f46b9cca764401acbec2556420a5df1b",
+      "server2/tests/providers/fixtures/city-obs-2026-10-25-midnight.html": "be23990a77db86c038bbe71358fbe1059efbf713d2d9d2fab3b825bccd68789f",
+      "server2/tests/providers/fixtures/PROVENANCE.md": "dc39200216d3282a69fbcf9269f2368a05ba699b0fd36a8cc449fd8c16d3bea2",
+      "server2/tools/verification/kma_public_history_qualification.py": "81e2a81af43dc79e3b6fb06dfd7410d4ea4a4ef4539feff5f56b31086bd3db2a",
+      "server2/tools/verification/test_kma_public_history_qualification.py": "d23ac5c95ac3ed2410b3fb2daa20c133f290d14049ec524b0ac76525434dfd9b",
+      "server2/tests/providers/fixtures/city-obs-2026-10-25-future-23.html": "e515751a8c285ff46cf842dfbe775b3a2dbfb8a7570f4c8613ac8b88048082b7"
+    },
+    "checks": [
+      {
+        "check": "Expected pre-fix fixed-hour failure",
+        "log_sha256": "c3fb4cd9834704eb8271ea4d82c12ab590b72c67d2c2ef8258335b0535ea7f14",
+        "summary": [
+          "test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.01s"
+        ],
+        "expected_failure": true
+      },
+      {
+        "check": "Expected pre-fix form-echo failure",
+        "log_sha256": "c7bcbc810514d39d212cfd0f1d0ea3be67c8713efd336e9a3048d6ab09aa829a",
+        "summary": [
+          "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 46 filtered out; finished in 0.00s"
+        ],
+        "expected_failure": true
+      },
+      {
+        "check": "Final providers",
+        "log_sha256": "b735b100ca7fcc01dbce9720ff6348269930985adc4e933e8887d88eadc873f7",
+        "summary": [
+          "test result: ok. 48 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.09s"
+        ],
+        "expected_failure": false
+      },
+      {
+        "check": "Scripted native full response/store/restore",
+        "log_sha256": "9ebf08ec5342e1a493e8c609b4544dbc25b93eb2840303c7b18cc9941b4b5cd0",
+        "summary": [
+          "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 173 filtered out; finished in 0.69s"
+        ],
+        "expected_failure": false
+      },
+      {
+        "check": "Clippy all targets",
+        "log_sha256": "63327714c7ccdb911ce78b722980fd9f2b299ac94d11201b93f19493ef355292",
+        "summary": [
+          "    Finished `dev` profile [unoptimized] target(s) in 12.03s"
+        ],
+        "expected_failure": false
+      }
+    ],
+    "independent_review": {
+      "agent_id": "912f2a7d-8c7c-4b39-b2d7-29c0b2edbc27",
+      "provider": "claude",
+      "model": "claude-opus-5-5",
+      "runtime_model_receipt": "claude-opus-5-5",
+      "effective_thinking": "max",
+      "source_only": true,
+      "ran_tests_builds_live_or_aws": false,
+      "verdict": "No blocker in bounded URI/exact-hour repair; diagnostic and test-strength findings addressed",
+      "followup_dispositions": [
+        "Malformed city header is Invalid(observation header), distinct from publication mismatch.",
+        "Minute broken-page classification and exact midnight outbound queries explicitly tested.",
+        "One actual future-hour response returns22:00to23:00request and is Stale/no-raw/no-retry in native loopback test.",
+        "Minor naming/query/future-fixture additions verified by lead after source-only follow-up, not independently re-inspected.",
+        "Previously admitted stored raw is not retroactively validated; full restore input-closure qualification remains open."
+      ]
+    },
+    "final_checks": [
+      {
+        "check": "Final providers",
+        "log_sha256": "558efe375081d7b8bdc883f212c83ca6b718c1ccdab548de296baf134765152c",
+        "summary": [
+          "test result: ok. 51 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.10s"
+        ],
+        "expected_failure": false
+      },
+      {
+        "check": "Final scripted full response/store/restore",
+        "log_sha256": "f5be809d534d78e9ce57a893b9c1eeb999e6c26db52eb8dee1e16e0a0cff0087",
+        "summary": [
+          "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 173 filtered out; finished in 0.71s"
+        ],
+        "expected_failure": false
+      },
+      {
+        "check": "Final Clippy all targets",
+        "log_sha256": "f4ac6d40b036df9a52816eaaba5c9558246f66892c69fd156af33dea3ccbaf52",
+        "summary": [
+          "    Finished `dev` profile [unoptimized] target(s) in 11.25s"
+        ],
+        "expected_failure": false
+      },
+      {
+        "check": "Expected pre-fix header diagnostic failure",
+        "log_sha256": "9a6aad29e08e80250afe82fff1f126547df32716e48e60f3631f3034b967a3d5",
+        "summary": [
+          "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 49 filtered out; finished in 0.00s"
+        ],
+        "expected_failure": true
+      }
+    ]
+  },
+  "diagram": {
+    "spec_sha256": "cd41c8c1c6753e00b433d07b945e52ae621fd309d1d68e4ae16a7d3369a5ce06",
+    "html_sha256": "986659d190f2c894b24c255c735d4208e02b9a8e71d0866b7349fc53300fb8e6",
+    "gates": {
+      "validate": "pass",
+      "deliver": "pass",
+      "check": "pass",
+      "browser-check": "pass"
+    },
+    "capture_checks": {
+      "containment": "pass",
+      "readability": "pass",
+      "viewerChrome": "pass",
+      "themeStates": "pass",
+      "captures": "pass"
+    },
+    "manual_visual_review": "Selected1440x900light and2048x1320dark top viewports inspected; no full-scrolled/card-area perceptual claim"
+  },
+  "build_capacity": {
+    "target": "server2/target",
+    "target_bytes": 8970084596,
+    "free_bytes_before_build": 146812932096,
+    "free_bytes_after_checks": 153407516672,
+    "cleaned_paths": [],
+    "recovered_bytes": 0,
+    "retention_reason": "Existing shared target retained for unfinished source recovery/auxiliary ownership and full measurement; reused existing Cargo registries; no new dependencies/settings"
+  },
+  "continued_date_kst": "2026-10-26",
+  "api_hub_required_for_current_work": false,
+  "data_go_normalization": {
+    "state": "IMPLEMENTED_LOCALLY",
+    "basis_source_ids": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "api_semantic_transfer": "source-based inference from KMA ASOS QnA and dataset metadata, supported by retained JSON patterns",
+    "hourly_supported_before": 18,
+    "hourly_supported_after": 124,
+    "hourly_new_normal_blank_dry": 106,
+    "hourly_explicit_wet_preserved": 18,
+    "hourly_explicit_trace_rain_preserved": 8,
+    "hourly_QC9_unknown": 44,
+    "daily_rain_supported_before": 3,
+    "daily_rain_supported_after": 7,
+    "daily_new_normal_blank_dry": 4,
+    "required_window_matching_hours": 167,
+    "required_window_missing_hour": "2026-10-25 00:00 KST",
+    "raw_bytes_changed": false,
+    "raw_schema_changed": false,
+    "legacy_replay_changed": false,
+    "grid_S16_dependency_marker": "asos-primary-v1;measured-history;public3h;rain-blank-semantics-v2",
+    "station_S16": "unchanged legacy derivation and IDs; internal last-year lookup, not the observed seven-day response source",
+    "new_weather_data_calls": 0,
+    "new_actual_AWS_S3_calls": 0,
+    "full_response_qualified": false,
+    "input_sha256": {
+      "server2/src/domestic/kma/source/asos.rs": "6ca5a80264b9c44cf1ed88abaaef4c3b26afb9ce529abbf2d7be55f6ae1f6ac2",
+      "server2/src/domestic/kma/source/mod.rs": "af0e52649f4c7467e41aa132cce01ab12a968f41f23619835b1a3d5b7d3e1bd4",
+      "server2/tests/domestic/asos.rs": "52a8a45503bc07219f114622b5eae3ca301a6bcb5e56aae8bca54ee44581ba0a",
+      "server2/tests/domestic/full_response.rs": "b0e57485c8d7de7e6a3cedbf8cafe41a53f01e93223af82d37f43c802d3e9d1d"
+    },
+    "checks": [
+      {
+        "name": "Initial regression before fix",
+        "log_sha256": "904aa24303ec48269a26366b15cf4c9795d9cac2bd7164592fdaa3dbc17266e5",
+        "summary": [
+          "    Finished `test` profile [unoptimized] target(s) in 4.87s",
+          "test result: FAILED. 2 passed; 3 failed; 0 ignored; 0 measured; 172 filtered out; finished in 0.01s"
+        ],
+        "expected_failure": true
+      },
+      {
+        "name": "Additional guards before fix",
+        "log_sha256": "d3f855f0098f2cd676a7fc7e5fb7068e30edbcfd7a045d16eab2dca17c8fc707",
+        "summary": [
+          "    Finished `test` profile [unoptimized] target(s) in 35.60s",
+          "test result: FAILED. 7 passed; 3 failed; 0 ignored; 0 measured; 169 filtered out; finished in 13.36s"
+        ],
+        "expected_failure": true
+      },
+      {
+        "name": "Trace conflict before fix",
+        "log_sha256": "76ed3875b6a569d1125adf4e3f98ddb3274b2e53f3811716665c62cd6472c7aa",
+        "summary": [
+          "    Finished `test` profile [unoptimized] target(s) in 5.02s",
+          "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 179 filtered out; finished in 0.01s"
+        ],
+        "expected_failure": true
+      },
+      {
+        "name": "Final ASOS",
+        "log_sha256": "e612a2ef1f39cc00c9387e94c6819ffe0c10bbe333b9b6cbfb74a84bd537b2fd",
+        "summary": [
+          "    Finished `test` profile [unoptimized] target(s) in 14.72s",
+          "test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 163 filtered out; finished in 0.31s"
+        ],
+        "expected_failure": false
+      },
+      {
+        "name": "Final observed assembly",
+        "log_sha256": "8dacf9ece1cf1e8c43dbaeaf3883533becd29c2d61eccb1667b6c2a781699a65",
+        "summary": [
+          "    Finished `test` profile [unoptimized] target(s) in 0.28s",
+          "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 178 filtered out; finished in 12.82s"
+        ],
+        "expected_failure": false
+      },
+      {
+        "name": "Final scripted wet/dry full cycle",
+        "log_sha256": "64ebfcef80ca765280f30de84744a56f2f7e55f9ab8090cb3858ecb0290526c7",
+        "summary": [
+          "    Finished `test` profile [unoptimized] target(s) in 0.23s",
+          "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 178 filtered out; finished in 1.34s"
+        ],
+        "expected_failure": false
+      },
+      {
+        "name": "Final summaries",
+        "log_sha256": "71ed8efd56cc60ed67aa013c2ed9978b3ea35e8197a4100b9d0910a4023f9f7a",
+        "summary": [
+          "    Finished `test` profile [unoptimized] target(s) in 1.91s",
+          "test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.40s"
+        ],
+        "expected_failure": false
+      },
+      {
+        "name": "Final Clippy",
+        "log_sha256": "9ca9ddda5c8f67083d5ce1bea777d7075849ac9f8c65157c59f6ef7183267400",
+        "summary": [
+          "    Finished `dev` profile [unoptimized] target(s) in 9.58s"
+        ],
+        "expected_failure": false
+      }
+    ],
+    "final_focused_tests_passed": 50,
+    "tests_by_group": {
+      "asos": 17,
+      "observed_history": 2,
+      "scripted_wet_dry_full_cycle": 2,
+      "summary": 29
+    },
+    "clippy_all_targets_deny_warnings": true,
+    "rustfmt_changed_files": 4,
+    "independent_review": {
+      "agent_id": "912f2a7d-8c7c-4b39-b2d7-29c0b2edbc27",
+      "provider": "claude",
+      "model": "claude-opus-5-5",
+      "runtime_model_observed": "claude-opus-5-5",
+      "effective_thinking_observed": "max",
+      "source_only": true,
+      "ran_tests_builds_provider_or_AWS": false,
+      "verdict": "No remaining Required finding in final bounded normalization guard review",
+      "scope": "ASOS normalizer and new tests, primary QnA context; focused follow-ups on winter citation, daily guards, S16 separation and trace contradiction",
+      "final_followup_assertions_viewed": false,
+      "final_test_results_from": "lead executions, not independently run",
+      "remaining": "Actual7day/mist-event/winter/unmanned/release/live/tail qualification remains open"
+    },
+    "remaining_daily_log_boundary": "Nonempty mist/other event logs remain conservatively unknown; no unqualified grammar mapping",
+    "intermediate_domestic_result": {
+      "passed": 176,
+      "ignored": 2,
+      "scope": "Earlier candidate before final guard refinements; not a final whole-suite claim"
+    },
+    "verification_scope": "Local source interpretation and scripted loopback integration only, no live latency",
+    "placement": {
+      "declared_paths": 67,
+      "changed_task_paths": 66,
+      "manual_task_scope": "PASS",
+      "whole_dirty_tree_gate": "29pre-existing undeclared paths; not a whole-tree pass",
+      "dependencies_changed": false
+    },
+    "document_links_checked": 337,
+    "broken_local_links": 0,
+    "citation_register": {
+      "sources": 9,
+      "sources_with_matched_quotes": 9,
+      "strict_consistency": "PASS; not a claim that every prose sentence is sourced"
+    },
+    "artifact_policy": "PASS current actual index only;0staged task paths; not candidate-commit validation"
+  },
+  "winter_observation_continuation": {
+    "date_kst": "2026-10-26",
+    "scope": "Source controls, exact reusable raw fixtures and native regression; no new production behavior",
+    "profiles": {
+      "sandbox_dns_only": {
+        "profile": "aws-hourly-qc9-trace-20261026",
+        "scope": "two source-field probes only; not client latency",
+        "attempt_cap": 2,
+        "started_utc": "2026-10-25T15:42:52.253649+00:00",
+        "attempts": [
+          {
+            "requested_kst": "202610202100",
+            "url": "https://www.weather.go.kr/cgi-bin/aws/nph-aws_txt_min?202610202100&0&MINDB_60M&0&m",
+            "error": "URLError",
+            "provider_http_ms": 9.845
+          },
+          {
+            "requested_kst": "202610202200",
+            "url": "https://www.weather.go.kr/cgi-bin/aws/nph-aws_txt_min?202610202200&0&MINDB_60M&0&m",
+            "error": "URLError",
+            "provider_http_ms": 2.21
+          }
+        ]
+      },
+      "network_enabled_public_aws": {
+        "profile": "aws-hourly-qc9-trace-network-20261026",
+        "scope": "two source-field HTTP probes; not client latency",
+        "attempt_cap": 2,
+        "started_utc": "2026-10-25T15:43:44.543638+00:00",
+        "attempts": [
+          {
+            "requested_kst": "202610202100",
+            "url": "https://www.weather.go.kr/cgi-bin/aws/nph-aws_txt_min?202610202100&0&MINDB_60M&0&m",
+            "status": 200,
+            "bytes": 493438,
+            "sha256": "c270c5f3fe302bd00825952d24cbeedfef890c31ff39ed86e04b3dbb8fa1dc49",
+            "provider_http_ms": 303.72
+          },
+          {
+            "requested_kst": "202610202200",
+            "url": "https://www.weather.go.kr/cgi-bin/aws/nph-aws_txt_min?202610202200&0&MINDB_60M&0&m",
+            "status": 200,
+            "bytes": 493289,
+            "sha256": "6bd22dc828c419ff95e5687cfa3047f0765e126cd3dc01b9483aa3027d08e67c",
+            "provider_http_ms": 338.441
+          }
+        ]
+      },
+      "winter_asos": {
+        "profile": "asos-winter-wet-control-20261026",
+        "scope": "winter source fields only, not client response or latency",
+        "attempt_cap": 2,
+        "started_utc": "2026-10-25T15:48:22.881082+00:00",
+        "attempts": [
+          {
+            "kind": "hourly",
+            "station": "108",
+            "start_date": "20241126",
+            "end_date": "20241128",
+            "status": 200,
+            "bytes": 36955,
+            "sha256": "f8a16e10086139fd2f7b849b5929a9d70cd40c12ce6c9ce2694a5c3f402422a1",
+            "result_code": "00",
+            "rows": 72,
+            "total": 72,
+            "first": "2024-11-26 00:00",
+            "last": "2024-11-28 23:00",
+            "field_shapes": {
+              "rn": {
+                "value": 20,
+                "blank": 52
+              },
+              "rnQcflg": {
+                "blank": 20,
+                "value": 52
+              },
+              "dmstMtphNo": {
+                "value": 57,
+                "blank": 15
+              },
+              "dc10Tca": {
+                "value": 72
+              }
+            },
+            "code_counts": {
+              "01": 15,
+              "1901": 5,
+              "": 15,
+              "190601": 1,
+              "1906": 2,
+              "190605": 2,
+              "05": 29,
+              "1905": 1,
+              "19": 2
+            },
+            "provider_http_ms": 764.734
+          },
+          {
+            "kind": "daily",
+            "station": "108",
+            "start_date": "20241126",
+            "end_date": "20241128",
+            "status": 200,
+            "bytes": 4633,
+            "sha256": "1be9f51a966912f165291b254fa5c6d2fdcd85d0026ee71cb6f755d853979a25",
+            "result_code": "00",
+            "rows": 3,
+            "total": 3,
+            "first": "2024-11-26",
+            "last": "2024-11-28",
+            "field_shapes": {
+              "sumRn": {
+                "value": 3
+              },
+              "sumRnDur": {
+                "value": 3
+              },
+              "iscs": {
+                "value": 3
+              }
+            },
+            "provider_http_ms": 226.83
+          }
+        ]
+      }
+    },
+    "actual_provider_http_attempts": 4,
+    "amazon_cloud_or_s3_calls": 0,
+    "public_aws_comparison": {
+      "scope": "exact two-case source comparison, no native replay",
+      "cases": [
+        {
+          "requested_kst": "202610202100",
+          "displayed_kst": "2026.10.20.21:00",
+          "displayed_time_matches": true,
+          "station": "108",
+          "aws": {
+            "rns": "○",
+            "rs15m": "0",
+            "rs1h": "0",
+            "rs3h": "0",
+            "rs6h": "0",
+            "rs12h": "0",
+            "rs1d": "0",
+            "t1h": "17.3"
+          },
+          "asos": {
+            "tm": "2026-10-20 21:00",
+            "ta": "17.3",
+            "rn": "",
+            "rnQcflg": "9",
+            "dmstMtphNo": ""
+          }
+        },
+        {
+          "requested_kst": "202610202200",
+          "displayed_kst": "2026.10.20.22:00",
+          "displayed_time_matches": true,
+          "station": "108",
+          "aws": {
+            "rns": "○",
+            "rs15m": "0",
+            "rs1h": "0",
+            "rs3h": "0",
+            "rs6h": "0",
+            "rs12h": "0",
+            "rs1d": "0",
+            "t1h": "16.9"
+          },
+          "asos": {
+            "tm": "2026-10-20 22:00",
+            "ta": "16.9",
+            "rn": "0.0",
+            "rnQcflg": "",
+            "dmstMtphNo": "01"
+          }
+        }
+      ],
+      "verdict": "Both AWS numeric amount and instantaneous flag fail to distinguish the observed ASOS trace hour from the QC9 dry-looking hour; no PTY0 rule admitted."
+    },
+    "journal_control": {
+      "report_sha256": "f7531a14ef84385db7ab3d0bf5a2101e1ee4d9d4f6ec448624e8f1fd63c5e1db",
+      "normal_qc_compared": 123,
+      "normal_qc_agree": 123,
+      "wet_controls": 18,
+      "dry_controls": 105,
+      "qc9_outside_logged_rain": 44,
+      "qc9_total": 44,
+      "first_retained_hour_excluded": [
+        "2026-10-18 00:00"
+      ],
+      "not_qualified": [
+        "hourly quantity from journal",
+        "QC9-to-zero",
+        "unattended journal completeness",
+        "snow and mixed formats",
+        "cross-midnight journal continuation",
+        "exact hour event endpoints",
+        "LGT",
+        "live response"
+      ],
+      "native_fallback_enabled": false
+    },
+    "winter_inputs": [
+      {
+        "path": "server2/tests/domestic/fixtures/asos-hourly-108-20241126-20241128.json",
+        "bytes": 36955,
+        "sha256": "f8a16e10086139fd2f7b849b5929a9d70cd40c12ce6c9ce2694a5c3f402422a1",
+        "rows": 72,
+        "fields": {
+          "rn": {
+            "value": 20,
+            "blank": 52
+          },
+          "rnQcflg": {
+            "blank": 20,
+            "value": 52
+          },
+          "dmstMtphNo": {
+            "value": 57,
+            "blank": 15
+          },
+          "dc10Tca": {
+            "value": 72
+          }
+        }
+      },
+      {
+        "path": "server2/tests/domestic/fixtures/asos-daily-108-20241126-20241128.json",
+        "bytes": 4633,
+        "sha256": "1be9f51a966912f165291b254fa5c6d2fdcd85d0026ee71cb6f755d853979a25",
+        "rows": 3,
+        "fields": {
+          "sumRn": {
+            "value": 3
+          },
+          "sumRnDur": {
+            "value": 3
+          },
+          "iscs": {
+            "value": 3
+          }
+        }
+      }
+    ],
+    "winter_amounts": {
+      "numeric": 20,
+      "all_at_three_hour_marks": true,
+      "blank_qc9": 52,
+      "hourly_quantity_split": false,
+      "daily_control_windows": [
+        {
+          "day": "2024-11-26",
+          "start_kst": "2024-11-26 01:00",
+          "end_kst": "2024-11-27 00:00",
+          "reported_amounts": 8,
+          "sum_mm": 26.0,
+          "daily_mm": 26.0
+        },
+        {
+          "day": "2024-11-27",
+          "start_kst": "2024-11-27 01:00",
+          "end_kst": "2024-11-28 00:00",
+          "reported_amounts": 8,
+          "sum_mm": 22.4,
+          "daily_mm": 22.4
+        }
+      ],
+      "qualification": "Corroborates ending-three-hour interpretation for two station-days; not all winter cases or seven-day closure"
+    },
+    "verification": {
+      "asos_tests": {
+        "passed": 18,
+        "failed": 0,
+        "ignored": 0,
+        "new_recorded_winter_test": true,
+        "log_sha256": "873e7687c69e2efa6a8820d301d55ea82c3b7c0180af2a3776d3a80c041b5ba9",
+        "command": "cargo test --offline --test domestic asos:: -- --test-threads=1"
+      },
+      "clippy": {
+        "all_targets_deny_warnings": true,
+        "log_sha256": "b0f3c40185334e0426cd98183a4220a3804b0300cc6c63745987b78513c86c84"
+      },
+      "previous_normalization_50_test_checkpoint": "Preserved; other groups not rerun for this fixture-only continuation",
+      "independent_advisor": "Opus5.5/max assessed lead-reported numbers without tools; no independent new runtime/source verification",
+      "rustfmt_changed_test": "PASS",
+      "local_document_file_links": {
+        "checked": 67,
+        "missing": 0,
+        "fragment_validation": false
+      },
+      "citation_consistency": {
+        "sources": 11,
+        "with_matched_quotes": 11,
+        "strict": "PASS",
+        "full_prose_entailment": "not checked"
+      },
+      "placement": {
+        "declared_paths": 69,
+        "changed_task_paths": 68,
+        "manual_task_scope": "PASS",
+        "whole_gate": "29 pre-existing undeclared paths only; not a whole-tree pass",
+        "dependencies_changed": false
+      },
+      "artifact_policy": "PASS actual index, 0 staged paths; not candidate-commit validation",
+      "diff_check": "PASS"
+    },
+    "next_single_source_gate": "Strict journal parser with continuation/modifiers; predeclared 100% agreement on additional staffed stations and retained winter controls. Any mismatch leaves QC9 absence unknown. Presence alone cannot qualify quantities or LGT.",
+    "full_seven_day_qualified": false,
+    "full_cold_qualified": false,
+    "full_restore_qualified": false,
+    "p95_p99_qualified": false,
+    "diagram_change": "Not needed: this continuation changes fixtures/tests/evidence only; existing runtime/route/storage contract and diagram unchanged"
+  },
+  "journal_qualification_continuation": {
+    "scope": "Offline source qualifier and fixed provider controls; no native runtime or response contract change",
+    "date_kst": "2026-10-26",
+    "official_guideline": {
+      "url": "https://data.kma.go.kr/resources/images/publication/%EA%B8%B0%ED%9B%84%ED%86%B5%EA%B3%84%EC%A7%80%EC%B9%A8%282021.5%29.pdf",
+      "bytes": 828082,
+      "sha256": "6f21cd3515872b94099ba9be0de755de1e734bfad8fc93ab64faedb95562bdaa",
+      "pages": 86,
+      "extraction": "local macOS PDFKit, no installed dependency",
+      "findings": [
+        "hourly phenomenon codes derive from the journal; comparison is not independent",
+        "intensity checkpoints are not onset evidence",
+        "24:00 continuation can only support bounded presence; unresolved hours stay unknown",
+        "manual thunder/lightning entries ended 2017-03-01; no LGT recovery",
+        "paper-symbol to data.go.kr brace-text interpretation remains an inference"
+      ]
+    },
+    "initial_frozen_parser_sha256": "24a2a199ab18402b5b88d2955f25795c15df1e15a90256f60dae67e5ea3104e4",
+    "initial_heldout_verdict": "FAIL, Busan unsupported drizzle day; Jeju two mismatches and one ambiguous exact hour",
+    "corrected_frozen_parser_sha256": "bf4d67b655a3334ecd08aa0d79b224ab86aee45865d6f6f10611b54978dfc607",
+    "same_data_replays": {
+      "seoul-summer": {
+        "code_consistency": {
+          "compared": 123,
+          "wet": 18,
+          "dry": 105,
+          "mismatches": []
+        },
+        "errors": [],
+        "ambiguous": [],
+        "gauge": {
+          "compared": 123,
+          "wet": 18,
+          "dry": 105,
+          "mismatches": [],
+          "unknown": [
+            "2026-10-18 00:00",
+            "2026-10-18 08:00",
+            "2026-10-18 20:00",
+            "2026-10-18 21:00",
+            "2026-10-18 22:00",
+            "2026-10-18 23:00",
+            "2026-10-19 00:00",
+            "2026-10-20 05:00",
+            "2026-10-20 06:00",
+            "2026-10-20 07:00",
+            "2026-10-20 08:00",
+            "2026-10-20 09:00",
+            "2026-10-20 10:00",
+            "2026-10-20 11:00",
+            "2026-10-20 12:00",
+            "2026-10-20 13:00",
+            "2026-10-20 14:00",
+            "2026-10-20 15:00",
+            "2026-10-20 16:00",
+            "2026-10-20 17:00",
+            "2026-10-20 18:00",
+            "2026-10-20 19:00",
+            "2026-10-20 20:00",
+            "2026-10-20 21:00",
+            "2026-10-21 00:00",
+            "2026-10-21 03:00",
+            "2026-10-21 04:00",
+            "2026-10-21 05:00",
+            "2026-10-21 06:00",
+            "2026-10-21 07:00",
+            "2026-10-21 10:00",
+            "2026-10-21 11:00",
+            "2026-10-21 12:00",
+            "2026-10-21 13:00",
+            "2026-10-21 14:00",
+            "2026-10-21 15:00",
+            "2026-10-21 16:00",
+            "2026-10-21 17:00",
+            "2026-10-21 18:00",
+            "2026-10-21 19:00",
+            "2026-10-21 20:00",
+            "2026-10-21 21:00",
+            "2026-10-21 22:00",
+            "2026-10-21 23:00",
+            "2026-10-22 00:00"
+          ],
+          "gate_passed": true
+        },
+        "combined_gate_passed": true
+      },
+      "seoul-winter": {
+        "code_consistency": {
+          "compared": 56,
+          "wet": 54,
+          "dry": 2,
+          "mismatches": []
+        },
+        "errors": [],
+        "ambiguous": [],
+        "gauge": {
+          "compared": 19,
+          "wet": 19,
+          "dry": 0,
+          "mismatches": [],
+          "unknown": [
+            "2024-11-26 00:00",
+            "2024-11-28 12:00",
+            "2024-11-28 15:00",
+            "2024-11-28 18:00",
+            "2024-11-28 21:00"
+          ],
+          "gate_passed": false
+        },
+        "combined_gate_passed": false
+      },
+      "busan": {
+        "code_consistency": {
+          "compared": 136,
+          "wet": 80,
+          "dry": 56,
+          "mismatches": []
+        },
+        "errors": [],
+        "ambiguous": [],
+        "gauge": {
+          "compared": 135,
+          "wet": 80,
+          "dry": 55,
+          "mismatches": [],
+          "unknown": [
+            "2026-10-18 00:00",
+            "2026-10-18 19:00",
+            "2026-10-18 21:00",
+            "2026-10-19 08:00",
+            "2026-10-19 09:00",
+            "2026-10-19 10:00",
+            "2026-10-19 11:00",
+            "2026-10-19 12:00",
+            "2026-10-19 13:00",
+            "2026-10-19 14:00",
+            "2026-10-19 15:00",
+            "2026-10-19 16:00",
+            "2026-10-19 18:00",
+            "2026-10-19 19:00",
+            "2026-10-19 21:00",
+            "2026-10-19 22:00",
+            "2026-10-19 23:00",
+            "2026-10-20 00:00",
+            "2026-10-21 03:00",
+            "2026-10-21 11:00",
+            "2026-10-21 12:00",
+            "2026-10-21 13:00",
+            "2026-10-21 14:00",
+            "2026-10-21 15:00",
+            "2026-10-21 16:00",
+            "2026-10-21 17:00",
+            "2026-10-21 18:00",
+            "2026-10-21 19:00",
+            "2026-10-21 20:00",
+            "2026-10-21 21:00",
+            "2026-10-21 22:00",
+            "2026-10-21 23:00",
+            "2026-10-22 00:00"
+          ],
+          "gate_passed": true
+        },
+        "combined_gate_passed": true
+      },
+      "jeju": {
+        "code_consistency": {
+          "compared": 135,
+          "wet": 77,
+          "dry": 58,
+          "mismatches": []
+        },
+        "errors": [],
+        "ambiguous": [
+          "2026-10-21 01:00",
+          "2026-10-21 02:00",
+          "2026-10-21 03:00"
+        ],
+        "gauge": {
+          "compared": 135,
+          "wet": 77,
+          "dry": 58,
+          "mismatches": [],
+          "unknown": [
+            "2026-10-18 00:00",
+            "2026-10-19 03:00",
+            "2026-10-19 04:00",
+            "2026-10-19 12:00",
+            "2026-10-19 14:00",
+            "2026-10-19 16:00",
+            "2026-10-19 17:00",
+            "2026-10-19 22:00",
+            "2026-10-19 23:00",
+            "2026-10-20 00:00",
+            "2026-10-20 06:00",
+            "2026-10-20 07:00",
+            "2026-10-20 08:00",
+            "2026-10-20 14:00",
+            "2026-10-20 15:00",
+            "2026-10-21 01:00",
+            "2026-10-21 02:00",
+            "2026-10-21 03:00",
+            "2026-10-21 10:00",
+            "2026-10-21 11:00",
+            "2026-10-21 12:00",
+            "2026-10-21 13:00",
+            "2026-10-21 14:00",
+            "2026-10-21 15:00",
+            "2026-10-21 16:00",
+            "2026-10-21 17:00",
+            "2026-10-21 18:00",
+            "2026-10-21 19:00",
+            "2026-10-21 20:00",
+            "2026-10-21 21:00",
+            "2026-10-21 22:00",
+            "2026-10-21 23:00",
+            "2026-10-22 00:00"
+          ],
+          "gate_passed": true
+        },
+        "combined_gate_passed": false
+      }
+    },
+    "fresh_profile": {
+      "id": "asos-journal-fresh-six-20261026",
+      "frozen_at_utc": "2026-10-25T17:00:54.269396+00:00",
+      "parser_sha256": "bf4d67b655a3334ecd08aa0d79b224ab86aee45865d6f6f10611b54978dfc607",
+      "classification": "fresh held-out source diagnostic, not runtime adoption or a latency cohort",
+      "attempt_cap": 6,
+      "retry_cap": 0,
+      "redirect_cap": 0,
+      "timeout_seconds": 10,
+      "max_body_bytes": 8388608,
+      "host": "apis.data.go.kr",
+      "services": [
+        "AsosHourlyInfoService/getWthrDataList",
+        "AsosDalyInfoService/getWthrDataList"
+      ],
+      "stations": [
+        {
+          "id": "112",
+          "start": "20250127",
+          "end": "20250130"
+        },
+        {
+          "id": "105",
+          "start": "20250302",
+          "end": "20250305"
+        },
+        {
+          "id": "165",
+          "start": "20261011",
+          "end": "20261014"
+        }
+      ],
+      "expected_rows_per_station": {
+        "hourly": 96,
+        "daily": 4
+      },
+      "criteria": {
+        "no_code_or_gauge_mismatches": true,
+        "all_returned_journals_parse": true,
+        "matching_station_unique_exact_hours": true,
+        "unknowns_counted_separately": true,
+        "required_observed_patterns": [
+          "overnight intensity-first checkpoint",
+          "winter snow",
+          "drizzle (안개비)"
+        ],
+        "wet_and_dry_gauge_controls_required_over_profile": true,
+        "missing_pattern_or_unparsed_day_fails_gate": true,
+        "hourly_codes_not_independent_from_journals": true,
+        "native_fallback_enabled": false,
+        "full_history_qualified": false
+      },
+      "credential_selection": "only first existing DONGNAE_SECRET_KEYS via private_key_list(server2/.env); no secret output",
+      "previous_profiles": "remain exhausted; no reset",
+      "output": "reports/kma-asos-journal-20261026/fresh-six/"
+    },
+    "fresh_results": {
+      "112": {
+        "code_consistency": {
+          "compared": 48,
+          "wet": 48,
+          "dry": 0,
+          "mismatches": []
+        },
+        "errors": [],
+        "ambiguous": [],
+        "gauge": {
+          "compared": 26,
+          "wet": 19,
+          "dry": 7,
+          "mismatches": [
+            {
+              "tm": "2025-01-28 21:00",
+              "journal_wet": false,
+              "rain_field_wet": true,
+              "hours": 3
+            }
+          ],
+          "unknown": [
+            "2025-01-27 00:00",
+            "2025-01-29 12:00",
+            "2025-01-29 15:00",
+            "2025-01-29 18:00",
+            "2025-01-29 21:00",
+            "2025-01-30 00:00"
+          ],
+          "gate_passed": false
+        },
+        "combined_gate_passed": false
+      },
+      "105": {
+        "code_consistency": {
+          "compared": 0,
+          "wet": 0,
+          "dry": 0,
+          "mismatches": []
+        },
+        "errors": [
+          {
+            "day": "2025-03-02",
+            "reason": "reported precipitation without a journal event"
+          },
+          {
+            "day": "2025-03-03",
+            "reason": "reported precipitation without a journal event"
+          },
+          {
+            "day": "2025-03-04",
+            "reason": "reported precipitation without a journal event"
+          },
+          {
+            "day": "2025-03-05",
+            "reason": "reported precipitation without a journal event"
+          }
+        ],
+        "ambiguous": [],
+        "gauge": {
+          "compared": 0,
+          "wet": 0,
+          "dry": 0,
+          "mismatches": [],
+          "unknown": [
+            "2025-03-02 00:00",
+            "2025-03-02 03:00",
+            "2025-03-02 06:00",
+            "2025-03-02 09:00",
+            "2025-03-02 12:00",
+            "2025-03-02 15:00",
+            "2025-03-02 18:00",
+            "2025-03-02 21:00",
+            "2025-03-03 00:00",
+            "2025-03-03 03:00",
+            "2025-03-03 06:00",
+            "2025-03-03 09:00",
+            "2025-03-03 12:00",
+            "2025-03-03 15:00",
+            "2025-03-03 18:00",
+            "2025-03-03 21:00",
+            "2025-03-04 00:00",
+            "2025-03-04 03:00",
+            "2025-03-04 06:00",
+            "2025-03-04 09:00",
+            "2025-03-04 12:00",
+            "2025-03-04 15:00",
+            "2025-03-04 18:00",
+            "2025-03-04 21:00",
+            "2025-03-05 00:00",
+            "2025-03-05 03:00",
+            "2025-03-05 06:00",
+            "2025-03-05 09:00",
+            "2025-03-05 12:00",
+            "2025-03-05 15:00",
+            "2025-03-05 18:00",
+            "2025-03-05 21:00"
+          ],
+          "gate_passed": false
+        },
+        "combined_gate_passed": false
+      },
+      "165": {
+        "code_consistency": {
+          "compared": 53,
+          "wet": 17,
+          "dry": 36,
+          "mismatches": []
+        },
+        "errors": [
+          {
+            "hour": "2026-10-13 23:00",
+            "reason": "unsupported nonblank reference code"
+          }
+        ],
+        "ambiguous": [],
+        "gauge": {
+          "compared": 50,
+          "wet": 18,
+          "dry": 32,
+          "mismatches": [],
+          "unknown": [
+            "2026-10-11 00:00",
+            "2026-10-11 14:00",
+            "2026-10-11 15:00",
+            "2026-10-11 16:00",
+            "2026-10-11 17:00",
+            "2026-10-11 18:00",
+            "2026-10-11 19:00",
+            "2026-10-11 20:00",
+            "2026-10-11 23:00",
+            "2026-10-12 00:00",
+            "2026-10-12 06:00",
+            "2026-10-12 07:00",
+            "2026-10-12 08:00",
+            "2026-10-12 09:00",
+            "2026-10-12 10:00",
+            "2026-10-12 11:00",
+            "2026-10-12 12:00",
+            "2026-10-12 13:00",
+            "2026-10-12 14:00",
+            "2026-10-12 15:00",
+            "2026-10-12 16:00",
+            "2026-10-12 17:00",
+            "2026-10-12 18:00",
+            "2026-10-12 19:00",
+            "2026-10-12 20:00",
+            "2026-10-12 21:00",
+            "2026-10-12 22:00",
+            "2026-10-12 23:00",
+            "2026-10-13 02:00",
+            "2026-10-13 03:00",
+            "2026-10-13 04:00",
+            "2026-10-13 05:00",
+            "2026-10-13 06:00",
+            "2026-10-13 09:00",
+            "2026-10-13 10:00",
+            "2026-10-13 11:00",
+            "2026-10-13 12:00",
+            "2026-10-13 13:00",
+            "2026-10-13 14:00",
+            "2026-10-13 15:00",
+            "2026-10-13 16:00",
+            "2026-10-13 17:00",
+            "2026-10-13 18:00",
+            "2026-10-13 19:00",
+            "2026-10-13 20:00",
+            "2026-10-14 00:00"
+          ],
+          "gate_passed": true
+        },
+        "combined_gate_passed": false
+      }
+    },
+    "fresh_verdict": "FAIL: one winter gauge mismatch, four rainy empty-journal days, one unsupported reference code; required drizzle/overnight-checkpoint cases not observed",
+    "native_journal_fallback_enabled": false,
+    "actual_provider_http_attempts_this_continuation": 10,
+    "profiles": [
+      {
+        "profile": "asos-journal-two-stations-20261026",
+        "attempt_cap": 4,
+        "parser_sha256": "24a2a199ab18402b5b88d2955f25795c15df1e15a90256f60dae67e5ea3104e4",
+        "started_utc": "2026-10-25T16:39:06.049785+00:00",
+        "attempts": [
+          {
+            "kind": "hourly",
+            "station": "159",
+            "start": "20261018",
+            "end": "20261024",
+            "status": 200,
+            "bytes": 86143,
+            "sha256": "1b08a7c18643b062d6eda5d0c25214bd5cb5ceedef0dc5c086f1647b485d835d",
+            "result_code": "00",
+            "rows": 168,
+            "total": 168,
+            "first": "2026-10-18 00:00",
+            "last": "2026-10-24 23:00",
+            "code_counts": {
+              "": 87,
+              "01": 28,
+              "1901": 50,
+              "19": 1,
+              "190201": 2
+            },
+            "rain_quality_counts": {
+              "": 136,
+              "9": 32
+            },
+            "provider_http_ms": 411.897
+          },
+          {
+            "kind": "daily",
+            "station": "159",
+            "start": "20261018",
+            "end": "20261024",
+            "status": 200,
+            "bytes": 8861,
+            "sha256": "bfa15be42084eaa30af9740d9bad908103f8d6621d9865e1d444d134c547b75d",
+            "result_code": "00",
+            "rows": 7,
+            "total": 7,
+            "first": "2026-10-18",
+            "last": "2026-10-24",
+            "provider_http_ms": 175.128
+          },
+          {
+            "kind": "hourly",
+            "station": "184",
+            "start": "20261018",
+            "end": "20261024",
+            "status": 200,
+            "bytes": 86254,
+            "sha256": "7e61a1d5e5be5c981c642a5ad63db8f71ef5211a725b38dd62c01f1799c79c73",
+            "result_code": "00",
+            "rows": 168,
+            "total": 168,
+            "first": "2026-10-18 00:00",
+            "last": "2026-10-24 23:00",
+            "code_counts": {
+              "": 88,
+              "1901": 51,
+              "01": 29
+            },
+            "rain_quality_counts": {
+              "": 139,
+              "9": 29
+            },
+            "provider_http_ms": 386.039
+          },
+          {
+            "kind": "daily",
+            "station": "184",
+            "start": "20261018",
+            "end": "20261024",
+            "status": 200,
+            "bytes": 8631,
+            "sha256": "e0261db42f43142e943a57ce2bc27d124000f3bcbc27a72f7394f2927b090bb6",
+            "result_code": "00",
+            "rows": 7,
+            "total": 7,
+            "first": "2026-10-18",
+            "last": "2026-10-24",
+            "provider_http_ms": 194.104
+          }
+        ]
+      },
+      {
+        "profile": "asos-journal-fresh-six-20261026",
+        "started_at_utc": "2026-10-25T17:01:20.646947+00:00",
+        "parser_sha256": "bf4d67b655a3334ecd08aa0d79b224ab86aee45865d6f6f10611b54978dfc607",
+        "attempt_cap": 6,
+        "attempts": [
+          {
+            "station": "112",
+            "kind": "hourly",
+            "start": "20250127",
+            "end": "20250130",
+            "status": 200,
+            "bytes": 49149,
+            "sha256": "8dd36fd5ecdd5d189a8066288862b55c6d2efb1df4a7aeb4979dea499d07bfa3",
+            "result_code": "00",
+            "rows": 96,
+            "total": 96,
+            "first": "2025-01-27 00:00",
+            "last": "2025-01-30 23:00",
+            "http_ms": 1032.703
+          },
+          {
+            "station": "112",
+            "kind": "daily",
+            "start": "20250127",
+            "end": "20250130",
+            "status": 200,
+            "bytes": 4964,
+            "sha256": "aa4e3d51bd3141289b8edbffa8af0be5cba1fd04772f5c069b63b7de273ec34c",
+            "result_code": "00",
+            "rows": 4,
+            "total": 4,
+            "first": "2025-01-27",
+            "last": "2025-01-30",
+            "http_ms": 289.361
+          },
+          {
+            "station": "105",
+            "kind": "hourly",
+            "start": "20250302",
+            "end": "20250305",
+            "status": 200,
+            "bytes": 48756,
+            "sha256": "75d908c4a746b922169fe2ee983d8cc813f854f745528c61c47718556b1f57dc",
+            "result_code": "00",
+            "rows": 96,
+            "total": 96,
+            "first": "2025-03-02 00:00",
+            "last": "2025-03-05 23:00",
+            "http_ms": 879.389
+          },
+          {
+            "station": "105",
+            "kind": "daily",
+            "start": "20250302",
+            "end": "20250305",
+            "status": 200,
+            "bytes": 4203,
+            "sha256": "2b3819d46d7220d4ee6a17fcb6ad79a7b6f194efb39246068067cc2b6dcda14c",
+            "result_code": "00",
+            "rows": 4,
+            "total": 4,
+            "first": "2025-03-02",
+            "last": "2025-03-05",
+            "http_ms": 437.175
+          },
+          {
+            "station": "165",
+            "kind": "hourly",
+            "start": "20261011",
+            "end": "20261014",
+            "status": 200,
+            "bytes": 49137,
+            "sha256": "780f10335a08b8145fe4b1876c31757393b003f8b2c009952ba834ac0c7bdae0",
+            "result_code": "00",
+            "rows": 96,
+            "total": 96,
+            "first": "2026-10-11 00:00",
+            "last": "2026-10-14 23:00",
+            "http_ms": 305.518
+          },
+          {
+            "station": "165",
+            "kind": "daily",
+            "start": "20261011",
+            "end": "20261014",
+            "status": 200,
+            "bytes": 4622,
+            "sha256": "21ed40726407cad2efc7fab51bdb2918ced2a3a6b75579eb3761b3d9cfb23db3",
+            "result_code": "00",
+            "rows": 4,
+            "total": 4,
+            "first": "2026-10-11",
+            "last": "2026-10-14",
+            "http_ms": 182.133
+          }
+        ],
+        "scope": "source-only data.go.kr, no AWS/S3 or client latency",
+        "finished_at_utc": "2026-10-25T17:01:23.775489+00:00",
+        "exhausted": true
+      }
+    ],
+    "fixture_originals": [
+      {
+        "path": "server2/tests/domestic/fixtures/asos-hourly-159-20261018-20261024.json",
+        "bytes": 86143,
+        "sha256": "1b08a7c18643b062d6eda5d0c25214bd5cb5ceedef0dc5c086f1647b485d835d"
+      },
+      {
+        "path": "server2/tests/domestic/fixtures/asos-daily-159-20261018-20261024.json",
+        "bytes": 8861,
+        "sha256": "bfa15be42084eaa30af9740d9bad908103f8d6621d9865e1d444d134c547b75d"
+      },
+      {
+        "path": "server2/tests/domestic/fixtures/asos-hourly-184-20261018-20261024.json",
+        "bytes": 86254,
+        "sha256": "7e61a1d5e5be5c981c642a5ad63db8f71ef5211a725b38dd62c01f1799c79c73"
+      },
+      {
+        "path": "server2/tests/domestic/fixtures/asos-daily-184-20261018-20261024.json",
+        "bytes": 8631,
+        "sha256": "e0261db42f43142e943a57ce2bc27d124000f3bcbc27a72f7394f2927b090bb6"
+      },
+      {
+        "path": "server2/tests/domestic/fixtures/asos-hourly-112-20250127-20250130.json",
+        "bytes": 49149,
+        "sha256": "8dd36fd5ecdd5d189a8066288862b55c6d2efb1df4a7aeb4979dea499d07bfa3"
+      },
+      {
+        "path": "server2/tests/domestic/fixtures/asos-daily-112-20250127-20250130.json",
+        "bytes": 4964,
+        "sha256": "aa4e3d51bd3141289b8edbffa8af0be5cba1fd04772f5c069b63b7de273ec34c"
+      },
+      {
+        "path": "server2/tests/domestic/fixtures/asos-hourly-105-20250302-20250305.json",
+        "bytes": 48756,
+        "sha256": "75d908c4a746b922169fe2ee983d8cc813f854f745528c61c47718556b1f57dc"
+      },
+      {
+        "path": "server2/tests/domestic/fixtures/asos-daily-105-20250302-20250305.json",
+        "bytes": 4203,
+        "sha256": "2b3819d46d7220d4ee6a17fcb6ad79a7b6f194efb39246068067cc2b6dcda14c"
+      },
+      {
+        "path": "server2/tests/domestic/fixtures/asos-hourly-165-20261011-20261014.json",
+        "bytes": 49137,
+        "sha256": "780f10335a08b8145fe4b1876c31757393b003f8b2c009952ba834ac0c7bdae0"
+      },
+      {
+        "path": "server2/tests/domestic/fixtures/asos-daily-165-20261011-20261014.json",
+        "bytes": 4622,
+        "sha256": "21ed40726407cad2efc7fab51bdb2918ced2a3a6b75579eb3761b3d9cfb23db3"
+      }
+    ],
+    "public_document_gets": 2,
+    "amazon_aws_or_s3_calls": 0,
+    "verification": {
+      "python": {
+        "passed": 40,
+        "failed": 0,
+        "test_groups": [
+          "test_kma_asos_journal (21)",
+          "test_kma_public_history_qualification (10)",
+          "test_kma_full_response_contract (9)"
+        ],
+        "duration_seconds": 0.102,
+        "scope": "isolated/offline only; no native execution this continuation"
+      },
+      "native_rust_build_or_test": "not rerun; no native changes",
+      "diagram": "unchanged; offline qualifier/fixtures/source evidence only, no collector/response/storage contract change",
+      "independent_advisor": "existing authorized Opus5.5/max source-only review of initial defect and official text; no independent execution; requested <=400 words exceeded (~550 words)",
+      "final_consistency": {
+        "file_links": {
+          "checked": 71,
+          "missing": 0,
+          "fragment_validation": false
+        },
+        "placement": {
+          "declared_paths": 81,
+          "changed_task_paths": 80,
+          "pre_existing_other_paths": 29,
+          "manual_task_scope": "PASS",
+          "whole_gate": "FAIL only on 29 preserved earlier paths; not a whole-tree pass"
+        },
+        "artifact_policy": "PASS current actual index, 0 staged paths; not candidate-commit validation",
+        "diff_check": "PASS",
+        "fixture_hashes_verified": 10,
+        "citation_consistency": "12 sources with matched quotes, strict/evidence consistency PASS; no full prose entailment check",
+        "native_runtime_paths_changed_this_continuation": [],
+        "dependencies_changed": false,
+        "disk": {
+          "target_approx_gib": 6.6,
+          "free_approx_gib": 143,
+          "cleanup_bytes": 0,
+          "target_retained_for": "unfinished source/auxiliary/measurement consumers",
+          "process_inventory": "sandbox pgrep unavailable; no cleanup performed",
+          "managed_tasks": "provider exec session completed; no build was started"
+        }
+      }
+    },
+    "pending_product_question": "Treatment of genuinely unavailable raw/QC values after required acquisition; no answer yet, existing requirements unchanged",
+    "full_seven_day_qualified": false,
+    "full_cold_samples": 0,
+    "full_restore_samples": 0,
+    "p95_p99_qualified": false,
+    "deferred_per_grid_plan_unchanged": true
+  }
+}

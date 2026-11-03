@@ -1,0 +1,5 @@
+# Preserve adjacent local Archify provenance without tracking generated run state.
+/server2-kma-data-design.delivery.json
+/server2-kma-data-design.browser-check.json
+/server2-kma-data-design.finalize.json
+/server2-kma-data-design.finalize-summary.json

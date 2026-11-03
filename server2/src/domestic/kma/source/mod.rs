@@ -46,6 +46,8 @@ pub mod observe;
 pub mod pages;
 mod records;
 mod reference;
+pub mod representative;
+pub mod required;
 pub mod rnshit;
 mod rss;
 pub mod seed;
@@ -83,6 +85,11 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::time::Instant;
+
+/// Observed-history derivation identity for stored summaries; a new aggregation rule must change
+/// it so that summaries built under an earlier rule are not reused. Its last segment is the
+/// `aggregation_policy_version` of `server2/config/contracts/kma-history.v1.json`.
+pub const OBSERVED_HISTORY_POLICY: &str = "asos-primary-v1;measured-history;public3h;rain-blank-semantics-v2;precipitation-guard-v1;dry-closure-v1;wet-bulb-rain-v1;station-altitude-v1";
 
 const DAY_MS: f64 = 86_400_000.;
 const HOUR_MS: f64 = 3_600_000.;
@@ -167,6 +174,8 @@ pub struct S3Source<T> {
     life: life_input::LifeInputs<T>,
     /// S15b-4: request-time forecast acquisitions (None: stored records only).
     forecast: Option<Arc<dyn fetch::ForecastAcquire>>,
+    raw_writer: Option<Arc<crate::storage::response_first::Writer>>,
+    observed_history: bool,
     /// Owned latest-publication, forecast-zone and warning acquisitions (S13d), keyed by
     /// dataset and publication.
     owned: crate::resolver::OwnedFlights<String, Option<Fetched>>,
@@ -246,16 +255,37 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         locate: Arc<dyn observe::Locate>,
         warnings: Arc<WarningStore<T>>,
     ) -> Result<Self, crate::storage::Error> {
+        Self::new_with_history_policy(transport, clock, acquire, locate, warnings, false)
+    }
+    /// AK's observations-primary contract; original constructor retains legacy replay.
+    pub fn new_observed_with_warning_store(
+        transport: T,
+        clock: Clock,
+        acquire: Arc<dyn observe::Acquire>,
+        locate: Arc<dyn observe::Locate>,
+        warnings: Arc<WarningStore<T>>,
+    ) -> Result<Self, crate::storage::Error> {
+        Self::new_with_history_policy(transport, clock, acquire, locate, warnings, true)
+    }
+    fn new_with_history_policy(
+        transport: T,
+        clock: Clock,
+        acquire: Arc<dyn observe::Acquire>,
+        locate: Arc<dyn observe::Locate>,
+        warnings: Arc<WarningStore<T>>,
+        observed: bool,
+    ) -> Result<Self, crate::storage::Error> {
         let store = Arc::new(CatalogStore::new(
             transport.clone(),
             CatalogLimits::default(),
         )?);
-        let observations = Arc::new(observe::Observations::new(
-            transport.clone(),
-            store.clone(),
-            acquire,
-            locate,
-        ));
+        let observations =
+            observe::Observations::new(transport.clone(), store.clone(), acquire, locate);
+        let observations = Arc::new(if observed {
+            observations.observed_history()
+        } else {
+            observations
+        });
         Ok(Self {
             town_resolver: towns::Resolver::new(transport.clone(), None).with_clock({
                 let clock = clock.clone();
@@ -273,6 +303,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             clock,
             zones: Arc::new(tokio::sync::Mutex::new(None)),
             forecast: None,
+            raw_writer: None,
+            observed_history: observed,
             owned: crate::resolver::OwnedFlights::new(crate::resolver::OwnedConfig {
                 running: 64,
                 entries: 8192,
@@ -320,6 +352,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         self.forecast = acquire;
         self
     }
+    /// Install one writer before the source/observation owner is shared.
+    pub fn with_raw_writer(mut self, writer: Arc<crate::storage::response_first::Writer>) -> Self {
+        Arc::get_mut(&mut self.observations)
+            .expect("unshared observation owner")
+            .set_raw_writer(writer.clone());
+        self.raw_writer = Some(writer);
+        self
+    }
     /// The same source-owned admission used by request assembly. No work starts here.
     pub fn warning_cycles(
         &self,
@@ -357,6 +397,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         until: Instant,
     ) -> Option<Fetched> {
         let acquire = self.forecast.clone()?;
+        if let Some(records) = acquire.cached(&request) {
+            return fetched_of(&records);
+        }
         let owned_for = request.owned_for();
         let start = publication_flight(acquire, admission, request);
         let waited = self.owned.join(key, until, owned_for, start).await;
@@ -554,7 +597,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     ) -> Result<Vec<Doc>, String> {
         self.grid_answer_by(family, grid, now, deadline, wait_bound(deadline))
             .await
-            .map(|(docs, _)| docs)
+            .map(|(docs, _, _)| docs)
     }
     /// [`Self::grid_answer`] waiting for an acquisition only until `until` (the request's bound),
     /// with the S16 identities of the acquisitions it folded (`None` when S06 excluded a listed
@@ -566,7 +609,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         deadline: Instant,
         until: Instant,
-    ) -> Result<(Vec<Doc>, Option<Vec<InputId>>), String> {
+    ) -> Result<(Vec<Doc>, Option<Vec<InputId>>, Vec<String>), String> {
         let coord = Coord {
             mx: f64::from(grid.nx()),
             my: f64::from(grid.ny()),
@@ -616,6 +659,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .copied()
                 .filter(|p| missing(p))
                 .collect();
+            let foreground: Vec<_> = if self.observed_history {
+                required::foreground(sf, now as i64)
+                    .into_iter()
+                    .filter(|p| *p != latest && missing(p))
+                    .collect()
+            } else {
+                Vec::new()
+            };
             if missing(&latest)
                 && let Some(request) = grid_request(sf, grid, latest)
             {
@@ -640,24 +691,75 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     self.acquire(key, request, LATEST_RETRY, until).await
                 };
                 if let Some(f) = fetched_latest {
-                    own = grid_input_id(family, sf.kind(), &f);
-                    fetched.push(visible(f, now));
+                    if self.raw_writer.is_none() {
+                        own = grid_input_id(family, sf.kind(), &f);
+                    }
+                    fetched.push(if self.observed_history {
+                        f
+                    } else {
+                        visible(f, now)
+                    });
                 }
             }
-            if !backfill.is_empty() {
+            if self.observed_history {
+                // Foreground history covers today's unavailable-in-ASOS hours and
+                // the D-1 24:00 boundary. Never request old SHRT for history.
+                for chunk in foreground.chunks(BACKFILL_CONCURRENCY) {
+                    if Instant::now() >= until {
+                        break;
+                    }
+                    let work = chunk.iter().filter_map(|p| {
+                        let request = grid_request(sf, grid, *p)?;
+                        Some(self.acquire(
+                            grid_flight(sf, grid, *p),
+                            fetch::ForecastRequest::DataGoKr(request),
+                            LATEST_RETRY,
+                            until,
+                        ))
+                    });
+                    for f in crate::history::join_all(work.collect())
+                        .await
+                        .into_iter()
+                        .flatten()
+                    {
+                        fetched.push(f);
+                    }
+                }
+            } else if !backfill.is_empty() {
                 self.backfill(sf, grid, latest, backfill).await;
             }
         }
+        if self.observed_history {
+            records::deduplicate(&mut fetched);
+        }
+        let as_of = if self.observed_history {
+            (self.clock)().max(now)
+        } else {
+            now
+        };
         let ids = (excluded == 0).then(|| {
-            let stored = fetched.len() - usize::from(own.is_some());
-            fetched[..stored]
-                .iter()
-                .filter(|f| f.fetched_at_ms as f64 <= now)
-                .filter_map(|f| grid_input_id(family, sf.kind(), f))
-                .chain(own)
-                .collect()
+            if self.observed_history {
+                fetched
+                    .iter()
+                    .filter(|f| f.fetched_at_ms as f64 <= as_of)
+                    .filter_map(|f| grid_input_id(family, sf.kind(), f))
+                    .collect()
+            } else {
+                let stored = fetched.len() - usize::from(own.is_some());
+                fetched[..stored]
+                    .iter()
+                    .filter(|f| f.fetched_at_ms as f64 <= now)
+                    .filter_map(|f| grid_input_id(family, sf.kind(), f))
+                    .chain(own)
+                    .collect()
+            }
         });
-        Ok((grid_documents(family, coord, &fetched, now), ids))
+        let raw_ids = fetched
+            .iter()
+            .filter(|f| f.fetched_at_ms as f64 <= as_of)
+            .flat_map(|f| f.raw_ids.iter().cloned())
+            .collect();
+        Ok((grid_documents(family, coord, &fetched, as_of), ids, raw_ids))
     }
     /// One owned pass over the missing backfill publications of a cell and family when its latest
     /// publication is `latest` (at most once per [`BACKFILL_RETRY`]), newest first, 3 in flight.
@@ -880,6 +982,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         }
     }
     async fn build(&self, request: &KmaRequest, deadline: Instant) -> Result<Snapshot, Unbuilt> {
+        // Covers the whole canonical discovery -> pending-overlay interval.
+        let _raw_pin = self.raw_writer.as_ref().map(|writer| writer.pin());
         let now = (self.clock)();
         let mut effective = request.clone();
         if super::middleware_of(&request.version, request.part.as_deref())
@@ -986,7 +1090,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // answered as legacy answers absent data. The air and life inputs end their waits 200 ms
         // before the deadline they are given, so they get `until` + 200 ms (`section`), which
         // also bounds the warning-state read; the assembly keeps the last 300 ms.
-        let until = wait_bound(deadline);
+        let until = if self.observed_history {
+            deadline
+                .checked_sub(ANSWER_RESERVE)
+                .unwrap_or_else(Instant::now)
+                .max(Instant::now())
+        } else {
+            wait_bound(deadline)
+        };
         let section = (until + std::time::Duration::from_millis(200)).min(deadline);
         let observations = async {
             let folded = self.observations.stations(now as i64, until).await;
@@ -1024,9 +1135,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             async {
                 let Some(grid) = grid else {
                     return (
-                        Ok((Vec::new(), None)),
-                        Ok((Vec::new(), None)),
-                        Ok((Vec::new(), None)),
+                        Ok((Vec::new(), None, Vec::new())),
+                        Ok((Vec::new(), None, Vec::new())),
+                        Ok((Vec::new(), None, Vec::new())),
                         Ok(Vec::new()),
                     );
                 };
@@ -1060,9 +1171,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             self.life.load(now, section),
         );
         let (zones, mids) = zones_and_mids?;
-        let (current, current_ids) = current?;
-        let (shortest, shortest_ids) = shortest?;
-        let (short, short_ids) = short?;
+        let (current, current_ids, current_raw) = current?;
+        let (shortest, shortest_ids, shortest_raw) = shortest?;
+        let (short, short_ids, short_raw) = short?;
         // S16: None when any grid family read was partial.
         let ids: Option<Vec<InputId>> = [current_ids, shortest_ids, short_ids]
             .into_iter()
@@ -1075,14 +1186,43 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         models.insert(TownModel::Shortest, shortest);
         models.insert(TownModel::Short, short);
         models.insert(TownModel::ShortRss, rss?);
+        let mut raw_ids: Vec<_> = [current_raw, shortest_raw, short_raw]
+            .into_iter()
+            .flatten()
+            .collect();
+        if let Some(stations) = &stations {
+            raw_ids.extend(stations.pages.iter().map(|page| page.raw_id.clone()));
+        }
+        if let Some(asos) = &asos {
+            raw_ids.extend(asos.fetched.iter().flat_map(|f| f.raw_ids.iter().cloned()));
+        }
+        let summary_admitted = self.raw_writer.as_ref().is_none_or(|writer| {
+            if let Some(scope) = crate::storage::response_first::ResponseScope::current() {
+                scope.require_durable(writer, &raw_ids);
+                true
+            } else {
+                writer.inputs_durable(&raw_ids)
+            }
+        });
         let summary = match (settled, ids, grid) {
-            (true, Some(ids), Some(grid)) => {
+            (true, Some(mut ids), Some(grid)) if summary_admitted => {
+                if self.observed_history {
+                    ids.push(InputId {
+                        family: "asos-primary-v1".into(),
+                        start_ms: i64::MIN / 2,
+                        end_ms: i64::MAX / 2,
+                        fetched_at_ms: 0,
+                        content_sha256: crate::storage::sha256(OBSERVED_HISTORY_POLICY.as_bytes()),
+                    });
+                }
                 summary_inputs(&town, grid, &history, ids, stations.as_deref(), asos)
             }
             _ => None,
         };
         Ok(Snapshot {
             summary,
+            // Keep presentation/day attribution on the request's clock even if
+            // acquisition crosses midnight. Raw visibility keeps its own fetch time.
             now,
             town,
             coord,
@@ -1091,6 +1231,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             zones,
             special,
             stations,
+            observed_history: self.observed_history,
             history,
             air,
             life,
@@ -1167,7 +1308,7 @@ fn summary_inputs(
         .and_then(OrderedJson::string)
         .as_deref()
     {
-        None | Some("station-unavailable") => {}
+        None | Some("station-unavailable") | Some("station-unrepresentative") => {}
         Some(_) => return None,
     }
     let folded = folded?;
@@ -1214,6 +1355,9 @@ fn summary_inputs(
     })
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> {
+    fn request_budget(&self) -> std::time::Duration {
+        std::time::Duration::from_secs(if self.observed_history { 8 } else { 3 })
+    }
     fn prepare(
         &self,
         mut request: KmaRequest,
@@ -1546,6 +1690,10 @@ fn fetched_of(records: &[crate::storage::RawRecord]) -> Option<Fetched> {
     let first = records.first()?;
     let period = &first.envelope.identity.period;
     Some(Fetched {
+        raw_ids: records
+            .iter()
+            .map(|r| r.envelope.identity.object_key().ok())
+            .collect::<Option<Vec<_>>>()?,
         fetched_at_ms: records
             .iter()
             .map(|r| r.envelope.identity.fetched_at_ms)
@@ -1662,6 +1810,8 @@ pub struct Snapshot {
     special: Option<Arc<ZoneState>>,
     /// Station collections (None before the first fold: answered over empty collections).
     stations: Option<Arc<observe::Folded>>,
+    /// ASOS-primary: station reads follow `station-altitude-v1`.
+    observed_history: bool,
     /// `history.loadForTown` for the snapshot's town.
     history: OrderedJson,
     air: air_input::AirAnswers,
@@ -1689,6 +1839,7 @@ impl Snapshot {
             zones,
             special,
             stations: None,
+            observed_history: false,
             history: OrderedJson::Null,
             air,
             life,
@@ -1756,6 +1907,7 @@ impl KmaStore for Snapshot {
             registry: &f.registry,
             hourly: &f.hourly,
             minute: &f.minute,
+            representative: self.observed_history,
         }
         .hourly_and_min_rns(town, date_time)
         .map(|d| d.json())
@@ -1768,6 +1920,7 @@ impl KmaStore for Snapshot {
             registry: &f.registry,
             hourly: &f.hourly,
             minute: &f.minute,
+            representative: self.observed_history,
         }
         .city_hourly(town, self.now)
         .map(|rows| list(&rows))

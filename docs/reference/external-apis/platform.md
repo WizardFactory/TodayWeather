@@ -1,0 +1,84 @@
+# Platform and operational service APIs
+
+[Manual index](README.md) · [Inventory](inventory.json) · [Historical services](retired.md)
+
+Source baseline `82f7a4838dda046be966ee9c25c9cb66561d099d`, 2026-10-24. These dependencies support delivery, storage, publication and mobile behavior. They are not additional weather observations. SDK method names are the app's contract; SDK-owned internal hosts/protocols are not invented as direct application REST calls.
+
+## Push delivery and authentication
+
+| ID / operation | Request / response contract | Actual invocation and bounds |
+| --- | --- | --- |
+| PUSH-FCM **POST** `https://fcm.googleapis.com/v1/projects/{project}/messages:send` | Bearer OAuth; JSON `message.token`, `notification.title/body`, string-valued `data`. Normal provider success carries `name`; implementation acceptance checks differ below. Acceptance is not device delivery. | Legacy Firebase Admin `.messaging().send()` [worker](../../../server/controllers/controllerPush.js#L181); optional S3 coordinator [direct transport](../../../server/lib/pushCoordinator/transport.js#L39); [server2 native transport](../../../server2/src/push/deliver/fcm.rs#L279). |
+| PUSH-OAUTH **POST** `https://oauth2.googleapis.com/token` | Form `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer`, signed JWT `assertion`; returns `access_token,expires_in` or error | [server2 OAuth](../../../server2/src/push/deliver/fcm.rs#L221), RS256/service-account scope assertion. Legacy installed Admin SDK uses `https://accounts.google.com/o/oauth2/token`; that is a compatibility variant, not a separate message submission. |
+| PUSH-GCM **SDK** `node-gcm.Sender.send()` | `GCM_ACCESS_KEY`; legacy registration ID, title/body/cityIndex/notId/content-available, high priority, TTL 86,400s | [Legacy Android branch](../../../server/controllers/controllerPush.js#L151) passes retry count 5 when registrationId exists without FCM token. Still source-wired, but provider service availability is unverified; do not use as a modern fallback recommendation. |
+| CLIENT-FCM **SDK** Firebasex Messaging | `getToken,hasPermission,grantPermission,unregister,onTokenRefresh,onMessageReceived`; token and notification/tap callbacks | [Shared adapter](../../../client/www/js/service.firebase.js#L23), [token registration to own server](../../../client/www/js/service.push.js#L866). Native platform Firebase configuration, permission and token required; no JS timeout/retry. |
+
+Official [FCM HTTP v1](https://firebase.google.com/docs/cloud-messaging/send/v1-api) and [service-account OAuth](https://developers.google.com/identity/protocols/oauth2/service-account) describe wire authentication. No push submission or device test was performed.
+
+The ordinary legacy sender lazily creates named Firebase apps per product from service-account configuration, includes `data.cityIndex`, and disables stored records on unregistered token. iOS without an FCM token errors; there is no direct APNs fallback. [Push architecture](../../architecture/push-notifications.md) distinguishes worker startup from route existence.
+
+The **opt-in `PUSH_STORE=s3` coordinator** adds `eventId`, Android TTL 300s/priority and APNs expiration. Its direct transport requires 2xx plus `name`, has a 15-second abort and 64 KiB response cap; no automatic transport replay after ambiguous timeout/error. Preparation retry and provider submission retry are different. SDK token preparation is bounded to ten seconds and refreshes at expiry−60s ([runtime](../../../server/lib/pushCoordinator/runtime.js#L130)).
+
+**server2** uses `SERVER2_FIREBASE_TODAYWEATHER` / `SERVER2_FIREBASE_TODAYAIR` JSON configuration with `project_id,client_email,private_key`. OAuth is ten seconds; per-product refresh lock/cache uses expiry−60s, failed token fetch is not cached. Send timeout defaults to **ten seconds**, with no ambiguous retry. Its [classifier](../../../server2/src/push/deliver/fcm.rs#L407) accepts parseable nontext JSON with 2xx and no provider error, without requiring `name`; that is the checked-out validation rule, not a recommended provider-success schema. Registration is revalidated after auth and before send; outcomes distinguish Accepted, Unregistered, Rejected, Unknown and NotSent. Missing auth prevents POST. FCM's iOS APNs payload fields are downstream Firebase integration, not a direct APNs operation. No runtime SNS sender was found.
+
+## Advertising and client telemetry
+
+Current shared client plugins are defined by [client/package.json](../../../client/package.json#L52), not by every old bundled JavaScript adapter. The web PWA does not inherit these native capabilities.
+
+| ID / SDK | Named methods / data | Current behavior and source |
+| --- | --- | --- |
+| CLIENT-ADMOB Google Mobile Ads through emi AdMob plugin 3.0.4 | `initialize,loadBannerAd,showBannerAd,hideBannerAd,removeBannerAd`; adaptive bottom banner | [Adapter](../../../client/www/js/service.admobemi.js#L22), [selection](../../../client/www/js/service.twads.js#L209). `autoShow=false`, nonoverlapping WebView, minimum 5s spacing. Load/failure events settle callback. Current adapter does not request interstitials merely because IDs exist. |
+| CLIENT-UMP Google User Messaging Platform | Native plugin consent initialization/readiness | [Consent gate](../../../client/www/js/service.admobemi.js#L83). Reinitializes once after consent; release UMP failure leaves ads gated. Test-unit fallback is conditional and bounded. No app REST consent endpoint. |
+| CLIENT-GA4 Firebase Analytics | `logEvent,isAnalyticsCollectionEnabled,setAnalyticsCollectionEnabled,setAnalyticsConsentMode` | [Monetization adapter](../../../client/www/js/service.monetization.js#L23). Starts disabled; explicit persisted choice plus native flag controls collection. Fixed allowlisted event schemas only; ad storage/user data/personalization denied. |
+| CLIENT-RC Firebase Remote Config | `setDefaults,setConfigSettings(10,3600),getAll,fetchAndActivate,getAll` | [Policy fetch](../../../client/www/js/service.monetization.js#L151), [invoker](../../../client/www/js/service.twads.js#L175). Cached/default pair applied first; 12s app fallback, late results ignored. |
+| CLIENT-CRASH Firebase Crashlytics | Installed native automatic crash collection; no direct shared JS error/log call established | [Manifest](../../../client/package.json#L120), modular Crashlytics 2.0.2, `FIREBASE_CRASHLYTICS_COLLECTION_ENABLED=true`. GA4 opt-in is not this switch. Build/upload unverified. |
+
+Official SDK docs: [Mobile Ads](https://developers.google.com/admob/android/quick-start), [UMP consent](https://developers.google.com/admob/android/privacy), [Analytics](https://firebase.google.com/docs/analytics), [Remote Config](https://firebase.google.com/docs/remote-config), [Crashlytics](https://firebase.google.com/docs/crashlytics). Native SDK behavior and bridge versions must be verified in a selected platform build before making runtime guarantees.
+
+Ad config names include `clientConfig.releaseAds`, `admobIOSBannerAdUnit`, `admobAndroidBannerAdUnit`; concrete identifiers are omitted. Older Clean/Pro AdMob adapters run only if their globals are present and are absent from the current plugin manifest. Legacy `Util.ga`/Fabric helpers are inert in the shared client; old call-site names do not prove Universal Analytics submission.
+
+GA4 events are `weather_fetch,weather_load,favorite_change,location_permission,ad_lifecycle,ad_policy_exposure` and fixed-route `screen_view`. Only fixed schema values and bounded integers are allowed, not raw URLs/labels/UUIDs/errors/provider bodies. Remote Config validates the **whole pair** `tw_banner_enabled` (strict boolean strings) and `tw_banner_delay_seconds` (integer 0..120); invalid pair keeps current policy. Ten-second fetch / 3,600-second minimum interval are SDK arguments, separate from the 12-second app gate. Remote Config does not depend on GA4 opt-in in this code.
+
+## Deep links and OS sharing
+
+**CLIENT-BRANCH — conditional SDK** `initSession` is invoked on device lifecycle only when `window.Branch` exists ([adapter](../../../client/www/js/service.branch.js#L29), [app](../../../client/www/js/app.js#L223)). It consumes clicked-link metadata/favorite navigation. The current shared package does **not** install Branch. Helper methods `createBranchUniversalObject,generateShortUrl,showShareSheet,setIdentity,userCompletedAction,sendCommerceEvent` remain, but not every helper has an established application caller. [Branch Cordova documentation](https://help.branch.io/developer-hub/docs/cordova-phonegap-ionic) describes the SDK family; it does not establish that our current binary contains it. No JS timeout/retry.
+
+**CLIENT-SHARE — OS delegated** `window.plugins.socialsharing.share(message,null,null,null)` is [invoked](../../../client/www/js/controller.tabctrl.js#L219). It opens the OS share sheet; no direct Kakao/Facebook/Twitter HTTP service is implied. Store, mail and external browser links are navigation. Public `*.app.link` strings are deep links, not distinct provider APIs.
+
+Historical Ionic Analytics/User/Deploy operations are [listed separately](retired.md#historical-native-services) because tracked applewatch code actually invokes them.
+
+## OpenAI notice translation
+
+**NOTICE-OPENAI — POST** `https://api.openai.com/v1/responses`, **operator notice publication only**, outside notice-read and weather-request paths. [Source](../../../server2/src/notice/translate.rs#L7); official [Responses create](https://developers.openai.com/api/reference/typescript/resources/responses/methods/create) and [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
+
+Bearer `OPENAI_SECRET_KEY`; `TRANSLATION_LLM_MODEL` config defaults in source to `gpt-6-luna`, optional `TRANSLATION_LLM_REASONING_EFFORT`. This literal is a repository default, not a verified available API model. Missing key skips translation; existing language translations are preserved; missing target languages run sequentially.
+
+JSON request contains `model,store:false,max_output_tokens:4096,instructions,input`, strict `text.format.type=json_schema` requiring `title,body` and no extra fields; reasoning effort is optional. Requires `status=completed`, collects `output` message `output_text`; refusal/incomplete/invalid schema fails that language. Model provenance comes from response or configured fallback. Five-second connect, 30-second HTTP and outer per-language bound, 1 MiB response cap, no redirect/proxy/retry. No API/model availability test was run.
+
+## AWS storage and operational APIs
+
+AWS auth is SigV4 using configured static pair or instance-role temporary credentials. Concrete bucket, role, distribution IDs and signed URLs are omitted. S3 is a storage API, not a new source of measured weather. [GetObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html), [HeadObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html), [PutObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html), [ListObjectsV2](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html) and [conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html) specify the provider operations.
+
+| ID / operation | Application use / request / output | Source |
+| --- | --- | --- |
+| AWS-S3-GET **GET** object | Legacy archives and KAQ reader; optional push storage; server2 raw/catalog/history/budget/geocode/summary. Body, ETag and metadata. Native raw 404 → NotFound; push miss → null; generic legacy helper propagates SDK error. | [Legacy helper](../../../server/s3/controller.s3.js#L34), [native raw](../../../server2/src/storage/transport.rs#L178), [push miss](../../../server/lib/pushCoordinator/storage.js#L30) |
+| AWS-S3-HEAD **HEAD** object | Native immutable raw identity/metadata verification, no body | [Native](../../../server2/src/storage/transport.rs#L184) |
+| AWS-S3-PUT **PUT** object | Legacy weather archive helper JSON/public-read; push private AES256 JSON with ETag CAS; native immutable gzip uses `If-None-Match:*`, Content-MD5 and metadata; mutable typed state has its own CAS | [Legacy](../../../server/s3/controller.s3.js#L42), [push](../../../server/lib/pushCoordinator/storage.js#L38), [native](../../../server2/src/storage/transport.rs#L237) |
+| AWS-S3-LIST **GET** `?list-type=2` | KAQ discovery, push shard listing, server2 catalog/history. Prefix/delimiter/max-keys/continuation; consume keys, truncation and next token. | [Legacy](../../../server/s3/controller.s3.js#L23), [push pagination](../../../server/lib/pushCoordinator/storage.js#L66), [native](../../../server2/src/storage/catalog_transport.rs#L254) |
+| AWS-S3-COPY / AWS-S3-UPLOAD **SDK helpers** | `copyObject` / fetch caller URL then managed `upload`. Definitions only; no current caller established. SDK internal multipart operations not independently inventoried. | [Helpers](../../../server/s3/controller.s3.js#L38), [upload](../../../server/s3/controller.s3.js#L66); **utility-only** |
+| AWS-IMDS-TOKEN **PUT** `/latest/api/token` | IMDSv2 session token; TTL request header 21,600s | [Credential source](../../../server2/src/storage/credentials.rs#L148) |
+| AWS-IMDS-ROLE **GET** `/latest/meta-data/iam/security-credentials/` | Session token header; discover instance role name | [Credential refresh](../../../server2/src/storage/credentials.rs#L200) |
+| AWS-IMDS-CREDS **GET** same prefix + `{role}` | Require `Code=Success`, temporary access/secret/session token and expiry | Same native credential refresh; no runtime STS AssumeRole caller established |
+| AWS-CLOUDFRONT **SDK** `createInvalidation` | Distribution ID, CallerReference, Paths Quantity/Items. `ALL` maps to `/town/*`. Current provider REST reference is **POST** `/2020-05-31/distribution/{id}/invalidation`; installed SDK API date is separately configured. | [Manual gather route](../../../server/routes/v000001/routeGather.js#L273) → [utility](../../../server/utils/awsCloudFront.js#L50) |
+
+server2 uses regional path-style `https://s3.{region}.amazonaws.com/{bucket}/{key}`, `rusty_s3` signed URL (30s) and reqwest connect 1s/HTTP 3s, without automatic redirect/proxy/retry/compression ([transport](../../../server2/src/storage/transport.rs#L113)). Higher-level CAS/reconciliation is store-specific. Legacy optional push S3 config uses SDK maxRetries 2, connect 2s/timeout 5s; generic legacy helper leaves SDK defaults. Native list max-keys 1..1000; the legacy helper's source value 2147483647 is not a supported S3 page-size guarantee.
+
+IMDSv2 is conditional on missing/placeholder static credentials, uses the documented link-local service, and has no IMDSv1 fallback. Session/credential refresh: 1s connect, 2s HTTP, 3s refresh wait, ≥10s between retries, refresh within five minutes of expiry with shared concurrent refresh. A real static `AWS_ACCESS_KEY`/`AWS_SECRET_KEY` pair suppresses IMDS. [Official IMDSv2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html). Configuration `SERVER2_S3_BUCKET`, `SERVER2_S3_REGION` defaults region to `ap-northeast-2` ([settings](../../../server2/src/storage/settings.rs#L22)).
+
+CloudFront invalidation is a **manual mutation** reachable from a gather GET handler, not a health check. No custom helper timeout/retry; its error branch can return without callback. This was not exercised. [Official CreateInvalidation](https://docs.aws.amazon.com/cloudfront/latest/APIReference/API_CreateInvalidation.html). Deployment/benchmark AWS CLI/control-plane tools are outside this application-runtime catalog; their authorization and commands belong to the relevant operations docs.
+
+## Log shipping
+
+**OPS-LOGENTRIES — SDK** `le_node` Winston Logentries transport sends `info` and above when `config.logToken[SERVER_MODE]` is nonempty ([source](../../../server/lib/log.js#L6), [construction](../../../server/lib/log.js#L28)). Config names are `LOGENTRIES_GATHER_TOKEN` and `LOGENTRIES_SERVICE_TOKEN`; SDK owns network endpoint/protocol, not a direct REST route in this app. The legacy nonempty placeholder can enable construction without a usable token. Console production log level and remote transport level are separate. No custom flush/deadline/retry contract is configured by the wrapper. [Official NodeJS logging guide](https://docs.rapid7.com/insightops/nodejs/) describes the service family; transport viability is unverified.
+
+New Relic is removed from current source/dependencies. Its existence in an older inspected host is a dated deployment observation, documented under [retired services](retired.md#removed-services-and-compatibility-code), not another currently wired APM API.

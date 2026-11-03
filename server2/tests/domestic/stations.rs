@@ -199,6 +199,7 @@ fn station_store_saves_and_answers_like_legacy() {
             registry: &registry,
             hourly: &hourly,
             minute: &minute,
+            representative: false,
         };
         let now = at(case, &["now"]).number().unwrap();
         let date_time = text(at(case, &["date_time"]));
@@ -216,6 +217,100 @@ fn station_store_saves_and_answers_like_legacy() {
             same(&got, at(answer, &["city"]), &format!("{id} {name} city"));
         }
     }
+}
+
+/// `station-altitude-v1` on the current-weather path, ASOS-primary only: the error names the
+/// station the path chose, and a town without a representative station reads no station data.
+#[test]
+fn current_weather_follows_the_station_altitude_rule() {
+    let registry = Registry::seeded(&server2::domestic::kma::source::seed::embedded().docs);
+    let (hourly, minute) = (RowStore::default(), RowStore::default());
+    let stations = |representative| Stations {
+        registry: &registry,
+        hourly: &hourly,
+        minute: &minute,
+        representative,
+    };
+    let town = |first: &str, second: &str, third: &str, lat: f64, lon: f64| {
+        serde_json::json!({"town":{"first":first,"second":second,"third":third},
+            "gCoord":{"lat":lat,"lon":lon}})
+    };
+    let error = |on: bool, town: &serde_json::Value| {
+        stations(on)
+            .hourly_and_min_rns(town, "202610131000")
+            .unwrap_err()
+            .0
+    };
+    let jinbu = town("강원도", "평창군", "진부면", 37.6345750, 128.5554000);
+    assert!(
+        error(false, &jinbu).contains("stnId=100"),
+        "{}",
+        error(false, &jinbu)
+    );
+    assert!(
+        error(true, &jinbu).starts_with("Fail to find stn coords"),
+        "{}",
+        error(true, &jinbu)
+    );
+    assert!(
+        stations(true)
+            .city_hourly(&jinbu, 0.)
+            .unwrap_err()
+            .0
+            .starts_with("Fail to find stn coords")
+    );
+
+    let gagok = town("강원도", "삼척시", "가곡면", 37.1469139, 129.2075306);
+    assert!(
+        error(false, &gagok).contains("stnId=216"),
+        "{}",
+        error(false, &gagok)
+    );
+    assert!(
+        error(true, &gagok).contains("stnId=130"),
+        "{}",
+        error(true, &gagok)
+    );
+
+    let hwangji = town("강원도", "태백시", "황지동", 37.1679528, 128.9939111);
+    assert!(
+        error(true, &hwangji).contains("stnId=216"),
+        "{}",
+        error(true, &hwangji)
+    );
+}
+
+/// A cape station's wind stays out of the current-weather rows under ASOS-primary only.
+#[test]
+fn current_weather_drops_only_a_cape_stations_wind() {
+    use server2::domestic::kma::source::Val;
+    let registry = Registry::seeded(&server2::domestic::kma::source::seed::embedded().docs);
+    let date = 1_793_000_000_000.;
+    let mut hourly = RowStore::default();
+    hourly.save(&[Doc::new()
+        .with("stnId", Val::str("185"))
+        .with("date", Val::Date(date))
+        .with("t1h", Val::str("12.5"))
+        .with("wsd", Val::str("9.5"))
+        .with("vec", Val::str("270"))]);
+    let minute = RowStore::default();
+    let town = serde_json::json!({"town":{"first":"제주특별자치도","second":"제주시","third":"한경면"},
+        "gCoord":{"lat":33.3040691,"lon":126.1881455}});
+    let row = |representative| {
+        Stations {
+            registry: &registry,
+            hourly: &hourly,
+            minute: &minute,
+            representative,
+        }
+        .city_hourly(&town, date)
+        .unwrap()
+        .remove(0)
+    };
+    let (on, off) = (row(true), row(false));
+    assert!(!on.has("wsd") && !on.has("vec"));
+    assert_eq!(on.get("t1h").and_then(|v| v.as_num()), Some(12.5));
+    assert!(off.has("wsd") && off.has("vec"));
 }
 
 /// S15b2s-R2: a seeded registry keeps repeated station ids as legacy `kmastninfos` holds them:

@@ -1,0 +1,484 @@
+{
+  "schema": 1,
+  "date": "2026-10-25",
+  "base_revision": "82f7a4838dda046be966ee9c25c9cb66561d099d",
+  "state": "LOCAL_IMPLEMENTATION_WITH_OPEN_SOURCE_QUALIFICATION",
+  "overall_complete": false,
+  "deployed": false,
+  "requirements": {
+    "historical_numeric_change": "Allowed only through acquired observed/ultra inputs; ASOS primary",
+    "public_cadence": "Existing three-hour short rows",
+    "internal_history_cadence": "Hourly",
+    "history": "Seven completed KST days, cloud/phenomena, AM/PM weather and daily measured extremes/rain",
+    "per_grid_optimization": "Explicitly deferred",
+    "life_air": "Outside weather investigation; envelope preserved"
+  },
+  "gates": {
+    "raw_group_integrity": "PASS_ISOLATED",
+    "full_real_history_coverage": "NOT_QUALIFIED",
+    "same_new_closure_replay": "PASS_SCRIPTED_WET_AND_DRY",
+    "real_full_cold_response": "NOT_QUALIFIED",
+    "real_full_restore_response": "NOT_QUALIFIED",
+    "p95_p99": "NOT_QUALIFIED",
+    "whole_request_response_first": "NOT_QUALIFIED_AUXILIARY_OWNERS"
+  },
+  "eligible_full_response_live_samples": 0,
+  "writer": {
+    "retained_bytes_max": 805306368,
+    "group_bytes_max": 92274688,
+    "entries_max": 4096,
+    "writers": 3,
+    "tested_cold_fanout_reservation_bytes": 645922816,
+    "dormancy_cap_seconds": 10,
+    "publish_attempt_timeout_seconds": 9,
+    "retry_backoff_max_seconds": 30,
+    "drain_seconds": 34,
+    "served_volatile_crash_loss": "Accepted; exact recovery impossible without an independent durable original",
+    "summary_fence": "Full RawIds actually held by each snapshot, receipt intersections outside global table lock",
+    "summary_waiters_max": 32,
+    "summary_writers_max": 2,
+    "summary_task_deadline_seconds": 30
+  },
+  "deadlines": {
+    "public_gateway_seconds": 9,
+    "observed_native_handler_seconds": 8,
+    "assembly_reserve_ms": 500,
+    "native_geocode_seconds": 3,
+    "is_latency_measurement": false
+  },
+  "source_probes": {
+    "scope": "Single-station provider HTTP feasibility, not request-to-client latency",
+    "observed_at_kst": "2026-10-25T19:16:00+09:00",
+    "asos_attempts_total": 4,
+    "public_aws_page_attempts": 2,
+    "actual_aws_s3_attempts": 0,
+    "completed_range_station": "108",
+    "completed_range_start": "20261018",
+    "completed_range_end": "20261024",
+    "hourly_http_ms": 421.493,
+    "daily_http_ms": 205.729,
+    "today_midnight_api_result": "99 / zero rows",
+    "winter_hourly_rows": 168,
+    "winter_rn_blank_rows": 168,
+    "winter_phenomenon_blank_rows": 161,
+    "qc_correction": "Initial probe inspected absent rnQcflag. Actual rnQcflg is blank on124rows and9 on44rows; an earlier prose correction incorrectly said all168were blank. Original bodies and diagnostics remain unchanged."
+  },
+  "fixtures": [
+    {
+      "path": "server2/tests/domestic/fixtures/asos-hourly-108-20261018-20261024.json",
+      "sha256": "0f632a75700f91e629793cc742624f28ce7d325b01b26a575ccf1688772fa0c0",
+      "bytes": 85712,
+      "rows": 168,
+      "fields": {
+        "ta": {
+          "value": 168
+        },
+        "hm": {
+          "value": 168
+        },
+        "rn": {
+          "blank": 150,
+          "value": 18
+        },
+        "rnQcflg": {
+          "blank": 124,
+          "value": 44
+        },
+        "dc10Tca": {
+          "value": 168
+        },
+        "dmstMtphNo": {
+          "blank": 150,
+          "value": 18
+        }
+      }
+    },
+    {
+      "path": "server2/tests/domestic/fixtures/asos-daily-108-20261018-20261024.json",
+      "sha256": "7837028411118dfc528f78ecb3c28a6f86cff4e1c77852a7c42f32eeb84ddc3f",
+      "bytes": 7565,
+      "rows": 7,
+      "fields": {
+        "minTa": {
+          "value": 7
+        },
+        "maxTa": {
+          "value": 7
+        },
+        "sumRn": {
+          "value": 3,
+          "blank": 4
+        },
+        "sumRnDur": {
+          "value": 3,
+          "blank": 4
+        },
+        "iscs": {
+          "value": 3,
+          "blank": 4
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "command": "cargo test --locked --offline --test response_first",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s"
+      ]
+    },
+    {
+      "command": "cargo test --locked --offline --test summary -- --test-threads=1",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.44s"
+      ]
+    },
+    {
+      "command": "cargo test --locked --offline --test domestic full_response:: -- --test-threads=1",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 173 filtered out; finished in 0.71s"
+      ]
+    },
+    {
+      "command": "cargo test --locked --offline --lib",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 100 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.22s"
+      ]
+    },
+    {
+      "command": "cargo test --locked --offline --test gateway -- --test-threads=1",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 59 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.75s"
+      ]
+    },
+    {
+      "command": "cargo test --locked --offline --test domestic observed_history:: -- --test-threads=1",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 172 filtered out; finished in 12.99s"
+      ]
+    },
+    {
+      "command": "cargo test --locked --offline --test domestic parity:: -- --test-threads=1",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 172 filtered out; finished in 14.94s"
+      ]
+    },
+    {
+      "command": "cargo test --locked --offline --test domestic asos:: -- --test-threads=1",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 162 filtered out; finished in 0.28s"
+      ]
+    },
+    {
+      "command": "cargo test --locked --offline --test domestic full_response:: -- --test-threads=1",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 173 filtered out; finished in 0.69s"
+      ]
+    },
+    {
+      "command": "cargo test --locked --offline --test domestic observe:: -- --test-threads=1",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 164 filtered out; finished in 36.37s"
+      ]
+    },
+    {
+      "command": "cargo test --locked --offline --test domestic summary_s3:: -- --test-threads=1",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 164 filtered out; finished in 13.45s"
+      ]
+    },
+    {
+      "command": "cargo test --locked --offline --test domestic towns:: -- --test-threads=1",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 157 filtered out; finished in 5.34s"
+      ]
+    },
+    {
+      "command": "cargo test --locked --offline --test domestic switch:: -- --test-threads=1",
+      "exit_code": 0,
+      "summary": [
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 169 filtered out; finished in 13.24s"
+      ]
+    }
+  ],
+  "domestic_monolithic_final": {
+    "status": "PASS",
+    "passed": 172,
+    "failed": 0,
+    "ignored": 2,
+    "command": "cargo test --locked --offline --test domestic -- --test-threads=1",
+    "source": "Owned local HTTP S3 peer with bounded reuse; no actual AWS/provider calls",
+    "address_unavailable_events": 0
+  },
+  "independent_review": {
+    "model": "Anthropic Claude Opus 5.5",
+    "configured_model": "claude-opus-5-5",
+    "effort": "max",
+    "scope": "Approved source/tests/non-secret measurement read only",
+    "ran_builds_tests_providers_aws": false,
+    "final_assessment": "No correctness or durability blocker in final checked spans; real ASOS closure and tails remain unqualified"
+  },
+  "remaining": [
+    "Close44QC9hourly gaps and required midnight with actual allowed observations; qualify event logs, winter, unmanned and pre-release cases. Qualified dry blanks and trace are now distinguished.",
+    "Qualify winter periods, unattended stations and D-1 publication boundary",
+    "Complete/qualify response-first ordering for auxiliary weather owners; warnings still use durable-first publication",
+    "Verify real fully empty provider-to-client full response, then fresh canonical-S3 full restore using identical coverage",
+    "Run a prospectively bounded tail campaign only after full coverage and same-closure replay pass",
+    "Confirm instance memory headroom, concurrent-load behavior and the proposed eight-second native budget"
+  ],
+  "verification": {
+    "rustfmt": {
+      "files": 38,
+      "passed": true,
+      "scope": "Declared existing Rust paths, skip_children=true"
+    },
+    "document_links": {
+      "checked": 308,
+      "missing": 0
+    },
+    "placement": {
+      "scoped_manual": "PASS",
+      "whole_dirty_tree_gate": "30 pre-existing undeclared paths; not a whole-tree pass",
+      "declared_paths": 53,
+      "changed_task_paths": 52,
+      "other_violations": 0,
+      "dependencies_changed": false
+    },
+    "artifact_policy": {
+      "command": "python3 scripts/check-artifact-policy.py --staged",
+      "passed": true,
+      "scope": "Current real index only; task changes remain unstaged; not candidate-commit validation"
+    },
+    "offline_contract_tests": {
+      "passed": 9
+    },
+    "clippy": {
+      "all_targets": true,
+      "deny_warnings": true,
+      "passed": true
+    }
+  },
+  "peer_reuse_checks": {
+    "command": [
+      "python3",
+      "tests/storage/catalog_peer.py",
+      "--check-persistent"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 2.155,
+    "summary": [
+      "owned peer default reuse/framing/HEAD/204/CAS/fault PASS",
+      "owned peer persistent reuse/framing/HEAD/204/CAS/fault PASS"
+    ]
+  },
+  "diagram": {
+    "spec_sha256": "e82f7898e90d97cea3345e1e5df641e215e51dbe6cd537ea5587035c874231d1",
+    "artifact_sha256": "1d40f37ad0c79d28b63565e602633a04ba9c8b320487a32110469bd09dd3b439",
+    "validate": "PASS",
+    "deliver": "PASS",
+    "artifact_check": "PASS",
+    "browser_check": "PASS",
+    "visual_check": "PASS",
+    "manual_visual_review": "Selected light and dark screenshots inspected",
+    "viewports": [
+      [
+        1440,
+        900
+      ],
+      [
+        2048,
+        1320
+      ]
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "deployment_evidence": false
+  },
+  "implemented_input_hashes": {
+    "server2/config/tasks/KMA-FULL-RESPONSE.json": "def0c7daf74e54ae1e7967da53703f9693b1fc53f7dc3a60e6eb9b6ae4fcacb8",
+    "server2/tools/verification/kma_full_response_contract.py": "aae3367458217f0aa1cdd8b52a5348c2697a85588db63d36f7ed0e23f46402a6",
+    "server2/tools/verification/test_kma_full_response_contract.py": "d54163ed0356775016c8c26b074ef8337fc735d74d0bdea9246c2730425c71ba",
+    "server2/src/domestic/kma/source/asos.rs": "e1279921eebf04f460062ff72d31a20f778a89934e56d1b567e7926d1c25f77e",
+    "server2/src/domestic/kma/source/asos/phenomena.rs": "25ca95100994e27be6202c3bd9f7f017e0e8372944b9a2a4fa33090a1fd78710",
+    "server2/src/domestic/kma/source/observe.rs": "d926bab8be11410376aaff7aad26d16afba545f4d4950aa9b1fd10e0156ee435",
+    "server2/src/domestic/kma/source/mod.rs": "43f883906f3e42c5a295caf6efc51dee40e5aa87ac9aacdc7b729d27bc87152a",
+    "server2/src/domestic/kma/policy.rs": "9e377163ee96b872e39a0ba16cb4d806e3b7ad966f031f0a6615da0119415ead",
+    "server2/src/domestic/kma/short.rs": "88e647833106f093f94cc9f1d47003138bebe22f5d0cd3d219855810662bd814",
+    "server2/src/domestic/kma/mid.rs": "b48e828dee38656fd2e85e7913efb813dc65b9ffa9e148a0dab3a57ee07d56ca",
+    "server2/src/gateway/runtime.rs": "22285285797a4f3484fb546be6414a17a35daa202ca86e737a4c261a538dd140",
+    "server2/tests/domestic/asos.rs": "f57d1eea365fb720df5302f48c8ef7dea5289ecc09e5e515e5be9b0ec67dd5d8",
+    "server2/tests/domestic/observed_history.rs": "de67fae8f4ae9fcde60cc13dc3cd588a4253be2c7b0aa5e31ca87df966e51595",
+    "server2/tests/domestic/recorded.rs": "aff1d2822037b49140fb8a30df819e759a58f93e1ce5aeb04c487c771ac49c5b",
+    "server2/tests/domestic.rs": "4d3bd36e2613bc0b72a68987dd2a044fef59c067c6daf053b5ec3f6b3fa3cf00",
+    "server2/src/storage/response_first.rs": "f9bf83b85a37afab88a8772b2c0a4769212cf67cd0d92d41bf61262ae8afff88",
+    "server2/src/storage/mod.rs": "35806dc38bc62a01b9b7d8a2b9666aeaa713975d508f4e3b31b7a11fab180db9",
+    "server2/src/gateway/mod.rs": "d3c280119ca2ff736eb3ce54c1c2b2a79c41af2b53d73f2a5deff1da1b414bae",
+    "server2/src/observability.rs": "4b356ea203f4814f95c6a1ccb187d0aa36d29e33651d9948af39c643ecc9c292",
+    "server2/src/runtime_services.rs": "796e1d945408a78d6e400ad8cc04256daa308487d4cc946131e71d8144863ba8",
+    "server2/src/process.rs": "7aff11e3a18e74eae5c77ec8ceb1ae2b66fa5485f800cd68aafc4fe3b3a5b683",
+    "server2/src/domestic/kma/source/fetch.rs": "578b68f8dd7f65663cb000b2895a39b4a3a62d2446e4d24650379d4ad493c2a5",
+    "server2/tests/response_first.rs": "205ac22f35389eabcb7cb3379342f92979168599e3b698738229cce431c90152",
+    "server2/tests/runtime_services/process.rs": "671ae53d4f85fdae97e901774e2c0638a3772f2f8dbf0df67f7b4a20321e0491",
+    "server2/tools/verification/kma_asos_qualification.py": "ceb9a733013d26b24330ea08cce5e47e59b47f5aaf1a399a757a5d66ef334c08",
+    "server2/src/lib.rs": "46d2764a156d522d3b033d685ba148e1d043ad07044978e40a70b0cd2f0b37ed",
+    "server2/src/domestic/kma/source/required.rs": "6cca20ae8c9d758219b5fc28cde59c46cd9d06c2fdd49b58fdef766d341a13a5",
+    "server2/src/domestic/kma/backend.rs": "63647a37842809cb73226f7a729bd8a3316350bf3a895799539cdf14335c064a",
+    "server2/src/gateway/backend.rs": "152226c6f3f4efc7ee410fafd9d0d7c9c83dfcc017f4707820db6aaaab8f62a1",
+    "server2/src/api/mod.rs": "968ee90dccdac2352ece9609de43ca9be9139dc84a10aecd6843dd0046f38a17",
+    "server2/src/domestic/kma/source/records.rs": "c8a0b687464baa980e96ac3aa4fdef25b1284a48718c9bb93aeb6e896bb97cd6",
+    "server2/tests/domestic/source.rs": "cb0b3f46a8bf2219d2f1d5cc42be8e6fb0424c70a8255cb69f17c84777a48925",
+    "server2/tests/domestic/source_s3.rs": "42dcaad7a05e1bf2d7fdca77e8d9036f65c3d5a4474d20f600aa833ed922a767",
+    "server2/tests/summary/derive.rs": "6a3b08c476f00d6d93796ead731e58b5fc8ea669d8f59350386185288ea9cc17",
+    "server2/examples/kma_response_first_measure/source.rs": "484396ad59da72162b5c26eb58c452fab83c58fbd30cf8a0e051ae6949839d37",
+    "server2/src/summary/recorder.rs": "ae7596fc552dd234527f95d7c810b3aa05ac80556f5c694af9819d0cd6150fff",
+    "server2/tests/domestic/observe.rs": "22076c418800b6592b46956513c3ae7259cec1bab709a18e08b7905538794193",
+    "server2/tests/domestic/full_response.rs": "20ca7c25f1b667fc9e605cbc2401ec50bd4c2513377e3b640d9ced1bd268771f",
+    "server2/tests/gateway/wire.rs": "4c6f918904144633ef466e6566139380c218e67501ddf42752cd1b94afc4406e",
+    "server2/src/summary/lookup.rs": "31a7d2c489835256c606aa7f45e25e3924e01482ef5e0cd728ffdd616343bfab",
+    "server2/tests/summary/lookup.rs": "633b1784d0e263c71cdf3154026d9e894f4d8021c8114a4bc78f3488a38ee389",
+    "server2/tests/domestic/fixtures/asos-hourly-108-20261018-20261024.json": "0f632a75700f91e629793cc742624f28ce7d325b01b26a575ccf1688772fa0c0",
+    "server2/tests/domestic/fixtures/asos-daily-108-20261018-20261024.json": "7837028411118dfc528f78ecb3c28a6f86cff4e1c77852a7c42f32eeb84ddc3f",
+    "server2/tests/domestic/fixtures/ASOS-20261025-PROVENANCE.md": "faef812c1f6afaf3bb6bb750eb7931ec6a646ee80de7123139bc1d319104bc4e",
+    "server2/tests/summary/record.rs": "d63e1cf56fe2f1b048dca304b6b37e9c698caad55db0224c8d69afdcfdfb004c"
+  },
+  "quality_checks": [
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--locked",
+        "--offline",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 23.358,
+      "summary": [
+        "    Finished `dev` profile [unoptimized] target(s) in 23.04s"
+      ]
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--offline",
+        "--test",
+        "runtime_services",
+        "--",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 40.539,
+      "summary": [
+        "    Finished `test` profile [unoptimized] target(s) in 15.86s",
+        "test result: ok. 22 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 23.61s"
+      ]
+    }
+  ],
+  "tests_final_distinct": {
+    "rust_passed": 398,
+    "rust_ignored": 3,
+    "python_passed": 9,
+    "duplicates_excluded": true
+  },
+  "build_capacity": {
+    "target": "server2/target",
+    "target_bytes": 7049150464,
+    "free_bytes": 146829594624,
+    "cleaned_paths": [],
+    "space_recovered_bytes": 0,
+    "protected": "Pre-existing shared target retained for unfinished qualification/measurement consumers; all task-managed builds completed",
+    "runnable_binary_retention_claim": false
+  },
+  "source_qualification_continuation": {
+    "evidence": "kma-asos-closure-qualification-2026-10-25.json",
+    "api_hub_key_available": false,
+    "public_city_logical_requests": 11,
+    "public_city_http_transactions_including_redirects": 19,
+    "runtime_behavior_changed": true,
+    "full_real_history_coverage": "NOT_QUALIFIED",
+    "eligible_full_response_live_samples": 0,
+    "new_offline_tool_tests_passed": 10,
+    "qc_counts_corrected_against_original": true,
+    "original_implemented_input_hashes_are_prior_snapshot": true,
+    "runtime_change_scope": "Current city URI, exact city/hourly observation time, no form-echo admission, distinct missing-header fault, pinned minute structural faults; valid minute/RSS minimum semantics retained",
+    "providers_tests_passed": 51,
+    "scripted_full_response_regression_passed": 1,
+    "offline_tests_passed": 19,
+    "clippy_all_targets_deny_warnings": true,
+    "independent_review": "Existing Opus5.5max source-only review and focused follow-up: no blocker; final minor naming/query/future-fixture additions lead-tested; no independent test execution",
+    "current_diagram": {
+      "spec_sha256": "609825afa847f81fc16629916190de0f3322b01c2151a37487c2f0f15460860c",
+      "html_sha256": "a7ab93293d3efc62f0f1a9896d0569022fbe7d103b190b53e7e0ae2be7649f67",
+      "gates": {
+        "validate": "pass",
+        "deliver": "pass",
+        "check": "pass",
+        "browser-check": "pass"
+      },
+      "captures": "PASS; selected light/dark viewport PNGs inspected"
+    }
+  },
+  "continued_date_kst": "2026-10-26",
+  "normalization_continuation": {
+    "evidence": "kma-asos-closure-qualification-2026-10-25.json",
+    "state": "LOCAL_OBSERVED_NORMALIZATION_CORRECTION",
+    "same_original_hourly_supported": 124,
+    "same_original_hourly_QC9_unknown": 44,
+    "same_original_daily_rain_supported": 7,
+    "raw_bytes_or_schema_changed": false,
+    "legacy_replay_changed": false,
+    "api_hub_required": false,
+    "source_interpretation": "KMA ASOS QnA inference applied to same data.go.kr ASOS product; retained JSON agrees, not a universal serialization guarantee",
+    "grid_summary_dependency": "rain-blank-semantics-v2",
+    "station_summary_derivation": "unchanged legacy replay for internal last-year lookup; not the current seven-day observed store",
+    "qualified_full_client_live_samples": 0,
+    "new_provider_data_or_actual_AWS_calls": 0,
+    "full_requirement_complete": false,
+    "final_focused_tests_passed": 50,
+    "tests_by_group": {
+      "asos": 17,
+      "observed_history": 2,
+      "scripted_wet_dry_full_cycle": 2,
+      "summary": 29
+    },
+    "clippy_all_targets_deny_warnings": true,
+    "independent_review": "No remaining Required finding in final bounded normalization guard review",
+    "actual_full_history": "NOT_QUALIFIED",
+    "current_diagram": {
+      "spec_sha256": "cd41c8c1c6753e00b433d07b945e52ae621fd309d1d68e4ae16a7d3369a5ce06",
+      "html_sha256": "986659d190f2c894b24c255c735d4208e02b9a8e71d0866b7349fc53300fb8e6",
+      "gates": {
+        "validate": "pass",
+        "deliver": "pass",
+        "check": "pass",
+        "browser-check": "pass"
+      },
+      "capture_checks": {
+        "containment": "pass",
+        "readability": "pass",
+        "viewerChrome": "pass",
+        "themeStates": "pass",
+        "captures": "pass"
+      },
+      "manual_visual_review": "Selected1440x900light and2048x1320dark top viewports inspected; no full-scrolled/card-area perceptual claim"
+    }
+  }
+}

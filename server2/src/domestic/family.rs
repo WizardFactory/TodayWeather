@@ -364,7 +364,7 @@ impl WebRequest {
                 .map_err(invalid)?,
             WebFamily::CityObservation => endpoints
                 .weather
-                .join("weather/observation/currentweather.jsp")
+                .join("w/weather/land/city-obs.do")
                 .map_err(invalid)?,
         };
         match (self.family, self.grid, self.publication) {
