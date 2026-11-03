@@ -128,6 +128,16 @@ fn normalize_legacy(
     station: &str,
     allowed: &BTreeSet<String>,
 ) -> Option<(String, Doc)> {
+    let (key, values) = normalize_fields(kind, item, station, allowed)?;
+    (!values.entries().is_empty()).then_some((key, values))
+}
+/// The identity checks and field mappings of `policy.normalize`, before its empty-row rejection.
+fn normalize_fields(
+    kind: AsosKind,
+    item: &Value,
+    station: &str,
+    allowed: &BTreeSet<String>,
+) -> Option<(String, Doc)> {
     if !item.is_object() {
         return None;
     }
@@ -200,9 +210,6 @@ fn normalize_legacy(
     {
         return None;
     }
-    if values.entries().is_empty() {
-        return None;
-    }
     Some((key, values))
 }
 
@@ -218,7 +225,10 @@ pub fn normalize(
     station: &str,
     allowed: &BTreeSet<String>,
 ) -> Option<(String, Doc)> {
-    let (key, mut values) = normalize_legacy(kind, item, station, allowed)?;
+    let (key, mut values) = normalize_fields(kind, item, station, allowed)?;
+    // A blank rain report means dry only beside another valid measurement. A numeric amount or a
+    // phenomenon code stands on its own.
+    let measured = !values.entries().is_empty();
     let month: u32 = key[4..6].parse().ok()?;
     let winter = month <= 3 || month >= 11;
     let rain_field = match kind {
@@ -245,7 +255,7 @@ pub fn normalize(
                 value => number(value) == Some(0.),
             });
     let no_precipitation =
-        reported_blank && rain_quality && reporting_time && compatible && daily_clear;
+        measured && reported_blank && rain_quality && reporting_time && compatible && daily_clear;
     if no_precipitation {
         let field = if kind == AsosKind::Hourly && winter {
             "rn3h"

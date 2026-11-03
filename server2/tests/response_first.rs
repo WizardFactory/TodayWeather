@@ -816,3 +816,17 @@ async fn corrupt_storage_reads_retry_without_reacquiring_provider_data() {
     assert_eq!(writer.stats().permanent_failures, 0);
     assert!(writer.drain(Instant::now() + Duration::from_secs(1)).await);
 }
+
+/// Scope inheritance wraps nested owned work, so its cost must not multiply with the depth.
+#[test]
+fn inheriting_a_scope_keeps_nested_futures_small() {
+    use server2::observability::inherit;
+    let large = async {
+        let buffer = [1u8; 64 * 1024];
+        tokio::task::yield_now().await;
+        buffer[0]
+    };
+    let nested = inherit(inherit(inherit(inherit(large))));
+    let size = std::mem::size_of_val(&nested);
+    assert!(size < 4 * 1024, "{size} bytes on the caller's stack");
+}

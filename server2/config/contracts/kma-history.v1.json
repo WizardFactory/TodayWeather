@@ -4,7 +4,7 @@
   "slice": "precipitation-1",
   "scope": "Seven completed KST days of Korean (KMA) history in the existing mobile response: precipitation presence and type from hourly rows through the public three-hour slots to the AM/PM day halves.",
   "not_a_claim": "This contract does not certify seven-day history, source completeness, SKY, snow or LGT values, or latency.",
-  "checked_at": "2026-11-03",
+  "checked_at": "2026-11-04",
   "aggregation_policy_version": "station-altitude-v1",
   "evidence": [
     "docs/evidence/research/kma-history-gap-options-2026-10-30.md",
@@ -334,7 +334,7 @@
   "rules": {
     "evidence-v1": {
       "implementation": "server2/src/domestic/kma/policy.rs",
-      "summary": "Precipitation evidence is a typed PTY, or an ASOS-provenance rain amount (rn1 or rn3h) on a row whose PTY ASOS did not set to 0."
+      "summary": "Precipitation evidence is a typed PTY, or an ASOS-provenance rain amount (rn1 or rn3h). A zero amount under an ASOS PTY 0 is a qualified dry hour and no evidence; a positive amount is evidence whatever the PTY."
     },
     "summary-to-3h": {
       "implementation": "server2/src/domestic/kma/short.rs",

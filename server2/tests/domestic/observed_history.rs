@@ -391,6 +391,72 @@ fn recorded_rain_at_stations_without_phenomenon_codes_never_reads_dry() {
 }
 
 #[test]
+fn a_measured_amount_beside_an_asos_dry_type_never_reads_dry() {
+    // Originals of different sources can leave rn1 0.5 and PTY 0 on one hour.
+    let mut hourly = Vec::new();
+    let mut daily = Vec::new();
+    for day in 17..=23 {
+        for hour in 0..24 {
+            let key = format!("202609{day:02}{hour:02}00");
+            let rain = if key == "202609230800" { 0.5 } else { 0. };
+            hourly.push(
+                json!({"source":"KMA_ASOS","kind":"hourly","timeBasis":"UTC",
+                "stationId":"108","key":key,
+                "values":{"t1h":17,"reh":60,"sky":4,"pty":0,"rn1":rain,"wsd":2,"vec":180}}),
+            );
+        }
+        daily.push(json!({"source":"KMA_ASOS","kind":"daily","timeBasis":"UTC",
+            "stationId":"108","key":format!("202609{day:02}"),
+            "values":{"taMin":7,"taMax":27,"t1d":17,"rn1":12,"reh":60,"wsd":2}}));
+    }
+    let history = OrderedJson::parse(
+        &serde_json::to_vec(&json!({"policy":"asos-primary-v1",
+            "startDate":"20260917","endDate":"20260923","hourly":hourly,"daily":daily}))
+        .unwrap(),
+    )
+    .unwrap();
+    let body = assembled_with(Some(history));
+    let d23 = day(&body, "20260923");
+    assert_not_dry(d23, "Am");
+    assert!(d23["wfAm"].is_null(), "{d23}");
+    assert_eq!(d23["wfPm"], "흐림", "the dry half stays: {d23}");
+    assert!(missing_dates(&body).contains(&"20260923".to_string()));
+}
+
+#[test]
+fn a_town_without_a_representative_station_lists_the_dates_it_omits() {
+    // The #2560 contract: a day without temperatures is omitted and listed.
+    let history = OrderedJson::parse(
+        &serde_json::to_vec(&json!({"policy":"asos-primary-v1",
+            "reason":"station-unrepresentative","hourly":[],"daily":[]}))
+        .unwrap(),
+    )
+    .unwrap();
+    let body = assembled_with(Some(history));
+    let dates: BTreeSet<String> = body["midData"]["dailyData"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r["date"].as_str().unwrap().to_string())
+        .collect();
+    let unavailable: BTreeSet<String> = body["midData"]["dailyStatus"]["unavailableDates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|d| d.as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(body["historyStatus"]["reason"], "station-unrepresentative");
+    for date in 17..=23 {
+        let date = format!("202609{date:02}");
+        assert!(
+            dates.contains(&date) || unavailable.contains(&date),
+            "{date} is neither served nor listed"
+        );
+    }
+    assert!(!dates.is_empty(), "forecast days stay");
+}
+
+#[test]
 fn qc9_hours_on_a_closed_dry_day_read_dry() {
     // R1b (approved 2026-10-31 after held-out validation): Daegu's dry-day QC9 block has no
     // phenomenon code, and the blank daily total closes a day without numeric hourly rain.

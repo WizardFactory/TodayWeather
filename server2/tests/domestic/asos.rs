@@ -1267,6 +1267,20 @@ fn qc9_dry_hours_stay_derived_so_other_sources_can_precede_them() {
 }
 
 #[test]
+fn a_row_with_only_a_rain_report_is_kept_under_observed_history() {
+    use server2::domestic::kma::source::asos::normalize;
+    let allowed = ["202601130300".to_owned()].into_iter().collect();
+    let row = serde_json::json!({"stnId":"108","tm":"2026-01-13 03:00","rn":"1.5","rnQcflg":"",
+        "dmstMtphNo":"05"});
+    let (key, values) = normalize(AsosKind::Hourly, &row, "108", &allowed).unwrap();
+    assert_eq!(key, "202601130300");
+    assert_eq!(values.get("rn3h").and_then(|v| v.as_num()), Some(1.5));
+    assert_eq!(values.get("pty").and_then(|v| v.as_num()), Some(3.));
+    let blank = serde_json::json!({"stnId":"108","tm":"2026-01-13 03:00","rn":"","rnQcflg":"9"});
+    assert!(normalize(AsosKind::Hourly, &blank, "108", &allowed).is_none());
+}
+
+#[test]
 fn a_cape_station_keeps_its_measurements_but_not_its_wind() {
     let replay = |station: &str| {
         let hour = serde_json::json!({"stnId":station,"tm":"2026-10-13 10:00","ta":"12","hm":"80",

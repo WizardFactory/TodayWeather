@@ -8,11 +8,11 @@ false-dry April–October AM/PM half. Current server2 has 61 unknown and 42 fals
 halves out of 458. Only winter hours at stations without phenomenon recording
 remain unknown.
 
-This is research, not an implementation. The rules are **not implemented**. Four
-of the five rules change documented normalization rules and need AK's decision.
-The output figures come from an offline simulation that mirrors the cited
-server2 source. No native build or end-to-end response was run, and no latency
-was measured. The seven-day requirements, fields, cadence and allowed historical
+This began as research. The sections up to "Decisions for AK" describe the state
+on 2026-10-30, before any rule existed, and their output figures come from an
+offline simulation that mirrors the cited server2 source. Later sections record
+what was validated and implemented; the contract holds the current status of each
+rule. No latency was measured. The seven-day requirements, fields, cadence and allowed historical
 sources (observations, ODAM and VSRT) are unchanged.
 
 This continues the [ASOS source qualification](kma-asos-closure-qualification-2026-10-25.md).

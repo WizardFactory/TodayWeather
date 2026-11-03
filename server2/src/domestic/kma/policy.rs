@@ -1031,18 +1031,17 @@ fn asos_field(row: &V, field: &str) -> bool {
     provenance.truthy() && strict_eq(&provenance.get("source"), &V::s("KMA_ASOS"))
 }
 /// Contract `evidence-v1` (`server2/config/contracts/kma-history.v1.json`): a typed PTY, or an
-/// ASOS rain amount, trace `0.0` included, on a row whose PTY ASOS did not set to 0 (a qualified
-/// dry blank sets both).
+/// ASOS rain amount, trace `0.0` included. A qualified dry blank sets PTY 0 and amount 0, so a
+/// zero amount under an ASOS PTY 0 is no evidence. A positive amount still is: originals of
+/// different sources can leave both on one hour.
 fn precipitation_evidence(row: &V) -> bool {
     if typed_pty(&row.get("pty")) {
         return true;
     }
-    if asos_field(row, "pty") && strict_eq(&row.get("pty"), &V::Num(0.)) {
-        return false;
-    }
-    ["rn1", "rn3h"]
-        .iter()
-        .any(|f| asos_field(row, f) && valid(f, &row.get(f)))
+    let dry_type = asos_field(row, "pty") && strict_eq(&row.get("pty"), &V::Num(0.));
+    ["rn1", "rn3h"].iter().any(|f| {
+        asos_field(row, f) && valid(f, &row.get(f)) && (!dry_type || to_number(&row.get(f)) > 0.)
+    })
 }
 /// Contract `precipitation-guard-v1`, ASOS-primary only. Partial aggregation skips unknown
 /// values, so an untyped measured precipitation hour next to dry hours used to summarize as

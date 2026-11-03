@@ -2,8 +2,8 @@
 //!
 //! A request that finds a publication missing in S3 starts an owned acquisition (S13d
 //! `OwnedFlights`, keyed by dataset and publication, surviving the waiter, legacy provider
-//! timeouts), waits at most 3 s and builds its answer from what is stored then; the acquisition
-//! publishes its raw records through S06 before any request uses them (O-9).
+//! timeouts), waits within the source's `request_budget` and builds its answer from what is stored
+//! then; the acquisition publishes its raw records through S06 before any request uses them (O-9).
 //!
 //! Families and their legacy collection (`server/controllers/controllerManager.js`):
 //! - the grid forecasts (`getUltraSrtNcst`, `getUltraSrtFcst`, `getVilageFcst`) per cell: the

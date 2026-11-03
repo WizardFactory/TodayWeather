@@ -247,9 +247,12 @@ impl ResponseScope {
         true
     }
 }
-/// Propagate the response scope across the same owned-task boundaries as tracing.
+/// Propagate the response scope across the same owned-task boundaries as tracing. The inner
+/// future is boxed: every branch below would otherwise hold it by value, and nested owned work
+/// would multiply its size on the caller's stack.
 pub fn inherit<F: Future>(future: F) -> impl Future<Output = F::Output> {
     let scope = ResponseScope::current();
+    let future = Box::pin(future);
     async move {
         match scope {
             Some(scope) => scope.run(future).await,
