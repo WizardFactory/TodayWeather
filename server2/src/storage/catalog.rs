@@ -832,6 +832,82 @@ impl<T: CatalogTransport> CatalogStore<T> {
         }
         Ok(())
     }
+    /// A single immutable publication: the first conditional-absent catalog wins.
+    /// Unlike `publish`, this never unions another acquisition into that catalog.
+    /// A losing raw write remains unreferenced; callers must not repair it into the winner.
+    pub async fn publish_once(
+        &self,
+        id: CatalogId,
+        record: RawRecord,
+        deadline: Instant,
+    ) -> Result<RawRecord, Error> {
+        let mut started = false;
+        let result = timeout_at(self.deadline(deadline), async {
+            let _admission = self.admit().await?;
+            id.validate()?;
+            if !id.matches(&record.envelope.identity)
+                || record.envelope.fetch_group.is_some()
+                || record.envelope.pagination.is_some()
+            {
+                return Err(Error::Invalid("single publication identity"));
+            }
+            let candidate = record.clone();
+            let l = self.limits.clone();
+            let envelope = self
+                .cpu(move || {
+                    candidate.prepare(&l.raw)?;
+                    Ok(candidate.envelope)
+                })
+                .await?;
+            let mut context = Context::new();
+            if let Some(p) = self.catalog(&id, &mut context).await? {
+                return self.single_record(p, &mut context).await;
+            }
+            let catalog = Catalog::empty(id.clone()).union(&[envelope], &self.limits)?;
+            let l = self.limits.clone();
+            let bytes = self.cpu(move || catalog.bytes(&l)).await?;
+            self.transport.ready().await?;
+            started = true;
+            self.raw.publish(record).await?;
+            match self
+                .transport
+                .put_control(&id.key(), &bytes, &WriteCondition::Absent)
+                .await
+            {
+                Ok(200 | 412 | 409 | 500..=599)
+                | Err(Error::Transport | Error::Timeout | Error::Ambiguous | Error::Capacity) => {}
+                Ok(status) => return Err(Error::Status(status)),
+                Err(e) => return Err(e),
+            }
+            // A response alone is not serving authority: verify the committed raw winner.
+            let mut context = Context::new();
+            let winner = self
+                .catalog(&id, &mut context)
+                .await?
+                .ok_or(Error::Ambiguous)?;
+            self.single_record(winner, &mut context).await
+        })
+        .await;
+        match result {
+            Ok(Err(e)) if started => Err(Self::uncertain(e)),
+            Ok(r) => r,
+            Err(_) => Err(if started {
+                Error::Ambiguous
+            } else {
+                Error::Timeout
+            }),
+        }
+    }
+    async fn single_record(&self, p: Pinned, context: &mut Context) -> Result<RawRecord, Error> {
+        if p.catalog.entries.len() != 1 {
+            return Err(Error::Corrupt("single publication cardinality"));
+        }
+        let e = &p.catalog.entries[0];
+        if e.fetch_group.is_some() || e.pagination.is_some() {
+            return Err(Error::Corrupt("single publication group"));
+        }
+        self.raw_checked(e, context).await
+    }
     pub async fn publish(
         &self,
         declaration: GroupDeclaration,

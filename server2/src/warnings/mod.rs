@@ -2,6 +2,7 @@
 //! records and per-type identity catalogs (#2697). Ported from legacy #2609 code at
 //! ca8735cf; no runtime read reaches `server/`. Latest bulletins are derived in memory from
 //! the type catalogs; there is no separately stored latest pointer or normalized view.
+pub mod acquisition_worker;
 pub mod collector;
 pub mod js;
 pub mod provider;

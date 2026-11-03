@@ -21,7 +21,7 @@
 //!
 //! S15b-4a acquires missing forecast inputs at request time ([`fetch`]): the latest grid, RSS and
 //! mid publications (waiting at most 3 s), legacy's grid backfill in one owned pass per cell, the
-//! forecast-zone list once per process and the 3-minute warning cycle. A missing input is no
+//! forecast-zone list until one successful process refresh and the 3-minute warning cycle. A missing input is no
 //! longer a forward reason: the snapshot answers what is stored, as legacy answers absent data.
 pub mod air_forecast;
 pub mod air_input;
@@ -35,6 +35,7 @@ mod grid;
 pub mod html;
 mod items;
 pub mod kasi;
+mod late;
 pub mod life;
 pub mod life_input;
 pub mod life_live;
@@ -53,6 +54,7 @@ pub mod seed;
 pub mod stations;
 pub mod stn;
 pub mod towns;
+mod warning_cycle;
 mod zone;
 
 pub use doc::{Doc, Val};
@@ -182,10 +184,12 @@ pub struct S3Source<T> {
     passes: crate::resolver::OwnedFlights<String, Option<Fetched>>,
     /// Retry bounds of the acquisition keys (failures included).
     attempts: Arc<Attempts>,
-    /// The forecast-zone list was requested by this process (legacy fetches it once at start).
-    zones_requested: std::sync::atomic::AtomicBool,
-    /// A warning cycle is running (cycles never overlap, as legacy's timer runs one at a time).
-    warning_running: Arc<std::sync::atomic::AtomicBool>,
+    /// B3 latest Short slots; generic retries and historical backfill stay independent.
+    latest_short: Arc<late::LatestShort>,
+    /// A complete readable forecast-zone list was published by this process refresh.
+    zones_requested: Arc<std::sync::atomic::AtomicBool>,
+    /// Requests and the process timer share one controlled warning cycle owner.
+    warning_cycles: Option<Arc<warning_cycle::WarningCycles<T>>>,
 }
 /// Retry bookkeeping: each key holds the instant its retry bound ends. Expired keys are dropped
 /// when the map has doubled since the last pruning (amortized), and at [`MAX_ATTEMPTS`] live keys
@@ -216,12 +220,15 @@ impl Attempts {
         map.insert(key.to_owned(), now + memo);
         true
     }
-}
-/// Clears a running flag when its task ends (also on a panic).
-struct Running(Arc<std::sync::atomic::AtomicBool>);
-impl Drop for Running {
-    fn drop(&mut self) {
-        self.0.store(false, std::sync::atomic::Ordering::SeqCst);
+    fn remaining(&self, key: &str) -> std::time::Duration {
+        self.state
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .0
+            .get(key)
+            .map_or(std::time::Duration::ZERO, |until| {
+                until.saturating_duration_since(std::time::Instant::now())
+            })
     }
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
@@ -311,8 +318,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             })
             .expect("static backfill pass bounds"),
             attempts: Arc::new(Attempts::default()),
-            zones_requested: std::sync::atomic::AtomicBool::new(false),
-            warning_running: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            latest_short: Arc::new(late::LatestShort::default()),
+            zones_requested: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            warning_cycles: None,
         })
     }
     /// Address-derived town metadata, independent of public geocode coexistence routing.
@@ -328,7 +336,19 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         self
     }
     /// S15b-4: request-time grid, RSS, mid, forecast-zone and warning acquisitions.
+    /// Set the shared pool, Attempts, clock and warning service before this call:
+    /// the warning capability captures those handles. Production constructs it last;
+    /// later private zone-only test pool overrides are not warning-admission proofs.
     pub fn with_forecast(mut self, acquire: Option<Arc<dyn fetch::ForecastAcquire>>) -> Self {
+        self.warning_cycles = acquire.as_ref().map(|acquire| {
+            Arc::new(warning_cycle::WarningCycles::new(
+                self.owned.clone(),
+                self.attempts.clone(),
+                self.warnings.clone(),
+                self.clock.clone(),
+                acquire.clone(),
+            ))
+        });
         self.forecast = acquire;
         self
     }
@@ -339,6 +359,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .set_raw_writer(writer.clone());
         self.raw_writer = Some(writer);
         self
+    }
+    /// The same source-owned admission used by request assembly. No work starts here.
+    pub fn warning_cycles(
+        &self,
+    ) -> Option<Arc<dyn crate::warnings::acquisition_worker::Acquisition>> {
+        self.warning_cycles
+            .clone()
+            .map(|cycles| cycles as Arc<dyn crate::warnings::acquisition_worker::Acquisition>)
     }
     /// Join (or start) the owned acquisition `key` and wait for it until `until`; the published
     /// records as one [`Fetched`], or None (not ready, nothing new, or no acquirer).
@@ -353,12 +381,27 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         memo: std::time::Duration,
         until: Instant,
     ) -> Option<Fetched> {
+        let admission = PublicationAdmission::Retry {
+            attempts: self.attempts.clone(),
+            key: key.clone(),
+            memo,
+        };
+        self.acquire_admitted(key, request, admission, until).await
+    }
+    /// Admission runs under owned-flight creation, after callers have joined by key.
+    async fn acquire_admitted(
+        &self,
+        key: String,
+        request: fetch::ForecastRequest,
+        admission: PublicationAdmission,
+        until: Instant,
+    ) -> Option<Fetched> {
         let acquire = self.forecast.clone()?;
         if let Some(records) = acquire.cached(&request) {
             return fetched_of(&records);
         }
         let owned_for = request.owned_for();
-        let start = publication_flight(acquire, self.attempts.clone(), key.clone(), memo, request);
+        let start = publication_flight(acquire, admission, request);
         let waited = self.owned.join(key, until, owned_for, start).await;
         match waited {
             crate::resolver::Waited::Ready(f) => f,
@@ -391,9 +434,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// omits stay, as legacy `$set` keeps them). Memory applies newer acquisitions every
     /// 10 minutes and refolds everything daily.
     pub async fn zones(&self, now: f64, deadline: Instant) -> Result<Arc<Zones>, String> {
-        // Legacy fetches the list once at process start: one owned refresh per process (marked
-        // when it starts), which no request waits for. A published list replaces the memory, so
-        // the next request folds it.
+        // One successful process refresh, without making the request wait. Failed attempts
+        // remain demand-retryable under the existing five-minute admission; only a complete
+        // readable published list invalidates memory and ends this process refresh.
         if let Some(acquire) = self.forecast.clone()
             && !self
                 .zones_requested
@@ -401,7 +444,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         {
             let request = fetch::ForecastRequest::Zones;
             let owned_for = request.owned_for();
-            let requested = &self.zones_requested;
+            let requested = self.zones_requested.clone();
+            let attempts = self.attempts.clone();
             let cache = self.zones.clone();
             let _ = self
                 .owned
@@ -410,12 +454,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     Instant::now(),
                     owned_for,
                     move |_| {
-                        let fresh = !requested.swap(true, std::sync::atomic::Ordering::SeqCst);
+                        let fresh = !requested.load(std::sync::atomic::Ordering::SeqCst)
+                            && attempts.claim("forecast-zones", LATEST_RETRY);
                         async move {
                             if fresh {
                                 let _ = crate::observability::spawn(async move {
-                                    if let Ok(Some(_)) = acquire.acquire(request).await {
-                                        cache.lock().await.take();
+                                    if let Ok(Some(records)) = acquire.acquire(request).await
+                                        && let Some(fetched) = fetched_of(&records)
+                                        && complete_list(&fetched.page_refs()).is_some()
+                                    {
+                                        let mut memory = cache.lock().await;
+                                        memory.take();
+                                        requested.store(true, std::sync::atomic::Ordering::SeqCst);
                                     }
                                 })
                                 .await;
@@ -619,23 +669,37 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             };
             if missing(&latest)
                 && let Some(request) = grid_request(sf, grid, latest)
-                && let Some(f) = self
-                    .acquire(
-                        grid_flight(sf, grid, latest),
-                        fetch::ForecastRequest::DataGoKr(request),
-                        LATEST_RETRY,
+            {
+                let key = grid_flight(sf, grid, latest);
+                let request = fetch::ForecastRequest::DataGoKr(request);
+                let fetched_latest = if sf == schedule::Family::Short {
+                    self.acquire_admitted(
+                        key.clone(),
+                        request,
+                        PublicationAdmission::LatestShort {
+                            gate: self.latest_short.clone(),
+                            attempts: self.attempts.clone(),
+                            key,
+                            cell: grid_key(grid),
+                            publication: latest,
+                            now,
+                        },
                         until,
                     )
                     .await
-            {
-                if self.raw_writer.is_none() {
-                    own = grid_input_id(family, sf.kind(), &f);
-                }
-                fetched.push(if self.observed_history {
-                    f
                 } else {
-                    visible(f, now)
-                });
+                    self.acquire(key, request, LATEST_RETRY, until).await
+                };
+                if let Some(f) = fetched_latest {
+                    if self.raw_writer.is_none() {
+                        own = grid_input_id(family, sf.kind(), &f);
+                    }
+                    fetched.push(if self.observed_history {
+                        f
+                    } else {
+                        visible(f, now)
+                    });
+                }
             }
             if self.observed_history {
                 // Foreground history covers today's unavailable-in-ASOS hours and
@@ -756,9 +820,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                                         request.owned_for(),
                                         publication_flight(
                                             acquire.clone(),
-                                            attempts.clone(),
-                                            key.clone(),
-                                            LATEST_RETRY,
+                                            PublicationAdmission::Retry {
+                                                attempts: attempts.clone(),
+                                                key: key.clone(),
+                                                memo: LATEST_RETRY,
+                                            },
                                             request.clone(),
                                         ),
                                     )
@@ -1215,45 +1281,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     }
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
-    /// One legacy warning cycle per 3-minute window while requests arrive, never two at once.
-    /// The cycle runs in its own task (its steps carry the collector's 30 s deadlines), so the
-    /// owned bound never cancels it; a request waits for it until `until` at most.
+    /// Join the shared warning owner, keeping the request's existing bounded wait.
     async fn warning_cycle(&self, until: Instant) {
-        let Some(acquire) = self.forecast.clone() else {
-            return;
-        };
-        let key = format!(
-            "warnings/{}",
-            ((self.clock)() as i64).div_euclid(fetch::WARNING_CYCLE.as_millis() as i64)
-        );
-        let request = fetch::ForecastRequest::Warnings;
-        let owned_for = request.owned_for();
-        let warnings = self.warnings.clone();
-        let attempts = self.attempts.clone();
-        let running = self.warning_running.clone();
-        let _ = self
-            .owned
-            .join(key, until, owned_for, move |_| {
-                use std::sync::atomic::Ordering::SeqCst;
-                let fresh = !running.load(SeqCst)
-                    && attempts.claim("warnings", fetch::WARNING_CYCLE)
-                    && !running.swap(true, SeqCst);
-                async move {
-                    if fresh {
-                        let _ = crate::observability::spawn(async move {
-                            let _running = Running(running);
-                            if acquire.acquire(request).await.is_ok() {
-                                // New rows are read again (the service memory holds the
-                                // previous state).
-                                warnings.clear_memory().await;
-                            }
-                        })
-                        .await;
-                    }
-                    None
-                }
-            })
-            .await;
+        use crate::warnings::acquisition_worker::Acquisition;
+        if let Some(cycles) = &self.warning_cycles {
+            cycles.cycle(until).await;
+        }
     }
 }
 /// S16: the summary inputs of a snapshot whose station state was read completely, or None
@@ -1519,8 +1552,8 @@ pub fn grid_input_id(family: Family, kind: &str, f: &Fetched) -> Option<InputId>
         content_sha256: identity(f).2,
     })
 }
-/// Retry bound of a missing latest publication (legacy re-walks late grids near +5 and +10
-/// minutes, #2676).
+/// Retry bound for generic latest and backfill acquisitions. Latest Short uses
+/// its finite provision+2/+5/+10 slots, while keeping this memo for backfill.
 const LATEST_RETRY: std::time::Duration = std::time::Duration::from_secs(5 * 60);
 /// Retry bound of a backfill publication (legacy's past-condition pass runs hourly).
 const BACKFILL_RETRY: std::time::Duration = std::time::Duration::from_secs(3600);
@@ -1546,19 +1579,60 @@ fn grid_key(grid: crate::history::Grid) -> String {
 fn grid_flight(sf: schedule::Family, grid: crate::history::Grid, p: Publication) -> String {
     format!("{}/{}/{}", sf.kind(), grid_key(grid), p.partition())
 }
-/// The start of a publication's owned acquisition. The retry bound `memo` of `key` is claimed by
-/// the creator of the flight (`OwnedFlights` calls this under its map lock), so a concurrent
-/// caller joins the real acquisition; the provider call and its publication run in their own
-/// task, which no owned bound cancels.
+/// Admission selected by the source; it never changes the owned flight key or deadline.
+/// Latest Short slots also leave the existing memo for historical backfill.
+enum PublicationAdmission {
+    Retry {
+        attempts: Arc<Attempts>,
+        key: String,
+        memo: std::time::Duration,
+    },
+    LatestShort {
+        gate: Arc<late::LatestShort>,
+        attempts: Arc<Attempts>,
+        key: String,
+        cell: String,
+        publication: Publication,
+        now: f64,
+    },
+}
+impl PublicationAdmission {
+    fn claim(self) -> bool {
+        match self {
+            Self::Retry {
+                attempts,
+                key,
+                memo,
+            } => attempts.claim(&key, memo),
+            Self::LatestShort {
+                gate,
+                attempts,
+                key,
+                cell,
+                publication,
+                now,
+            } => {
+                if !gate.claim(&cell, publication, now) {
+                    return false;
+                }
+                // Keep the shared recent-attempt memo for historical backfill.
+                // Its result does not gate the next Short slot (the first two
+                // slots are only three minutes apart, less than this memo).
+                let _ = attempts.claim(&key, LATEST_RETRY);
+                true
+            }
+        }
+    }
+}
+/// Claim admission under owned-flight creation. The provider/publication owner
+/// survives a caller that stops waiting, as before.
 fn publication_flight(
     acquire: Arc<dyn fetch::ForecastAcquire>,
-    attempts: Arc<Attempts>,
-    key: String,
-    memo: std::time::Duration,
+    admission: PublicationAdmission,
     request: fetch::ForecastRequest,
 ) -> impl FnOnce(Instant) -> BoxFuture<'static, Option<Fetched>> {
     move |_| {
-        let fresh = attempts.claim(&key, memo);
+        let fresh = admission.claim();
         Box::pin(async move {
             if !fresh {
                 return None;
@@ -1994,3 +2068,6 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod zone_retry_tests;

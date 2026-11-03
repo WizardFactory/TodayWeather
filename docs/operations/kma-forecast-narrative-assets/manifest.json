@@ -1,0 +1,8 @@
+{
+  "date": "2026-10-17",
+  "source": "../kma-forecast-narrative-manual.html",
+  "capture": "api-usage.png",
+  "sha256": "65ff019169b90043c6ffeb0a90285829415cab2bfaa65d18485021d546180600",
+  "provenance": "Chrome screenshot of actual isolated national/regional HTTP response excerpts, synthetic prose and unrelated weather collaborators. Not a deployed mobile screenshot.",
+  "verification": "Updated two-page PDF rendered with PyMuPDF and both pages visually inspected; original markup remains literal text in the escaped manual examples."
+}

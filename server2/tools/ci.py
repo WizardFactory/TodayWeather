@@ -48,6 +48,11 @@ def main():
     commands.append([sys.executable, 'tools/logging_smoke.py', '--binary', 'target/release/server2',
                      '--probe', 'target/release/examples/logging_smoke', '--out', str(root/'reports/server2-logging/ci')])
     commands.append([sys.executable, 'tools/gateway_smoke.py', '--binary', 'target/release/server2'])
+    commands.append([sys.executable, 'tools/widget_smoke.py', '--binary', 'target/release/server2',
+                     '--output', str(root/'reports/server2-widget/ci')])
+    commands.append(['cargo','build','--locked','--release','--example','narrative_smoke'])
+    commands.append([sys.executable,'tools/narrative_smoke.py','--binary','target/release/examples/narrative_smoke',
+                     '--out',str(root/'reports/server2-narrative/ci')])
     # S15: KMA v000903 routing entry (legacy -> kma -> legacy) on the release binary.
     commands.append([sys.executable, 'tools/kma_smoke.py', '--binary', 'target/release/server2'])
     # S15 O-2 checkpoint: KMA v000903 assembly time, peak RSS and CPU on this (Linux) runner.
@@ -63,6 +68,7 @@ def main():
     commands.insert(5, [sys.executable, 'tests/integration/test_native_suite.py'])
     commands.insert(6, [sys.executable, 'tests/integration/test_release_recovery.py'])
     commands.insert(7, [sys.executable, 'tests/integration/test_cutover_deadline.py'])
+    commands.insert(8, [sys.executable, 'tools/test_native_artifact.py'])
     os.environ.setdefault('SERVER2_PYTHON', sys.executable)
     commands.append(['bash', 'deploy/smoke.sh', '--binary', 'target/release/server2', '--skip-reused',
                      '--out', str(root/'reports/server2-smoke/ci')])
@@ -89,6 +95,9 @@ def main():
             ['cargo', 'build', '--locked', '--release', '--target', target],
             ['readelf', '-h', f'target/{target}/release/server2'],
             [sys.executable, 'tools/verify_artifact.py', '--binary-dir', f'target/{target}/release', '--output', str(reports/'artifact-native'), '--source-revision', revision],
+            [sys.executable, 'tools/native_artifact.py', '--target-dir', 'target',
+             '--output', str(reports/'native-staging'), '--archive', str(reports/'artifact-native/native.tar.gz'),
+             '--source-revision', revision],
         ])
     for command in commands:
         print('+',' '.join(command),flush=True);subprocess.run(command,check=True)

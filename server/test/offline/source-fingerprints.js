@@ -1,0 +1,235 @@
+#!/usr/bin/env node
+'use strict';
+// Exact offline verification export. Never require handlers or evaluate source.
+const fs = require('fs'), path = require('path'), crypto = require('crypto');
+const SOURCES = [
+  "server/app.js",
+  "server/config/air.js",
+  "server/config/config.js",
+  "server/config/gather.js",
+  "server/controllers/airkorea.dust.image.controller.js",
+  "server/controllers/airkorea.hourly.forecast.controller.js",
+  "server/controllers/alert.push.controller.js",
+  "server/controllers/controller.weather.desc.js",
+  "server/controllers/controllerKmaStnWeather.js",
+  "server/controllers/controllerManager.js",
+  "server/controllers/controllerPush.js",
+  "server/controllers/controllerTown.js",
+  "server/controllers/controllerTown24h.js",
+  "server/controllers/geo.controller.js",
+  "server/controllers/img.hourly.forecast.controller.js",
+  "server/controllers/kaq.hourly.forecast.controller.js",
+  "server/controllers/kaq.modelimg.case.controller.js",
+  "server/controllers/kaq.modelimg.controller.js",
+  "server/controllers/kasi.riseset.controller.js",
+  "server/controllers/kecoController.js",
+  "server/controllers/kma.specialweather.controller.js",
+  "server/controllers/kma/kma.forecast.zone.controller.js",
+  "server/controllers/kma/kma.town.current.controller.js",
+  "server/controllers/kma/kma.town.mid.controller.js",
+  "server/controllers/kma/kma.town.short.controller.js",
+  "server/controllers/kma/kma.town.short.rss.controller.js",
+  "server/controllers/kma/kma.town.shortest.controller.js",
+  "server/controllers/lifeIndexKmaController.js",
+  "server/controllers/worldWeather/controller.ww.units.js",
+  "server/controllers/worldWeather/controllerWorldWeather.js",
+  "server/controllers/worldWeather/dsf.controller.js",
+  "server/lib/AQI/airFallback.js",
+  "server/lib/AQI/waqiStationName.js",
+  "server/lib/VC/vcConverter.js",
+  "server/lib/air/httpClient.js",
+  "server/lib/air/nationAir.js",
+  "server/lib/air/observation.js",
+  "server/lib/air/providerBudget.js",
+  "server/lib/air/providerChain.js",
+  "server/lib/air/providers/google.js",
+  "server/lib/air/providers/index.js",
+  "server/lib/air/providers/openweather.js",
+  "server/lib/air/providers/visualcrossing.js",
+  "server/lib/air/providers/waqi.js",
+  "server/lib/airkorea.finedust.image.parser.js",
+  "server/lib/airkoreaImageLayout.js",
+  "server/lib/airkoreaObservation.js",
+  "server/lib/aqi.converter.js",
+  "server/lib/collectTownForecast.js",
+  "server/lib/dataGoKrKeys.js",
+  "server/lib/dataGoKrRejection.js",
+  "server/lib/diffcolor.ciede2000.js",
+  "server/lib/foodPoisoning.js",
+  "server/lib/forecastGridCollection.js",
+  "server/lib/geocoder/cache.js",
+  "server/lib/geocoder/format.js",
+  "server/lib/geocoder/google.js",
+  "server/lib/geocoder/index.js",
+  "server/lib/geocoder/kakao.js",
+  "server/lib/geocoder/keys.js",
+  "server/lib/geocoder/transport.js",
+  "server/lib/history/observations.js",
+  "server/lib/history/policy.js",
+  "server/lib/history/provider.js",
+  "server/lib/history/readCache.js",
+  "server/lib/history/recovery.js",
+  "server/lib/history/service.js",
+  "server/lib/history/store.js",
+  "server/lib/kaq.finedust.image.parser.js",
+  "server/lib/kecoRequester.js",
+  "server/lib/kmaForecastNarrative.js",
+  "server/lib/kmaForecastNarrativeResponse.js",
+  "server/lib/kmaForecastRegions.js",
+  "server/lib/kmaPrecipitation.js",
+  "server/lib/kmaScraper.js",
+  "server/lib/kmaTimeLib.js",
+  "server/lib/kmaWarningZones.js",
+  "server/lib/lifeIndexKmaRequester.js",
+  "server/lib/midForecastPolicy.js",
+  "server/lib/pushCoordinator/engine.js",
+  "server/lib/pushCoordinator/registry.js",
+  "server/lib/pushCoordinator/runtime.js",
+  "server/lib/pushCoordinator/transport.js",
+  "server/lib/pushCoordinator/warningFeed.js",
+  "server/lib/pushStore/index.js",
+  "server/lib/pushStore/mongo.js",
+  "server/lib/sunRiseSet.js",
+  "server/lib/unitConverter.js",
+  "server/lib/weatherUnavailable.js",
+  "server/locales/de.json",
+  "server/locales/en.json",
+  "server/locales/ja.json",
+  "server/locales/ko.json",
+  "server/locales/zh-CN.json",
+  "server/locales/zh-TW.json",
+  "server/models/air.observation.cache.model.js",
+  "server/models/air.provider.usage.model.js",
+  "server/models/alert.push.model.js",
+  "server/models/arpltn.hourly.forecast.js",
+  "server/models/arpltnKeco.js",
+  "server/models/arpltnTownKeco.js",
+  "server/models/kaq.hourly.forecast.model.js",
+  "server/models/kaq.map.case.model.js",
+  "server/models/kma/kma.forecast.zone.model.js",
+  "server/models/kma/kma.lifeindex.model.js",
+  "server/models/kma/kma.town.current.model.js",
+  "server/models/kma/kma.town.mid.forecast.model.js",
+  "server/models/kma/kma.town.mid.land.model.js",
+  "server/models/kma/kma.town.mid.sea.model.js",
+  "server/models/kma/kma.town.mid.temp.model.js",
+  "server/models/kma/kma.town.short.model.js",
+  "server/models/kma/kma.town.short.rss.model.js",
+  "server/models/kma/kma.town.shortest.model.js",
+  "server/models/lifeIndexKma.js",
+  "server/models/modelAreaNo.js",
+  "server/models/modelCurrent.js",
+  "server/models/modelFoodPoisoning.js",
+  "server/models/modelKasiRiseSet.js",
+  "server/models/modelKmaForecastNarrative.js",
+  "server/models/modelKmaSpecialWeatherSituation.js",
+  "server/models/modelKmaSpecialWeatherZone.js",
+  "server/models/modelKmaStnDaily.js",
+  "server/models/modelKmaStnHourly.js",
+  "server/models/modelKmaStnHourly2.js",
+  "server/models/modelKmaStnInfo.js",
+  "server/models/modelKmaStnMinute.js",
+  "server/models/modelKmaStnMinute2.js",
+  "server/models/modelMidForecast.js",
+  "server/models/modelMidLand.js",
+  "server/models/modelMidTemp.js",
+  "server/models/modelMinuDustFrcst.js",
+  "server/models/modelMsrStnInfo.js",
+  "server/models/modelPush.js",
+  "server/models/modelShort.js",
+  "server/models/modelShortRss.js",
+  "server/models/modelShortest.js",
+  "server/models/sido.arpltn.keco.model.js",
+  "server/models/town.js",
+  "server/models/worldWeather/vc.fetch.lock.model.js",
+  "server/models/worldWeather/vc.usage.model.js",
+  "server/routes/gateway.js",
+  "server/routes/v000705/index.js",
+  "server/routes/v000705/routePushNotification.js",
+  "server/routes/v000705/routeTownForecast.js",
+  "server/routes/v000803/route.nation.js",
+  "server/routes/v000803/routeTownForecast.js",
+  "server/routes/v000901/route.dsf.coord.js",
+  "server/routes/v000901/route.kma.addr.js",
+  "server/routes/v000902/index.js",
+  "server/routes/v000902/route.dsf.coord.v000902.js",
+  "server/routes/v000902/route.kma.v000902.js",
+  "server/routes/v000902/route.push.update.list.js",
+  "server/routes/v000903/route.dsf.coord.v000903.js",
+  "server/routes/v000903/route.kma.v000903.js",
+  "server/routes/worldweather/routeWeather.js",
+  "server/s3/controller.s3.js",
+  "server/test/offline/air-harness.js",
+  "server/test/offline/airkorea-image-harness.js",
+  "server/test/offline/airkorea-image.test.js",
+  "server/test/offline/fixtures/gateway/providers.json",
+  "server/test/offline/fixtures/kma-warning/brk-news.json",
+  "server/test/offline/fixtures/kma-warning/wrn-msg-0926.json",
+  "server/test/offline/fixtures/kma-warning/wthr-info.json",
+  "server/test/offline/fixtures/kma-warning/wthr-pwn.json",
+  "server/test/offline/fixtures/vc-london-combined.json",
+  "server/test/offline/fixtures/vc-newyork-combined.json",
+  "server/test/offline/fixtures/vc-tokyo-combined.json",
+  "server/test/offline/fixtures/vc-tokyo-forecast.json",
+  "server/test/offline/fixtures/waqi-seoul.json",
+  "server/test/offline/fixtures/waqi-tokyo.json",
+  "server/test/offline/oracle-provenance/air/air-fixtures.js",
+  "server/test/offline/oracle-provenance/air/sections-air.js",
+  "server/test/offline/oracle-provenance/delivery/alarm-scenarios.js",
+  "server/test/offline/rss-response-smoke.js",
+  "server/test/offline/vc-synthetic.js",
+  "server/test/offline/vc-weather-smoke.js",
+  "server/utils/convertGeocode.js",
+  "server/utils/coordinate2xy.js",
+  "server/utils/data/20160704_AreaNoResutl",
+  "server/utils/data/20180119_kma_lifeindex_areano.csv",
+  "server/utils/data/base.csv",
+  "server/utils/data/kma_forecast_land_zones.csv",
+  "server/utils/data/kma_warning_zones.csv",
+  "server/utils/data/part.csv",
+  "server/utils/data/region.csv",
+  "server/utils/initTownDataToMongo.js",
+  "server/utils/update.areano.to.db.js",
+  "server/utils/updateTownDataToMongo.js",
+  "server/views/error.jade",
+  "server/views/layout.jade"
+];
+const FILE_LIMIT = 1024 * 1024, TOTAL_LIMIT = 16 * 1024 * 1024;
+function fingerprint(root, relative, remaining) {
+  let current = root;
+  for (const part of relative.split('/')) {
+    current = path.join(current, part);
+    const stat = fs.lstatSync(current);
+    if (stat.isSymbolicLink()) throw Error('symlink source rejected: '+relative);
+  }
+  const fd = fs.openSync(current, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+  try {
+    const before = fs.fstatSync(fd);
+    if (!before.isFile() || before.size > FILE_LIMIT || before.size > remaining) throw Error('source type/size rejected: '+relative);
+    const hash = crypto.createHash('sha256'), buffer = Buffer.alloc(65536);
+    let bytes = 0, count;
+    while ((count = fs.readSync(fd, buffer, 0, buffer.length, null))) {
+      bytes += count;
+      if (bytes > FILE_LIMIT || bytes > remaining) throw Error('source size limit exceeded: '+relative);
+      hash.update(buffer.subarray(0, count));
+    }
+    const after = fs.fstatSync(fd);
+    if (bytes !== before.size || before.size !== after.size || before.mtimeMs !== after.mtimeMs)
+      throw Error('source changed during read: '+relative);
+    return {sha256:hash.digest('hex'), bytes};
+  } finally { fs.closeSync(fd); }
+}
+try {
+  if (process.argv.length !== 4 || process.argv[2] !== '--root') throw Error('usage: source-fingerprints.js --root CHECKOUT');
+  const root = path.resolve(process.argv[3]);
+  if (fs.lstatSync(root).isSymbolicLink() || !fs.statSync(root).isDirectory()) throw Error('regular checkout root required');
+  const files = {}; let total = 0;
+  for (const relative of SOURCES) {
+    const item = fingerprint(root, relative, TOTAL_LIMIT-total); total += item.bytes;
+    if (total > TOTAL_LIMIT) throw Error('aggregate source size limit exceeded');
+    files[relative] = item.sha256;
+  }
+  const result = JSON.stringify({schema:1, node:process.version, files, total_bytes:total});
+  if (Buffer.byteLength(result) > 2 * 1024 * 1024) throw Error('reader response size limit exceeded');
+  process.stdout.write(result+'\n');
+} catch (error) { process.stderr.write('INVALID fingerprint input: '+error.message+'\n'); process.exitCode = 2; }

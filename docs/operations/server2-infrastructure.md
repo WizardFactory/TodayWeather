@@ -2,9 +2,14 @@
 
 Status: reproducible local test environment and staging plan. S03 changed **no AWS
 resources or routing**; the account root provisioned the staging bucket and runtime
-role on 2026-10-15 (S10f, see the worksheet below). S01/S04 are integrated. The foundation
-binary serves health and loopback metrics, without weather/S3/provider runtime
-routes. [Architecture](../architecture/server2.md) and
+role on 2026-10-15 (S10f, see the worksheet below). S01/S04 are integrated. The original
+S04 foundation was health-only; the current operational binary also owns native
+services and requires complete selection or an explicit development coexistence
+origin. The local stack below uses that origin, a restricted environment and an
+empty working directory to exercise health/metrics without starting native workers.
+Begin with the [installation guide](server2-install.md); the
+[runtime services guide](server2-runtime-services.md) owns ordinary startup/stop.
+[Architecture](../architecture/server2.md) and
 [S03 contract](../../specs/issue-2688.md) describe the boundaries.
 
 ## Start and verify locally
@@ -339,8 +344,9 @@ distinguish this functional observation from deployment readiness.
 
 The selected [CLI capture](../evidence/tasks/server2-infrastructure/usage.png)
 and [manifest](../evidence/tasks/server2-infrastructure/manifest.json) bind the
-actual test output and release binary. Editable source is this document; the
-[PDF manual](server2-infrastructure.pdf) includes the same operational boundaries.
+actual test output and release binary. They retain their original task scope.
+The [PDF snapshot](server2-infrastructure.pdf) predates these startup clarifications;
+this editable Markdown carries current amendments and is not a new execution claim.
 Unit tests cover wire boundaries separately from integrated process smoke.
 The local smoke performs no live AWS access, provider request, traffic replay, IAM
 application, musl Linux run, real Spot interruption, weather parity or latency/cost

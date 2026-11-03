@@ -16,6 +16,7 @@ pub mod store;
 pub mod transport;
 pub mod units;
 pub mod vc;
+pub mod widget;
 
 pub use air::{AirOutcome, AirProvider, AirSource, Unconfigured};
 pub use air_chain::{
@@ -73,6 +74,8 @@ impl Range {
 /// Legacy route variant.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Version {
+    /// Raw /ww/010000/current/2 middleware; no unit conversion or summary.
+    Widget,
     V1,
     V2,
     V3,
@@ -131,6 +134,8 @@ pub struct WorldRequest {
 /// Route outcome in legacy wire classes.
 #[derive(Debug)]
 pub enum WorldReply {
+    /// Direct widget initial provider-authentication failure (legacy401).
+    Unauthorized,
     Body(Val),
     /// 503 `{code: EWEATHERUNAVAILABLE, retryAt}`.
     Unavailable(f64),
@@ -145,7 +150,9 @@ impl World {
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let mut query = request.query;
         for name in units::UNIT_LIST {
-            if !query.has(name) || query.get(name).str() == Some("(null)") {
+            if request.version != Version::Widget
+                && (!query.has(name) || query.get(name).str() == Some("(null)"))
+            {
                 query.set(name, units::default_unit(name));
             }
         }
@@ -163,7 +170,10 @@ impl World {
         let found = match records {
             Ok(found) => found,
             Err(Failure::Unavailable(at)) => return WorldReply::Unavailable(at),
-            Err(Failure::Error) => return WorldReply::Error,
+            Err(Failure::Unauthorized) if request.version == Version::Widget => {
+                return WorldReply::Unauthorized;
+            }
+            Err(Failure::Unauthorized | Failure::Error) => return WorldReply::Error,
         };
         let Some(dsf) = records::output(&found, lat, lon) else {
             return WorldReply::Error;
@@ -224,6 +234,10 @@ pub fn parse_query(raw: &str) -> Obj {
 /// Parse `/{version}/dsf/coord/{loc}?{query}` as the legacy router does.
 pub fn parse_path(path: &str) -> Option<(Version, String, Obj)> {
     let (route, query) = path.split_once('?').unwrap_or((path, ""));
+    if route.strip_suffix('/').unwrap_or(route) == "/ww/010000/current/2" {
+        let q = parse_query(query);
+        return Some((Version::Widget, q.get("gcode").str()?.to_owned(), q));
+    }
     let mut parts = route.strip_prefix('/')?.split('/');
     let version = Version::parse(parts.next()?)?;
     if parts.next()? != "dsf" || parts.next()? != "coord" {
@@ -304,7 +318,7 @@ impl BackendHandler for WorldBackend {
                     at,
                     self.world.now_ms(),
                 ))),
-                WorldReply::Error => Err(GatewayError::Provider),
+                WorldReply::Error | WorldReply::Unauthorized => Err(GatewayError::Provider),
             }
         })
     }

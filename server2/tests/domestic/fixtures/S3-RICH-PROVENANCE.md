@@ -96,3 +96,10 @@ The accepted comparison is exact status/body/functional-header union. Only named
 transport/session headers differ. No response normalization hides rounding,
 HEAD framing or missing fields. See the [manifest](../../integration/fixtures/kma-rich-replay.json)
 and [operation guide](../../../../docs/operations/server2-kma-rich-replay.md).
+
+
+## Current a6 renewal (2026-10-20, build23)
+
+This fixture was renewed from the qualified full22 rich capture at `a6fdf1f4d1f869d63c5310646003967571dac6e2`. Two independent captures had identical raw and gzip bytes, with no same-base comparison exclusions. SHA-256: `1d5ae34b0837a7ef9966f6441b6f3d184d236643486f2eed92f4383f09ede2f5`. Previous fixture SHA-256: `9057374928813cc5568bafebbaee19f84021faa3bb5a9d8877846acf4f01ff17`; original bytes remain in local ignored build23 evidence. Original request cases and clocks are retained.
+
+The old/current comparison excluded only `/source/files`; 880 rows across all five corpora were classified. New legacy stored-air forecast/history/station metadata are intentional current-reference behavior and require native alignment; old/current semantic equivalence is not claimed. Empty optional narrative lookups do not cover present narrative content. Requesttrace arpltn result preimages and two backend body preimages were not retained by the original recorder. Full22 terminal/capture success does not qualify live providers, Linux or production capacity.

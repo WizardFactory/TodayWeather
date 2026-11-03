@@ -893,8 +893,10 @@ are satisfied. No claim of RPO zero is made for an unacknowledged provider reply
 Following S06 merge, [S08 #2693](https://github.com/WizardFactory/TodayWeather/issues/2693)
 implements internal quota admission and rejection primitives. Its
 [sequence](diagrams/server2-provider-admission.html) and
-[editable source](diagrams/server2-provider-admission.sequence.json) show the
-committed internal execution; no provider route, live quota or production policy is activated.
+[editable source](diagrams/server2-provider-admission.sequence.json) now show the
+selected #2819 B2 DataGoKr funding contract as an illustrative example, not a
+code-revision attestation of the entire S08 CAS/witness protocol. The historical
+S08 diagram remains in Git history. No live quota or production policy is activated.
 
 Each trusted provider/quota-owner/window has a separate versioned
 `budgets/v2/{provider}/{opaque_quota_key_id}/{window_id}/authority.json`.
@@ -924,24 +926,40 @@ Policy mismatch, overflow, observed floor decrease and invalid/backwards time
 fail closed. Stable window/owner configuration, trusted clocks and no external
 delete/reset/version rollback remain deployment prerequisites.
 
-The funded executor sends at most two actual provider HTTP attempts. VC reserves
-98/50/2 records for two attempts of the 49/25/1-record modes. data.go.kr reserves
-two units on the initial candidate and, if configured, one on the next key before
-any HTTP. Three conservative reserved units never mean three actual attempts.
-A trusted injected validator checks JSON in this primitive; concrete provider
-schemas, pagination/group composition and the S07 funding adapter are later
-ports. Credential-to-quota-owner, window and endpoint mappings are operator
-configuration. The library does not infer their correctness from a key hash.
+The funded executor sends at most two actual provider HTTP attempts. VC retains its
+maximum prepayment: 98/50/2 records for two attempts of the 49/25/1-record modes.
+The #2819 B2 correction reserves one logical data.go.kr unit immediately before
+HTTP on the selected key. An unused rotation candidate is not funded. Known local
+`BudgetError::Exhausted` skips to the next distinct declared candidate without an
+HTTP attempt; every other funding error (including unknown ownership, transport,
+corruption, clock or deadline) stops the chain. A funded unit is never refunded.
+S08 authority blocks can exceed these logical units and are not HTTP counters.
 
-Any candidate funding denial stops the chain; quota/auth responses stop retries
-on that key, while only the permitted funded retry or key rotation can consume
-the remaining attempt within the original deadline. Exhausting the bounded CAS
-conflict attempts is contention, distinct from exhausted quota. Duplicate rotation
-keys or quota-owner identities are rejected before funding or provider HTTP.
+Quota/auth responses stop retries on that key; a distinct next candidate must be
+funded before rotation. Retryable failures retain the remaining attempt within
+the original deadline. Candidate identity validation precedes funding. Duplicate
+rotation keys or quota-owner identities are rejected. Bounded CAS contention is
+distinct from exhausted quota. Concrete provider schemas and page composition live
+in the domestic acquirer; operator credential/owner/window/endpoint mappings are
+not inferred from a key hash.
+
+`CallReport` separately records local exhausted candidate indices and actual
+funded HTTP outcomes. Ordinary keyring settlement advances past those exhausted
+keys with its existing concurrent compare-and-update guard; successful keys stay
+preferred without undoing a concurrent valid advancement. Each call sees at most
+two candidates. In a larger ring, an exhausted pair can fail without HTTP and
+advance to the third key for the next call; it does not scan all keys per call.
+Local denial is never fabricated as a provider HTTP quota outcome. If A actually
+answered Quota/Auth and the distinct next key B is only locally exhausted, the
+terminal result preserves A's observed provider classification; the report still
+records B's local denial. Unknown funding on B remains a terminal funding error.
+The report contains skipped local candidates for settlement, but no separate
+successful-skip metric exists. `funding_denied` counts calls ending in a funding
+error; actual HTTP outcome counters retain their own meaning.
 
 If response headers have arrived but encoding, header/body size or download
 validation fails, a typed body failure preserves the received HTTP status.
-HTTP 429 and 401/403 still stop that key and allow only a distinct pre-funded
+HTTP 429 and 401/403 still stop that key and allow only a distinct, funded next
 rotation; other 4xx terminate without retry. An incomplete body is never Data
 or NoData. Status-less transport failures and incomplete transient responses
 retain the original bounded retry and absolute deadline.
@@ -1395,8 +1413,8 @@ configuration. Existing injected `GEOCODER_KAKAO_KEYS`
 and `GEOCODER_GOOGLE_KEY` names and the Google fingerprint restriction are
 preserved. Present Kakao key lists must be JSON arrays of nonempty strings;
 malformed entries reject the configuration. S08 adds Kakao/Google budget identities; the geocoder funding bridge
-reserves/consumes every possible key attempt before owned work, while the
-weather-only executor rejects those identities. Configured limits are not measured quotas (#2724).
+funds only the selected provider/key immediately before its HTTP attempt; local
+exhaustion skips to the next configured key. The weather-only executor rejects those identities. Configured limits are not measured quotas (#2724).
 
 Exact coordinate/locale single-flight and results remain bounded volatile RAM.
 The optional address-only S3 adapter stores a bounded 16-KiB projection with
@@ -1690,8 +1708,26 @@ The table records the S10c state.
 | KMA life inputs (S15b-3b) | none new | Read only with `kma`. UV V5, pollen V3 and KASI use the S15b-2 data.go.kr acquirer (its key and unit settings): one S08 quota owner per key and KST day across ASOS and these services, one key ring per service. MFDS is keyless at the production endpoint legacy hard-codes (`https://poisonmap.mfds.go.kr/api/risk.do`); per AK 2026-10-15 no new `SERVER2_*` provider setting is added (S10e converts the existing ones to the legacy names). |
 
 `FundedQuota` now opens one S08 budget store per key and UTC day from configured limits,
-claims at most 50 units per authority block, and still funds every possible attempt of a
-lookup before HTTP without refunds. Without a quota the geocoder denies every acquisition.
+claims at most 50 units per authority block, and funds each selected geocoder key before
+HTTP without refunds. B1 (#2819) removes reservation of unused candidates: a complete
+Kakao result does not debit or depend on Google funding; address lookup remains Google
+first with Kakao fallback. Shared owners/cache hits do not duplicate funding. Admission
+waits stay inside the existing five-second owner deadline; HTTP attempts remain capped
+at three seconds and the remaining owner time. A funded unit can remain spent if the
+deadline expires before send; this is conservative admission, not wire accounting.
+The existing outer five-second owner timeout is the binding end-to-end limit;
+the per-admission timeout and post-funding remaining-time check are additional guards.
+The paused-clock slow-funding regression establishes the owner boundary and no late
+HTTP, not an independent proof of those inner guards.
+`server2_geocoder_quota_rejections_total` counts denied provider/key admissions,
+not rejected HTTP requests or failed lookups. Several unavailable keys can increment
+it during one lookup, and a later funded key or optional-supplement failure can still
+produce a successful response. Pair it with lookup outcome/HTTP-attempt counters;
+do not use it alone as a failed-request rate.
+Without a quota the geocoder denies every acquisition. The
+[funding contract flow](diagrams/server2-geocode-funding.html) illustrates this policy,
+not an execution receipt. [Local checks](../evidence/tasks/issue-2819-funding/verification.md)
+use owned HTTP and a volatile S08 peer; production quotas are not measured.
 S08 keeps one policy per owner and window, so a changed limit applies from the next UTC day;
 a restart with another limit inside the same day denies that key until the day ends. A
 provider day that is not the UTC day overlaps two windows; the #2724 limits must account for
@@ -1876,16 +1912,21 @@ when a parallel acquisition marks the key exhausted restarts with the next key i
 funding another page. When no entry completes and at least one was exhausted the call fails with
 `Provider(Quota)`; an all-credential failure stays `Provider(Auth)`. The last working key is still
 remembered (`preferred`). Code 23 (per-second limit) is not a daily quota and keeps stopping.
-The forecast-zone and KASI rings (#2604 rotation) are unchanged, and an S08 `Funding` denial still
-stops the call.
+The forecast-zone and KASI rings retain their #2604 order. With #2819 B2, a known
+local S08 `Exhausted` also tries the next selected key. AirKorea keeps its reverse
+legacy order and remembered working key, but an API-local funding cap never sets
+the provider-wide KST exhaustion marker. Other funding errors still stop. AirKorea does not cache an API-local funding
+exhaustion in its provider-wide KST marker: a later call rechecks that key's S08
+authority (an S3 read, no provider HTTP). This avoids carrying one API's cap into
+other APIs or beyond its actual window.
 
-Funding is unchanged: every page call offers one key and reserves two units on that key's S08
-budget before any HTTP (one attempt plus one transient retry); an exhausted key reserves nothing.
-With *n* keys and *P* pages the worst case is *n·P* page calls, *2·n·P* attempts and *2·n·P*
-reserved units, the same bound as the S13b credential failover (at most 20 pages; for example
-3 keys and the 7-page station list: 21 calls, 42 units). The usual case, quota on page 1, costs
-one extra call and two extra units per exhausted key and day per acquirer (parallel acquisitions
-already sending to the key can each receive one quota answer). Exhaustion is held in memory per
+Every actual data.go.kr HTTP attempt now reserves one logical unit on its key;
+an unused transient retry is not prepaid. With *n* keys and *P* pages the upper
+bound remains *n·P* page calls, *2·n·P* actual HTTP attempts/logical units (at most
+20 pages; 3 keys × 7 pages can use at most 42 actual attempts). A single quota response
+on page 1 costs one HTTP/logical unit per rejected key, rather than reserving a
+second unused retry unit. Parallel acquisitions already in flight can each receive
+one quota answer. Exhaustion is held in memory per
 acquirer, so after a restart each exhausted key costs one more quota answer per acquisition that
 reaches it before the first answer is recorded. Only a provider quota answer marks a key: a page
 recheck that finds the key already exhausted never moves the end of that exhaustion.
@@ -2473,7 +2514,7 @@ a current observation must carry no recovery sentinel (`t1h` -50 or `reh` -1 is 
 | Grid backfill (earlier publications: 23 current, 23 ultra-short, 7 short; S14 `schedule`) | Missing publications, in one owned pass per cell, family and latest publication (3 acquisitions in flight, 8 passes in their own pool); the request does not wait | Each pass at most hourly. Each publication shares the latest acquisition's flight and 5-minute retry bound. |
 | Latest short RSS (`wid/queryDFS.jsp`) | Not in S3 for the cell | 5 minutes |
 | Latest mid publications (`getMidFcst`, `getMidLandFcst`, `getMidTa` at the 06/18 `tmFc`) | A region legacy collects lacks the latest publication | 5 minutes |
-| Forecast-zone list (`getFcstZoneCd`) | Once per process, like legacy's `getFromKma()` at start; a published list replaces the memory | per process |
+| Forecast-zone list (`getFcstZoneCd`) | Until one complete readable process refresh; success replaces memory, failure remains demand-retryable (#2819 D1) | 5 minutes after an admitted attempt; stop after success |
 | Warning cycle (`WarningCollector.gather`, S12) | Once per 3 minutes, legacy's cadence; never two at once | 3 minutes |
 
 Retry keys are bounded at 65,536. Expired keys are pruned when the map doubles. Beyond the bound,
@@ -3027,6 +3068,24 @@ the wait expiring), the route gives its legacy store-error answer with the messa
 `push state storage unavailable`: `POST /push` and `PUT` 500, `DELETE` 501, and `push-list` 200
 with `null` for each affected item (the legacy batch helper swallows store errors). Validation and
 cast-error answers are unchanged because they precede any store call.
+
+**Registration state safety (#2819 C1).** Before a transaction, direct commit or import
+admits a stored document, validate every nested key (no `$` prefix or literal `.`),
+encoded size (at most 256 KiB per document) and nesting depth (at most 32 below the root).
+The limit counts escaped JSON bytes; schema-supported dotted update paths still resolve
+to safe stored fields. Typed BSON dates and non-finite numbers keep their EJSON wrappers.
+Invalid input receives the existing store-error shape and writes no journal entry; later
+valid changes remain usable. Compact record reads return errors instead of panicking.
+Every replacement in a journal entry is checked before any is applied, so a bad entry
+cannot apply an earlier prefix or advance its sequence. Corrupt acknowledged bytes are
+retained: restore stays unready; this does not skip a record or rewind state. Writer
+completion, cancellation and unwind clear the shared ready flag. Public `/health` is
+still liveness only; aggregate production readiness is a separate #2819 increment.
+
+The [state safety contract flow](diagrams/server2-push-state.html)
+([editable JSON](diagrams/server2-push-state.json)) illustrates these admission/recovery
+rules; it is not execution evidence. The [selected verification](../evidence/tasks/issue-2819-state/verification.md)
+records the actual regressions, neighboring suites and owned HTTP restart smoke.
 
 **One-time copy.** `push_registration_convert PUSHES ALERTPUSHES IMPORT REPORT` (offline) reads
 `mongoexport` output of `pushes` and `alertpushes` (lines or `--jsonArray`; relaxed, canonical or
@@ -3618,6 +3677,23 @@ See the [operations manual](../operations/server2-runtime-services.md),
 [design](diagrams/server2-runtime-services.html) and
 [selected verification](../evidence/tasks/issue-2705-s20a/verification.md).
 
+### S20h public warning binding (issue #2817)
+
+The explicit native `kma` selection also constructs the existing S12 WarningService
+on the shared bounded WarningStore. `RuntimeServices::public_router` delegates
+GET/HEAD `/v000903/kma/special` before the broader direct-KMA mount. This restores
+the existing warning contract: populated JSON with a 300-second cache age, empty
+501 `data is empty`, case-insensitive matching, one trailing slash, HEAD and
+conditional GET. Push and older-KMA-only construction can share warning data without
+selecting this public route. No acquisition or delivery loop starts for this binding.
+
+The combined factory/router check maps the 19 historical method/path groups and
+notice/WW supplements to explicit cases, then reconstructs acknowledged registration,
+notice and canonical narrative state on the same owned S3 peer. Recorded warning
+publications are tested through fresh public service construction. These isolated
+checks do not qualify fixed-input weather parity, OS-process recovery, production
+shadow or a previous full release. See [selected verification](../evidence/tasks/issue-2705-s20h/verification.md).
+
 ### S20b supervised delivery (issue #2792)
 
 Ordinary push selection now prepares the alarm, conditional and warning workers in
@@ -3663,8 +3739,469 @@ S19c's [paired release verification](../operations/server2-release-recovery.md) 
 
 ## S20c: operational preparation after S19
 
-The [fixed cutover inventory](../../server2/config/cutover/inventory.json) retains all19accepted method/path groups and220583observed requests, the later notice backend supplement and required health/private metrics. `/ww` remains outside the accepted report's scope and unclassified. Tiny/failure-only groups stay included. #2805's new nationwide narrative and #2724 actual quota measurements are excluded from this preparation; neither silently removes an existing used contract or waives a production gate.
+The [fixed cutover inventory](../../server2/config/cutover/inventory.json) retains all19accepted method/path groups and220583observed requests, the later notice backend supplement and required health/private metrics. `/ww` remains outside the accepted report's historical scope; S20d separately includes the retained widget contract as a native supplement. Tiny/failure-only groups stay included. S20e subsequently includes PR #2805's national/regional narrative as a response supplement through #2809. #2724 actual quota measurement remains excluded; no supplement waives a production gate.
 
 The [candidate nginx configuration](../../server2/deploy/cutover/nginx.conf.template) uses one upstream connection per request while keeping the client connection reusable. The [owned rehearsal](../../server2/tools/cutover/rehearse_deadline.py) verifies exact retained input hashes, actual nginx syntax/process and a release gateway request beginning4safter client connection acceptance. It compares the real9s501body/functionalheaders with S02 and checks existing3backend attempts, no proxy retry and no abandoned response. Injected roots and a frozen backend are explicit local dependencies; this does not qualify native-only production routing, host/TLS/CloudFront, quota or seven-day shadow. Existing runtime timeouts and worker semantics are unchanged.
 
 The [operator runbook](../operations/server2-cutover.md), [PDF](../operations/server2-cutover.pdf) and [proposed decision flow](diagrams/server2-cutover.html) specify eligibility, immutable release/config/state identities, admission/scheduler quiescence, bounded drain, singular worker ownership, thresholds, exact state-preserving restoration and post-switch verification. No eligible previous full bundle means no cutover. Keep durable claims/acknowledged state and never resend failed/unknown work or rewind a journal. Repository preparation, live evidence and separately scoped AK production authority are distinct gates; no actuator or production rollback is executed here.
+
+
+## S20d retained world-widget supplement (2026-10-17)
+
+AK explicitly retained existing widget support and included `GET /ww/010000/current/2?gcode=lat,lon` in native migration. This is outside the accepted historical 19 method/path groups; its request volume remains unknown. `dsf` selection enables it on the same world engine, quotas and S3 catalogs, without a geocoder or legacy origin. The native route preserves the current legacy raw `thisTime`/`hourly`/`daily`, original icon case and units metadata; it does not run coordinate-route conversion or summary middleware. Initial provider authentication failure keeps 401, the provider-down window keeps 503 plus retryAt, and generic failure keeps 500. Existing coordinate/gateway outcomes are unchanged.
+
+[Widget operations and limitations](../operations/server2-widget.md) includes frozen wire and owned release/S3 recovery proof. The source iOS parser also contains `current.t1h` references that differ from the current endpoint; this port does not attest a released client build or repair that pre-existing discrepancy. Production revision parity, shadow, host/quota and eligible previous full-release qualification remain required.
+
+## S20e native forecast narrative response supplement (2026-10-17)
+
+AK included the accepted PR #2805 national/regional prose in server2 through
+[#2809](https://github.com/WizardFactory/TodayWeather/issues/2809).
+[`narrative`](../../server2/src/narrative/mod.rs) preserves the ten-office map,
+renamed province aliases, original Korean plain text, strict KST-to-UTC
+announcement and 24-hour expiry. Successful KMA assembly chooses the office
+from the final `source` and `regionName`. National KR uses108 and removes child
+regional prose. Both wire writers cap cache age before HEAD/304 handling.
+
+Runtime construction shares the native S3 admission and daily data.go.kr
+acquirer. Native KMA/town serving has a separate owned worker after listener
+bind, with a delayed first tick and180-second cadence. It is not the warning
+worker or an HTTP-triggered narrative acquisition. Existing S08 funding is per
+VilageFcstMsg API/key/KST day; the documented development default is10000, with
+no actual operating quota measurement. Existing funded retries are preserved.
+Shutdown aborts and joins this worker within the process stop path.
+
+[`narrative/store`](../../server2/src/narrative/store.rs) retains original
+provider bodies in S06 raw records and an existing v2 catalog per office and
+publication. [`CatalogStore::publish_once`](../../server2/src/storage/catalog.rs)
+uses a conditional-absent single-record catalog: the first committed body wins,
+and a losing raw orphan cannot replace it. Ordinary catalog union is unchanged.
+Bounded S3-only discovery/read reconstructs prose after memory loss. Ten office
+caches refresh within30seconds and check expiry on every return; a local
+publication invalidates its office cache. Missing/invalid/expired/unavailable
+optional data is omitted without a weather failure or legacy dependency.
+
+The [operator contract](../operations/server2-forecast-narrative.md),
+[PDF](../operations/server2-forecast-narrative.pdf) and
+[design workflow](diagrams/server2-forecast-narrative.html)
+([source](diagrams/server2-forecast-narrative.json)) separate background
+acquisition, durable originals and optional serving. The diagram cites the
+accepted legacy contract and labels its proposed native ownership; it is not
+runtime execution evidence. The [verification record](../evidence/tasks/issue-2705-s20e/verification.md)
+distinguishes legacy object parity, native storage tests and the owned-peer
+release narrative layer from full provider startup/production qualification.
+This adds a response supplement without changing historical route counts.
+Warnings, zones, registrations, claims and sends retain their existing behavior.
+
+
+### #2819 B3: finite latest Short publication attempts
+
+The request-time KMA source gives the latest `vilage-fcst` publication three
+process-local admission slots: provision+2, +5 and +10 minutes. Existing Short
+bases are 02/05/…/23 and provision is HH10, so the first minute checks are
+HH12/15/20. Demand is required; there is no retry timer or pre-collection. A
+first request arriving after a window consumes only the highest elapsed slot,
+without replaying missed windows. Existing usable S3 data prevents acquisition.
+
+`source::late::LatestShort` keeps the newest admitted publication and at most
+65,536 cell-to-highest-slot entries under one mutex. A newer base clears old
+entries; an older publication or repeated/lower slot cannot reset admission.
+Full capacity refuses a new cell until a newer publication. This is bounded
+process memory, not durable coordination across processes or restarts. After a
+forward clock jump, older publication admission fails closed until time catches
+up; no rollback of this fence is performed.
+
+`PublicationAdmission` runs only in the existing owned-flight creation callback.
+Overlapping callers still join one publication key and caller cancellation does
+not cancel the provider owner. The existing completed-result retention, waits,
+provider deadlines and publication writer are unchanged. Admitted latest Short
+attempts also leave the existing recent-attempt memo for historical backfill;
+that memo does not suppress a later Short slot, since the first two slots are
+only three minutes apart. Historical backfill and current/ultra-short/RSS/mid,
+warning and zone admission retain their original policies.
+
+The cap counts publication acquisitions, not pages or HTTP retries. B2 still
+funds actual attempted keys immediately before HTTP; an always-NotPublished
+first page uses one funded HTTP per slot. The separate local
+[verification command](../operations/server2-native-verification.md#b3-latest-short-publication-windows)
+composes the real source/owner, domestic acquirer and S08 budget with owned S3
+and HTTP peers. Its request clock is synthetic; it does not measure three hours
+of real performance or operating quota. Historical provider calls are stubbed
+in that specific smoke and covered separately by source/history regressions.
+The [proposed contract](diagrams/server2-late-publication.html) and
+[editable source](diagrams/server2-late-publication.sequence.json) preserve their
+pre-implementation base identity; they are not execution or readiness evidence.
+
+### #2819 D1 forecast-zone recovery
+
+The [D1 contract](../../specs/issue-2819-zone-retry.md) changes the request-time
+forecast-zone process refresh from “attempted once” to “completed successfully
+once.” The existing `forecast-zones` owned flight still returns to callers
+immediately. Its creator claims the existing five-minute monotonic `Attempts`
+admission before collection. Errors, None, panic and empty/unreadable/incomplete
+results retain retry eligibility and last-good memory; there is no timer or
+pre-collection. A complete readable published list invalidates memory before
+latching success, so a later read folds S3. The ten-minute incremental refresh,
+daily full refold, field merge, original owned lifetime and funding remain.
+
+The [proposed flow](diagrams/server2-zone-refresh.html) and
+[editable source](diagrams/server2-zone-refresh.sequence.json) cite the committed
+B3 parent as the existing interface; they do not attest a live execution.
+[Local verification](../operations/server2-native-verification.md#d1-forecast-zone-failure-recovery)
+uses owned peers and a real five-minute retry interval. The slice is stacked
+on B3 and is not an integrated release or D2 capacity qualification.
+
+### #2819 narrative read cache recovery
+
+The [cache contract](../../specs/issue-2819-narrative-cache.md) separates a
+confirmed answer from a short completed-error retry gate under the same
+per-office mutex. Only `Ok(Some(value))` or confirmed `Ok(None)` gets the
+existing30s answer entry. A completed timeout, transport, corruption or capacity
+error preserves the expired prior answer without serving/extending it, and
+sets an independent **1s monotonic retry-after**. Demand inside that gate omits
+the optional field without storage work; later demand can retry. Successful
+read or refresh publication clears the error gate immediately.
+
+This bounds repeated completed failures while retaining the original lock/read
+deadline and public attach cap min(remaining deadline,2s). One reader holds an
+office mutex. Each admitted Store read retains up to8indexpages for each of two
+dates (at most16indexLISTpages), followed by existing catalog/raw limits. These
+are source bounds, not measured outage cost/quota/headroom. Cancellation without
+a completed error does not manufacture an error/absence entry. Recovery may wait
+for the short gate plus existing read/lock bounds; this replaces the initial
+prototype's unbounded immediate retries, rather than accepting their outage cost.
+No stale-on-error, read-path provider acquisition, timer, mode or schema change.
+
+The [proposed flow](diagrams/server2-narrative-cache.html) and
+[editable source](diagrams/server2-narrative-cache.sequence.json) pin prototype
+`968205d8` as existing interface context, not implementation/execution proof.
+The [operator scenario](../operations/server2-native-verification.md#narrative-cache-error-recovery)
+uses actual owned S3 publication/readback, injected delays and a fixture refresh.
+It does not establish real S3 latency, unconditional prose presence or whole-bundle
+recovery. Nation discardedchildreads, D2/capacity and shadow remain separate.
+
+
+### #2819 finite admitted notification cohorts
+
+The [lateness contract](../../specs/issue-2819-delivery-lateness.md) lets the
+already-selected and durably claimed alarm or conditional-alert list finish after
+its UTC minute. That minute identifies the one-shot claim; it is not the send
+expiry. The list does not grow, stale queued scheduler ticks are not caught up,
+and reconstruction from the same durable state cannot replay a claimed minute.
+Concurrency remains six per cohort, with the existing operation bounds. Failed or
+unknown actual sends are never automatically retried.
+
+Final admission still checks the current registration/token and shutdown state.
+The final clock must not precede the actual cohort entry clock. Conditional alerts
+also remain in the same continuous configured UTC window occurrence, with the
+original JS coercion and inclusive whole-second comparisons. A later day's finite
+window cannot revive the old cohort; an all-day predicate is continuous and has
+no invented midnight expiry. A private constant-size interval calculation captures
+the first excluded second; it does not scan the day at runtime. The explicit
+`run_minute` selection argument is separate from the actual entry clock.
+
+Alarms have no newly invented age cutoff. A suspended live process may therefore
+finish old admitted work; this change establishes no operational lateness SLA or
+whole-process/global concurrency bound. The parent C2 task still owns safe state
+repair after other definite no-POST refusals: this increment does not remove all
+false six-hour suppression. It changes no journal schema, ownership or actual-send
+retry policy. C1 and B1 were parallel during the original lateness verification; both are
+ancestors of the 2026-10-19 integrated source.
+
+[Proposed flow](diagrams/server2-delivery-lateness.html) and
+[editable source](diagrams/server2-delivery-lateness.sequence.json) are frozen
+design-time artifacts at `7659b9fa`. Their 60-test baseline/no-new-test-yet card
+records that earlier design point, not current verification. Current
+[selected evidence](../evidence/tasks/issue-2819-delivery-lateness/verification.md)
+and the [owned operator scenario](../operations/server2-native-verification.md#delivery-cohort-lateness)
+record the subsequent implementation and checks. This is a stacked pre-merge
+slice, not main, shadow, capacity or an eligible full recovery release.
+
+
+### #2819 conditional-alert definite no-POST compensation
+
+The [C2 contract](../../specs/issue-2819-delivery-cohort.md) adds a private
+writer-issued, single-use receipt after a known committed alert-state update.
+The receipt owns only changed derived leaves of selected sending channels:
+precipitation `lastState`/`pushTime`, and air `lastGrade`/`lastCode`/`pushTime`.
+Message/target preflight precedes that update. A preflight error commits nothing,
+including nonselected observations; a permanently invalid registration therefore
+remains due and can repeat weather work and a failure at each fresh scheduled
+cycle, without OAuth or FCM work for invalid targets. It cannot replay a claimed
+minute. Observation-only `Send::None` updates retain their existing behavior.
+
+Only typed FCM `SendOutcome::NotSent` permits one ordinary journal transaction
+that restores still-owned leaves. Accepted, unregistered, rejected and unknown
+actual POST outcomes keep state and claims; cancellation or panic is not a
+no-POST receipt. The connect-refusal undo relies on the existing FCM typed
+`NotSent` classification (`reqwest::Error::is_connect`) meaning the request was
+not written. General transport/reset errors remain `Unknown`; this does not
+reclassify them as safe to undo. Restore preserves user/token edits, other-channel observations,
+newer derived values, exact missingness and newer parent structure. It never
+rewinds the whole document or releases a delivery claim.
+
+The writer observes each individual local, settled and caught-up change before
+application. An actual intervening leaf transition permanently revokes that
+leaf's ownership, including A-to-B-to-A; deletion/recreation or writer replacement
+revokes the relevant live capability. An equal-value no-op filtered by
+`Txn::changes` is not a persisted transition. The tracker holds weak references
+only for live attempts and prunes them on ordinary commands. There is no second
+journal, persisted schema change, cleanup task or repair-on-drop.
+
+Typed attempt/restore queue admission and answer share the existing monotonic
+writer wait. A known receipt retains its transaction time solely to construct an
+exact restore if the shared clock later fails: that patch writes no new date or
+ID. New attempts and final POST guards still require a live clock. The older bool
+internal API is unchanged: preselection duplicate cleanup, final selection checks,
+observation-only updates and disable operations can wait for queue capacity
+outside their answer timeout. This change establishes no bound
+for the whole worker under a full queue.
+
+Lost initial acknowledgement, unresolved journal progress or unavailable restore
+returns explicit uncertainty and permits no POST. Such uncertainty can retain
+suppression; no unconditional retryability or successful repair is claimed.
+Owned-cycle typed push-state events distinguish this from external send results.
+The original delivery claim remains one-shot. Later fresh scheduled evaluation
+may send after a successful definite-no-POST restore, never replay that claim.
+
+[Proposed sequence](diagrams/server2-delivery-cohort.html) and
+[editable source](diagrams/server2-delivery-cohort.sequence.json) are frozen design
+time at `e97a5090`; their no-parent-tests-yet card is historical context. Current
+[selected evidence](../evidence/tasks/issue-2819-delivery-cohort/verification.md)
+and [operator scenario](../operations/server2-native-verification.md#conditional-alert-no-post-compensation)
+record subsequent execution. The 2026-10-19 integration parent `774343136`
+includes C1 (fallible state validation/decoding) and B1. C2 attempt/restore now
+propagate those fallible APIs. A decode error clears writer readiness and drops
+the reply: the caller receives uncertainty and permits no POST. A later full
+restore revokes all live receipts. The observed application path validates the
+entire batch before any mutation or ownership observation, then observes each
+valid intermediate change immediately before applying it, preserving ABA guards.
+This reconciles the two existing contracts; it adds no retry or repair policy.
+The C2 source merge is `a5def505`; local execution identities and subsequent
+source-bound integration checks are kept distinct in the selected evidence.
+No main-wide, whole recovery bundle, shadow or production qualification is established.
+
+### #2819 bounded warning fan-out work
+
+The [C4 contract](../../specs/issue-2819-warning-fanout.md) reduces repeated
+admission work while keeping strict S12 checks after the durable claim and again
+inside that caller's original four-second after-OAuth guard. Each admission starts
+its own acquisition. Current writer-journal selection, clock, configured window,
+event activity and FCM stopping checks remain. A warning release published by a
+different S12 store during OAuth must still prevent the pending POST. There is no
+shared in-flight admission, fill timer, detached coordinator, stale fallback or new
+publication head. The existing S12 multi-object reads and read-to-POST gap do not
+establish a globally atomic warning snapshot.
+
+A lazy, poll-local view filters candidates before a claim. Successful later strict
+reads can update it by read-start order. It cannot authorize delivery; an error
+leaves candidates unclaimed, counts their failures, and expires with that poll.
+The next ordinary poll can inspect them again. A newly active event after the
+advisory read may wait until that next poll. Post-claim source errors retain the
+existing `warning-state` class and make no OAuth request.
+
+A local memo stores only exact physical claim identities that returned `Owned`
+or `Taken`, synchronously before the next await. `Unavailable` is never evidence
+of ownership. The existing open-campaign/window calculation prunes entries. The
+65,536-entry cap bounds an optimization, not eligible recipients: a full memo
+keeps existing entries and new targets still use ordinary durable CAS. Claims are
+never released or rewound, and actual failed/unknown sends are never retried.
+Memory loss restores ordinary ledger checks. The memo is separate from the
+async poll-state lock and adds no journal or persistent schema.
+
+Filtering follows the original zone/natural-record order and endpoint deduplication,
+so selected/skipped report meanings remain. Existing exact geo/town success reuse,
+geo precedence, error retry and clearing across quiet episodes stay unchanged.
+Locations were already grouped; a universal per-recipient geocode claim is
+inaccurate. At most six delivery futures are constructed at once. Registration,
+group and location metadata remain proportional to the input, and existing shared
+permits/product-token contention remain. `fanout_stats()` exposes local read,
+error, memo and peak-work counters; it does not wire them into HTTP metrics or
+measure allocator overhead/process RSS.
+
+For a healthy pass with E nonterminal candidates and E' still-current owners,
+strict source calls change from up to E+2E' to at most 1+2E'. Physical S3 requests
+also depend on seed coverage, catalogs, descriptors, raw members, discovery and
+repair; they are measured separately. Already-terminal polls avoid endpoint S12,
+claim and journal work while the memo covers them. Saturation can repeat that
+work without dropping a new notification. The fixed local 5,000-recipient bound
+is not a real-host latency, quota, worst-case history or five-minute throughput
+qualification.
+
+The [proposed flow](diagrams/server2-warning-fanout.html) and
+[editable source](diagrams/server2-warning-fanout.sequence.json) pin existing hooks
+at `2e67d146`. Their design-time comparison is separate from the subsequent
+[current evidence](../evidence/tasks/issue-2819-warning-fanout/verification.md) and
+[owned operator rehearsal](../operations/server2-native-verification.md#bounded-warning-fan-out).
+This task continues C2 PR2827; the ordered integration includes C1/B1 ancestors. Initial silent
+warning polling, traffic-independent acquisition, startup credentials, readiness
+and other #2819/cutover gates remain separate. No main, complete recovery bundle,
+seven-day shadow or production qualification is implied.
+
+C4 admission limits: an advisory view can still say active after an external
+release. Such an endpoint can acquire its one-shot claim before the independent
+post-claim read returns `warning-inactive`; that claim remains terminal and is
+not released or retried. Inactive/error advisory results instead leave work
+unclaimed for a later poll. The default `StderrDiagnostics::minute` adapter is
+silent, including the memo-saturation note; `fanout_stats()` is the only library
+snapshot signal until operational metrics are wired. No default stderr/HTTP
+saturation metric is claimed. The post-claim read retains the source's own
+existing deadline; the worker adds no outer timeout there. The separate final
+after-OAuth admission guard retains its original four-second timeout.
+
+
+## C5 traffic-independent warning acquisition (#2819)
+
+The source warning lane is shared by native request assembly and the process-owned
+periodic driver. `RuntimeServices.warning_cycles` carries that controlled capability;
+the raw `warning_acquire` remains for the existing collector/feed recovery test and
+is not called by the production timer. Constructing services starts no acquisition.
+Only a push-enabled process starts the driver, immediately after both listener binds.
+HTTP-only KMA retains request acquisition and does not start a periodic driver.
+
+The lane reuses the source's existing 64-running/8,192-entry OwnedFlights pool,
+three-second retained outcomes, 180-second Attempts memo and epoch window keys.
+After the actual collector finishes, the driver schedules from the memo's remaining
+real monotonic time plus a one-millisecond non-early margin. Busy, retained or
+unadmitted calls use a bounded three-second local fallback. These wakeups do not
+bypass funding or admission. Request joins retain their remaining three-second
+wait; collector step deadlines and the outer 600-second tracking limit are unchanged.
+An inner collector can outlive that outer tracker. Its running lease is reserved
+before an unpolled wrapper and its actual abort handle remains process-owned.
+
+The process installs an inert stop guard before binding. Shutdown quiesces delivery
+and FCM first, closes warning admission before HTTP drain, stops the periodic driver,
+and lets existing collection/publication finish within the same drain allowance.
+HTTP-only processes retain five seconds; push processes retain the 34-second drain
+and 35-second shutdown limit. Timeout and guard destruction request cancellation of
+the actual inner future. Cancellation requests alone are not successful joins.
+A completed warning drain means its collector future was destroyed, not that its
+provider or publication succeeded. Incomplete warning work makes the overall process
+drain Unknown; `delivery_joined`, `writer_joined` and `http_joined` keep their original
+meanings, so those three can all be true while the overall result is Unknown.
+
+Successful collection clears the source warning service's existing memory. The
+separate public warning service, partial-publication errors and concurrent refill
+limits are unchanged; no new common-cache generation fence is claimed. The initial
+feed baseline and first delivery poll remain silent. The owned no-HTTP rehearsal
+therefore records a prior quiet durable baseline and a subsequent new publication;
+it proves acquisition and feed persistence, not initial notification delivery.
+In particular, a grace-completed publication may become the next process's silent
+baseline and never be notified. The existing generic Unknown drain record also
+cannot identify the unfinished warning task/step by itself.
+
+See the [proposed ownership flow](diagrams/server2-warning-acquisition.html),
+[editable source](diagrams/server2-warning-acquisition.sequence.json),
+[operator procedure](../operations/server2-native-verification.md#warning-acquisition-without-product-http)
+and [selected evidence](../evidence/tasks/issue-2819-warning-acquisition/verification.md).
+This change continues the C4 implementation from PR #2828. It does not qualify integrated main,
+an eligible full recovery bundle, live providers, EC2 capacity or seven-day shadow.
+
+
+### C6 checked push account construction (#2819)
+
+The current shared factory validates local Firebase accounts immediately after native-family parsing, before shared S3/native construction or the registration writer. `Fcm::for_push` requires active TodayWeather and checks any configured nonempty TodayAir account; absent retired TodayAir is allowed. Empty active settings, unreadable files, malformed/missing fields or invalid PKCS8 RSA return InvalidConfiguration. Disabled push reads no Firebase settings/files.
+
+Parsed accounts are cached before first send. This makes no OAuth/FCM request and proves no remote authorization/revocation or later filesystem health; rotation requires restart. The existing low-level lazy FCM API and token/send/outcome/one-shot rules are unchanged. This supersedes the historical S20a no-account startup statement for the current push-enabled factory. See the [operator contract](../operations/server2-runtime-services.md), [design](diagrams/server2-runtime-services.html), [C6 spec](../../specs/issue-2819-push-credentials.md) and [selected evidence](../evidence/tasks/issue-2819-push-credentials/verification.md). No production activation or full recovery/shadow qualification follows.
+
+### E1/E2 production startup coverage (#2819)
+
+The production main validates complete native API selection after listener configuration
+and before `process::run`. Without an explicit development legacy origin it requires
+all eight accepted family selections and all three world versions. The pure guard reuses
+the existing family parser and the extracted unchanged world-version parser; no state,
+provider or account lookup occurs in that guard. The shared partial/foundation factories
+keep their accepted behavior; constructor/provider/account validation still follows.
+AK confirmed optional `.env` and process precedence: complete environment-only settings
+are valid, missing mandatory configuration fails, and file absence alone is allowed.
+Health remains liveness, not E3 readiness. See the [spec](../../specs/issue-2819-startup-coverage.md),
+[operator contract](../operations/server2-runtime-services.md),
+[design](diagrams/server2-runtime-services.html) and
+[selected checks](../evidence/tasks/issue-2819-startup-coverage/verification.md).
+This is a startup availability fix, not full-native host or cutover qualification.
+
+### E3a writer availability (#2819)
+
+`PushService::ready` now combines the existing successful-restore flag with the existing
+writer sender's open-receiver state. No monitor, mutex lookup or second lifecycle owner
+is introduced. A closed/dead writer cannot advertise writable availability solely because
+memory was restored earlier. Closing a receiver can precede pending-command drain, so
+this predicate never proves a join/cancellation completed. Existing state/HTTP error,
+claim/no-retry and stop-order contracts remain. Delivery admission uses this same gate.
+
+This is only the writer portion of E3, with controlled writer-exit and owned API/S3 checks.
+A public readiness endpoint and S3/credential-source health remain open; health is still
+liveness. See [spec](../../specs/issue-2819-writer-liveness.md),
+[operator contract](../operations/server2-runtime-services.md),
+[design](diagrams/server2-runtime-services.html) and
+[selected evidence](../evidence/tasks/issue-2819-writer-liveness/verification.md).
+No main integration, full E3/recovery/shadow or production qualification is claimed.
+
+
+### Warning delivery supervisor slot (E3b)
+
+The process-owned delivery supervisor tracks its warning poll by the actual Tokio task ID
+inside the same JoinSet. Normal and failed join identities release only the matching
+warning slot. Other job failures leave that slot reserved. A warning panic remains an
+incomplete drain, while later regular polling resumes if the supervisor is accepting work.
+The five-second interval, missed-tick policy, stop-first admission, minute guards, one-shot
+claims and no automatic retry of failed/unknown sends are unchanged. No second monitor or
+persistent state is introduced. C5 source acquisition lease ownership is separate.
+
+[E3b verification](../evidence/tasks/issue-2819-warning-poll-supervision/verification.md)
+covers the bounded supervisor correction and owned fixture retirement. It does not add a
+readiness endpoint or qualify S3/credential-source health, a production recovery bundle,
+shadow or cutover. The [runtime-services diagram](diagrams/server2-runtime-services.html)
+retains process/writer/storage ownership; its final source pin is bound to the implemented
+code before PR review, not to an uncommitted future design.
+
+
+## Current legacy air parity: a6 reference (2026-10-20)
+
+Build23 aligns the native air assembly/store with merged legacy changes `125dbfef`
+and `3c37c401` at pinned `a6fdf1f4d1f869d63c5310646003967571dac6e2`.
+This is a compatibility correction under development, not deployment evidence.
+The full22 five-profile corpus was captured twice with identical same-base raw
+and gzip bytes; old/current output equivalence was not accepted. The original
+five fixture bytes were preserved before renewing the reference.
+
+Nearby AirKorea metadata retains `forecastStationName` independently of whether
+an observation exists or is fresh. An external provider's current reading keeps
+its own location label; stored forecasts use the retained AirKorea station.
+Forecast rows must have valid timestamps and finite non-negative values for the
+six supported pollutants. The interval is `(max(now,lastObservation), end]`:
+AirKorea observations use `lastObservation+24h`; external observations use
+`floor(now/hour)+24h`. Only actual future rows determine `forecastPubDate`;
+time-specific AQI rows retain their `pubDate` too.
+
+When fallback replaces current air, stored AirKorea observations remain available
+for display history. Hour-aligned values from the selected station in the previous
+24 hours before the provider current hour, and not in the future, replace chart
+placeholders. If `H` is the provider current observation time rounded down to the
+hour, accepted timestamps satisfy `H-24h <= timestamp < H` and
+`timestamp <= requestNow`. New row objects are recalculated. This does not change provider
+current/freshness or mutate stored observations. If the primary history list is
+absent, the first station list supplies history; an empty primary list remains
+empty, following JavaScript truthiness.
+
+The empty optional legacy narrative lookup is validated at the native replay
+boundary as an empty final read with a fixed station-id argument shape. Native
+narrative behavior remains in its existing subsystem; the KMA store does not add a
+duplicate database call to imitate the legacy recorder's internal call sequence.
+These empty-result fixtures do not establish present-narrative-content parity.
+
+Source: [legacy forecast selection](../../server/controllers/controllerTown24h.js),
+[legacy nearby station identity](../../server/controllers/kecoController.js),
+[native air assembly](../../server2/src/domestic/kma/air.rs),
+[native AirKorea store](../../server2/src/domestic/kma/source/airkorea.rs), and
+[the compatibility specification](../../specs/issue-2819-oracle-provenance.md).
+Current CI, complete G1 oracle/native/strict checks and independent review remain
+required before merge readiness; no live provider, Linux or capacity claim follows
+from local Darwin loopback checks.
+
+The [golden qualification boundary](../operations/server2-golden.md#current-g1-qualification-boundary)
+separates source freshness, actual guarded recording, complete difference
+disposition, native parity and CI/review readiness. All 22 registered fixtures
+were current in the 2026-10-20 local audit after whole-record requalification;
+that dated result is not a promise about later legacy edits or a G1 readiness
+decision. The recorder, guard and declared export exceptions are verification
+assets only. Native serving does not read them or legacy source files.

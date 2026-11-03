@@ -3,7 +3,7 @@
   "family": "kma",
   "oracle": {
     "path": "tests/domestic/fixtures/s3-response.json.gz",
-    "sha256": "60be815b9a4abc340f843b32d412ea4c7c1aaa0919f91dff45edfbbf074e5bc5"
+    "sha256": "0f3850559c7eaf9e95d699cba1d32acb8ad021475082ce5b33ba77b8b029a162"
   },
   "declared_differences": [
     {

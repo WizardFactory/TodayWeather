@@ -433,6 +433,11 @@ pub(crate) fn send_tagged(
     retry: Option<u64>,
     tag: String,
 ) -> Response {
+    let max_age = if status.is_success() && max_age.is_some() {
+        crate::narrative::cache_age(&body, max_age, crate::narrative::now_ms()).or(max_age)
+    } else {
+        max_age
+    };
     let fresh = status.is_success()
         && !request
             .get("cache-control")

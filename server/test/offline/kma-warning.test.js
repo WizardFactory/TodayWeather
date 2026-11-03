@@ -28,7 +28,7 @@ function Stub() {}
 function load(relative, dependencies = {}, clock = Date) {
     const module = {exports: {}};
     const sandbox = {process: {env: {}}, module, exports: module.exports, console, log, Date: clock, setTimeout, clearTimeout, setImmediate, __dirname: path.dirname(path.join(root, relative)),
-        require: name => /(?:^|\/)dataGoKrKeys$/.test(name) ? require('../../lib/dataGoKrKeys') : /(?:^|\/)dataGoKrRejection$/.test(name) ? require('../../lib/dataGoKrRejection') : Object.prototype.hasOwnProperty.call(dependencies, name) ? dependencies[name] : Stub};
+        require: name => /kmaForecastNarrative$/.test(name) ? function () { this.gather = cb => cb(null, false); } : /(?:^|\/)dataGoKrKeys$/.test(name) ? require('../../lib/dataGoKrKeys') : /(?:^|\/)dataGoKrRejection$/.test(name) ? require('../../lib/dataGoKrRejection') : Object.prototype.hasOwnProperty.call(dependencies, name) ? dependencies[name] : Stub};
     sandbox.global = sandbox;
     vm.runInNewContext(fs.readFileSync(path.join(root, relative), 'utf8'), sandbox, {filename: relative});
     return module.exports;
@@ -203,7 +203,7 @@ test('requester: stored key sent once-encoded, auth rotation, error classes (AC9
         [{body: {OpenAPI_ServiceResponse: {cmmMsgHeader: {errMsg: 'LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR', returnReasonCode: '22'}}}}, e => e.isQuotaError],
         [{body: fixture('err-99')}, e => e.returnCode === '99' && !e.isAuthError && !e.isQuotaError],
         [{statusCode: 500, body: 'Internal'}, e => e.statusCode === 500],
-        [new Error('socket hang up'), e => /socket hang up/.test(e.message)]
+        [new Error('socket hang up'), e => /transport failure/.test(e.message) && !e.cause]
     ];
     for (const [result, check] of cases) {
         request = fakeProvider(() => result);

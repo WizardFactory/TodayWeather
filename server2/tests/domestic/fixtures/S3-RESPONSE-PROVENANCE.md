@@ -43,3 +43,10 @@ TZ=UTC NODE_ENV=production NODE_PATH=/owned/oracle/node_modules \
 The recorder refuses the committed fixture directory as an output destination.
 Review decoded raw inputs, responses and provenance before deliberately updating
 the fixture and its replay-manifest digest. Production `.env` is never needed.
+
+
+## Current a6 renewal (2026-10-20, build23)
+
+This fixture was renewed from the qualified full22 core capture at `a6fdf1f4d1f869d63c5310646003967571dac6e2`. Two independent captures had identical raw and gzip bytes, with no same-base comparison exclusions. SHA-256: `0f3850559c7eaf9e95d699cba1d32acb8ad021475082ce5b33ba77b8b029a162`. Previous fixture SHA-256: `60be815b9a4abc340f843b32d412ea4c7c1aaa0919f91dff45edfbbf074e5bc5`; original bytes remain in local ignored build23 evidence. Original request cases and clocks are retained.
+
+The old/current comparison excluded only `/source/files`; 880 rows across all five corpora were classified. New legacy stored-air forecast/history/station metadata are intentional current-reference behavior and require native alignment; old/current semantic equivalence is not claimed. Empty optional narrative lookups do not cover present narrative content. Requesttrace arpltn result preimages and two backend body preimages were not retained by the original recorder. Full22 terminal/capture success does not qualify live providers, Linux or production capacity.

@@ -775,3 +775,55 @@ Nine provinces use captured inputs (reduced station fixtures use synthetic envel
 counts); eight unaffected provinces use a relabeled Seoul control. This proves
 isolated wiring, not live all-province recovery. CI runs the regression on Node16/22
 and smoke in the existing AirKorea Mongo job. See [selected evidence](../../../docs/evidence/tasks/issue-2758/verification.md).
+
+
+## Nationwide forecast narrative (#2798)
+
+`kma-narrative.test.js` (in `test:offline`) checks the ten official national/regional
+offices, complete province aliases, immutable station/publication IDs, KST/UTC, strict
+expiry and malformed data, bounded key/write/read failures, concurrency, independent
+scheduled dispatch and unchanged special types 1–4. It also checks literal untrusted
+plain text, optional late-read suppression and cache expiry.
+
+`kma-narrative-smoke.js` separately uses real loopback HTTP/request and
+Mongo7/Mongoose5.13.23. It verifies a scheduled batch, all17province responses, national
+root selection, coordinate selection, v000901/v000902/v000903 mounted paths, repeat/new
+concurrent publications, expiry/read failure and unchanged weather/special fields.
+Unrelated weather acquisition/geocoder/air collaborators are isolated; no app startup,
+production config, provider key or live regional access is used. The Node10-compatible
+warning script also replays the new collection/response contract.
+
+See [operations](../../../docs/operations/kma-forecast-narrative.md) and the
+[verification record](../../../docs/evidence/tasks/issue-2798/verification.md).
+
+## Coordinate-provider observations with stored forecasts (#2831)
+
+`air-forecast-observation-fallback.test.js` covers nearby metadata retention,
+stale AirKorea -> coordinate-provider current values, single/list flows, source
+selection, invalid/expired/partial rows, missing identities and store errors.
+It runs in `npm run test:offline`.
+
+`air-forecast-observation-http-smoke.js` opens a real loopback HTTP server and
+isolated MongoDB 7.0.14, seeds production station/observation/forecast schemas,
+executes legacy middleware and runs the installed client's actual chart-data
+block. It replays the retained real OpenWeather current-only snapshot, checking
+unchanged current fields/attribution and numeric future PM10/PM2.5/AQI slots.
+Acquisition is replaced with the captured observation; no live provider is called.
+The fixture provenance distinguishes the coordinate-provider capture from the
+original incident and from local stored forecast fixtures.
+
+```sh
+NODE_PATH=<isolated-dependencies>/node_modules node server/test/offline/air-forecast-observation-fallback.test.js
+NODE_PATH=<isolated-dependencies>/node_modules node server/test/offline/air-forecast-observation-http-smoke.js
+```
+
+The smoke needs `mongodb-memory-server-core@10.1.4`,
+`mongoose-smoke@npm:mongoose@5.13.23`, `async@2.6.4`, and `express@4.13.4`.
+Production Mongoose 5.1 schemas are loaded through the 5.13 test driver for MongoDB
+7 compatibility. `TW_SMOKE_OUTPUT_DIR` optionally retains response JSON under an
+ignored output directory. Temporary DB/listener cleanup runs on success/failure.
+CI runs the smoke in the existing Node 16 air integration job.
+See [verification](../../../docs/evidence/tasks/issue-2831/verification.md) and
+[rollout](../../../docs/operations/air-forecast-fallback.md).
+
+The #2831 observation fallback suite also checks restored named AirKorea past slots with unchanged provider current, KST midnight/minute collisions, invalid/missing/partial/duplicate history and zero. Its Mongo/HTTP smoke seeds stale 10:00/14:00/15:00/16:00 observations: four stored past rows, three numeric past chart slots per PM/AQI, exact captured OpenWeather current, and 23 future forecast rows (11 visible future slots). Baseline mode suppresses both history restoration and forecasts to replay the captured current-only failure.

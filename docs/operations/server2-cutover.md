@@ -1,15 +1,15 @@
 # server2 operational preparation and rollback
 
-This is a candidate procedure for #2704 / #2705. It does not authorize or execute deployment, traffic mirroring, provider calls, state replacement or notification sends. The current repository baseline is main `6e4436c8`; S20a/b process and worker wiring, structured logging and local paired recovery are integrated. [Editable inventory](../../server2/config/cutover/inventory.json) and [decision flow](../architecture/diagrams/server2-cutover.html) accompany this guide. [PDF](server2-cutover.pdf).
+This is a candidate procedure for #2704 / #2705. It does not authorize or execute deployment, traffic mirroring, provider calls, state replacement or notification sends. The S20c preparation originated at main `6e4436c8`, with S20a/b process and worker wiring, structured logging and local paired recovery. Later widget and narrative additions are described below; their task records bind their own revisions. [Editable inventory](../../server2/config/cutover/inventory.json) and [decision flow](../architecture/diagrams/server2-cutover.html) accompany this guide. [S20c snapshot PDF](server2-cutover.pdf); later amendments below are maintained in this Markdown source.
 
 ## 1. Readiness before a switch
 
-Reconcile all 19 accepted method/path groups (220,583 observed requests), including tiny and failure-only groups, against their exact native contracts. The window is 2026-08-23T19:53:45Z to 2026-09-22T19:53:45Z exclusive. [Accepted traffic evidence](../evidence/aws/api-traffic-2026-09-22.md) is historical, not a fresh routing observation. The later notice endpoint is an explicit backend supplement. App/web notice popup work #2623 remains separate. `/ww` was outside that report and remains unclassified: do not turn it into a zero-use exclusion. Its disposition blocks a complete production inventory. #2805's new nationwide narrative is excluded from this baseline; the existing used special API still requires its accepted contract. Reconcile that supplement if it later becomes a cutover target.
+Reconcile all 19 accepted method/path groups (220,583 observed requests), including tiny and failure-only groups, against their exact native contracts. The window is 2026-08-23T19:53:45Z to 2026-09-22T19:53:45Z exclusive. [Accepted traffic evidence](../evidence/aws/api-traffic-2026-09-22.md) is historical, not a fresh routing observation. The later notice endpoint is an explicit backend supplement. App/web notice popup work #2623 remains separate. `/ww` was outside that report, so its volume remains unknown. AK retained widget support on 2026-10-17; `GET /ww/010000/current/2?gcode=lat,lon` is a required native supplement. Use the [widget continuity contract](server2-widget.md), with exact-revision parity and shadow still required. AK subsequently included PR #2805's national/regional `forecastNarrative` in the server2 scope through #2809. Use the [native narrative contract](server2-forecast-narrative.md); this response supplement does not alter the historical 19-route denominator. Its local acquisition/storage/serving proof does not waive exact production parity or qualify an older complete rollback bundle. Existing used special APIs still require their accepted contracts.
 
 | Required evidence | Current disposition |
 | --- | --- |
 | S19 gateway scenarios, paired CORE/Rich/native family checks | Local evidence exists; keep each corpus, denominator and acquisition differences separate |
-| Current native suite | 11 checks including 27 worker cases PASS on retained runtime build; family layers include library, HTTP and coexistence fixtures |
+| Retained S20c-era native suite | 11 checks including 27 worker cases PASS on retained runtime build; family layers include library, HTTP and coexistence fixtures |
 | Paired release recovery | Nine family checks on each release, four API cases A/B/A, 14 mixed-release worker restores and one overlap owner PASS |
 | Seven-day paired shadow, exact-revision parity and quota headroom | Not performed here; no invented duration or zero-difference claim |
 | EC2 cold p95/capacity/I/O and selected CloudFront/nginx topology | Not qualified by local timings or prior host observations |
@@ -18,6 +18,23 @@ Reconcile all 19 accepted method/path groups (220,583 observed requests), includ
 | Final state copy, rainfall handover, instance-role/IMDSv2 and keys | Still require target-specific execution evidence; control-plane existence does not prove runtime access |
 
 The local pair remains `16f3dfde` / `0fc0442d`, not a later build. Worker NativeFetch/clock are injected, and compiled fixtures can refer to the build checkout. Native API rollback covers geocode, partial KMA, world-air and empty notice; it does not prove complete history or notice mutation. World coexistence checks use a frozen legacy double. See [common suite](server2-native-verification.md), [paired recovery](server2-release-recovery.md) and [selected S20c evidence](../evidence/tasks/issue-2705-s20c/verification.md). Do not close S19/S20 or authorize cutover from these layers alone.
+
+### Push state admission and corrupt recovery (#2819 C1)
+
+Registration documents must have safe nested field names, at most 256 KiB encoded JSON
+and depth at most 32 below the root. The converter rejects nonconforming records;
+review rejected counts before any separately authorized final copy. Invalid API input
+gets the existing store-error reply and must not change acknowledged state. Normal
+writer stop, cancellation or panic clears push readiness; `/health` 200 alone remains
+insufficient. The aggregate readiness endpoint is not introduced by this correction.
+
+If an existing journal or snapshot cannot decode, preserve its original bytes and
+version identities, keep registration/delivery admission closed and investigate an
+approved compatible repair. Do not delete, silently skip or rewrite the offending
+record/sequence, restore an older snapshot over acknowledged state, or retry a failed
+or unknown delivery. The [state safety evidence](../evidence/tasks/issue-2819-state/verification.md)
+is synthetic local verification, not a repair of production registrations or a complete
+recovery-release qualification.
 
 ## 2. Freeze a release and recovery dossier
 
@@ -46,11 +63,11 @@ python3 server2/tools/cutover/rehearse_deadline.py \
   --out reports/my-task/deadline-1
 ```
 
-The artifact manifest uses the [common suite schema](server2-native-verification.md), requiring `server2` and `loopback_server` beside it under `examples/`. The tool verifies hashes before any child, starts only owned literal-loopback peers, runs nginx `-t` and a temporary foreground process, and inherits no operator credentials or `.env`. It downloads/installs nothing and refuses existing output or output under `server2/`. Use Python 3.9+ and a POSIX host. The nginx executable is an explicit operator-owned input; this is not an arbitrary-binary security sandbox.
+The artifact manifest uses the [common suite schema](server2-native-verification.md), requiring `server2` and `loopback_server` beside it under `examples/`. The tool verifies hashes before any child, starts only owned literal-loopback peers, runs nginx `-t` and a temporary foreground process, and inherits no operator credentials or `.env`. It downloads/installs nothing and refuses existing output or output under `server2/`. Use Python 3.9+, nginx 1.19.5+ and a POSIX host. All five standard HTTP module temporary paths are rendered under the private owned workspace; `-e stderr` avoids distro pre-config log paths. Relative, traversing or configuration-injecting workspace/PID paths are refused. Do not grant the test account access to system nginx directories or run the rehearsal as root. The nginx executable is an explicit operator-owned input; this is not an arbitrary-binary security sandbox.
 
 The direct control reproduces the late-request connection close. The candidate first requests health, waits four seconds, then requests weather on the same frontend socket while the recorded backend stalls. PASS requires the real gateway's S02-compatible 501 body and functional headers, `no-store`, approximately nine seconds, exactly three backend attempts, one gateway dependency error and no abandoned response. nginx owns the Server/connection/date headers. The frozen backend and injected roots are declared test dependencies, not proof that a production native-only route needs legacy.
 
-Exit 2/BLOCKED means inadmissible inputs; exit 1/FAIL means execution failed; exit 0/PASS covers this local deadline scenario only. `production_eligible` remains false. Inspect the retained JSON and nginx log, including the failed control, rather than just the exit code. Five additional owned transport-double cases check POST/PUT/DELETE body and authorization preservation with one503attempt each, OPTIONS204/CORS, and conditionalGET304/ETag. They test proxy transport, not product mutation semantics. All owned processes are stopped. A local PASS does not qualify CloudFront, TLS or EC2 behavior.
+Exit 2/BLOCKED means inadmissible inputs; exit 1/FAIL means execution failed; exit 0/PASS covers this local deadline scenario only. `production_eligible` remains false. Inspect the retained JSON and nginx log, including the failed control, rather than just the exit code. Five additional owned transport-double cases check POST/PUT/DELETE body and authorization preservation with one 503 attempt each, OPTIONS 204/CORS, and conditionalGET 304/ETag. They test proxy transport, not product mutation semantics. All owned processes are stopped. A local PASS does not qualify CloudFront, TLS or EC2 behavior.
 
 ## 4. Authorized activation sequence
 
@@ -81,4 +98,12 @@ Abort admission immediately on an unexplained contract diff, missing acknowledge
 
 The [selected verification record](../evidence/tasks/issue-2705-s20c/verification.md) pins the actual command, inputs and report hashes. This capture is formatted from that JSON, not production traffic. The required configuration regression and real nginx/release run have different evidence roles. Existing failure, timeout, source and build receipts stay retained.
 
-Current preparation leaves `/ww` disposition, exact whole-inventory production parity, seven-day shadow, real-host listener/topology/performance/capacity, provider quota headroom (#2724 excluded here), target S3/IAM/IMDSv2 readiness, complete prior-bundle compatibility, final state/rainfall handover and scoped switch/rollback authorization open. Do not mark any as PASS because the local report or PR CI succeeds.
+Current preparation leaves exact whole-inventory production parity (including the retained widget), seven-day shadow, real-host listener/topology/performance/capacity, provider quota headroom (#2724 excluded here), target S3/IAM/IMDSv2 readiness, complete prior-bundle compatibility, final state/rainfall handover and scoped switch/rollback authorization open. Do not mark any as PASS because the local report or PR CI succeeds.
+
+## 7. Actual unprivileged Linux rehearsal
+
+The [2026-10-17 UTC Linux record](../evidence/tasks/issue-2814/verification.md) repairs a real distro-default permission failure that occurred before the deadline assertion. It preserves the original failed setup and separately records the successful nginx 1.30.5 run as uid 1000 on the owned Spot host. HTTP 501 arrived in 9001.63 ms on the same frontend socket; all five transport cases passed. A 122880-byte synthetic POST exercised a logged body spill into the owned temp directory, with bytes and authorization preserved. After stop, no owned nginx process remained and the system service was inactive. This qualifies the declared loopback scenario on that host, not TLS/CloudFront, production readiness or rollback eligibility. Existing retained release binaries were used without a Rust rebuild.
+
+![Typeset actual Linux CLI records](../evidence/tasks/issue-2814/nginx.png)
+
+This labelled image renders actual retained CLI reports/logs; it is not an application UI screenshot or another execution. No external live calls, traffic mirror, state copies, device send or production activation occurred.

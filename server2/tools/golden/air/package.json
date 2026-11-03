@@ -1,0 +1,14 @@
+{
+  "name": "server2-air-legacy-oracle",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Isolated full air legacy oracle dependencies; verification only",
+  "engines": {
+    "node": "16.20.2"
+  },
+  "dependencies": {
+    "mongoose": "5.1.2",
+    "async": "2.6.2",
+    "xml2js": "0.4.19"
+  }
+}

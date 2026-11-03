@@ -1,0 +1,228 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Proposed narrative cache error handling",
+    "output": "docs/architecture/diagrams/server2-narrative-cache.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "viewBox": [
+      1040,
+      665
+    ],
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "968205d88fc0f2985f0ee30fc256c80800bfbf66",
+      "link_mode": "local-only"
+    }
+  },
+  "participants": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "Weather caller",
+      "sublabel": "optional narrative",
+      "sources": [
+        {
+          "path": "server2/src/narrative/store.rs",
+          "line": 206,
+          "end_line": 229,
+          "label": "Existing cache / Result interface"
+        }
+      ]
+    },
+    {
+      "id": "service",
+      "type": "backend",
+      "label": "Narrative service",
+      "sublabel": "per-office deadline",
+      "sources": [
+        {
+          "path": "server2/src/narrative/store.rs",
+          "line": 206,
+          "end_line": 229,
+          "label": "Existing cache / Result interface"
+        }
+      ]
+    },
+    {
+      "id": "memory",
+      "type": "database",
+      "label": "Office memory",
+      "sublabel": "answer + error gate",
+      "sources": [
+        {
+          "path": "server2/src/narrative/store.rs",
+          "line": 188,
+          "end_line": 229,
+          "label": "Existing cache / Result interface"
+        }
+      ]
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "Stored narrative",
+      "sublabel": "bounded S3 read",
+      "sources": [
+        {
+          "path": "server2/src/narrative/store.rs",
+          "line": 87,
+          "end_line": 168,
+          "label": "Existing cache / Result interface"
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 550,
+      "label": "Proposed distinct answer and error states"
+    }
+  ],
+  "messages": [
+    {
+      "id": "cache-bound-step-0",
+      "from": "caller",
+      "to": "service",
+      "y": 170,
+      "label": "Read narrative",
+      "variant": "default"
+    },
+    {
+      "id": "cache-bound-step-1",
+      "from": "service",
+      "to": "memory",
+      "y": 198,
+      "label": "Check office state",
+      "variant": "default"
+    },
+    {
+      "id": "cache-bound-step-2",
+      "from": "memory",
+      "to": "service",
+      "y": 226,
+      "label": "Miss / no active gate",
+      "variant": "return"
+    },
+    {
+      "id": "cache-bound-step-3",
+      "from": "service",
+      "to": "store",
+      "y": 254,
+      "label": "Read within deadline",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cache-bound-step-4",
+      "from": "store",
+      "to": "service",
+      "y": 282,
+      "label": "Completed error",
+      "variant": "return"
+    },
+    {
+      "id": "cache-bound-step-5",
+      "from": "service",
+      "to": "memory",
+      "y": 310,
+      "label": "Separate error gate: 1s",
+      "variant": "default"
+    },
+    {
+      "id": "cache-bound-step-6",
+      "from": "service",
+      "to": "caller",
+      "y": 338,
+      "label": "Omit this request",
+      "variant": "return"
+    },
+    {
+      "id": "cache-bound-step-7",
+      "from": "caller",
+      "to": "service",
+      "y": 366,
+      "label": "Demand during gate",
+      "variant": "default"
+    },
+    {
+      "id": "cache-bound-step-8",
+      "from": "service",
+      "to": "caller",
+      "y": 394,
+      "label": "Omit; no storage work",
+      "variant": "return"
+    },
+    {
+      "id": "cache-bound-step-9",
+      "from": "caller",
+      "to": "service",
+      "y": 422,
+      "label": "After 1s: new demand",
+      "variant": "default"
+    },
+    {
+      "id": "cache-bound-step-10",
+      "from": "service",
+      "to": "store",
+      "y": 450,
+      "label": "Retry within deadline",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cache-bound-step-11",
+      "from": "store",
+      "to": "service",
+      "y": 478,
+      "label": "Ok(value / absent)",
+      "variant": "return"
+    },
+    {
+      "id": "cache-bound-step-12",
+      "from": "service",
+      "to": "memory",
+      "y": 506,
+      "label": "Confirmed answer: 30s",
+      "variant": "default"
+    },
+    {
+      "id": "cache-bound-step-13",
+      "from": "service",
+      "to": "caller",
+      "y": 534,
+      "label": "Fresh prose / absent",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Proposed correction to the minimal prototype",
+      "items": [
+        "The pinned prototype fixes false absence but has no repeated-error hold-back.",
+        "Selected1s completed-error gate is distinct from30s confirmed presence or absence.",
+        "No background retry timer or newly authorized production action."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Bound each office and recover",
+      "items": [
+        "Existing mutex permits one active read per office; gate blocks storage after completed faults.",
+        "Read/lock retain their original deadline; attach caps optional work at the remaining time or2s.",
+        "Successful read or refresh publication clears the error gate; expired answers stay expired."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Disclose remaining limits",
+      "items": [
+        "Admitted reads retain existing2date/8page index and catalog/raw bounds, not measured host cost.",
+        "Caller cancellation without a completed error is not cached as absence or manufactured failure.",
+        "Nation child-read work, production capacity, whole-bundle recovery and shadow remain separate."
+      ]
+    }
+  ]
+}

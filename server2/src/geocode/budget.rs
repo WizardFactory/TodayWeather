@@ -191,7 +191,7 @@ impl<T: BudgetTransport + 'static> Quota for FundedQuota<T> {
                     *maximum,
                 ));
             }
-            // Consume the entire possible chain conservatively; unused attempts are not refunded.
+            // Consume the requested maxima conservatively; funded attempts are not refunded.
             for (mut reservation, maximum) in reservations {
                 reservation
                     .consume(maximum, deadline)

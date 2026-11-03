@@ -1,0 +1,60 @@
+{
+  "task": "LatePublication2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "B3 only: bounded demand-triggered late-publication attempts for latest short/vilage-fcst; preserve historical backfill, other families, original owned-flight/cancellation/deadline and B2actualattemptfunding. No newtimer/precollection/mode/allowances/operatingquota. Pre-merge only; no merge/cloud/livecalls/sends/shadow.",
+  "server2_paths": [
+    "server2/config/tasks/LatePublication2819.json",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/late.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/late_publication.rs",
+    "server2/examples/late_publication_smoke.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-late-publication.md",
+      "category": "documentation",
+      "reason": "Maintain task requirements, selected late-publication contract, verification/operator evidence and editable/generated architecture diagram; no runtime implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2819-late-publication.md",
+      "category": "documentation",
+      "reason": "Maintain task requirements, selected late-publication contract, verification/operator evidence and editable/generated architecture diagram; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2819-late-publication.md",
+      "category": "documentation",
+      "reason": "Maintain task requirements, selected late-publication contract, verification/operator evidence and editable/generated architecture diagram; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Maintain task requirements, selected late-publication contract, verification/operator evidence and editable/generated architecture diagram; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain task requirements, selected late-publication contract, verification/operator evidence and editable/generated architecture diagram; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Maintain task requirements, selected late-publication contract, verification/operator evidence and editable/generated architecture diagram; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-late-publication.sequence.json",
+      "category": "documentation",
+      "reason": "Maintain task requirements, selected late-publication contract, verification/operator evidence and editable/generated architecture diagram; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-late-publication.html",
+      "category": "documentation",
+      "reason": "Maintain task requirements, selected late-publication contract, verification/operator evidence and editable/generated architecture diagram; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-late-publication/verification.md",
+      "category": "documentation",
+      "reason": "Maintain task requirements, selected late-publication contract, verification/operator evidence and editable/generated architecture diagram; no runtime implementation outside server2"
+    }
+  ]
+}

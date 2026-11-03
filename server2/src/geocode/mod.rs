@@ -105,8 +105,8 @@ pub struct ProviderDemand {
     pub key_index: usize,
     pub attempts: u32,
 }
-/// Reserve and consume the maximum possible owner chain before the first HTTP attempt.
-/// Unused units remain consumed: waiter cancellation and key rotation never refund or re-reserve.
+/// Reserve and consume the requested provider/key attempts before their HTTP calls.
+/// Geocoding selects one key at a time. Once funded, cancellation never refunds units.
 pub trait Quota: Send + Sync {
     fn reserve(&self, demands: Vec<ProviderDemand>) -> BoxFuture<'_, Result<(), GeocodeError>>;
 }
@@ -477,32 +477,6 @@ impl Geocoder {
     }
 }
 impl Inner {
-    fn demands(&self, key: &LookupKey) -> Vec<ProviderDemand> {
-        let use_kakao = matches!(key, LookupKey::Address(_))
-            || matches!(key,LookupKey::Coord{lat,lon,..} if is_korea_area([f64::from_bits(*lat),f64::from_bits(*lon)]));
-        let mut demands = Vec::new();
-        if use_kakao {
-            demands.extend(
-                self.config
-                    .kakao_keys
-                    .iter()
-                    .enumerate()
-                    .map(|(key_index, _)| ProviderDemand {
-                        provider: GeoProvider::Kakao,
-                        key_index,
-                        attempts: 1,
-                    }),
-            );
-        }
-        if self.config.google_key.is_some() {
-            demands.push(ProviderDemand {
-                provider: GeoProvider::Google,
-                key_index: 0,
-                attempts: 1,
-            });
-        }
-        demands
-    }
     async fn acquire(&self, key: &LookupKey) -> Result<GeoClient, GeocodeError> {
         let deadline = Instant::now() + Duration::from_secs(5);
         if let LookupKey::Address(address) = key
@@ -513,13 +487,6 @@ impl Inner {
         {
             return Ok(projection.geo);
         }
-        // Every possible attempt is funded before HTTP; without a quota every lookup is denied.
-        self.quota
-            .reserve(self.demands(key))
-            .await
-            .inspect_err(|_| {
-                crate::gateway::metrics::add(&crate::gateway::metrics::COUNTERS.quota_rejections)
-            })?;
         match key {
             LookupKey::Coord { lat, lon, language } => {
                 let loc = [f64::from_bits(*lat), f64::from_bits(*lon)];
@@ -600,12 +567,34 @@ impl Inner {
             return Err(GeocodeError::Provider);
         }
         let start = self.rotation.fetch_add(1, Ordering::Relaxed) % keys.len();
+        let mut last_error = GeocodeError::Provider;
         for offset in 0..keys.len() {
+            if Instant::now() >= deadline {
+                return Err(GeocodeError::Provider);
+            }
+            let key_index = (start + offset) % keys.len();
+            // A denied key never reaches HTTP. The next configured key can still be funded.
+            let funded = tokio::time::timeout_at(
+                deadline,
+                self.quota.reserve(vec![ProviderDemand {
+                    provider,
+                    key_index,
+                    attempts: 1,
+                }]),
+            )
+            .await
+            .map_err(|_| GeocodeError::Provider)?;
+            if let Err(error) = funded {
+                crate::gateway::metrics::add(&crate::gateway::metrics::COUNTERS.quota_rejections);
+                last_error = error;
+                continue;
+            }
             let Some(remaining) = deadline.checked_duration_since(Instant::now()) else {
                 return Err(GeocodeError::Provider);
             };
             let attempt = remaining.min(Duration::from_secs(3));
-            let key_value = keys[(start + offset) % keys.len()];
+            let key_value = keys[key_index];
+            last_error = GeocodeError::Provider;
             let url = self.url(provider, key, key_value);
             let counters = &crate::gateway::metrics::COUNTERS;
             crate::gateway::metrics::add(match provider {
@@ -668,7 +657,7 @@ impl Inner {
                 }
             }
         }
-        Err(GeocodeError::Provider)
+        Err(last_error)
     }
     fn url(&self, provider: GeoProvider, query: &LookupKey, key: &str) -> String {
         let base = match provider {

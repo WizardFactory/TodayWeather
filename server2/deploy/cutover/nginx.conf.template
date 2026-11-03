@@ -7,6 +7,12 @@ error_log stderr notice;
 events { worker_connections 128; }
 http {
     access_log off;
+    # Standard distro modules must not create their system-owned default paths.
+    client_body_temp_path "{{WORKSPACE}}/client_body";
+    proxy_temp_path "{{WORKSPACE}}/proxy";
+    fastcgi_temp_path "{{WORKSPACE}}/fastcgi";
+    uwsgi_temp_path "{{WORKSPACE}}/uwsgi";
+    scgi_temp_path "{{WORKSPACE}}/scgi";
     client_max_body_size 0;
     keepalive_timeout 30s;
     upstream server2_candidate {

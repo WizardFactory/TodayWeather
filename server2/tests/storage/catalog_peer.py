@@ -24,7 +24,45 @@ base = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = base
 spec.loader.exec_module(base)
 
+class PayloadReader:
+    """Count consumed request bodies, never parsed HTTP headers (owned fixture only)."""
+    def __init__(self, stream, handler):
+        self.stream, self.handler = stream, handler
+    def read(self, *args):
+        body = self.stream.read(*args)
+        self.handler.payload_count('BODYIN', len(body))
+        return body
+    def __getattr__(self, name):
+        return getattr(self.stream, name)
+
+
+class PayloadWriter:
+    """Count successful body writes after headers; chunk framing is included if enabled."""
+    def __init__(self, stream, handler):
+        self.stream, self.handler = stream, handler
+    def write(self, body):
+        count = self.stream.write(body)
+        if self.handler.payload_started:
+            self.handler.payload_count('BODYOUT', len(body) if count is None else count)
+        return count
+    def __getattr__(self, name):
+        return getattr(self.stream, name)
+
+
 class Handler(base.Handler):
+    def setup(self):
+        super().setup()
+        self.payload_started, self.operation = False, None
+        self.rfile = PayloadReader(self.rfile, self)
+        self.wfile = PayloadWriter(self.wfile, self)
+    def payload_count(self, kind, count):
+        if self.operation is not None:
+            with self.server.response_lock:
+                key = kind + ' ' + self.operation
+                self.server.response_counts[key] = self.server.response_counts.get(key, 0) + count
+    def end_headers(self):
+        super().end_headers()
+        self.payload_started = True
     def send(self, status, body=b'', headers=None):
         path = unquote(urlsplit(self.path).path)
         key = path.split('/', 2)[2] if len(path.split('/', 2)) == 3 else ''
@@ -52,6 +90,7 @@ class Handler(base.Handler):
             self.send_header('Connection','close');self.end_headers();self.wfile.write(body);self.close_connection=True;return
         return super().send(status,body,headers)
     def dispatch(self):
+        self.payload_started, self.operation = False, None
         split = urlsplit(self.path)
         query = parse_qs(split.query)
         if split.path == '/__catalog':
@@ -86,6 +125,12 @@ class Handler(base.Handler):
             return self.send(200, json.dumps(result).encode(), {'Content-Type':'application/json'})
         path = unquote(split.path)
         key = path.split('/', 2)[2] if len(path.split('/',2)) == 3 else ''
+        self.operation = ('LIST ' + query.get('prefix', [''])[0]
+                          if self.command == 'GET' and query.get('list-type') == ['2']
+                          else self.command + ' ' + key)
+        with self.server.response_lock:
+            counter = 'OP ' + self.operation
+            self.server.response_counts[counter] = self.server.response_counts.get(counter, 0) + 1
         with self.server.lock:
             mode, fault_key = self.server.mode, self.server.fault_key
             counter = self.command + ' ' + key
@@ -171,8 +216,13 @@ class PersistentHandler(Handler):
         return super().send(status, body, headers)
 
 
-def make(persistent=False):
+def make(persistent=False, fanout_capacity=False):
     config = base.load_config(OWNED/'config/local-stack.json')
+    if fanout_capacity:
+        # Explicit finite TEST-only capacity for5000 claim+result objects; ordinary
+        # local stack defaults and every runtime configuration remain unchanged.
+        config['max_objects'] = 16384
+        config['max_store_bytes'] = 64 * 1024 * 1024
     # Linux drops connection attempts beyond the listen backlog (socketserver default 5) and the
     # S3 client connects within 1 s, so a few concurrent readers failed with Transport on CI.
     # Admission stays bounded by the peer's connection slots.
@@ -212,6 +262,13 @@ def check_persistent():
                 assert response.read() == (b'' if method == 'HEAD' else body)
                 if persistent:
                     assert connection.sock is original, 'two requests must reuse the same actual socket'
+            with peer.response_lock:
+                counted = dict(peer.response_counts)
+            assert counted['OP PUT reuse'] == 1
+            assert counted['OP HEAD reuse'] == 1 and counted['OP GET reuse'] == 2
+            assert counted['BODYIN PUT reuse'] == len(body), 'headers are not request payload'
+            assert counted['BODYOUT GET reuse'] == 2 * len(body), 'count actual emitted body bytes'
+            assert counted.get('BODYOUT HEAD reuse', 0) == 0, 'HEAD announces length but emits no body'
             if persistent:
                 time.sleep(peer.config['socket_timeout_seconds'] / 2 + 0.05)
                 connection.request('GET', path, headers=auth)
@@ -249,7 +306,7 @@ def check_persistent():
             connection.request('GET', path, headers=auth)
             response = connection.getresponse()
             assert response.status == 200 and response.read() == body, 'early PUT response corrupted the next HTTP frame'
-            print('owned peer', 'persistent' if persistent else 'default', 'reuse/framing/HEAD/204/CAS/fault PASS')
+            print('owned peer', 'persistent' if persistent else 'default', 'reuse/framing/HEAD/204/CAS/fault/payload-counters PASS')
         finally:
             connection.close()
             peer.shutdown()
@@ -262,11 +319,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--smoke', help='Built catalogs_smoke executable')
     parser.add_argument('--persistent', action='store_true', help='Reuse owned HTTP connections within unchanged admission/socket bounds')
+    parser.add_argument('--fanout-capacity', action='store_true', help='Bounded TEST-only16384 objects/64MiB for5000 warning claim+result pairs')
     parser.add_argument('--check-persistent', action='store_true', help='Run isolated framing/reuse/default/fault checks and exit')
     args = parser.parse_args()
     if args.check_persistent:
         return check_persistent()
-    peer = make(args.persistent)
+    peer = make(args.persistent, args.fanout_capacity)
     endpoint = f'http://127.0.0.1:{peer.server_port}/'
     if args.smoke:
         thread = threading.Thread(target=peer.serve_forever, daemon=True)

@@ -65,9 +65,17 @@
         if(reqType == TYPE_REQUEST_WEATHER_KR)
         {
             nssDate             = [[arrDaysData objectAtIndex:i] objectForKey:@"date"];
-            nssMonth            = [nssDate substringWithRange:NSMakeRange(4, 2)];
-            nssDay              = [nssDate substringFromIndex:6];
-            
+            if ([nssDate isKindOfClass:[NSString class]] && [nssDate length] >= 8)
+            {
+                nssMonth        = [nssDate substringWithRange:NSMakeRange(4, 2)];
+                nssDay          = [nssDate substringWithRange:NSMakeRange(6, 2)];
+            }
+            else
+            {
+                nssMonth        = @"--";
+                nssDay          = @"--";
+            }
+
             taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmn"] intValue];
             taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmx"] intValue];
             
@@ -79,26 +87,37 @@
         }
         else if (reqType == TYPE_REQUEST_WEATHER_GLOBAL)
         {
-            nssDate             = [[arrDaysData objectAtIndex:i] objectForKey:@"date"];
-            nssMonth            = [nssDate substringWithRange:NSMakeRange(4, 2)];
-            nssDay              = [nssDate substringFromIndex:6];
-            taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmn"] intValue];
-            taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tmx"] intValue];
-            
-//            nssDate             = [[arrDaysData objectAtIndex:i] objectForKey:@"date"];
-//            nssMonth            = [nssDate substringWithRange:NSMakeRange(5, 2)];
-//            nssDay              = [nssDate substringWithRange:NSMakeRange(8, 2)];
-//
-//            if(tempUnit == TEMP_UNIT_CELSIUS)
-//            {
-//                taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMin_c"] intValue];
-//                taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMax_c"] intValue];
-//            }
-//            else
-//            {
-//                taMin               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMin_f"] intValue];
-//                taMax               = [[[arrDaysData objectAtIndex:i] objectForKey:@"tempMax_f"] intValue];
-//            }
+            NSDictionary *daily = [arrDaysData objectAtIndex:i];
+            nssDate             = [daily objectForKey:@"date"];
+            BOOL isDateString   = [nssDate isKindOfClass:[NSString class]];
+            // Raw /ww and normalized coordinate responses share this display path.
+            BOOL isRawWorld     = isDateString && [nssDate length] >= 10 &&
+                [nssDate characterAtIndex:4] == '.' && [nssDate characterAtIndex:7] == '.';
+            if (isRawWorld)
+            {
+                nssMonth        = [nssDate substringWithRange:NSMakeRange(5, 2)];
+                nssDay          = [nssDate substringWithRange:NSMakeRange(8, 2)];
+                NSString *minKey = tempUnit == TEMP_UNIT_CELSIUS ? @"tempMin_c" : @"tempMin_f";
+                NSString *maxKey = tempUnit == TEMP_UNIT_CELSIUS ? @"tempMax_c" : @"tempMax_f";
+                taMin           = [[daily objectForKey:minKey] intValue];
+                taMax           = [[daily objectForKey:maxKey] intValue];
+            }
+            else
+            {
+                if (isDateString && [nssDate length] >= 8)
+                {
+                    nssMonth    = [nssDate substringWithRange:NSMakeRange(4, 2)];
+                    nssDay      = [nssDate substringWithRange:NSMakeRange(6, 2)];
+                }
+                else
+                {
+                    nssMonth    = @"--";
+                    nssDay      = @"--";
+                }
+                // Normalized rows already contain the requested temperature unit.
+                taMin           = [[daily objectForKey:@"tmn"] intValue];
+                taMax           = [[daily objectForKey:@"tmx"] intValue];
+            }
         }
         
         nssTempMaxMin       = [NSString stringWithFormat:@"%d˚/%d˚", taMin, taMax];

@@ -2,7 +2,8 @@
 """Actual release-process smoke: only loopback, no providers, Mongo or S3.
 
 S10e: the listener follows the legacy names (PORT=0 selects ephemeral public and metrics
-ports); every other process setting is built in (128 public sockets, 9-second lifetime). The
+ports); explicit closed-loopback development coexistence preserves this isolated check
+under the production coverage guard (128 public sockets, 12-second gateway lifetime). The
 process runs in an empty working directory, so no real server2/.env is read."""
 import argparse
 import json
@@ -25,12 +26,12 @@ def get(url):
 
 
 SOCKETS=128   # built-in public connection limit
-LIFETIME=9    # built-in connection lifetime without the gateway
+LIFETIME=12   # built-in connection lifetime with explicit development gateway
 
 
 def run(binary):
     env={k:v for k,v in os.environ.items() if k in ('PATH','SYSTEMROOT','TMPDIR')}
-    env.update(PORT='0')
+    env.update(PORT='0',SERVER2_GATEWAY_LEGACY_URL='http://127.0.0.1:9')
     cwd=tempfile.mkdtemp(prefix='server2-smoke-')
     bad=dict(env,PORT='http')
     invalid=subprocess.run([binary],env=bad,cwd=cwd,capture_output=True,text=True,timeout=5)
@@ -97,7 +98,7 @@ def run(binary):
     finally:
         if process.poll() is None: process.kill();process.wait(timeout=5)
 
-    # A second process has the 9-second socket lifetime, so the 5-second signal drain
+    # A second process has the 12-second gateway socket lifetime, so the 5-second signal drain
     # must force-close a partial-header connection rather than wait for its age limit.
     process=subprocess.Popen([binary],env=env,cwd=cwd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     try:

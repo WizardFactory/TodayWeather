@@ -1,4 +1,5 @@
 //! S16 END TO END over the S06 loopback S3 test peer: the native v000903 KMA backend records the
+//! High-read S3 cases reuse the existing bounded peer to avoid local ephemeral-port exhaustion.
 //! town's complete grid days after a served response (the `00:00` hour counted for the previous
 //! day), writes nothing again for the same inputs, writes a new revision after a late input,
 //! records nothing while the ASOS history read is still running, and the last-year lookup
@@ -264,7 +265,7 @@ async fn names(recorder: &Recorder<BoundedS3<HttpS3Transport>>, date: u32) -> us
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn served_requests_record_complete_grid_days_and_late_revisions() {
     let _peers = S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let catalogs = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
     seed(&catalogs, &[]).await;
     // 09-23: all 24 hours, its 2400 hour published as 09-24 00:00. 09-22: 17 hours.
@@ -366,7 +367,7 @@ fn backend_again(peer: &Peer) -> (KmaBackend, Recorder<BoundedS3<HttpS3Transport
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn nothing_is_recorded_while_the_asos_history_read_runs() {
     let _peers = S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let catalogs = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
     seed(&catalogs, &[]).await;
     day(&catalogs, 20260923, 1..=24).await;
@@ -436,7 +437,7 @@ impl Acquire for LiveAsos {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn lookup_acquires_asos_once_and_derives_vc_from_stored_records() {
     let _peers = S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport_limited(4);
     let catalogs =
         Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -548,7 +549,7 @@ async fn lookup_acquires_asos_once_and_derives_vc_from_stored_records() {
 async fn only_the_current_fold_of_a_complete_read_is_settled() {
     use server2::domestic::kma::source::observe::{Folded, Observations};
     let _peers = S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport_limited(4);
     let catalogs =
         Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -573,7 +574,7 @@ async fn only_the_current_fold_of_a_complete_read_is_settled() {
 /// station state is settled.
 async fn seed_settled(ats: &[f64], fault: &str) -> bool {
     use server2::domestic::kma::source::observe::Observations;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport_limited(4);
     let catalogs =
         Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -638,7 +639,7 @@ async fn a_failed_or_partial_registry_seed_read_is_not_settled() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_partial_grid_read_records_nothing() {
     let _peers = S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let catalogs = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
     seed(&catalogs, &[]).await;
     day(&catalogs, 20260923, 1..=24).await;
@@ -682,7 +683,7 @@ async fn a_partial_grid_read_records_nothing() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_partial_vc_read_stores_no_vc_day() {
     let _peers = S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let transport = peer.transport_limited(4);
     let world =
         Arc::new(CatalogWorldStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -819,7 +820,7 @@ async fn a_request_time_backfill_is_a_late_input_of_a_stored_day() {
             })
         }
     }
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let catalogs = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
     seed(&catalogs, &[]).await;
     day(&catalogs, 20260923, 1..=23).await;
@@ -903,7 +904,7 @@ async fn the_requests_own_acquisition_keeps_its_stored_identity() {
             })
         }
     }
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let catalogs = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
     seed(&catalogs, &["current"]).await;
     let source = S3Source::new(
@@ -971,7 +972,7 @@ async fn older_native_routes_record_only_compatible_daily_rows() {
         }
     }
     let _peers = S3_PEERS.lock().await;
-    let peer = Peer::new();
+    let peer = Peer::persistent();
     let catalogs = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
     seed(&catalogs, &[]).await;
     day(&catalogs, 20260923, 1..=24).await;

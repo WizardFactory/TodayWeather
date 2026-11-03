@@ -15,13 +15,16 @@
     "server/lib/AQI/waqiStationName.js": "b5cbb6244a89b06b140bf9aeb32bed84e7b1701558ac655cbeb90bd82d65b305",
     "server/lib/air/observation.js": "9b83c8d1b394fa10e71933ce19bdcf90220a63dd7191b6894389f5e9412b7244",
     "server/lib/unitConverter.js": "f52aa2503ba18aa1236cbd91e1a11f4f9fdbc5e61bc82411378e37e9cc84570b",
-    "server/controllers/kecoController.js": "2041f9f23a1487008461ff780f9618b5dcc19f67e977a6c1a1cbc056013f904d",
-    "server/controllers/controllerTown24h.js": "7e551bb88dca224f25877c1d2bf1ab43046238e37bb4c76c78c44ab2dcfd7234",
+    "server/controllers/kecoController.js": "17c1eef79eb86d25ff5aaed346cc1480f35afc4432b8ddd9e76cb92e185cffb9",
+    "server/controllers/controllerTown24h.js": "ef4ad5804d5d1cec94e8880e6d9d93597408ae9035f5bfd086c4e80563b4f708",
     "server/lib/kecoRequester.js": "ca7ea70339ad37a6f9ef06af014746ea2f566d9f17a678bb87b685cd11030a8c",
     "server/models/sido.arpltn.keco.model.js": "42fdc4f74b6eb89ba360531284fb640fa177643dc4da09b125a046be982f816f",
     "server/app.js": "bf8081f9dca7708540d8b78f739f2e746eb6a564ae48b01fb6f95a56e10619a8",
     "server/lib/air/nationAir.js": "8840fe6fa1721d2e3a0c1c96758dea549fbb9102cb5250df6153c6b6bac5e804",
-    "server/routes/v000803/route.nation.js": "27a730ad76bdd0e1b270124fe1c28c1e568a4aa71ebc2a5d8370333847a7d60d",
+    "server/lib/kmaForecastRegions.js": "692027586f9411cb8ffb3eadb2a729e54ee66350d47030b04d2e6eb5b8b30907",
+    "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e",
+    "server/lib/kmaForecastNarrativeResponse.js": "c84ab2a2aa90b00f2340d3499147420b02b196efa25b214e144ae50671a7c2bd",
+    "server/routes/v000803/route.nation.js": "d57c5d810a334756d479c8d6fa62b760bc706198c2d3d0adedde5b725b7da779",
     "server/views/error.jade": "a786e6d89a5251bb63a874d3b85ecdf8df48626b1c72ec8c196a6205d50fe141",
     "server/views/layout.jade": "bbde3ad4fa8f85139fdb6e83ecc7bb7d84489d3bdbde8f6994405e856d02dc24"
   },
@@ -1632,6 +1635,280 @@
           "locale": "en"
         }
       ]
+    },
+    {
+      "id": "narrative-fresh-national",
+      "version": "v000903",
+      "query": {},
+      "stored": [],
+      "fallback": {},
+      "body": "{\"nation\":\"KR\",\"weather\":[{\"cityName\":\"서울특별시\",\"current\":{\"t1h\":20}},{\"cityName\":\"강원도/춘천시\",\"current\":{\"t1h\":20}},{\"cityName\":\"부산광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"대구광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"제주특별자치도/제주시\",\"current\":{\"t1h\":20}},{\"cityName\":\"광주광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"대전광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"충청북도/청주시\",\"current\":{\"t1h\":20}},{\"cityName\":\"전라북도/전주시\",\"current\":{\"t1h\":20}},{\"cityName\":\"강원도/강릉시\",\"current\":{\"t1h\":20}},{\"cityName\":\"인천광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"전라남도/목포시\",\"current\":{\"t1h\":20}},{\"cityName\":\"전라남도/여수시\",\"current\":{\"t1h\":20}},{\"cityName\":\"경상북도/안동시\",\"current\":{\"t1h\":20}},{\"cityName\":\"울산광역시\",\"current\":{\"t1h\":20}}],\"air\":[],\"airStatus\":{\"checkedAt\":\"2026-10-16T00:10:00.000Z\",\"provinces\":[{\"sidoName\":\"서울\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"부산\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"대구\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"인천\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"광주\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"대전\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"울산\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"경기\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"강원\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"충북\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"충남\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"전북\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"전남\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"경북\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"경남\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"제주\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"세종\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"}]},\"forecastNarrative\":{\"stationId\":108,\"region\":\"전국\",\"announcement\":\"2026-10-16T00:00:00.000Z\",\"expiresAt\":\"2026-10-17T00:00:00.000Z\",\"text\":\"National literal <b>rain</b>\\nsecond line\",\"language\":\"ko\",\"source\":\"KMA\",\"textFormat\":\"plain\"}}",
+      "cityCalls": [
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EA%B0%95%EC%9B%90%EB%8F%84/%EC%B6%98%EC%B2%9C%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EB%8C%80%EA%B5%AC%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EA%B4%91%EC%A3%BC%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EB%8C%80%EC%A0%84%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%B6%A9%EC%B2%AD%EB%B6%81%EB%8F%84/%EC%B2%AD%EC%A3%BC%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%A0%84%EB%9D%BC%EB%B6%81%EB%8F%84/%EC%A0%84%EC%A3%BC%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EA%B0%95%EC%9B%90%EB%8F%84/%EA%B0%95%EB%A6%89%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%9D%B8%EC%B2%9C%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%A0%84%EB%9D%BC%EB%82%A8%EB%8F%84/%EB%AA%A9%ED%8F%AC%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%A0%84%EB%9D%BC%EB%82%A8%EB%8F%84/%EC%97%AC%EC%88%98%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EA%B2%BD%EC%83%81%EB%B6%81%EB%8F%84/%EC%95%88%EB%8F%99%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%9A%B8%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        }
+      ],
+      "narrativeInput": {
+        "rows": [
+          {
+            "stationId": 108,
+            "announcement": "2026-10-16T00:00:00.000Z",
+            "text": "National literal <b>rain</b>\r\nsecond line"
+          }
+        ]
+      },
+      "narrativeReads": [
+        {
+          "query": {
+            "stationId": 108
+          },
+          "projection": {
+            "_id": 0,
+            "__v": 0
+          }
+        }
+      ],
+      "responseHeaders": {
+        "cache-control": "public, max-age=300, s-maxage=300"
+      }
+    },
+    {
+      "id": "narrative-expired",
+      "version": "v000903",
+      "query": {},
+      "stored": [],
+      "fallback": {},
+      "body": "{\"nation\":\"KR\",\"weather\":[{\"cityName\":\"서울특별시\",\"current\":{\"t1h\":20}},{\"cityName\":\"강원도/춘천시\",\"current\":{\"t1h\":20}},{\"cityName\":\"부산광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"대구광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"제주특별자치도/제주시\",\"current\":{\"t1h\":20}},{\"cityName\":\"광주광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"대전광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"충청북도/청주시\",\"current\":{\"t1h\":20}},{\"cityName\":\"전라북도/전주시\",\"current\":{\"t1h\":20}},{\"cityName\":\"강원도/강릉시\",\"current\":{\"t1h\":20}},{\"cityName\":\"인천광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"전라남도/목포시\",\"current\":{\"t1h\":20}},{\"cityName\":\"전라남도/여수시\",\"current\":{\"t1h\":20}},{\"cityName\":\"경상북도/안동시\",\"current\":{\"t1h\":20}},{\"cityName\":\"울산광역시\",\"current\":{\"t1h\":20}}],\"air\":[],\"airStatus\":{\"checkedAt\":\"2026-10-16T00:10:00.000Z\",\"provinces\":[{\"sidoName\":\"서울\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"부산\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"대구\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"인천\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"광주\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"대전\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"울산\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"경기\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"강원\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"충북\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"충남\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"전북\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"전남\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"경북\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"경남\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"제주\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"세종\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"}]}}",
+      "cityCalls": [
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EA%B0%95%EC%9B%90%EB%8F%84/%EC%B6%98%EC%B2%9C%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EB%8C%80%EA%B5%AC%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EA%B4%91%EC%A3%BC%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EB%8C%80%EC%A0%84%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%B6%A9%EC%B2%AD%EB%B6%81%EB%8F%84/%EC%B2%AD%EC%A3%BC%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%A0%84%EB%9D%BC%EB%B6%81%EB%8F%84/%EC%A0%84%EC%A3%BC%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EA%B0%95%EC%9B%90%EB%8F%84/%EA%B0%95%EB%A6%89%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%9D%B8%EC%B2%9C%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%A0%84%EB%9D%BC%EB%82%A8%EB%8F%84/%EB%AA%A9%ED%8F%AC%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%A0%84%EB%9D%BC%EB%82%A8%EB%8F%84/%EC%97%AC%EC%88%98%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EA%B2%BD%EC%83%81%EB%B6%81%EB%8F%84/%EC%95%88%EB%8F%99%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%9A%B8%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        }
+      ],
+      "narrativeInput": {
+        "rows": [
+          {
+            "stationId": 108,
+            "announcement": "2026-10-15T00:00:00.000Z",
+            "text": "National literal <b>rain</b>\r\nsecond line"
+          }
+        ]
+      },
+      "narrativeReads": [
+        {
+          "query": {
+            "stationId": 108
+          },
+          "projection": {
+            "_id": 0,
+            "__v": 0
+          }
+        }
+      ],
+      "responseHeaders": {
+        "cache-control": "public, max-age=900, s-maxage=600, stale-if-error=60"
+      }
+    },
+    {
+      "id": "narrative-db-error",
+      "version": "v000903",
+      "query": {},
+      "stored": [],
+      "fallback": {},
+      "body": "{\"nation\":\"KR\",\"weather\":[{\"cityName\":\"서울특별시\",\"current\":{\"t1h\":20}},{\"cityName\":\"강원도/춘천시\",\"current\":{\"t1h\":20}},{\"cityName\":\"부산광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"대구광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"제주특별자치도/제주시\",\"current\":{\"t1h\":20}},{\"cityName\":\"광주광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"대전광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"충청북도/청주시\",\"current\":{\"t1h\":20}},{\"cityName\":\"전라북도/전주시\",\"current\":{\"t1h\":20}},{\"cityName\":\"강원도/강릉시\",\"current\":{\"t1h\":20}},{\"cityName\":\"인천광역시\",\"current\":{\"t1h\":20}},{\"cityName\":\"전라남도/목포시\",\"current\":{\"t1h\":20}},{\"cityName\":\"전라남도/여수시\",\"current\":{\"t1h\":20}},{\"cityName\":\"경상북도/안동시\",\"current\":{\"t1h\":20}},{\"cityName\":\"울산광역시\",\"current\":{\"t1h\":20}}],\"air\":[],\"airStatus\":{\"checkedAt\":\"2026-10-16T00:10:00.000Z\",\"provinces\":[{\"sidoName\":\"서울\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"부산\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"대구\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"인천\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"광주\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"대전\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"울산\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"경기\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"강원\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"충북\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"충남\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"전북\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"전남\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"경북\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"경남\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"제주\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"},{\"sidoName\":\"세종\",\"available\":false,\"reason\":\"no-provider\",\"airkorea\":\"missing\"}]}}",
+      "cityCalls": [
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EA%B0%95%EC%9B%90%EB%8F%84/%EC%B6%98%EC%B2%9C%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EB%B6%80%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EB%8C%80%EA%B5%AC%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%A0%9C%EC%A3%BC%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EC%A0%9C%EC%A3%BC%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EA%B4%91%EC%A3%BC%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EB%8C%80%EC%A0%84%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%B6%A9%EC%B2%AD%EB%B6%81%EB%8F%84/%EC%B2%AD%EC%A3%BC%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%A0%84%EB%9D%BC%EB%B6%81%EB%8F%84/%EC%A0%84%EC%A3%BC%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EA%B0%95%EC%9B%90%EB%8F%84/%EA%B0%95%EB%A6%89%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%9D%B8%EC%B2%9C%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%A0%84%EB%9D%BC%EB%82%A8%EB%8F%84/%EB%AA%A9%ED%8F%AC%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%A0%84%EB%9D%BC%EB%82%A8%EB%8F%84/%EC%97%AC%EC%88%98%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EA%B2%BD%EC%83%81%EB%B6%81%EB%8F%84/%EC%95%88%EB%8F%99%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        },
+        {
+          "url": "http://127.0.0.1:1/v000903/kma/addr/%EC%9A%B8%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=airkorea",
+          "lang": "ko"
+        }
+      ],
+      "narrativeInput": {
+        "rows": [],
+        "error": true
+      },
+      "narrativeReads": [
+        {
+          "query": {
+            "stationId": 108
+          },
+          "projection": {
+            "_id": 0,
+            "__v": 0
+          }
+        }
+      ],
+      "responseHeaders": {
+        "cache-control": "public, max-age=900, s-maxage=600, stale-if-error=60"
+      }
     }
   ]
 }

@@ -42,13 +42,32 @@ class Inventory(unittest.TestCase):
         self.assertEqual(sum(r['observed_requests'] == 1 for r in rows), 2)
         self.assertIn('/v000705/town/{location}', {r['path'] for r in rows})
         self.assertEqual(data['supplements'][0]['path'], '/v000903/notice/latest')
-        self.assertEqual(data['unclassified'][0]['path'], '/ww')
+        self.assertEqual(data['unclassified'], [])
+        self.assertIn('/ww/010000/current/2', {r['path'] for r in data['supplements']})
+        self.assertNotIn('observed_requests', data['supplements'][1])
         self.assertFalse(data['production_eligible'])
         self.assertIn('2724 actual provider quota measurement', data['excluded_changes'])
+        self.assertFalse(any(item.startswith('2805') for item in data['excluded_changes']))
+        self.assertEqual(data['response_supplements'][0]['field'],'forecastNarrative')
+        self.assertEqual(set(data['response_supplements'][0]['families']),{'kma','town','nation'})
         for row in rows + data['supplements']:
             self.assertTrue((ROOT.parent / row['native_source']).is_file())
 
 class Admission(unittest.TestCase):
+    def test_owned_paths_replace_distro_defaults(self):
+        rendered = rehearsal.render(rehearsal.TEMPLATE.read_text(), 8080, 8081,
+                                    '/tmp/owned with space/nginx.pid')
+        for module in ('client_body', 'proxy', 'fastcgi', 'uwsgi', 'scgi'):
+            self.assertIn(module+'_temp_path "/tmp/owned with space/'+module+'";', rendered)
+        self.assertNotIn('/var/lib/nginx', rendered)
+
+    def test_render_refuses_ambiguous_or_injecting_workspace(self):
+        for pid in ('relative/nginx.pid', '/tmp/../outside/nginx.pid', '/tmp/quote"/nginx.pid',
+                    '/tmp/back\\slash/nginx.pid', '/tmp/$variable/nginx.pid',
+                    '/tmp/semi;colon/nginx.pid', '/tmp/new\nline/nginx.pid', '/tmp/nul\0/nginx.pid'):
+            with self.subTest(pid=pid), self.assertRaises(ValueError):
+                rehearsal.render(rehearsal.TEMPLATE.read_text(), 8080, 8081, pid)
+
     def test_render_refuses_injection_or_privileged_port(self):
         template = rehearsal.TEMPLATE.read_text()
         for invalid in [True, 0, 80, 65536, '8080; include secret;']:

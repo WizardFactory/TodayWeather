@@ -124,6 +124,7 @@ async fn public_registration_is_durable_and_recovers_after_reconstruction() {
             .unwrap()
             .coll(server2::push::Coll::Alarm)
             .iter()
+            .map(Result::unwrap)
             .any(|(_, r)| r.token("fcmToken") == Some("synthetic-new"))
     );
     let h = Http::new(restored).await;

@@ -143,7 +143,7 @@ arpltnController._getArpLtnList = function (msrStnList, dateTime, callback) {
                 .lean()
                 .exec(function (err, arpltnList) {
                     if (err) {
-                        log.error(err);
+                        return cb(err);
                     }
                     if (arpltnList.length === 0) {
                         log.warn("Fail to find arpltn stationName="+msrStn.stationName);
@@ -396,6 +396,7 @@ arpltnController.getDustFrcst = function (town, date, callback) {
  */
 arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
     var self = this;
+    var forecastStationName;
 
     async.waterfall([
             function(cb) {
@@ -404,6 +405,11 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
                     if (err) {
                         return cb(err);
                     }
+                    // Keep metadata identity independently of observation availability/freshness (#2831).
+                    var station = (Array.isArray(msrStnList) ? msrStnList : []).find(function (stn) {
+                        return stn && typeof stn.stationName === 'string' && stn.stationName.trim();
+                    });
+                    forecastStationName = station && station.stationName;
                     return cb(err, msrStnList);
                 });
             },
@@ -430,7 +436,7 @@ arpltnController.getArpLtnInfo = function (townInfo, dateTime, callback) {
                     return 0;
                 });
 
-                return cb(undefined, {arpltn:arpltn, list: arpltnList[0], stnList: arpltnList});
+                return cb(undefined, {arpltn:arpltn, list: arpltnList[0], stnList: arpltnList, forecastStationName: forecastStationName});
             }],
         function(err, arpltnObj) {
             if (err)  {

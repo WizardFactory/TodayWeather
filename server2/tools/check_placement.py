@@ -6,6 +6,7 @@ Task declarations are reviewable contracts, not authority to widen scope.
 """
 import argparse
 import ast
+import hashlib
 import json
 import re
 import subprocess
@@ -335,12 +336,77 @@ def inert_golden_identities(tree):
     return dict(tree, cases=[{k: v for k, v in c.items() if k != 'handler'} for c in cases])
 
 
-def audit_nonrust(path, body):
+# Exact reviewed verification-policy bytes, not a directory or runtime exception.
+# Any policy edit revokes recognition and needs a new policy/pin review.
+REVIEWED_VERIFICATION_POLICIES = {
+    'server2/tools/golden/policies/air.json': '801d6dd66979e57b79fba98bf979a35d0911fce5ce2ea1538d1bb93d6a444c25',
+    'server2/tools/golden/policies/nation.json': 'a0f09ab457274ffcbdde4f42fb7d13a239277f06446f5caf4cdb33ece957309a',
+    'server2/tools/golden/policies/delivery.json': 'a62cf9db9e87e663225fef5ffea5f96c788bb7ecb4568b3690adc945bc1cb0f5',
+    'server2/tools/golden/policies/domestic_http.json': 'dd8b921a92b98f158b55032e563c94d7bf3b67adf0379c3a1ebc8a5fe28f8bf8',
+    'server2/tools/golden/policies/rest_http.json': '00aa4df69d8bb3d4e7c534ecdc4bad214d0319459e7d9603119ea00ccc44fa7f',
+}
+
+
+def inert_provenance_registry(tree):
+    """Only validated fingerprint identities, never a runtime resource exemption."""
+    if (not isinstance(tree, dict) or
+            set(tree) != {'schema', 'reader_sha256', 'legacy_sources', 'verification_exports', 'fixtures', 'semantics', 'other_test_json'} or
+            type(tree['schema']) is not int or tree['schema'] != 1 or tree['semantics'] != 'NOT_EVALUATED' or
+            not isinstance(tree['reader_sha256'], str) or not re.fullmatch('[0-9a-f]{64}', tree['reader_sha256'])):
+        raise ValueError('invalid fingerprint registry schema/reader')
+    sources = tree['legacy_sources']
+    if (not isinstance(sources, list) or len(sources) != 187 or
+            not all(isinstance(p, str) and p.startswith('server/') and clean(p) and '\\' not in p for p in sources) or
+            sources != sorted(set(sources))):
+        raise ValueError('invalid fingerprint source identities')
+    exports = tree['verification_exports']
+    if (not isinstance(exports, list) or len(exports) != 33 or
+            not all(isinstance(p, str) and p.startswith('server/test/offline/oracle-provenance/')
+                    and clean(p) and '\\' not in p for p in exports) or
+            exports != sorted(set(exports)) or set(exports) & set(sources)):
+        raise ValueError('invalid fingerprint verification export identities')
+    identities = set(sources) | set(exports)
+    fixtures = tree['fixtures']
+    if not isinstance(fixtures, list) or len(fixtures) != 22:
+        raise ValueError('invalid fingerprint fixture inventory')
+    cleaned = []
+    seen = set(); references = set(); map_count = 0
+    for fixture in fixtures:
+        if (not isinstance(fixture, dict) or set(fixture) != {'path', 'sha256', 'compression', 'maps', 'provenance'} or
+                not isinstance(fixture['path'], str) or not fixture['path'].startswith('server2/tests/') or
+                not clean(fixture['path']) or fixture['path'] in seen or
+                not isinstance(fixture['sha256'], str) or not re.fullmatch('[0-9a-f]{64}', fixture['sha256']) or
+                fixture['compression'] != ('gzip' if fixture['path'].endswith('.gz') else 'none') or
+                not isinstance(fixture['maps'], list) or not fixture['maps']):
+            raise ValueError('invalid fingerprint fixture identity')
+        seen.add(fixture['path']); maps = []; pointers = set()
+        for item in fixture['maps']:
+            if (not isinstance(item, dict) or set(item) != {'pointer', 'paths'} or
+                    item['pointer'] not in {'/source/files', '/sourceHashes', '/forecast/source/files', '/harness/source', '/oracle/files', '/source_sha256', '/hash'} or
+                    item['pointer'] in pointers or not isinstance(item['paths'], list) or not item['paths'] or
+                    not all(isinstance(p, str) for p in item['paths']) or
+                    item['paths'] != sorted(set(item['paths'])) or not set(item['paths']) <= identities):
+                raise ValueError('invalid fingerprint source-map identity')
+            references.update(item['paths']); pointers.add(item['pointer']); map_count += 1
+            maps.append({'pointer':item['pointer']})
+        cleaned.append(dict(fixture, maps=maps))
+    if map_count != 23 or references != identities:
+        raise ValueError('incomplete fingerprint map coverage')
+    # Retain provenance, all ordinary fixture metadata and other_test_json for
+    # normal direct-resource scanning. Remove only the validated source identities.
+    return dict(tree, legacy_sources=[], verification_exports=[], fixtures=cleaned)
+
+
+def audit_nonrust(path, body, raw_body=None):
     """Direct executable Python call arguments, decoded JSON, literal shell/config paths.
 
     Fixture path/payload exemption is exact file + self.write/fixture_symlink data roles, not a file bypass.
     Computed paths, aliases, custom loaders and macros require manual review.
     """
+    if path in REVIEWED_VERIFICATION_POLICIES:
+        if raw_body is not None and hashlib.sha256(raw_body).hexdigest() == REVIEWED_VERIFICATION_POLICIES[path]:
+            return []
+        return [f'{path}: unreviewed verification policy bytes']
     values = []
     if path.endswith('.py') or (body.startswith('#!') and 'python' in body.splitlines()[0]):
         try: tree = ast.parse(body)
@@ -349,9 +415,10 @@ def audit_nonrust(path, body):
             if not isinstance(node, ast.Call): continue
             name = node.func.id if isinstance(node.func, ast.Name) else node.func.attr if isinstance(node.func, ast.Attribute) else ''
             if name not in {'open', 'Path', 'read', 'read_text', 'read_bytes', 'write', 'write_text', 'write_bytes', 'run', 'Popen', 'check_output', 'check_call', 'load', 'symlink_to', 'system', 'popen', 'chdir', 'listdir', 'scandir', 'unlink', 'rename', 'replace', 'remove'}: continue
-            fixture = (path == 'server2/tools/test_placement.py' and isinstance(node.func, ast.Attribute)
-                       and node.func.attr in ('write', 'fixture_symlink') and isinstance(node.func.value, ast.Name)
-                       and node.func.value.id == 'self')
+            fixture = (isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name)
+                       and node.func.value.id == 'self' and
+                       ((path == 'server2/tools/test_placement.py' and node.func.attr in ('write', 'fixture_symlink')) or
+                        (path == 'server2/tools/golden/test_provenance.py' and node.func.attr == 'write')))
             for index, arg in enumerate(node.args):
                 if fixture: continue
                 for literal in ast.walk(arg):
@@ -364,6 +431,9 @@ def audit_nonrust(path, body):
         if path == 'server2/tests/golden/records.json':
             try: tree = inert_golden_identities(tree)
             except ValueError as e: return [f'{path}: {e}']
+        if path == 'server2/config/golden-provenance.json':
+            try: tree = inert_provenance_registry(tree)
+            except (ValueError, TypeError, KeyError): return [f'{path}: invalid fingerprint provenance identity']
         if re.fullmatch(r'server2/config/tasks/[^/]+\.json', path):
             # Declaration identities do not read assets. Only validated outside.path
             # roles are exempt; arbitrary runtime configuration in this file is scanned.
@@ -461,7 +531,7 @@ def check(root, declaration, base):
             if file.name == 'Cargo.toml' or path.startswith('server2/.cargo/'):
                 errors.extend(audit_manifest(root, path, body))
             if file.suffix == '.rs': errors.extend(audit_source(root, path, body, host_reads))
-            elif file.name != 'Cargo.toml': errors.extend(audit_nonrust(path, body))
+            elif file.name != 'Cargo.toml': errors.extend(audit_nonrust(path, body, raw_body))
     return errors
 
 

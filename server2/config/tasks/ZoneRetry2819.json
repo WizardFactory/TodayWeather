@@ -1,0 +1,58 @@
+{
+  "task": "ZoneRetry2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "D1 only: request-triggered forecast-zone retry after failure using existing five-minute admission; latch only a complete readable published result. Preserve owned flights, nonblocking request, last-good cache, funding and periodic S3 fold. Pre-merge only; no merge, cloud, live providers/sends or shadow.",
+  "server2_paths": [
+    "server2/config/tasks/ZoneRetry2819.json",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/zone_retry_tests.rs",
+    "server2/examples/zone_retry_smoke.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-zone-retry.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, retry flow, operator instructions and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2819-zone-retry.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, retry flow, operator instructions and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2819-zone-retry.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, retry flow, operator instructions and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, retry flow, operator instructions and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, retry flow, operator instructions and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, retry flow, operator instructions and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-zone-refresh.sequence.json",
+      "category": "documentation",
+      "reason": "Maintain task contract, retry flow, operator instructions and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-zone-refresh.html",
+      "category": "documentation",
+      "reason": "Maintain task contract, retry flow, operator instructions and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-zone-retry/verification.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, retry flow, operator instructions and selected evidence; no runtime implementation outside server2"
+    }
+  ]
+}

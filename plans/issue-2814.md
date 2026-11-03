@@ -1,0 +1,7 @@
+# Linux nginx portability plan
+One PR, root owner. [Spec](../specs/issue-2814.md); [exact declaration](../server2/config/tasks/S20g.json). Dependent on PR2815; reconcile base and retained-byte identity before integration. Reuse root execution notebook, no competing plan.
+1. Add negative checks for all scratch paths and unsafe PID/workspace values; observe original failure.
+2. Render five owned temp paths and route pre-config error logging to stderr. Keep all HTTP behavior unchanged. Increase one synthetic transport body to exercise spill without changing five-case denominator.
+3. Local unit checks and separate actual unprivileged AL2023 nginx/release rehearsal; verify bytes, system service inactivity and owned child retirement. No Rust compilation.
+4. Update existing operator guide/PDF plus selected actual evidence, preserving original failure; no diagram regeneration for path-only config repair. Independent cross-provider QA, exact CI/main gates, authorized merge. No production operation.
+Scenarios: OP-REHEARSE (AC1/2): operator has fixed release binaries, nginx hash and fresh report path, runs rehearsal as ordinary account; expected exact deadline plus five transport PASS and owned scratch cleanup; hash mismatch or old output blocks before children. OP-PATH (AC1): paths with spaces remain quoted, syntax metacharacters/relative paths/parent traversal reject before child. OP-REVIEW (AC3): inspect original failure and new passing proof with source/binary identities, five PDF page results and placement. Unsupported production/rollback remains blocked.

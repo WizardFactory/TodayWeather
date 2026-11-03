@@ -980,6 +980,11 @@ pub fn assemble(a: &Assembly<'_>, dsf: Dsf, air: AirOutcome) -> Result<Obj, Fail
         }
     }
     result.set("source", "VC");
+    // /ww stops at dataSort: it retains raw temperatures, dates, icons and air fields.
+    if a.version == Version::Widget {
+        add_units(&mut result, q);
+        return Ok(result);
+    }
     // skyIconLowCase (v000902/v000903)
     if a.version != Version::V1 {
         for key in ["daily", "thisTime", "hourly"] {
@@ -1065,7 +1070,11 @@ pub fn assemble(a: &Assembly<'_>, dsf: Dsf, air: AirOutcome) -> Result<Obj, Fail
             info.set("last", arpltn.unwrap_or_default());
         }
     }
-    // sendResult
+    add_units(&mut result, q);
+    Ok(result)
+}
+fn add_units(result: &mut Obj, q: &Obj) {
+    // sendResult (metadata only for /ww; it does not convert weather values).
     let mut units = Obj::new();
     for name in UNIT_LIST {
         let v = q.get(name);
@@ -1079,5 +1088,4 @@ pub fn assemble(a: &Assembly<'_>, dsf: Dsf, air: AirOutcome) -> Result<Obj, Fail
         );
     }
     result.set("units", units);
-    Ok(result)
 }

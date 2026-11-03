@@ -306,7 +306,26 @@ mod review_regressions {
         )
         .unwrap()
     }
-    #[tokio::test]
+    // CPU work uses real blocking threads; keep virtual request time fixed while
+    // the owned transport/CPU phase progresses. An independent wall watchdog
+    // bounds a broken fixture instead of silently consuming the request deadline.
+    async fn phase_reached(mut ready: impl FnMut() -> bool) {
+        let wall = std::time::Instant::now();
+        std::future::poll_fn(|cx| {
+            assert!(
+                wall.elapsed() < std::time::Duration::from_secs(10),
+                "storage test phase stalled"
+            );
+            if ready() {
+                std::task::Poll::Ready(())
+            } else {
+                cx.waker().wake_by_ref();
+                std::task::Poll::Pending
+            }
+        })
+        .await;
+    }
+    #[tokio::test(start_paused = true)]
     async fn reconciliation_waits_for_decode_under_cpu_contention() {
         for status in [412, 500, 0] {
             let store = Arc::new(
@@ -327,10 +346,10 @@ mod review_regressions {
             );
             let s = store.clone();
             let task = crate::observability::spawn(async move { s.publish(record()).await });
-            store.transport.started.notified().await;
+            phase_reached(|| store.transport.object.lock().unwrap().is_some()).await;
             let held = store.cpu.clone().acquire_owned().await.unwrap();
             store.transport.reply.notify_one();
-            tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+            phase_reached(|| store.transport.gets.load(Ordering::SeqCst) == 1).await;
             assert_eq!(
                 store.transport.gets.load(Ordering::SeqCst),
                 1,
@@ -346,10 +365,11 @@ mod review_regressions {
                 "post-PUT contention must wait, not report not-attempted Capacity"
             );
             drop(held);
+            phase_reached(|| task.is_finished()).await;
             assert_eq!(task.await.unwrap(), Ok(PublishOutcome::AlreadyPresent));
         }
     }
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn post_put_cpu_timeout_is_ambiguous_never_capacity() {
         let store = Arc::new(
             RawRecordStore::new(
@@ -370,9 +390,18 @@ mod review_regressions {
         );
         let s = store.clone();
         let task = crate::observability::spawn(async move { s.publish(record()).await });
-        store.transport.started.notified().await;
+        phase_reached(|| store.transport.object.lock().unwrap().is_some()).await;
         let held = store.cpu.clone().acquire_owned().await.unwrap();
         store.transport.reply.notify_one();
+        phase_reached(|| store.transport.gets.load(Ordering::SeqCst) == 1).await;
+        assert_eq!(store.buffers.available_permits(), store.limits.io - 1);
+        assert!(
+            !task.is_finished(),
+            "decode must still be waiting for the held CPU permit"
+        );
+        // The intended timeout starts only after GET and CPU-wait are proven.
+        // No product deadline is extended; this store still has the same100ms.
+        tokio::time::advance(std::time::Duration::from_millis(101)).await;
         assert_eq!(task.await.unwrap(), Err(Error::Ambiguous));
         assert!(
             store.transport.object.lock().unwrap().is_some(),

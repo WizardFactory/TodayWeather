@@ -635,3 +635,10 @@ async function run() {
 }
 run().catch(e => { console.error(e.stack); process.exit(1); });
 ```
+
+
+## Current a6 renewal (2026-10-20, build23)
+
+This fixture was renewed from the qualified full22 kma capture at `a6fdf1f4d1f869d63c5310646003967571dac6e2`. Two independent captures had identical raw and gzip bytes, with no same-base comparison exclusions. SHA-256: `6899cf4f6b53c347f2d0c118887c3b36db73427272a0818c23698f15313f58ba`. Previous fixture SHA-256: `35021a0384f40af09664c319e2b48c066c2fab77e9bec7d489c87992e4fcbd04`; original bytes remain in local ignored build23 evidence. Original request cases and clocks are retained.
+
+The old/current comparison excluded only `/source/files`; 880 rows across all five corpora were classified. New legacy stored-air forecast/history/station metadata are intentional current-reference behavior and require native alignment; old/current semantic equivalence is not claimed. Empty optional narrative lookups do not cover present narrative content. Requesttrace arpltn result preimages and two backend body preimages were not retained by the original recorder. Full22 terminal/capture success does not qualify live providers, Linux or production capacity.

@@ -56,6 +56,11 @@ impl From<String> for StoreError {
         }
     }
 }
+impl From<super::ejson::DecodeError> for StoreError {
+    fn from(_: super::ejson::DecodeError) -> Self {
+        STORAGE_FAILURE.to_owned().into()
+    }
+}
 pub(crate) type StoreResult = Result<Val, StoreError>;
 
 /// Store calls the handlers make; implemented over a transaction and, for the response after a
@@ -470,16 +475,19 @@ impl Backend for TxnBackend<'_, '_> {
         if let Some(conflict) = mongoose::set_conflict(&set) {
             return Err(conflict.into());
         }
-        let found = self.txn.find(Coll::Alarm, &query);
+        let found = self.txn.find(Coll::Alarm, &query)?;
         if let Some(n) = found.first() {
-            let mut record = self.txn.get(Coll::Alarm, *n).expect("found record");
+            let mut record = self
+                .txn
+                .get(Coll::Alarm, *n)?
+                .ok_or(super::ejson::DecodeError("missing record"))?;
             let before = record.doc.clone();
             mongoose::apply_set(&mut record.doc, &set);
             if let Some(e) = mongoose::geo_index_error(&record.doc) {
                 return Err(e.into());
             }
             let modified = !super::store::same_doc(&before, &record.doc);
-            self.txn.put(Coll::Alarm, *n, record);
+            self.txn.put(Coll::Alarm, *n, record)?;
             return Ok(write_result(1, usize::from(modified), None));
         }
         // Upsert: _id, the query's equality fields, `$setOnInsert: {__v: 0}`, then `$set`.
@@ -495,13 +503,13 @@ impl Backend for TxnBackend<'_, '_> {
         if let Some(e) = mongoose::geo_index_error(&doc) {
             return Err(e.into());
         }
-        self.txn.insert(Coll::Alarm, Record { oid, doc });
+        self.txn.insert(Coll::Alarm, Record { oid, doc })?;
         Ok(write_result(1, 0, Some(oid_hex(&oid))))
     }
     fn upsert_alert(&mut self, info: &Obj) -> StoreResult {
         let query =
             cast_query(Coll::Alert, &key_filter(info)).map_err(|e| StoreError::from(e.message))?;
-        let found = self.txn.find(Coll::Alert, &query);
+        let found = self.txn.find(Coll::Alert, &query)?;
         let Some(n) = found.first() else {
             let oid = self.txn.new_oid();
             let (doc, json) = mongoose::new_document(Coll::Alert, info, oid)
@@ -509,7 +517,7 @@ impl Backend for TxnBackend<'_, '_> {
             if let Some(e) = mongoose::geo_index_error(&doc) {
                 return Err(e.into());
             }
-            self.txn.insert(Coll::Alert, Record { oid, doc });
+            self.txn.insert(Coll::Alert, Record { oid, doc })?;
             return Ok(Val::Obj(json));
         };
         let set = cast_set(Coll::Alert, info, false)
@@ -522,7 +530,10 @@ impl Backend for TxnBackend<'_, '_> {
                 message,
                 result: update_default(),
             })?;
-        let mut record = self.txn.get(Coll::Alert, *n).expect("found record");
+        let mut record = self
+            .txn
+            .get(Coll::Alert, *n)?
+            .ok_or(super::ejson::DecodeError("missing record"))?;
         let before = record.doc.clone();
         mongoose::apply_set(&mut record.doc, &set);
         if let Some(message) = mongoose::geo_index_error(&record.doc) {
@@ -532,7 +543,7 @@ impl Backend for TxnBackend<'_, '_> {
             });
         }
         let modified = !super::store::same_doc(&before, &record.doc);
-        self.txn.put(Coll::Alert, *n, record);
+        self.txn.put(Coll::Alert, *n, record)?;
         Ok(write_result(1, usize::from(modified), None))
     }
     fn update_token(&mut self, c: Coll, kind: &str, new: &Val, old: &Val) -> StoreResult {
@@ -541,24 +552,27 @@ impl Backend for TxnBackend<'_, '_> {
         let mut set_obj = Obj::new();
         set_obj.set(kind, new.clone());
         let set = cast_set(c, &set_obj, false).map_err(|e| StoreError::from(e.message))?;
-        let found = self.txn.find(c, &query);
+        let found = self.txn.find(c, &query)?;
         let mut modified = 0;
         for n in &found {
-            let mut record = self.txn.get(c, *n).expect("found record");
+            let mut record = self
+                .txn
+                .get(c, *n)?
+                .ok_or(super::ejson::DecodeError("missing record"))?;
             let before = record.doc.clone();
             mongoose::apply_set(&mut record.doc, &set);
             if !super::store::same_doc(&before, &record.doc) {
                 modified += 1;
             }
-            self.txn.put(c, *n, record);
+            self.txn.put(c, *n, record)?;
         }
         Ok(write_result(found.len(), modified, None))
     }
     fn remove(&mut self, c: Coll, filter: &[(String, Val)]) -> StoreResult {
         let query = cast_query(c, filter).map_err(|e| StoreError::from(e.message))?;
-        let found = self.txn.find(c, &query);
+        let found = self.txn.find(c, &query)?;
         for n in &found {
-            self.txn.remove(c, *n);
+            self.txn.remove(c, *n)?;
         }
         Ok(remove_result(found.len()))
     }

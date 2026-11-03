@@ -33,6 +33,8 @@ function KmaWarningRequester(options) {
     this.request = options.request || req;
     this.baseUrl = options.baseUrl || BASE_URL;
     this.keyIndex = 0;
+    this.strict = options.strict === true;
+    this.timeoutMs = options.timeoutMs || TIMEOUT_MS;
 }
 
 KmaWarningRequester.candidateKeys = candidateKeys;
@@ -57,8 +59,9 @@ function makeError(operation, message, fields) {
     return err;
 }
 
-function codeError(operation, code, statusCode, message) {
-    return makeError(operation, 'code=' + code + (statusCode ? ' status=' + statusCode : '') + (message ? ' ' + message : ''), {
+function codeError(operation, code, statusCode) {
+    code = /^(?:[0-9]{1,3}|unparsed|noheader|http)$/.test(String(code)) ? String(code) : 'invalid';
+    return makeError(operation, 'code=' + code + (statusCode ? ' status=' + statusCode : ''), {
         returnCode: code,
         statusCode: statusCode,
         isAuthError: rejection.isAuth(statusCode, code),
@@ -88,7 +91,7 @@ KmaWarningRequester.prototype.classify = function (operation, statusCode, body) 
     }
     if (body && body.OpenAPI_ServiceResponse && body.OpenAPI_ServiceResponse.cmmMsgHeader) {
         var gateway = body.OpenAPI_ServiceResponse.cmmMsgHeader;
-        return {error: codeError(operation, String(gateway.returnReasonCode), statusCode, gateway.errMsg)};
+        return {error: codeError(operation, String(gateway.returnReasonCode), statusCode)};
     }
     if (!body || !body.response || !body.response.header) {
         return {error: codeError(operation, 'noheader', statusCode)};
@@ -97,8 +100,8 @@ KmaWarningRequester.prototype.classify = function (operation, statusCode, body) 
     if (resultCode === '03') {
         return {noData: true};
     }
-    if (resultCode !== '00' && resultCode !== '0') {
-        return {error: codeError(operation, resultCode, statusCode, body.response.header.resultMsg)};
+    if (resultCode !== '00' && (this.strict || resultCode !== '0')) {
+        return {error: codeError(operation, resultCode, statusCode)};
     }
     if (statusCode >= 400) {
         return {error: codeError(operation, 'http', statusCode)};
@@ -128,13 +131,17 @@ KmaWarningRequester.prototype.get = function (operation, params, callback) {
 
     function attempt() {
         var index = (start + offset) % keyCount;
-        self.request(self.buildUrl(operation, params, self.keys[index]), {timeout: TIMEOUT_MS, json: true},
-            function (err, response, body) {
+        var settled = false, handle, deadline;
+        function receive(err, response, body) {
+                if (settled) { return; }
+                settled = true;
+                if (deadline) { clearTimeout(deadline); }
                 if (err) {
-                    return callback(makeError(operation, err.code || err.message, {cause: err.message}));
+                    return callback(makeError(operation, 'transport failure'));
                 }
+                if (!response) { return callback(makeError(operation, 'missing HTTP response')); }
                 var result = self.classify(operation, response.statusCode, body);
-                if (!result.error && response.statusCode >= 400) {
+                if (!result.error && (response.statusCode >= 400 || (self.strict && response.statusCode !== 200))) {
                     result = {error: codeError(operation, 'http', response.statusCode)};
                 }
                 if (result.error) {
@@ -149,7 +156,15 @@ KmaWarningRequester.prototype.get = function (operation, params, callback) {
                     self.keyIndex = index;
                 }
                 callback(null, result);
-            });
+        }
+        if (self.strict) {
+            deadline = setTimeout(function () {
+                receive(new Error('deadline'));
+                if (handle && handle.abort) { handle.abort(); }
+            }, self.timeoutMs);
+        }
+        handle = self.request(self.buildUrl(operation, params, self.keys[index]),
+            {timeout: self.timeoutMs, json: true, followRedirect: !self.strict}, receive);
     }
     attempt();
 };

@@ -3,6 +3,7 @@
 //! body-parser and Mongoose 5.1.2 contracts, server2-owned ordered state that is durable in S3
 //! before a success answer (journal + snapshots) and restored after memory loss, and the
 //! one-time copy of the legacy registrations (`migrate`). Delivery is not part of S18a.
+pub(crate) mod attempt;
 pub mod deliver;
 pub mod durable;
 pub mod ejson;

@@ -215,11 +215,11 @@ async function domesticCases(){
 }
 
 let worldHarness;
-function world(version){
+function world(version,bodyFor,options){
     now='2026-09-26T07:04:30.000Z';
-    if(!worldHarness)worldHarness=harnessModule(path.join(__dirname,'vc-weather-smoke.js'),{oracleTranslate:translate('en')},code=>{assert(code.includes('__: s => s'));return code.replace('__: s => s','__: oracleTranslate');});
+    if(!worldHarness)worldHarness=harnessModule(path.join(__dirname,'vc-weather-smoke.js'),{oracleTranslate:translate('en')},code=>{assert(code.includes('__: s => s'));return code.replace('__: s => s','__: oracleTranslate').replace('module.exports = {createHarness,','module.exports = {__realmError: Error, createHarness,');});
     worldHarness.setNow(RealDate.parse(now));
-    const h=worldHarness.createHarness();
+    const h=worldHarness.createHarness(bodyFor,options);
     const file=version==='v000901'?'route.dsf.coord.js':'route.dsf.coord.'+version+'.js';
     const handler='server/routes/'+version+'/'+file;
     return {h,router:h.load(path.join(root,handler)),handler};
@@ -422,9 +422,46 @@ async function healthCases(){
     for(const method of ['GET','HEAD']){const r=await capture('health-'+method,null,'server/app.js',app,{method,path:'/health'},{baseline_scope:'supplementary operational health, outside19 product groups'});assert.equal(r.status,200);assert.equal(r.raw.toString(),method==='GET'?'OK':'');}
 }
 
-async function main(){await domesticCases();await worldCases();await gatewayCases();await nationCases();await pushCases();await warningCases();await healthCases();
+// S20d: the exact retained widget route; explicit supplement, never folded into19 counts.
+async function widgetCases(){
+    world('v000901');
+    const paths=[['widget-tokyo','/ww/010000/current/2?gcode=35.68,139.76'],
+        ['widget-units','/ww/010000/current/2?gcode=35.68,139.76&temperatureUnit=F&windSpeedUnit=mph'],
+        ...['ko','ja','zh-CN'].map(lang=>['widget-locale-'+lang,'/ww/010000/current/2?gcode=35.68,139.76']),
+        ['widget-air','/ww/010000/current/2?gcode=35.68,139.76'],
+        ['widget-missing','/ww/010000/current/2'],
+        ['widget-malformed','/ww/010000/current/2?gcode=35.68'],
+        ['widget-invalid-version','/ww/999999/current/2?gcode=35.68,139.76'],
+        ['widget-provider-401','/ww/010000/current/2?gcode=35.68,139.76'],
+        ['widget-provider-500','/ww/010000/current/2?gcode=35.68,139.76']];
+    for(const [id,url] of paths){
+        const fail=id==='widget-provider-401'?401:id==='widget-provider-500'?500:0;
+        const bodyFor=fail?()=>{const e=new worldHarness.__realmError('owned synthetic provider failure');e.statusCode=fail;if(fail===401)e.providerDown=true;return e;}:undefined;
+        let airBody;
+        const options={};
+        if(id==='widget-air'){
+            airBody=airHarness.fixture('waqi-seoul');
+            airBody.data.time={iso:'2026-09-26T07:00:00Z'};
+            airBody.data.city.geo=[35.69,139.77];
+            options.keyString={aqi_keys:[{key:'world-waqi-token-0001'}]};
+            options.packages={axios:{get:url=>{assert(url.startsWith('https://api.waqi.info/feed/geo:'));return Promise.resolve({status:200,data:clone(airBody)});}}};
+        }
+        const {h}=world('v000901',bodyFor,options); const handler='server/routes/worldweather/routeWeather.js';
+        const app=appFor(h.load(path.join(root,handler)),'/ww');
+        const input={path:url};if(id.startsWith('widget-locale-'))input.headers={'accept-language':id.slice('widget-locale-'.length)};
+        const r=await capture(id,null,handler,app,input,{baseline_scope:'AK accepted native widget supplement; volume unknown',dependency_trace:{provider:'recorded Visual Crossing, isolated air/store',calls:h.providerCalls,...(airBody?{air_body:airBody}:{})}});
+        if(id==='widget-provider-401'){await capture('widget-provider-down-backoff',null,handler,app,{path:url},{dependency_trace:{provider:'same401failure; repeat within provider-down window',calls:h.providerCalls}});}
+        if(id==='widget-tokyo'){
+            assert.equal(r.status,200);const b=JSON.parse(r.raw);assert(b.thisTime&&b.daily&&b.hourly);assert.equal(b.thisTime[1].t1h,undefined);
+            const tag=Object.fromEntries(r.headers).etag;
+            await capture('widget-304',null,handler,app,{path:url,headers:{'if-none-match':tag}});
+            await capture('widget-head',null,handler,app,{path:url,method:'HEAD'});
+        }
+    }
+}
+async function main(){if(process.argv.includes('--widget-only')){await widgetCases();}else{await domesticCases();await worldCases();await gatewayCases();await nationCases();await pushCases();await warningCases();await healthCases();}
     const dependencies={};for(const name of ['express','express-session','cors','body-parser','cookie-parser','i18n','async','sprintf','xml2js'])dependencies[name]=require(name+'/package.json').version;
-    const record={schema:1,inventory,source:{revision:baseRevision,oracle_sha256:sha(rawRead(__filename)),dependency_lock_sha256:sha(rawRead(path.join(root,'server2/tools/golden/package-lock.json'))),files:Object.fromEntries(Object.entries(sourceFiles).sort())},runtime:{node:process.version,dependencies},
+    const record={schema:1,inventory,source:{revision:process.argv.includes('--widget-only')?'82f7a4838dda046be966ee9c25c9cb66561d099d':baseRevision,oracle_sha256:sha(rawRead(__filename)),dependency_lock_sha256:sha(rawRead(path.join(root,'server2/tools/golden/package-lock.json'))),files:Object.fromEntries(Object.entries(sourceFiles).sort())},runtime:{node:process.version,dependencies},
         normalization:{date:'Explicit fixed per-scenario Date header; Node HTTP cached Date does not use VM Date',session:'Fixed generated session identity and expiry clock',excluded_headers:[]},
         approved_future_differences:['D02 server2 push sends do not automatically retry failure/unknown outcomes; legacy baseline retained','D03 no legacy registration migration; not a wire baseline rewrite'],
         backend_coverage:[...coverage].sort(),network,cases};

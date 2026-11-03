@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Proposed process-owned warning acquisition",
+    "output": "docs/architecture/diagrams/server2-warning-acquisition.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1500,
+      850
+    ],
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "d0c268a4daad39e41aa924567649f8211773838f",
+      "link_mode": "local-only"
+    }
+  },
+  "participants": [
+    {
+      "id": "process",
+      "type": "backend",
+      "label": "Bound process",
+      "sources": [
+        {
+          "path": "server2/src/process.rs",
+          "line": 112,
+          "end_line": 160
+        }
+      ]
+    },
+    {
+      "id": "driver",
+      "type": "backend",
+      "label": "Timer / request",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 928,
+          "end_line": 933
+        }
+      ]
+    },
+    {
+      "id": "flight",
+      "type": "backend",
+      "label": "Source admission",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 1122,
+          "end_line": 1142
+        },
+        {
+          "path": "server2/src/resolver/owned.rs",
+          "line": 152,
+          "end_line": 186
+        }
+      ]
+    },
+    {
+      "id": "lane",
+      "type": "backend",
+      "label": "Cycle lane",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 1143,
+          "end_line": 1158
+        }
+      ]
+    },
+    {
+      "id": "collector",
+      "type": "external",
+      "label": "Native collector",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/fetch.rs",
+          "line": 241,
+          "end_line": 255
+        }
+      ]
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "Store + feed",
+      "sources": [
+        {
+          "path": "server2/src/runtime_services.rs",
+          "line": 69,
+          "end_line": 110
+        }
+      ]
+    },
+    {
+      "id": "cache",
+      "type": "database",
+      "label": "Source cache",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 1146,
+          "end_line": 1150
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 140,
+      "to": 490,
+      "label": "One source, existing admission"
+    },
+    {
+      "from": 510,
+      "to": 750,
+      "label": "Explicit process stop"
+    }
+  ],
+  "messages": [
+    {
+      "id": "acq-1",
+      "from": "process",
+      "to": "driver",
+      "label": "push: start after both binds",
+      "y": 160,
+      "variant": "emphasis"
+    },
+    {
+      "id": "acq-2",
+      "from": "driver",
+      "to": "flight",
+      "label": "same source; waiter <=3s",
+      "y": 190,
+      "variant": "default"
+    },
+    {
+      "id": "acq-3",
+      "from": "flight",
+      "to": "lane",
+      "label": "admit; own lease before poll",
+      "y": 230,
+      "variant": "emphasis"
+    },
+    {
+      "id": "acq-4",
+      "from": "lane",
+      "to": "collector",
+      "label": "spawn; keep actual abort handle",
+      "y": 270,
+      "variant": "default"
+    },
+    {
+      "id": "acq-5",
+      "from": "flight",
+      "to": "driver",
+      "label": "Pending does not cancel collection",
+      "y": 310,
+      "variant": "return"
+    },
+    {
+      "id": "acq-6",
+      "from": "collector",
+      "to": "store",
+      "label": "acknowledge S12 before feed",
+      "y": 350,
+      "variant": "default"
+    },
+    {
+      "id": "acq-7",
+      "from": "collector",
+      "to": "cache",
+      "label": "Ok: existing source invalidation",
+      "y": 390,
+      "variant": "default"
+    },
+    {
+      "id": "acq-8",
+      "from": "collector",
+      "to": "lane",
+      "label": "future ends; last lease drops",
+      "y": 430,
+      "variant": "return"
+    },
+    {
+      "id": "acq-9",
+      "from": "driver",
+      "to": "flight",
+      "label": "next wake follows 180s memo",
+      "y": 470,
+      "variant": "default"
+    },
+    {
+      "id": "acq-10",
+      "from": "process",
+      "to": "lane",
+      "label": "close request + timer admission",
+      "y": 530,
+      "variant": "emphasis"
+    },
+    {
+      "id": "acq-11",
+      "from": "process",
+      "to": "driver",
+      "label": "stop periodic driver",
+      "y": 570,
+      "variant": "default"
+    },
+    {
+      "id": "acq-12",
+      "from": "process",
+      "to": "lane",
+      "label": "drain inside existing process bound",
+      "y": 610,
+      "variant": "default"
+    },
+    {
+      "id": "acq-13",
+      "from": "lane",
+      "to": "collector",
+      "label": "timeout / Drop: request abort",
+      "y": 650,
+      "variant": "emphasis"
+    },
+    {
+      "id": "acq-14",
+      "from": "collector",
+      "to": "lane",
+      "label": "signal after provider future drops",
+      "y": 690,
+      "variant": "return"
+    },
+    {
+      "id": "acq-15",
+      "from": "lane",
+      "to": "process",
+      "label": "stopped or incomplete; not success",
+      "y": 730,
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Selected proposal, not implementation",
+      "items": [
+        "Existing hooks are pinned at d0c268a4. A private cycle lane and process timer are proposed; no C5 runtime check has run.",
+        "Three independent sketches, two actual providers and a fresh judge informed selection. Remaining implementation gates are not waived."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Admission and clocks stay bounded",
+      "items": [
+        "Reuse source64/8192 pool, Attempts180s and request wait<=3s. The collector can outlive outer600s tracking, as before.",
+        "Memo-driven wakeup avoids fixed-interval jitter. Local fallback never bypasses provider funding, attempts or overlap."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Stop and uncertainty",
+      "items": [
+        "Prebuild the running lease; never drop it inside a watch write lock. Verify provider destruction before completion is signaled.",
+        "Stop guard aborts actual inner work on deadline/drop. Async cancellation is not synchronous join; incomplete drain stays Unknown. Existing5s/34s budgets and log schema remain."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Publication and remaining evidence",
+      "items": [
+        "Source/public warning services are distinct. Keep source invalidation only; no new cache-generation or shared-memory guarantee.",
+        "Silent initial baselines remain. No-HTTP feed-event smoke needs an explicit quiet durable baseline plus a new provider publication; it does not prove initial delivery.",
+        "Private protocol tests, owned process CLI, current source review/CI and placement still precede pre-merge. No live calls, sends, merge, deployment or global closure."
+      ]
+    }
+  ]
+}

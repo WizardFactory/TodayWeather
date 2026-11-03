@@ -88,7 +88,7 @@ async fn main() {
         panic!("expected published weather data");
     };
     assert_eq!(raw.attempts, 2);
-    println!("cold: both candidates pre-funded; quota XML rotated key; 2 HTTP total");
+    println!("cold: each selected attempt funded; quota XML rotated key; 2 HTTP total");
     let record = RawRecord::new(
         "kma",
         "current",
@@ -126,9 +126,18 @@ async fn main() {
     );
     println!("caller publication: raw body + complete S06 group; fresh S3 lookup matches bytes");
     executor
-        .execute(provider.clone(), vec![candidate(a, "first")], deadline())
+        .execute(
+            provider.clone(),
+            vec![candidate(a.clone(), "first")],
+            deadline(),
+        )
         .await
         .unwrap();
+    // The warm request used A's remaining block unit. Explicitly issue and
+    // abandon the final block so replacement exhaustion is real under the
+    // selected-attempt policy; issued capacity is never refunded.
+    drop(a.reserve(2, deadline()).await.unwrap());
+    drop(a);
     let replacement = store(endpoint, p);
     assert!(matches!(
         executor

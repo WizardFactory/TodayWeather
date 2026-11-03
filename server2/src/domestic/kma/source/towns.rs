@@ -48,8 +48,8 @@ fn truthy(v: &Value) -> bool {
         _ => true,
     }
 }
-/// The transient newTown before Mongo save/casting, from convertGeocode's typed coordinates.
-/// Coordinates are cloned as strings or numbers; numeric comparison must not normalize them.
+/// The transient newTown from convertGeocode, including legacy's in-Korea Number conversion.
+/// The outside-Korea early return retains the provider's original coordinate primitives.
 pub fn added_town(converted: &Value, names: &Value, list: &[Value]) -> Value {
     let mut town = json!({
         "gCoord": {"lat": converted["lat"], "lon": converted["lon"]},
@@ -61,6 +61,8 @@ pub fn added_town(converted: &Value, names: &Value, list: &[Value]) -> Value {
     if !((32.6942..=39.3769).contains(&lat) && (123.9523..=131.88).contains(&lon)) {
         return town;
     }
+    town["gCoord"]["lat"] = json!(lat);
+    town["gCoord"]["lon"] = json!(lon);
     // Legacy breaks at the first matching grid even if it has no areaNo, then tries the
     // first matching region/city. It does not search later matching rows for a better value.
     let grid = list.iter().find(|row| {

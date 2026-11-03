@@ -1,0 +1,206 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Proposed native forecast narrative workflow",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/server2-forecast-narrative.html",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "9333d196846b1c04989b36128d3a7e06f74aa927",
+      "provider": "github"
+    }
+  },
+  "lanes": [
+    {
+      "id": "acquire",
+      "label": "Background acquisition and immutable originals"
+    },
+    {
+      "id": "serve",
+      "label": "Optional response enrichment"
+    }
+  ],
+  "mainPath": [
+    "request",
+    "read",
+    "attach",
+    "reply"
+  ],
+  "nodes": [
+    {
+      "id": "poll",
+      "lane": "acquire",
+      "col": 0,
+      "type": "backend",
+      "label": "Background cycle",
+      "sublabel": "Proposed native owner",
+      "width": 180,
+      "sources": [
+        {
+          "path": "server/lib/kmaForecastNarrative.js",
+          "line": 15,
+          "label": "Accepted legacy contract"
+        }
+      ]
+    },
+    {
+      "id": "fetch",
+      "lane": "acquire",
+      "col": 1,
+      "type": "cloud",
+      "label": "Funded KMA",
+      "sublabel": "Ten offices; no HTTP trigger",
+      "width": 180,
+      "sources": [
+        {
+          "path": "server/lib/kmaForecastNarrative.js",
+          "line": 23,
+          "label": "Accepted legacy contract"
+        }
+      ]
+    },
+    {
+      "id": "validate",
+      "lane": "acquire",
+      "col": 2,
+      "type": "security",
+      "label": "Validate publication",
+      "sublabel": "Office, KST minute, 24 hours",
+      "width": 180,
+      "sources": [
+        {
+          "path": "server/lib/kmaForecastNarrative.js",
+          "line": 29,
+          "label": "Accepted legacy contract"
+        }
+      ]
+    },
+    {
+      "id": "commit",
+      "lane": "acquire",
+      "col": 3,
+      "type": "database",
+      "label": "Immutable commit",
+      "sublabel": "First office/publication wins",
+      "width": 180,
+      "sources": [
+        {
+          "path": "server/lib/kmaForecastNarrative.js",
+          "line": 53,
+          "label": "Accepted legacy contract"
+        }
+      ]
+    },
+    {
+      "id": "request",
+      "lane": "serve",
+      "col": 0,
+      "type": "frontend",
+      "label": "Weather request",
+      "sublabel": "Existing native assembly",
+      "width": 180,
+      "sources": [
+        {
+          "path": "server/lib/kmaForecastNarrative.js",
+          "line": 83,
+          "label": "Accepted legacy contract"
+        }
+      ]
+    },
+    {
+      "id": "read",
+      "lane": "serve",
+      "col": 1,
+      "type": "database",
+      "label": "Optional stored read",
+      "sublabel": "No provider acquisition",
+      "width": 180,
+      "sources": [
+        {
+          "path": "server/lib/kmaForecastNarrative.js",
+          "line": 83,
+          "label": "Accepted legacy contract"
+        }
+      ]
+    },
+    {
+      "id": "attach",
+      "lane": "serve",
+      "col": 2,
+      "type": "backend",
+      "label": "Attach fresh prose",
+      "sublabel": "Matching office only",
+      "width": 180,
+      "sources": [
+        {
+          "path": "server/lib/kmaForecastNarrative.js",
+          "line": 99,
+          "label": "Accepted legacy contract"
+        }
+      ]
+    },
+    {
+      "id": "reply",
+      "lane": "serve",
+      "col": 3,
+      "type": "frontend",
+      "label": "Weather response",
+      "sublabel": "Cache capped by expiry",
+      "width": 180,
+      "sources": [
+        {
+          "path": "server/lib/kmaForecastNarrative.js",
+          "line": 103,
+          "label": "Accepted legacy contract"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "poll",
+      "to": "fetch"
+    },
+    {
+      "from": "fetch",
+      "to": "validate"
+    },
+    {
+      "from": "validate",
+      "to": "commit"
+    },
+    {
+      "from": "request",
+      "to": "read"
+    },
+    {
+      "from": "read",
+      "to": "attach"
+    },
+    {
+      "from": "attach",
+      "to": "reply"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Native implementation decision",
+      "items": [
+        "Separate process-owned worker; first tick delayed, cancellation joined.",
+        "Existing raw/index S3 stores originals; no Mongo or legacy runtime asset.",
+        "Design is proposed; cited legacy bytes define the accepted contract."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Failure boundaries",
+      "items": [
+        "Malformed, future, expired or unavailable prose is omitted.",
+        "Weather/air and warning/push state stay independent.",
+        "This diagram does not qualify production or authorize a switch."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "task": "DeliveryCohort2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "C2 typed definite no-POST alert-state compensation only, stacked on child lateness PR2826; preserve newer/user state, durableclaims, actualsend no-retry and schema. No live/merge/production authority.",
+  "server2_paths": [
+    "server2/config/tasks/DeliveryCohort2819.json",
+    "server2/src/push/attempt.rs",
+    "server2/src/push/mod.rs",
+    "server2/src/push/store.rs",
+    "server2/src/push/durable.rs",
+    "server2/src/push/service.rs",
+    "server2/src/push/deliver/alerts.rs",
+    "server2/src/push/deliver/ops.rs",
+    "server2/tests/delivery.rs",
+    "server2/tests/delivery/cohort.rs",
+    "server2/examples/delivery_cohort_smoke.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2819-delivery-cohort.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, admitted-cohort/compensation flow, operator verification and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2819-delivery-cohort.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, admitted-cohort/compensation flow, operator verification and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2819-delivery-cohort.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, admitted-cohort/compensation flow, operator verification and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2614.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, admitted-cohort/compensation flow, operator verification and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, admitted-cohort/compensation flow, operator verification and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, admitted-cohort/compensation flow, operator verification and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-delivery-cohort.sequence.json",
+      "category": "documentation",
+      "reason": "Maintain task contract, admitted-cohort/compensation flow, operator verification and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-delivery-cohort.html",
+      "category": "documentation",
+      "reason": "Maintain task contract, admitted-cohort/compensation flow, operator verification and selected evidence; no runtime implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2819-delivery-cohort/verification.md",
+      "category": "documentation",
+      "reason": "Maintain task contract, admitted-cohort/compensation flow, operator verification and selected evidence; no runtime implementation outside server2"
+    }
+  ]
+}

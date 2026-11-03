@@ -2,22 +2,22 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "S20b supervised runtime lifecycle",
+    "title": "Complete-native startup and shared services",
     "output": "docs/architecture/diagrams/server2-runtime-services.html",
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "411eb9a8af1aa08a7dc91a343cb17ea4c8ebc874"
+      "revision": "f6b69e8387b491bc2afc93129570a13272c66edb"
     }
   },
   "components": [
     {
       "id": "process",
       "type": "backend",
-      "label": "Process + factory",
-      "sublabel": "HTTP-only 5s; push-owned drain 34s",
+      "label": "Entry + shared factory",
+      "sublabel": "Coverage first; then local accounts",
       "pos": [
-        40,
+        440,
         245
       ],
       "size": [
@@ -26,16 +26,19 @@
       ],
       "sources": [
         {
-          "path": "server2/src/process.rs",
-          "line": 83
+          "path": "server2/src/main.rs",
+          "line": 12,
+          "end_line": 25
+        },
+        {
+          "path": "server2/src/startup.rs",
+          "line": 1,
+          "end_line": 36
         },
         {
           "path": "server2/src/runtime_services.rs",
-          "line": 116
-        },
-        {
-          "path": "server2/src/process.rs",
-          "line": 145
+          "line": 64,
+          "end_line": 85
         }
       ]
     },
@@ -43,9 +46,9 @@
       "id": "writer",
       "type": "backend",
       "label": "Registration writer",
-      "sublabel": "Quiesce HTTP; close / join / abort",
+      "sublabel": "Restored state + open receiver",
       "pos": [
-        40,
+        440,
         25
       ],
       "size": [
@@ -55,7 +58,13 @@
       "sources": [
         {
           "path": "server2/src/push/service.rs",
-          "line": 224
+          "line": 224,
+          "end_line": 250
+        },
+        {
+          "path": "server2/src/push/service.rs",
+          "line": 255,
+          "end_line": 259
         }
       ]
     },
@@ -63,9 +72,9 @@
       "id": "jobs",
       "type": "backend",
       "label": "Owned delivery jobs",
-      "sublabel": "UTC alarm/alerts; silent warning baseline",
+      "sublabel": "Warning task ID owns the poll slot",
       "pos": [
-        430,
+        830,
         245
       ],
       "size": [
@@ -75,17 +84,18 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/supervisor.rs",
-          "line": 48
+          "line": 34,
+          "end_line": 111
         }
       ]
     },
     {
       "id": "fcm",
       "type": "backend",
-      "label": "OAuth + FCM client",
-      "sublabel": "Lazy product files; final stop check",
+      "label": "Parsed accounts + OAuth",
+      "sublabel": "TW required; configured TA checked",
       "pos": [
-        900,
+        1300,
         245
       ],
       "size": [
@@ -95,7 +105,13 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/fcm.rs",
-          "line": 261
+          "line": 197,
+          "end_line": 220
+        },
+        {
+          "path": "server2/src/push/deliver/fcm.rs",
+          "line": 299,
+          "end_line": 352
         }
       ]
     },
@@ -105,7 +121,7 @@
       "label": "Shared native services",
       "sublabel": "Typed fetch + WarningStore / feed",
       "pos": [
-        430,
+        830,
         480
       ],
       "size": [
@@ -115,15 +131,13 @@
       "sources": [
         {
           "path": "server2/src/runtime_services.rs",
-          "line": 114
-        },
-        {
-          "path": "server2/src/runtime_services.rs",
-          "line": 145
+          "line": 141,
+          "end_line": 183
         },
         {
           "path": "server2/src/push/deliver/native_fetch.rs",
-          "line": 31
+          "line": 31,
+          "end_line": 56
         }
       ]
     },
@@ -133,7 +147,7 @@
       "label": "Shared bounded S3",
       "sublabel": "State / claims / results / warning data",
       "pos": [
-        40,
+        440,
         480
       ],
       "size": [
@@ -143,11 +157,18 @@
       "sources": [
         {
           "path": "server2/src/runtime_services.rs",
-          "line": 60
+          "line": 76,
+          "end_line": 96
         },
         {
           "path": "server2/src/push/deliver/ledger.rs",
-          "line": 59
+          "line": 64,
+          "end_line": 73
+        },
+        {
+          "path": "server2/src/push/deliver/ledger.rs",
+          "line": 125,
+          "end_line": 159
         }
       ]
     },
@@ -157,7 +178,7 @@
       "label": "Notice GET / HEAD",
       "sublabel": "Read only; no Translator client",
       "pos": [
-        40,
+        440,
         710
       ],
       "size": [
@@ -167,7 +188,39 @@
       "sources": [
         {
           "path": "server2/src/notice/api.rs",
-          "line": 25
+          "line": 24,
+          "end_line": 34
+        }
+      ]
+    },
+    {
+      "id": "warning-api",
+      "type": "backend",
+      "label": "Warning GET / HEAD",
+      "sublabel": "Selected kma; empty data -> 501",
+      "pos": [
+        40,
+        245
+      ],
+      "size": [
+        240,
+        110
+      ],
+      "sources": [
+        {
+          "path": "server2/src/runtime_services.rs",
+          "line": 92,
+          "end_line": 107
+        },
+        {
+          "path": "server2/src/runtime_services.rs",
+          "line": 225,
+          "end_line": 235
+        },
+        {
+          "path": "server2/src/warnings/service.rs",
+          "line": 269,
+          "end_line": 318
         }
       ]
     }
@@ -177,7 +230,7 @@
       "id": "process-writer",
       "from": "process",
       "to": "writer",
-      "label": "quiesce + drain"
+      "label": "validate first; then restore"
     },
     {
       "id": "process-jobs",
@@ -224,15 +277,38 @@
       "from": "notice",
       "to": "s3",
       "label": "read publication"
+    },
+    {
+      "id": "process-warning",
+      "from": "process",
+      "to": "warning-api",
+      "label": "kma GET / HEAD"
+    },
+    {
+      "id": "warning-s3",
+      "from": "warning-api",
+      "to": "s3",
+      "label": "read warning data"
     }
   ],
   "cards": [
     {
       "dot": "cyan",
+      "title": "Production coverage before runtime",
+      "items": [
+        "Without explicit legacy: require all8 native selections and all3 world versions.",
+        "Missing coverage stops before services, state, listeners or providers.",
+        "Explicit coexistence keeps existing origin/provider validation.",
+        "Shared code-injected partial/foundation construction is unchanged.",
+        "AK E2: complete env-only settings allowed without .env; mandatory settings still required."
+      ]
+    },
+    {
+      "dot": "cyan",
       "title": "Scheduling and admission",
       "items": [
-        "Ordinary push selection; no startup weather precollection.",
-        "Observe UTC minutes; reject stale queued ticks, never catch up.",
+        "Push startup parses active TW and configured TA accounts before state work.",
+        "No OAuth / FCM probe at startup; low-level sends retain their error mapping.",
         "After OAuth: current subscription/time/zones and final stop gate."
       ]
     },
@@ -243,6 +319,44 @@
         "Push writer or delivery: shared 34s drain + up to 1s teardown.",
         "Neither present: shared HTTP-only 5s drain + up to 1s teardown.",
         "Long owned acquisitions remain incomplete; durable claims prevent replay."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Public warning boundary",
+      "items": [
+        "Explicit kma selects v000903 special before direct KMA dispatch.",
+        "Internal push / older KMA storage does not expose this public API.",
+        "C5 source-owned acquisition is separate; initial delivery baseline stays silent."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Local validation boundary",
+      "items": [
+        "Absent retired TodayAir is allowed; active TodayWeather is mandatory.",
+        "Parsed accounts stay cached; restart for rotation, no remote-auth proof.",
+        "Disabled push reads no Firebase account settings or files."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Writer availability boundary",
+      "items": [
+        "ready requires restored state and the existing writer receiver to remain open.",
+        "Normal close or writer panic makes availability false; no second task owner.",
+        "Receiver closure can precede drain completion; false is not a writer-join receipt.",
+        "Full readiness endpoint and S3 / credential-source health remain open E3 work."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Warning poll task ownership",
+      "items": [
+        "Only the matching warning job completion or failed join releases its poll slot.",
+        "Alarm or alert failures cannot release live warning work; one JoinSet owns the jobs.",
+        "A pending regular tick may run after completion; stop still blocks new scheduling.",
+        "Original task failure stays incomplete; no failed / unknown send replay or state rewind."
       ]
     }
   ]

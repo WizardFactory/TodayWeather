@@ -1,0 +1,289 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Proposed bounded warning delivery with fresh admission",
+    "output": "docs/architecture/diagrams/server2-warning-fanout.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1200,
+      750
+    ],
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "2e67d146af033ba9dc51a7e86e1a1f79728260b0",
+      "link_mode": "local-only"
+    }
+  },
+  "participants": [
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "Worker + memo",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/warnings.rs",
+          "line": 397,
+          "end_line": 434
+        }
+      ]
+    },
+    {
+      "id": "reads",
+      "type": "backend",
+      "label": "Poll advisory view",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/warnings.rs",
+          "line": 182,
+          "end_line": 188
+        },
+        {
+          "path": "server2/src/push/deliver/warnings.rs",
+          "line": 339,
+          "end_line": 369
+        }
+      ]
+    },
+    {
+      "id": "zones",
+      "type": "database",
+      "label": "Strict S12",
+      "sources": [
+        {
+          "path": "server2/src/warnings/store.rs",
+          "line": 544,
+          "end_line": 596
+        }
+      ]
+    },
+    {
+      "id": "ledger",
+      "type": "database",
+      "label": "One-shot ledger",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/ledger.rs",
+          "line": 63,
+          "end_line": 121
+        }
+      ]
+    },
+    {
+      "id": "journal",
+      "type": "database",
+      "label": "Registration journal",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/warnings.rs",
+          "line": 345,
+          "end_line": 357
+        }
+      ]
+    },
+    {
+      "id": "fcm",
+      "type": "external",
+      "label": "FCM adapter",
+      "sources": [
+        {
+          "path": "server2/src/push/deliver/fcm.rs",
+          "line": 287,
+          "end_line": 313
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 255,
+      "label": "Advisory only"
+    },
+    {
+      "from": 270,
+      "to": 375,
+      "label": "Preserve post-claim check"
+    },
+    {
+      "from": 390,
+      "to": 650,
+      "label": "Fresh guard after own OAuth"
+    }
+  ],
+  "messages": [
+    {
+      "id": "step-1",
+      "from": "worker",
+      "to": "reads",
+      "label": "nonterminal prefilter",
+      "y": 160,
+      "variant": "default"
+    },
+    {
+      "id": "step-2",
+      "from": "reads",
+      "to": "zones",
+      "label": "fresh strict read",
+      "y": 190,
+      "variant": "default"
+    },
+    {
+      "id": "step-3",
+      "from": "zones",
+      "to": "reads",
+      "label": "advisory view",
+      "y": 220,
+      "variant": "return"
+    },
+    {
+      "id": "step-4",
+      "from": "reads",
+      "to": "worker",
+      "label": "active candidate",
+      "y": 250,
+      "variant": "return"
+    },
+    {
+      "id": "step-5",
+      "from": "worker",
+      "to": "ledger",
+      "label": "absent-only claim",
+      "y": 280,
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-6",
+      "from": "ledger",
+      "to": "worker",
+      "label": "Owned / Taken / unavailable",
+      "y": 310,
+      "variant": "return",
+      "note": "Remember Owned/Taken before the next await"
+    },
+    {
+      "id": "step-8",
+      "from": "worker",
+      "to": "zones",
+      "label": "fresh post-claim read",
+      "y": 340,
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-10",
+      "from": "zones",
+      "to": "worker",
+      "label": "active or fail; no OAuth",
+      "y": 370,
+      "variant": "return"
+    },
+    {
+      "id": "step-11",
+      "from": "worker",
+      "to": "fcm",
+      "label": "OAuth preparation",
+      "y": 400,
+      "variant": "default"
+    },
+    {
+      "id": "step-12",
+      "from": "fcm",
+      "to": "worker",
+      "label": "this caller is ready",
+      "y": 430,
+      "variant": "return"
+    },
+    {
+      "id": "step-13",
+      "from": "worker",
+      "to": "zones",
+      "label": "fresh final read; original 4s",
+      "y": 460,
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-15",
+      "from": "zones",
+      "to": "worker",
+      "label": "this caller reads fresh state",
+      "y": 490,
+      "variant": "return"
+    },
+    {
+      "id": "step-16",
+      "from": "worker",
+      "to": "journal",
+      "label": "catch up; select current",
+      "y": 520,
+      "variant": "default"
+    },
+    {
+      "id": "step-17",
+      "from": "journal",
+      "to": "worker",
+      "label": "selection confirmed",
+      "y": 550,
+      "variant": "return"
+    },
+    {
+      "id": "step-18",
+      "from": "worker",
+      "to": "fcm",
+      "label": "if active + live + not stopping",
+      "y": 580,
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-19",
+      "from": "fcm",
+      "to": "worker",
+      "label": "accepted / failed / unknown",
+      "y": 610,
+      "variant": "return"
+    },
+    {
+      "id": "step-20",
+      "from": "worker",
+      "to": "ledger",
+      "label": "result; never release claim",
+      "y": 640,
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Design3 at the pinned base",
+      "items": [
+        "Existing hooks are cited at2e67d146; this is the selected optimization contract, not current-code or execution proof.",
+        "Prior Shared-future prototype passed local checks but its actual batching gain was only132requests; its lifecycle is not selected."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Fresh admission stays per caller",
+      "items": [
+        "One poll advisory view only filters candidates before claims. Post-claim and after-own-OAuth reads are independent fresh strict acquisitions.",
+        "Keep zero OAuth on post-claim state failure, the original four-second final guard, current journal/clock/window and FCM stopping checks. No shared in-flight join, fill timer or detached task."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Local memo; durable authority",
+      "items": [
+        "Only known Owned/Taken physical claim identities enter the bounded memo, before another await. Unavailable is not ownership.",
+        "Full memo falls back to ordinary CAS for new endpoints. Claims never release; actual failed/unknown sends never retry. At most six delivery futures are constructed at once."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Measured scope and remaining gates",
+      "items": [
+        "Actual complete-seed/fixed-clock5000 baseline:195002first S3requests,65001onrepeat; all5000accepted/results.",
+        "Keep the frozen first-pass126000S12 maximum and0repeatendpointwork; simplifiedcandidate must rerun the same harness. These are local fixture bounds, not60day/realhost capacity.",
+        "No globally atomic warning snapshot, newTTL, production/shadow qualification or merge."
+      ]
+    }
+  ]
+}

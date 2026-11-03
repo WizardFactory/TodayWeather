@@ -4,15 +4,52 @@ S20b connects ordinary push selection to supervised alarm, conditional-alert and
 
 ## Select and start
 
+The operational `server2` executable now validates complete API selection before constructing
+services, restoring state or binding listeners. Without an explicit nonempty
+`SERVER2_GATEWAY_LEGACY_URL`, it requires
+`geocode,dsf,kma,kma-v000901,kma-v000902,town,push,notice` and world
+`v000901,v000902,v000903` (the default world selection). Missing a family/version
+fails startup, including missing unversioned weather coverage. Unknown/duplicate family
+entries retain their existing errors. Explicit development coexistence remains supported;
+it does not authorize legacy fallback after cutover. Shared code-injected partial factories
+and the isolated loopback example retain their existing behavior.
+
+AK confirmed the E2 configuration contract: a complete environment-only deployment may
+start without `.env`. Missing required settings fail validation; file absence alone does
+not. Process environment still precedes an optional working-directory `.env`, and invalid
+listener settings retain their prior error precedence. After the pure coverage check,
+existing constructors validate provider/storage/Firebase settings. Selection completeness
+is not provider authorization or readiness; `/health` remains basic liveness.
+See the [startup specification](../../specs/issue-2819-startup-coverage.md) and
+[verification](../evidence/tasks/issue-2819-startup-coverage/verification.md).
+
 `SERVER2_NATIVE_FAMILIES` uses the existing `push` and `notice` entries. Native-only selection needs no legacy URL. Push builds shared native KMA, DSF and geocoder dependencies even when their public weather routes are unselected; existing provider configuration requirements remain. One bounded S3 transport/credential cache serves registrations, delivery claims/results, warning store/feed and notices. Construction performs no weather precollection, OAuth or FCM request. Notice GET/HEAD never instantiates Translator or a paid client.
 
 Workers use typed NativeFetch with logical origin `http://server2.internal`, existing v000902 weather paths, units and full weather Accept-Language. It makes no self HTTP request; SERVICE_SERVER/API_SERVER and legacy forwarding do not select the worker destination. The existing 12-second native HTTP connection lifetime and 9-second registration wait remain.
 
-Both public and private listeners must bind before delivery starts. Alarm and conditional jobs run at the next observed UTC minute; conditional selection remains :07/:17/:35/:50. A delayed wake evaluates the current minute, and a queued tick that became stale is rejected before claim work. Missed minutes are never replayed. Warning polls are serialized every five seconds; the first successful poll establishes a silent baseline. Warning data acquisition stays request driven.
+Both public and private listeners must bind before delivery starts. Alarm and conditional jobs run at the next observed UTC minute; conditional selection remains :07/:17/:35/:50. A delayed wake evaluates the current minute, and a queued tick that became stale is rejected before claim work. Missed minutes are never replayed. Warning polls are serialized every five seconds; the first successful poll establishes a silent baseline. With push selected, the process-owned C5 warning driver and requests share source admission on the existing three-minute cadence; construction stays inert and shutdown fences/drains the inner collector. See the [C5 verification](../evidence/tasks/issue-2819-warning-acquisition/verification.md).
 
-FCM accounts remain lazy per product: `SERVER2_FIREBASE_TODAYWEATHER` and the existing TodayAir setting point to account files. Missing/invalid files fail that product's send, not startup or another product. Retired TodayAir is no new mandatory account. Future deployment readiness must verify the real required files separately before activation. Development uses only synthetic public test-vector keys.
+With `push` selected, `SERVER2_FIREBASE_TODAYWEATHER` must name a readable local service-account JSON with nonempty project/email and a valid PKCS8 RSA key. The factory parses and caches it before shared S3 construction or registration restore/writer. Missing, empty, unreadable or invalid files fail process startup before listener binding or jobs. TodayAir is retired: absent/empty `SERVER2_FIREBASE_TODAYAIR` is allowed; any configured nonempty TodayAir path must also validate. A TodayAir account alone does not satisfy the active TodayWeather requirement. Disabled push reads neither setting nor account file.
+
+There is no startup OAuth/FCM probe. Local parse does not establish remote authorization, key revocation, later file permissions or production readiness. Parsed accounts stay cached until process exit; restart after rotation, as after the first cached send previously. The low-level FCM constructor retains its legacy per-send missing-account classification for existing direct callers. Token refresh, send admission, error mapping and no retries are unchanged. Development uses only synthetic public test-vector keys. See the [C6 verification](../evidence/tasks/issue-2819-push-credentials/verification.md).
+
+Startup currently reports account rejection as the generic `invalid gateway configuration` error; it does not identify the failed setting. Check the required TodayWeather path and any configured TodayAir path, readability and account structure locally. Do not put paths, file contents or key material into a diagnostic report. This diagnosis limit is separate from the before-state startup rejection.
 
 ## Registration, notices and delivery safety
+
+Internal push availability (`PushService::ready`) requires both successful durable restore
+and an open writer receiver. A writer panic, exit or closed queue cannot leave restored
+memory advertised as available for new writer work. Receiver close can happen while
+already accepted commands still drain; false availability is not a completed-join or
+cancellation receipt. The restore flag, writer queue and process stop/drain order are
+unchanged. Delivery guards use the same predicate; this adds no retry, automatic restart,
+state rewind or send policy. Existing HTTP storage-error contracts remain unchanged,
+including push-list's per-item null failure and token-update's 500 storage error.
+
+This E3a fix is internal writer availability only. `/health` remains basic liveness;
+the full E3 readiness endpoint and S3/credential-source health are still open. See the
+[writer specification](../../specs/issue-2819-writer-liveness.md) and
+[selected checks](../evidence/tasks/issue-2819-writer-liveness/verification.md).
 
 Existing registration routes remain `POST /v000705/push`, `PUT`/`DELETE /v000902/push`, and `POST /v000902/push-list`. Preserve existing payloads/language headers. Acknowledgement follows durable journal publication; cold/unavailable storage keeps the route's existing storage-error response. Quiescing rejects new mutations with those responses. Queued writes may settle during drain; an unacknowledged or cancelled write is incomplete and must be reconciled from authoritative S3.
 
@@ -40,8 +77,32 @@ python3 server2/tools/runtime_services_smoke.py \
 
 The tool clears the child environment, loads no dotenv file, and injects owned loopback S3/native/OAuth/FCM peers and synthetic keys through the same production factory/stop code. It exercises public registration/notice/health, scheduled alarm/conditional jobs, silent warning polling, actual TERM/INT/listener failures, queued registration, slow weather/OAuth, final pre-POST guard, in-flight POST/result write, and durable restart/no-replay. Its native test handler uses actual OwnedFlights; an incomplete task's Drop marker proves runtime cancellation. Production endpoint bounds and shared test-peer configuration are unchanged.
 
-See the [S20b verification record](../evidence/tasks/issue-2705-s20b/verification.md), [editable diagram](../architecture/diagrams/server2-runtime-services.json), [interactive diagram](../architecture/diagrams/server2-runtime-services.html) and [PDF manual](server2-runtime-services.pdf). The capture below shows actual isolated usage/results, not device delivery.
+See the [S20b verification record](../evidence/tasks/issue-2705-s20b/verification.md), [editable diagram](../architecture/diagrams/server2-runtime-services.json), [interactive diagram](../architecture/diagrams/server2-runtime-services.html) and [historical PDF snapshot](server2-runtime-services.pdf). The PDF and capture retain their original task scope; later startup, credential and recovery amendments are maintained in this Markdown. The capture below shows actual isolated usage/results, not device delivery.
 
 ![Actual isolated process lifecycle results](../evidence/tasks/issue-2705-s20b/runtime-smoke.png)
 
 CI and eligible independent review are separate exact-head gates. Real providers, AWS/Mongo, device sends, paid translation, deployment/cutover, EC2/quota measurement, seven-day shadow and full S20/#2742 acceptance remain excluded.
+
+
+### Warning delivery poll recovery (E3b)
+
+The delivery supervisor retains the actual warning job ID from its existing JoinSet.
+Only that job's normal completion or failed join releases the warning scheduling slot.
+An alarm or conditional-alert failure cannot release a still-running warning slot.
+After a warning task panic, later regular five-second polling can continue; the original
+failure remains in the drain report. This does not retry failed or unknown notification
+sends, rewind state, or change durable claim/result authority.
+
+The existing missed-tick policy is unchanged. A tick that becomes ready while a warning
+job runs may be consumed immediately after it finishes; this is regular scheduling,
+not evidence of a previously queued duplicate. Stop/quiesce still blocks new scheduling,
+and the same supervisor JoinSet drains or cancels owned work. No watchdog or second owner
+was added. The C5 warning acquisition lease is a different owner and remains unchanged.
+The first successful delivery poll still establishes a silent baseline; this change does
+not qualify warning delivery across deployment or complete the remaining E3 readiness
+endpoint, S3 health or credential-source health work.
+
+Verification uses synthetic owned peers. The test provider now receives graceful shutdown
+and must successfully join before its listener is reported retired. Original parallel
+abort/port-observation failures are retained; a production ownership defect is not inferred
+from those failures. See the [selected E3b evidence](../evidence/tasks/issue-2819-warning-poll-supervision/verification.md).

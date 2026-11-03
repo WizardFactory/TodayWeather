@@ -1,0 +1,8 @@
+{
+  "captured_at_utc": "2026-10-18T15:42:44.879406+00:00",
+  "url": "https://todayweather.wizardfactory.net/v000903/dsf/coord/37.5636,126.983?airForecastSource=kaq&airUnit=airkorea",
+  "source_response_sha256": "5b9aee9f3f8d86593fc3de47de6f89d240a34c264876e184b67bffbd98f03b5a",
+  "retained_projection": "airInfo only, unmodified",
+  "fixture_sha256": "4026954075e5d772f8ba72328bc0e532669fc358d0c7947d4db2cee7a3a2cbd1",
+  "limitation": "Domestic origin/CDN had recovered to AirKorea at capture time. DSF coordinate-provider route supplies the actual current-only OpenWeather airInfo for replay through stale domestic observation middleware. This is not the original October 18 23:57 incident capture."
+}

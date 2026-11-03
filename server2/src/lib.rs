@@ -2,10 +2,12 @@
 pub mod cache;
 pub mod dotenv;
 pub mod listener;
+pub mod narrative;
 pub mod observability;
 pub mod process;
 pub mod resolver;
 pub mod runtime_services;
+pub mod startup;
 pub mod storage;
 use axum::{
     Router,

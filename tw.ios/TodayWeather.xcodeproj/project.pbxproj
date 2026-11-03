@@ -147,7 +147,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				7BAC1D2094DA4E929245516D /* NotificationCenter.framework in Frameworks */,
-				840BA9FC7D974B7EA7E367A1 /* libCordova.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -328,7 +328,16 @@ async fn selected_native_direct_dependency_failure_never_forwards() {
     });
     let gw = gateway(&origin, source.clone(), ALL);
     for golden_id in GOLDENS {
-        let (status, _, body) = send(&gw, Method::GET, golden_id).await;
+        let (status, headers, body) = send(&gw, Method::GET, golden_id).await;
+        // Exercise the exact direct-native dependency-error wire deterministically,
+        // independent of whether the empty production factory answers partial200.
+        assert_eq!(headers["content-type"], "text/html; charset=utf-8");
+        assert_eq!(headers["content-length"], "12");
+        assert_eq!(headers["x-powered-by"], "Express");
+        assert_eq!(headers["access-control-allow-origin"], "*");
+        assert!(!headers.contains_key("cache-control"));
+        assert!(!headers.contains_key("x-content-type-options"));
+        assert_eq!(headers["etag"], server2::gateway::response::etag(&body));
         assert_eq!(
             (status, body.as_slice()),
             (502, b"Bad Gateway\n".as_slice()),

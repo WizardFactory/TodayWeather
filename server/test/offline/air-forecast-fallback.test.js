@@ -68,7 +68,7 @@ test('explicit AirKorea reads only AirKorea and keeps its source', async () => {
     assert.equal(h.calls.length, 1);
     assert.equal(h.calls[0].source, 'airkorea');
 });
-test('non-AirKorea observations skip station forecasts; store failure is reported safely', async () => {
+test('non-AirKorea observations without nearby metadata skip forecasts; store failure is reported safely', async () => {
     const info = airInfo(); info.source = 'google';
     const h = harness([], new Error('store unavailable'));
     assert.ifError((await h.get(info)).error);

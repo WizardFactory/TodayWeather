@@ -148,8 +148,18 @@
                 </dict>
             </array>
         </privacy-manifest>
+        <!--
+          cordova.plugins.diagnostic (LOCATION module) injects all three location purpose keys with placeholder text,
+          which App Review rejects (#2855). The app requests only when-in-use authorization; override every key.
+        -->
         <edit-config file="*-Info.plist" mode="merge" target="NSLocationWhenInUseUsageDescription">
-            <string>TodayWeather uses your location to show the weather where you are.</string>
+            <string>TodayWeather uses your location only while you use the app, to show the current weather and forecast where you are. For example, it shows the hourly forecast and air quality for your current neighborhood.</string>
+        </edit-config>
+        <edit-config file="*-Info.plist" mode="merge" target="NSLocationAlwaysAndWhenInUseUsageDescription">
+            <string>TodayWeather uses your location only while you use the app, to show the current weather and forecast where you are. For example, it shows the hourly forecast and air quality for your current neighborhood.</string>
+        </edit-config>
+        <edit-config file="*-Info.plist" mode="merge" target="NSLocationAlwaysUsageDescription">
+            <string>TodayWeather uses your location only while you use the app, to show the current weather and forecast where you are. For example, it shows the hourly forecast and air quality for your current neighborhood.</string>
         </edit-config>
     </platform>
 </widget>

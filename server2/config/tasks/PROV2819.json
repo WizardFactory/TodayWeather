@@ -1,0 +1,408 @@
+{
+  "task": "PROV2819",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "G1 auxiliary legacy-source provenance: phase1 hash-only inventory/checker, then separately predeclared semantic recording/reconciliation and CI enforcement before task completion; no Rust-derived oracle or automatic hash refresh. Exact placement support recognizes only validated inert registry identities and named synthetic fixture-write roles; no runtime/read/import exemption. Phase2 first group: exact full towns legacy lifecycle driver, group-specific no-transport guard, pinned Node16.20.2/mongoose5.1.2 and server2 launcher; synthetic guard controls before separately root-authorized actual replay; no fixture replacement until root semantic disposition. Phase3 permits whole actual towns recording replacement after root accepted16 semantic changes caused by merged Number(lat/lon), followed by focused native Red/Green; no other group handler or fixture replacement. Phase4 remaining13fixture fullcorpus preparation/replay/nativeparity andCIenforcement; fourexecutioncheckpoints, notfourautomaticstageiterations. Newguards/launchers/policies inserver2, originalfullrecorder/helperexportsbytepreserving namedlegacyverificationexceptions. Rootcontrols/actualhandler/semanticdisposition gates separate. No speculativeRustchanges. Build23 registry reconciliation distinguishes187 tracked product sources from33 already-declared verification exports referenced by immutable source.files maps. The unchanged pinned Node reader hashes190 paths including3 declared exports; other declared referenced exports use bounded hash-only reads. No fixture metadata rewrite or original exporter byte changes. Native air response/store and full22 fixture parity are authorized; original G1 completion gates remain.",
+  "server2_paths": [
+    "server2/config/golden-provenance.json",
+    "server2/config/tasks/PROV2819.json",
+    "server2/src/domestic/kma/air.rs",
+    "server2/src/domestic/kma/source/airkorea.rs",
+    "server2/src/domestic/kma/source/towns.rs",
+    "server2/src/narrative/mod.rs",
+    "server2/src/nation/mod.rs",
+    "server2/tests/delivery/fixtures/PROVENANCE.md",
+    "server2/tests/delivery/fixtures/alarm-oracle.json.gz",
+    "server2/tests/delivery/fixtures/alerts-PROVENANCE.md",
+    "server2/tests/delivery/fixtures/alerts-air-filter.json.gz",
+    "server2/tests/delivery/fixtures/alerts-malformed.json.gz",
+    "server2/tests/delivery/fixtures/alerts-oracle.json.gz",
+    "server2/tests/domestic/air.rs",
+    "server2/tests/domestic/air_forecast.rs",
+    "server2/tests/domestic/air_forecast_s3.rs",
+    "server2/tests/domestic/air_s3.rs",
+    "server2/tests/domestic/fixtures/AIR-PROVENANCE.md",
+    "server2/tests/domestic/fixtures/PROVENANCE.md",
+    "server2/tests/domestic/fixtures/S3-RESPONSE-PROVENANCE.md",
+    "server2/tests/domestic/fixtures/S3-RICH-PROVENANCE.md",
+    "server2/tests/domestic/fixtures/TOWNS-PROVENANCE.md",
+    "server2/tests/domestic/fixtures/air.json.gz",
+    "server2/tests/domestic/fixtures/oracle.json.gz",
+    "server2/tests/domestic/fixtures/s3-response.json.gz",
+    "server2/tests/domestic/fixtures/s3-rich-response.json.gz",
+    "server2/tests/domestic/fixtures/towns-oracle.json.gz",
+    "server2/tests/domestic/parity.rs",
+    "server2/tests/domestic/recorded.rs",
+    "server2/tests/domestic/replay.rs",
+    "server2/tests/domestic/source_s3.rs",
+    "server2/tests/domestic/source_s3_oracle.rs",
+    "server2/tests/domestic/towns.rs",
+    "server2/tests/golden/records.json",
+    "server2/tests/integration/fixtures/kma-replay.json",
+    "server2/tests/integration/fixtures/kma-rich-replay.json",
+    "server2/tests/legacy_versions/fixtures/PROVENANCE.md",
+    "server2/tests/legacy_versions/fixtures/kma-older.json.gz",
+    "server2/tests/legacy_versions/fixtures/kma-town.json.gz",
+    "server2/tests/legacy_versions/kma_parity.rs",
+    "server2/tests/narrative.rs",
+    "server2/tests/nation/PROVENANCE.md",
+    "server2/tests/nation/oracle.json",
+    "server2/tests/nation/parity.rs",
+    "server2/tests/nation/request_edges.rs",
+    "server2/tests/world/fixtures/PROVENANCE.md",
+    "server2/tests/world/fixtures/oracle.json.gz",
+    "server2/tests/world/fixtures/widget.json.gz",
+    "server2/tools/check_placement.py",
+    "server2/tools/golden/air/package-lock.json",
+    "server2/tools/golden/air/package.json",
+    "server2/tools/golden/ci.py",
+    "server2/tools/golden/delivery/fcm-test-todayAir.json",
+    "server2/tools/golden/delivery/fcm-test-todayWeather.json",
+    "server2/tools/golden/delivery/firebase/package-lock.json",
+    "server2/tools/golden/delivery/firebase/package.json",
+    "server2/tools/golden/delivery/make_test_accounts.cjs",
+    "server2/tools/golden/delivery/package-lock.json",
+    "server2/tools/golden/delivery/package.json",
+    "server2/tools/golden/domestic_http/core/package-lock.json",
+    "server2/tools/golden/domestic_http/core/package.json",
+    "server2/tools/golden/guards/air.cjs",
+    "server2/tools/golden/guards/delivery.cjs",
+    "server2/tools/golden/guards/domestic_http.cjs",
+    "server2/tools/golden/guards/nation.cjs",
+    "server2/tools/golden/guards/rest_http.cjs",
+    "server2/tools/golden/guards/world_widget.cjs",
+    "server2/tools/golden/nation/package-lock.json",
+    "server2/tools/golden/nation/package.json",
+    "server2/tools/golden/policies/air.json",
+    "server2/tools/golden/policies/delivery.json",
+    "server2/tools/golden/policies/domestic_http.json",
+    "server2/tools/golden/policies/nation.json",
+    "server2/tools/golden/policies/rest_http.json",
+    "server2/tools/golden/policies/world_widget.json",
+    "server2/tools/golden/provenance.py",
+    "server2/tools/golden/replay_air.py",
+    "server2/tools/golden/replay_delivery.py",
+    "server2/tools/golden/replay_domestic_http.py",
+    "server2/tools/golden/replay_nation.py",
+    "server2/tools/golden/replay_rest_http.py",
+    "server2/tools/golden/replay_towns.py",
+    "server2/tools/golden/replay_world_widget.py",
+    "server2/tools/golden/test_provenance.py",
+    "server2/tools/golden/test_replay_air.py",
+    "server2/tools/golden/test_replay_delivery.py",
+    "server2/tools/golden/test_replay_domestic_http.py",
+    "server2/tools/golden/test_replay_nation.py",
+    "server2/tools/golden/test_replay_rest_http.py",
+    "server2/tools/golden/test_replay_towns.py",
+    "server2/tools/golden/test_replay_world_widget.py",
+    "server2/tools/golden/towns/package-lock.json",
+    "server2/tools/golden/towns/package.json",
+    "server2/tools/test_placement.py"
+  ],
+  "outside": [
+    {
+      "path": "server/test/offline/source-fingerprints.js",
+      "category": "legacy-export",
+      "reason": "Single named offline verification reader: SHA-256 only of an explicit reviewed tracked legacy-source allowlist; no handlers, business logic, network, or server2 runtime dependency."
+    },
+    {
+      "path": "intent/issue-2819-oracle-provenance.md",
+      "category": "documentation",
+      "reason": "Maintained provenance contract and checker operation; shared operations document edited only by root after gate."
+    },
+    {
+      "path": "specs/issue-2819-oracle-provenance.md",
+      "category": "documentation",
+      "reason": "Maintained provenance contract and checker operation; shared operations document edited only by root after gate."
+    },
+    {
+      "path": "plans/issue-2819-oracle-provenance.md",
+      "category": "documentation",
+      "reason": "Maintained provenance contract and checker operation; shared operations document edited only by root after gate."
+    },
+    {
+      "path": "docs/operations/server2-golden.md",
+      "category": "documentation",
+      "reason": "Maintained provenance contract and checker operation; shared operations document edited only by root after gate."
+    },
+    {
+      "path": "server/test/offline/record-towns.js",
+      "category": "legacy-export",
+      "reason": "Named full towns fixture recorder and group-specific preload: execute only five documented legacy source inputs with actual mongoose lifecycle in isolated offline verification; no app/provider/Mongo/network/runtime legacy dependency. Root synthetic guard/replay gate applies."
+    },
+    {
+      "path": "server/test/offline/towns-oracle-guard.js",
+      "category": "legacy-export",
+      "reason": "Named full towns fixture recorder and group-specific preload: execute only five documented legacy source inputs with actual mongoose lifecycle in isolated offline verification; no app/provider/Mongo/network/runtime legacy dependency. Root synthetic guard/replay gate applies."
+    },
+    {
+      "path": "server/test/offline/record-nation.cjs",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/air/record-air.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/air/sections-air.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/air/air-fixtures.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/air/legacy.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/air/fakemongo.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/delivery/record-alarm.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/delivery/legacy2.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/delivery/alarm-scenarios.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/delivery/record-alerts.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/delivery/record-alerts-malformed.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/delivery/record-alerts-air-filter.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/domestic-http/record-kma.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/domestic-http/record-older.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/domestic-http/record-town.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/world-widget/record-world.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/core/fakemongo.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/core/grid-fixtures.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/core/legacy.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/core/mid-fixtures.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/core/record.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/core/rss-fixtures.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/core/sections-grid.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/core/sections.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/air-fixtures.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/asos-boundary.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/collect-rich.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/fakemongo.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/grid-fixtures.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/legacy.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/life-fixtures.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/mid-fixtures.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/record.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/rich-raw.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/rss-fixtures.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/sections-air.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/sections-area.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/sections-grid.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/sections-kasi.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/sections-life.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/sections-mfds.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/sections-rich-asos.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/sections-rich-images.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/sections-stations.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/sections-stn.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/sections.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/shift-raw.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "server/test/offline/oracle-provenance/rich/station-fixtures.js",
+      "category": "legacy-export",
+      "reason": "Byte-preserving full original offline recorder/helper exported into a named legacy verification boundary; no runtime use or business change. Exact original source and new export hashes must agree; root must declare before copying."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Root maintainedverification/provenance boundary andselectedworkflow; generatedHTMLviaArchifywithseparategates, no runtimeimplementation."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-golden-provenance.json",
+      "category": "documentation",
+      "reason": "Root maintainedverification/provenance boundary andselectedworkflow; generatedHTMLviaArchifywithseparategates, no runtimeimplementation."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-golden-provenance.html",
+      "category": "documentation",
+      "reason": "Root maintainedverification/provenance boundary andselectedworkflow; generatedHTMLviaArchifywithseparategates, no runtimeimplementation."
+    },
+    {
+      "path": "server/test/offline/record-nation-current.cjs",
+      "category": "legacy-export",
+      "reason": "Named current legacy oracle adapter derived from the preserved complete original nation recorder; executes current narrative reader/response helpers using fixed in-memory DB rows. No server2 implementation or runtime dependency; original recorder and canonical S02 unchanged."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.json",
+      "category": "documentation",
+      "reason": "Build23 approved air response/storage contract annotation and generated Archify artifact; no runtime asset."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2.html",
+      "category": "documentation",
+      "reason": "Build23 approved air response/storage contract annotation and generated Archify artifact; no runtime asset."
+    }
+  ]
+}

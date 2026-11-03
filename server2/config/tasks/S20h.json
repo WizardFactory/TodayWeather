@@ -1,0 +1,49 @@
+{
+  "task": "S20h",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2817",
+  "scope": "Restore existing S12 public warning route in shared factory/router, gated by selected native KMA903; combined bounded native API/state regression. No new settings/modes/providers/lifecycle or deployment.",
+  "server2_paths": [
+    "server2/tests/runtime_services/inventory.rs",
+    "server2/tests/runtime_services.rs",
+    "server2/config/tasks/S20h.json",
+    "server2/src/runtime_services.rs",
+    "server2/config/cutover/inventory.json"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2705-s20h.md",
+      "category": "documentation",
+      "reason": "Maintain task contract and selected verification evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2705-s20h.md",
+      "category": "documentation",
+      "reason": "Maintain task contract and selected verification evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2705-s20h.md",
+      "category": "documentation",
+      "reason": "Maintain task contract and selected verification evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2705-s20h/verification.md",
+      "category": "documentation",
+      "reason": "Maintain task contract and selected verification evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Maintain affected public warning ownership contract and regenerate/verify its architecture diagram; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.json",
+      "category": "documentation",
+      "reason": "Maintain affected public warning ownership contract and regenerate/verify its architecture diagram; no implementation outside server2"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.html",
+      "category": "documentation",
+      "reason": "Maintain affected public warning ownership contract and regenerate/verify its architecture diagram; no implementation outside server2"
+    }
+  ]
+}

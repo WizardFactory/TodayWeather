@@ -1330,6 +1330,7 @@ impl Classify for crate::push::durable::StateError {
         match self {
             Self::Storage(error) => error.classify(),
             Self::Corrupt(_) => (Cause::Corrupt, Outcome::Failed, None),
+            Self::Input { .. } => (Cause::InvalidInput, Outcome::Failed, None),
         }
     }
 }
@@ -1495,7 +1496,7 @@ impl Classify for crate::world::Failure {
         (
             match self {
                 Self::Unavailable(_) => Cause::Quota,
-                Self::Error => Cause::Dependency,
+                Self::Unauthorized | Self::Error => Cause::Dependency,
             },
             Outcome::Failed,
             None,

@@ -1,0 +1,36 @@
+{
+  "task": "MANUALS20261021",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2819",
+  "scope": "Documentation-only installation and operations refresh after G1 PR2844. Declares the README and exact maintained manual paths for the existing CI placement gate; no runtime, dependency, fixture, workflow or checker changes and no new runtime access permission.",
+  "server2_paths": [
+    "server2/README.md",
+    "server2/config/tasks/MANUALS20261021.json"
+  ],
+  "outside": [
+    {
+      "path": "docs/operations/server2-foundation.md",
+      "category": "documentation",
+      "reason": "Link the installation entrypoint and scope historical foundation checks"
+    },
+    {
+      "path": "docs/operations/server2-golden.md",
+      "category": "documentation",
+      "reason": "Document provenance-first CI, revision-bound G1 results and historical PDF scope"
+    },
+    {
+      "path": "docs/operations/server2-infrastructure.md",
+      "category": "documentation",
+      "reason": "Distinguish current operational startup from the isolated local stack"
+    },
+    {
+      "path": "docs/operations/server2-install.md",
+      "category": "documentation",
+      "reason": "Provide the installation, isolated verification and operations reading path"
+    },
+    {
+      "path": "docs/operations/server2-runtime-services.md",
+      "category": "documentation",
+      "reason": "Label the PDF as a historical snapshot of its original task"
+    }
+  ]
+}

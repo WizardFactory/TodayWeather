@@ -16,7 +16,7 @@ class OperationalLogging(unittest.TestCase):
         self.assertTrue(binary.is_file(), 'explicit release binary required')
         secret = 'SYNTHETIC-PRIVATE-2802-DO-NOT-LOG'
         env = {k: os.environ[k] for k in ('PATH', 'TMPDIR', 'LANG', 'LC_ALL') if k in os.environ}
-        env.update(PORT='0', SERVER2_LOG_LEVEL='debug', SERVER2_LOG_RATE='1000')
+        env.update(PORT='0', SERVER2_GATEWAY_LEGACY_URL='http://127.0.0.1:9', SERVER2_LOG_LEVEL='debug', SERVER2_LOG_RATE='1000')
         with tempfile.TemporaryDirectory(prefix='server2-logging-') as cwd:
             proc = subprocess.Popen([str(binary)], cwd=cwd, env=env,
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -76,7 +76,7 @@ class OperationalLogging(unittest.TestCase):
     def test_blocked_stderr_keeps_actual_http_and_stop_bounded_and_exposes_loss(self):
         binary = Path(os.environ['SERVER2_LOGGING_BINARY']).resolve()
         env = {k: os.environ[k] for k in ('PATH', 'TMPDIR', 'LANG', 'LC_ALL') if k in os.environ}
-        env.update(PORT='0', SERVER2_LOG_LEVEL='debug', SERVER2_LOG_RATE='1000')
+        env.update(PORT='0', SERVER2_GATEWAY_LEGACY_URL='http://127.0.0.1:9', SERVER2_LOG_LEVEL='debug', SERVER2_LOG_RATE='1000')
         import time
         with tempfile.TemporaryDirectory(prefix='server2-stalled-logging-') as cwd:
             proc = subprocess.Popen([str(binary)], cwd=cwd, env=env,
@@ -117,7 +117,7 @@ class OperationalLogging(unittest.TestCase):
         secret = 'SYNTHETIC-PRIVATE-2802-INVALID-LOGGING'
         for level, rate in [('error', '1000'), (secret, secret)]:
             env = {k: os.environ[k] for k in ('PATH', 'TMPDIR', 'LANG', 'LC_ALL') if k in os.environ}
-            env.update(PORT='0', SERVER2_LOG_LEVEL=level, SERVER2_LOG_RATE=rate)
+            env.update(PORT='0', SERVER2_GATEWAY_LEGACY_URL='http://127.0.0.1:9', SERVER2_LOG_LEVEL=level, SERVER2_LOG_RATE=rate)
             with tempfile.TemporaryDirectory(prefix='server2-log-filter-') as cwd:
                 proc = subprocess.Popen([str(binary)], cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 try:

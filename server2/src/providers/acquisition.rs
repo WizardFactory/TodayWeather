@@ -61,11 +61,14 @@ pub enum AttemptResult {
 /// Per-call accounting for metrics and key stickiness. Contains no key, URL or body.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CallReport {
-    /// Units durably reserved per candidate before any HTTP; never refunded.
+    /// Logical units reserved per candidate: selected DataGoKr attempts, or VC maximum.
+    /// Authority block claims can be larger; issued units are never refunded.
     pub reserved: Vec<u64>,
     /// One entry per consumed unit: (candidate index, observed result). The entry is added
     /// before HTTP as `Unsettled` and replaced when the outcome is known.
     pub attempts: Vec<(u8, AttemptResult)>,
+    /// Known local Exhausted candidates (at most two), not HTTP/provider outcomes.
+    pub exhausted_keys: Vec<u8>,
 }
 impl CallReport {
     pub fn reserved_units(&self) -> u64 {
@@ -204,23 +207,67 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                     .await
                     .map_err(|_| AcquisitionError::Deadline)?
                     .map_err(|_| AcquisitionError::Invalid)?;
-                // Pre-fund every permitted key, including the unused rotation candidate. No late reservation.
+                // VC retains maximum prepayment for its one configured key. DataGoKr
+                // reserves one unit only for the selected attempt, never an unused key.
                 let mut funds: Vec<Reservation> = Vec::with_capacity(candidates.len());
-                for (i, c) in candidates.iter().enumerate() {
-                    let maximum = if i == 0 { self.units * 2 } else { self.units };
+                if self.provider == Provider::VisualCrossing {
+                    let maximum = self.units * 2;
                     funds.push(
-                        c.budget
+                        candidates[0]
+                            .budget
                             .reserve(maximum, deadline)
                             .await
                             .map_err(AcquisitionError::Funding)?,
                     );
                     report.reserved.push(maximum);
+                } else {
+                    report.reserved.resize(candidates.len(), 0);
                 }
                 let mut key = 0;
                 for attempt in 1..=2 {
-                    funds[key]
-                        .consume(self.units, deadline)
-                        .map_err(AcquisitionError::Funding)?;
+                    if self.provider == Provider::DataGoKr {
+                        loop {
+                            match candidates[key].budget.reserve(self.units, deadline).await {
+                                Ok(mut ticket) => {
+                                    report.reserved[key] += self.units;
+                                    ticket
+                                        .consume(self.units, deadline)
+                                        .map_err(AcquisitionError::Funding)?;
+                                    break;
+                                }
+                                Err(BudgetError::Exhausted) => {
+                                    report.exhausted_keys.push(key as u8);
+                                    if key + 1 == candidates.len() {
+                                        // Preserve a real quota/auth answer when its distinct
+                                        // rotation key is only locally exhausted. Unknown
+                                        // funding errors below remain terminal funding errors.
+                                        let rejection =
+                                            report.attempts.last().and_then(|(_, r)| match r {
+                                                AttemptResult::Disposition(d)
+                                                    if matches!(
+                                                        d,
+                                                        Disposition::Quota | Disposition::Auth
+                                                    ) =>
+                                                {
+                                                    Some(*d)
+                                                }
+                                                _ => None,
+                                            });
+                                        return Err(rejection.map_or(
+                                            AcquisitionError::Funding(BudgetError::Exhausted),
+                                            AcquisitionError::Provider,
+                                        ));
+                                    }
+                                    key += 1;
+                                }
+                                Err(error) => return Err(AcquisitionError::Funding(error)),
+                            }
+                        }
+                    } else {
+                        funds[key]
+                            .consume(self.units, deadline)
+                            .map_err(AcquisitionError::Funding)?;
+                    }
                     report.attempts.push((key as u8, AttemptResult::Unsettled));
                     crate::observability::event(
                         crate::observability::Component::Provider,
@@ -272,10 +319,10 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                                 return Err(AcquisitionError::Provider(disposition));
                             }
                             if matches!(disposition, Disposition::Quota | Disposition::Auth) {
-                                if candidates.len() < 2 {
+                                if key + 1 >= candidates.len() {
                                     return Err(AcquisitionError::Provider(disposition));
                                 }
-                                key = 1;
+                                key += 1;
                             }
                             crate::observability::event(
                                 crate::observability::Component::Provider,
@@ -389,10 +436,10 @@ impl<P: ProviderTransport, V: Validator> FundedExecutor<P, V> {
                         return Err(AcquisitionError::Provider(disposition));
                     }
                     if matches!(disposition, Disposition::Quota | Disposition::Auth) {
-                        if candidates.len() < 2 {
+                        if key + 1 >= candidates.len() {
                             return Err(AcquisitionError::Provider(disposition));
                         }
-                        key = 1;
+                        key += 1;
                     }
                     crate::observability::event(
                         crate::observability::Component::Provider,

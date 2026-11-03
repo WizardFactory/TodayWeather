@@ -1,0 +1,5 @@
+# Widget daily compatibility contract
+
+Within GLOBAL daily display, discriminate rawWW's dotted YYYY.MM.DD local date from normalized YYYYMMDD rows. RawWW reads selected-unit tempMin_c/tempMax_c or tempMin_f/tempMax_f; normalized/Korean values remain already-converted tmn/tmx without double conversion. Preserve integer truncation, zero/negative values, icon case, six-row cap and localized yesterday/today/tomorrow labels. Bound date slicing so malformed short dates cannot trigger substring exceptions; do not change routing, compact parser, network/retry behavior, server WW bytes or unrelated unit helpers.
+
+Remove only widget-target unusedCordova link, keep app membership and target graph. No new dependencies. Verification copies sanitize WidgetConfig key/URL before compilation, hash original only, intercept exact loopback WW requests and reject every other HTTP(S) request, create owned Simulator, stop/shutdown its processes. Fixtures and build orchestration remain tw.ios/tests/widget; selected evidence/manual tracked in docs. No real Today activation on installed iOS26.5 or releasedIPA claim. Scope and explicit shared CI exception are in declared-paths.json.

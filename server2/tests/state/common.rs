@@ -385,5 +385,10 @@ fn value_eq(a: &Val, b: &Val) -> bool {
 
 /// The state's records of one collection in natural order.
 pub fn records(state: &State, c: Coll) -> Vec<Record> {
-    state.coll(c).iter().map(|(_, r)| r.clone()).collect()
+    state
+        .coll(c)
+        .iter()
+        .map(Result::unwrap)
+        .map(|(_, r)| r.clone())
+        .collect()
 }

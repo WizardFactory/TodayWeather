@@ -25,6 +25,15 @@ def main():
             subprocess.run(['npm','ci','--ignore-scripts','--no-audit','--no-fund','--cache',str(prefix/'npm-cache')],cwd=prefix,check=True,timeout=180)
             env['NODE_PATH'] = str(prefix/'node_modules')
         if not env.get('NODE_PATH'): raise RuntimeError('provide isolated NODE_PATH or --install')
+        reports = root/'reports/verification/server2-golden'
+        if reports.resolve() != reports: raise RuntimeError('canonical provenance report parent required')
+        reports.mkdir(parents=True, exist_ok=True)
+        audit = Path(tempfile.mkdtemp(prefix='provenance-', dir=reports))/'audit'
+        for command in ([sys.executable,str(owned/'test_provenance.py')],
+                        [sys.executable,str(owned/'provenance.py'),'--root',str(root),
+                         '--node',shutil.which('node') or 'node','--out',str(audit)]):
+            print('+',' '.join(command),flush=True)
+            subprocess.run(command,cwd=root,env=env,check=True,timeout=180)
         for command in ([sys.executable,str(owned/'test_golden.py')],
                         [sys.executable,str(owned/'verify.py'),'verify']):
             print('+',' '.join(command),flush=True)

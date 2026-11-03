@@ -3,6 +3,16 @@
 Source: [intent](../intent/issue-2614.md), [spec](../specs/issue-2614.md).
 Current status (2026-10-17, observed main `6e4436c8`): existing backend ports including S15b #2742 and S18 #2703 are integrated/closed. S20a #2789 and S20b #2792 process/API/worker preparation is integrated. Structured logging #2802 is integrated through PR #2804; common native verification and local paired recovery are integrated through S19b/S19c PR #2801/#2806. S19 #2704 and S20 #2705 remain open for operational qualification. S20c reconciles the accepted19route inventory plus notice supplement, preserves the unclassified `/ww` gap, prepares a per-request nginx upstream deadline configuration and an explicit previous-server2/config/state rollback procedure. These preparations do not establish whole-service eligibility. #2724 quota measurement and new #2805 nationwide narrative are excluded from this preparation. Seven-day shadow, exact production inventory/parity, real-host capacity/performance/deadline, final state/rainfall handover and separately approved cutover remain gates. App/web notice popup #2623 is separate. No deployment, live mirroring or device send is claimed. Earlier dated entries remain revision-bound history.
 
+
+Scoped #2819 B1 correction (2026-10-18, pre-merge): move geocoder funding from all
+possible candidates to each selected provider/key before HTTP. Complete Kakao Korean
+lookups do not depend on unused Google funding. Per-key daily ownership, conservative
+no-refund admission, cache/shared owners and deadlines remain.
+[Task plan](issue-2819-funding.md) and
+[local verification](../docs/evidence/tasks/issue-2819-funding/verification.md) track this
+independent correction. B2/B3, notification scheduling, capacity and operational gates
+remain subsequent work; this note does not close #2819, S19 or S20.
+
 ## Current AK amendments (2026-10-14 to 2026-10-16)
 
 These decisions supersede the older cold-cell, key, push-copy, cache and mock-only statements below. In particular, the 2026-10-13 mock-only geocoder description is historical; S10c/S10e replaced those verification modes.
@@ -453,3 +463,223 @@ as full-response parity. Empty RAM, disabled providers, cache loss/corruption
 and zero legacy hops remain required scenarios. S18 notice implementation and
 S19 family coverage remain unfinished; warning worker/process wiring and
 deployment/cutover are S20 activation tasks.
+
+
+### S20d widget scope amendment — 2026-10-17
+
+AK selected retained widget support and native migration of `/ww/010000/current/2`. Preserve the current legacy wire contract with the existing world acquisition/storage/budget chain; add it as a required supplement without altering historical 19 route counts. Local parity and empty-memory S3 restore are separate from released iOS UI verification and operational qualification. S20c remains the repository preparation parent. #2805 narrative and #2724 actual quota measurement remain outside this increment. See [S20d plan](issue-2705-s20d.md).
+
+## S20e - native national and regional narratives (2026-10-17)
+
+After PR #2805 merged at `9333d196`, AK explicitly requested its server2 port in
+[issue #2809](https://github.com/WizardFactory/TodayWeather/issues/2809), before
+actual widget compatibility, eligible complete-release rollback and environment
+verification. This supersedes the earlier narrative exclusion for this new
+increment. The [S20e plan](issue-2705-s20e.md) declares background-only funded
+acquisition, first-committed immutable raw/index S3 originals and optional
+matching-office response enrichment. There is no narrative provider work on the
+HTTP path or dependency on Mongo/legacy runtime assets. National children omit
+regional prose, and cache lifetime respects publication expiry.
+
+The accepted historical 19-route denominator stays unchanged; narrative is a
+response supplement alongside the retained notice/widget route supplements.
+Local narrative proof does not qualify exact production parity, a released
+widget UI or an earlier complete release. #2704/#2705 remain open. #2724 actual
+quota measurement, production/resources/live providers/mirroring/sends/final
+state copies and switch authority remain outside this increment. Earlier dated
+scope and execution records remain historical, not relabelled as S20e runs.
+
+## #2819 ordered corrective work (2026-10-18)
+
+The [review comment](https://github.com/WizardFactory/TodayWeather/issues/2819#issuecomment-6244183930)
+distinguishes reproduced failures, source findings and unresolved estimates. The
+[first correction](issue-2819-state.md) protects bounded decodable push documents,
+atomic journal application and writer readiness. It preserves compact records and
+failed/unknown delivery claims. This is one slice, not closure of #2819 or S19/S20.
+Funding/publication, notification scheduling, capacity/observability/configuration/CI
+and exact candidate/recovery requalification follow in that order. Seven-day shadow
+qualification and production cutover remain blocked by the unresolved applicable gates.
+
+### #2819 B2 local correction (pre-merge)
+
+The [DataGoKr funding plan](issue-2819-data-go-kr-funding.md) addresses selected-key
+logical funding and known local exhaustion. VC maximum prepayment, two actual HTTP
+attempts, original deadlines and no-refund ownership stay. AirKorea local API
+funding caps do not become provider-wide KST quota markers. Local regressions and
+an owned HTTP/volatile S08 composition are recorded separately from current CI
+and independent PR review. B3 publication timing, operating allowances, production
+quota/capacity and all cutover/shadow qualification remain open. No merge authority.
+
+
+#### #2819 B3: latest Short publication verification
+
+[Task plan](issue-2819-late-publication.md) and
+[contract](../specs/issue-2819-late-publication.md) limit demand-triggered latest
+Short acquisition at provision+2/+5/+10, under the original owned-flight and
+request deadline. This task is stacked on the reviewed B2 candidate, not an
+integrated master release. It introduces no collection timer, operating quota
+values, global durable cap or production authority. Exact tests, owned functional
+execution, independent review and current CI remain task gates. #2819/#2704/#2705,
+D2 capacity and seven-day shadow remain open.
+
+#### #2819 D1: forecast-zone retry verification
+
+[Task plan](issue-2819-zone-retry.md) and
+[contract](../specs/issue-2819-zone-retry.md) retain one successful process refresh
+while allowing failed request-triggered attempts after the existing five-minute
+admission. The original owned key/lifetime, immediate waiter, last-good S3 memory
+and periodic fold remain. This task stacks on B3, not an integrated master release.
+Focused tests, actual owned HTTP/S3 recovery across a real memo expiry, independent
+review and exact CI are required. No timer, operating allowance, merge or live
+action is authorized. D2 capacity and #2819/#2704/#2705/shadow remain open.
+
+#### #2819 narrative cache recovery
+
+[Task plan](issue-2819-narrative-cache.md) and
+[contract](../specs/issue-2819-narrative-cache.md) separate30s confirmed answers
+from a1s monotonic gate after completed storage errors. Required review1 rejected
+the initial prototype's unbounded repeated-error behavior; the author selected
+short independent backoff, preserved office owner/deadlines/TTL/expiry, and renewed
+persistent-fault, recovery and successful-publication invalidation proofs. No new
+production approval or stale fallback/provider timer is claimed. This stacks on
+D1, not integratedmain. Current re-review and exact-newheadCI remain mandatory;
+Nation childreads, other#2819items, D2/#2704/#2705/shadow and whole-bundle recovery
+remain separate/open. No merge/live action authorized.
+
+
+#### #2819 notification lateness child
+
+The [child plan](issue-2819-delivery-lateness.md) and
+[contract](../specs/issue-2819-delivery-lateness.md) address C3 and the minute-only
+refusal trigger within C2. Finite admitted cohorts can finish in a later minute;
+registration/token/shutdown guards and the same configured alert window occurrence
+remain. No actual-send retry, claim replay, new capacity TTL or runtime legacy
+asset dependency. The design comparison used two actual providers, not three;
+the numeric model and design-time diagram are not execution proof.
+
+Scoped regression inventory: library103 + delivery66 + runtime31 = **200 passed,
+1 ignored**, with unchanged library/delivery projections explicitly reused after
+the separate runtime-supervision policy test changed. The original whole runtime
+30/1/1 failure remains retained. Actual standalone owned HTTP rehearsal observes
+13 rejected posts per cohort, six active weather fetches, retained claims and no
+extra posts on service reconstruction. Exact source, executable and closed peer
+listeners are bound in [selected evidence](../docs/evidence/tasks/issue-2819-delivery-lateness/verification.md).
+
+The parent delivery-cohort task retains unresolved C2 definite-no-POST state
+ownership/compensation and aggregate stage accounting. Current independent review,
+exact CI and any later base reconciliation are separate gates. This branch is
+stacked on N1; C1 and B1 are separate unmerged branches. No merged/full-bundle,
+#2819/#2704/#2705, seven-day shadow or production completion is claimed.
+
+
+### 2026-10-19 ordered #2819 integration records
+
+AK subsequently authorized the ordered main integration of PR2820–2830,
+2832,2834,2835 while retaining warning acquisition180s and delivery polling5s.
+The original per-task pre-merge declarations, parent-status prose and exact
+execution receipts above remain historical. They are not retroactive main or
+production evidence. Current head/base, regression/smoke, independent review, CI
+and actual merge-tree results are recorded on each PR. Live providers/device
+sends, deployment, shadow, deferred #2724 and global issue closure remain outside
+this integration authority.
+
+
+#### #2819 C2: definite no-POST alert-state restoration
+
+The [parent plan](issue-2819-delivery-cohort.md) and
+[contract](../specs/issue-2819-delivery-cohort.md) continue after lateness child
+PR2826. A known committed writer receipt owns only selected sending-channel
+changed leaves. Typed `NotSent` permits one bounded conditional restore while
+preserving user/token edits, nonselected observations and actual newer state,
+including intermediate local/settled/caught-up ABA. No claim release, persisted
+schema change, actual failed/unknown send retry or automatic repair is added.
+A receipt's known transaction time permits exact undo when the shared clock
+fails; attempts and final send guards still fail closed.
+
+Lost initial acknowledgement or unavailable compensation can retain suppression
+and stays explicitly uncertain. The old bool preselection queue API is unchanged;
+this is not a whole-worker full-queue deadline guarantee. Discriminating public
+Reds, actual scoped regressions and an additional owned-HTTP executable rehearsal
+are recorded in [selected evidence](../docs/evidence/tasks/issue-2819-delivery-cohort/verification.md).
+Current independent review and exact CI are separate gates. C1/B1 are not
+ancestors, and later integration needs reconciliation. No merge, main, full-bundle,
+#2819/#2704/#2705, seven-day shadow or production completion is claimed.
+
+#### #2819 C4: bounded warning work
+
+The [task plan](issue-2819-warning-fanout.md) and
+[contract](../specs/issue-2819-warning-fanout.md) retain independent strict
+post-claim and after-OAuth admission, with a poll-local advisory prefilter,
+known-terminal physical-claim memo and at most six constructed delivery futures.
+The memo is bounded and falls back to ordinary CAS when full; uncertainty does
+not establish ownership. Location grouping already exists and stays exact-input,
+geo-first and episode-scoped. No claim release or actual-send retry is added.
+
+An actual untouched 5,000-endpoint run accepts/verifies every result but uses
+195,002 first-pass S3 requests and 65,001 on a repeated poll. The pre-Red budget
+requires at most 126,000 S12 requests, no increase in total requests/body bytes,
+and zero repeated endpoint-specific work. A measured shared-query prototype
+saved only 132 requests beyond the advisory view; the selected implementation
+keeps per-caller fresh reads and removes that coordination surface. Current
+[selected evidence](../docs/evidence/tasks/issue-2819-warning-fanout/verification.md)
+separates prototype results, the final source/executable, actual tests, peer limits
+and fixed-clock/seed-history qualifications.
+
+The parent C2 PR2827 is pre-merge complete and unmerged. C1/B1 are parallel
+branches, not integrated ancestors. Current C4 review/CI, C5/C6/readiness,
+S3/cold-load capacity, later integration/full-bundle qualification and
+#2819/#2704/#2705/shadow remain separate gates. No merge or live action is authorized.
+
+
+### C5 warning acquisition preparation (#2819)
+
+C4 PR #2828 has independent review PASS and exact-head 14/14 CI at pre-merge,
+with no merge authority. C5 is its separate child: native source requests and a
+push-only post-bind periodic driver share existing warning admission. The process
+owns the inner collector through stop and keeps current drain deadlines. See the
+[C5 plan](issue-2819-warning-acquisition.md), [contract](../specs/issue-2819-warning-acquisition.md)
+and [selected evidence](../docs/evidence/tasks/issue-2819-warning-acquisition/verification.md).
+Current local implementation/verification is in progress; no C5 current-review/CI,
+main integration, full recovery bundle or seven-day shadow qualification is claimed.
+C1 and B1 remain separate unmerged branches. C6 and remaining #2819/#2704/#2705
+work remain open; no live notification or deployment authority is added.
+
+
+### C6 push startup account validation (#2819)
+
+C6 is an isolated child of unmerged C5 PR #2829 (ba56cd84), whose source/records reviews PASS and exact CI14/14 succeeded. The shared factory validates/caches active TodayWeather and any configured retired TodayAir account before state work; disabled push reads no account configuration and startup performs no OAuth/FCM request. See [intent](../intent/issue-2819-push-credentials.md), [plan](issue-2819-push-credentials.md), [spec](../specs/issue-2819-push-credentials.md) and [selected evidence](../docs/evidence/tasks/issue-2819-push-credentials/verification.md). Current C6 local verification/review/CI is in progress; no merge, main integration, eligible full recovery bundle, shadow or global #2819/#2704/#2705 completion is claimed.
+
+### E1/E2 complete startup configuration (#2819)
+
+This child of unmerged C6 PR #2830 (b080bc48) requires complete accepted family/world
+selection in the operational executable before runtime construction without an explicit
+legacy origin. Shared partial factories remain available for isolated verification.
+AK confirmed E2: complete environment-only deployments may omit `.env`; missing mandatory
+settings fail through coverage and existing provider/storage/account validation.
+See [intent](../intent/issue-2819-startup-coverage.md),
+[spec](../specs/issue-2819-startup-coverage.md), [plan](issue-2819-startup-coverage.md) and
+[verification](../docs/evidence/tasks/issue-2819-startup-coverage/verification.md).
+Local verification/review/CI is in progress; no merge, global issue closure, full recovery,
+shadow or production qualification is claimed.
+
+### E3a writer availability (#2819)
+
+This child of unmerged E1/E2 PR #2832 (938e5ba9) scopes only stale internal writer
+availability. Use restored state plus the existing channel's receiver-open state; no
+new monitor, retry, state owner or public endpoint. Preserve pending-command drain and
+HTTP storage errors. See [intent](../intent/issue-2819-writer-liveness.md),
+[spec](../specs/issue-2819-writer-liveness.md), [plan](issue-2819-writer-liveness.md) and
+[evidence](../docs/evidence/tasks/issue-2819-writer-liveness/verification.md).
+Local verification/review/CI is in progress. Full E3 readiness endpoint/S3/credential-source
+health and remaining #2819/#2704/#2705 gates stay open; no merge or production authority.
+
+
+### #2819 E3b warning delivery scheduling
+
+The bounded [E3b plan](issue-2819-warning-poll-supervision.md) continues the unmerged E3a
+writer-availability parent. The actual warning JoinSet task ID replaces the independent
+boolean so a failed warning job can release its slot without letting another job failure
+release live warning work. Existing claim/send/drain policy stays. The selected source,
+owned peer/real-time evidence and final diagram precede independent review and exact
+parent/current CI at pre-merge only. This record does not close full E3, #2819, #2704 or
+#2705, or authorize merge, cloud actions, live provider/device sends, shadow or cutover.

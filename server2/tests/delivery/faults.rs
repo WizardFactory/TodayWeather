@@ -192,6 +192,7 @@ fn enabled_after_restore(state: &server2::push::State) -> Vec<(String, Val)> {
     state
         .coll(Coll::Alarm)
         .iter()
+        .map(Result::unwrap)
         .map(|(_, r)| {
             (
                 r.token("fcmToken").unwrap().to_owned(),
@@ -333,6 +334,7 @@ async fn a_user_update_during_the_minute_survives_the_stale_cleanup() {
     let records: Vec<(Val, Val)> = state
         .coll(Coll::Alarm)
         .iter()
+        .map(Result::unwrap)
         .map(|(_, r)| (r.doc.get("name").clone(), r.doc.get("enable").clone()))
         .collect();
     assert_eq!(records, [(Val::Str("새집".into()), Val::Undef)]);
@@ -386,6 +388,7 @@ async fn a_same_settings_user_update_during_the_minute_survives_the_stale_cleanu
     let records: Vec<(Val, Val)> = state
         .coll(Coll::Alarm)
         .iter()
+        .map(Result::unwrap)
         .map(|(_, r)| (r.doc.get("enable").clone(), r.doc.get("updatedBy").clone()))
         .collect();
     assert_eq!(
@@ -497,6 +500,7 @@ async fn the_stale_cleanup_removes_only_stale_records_of_the_selector() {
     let kinds: Vec<Val> = state
         .coll(Coll::Alarm)
         .iter()
+        .map(Result::unwrap)
         .map(|(_, r)| r.doc.get("type").clone())
         .collect();
     assert_eq!(kinds, [Val::Str("web".into())]);
@@ -600,6 +604,7 @@ async fn an_unregistered_stale_record_is_removed_with_the_disable_in_one_entry()
     let records: Vec<(Val, Val)> = state
         .coll(Coll::Alarm)
         .iter()
+        .map(Result::unwrap)
         .map(|(_, r)| (r.doc.get("cityIndex").clone(), r.doc.get("enable").clone()))
         .collect();
     assert_eq!(records, [(Val::Num(2.), Val::Bool(false))]);
@@ -637,6 +642,7 @@ async fn stale_selections_sharing_a_token_are_all_removed() {
     let records: Vec<(Val, Val)> = state
         .coll(Coll::Alarm)
         .iter()
+        .map(Result::unwrap)
         .map(|(_, r)| (r.doc.get("cityIndex").clone(), r.doc.get("enable").clone()))
         .collect();
     assert_eq!(records, [(Val::Num(3.), Val::Bool(false))]);
@@ -814,6 +820,7 @@ async fn duplicate_registrations_keep_the_newer_record() {
     let left: Vec<Val> = state
         .coll(Coll::Alarm)
         .iter()
+        .map(Result::unwrap)
         .map(|(_, r)| r.doc.get("updatedAt").clone())
         .collect();
     assert_eq!(left, [Val::Date(1_790_000_000_000.)]);

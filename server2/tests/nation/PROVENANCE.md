@@ -31,3 +31,19 @@ v000901; differing parent cookie/header and cookie-only requests do not forward 
 The prior thirteen scenarios and their fifteen source hashes remain unchanged; the app
 configuration source is the additional hash. DirectRoutes compares both child calls and
 complete output bytes against these recordings.
+
+## Current-source whole-record renewal (build24, 2026-10-20)
+
+Two separately guarded recordings per group produced identical complete document and gzip bytes. The adopted bytes are the second actual recording in full; no source field was patched into an old record. All 20 typed differences across towns, nation and four delivery groups are source metadata (2 + 2 + 4 × 4); body, status, headers, trace and ordering differences are zero in this corpus. Node is 16.20.2 (binary SHA256 `83325958463d59cb0b16433eefab0a03fd1ce7d565a27e0274f507b1f3839a6e`), TZ UTC.
+
+The delivery `source.revision` value `a6fdf1f4d1f869d63c5310646003967571dac6e2` identifies the base commit. Execution also used candidate files, including untracked named recorder exports and existing G1 changes; the actual inputs are identified by per-file SHA256 in the records and guarded policy inventories. This is not a clean-checkout recording claim. Old fixture bytes and all capture/receipt/comparison histories are preserved in the local build24 evidence. Freshness and native acceptance are verified separately after adoption.
+
+| Group | Preserved predecessor SHA256 | Adopted actual2 SHA256 |
+| --- | --- | --- |
+| nation | `19b186ccf035ecc40fcb34063b8e92bce6d2795f64f209a89a8c74d1847cf3cc` | `ced3f9e1939a2e02ee9bef48b4ca1f10ca794959b48051efd9bffa5c3636caa3` |
+
+Pinned dependency locks (npm lockfile format and exact direct versions retained):
+
+- SHA256 `c34d3d5f2cf6290283c11ad82a53774c5ecf63a4f41550d491b03ee29d305b1e`, lockfileVersion 3; direct dependencies: `mongoose@5.1.2`, `async@2.6.2`, `jade@1.11.0`, `i18n@0.8.3`.
+
+Raw build24 receipts are local evidence, not a published CI or whole-G1 PASS. Remaining S02, world and widget qualification and original G1 gates stay open.

@@ -249,3 +249,46 @@ fn s02_direct_goldens_equal_recorded_oracle_bodies() {
     assert_eq!(revalidate["status"], 304);
     assert_eq!(revalidate["body_base64"], "");
 }
+
+/// The replay exception is restricted to the optional, empty final narrative read.
+#[test]
+fn empty_optional_narrative_tail_is_strict() {
+    let fixture: serde_json::Value =
+        serde_json::json!({"schema": 1, "scenarios": [scenario("domestic-v000903")]});
+    let parse = |v: &serde_json::Value| RecordedSource::parse(&serde_json::to_vec(v).unwrap());
+    // Keep the recording header used by RecordedSource (schema/oracle/source are not rewritten).
+    assert!(parse(&fixture).is_ok());
+    for kind in 0..5 {
+        let mut v = fixture.clone();
+        let calls = v["scenarios"][0]["calls"].as_array_mut().unwrap();
+        let last = calls.len() - 1;
+        match kind {
+            0 => calls[last]["result"] = serde_json::json!([{"text":"present"}]),
+            1 => calls[last]["error"] = serde_json::json!("read failure"),
+            2 => calls[last]["args"] = serde_json::json!([{"stationId":109,"extra":true}]),
+            3 => calls[last]["args"] = serde_json::json!([{"stationId":"109"}]),
+            _ => {
+                calls.swap(last - 1, last);
+            }
+        }
+        assert!(parse(&v).is_err(), "invalid optional narrative case {kind}");
+    }
+}
+
+/// Removing the redundant primary list must preserve the same stored-history chart:
+/// legacy retains station-list[0] before replacing the current with provider fallback.
+#[test]
+fn fallback_history_uses_station_list_when_primary_missing() {
+    let mut sc = scenario("air-stale").clone();
+    let calls = sc["calls"].as_array_mut().unwrap();
+    let air = calls.iter_mut().find(|c| c["m"] == "arpltn").unwrap();
+    assert_eq!(air["result"]["list"], air["result"]["stnList"][0]);
+    assert!(
+        air["result"]
+            .as_object_mut()
+            .unwrap()
+            .remove("list")
+            .is_some()
+    );
+    run(&sc).unwrap();
+}

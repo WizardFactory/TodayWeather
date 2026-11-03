@@ -79,6 +79,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/gateway-offline/node_modules
         run: |
+          node server/test/offline/kma-narrative.test.js
           node server/test/offline/gateway-geocoder.test.js
           node server/test/offline/gateway-route.test.js
           node server/test/offline/gateway-callers.test.js
@@ -126,15 +127,17 @@ jobs:
           node-version: '16.20.2'
           package-manager-cache: false
       - name: Install isolated air integration dependencies
-        run: npm install --prefix "$RUNNER_TEMP/airkorea-offline" --ignore-scripts --no-audit --no-fund --package-lock=false mongoose-smoke@npm:mongoose@5.13.23 mongodb-memory-server-core@10.1.4 axios@0.18.1 async@2.6.4 express@4.13.4
+        run: npm install --prefix "$RUNNER_TEMP/airkorea-offline" --ignore-scripts --no-audit --no-fund --package-lock=false mongoose-smoke@npm:mongoose@5.13.23 mongodb-memory-server-core@10.1.4 axios@0.18.1 async@2.6.4 express@4.13.4 request@2.88.2
       - name: Verify collection, nation response and shared global cache on local Mongo
         env:
           TZ: UTC
           NODE_PATH: ${{ runner.temp }}/airkorea-offline/node_modules
           MONGOMS_DOWNLOAD_DIR: ${{ runner.temp }}/airkorea-mongodb
         run: |
+          node server/test/offline/air-forecast-observation-http-smoke.js
           node server/test/offline/airkorea-nation-smoke.js
           node server/test/offline/airkorea-rejections-smoke.js
+          node server/test/offline/kma-narrative-smoke.js
 
   current-grid-integration:
     runs-on: ubuntu-latest

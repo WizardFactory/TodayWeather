@@ -1,0 +1,48 @@
+{
+  "task": "S20g",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2814",
+  "scope": "Unprivileged owned-loopback nginx scratch/log portability only. No product runtime/build/dependency/sharedworkflow/systemservice/production change. Read declared release binaries; write fresh owned temp/report paths only.",
+  "server2_paths": [
+    "server2/config/tasks/S20g.json",
+    "server2/deploy/cutover/nginx.conf.template",
+    "server2/tools/cutover/rehearse_deadline.py",
+    "server2/tests/integration/test_cutover_deadline.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2814.md",
+      "category": "documentation",
+      "reason": "Maintain this task contract, affected operator guide/PDF and selected actual Linux evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2814.md",
+      "category": "documentation",
+      "reason": "Maintain this task contract, affected operator guide/PDF and selected actual Linux evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "plans/issue-2814.md",
+      "category": "documentation",
+      "reason": "Maintain this task contract, affected operator guide/PDF and selected actual Linux evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-cutover.md",
+      "category": "documentation",
+      "reason": "Maintain this task contract, affected operator guide/PDF and selected actual Linux evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/operations/server2-cutover.pdf",
+      "category": "documentation",
+      "reason": "Maintain this task contract, affected operator guide/PDF and selected actual Linux evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2814/verification.md",
+      "category": "documentation",
+      "reason": "Maintain this task contract, affected operator guide/PDF and selected actual Linux evidence; no server2 implementation outside server2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2814/nginx.png",
+      "category": "documentation",
+      "reason": "Maintain this task contract, affected operator guide/PDF and selected actual Linux evidence; no server2 implementation outside server2"
+    }
+  ]
+}

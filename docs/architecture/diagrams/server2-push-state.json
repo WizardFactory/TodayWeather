@@ -1,0 +1,207 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Push Registration State Safety Contract",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/server2-push-state.html",
+    "legend": {
+      "entries": {
+        "frontend": {
+          "label": "Registration API"
+        },
+        "backend": {
+          "label": "State owner"
+        },
+        "database": {
+          "label": "Durable storage"
+        },
+        "security": {
+          "label": "Admission / recovery"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "admission",
+      "label": "Mutation admission"
+    },
+    {
+      "id": "storage",
+      "label": "Durable ownership"
+    },
+    {
+      "id": "recovery",
+      "label": "Restore and failure",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "input",
+    "validate",
+    "journal",
+    "apply",
+    "ack"
+  ],
+  "nodes": [
+    {
+      "id": "input",
+      "lane": "admission",
+      "col": 0,
+      "type": "frontend",
+      "label": "Plan mutation",
+      "sublabel": "HTTP or import",
+      "width": 150
+    },
+    {
+      "id": "validate",
+      "lane": "admission",
+      "col": 1,
+      "type": "security",
+      "label": "Validate records",
+      "sublabel": "Keys, depth, bytes",
+      "width": 150
+    },
+    {
+      "id": "reject",
+      "lane": "admission",
+      "col": 2,
+      "type": "security",
+      "label": "Store-error reply",
+      "sublabel": "No durable write",
+      "width": 150
+    },
+    {
+      "id": "journal",
+      "lane": "storage",
+      "col": 1,
+      "type": "database",
+      "label": "Claim journal seq",
+      "sublabel": "Conditional S3 write",
+      "width": 150
+    },
+    {
+      "id": "apply",
+      "lane": "storage",
+      "col": 2,
+      "type": "backend",
+      "label": "Apply all changes",
+      "sublabel": "Validate before apply",
+      "width": 150
+    },
+    {
+      "id": "ack",
+      "lane": "storage",
+      "col": 3,
+      "type": "frontend",
+      "label": "Acknowledge",
+      "sublabel": "Durable state retained",
+      "width": 150
+    },
+    {
+      "id": "restore",
+      "lane": "recovery",
+      "col": 0,
+      "type": "database",
+      "label": "Read history",
+      "sublabel": "Snapshot and journal",
+      "width": 150
+    },
+    {
+      "id": "corrupt",
+      "lane": "recovery",
+      "col": 1,
+      "type": "security",
+      "label": "Corrupt entry",
+      "sublabel": "Preserve original bytes",
+      "width": 150
+    },
+    {
+      "id": "unready",
+      "lane": "recovery",
+      "col": 2,
+      "type": "security",
+      "label": "Not ready",
+      "sublabel": "No skip or rewind",
+      "width": 150
+    },
+    {
+      "id": "stopped",
+      "lane": "recovery",
+      "col": 3,
+      "type": "backend",
+      "label": "Writer exits",
+      "sublabel": "Stop, abort or panic",
+      "width": 150
+    }
+  ],
+  "edges": [
+    {
+      "from": "input",
+      "to": "validate"
+    },
+    {
+      "from": "validate",
+      "to": "reject",
+      "label": "invalid",
+      "variant": "security"
+    },
+    {
+      "from": "validate",
+      "to": "journal",
+      "label": "valid"
+    },
+    {
+      "from": "journal",
+      "to": "apply",
+      "label": "committed"
+    },
+    {
+      "from": "apply",
+      "to": "ack"
+    },
+    {
+      "from": "restore",
+      "to": "apply",
+      "label": "valid entry"
+    },
+    {
+      "from": "restore",
+      "to": "corrupt",
+      "label": "invalid"
+    },
+    {
+      "from": "corrupt",
+      "to": "unready",
+      "variant": "security"
+    },
+    {
+      "from": "stopped",
+      "to": "unready",
+      "label": "clear ready",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Document admission",
+      "items": [
+        "No stored key beginning with $ or containing a literal dot",
+        "At most 256 KiB encoded JSON; depth at most 32 below root",
+        "Typed BSON dates and non-finite numeric wrappers remain valid"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Contract, not execution evidence",
+      "items": [
+        "An invalid entry applies no prefix and advances no sequence",
+        "Preserve failed and unknown delivery claims without automatic retry",
+        "Public health remains liveness; aggregate readiness is a later increment",
+        "See the maintained verification record for actual commands and outcomes"
+      ]
+    }
+  ]
+}

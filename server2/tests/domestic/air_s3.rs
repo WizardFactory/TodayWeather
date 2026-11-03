@@ -175,6 +175,15 @@ async fn air_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     seed_oracle(&store).await;
+    let station_runs = items_of(at(oracle(), &["stations", "acquisitions"]));
+    assert_eq!(station_runs.len(), 2);
+    assert_eq!(
+        number(at(&station_runs[0], &["fetched"])),
+        1_791_763_500_000.
+    );
+    let second_station_fetch = number(at(&station_runs[1], &["fetched"]));
+    assert_eq!(second_station_fetch, 1_791_849_900_000.);
+    let (mut early_cases, mut corrected_cases, mut checked) = (0, 0, 0);
     let mut readers = std::collections::HashMap::new();
     for a in items_of(at(oracle(), &["arpltn"])) {
         let now = number(at(a, &["now"]));
@@ -194,13 +203,40 @@ async fn air_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
                 deadline(),
             )
             .await;
+        // The recorder loads the final station table before all query clocks. S3
+        // correctly excludes future acquisitions: before the second list, the
+        // nearest identities are Gangnam/Mapo, not the not-yet-added stations.
+        // Independent planar $near calculation over the first raw page supports
+        // these two literals (fakemongo.js:123-137); every other byte stays strict.
+        let mut expected = at(a, &["result"]).clone();
+        if now < second_station_fetch {
+            early_cases += 1;
+            assert_eq!(now, 1_791_846_000_000.);
+            let identity = match text(at(a, &["town"])).as_str() {
+                "chuncheon" => Some(("춘천", "강남구")),
+                "deokjeok" => Some(("덕적도", "마포구")),
+                _ => None,
+            };
+            if let Some((recorded, at_query)) = identity {
+                assert_eq!(text(at(&expected, &["forecastStationName"])), recorded);
+                let OrderedJson::Object(fields) = &mut expected else {
+                    panic!("arpltn answer must be an object");
+                };
+                let key: Vec<u16> = "forecastStationName".encode_utf16().collect();
+                let value = &mut fields.iter_mut().find(|(k, _)| *k == key).unwrap().1;
+                *value = OrderedJson::from_serde(&at_query).unwrap();
+                corrected_cases += 1;
+            }
+        }
         same(
             &answers.arpltn.unwrap(),
-            at(a, &["result"]),
+            &expected,
             &format!("{} at {now}", text(at(a, &["town"]))),
         );
+        checked += 1;
         assert!(answers.dust.is_none());
     }
+    assert_eq!((checked, early_cases, corrected_cases), (48, 6, 2));
     // Dust forecasts: the oracle queried after its last run (10-14 23:32 KST). A request reads
     // the search dates `date-2..date` at its own KST date, so the queries for 10-14 .. 10-17 are
     // replayed at 12:00 KST of that date (after every run); 10-12 and 10-13 would need an instant
@@ -249,6 +285,154 @@ async fn air_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
         TEST_PERMITS,
         "every S3 permit returned"
     );
+}
+
+/// Additional owned functional read flow, run separately from the regression suite.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "separate owned normal-S3 cold/warm/reconstruction flow; captures full byte output"]
+async fn owned_normal_air_s3_reconstruction_flow() {
+    use sha2::{Digest, Sha256};
+
+    async fn counters(client: &reqwest::Client, peer: &Peer) -> serde_json::Value {
+        let response = client
+            .get(format!("{}/__catalog/status", peer.endpoint()))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), 200);
+        serde_json::from_slice(&response.bytes().await.unwrap()).unwrap()
+    }
+    fn count(snapshot: &serde_json::Value, prefix: &str) -> u64 {
+        snapshot
+            .as_object()
+            .unwrap()
+            .iter()
+            .filter(|(key, _)| key.starts_with(prefix))
+            .map(|(_, value)| value.as_u64().unwrap())
+            .sum()
+    }
+    async fn read_pair(
+        observations: &AirInputs<BoundedS3<HttpS3Transport>>,
+        forecasts: &AirInputs<BoundedS3<HttpS3Transport>>,
+        observation: &OrderedJson,
+        dust: &OrderedJson,
+        dust_now: f64,
+    ) -> (Vec<u8>, Vec<u8>) {
+        let g = at(observation, &["gCoord"]);
+        let answer = observations
+            .load(
+                &town(number(at(g, &["lat"])), number(at(g, &["lon"]))),
+                "서울특별시",
+                "종로구",
+                false,
+                false,
+                number(at(observation, &["now"])),
+                deadline(),
+            )
+            .await;
+        assert!(answer.dust.is_none());
+        let observation_bytes = answer.arpltn.unwrap().to_bytes();
+        assert_eq!(observation_bytes, at(observation, &["result"]).to_bytes());
+        let answer = forecasts
+            .load(
+                &town(37.57, 126.98),
+                "서울특별시",
+                "종로구",
+                true,
+                false,
+                dust_now,
+                deadline(),
+            )
+            .await;
+        let (args, answer) = answer.dust.unwrap();
+        assert_eq!(
+            args,
+            (
+                "서울특별시".to_owned(),
+                "종로구".to_owned(),
+                "20261014".to_owned()
+            )
+        );
+        let dust_bytes = answer.unwrap().to_bytes();
+        assert_eq!(dust_bytes, at(dust, &["result"]).to_bytes());
+        (observation_bytes, dust_bytes)
+    }
+
+    let _serial = SERIAL.lock().await;
+    tokio::time::timeout(Duration::from_secs(90), async {
+        let observation = items_of(at(oracle(), &["arpltn"])).iter()
+            .filter(|a| text(at(a, &["town"])) == "seoul-center")
+            .max_by(|a, b| number(at(a, &["now"])).total_cmp(&number(at(b, &["now"]))))
+            .unwrap();
+        let dust = items_of(at(oracle(), &["dust", "queries"])).iter()
+            .find(|q| text(at(q, &["date"])) == "20261014"
+                && text(at(q, &["region"])) == "서울특별시"
+                && text(at(q, &["city"])) == "종로구").unwrap();
+        let dust_now = (server2::history::schedule::to_ms(Publication::new(20261014, 1200).unwrap()) as f64)
+            .max(1_791_988_320_000. + 60_000.);
+        assert_eq!(kst_date(dust_now), 20261014);
+        let configuration = json!({
+            "flow":"owned_normal_air_s3_reconstruction_flow",
+            "fixture":"tests/domestic/fixtures/air.json.gz",
+            "town":"seoul-center", "observation_now":number(at(observation, &["now"])),
+            "dust_region":"서울특별시", "dust_city":"종로구", "dust_date":"20261014", "dust_now":dust_now,
+            "reader":"AirInputs::new", "provider_configured":false,
+            "permits":TEST_PERMITS, "request_deadline_seconds":20, "flow_deadline_seconds":90,
+            "reconstruction":"new AirInputs and CatalogStore; same owned S3 child",
+        });
+        let configuration_json = serde_json::to_string(&configuration).unwrap();
+        let configuration_sha256 = format!("{:x}", Sha256::digest(configuration_json.as_bytes()));
+        let peer = Peer::new();
+        let transport = peer.transport();
+        let client = reqwest::Client::builder().no_proxy().timeout(Duration::from_secs(5)).build().unwrap();
+        let before = counters(&client, &peer).await;
+        let seed_store = CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap();
+        seed_oracle(&seed_store).await;
+        drop(seed_store);
+        let seeded = counters(&client, &peer).await;
+        assert!(count(&seeded, "PUT ") > count(&before, "PUT "));
+        let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+        let observations = AirInputs::new(transport.clone(), store.clone());
+        let forecasts = AirInputs::new(transport.clone(), store.clone());
+        let cold = read_pair(&observations, &forecasts, observation, dust, dust_now).await;
+        let cold_counts = counters(&client, &peer).await;
+        assert!(count(&cold_counts, "GET ") > count(&seeded, "GET "), "cold read must contact owned S3");
+        let warm = read_pair(&observations, &forecasts, observation, dust, dust_now).await;
+        let warm_counts = counters(&client, &peer).await;
+        assert_eq!(cold, warm);
+        drop(observations);
+        drop(forecasts);
+        drop(store);
+        let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+        let observations = AirInputs::new(transport.clone(), store.clone());
+        let forecasts = AirInputs::new(transport.clone(), store.clone());
+        let reconstructed = read_pair(&observations, &forecasts, observation, dust, dust_now).await;
+        let reconstructed_counts = counters(&client, &peer).await;
+        assert_eq!(cold, reconstructed);
+        assert!(count(&reconstructed_counts, "GET ") > count(&warm_counts, "GET "), "new empty-memory readers must contact owned S3");
+        for snapshot in [&cold_counts, &warm_counts, &reconstructed_counts] {
+            for prefix in ["PUT ", "DELETE ", "POST "] {
+                assert_eq!(count(snapshot, prefix), count(&seeded, prefix), "read flow wrote to S3");
+            }
+        }
+        drop(observations);
+        drop(forecasts);
+        drop(store);
+        assert_eq!(transport.available(), TEST_PERMITS);
+        drop(peer); // Existing owner kills and waits for its Python child.
+        let wire = |pair: &(Vec<u8>, Vec<u8>)| json!({
+            "observation_utf8":std::str::from_utf8(&pair.0).unwrap(),
+            "dust_utf8":std::str::from_utf8(&pair.1).unwrap(),
+        });
+        println!("\nAIR_S3_FLOW_RECORD {}", json!({
+            "schema":1, "configuration_json":configuration_json, "configuration_sha256":configuration_sha256,
+            "before":before, "seeded":seeded, "cold_counts":cold_counts,
+            "warm_counts":warm_counts, "reconstructed_counts":reconstructed_counts,
+            "cold":wire(&cold), "warm":wire(&warm), "reconstructed":wire(&reconstructed),
+            "available_permits":transport.available(), "peer_drop_completed":true,
+            "scope":"one observation and one dust query through normal AirInputs; component reconstruction, not process restart/full HTTP parity",
+        }));
+    }).await.expect("owned air S3 flow exceeded90seconds");
 }
 
 // ---- request-time acquisition ----

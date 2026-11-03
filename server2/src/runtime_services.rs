@@ -19,9 +19,13 @@ pub struct RuntimeServices {
     pub push: Option<Arc<crate::push::PushService>>,
     pub notices: Option<Arc<crate::notice::store::NoticeStore<ProcessS3>>>,
     pub warning_store: Option<Arc<ProcessWarnings>>,
+    pub warning_api: Option<Arc<crate::warnings::service::WarningService<ProcessS3>>>,
     pub warning_feed: Option<Arc<ProcessFeed>>,
+    /// Controlled source owner; production periodic work never calls the raw collector below.
+    pub warning_cycles: Option<Arc<dyn crate::warnings::acquisition_worker::Acquisition>>,
     pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
     pub raw_writer: Option<Arc<crate::storage::response_first::Writer>>,
+    pub narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>>,
     pub native_fetch: crate::push::deliver::native_fetch::NativeFetch,
     pub s3: Option<ProcessS3>,
     pub delivery: Option<Arc<crate::push::deliver::supervisor::Workers<ProcessS3>>>,
@@ -60,6 +64,16 @@ impl RuntimeServices {
     ) -> Result<Self, GatewayError> {
         let base = var("SERVER2_GATEWAY_LEGACY_URL");
         let families = NativeFamilies::from_vars(var)?;
+        // Validate/cache accounts before constructing storage or starting the writer.
+        // Disabled push never reads Firebase settings or files. No OAuth/FCM probe.
+        let prepared_fcm = if families.push {
+            Some(Arc::new(
+                crate::push::deliver::Fcm::for_push(var, endpoints)
+                    .map_err(|_| GatewayError::InvalidConfiguration)?,
+            ))
+        } else {
+            None
+        };
         let s3 = if families.any() {
             Some(gateway::runtime::shared_s3(var, builtins)?)
         } else {
@@ -74,6 +88,19 @@ impl RuntimeServices {
                 )
                 .map_err(|_| GatewayError::InvalidConfiguration)?,
             ))
+        } else {
+            None
+        };
+        // Internal warning state also serves push and older KMA versions. Only the
+        // explicit v000903 KMA selection exposes the public special API.
+        let warning_api = if families.kma {
+            Some(Arc::new(crate::warnings::service::WarningService::new(
+                warning_store
+                    .clone()
+                    .ok_or(GatewayError::InvalidConfiguration)?,
+                clock.clone(),
+                crate::warnings::service::ServiceConfig::default(),
+            )))
         } else {
             None
         };
@@ -118,10 +145,7 @@ impl RuntimeServices {
             use crate::push::deliver::{self, native_fetch::NativeFetch, supervisor::Workers};
             let transport = Arc::new(s3.clone().ok_or(GatewayError::InvalidConfiguration)?);
             let fetch = Arc::new(native_fetch.clone());
-            let fcm = Arc::new(
-                deliver::Fcm::from_vars(var, endpoints)
-                    .map_err(|_| GatewayError::InvalidConfiguration)?,
-            );
+            let fcm = prepared_fcm.ok_or(GatewayError::InvalidConfiguration)?;
             let diagnostics: Arc<dyn deliver::Diagnostics> = Arc::new(deliver::StderrDiagnostics);
             let servers = NativeFetch::servers();
             Some(Arc::new(Workers {
@@ -168,17 +192,24 @@ impl RuntimeServices {
             delivery,
             warning_acquire: built.warning_acquire,
             raw_writer: built.raw_writer,
+            warning_cycles: built.warning_cycles,
+            narrative_acquire: built.narrative_acquire,
             gateway: built.gateway,
             push,
             notices,
             warning_store,
+            warning_api,
             warning_feed,
             native_fetch,
             s3,
         })
     }
     pub fn public_router(self, state: Arc<crate::SharedState>) -> Router {
-        if self.gateway.is_none() && self.push.is_none() && self.notices.is_none() {
+        if self.gateway.is_none()
+            && self.push.is_none()
+            && self.notices.is_none()
+            && self.warning_api.is_none()
+        {
             return crate::public_router(state);
         }
         let notices = self.notices.clone();
@@ -190,6 +221,15 @@ impl RuntimeServices {
                     && crate::push::PushService::matches(request.uri().path())
                 {
                     return push.handle(request).await.expect("claimed push mount");
+                }
+                // The generic direct-KMA mount also claims this path. Let its
+                // existing warning handler decide GET/HEAD before gateway dispatch.
+                if let Some(warnings) = &services.warning_api
+                    && let Some(reply) = warnings
+                        .handle(request.method(), request.uri().path(), request.headers())
+                        .await
+                {
+                    return reply;
                 }
                 match &services.gateway {
                     Some(gateway) => gateway.handle(request).await,

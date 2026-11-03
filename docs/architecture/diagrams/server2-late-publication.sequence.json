@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Proposed latest Short publication admission",
+    "output": "docs/architecture/diagrams/server2-late-publication.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "viewBox": [
+      1000,
+      645
+    ],
+    "column_fit": "spread",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "0f005ecc0fee343a5cc86ec6dce541916b4305b4",
+      "link_mode": "local-only"
+    }
+  },
+  "participants": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "Weather caller",
+      "sublabel": "demand only",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 498,
+          "end_line": 507,
+          "label": "Existing request API"
+        }
+      ]
+    },
+    {
+      "id": "source",
+      "type": "backend",
+      "label": "KMA source",
+      "sublabel": "stored data first",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 529,
+          "end_line": 582,
+          "label": "Existing latest collection"
+        }
+      ]
+    },
+    {
+      "id": "owned",
+      "type": "backend",
+      "label": "Owned flight",
+      "sublabel": "join / start",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 303,
+          "end_line": 324,
+          "label": "Existing ownership"
+        }
+      ]
+    },
+    {
+      "id": "gate",
+      "type": "backend",
+      "label": "Proposed gate",
+      "sublabel": "latest Short slots",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 185,
+          "end_line": 209,
+          "label": "Current gate is expiry only"
+        }
+      ]
+    },
+    {
+      "id": "acquire",
+      "type": "external",
+      "label": "Forecast acquire",
+      "sublabel": "existing S13 / S08",
+      "sources": [
+        {
+          "path": "server2/src/domestic/kma/source/mod.rs",
+          "line": 1409,
+          "end_line": 1427,
+          "label": "Existing provider owner"
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 537,
+      "label": "Bounded latest Short acquisition"
+    }
+  ],
+  "messages": [
+    {
+      "id": "request",
+      "to": "source",
+      "y": 170,
+      "label": "Weather request",
+      "variant": "default",
+      "from": "caller"
+    },
+    {
+      "id": "missing",
+      "to": "owned",
+      "y": 196,
+      "label": "Missing Short: join key",
+      "variant": "emphasis",
+      "from": "source"
+    },
+    {
+      "id": "claim",
+      "to": "gate",
+      "y": 222,
+      "label": "New owner: claim slot",
+      "variant": "default",
+      "from": "owned"
+    },
+    {
+      "id": "admit",
+      "to": "owned",
+      "y": 250,
+      "label": "Due slot: admit once",
+      "variant": "return",
+      "from": "gate"
+    },
+    {
+      "id": "fetch",
+      "to": "acquire",
+      "y": 278,
+      "label": "If admitted: collect",
+      "variant": "emphasis",
+      "from": "owned"
+    },
+    {
+      "id": "absent",
+      "to": "owned",
+      "y": 306,
+      "label": "NotPublished / fetched",
+      "variant": "return",
+      "from": "acquire"
+    },
+    {
+      "id": "complete",
+      "to": "source",
+      "y": 332,
+      "label": "Owned result or wait bound",
+      "variant": "return",
+      "from": "owned"
+    },
+    {
+      "id": "answer",
+      "to": "caller",
+      "y": 358,
+      "label": "Existing response contract",
+      "variant": "return",
+      "from": "source"
+    },
+    {
+      "id": "repeat",
+      "to": "source",
+      "y": 390,
+      "label": "Repeat in same window",
+      "variant": "default",
+      "from": "caller"
+    },
+    {
+      "id": "again",
+      "to": "owned",
+      "y": 416,
+      "label": "Still missing: join key",
+      "variant": "default",
+      "from": "source"
+    },
+    {
+      "id": "reclaim",
+      "to": "gate",
+      "y": 442,
+      "label": "New owner: same slot",
+      "variant": "default",
+      "from": "owned"
+    },
+    {
+      "id": "deny",
+      "to": "owned",
+      "y": 470,
+      "label": "Already claimed: deny",
+      "variant": "return",
+      "from": "gate"
+    },
+    {
+      "id": "nohttp",
+      "to": "source",
+      "y": 496,
+      "label": "No new provider work",
+      "variant": "return",
+      "from": "owned"
+    },
+    {
+      "id": "repeatanswer",
+      "to": "caller",
+      "y": 522,
+      "label": "Stored / missing parts",
+      "variant": "return",
+      "from": "source"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Proposed contract, not execution proof",
+      "items": [
+        "One cell / latest Short: provision +2, +5, +10 minutes; no timer or pre-collection.",
+        "Late first demand uses one elapsed slot, without replaying missed windows.",
+        "Current cited gate is expiry-only; finite-slot implementation is still planned."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Bounded process-local ownership",
+      "items": [
+        "At most 65,536 cells for the newest admitted publication; newer base resets the map.",
+        "Older publication or repeated/lower slot is refused after clock rollback.",
+        "Concurrent callers join the existing flight; cancellation does not cancel its owner."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Preserved boundaries",
+      "items": [
+        "Stored usable inputs prevent acquisition; original response/wait deadline stays.",
+        "Historical backfill and other families retain their existing admission.",
+        "B2 charges actual HTTP attempts; no durable global quota, operating allowance or readiness claim."
+      ]
+    }
+  ]
+}
