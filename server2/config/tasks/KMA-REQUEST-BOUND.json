@@ -9,6 +9,7 @@
     "server2/src/domestic/kma/source/air_input.rs",
     "server2/src/domestic/kma/source/forecast_input.rs",
     "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/representative.rs",
     "server2/src/warnings/collector.rs",
     "server2/src/warnings/service.rs",
     "server2/src/warnings/store.rs",

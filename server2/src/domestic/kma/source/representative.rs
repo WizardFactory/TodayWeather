@@ -53,7 +53,7 @@ fn elevations() -> &'static HashMap<Key, [f64; 3]> {
     })
 }
 /// The table keeps the province names of the town list.
-fn listed_first(first: &str) -> &str {
+pub(super) fn listed_first(first: &str) -> &str {
     match first {
         "강원특별자치도" => "강원도",
         "전북특별자치도" => "전라북도",

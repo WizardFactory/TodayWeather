@@ -1168,42 +1168,63 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 |o| o.1,
             );
             let absent_town = Doc::new();
-            let (result, mid, air, life, special) = tokio::join!(
-                self.town_resolver.resolve(
-                    crate::geocode::town::Operation::Town,
-                    address,
-                    until,
-                    now.max(0.) as u64
-                ),
-                async {
-                    let zones = self.zones(now, deadline).await?;
-                    let mids = self
-                        .mids(&region, &city, &zones, now, deadline, until)
-                        .await?;
-                    Ok::<_, String>((zones, mids))
-                },
-                self.air.load(
-                    &absent_town,
-                    &region,
-                    &city,
-                    dust_wanted,
-                    image_wanted,
-                    now,
-                    section
-                ),
-                self.life.load(now, section),
-                async {
-                    self.warning_wait(until).await;
-                    self.warnings.zone_state(now as i64, section).await.ok()
-                }
+            let lookup = self.town_resolver.resolve(
+                crate::geocode::town::Operation::Town,
+                address,
+                until,
+                now.max(0.) as u64,
             );
+            let mid = async {
+                let zones = self.zones(now, deadline).await?;
+                let mids = self
+                    .mids(&region, &city, &zones, now, deadline, until)
+                    .await?;
+                Ok::<_, String>((zones, mids))
+            };
+            let optional = async {
+                tokio::join!(
+                    self.air.load(
+                        &absent_town,
+                        &region,
+                        &city,
+                        dust_wanted,
+                        image_wanted,
+                        now,
+                        section
+                    ),
+                    self.life.load(now, section),
+                    async {
+                        self.warning_wait(until).await;
+                        self.warnings.zone_state(now as i64, section).await.ok()
+                    }
+                )
+            };
+            let (result, mid, optional) = if observed.is_some() {
+                // A found town must not wait for these, or its forecast starts with no time
+                // left. The rest of the request starts its own.
+                let (result, mid) = tokio::join!(lookup, mid);
+                let optional = if result.is_err() {
+                    Some(optional.await)
+                } else {
+                    None
+                };
+                (result, mid, optional)
+            } else {
+                let (result, mid, optional) = tokio::join!(lookup, mid, optional);
+                (result, mid, Some(optional))
+            };
             let (zones, mids) = mid?;
-            let result = match result {
-                Ok(result) => result,
-                Err(towns::ResolveError::Storage) => {
+            let result = match (result, optional) {
+                (Ok(result), _) => result,
+                (Err(towns::ResolveError::Storage), _) => {
                     return Err(Unbuilt::Failed("town projection unavailable".into()));
                 }
-                Err(_) => return Ok(Snapshot::missing_town(now, zones, mids, air, life, special)),
+                (Err(_), Some((air, life, special))) => {
+                    return Ok(Snapshot::missing_town(now, zones, mids, air, life, special));
+                }
+                (Err(_), None) => {
+                    return Err(Unbuilt::Failed("town lookup without its answer".into()));
+                }
             };
             (
                 towns::town_document(&result, request, list),
@@ -1524,6 +1545,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> 
         deadline: Instant,
     ) -> BoxFuture<'_, Result<KmaRequest, super::Outcome>> {
         Box::pin(async move {
+            // The geocoder names two provinces by their new names; the town list and the region
+            // table keep the old ones, and legacy's lookups miss them.
+            if self.observed_history
+                && let Some(region) = request.region.as_deref()
+            {
+                let listed = representative::listed_first(region).to_owned();
+                request.region = Some(listed);
+            }
             if !super::middleware_of(&request.version, request.part.as_deref())
                 .contains(&"checkParamValidation")
                 || (request.city.as_deref() != Some("KR") && request.town.as_deref() != Some("KR"))
