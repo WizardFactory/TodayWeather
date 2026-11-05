@@ -1,0 +1,72 @@
+{
+  "task": "KMA-STORED-READS",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Observed KMA path with empty or partly stored S3: one LIST per existence question, a packaged land-zone list for the first response, absent publications requested without waiting for stored reads, a stored-read window, a collector-written zone state and one stored KASI fold. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/contracts/kma-client-wire.v1.json",
+    "server2/config/contracts/kma-history.v1.json",
+    "server2/config/tasks/KMA-STORED-READS.json",
+    "server2/src/domestic/kma/source/life_input.rs",
+    "server2/src/domestic/kma/source/mid.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/records.rs",
+    "server2/src/domestic/kma/source/zone.rs",
+    "server2/src/warnings/collector.rs",
+    "server2/src/warnings/records.rs",
+    "server2/src/warnings/store.rs",
+    "server2/src/warnings/zones.rs",
+    "server2/tests/delivery/warning_fanout.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/domestic/life_s3.rs",
+    "server2/tests/domestic/source_s3.rs",
+    "server2/tests/domestic/towns.rs",
+    "server2/tests/warnings/collector.rs",
+    "server2/tests/warnings/recovery.rs",
+    "server2/tools/verification/kma_client_eval.py",
+    "server2/tools/verification/kma_full_response_contract.py",
+    "server2/tools/verification/test_kma_client_eval.py",
+    "server2/tools/verification/test_kma_full_response_contract.py"
+  ],
+  "outside": [
+    {
+      "path": "docs/evidence/research/kma-speed-options-2026-11-04.md",
+      "category": "documentation",
+      "reason": "Causes, options, partial-storage measurements and the result of this change."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "Stored objects and read protocol changed by this task."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Warning replay, listings, read window and KASI restore behavior."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.json",
+      "category": "documentation",
+      "reason": "Editable source of the read and restart flow."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.html",
+      "category": "documentation",
+      "reason": "Generated diagram of the read and restart flow."
+    },
+    {
+      "path": "intent/issue-2614-kma-stored-reads.md",
+      "category": "documentation",
+      "reason": "Outcome, authority and exclusions."
+    },
+    {
+      "path": "specs/issue-2614-kma-stored-reads.md",
+      "category": "documentation",
+      "reason": "Acceptance criteria."
+    },
+    {
+      "path": "plans/issue-2614-kma-stored-reads.md",
+      "category": "documentation",
+      "reason": "Implementation sequence."
+    }
+  ]
+}

@@ -289,6 +289,20 @@ pub struct Entry {
     pub event_rank: f64,
 }
 impl Entry {
+    /// The legacy exported zone document [`Self::from_legacy`] reads back.
+    pub fn to_legacy(&self) -> Value {
+        serde_json::json!({
+            "areaCode": self.area_code,
+            "areaName": self.area_name,
+            "warnVar": self.warn_var,
+            "warnStress": self.warn_stress,
+            "active": self.active,
+            "command": self.command,
+            "eventTmFc": self.event_tm_fc,
+            "eventTmSeq": self.event_tm_seq,
+            "eventRank": self.event_rank,
+        })
+    }
     /// A legacy exported zone document; `None` for the `_sync` marker or a non-object.
     pub fn from_legacy(doc: &Value) -> Option<Self> {
         let o = doc.as_object()?;
@@ -395,8 +409,20 @@ pub fn state_key(area_code: &str, warn_var: f64) -> String {
 pub struct ZoneState {
     order: Vec<String>,
     entries: HashMap<String, Entry>,
+    seed: Option<String>,
 }
 impl ZoneState {
+    /// An empty state on the legacy seed acquisition `seed`.
+    pub fn on_seed(seed: Option<String>) -> Self {
+        Self {
+            seed,
+            ..Self::default()
+        }
+    }
+    /// The legacy seed acquisition this state was built on, whichever is stored by now.
+    pub fn seed(&self) -> Option<&str> {
+        self.seed.as_deref()
+    }
     pub fn insert(&mut self, entry: Entry) {
         let key = state_key(&entry.area_code, entry.warn_var);
         if !self.entries.contains_key(&key) {

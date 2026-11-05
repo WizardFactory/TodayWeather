@@ -337,9 +337,10 @@ async fn seed_absent_strict_warning_read_records_a_bounded_actual_transport_scan
     let requests = sum("OP ");
     let consumed = sum("BODYIN ");
     let written = sum("BODYOUT ");
+    // The seed read, one listing each of stored states and days, and the one listed day.
     assert!(
-        requests > 60 && requests <= 512,
-        "predeclared512HTTPsingle-readbound, actual {requests}"
+        requests > 0 && requests <= 16,
+        "bounded by what is stored, not by the days it could be on, actual {requests}"
     );
     assert!(written > 0);
     println!(

@@ -214,7 +214,9 @@ async fn life_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
     }
     assert_eq!(compared, 5);
     // KASI: the first request reads every area's stored days without a provider or warmup.
-    let inputs = LifeInputs::new(transport.clone(), store.clone()).with_clock(test_clock());
+    let inputs = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_kasi_wait(Duration::from_secs(20));
 
     let kasi = inputs.load(KASI_NOW, deadline()).await.kasi.expect("read");
     let k = at(oracle(), &["kasi"]);
@@ -257,7 +259,9 @@ async fn first_request_restores_stored_kasi_without_acquirer_or_warmup() {
         &[kma_page(value(at(run, &["raw"])))],
     )
     .await;
-    let inputs = LifeInputs::new(transport, store).with_clock(test_clock());
+    let inputs = LifeInputs::new(transport, store)
+        .with_clock(test_clock())
+        .with_kasi_wait(Duration::from_secs(20));
     // An exhausted request budget returns without waiting for the owned S3 work.
     let started = Instant::now();
     let late = inputs.load(KASI_NOW, started).await;
@@ -273,6 +277,179 @@ async fn first_request_restores_stored_kasi_without_acquirer_or_warmup() {
     assert!(
         !items_of(&restored.json()).is_empty(),
         "the S3 day must be restored"
+    );
+}
+
+/// S3 GETs and LISTs of keys containing `needle` the peer has served.
+async fn served(peer: &Peer, needle: &str) -> u64 {
+    let bytes = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .unwrap()
+        .get(format!(
+            "{}/__catalog/status",
+            peer.endpoint().trim_end_matches('/')
+        ))
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+    let status: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    status
+        .as_object()
+        .unwrap()
+        .iter()
+        .filter(|(k, _)| k.starts_with("OP ") && k.contains(needle))
+        .map(|(_, n)| n.as_u64().unwrap())
+        .sum()
+}
+
+/// A restore longer than the request's short wait continues on its own: the request answers
+/// without KASI and a later one has it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_long_kasi_restore_does_not_hold_the_request() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let run = &items_of(at(oracle(), &["kasi", "runs"]))[0];
+    for area in server2::domestic::riseset::AREAS.iter().take(10) {
+        for day in [20261014, 20261015, 20261016, 20261017] {
+            publish(
+                &store,
+                "data-go-kr",
+                "kasi-area-rise-set",
+                area_key(area),
+                Publication::new(day, 0).unwrap().period(),
+                &day.to_string(),
+                1_791_000_000_000.,
+                &[kma_page(value(at(run, &["raw"])))],
+            )
+            .await;
+        }
+    }
+    let slow = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .unwrap()
+        .post(format!(
+            "{}/__catalog?mode=slow-all&key=x",
+            peer.endpoint().trim_end_matches('/')
+        ))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(slow.status(), 204);
+    let inputs = LifeInputs::new(transport, store)
+        .with_clock(test_clock())
+        .with_kasi_wait(Duration::from_millis(100));
+    let started = Instant::now();
+    let answers = inputs
+        .load(KASI_NOW, Instant::now() + Duration::from_secs(3))
+        .await;
+    assert!(answers.kasi.is_none(), "the restore needs longer");
+    assert!(started.elapsed() < Duration::from_secs(1));
+    let until = Instant::now() + Duration::from_secs(30);
+    loop {
+        let answers = inputs
+            .load(KASI_NOW, Instant::now() + Duration::from_secs(3))
+            .await;
+        if answers.kasi.is_some() {
+            break;
+        }
+        assert!(Instant::now() < until, "the owned restore never finished");
+    }
+}
+
+/// A capture pass stores what it folded as one object, and a new process restores from that
+/// object instead of reading every area and day.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_new_process_restores_kasi_from_the_stored_fold() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    seed_oracle(&store).await;
+    let first = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD)
+        .with_kasi_wait(Duration::from_secs(20));
+    first.kasi_pass(KASI_NOW).await.unwrap();
+    let expected = first.load(KASI_NOW, deadline()).await.kasi.expect("read");
+    let (reads, lists) = (
+        served(&peer, "GET index/v2/data-go-kr/kasi-area-rise-set").await,
+        served(&peer, "LIST index/v2/data-go-kr/kasi-area-rise-set").await,
+    );
+    let second = LifeInputs::new(transport, store)
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD)
+        .with_kasi_wait(Duration::from_secs(20));
+    let fold_lists = served(&peer, "LIST index/v2/data-go-kr/kasi-fold").await;
+    let restored = second.load(KASI_NOW, deadline()).await.kasi.expect("fold");
+    same(
+        &by_location(&restored.json()),
+        &by_location(&expected.json()),
+        "kasiRiseSet from the stored fold",
+    );
+    assert_eq!(
+        served(&peer, "LIST index/v2/data-go-kr/kasi-fold").await,
+        fold_lists + 1,
+        "one existence question"
+    );
+    assert_eq!(
+        served(&peer, "GET index/v2/data-go-kr/kasi-area-rise-set").await,
+        reads,
+        "no area or day is read"
+    );
+    assert_eq!(
+        served(&peer, "LIST index/v2/data-go-kr/kasi-area-rise-set").await,
+        lists,
+        "a fresh fold stands for the listing"
+    );
+}
+
+/// Days stored after an older fold are read from the listing on top of it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_older_kasi_fold_is_completed_from_the_listing() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    seed_oracle(&store).await;
+    let first = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD)
+        .with_kasi_wait(Duration::from_secs(20));
+    first.kasi_pass(KASI_NOW).await.unwrap();
+    let run = &items_of(at(oracle(), &["kasi", "runs"]))[0];
+    let area = text(at(run, &["area"]));
+    let later = KASI_NOW + 3. * DAY;
+    let day = 20261019;
+    let mut raw = value(at(run, &["raw"]));
+    raw["locdate"] = json!(day);
+    publish(
+        &store,
+        "data-go-kr",
+        "kasi-area-rise-set",
+        area_key(&area),
+        Publication::new(day, 0).unwrap().period(),
+        &day.to_string(),
+        later - 1000.,
+        &[kma_page(raw)],
+    )
+    .await;
+    let second = LifeInputs::new(transport, store)
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD)
+        .with_kasi_wait(Duration::from_secs(20));
+    let restored = second.load(later, deadline()).await.kasi.expect("read");
+    assert!(
+        restored.has(&area, &day.to_string()),
+        "{}",
+        restored.json().to_bytes().len()
     );
 }
 
@@ -1126,7 +1303,7 @@ impl server2::history::IndexListing for OrderedKasi {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn parallel_kasi_restore_preserves_area_ties_and_recovers_after_a_partial_read_error() {
+async fn kasi_restore_reads_areas_in_order_and_recovers_after_a_partial_read_error() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
@@ -1165,13 +1342,17 @@ async fn parallel_kasi_restore_preserves_area_ties_and_recovers_after_a_partial_
         .with_kasi_schedule(HOLD, HOLD);
     assert!(inputs.kasi_pass(KASI_NOW).await.is_err());
     let completed = done.lock().unwrap().clone();
-    assert!(completed.len() >= 3);
+    assert_eq!(
+        completed.len(),
+        2,
+        "the failed area ends the read: {completed:?}"
+    );
     let first = server2::storage::sha256(&area_key("강릉").canonical_bytes().unwrap());
     let second = server2::storage::sha256(&area_key("강화도").canonical_bytes().unwrap());
     let position = |part: &str| completed.iter().position(|k| k.contains(part)).unwrap();
     assert!(
-        position(&second) < position(&first),
-        "S3 completion order differs from AREAS"
+        position(&first) < position(&second),
+        "one area at a time, leaving the S3 gate to requests, even when the first is slow"
     );
     failed_area.store(false, Ordering::SeqCst);
     inputs.kasi_pass(KASI_NOW).await.unwrap();
@@ -1186,5 +1367,108 @@ async fn parallel_kasi_restore_preserves_area_ties_and_recovers_after_a_partial_
         text(at(&items_of(&answer)[0], &["locationName"])),
         "강릉",
         "first AREAS entry wins equal-distance tie"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_unreadable_kasi_fold_falls_back_to_the_originals() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    seed_oracle(&store).await;
+    let first = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD);
+    first.kasi_pass(KASI_NOW).await.unwrap();
+    let expected = first
+        .load(KASI_NOW, deadline())
+        .await
+        .kasi
+        .expect("originals");
+    assert!(!expected.is_empty());
+    let id = CatalogId {
+        source: "data-go-kr".into(),
+        kind: "kasi-fold".into(),
+        key_sha256: server2::storage::sha256(&named("all-areas").canonical_bytes().unwrap()),
+        partition: "20261016".into(),
+    };
+    let mut url: reqwest::Url = format!("{}/__catalog", peer.endpoint().trim_end_matches('/'))
+        .parse()
+        .unwrap();
+    url.query_pairs_mut()
+        .append_pair("mode", "corrupt")
+        .append_pair("key", &id.key());
+    let fault = reqwest::Client::new()
+        .post(url)
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(fault.status(), 204);
+    let second = LifeInputs::new(transport, store)
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD)
+        .with_kasi_wait(Duration::from_secs(20));
+    second.kasi_pass(KASI_NOW).await.unwrap();
+    let restored = second
+        .load(KASI_NOW, deadline())
+        .await
+        .kasi
+        .expect("originals");
+    same(
+        &by_location(&restored.json()),
+        &by_location(&expected.json()),
+        "fold fallback",
+    );
+}
+
+/// The fold's age decides, not its date: this one is a day and an hour old on the next UTC date.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_kasi_fold_older_than_a_day_is_completed_on_the_next_date() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    seed_oracle(&store).await;
+    let first = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD);
+    first.kasi_pass(KASI_NOW).await.unwrap();
+    let lists = served(&peer, "LIST index/v2/data-go-kr/kasi-area-rise-set").await;
+    let second = LifeInputs::new(transport, store)
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD)
+        .with_kasi_wait(Duration::from_secs(20));
+    second.load(KASI_NOW + 25. * HOUR, deadline()).await;
+    assert!(served(&peer, "LIST index/v2/data-go-kr/kasi-area-rise-set").await > lists);
+}
+
+/// A request that waited behind a capture pass finds the fold loaded and lists nothing itself.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_request_behind_a_capture_pass_does_not_list_the_kasi_kind() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    seed_oracle(&store).await;
+    let first = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD);
+    first.kasi_pass(KASI_NOW).await.unwrap();
+    let lists = served(&peer, "LIST index/v2/data-go-kr/kasi-area-rise-set").await;
+    let second = LifeInputs::new(transport, store)
+        .with_clock(test_clock())
+        .with_kasi_schedule(HOLD, HOLD)
+        .with_kasi_wait(Duration::from_secs(20));
+    let (pass, answers) = tokio::join!(
+        second.kasi_pass(KASI_NOW),
+        second.load(KASI_NOW, deadline())
+    );
+    pass.unwrap();
+    assert!(answers.kasi.is_some());
+    assert_eq!(
+        served(&peer, "LIST index/v2/data-go-kr/kasi-area-rise-set").await,
+        lists
     );
 }

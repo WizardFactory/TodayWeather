@@ -1,5 +1,6 @@
 //! S3 identities for warning acquisitions and in-memory derivation of legacy documents.
-//! Raw bytes are exact provider/export bytes; no derived bulletin or zone state is stored.
+//! Raw bytes are exact provider/export bytes, except the zone state the collector stores once a
+//! KST day (`ZONE_STATE_KIND`); no derived bulletin is stored.
 use super::{
     js::{self, key, ostr},
     provider::{self, Operation},
@@ -18,6 +19,8 @@ use std::sync::Arc;
 pub const SOURCE: &str = "kma-warning";
 pub const ZONE_KIND: &str = "pwn-cd";
 pub const ZONE_SEED_KIND: &str = "zone-seed";
+/// The zone state the collector stores once a day, in the legacy export's document shape.
+pub const ZONE_STATE_KIND: &str = "zone-state";
 pub const SEED_PARTITION: &str = "seed";
 pub const SEED_DATE: u32 = 19700101;
 pub const LEGACY_SPECIAL_ROLE: &str = "legacy-special";
@@ -55,7 +58,7 @@ pub fn summary_operation(kind: u8) -> Option<Operation> {
 }
 fn slot(kind: &str) -> &'static str {
     match kind {
-        ZONE_KIND => "day",
+        ZONE_KIND | ZONE_STATE_KIND => "day",
         ZONE_SEED_KIND => "seed",
         _ => "announcement",
     }

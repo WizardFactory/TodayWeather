@@ -6,7 +6,7 @@ use crate::storage::{
     CatalogId, CatalogStore, Error, LookupOutcome, PageOutcome, ProviderKey, RawRecord, ReadCursor,
     ReadOrder, sha256,
 };
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tokio::time::Instant;
 
 /// One complete acquisition.
@@ -26,6 +26,8 @@ impl Fetched {
 }
 /// LIST pages allowed per key and month (1,000 keys each; a month of hourly partitions is 744).
 const LIST_PAGES: usize = 4;
+/// LIST pages allowed for every key of one kind (1,000 keys each).
+const KIND_LIST_PAGES: usize = 1024;
 /// Catalog lookups in flight at once per load (below the shared S3 admission).
 pub const LOOKUPS: usize = 8;
 
@@ -69,8 +71,34 @@ impl<T: IndexListing + Clone> Reader<T> {
             sha256(&key.canonical_bytes()?)
         ))
     }
-    /// Published partitions of one key in the given KST months (`YYYYMM`), ascending. An
-    /// incomplete listing is an error: absence cannot be proved.
+    /// Every key under `prefix`, from one paged LIST. An incomplete listing is an error: absence
+    /// cannot be proved.
+    async fn listed(
+        &self,
+        prefix: &str,
+        pages: usize,
+        deadline: Instant,
+    ) -> Result<Vec<String>, Error> {
+        let mut out = Vec::new();
+        let mut token: Option<String> = None;
+        for _ in 0..pages {
+            let page = tokio::time::timeout_at(
+                deadline,
+                self.transport.list_index(prefix, token.as_deref()),
+            )
+            .await
+            .map_err(|_| Error::Timeout)??;
+            out.extend(page.keys);
+            token = page.next;
+            if token.is_none() {
+                return Ok(out);
+            }
+        }
+        Err(Error::Capacity)
+    }
+    /// Published partitions of one key in the given KST months (`YYYYMM`), ascending. A range
+    /// longer than two months lists the key once, so an existence question costs one LIST however
+    /// long the range has grown.
     pub async fn partitions(
         &self,
         source: &str,
@@ -80,39 +108,85 @@ impl<T: IndexListing + Clone> Reader<T> {
         deadline: Instant,
     ) -> Result<Vec<String>, Error> {
         let prefix = Self::prefix(source, kind, key)?;
+        let of = |key: &String| {
+            key.strip_prefix(&prefix)
+                .and_then(|k| k.strip_suffix(".json"))
+                .map(str::to_owned)
+        };
         let mut out = Vec::new();
-        for month in months {
-            let mut token: Option<String> = None;
-            let mut done = false;
-            for _ in 0..LIST_PAGES {
-                let page = tokio::time::timeout_at(
-                    deadline,
-                    self.transport
-                        .list_index(&format!("{prefix}{month:06}"), token.as_deref()),
-                )
-                .await
-                .map_err(|_| Error::Timeout)??;
-                for key in page.keys {
-                    if let Some(p) = key
-                        .strip_prefix(&prefix)
-                        .and_then(|k| k.strip_suffix(".json"))
-                    {
-                        out.push(p.to_owned());
-                    }
-                }
-                token = page.next;
-                if token.is_none() {
-                    done = true;
-                    break;
-                }
-            }
-            if !done {
-                return Err(Error::Capacity);
+        if months.len() > 2 {
+            let wanted: Vec<String> = months.iter().map(|m| format!("{m:06}")).collect();
+            let keys = self
+                .listed(&prefix, LIST_PAGES * months.len(), deadline)
+                .await?;
+            out.extend(
+                keys.iter()
+                    .filter_map(of)
+                    .filter(|p| wanted.iter().any(|m| p.starts_with(m))),
+            );
+        } else {
+            for month in months {
+                let keys = self
+                    .listed(&format!("{prefix}{month:06}"), LIST_PAGES, deadline)
+                    .await?;
+                out.extend(keys.iter().filter_map(of));
             }
         }
         out.sort();
         out.dedup();
         Ok(out)
+    }
+    /// Every published partition of one key, ascending, from one LIST of the key.
+    pub async fn key_partitions(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        deadline: Instant,
+    ) -> Result<Vec<String>, Error> {
+        let prefix = Self::prefix(source, kind, key)?;
+        let mut out: Vec<String> = self
+            .listed(&prefix, LIST_PAGES, deadline)
+            .await?
+            .iter()
+            .filter_map(|key| {
+                key.strip_prefix(&prefix)
+                    .and_then(|k| k.strip_suffix(".json"))
+                    .map(str::to_owned)
+            })
+            .collect();
+        out.sort();
+        out.dedup();
+        Ok(out)
+    }
+    /// Published partitions of every key of one kind by key hash, ascending, from one paged LIST.
+    pub async fn kind_partitions(
+        &self,
+        source: &str,
+        kind: &str,
+        deadline: Instant,
+    ) -> Result<HashMap<String, Vec<String>>, Error> {
+        let prefix = format!("index/v2/{source}/{kind}/");
+        let mut out: HashMap<String, Vec<String>> = HashMap::new();
+        for key in self.listed(&prefix, KIND_LIST_PAGES, deadline).await? {
+            if let Some((hash, partition)) = key
+                .strip_prefix(&prefix)
+                .and_then(|k| k.strip_suffix(".json"))
+                .and_then(|k| k.split_once('/'))
+            {
+                out.entry(hash.to_owned())
+                    .or_default()
+                    .push(partition.to_owned());
+            }
+        }
+        for partitions in out.values_mut() {
+            partitions.sort();
+        }
+        Ok(out)
+    }
+    /// The hash a key's partitions are listed under.
+    pub fn key_hash(key: &ProviderKey) -> Result<String, Error> {
+        Ok(sha256(&key.canonical_bytes()?))
     }
     /// Every complete acquisition of one catalog; empty when the catalog does not exist.
     pub async fn acquisitions(

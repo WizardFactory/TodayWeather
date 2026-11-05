@@ -71,7 +71,7 @@
       "to": "s3",
       "y": 210,
       "label": "Discover required originals",
-      "note": "Real bounded LIST and catalog checks stay inside latency. No initial grid head."
+      "note": "One LIST per existence question: the key layout is known. No initial grid head."
     },
     {
       "id": "inventory",
@@ -103,7 +103,7 @@
       "from": "owner",
       "to": "provider",
       "y": 470,
-      "label": "Fetch missing required inputs",
+      "label": "Fetch absent inputs at once",
       "variant": "emphasis"
     },
     {
@@ -182,7 +182,7 @@
       "to": "s3",
       "y": 1173,
       "label": "Normal canonical discovery",
-      "note": "Count LIST, catalogs, descriptors and raw. Provider fallback is disabled in the restore test."
+      "note": "Grid reads stop at 54 h under ASOS-primary. Provider fallback is disabled in the restore test."
     },
     {
       "id": "restore-raw",
@@ -240,7 +240,7 @@
       "to": "s3",
       "y": 1713,
       "label": "Read and bounded repair",
-      "note": "Protect discovery generations through promotion/removal. Never combine different vintages."
+      "note": "Zone state and KASI restore from one stored fold; a restore holds a request at most 500 ms."
     },
     {
       "id": "reacquire",
@@ -284,6 +284,7 @@
       "title": "Canonical reuse; conditional candidates",
       "items": [
         "Canonical v2 raw/catalog/group controls remain the restore authority. Same selected original closure must replay exactly.",
+        "The collector stores zone-state daily and KASI capture stores kasi-fold: folds of raw inputs, never assembled weather.",
         "Per-grid optimal combinations, source plans, day locators, heads and packs remain deferred. No live full-response timing is qualified."
       ]
     }

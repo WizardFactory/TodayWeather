@@ -280,7 +280,10 @@ def evaluate(text, version, surface, contract, profile, observed_history=False):
         return [finding('W2', 'violation', '$', f'{json_type(body)}; legacy uses object')]
     if set(body) == {'usage'}:
         return []
-    known = profile.get((version, surface)) or profile.get((version, 'addr')) or {}
+    known = dict(profile.get((version, surface)) or profile.get((version, 'addr')) or {})
+    for path, addition in contract['wire_additions'].items():
+        if path in known:
+            known[path] = set(known[path]) | set(addition['types'])
     return (wire_rules(body, known) + required_rules(body, contract) + axis_rules(body, contract)
             + consumer_rules(body, version, contract, known) + history_rules(body, observed_history))
 

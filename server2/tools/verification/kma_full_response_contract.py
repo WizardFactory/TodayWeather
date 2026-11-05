@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Offline KMA history coverage and exact value-difference evidence.
+"""Offline KMA history and forecast coverage and exact value-difference evidence.
 
-This necessary history gate never certifies a complete client response by itself.
+These necessary gates never certify a complete client response by themselves.
 Latest products, native raw identity/integrity, recent public slots, provenance,
 functional headers and end-to-end timing remain independent acceptance gates.
 No provider, legacy service, S3 or credential access is performed.
@@ -23,6 +23,10 @@ WEATHER_FIELDS = frozenset(('pop pty r06 r06Approx r06Hours reh s06 s06Approx '
                            'rn1 lgt taMin taMax t1d skyAm skyPm ptyAm ptyPm '
                            'lgtAm lgtPm wfAm wfPm').split())
 MAX_INPUT = 32 * 1024 * 1024
+# Legacy daily rows reach D+10; every short issue reaches the end of D+2 in three-hour slots.
+FORECAST_DAYS = 10
+MID_MORNING_HOUR = 8
+SHORT_STEP = timedelta(hours=3)
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 CONTRACT_PATH = REPOSITORY_ROOT / 'server2' / 'config' / 'contracts' / 'kma-history.v1.json'
 
@@ -101,6 +105,47 @@ def audit_history(body, as_of, hourly=None):
                 forbidden_source_hours=forbidden, daily_field_gap_count=len(daily_gaps),
                 daily_field_gaps=daily_gaps, duplicate_dates=duplicate_dates,
                 native_history_status_is_not_coverage_proof=True)
+
+
+def slot_time(row):
+    """A short slot's end; 0300 as text and 3 as a number are the same hour, 24 ends the day."""
+    time = int(row['time'])
+    hour = time // 100 if time > 24 else time
+    return datetime.strptime(str(row['date']), '%Y%m%d').replace(tzinfo=KST) + timedelta(hours=hour)
+
+
+def slot_label(moment):
+    day = moment - timedelta(hours=1)
+    midnight = day.replace(hour=0)
+    return f"{day.strftime('%Y%m%d')}:{int((moment - midnight).total_seconds()) // 3600:02}"
+
+
+def audit_forecast(body, as_of):
+    """Forecast coverage format rules cannot see: a valid body can still miss days."""
+    today = as_kst(as_of).replace(hour=0, minute=0, second=0, microsecond=0)
+    mid = body.get('midData', {})
+    status = mid.get('dailyStatus')
+    healthy = isinstance(status, dict) and status.get('healthy') is True
+    reasons = list(status.get('reasons', [])) if isinstance(status, dict) else ['daily-status-missing']
+    dates = {str(r.get('date')) for r in mid.get('dailyData', [])}
+    # The mid target before 08 KST is the previous day's 18:00 issue, so its last day is D+9.
+    last_day = FORECAST_DAYS if as_kst(as_of).hour >= MID_MORNING_HOUR else FORECAST_DAYS - 1
+    expected = [(today + timedelta(days=i)).strftime('%Y%m%d') for i in range(last_day + 1)]
+    missing = [d for d in expected if d not in dates]
+    slots = sorted(slot_time(r) for r in body.get('short', []))
+    starts = bool(slots) and slots[0] <= as_kst(as_of) + SHORT_STEP
+    gaps = []
+    for earlier, later in zip(slots, slots[1:]):
+        moment = earlier + SHORT_STEP
+        while moment < later:
+            gaps.append(slot_label(moment))
+            moment += SHORT_STEP
+    reaches = bool(slots) and slots[-1] >= today + timedelta(days=3)
+    return dict(forecast_complete=healthy and not missing and starts and reaches and not gaps,
+                daily_status_healthy=healthy, daily_status_reasons=reasons,
+                missing_forecast_dates=missing, short_slot_count=len(slots),
+                short_starts_by_now=starts, short_reaches_second_future_day=reaches,
+                short_slot_gaps=gaps)
 
 
 def value_at(row, key):
@@ -277,7 +322,8 @@ def main():
     hourly = load(args.hourly_evidence) if args.hourly_evidence else None
     result = dict(schema=1, as_of=args.as_of,
                   input_sha256=hashlib.sha256(Path(args.body).read_bytes()).hexdigest(),
-                  history=audit_history(body, args.as_of, hourly))
+                  history=audit_history(body, args.as_of, hourly),
+                  forecast=audit_forecast(body, args.as_of))
     if args.compare:
         diff = historical_differences(body, response_body(args.compare, args.record_index), args.as_of)
         result['historical_weather_differences'] = diff
@@ -285,9 +331,10 @@ def main():
         result['compared_input_sha256'] = hashlib.sha256(Path(args.compare).read_bytes()).hexdigest()
     Path(args.report).write_text(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False) + '\n')
     print(json.dumps(dict(history_complete=result['history']['history_complete'],
+                          forecast_complete=result['forecast']['forecast_complete'],
                           full_response_qualified=False,
                           historical_weather_difference_count=result.get('historical_weather_difference_count'))))
-    return 0 if result['history']['history_complete'] else 2
+    return 0 if result['history']['history_complete'] and result['forecast']['forecast_complete'] else 2
 
 
 if __name__ == '__main__':

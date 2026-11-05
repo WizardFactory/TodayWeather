@@ -89,7 +89,7 @@ use tokio::time::Instant;
 /// Observed-history derivation identity for stored summaries; a new aggregation rule must change
 /// it so that summaries built under an earlier rule are not reused. Its last segment is the
 /// `aggregation_policy_version` of `server2/config/contracts/kma-history.v1.json`.
-pub const OBSERVED_HISTORY_POLICY: &str = "asos-primary-v1;measured-history;public3h;rain-blank-semantics-v2;precipitation-guard-v1;dry-closure-v1;wet-bulb-rain-v1;station-altitude-v1";
+pub const OBSERVED_HISTORY_POLICY: &str = "asos-primary-v1;measured-history;public3h;rain-blank-semantics-v2;precipitation-guard-v1;dry-closure-v1;wet-bulb-rain-v1;station-altitude-v1;stored-read-window-v1";
 
 const DAY_MS: f64 = 86_400_000.;
 const HOUR_MS: f64 = 3_600_000.;
@@ -116,6 +116,10 @@ fn lookback_ms(family: Family) -> f64 {
 }
 /// RSS rows reach two days after their publication day; retention is 216 h before the run.
 const RSS_LOOKBACK_MS: f64 = grid::RETENTION_MS + 4. * DAY_MS;
+/// Stored grid and RSS publications the observed response reads. ASOS owns completed days, but
+/// yesterday's ASOS arrives after 11:00 KST: the window reaches yesterday's first hour at any
+/// clock (48 h) and the publications valid then (VSRT's six hours).
+const OBSERVED_READ_MS: f64 = 54. * HOUR_MS;
 /// KST months (`YYYYMM`) from [`HISTORY_START_MONTH`] through `now`, ascending.
 pub(crate) fn history_months(now: f64) -> Vec<u32> {
     let end = records::months(now, now)
@@ -541,7 +545,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         }
         let (true, Some(last)) = (applied, last) else {
             // No list stored: legacy's empty collection (`findForecastZoneByName` finds nothing).
-            return Ok(Arc::new(Zones::default()));
+            // The observed response uses the release's land zones until a list is stored, so its
+            // first answer can ask for mid temperatures.
+            return Ok(if self.observed_history {
+                Zones::packaged()
+            } else {
+                Arc::new(Zones::default())
+            });
         };
         let zones = Arc::new(zones);
         *cache = Some(ZoneCache {
@@ -620,7 +630,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             Family::Short => schedule::Family::Short,
         };
         let key = grid.provider_key();
-        let from = now - lookback_ms(family);
+        let from = now
+            - if self.observed_history {
+                OBSERVED_READ_MS
+            } else {
+                lookback_ms(family)
+            };
         let months = records::months(from, now);
         let parts = self
             .reader
@@ -629,11 +644,31 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .map_err(|e| format!("{} listing: {e}", sf.kind()))?;
         let oldest = schedule::from_ms(from as i64).partition();
         let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
-        let (mut fetched, excluded) = self
-            .reader
-            .all_counted(sf.source(), sf.kind(), &key, &wanted, deadline)
-            .await
-            .map_err(|e| format!("{} read: {e}", sf.kind()))?;
+        // The observed path requests what the listing shows absent without waiting for the
+        // stored reads, so stored history does not delay the provider.
+        let absent_first =
+            |p: &Publication| self.observed_history && !wanted.iter().any(|w| *w == p.partition());
+        let absent = async {
+            let mut acquired = Vec::new();
+            if let Some(latest) = sf.latest(now as i64).filter(absent_first) {
+                acquired.extend(self.latest_grid(sf, grid, latest, now, until).await);
+            }
+            if self.observed_history {
+                let today: Vec<_> = required::foreground(sf, now as i64)
+                    .into_iter()
+                    .filter(|p| Some(*p) != sf.latest(now as i64) && absent_first(p))
+                    .collect();
+                acquired.extend(self.foreground_grid(sf, grid, &today, until).await);
+            }
+            acquired
+        };
+        let (stored, absent) = tokio::join!(
+            self.reader
+                .all_counted(sf.source(), sf.kind(), &key, &wanted, deadline),
+            absent
+        );
+        let (mut fetched, excluded) = stored.map_err(|e| format!("{} read: {e}", sf.kind()))?;
+        fetched.extend(absent);
         // S16: this request's own acquisition keeps its stored fetch time in its identity (the
         // fold sees it at the request instant).
         let mut own: Option<InputId> = None;
@@ -659,72 +694,30 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .copied()
                 .filter(|p| missing(p))
                 .collect();
+            // Listed but unusable publications are still eligible, after the reads showed it.
             let foreground: Vec<_> = if self.observed_history {
                 required::foreground(sf, now as i64)
                     .into_iter()
-                    .filter(|p| *p != latest && missing(p))
+                    .filter(|p| *p != latest && missing(p) && !absent_first(p))
                     .collect()
             } else {
                 Vec::new()
             };
             if missing(&latest)
-                && let Some(request) = grid_request(sf, grid, latest)
+                && !absent_first(&latest)
+                && let Some(f) = self.latest_grid(sf, grid, latest, now, until).await
             {
-                let key = grid_flight(sf, grid, latest);
-                let request = fetch::ForecastRequest::DataGoKr(request);
-                let fetched_latest = if sf == schedule::Family::Short {
-                    self.acquire_admitted(
-                        key.clone(),
-                        request,
-                        PublicationAdmission::LatestShort {
-                            gate: self.latest_short.clone(),
-                            attempts: self.attempts.clone(),
-                            key,
-                            cell: grid_key(grid),
-                            publication: latest,
-                            now,
-                        },
-                        until,
-                    )
-                    .await
-                } else {
-                    self.acquire(key, request, LATEST_RETRY, until).await
-                };
-                if let Some(f) = fetched_latest {
-                    if self.raw_writer.is_none() {
-                        own = grid_input_id(family, sf.kind(), &f);
-                    }
-                    fetched.push(if self.observed_history {
-                        f
-                    } else {
-                        visible(f, now)
-                    });
+                if self.raw_writer.is_none() {
+                    own = grid_input_id(family, sf.kind(), &f);
                 }
+                fetched.push(if self.observed_history {
+                    f
+                } else {
+                    visible(f, now)
+                });
             }
             if self.observed_history {
-                // Foreground history covers today's unavailable-in-ASOS hours and
-                // the D-1 24:00 boundary. Never request old SHRT for history.
-                for chunk in foreground.chunks(BACKFILL_CONCURRENCY) {
-                    if Instant::now() >= until {
-                        break;
-                    }
-                    let work = chunk.iter().filter_map(|p| {
-                        let request = grid_request(sf, grid, *p)?;
-                        Some(self.acquire(
-                            grid_flight(sf, grid, *p),
-                            fetch::ForecastRequest::DataGoKr(request),
-                            LATEST_RETRY,
-                            until,
-                        ))
-                    });
-                    for f in crate::history::join_all(work.collect())
-                        .await
-                        .into_iter()
-                        .flatten()
-                    {
-                        fetched.push(f);
-                    }
-                }
+                fetched.extend(self.foreground_grid(sf, grid, &foreground, until).await);
             } else if !backfill.is_empty() {
                 self.backfill(sf, grid, latest, backfill).await;
             }
@@ -760,6 +753,69 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .flat_map(|f| f.raw_ids.iter().cloned())
             .collect();
         Ok((grid_documents(family, coord, &fetched, as_of), ids, raw_ids))
+    }
+    /// The latest publication of a cell and family, joined under the request's wait.
+    async fn latest_grid(
+        &self,
+        sf: schedule::Family,
+        grid: crate::history::Grid,
+        latest: Publication,
+        now: f64,
+        until: Instant,
+    ) -> Option<Fetched> {
+        let request = grid_request(sf, grid, latest)?;
+        let key = grid_flight(sf, grid, latest);
+        let request = fetch::ForecastRequest::DataGoKr(request);
+        if sf == schedule::Family::Short {
+            self.acquire_admitted(
+                key.clone(),
+                request,
+                PublicationAdmission::LatestShort {
+                    gate: self.latest_short.clone(),
+                    attempts: self.attempts.clone(),
+                    key,
+                    cell: grid_key(grid),
+                    publication: latest,
+                    now,
+                },
+                until,
+            )
+            .await
+        } else {
+            self.acquire(key, request, LATEST_RETRY, until).await
+        }
+    }
+    /// Foreground history covers today's unavailable-in-ASOS hours and the D-1 24:00 boundary.
+    /// Never request old SHRT for history.
+    async fn foreground_grid(
+        &self,
+        sf: schedule::Family,
+        grid: crate::history::Grid,
+        publications: &[Publication],
+        until: Instant,
+    ) -> Vec<Fetched> {
+        let mut acquired = Vec::new();
+        for chunk in publications.chunks(BACKFILL_CONCURRENCY) {
+            if Instant::now() >= until {
+                break;
+            }
+            let work = chunk.iter().filter_map(|p| {
+                let request = grid_request(sf, grid, *p)?;
+                Some(self.acquire(
+                    grid_flight(sf, grid, *p),
+                    fetch::ForecastRequest::DataGoKr(request),
+                    LATEST_RETRY,
+                    until,
+                ))
+            });
+            acquired.extend(
+                crate::history::join_all(work.collect())
+                    .await
+                    .into_iter()
+                    .flatten(),
+            );
+        }
+        acquired
     }
     /// One owned pass over the missing backfill publications of a cell and family when its latest
     /// publication is `latest` (at most once per [`BACKFILL_RETRY`]), newest first, 3 in flight.
@@ -862,7 +918,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             my: f64::from(grid.ny()),
         };
         let key = grid.provider_key();
-        let from = now - RSS_LOOKBACK_MS;
+        let from = now
+            - if self.observed_history {
+                OBSERVED_READ_MS
+            } else {
+                RSS_LOOKBACK_MS
+            };
         let months = records::months(from, now);
         let parts = self
             .reader
@@ -872,22 +933,37 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let latest = publication::rss_latest(now as i64).ok_or("clock")?;
         let oldest = schedule::from_ms(from as i64).partition();
         let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
-        let mut fetched = self
-            .reader
-            .all("kma-web", "town-rss", &key, &wanted, deadline)
-            .await
-            .map_err(|e| format!("town-rss read: {e}"))?;
-        if !present(&fetched, &latest.partition(), now)
-            && let Ok(request) = crate::domestic::family::WebRequest::town_rss(grid.nx(), grid.ny())
+        let request_latest = || async {
+            let request = crate::domestic::family::WebRequest::town_rss(grid.nx(), grid.ny())
                 .and_then(|r| r.not_before(latest))
-            && let Some(f) = self
-                .acquire(
-                    format!("town-rss/{}/{}", grid_key(grid), latest.partition()),
-                    fetch::ForecastRequest::Rss(request),
-                    LATEST_RETRY,
-                    until,
-                )
-                .await
+                .ok()?;
+            self.acquire(
+                format!("town-rss/{}/{}", grid_key(grid), latest.partition()),
+                fetch::ForecastRequest::Rss(request),
+                LATEST_RETRY,
+                until,
+            )
+            .await
+        };
+        // Observed: what the listing shows absent is requested while the stored reads run.
+        let absent_first = self.observed_history && !wanted.contains(&latest.partition());
+        let (read, requested) = tokio::join!(
+            self.reader
+                .all("kma-web", "town-rss", &key, &wanted, deadline),
+            async {
+                if absent_first {
+                    request_latest().await
+                } else {
+                    None
+                }
+            }
+        );
+        let mut fetched = read.map_err(|e| format!("town-rss read: {e}"))?;
+        if let Some(f) = requested {
+            fetched.push(visible(f, now));
+        } else if !absent_first
+            && !present(&fetched, &latest.partition(), now)
+            && let Some(f) = request_latest().await
         {
             fetched.push(visible(f, now));
         }
@@ -941,29 +1017,76 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let key = ProviderKey::Named { id: key };
         let latest = publication::mid_tm_fc(now as i64).ok_or("clock")?;
         let latest_part = latest.partition();
-        for month in history_months(now).into_iter().rev() {
-            let parts = self
-                .reader
-                .partitions("data-go-kr", kind, &key, &[month], deadline)
-                .await
-                .map_err(|e| format!("{kind} listing: {e}"))?;
+        let request_latest = || async {
+            let request = mid_request(model, reg_id, latest)?;
+            self.acquire(
+                format!("{kind}/{}/{latest_part}", reg_id.to_ascii_lowercase()),
+                fetch::ForecastRequest::DataGoKr(request),
+                LATEST_RETRY,
+                until,
+            )
+            .await
+        };
+        if !self.observed_history {
+            // Legacy `saveOnlyLastOne`: the last completed acquisition of the newest month.
+            for month in history_months(now).into_iter().rev() {
+                let parts = self
+                    .reader
+                    .partitions("data-go-kr", kind, &key, &[month], deadline)
+                    .await
+                    .map_err(|e| format!("{kind} listing: {e}"))?;
+                let mut fetched = self
+                    .reader
+                    .all("data-go-kr", kind, &key, &parts, deadline)
+                    .await
+                    .map_err(|e| format!("{kind} read: {e}"))?;
+                if collected
+                    && month == latest.date() / 100
+                    && !present(&fetched, &latest_part, now)
+                    && let Some(f) = request_latest().await
+                {
+                    fetched.push(visible(f, now));
+                }
+                let found = mid_documents(model, reg_id, &fetched, now);
+                if !found.is_empty() {
+                    return Ok(found);
+                }
+            }
+            // No acquisition was ever saved: legacy has no document either.
+            return Ok(Vec::new());
+        }
+        let listed = self
+            .reader
+            .partitions("data-go-kr", kind, &key, &history_months(now), deadline)
+            .await
+            .map_err(|e| format!("{kind} listing: {e}"))?;
+        // Each save replaces the whole document, so the newest publication that organizes is the
+        // answer: start there and stop at the first document.
+        if collected
+            && !listed.contains(&latest_part)
+            && let Some(f) = request_latest().await
+        {
+            let found = mid_documents(model, reg_id, &[visible(f, now)], now);
+            if !found.is_empty() {
+                return Ok(found);
+            }
+        }
+        for partition in listed.iter().rev() {
             let mut fetched = self
                 .reader
-                .all("data-go-kr", kind, &key, &parts, deadline)
+                .all(
+                    "data-go-kr",
+                    kind,
+                    &key,
+                    std::slice::from_ref(partition),
+                    deadline,
+                )
                 .await
                 .map_err(|e| format!("{kind} read: {e}"))?;
             if collected
-                && month == latest.date() / 100
+                && *partition == latest_part
                 && !present(&fetched, &latest_part, now)
-                && let Some(request) = mid_request(model, reg_id, latest)
-                && let Some(f) = self
-                    .acquire(
-                        format!("{kind}/{}/{latest_part}", reg_id.to_ascii_lowercase()),
-                        fetch::ForecastRequest::DataGoKr(request),
-                        LATEST_RETRY,
-                        until,
-                    )
-                    .await
+                && let Some(f) = request_latest().await
             {
                 fetched.push(visible(f, now));
             }

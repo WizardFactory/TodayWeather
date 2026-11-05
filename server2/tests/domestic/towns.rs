@@ -909,3 +909,22 @@ async fn kr_remap_http_uses_google_json_and_funds_each_legacy_request_retry() {
         ]
     );
 }
+
+#[test]
+fn every_region_row_finds_a_collected_mid_temperature_zone_before_any_list_is_stored() {
+    use server2::domestic::kma::MidModel;
+    use server2::domestic::kma::source::{Val, Zones, collected, region_table};
+    let zones = Zones::packaged();
+    let mut unresolved = Vec::new();
+    for row in region_table() {
+        let found = zones.find_by_name(&row.first, &row.second);
+        let id = match found.as_slice() {
+            [one] => one.get("regId").and_then(Val::as_str).unwrap().to_owned(),
+            _ => row.city_code.clone(),
+        };
+        if !collected(MidModel::Temp, &id, &zones) {
+            unresolved.push((row.first.clone(), row.second.clone(), id));
+        }
+    }
+    assert!(unresolved.is_empty(), "{unresolved:?}");
+}

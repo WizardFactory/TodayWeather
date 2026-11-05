@@ -435,3 +435,67 @@ async fn failed_raw_publication_never_calls_the_push_feed_hook() {
         "unacknowledged provider rows never enter feed"
     );
 }
+
+#[tokio::test]
+async fn a_failed_zone_state_store_does_not_fail_the_cycle_and_is_retried() {
+    use server2::warnings::records::{self, ZONE_STATE_KIND};
+    let peer = Peer::new();
+    let store = peer.store();
+    let clock = FixedClock::at("2026-09-26T03:05:00Z");
+    let collector =
+        WarningCollector::new(Arc::new(Recorded::fixtures()), store.clone(), clock.clone());
+    for _ in 0..7 {
+        collector.gather().await;
+    }
+    let catalog = records::catalog(ZONE_STATE_KIND, 20260926).unwrap().key();
+    peer.fault("reject", &catalog).await;
+    let report = collector.gather().await;
+    assert_eq!(report.errors, vec![]);
+    peer.fault("clear", &catalog).await;
+    let stored = || async {
+        store
+            .day(ZONE_STATE_KIND, 20260926, deadline())
+            .await
+            .unwrap()
+            .items
+            .len()
+    };
+    // Its raw object was written before the catalog refused it, and a read repairs that.
+    let before = stored().await;
+    clock.set("2026-09-26T03:06:00Z");
+    collector.gather().await;
+    assert_eq!(stored().await, before + 1, "a later cycle retries");
+}
+
+#[tokio::test]
+async fn the_collector_stores_the_zone_state_once_a_day_after_its_bootstrap() {
+    use server2::warnings::records::ZONE_STATE_KIND;
+    let peer = Peer::new();
+    let store = peer.store();
+    let clock = FixedClock::at("2026-09-26T03:05:00Z");
+    let collector =
+        WarningCollector::new(Arc::new(Recorded::fixtures()), store.clone(), clock.clone());
+    let stored = |date| {
+        let store = store.clone();
+        async move {
+            store
+                .day(ZONE_STATE_KIND, date, deadline())
+                .await
+                .unwrap()
+                .items
+                .len()
+        }
+    };
+    collector.gather().await;
+    assert_eq!(stored(20260926).await, 0, "sixty days are not covered yet");
+    // Each later cycle reaches eight days further back.
+    for _ in 0..7 {
+        collector.gather().await;
+    }
+    assert_eq!(stored(20260926).await, 1);
+    collector.gather().await;
+    assert_eq!(stored(20260926).await, 1, "once a day");
+    clock.set("2026-09-27T03:05:00Z");
+    collector.gather().await;
+    assert_eq!(stored(20260927).await, 1);
+}
