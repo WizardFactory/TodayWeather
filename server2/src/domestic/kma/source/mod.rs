@@ -1200,15 +1200,36 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 )
             };
             if observed.is_some() {
-                // A found town must not wait for the rest, or its forecast starts with no time
-                // left. The main path starts its own mid and optional arms.
-                match lookup.await {
-                    Ok(result) => (towns::town_document(&result, request, list), None),
+                // The mid forecast starts with the lookup, so a late lookup still leaves it time.
+                // A found town waits for neither it nor the optional arms, or its forecast would
+                // start with no time left: the main path joins the same owned acquisitions.
+                tokio::pin!(lookup, mid);
+                let mut mid_done = None;
+                let result = tokio::select! {
+                    result = &mut lookup => result,
+                    done = &mut mid => {
+                        mid_done = Some(done);
+                        lookup.await
+                    }
+                };
+                match result {
+                    Ok(result) => (
+                        towns::town_document(&result, request, list),
+                        mid_done.and_then(Result::ok),
+                    ),
                     Err(towns::ResolveError::Storage) => {
                         return Err(Unbuilt::Failed("town projection unavailable".into()));
                     }
                     Err(_) => {
-                        let (mid, (air, life, special)) = tokio::join!(mid, optional);
+                        let (mid, (air, life, special)) = tokio::join!(
+                            async {
+                                match mid_done {
+                                    Some(done) => done,
+                                    None => mid.await,
+                                }
+                            },
+                            optional
+                        );
                         let (zones, mids) = mid?;
                         return Ok(Snapshot::missing_town(now, zones, mids, air, life, special));
                     }

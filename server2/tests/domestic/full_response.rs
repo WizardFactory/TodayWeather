@@ -1346,3 +1346,55 @@ async fn a_kr_remap_to_a_new_province_name_finds_the_listed_name() {
     assert_eq!(prepared.region.as_deref(), Some("강원도"));
     assert_eq!(prepared.city.as_deref(), Some("강릉시"));
 }
+
+/// A lookup that outlasts the wait leaves the mid forecast the time it had from the start.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_late_town_lookup_keeps_the_mid_forecast_of_its_region() {
+    struct NeverLocated;
+    impl server2::geocode::town::Acquire for NeverLocated {
+        fn address(
+            &self,
+            _: server2::geocode::town::Operation,
+            _: String,
+        ) -> BoxFuture<'_, Result<serde_json::Value, server2::geocode::GeocodeError>> {
+            Box::pin(async {
+                tokio::time::sleep(Duration::from_secs(20)).await;
+                Err(server2::geocode::GeocodeError::Provider)
+            })
+        }
+    }
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        })))
+        .with_raw_writer(writer.clone())
+        .with_town_geocoder(Some(Arc::new(NeverLocated)));
+    let backend = KmaBackend::new(
+        Arc::new(source),
+        Arc::new(|| NOW),
+        AssemblyConfig::default(),
+    );
+    let mut request = super::source_s3::request();
+    request.town = Some("새동".into());
+    let started = Instant::now();
+    let outcome = backend
+        .outcome(request, Instant::now() + Duration::from_secs(8))
+        .await
+        .unwrap();
+    assert!(started.elapsed() < Duration::from_secs(3));
+    let server2::domestic::kma::Outcome::Json(body) = outcome else {
+        panic!("{outcome:?}")
+    };
+    let body: serde_json::Value = serde_json::from_slice(&body.to_bytes()).unwrap();
+    assert!(
+        !body["midData"]["forecast"].is_null(),
+        "{}",
+        body["midData"]
+    );
+}
