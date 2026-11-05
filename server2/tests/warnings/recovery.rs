@@ -976,7 +976,8 @@ async fn a_zone_state_of_an_unfinished_bootstrap_does_not_stand_for_the_seed() {
         .zone_state(now, deadline())
         .await
         .unwrap()
-        .seed_fetched();
+        .seed()
+        .map(str::to_owned);
     let empty = server2::warnings::zones::ZoneState::on_seed(seed);
     store
         .publish_zone_snapshot(&empty, now, 20260925, now, deadline())
@@ -1058,4 +1059,49 @@ async fn zone_progress_reads_only_the_days_that_hold_objects() {
             - reads_of(&before, "/2026/09/25/"),
         "only the day with objects is read"
     );
+
+async fn a_different_seed_with_the_same_export_time_voids_the_zone_state() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let now = ms("2026-09-26T00:10:00.000Z");
+    let seed = |area: &str| {
+        let zone = serde_json::json!([
+            {"areaCode": area, "areaName": "seed", "warnVar": 3, "warnStress": 1,
+             "active": true, "command": "1", "eventTmFc": 202601010900_i64,
+             "eventTmSeq": 1, "eventRank": 1}
+        ]);
+        seed_file(
+            vec![],
+            Some(OrderedJson::parse(&serde_json::to_vec(&zone).unwrap()).unwrap()),
+            "2026-09-25T00:00:00.000Z",
+        )
+    };
+    import(&store, &seed("L1100100")).await;
+    let held = store.zone_state(now, deadline()).await.unwrap();
+    // Equal export times elect by content, so import until another seed is the one in force.
+    let mut elected = held.clone();
+    for area in ["L1100200", "L1100300", "L1100400", "L1100500", "L1100600"] {
+        import(&store, &seed(area)).await;
+        elected = peer.store().zone_state(now, deadline()).await.unwrap();
+        if elected.seed() != held.seed() {
+            break;
+        }
+    }
+    assert_ne!(held.seed(), elected.seed());
+    let areas = |state: &server2::warnings::zones::ZoneState| {
+        state
+            .entries()
+            .map(|e| e.area_code.clone())
+            .collect::<Vec<_>>()
+    };
+    store
+        .publish_zone_snapshot(&held, now, 20260701, now, deadline())
+        .await
+        .unwrap();
+    let restored = peer
+        .store()
+        .zone_state(now + 1000, deadline())
+        .await
+        .unwrap();
+    assert_eq!(areas(&restored), areas(&elected));
 }
