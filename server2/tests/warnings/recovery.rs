@@ -1059,7 +1059,9 @@ async fn zone_progress_reads_only_the_days_that_hold_objects() {
             - reads_of(&before, "/2026/09/25/"),
         "only the day with objects is read"
     );
+}
 
+#[tokio::test]
 async fn a_different_seed_with_the_same_export_time_voids_the_zone_state() {
     let peer = Peer::new();
     let store = peer.store();
