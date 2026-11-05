@@ -2,11 +2,44 @@
 
 Investigated on 2026-11-04 at master `0e6ad85d`, after PR #2861 merged. Nothing in the runtime changed, and no provider or AWS call was made. AK requires at most 3 s of request waiting and a measured cold p95 of at most 2.5 s for cutover ([plan](../../../plans/issue-2614.md), [gate](../../architecture/server2.md)). The merged ASOS-primary path has an 8 s budget.
 
-**The merged path has never been timed end to end against real providers, on any host.** Figures below are labelled *modeled* (the real code with injected delays), *measured* (with its environment), *counted* from the code, or *calculated*. No modeled or calculated figure is a production latency claim.
+**Until the [EC2 measurement of 2026-11-05](#measured-on-ec2-against-real-providers-and-s3) the merged path had never been timed end to end against real providers, on any host, and that measurement replaces the modeled first-request figures below.** Figures below are labelled *modeled* (the real code with injected delays), *measured* (with its environment), *counted* from the code, or *calculated*. No modeled or calculated figure is a production latency claim.
+
+## Measured on EC2 against real providers and S3
+
+Measured on 2026-11-05 and 2026-11-06 on one t3.small Spot host in ap-northeast-2d, with the CI-verified musl binaries, real providers and a new bucket in the same region. `Before` is `478232c9`, the head merged as `0e6ad85d`. `After` is `558db418` in the first window and `29243e6e` in the second; they differ only outside the normal path. Times are from a loopback client and include geocoding, with no network to a real client. Each process served its requests in order and stopped.
+
+| Request | Before, 22:40 KST | After, 22:40 KST | Before, 00:20 KST | After, 00:20 KST |
+| --- | ---: | ---: | ---: | ---: |
+| Empty store, first request | 5,089 | 4,232 and 4,479 | 6,616 | 4,903, 4,976 (Busan) and 3,641 (Jeju) |
+| Same cell again, same process | 1,731 | 576 and 578 | 1,741 | 482 |
+| New cell, same process | 1,385 | 1,391 and 1,407 | 1,381 | 1,581 |
+| Restart, stored cell | 5,795 | 5,828 | 5,184 | 3,777 |
+| Restart, another stored cell | 3,097 | 611 | 531 | 3,105 |
+| Restart, new cell | 2,672 | 1,506 | 1,379 | 3,109 |
+
+These are single runs, so read them as ranges and not as a percentile. AK's 3 s is not met on the first request of a process, with or without this change.
+
+**What this change delivered.** The first response of an empty store now carries the whole forecast: 17 or 18 daily rows and `healthy: true`, where before it had 11 or 12 rows and `healthy: false` with `temperature-unavailable`. A request repeating a cell fell from about 1.7 s to about 0.5 s. All 200, and both validators pass on every "After" body.
+
+**Why the model was wrong.** It gave 1,402 ms for the empty store because its warning cycle and AirKorea fixtures cost nothing. The real first request is held by two things, and everything else had finished by about 1.9 s:
+
+- **Warnings.** The first cycle fetches and then publishes up to ten days, 55 or more S3 operations, and took 4.2 to 6.1 s. A request waits 3 s for it and then replays what S3 holds so far, which adds up to 1 s. The waits add up, so this path alone exceeds 3 s.
+- **AirKorea forecast images.** Each GIF took 1.1 to 1.8 s to fetch and its upload about 1.5 s, one after another, and every request that arrives during that acquisition waits up to 3 s. That explains the 3,097, 3,105 and 3,109 ms rows above: those requests joined a running acquisition, and the others found the images stored. It is not a difference between the binaries.
+
+Real latency, from the process logs of one run: S3 operations p50 32 ms, p90 40 ms. Provider acquisitions p50 46 ms, p90 308 ms, largest 1,755 ms. A process that served three requests used about 80 KASI calls.
+
+**Other real-data findings.**
+
+- At 22:46 KST AirKorea answered 429 on all three keys, which production shares, so `current.arpltn` was absent. At 00:18 KST it was present on the responses, so the daily quota had been used up, not lost. A 429 at the end of the day leaves air data out and nothing else.
+- `kma_client_eval.py` flagged `current.arpltn.pm10Index` and `pm25Index` as numbers on the first real air data. Legacy sets them from measured values (`server/controllers/kecoController.js:47`) and the corpus recorded only null, so the corpus was too narrow. The contract now lists them under `wire_additions`.
+- The computed sunrise on a first response differed from KASI's by 2 minutes in Seoul (07:02 against 07:00), which is the case AK approved on 2026-11-05.
+- From 1 November, `historyStatus.missingHourlySlots` lists the off-cycle winter hours, 55 on this date, because a winter hour without a mark has no precipitation type under the approved rules. On 3 November a half-day with an unknown type shows as `wfPm: "구름적고 "` with a trailing space, and that date is reported in `missingDailyDates`.
+
+No credential left the workstation except provider keys passed to the process by SSH standard input. Logs fetched from the host were scanned for those keys, without printing them, and none was found. The instance used a role limited to its own bucket, and everything created was removed afterwards.
 
 ## Result of the change
 
-AK approved the recommended order on 2026-11-05, with a computed sunrise allowed while stored KASI is not fully read. Options C, E, F, H, I and K and the wait part of J are implemented, along with one stored KASI fold. Same harness, same model: real code with injected provider and S3 delays on an Apple M4, not a production measurement. Response p50 in ms at 20 ms per S3 read:
+These figures are modeled, and the [measurement above](#measured-on-ec2-against-real-providers-and-s3) shows what they left out. AK approved the recommended order on 2026-11-05, with a computed sunrise allowed while stored KASI is not fully read. Options C, E, F, H, I and K and the wait part of J are implemented, along with one stored KASI fold. Same harness, same model: real code with injected provider and S3 delays on an Apple M4, not a production measurement. Response p50 in ms at 20 ms per S3 read:
 
 | Stored before the request | Before | After | S3 reads before the response |
 | --- | ---: | ---: | --- |

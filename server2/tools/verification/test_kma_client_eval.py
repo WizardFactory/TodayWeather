@@ -70,6 +70,17 @@ class WireRulesTest(unittest.TestCase):
         body = legacy('v000903', 'addr', lambda b: b['current'].get('arpltn', {}).get('pm10Index', 0) is None)
         self.assertEqual(violations(run(body)), [])
 
+    def test_a_measured_air_index_is_allowed(self):
+        body = legacy('v000903', 'addr', lambda b: b['current'].get('arpltn', {}).get('pm10Index', 0) is None)
+        body['current']['arpltn']['pm10Index'] = 32
+        body['current']['arpltn']['pm25Index'] = 37
+        self.assertEqual(violations(run(body)), [])
+
+    def test_a_text_air_index_stays_a_violation(self):
+        body = legacy('v000903', 'addr', lambda b: b['current'].get('arpltn', {}).get('pm10Index', 0) is None)
+        body['current']['arpltn']['pm10Index'] = '32'
+        self.assertTrue(violations(run(body), 'W2'))
+
     def test_type_change_is_a_violation(self):
         body = legacy('v000903', 'addr', full)
         body['midData']['dailyData'][0]['tmx'] = '27'
