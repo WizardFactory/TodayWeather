@@ -1084,6 +1084,7 @@ async fn image_load(
             flights,
             generation,
             Instant::now() + Duration::from_secs(3),
+            true,
         )
         .await
 }
@@ -1386,6 +1387,7 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
                 &Flights::new(Duration::from_secs(600)),
                 &generation,
                 deadline(),
+                true,
             )
             .await;
         let asked: Vec<Period> = recorder.0.lock().unwrap().clone();
@@ -1428,6 +1430,7 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
             &flights,
             &generation,
             deadline(),
+            true,
         )
         .await;
     assert!(
@@ -1977,4 +1980,44 @@ async fn stored_images_restore_while_observations_use_the_same_expiring_request_
         matches!(rows(&answer,"중구"),OrderedJson::Array(r) if !r.is_empty()),
         "independent stored images must not wait behind observations"
     );
+}
+
+/// The observed response does not wait for GIFs that cannot arrive in time; the acquisition
+/// continues and a later request reads the result.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_answer_before_the_image_acquisition_gets_it_on_a_later_request() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = store_for(&transport);
+    let stub = stub().await;
+    let inputs = AirInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
+        .answering_before_image_acquisition();
+    let seoul = town(37.5665, 126.978);
+    let three = || Instant::now() + Duration::from_secs(3);
+    until(
+        || inputs.load(&seoul, "서울특별시", "중구", true, false, now_ms(), three()),
+        |a| warmed(a, &stub.state),
+    )
+    .await;
+    stub.state.delay_ms.store(1500, Ordering::SeqCst);
+    let started = Instant::now();
+    let first = inputs
+        .load(&seoul, "서울특별시", "중구", false, true, now_ms(), three())
+        .await;
+    assert!(
+        started.elapsed() < Duration::from_secs(1),
+        "{:?}",
+        started.elapsed()
+    );
+    assert!(first.hourly.is_some_and(|h| h.is_empty()), "not yet");
+    stub.state.delay_ms.store(0, Ordering::SeqCst);
+    let later = until(
+        || inputs.load(&seoul, "서울특별시", "중구", false, true, now_ms(), three()),
+        |a| a.hourly.as_ref().is_some_and(|h| !h.is_empty()),
+    )
+    .await;
+    assert!(later.hourly.is_some());
 }

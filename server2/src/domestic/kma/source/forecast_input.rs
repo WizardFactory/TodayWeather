@@ -279,6 +279,7 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
         flights: &Flights,
         generation: &Arc<AtomicU64>,
         until: Instant,
+        wait_for_acquisition: bool,
     ) -> Arc<HourlyForecasts> {
         self.read(now, stations.clone(), generation, until).await;
         // The expected announcement, or while its documents name no characterized pair yet
@@ -317,7 +318,11 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
             let published = flights
                 .join_for(
                     &format!("images-{}", at.compact()),
-                    until,
+                    if wait_for_acquisition {
+                        until
+                    } else {
+                        Instant::now()
+                    },
                     super::live::IMAGE_CALL_BUDGET + Duration::from_secs(10),
                     move || -> BoxFuture<'static, bool> {
                         Box::pin(async move {

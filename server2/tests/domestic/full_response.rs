@@ -936,3 +936,125 @@ async fn only_the_newest_mid_publication_of_a_region_is_read() {
         "{requested:?}"
     );
 }
+
+/// A warning cycle that never ends; it offers the zone state first when asked to.
+struct HeldWarnings {
+    inner: Forecasts,
+    store: Arc<WarningStore<server2::world::BoundedS3<server2::storage::HttpS3Transport>>>,
+    offers: bool,
+}
+impl ForecastAcquire for HeldWarnings {
+    fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>> {
+        if request == ForecastRequest::Warnings {
+            let (store, offers) = (self.store.clone(), self.offers);
+            return Box::pin(async move {
+                if offers {
+                    store.offer_zone_state(Default::default());
+                }
+                tokio::time::sleep(Duration::from_secs(20)).await;
+                Ok(None)
+            });
+        }
+        self.inner.acquire(request)
+    }
+    fn cached(&self, request: &ForecastRequest) -> Published {
+        self.inner.cached(request)
+    }
+}
+async fn served_with_held_warnings(offers: bool) -> Duration {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let warning = Arc::new(
+        WarningStore::new(
+            peer.transport_limited(2),
+            CatalogLimits::default(),
+            StoreConfig::default(),
+        )
+        .unwrap(),
+    );
+    let source = S3Source::new_observed_with_warning_store(
+        peer.transport_limited(4),
+        Arc::new(|| NOW),
+        Arc::new(Providers::default()),
+        Arc::new(Unreachable),
+        warning.clone(),
+    )
+    .unwrap()
+    .with_forecast(Some(Arc::new(HeldWarnings {
+        inner: Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        },
+        store: warning,
+        offers,
+    })))
+    .with_raw_writer(writer.clone());
+    let started = Instant::now();
+    let response = build_gateway(Arc::new(source), None)
+        .handle(http_request())
+        .await;
+    assert_eq!(response.status(), 200);
+    started.elapsed()
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_response_does_not_wait_for_a_warning_cycle_that_offered_its_state() {
+    let held = served_with_held_warnings(true).await;
+    assert!(held < Duration::from_secs(2), "{held:?}");
+}
+
+/// The request waits at most 2.5 s for what it has started, whatever is still running.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_warning_cycle_that_never_ends_does_not_hold_the_response_past_the_bound() {
+    let held = served_with_held_warnings(false).await;
+    assert!(held >= Duration::from_millis(2400), "{held:?}");
+    assert!(held < Duration::from_secs(3), "{held:?}");
+}
+
+/// A failed or late ultra-short forecast leaves the rest of the response in its client format.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_missing_ultra_short_forecast_keeps_the_client_format() {
+    struct NoShortest(Forecasts);
+    impl ForecastAcquire for NoShortest {
+        fn acquire(
+            &self,
+            request: ForecastRequest,
+        ) -> BoxFuture<'static, Result<Published, String>> {
+            if matches!(&request, ForecastRequest::DataGoKr(r) if r.family() == F::UltraSrtFcst) {
+                return Box::pin(async { Err("late".to_owned()) });
+            }
+            self.0.acquire(request)
+        }
+        fn cached(&self, request: &ForecastRequest) -> Published {
+            self.0.cached(request)
+        }
+    }
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(NoShortest(Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        }))))
+        .with_raw_writer(writer.clone());
+    let response = build_gateway(Arc::new(source), None)
+        .handle(http_request())
+        .await;
+    assert_eq!(response.status(), 200);
+    let body = to_bytes(response.into_body(), 6 * 1024 * 1024)
+        .await
+        .unwrap();
+    let weather: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert!(
+        weather["short"][0]["time"].is_number(),
+        "{}",
+        weather["short"][0]
+    );
+    assert!(weather["midData"]["dailyData"][0]["skyAm"].is_string());
+}

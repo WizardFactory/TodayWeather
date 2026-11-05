@@ -989,3 +989,47 @@ async fn a_zone_state_of_an_unfinished_bootstrap_does_not_stand_for_the_seed() {
         .unwrap();
     assert_eq!(restored.len(), 1);
 }
+
+#[tokio::test]
+async fn an_offered_zone_state_answers_from_memory() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let service = WarningService::new(
+        store.clone(),
+        FixedClock::at("2026-09-26T00:10:00.000Z"),
+        ServiceConfig::default(),
+    );
+    let waiting = service.zones_ready();
+    tokio::pin!(waiting);
+    assert!(
+        tokio::time::timeout(Duration::from_millis(20), &mut waiting)
+            .await
+            .is_err(),
+        "no state yet"
+    );
+    let mut offered = server2::warnings::zones::ZoneState::default();
+    offered.apply(&server2::warnings::zones::prepare_events(&[zone_row(
+        "L1100200",
+        12,
+        0,
+        "1",
+        202609250900,
+    )]));
+    store.offer_zone_state(offered);
+    tokio::time::timeout(Duration::from_secs(1), waiting)
+        .await
+        .expect("an offer ends the wait");
+    let town = Town {
+        first: "서울특별시".into(),
+        second: "종로구".into(),
+        third: "청운효자동".into(),
+    };
+    // The store is empty, so only the offer holds this warning.
+    assert_eq!(service.special_info(&town).await.unwrap().len(), 1);
+    service.clear_memory().await;
+    assert_eq!(
+        service.special_info(&town).await.unwrap().len(),
+        1,
+        "still current after a cycle"
+    );
+}

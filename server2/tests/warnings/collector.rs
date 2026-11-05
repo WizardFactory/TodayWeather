@@ -467,6 +467,45 @@ async fn a_failed_zone_state_store_does_not_fail_the_cycle_and_is_retried() {
     assert_eq!(stored().await, before + 1, "a later cycle retries");
 }
 
+/// A request may answer what was fetched while its publications still run: they fail here.
+#[tokio::test]
+async fn the_collector_offers_the_zone_state_before_its_publications() {
+    use server2::warnings::records::{self, ZONE_KIND};
+    let peer = Peer::new();
+    let store = peer.store();
+    let clock = FixedClock::at("2026-09-26T03:05:00Z");
+    let collector =
+        WarningCollector::new(Arc::new(Recorded::fixtures()), store.clone(), clock.clone());
+    peer.fault(
+        "reject",
+        &records::catalog(ZONE_KIND, 20260926).unwrap().key(),
+    )
+    .await;
+    let report = collector.gather().await;
+    assert!(!report.errors.is_empty(), "the publication was refused");
+    let (offered, _) = store.offered_zone_state().expect("offered");
+    assert!(offered.len() > 0);
+}
+
+/// With nothing new to sync, the state is current once the first two steps have run; the bulletin
+/// steps after them do not change it.
+#[tokio::test]
+async fn the_collector_offers_the_zone_state_when_nothing_needs_a_sync() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let clock = FixedClock::at("2026-09-26T03:05:00Z");
+    let fixtures = || Arc::new(Recorded::fixtures());
+    let first = WarningCollector::new(fixtures(), store.clone(), clock.clone());
+    for _ in 0..8 {
+        first.gather().await;
+    }
+    let restarted = peer.store();
+    assert!(restarted.offered_zone_state().is_none());
+    let second = WarningCollector::new(fixtures(), restarted.clone(), clock.clone());
+    second.gather().await;
+    assert!(restarted.offered_zone_state().is_some());
+}
+
 #[tokio::test]
 async fn the_collector_stores_the_zone_state_once_a_day_after_its_bootstrap() {
     use server2::warnings::records::ZONE_STATE_KIND;

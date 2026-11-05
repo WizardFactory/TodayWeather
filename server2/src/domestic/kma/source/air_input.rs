@@ -152,6 +152,8 @@ pub struct AirInputs<T> {
     cpu: Arc<tokio::sync::Semaphore>,
     /// S15b-3c: the AirKorea image hourly forecast.
     images: super::forecast_input::ImageForecasts<T>,
+    /// A request waits for a missing image acquisition (legacy source).
+    image_wait: bool,
     /// The wall clock (S15b-3d).
     clock: Arc<dyn Clock>,
 }
@@ -172,6 +174,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                 store.clone(),
                 super::air_forecast::Calibration::defaults(),
             ),
+            image_wait: true,
             reader: Reader { transport, store },
             acquire: None,
             air: None,
@@ -199,6 +202,12 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
     /// The capture check interval (10 minutes; tests shorten it).
     pub fn with_capture_interval(mut self, every: Duration) -> Self {
         self.capture_every = every;
+        self
+    }
+    /// Start a missing image acquisition without waiting for it: its GIFs take longer than a
+    /// request may wait, so a later request reads the result.
+    pub fn answering_before_image_acquisition(mut self) -> Self {
+        self.image_wait = false;
         self
     }
     pub fn with_acquire(mut self, acquire: Option<Arc<dyn AirKoreaAcquire>>) -> Self {
@@ -882,6 +891,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                                 &self.flights,
                                 &self.generation,
                                 wait_until,
+                                self.image_wait,
                             )
                             .await,
                     ),

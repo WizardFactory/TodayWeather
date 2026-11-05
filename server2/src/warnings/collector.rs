@@ -156,6 +156,14 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
                         0 => self.resync_step(&mut state, &mut report).await,
                         kind => self.bulletin_step(kind, &mut report).await,
                     };
+                    // With nothing to sync the state is current here; the later steps keep it.
+                    if step == 0
+                        && result.is_ok()
+                        && !report.synced
+                        && let Some(zones) = &state.zones
+                    {
+                        self.store.offer_zone_state(zones.clone());
+                    }
                     if let Err(e) = result {
                         let quota = e.is_quota();
                         crate::observability::event(
@@ -260,9 +268,16 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
             .map_err(|e| CycleError::Fetch(Operation::PwnCd, e))?;
             fetched.push((*day, pages));
         }
-        let mut rows = Vec::new();
+        let rows: Vec<Value> = fetched
+            .iter()
+            .flat_map(|(_, pages)| pages.iter().flat_map(|p| p.items.iter().cloned()))
+            .collect();
+        let events = prepare_events(&rows);
+        // A request answers what was fetched; the publications below follow it.
+        let mut offered = state.zones.clone().unwrap_or_default();
+        offered.apply(&events);
+        self.store.offer_zone_state(offered);
         for (day, pages) in fetched {
-            rows.extend(pages.iter().flat_map(|p| p.items.iter().cloned()));
             if pages.is_empty() {
                 continue;
             }
@@ -295,7 +310,7 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
         state
             .zones
             .get_or_insert_with(ZoneState::default)
-            .apply(&prepare_events(&rows));
+            .apply(&events);
         let complete = oldest <= kst_date(now_ms, -ZONE_LOOKBACK_DAYS);
         state.last_sync_at_ms = Some(now_ms);
         state.oldest_synced = Some(oldest);

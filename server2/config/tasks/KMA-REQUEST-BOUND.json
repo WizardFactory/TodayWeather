@@ -1,0 +1,51 @@
+{
+  "task": "KMA-REQUEST-BOUND",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Observed KMA path: one 2.5 s wait per request, the warning zone state offered before its publications, no wait for image acquisitions, and a guard for a missing ultra-short forecast. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-REQUEST-BOUND.json",
+    "server2/src/domestic/kma/present.rs",
+    "server2/src/domestic/kma/source/air_input.rs",
+    "server2/src/domestic/kma/source/forecast_input.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/warnings/collector.rs",
+    "server2/src/warnings/service.rs",
+    "server2/src/warnings/store.rs",
+    "server2/tests/domestic/air_forecast_s3.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/warnings/collector.rs",
+    "server2/tests/warnings/recovery.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-request-bound.md",
+      "category": "task-record",
+      "reason": "Task intent, in the existing intent directory."
+    },
+    {
+      "path": "specs/issue-2614-kma-request-bound.md",
+      "category": "task-record",
+      "reason": "Acceptance, in the existing specs directory."
+    },
+    {
+      "path": "plans/issue-2614-kma-request-bound.md",
+      "category": "task-record",
+      "reason": "Plan, in the existing plans directory."
+    },
+    {
+      "path": "docs/evidence/research/kma-speed-options-2026-11-04.md",
+      "category": "documentation",
+      "reason": "The EC2 measurement of this change."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Request waits, warning zone state and image behaviour."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "The wait rule of the data design."
+    }
+  ]
+}

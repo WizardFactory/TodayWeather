@@ -22,7 +22,7 @@ use std::{
     },
 };
 use tokio::{
-    sync::{OwnedSemaphorePermit, Semaphore},
+    sync::{OwnedSemaphorePermit, Semaphore, watch},
     task::JoinSet,
     time::Instant,
 };
@@ -287,12 +287,15 @@ impl<T: CatalogTransport> Reader<T> {
         }
     }
 }
+/// A zone state the collector has current, and when.
+pub type OfferedZones = (Arc<ZoneState>, Instant);
 pub struct WarningStore<T> {
     transport: Arc<T>,
     reader: Reader<T>,
     limits: CatalogLimits,
     config: StoreConfig,
     pub counters: Arc<Counters>,
+    offered: watch::Sender<Option<OfferedZones>>,
 }
 /// When a `_sync` marker's bootstrap had seen the whole lookback: the time of its last sync. An
 /// unfinished bootstrap (covered start later than sync - 59 days) has not seen older days.
@@ -350,7 +353,19 @@ impl<T: CatalogTransport> WarningStore<T> {
             limits,
             config,
             counters,
+            offered: watch::channel(None).0,
         })
+    }
+    /// Hand the current zone state to requests, ahead of whatever the collector still publishes.
+    pub fn offer_zone_state(&self, state: ZoneState) {
+        self.offered
+            .send_replace(Some((Arc::new(state), Instant::now())));
+    }
+    pub fn offered_zone_state(&self) -> Option<OfferedZones> {
+        self.offered.borrow().clone()
+    }
+    pub fn zone_offers(&self) -> watch::Receiver<Option<OfferedZones>> {
+        self.offered.subscribe()
     }
     pub fn limits(&self) -> &CatalogLimits {
         &self.limits

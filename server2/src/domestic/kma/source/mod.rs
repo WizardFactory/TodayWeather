@@ -296,7 +296,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 Arc::new(move || clock().max(0.) as u64)
             }),
             observations,
-            air: air_input::AirInputs::new(transport.clone(), store.clone()),
+            air: {
+                let air = air_input::AirInputs::new(transport.clone(), store.clone());
+                if observed {
+                    air.answering_before_image_acquisition()
+                } else {
+                    air
+                }
+            },
             life: life_input::LifeInputs::new(transport.clone(), store.clone()),
             reader: Reader { transport, store },
             warnings: Arc::new(WarningService::new(
@@ -1218,6 +1225,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .checked_sub(ANSWER_RESERVE)
                 .unwrap_or_else(Instant::now)
                 .max(Instant::now())
+                .min(Instant::now() + OBSERVED_WAIT)
         } else {
             wait_bound(deadline)
         };
@@ -1286,7 +1294,16 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             // as an owned task). A failed or late read is the legacy store error
             // (`getSpecialInfo` skips the section).
             async {
-                self.warning_cycle(until).await;
+                if self.observed_history {
+                    // Starts a due cycle, but its publications do not hold the answer.
+                    tokio::select! {
+                        biased;
+                        () = self.warning_cycle(until) => {}
+                        () = self.warnings.zones_ready() => {}
+                    }
+                } else {
+                    self.warning_cycle(until).await;
+                }
                 self.warnings.zone_state(now as i64, section).await.ok()
             },
             // S15b-3b life inputs (their owned acquisitions start for every request that reaches
@@ -1686,6 +1703,9 @@ const BACKFILL_CONCURRENCY: usize = 3;
 const BACKFILL_PASSES: usize = 8;
 /// Time kept after a request's waits for the remaining S3 reads and the assembly.
 const ANSWER_RESERVE: std::time::Duration = std::time::Duration::from_millis(500);
+/// The observed response's wait for everything it started: its share of AK's 3 s, the rest being
+/// the air and life section and the assembly. Stored reads keep the longer request budget.
+const OBSERVED_WAIT: std::time::Duration = std::time::Duration::from_millis(2500);
 /// Earlier publications legacy's backfill keeps per family (S14 `schedule`).
 fn fetch_reach(sf: schedule::Family) -> usize {
     match sf {

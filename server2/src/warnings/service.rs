@@ -167,6 +167,32 @@ impl<T: CatalogTransport> WarningService<T> {
         let now_ms = self.now_ms()?;
         Ok(special::current(&latest, now_ms, korean))
     }
+    /// Take over a newer zone state the collector offered.
+    fn adopt_offer(&self) {
+        if let Some((state, at)) = self.store.offered_zone_state() {
+            let mut memory = self.zones.lock().unwrap_or_else(|e| e.into_inner());
+            if memory.as_ref().is_none_or(|c| c.at < at) {
+                *memory = Some(ZoneCache {
+                    state,
+                    at,
+                    full_at: at,
+                });
+            }
+        }
+    }
+    /// Ends once [`Self::zone_state`] can answer from memory: now, or when the collector offers.
+    pub async fn zones_ready(&self) {
+        let mut offers = self.store.zone_offers();
+        loop {
+            self.adopt_offer();
+            if Self::zone_memory(&self.zones, &self.config, true).is_some() {
+                return;
+            }
+            if offers.changed().await.is_err() {
+                std::future::pending::<()>().await;
+            }
+        }
+    }
     /// Valid zone memory for the outage fallback (younger than refresh + stale).
     fn zone_memory(
         zones: &ZoneSlot,
@@ -194,6 +220,7 @@ impl<T: CatalogTransport> WarningService<T> {
         now_ms: i64,
         deadline: Instant,
     ) -> Result<Arc<ZoneState>, ServeError> {
+        self.adopt_offer();
         if let Some(state) = Self::zone_memory(&self.zones, &self.config, true) {
             return Ok(state);
         }
@@ -215,6 +242,7 @@ impl<T: CatalogTransport> WarningService<T> {
                     if let Some(state) = Self::zone_memory(&zones, &config, true) {
                         return Ok(state);
                     }
+                    let started = Instant::now();
                     let previous = zones
                         .lock()
                         .unwrap_or_else(|e| e.into_inner())
@@ -235,6 +263,17 @@ impl<T: CatalogTransport> WarningService<T> {
                             .map(|state| (state, Instant::now())),
                     };
                     let (state, full_at) = refreshed.map_err(ServeError::Storage)?;
+                    // A state offered during this read beats what the read saw of S3.
+                    if let Some((offered, at)) = store.offered_zone_state()
+                        && at >= started
+                    {
+                        *zones.lock().unwrap_or_else(|e| e.into_inner()) = Some(ZoneCache {
+                            state: offered.clone(),
+                            at,
+                            full_at: at,
+                        });
+                        return Ok(offered);
+                    }
                     let state = Arc::new(state);
                     *zones.lock().unwrap_or_else(|e| e.into_inner()) = Some(ZoneCache {
                         state: state.clone(),
