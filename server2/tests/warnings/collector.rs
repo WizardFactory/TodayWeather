@@ -484,7 +484,7 @@ async fn the_collector_offers_the_zone_state_before_its_publications() {
     let report = collector.gather().await;
     assert!(!report.errors.is_empty(), "the publication was refused");
     let (offered, _) = store.offered_zone_state().expect("offered");
-    assert!(offered.len() > 0);
+    assert!(!offered.is_empty());
 }
 
 /// With nothing new to sync, the state is current once the first two steps have run; the bulletin
