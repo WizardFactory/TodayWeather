@@ -39,22 +39,27 @@ No credential left the workstation except provider keys passed to the process by
 
 ### With one bound on the request
 
-The same scenarios ran at 00:57 to 00:59 KST on 2026-11-06 with the CI binary of `d84a0bc2` (PR #2863): one 2.5 s wait for what the request started, the warning zone state offered before its publications, no wait for image acquisitions.
+The same scenarios ran on 2026-11-06 at 04:26 to 04:29 KST with the CI binary of `435a96cc` (PR #2863): one wait for what the request started, the warning zone state offered before its publications, no wait for image acquisitions, and the geocoder's newer province names mapped to the listed ones. The "Without" column is `29243e6e` at 00:20 KST.
 
-| Request | Without, 00:20 KST | With, 00:58 KST |
+| Request | Without | With |
 | --- | ---: | ---: |
-| Empty store, first request | 4,903, 4,976 (Busan) and 3,641 (Jeju) | 2,889, 2,857 (Busan) and 2,854 (Jeju) |
-| Same cell again, same process | 482 | 1,443 |
-| New cell, same process | 1,581 | 1,327 |
-| Restart, stored cell | 3,777 | 2,871 |
-| Restart, another stored cell | 3,105 | 605 |
-| Restart, new cell | 3,109 | 1,390 |
+| Empty store, first request, Seoul | 4,903 | 2,788 |
+| Same cell again, same process | 482 | 1,413 |
+| New cell, same process | 1,581 | 1,255 |
+| Restart, stored cell | 3,777 | 2,516 |
+| Restart, another stored cell | 3,105 | 613 |
+| Restart, new cell | 3,109 | 1,351 |
+| Empty store, first request, Busan, Jeju, Daejeon | 4,976, 3,641, not run | 2,819, 2,818, 2,820 |
+| Empty store, first request, Gangneung | 6,590 | 2,826 |
+| Empty store, first request, Jeonju, Yeosu, Gwangju | not run | 2,814, 2,782, 2,783 |
 
-Single runs again. Every response was 200, `kma_client_eval.py` reports no violation and the forecast part of the full-response check passes. `current.arpltn` and the daily rows are present on the first response, and the Jeju first response carried its two active warnings. Without this change the Jeju first response had neither: it took 3,641 ms and read warnings from S3 while they were still being published, so active warnings were left out.
+Single runs again. Every response was 200, `kma_client_eval.py` reports no violation, and the forecast part of the full-response check passes. Each first response has 17 daily rows, `healthy: true` and `current.arpltn`. The Jeju first response carried its two active warnings, which the run without this change left out: it read warnings from S3 while they were still being published.
 
-AK's 3 s now holds in every run, but the 2.5 s cold gate does not, because the first requests all end at the bound. At this hour the life arm holds them: the UV call walks four earlier slots while each answers no data, about 1.1 to 1.7 s each, and its objects reach S3 about 7 s after the request. Stopping the optional arms when the required ones finish would answer at about 2.2 s, calculated from the same traces and not measured, and would leave out whatever air and life data is not ready by then.
+**Province names.** The geocoder answers `강원특별자치도`, `전북특별자치도` and, for every town in Jeonnam and Gwangju, `전남광주통합특별시`. The town list and region table keep the earlier names and legacy's lookups are exact, so before this change those towns had no mid forecast on any response (`land-unavailable`, `temperature-unavailable`), and Gangneung's first request took 6.6 to 8.0 s. The handler now maps them to the listed names. Daegu's `군위군` also misses the list but stays under Daegu, because its air and food-poisoning regions are Daegu's; in a run of fifteen more towns it was the only one left unhealthy (`invalid-daily-row`, `forecast-gap`), which is not investigated here. Incheon, Bucheon and Hwaseong's new districts miss the list too and take the lookup path, within the bound and healthy.
 
-The repeated cell got slower because the first request no longer waits for the images, so the second one pays for reading and decoding them, about 1.2 s on this host. A restart's warning cycle ran 14 s with over 300 S3 operations, republishing days it already holds. It no longer holds a request, but it is wasted work (KMA-SR-06 of #2862).
+**What is left.** AK's 3 s holds in every run, but the 2.5 s cold gate does not: first requests end at about 2.8 s because they wait to the bound. At night the life arm holds them, the UV call walking four earlier slots at 1.1 to 1.7 s each. Stopping the optional arms when the required ones finish would answer at about 2.2 s, calculated from the traces and not measured, and would leave out air and life data not ready by then. A repeated cell takes about 1.4 s because it decodes the stored images, about 1.2 s on this host. A restart's warning cycle ran 14 s with over 300 S3 operations, republishing days it holds. It no longer holds a request (KMA-SR-06 of #2862).
+
+The host, its bucket, role, profile and security group were removed after these runs, and their absence was read back.
 
 ## Result of the change
 
