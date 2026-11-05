@@ -1982,8 +1982,9 @@ long the range has grown. An acquisition is dated by its last page.
 The snapshot lists the matched town as `towns()`; the chain uses the list only for `_findTown`,
 which finds that town first in the full list too. Under the observed source the handler first maps
 the geocoder's `강원특별자치도` and `전북특별자치도` to the listed `강원도` and `전라북도`, so the
-lookups find them and `regionName` carries the listed name. A town outside the list starts its
-forecast as soon as its lookup ends, and only one that stays unknown waits for air, life and warnings.
+lookups find them and `regionName` carries the listed name, including after a KR remap. A town outside
+the list starts its forecast as soon as its lookup ends, and only one that stays unknown waits for
+its mid forecast, air, life and warnings.
 
 **Reference data from the repository.** `part.csv`, `base.csv`, `region.csv` and
 `kma_forecast_land_zones.csv` are byte-identical copies with provenance. The town list follows

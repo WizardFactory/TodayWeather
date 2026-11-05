@@ -1262,3 +1262,87 @@ async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
     let daily = body["midData"]["dailyData"].as_array().unwrap();
     assert_eq!(daily.last().unwrap()["date"], json!("20261004"));
 }
+
+/// A mid forecast that never ends must not hold the forecast of a town outside the list.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_late_mid_does_not_hold_the_forecast_of_a_town_outside_the_list() {
+    struct HeldMid(Forecasts);
+    impl ForecastAcquire for HeldMid {
+        fn acquire(
+            &self,
+            request: ForecastRequest,
+        ) -> BoxFuture<'static, Result<Published, String>> {
+            if matches!(&request, ForecastRequest::DataGoKr(r) if r.family() == F::MidLandFcst) {
+                return Box::pin(async {
+                    tokio::time::sleep(Duration::from_secs(20)).await;
+                    Ok(None)
+                });
+            }
+            self.0.acquire(request)
+        }
+        fn cached(&self, request: &ForecastRequest) -> Published {
+            self.0.cached(request)
+        }
+    }
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(HeldMid(Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        }))))
+        .with_raw_writer(writer.clone())
+        .with_town_geocoder(Some(Arc::new(Located)));
+    let backend = KmaBackend::new(
+        Arc::new(source),
+        Arc::new(|| NOW),
+        AssemblyConfig::default(),
+    );
+    let mut request = super::source_s3::request();
+    request.town = Some("새동".into());
+    let outcome = backend
+        .outcome(request, Instant::now() + Duration::from_secs(8))
+        .await
+        .unwrap();
+    let server2::domestic::kma::Outcome::Json(body) = outcome else {
+        panic!("{outcome:?}")
+    };
+    let body: serde_json::Value = serde_json::from_slice(&body.to_bytes()).unwrap();
+    assert!(!body["short"].as_array().unwrap().is_empty());
+}
+
+/// A KR request's address can name the province by its new name too.
+#[tokio::test]
+async fn a_kr_remap_to_a_new_province_name_finds_the_listed_name() {
+    use server2::domestic::kma::backend::KmaSource;
+    struct Remapped;
+    impl server2::geocode::town::Acquire for Remapped {
+        fn address(
+            &self,
+            _: server2::geocode::town::Operation,
+            _: String,
+        ) -> BoxFuture<'_, Result<serde_json::Value, server2::geocode::GeocodeError>> {
+            Box::pin(async {
+                Ok(json!({"provider":"google","address":"대한민국 강원특별자치도 강릉시 홍제동"}))
+            })
+        }
+    }
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_town_geocoder(Some(Arc::new(Remapped)));
+    let request = server2::domestic::kma::backend::parse_path(
+        "/v000903/kma/addr/%EA%B0%95%EB%A6%89%EC%8B%9C/KR",
+        "ko",
+    )
+    .unwrap();
+    let prepared = source
+        .prepare(request, Instant::now() + Duration::from_secs(8))
+        .await
+        .unwrap();
+    assert_eq!(prepared.region.as_deref(), Some("강원도"));
+    assert_eq!(prepared.city.as_deref(), Some("강릉시"));
+}

@@ -1199,37 +1199,37 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     }
                 )
             };
-            let (result, mid, optional) = if observed.is_some() {
-                // A found town must not wait for these, or its forecast starts with no time
-                // left. The rest of the request starts its own.
-                let (result, mid) = tokio::join!(lookup, mid);
-                let optional = if result.is_err() {
-                    Some(optional.await)
-                } else {
-                    None
-                };
-                (result, mid, optional)
+            if observed.is_some() {
+                // A found town must not wait for the rest, or its forecast starts with no time
+                // left. The main path starts its own mid and optional arms.
+                match lookup.await {
+                    Ok(result) => (towns::town_document(&result, request, list), None),
+                    Err(towns::ResolveError::Storage) => {
+                        return Err(Unbuilt::Failed("town projection unavailable".into()));
+                    }
+                    Err(_) => {
+                        let (mid, (air, life, special)) = tokio::join!(mid, optional);
+                        let (zones, mids) = mid?;
+                        return Ok(Snapshot::missing_town(now, zones, mids, air, life, special));
+                    }
+                }
             } else {
-                let (result, mid, optional) = tokio::join!(lookup, mid, optional);
-                (result, mid, Some(optional))
-            };
-            let (zones, mids) = mid?;
-            let result = match (result, optional) {
-                (Ok(result), _) => result,
-                (Err(towns::ResolveError::Storage), _) => {
-                    return Err(Unbuilt::Failed("town projection unavailable".into()));
-                }
-                (Err(_), Some((air, life, special))) => {
-                    return Ok(Snapshot::missing_town(now, zones, mids, air, life, special));
-                }
-                (Err(_), None) => {
-                    return Err(Unbuilt::Failed("town lookup without its answer".into()));
-                }
-            };
-            (
-                towns::town_document(&result, request, list),
-                Some((zones, mids)),
-            )
+                let (result, mid, (air, life, special)) = tokio::join!(lookup, mid, optional);
+                let (zones, mids) = mid?;
+                let result = match result {
+                    Ok(result) => result,
+                    Err(towns::ResolveError::Storage) => {
+                        return Err(Unbuilt::Failed("town projection unavailable".into()));
+                    }
+                    Err(_) => {
+                        return Ok(Snapshot::missing_town(now, zones, mids, air, life, special));
+                    }
+                };
+                (
+                    towns::town_document(&result, request, list),
+                    Some((zones, mids)),
+                )
+            }
         };
 
         let m = town.get("mCoord").and_then(Val::as_doc);
@@ -1439,6 +1439,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// Join the shared warning owner, keeping the request's existing bounded wait.
+    /// The geocoder names two provinces by their new names. The town list and the region table
+    /// keep the old ones, and legacy's lookups are exact, so they would miss them.
+    fn list_region(&self, request: &mut KmaRequest) {
+        if self.observed_history
+            && let Some(region) = request.region.as_deref()
+        {
+            request.region = Some(representative::listed_first(region).to_owned());
+        }
+    }
     /// Starts a due warning cycle and waits for it. Under the observed source the wait ends at
     /// the zone state it offers, so its publications do not hold the answer.
     async fn warning_wait(&self, until: Instant) {
@@ -1545,14 +1554,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> 
         deadline: Instant,
     ) -> BoxFuture<'_, Result<KmaRequest, super::Outcome>> {
         Box::pin(async move {
-            // The geocoder names two provinces by their new names; the town list and the region
-            // table keep the old ones, and legacy's lookups miss them.
-            if self.observed_history
-                && let Some(region) = request.region.as_deref()
-            {
-                let listed = representative::listed_first(region).to_owned();
-                request.region = Some(listed);
-            }
+            self.list_region(&mut request);
             if !super::middleware_of(&request.version, request.part.as_deref())
                 .contains(&"checkParamValidation")
                 || (request.city.as_deref() != Some("KR") && request.town.as_deref() != Some("KR"))
@@ -1595,6 +1597,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> 
             request.region = params["region"].as_str().map(str::to_owned);
             request.city = params["city"].as_str().map(str::to_owned);
             request.town = params["town"].as_str().map(str::to_owned);
+            self.list_region(&mut request);
             // A still-KR result must terminate instead of recurring or forwarding.
             if request.city.as_deref() == Some("KR") || request.town.as_deref() == Some("KR") {
                 return Err(super::Outcome::Status(
