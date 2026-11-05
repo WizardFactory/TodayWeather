@@ -200,6 +200,9 @@ pub struct KmaRequest {
     /// Decoded query pairs in order (Express `qs`: the first 1,000 raw fields, no bracket syntax).
     pub query: Vec<(String, String)>,
     pub locale: Locale,
+    /// The province name the request carried when its lookups use the town list's name instead
+    /// (`S3Source::prepare`). The response's `regionName` keeps it.
+    pub requested_region: Option<String>,
 }
 /// Result of one assembly.
 #[derive(Debug, Clone, PartialEq)]

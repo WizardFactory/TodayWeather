@@ -1467,7 +1467,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             && let Some(region) = request.region.as_deref()
         {
             let city = request.city.as_deref().unwrap_or_default();
-            request.region = Some(representative::listed_first(region, city).to_owned());
+            let listed = representative::listed_first(region, city).to_owned();
+            if listed != region {
+                request.requested_region = Some(region.to_owned());
+                request.region = Some(listed);
+            }
         }
     }
     /// Starts a due warning cycle and waits for it. Under the observed source the wait ends at

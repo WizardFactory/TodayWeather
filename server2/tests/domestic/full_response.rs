@@ -1255,6 +1255,7 @@ async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
             !body["short"].as_array().unwrap().is_empty(),
             "{region} {city}: the listed town"
         );
+        assert_eq!(body["regionName"], json!(region), "the name requested");
         let status = &body["midData"]["dailyStatus"];
         for reason in status["reasons"].as_array().unwrap() {
             assert!(
@@ -1295,6 +1296,12 @@ async fn the_listed_province_depends_on_the_new_name_and_its_city() {
             .await
             .unwrap();
         assert_eq!(prepared.region.as_deref(), Some(listed), "{region} {city}");
+        let requested = (listed != region).then_some(region);
+        assert_eq!(
+            prepared.requested_region.as_deref(),
+            requested,
+            "{region} {city}"
+        );
     }
 }
 
@@ -1380,6 +1387,7 @@ async fn a_kr_remap_to_a_new_province_name_finds_the_listed_name() {
         .unwrap();
     assert_eq!(prepared.region.as_deref(), Some("강원도"));
     assert_eq!(prepared.city.as_deref(), Some("강릉시"));
+    assert_eq!(prepared.requested_region.as_deref(), Some("강원특별자치도"));
 }
 
 /// A lookup that outlasts the wait leaves the mid forecast the time it had from the start.

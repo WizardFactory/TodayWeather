@@ -1982,8 +1982,8 @@ long the range has grown. An acquisition is dated by its last page.
 The snapshot lists the matched town as `towns()`; the chain uses the list only for `_findTown`,
 which finds that town first in the full list too. Under the observed source the handler first maps
 the geocoder's `강원특별자치도`, `전북특별자치도` and `전남광주통합특별시` to the listed `강원도`, `전라북도`,
-and `광주광역시` or `전라남도`, so the lookups find them and `regionName` carries the listed name, including
-after a KR remap. Daegu's `군위군` stays under its own name, since its air and food-poisoning regions are Daegu's. A town outside
+and `광주광역시` or `전라남도`, so the lookups find them, while `regionName` keeps the name the request
+carried, including after a KR remap. Daegu's `군위군` stays under its own name, since its air and food-poisoning regions are Daegu's. A town outside
 the list starts its forecast as soon as its lookup ends, and only one that stays unknown waits for
 its mid forecast, air, life and warnings.
 
