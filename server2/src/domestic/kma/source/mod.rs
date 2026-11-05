@@ -1116,13 +1116,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let _raw_pin = self.raw_writer.as_ref().map(|writer| writer.pin());
         let now = (self.clock)();
         // One instant for the whole request, so a town lookup's wait and the rest do not add up.
-        let observed_until = self.observed_history.then(|| {
-            deadline
-                .checked_sub(ANSWER_RESERVE)
-                .unwrap_or_else(Instant::now)
-                .max(Instant::now())
-                .min(Instant::now() + OBSERVED_WAIT)
-        });
+        let observed_until = self.observed_history.then(|| observed_wait_end(deadline));
         let mut effective = request.clone();
         if super::middleware_of(&request.version, request.part.as_deref())
             .contains(&"getAllDataFromDb")
@@ -1500,7 +1494,18 @@ fn summary_inputs(
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> {
     fn request_budget(&self) -> std::time::Duration {
-        std::time::Duration::from_secs(if self.observed_history { 8 } else { 3 })
+        if self.observed_history {
+            OBSERVED_BUDGET
+        } else {
+            std::time::Duration::from_secs(3)
+        }
+    }
+    fn narrative_by(&self, deadline: Instant) -> Instant {
+        if self.observed_history {
+            (observed_wait_end(deadline) + std::time::Duration::from_millis(400)).min(deadline)
+        } else {
+            deadline
+        }
     }
     fn prepare(
         &self,
@@ -1707,9 +1712,20 @@ const BACKFILL_CONCURRENCY: usize = 3;
 const BACKFILL_PASSES: usize = 8;
 /// Time kept after a request's waits for the remaining S3 reads and the assembly.
 const ANSWER_RESERVE: std::time::Duration = std::time::Duration::from_millis(500);
-/// The observed response's wait for everything it started: its share of AK's 3 s, the rest being
-/// the air and life section and the assembly. Stored reads keep the longer request budget.
+/// The observed request's budget, which stored reads keep, so a slow S3 delays an answer instead
+/// of failing it.
+const OBSERVED_BUDGET: std::time::Duration = std::time::Duration::from_secs(8);
+/// The observed request's wait for everything it started: its share of AK's 3 s, the rest being
+/// the air and life section and the assembly.
 const OBSERVED_WAIT: std::time::Duration = std::time::Duration::from_millis(2500);
+/// When the observed request stops waiting, the same instant wherever it has got to: `deadline`
+/// is its budget from the start, so a KR remap's wait counts as well.
+fn observed_wait_end(deadline: Instant) -> Instant {
+    deadline
+        .checked_sub(OBSERVED_BUDGET - OBSERVED_WAIT)
+        .unwrap_or_else(Instant::now)
+        .max(Instant::now())
+}
 /// Earlier publications legacy's backfill keeps per family (S14 `schedule`).
 fn fetch_reach(sf: schedule::Family) -> usize {
     match sf {

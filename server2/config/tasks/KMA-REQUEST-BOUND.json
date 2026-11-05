@@ -4,6 +4,7 @@
   "scope": "Observed KMA path: one 2.5 s wait per request, the warning zone state offered before its publications, no wait for image acquisitions, and a guard for a missing ultra-short forecast. No deployment or production mutation.",
   "server2_paths": [
     "server2/config/tasks/KMA-REQUEST-BOUND.json",
+    "server2/src/domestic/kma/backend.rs",
     "server2/src/domestic/kma/present.rs",
     "server2/src/domestic/kma/source/air_input.rs",
     "server2/src/domestic/kma/source/forecast_input.rs",
@@ -46,6 +47,16 @@
       "path": "docs/architecture/server2-kma-data-design.md",
       "category": "documentation",
       "reason": "The wait rule of the data design."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.json",
+      "category": "documentation",
+      "reason": "The wait rule in the design diagram."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.html",
+      "category": "documentation",
+      "reason": "Generated from the diagram source."
     }
   ]
 }

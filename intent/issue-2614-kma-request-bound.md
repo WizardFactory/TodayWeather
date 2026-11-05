@@ -4,7 +4,7 @@ AK requires that a client request waits at most 3 s, answers from what was gathe
 
 ## Outcomes
 
-- **BOUND:** the observed response stops waiting for everything it started 2.5 s after it began, and air and life by 2.7 s.
+- **BOUND:** the observed response stops waiting for everything it started 2.5 s after the request reached the handler, air and life by 2.7 s and the narrative by 2.9 s.
 - **WARNINGS:** the warning zone state reaches requests once fetched, before the collector's publications, as AK asked for weather data. A later cycle does not hold a request that already has a current state.
 - **IMAGES:** a request does not wait for an image acquisition that takes longer than a request may wait. It continues and a later request reads the result.
 - **SHORTEST:** a missing ultra-short forecast no longer leaves the rest of the response in its internal shape.
@@ -15,7 +15,7 @@ AK requires that a client request waits at most 3 s, answers from what was gathe
 
 Each changes what a first response carries, so this change is not merged without AK:
 
-- The 2.5 s wait replaces the 8 s budget for everything the observed response waits on. Stored reads keep the longer budget, so a slow S3 can still delay an answer instead of failing it.
+- The 2.5 s wait replaces the 8 s budget for everything the observed response waits on. Stored reads keep the longer budget, so a slow S3 can still delay an answer past 3 s instead of failing it. The town geocoder runs before the handler and keeps its own 3 s cap.
 - A first response no longer waits for forecast images. In the measurement they took 3 s or more, so they were late anyway.
 - The guard differs from legacy's failure path, where the exception skipped the remaining conversions.
 

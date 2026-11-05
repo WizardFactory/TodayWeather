@@ -1058,3 +1058,97 @@ async fn a_missing_ultra_short_forecast_keeps_the_client_format() {
     );
     assert!(weather["midData"]["dailyData"][0]["skyAm"].is_string());
 }
+
+/// A reader that never answers.
+struct HeldNarrative;
+impl server2::narrative::Read for HeldNarrative {
+    fn read(
+        &self,
+        _station: u16,
+        _deadline: Instant,
+    ) -> BoxFuture<'_, Option<server2::narrative::Narrative>> {
+        Box::pin(async {
+            tokio::time::sleep(Duration::from_secs(20)).await;
+            None
+        })
+    }
+}
+/// A source whose warning cycle never ends, with no offer.
+fn held_source(
+    peer: &Peer,
+) -> Arc<S3Source<server2::world::BoundedS3<server2::storage::HttpS3Transport>>> {
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let warning = Arc::new(
+        WarningStore::new(
+            peer.transport_limited(2),
+            CatalogLimits::default(),
+            StoreConfig::default(),
+        )
+        .unwrap(),
+    );
+    Arc::new(
+        S3Source::new_observed_with_warning_store(
+            peer.transport_limited(4),
+            Arc::new(|| NOW),
+            Arc::new(Providers::default()),
+            Arc::new(Unreachable),
+            warning.clone(),
+        )
+        .unwrap()
+        .with_forecast(Some(Arc::new(HeldWarnings {
+            inner: Forecasts {
+                writer: writer.clone(),
+                calls: Arc::new(AtomicUsize::new(0)),
+            },
+            store: warning,
+            offers: false,
+        })))
+        .with_raw_writer(writer),
+    )
+}
+
+/// The narrative is added after the assembly, and it shares the request's bound too.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_narrative_that_never_ends_does_not_hold_the_response_past_the_bound() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let backends = BackendDispatcher::legacy("http://127.0.0.1:9").unwrap();
+    let backend = Arc::new(
+        KmaBackend::new(
+            held_source(&peer),
+            Arc::new(|| NOW),
+            AssemblyConfig::default(),
+        )
+        .with_narrative(Some(Arc::new(HeldNarrative))),
+    );
+    backend.register(&backends);
+    KmaBackend::select(&backends, BackendMode::Native).unwrap();
+    let gateway = Gateway::new(Arc::new(FixedGeo), backends)
+        .with_weather_geocoder(Arc::new(FixedGeo), vec![Version::V000903]);
+    let started = Instant::now();
+    let response = gateway.handle(http_request()).await;
+    assert_eq!(response.status(), 200);
+    let held = started.elapsed();
+    assert!(held < Duration::from_millis(3300), "{held:?}");
+}
+
+/// What ran before the source used up part of the wait: here all but half a second of it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_wait_ends_at_one_instant_counted_from_the_start_of_the_request() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let source = held_source(&peer);
+    let backend = KmaBackend::new(source, Arc::new(|| NOW), AssemblyConfig::default());
+    let started = Instant::now();
+    let outcome = backend
+        .outcome(
+            super::source_s3::request(),
+            Instant::now() + Duration::from_secs(6),
+        )
+        .await;
+    assert!(outcome.is_ok());
+    let held = started.elapsed();
+    assert!(held < Duration::from_millis(1500), "{held:?}");
+}

@@ -356,8 +356,8 @@ wakes and skips affected summaries immediately. A summary can still be skipped
 on wait/write admission or timeout, and a later request retries unexamined inputs.
 Legacy optional backfill
 remains durable-before-visible. The public gateway stays 9 s; ASOS-primary KMA gets
-an 8 s handler budget for stored reads and a 500 ms assembly reserve, and everything it waits
-for ends 2.5 s after it starts (2.7 s for air and life), while geocode retains its own 3 s
+an 8 s handler budget for stored reads, and everything it waits for ends 2.5 s after the handler
+starts (2.7 s for air and life, 2.9 s for the narrative), while geocode retains its own 3 s
 cap. Other handlers keep their existing budgets. These are limits, not latency
 measurements. See the [current implementation record](../evidence/research/kma-full-response-implementation-2026-10-25.md)
 and [selected protocol](server2-kma-data-design.md#response-first-durability-and-recovery).

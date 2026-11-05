@@ -55,7 +55,8 @@ pub struct Report {
 #[derive(Default)]
 struct State {
     pending: Option<(String, u32)>,
-    progress_loaded_on: Option<u32>,
+    progress_loaded: bool,
+    zones_loaded_on: Option<u32>,
     last_sync_at_ms: Option<i64>,
     oldest_synced: Option<u32>,
     bootstrap_complete: bool,
@@ -221,30 +222,34 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
         state.state_stored_on = Some(today);
         Ok(())
     }
-    /// Once a KST day, so a later seed import reaches the state requests are offered.
+    /// Progress once a process. The zone state once a KST day, so a later seed import reaches the
+    /// state requests are offered.
     async fn load_progress(&self, state: &mut State, now_ms: i64) -> Result<(), CycleError> {
         let today = kst_date(now_ms, 0);
-        if state.progress_loaded_on == Some(today) {
+        if state.zones_loaded_on == Some(today) {
             return Ok(());
         }
         let deadline = self.deadline();
-        let progress = self
-            .store
-            .zone_progress(now_ms, deadline)
-            .await
-            .map_err(CycleError::Store)?;
+        if !state.progress_loaded {
+            let progress = self
+                .store
+                .zone_progress(now_ms, deadline)
+                .await
+                .map_err(CycleError::Store)?;
+            if let Some((fetched, oldest)) = progress {
+                state.last_sync_at_ms = i64::try_from(fetched).ok();
+                state.oldest_synced = Some(oldest);
+                state.bootstrap_complete = oldest <= kst_date(now_ms, -ZONE_LOOKBACK_DAYS);
+            }
+            state.progress_loaded = true;
+        }
         let zones = self
             .store
             .zone_state(now_ms, deadline)
             .await
             .map_err(CycleError::Store)?;
-        if let Some((fetched, oldest)) = progress {
-            state.last_sync_at_ms = i64::try_from(fetched).ok();
-            state.oldest_synced = Some(oldest);
-            state.bootstrap_complete = oldest <= kst_date(now_ms, -ZONE_LOOKBACK_DAYS);
-        }
         state.zones = Some(zones);
-        state.progress_loaded_on = Some(today);
+        state.zones_loaded_on = Some(today);
         Ok(())
     }
     /// `syncZones`: fetch every planned day first; publish only after the whole series succeeds.

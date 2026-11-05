@@ -262,8 +262,8 @@ impl<T: CatalogTransport> WarningService<T> {
                             .await
                             .map(|state| (state, Instant::now())),
                     };
-                    let (state, full_at) = refreshed.map_err(ServeError::Storage)?;
-                    // A state offered during this read beats what the read saw of S3.
+                    // A state offered since this read began is newer than what the read saw of
+                    // S3, whatever became of the read.
                     if let Some((offered, at)) = store.offered_zone_state()
                         && at >= started
                     {
@@ -274,10 +274,12 @@ impl<T: CatalogTransport> WarningService<T> {
                         });
                         return Ok(offered);
                     }
+                    let (state, full_at) = refreshed.map_err(ServeError::Storage)?;
                     let state = Arc::new(state);
+                    // Dated when the read began, so an offer made during it still replaces it.
                     *zones.lock().unwrap_or_else(|e| e.into_inner()) = Some(ZoneCache {
                         state: state.clone(),
-                        at: Instant::now(),
+                        at: started,
                         full_at,
                     });
                     Ok(state)
@@ -290,6 +292,7 @@ impl<T: CatalogTransport> WarningService<T> {
             Ok(Err(_)) => Err(ServeError::Storage(Error::Transport)),
             Err(_) => Err(ServeError::Storage(Error::Timeout)),
         };
+        self.adopt_offer();
         result.or_else(|e| Self::zone_memory(&self.zones, &self.config, false).ok_or(e))
     }
     /// `getSpecialInfo(town)`: active warnings of the town's zones, legacy order.

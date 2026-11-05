@@ -1107,3 +1107,90 @@ async fn a_different_seed_with_the_same_export_time_voids_the_zone_state() {
         .unwrap();
     assert_eq!(areas(&restored), areas(&elected));
 }
+
+fn offered_warning() -> server2::warnings::zones::ZoneState {
+    let mut offered = server2::warnings::zones::ZoneState::default();
+    offered.apply(&server2::warnings::zones::prepare_events(&[zone_row(
+        "L1100200",
+        12,
+        0,
+        "1",
+        202609250900,
+    )]));
+    offered
+}
+/// S3 cannot be read here, and only the offer holds this warning.
+#[tokio::test]
+async fn an_offer_answers_after_a_failed_zone_read() {
+    let peer = Peer::new();
+    let store = peer.store();
+    publish_zone_row(
+        &store,
+        20260925,
+        zone_row("L1100300", 12, 0, "1", 202609250900),
+    )
+    .await;
+    peer.fault(
+        "corrupt",
+        &records::catalog(records::ZONE_KIND, 20260925)
+            .unwrap()
+            .key(),
+    )
+    .await;
+    let service = WarningService::new(
+        store.clone(),
+        FixedClock::at("2026-09-26T00:10:00.000Z"),
+        ServiceConfig::default(),
+    );
+    assert!(service.special_info(&jongno()).await.is_err());
+    store.offer_zone_state(offered_warning());
+    assert_eq!(service.special_info(&jongno()).await.unwrap().len(), 1);
+}
+
+/// The read is late for this request, and the offer it did not wait for still answers it.
+#[tokio::test]
+async fn an_offer_answers_a_request_whose_zone_read_is_late() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let service = Arc::new(WarningService::new(
+        store.clone(),
+        FixedClock::at("2026-09-26T00:10:00.000Z"),
+        ServiceConfig {
+            deadline: Duration::from_millis(30),
+            ..ServiceConfig::default()
+        },
+    ));
+    peer.fault("slow-all", "x").await;
+    let reading = {
+        let service = service.clone();
+        tokio::spawn(async move { service.special_info(&jongno()).await })
+    };
+    tokio::time::sleep(Duration::from_millis(5)).await;
+    store.offer_zone_state(offered_warning());
+    assert_eq!(reading.await.unwrap().unwrap().len(), 1);
+}
+
+/// What a read saw of S3 before an offer does not hide the offer, in this request or the next.
+#[tokio::test]
+async fn an_offer_during_a_zone_read_replaces_what_the_read_found() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let service = Arc::new(WarningService::new(
+        store.clone(),
+        FixedClock::at("2026-09-26T00:10:00.000Z"),
+        ServiceConfig::default(),
+    ));
+    peer.fault("slow-all", "x").await;
+    let reading = {
+        let service = service.clone();
+        tokio::spawn(async move { service.special_info(&jongno()).await })
+    };
+    tokio::time::sleep(Duration::from_millis(5)).await;
+    store.offer_zone_state(offered_warning());
+    assert_eq!(reading.await.unwrap().unwrap().len(), 1, "this request");
+    assert_eq!(
+        service.special_info(&jongno()).await.unwrap().len(),
+        1,
+        "the next"
+    );
+}

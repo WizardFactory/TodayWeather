@@ -545,6 +545,54 @@ async fn a_seed_imported_later_reaches_the_offered_state_the_next_day() {
     assert!(has_seed());
 }
 
+/// A day with no warnings has no object, so the progress probe stops there.
+struct QuietDay(Recorded, &'static str);
+impl WarningSource for QuietDay {
+    fn fetch<'a>(
+        &'a self,
+        operation: Operation,
+        params: Vec<(&'static str, String)>,
+        deadline: Instant,
+    ) -> BoxFuture<'a, Result<Option<Page>, FetchError>> {
+        if operation == Operation::PwnCd && params.iter().any(|(_, v)| v == self.1) {
+            return Box::pin(async { Ok(None) });
+        }
+        self.0.fetch(operation, params, deadline)
+    }
+}
+
+/// Only the zone state reloads daily: the probe must not send the collector back to its bootstrap.
+#[tokio::test]
+async fn the_daily_reload_keeps_the_bootstrap_across_a_quiet_day() {
+    use server2::warnings::records::ZONE_STATE_KIND;
+    let peer = Peer::new();
+    let store = peer.store();
+    let clock = FixedClock::at("2026-09-26T03:05:00Z");
+    let collector = WarningCollector::new(
+        Arc::new(QuietDay(Recorded::fixtures(), "20260920")),
+        store.clone(),
+        clock.clone(),
+    );
+    for _ in 0..8 {
+        collector.gather().await;
+    }
+    let stored = |date| {
+        let store = store.clone();
+        async move {
+            store
+                .day(ZONE_STATE_KIND, date, deadline())
+                .await
+                .unwrap()
+                .items
+                .len()
+        }
+    };
+    assert_eq!(stored(20260926).await, 1);
+    clock.set("2026-09-27T03:05:00Z");
+    collector.gather().await;
+    assert_eq!(stored(20260927).await, 1);
+}
+
 #[tokio::test]
 async fn the_collector_stores_the_zone_state_once_a_day_after_its_bootstrap() {
     use server2::warnings::records::ZONE_STATE_KIND;
