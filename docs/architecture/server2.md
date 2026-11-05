@@ -356,7 +356,8 @@ wakes and skips affected summaries immediately. A summary can still be skipped
 on wait/write admission or timeout, and a later request retries unexamined inputs.
 Legacy optional backfill
 remains durable-before-visible. The public gateway stays 9 s; ASOS-primary KMA gets
-an 8 s handler budget and a 500 ms assembly reserve, while geocode retains its own 3 s
+an 8 s handler budget for stored reads, and everything it waits for ends 2.5 s after the handler
+starts (2.7 s for air and life, 2.9 s for the narrative), while geocode retains its own 3 s
 cap. Other handlers keep their existing budgets. These are limits, not latency
 measurements. See the [current implementation record](../evidence/research/kma-full-response-implementation-2026-10-25.md)
 and [selected protocol](server2-kma-data-design.md#response-first-durability-and-recovery).
@@ -793,7 +794,10 @@ published day without either) is then replayed in memory by an owned refresh tas
 stores `zone-state` once a KST day after its sixty-day bootstrap, so cold replay cost is bounded by
 the days since then. Each state names the seed acquisition it was built on (time and content), so a seed imported later voids older
 states, including one built before the import and stored after it. A state that cannot be read, or
-whose bootstrap had not covered the lookback, costs the replay from the seed. One raw LIST decides the days to
+whose bootstrap had not covered the lookback, costs the replay from the seed. The collector offers its zone state to requests through the store
+once fetched, before its publications, or after its first two steps when nothing needs a sync. A
+request stops waiting for the cycle at that offer and answers from memory, and the state stays
+current across the memory reset that ends a cycle. One raw LIST decides the days to
 read: a day with no raw object costs nothing, and a complete orphan group has raw objects, so its
 day is read and repaired. Discovery reaches back to 1970, so no stored bulletin ages out. Seeds come from the
 offline `server2/tools/migration/` converter and an importer that uses the shared
@@ -1976,7 +1980,12 @@ long the range has grown. An acquisition is dated by its last page.
 - **Forecast zones** fold every list since 2026-01 in completion order. A 10-minute refresh appends
   newer lists. A late list completed earlier triggers a refold, and a daily refold catches the rest.
 The snapshot lists the matched town as `towns()`; the chain uses the list only for `_findTown`,
-which finds that town first in the full list too.
+which finds that town first in the full list too. Under the observed source the handler first maps
+the geocoder's `강원특별자치도`, `전북특별자치도` and `전남광주통합특별시` to the listed `강원도`, `전라북도`,
+and `광주광역시` or `전라남도`, so the lookups find them and `regionName` carries the listed name, including
+after a KR remap. Daegu's `군위군` stays under its own name, since its air and food-poisoning regions are Daegu's. A town outside
+the list starts its forecast as soon as its lookup ends, and only one that stays unknown waits for
+its mid forecast, air, life and warnings.
 
 **Reference data from the repository.** `part.csv`, `base.csv`, `region.csv` and
 `kma_forecast_land_zones.csv` are byte-identical copies with provenance. The town list follows
@@ -2447,7 +2456,8 @@ announcement or day is therefore folded in completion order within a minute, as 
 folds it. A request whose fold lacks the expected announcement (or, while that one's documents
 name no acceptable pair, the previous announcement, which legacy processed when it was expected)
 starts one owned acquisition of its images (S13d `OwnedFlights`, 10-minute retry, 60 s call
-budget, 8 MiB per image) and waits only until its deadline; until the images are published and
+budget, 8 MiB per image). The legacy-path source waits only until its deadline, and the observed
+response does not wait, because the images take longer than a request may wait; until the images are published and
 decoded it gets the legacy output for missing data. A pair `getDustImage` rejects is never
 fetched. The provider-supplied URLs are never fetched as given: their validated path is fetched on
 the built-in image root `https://www.airkorea.or.kr/` (`gateway::runtime::Builtins::

@@ -657,12 +657,17 @@ pub fn convert_units_mw(cx: &mut Cx) -> Flow {
                 );
             }
         }
-        for v in cx.r("shortest").a().items() {
-            v.set(
-                "dateObj",
-                time::dot_space(&to_str(&add(&v.get("date"), &v.get("time")))),
-            );
-            convert_weather_data(&v, &query);
+        // Under ASOS-primary a late list must not skip the conversions below. Legacy's exception
+        // does, and its failure output stays as it was.
+        let shortest = cx.r("shortest");
+        if shortest.truthy() || !super::policy::observations_primary(&cx.req) {
+            for v in shortest.a().items() {
+                v.set(
+                    "dateObj",
+                    time::dot_space(&to_str(&add(&v.get("date"), &v.get("time")))),
+                );
+                convert_weather_data(&v, &query);
+            }
         }
         let short = cx.r("short");
         let rows = short.a().items();

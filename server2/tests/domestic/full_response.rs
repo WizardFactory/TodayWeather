@@ -936,3 +936,500 @@ async fn only_the_newest_mid_publication_of_a_region_is_read() {
         "{requested:?}"
     );
 }
+
+/// A warning cycle that never ends; it offers the zone state first when asked to.
+struct HeldWarnings {
+    inner: Forecasts,
+    store: Arc<WarningStore<server2::world::BoundedS3<server2::storage::HttpS3Transport>>>,
+    offers: bool,
+}
+impl ForecastAcquire for HeldWarnings {
+    fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>> {
+        if request == ForecastRequest::Warnings {
+            let (store, offers) = (self.store.clone(), self.offers);
+            return Box::pin(async move {
+                if offers {
+                    store.offer_zone_state(Default::default());
+                }
+                tokio::time::sleep(Duration::from_secs(20)).await;
+                Ok(None)
+            });
+        }
+        self.inner.acquire(request)
+    }
+    fn cached(&self, request: &ForecastRequest) -> Published {
+        self.inner.cached(request)
+    }
+}
+async fn served_with_held_warnings(offers: bool) -> Duration {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let warning = Arc::new(
+        WarningStore::new(
+            peer.transport_limited(2),
+            CatalogLimits::default(),
+            StoreConfig::default(),
+        )
+        .unwrap(),
+    );
+    let source = S3Source::new_observed_with_warning_store(
+        peer.transport_limited(4),
+        Arc::new(|| NOW),
+        Arc::new(Providers::default()),
+        Arc::new(Unreachable),
+        warning.clone(),
+    )
+    .unwrap()
+    .with_forecast(Some(Arc::new(HeldWarnings {
+        inner: Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        },
+        store: warning,
+        offers,
+    })))
+    .with_raw_writer(writer.clone());
+    let started = Instant::now();
+    let response = build_gateway(Arc::new(source), None)
+        .handle(http_request())
+        .await;
+    assert_eq!(response.status(), 200);
+    started.elapsed()
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_response_does_not_wait_for_a_warning_cycle_that_offered_its_state() {
+    let held = served_with_held_warnings(true).await;
+    assert!(held < Duration::from_secs(2), "{held:?}");
+}
+
+/// The request waits at most 2.5 s for what it has started, whatever is still running.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_warning_cycle_that_never_ends_does_not_hold_the_response_past_the_bound() {
+    let held = served_with_held_warnings(false).await;
+    assert!(held >= Duration::from_millis(2400), "{held:?}");
+    assert!(held < Duration::from_secs(3), "{held:?}");
+}
+
+/// A failed or late ultra-short forecast leaves the rest of the response in its client format.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_missing_ultra_short_forecast_keeps_the_client_format() {
+    struct NoShortest(Forecasts);
+    impl ForecastAcquire for NoShortest {
+        fn acquire(
+            &self,
+            request: ForecastRequest,
+        ) -> BoxFuture<'static, Result<Published, String>> {
+            if matches!(&request, ForecastRequest::DataGoKr(r) if r.family() == F::UltraSrtFcst) {
+                return Box::pin(async { Err("late".to_owned()) });
+            }
+            self.0.acquire(request)
+        }
+        fn cached(&self, request: &ForecastRequest) -> Published {
+            self.0.cached(request)
+        }
+    }
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(NoShortest(Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        }))))
+        .with_raw_writer(writer.clone());
+    let response = build_gateway(Arc::new(source), None)
+        .handle(http_request())
+        .await;
+    assert_eq!(response.status(), 200);
+    let body = to_bytes(response.into_body(), 6 * 1024 * 1024)
+        .await
+        .unwrap();
+    let weather: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert!(
+        weather["short"][0]["time"].is_number(),
+        "{}",
+        weather["short"][0]
+    );
+    assert!(weather["midData"]["dailyData"][0]["skyAm"].is_string());
+}
+
+/// A reader that never answers.
+struct HeldNarrative;
+impl server2::narrative::Read for HeldNarrative {
+    fn read(
+        &self,
+        _station: u16,
+        _deadline: Instant,
+    ) -> BoxFuture<'_, Option<server2::narrative::Narrative>> {
+        Box::pin(async {
+            tokio::time::sleep(Duration::from_secs(20)).await;
+            None
+        })
+    }
+}
+/// A source whose warning cycle never ends, with no offer.
+fn held_source(
+    peer: &Peer,
+) -> Arc<S3Source<server2::world::BoundedS3<server2::storage::HttpS3Transport>>> {
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let warning = Arc::new(
+        WarningStore::new(
+            peer.transport_limited(2),
+            CatalogLimits::default(),
+            StoreConfig::default(),
+        )
+        .unwrap(),
+    );
+    Arc::new(
+        S3Source::new_observed_with_warning_store(
+            peer.transport_limited(4),
+            Arc::new(|| NOW),
+            Arc::new(Providers::default()),
+            Arc::new(Unreachable),
+            warning.clone(),
+        )
+        .unwrap()
+        .with_forecast(Some(Arc::new(HeldWarnings {
+            inner: Forecasts {
+                writer: writer.clone(),
+                calls: Arc::new(AtomicUsize::new(0)),
+            },
+            store: warning,
+            offers: false,
+        })))
+        .with_raw_writer(writer),
+    )
+}
+
+/// The narrative is added after the assembly, and it shares the request's bound too.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_narrative_that_never_ends_does_not_hold_the_response_past_the_bound() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let backends = BackendDispatcher::legacy("http://127.0.0.1:9").unwrap();
+    let backend = Arc::new(
+        KmaBackend::new(
+            held_source(&peer),
+            Arc::new(|| NOW),
+            AssemblyConfig::default(),
+        )
+        .with_narrative(Some(Arc::new(HeldNarrative))),
+    );
+    backend.register(&backends);
+    KmaBackend::select(&backends, BackendMode::Native).unwrap();
+    let gateway = Gateway::new(Arc::new(FixedGeo), backends)
+        .with_weather_geocoder(Arc::new(FixedGeo), vec![Version::V000903]);
+    let started = Instant::now();
+    let response = gateway.handle(http_request()).await;
+    assert_eq!(response.status(), 200);
+    let held = started.elapsed();
+    assert!(held < Duration::from_millis(3300), "{held:?}");
+}
+
+/// What ran before the source used up part of the wait: here all but half a second of it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_wait_ends_at_one_instant_counted_from_the_start_of_the_request() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let source = held_source(&peer);
+    let backend = KmaBackend::new(source, Arc::new(|| NOW), AssemblyConfig::default());
+    let started = Instant::now();
+    let outcome = backend
+        .outcome(
+            super::source_s3::request(),
+            Instant::now() + Duration::from_secs(6),
+        )
+        .await;
+    assert!(outcome.is_ok());
+    let held = started.elapsed();
+    assert!(held < Duration::from_millis(1500), "{held:?}");
+}
+
+/// However late the request got to the narrative, it does not reopen the wait.
+#[tokio::test]
+async fn the_narrative_stops_at_one_instant_from_the_start_of_the_request() {
+    use server2::domestic::kma::backend::KmaSource;
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let source = held_source(&peer);
+    let now = Instant::now();
+    assert_eq!(
+        source.narrative_by(now + Duration::from_secs(8)),
+        now + Duration::from_millis(2900)
+    );
+    let late = now + Duration::from_millis(5050);
+    assert!(source.narrative_by(late) < Instant::now());
+}
+
+/// Places a town the list does not hold.
+struct Located;
+impl server2::geocode::town::Acquire for Located {
+    fn address(
+        &self,
+        _: server2::geocode::town::Operation,
+        _: String,
+    ) -> BoxFuture<'_, Result<serde_json::Value, server2::geocode::GeocodeError>> {
+        Box::pin(async { Ok(json!({"provider":"kakao","lat":"37.566","lon":"126.978"})) })
+    }
+}
+
+/// The lookup is quick, so the forecast must not wait behind a warning cycle that never ends.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_town_outside_the_list_gets_its_forecast_within_the_bound() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let source = held_source(&peer);
+    let source = Arc::into_inner(source)
+        .unwrap()
+        .with_town_geocoder(Some(Arc::new(Located)));
+    let backend = KmaBackend::new(
+        Arc::new(source),
+        Arc::new(|| NOW),
+        AssemblyConfig::default(),
+    );
+    let mut request = super::source_s3::request();
+    request.town = Some("새동".into());
+    let started = Instant::now();
+    let outcome = backend
+        .outcome(request, Instant::now() + Duration::from_secs(8))
+        .await
+        .unwrap();
+    assert!(started.elapsed() < Duration::from_secs(3));
+    let server2::domestic::kma::Outcome::Json(body) = outcome else {
+        panic!("{outcome:?}")
+    };
+    let body: serde_json::Value = serde_json::from_slice(&body.to_bytes()).unwrap();
+    assert!(
+        !body["short"].as_array().unwrap().is_empty(),
+        "a forecast, not the answer for a town with none"
+    );
+}
+
+/// The geocoder's name for the province must reach the listed town and its mid forecast.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
+    let _peers = S3_PEERS.lock().await;
+    for (region, city, town) in [
+        ("강원특별자치도", "강릉시", "홍제동"),
+        ("전북특별자치도", "군산시", "조촌동"),
+        ("전남광주통합특별시", "여수시", "쌍봉동"),
+        ("전남광주통합특별시", "광산구", "송정2동"),
+    ] {
+        let peer = Peer::persistent();
+        let store = Arc::new(
+            CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap(),
+        );
+        let writer = Writer::new(store, Config::default()).unwrap();
+        let source = build_source(&peer, Arc::new(Providers::default()))
+            .with_forecast(Some(Arc::new(Forecasts {
+                writer: writer.clone(),
+                calls: Arc::new(AtomicUsize::new(0)),
+            })))
+            .with_raw_writer(writer.clone());
+        let backend = KmaBackend::new(
+            Arc::new(source),
+            Arc::new(|| NOW),
+            AssemblyConfig::default(),
+        );
+        let mut request = super::source_s3::request();
+        request.region = Some(region.into());
+        request.city = Some(city.into());
+        request.town = Some(town.into());
+        let outcome = backend
+            .outcome(request, Instant::now() + Duration::from_secs(8))
+            .await
+            .unwrap();
+        let server2::domestic::kma::Outcome::Json(body) = outcome else {
+            panic!("{outcome:?}")
+        };
+        let body: serde_json::Value = serde_json::from_slice(&body.to_bytes()).unwrap();
+        assert!(
+            !body["short"].as_array().unwrap().is_empty(),
+            "{region} {city}: the listed town"
+        );
+        let status = &body["midData"]["dailyStatus"];
+        for reason in status["reasons"].as_array().unwrap() {
+            assert!(
+                ![
+                    "land-unavailable",
+                    "temperature-unavailable",
+                    "future-mid-unavailable"
+                ]
+                .contains(&reason.as_str().unwrap()),
+                "{region} {city}: {status}"
+            );
+        }
+        let daily = body["midData"]["dailyData"].as_array().unwrap();
+        assert_eq!(daily.last().unwrap()["date"], json!("20261004"));
+    }
+}
+
+/// Only those names move. Gunwi stays in Daegu: its air and food-poisoning regions are Daegu's.
+#[tokio::test]
+async fn the_listed_province_depends_on_the_new_name_and_its_city() {
+    use server2::domestic::kma::backend::KmaSource;
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let source = build_source(&peer, Arc::new(Providers::default()));
+    for (region, city, listed) in [
+        ("강원특별자치도", "강릉시", "강원도"),
+        ("전북특별자치도", "군산시", "전라북도"),
+        ("전남광주통합특별시", "여수시", "전라남도"),
+        ("전남광주통합특별시", "광산구", "광주광역시"),
+        ("대구광역시", "군위군", "대구광역시"),
+        ("서울특별시", "중구", "서울특별시"),
+    ] {
+        let mut request = super::source_s3::request();
+        request.region = Some(region.into());
+        request.city = Some(city.into());
+        let prepared = source
+            .prepare(request, Instant::now() + Duration::from_secs(8))
+            .await
+            .unwrap();
+        assert_eq!(prepared.region.as_deref(), Some(listed), "{region} {city}");
+    }
+}
+
+/// A mid forecast that never ends must not hold the forecast of a town outside the list.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_late_mid_does_not_hold_the_forecast_of_a_town_outside_the_list() {
+    struct HeldMid(Forecasts);
+    impl ForecastAcquire for HeldMid {
+        fn acquire(
+            &self,
+            request: ForecastRequest,
+        ) -> BoxFuture<'static, Result<Published, String>> {
+            if matches!(&request, ForecastRequest::DataGoKr(r) if r.family() == F::MidLandFcst) {
+                return Box::pin(async {
+                    tokio::time::sleep(Duration::from_secs(20)).await;
+                    Ok(None)
+                });
+            }
+            self.0.acquire(request)
+        }
+        fn cached(&self, request: &ForecastRequest) -> Published {
+            self.0.cached(request)
+        }
+    }
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(HeldMid(Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        }))))
+        .with_raw_writer(writer.clone())
+        .with_town_geocoder(Some(Arc::new(Located)));
+    let backend = KmaBackend::new(
+        Arc::new(source),
+        Arc::new(|| NOW),
+        AssemblyConfig::default(),
+    );
+    let mut request = super::source_s3::request();
+    request.town = Some("새동".into());
+    let outcome = backend
+        .outcome(request, Instant::now() + Duration::from_secs(8))
+        .await
+        .unwrap();
+    let server2::domestic::kma::Outcome::Json(body) = outcome else {
+        panic!("{outcome:?}")
+    };
+    let body: serde_json::Value = serde_json::from_slice(&body.to_bytes()).unwrap();
+    assert!(!body["short"].as_array().unwrap().is_empty());
+}
+
+/// A KR request's address can name the province by its new name too.
+#[tokio::test]
+async fn a_kr_remap_to_a_new_province_name_finds_the_listed_name() {
+    use server2::domestic::kma::backend::KmaSource;
+    struct Remapped;
+    impl server2::geocode::town::Acquire for Remapped {
+        fn address(
+            &self,
+            _: server2::geocode::town::Operation,
+            _: String,
+        ) -> BoxFuture<'_, Result<serde_json::Value, server2::geocode::GeocodeError>> {
+            Box::pin(async {
+                Ok(json!({"provider":"google","address":"대한민국 강원특별자치도 강릉시 홍제동"}))
+            })
+        }
+    }
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_town_geocoder(Some(Arc::new(Remapped)));
+    let request = server2::domestic::kma::backend::parse_path(
+        "/v000903/kma/addr/%EA%B0%95%EB%A6%89%EC%8B%9C/KR",
+        "ko",
+    )
+    .unwrap();
+    let prepared = source
+        .prepare(request, Instant::now() + Duration::from_secs(8))
+        .await
+        .unwrap();
+    assert_eq!(prepared.region.as_deref(), Some("강원도"));
+    assert_eq!(prepared.city.as_deref(), Some("강릉시"));
+}
+
+/// A lookup that outlasts the wait leaves the mid forecast the time it had from the start.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_late_town_lookup_keeps_the_mid_forecast_of_its_region() {
+    struct NeverLocated;
+    impl server2::geocode::town::Acquire for NeverLocated {
+        fn address(
+            &self,
+            _: server2::geocode::town::Operation,
+            _: String,
+        ) -> BoxFuture<'_, Result<serde_json::Value, server2::geocode::GeocodeError>> {
+            Box::pin(async {
+                tokio::time::sleep(Duration::from_secs(20)).await;
+                Err(server2::geocode::GeocodeError::Provider)
+            })
+        }
+    }
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        })))
+        .with_raw_writer(writer.clone())
+        .with_town_geocoder(Some(Arc::new(NeverLocated)));
+    let backend = KmaBackend::new(
+        Arc::new(source),
+        Arc::new(|| NOW),
+        AssemblyConfig::default(),
+    );
+    let mut request = super::source_s3::request();
+    request.town = Some("새동".into());
+    let started = Instant::now();
+    let outcome = backend
+        .outcome(request, Instant::now() + Duration::from_secs(8))
+        .await
+        .unwrap();
+    assert!(started.elapsed() < Duration::from_secs(3));
+    let server2::domestic::kma::Outcome::Json(body) = outcome else {
+        panic!("{outcome:?}")
+    };
+    let body: serde_json::Value = serde_json::from_slice(&body.to_bytes()).unwrap();
+    assert!(
+        !body["midData"]["forecast"].is_null(),
+        "{}",
+        body["midData"]
+    );
+}

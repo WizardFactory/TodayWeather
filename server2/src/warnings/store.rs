@@ -22,7 +22,7 @@ use std::{
     },
 };
 use tokio::{
-    sync::{OwnedSemaphorePermit, Semaphore},
+    sync::{OwnedSemaphorePermit, Semaphore, watch},
     task::JoinSet,
     time::Instant,
 };
@@ -287,12 +287,15 @@ impl<T: CatalogTransport> Reader<T> {
         }
     }
 }
+/// A zone state the collector has current, and when.
+pub type OfferedZones = (Arc<ZoneState>, Instant);
 pub struct WarningStore<T> {
     transport: Arc<T>,
     reader: Reader<T>,
     limits: CatalogLimits,
     config: StoreConfig,
     pub counters: Arc<Counters>,
+    offered: watch::Sender<Option<OfferedZones>>,
 }
 /// When a `_sync` marker's bootstrap had seen the whole lookback: the time of its last sync. An
 /// unfinished bootstrap (covered start later than sync - 59 days) has not seen older days.
@@ -350,7 +353,19 @@ impl<T: CatalogTransport> WarningStore<T> {
             limits,
             config,
             counters,
+            offered: watch::channel(None).0,
         })
+    }
+    /// Hand the current zone state to requests, ahead of whatever the collector still publishes.
+    pub fn offer_zone_state(&self, state: ZoneState) {
+        self.offered
+            .send_replace(Some((Arc::new(state), Instant::now())));
+    }
+    pub fn offered_zone_state(&self) -> Option<OfferedZones> {
+        self.offered.borrow().clone()
+    }
+    pub fn zone_offers(&self) -> watch::Receiver<Option<OfferedZones>> {
+        self.offered.subscribe()
     }
     pub fn limits(&self) -> &CatalogLimits {
         &self.limits
@@ -690,10 +705,19 @@ impl<T: CatalogTransport> WarningStore<T> {
             .rev()
             .map(js::date_of_index)
             .collect();
+        // Raw objects decide the days to read, as for the zone state.
+        let held = self
+            .discovered(
+                ZONE_KIND,
+                kst_date(now_ms, -ZONE_LOOKBACK_DAYS),
+                kst_date(now_ms, 0),
+                deadline,
+            )
+            .await?;
         let mut days = Vec::new();
         self.first(
             ZONE_KIND,
-            dates.clone(),
+            held.clone(),
             &map,
             |day| {
                 days.push(day.items);
@@ -702,9 +726,12 @@ impl<T: CatalogTransport> WarningStore<T> {
             deadline,
         )
         .await?;
+        let mut read: std::collections::HashMap<u32, Vec<u64>> =
+            held.into_iter().zip(days).collect();
         let mut newest: Option<(u64, u32)> = None;
         let mut covered = true;
-        for (date, items) in dates.into_iter().zip(days) {
+        for date in dates {
+            let items = read.remove(&date).unwrap_or_default();
             if items.is_empty() {
                 if newest.is_some() {
                     covered = false;

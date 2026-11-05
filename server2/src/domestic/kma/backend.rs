@@ -33,6 +33,10 @@ pub trait KmaSource: Send + Sync {
         Box::pin(async { Ok(request) })
     }
     fn snapshot(&self, request: &KmaRequest, deadline: Instant) -> BoxFuture<'_, SourceAnswer>;
+    /// When the answer stops waiting for the narrative it adds last.
+    fn narrative_by(&self, deadline: Instant) -> Instant {
+        deadline
+    }
 }
 /// Register the v000903 KMA handler with `source` and select it (`SERVER2_NATIVE_FAMILIES`
 /// contains `kma`; the runtime passes the S3 source built from the legacy S3 settings).
@@ -233,7 +237,8 @@ impl KmaBackend {
                     .and_then(|p| crate::narrative::office(&p))
             })
             .flatten();
-            crate::narrative::attach(body, office, self.narrative.as_ref(), deadline).await;
+            let by = self.source.narrative_by(deadline);
+            crate::narrative::attach(body, office, self.narrative.as_ref(), by).await;
         }
         Ok(outcome)
     }

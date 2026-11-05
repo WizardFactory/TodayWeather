@@ -167,6 +167,35 @@ impl<T: CatalogTransport> WarningService<T> {
         let now_ms = self.now_ms()?;
         Ok(special::current(&latest, now_ms, korean))
     }
+    /// Take over a newer zone state the collector offered.
+    fn adopt_offer(&self) {
+        Self::adopt_into(&self.store, &self.zones);
+    }
+    fn adopt_into(store: &WarningStore<T>, zones: &ZoneSlot) {
+        if let Some((state, at)) = store.offered_zone_state() {
+            let mut memory = zones.lock().unwrap_or_else(|e| e.into_inner());
+            if memory.as_ref().is_none_or(|c| c.at < at) {
+                *memory = Some(ZoneCache {
+                    state,
+                    at,
+                    full_at: at,
+                });
+            }
+        }
+    }
+    /// Ends once [`Self::zone_state`] can answer from memory: now, or when the collector offers.
+    pub async fn zones_ready(&self) {
+        let mut offers = self.store.zone_offers();
+        loop {
+            self.adopt_offer();
+            if Self::zone_memory(&self.zones, &self.config, true).is_some() {
+                return;
+            }
+            if offers.changed().await.is_err() {
+                std::future::pending::<()>().await;
+            }
+        }
+    }
     /// Valid zone memory for the outage fallback (younger than refresh + stale).
     fn zone_memory(
         zones: &ZoneSlot,
@@ -194,6 +223,7 @@ impl<T: CatalogTransport> WarningService<T> {
         now_ms: i64,
         deadline: Instant,
     ) -> Result<Arc<ZoneState>, ServeError> {
+        self.adopt_offer();
         if let Some(state) = Self::zone_memory(&self.zones, &self.config, true) {
             return Ok(state);
         }
@@ -212,6 +242,10 @@ impl<T: CatalogTransport> WarningService<T> {
                     owner.join(crate::observability::Component::Warnings);
                     let _single = refresh.lock_owned().await;
                     let _owner = owner.enter();
+                    // An offer can have arrived since this task was created, and one after
+                    // `started` is caught below, so none is lost between the two.
+                    let started = Instant::now();
+                    Self::adopt_into(&store, &zones);
                     if let Some(state) = Self::zone_memory(&zones, &config, true) {
                         return Ok(state);
                     }
@@ -234,11 +268,24 @@ impl<T: CatalogTransport> WarningService<T> {
                             .await
                             .map(|state| (state, Instant::now())),
                     };
+                    // A state offered since this read began is newer than what the read saw of
+                    // S3, whatever became of the read.
+                    if let Some((offered, at)) = store.offered_zone_state()
+                        && at >= started
+                    {
+                        *zones.lock().unwrap_or_else(|e| e.into_inner()) = Some(ZoneCache {
+                            state: offered.clone(),
+                            at,
+                            full_at: at,
+                        });
+                        return Ok(offered);
+                    }
                     let (state, full_at) = refreshed.map_err(ServeError::Storage)?;
                     let state = Arc::new(state);
+                    // Dated when the read began, so an offer made during it still replaces it.
                     *zones.lock().unwrap_or_else(|e| e.into_inner()) = Some(ZoneCache {
                         state: state.clone(),
-                        at: Instant::now(),
+                        at: started,
                         full_at,
                     });
                     Ok(state)
@@ -251,6 +298,7 @@ impl<T: CatalogTransport> WarningService<T> {
             Ok(Err(_)) => Err(ServeError::Storage(Error::Transport)),
             Err(_) => Err(ServeError::Storage(Error::Timeout)),
         };
+        self.adopt_offer();
         result.or_else(|e| Self::zone_memory(&self.zones, &self.config, false).ok_or(e))
     }
     /// `getSpecialInfo(town)`: active warnings of the town's zones, legacy order.

@@ -296,7 +296,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 Arc::new(move || clock().max(0.) as u64)
             }),
             observations,
-            air: air_input::AirInputs::new(transport.clone(), store.clone()),
+            air: {
+                let air = air_input::AirInputs::new(transport.clone(), store.clone());
+                if observed {
+                    air.answering_before_image_acquisition()
+                } else {
+                    air
+                }
+            },
             life: life_input::LifeInputs::new(transport.clone(), store.clone()),
             reader: Reader { transport, store },
             warnings: Arc::new(WarningService::new(
@@ -1108,6 +1115,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // Covers the whole canonical discovery -> pending-overlay interval.
         let _raw_pin = self.raw_writer.as_ref().map(|writer| writer.pin());
         let now = (self.clock)();
+        // One instant for the whole request, so a town lookup's wait and the rest do not add up.
+        let observed = self.observed_history.then(|| {
+            (
+                observed_instant(deadline, OBSERVED_WAIT),
+                observed_instant(deadline, OBSERVED_SECTION),
+            )
+        });
         let mut effective = request.clone();
         if super::middleware_of(&request.version, request.part.as_deref())
             .contains(&"getAllDataFromDb")
@@ -1148,50 +1162,95 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             // Medium-range inputs depend on region/city, not on a successful town geocode.
             // Start them alongside the owned lookup so a late location cannot discard already
             // available mid data or create a second acquisition wait budget.
-            let until = wait_bound(deadline);
-            let section = (until + std::time::Duration::from_millis(200)).min(deadline);
-            let absent_town = Doc::new();
-            let (result, mid, air, life, special) = tokio::join!(
-                self.town_resolver.resolve(
-                    crate::geocode::town::Operation::Town,
-                    address,
-                    until,
-                    now.max(0.) as u64
-                ),
-                async {
-                    let zones = self.zones(now, deadline).await?;
-                    let mids = self
-                        .mids(&region, &city, &zones, now, deadline, until)
-                        .await?;
-                    Ok::<_, String>((zones, mids))
-                },
-                self.air.load(
-                    &absent_town,
-                    &region,
-                    &city,
-                    dust_wanted,
-                    image_wanted,
-                    now,
-                    section
-                ),
-                self.life.load(now, section),
-                async {
-                    self.warning_cycle(until).await;
-                    self.warnings.zone_state(now as i64, section).await.ok()
-                }
+            let until = observed.map_or_else(|| wait_bound(deadline), |o| o.0);
+            let section = observed.map_or_else(
+                || (until + std::time::Duration::from_millis(200)).min(deadline),
+                |o| o.1,
             );
-            let (zones, mids) = mid?;
-            let result = match result {
-                Ok(result) => result,
-                Err(towns::ResolveError::Storage) => {
-                    return Err(Unbuilt::Failed("town projection unavailable".into()));
-                }
-                Err(_) => return Ok(Snapshot::missing_town(now, zones, mids, air, life, special)),
+            let absent_town = Doc::new();
+            let lookup = self.town_resolver.resolve(
+                crate::geocode::town::Operation::Town,
+                address,
+                until,
+                now.max(0.) as u64,
+            );
+            let mid = async {
+                let zones = self.zones(now, deadline).await?;
+                let mids = self
+                    .mids(&region, &city, &zones, now, deadline, until)
+                    .await?;
+                Ok::<_, String>((zones, mids))
             };
-            (
-                towns::town_document(&result, request, list),
-                Some((zones, mids)),
-            )
+            let optional = async {
+                tokio::join!(
+                    self.air.load(
+                        &absent_town,
+                        &region,
+                        &city,
+                        dust_wanted,
+                        image_wanted,
+                        now,
+                        section
+                    ),
+                    self.life.load(now, section),
+                    async {
+                        self.warning_wait(until).await;
+                        self.warnings.zone_state(now as i64, section).await.ok()
+                    }
+                )
+            };
+            if observed.is_some() {
+                // The mid forecast starts with the lookup, so a late lookup still leaves it time.
+                // A found town waits for neither it nor the optional arms, or its forecast would
+                // start with no time left: the main path joins the same owned acquisitions.
+                tokio::pin!(lookup, mid);
+                let mut mid_done = None;
+                let result = tokio::select! {
+                    result = &mut lookup => result,
+                    done = &mut mid => {
+                        mid_done = Some(done);
+                        lookup.await
+                    }
+                };
+                match result {
+                    Ok(result) => (
+                        towns::town_document(&result, request, list),
+                        mid_done.and_then(Result::ok),
+                    ),
+                    Err(towns::ResolveError::Storage) => {
+                        return Err(Unbuilt::Failed("town projection unavailable".into()));
+                    }
+                    Err(_) => {
+                        let (mid, (air, life, special)) = tokio::join!(
+                            async {
+                                match mid_done {
+                                    Some(done) => done,
+                                    None => mid.await,
+                                }
+                            },
+                            optional
+                        );
+                        let (zones, mids) = mid?;
+                        return Ok(Snapshot::missing_town(now, zones, mids, air, life, special));
+                    }
+                }
+            } else {
+                let (result, mid, (air, life, special)) = tokio::join!(lookup, mid, optional);
+                let (zones, mids) = mid?;
+                let result = match result {
+                    Ok(result) => result,
+                    Err(towns::ResolveError::Storage) => {
+                        return Err(Unbuilt::Failed("town projection unavailable".into()));
+                    }
+                    Err(_) => {
+                        return Ok(Snapshot::missing_town(now, zones, mids, air, life, special));
+                    }
+                };
+                (
+                    towns::town_document(&result, request, list),
+                    Some((zones, mids)),
+                )
+            }
         };
 
         let m = town.get("mCoord").and_then(Val::as_doc);
@@ -1207,21 +1266,17 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // A coordinate outside the KMA grid has no grid collection: legacy's `find` by `mCoord`
         // finds no row, so every grid collection answers empty (no acquisition either).
         let grid = kma_grid(coord);
-        // One wait bound for the whole request (at most REQUEST_WAIT, 3 s, and ANSWER_RESERVE
-        // before the deadline): station observations, ASOS history, the forecast, air and life
+        // One wait bound for the whole request (OBSERVED_WAIT from its start, otherwise at most
+        // REQUEST_WAIT, 3 s, and ANSWER_RESERVE before the deadline): station observations, ASOS history, the forecast, air and life
         // acquisitions all stop waiting at `until`, so the waits never add up; late parts are
         // answered as legacy answers absent data. The air and life inputs end their waits 200 ms
         // before the deadline they are given, so they get `until` + 200 ms (`section`), which
         // also bounds the warning-state read; the assembly keeps the last 300 ms.
-        let until = if self.observed_history {
-            deadline
-                .checked_sub(ANSWER_RESERVE)
-                .unwrap_or_else(Instant::now)
-                .max(Instant::now())
-        } else {
-            wait_bound(deadline)
-        };
-        let section = (until + std::time::Duration::from_millis(200)).min(deadline);
+        let until = observed.map_or_else(|| wait_bound(deadline), |o| o.0);
+        let section = observed.map_or_else(
+            || (until + std::time::Duration::from_millis(200)).min(deadline),
+            |o| o.1,
+        );
         let observations = async {
             let folded = self.observations.stations(now as i64, until).await;
             let (history, asos) = self
@@ -1286,7 +1341,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             // as an owned task). A failed or late read is the legacy store error
             // (`getSpecialInfo` skips the section).
             async {
-                self.warning_cycle(until).await;
+                self.warning_wait(until).await;
                 self.warnings.zone_state(now as i64, section).await.ok()
             },
             // S15b-3b life inputs (their owned acquisitions start for every request that reaches
@@ -1405,6 +1460,29 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// Join the shared warning owner, keeping the request's existing bounded wait.
+    /// Legacy's lookups are exact, so the geocoder's newer province names would miss the town
+    /// list and the region table.
+    fn list_region(&self, request: &mut KmaRequest) {
+        if self.observed_history
+            && let Some(region) = request.region.as_deref()
+        {
+            let city = request.city.as_deref().unwrap_or_default();
+            request.region = Some(representative::listed_first(region, city).to_owned());
+        }
+    }
+    /// Starts a due warning cycle and waits for it. Under the observed source the wait ends at
+    /// the zone state it offers, so its publications do not hold the answer.
+    async fn warning_wait(&self, until: Instant) {
+        if self.observed_history {
+            tokio::select! {
+                biased;
+                () = self.warning_cycle(until) => {}
+                () = self.warnings.zones_ready() => {}
+            }
+        } else {
+            self.warning_cycle(until).await;
+        }
+    }
     async fn warning_cycle(&self, until: Instant) {
         use crate::warnings::acquisition_worker::Acquisition;
         if let Some(cycles) = &self.warning_cycles {
@@ -1479,7 +1557,18 @@ fn summary_inputs(
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> {
     fn request_budget(&self) -> std::time::Duration {
-        std::time::Duration::from_secs(if self.observed_history { 8 } else { 3 })
+        if self.observed_history {
+            OBSERVED_BUDGET
+        } else {
+            std::time::Duration::from_secs(3)
+        }
+    }
+    fn narrative_by(&self, deadline: Instant) -> Instant {
+        if self.observed_history {
+            observed_instant(deadline, OBSERVED_NARRATIVE)
+        } else {
+            deadline
+        }
     }
     fn prepare(
         &self,
@@ -1487,6 +1576,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> 
         deadline: Instant,
     ) -> BoxFuture<'_, Result<KmaRequest, super::Outcome>> {
         Box::pin(async move {
+            self.list_region(&mut request);
             if !super::middleware_of(&request.version, request.part.as_deref())
                 .contains(&"checkParamValidation")
                 || (request.city.as_deref() != Some("KR") && request.town.as_deref() != Some("KR"))
@@ -1529,6 +1619,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> 
             request.region = params["region"].as_str().map(str::to_owned);
             request.city = params["city"].as_str().map(str::to_owned);
             request.town = params["town"].as_str().map(str::to_owned);
+            self.list_region(&mut request);
             // A still-KR result must terminate instead of recurring or forwarding.
             if request.city.as_deref() == Some("KR") || request.town.as_deref() == Some("KR") {
                 return Err(super::Outcome::Status(
@@ -1686,6 +1777,23 @@ const BACKFILL_CONCURRENCY: usize = 3;
 const BACKFILL_PASSES: usize = 8;
 /// Time kept after a request's waits for the remaining S3 reads and the assembly.
 const ANSWER_RESERVE: std::time::Duration = std::time::Duration::from_millis(500);
+/// The observed request's budget, which stored reads keep, so a slow S3 delays an answer instead
+/// of failing it.
+const OBSERVED_BUDGET: std::time::Duration = std::time::Duration::from_secs(8);
+/// The observed request's wait for everything it started: its share of AK's 3 s, the rest being
+/// the air and life section and the assembly.
+const OBSERVED_WAIT: std::time::Duration = std::time::Duration::from_millis(2500);
+/// The air and life inputs end their waits 200 ms before the deadline they are given.
+const OBSERVED_SECTION: std::time::Duration = std::time::Duration::from_millis(2700);
+/// The narrative is added after the assembly, so it stops last.
+const OBSERVED_NARRATIVE: std::time::Duration = std::time::Duration::from_millis(2900);
+/// `after` the start of an observed request, the same instant wherever it has got to: `deadline`
+/// is its budget from the start, so a KR remap's wait counts as well. A past instant stays past.
+fn observed_instant(deadline: Instant, after: std::time::Duration) -> Instant {
+    deadline
+        .checked_sub(OBSERVED_BUDGET - after)
+        .unwrap_or_else(Instant::now)
+}
 /// Earlier publications legacy's backfill keeps per family (S14 `schedule`).
 fn fetch_reach(sf: schedule::Family) -> usize {
     match sf {

@@ -992,6 +992,76 @@ async fn a_zone_state_of_an_unfinished_bootstrap_does_not_stand_for_the_seed() {
 }
 
 #[tokio::test]
+async fn an_offered_zone_state_answers_from_memory() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let service = WarningService::new(
+        store.clone(),
+        FixedClock::at("2026-09-26T00:10:00.000Z"),
+        ServiceConfig::default(),
+    );
+    let waiting = service.zones_ready();
+    tokio::pin!(waiting);
+    assert!(
+        tokio::time::timeout(Duration::from_millis(20), &mut waiting)
+            .await
+            .is_err(),
+        "no state yet"
+    );
+    let mut offered = server2::warnings::zones::ZoneState::default();
+    offered.apply(&server2::warnings::zones::prepare_events(&[zone_row(
+        "L1100200",
+        12,
+        0,
+        "1",
+        202609250900,
+    )]));
+    store.offer_zone_state(offered);
+    tokio::time::timeout(Duration::from_secs(1), waiting)
+        .await
+        .expect("an offer ends the wait");
+    let town = Town {
+        first: "서울특별시".into(),
+        second: "종로구".into(),
+        third: "청운효자동".into(),
+    };
+    // The store is empty, so only the offer holds this warning.
+    assert_eq!(service.special_info(&town).await.unwrap().len(), 1);
+    service.clear_memory().await;
+    assert_eq!(
+        service.special_info(&town).await.unwrap().len(),
+        1,
+        "still current after a cycle"
+    );
+}
+
+#[tokio::test]
+async fn zone_progress_reads_only_the_days_that_hold_objects() {
+    let peer = Peer::new();
+    let store = peer.store();
+    publish_zone_row(
+        &store,
+        20260925,
+        zone_row("L1100200", 12, 0, "1", 202609250900),
+    )
+    .await;
+    let before = peer.counts().await;
+    let progress = store
+        .zone_progress(ms("2026-09-26T00:10:00.000Z"), deadline())
+        .await
+        .unwrap();
+    assert_eq!(progress.map(|p| p.1), Some(20260925));
+    let after = peer.counts().await;
+    assert_eq!(
+        reads_of(&after, "/pwn-cd/") - reads_of(&before, "/pwn-cd/"),
+        reads_of(&after, "/20260925") - reads_of(&before, "/20260925")
+            + reads_of(&after, "/2026/09/25/")
+            - reads_of(&before, "/2026/09/25/"),
+        "only the day with objects is read"
+    );
+}
+
+#[tokio::test]
 async fn a_different_seed_with_the_same_export_time_voids_the_zone_state() {
     let peer = Peer::new();
     let store = peer.store();
@@ -1036,4 +1106,114 @@ async fn a_different_seed_with_the_same_export_time_voids_the_zone_state() {
         .await
         .unwrap();
     assert_eq!(areas(&restored), areas(&elected));
+}
+
+fn offered_warning() -> server2::warnings::zones::ZoneState {
+    let mut offered = server2::warnings::zones::ZoneState::default();
+    offered.apply(&server2::warnings::zones::prepare_events(&[zone_row(
+        "L1100200",
+        12,
+        0,
+        "1",
+        202609250900,
+    )]));
+    offered
+}
+/// S3 cannot be read here, and only the offer holds this warning.
+#[tokio::test]
+async fn an_offer_answers_after_a_failed_zone_read() {
+    let peer = Peer::new();
+    let store = peer.store();
+    publish_zone_row(
+        &store,
+        20260925,
+        zone_row("L1100300", 12, 0, "1", 202609250900),
+    )
+    .await;
+    peer.fault(
+        "corrupt",
+        &records::catalog(records::ZONE_KIND, 20260925)
+            .unwrap()
+            .key(),
+    )
+    .await;
+    let service = WarningService::new(
+        store.clone(),
+        FixedClock::at("2026-09-26T00:10:00.000Z"),
+        ServiceConfig::default(),
+    );
+    assert!(service.special_info(&jongno()).await.is_err());
+    store.offer_zone_state(offered_warning());
+    assert_eq!(service.special_info(&jongno()).await.unwrap().len(), 1);
+}
+
+/// The read is late for this request, and the offer it did not wait for still answers it.
+#[tokio::test]
+async fn an_offer_answers_a_request_whose_zone_read_is_late() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let service = Arc::new(WarningService::new(
+        store.clone(),
+        FixedClock::at("2026-09-26T00:10:00.000Z"),
+        ServiceConfig {
+            deadline: Duration::from_millis(30),
+            ..ServiceConfig::default()
+        },
+    ));
+    peer.fault("slow-all", "x").await;
+    let reading = {
+        let service = service.clone();
+        tokio::spawn(async move { service.special_info(&jongno()).await })
+    };
+    tokio::time::sleep(Duration::from_millis(5)).await;
+    store.offer_zone_state(offered_warning());
+    assert_eq!(reading.await.unwrap().unwrap().len(), 1);
+}
+
+/// What a read saw of S3 before an offer does not hide the offer, in this request or the next.
+#[tokio::test]
+async fn an_offer_during_a_zone_read_replaces_what_the_read_found() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let service = Arc::new(WarningService::new(
+        store.clone(),
+        FixedClock::at("2026-09-26T00:10:00.000Z"),
+        ServiceConfig::default(),
+    ));
+    peer.fault("slow-all", "x").await;
+    let reading = {
+        let service = service.clone();
+        tokio::spawn(async move { service.special_info(&jongno()).await })
+    };
+    tokio::time::sleep(Duration::from_millis(5)).await;
+    store.offer_zone_state(offered_warning());
+    assert_eq!(reading.await.unwrap().unwrap().len(), 1, "this request");
+    assert_eq!(
+        service.special_info(&jongno()).await.unwrap().len(),
+        1,
+        "the next"
+    );
+}
+
+/// The refresh task exists but has not run when the offer arrives.
+#[tokio::test]
+async fn an_offer_before_a_refresh_task_runs_answers_this_request_and_the_next() {
+    use futures_util::FutureExt;
+    let peer = Peer::new();
+    let store = peer.store();
+    let service = WarningService::new(
+        store.clone(),
+        FixedClock::at("2026-09-26T00:10:00.000Z"),
+        ServiceConfig::default(),
+    );
+    let town = jongno();
+    let mut reading = Box::pin(service.special_info(&town));
+    assert!((&mut reading).now_or_never().is_none());
+    store.offer_zone_state(offered_warning());
+    assert_eq!(reading.await.unwrap().len(), 1, "this request");
+    assert_eq!(
+        service.special_info(&town).await.unwrap().len(),
+        1,
+        "the next"
+    );
 }

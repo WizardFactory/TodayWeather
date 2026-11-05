@@ -476,6 +476,12 @@ uses the release's land zones (`data/kma_forecast_land_zones.csv`) until a forec
 stored, so its first answer can request mid temperatures. Measurements are in the
 [speed evidence](../evidence/research/kma-speed-options-2026-11-04.md#result-of-the-change).
 
+### One wait for a request
+
+The observed request stops waiting for everything it started 2.5 s after it reaches the handler, 2.7 s for air and life and 2.9 s for the narrative it adds last. A KR remap before the snapshot counts too, so the waits cannot add up. What is late is omitted. Stored reads keep the 8 s budget, so a slow S3 delays an answer instead of failing it, which is a decision for AK. The town geocoder runs before the handler and keeps its own 3 s cap.
+
+Two kinds of owned work no longer hold a request. The warning collector offers its zone state once fetched, before its publications; a request answers from that memory, and the push feed still sees only durable rows. A request starts a missing AirKorea image acquisition without waiting for it, because its GIFs take longer than the bound, and a later request reads the result. Measurements are in the [speed evidence](../evidence/research/kma-speed-options-2026-11-04.md#with-one-bound-on-the-request).
+
 ## Wire, storage and assembly format boundaries
 
 The [API manual](../reference/external-apis/kma.md) defines current operations,

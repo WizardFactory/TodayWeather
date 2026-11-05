@@ -56,6 +56,7 @@ pub struct Report {
 struct State {
     pending: Option<(String, u32)>,
     progress_loaded: bool,
+    zones_loaded_on: Option<u32>,
     last_sync_at_ms: Option<i64>,
     oldest_synced: Option<u32>,
     bootstrap_complete: bool,
@@ -156,6 +157,14 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
                         0 => self.resync_step(&mut state, &mut report).await,
                         kind => self.bulletin_step(kind, &mut report).await,
                     };
+                    // With nothing to sync the state is current here; the later steps keep it.
+                    if step == 0
+                        && result.is_ok()
+                        && !report.synced
+                        && let Some(zones) = &state.zones
+                    {
+                        self.store.offer_zone_state(zones.clone());
+                    }
                     if let Err(e) = result {
                         let quota = e.is_quota();
                         crate::observability::event(
@@ -213,28 +222,34 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
         state.state_stored_on = Some(today);
         Ok(())
     }
+    /// Progress once a process. The zone state once a KST day, so a later seed import reaches the
+    /// state requests are offered.
     async fn load_progress(&self, state: &mut State, now_ms: i64) -> Result<(), CycleError> {
-        if state.progress_loaded {
+        let today = kst_date(now_ms, 0);
+        if state.zones_loaded_on == Some(today) {
             return Ok(());
         }
         let deadline = self.deadline();
-        let progress = self
-            .store
-            .zone_progress(now_ms, deadline)
-            .await
-            .map_err(CycleError::Store)?;
+        if !state.progress_loaded {
+            let progress = self
+                .store
+                .zone_progress(now_ms, deadline)
+                .await
+                .map_err(CycleError::Store)?;
+            if let Some((fetched, oldest)) = progress {
+                state.last_sync_at_ms = i64::try_from(fetched).ok();
+                state.oldest_synced = Some(oldest);
+                state.bootstrap_complete = oldest <= kst_date(now_ms, -ZONE_LOOKBACK_DAYS);
+            }
+            state.progress_loaded = true;
+        }
         let zones = self
             .store
             .zone_state(now_ms, deadline)
             .await
             .map_err(CycleError::Store)?;
-        if let Some((fetched, oldest)) = progress {
-            state.last_sync_at_ms = i64::try_from(fetched).ok();
-            state.oldest_synced = Some(oldest);
-            state.bootstrap_complete = oldest <= kst_date(now_ms, -ZONE_LOOKBACK_DAYS);
-        }
         state.zones = Some(zones);
-        state.progress_loaded = true;
+        state.zones_loaded_on = Some(today);
         Ok(())
     }
     /// `syncZones`: fetch every planned day first; publish only after the whole series succeeds.
@@ -260,9 +275,16 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
             .map_err(|e| CycleError::Fetch(Operation::PwnCd, e))?;
             fetched.push((*day, pages));
         }
-        let mut rows = Vec::new();
+        let rows: Vec<Value> = fetched
+            .iter()
+            .flat_map(|(_, pages)| pages.iter().flat_map(|p| p.items.iter().cloned()))
+            .collect();
+        let events = prepare_events(&rows);
+        // A request answers what was fetched; the publications below follow it.
+        let mut offered = state.zones.clone().unwrap_or_default();
+        offered.apply(&events);
+        self.store.offer_zone_state(offered);
         for (day, pages) in fetched {
-            rows.extend(pages.iter().flat_map(|p| p.items.iter().cloned()));
             if pages.is_empty() {
                 continue;
             }
@@ -295,7 +317,7 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
         state
             .zones
             .get_or_insert_with(ZoneState::default)
-            .apply(&prepare_events(&rows));
+            .apply(&events);
         let complete = oldest <= kst_date(now_ms, -ZONE_LOOKBACK_DAYS);
         state.last_sync_at_ms = Some(now_ms);
         state.oldest_synced = Some(oldest);

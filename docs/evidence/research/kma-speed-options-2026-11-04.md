@@ -37,6 +37,30 @@ Real latency, from the process logs of one run: S3 operations p50 32 ms, p90 40 
 
 No credential left the workstation except provider keys passed to the process by SSH standard input. Logs fetched from the host were scanned for those keys, without printing them, and none was found. The instance used a role limited to its own bucket.
 
+### With one bound on the request
+
+The same scenarios ran on 2026-11-06 at 04:26 to 04:29 KST with the CI binary of `435a96cc` (PR #2863): one wait for what the request started, the warning zone state offered before its publications, no wait for image acquisitions, and the geocoder's newer province names mapped to the listed ones. The "Without" column is `29243e6e`, at 00:20 KST and, for Gangneung, at 02:25 KST.
+
+| Request | Without | With |
+| --- | ---: | ---: |
+| Empty store, first request, Seoul | 4,903 | 2,788 |
+| Same cell again, same process | 482 | 1,413 |
+| New cell, same process | 1,581 | 1,255 |
+| Restart, stored cell | 3,777 | 2,516 |
+| Restart, another stored cell | 3,105 | 613 |
+| Restart, new cell | 3,109 | 1,351 |
+| Empty store, first request, Busan, Jeju, Daejeon | 4,976, 3,641, not run | 2,819, 2,818, 2,820 |
+| Empty store, first request, Gangneung | 6,590 | 2,826 |
+| Empty store, first request, Jeonju, Yeosu, Gwangju | not run | 2,814, 2,782, 2,783 |
+
+Single runs again. Every response was 200, `kma_client_eval.py` reports no violation, and the forecast part of the full-response check passes. Each first response has 17 daily rows, `healthy: true` and `current.arpltn`. The Jeju first response carried its two active warnings, which the run without this change left out: it read warnings from S3 while they were still being published.
+
+**Province names.** The geocoder answers `강원특별자치도`, `전북특별자치도` and, for every town in Jeonnam and Gwangju, `전남광주통합특별시`. The town list and region table keep the earlier names and legacy's lookups are exact, so before this change those towns had no mid forecast on any response (`land-unavailable`, `temperature-unavailable`), and Gangneung's first request took 6.6 to 8.0 s. The handler now maps them to the listed names. Daegu's `군위군` also misses the list but stays under Daegu, because its air and food-poisoning regions are Daegu's; in a run of fifteen more towns it was the only one left unhealthy (`invalid-daily-row`, `forecast-gap`), which is not investigated here. Incheon, Bucheon and Hwaseong's new districts miss the list too and take the lookup path, within the bound and healthy.
+
+**What is left.** AK's 3 s holds in every run, but the 2.5 s cold gate does not: first requests end at about 2.8 s because they wait to the bound. At night the life arm holds them, the UV call walking four earlier slots at 1.1 to 1.7 s each. Stopping the optional arms when the required ones finish would answer at about 2.2 s, calculated from the traces and not measured, and would leave out air and life data not ready by then. A repeated cell takes about 1.4 s because it decodes the stored images, about 1.2 s on this host. A restart's warning cycle ran 14 s with over 300 S3 operations, republishing days it holds. It no longer holds a request (KMA-SR-06 of #2862).
+
+The host, its bucket, role, profile and security group were removed after these runs, and their absence was read back.
+
 ## Result of the change
 
 These figures are modeled, and the [measurement above](#measured-on-ec2-against-real-providers-and-s3) shows what they left out. AK approved the recommended order on 2026-11-05, with a computed sunrise allowed while stored KASI is not fully read. Options C, E, F, H, I and K and the wait part of J are implemented, along with one stored KASI fold. Same harness, same model: real code with injected provider and S3 delays on an Apple M4, not a production measurement. Response p50 in ms at 20 ms per S3 read:
