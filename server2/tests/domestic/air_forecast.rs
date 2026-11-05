@@ -180,12 +180,26 @@ fn hourly_forecast_rows_and_answers_equal_legacy() {
             at(run, &["docs"]),
             &format!("rows after {data_time}"),
         );
+        // The produced form read back answers exactly the same.
+        let (restored, made) = HourlyForecasts::from_product(&fold.product(now)).expect("product");
+        assert_eq!(made, now);
+        assert_eq!(restored.len(), fold.len());
+        super::source::same(
+            &restored.json(),
+            at(run, &["docs"]),
+            &format!("product rows after {data_time}"),
+        );
         for a in items_of(at(run, &["answers"])) {
             let name = text(at(a, &["stationName"]));
             super::source::same(
                 &fold.by_station(&name),
                 at(a, &["result"]),
                 &format!("getForecast {name} after {data_time}"),
+            );
+            super::source::same(
+                &restored.by_station(&name),
+                at(a, &["result"]),
+                &format!("product getForecast {name} after {data_time}"),
             );
         }
     }

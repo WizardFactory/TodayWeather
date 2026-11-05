@@ -57,6 +57,8 @@ def case(binary,out,phase,trigger):
                 return m.group(1) if m else None
             address=wait_for(startup)
             base='http://'+address
+            # The image forecast timer produces once the listeners are bound, before any request.
+            wait_for(lambda: 'S20B_IMAGE_PRODUCED' in logpath.read_text())
             assert request(base+'/health')==(200,'OK')
             assert request(base+'/v000903/notice/latest')==(200,'{"notice":null}')
             time.sleep(.1)
@@ -103,6 +105,8 @@ def case(binary,out,phase,trigger):
             assert any(e['component']=='process' and e['stage']=='shutdown' and e['action']=='quiesce' and e.get('limit_seconds')==35 for e in diagnostics(text)),text
             if phase=='weather': assert 'S20B_PROVIDER_CANCELLED incomplete' in text,text
             assert ('listener-error' if trigger=='listener' else 'signal-ok') in text,text
+            # One production at startup; the next tick is ten minutes later, after the shutdown.
+            assert text.count('S20B_IMAGE_PRODUCED')==1,text
             registration=[]
             for admitted in [future,queued]:
                 if admitted is not None:
@@ -161,6 +165,7 @@ def bind_failure(binary,out):
             text=logpath.read_text()
             assert 'S20B_PROCESS_RESULT listener-error' in text,text
             assert 'server2 public=' not in text,text
+            assert 'S20B_IMAGE_PRODUCED' not in text,text
             assert not peer.events,peer.events
             assert not any('warning-feed' in k for k in peer.counts),peer.counts
             return dict(id='second-bind-failure',status='passed',delivery_started=False)

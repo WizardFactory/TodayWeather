@@ -351,6 +351,7 @@ pub(crate) struct BuiltGateway {
     pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
     pub raw_writer: Option<Arc<crate::storage::response_first::Writer>>,
     pub narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>>,
+    pub image_production: Option<Arc<dyn crate::domestic::kma::source::air_input::ImageProduction>>,
 }
 struct UnavailableGeocoder;
 impl super::Geocoder for UnavailableGeocoder {
@@ -390,6 +391,7 @@ pub(crate) fn build_shared(
             raw_writer: None,
             warning_cycles: None,
             narrative_acquire: None,
+            image_production: None,
         });
     }
     let backend = match &base {
@@ -442,6 +444,7 @@ pub(crate) fn build_shared(
     let mut raw_writer = None;
     let mut warning_cycles = None;
     let mut narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>> = None;
+    let mut image_production = None;
     if let (Some(s3), true) = (s3, families.kma_source() || families.push) {
         // S15b: the S3 input source over the shared admission, one for every listed address
         // version (S17a) and the direct routes (S17b). S15b-4 acquires missing forecast inputs at
@@ -514,6 +517,8 @@ pub(crate) fn build_shared(
         .with_life(Some(life))
         .with_forecast(Some(forecast));
         warning_cycles = source.warning_cycles();
+        // S15b-3c: the image hourly forecast the requests read is produced on the process timer.
+        image_production = source.image_producer();
         let source = Arc::new(source);
         // S16: daily summaries of natively served towns, written after the response through
         // the same S3 admission. Nation shares this backend and its summary recorder.
@@ -562,6 +567,7 @@ pub(crate) fn build_shared(
         raw_writer,
         warning_cycles,
         narrative_acquire,
+        image_production,
     })
 }
 /// S15b-4: the request-time grid, RSS, mid, forecast-zone and warning acquirer of the KMA source

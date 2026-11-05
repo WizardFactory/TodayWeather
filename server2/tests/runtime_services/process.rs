@@ -77,6 +77,14 @@ impl BackendHandler for OwnedNative {
         })
     }
 }
+/// The bound process's image forecast timer, observed through stdout.
+struct AnnouncedProduction;
+impl server2::domestic::kma::source::air_input::ImageProduction for AnnouncedProduction {
+    fn produce(&self) -> BoxFuture<'_, ()> {
+        println!("S20B_IMAGE_PRODUCED");
+        Box::pin(async {})
+    }
+}
 #[test]
 #[ignore = "child entrypoint; only the isolated runtime_services_smoke.py provides stdin"]
 fn child() {
@@ -129,6 +137,10 @@ fn child() {
                 clock,
                 Some(native),
             )
+            .map(|mut services| {
+                services.image_production = Some(Arc::new(AnnouncedProduction));
+                services
+            })
         },
         move |listener| {
             if failure {

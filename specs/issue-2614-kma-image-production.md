@@ -1,0 +1,9 @@
+# Acceptance for the scheduled AirKorea image forecast
+
+- **REGION:** under the observed source, `regionName` is the province name the request carried when its lookups use the town list's name (`S3Source::prepare`), also after a KR remap; otherwise it is unchanged. Checked by `tests/domestic/full_response.rs`.
+- **PRODUCE:** `AirInputs::produce_images` without a request acquires the missing announcement's images once and stores an `airkorea-image`/`airkorea-forecast-hourly` product. A second production, and a new process's first one, store nothing and read no image when the stored acquisitions, station list and calibration are those of the last product. Another host's stored images are folded by a production. The runtime prepares the timer only for the native KMA source with an AirKorea acquirer, and the timer produces at once and then every period until stopped. Checked by `tests/domestic/air_forecast_s3.rs` and `tests/runtime_services/image_production.rs`.
+- **READ:** under the observed source a request with no product answers an empty hourly forecast, starts no acquisition and reads no image, also with images stored. A request reads the product, a new process reads the stored one, and a later request removes the rows a day old by its instant. Checked by `tests/domestic/air_forecast_s3.rs`.
+- **LEGACY:** the product of every legacy oracle run reads back to the same rows and `getForecast` answers; the legacy-path image tests pass unchanged apart from the removed wait argument. Checked by `tests/domestic/air_forecast.rs` and `tests/domestic/air_forecast_s3.rs`.
+- **PLACEMENT:** the placement gate passes against the single declaration, and the artifact policy passes on outgoing commits.
+
+Failure paths: a failed or late acquisition leaves the fold without the announcement and the next production tries again after the ten-minute retry; a failed product read leaves a request with the last product it read, or the legacy answer for missing data.

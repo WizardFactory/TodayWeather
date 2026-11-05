@@ -152,8 +152,9 @@ pub struct AirInputs<T> {
     cpu: Arc<tokio::sync::Semaphore>,
     /// S15b-3c: the AirKorea image hourly forecast.
     images: super::forecast_input::ImageForecasts<T>,
-    /// A request waits for a missing image acquisition (legacy source).
-    image_wait: bool,
+    /// Requests read the produced image forecast (the observed source); otherwise they fold and
+    /// acquire it themselves (the legacy source).
+    produced_images: bool,
     /// The wall clock (S15b-3d).
     clock: Arc<dyn Clock>,
 }
@@ -174,7 +175,7 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                 store.clone(),
                 super::air_forecast::Calibration::defaults(),
             ),
-            image_wait: true,
+            produced_images: false,
             reader: Reader { transport, store },
             acquire: None,
             air: None,
@@ -204,11 +205,16 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         self.capture_every = every;
         self
     }
-    /// Start a missing image acquisition without waiting for it: its GIFs take longer than a
-    /// request may wait, so a later request reads the result.
-    pub fn answering_before_image_acquisition(mut self) -> Self {
-        self.image_wait = false;
+    /// Requests read the image forecast the scheduled production stores
+    /// ([`Self::produce_images`]): its GIFs and decoding take longer than a request may wait.
+    pub fn reading_produced_images(mut self) -> Self {
+        self.produced_images = true;
         self
+    }
+    /// Whether the process timer produces the image forecast: its requests read the product and
+    /// an AirKorea acquirer is configured.
+    pub fn produces_images(&self) -> bool {
+        self.produced_images && self.acquire.is_some()
     }
     pub fn with_acquire(mut self, acquire: Option<Arc<dyn AirKoreaAcquire>>) -> Self {
         self.acquire = acquire;
@@ -873,15 +879,26 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         // not consume the image branch's entire budget before decoding can start.
         let (observations, (stations, dust, hourly)) =
             tokio::join!(self.observations(now, wait_until), async {
-                let (stations, dust) = tokio::join!(self.stations(now, wait_until), async {
-                    if dust_wanted || image_wanted {
-                        Some(self.forecasts(now, date, wait_until).await)
-                    } else {
-                        None
+                let (stations, dust, produced) = tokio::join!(
+                    self.stations(now, wait_until),
+                    async {
+                        if dust_wanted || (image_wanted && !self.produced_images) {
+                            Some(self.forecasts(now, date, wait_until).await)
+                        } else {
+                            None
+                        }
+                    },
+                    async {
+                        if image_wanted && self.produced_images {
+                            Some(self.images.produced(now, wait_until).await)
+                        } else {
+                            None
+                        }
                     }
-                });
-                let hourly = match (image_wanted, &stations) {
-                    (true, Ok(s)) => Some(
+                );
+                let hourly = match (image_wanted, &stations, produced) {
+                    (true, Ok(_), Some(produced)) => Some(produced),
+                    (true, Ok(s), None) => Some(
                         self.images
                             .load(
                                 now,
@@ -891,7 +908,6 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                                 &self.flights,
                                 &self.generation,
                                 wait_until,
-                                self.image_wait,
                             )
                             .await,
                     ),
@@ -959,6 +975,76 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             _ => None,
         }
     }
+}
+/// The longest one scheduled image forecast production runs (the timer's period is ten
+/// minutes): the station list and dust forecast reads or acquisitions, the image acquisition and
+/// the decoding of every image acquisition a new process has not decoded.
+const PRODUCE_FOR: Duration = Duration::from_secs(540);
+impl<T: IndexListing + Clone + 'static> AirInputs<T> {
+    /// One scheduled production of the image hourly forecast (the process timer, never a
+    /// request; AK 2026-11-06): the station list and the dust forecast documents naming the
+    /// images, each acquired when missing, then [`ImageForecasts::produce`]. Ok(true): a product
+    /// was stored.
+    ///
+    /// [`ImageForecasts::produce`]: super::forecast_input::ImageForecasts::produce
+    pub async fn produce_images(&self) -> Result<bool, String> {
+        let now = wall_ms(&*self.clock);
+        let deadline = Instant::now() + PRODUCE_FOR;
+        let stations = self.stations(now, deadline).await?;
+        let forecasts = self.forecasts(now, kst_date(now), deadline).await.ok();
+        self.images
+            .produce(
+                now,
+                stations,
+                forecasts.as_ref(),
+                self.acquire.clone(),
+                &self.flights,
+                &self.generation,
+                deadline,
+            )
+            .await
+    }
+}
+/// The scheduled production of the image hourly forecast.
+pub trait ImageProduction: Send + Sync + 'static {
+    /// One production; a failure waits for the next tick.
+    fn produce(&self) -> BoxFuture<'_, ()>;
+}
+impl<T: IndexListing + Clone + Send + Sync + 'static> ImageProduction for AirInputs<T> {
+    fn produce(&self) -> BoxFuture<'_, ()> {
+        Box::pin(async move {
+            let _ = self.produce_images().await;
+        })
+    }
+}
+/// The production timer; the caller owns it.
+pub struct ImageWorker(tokio::task::JoinHandle<()>);
+impl ImageWorker {
+    pub async fn stop(mut self) {
+        self.0.abort();
+        let _ = (&mut self.0).await;
+    }
+}
+impl Drop for ImageWorker {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+/// Produce at once and then every `period` (a production that runs longer delays the next).
+pub fn image_worker(production: Arc<dyn ImageProduction>, period: Duration) -> ImageWorker {
+    ImageWorker(tokio::spawn(async move {
+        let mut ticks = tokio::time::interval(period);
+        ticks.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        loop {
+            ticks.tick().await;
+            crate::observability::root_work(
+                crate::observability::Component::Domestic,
+                crate::observability::Stage::Worker,
+                production.produce(),
+            )
+            .await;
+        }
+    }))
 }
 /// Blocking work under a CPU admission (see [`AirInputs::cpu`]).
 pub async fn cpu_task<R: Send + 'static>(

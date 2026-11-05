@@ -6,6 +6,8 @@ mod credentials;
 mod feed;
 #[path = "runtime_services/http.rs"]
 mod http;
+#[path = "runtime_services/image_production.rs"]
+mod image_production;
 #[path = "runtime_services/inventory.rs"]
 mod inventory;
 #[path = "runtime_services/inventory_nation.rs"]

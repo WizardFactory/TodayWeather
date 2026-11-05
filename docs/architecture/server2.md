@@ -2442,30 +2442,55 @@ and server2 follows it exactly.
 - The S15 oracle covers these cases with 13 recorded scenarios (`air-kaq-*`, `air-airkorea-*`).
 
 **Request time.** A request that reads the forecast (`airForecastSource` absent, `(null)`,
-`airkorea` or `kaq`) loads the station list and the dust forecast and reads the image fold. The
-fold replays the image acquisitions of the last eight KST days (an announcement of day D names an
-image whose first frame is at the latest D+1 00:00 KST, enforced above, with at most 120 hourly frames, and a row
+`airkorea` or `kaq`) loads the station list and reads an image fold. The fold replays the image
+acquisitions of the last eight KST days (an announcement of day D names an image whose first
+frame is at the latest D+1 00:00 KST, enforced above, with at most 120 hourly frames, and a row
 lives one more day) in completion order as legacy `do` runs; acquisitions completed in the same
-millisecond are told apart by their fetch group. A refresh reads the eight day catalogs (small control objects, no record body) and downloads only the acquisitions it does not
-know, one S06 lookup each (a whole-day lookup would pass the 32 MiB read bound with three
-acquisitions), decoding each before the next is read so at most one pair of raw images is held;
-each is decoded once per station list. Refreshes are owned
-tasks, at most every minute, and at once when the station list changed or an image acquisition of
-this process ended (a failed S3 write may still have committed). A late acquisition of an earlier
-announcement or day is therefore folded in completion order within a minute, as a cold reader
-folds it. A request whose fold lacks the expected announcement (or, while that one's documents
-name no acceptable pair, the previous announcement, which legacy processed when it was expected)
-starts one owned acquisition of its images (S13d `OwnedFlights`, 10-minute retry, 60 s call
-budget, 8 MiB per image). The legacy-path source waits only until its deadline, and the observed
-response does not wait, because the images take longer than a request may wait; until the images are published and
-decoded it gets the legacy output for missing data. A pair `getDustImage` rejects is never
-fetched. The provider-supplied URLs are never fetched as given: their validated path is fetched on
-the built-in image root `https://www.airkorea.or.kr/` (`gateway::runtime::Builtins::
-airkorea_images`; tests build a loopback root). The acquisitions are demand-gated like the other
-S15b-3 inputs: an announcement no request asked for while it was expected (or previous, before the
-next one's documents appeared) is never stored. The GIFs are raw records of about 5-6 MB: regional
-S3 takes them within the S06 3-second operation bound, while the shared local stack's test peer
-caps objects at 1 MiB and cannot hold one. Load: two GIF downloads per accepted announcement.
+millisecond are told apart by their fetch group. A refresh reads the eight day catalogs (small
+control objects, no record body) and downloads only the acquisitions it does not know, one S06
+lookup each (a whole-day lookup would pass the 32 MiB read bound with three acquisitions),
+decoding each before the next is read so at most one pair of raw images is held; each is decoded
+once per station list. An acquisition of an announcement's images is one owned task (S13d
+`OwnedFlights`, 10-minute retry, 60 s call budget, 8 MiB per image) for the expected announcement
+or, while that one's documents name no acceptable pair, the previous announcement, which legacy
+processed when it was expected. A pair `getDustImage` rejects is never fetched. The
+provider-supplied URLs are never fetched as given: their validated path is fetched on the built-in
+image root `https://www.airkorea.or.kr/` (`gateway::runtime::Builtins::airkorea_images`; tests
+build a loopback root). The GIFs are raw records of about 5-6 MB: regional S3 takes them within
+the S06 3-second operation bound, while the shared local stack's test peer caps objects at 1 MiB
+and cannot hold one. Load: two GIF downloads per accepted announcement.
+
+**Scheduled production (observed source, AK 2026-11-06).** The observed response's requests
+never acquire or decode an image: the images and their decoding take longer than a request may
+wait. The bound process produces the fold at startup and then every ten minutes
+(`air_input::image_worker`, prepared when the KMA source has an AirKorea acquirer, stopped at
+shutdown). A production reads the station list and the dust forecast (acquiring either when
+missing, as a request does), folds the stored image acquisitions, and acquires the target
+announcement's images when that fold lacks them, waiting for the owned acquisition and folding
+it. It stores the fold as one `airkorea-image`/`airkorea-forecast-hourly` record under the image
+key (partition: the KST day it was made). The record keeps the rows in order as runs of one
+station, code and announcement on consecutive hours, `dataTime` following from the date as
+`apply` derives it, with what the product was made of: the acquisitions, a station list digest
+and a calibration digest. A production whose stored acquisitions, station list and calibration
+equal the last product's stores and decodes nothing (acquisitions of days before the eight-day
+window are not compared: none of their rows is left), and a new process starts from the stored
+product, so a restart decodes only when something changed. A request reads the newest product of
+the last eight KST days (one owned read shared by concurrent requests, repeated at most every
+minute; the producing process installs its own product at once). It removes the rows older than
+one day before its instant, as legacy `_removeOldData` does, and until a product exists it gets
+the legacy output for missing data. Legacy master ran `kecoForecast` hourly whether or not anyone
+asked; the timer is the same kind of fixed schedule, so these image acquisitions no longer wait
+for demand.
+
+**Legacy-path source.** The source that replays legacy (`S3Source::new`, the parity tests) folds
+per request. Refreshes are owned tasks, at most every minute, and at once when the station list
+changed or an image acquisition of this process ended (a failed S3 write may still have
+committed). A late acquisition of an earlier announcement or day is therefore folded in
+completion order within a minute, as a cold reader folds it. A request whose fold lacks the
+target announcement starts its acquisition and waits only until its deadline; until the images
+are published and decoded it gets the legacy output for missing data. These acquisitions are
+demand-gated like the other S15b-3 inputs: an announcement no request asked for while it was
+expected (or previous, before the next one's documents appeared) is never stored.
 
 Verification (local; test peers only): a pinned Node 16.20.2 oracle
 ([provenance](../../server2/tests/domestic/fixtures/AIR-FORECAST-PROVENANCE.md)) records get-pixels
@@ -2485,7 +2510,17 @@ without a publication count change, a 23시 announcement kept until its rows exp
 acquisitions completed in one millisecond both read, a new station list decoded at once, rejected
 paths (another host, a 12 cycle, a missing PM2.5 path) never fetched and a failed download storing
 nothing, an image starting after its announcement's next day neither acquired nor folded, GIFs beyond the decoding bounds and a cyclic LZW stream refused, and the three
-`kaq`/`airkorea` cases above. The request-time tests here and S15b-3b's slow life acquisition
+`kaq`/`airkorea` cases above. For the observed source (2026-11-06) a production without any
+request acquires the missing images once and stores the fold, a request before it acquires
+nothing, a request reads the product, a second production and a new process's first one find it
+current without reading an image again (also when the product lists an acquisition of a day
+before the window), a new process reads the stored product, another host's stored images are
+folded by a production and never by a request, a later request removes the rows old by its
+instant, and the product read back answers the ten legacy runs byte for byte.
+The runtime prepares the timer only for the native KMA source with an AirKorea acquirer, the
+timer produces at once and then every period until it is stopped, and the process lifecycle smoke
+(`tools/runtime_services_smoke.py`) sees the bound process produce once its listeners are bound and
+not at all when binding fails. The request-time tests here and S15b-3b's slow life acquisition
 start at fixed instants (S15b-3d, 2026-10-16), not on the system clock: their stubs, the
 acquirers' clock and the inputs' wall clock (`AirInputs`, `ImageForecasts` and `LifeInputs`
 `with_clock`, the system clock by default) read a test clock that starts at that instant
@@ -2819,7 +2854,7 @@ ensured). Smokes and tests run processes in an empty working directory and never
 | Listener | `OPENSHIFT_NODEJS_IP`, `OPENSHIFT_NODEJS_PORT`, `PORT` (legacy) | As `config.js`: address default `127.0.0.1`, port `OPENSHIFT_NODEJS_PORT`, else `PORT`, else `3000`; an empty value is unset. Give server2 another port than the legacy origin during coexistence. |
 | S3 | `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `TWA_S3_REGION` (legacy); `SERVER2_S3_BUCKET` (server2) | Region default `ap-northeast-2`; endpoint built in (`https://s3.<region>.amazonaws.com/`); bucket and credentials required when any family is native. The importers use the same settings. Superseded by [S10f](#s10f-instance-role-credentials-and-the-server2-s3-region-2026-10-15): `SERVER2_S3_REGION` replaces `TWA_S3_REGION`, and unset keys select the EC2 instance role. |
 | data.go.kr | `DONGNAE_SECRET_KEYS` (legacy) | Required with `kma` (ASOS ranges; since S15b-3b also UV, pollen and KASI; since S15b-4a the grid and mid forecasts, the zone list and warnings). Built in since [S15b-4q](#s15b-4q-datagokr-quotas-per-api-and-key-2026-10-16): each API's documented development allowance per key and KST day (10,000 for the KMA and KASI APIs), replaced by `domestic::quota::OPERATING_UNITS` once AK supplies the operating values. |
-| AirKorea | `AIRKOREA_SECRET_KEYS` (legacy) | Read with `kma`; no usable key: stored records only. Built in since S15b-4q: 500 units per key, AirKorea API (`ArpltnInforInqireSvc` 15073861, `MsrstnInfoInqireSvc` 15073877, `ArpltnStatsSvc` 15073855) and KST day. |
+| AirKorea | `AIRKOREA_SECRET_KEYS` (legacy) | Read with `kma`; no usable key: stored records only, and no image forecast production (the process timer runs only with a key, S15b-3c). Built in since S15b-4q: 500 units per key, AirKorea API (`ArpltnInforInqireSvc` 15073861, `MsrstnInfoInqireSvc` 15073877, `ArpltnStatsSvc` 15073855) and KST day. |
 | AirKorea forecast images (S15b-3c) | `AIRKOREA_KOREA_IMAGE_COORDI_*`, `AIRKOREA_KOREA_IMAGE_SIZE_*`, `AIRKOREA_KOREA_IMAGE_MAP_*` (legacy) | Read with `kma` as master `config.js` L89-105 and `airkoreaImageLayout` read them; unset or empty: the characterized defaults (820×820, map 77/663/75/794). The image root is built in (`https://www.airkorea.or.kr/`); the images are keyless. |
 | Geocoder | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY` (legacy) | Kakao keys parsed as legacy `keys.parseKeys` (nonempty strings of a JSON array; anything else gives no key). Endpoints built in; legacy's test-only `GEOCODER_*_BASE_URL` are not read. Built in: Kakao 100,000 units per key and UTC day (Kakao quota page, 100,000건 per day), Google 322 per UTC day (Google documents no daily quota; 10,000 free Geocoding events a month ÷ 31). |
 | Visual Crossing | `VC_SECRET_KEY`, `VC_DAILY_RECORD_LIMIT` (legacy) | Read as JavaScript `Number` (`50.0`, `5e1` are 50); a positive finite limit admits `floor(limit)` records a day (at least 1). 0, unset, not a number or `Infinity` is "no budget" in legacy, here the documented free plan, 1,000 records a day. Quota owner derived from the key. |

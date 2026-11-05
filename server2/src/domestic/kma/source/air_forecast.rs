@@ -129,6 +129,17 @@ const POS_NAMES: [&str; 4] = [
     "AIRKOREA_KOREA_IMAGE_MAP_BOTTOM",
 ];
 impl Calibration {
+    /// A digest of the setting texts: a produced forecast records what it was decoded with.
+    pub fn digest(&self) -> String {
+        let texts: Vec<&str> = self
+            .coordi
+            .iter()
+            .chain(&self.size)
+            .chain(&self.pos)
+            .map(String::as_str)
+            .collect();
+        crate::storage::sha256(texts.join("\n").as_bytes())
+    }
     /// The `config.js` defaults of legacy master (L89-105): the characterized 820x820 canvas, map
     /// x 77..663 and y 75..794 (exclusive ends), the inherited geographic box.
     pub fn defaults() -> Self {
@@ -574,7 +585,133 @@ impl HourlyForecasts {
     pub fn json(&self) -> OrderedJson {
         OrderedJson::Array(self.rows.iter().map(|r| row_doc(r).json()).collect())
     }
+    /// The fold as `remove_old(now)` leaves it, as a copy (None: no row is that old).
+    pub fn without_old(&self, now: f64) -> Option<Self> {
+        let limit = now - DAY_MS;
+        if self.rows.iter().all(|r| r.date >= limit) {
+            return None;
+        }
+        let mut fold = Self::default();
+        for r in self.rows.iter().filter(|r| r.date >= limit) {
+            fold.index.insert(
+                (r.station.clone(), r.date.to_bits(), r.code),
+                fold.rows.len(),
+            );
+            fold.rows.push(r.clone());
+        }
+        Some(fold)
+    }
+    /// The instant up to which `remove_old` leaves every row (infinite without rows).
+    pub fn whole_until(&self) -> f64 {
+        self.rows
+            .iter()
+            .map(|r| r.date)
+            .fold(f64::INFINITY, f64::min)
+            + DAY_MS
+    }
+    /// The stored form of a produced fold made at `at`: the rows in order, as runs of one
+    /// station, code and announcement on consecutive hours, with each station name and
+    /// announcement listed once. `dataTime` follows from the date, as `apply` derives it.
+    pub fn product(&self, at: f64) -> serde_json::Value {
+        let (mut stations, mut pubs) = (Vec::new(), Vec::new());
+        let (mut station_of, mut pub_of) = (HashMap::new(), HashMap::new());
+        let mut runs: Vec<(usize, usize, usize, f64, Vec<serde_json::Value>)> = Vec::new();
+        let mut last: Option<&Row> = None;
+        for r in &self.rows {
+            let follows = last.is_some_and(|l| {
+                l.station == r.station
+                    && l.code == r.code
+                    && l.pub_date == r.pub_date
+                    && l.date + HOUR_MS == r.date
+            });
+            match runs.last_mut() {
+                Some(run) if follows => run.4.push(json_number(r.val)),
+                _ => {
+                    let s = *station_of.entry(r.station.as_str()).or_insert_with(|| {
+                        stations.push(r.station.as_str());
+                        stations.len() - 1
+                    });
+                    let p = *pub_of.entry(r.pub_date.as_str()).or_insert_with(|| {
+                        pubs.push(r.pub_date.as_str());
+                        pubs.len() - 1
+                    });
+                    let c = CODES
+                        .iter()
+                        .position(|(code, _, _)| *code == r.code)
+                        .unwrap_or_default();
+                    runs.push((s, c, p, r.date, vec![json_number(r.val)]));
+                }
+            }
+            last = Some(r);
+        }
+        let runs: Vec<serde_json::Value> = runs
+            .into_iter()
+            .map(|(s, c, p, date, vals)| serde_json::json!([s, c, p, json_number(date), vals]))
+            .collect();
+        serde_json::json!({
+            "schema": PRODUCT_SCHEMA,
+            "at": json_number(at),
+            "stations": stations,
+            "pubs": pubs,
+            "runs": runs,
+        })
+    }
+    /// A stored product and when it was made; None when it is not one.
+    pub fn from_product(product: &serde_json::Value) -> Option<(Self, f64)> {
+        if product.get("schema")?.as_u64()? != PRODUCT_SCHEMA {
+            return None;
+        }
+        let names = |key| -> Option<Vec<&str>> {
+            product
+                .get(key)?
+                .as_array()?
+                .iter()
+                .map(serde_json::Value::as_str)
+                .collect()
+        };
+        let (stations, pubs) = (names("stations")?, names("pubs")?);
+        let at = |v: &serde_json::Value| v.as_u64().and_then(|i| usize::try_from(i).ok());
+        let mut fold = Self::default();
+        for run in product.get("runs")?.as_array()? {
+            let [s, c, p, date, vals] = run.as_array()?.as_slice() else {
+                return None;
+            };
+            let (station, code, pub_date) = (
+                *stations.get(at(s)?)?,
+                CODES.get(at(c)?)?.0,
+                *pubs.get(at(p)?)?,
+            );
+            let mut date = date.as_f64()?;
+            for val in vals.as_array()? {
+                let key = (station.to_owned(), date.to_bits(), code);
+                // A fold holds one row per station, hour and code.
+                if fold.index.insert(key, fold.rows.len()).is_some() {
+                    return None;
+                }
+                fold.rows.push(Row {
+                    station: station.to_owned(),
+                    date,
+                    code,
+                    val: val.as_f64()?,
+                    data_time: minute_text(date + 9. * HOUR_MS)?,
+                    pub_date: pub_date.to_owned(),
+                });
+                date += HOUR_MS;
+            }
+        }
+        Some((fold, product.get("at")?.as_f64()?))
+    }
 }
+/// A number as JSON: an integral value without the fraction (exact below 2^53).
+fn json_number(x: f64) -> serde_json::Value {
+    if x.fract() == 0. && x.abs() < 9_007_199_254_740_992. && !(x == 0. && x.is_sign_negative()) {
+        serde_json::Value::from(x as i64)
+    } else {
+        serde_json::Value::from(x)
+    }
+}
+/// The schema of [`HourlyForecasts::product`].
+const PRODUCT_SCHEMA: u64 = 1;
 /// The stored form: the query fields, `__v` from the upsert's insert, then the replacement's
 /// remaining keys in Mongoose 5.1.2's reverse walk.
 fn row_doc(r: &Row) -> Doc {

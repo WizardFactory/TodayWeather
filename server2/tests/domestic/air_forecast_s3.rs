@@ -1084,7 +1084,6 @@ async fn image_load(
             flights,
             generation,
             Instant::now() + Duration::from_secs(3),
-            true,
         )
         .await
 }
@@ -1387,7 +1386,6 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
                 &Flights::new(Duration::from_secs(600)),
                 &generation,
                 deadline(),
-                true,
             )
             .await;
         let asked: Vec<Period> = recorder.0.lock().unwrap().clone();
@@ -1430,7 +1428,6 @@ async fn the_expected_announcement_or_else_the_previous_one_is_acquired() {
             &flights,
             &generation,
             deadline(),
-            true,
         )
         .await;
     assert!(
@@ -1982,19 +1979,124 @@ async fn stored_images_restore_while_observations_use_the_same_expiring_request_
     );
 }
 
-/// The observed response does not wait for GIFs that cannot arrive in time; the acquisition
-/// continues and a later request reads the result.
+/// Counts the image GETs (raw GIFs and manifests) at the transport boundary; everything else
+/// passes through to the S06 loopback peer.
+#[derive(Clone)]
+struct CountedImages {
+    inner: BoundedS3<HttpS3Transport>,
+    image_gets: Arc<AtomicUsize>,
+}
+impl server2::storage::ObjectTransport for CountedImages {
+    async fn put(
+        &self,
+        record: &server2::storage::PreparedRecord,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put(record).await
+    }
+    async fn head(&self, key: &str) -> Result<server2::storage::Object, server2::storage::Error> {
+        self.inner.head(key).await
+    }
+    async fn get(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::Object, server2::storage::Error> {
+        if key.starts_with("raw/v2/airkorea-image/airkorea-forecast-image/") {
+            self.image_gets.fetch_add(1, Ordering::SeqCst);
+        }
+        self.inner.get(key, max).await
+    }
+}
+impl server2::storage::CatalogTransport for CountedImages {
+    async fn get_control(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
+        self.inner.get_control(key, max).await
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &server2::storage::WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put_control(key, body, condition).await
+    }
+    async fn list_raw_document(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+        keys: usize,
+        bytes: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        self.inner
+            .list_raw_document(prefix, token, keys, bytes)
+            .await
+    }
+}
+impl server2::history::IndexListing for CountedImages {
+    async fn list_index(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+    ) -> Result<server2::storage::ListPage, server2::storage::Error> {
+        self.inner.list_index(prefix, token).await
+    }
+}
+/// The stored products (`airkorea-forecast-hourly`) of one KST day, newest first.
+async fn products(store: &Arc<Store>, day: &str) -> Vec<Value> {
+    let key = ProviderKey::Named {
+        id: "national".into(),
+    };
+    let id = CatalogId {
+        source: "airkorea-image".into(),
+        kind: "airkorea-forecast-hourly".into(),
+        key_sha256: server2::storage::sha256(&key.canonical_bytes().unwrap()),
+        partition: day.into(),
+    };
+    match store.lookup(&id, deadline()).await {
+        Ok(server2::storage::LookupOutcome::Ready(set)) => set
+            .acquisitions()
+            .iter()
+            .rev()
+            .map(|a| serde_json::from_slice(&a.records()[0].bytes).unwrap())
+            .collect(),
+        Err(server2::storage::Error::NotFound) => Vec::new(),
+        other => panic!("product catalog: {:?}", other.err()),
+    }
+}
+
+/// AK 2026-11-06: the observed source makes the image forecast on the process timer, not in a
+/// request. A request never acquires or decodes an image: before a production it answers the
+/// legacy answer for missing data, also with the images stored. A production without any request
+/// acquires the expected announcement's images and stores the fold; requests and a new process
+/// read that product, and a production with nothing new stores nothing and decodes nothing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn an_answer_before_the_image_acquisition_gets_it_on_a_later_request() {
+async fn the_image_forecast_is_produced_on_a_schedule_and_requests_only_read_it() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
-    let transport = peer.transport();
-    let store = store_for(&transport);
+    let image_gets = Arc::new(AtomicUsize::new(0));
+    let transport = CountedImages {
+        inner: peer.transport(),
+        image_gets: image_gets.clone(),
+    };
+    let limits = CatalogLimits {
+        deadline: Duration::from_secs(9),
+        raw: server2::storage::Limits {
+            deadline: Duration::from_secs(9),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let store = Arc::new(CatalogStore::new(transport.clone(), limits).unwrap());
+    let peer_store = store_for(&peer.transport());
     let stub = stub().await;
     let inputs = AirInputs::new(transport.clone(), store.clone())
         .with_clock(test_clock())
-        .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
-        .answering_before_image_acquisition();
+        .with_acquire(Some(live(&peer, peer_store.clone(), &stub.base)))
+        .reading_produced_images();
+    assert!(inputs.produces_images());
     let seoul = town(37.5665, 126.978);
     let three = || Instant::now() + Duration::from_secs(3);
     until(
@@ -2002,22 +2104,187 @@ async fn an_answer_before_the_image_acquisition_gets_it_on_a_later_request() {
         |a| warmed(a, &stub.state),
     )
     .await;
-    stub.state.delay_ms.store(1500, Ordering::SeqCst);
-    let started = Instant::now();
+    // A request finds no product: it answers without the images and starts nothing.
     let first = inputs
         .load(&seoul, "서울특별시", "중구", false, true, now_ms(), three())
         .await;
-    assert!(
-        started.elapsed() < Duration::from_secs(1),
-        "{:?}",
-        started.elapsed()
+    assert!(first.hourly.is_some_and(|h| h.is_empty()), "no product yet");
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    assert_eq!(
+        stub.state.gifs.load(Ordering::SeqCst),
+        0,
+        "no request acquires"
     );
-    assert!(first.hourly.is_some_and(|h| h.is_empty()), "not yet");
-    stub.state.delay_ms.store(0, Ordering::SeqCst);
-    let later = until(
-        || inputs.load(&seoul, "서울특별시", "중구", false, true, now_ms(), three()),
-        |a| a.hourly.as_ref().is_some_and(|h| !h.is_empty()),
+    // The production acquires the images once and stores the fold.
+    let before = now_ms();
+    assert_eq!(inputs.produce_images().await, Ok(true));
+    let after = now_ms();
+    assert_eq!(stub.state.gifs.load(Ordering::SeqCst), 2, "one acquisition");
+    assert_eq!(stub.state.dust.load(Ordering::SeqCst), 1);
+    let day = format!(
+        "{:08}",
+        server2::domestic::kma::source::air_input::kst_date(after)
+    );
+    assert_eq!(products(&peer_store, &day).await.len(), 1);
+    // Requests read the product (this process installed it).
+    let settled = inputs
+        .load(&seoul, "서울특별시", "중구", false, true, now_ms(), three())
+        .await;
+    assert!(served(&settled));
+    for (name, _, _) in stations() {
+        acquired(before, after, &stub.state, &rows(&settled, &name), &name);
+    }
+    // Nothing new: no product is stored and nothing is read or decoded again.
+    let gets = image_gets.load(Ordering::SeqCst);
+    assert_eq!(inputs.produce_images().await, Ok(false));
+    assert_eq!(products(&peer_store, &day).await.len(), 1);
+    assert_eq!(image_gets.load(Ordering::SeqCst), gets);
+    assert_eq!(stub.state.gifs.load(Ordering::SeqCst), 2);
+    // A new process reads the stored product; its first production finds it current.
+    let cold = AirInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .reading_produced_images();
+    assert!(!cold.produces_images(), "no acquirer: no timer");
+    let restored = until(
+        || cold.load(&seoul, "서울특별시", "중구", false, true, now_ms(), three()),
+        served,
     )
     .await;
-    assert!(later.hourly.is_some());
+    for (name, _, _) in stations() {
+        same(
+            &rows(&restored, &name),
+            &rows(&settled, &name),
+            &format!("restored {name}"),
+        );
+    }
+    assert_eq!(cold.produce_images().await, Ok(false));
+    assert_eq!(products(&peer_store, &day).await.len(), 1);
+    assert_eq!(image_gets.load(Ordering::SeqCst), gets, "nothing decoded");
+}
+
+/// Another host's stored images answer no request until a production folds them: the request
+/// reads no image, and a production without an acquirer decodes the stored acquisition and stores
+/// the legacy fold.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn stored_images_are_folded_by_a_production_never_by_a_request() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let image_gets = Arc::new(AtomicUsize::new(0));
+    let transport = CountedImages {
+        inner: peer.transport(),
+        image_gets: image_gets.clone(),
+    };
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let peer_store = store_for(&peer.transport());
+    // The station list an hour ago, and the 23시 announcement's images of the previous KST day
+    // (frames from today 00:00 KST) acquired by another host half an hour ago.
+    let now = now_ms();
+    publish_json(
+        &peer_store,
+        "airkorea-station-list",
+        "stations",
+        Period {
+            local_date: 20261015,
+            slot: "0000".into(),
+        },
+        "20261015",
+        now - 3_600_000.,
+        station_page(),
+    )
+    .await;
+    let urls = served_urls("https://www.airkorea.or.kr", "23", now);
+    let fetched = now - 1_800_000.;
+    publish(
+        &peer_store,
+        ("airkorea-image", "airkorea-forecast-image"),
+        ProviderKey::Named {
+            id: "national".into(),
+        },
+        Publication::new(20261015, 2300).unwrap().period(),
+        "20261015",
+        fetched,
+        &image_pages('A', &urls),
+    )
+    .await;
+    let inputs = AirInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .reading_produced_images();
+    let seoul = town(37.5665, 126.978);
+    let three = || Instant::now() + Duration::from_secs(3);
+    let answer = until(
+        || inputs.load(&seoul, "서울특별시", "중구", false, true, now_ms(), three()),
+        |a| a.hourly.is_some(),
+    )
+    .await;
+    assert!(
+        answer.hourly.is_some_and(|h| h.is_empty()),
+        "no product yet"
+    );
+    assert_eq!(
+        image_gets.load(Ordering::SeqCst),
+        0,
+        "a request reads no image"
+    );
+    assert_eq!(inputs.produce_images().await, Ok(true));
+    assert!(
+        image_gets.load(Ordering::SeqCst) > 0,
+        "the production decoded"
+    );
+    let expected = expected_fold(&[("2026-10-15 23:00", fetched, 'A', &urls)], now_ms());
+    let produced = inputs
+        .load(&seoul, "서울특별시", "중구", false, true, now_ms(), three())
+        .await;
+    for (name, _, _) in stations() {
+        same(
+            &rows(&produced, &name),
+            &expected.by_station(&name),
+            &format!("produced {name}"),
+        );
+    }
+    assert!(matches!(rows(&produced, "중구"), OrderedJson::Array(r) if r.len() > 40));
+    // A later request answers without the rows old by then (the product is read once).
+    let later = now_ms() + 26. * 3_600_000.;
+    let cut = expected_fold(&[("2026-10-15 23:00", fetched, 'A', &urls)], later);
+    let answer = inputs
+        .load(&seoul, "서울특별시", "중구", false, true, later, three())
+        .await;
+    for (name, _, _) in stations() {
+        same(
+            &rows(&answer, &name),
+            &cut.by_station(&name),
+            &format!("cut {name}"),
+        );
+    }
+    assert!(cut.len() < expected.len(), "rows were old");
+    // An acquisition of a day before the window leaves the product current: a new process's
+    // production stores and reads nothing although the product lists it.
+    let mut product = products(&peer_store, "20261016").await.remove(0);
+    let made = product["at"].as_f64().unwrap() + 1_000.;
+    product["at"] = json!(made);
+    product["madeOf"]["acquisitions"]
+        .as_array_mut()
+        .unwrap()
+        .insert(
+            0,
+            json!([made as u64 - 15 * 86_400_000, "20261001", "an-old-group"]),
+        );
+    publish(
+        &peer_store,
+        ("airkorea-image", "airkorea-forecast-hourly"),
+        ProviderKey::Named {
+            id: "national".into(),
+        },
+        Publication::new(20261016, 0).unwrap().period(),
+        "20261016",
+        made,
+        &[(serde_json::to_vec(&product).unwrap(), "application/json")],
+    )
+    .await;
+    let gets = image_gets.load(Ordering::SeqCst);
+    let restarted = AirInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .reading_produced_images();
+    assert_eq!(restarted.produce_images().await, Ok(false));
+    assert_eq!(image_gets.load(Ordering::SeqCst), gets, "nothing decoded");
+    assert_eq!(products(&peer_store, "20261016").await.len(), 2);
 }
