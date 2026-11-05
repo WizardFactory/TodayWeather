@@ -791,7 +791,7 @@ the legacy 501. Zone state for `specialInfo` starts from the newest `zone-state`
 in force, else the newest zone seed; every `pwn-cd` revision published since its sync point (every
 published day without either) is then replayed in memory by an owned refresh task. The collector
 stores `zone-state` once a KST day after its sixty-day bootstrap, so cold replay cost is bounded by
-the days since then. Each state names the seed it was built on, so a seed imported later voids older
+the days since then. Each state names the seed acquisition it was built on (time and content), so a seed imported later voids older
 states, including one built before the import and stored after it. A state that cannot be read, or
 whose bootstrap had not covered the lookback, costs the replay from the seed. One raw LIST decides the days to
 read: a day with no raw object costs nothing, and a complete orphan group has raw objects, so its

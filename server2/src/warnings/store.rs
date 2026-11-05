@@ -554,17 +554,18 @@ impl<T: CatalogTransport> WarningStore<T> {
         .await?;
         Ok(rows)
     }
-    /// The acquisition identifying the seed in force.
-    fn seed_fetched(seed: &Day<Vec<RawRecord>>) -> Option<u64> {
-        seed.items
-            .last()
-            .map(|latest| latest[0].envelope.identity.fetched_at_ms)
+    /// The acquisition identifying the seed in force: exports can share their time.
+    fn seed_id(seed: &Day<Vec<RawRecord>>) -> Option<String> {
+        seed.items.last().map(|latest| {
+            let id = &latest[0].envelope.identity;
+            format!("{}-{}", id.fetched_at_ms, id.raw_sha256)
+        })
     }
     /// The newest stored zone state built on the seed in force. A seed imported later must take
     /// effect, so it voids older states.
     async fn zone_snapshot(
         &self,
-        seed_fetched: Option<u64>,
+        seed: Option<&str>,
         now_ms: i64,
         deadline: Instant,
     ) -> Result<Option<Vec<RawRecord>>, Error> {
@@ -580,7 +581,7 @@ impl<T: CatalogTransport> WarningStore<T> {
                 covered_sync(&docs).is_some()
                     && docs.iter().any(|d| {
                         d.get("areaCode").and_then(Value::as_str) == Some("_sync")
-                            && d.get("seedFetchedAtMs").and_then(Value::as_u64) == seed_fetched
+                            && d.get("seed").and_then(Value::as_str) == seed
                     })
             })
         }))
@@ -600,7 +601,7 @@ impl<T: CatalogTransport> WarningStore<T> {
             "areaCode": "_sync",
             "lastSyncAt": js::iso(synced_ms),
             "oldestSyncedTmFc": format!("{oldest_synced:08}"),
-            "seedFetchedAtMs": state.seed_fetched(),
+            "seed": state.seed(),
         }));
         let bytes = serde_json::to_vec(&docs).map_err(|_| Error::Invalid("zone state JSON"))?;
         self.publish(
@@ -621,11 +622,11 @@ impl<T: CatalogTransport> WarningStore<T> {
         let seed = self
             .day(ZONE_SEED_KIND, records::SEED_DATE, deadline)
             .await?;
-        let seed_fetched = Self::seed_fetched(&seed);
-        let mut state = ZoneState::on_seed(seed_fetched);
+        let seed_id = Self::seed_id(&seed);
+        let mut state = ZoneState::on_seed(seed_id.clone());
         // A stored state only shortens the replay: one that cannot be read costs the replay.
         let snapshot = self
-            .zone_snapshot(seed_fetched, now_ms, deadline)
+            .zone_snapshot(seed_id.as_deref(), now_ms, deadline)
             .await
             .unwrap_or_default();
         let mut from = FIRST_DATE;
