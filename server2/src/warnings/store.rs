@@ -704,10 +704,19 @@ impl<T: CatalogTransport> WarningStore<T> {
             .rev()
             .map(js::date_of_index)
             .collect();
+        // Raw objects decide the days to read, as for the zone state.
+        let held = self
+            .discovered(
+                ZONE_KIND,
+                kst_date(now_ms, -ZONE_LOOKBACK_DAYS),
+                kst_date(now_ms, 0),
+                deadline,
+            )
+            .await?;
         let mut days = Vec::new();
         self.first(
             ZONE_KIND,
-            dates.clone(),
+            held.clone(),
             &map,
             |day| {
                 days.push(day.items);
@@ -716,9 +725,12 @@ impl<T: CatalogTransport> WarningStore<T> {
             deadline,
         )
         .await?;
+        let mut read: std::collections::HashMap<u32, Vec<u64>> =
+            held.into_iter().zip(days).collect();
         let mut newest: Option<(u64, u32)> = None;
         let mut covered = true;
-        for (date, items) in dates.into_iter().zip(days) {
+        for date in dates {
+            let items = read.remove(&date).unwrap_or_default();
             if items.is_empty() {
                 if newest.is_some() {
                     covered = false;

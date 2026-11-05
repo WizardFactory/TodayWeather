@@ -1033,3 +1033,29 @@ async fn an_offered_zone_state_answers_from_memory() {
         "still current after a cycle"
     );
 }
+
+#[tokio::test]
+async fn zone_progress_reads_only_the_days_that_hold_objects() {
+    let peer = Peer::new();
+    let store = peer.store();
+    publish_zone_row(
+        &store,
+        20260925,
+        zone_row("L1100200", 12, 0, "1", 202609250900),
+    )
+    .await;
+    let before = peer.counts().await;
+    let progress = store
+        .zone_progress(ms("2026-09-26T00:10:00.000Z"), deadline())
+        .await
+        .unwrap();
+    assert_eq!(progress.map(|p| p.1), Some(20260925));
+    let after = peer.counts().await;
+    assert_eq!(
+        reads_of(&after, "/pwn-cd/") - reads_of(&before, "/pwn-cd/"),
+        reads_of(&after, "/20260925") - reads_of(&before, "/20260925")
+            + reads_of(&after, "/2026/09/25/")
+            - reads_of(&before, "/2026/09/25/"),
+        "only the day with objects is read"
+    );
+}
