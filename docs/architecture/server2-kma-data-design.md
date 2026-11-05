@@ -385,6 +385,10 @@ index/v2/{source}/{kind}/{key_hash}/{original_partition}.json
 packs/v2/{source}/{kind}/{key_hash}/{day}/{pack_sha256}.pack
 representations/v1/{source}/{kind}/{key_hash}/{day}/{manifest_sha256}.json
 
+# Server-written folds in canonical raw, each read through one LIST and one lookup:
+raw/v2/kma-warning/zone-state/{YYYY}/{MM}/{DD}/...
+raw/v2/data-go-kr/kasi-fold/{YYYY}/{MM}/{DD}/...
+
 # Deferred discovery experiments; not initial serving dependencies:
 index/v3/{source}/{kind}/{key_hash}/day/{YYYYMMDD}.json
 lookup/v1/kma/grid/{nx}-{ny}/{source_plan_hash}/head.json
@@ -449,6 +453,28 @@ drop-in list of keys for the current lookup API.
 These grid/day experiments are outside initial implementation. The earlier
 proposal already required locator coverage/invalidation proof; this revision
 defers that unresolved protocol instead of treating it as a baseline dependency.
+
+### Existence checks and partly stored data
+
+The layout above is known before any request, so a LIST of one prefix proves whether anything
+is stored. Implemented on 2026-11-05:
+
+| Question | Asked by |
+| --- | --- |
+| Which partitions does this key have? | One LIST of the key when the range exceeds two months |
+| Which KASI days are stored? | One LIST of the kind, assigned to areas by key hash |
+| Which warning days hold data? | One raw LIST of the kind; only those days are read |
+| Is a publication absent? | The listing: under ASOS-primary the provider call starts without waiting for stored reads |
+| Which stored publications matter? | Under ASOS-primary, the last 54 hours (`stored-read-window-v1`) |
+
+A grid head or day locator would not shorten the empty case: it cannot prove absence, so an
+empty answer would still need the LIST. Shared data that many objects fold into is instead stored
+as one fold: `zone-state` once a KST day by the warning collector and `kasi-fold` by the KASI
+capture pass. These hold provider items or legacy-shaped state, not assembled weather, and a new
+process falls back to the original objects when no usable fold exists. The observed response also
+uses the release's land zones (`data/kma_forecast_land_zones.csv`) until a forecast-zone list is
+stored, so its first answer can request mid temperatures. Measurements are in the
+[speed evidence](../evidence/research/kma-speed-options-2026-11-04.md#result-of-the-change).
 
 ## Wire, storage and assembly format boundaries
 
@@ -516,9 +542,10 @@ history constant-size.
 
 1. Load the release's public source-plan/reference snapshot; resolve the normal
    location semantics. Include geocoder latency when it is required.
-2. Probe original owner catalogs and bounded existing discovery/repair scopes.
-   Fully empty repair still performs its actual empty-prefix LISTs; partial
-   repair cannot certify absence. There is no initial grid-head dependency.
+2. Probe original owner catalogs and bounded existing discovery/repair scopes:
+   one LIST per existence question, so a fully empty store answers each in one
+   request. Partial repair cannot certify absence. There is no initial grid-head
+   dependency.
 3. Reserve provider budget durably, then acquire independent required products
    and the missing required historical closure as foreground work, concurrently
    under global operation/byte admission. Range/page dependencies,
