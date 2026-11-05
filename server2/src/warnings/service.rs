@@ -242,12 +242,13 @@ impl<T: CatalogTransport> WarningService<T> {
                     owner.join(crate::observability::Component::Warnings);
                     let _single = refresh.lock_owned().await;
                     let _owner = owner.enter();
-                    // An offer can have arrived since this task was created.
+                    // An offer can have arrived since this task was created, and one after
+                    // `started` is caught below, so none is lost between the two.
+                    let started = Instant::now();
                     Self::adopt_into(&store, &zones);
                     if let Some(state) = Self::zone_memory(&zones, &config, true) {
                         return Ok(state);
                     }
-                    let started = Instant::now();
                     let previous = zones
                         .lock()
                         .unwrap_or_else(|e| e.into_inner())
