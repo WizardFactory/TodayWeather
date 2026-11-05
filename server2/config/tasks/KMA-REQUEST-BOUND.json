@@ -18,21 +18,6 @@
   ],
   "outside": [
     {
-      "path": "intent/issue-2614-kma-request-bound.md",
-      "category": "task-record",
-      "reason": "Task intent, in the existing intent directory."
-    },
-    {
-      "path": "specs/issue-2614-kma-request-bound.md",
-      "category": "task-record",
-      "reason": "Acceptance, in the existing specs directory."
-    },
-    {
-      "path": "plans/issue-2614-kma-request-bound.md",
-      "category": "task-record",
-      "reason": "Plan, in the existing plans directory."
-    },
-    {
       "path": "docs/evidence/research/kma-speed-options-2026-11-04.md",
       "category": "documentation",
       "reason": "The EC2 measurement of this change."
