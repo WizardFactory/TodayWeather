@@ -3,6 +3,7 @@
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
   "scope": "Observed KMA path with empty or partly stored S3: one LIST per existence question, a packaged land-zone list for the first response, absent publications requested without waiting for stored reads, a stored-read window, a collector-written zone state and one stored KASI fold. No deployment or production mutation.",
   "server2_paths": [
+    "server2/config/contracts/kma-client-wire.v1.json",
     "server2/config/contracts/kma-history.v1.json",
     "server2/config/tasks/KMA-STORED-READS.json",
     "server2/src/domestic/kma/source/life_input.rs",
@@ -21,7 +22,9 @@
     "server2/tests/domestic/towns.rs",
     "server2/tests/warnings/collector.rs",
     "server2/tests/warnings/recovery.rs",
+    "server2/tools/verification/kma_client_eval.py",
     "server2/tools/verification/kma_full_response_contract.py",
+    "server2/tools/verification/test_kma_client_eval.py",
     "server2/tools/verification/test_kma_full_response_contract.py"
   ],
   "outside": [

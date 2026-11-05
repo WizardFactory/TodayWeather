@@ -3,7 +3,7 @@
   "version": 1,
   "scope": "KMA weather response bodies delivered to clients, for every weather API version observed in production traffic from 2026-08-23 to 2026-09-22.",
   "not_a_claim": "Passing does not prove value correctness, latency, HTTP headers, or the behavior of client builds that are not in this repository.",
-  "checked_at": "2026-10-30",
+  "checked_at": "2026-11-06",
   "evidence": [
     "docs/evidence/aws/api-traffic-2026-09-22.md",
     "server2/config/contracts/kma-history.v1.json"
@@ -236,9 +236,19 @@
       ]
     }
   },
+  "wire_additions": {
+    "$.current.arpltn.pm10Index": {
+      "types": ["number"],
+      "evidence": "Legacy kecoController sets it from a measured value. The corpus recorded only null, and the real responses of 2026-11-06 carry a number."
+    },
+    "$.current.arpltn.pm25Index": {
+      "types": ["number"],
+      "evidence": "Legacy kecoController sets it from a measured value. The corpus recorded only null, and the real responses of 2026-11-06 carry a number."
+    }
+  },
   "rules": {
     "W1": "No JSON null where the legacy corpus of that version and surface never carries null.",
-    "W2": "Every value has a JSON type the legacy corpus uses at the same path.",
+    "W2": "Every value has a JSON type the legacy corpus uses at the same path, or that wire_additions adds where the corpus is known to be narrower than legacy.",
     "W3": "Required paths are present.",
     "W4": "Paths absent from the legacy corpus are reported as additive information, not violations.",
     "A1": "Three-hour slots are ordered by date and time and use the legacy slot time values.",
