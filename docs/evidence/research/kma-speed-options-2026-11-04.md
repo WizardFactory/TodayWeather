@@ -6,7 +6,7 @@ Investigated on 2026-11-04 at master `0e6ad85d`, after PR #2861 merged. Nothing 
 
 ## Measured on EC2 against real providers and S3
 
-Measured on 2026-11-05 and 2026-11-06 on one t3.small Spot host in ap-northeast-2d, with the CI-verified musl binaries, real providers and a new bucket in the same region. `Before` is `478232c9`, the head merged as `0e6ad85d`. `After` is `558db418` in the first window and `29243e6e` in the second; they differ only outside the normal path. Times are from a loopback client and include geocoding, with no network to a real client. Each process served its requests in order and stopped.
+Measured on 2026-11-05 and 2026-11-06 on one t3.small Spot host in ap-northeast-2d, with the CI-verified musl binaries, real providers and a new bucket in the same region. `Before` is `478232c9`, the head merged as `0e6ad85d`. `After` is `558db418` in the first window and `29243e6e` in the second, so the two windows are not the same code: the review corrections between them include an absent RSS that overlaps stored reads. Times are from a loopback client and include geocoding, with no network to a real client. Each process served its requests in order and stopped.
 
 | Request | Before, 22:40 KST | After, 22:40 KST | Before, 00:20 KST | After, 00:20 KST |
 | --- | ---: | ---: | ---: | ---: |
@@ -19,9 +19,9 @@ Measured on 2026-11-05 and 2026-11-06 on one t3.small Spot host in ap-northeast-
 
 These are single runs, so read them as ranges and not as a percentile. AK's 3 s is not met on the first request of a process, with or without this change.
 
-**What this change delivered.** The first response of an empty store now carries the whole forecast: 17 or 18 daily rows and `healthy: true`, where before it had 11 or 12 rows and `healthy: false` with `temperature-unavailable`. A request repeating a cell fell from about 1.7 s to about 0.5 s. All 200, and both validators pass on every "After" body.
+**What this change delivered.** The first response of an empty store now carries the whole forecast: 17 or 18 daily rows and `healthy: true`, where before it had 11 or 12 rows and `healthy: false` with `temperature-unavailable`. A request repeating a cell fell from about 1.7 s to about 0.5 s. Every response was 200. On every "After" body `kma_client_eval.py` reports no violation and the forecast part of `kma_full_response_contract.py` passes. Its history part was not judged, because this run gave it no hourly evidence, so the tool exits non-zero; `historyStatus` reports the gaps listed below.
 
-**Why the model was wrong.** It gave 1,402 ms for the empty store because its warning cycle and AirKorea fixtures cost nothing. The real first request is held by two things, and everything else had finished by about 1.9 s:
+**Why the model was wrong.** It gave 1,402 ms for the empty store because its warning cycle and AirKorea fixtures cost nothing. The real first request is held by two things, and in the run examined everything else had finished by about 1.9 s:
 
 - **Warnings.** The first cycle fetches and then publishes up to ten days, 55 or more S3 operations, and took 4.2 to 6.1 s. A request waits 3 s for it and then replays what S3 holds so far, which adds up to 1 s. The waits add up, so this path alone exceeds 3 s.
 - **AirKorea forecast images.** Each GIF took 1.1 to 1.8 s to fetch and its upload about 1.5 s, one after another, and every request that arrives during that acquisition waits up to 3 s. That explains the 3,097, 3,105 and 3,109 ms rows above: those requests joined a running acquisition, and the others found the images stored. It is not a difference between the binaries.
@@ -30,12 +30,12 @@ Real latency, from the process logs of one run: S3 operations p50 32 ms, p90 40 
 
 **Other real-data findings.**
 
-- At 22:46 KST AirKorea answered 429 on all three keys, which production shares, so `current.arpltn` was absent. At 00:18 KST it was present on the responses, so the daily quota had been used up, not lost. A 429 at the end of the day leaves air data out and nothing else.
+- At 22:46 KST the AirKorea call answered 429 on each attempt with the three keys, which production shares, so `current.arpltn` was absent. At 00:18 KST it was present, which points to the daily quota. The 429 left air data out and nothing else.
 - `kma_client_eval.py` flagged `current.arpltn.pm10Index` and `pm25Index` as numbers on the first real air data. Legacy sets them from measured values (`server/controllers/kecoController.js:47`) and the corpus recorded only null, so the corpus was too narrow. The contract now lists them under `wire_additions`.
 - The computed sunrise on a first response differed from KASI's by 2 minutes in Seoul (07:02 against 07:00), which is the case AK approved on 2026-11-05.
 - From 1 November, `historyStatus.missingHourlySlots` lists the off-cycle winter hours, 55 on this date, because a winter hour without a mark has no precipitation type under the approved rules. On 3 November a half-day with an unknown type shows as `wfPm: "구름적고 "` with a trailing space, and that date is reported in `missingDailyDates`.
 
-No credential left the workstation except provider keys passed to the process by SSH standard input. Logs fetched from the host were scanned for those keys, without printing them, and none was found. The instance used a role limited to its own bucket, and everything created was removed afterwards.
+No credential left the workstation except provider keys passed to the process by SSH standard input. Logs fetched from the host were scanned for those keys, without printing them, and none was found. The instance used a role limited to its own bucket.
 
 ## Result of the change
 
