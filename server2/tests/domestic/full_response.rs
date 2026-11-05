@@ -451,3 +451,350 @@ async fn full_cycle(dry: bool) {
         "fresh process model, no provider or RAM, same raw closure"
     );
 }
+async fn peer_status(endpoint: &str) -> serde_json::Value {
+    let bytes = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .unwrap()
+        .get(format!(
+            "{}/__catalog/status",
+            endpoint.trim_end_matches('/')
+        ))
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+    serde_json::from_slice(&bytes).unwrap()
+}
+/// S3 requests the peer served, as (`LIST`/`GET`, kind) and how many times.
+async fn s3_requests(peer: &Peer) -> std::collections::BTreeMap<(String, String), u64> {
+    let status = peer_status(peer.endpoint()).await;
+    let mut out = std::collections::BTreeMap::new();
+    for (key, count) in status.as_object().unwrap() {
+        let Some((op, path)) = key.strip_prefix("OP ").and_then(|k| k.split_once(' ')) else {
+            continue;
+        };
+        if let Some(kind) = path.split('/').nth(3) {
+            *out.entry((op.to_owned(), kind.to_owned())).or_default() += count.as_u64().unwrap();
+        }
+    }
+    out
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_empty_store_answers_each_existence_question_once() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        })))
+        .with_raw_writer(writer.clone());
+    let gateway = build_gateway(Arc::new(source), None);
+    let response = gateway.handle(http_request()).await;
+    assert_eq!(response.status(), 200);
+    let requests = s3_requests(&peer).await;
+    let of = |op: &str, kind: &str| {
+        requests
+            .get(&(op.to_owned(), kind.to_owned()))
+            .copied()
+            .unwrap_or(0)
+    };
+    for kind in [
+        "forecast-zone",
+        "mid-ta",
+        "kma-stn-info",
+        "airkorea-station-list",
+        "kasi-area-rise-set",
+        "pwn-cd",
+    ] {
+        assert_eq!(of("LIST", kind), 1, "{kind}: {requests:?}");
+    }
+    assert_eq!(of("GET", "pwn-cd"), 0, "{requests:?}");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_first_response_of_an_empty_store_carries_the_whole_forecast() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        })))
+        .with_raw_writer(writer.clone());
+    let gateway = build_gateway(Arc::new(source), None);
+    let response = gateway.handle(http_request()).await;
+    assert_eq!(response.status(), 200);
+    let body = to_bytes(response.into_body(), 6 * 1024 * 1024)
+        .await
+        .unwrap();
+    let weather: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let mid = &weather["midData"];
+    assert_eq!(
+        mid["dailyStatus"]["healthy"],
+        json!(true),
+        "{}",
+        mid["dailyStatus"]
+    );
+    assert_eq!(mid["dailyStatus"]["unavailableDates"], json!([]));
+    assert_eq!(mid["dailyData"].as_array().unwrap().len(), 18);
+    let last = mid["dailyData"].as_array().unwrap().last().unwrap();
+    assert_eq!(last["date"], json!("20261004"));
+    assert_eq!(
+        (last["tmn"].clone(), last["tmx"].clone()),
+        (json!(12), json!(24))
+    );
+}
+
+/// Publish `publications` of the test cell, as earlier requests would have.
+async fn store_grid(peer: &Peer, family: F, publications: &[Publication]) {
+    use server2::domestic::family::{DataGoKrRequest, Target};
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap());
+    for chunk in publications.chunks(4) {
+        let writer = Writer::new(store.clone(), Config::default()).unwrap();
+        let forecasts = Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        };
+        let mut waits = Vec::new();
+        for p in chunk {
+            let request =
+                DataGoKrRequest::new(family, Target::Grid { nx: 60, ny: 127 }, *p).unwrap();
+            waits.push(forecasts.acquire(ForecastRequest::DataGoKr(request)));
+        }
+        for done in futures_util::future::join_all(waits).await {
+            done.unwrap();
+        }
+        assert!(writer.drain(Instant::now() + Duration::from_secs(30)).await);
+    }
+}
+/// How many times the peer served each key by GET.
+async fn s3_gets(peer: &Peer) -> std::collections::BTreeMap<String, u64> {
+    let status = peer_status(peer.endpoint()).await;
+    status
+        .as_object()
+        .unwrap()
+        .iter()
+        .filter_map(|(k, n)| {
+            k.strip_prefix("OP GET ")
+                .map(|k| (k.to_owned(), n.as_u64().unwrap()))
+        })
+        .collect()
+}
+/// The keys of `kind` read since `before`.
+async fn read_since(
+    peer: &Peer,
+    before: &std::collections::BTreeMap<String, u64>,
+    kind: &str,
+) -> Vec<String> {
+    s3_gets(peer)
+        .await
+        .into_iter()
+        .filter(|(k, n)| k.contains(kind) && before.get(k) != Some(n))
+        .map(|(k, _)| k)
+        .collect()
+}
+/// Records how many stored-short reads had finished when the latest short was requested.
+struct Watching {
+    inner: Forecasts,
+    endpoint: String,
+    reads_at_call: Arc<std::sync::Mutex<Option<usize>>>,
+}
+impl ForecastAcquire for Watching {
+    fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>> {
+        let forward = self.inner.acquire(request.clone());
+        let (endpoint, seen) = (self.endpoint.clone(), self.reads_at_call.clone());
+        Box::pin(async move {
+            if let ForecastRequest::DataGoKr(r) = &request
+                && r.family() == F::VilageFcst
+            {
+                let status = peer_status(&endpoint).await;
+                let reads = status
+                    .as_object()
+                    .unwrap()
+                    .iter()
+                    .filter(|(k, _)| k.starts_with("OP GET raw/v2/data-go-kr/vilage-fcst/"))
+                    .map(|(_, n)| n.as_u64().unwrap() as usize)
+                    .sum();
+                seen.lock().unwrap().get_or_insert(reads);
+            }
+            forward.await
+        })
+    }
+    fn cached(&self, request: &ForecastRequest) -> Published {
+        self.inner.cached(request)
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_absent_latest_short_is_requested_without_waiting_for_stored_reads() {
+    use server2::history::schedule::Family as Sf;
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let latest = Sf::Short.latest(NOW as i64).unwrap();
+    let mut stored = Vec::new();
+    let mut p = latest;
+    for _ in 0..12 {
+        p = p.add_hours(-3).unwrap();
+        stored.push(p);
+    }
+    store_grid(&peer, F::VilageFcst, &stored).await;
+    // Publication itself reads each raw object back.
+    let published: u64 = s3_gets(&peer)
+        .await
+        .iter()
+        .filter(|(k, _)| k.starts_with("raw/v2/data-go-kr/vilage-fcst/"))
+        .map(|(_, n)| *n)
+        .sum();
+    let client = reqwest::Client::builder().no_proxy().build().unwrap();
+    let slow = client
+        .post(format!(
+            "{}/__catalog?mode=slow-all&key=x",
+            peer.endpoint().trim_end_matches('/')
+        ))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(slow.status(), 204);
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let reads_at_call = Arc::new(std::sync::Mutex::new(None));
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(Watching {
+            inner: Forecasts {
+                writer: writer.clone(),
+                calls: Arc::new(AtomicUsize::new(0)),
+            },
+            endpoint: peer.endpoint().to_owned(),
+            reads_at_call: reads_at_call.clone(),
+        })))
+        .with_raw_writer(writer.clone());
+    let response = build_gateway(Arc::new(source), None)
+        .handle(http_request())
+        .await;
+    assert_eq!(response.status(), 200);
+    let reads = reads_at_call
+        .lock()
+        .unwrap()
+        .expect("latest short requested")
+        - published as usize;
+    assert!(
+        reads < stored.len(),
+        "{reads} of {} stored reads done",
+        stored.len()
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn stored_publications_before_the_response_window_are_not_read() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let old: Vec<Publication> = (0..4).map(|h| publication(20260919, h * 100)).collect();
+    let recent: Vec<Publication> = (0..4).map(|h| publication(20260923, h * 100)).collect();
+    store_grid(&peer, F::UltraSrtNcst, &old).await;
+    store_grid(&peer, F::UltraSrtNcst, &recent).await;
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let before = s3_gets(&peer).await;
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        })))
+        .with_raw_writer(writer.clone());
+    let response = build_gateway(Arc::new(source), None)
+        .handle(http_request())
+        .await;
+    assert_eq!(response.status(), 200);
+    let requested = read_since(&peer, &before, "ultra-srt-ncst").await;
+    assert!(
+        requested
+            .iter()
+            .any(|k| k.contains("/2026/09/23/") || k.contains("/20260923")),
+        "{requested:?}"
+    );
+    assert!(
+        !requested
+            .iter()
+            .any(|k| k.contains("/2026/09/19/") || k.contains("/20260919")),
+        "{requested:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn only_the_newest_mid_publication_of_a_region_is_read() {
+    use server2::domestic::family::{DataGoKrRequest, Target};
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    // Twice a day through this month, then the publication the clock asks for.
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let forecasts = Forecasts {
+        writer: writer.clone(),
+        calls: Arc::new(AtomicUsize::new(0)),
+    };
+    for (date, time) in [
+        (20260921, 600),
+        (20260922, 600),
+        (20260923, 600),
+        (20260924, 600),
+    ] {
+        let request = DataGoKrRequest::new(
+            F::MidLandFcst,
+            Target::Region("11B00000".into()),
+            publication(date, time),
+        )
+        .unwrap();
+        forecasts
+            .acquire(ForecastRequest::DataGoKr(request))
+            .await
+            .unwrap();
+    }
+    assert!(writer.drain(Instant::now() + Duration::from_secs(30)).await);
+    let before = s3_gets(&peer).await;
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        })))
+        .with_raw_writer(writer.clone());
+    let response = build_gateway(Arc::new(source), None)
+        .handle(http_request())
+        .await;
+    assert_eq!(response.status(), 200);
+    let body = to_bytes(response.into_body(), 6 * 1024 * 1024)
+        .await
+        .unwrap();
+    let weather: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(
+        weather["midData"]["landPubDate"],
+        json!("2026-09-23T21:00:00.000Z"),
+        "{}",
+        weather["midData"]["landPubDate"]
+    );
+    let requested = read_since(&peer, &before, "mid-land-fcst").await;
+    assert!(
+        !requested
+            .iter()
+            .any(|k| k.contains("20260923") || k.contains("/2026/09/23/")),
+        "{requested:?}"
+    );
+}

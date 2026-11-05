@@ -61,6 +61,7 @@ struct State {
     bootstrap_complete: bool,
     zones: Option<ZoneState>,
     published: HashMap<u32, String>,
+    state_stored_on: Option<u32>,
 }
 pub struct WarningCollector<S: ?Sized, T> {
     source: Arc<S>,
@@ -176,10 +177,41 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
                     }
                 }
                 report.pending_cycles = state.pending.as_ref().map_or(0, |p| p.1);
+                // A later cycle retries it, and replay works without one: not a cycle error.
+                if self.store_zone_state(&mut state).await.is_err() {
+                    crate::observability::event(
+                        crate::observability::Component::Warnings,
+                        crate::observability::Stage::Acquire,
+                        crate::observability::Cause::Dependency,
+                        crate::observability::Action::ReturnError,
+                        crate::observability::Outcome::Failed,
+                        Default::default(),
+                    );
+                }
                 report
             },
         )
         .await
+    }
+    /// Once a KST day after the bootstrap: store the zone state, so a new process replays only
+    /// the days since it.
+    async fn store_zone_state(&self, state: &mut State) -> Result<(), CycleError> {
+        let now_ms = self.now()?;
+        let today = kst_date(now_ms, 0);
+        if !state.bootstrap_complete || state.state_stored_on == Some(today) {
+            return Ok(());
+        }
+        let (Some(zones), Some(synced), Some(oldest)) =
+            (&state.zones, state.last_sync_at_ms, state.oldest_synced)
+        else {
+            return Ok(());
+        };
+        self.store
+            .publish_zone_snapshot(zones, synced, oldest, now_ms, self.deadline())
+            .await
+            .map_err(CycleError::Store)?;
+        state.state_stored_on = Some(today);
+        Ok(())
     }
     async fn load_progress(&self, state: &mut State, now_ms: i64) -> Result<(), CycleError> {
         if state.progress_loaded {

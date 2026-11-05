@@ -289,6 +289,20 @@ pub struct Entry {
     pub event_rank: f64,
 }
 impl Entry {
+    /// The legacy exported zone document [`Self::from_legacy`] reads back.
+    pub fn to_legacy(&self) -> Value {
+        serde_json::json!({
+            "areaCode": self.area_code,
+            "areaName": self.area_name,
+            "warnVar": self.warn_var,
+            "warnStress": self.warn_stress,
+            "active": self.active,
+            "command": self.command,
+            "eventTmFc": self.event_tm_fc,
+            "eventTmSeq": self.event_tm_seq,
+            "eventRank": self.event_rank,
+        })
+    }
     /// A legacy exported zone document; `None` for the `_sync` marker or a non-object.
     pub fn from_legacy(doc: &Value) -> Option<Self> {
         let o = doc.as_object()?;

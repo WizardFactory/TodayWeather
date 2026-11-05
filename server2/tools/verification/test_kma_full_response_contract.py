@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from kma_full_response_contract import (ALLOWED_SOURCES, CONTRACT_PATH, REPOSITORY_ROOT, WEATHER_FIELDS,
-                                        allowed_history_labels, audit_history, coverage_edges,
+                                        allowed_history_labels, audit_forecast, audit_history, coverage_edges,
                                         historical_differences, load_contract, references_contract,
                                         required_hours, validate_contract)
 
@@ -99,6 +99,61 @@ class HistoryContractTest(unittest.TestCase):
         before = dict(short=[dict(date='20260923', time=3, r06Approx=False)])
         after = dict(short=[dict(date='20260923', time=3, r06Approx=0)])
         self.assertEqual(len(historical_differences(before, after, CLOCK)), 1)
+
+
+def forecast_case():
+    daily = [dict(date=f'202609{d:02}') for d in range(24, 31)]
+    daily += [dict(date=f'202610{d:02}') for d in range(1, 5)]
+    short = [dict(date=f'202609{d:02}', time=h) for d in (24, 25, 26)
+             for h in range(3, 25, 3)]
+    return dict(short=short, midData=dict(
+        dailyData=daily, dailyStatus=dict(healthy=True, reasons=[], unavailableDates=[])))
+
+
+class ForecastCoverageTest(unittest.TestCase):
+    def test_a_whole_forecast_is_complete(self):
+        report = audit_forecast(forecast_case(), CLOCK)
+        self.assertTrue(report['forecast_complete'], report)
+        self.assertEqual(report['missing_forecast_dates'], [])
+
+    def test_valid_body_missing_future_days_is_incomplete(self):
+        body = forecast_case()
+        body['midData']['dailyData'] = body['midData']['dailyData'][:4]
+        body['midData']['dailyStatus'] = dict(
+            healthy=False, reasons=['temperature-unavailable', 'future-mid-unavailable'],
+            unavailableDates=['20260928'])
+        report = audit_forecast(body, CLOCK)
+        self.assertFalse(report['forecast_complete'])
+        self.assertFalse(report['daily_status_healthy'])
+        self.assertEqual(report['daily_status_reasons'],
+                         ['temperature-unavailable', 'future-mid-unavailable'])
+        self.assertEqual(report['missing_forecast_dates'][0], '20260928')
+        self.assertEqual(report['missing_forecast_dates'][-1], '20261004')
+
+    def test_short_list_ending_before_the_second_future_day_is_incomplete(self):
+        body = forecast_case()
+        body['short'] = [r for r in body['short'] if r['date'] < '20260926']
+        report = audit_forecast(body, CLOCK)
+        self.assertFalse(report['forecast_complete'])
+        self.assertFalse(report['short_reaches_second_future_day'])
+
+    def test_a_hole_in_the_short_list_is_incomplete(self):
+        body = forecast_case()
+        del body['short'][5]
+        report = audit_forecast(body, CLOCK)
+        self.assertFalse(report['forecast_complete'])
+        self.assertEqual(report['short_slot_gaps'], ['20260924:18'])
+
+    def test_short_times_as_text_keep_their_slots(self):
+        body = forecast_case()
+        for row in body['short']:
+            row['time'] = f"{row['time']:02}00"
+        self.assertTrue(audit_forecast(body, CLOCK)['forecast_complete'])
+
+    def test_missing_status_is_not_healthy(self):
+        body = forecast_case()
+        del body['midData']['dailyStatus']
+        self.assertFalse(audit_forecast(body, CLOCK)['forecast_complete'])
 
 
 class HistoryDataContractTest(unittest.TestCase):

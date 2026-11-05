@@ -21,6 +21,22 @@ pub const LAND_CODES: [&str; 10] = [
     "11H20000", "11G00000",
 ];
 const LAND_ZONES_CSV: &str = include_str!("data/kma_forecast_land_zones.csv");
+/// The land zones as the forecast-zone documents `findForecastZoneByName` reads.
+pub fn land_zone_docs() -> Vec<Doc> {
+    LAND_ZONES_CSV
+        .split('\n')
+        .filter(|l| !l.is_empty() && !l.starts_with('#') && !l.starts_with("REG_ID,"))
+        .filter_map(|l| {
+            let mut fields = l.split(',');
+            Some(
+                Doc::new()
+                    .with("regId", Val::str(fields.next()?))
+                    .with("regSp", Val::str("C"))
+                    .with("regName", Val::str(fields.next()?)),
+            )
+        })
+        .collect()
+}
 /// `KmaForecastZoneController.landZoneIds()`.
 pub fn land_zone_ids() -> &'static [String] {
     static IDS: OnceLock<Vec<String>> = OnceLock::new();

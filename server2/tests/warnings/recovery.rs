@@ -754,3 +754,137 @@ async fn concurrent_walks_stay_within_the_store_read_bound() {
     );
     assert!(peak > 1, "walks still run concurrently");
 }
+
+/// GETs the peer served of keys containing `needle`.
+fn reads_of(counts: &serde_json::Value, needle: &str) -> u64 {
+    counts
+        .as_object()
+        .unwrap()
+        .iter()
+        .filter(|(k, _)| k.starts_with("OP GET ") && k.contains(needle))
+        .map(|(_, n)| n.as_u64().unwrap())
+        .sum()
+}
+#[tokio::test]
+async fn a_zone_snapshot_bounds_the_replay_and_keeps_the_state() {
+    let peer = Peer::new();
+    let store = peer.store();
+    publish_zone_row(
+        &store,
+        20260901,
+        zone_row("L1100100", 3, 1, "1", 202609010900),
+    )
+    .await;
+    publish_zone_row(
+        &store,
+        20260925,
+        zone_row("L1100200", 12, 0, "1", 202609250900),
+    )
+    .await;
+    let now = ms("2026-09-26T00:10:00.000Z");
+    let full = store.zone_state(now, deadline()).await.unwrap();
+    assert_eq!(full.len(), 2);
+    store
+        .publish_zone_snapshot(&full, now, 20260701, now, deadline())
+        .await
+        .unwrap();
+    // Published after the snapshot: replay still applies it.
+    publish_zone_row(
+        &store,
+        20260927,
+        zone_row("L1100300", 3, 1, "1", 202609270900),
+    )
+    .await;
+    let before = peer.counts().await;
+    let later = ms("2026-09-28T00:10:00.000Z");
+    let replayed = peer.store().zone_state(later, deadline()).await.unwrap();
+    let after = peer.counts().await;
+    let entries: Vec<_> = replayed.entries().cloned().collect();
+    let known: Vec<_> = full.entries().cloned().collect();
+    assert_eq!(entries.len(), 3);
+    assert_eq!(
+        entries[..2],
+        known[..],
+        "order and values survive the snapshot"
+    );
+    assert_eq!(entries[2].area_code, "L1100300");
+    assert_eq!(
+        reads_of(&after, "/pwn-cd/") - reads_of(&before, "/pwn-cd/"),
+        reads_of(&after, "/20260927") - reads_of(&before, "/20260927")
+            + reads_of(&after, "/2026/09/27/")
+            - reads_of(&before, "/2026/09/27/")
+            + reads_of(&after, "/20260925")
+            - reads_of(&before, "/20260925")
+            + reads_of(&after, "/2026/09/25/")
+            - reads_of(&before, "/2026/09/25/"),
+        "only days from two days before the sync are read"
+    );
+}
+#[tokio::test]
+async fn a_new_legacy_seed_voids_an_older_zone_snapshot() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let now = ms("2026-09-26T00:10:00.000Z");
+    publish_zone_row(
+        &store,
+        20260925,
+        zone_row("L1100200", 12, 0, "1", 202609250900),
+    )
+    .await;
+    let built = store.zone_state(now, deadline()).await.unwrap();
+    store
+        .publish_zone_snapshot(&built, now, 20260701, now, deadline())
+        .await
+        .unwrap();
+    let zone = serde_json::json!([
+        {"areaCode": "L1100100", "areaName": "seed", "warnVar": 3, "warnStress": 1, "active": true,
+         "command": "1", "eventTmFc": 202601010900_i64, "eventTmSeq": 1, "eventRank": 1}
+    ]);
+    let zone = OrderedJson::parse(&serde_json::to_vec(&zone).unwrap()).unwrap();
+    import(
+        &store,
+        &seed_file(vec![], Some(zone), "2026-01-02T00:00:00.000Z"),
+    )
+    .await;
+    let state = peer.store().zone_state(now, deadline()).await.unwrap();
+    let areas: Vec<_> = state.entries().map(|e| e.area_code.clone()).collect();
+    assert_eq!(
+        areas,
+        ["L1100100", "L1100200"],
+        "the imported seed takes effect"
+    );
+}
+#[tokio::test]
+async fn an_empty_store_answers_the_zone_state_from_its_listings() {
+    let peer = Peer::new();
+    let state = peer
+        .store()
+        .zone_state(ms("2026-09-26T00:10:00.000Z"), deadline())
+        .await
+        .unwrap();
+    assert!(state.is_empty());
+    assert_eq!(reads_of(&peer.counts().await, "/pwn-cd/"), 0);
+}
+#[tokio::test]
+async fn a_day_with_only_raw_objects_is_still_repaired_into_the_zone_state() {
+    let peer = Peer::new();
+    let store = peer.store();
+    publish_zone_row(
+        &store,
+        20260925,
+        zone_row("L1100200", 12, 0, "1", 202609250900),
+    )
+    .await;
+    peer.fault(
+        "forget",
+        &records::catalog(records::ZONE_KIND, 20260925)
+            .unwrap()
+            .key(),
+    )
+    .await;
+    let state = store
+        .zone_state(ms("2026-09-26T00:10:00.000Z"), deadline())
+        .await
+        .unwrap();
+    assert_eq!(state.len(), 1);
+}

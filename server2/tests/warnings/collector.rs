@@ -435,3 +435,36 @@ async fn failed_raw_publication_never_calls_the_push_feed_hook() {
         "unacknowledged provider rows never enter feed"
     );
 }
+
+#[tokio::test]
+async fn the_collector_stores_the_zone_state_once_a_day_after_its_bootstrap() {
+    use server2::warnings::records::ZONE_STATE_KIND;
+    let peer = Peer::new();
+    let store = peer.store();
+    let clock = FixedClock::at("2026-09-26T03:05:00Z");
+    let collector =
+        WarningCollector::new(Arc::new(Recorded::fixtures()), store.clone(), clock.clone());
+    let stored = |date| {
+        let store = store.clone();
+        async move {
+            store
+                .day(ZONE_STATE_KIND, date, deadline())
+                .await
+                .unwrap()
+                .items
+                .len()
+        }
+    };
+    collector.gather().await;
+    assert_eq!(stored(20260926).await, 0, "sixty days are not covered yet");
+    // Each later cycle reaches eight days further back.
+    for _ in 0..7 {
+        collector.gather().await;
+    }
+    assert_eq!(stored(20260926).await, 1);
+    collector.gather().await;
+    assert_eq!(stored(20260926).await, 1, "once a day");
+    clock.set("2026-09-27T03:05:00Z");
+    collector.gather().await;
+    assert_eq!(stored(20260927).await, 1);
+}

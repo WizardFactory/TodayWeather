@@ -6,7 +6,10 @@
 use super::doc::{Doc, Val};
 use crate::gateway::response::js_number;
 use serde_json::Value;
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    sync::{Arc, OnceLock},
+};
 
 const ROWS_PER_PAGE: f64 = 1000.;
 const MAX_PAGES: u32 = 10;
@@ -194,6 +197,18 @@ pub fn complete_list(pages: &[&[u8]]) -> Option<Vec<Doc>> {
 #[derive(Debug, Clone, Default)]
 pub struct Zones(Vec<Doc>);
 impl Zones {
+    /// The release's land zones, for a store that holds no list yet: a town's mid temperature
+    /// region is known before the first list arrives.
+    pub fn packaged() -> Arc<Self> {
+        static ZONES: OnceLock<Arc<Zones>> = OnceLock::new();
+        ZONES
+            .get_or_init(|| {
+                let mut zones = Zones::default();
+                zones.apply(&super::mid::land_zone_docs(), 0.);
+                Arc::new(zones)
+            })
+            .clone()
+    }
     /// Apply one complete list as `getFromKma` does; `retired_at_ms` is the run's wall clock.
     pub fn apply(&mut self, list: &[Doc], retired_at_ms: f64) {
         for zone in list {
