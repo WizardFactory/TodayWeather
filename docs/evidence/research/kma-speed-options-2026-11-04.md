@@ -39,7 +39,7 @@ No credential left the workstation except provider keys passed to the process by
 
 ### With one bound on the request
 
-The same scenarios ran on 2026-11-06 at 04:26 to 04:29 KST with the CI binary of `435a96cc` (PR #2863): one wait for what the request started, the warning zone state offered before its publications, no wait for image acquisitions, and the geocoder's newer province names mapped to the listed ones. The "Without" column is `29243e6e` at 00:20 KST.
+The same scenarios ran on 2026-11-06 at 04:26 to 04:29 KST with the CI binary of `435a96cc` (PR #2863): one wait for what the request started, the warning zone state offered before its publications, no wait for image acquisitions, and the geocoder's newer province names mapped to the listed ones. The "Without" column is `29243e6e`, at 00:20 KST and, for Gangneung, at 02:25 KST.
 
 | Request | Without | With |
 | --- | ---: | ---: |
