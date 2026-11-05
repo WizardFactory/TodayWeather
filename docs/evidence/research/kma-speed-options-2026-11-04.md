@@ -37,6 +37,25 @@ Real latency, from the process logs of one run: S3 operations p50 32 ms, p90 40 
 
 No credential left the workstation except provider keys passed to the process by SSH standard input. Logs fetched from the host were scanned for those keys, without printing them, and none was found. The instance used a role limited to its own bucket.
 
+### With one bound on the request
+
+The same scenarios ran at 00:57 to 00:59 KST on 2026-11-06 with the CI binary of `d84a0bc2` (PR #2863): one 2.5 s wait for what the request started, the warning zone state offered before its publications, no wait for image acquisitions.
+
+| Request | Without, 00:20 KST | With, 00:58 KST |
+| --- | ---: | ---: |
+| Empty store, first request | 4,903, 4,976 (Busan) and 3,641 (Jeju) | 2,889, 2,857 (Busan) and 2,854 (Jeju) |
+| Same cell again, same process | 482 | 1,443 |
+| New cell, same process | 1,581 | 1,327 |
+| Restart, stored cell | 3,777 | 2,871 |
+| Restart, another stored cell | 3,105 | 605 |
+| Restart, new cell | 3,109 | 1,390 |
+
+Single runs again. Every response was 200, `kma_client_eval.py` reports no violation and the forecast part of the full-response check passes. `current.arpltn` and the daily rows are present on the first response, and the Jeju first response carried its two active warnings. Without this change the Jeju first response had neither: it took 3,641 ms and read warnings from S3 while they were still being published, so active warnings were left out.
+
+AK's 3 s now holds in every run, but the 2.5 s cold gate does not, because the first requests all end at the bound. At this hour the life arm holds them: the UV call walks four earlier slots while each answers no data, about 1.1 to 1.7 s each, and its objects reach S3 about 7 s after the request. Stopping the optional arms when the required ones finish would answer at about 2.2 s, calculated from the same traces and not measured, and would leave out whatever air and life data is not ready by then.
+
+The repeated cell got slower because the first request no longer waits for the images, so the second one pays for reading and decoding them, about 1.2 s on this host. A restart's warning cycle ran 14 s with over 300 S3 operations, republishing days it already holds. It no longer holds a request, but it is wasted work (KMA-SR-06 of #2862).
+
 ## Result of the change
 
 These figures are modeled, and the [measurement above](#measured-on-ec2-against-real-providers-and-s3) shows what they left out. AK approved the recommended order on 2026-11-05, with a computed sunrise allowed while stored KASI is not fully read. Options C, E, F, H, I and K and the wait part of J are implemented, along with one stored KASI fold. Same harness, same model: real code with injected provider and S3 delays on an Apple M4, not a production measurement. Response p50 in ms at 20 ms per S3 read:
