@@ -506,6 +506,45 @@ async fn the_collector_offers_the_zone_state_when_nothing_needs_a_sync() {
     assert!(restarted.offered_zone_state().is_some());
 }
 
+/// The offered state replaces what a request reads, so it must not hide a later import for long.
+#[tokio::test]
+async fn a_seed_imported_later_reaches_the_offered_state_the_next_day() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let clock = FixedClock::at("2026-09-26T03:05:00Z");
+    let collector =
+        WarningCollector::new(Arc::new(Recorded::fixtures()), store.clone(), clock.clone());
+    collector.gather().await;
+    let zone = serde_json::json!([
+        {"areaCode": "L1109999", "areaName": "seed", "warnVar": 3, "warnStress": 1,
+         "active": true, "command": "1", "eventTmFc": 202601010900_i64,
+         "eventTmSeq": 1, "eventRank": 1}
+    ]);
+    let zone = OrderedJson::parse(&serde_json::to_vec(&zone).unwrap()).unwrap();
+    server2::warnings::seed::import(
+        &store,
+        &server2::warnings::seed::parse(&seed_file(vec![], Some(zone), "2026-09-26T03:06:00.000Z"))
+            .unwrap(),
+        deadline(),
+    )
+    .await
+    .unwrap();
+    let has_seed = || {
+        store
+            .offered_zone_state()
+            .unwrap()
+            .0
+            .entries()
+            .any(|e| e.area_code == "L1109999")
+    };
+    clock.set("2026-09-26T03:10:00Z");
+    collector.gather().await;
+    assert!(!has_seed(), "the state keeps its seed within the day");
+    clock.set("2026-09-27T03:10:00Z");
+    collector.gather().await;
+    assert!(has_seed());
+}
+
 #[tokio::test]
 async fn the_collector_stores_the_zone_state_once_a_day_after_its_bootstrap() {
     use server2::warnings::records::ZONE_STATE_KIND;

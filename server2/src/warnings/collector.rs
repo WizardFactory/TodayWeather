@@ -55,7 +55,7 @@ pub struct Report {
 #[derive(Default)]
 struct State {
     pending: Option<(String, u32)>,
-    progress_loaded: bool,
+    progress_loaded_on: Option<u32>,
     last_sync_at_ms: Option<i64>,
     oldest_synced: Option<u32>,
     bootstrap_complete: bool,
@@ -221,8 +221,10 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
         state.state_stored_on = Some(today);
         Ok(())
     }
+    /// Once a KST day, so a later seed import reaches the state requests are offered.
     async fn load_progress(&self, state: &mut State, now_ms: i64) -> Result<(), CycleError> {
-        if state.progress_loaded {
+        let today = kst_date(now_ms, 0);
+        if state.progress_loaded_on == Some(today) {
             return Ok(());
         }
         let deadline = self.deadline();
@@ -242,7 +244,7 @@ impl<S: WarningSource + ?Sized, T: CatalogTransport> WarningCollector<S, T> {
             state.bootstrap_complete = oldest <= kst_date(now_ms, -ZONE_LOOKBACK_DAYS);
         }
         state.zones = Some(zones);
-        state.progress_loaded = true;
+        state.progress_loaded_on = Some(today);
         Ok(())
     }
     /// `syncZones`: fetch every planned day first; publish only after the whole series succeeds.
