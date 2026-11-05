@@ -1460,13 +1460,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// Join the shared warning owner, keeping the request's existing bounded wait.
-    /// The geocoder names two provinces by their new names. The town list and the region table
-    /// keep the old ones, and legacy's lookups are exact, so they would miss them.
+    /// Legacy's lookups are exact, so the geocoder's newer province names would miss the town
+    /// list and the region table.
     fn list_region(&self, request: &mut KmaRequest) {
         if self.observed_history
             && let Some(region) = request.region.as_deref()
         {
-            request.region = Some(representative::listed_first(region).to_owned());
+            let city = request.city.as_deref().unwrap_or_default();
+            request.region = Some(representative::listed_first(region, city).to_owned());
         }
     }
     /// Starts a due warning cycle and waits for it. Under the observed source the wait ends at

@@ -1217,50 +1217,87 @@ async fn a_town_outside_the_list_gets_its_forecast_within_the_bound() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
     let _peers = S3_PEERS.lock().await;
-    let peer = Peer::persistent();
-    let store =
-        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
-    let writer = Writer::new(store, Config::default()).unwrap();
-    let source = build_source(&peer, Arc::new(Providers::default()))
-        .with_forecast(Some(Arc::new(Forecasts {
-            writer: writer.clone(),
-            calls: Arc::new(AtomicUsize::new(0)),
-        })))
-        .with_raw_writer(writer.clone());
-    let backend = KmaBackend::new(
-        Arc::new(source),
-        Arc::new(|| NOW),
-        AssemblyConfig::default(),
-    );
-    let request =
-        server2::domestic::kma::backend::parse_path("/v000903/kma/addr/%EA%B0%95%EC%9B%90%ED%8A%B9%EB%B3%84%EC%9E%90%EC%B9%98%EB%8F%84/%EA%B0%95%EB%A6%89%EC%8B%9C/%ED%99%8D%EC%A0%9C%EB%8F%99", "ko")
-            .unwrap();
-    let outcome = backend
-        .outcome(request, Instant::now() + Duration::from_secs(8))
-        .await
-        .unwrap();
-    let server2::domestic::kma::Outcome::Json(body) = outcome else {
-        panic!("{outcome:?}")
-    };
-    let body: serde_json::Value = serde_json::from_slice(&body.to_bytes()).unwrap();
-    assert!(
-        !body["short"].as_array().unwrap().is_empty(),
-        "the listed town"
-    );
-    let status = &body["midData"]["dailyStatus"];
-    for reason in status["reasons"].as_array().unwrap() {
-        assert!(
-            ![
-                "land-unavailable",
-                "temperature-unavailable",
-                "future-mid-unavailable"
-            ]
-            .contains(&reason.as_str().unwrap()),
-            "{status}"
+    for (region, city, town) in [
+        ("강원특별자치도", "강릉시", "홍제동"),
+        ("전북특별자치도", "군산시", "조촌동"),
+        ("전남광주통합특별시", "여수시", "쌍봉동"),
+        ("전남광주통합특별시", "광산구", "송정2동"),
+        ("대구광역시", "군위군", "군위읍"),
+    ] {
+        let peer = Peer::persistent();
+        let store = Arc::new(
+            CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap(),
         );
+        let writer = Writer::new(store, Config::default()).unwrap();
+        let source = build_source(&peer, Arc::new(Providers::default()))
+            .with_forecast(Some(Arc::new(Forecasts {
+                writer: writer.clone(),
+                calls: Arc::new(AtomicUsize::new(0)),
+            })))
+            .with_raw_writer(writer.clone());
+        let backend = KmaBackend::new(
+            Arc::new(source),
+            Arc::new(|| NOW),
+            AssemblyConfig::default(),
+        );
+        let mut request = super::source_s3::request();
+        request.region = Some(region.into());
+        request.city = Some(city.into());
+        request.town = Some(town.into());
+        let outcome = backend
+            .outcome(request, Instant::now() + Duration::from_secs(8))
+            .await
+            .unwrap();
+        let server2::domestic::kma::Outcome::Json(body) = outcome else {
+            panic!("{outcome:?}")
+        };
+        let body: serde_json::Value = serde_json::from_slice(&body.to_bytes()).unwrap();
+        assert!(
+            !body["short"].as_array().unwrap().is_empty(),
+            "{region} {city}: the listed town"
+        );
+        let status = &body["midData"]["dailyStatus"];
+        for reason in status["reasons"].as_array().unwrap() {
+            assert!(
+                ![
+                    "land-unavailable",
+                    "temperature-unavailable",
+                    "future-mid-unavailable"
+                ]
+                .contains(&reason.as_str().unwrap()),
+                "{region} {city}: {status}"
+            );
+        }
+        let daily = body["midData"]["dailyData"].as_array().unwrap();
+        assert_eq!(daily.last().unwrap()["date"], json!("20261004"));
     }
-    let daily = body["midData"]["dailyData"].as_array().unwrap();
-    assert_eq!(daily.last().unwrap()["date"], json!("20261004"));
+}
+
+/// Only those names move: a Daegu district and an unchanged province stay.
+#[tokio::test]
+async fn the_listed_province_depends_on_the_new_name_and_its_city() {
+    use server2::domestic::kma::backend::KmaSource;
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let source = build_source(&peer, Arc::new(Providers::default()));
+    for (region, city, listed) in [
+        ("강원특별자치도", "강릉시", "강원도"),
+        ("전북특별자치도", "군산시", "전라북도"),
+        ("전남광주통합특별시", "여수시", "전라남도"),
+        ("전남광주통합특별시", "광산구", "광주광역시"),
+        ("대구광역시", "군위군", "경상북도"),
+        ("대구광역시", "수성구", "대구광역시"),
+        ("서울특별시", "중구", "서울특별시"),
+    ] {
+        let mut request = super::source_s3::request();
+        request.region = Some(region.into());
+        request.city = Some(city.into());
+        let prepared = source
+            .prepare(request, Instant::now() + Duration::from_secs(8))
+            .await
+            .unwrap();
+        assert_eq!(prepared.region.as_deref(), Some(listed), "{region} {city}");
+    }
 }
 
 /// A mid forecast that never ends must not hold the forecast of a town outside the list.

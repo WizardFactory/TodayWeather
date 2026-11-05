@@ -52,12 +52,18 @@ fn elevations() -> &'static HashMap<Key, [f64; 3]> {
         out
     })
 }
-/// The table keeps the province names of the town list.
-pub(super) fn listed_first(first: &str) -> &str {
-    match first {
-        "강원특별자치도" => "강원도",
-        "전북특별자치도" => "전라북도",
-        other => other,
+/// The town list and the region table keep the names from before these changes, and the geocoder
+/// answers the new ones.
+pub(super) fn listed_first<'a>(first: &'a str, second: &str) -> &'a str {
+    match (first, second) {
+        ("강원특별자치도", _) => "강원도",
+        ("전북특별자치도", _) => "전라북도",
+        ("전남광주통합특별시", "동구" | "서구" | "남구" | "북구" | "광산구") => {
+            "광주광역시"
+        }
+        ("전남광주통합특별시", _) => "전라남도",
+        ("대구광역시", "군위군") => "경상북도",
+        (other, _) => other,
     }
 }
 fn serves(first: &str, second: &str, station: &str) -> bool {
@@ -123,7 +129,7 @@ pub fn verdict(
     lon: f64,
     stations: &[Doc],
 ) -> Verdict {
-    let first = listed_first(first);
+    let first = listed_first(first, second);
     let key = (first.to_owned(), second.to_owned(), third.to_owned());
     let Some(estimates) = elevations().get(&key) else {
         return Verdict::Nearest;
