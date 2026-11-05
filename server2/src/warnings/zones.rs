@@ -409,8 +409,20 @@ pub fn state_key(area_code: &str, warn_var: f64) -> String {
 pub struct ZoneState {
     order: Vec<String>,
     entries: HashMap<String, Entry>,
+    seed_fetched: Option<u64>,
 }
 impl ZoneState {
+    /// An empty state on the legacy seed acquired at `seed_fetched`.
+    pub fn on_seed(seed_fetched: Option<u64>) -> Self {
+        Self {
+            seed_fetched,
+            ..Self::default()
+        }
+    }
+    /// The acquisition of the legacy seed this state was built on, whichever is stored by now.
+    pub fn seed_fetched(&self) -> Option<u64> {
+        self.seed_fetched
+    }
     pub fn insert(&mut self, entry: Entry) {
         let key = state_key(&entry.area_code, entry.warn_var);
         if !self.entries.contains_key(&key) {

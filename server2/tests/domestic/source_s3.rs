@@ -1510,3 +1510,46 @@ async fn legacy_comparisons_and_conversions_shape_the_answer() {
     inherited["units"]["temperatureUnit"] = json!({"toString": "F"});
     assert_eq!(inherited, own);
 }
+
+#[tokio::test]
+async fn the_legacy_source_keeps_the_mid_completion_order_across_publications() {
+    let _serial = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let key = ProviderKey::Named {
+        id: "reg-11b10101".into(),
+    };
+    let mut completions = Vec::new();
+    // The new publication's request finishes first and a running request of the old one just
+    // after it: legacy `saveOnlyLastOne` follows completion order, not publication order.
+    for (date, time, at) in [
+        (20260924, 600, kst_ms(20260924, 800) + 1000.),
+        (20260923, 1800, kst_ms(20260924, 800) + 2000.),
+    ] {
+        let p = Publication::new(date, time).unwrap();
+        let body = mid_page(vec![temp_item()]);
+        publish(
+            &store,
+            "data-go-kr",
+            "mid-ta",
+            &key,
+            p.period(),
+            &p.partition(),
+            at,
+            std::slice::from_ref(&body),
+            "application/json",
+        )
+        .await;
+        completions.push(fetched(at, &p.partition(), body));
+    }
+    let expected = mid_documents(MidModel::Temp, "11B10101", &completions, NOW);
+    let actual = source(&peer)
+        .mid_answer(MidModel::Temp, "11B10101", false, NOW, deadline())
+        .await
+        .unwrap();
+    same(
+        &docs_json(&actual),
+        &docs_json(&expected),
+        "completion order",
+    );
+}

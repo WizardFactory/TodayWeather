@@ -144,6 +144,22 @@ class ForecastCoverageTest(unittest.TestCase):
         self.assertFalse(report['forecast_complete'])
         self.assertEqual(report['short_slot_gaps'], ['20260924:18'])
 
+    def test_a_short_list_starting_after_now_is_incomplete(self):
+        body = forecast_case()
+        body['short'] = [r for r in body['short'] if r['date'] >= '20260925']
+        report = audit_forecast(body, CLOCK)
+        self.assertFalse(report['forecast_complete'])
+        self.assertFalse(report['short_starts_by_now'])
+
+    def test_before_the_morning_mid_target_the_last_day_is_not_expected(self):
+        body = forecast_case()
+        early = '2026-09-24T07:59:00+09:00'
+        body['midData']['dailyData'] = [r for r in body['midData']['dailyData']
+                                        if r['date'] <= '20261003']
+        self.assertTrue(audit_forecast(body, early)['forecast_complete'])
+        self.assertEqual(audit_forecast(body, '2026-09-24T08:00:00+09:00')['missing_forecast_dates'],
+                         ['20261004'])
+
     def test_short_times_as_text_keep_their_slots(self):
         body = forecast_case()
         for row in body['short']:

@@ -25,6 +25,7 @@ WEATHER_FIELDS = frozenset(('pop pty r06 r06Approx r06Hours reh s06 s06Approx '
 MAX_INPUT = 32 * 1024 * 1024
 # Legacy daily rows reach D+10; every short issue reaches the end of D+2 in three-hour slots.
 FORECAST_DAYS = 10
+MID_MORNING_HOUR = 8
 SHORT_STEP = timedelta(hours=3)
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 CONTRACT_PATH = REPOSITORY_ROOT / 'server2' / 'config' / 'contracts' / 'kma-history.v1.json'
@@ -127,9 +128,12 @@ def audit_forecast(body, as_of):
     healthy = isinstance(status, dict) and status.get('healthy') is True
     reasons = list(status.get('reasons', [])) if isinstance(status, dict) else ['daily-status-missing']
     dates = {str(r.get('date')) for r in mid.get('dailyData', [])}
-    expected = [(today + timedelta(days=i)).strftime('%Y%m%d') for i in range(FORECAST_DAYS + 1)]
+    # The mid target before 08 KST is the previous day's 18:00 issue, so its last day is D+9.
+    last_day = FORECAST_DAYS if as_kst(as_of).hour >= MID_MORNING_HOUR else FORECAST_DAYS - 1
+    expected = [(today + timedelta(days=i)).strftime('%Y%m%d') for i in range(last_day + 1)]
     missing = [d for d in expected if d not in dates]
     slots = sorted(slot_time(r) for r in body.get('short', []))
+    starts = bool(slots) and slots[0] <= as_kst(as_of) + SHORT_STEP
     gaps = []
     for earlier, later in zip(slots, slots[1:]):
         moment = earlier + SHORT_STEP
@@ -137,10 +141,11 @@ def audit_forecast(body, as_of):
             gaps.append(slot_label(moment))
             moment += SHORT_STEP
     reaches = bool(slots) and slots[-1] >= today + timedelta(days=3)
-    return dict(forecast_complete=healthy and not missing and reaches and not gaps,
+    return dict(forecast_complete=healthy and not missing and starts and reaches and not gaps,
                 daily_status_healthy=healthy, daily_status_reasons=reasons,
                 missing_forecast_dates=missing, short_slot_count=len(slots),
-                short_reaches_second_future_day=reaches, short_slot_gaps=gaps)
+                short_starts_by_now=starts, short_reaches_second_future_day=reaches,
+                short_slot_gaps=gaps)
 
 
 def value_at(row, key):

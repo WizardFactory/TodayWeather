@@ -294,6 +294,23 @@ pub struct WarningStore<T> {
     config: StoreConfig,
     pub counters: Arc<Counters>,
 }
+/// When a `_sync` marker's bootstrap had seen the whole lookback: the time of its last sync. An
+/// unfinished bootstrap (covered start later than sync - 59 days) has not seen older days.
+fn covered_sync(docs: &[Value]) -> Option<i64> {
+    let marker = docs
+        .iter()
+        .find(|d| d.get("areaCode").and_then(Value::as_str) == Some("_sync"))?;
+    let synced = marker
+        .get("lastSyncAt")
+        .and_then(Value::as_str)
+        .and_then(js::parse_iso)?;
+    let oldest: u32 = marker
+        .get("oldestSyncedTmFc")
+        .and_then(Value::as_str)?
+        .parse()
+        .ok()?;
+    (oldest <= kst_date(synced, -ZONE_LOOKBACK_DAYS)).then_some(synced)
+}
 fn bulletin_map(kind: u8, date: u32, counters: Arc<Counters>) -> Map<Option<Bulletin>> {
     Arc::new(move |records| {
         let b = records::derive(kind, records)?;
@@ -560,10 +577,11 @@ impl<T: CatalogTransport> WarningStore<T> {
         let day = self.day(ZONE_STATE_KIND, *newest, deadline).await?;
         Ok(day.items.into_iter().next_back().filter(|latest| {
             records::zone_seed(latest).is_ok_and(|docs| {
-                docs.iter().any(|d| {
-                    d.get("areaCode").and_then(Value::as_str) == Some("_sync")
-                        && d.get("seedFetchedAtMs").and_then(Value::as_u64) == seed_fetched
-                })
+                covered_sync(&docs).is_some()
+                    && docs.iter().any(|d| {
+                        d.get("areaCode").and_then(Value::as_str) == Some("_sync")
+                            && d.get("seedFetchedAtMs").and_then(Value::as_u64) == seed_fetched
+                    })
             })
         }))
     }
@@ -577,15 +595,12 @@ impl<T: CatalogTransport> WarningStore<T> {
         now_ms: i64,
         deadline: Instant,
     ) -> Result<(), Error> {
-        let seed = self
-            .day(ZONE_SEED_KIND, records::SEED_DATE, deadline)
-            .await?;
         let mut docs: Vec<Value> = state.entries().map(|e| e.to_legacy()).collect();
         docs.push(serde_json::json!({
             "areaCode": "_sync",
             "lastSyncAt": js::iso(synced_ms),
             "oldestSyncedTmFc": format!("{oldest_synced:08}"),
-            "seedFetchedAtMs": Self::seed_fetched(&seed),
+            "seedFetchedAtMs": state.seed_fetched(),
         }));
         let bytes = serde_json::to_vec(&docs).map_err(|_| Error::Invalid("zone state JSON"))?;
         self.publish(
@@ -603,13 +618,16 @@ impl<T: CatalogTransport> WarningStore<T> {
     /// Zone state: the newest stored state or legacy zone seed, then every published getPwnCd
     /// revision since it (all published days without either), replayed as one batch in memory.
     pub async fn zone_state(&self, now_ms: i64, deadline: Instant) -> Result<ZoneState, Error> {
-        let mut state = ZoneState::default();
         let seed = self
             .day(ZONE_SEED_KIND, records::SEED_DATE, deadline)
             .await?;
+        let seed_fetched = Self::seed_fetched(&seed);
+        let mut state = ZoneState::on_seed(seed_fetched);
+        // A stored state only shortens the replay: one that cannot be read costs the replay.
         let snapshot = self
-            .zone_snapshot(Self::seed_fetched(&seed), now_ms, deadline)
-            .await?;
+            .zone_snapshot(seed_fetched, now_ms, deadline)
+            .await
+            .unwrap_or_default();
         let mut from = FIRST_DATE;
         if let Some(latest) = snapshot.as_ref().or(seed.items.last()) {
             let docs = records::zone_seed(latest)?;
@@ -621,23 +639,7 @@ impl<T: CatalogTransport> WarningStore<T> {
             // The snapshot reflects events only through its `_sync.lastSyncAt` (a later export
             // time proves nothing); getPwnCd rows are final at D+2, so replay from two days
             // before that sync. Without a valid marker, replay every published day.
-            // An unfinished legacy bootstrap (covered start later than sync - 59 days) has not
-            // seen older days either, so it also replays everything.
-            let marker = docs
-                .iter()
-                .find(|d| d.get("areaCode").and_then(Value::as_str) == Some("_sync"));
-            let synced = marker
-                .and_then(|d| d.get("lastSyncAt"))
-                .and_then(Value::as_str)
-                .and_then(js::parse_iso);
-            let covered = |synced: i64| {
-                marker
-                    .and_then(|d| d.get("oldestSyncedTmFc"))
-                    .and_then(Value::as_str)
-                    .and_then(|s| s.parse::<u32>().ok())
-                    .is_some_and(|oldest| oldest <= kst_date(synced, -ZONE_LOOKBACK_DAYS))
-            };
-            if let Some(synced) = synced.filter(|s| covered(*s)) {
+            if let Some(synced) = covered_sync(&docs) {
                 let exported = latest[0].envelope.identity.fetched_at_ms as i64;
                 from = kst_date(synced.min(exported), -2).max(FIRST_DATE);
             }

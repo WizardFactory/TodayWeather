@@ -1,5 +1,6 @@
 //! S3 identities for warning acquisitions and in-memory derivation of legacy documents.
-//! Raw bytes are exact provider/export bytes; no derived bulletin or zone state is stored.
+//! Raw bytes are exact provider/export bytes, except the zone state the collector stores once a
+//! KST day (`ZONE_STATE_KIND`); no derived bulletin is stored.
 use super::{
     js::{self, key, ostr},
     provider::{self, Operation},

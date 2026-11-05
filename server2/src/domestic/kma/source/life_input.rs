@@ -902,27 +902,22 @@ fn kasi_key(area: &str) -> Option<ProviderKey> {
         .ok()
         .map(|r| r.provider_key())
 }
-/// Apply the newest stored fold and return its day. An unreadable fold only costs the longer
-/// restore.
+/// Apply the newest stored fold and return when it was built. An unreadable fold only costs the
+/// longer restore.
 async fn read_kasi_fold<T: IndexListing + Clone + 'static>(
     shared: &Arc<Shared<T>>,
     now: f64,
     first_day: f64,
     deadline: Instant,
-) -> Result<Option<String>, String> {
+) -> Result<Option<f64>, String> {
     let key = all_areas();
     let parts = shared
         .reader
-        .partitions(
-            DATA_GO_KR,
-            KASI_FOLD,
-            &key,
-            &months(now - KASI_FOLD_SEARCH_MS, now),
-            deadline,
-        )
+        .key_partitions(DATA_GO_KR, KASI_FOLD, &key, deadline)
         .await
         .map_err(|e| format!("kasi fold listing: {e}"))?;
-    let Some(day) = parts.last() else {
+    let oldest = utc_date(now - KASI_FOLD_SEARCH_MS);
+    let Some(day) = parts.last().filter(|day| **day >= oldest) else {
         return Ok(None);
     };
     let found = shared
@@ -953,7 +948,9 @@ async fn read_kasi_fold<T: IndexListing + Clone + 'static>(
     }
     Arc::make_mut(&mut state.folded).forget_before(first_day);
     state.unstored = unstored;
-    Ok(Some(day.clone()))
+    Ok(Some(
+        body.get("at").and_then(Value::as_f64).unwrap_or_default(),
+    ))
 }
 /// Store what the fold applied as one object, so a new process reads it instead of every area
 /// and day.
@@ -989,7 +986,7 @@ async fn store_kasi_fold<T: IndexListing + Clone + 'static>(
             .iter()
             .map(|(area, day, item)| serde_json::json!({"area": area, "day": day, "item": item}))
             .collect();
-        let body = serde_json::json!({"schema": KASI_FOLD_SCHEMA, "items": items});
+        let body = serde_json::json!({"schema": KASI_FOLD_SCHEMA, "at": now, "items": items});
         let bytes = serde_json::to_vec(&body).map_err(|e| format!("kasi fold: {e}"))?;
         (bytes, state.unstored)
     };
@@ -1049,6 +1046,10 @@ async fn restore_kasi<T: IndexListing + Clone + 'static>(
     deadline: Option<Instant>,
 ) -> Result<(), String> {
     let _refresh = shared.kasi_refresh.lock().await;
+    // A capture pass restored it while this request waited.
+    if deadline.is_some() && shared.kasi.lock().unwrap_or_else(|e| e.into_inner()).loaded {
+        return Ok(());
+    }
     let days = kasi_days(now);
     let first_day = crate::world::js::parts(now - (8. + KASI_KEEP_DAYS) * DAY_MS).map_or(0., |p| {
         crate::world::js::days_from_civil(p.year, p.month, p.day) as f64 * DAY_MS
@@ -1059,11 +1060,14 @@ async fn restore_kasi<T: IndexListing + Clone + 'static>(
         m
     };
     // Read: the stored fold, one listing of the kind, then the stored days the fold lacks. Every
-    // S3 call has its own bound (a pass can run for many minutes).
+    // S3 call has its own bound (a pass can run for many minutes). A fold that cannot be read
+    // only costs those reads.
     let read_by = || deadline.unwrap_or_else(|| Instant::now() + KASI_READ);
     if !shared.kasi.lock().unwrap_or_else(|e| e.into_inner()).loaded
-        && let Some(day) = read_kasi_fold(shared, now, first_day, read_by()).await?
-        && day >= utc_date(now - DAY_MS)
+        && let Some(at) = read_kasi_fold(shared, now, first_day, read_by())
+            .await
+            .unwrap_or_default()
+        && now - at <= DAY_MS
     {
         // At most a day old it stands for the listing; the capture pass adds what came later.
         shared.kasi.lock().unwrap_or_else(|e| e.into_inner()).loaded = true;
@@ -1166,7 +1170,9 @@ async fn kasi_pass<T: IndexListing + Clone + 'static>(
     if let Some(acquire) = shared.acquire.clone() {
         acquire_kasi(shared, now, acquire).await?;
     }
-    store_kasi_fold(shared, now).await
+    // A later pass retries it, and a restore works without one: not a pass error.
+    let _ = store_kasi_fold(shared, now).await;
+    Ok(())
 }
 /// Acquire what is still missing.
 async fn acquire_kasi<T: IndexListing + Clone + 'static>(

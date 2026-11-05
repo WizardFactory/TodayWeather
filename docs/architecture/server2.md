@@ -791,7 +791,9 @@ the legacy 501. Zone state for `specialInfo` starts from the newest `zone-state`
 in force, else the newest zone seed; every `pwn-cd` revision published since its sync point (every
 published day without either) is then replayed in memory by an owned refresh task. The collector
 stores `zone-state` once a KST day after its sixty-day bootstrap, so cold replay cost is bounded by
-the days since then, and a seed imported later voids older states. One raw LIST decides the days to
+the days since then. Each state names the seed it was built on, so a seed imported later voids older
+states, including one built before the import and stored after it. A state that cannot be read, or
+whose bootstrap had not covered the lookback, costs the replay from the seed. One raw LIST decides the days to
 read: a day with no raw object costs nothing, and a complete orphan group has raw objects, so its
 day is read and repaired. Discovery reaches back to 1970, so no stored bulletin ages out. Seeds come from the
 offline `server2/tools/migration/` converter and an importer that uses the shared
@@ -1968,8 +1970,9 @@ long the range has grown. An acquisition is dated by its last page.
 - **Grid and RSS** read the publications that can still own a retained slot: 216 h plus the
   horizon and a trailing day. The observed response reads 54 h instead (`stored-read-window-v1`),
   and requests a publication the listing shows absent without waiting for the stored reads.
-- **Mid** reads the newest publication first and stops at the first document: each save replaces
-  the whole document, as legacy keeps the last saved one.
+- **Mid** in the observed response reads the newest publication first and stops at the first
+  document: each save replaces the whole document. `S3Source::new` keeps legacy's last completed
+  acquisition of the newest month, so an old publication completing last still wins there.
 - **Forecast zones** fold every list since 2026-01 in completion order. A 10-minute refresh appends
   newer lists. A late list completed earlier triggers a refold, and a daily refold catches the rest.
 The snapshot lists the matched town as `towns()`; the chain uses the list only for `_findTown`,
@@ -2316,9 +2319,10 @@ S3 listing of the kind, then the missing area/days of the window, today's column
 iterates per area; the stored set is the same), an area stopping at its first failure; every S3
 call of a pass has its own bound. A pass ends by storing what it applied as one `kasi-fold` object.
 A new process restores from the newest fold, and a fold at most a day old stands for the listing;
-without one it reads areas one at a time so the shared S3 gate stays free for requests. A request
-waits at most 500 ms for the restore, which continues on its own; until it ends the assembly computes
-sunrise and sunset (AK, 2026-11-05). The fold forgets days 30 days before the window but keeps every
+without a readable one it reads areas one at a time so the shared S3 gate stays free for requests. A
+request waits at most 500 ms for the restore, which continues on its own; until it ends the assembly
+computes sunrise and sunset (AK, 2026-11-05). A request that waited behind a running pass lists nothing
+itself. A fold that cannot be stored is retried by a later pass and does not fail this one. The fold forgets days 30 days before the window but keeps every
 location it ever stored with its coordinate (a cold read learns a location that has only older
 days from its newest record), because legacy's unbounded `$near` still picks such a location. A
 location's days are answered in day order (legacy's natural order: each gather appends its new

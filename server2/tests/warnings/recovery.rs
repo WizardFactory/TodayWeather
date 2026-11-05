@@ -888,3 +888,104 @@ async fn a_day_with_only_raw_objects_is_still_repaired_into_the_zone_state() {
         .unwrap();
     assert_eq!(state.len(), 1);
 }
+
+#[tokio::test]
+async fn a_seed_imported_while_a_state_is_held_is_not_hidden_by_its_snapshot() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let now = ms("2026-09-26T00:10:00.000Z");
+    publish_zone_row(
+        &store,
+        20260925,
+        zone_row("L1100200", 12, 0, "1", 202609250900),
+    )
+    .await;
+    // The collector holds this state between cycles.
+    let held = store.zone_state(now, deadline()).await.unwrap();
+    let zone = serde_json::json!([
+        {"areaCode": "L1100100", "areaName": "seed", "warnVar": 3, "warnStress": 1,
+         "active": true, "command": "1", "eventTmFc": 202601010900_i64,
+         "eventTmSeq": 1, "eventRank": 1}
+    ]);
+    let zone = OrderedJson::parse(&serde_json::to_vec(&zone).unwrap()).unwrap();
+    import(
+        &store,
+        &seed_file(vec![], Some(zone), "2026-09-26T00:11:00.000Z"),
+    )
+    .await;
+    // The next daily state was built before the import, so it does not stand for that seed.
+    store
+        .publish_zone_snapshot(&held, now, 20260701, now + 120000, deadline())
+        .await
+        .unwrap();
+    let restored = peer
+        .store()
+        .zone_state(now + 180000, deadline())
+        .await
+        .unwrap();
+    let areas: Vec<_> = restored.entries().map(|e| e.area_code.clone()).collect();
+    assert!(areas.iter().any(|a| a == "L1100100"), "{areas:?}");
+    assert!(areas.iter().any(|a| a == "L1100200"), "{areas:?}");
+}
+
+#[tokio::test]
+async fn an_unreadable_zone_state_falls_back_to_the_originals() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let now = ms("2026-09-26T00:10:00.000Z");
+    publish_zone_row(
+        &store,
+        20260925,
+        zone_row("L1100200", 12, 0, "1", 202609250900),
+    )
+    .await;
+    let full = store.zone_state(now, deadline()).await.unwrap();
+    store
+        .publish_zone_snapshot(&full, now, 20260701, now, deadline())
+        .await
+        .unwrap();
+    let snapshot = records::catalog(records::ZONE_STATE_KIND, 20260926)
+        .unwrap()
+        .key();
+    peer.fault("corrupt", &snapshot).await;
+    let restored = peer
+        .store()
+        .zone_state(now + 1000, deadline())
+        .await
+        .unwrap();
+    assert_eq!(restored.len(), 1);
+}
+
+#[tokio::test]
+async fn a_zone_state_of_an_unfinished_bootstrap_does_not_stand_for_the_seed() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let now = ms("2026-09-26T00:10:00.000Z");
+    let zone = serde_json::json!([
+        {"areaCode": "L1100100", "areaName": "seed", "warnVar": 3, "warnStress": 1,
+         "active": true, "command": "1", "eventTmFc": 202601010900_i64,
+         "eventTmSeq": 1, "eventRank": 1}
+    ]);
+    let zone = OrderedJson::parse(&serde_json::to_vec(&zone).unwrap()).unwrap();
+    import(
+        &store,
+        &seed_file(vec![], Some(zone), "2026-09-25T00:11:00.000Z"),
+    )
+    .await;
+    let seed = store
+        .zone_state(now, deadline())
+        .await
+        .unwrap()
+        .seed_fetched();
+    let empty = server2::warnings::zones::ZoneState::on_seed(seed);
+    store
+        .publish_zone_snapshot(&empty, now, 20260925, now, deadline())
+        .await
+        .unwrap();
+    let restored = peer
+        .store()
+        .zone_state(now + 1000, deadline())
+        .await
+        .unwrap();
+    assert_eq!(restored.len(), 1);
+}

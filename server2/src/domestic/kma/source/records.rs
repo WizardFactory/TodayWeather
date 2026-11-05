@@ -136,6 +136,29 @@ impl<T: IndexListing + Clone> Reader<T> {
         out.dedup();
         Ok(out)
     }
+    /// Every published partition of one key, ascending, from one LIST of the key.
+    pub async fn key_partitions(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        deadline: Instant,
+    ) -> Result<Vec<String>, Error> {
+        let prefix = Self::prefix(source, kind, key)?;
+        let mut out: Vec<String> = self
+            .listed(&prefix, LIST_PAGES, deadline)
+            .await?
+            .iter()
+            .filter_map(|key| {
+                key.strip_prefix(&prefix)
+                    .and_then(|k| k.strip_suffix(".json"))
+                    .map(str::to_owned)
+            })
+            .collect();
+        out.sort();
+        out.dedup();
+        Ok(out)
+    }
     /// Published partitions of every key of one kind by key hash, ascending, from one paged LIST.
     pub async fn kind_partitions(
         &self,

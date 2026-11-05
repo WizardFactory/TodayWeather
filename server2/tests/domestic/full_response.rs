@@ -605,26 +605,36 @@ async fn read_since(
         .map(|(k, _)| k)
         .collect()
 }
-/// Records how many stored-short reads had finished when the latest short was requested.
+/// Records how many stored reads had finished when the latest publication was requested.
 struct Watching {
     inner: Forecasts,
     endpoint: String,
     reads_at_call: Arc<std::sync::Mutex<Option<usize>>>,
+    watched: fn(&ForecastRequest) -> bool,
+    raw: &'static str,
+}
+fn latest_short(request: &ForecastRequest) -> bool {
+    matches!(request, ForecastRequest::DataGoKr(r) if r.family() == F::VilageFcst)
+}
+fn latest_rss(request: &ForecastRequest) -> bool {
+    matches!(request, ForecastRequest::Rss(_))
 }
 impl ForecastAcquire for Watching {
     fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>> {
         let forward = self.inner.acquire(request.clone());
         let (endpoint, seen) = (self.endpoint.clone(), self.reads_at_call.clone());
+        let (watched, raw) = (self.watched, self.raw);
         Box::pin(async move {
-            if let ForecastRequest::DataGoKr(r) = &request
-                && r.family() == F::VilageFcst
-            {
+            if watched(&request) {
                 let status = peer_status(&endpoint).await;
                 let reads = status
                     .as_object()
                     .unwrap()
                     .iter()
-                    .filter(|(k, _)| k.starts_with("OP GET raw/v2/data-go-kr/vilage-fcst/"))
+                    .filter(|(k, _)| {
+                        k.strip_prefix("OP GET ")
+                            .is_some_and(|k| k.starts_with(raw))
+                    })
                     .map(|(_, n)| n.as_u64().unwrap() as usize)
                     .sum();
                 seen.lock().unwrap().get_or_insert(reads);
@@ -680,6 +690,8 @@ async fn an_absent_latest_short_is_requested_without_waiting_for_stored_reads() 
             },
             endpoint: peer.endpoint().to_owned(),
             reads_at_call: reads_at_call.clone(),
+            watched: latest_short,
+            raw: "raw/v2/data-go-kr/vilage-fcst/",
         })))
         .with_raw_writer(writer.clone());
     let response = build_gateway(Arc::new(source), None)
@@ -695,6 +707,132 @@ async fn an_absent_latest_short_is_requested_without_waiting_for_stored_reads() 
         reads < stored.len(),
         "{reads} of {} stored reads done",
         stored.len()
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_absent_latest_rss_is_requested_without_waiting_for_stored_reads() {
+    use server2::domestic::{family::WebRequest, publication::rss_latest};
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let key = WebRequest::town_rss(60, 127).unwrap().provider_key();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let mut p = rss_latest(NOW as i64).unwrap();
+    let mut stored = 0;
+    for _ in 0..12 {
+        p = p.add_hours(-3).unwrap();
+        let a = acquisition(
+            "kma-web",
+            "town-rss",
+            &key,
+            p,
+            &p.partition(),
+            rss_xml(),
+            "application/xml",
+        );
+        store
+            .publish(
+                a.declaration,
+                a.records,
+                Instant::now() + Duration::from_secs(10),
+            )
+            .await
+            .unwrap();
+        stored += 1;
+    }
+    let published: u64 = s3_gets(&peer)
+        .await
+        .iter()
+        .filter(|(k, _)| k.starts_with("raw/v2/kma-web/town-rss/"))
+        .map(|(_, n)| *n)
+        .sum();
+    let client = reqwest::Client::builder().no_proxy().build().unwrap();
+    let slow = client
+        .post(format!(
+            "{}/__catalog?mode=slow-all&key=x",
+            peer.endpoint().trim_end_matches('/')
+        ))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(slow.status(), 204);
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let reads_at_call = Arc::new(std::sync::Mutex::new(None));
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(Watching {
+            inner: Forecasts {
+                writer: writer.clone(),
+                calls: Arc::new(AtomicUsize::new(0)),
+            },
+            endpoint: peer.endpoint().to_owned(),
+            reads_at_call: reads_at_call.clone(),
+            watched: latest_rss,
+            raw: "raw/v2/kma-web/town-rss/",
+        })))
+        .with_raw_writer(writer.clone());
+    let response = build_gateway(Arc::new(source), None)
+        .handle(http_request())
+        .await;
+    assert_eq!(response.status(), 200);
+    let reads = reads_at_call.lock().unwrap().expect("latest rss requested") - published as usize;
+    assert!(reads < stored, "{reads} of {stored} stored reads done");
+}
+
+/// A listed publication whose body organizes nothing is still eligible once it has been read.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_listed_publication_that_proves_unusable_is_requested_after_the_read() {
+    use server2::{
+        domestic::family::{DataGoKrRequest, Target},
+        history::schedule::Family as Sf,
+    };
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let latest = Sf::Short.latest(NOW as i64).unwrap();
+    let key = DataGoKrRequest::new(F::VilageFcst, Target::Grid { nx: 60, ny: 127 }, latest)
+        .unwrap()
+        .provider_key();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap());
+    let a = acquisition(
+        "data-go-kr",
+        F::VilageFcst.kind(),
+        &key,
+        latest,
+        &latest.partition(),
+        envelope(Vec::new()),
+        "application/json",
+    );
+    store
+        .publish(
+            a.declaration,
+            a.records,
+            Instant::now() + Duration::from_secs(10),
+        )
+        .await
+        .unwrap();
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let reads_at_call = Arc::new(std::sync::Mutex::new(None));
+    let source = build_source(&peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(Watching {
+            inner: Forecasts {
+                writer: writer.clone(),
+                calls: Arc::new(AtomicUsize::new(0)),
+            },
+            endpoint: peer.endpoint().to_owned(),
+            reads_at_call: reads_at_call.clone(),
+            watched: latest_short,
+            raw: "raw/v2/data-go-kr/vilage-fcst/",
+        })))
+        .with_raw_writer(writer.clone());
+    let response = build_gateway(Arc::new(source), None)
+        .handle(http_request())
+        .await;
+    assert_eq!(response.status(), 200);
+    assert!(
+        reads_at_call.lock().unwrap().expect("requested again") > 1,
+        "read back at publication, then by the request"
     );
 }
 

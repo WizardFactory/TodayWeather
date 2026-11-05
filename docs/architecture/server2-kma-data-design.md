@@ -461,10 +461,10 @@ is stored. Implemented on 2026-11-05:
 
 | Question | Asked by |
 | --- | --- |
-| Which partitions does this key have? | One LIST of the key when the range exceeds two months |
+| Which partitions does this key have? | One LIST of the key when the range exceeds two months, or for a fold; one LIST per month otherwise, because a long-lived grid key's whole listing costs more pages than two months |
 | Which KASI days are stored? | One LIST of the kind, assigned to areas by key hash |
 | Which warning days hold data? | One raw LIST of the kind; only those days are read |
-| Is a publication absent? | The listing: under ASOS-primary the provider call starts without waiting for stored reads |
+| Is a publication absent? | The listing: under ASOS-primary the provider call of a grid or RSS publication starts without waiting for stored reads |
 | Which stored publications matter? | Under ASOS-primary, the last 54 hours (`stored-read-window-v1`) |
 
 A grid head or day locator would not shorten the empty case: it cannot prove absence, so an

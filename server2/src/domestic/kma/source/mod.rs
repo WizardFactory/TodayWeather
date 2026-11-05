@@ -933,22 +933,37 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let latest = publication::rss_latest(now as i64).ok_or("clock")?;
         let oldest = schedule::from_ms(from as i64).partition();
         let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
-        let mut fetched = self
-            .reader
-            .all("kma-web", "town-rss", &key, &wanted, deadline)
-            .await
-            .map_err(|e| format!("town-rss read: {e}"))?;
-        if !present(&fetched, &latest.partition(), now)
-            && let Ok(request) = crate::domestic::family::WebRequest::town_rss(grid.nx(), grid.ny())
+        let request_latest = || async {
+            let request = crate::domestic::family::WebRequest::town_rss(grid.nx(), grid.ny())
                 .and_then(|r| r.not_before(latest))
-            && let Some(f) = self
-                .acquire(
-                    format!("town-rss/{}/{}", grid_key(grid), latest.partition()),
-                    fetch::ForecastRequest::Rss(request),
-                    LATEST_RETRY,
-                    until,
-                )
-                .await
+                .ok()?;
+            self.acquire(
+                format!("town-rss/{}/{}", grid_key(grid), latest.partition()),
+                fetch::ForecastRequest::Rss(request),
+                LATEST_RETRY,
+                until,
+            )
+            .await
+        };
+        // Observed: what the listing shows absent is requested while the stored reads run.
+        let absent_first = self.observed_history && !wanted.contains(&latest.partition());
+        let (read, requested) = tokio::join!(
+            self.reader
+                .all("kma-web", "town-rss", &key, &wanted, deadline),
+            async {
+                if absent_first {
+                    request_latest().await
+                } else {
+                    None
+                }
+            }
+        );
+        let mut fetched = read.map_err(|e| format!("town-rss read: {e}"))?;
+        if let Some(f) = requested {
+            fetched.push(visible(f, now));
+        } else if !absent_first
+            && !present(&fetched, &latest.partition(), now)
+            && let Some(f) = request_latest().await
         {
             fetched.push(visible(f, now));
         }
@@ -1002,11 +1017,6 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let key = ProviderKey::Named { id: key };
         let latest = publication::mid_tm_fc(now as i64).ok_or("clock")?;
         let latest_part = latest.partition();
-        let listed = self
-            .reader
-            .partitions("data-go-kr", kind, &key, &history_months(now), deadline)
-            .await
-            .map_err(|e| format!("{kind} listing: {e}"))?;
         let request_latest = || async {
             let request = mid_request(model, reg_id, latest)?;
             self.acquire(
@@ -1017,6 +1027,39 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             )
             .await
         };
+        if !self.observed_history {
+            // Legacy `saveOnlyLastOne`: the last completed acquisition of the newest month.
+            for month in history_months(now).into_iter().rev() {
+                let parts = self
+                    .reader
+                    .partitions("data-go-kr", kind, &key, &[month], deadline)
+                    .await
+                    .map_err(|e| format!("{kind} listing: {e}"))?;
+                let mut fetched = self
+                    .reader
+                    .all("data-go-kr", kind, &key, &parts, deadline)
+                    .await
+                    .map_err(|e| format!("{kind} read: {e}"))?;
+                if collected
+                    && month == latest.date() / 100
+                    && !present(&fetched, &latest_part, now)
+                    && let Some(f) = request_latest().await
+                {
+                    fetched.push(visible(f, now));
+                }
+                let found = mid_documents(model, reg_id, &fetched, now);
+                if !found.is_empty() {
+                    return Ok(found);
+                }
+            }
+            // No acquisition was ever saved: legacy has no document either.
+            return Ok(Vec::new());
+        }
+        let listed = self
+            .reader
+            .partitions("data-go-kr", kind, &key, &history_months(now), deadline)
+            .await
+            .map_err(|e| format!("{kind} listing: {e}"))?;
         // Each save replaces the whole document, so the newest publication that organizes is the
         // answer: start there and stop at the first document.
         if collected
