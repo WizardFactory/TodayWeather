@@ -1116,7 +1116,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let _raw_pin = self.raw_writer.as_ref().map(|writer| writer.pin());
         let now = (self.clock)();
         // One instant for the whole request, so a town lookup's wait and the rest do not add up.
-        let observed_until = self.observed_history.then(|| observed_wait_end(deadline));
+        let observed = self.observed_history.then(|| {
+            (
+                observed_instant(deadline, OBSERVED_WAIT),
+                observed_instant(deadline, OBSERVED_SECTION),
+            )
+        });
         let mut effective = request.clone();
         if super::middleware_of(&request.version, request.part.as_deref())
             .contains(&"getAllDataFromDb")
@@ -1157,8 +1162,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             // Medium-range inputs depend on region/city, not on a successful town geocode.
             // Start them alongside the owned lookup so a late location cannot discard already
             // available mid data or create a second acquisition wait budget.
-            let until = observed_until.unwrap_or_else(|| wait_bound(deadline));
-            let section = (until + std::time::Duration::from_millis(200)).min(deadline);
+            let until = observed.map_or_else(|| wait_bound(deadline), |o| o.0);
+            let section = observed.map_or_else(
+                || (until + std::time::Duration::from_millis(200)).min(deadline),
+                |o| o.1,
+            );
             let absent_town = Doc::new();
             let (result, mid, air, life, special) = tokio::join!(
                 self.town_resolver.resolve(
@@ -1222,8 +1230,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // answered as legacy answers absent data. The air and life inputs end their waits 200 ms
         // before the deadline they are given, so they get `until` + 200 ms (`section`), which
         // also bounds the warning-state read; the assembly keeps the last 300 ms.
-        let until = observed_until.unwrap_or_else(|| wait_bound(deadline));
-        let section = (until + std::time::Duration::from_millis(200)).min(deadline);
+        let until = observed.map_or_else(|| wait_bound(deadline), |o| o.0);
+        let section = observed.map_or_else(
+            || (until + std::time::Duration::from_millis(200)).min(deadline),
+            |o| o.1,
+        );
         let observations = async {
             let folded = self.observations.stations(now as i64, until).await;
             let (history, asos) = self
@@ -1502,7 +1513,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> 
     }
     fn narrative_by(&self, deadline: Instant) -> Instant {
         if self.observed_history {
-            (observed_wait_end(deadline) + std::time::Duration::from_millis(400)).min(deadline)
+            observed_instant(deadline, OBSERVED_NARRATIVE)
         } else {
             deadline
         }
@@ -1718,13 +1729,16 @@ const OBSERVED_BUDGET: std::time::Duration = std::time::Duration::from_secs(8);
 /// The observed request's wait for everything it started: its share of AK's 3 s, the rest being
 /// the air and life section and the assembly.
 const OBSERVED_WAIT: std::time::Duration = std::time::Duration::from_millis(2500);
-/// When the observed request stops waiting, the same instant wherever it has got to: `deadline`
-/// is its budget from the start, so a KR remap's wait counts as well.
-fn observed_wait_end(deadline: Instant) -> Instant {
+/// The air and life inputs end their waits 200 ms before the deadline they are given.
+const OBSERVED_SECTION: std::time::Duration = std::time::Duration::from_millis(2700);
+/// The narrative is added after the assembly, so it stops last.
+const OBSERVED_NARRATIVE: std::time::Duration = std::time::Duration::from_millis(2900);
+/// `after` the start of an observed request, the same instant wherever it has got to: `deadline`
+/// is its budget from the start, so a KR remap's wait counts as well. A past instant stays past.
+fn observed_instant(deadline: Instant, after: std::time::Duration) -> Instant {
     deadline
-        .checked_sub(OBSERVED_BUDGET - OBSERVED_WAIT)
+        .checked_sub(OBSERVED_BUDGET - after)
         .unwrap_or_else(Instant::now)
-        .max(Instant::now())
 }
 /// Earlier publications legacy's backfill keeps per family (S14 `schedule`).
 fn fetch_reach(sf: schedule::Family) -> usize {

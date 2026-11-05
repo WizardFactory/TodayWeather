@@ -1152,3 +1152,19 @@ async fn the_wait_ends_at_one_instant_counted_from_the_start_of_the_request() {
     let held = started.elapsed();
     assert!(held < Duration::from_millis(1500), "{held:?}");
 }
+
+/// However late the request got to the narrative, it does not reopen the wait.
+#[tokio::test]
+async fn the_narrative_stops_at_one_instant_from_the_start_of_the_request() {
+    use server2::domestic::kma::backend::KmaSource;
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let source = held_source(&peer);
+    let now = Instant::now();
+    assert_eq!(
+        source.narrative_by(now + Duration::from_secs(8)),
+        now + Duration::from_millis(2900)
+    );
+    let late = now + Duration::from_millis(5050);
+    assert!(source.narrative_by(late) < Instant::now());
+}

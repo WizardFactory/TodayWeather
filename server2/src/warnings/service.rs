@@ -169,8 +169,11 @@ impl<T: CatalogTransport> WarningService<T> {
     }
     /// Take over a newer zone state the collector offered.
     fn adopt_offer(&self) {
-        if let Some((state, at)) = self.store.offered_zone_state() {
-            let mut memory = self.zones.lock().unwrap_or_else(|e| e.into_inner());
+        Self::adopt_into(&self.store, &self.zones);
+    }
+    fn adopt_into(store: &WarningStore<T>, zones: &ZoneSlot) {
+        if let Some((state, at)) = store.offered_zone_state() {
+            let mut memory = zones.lock().unwrap_or_else(|e| e.into_inner());
             if memory.as_ref().is_none_or(|c| c.at < at) {
                 *memory = Some(ZoneCache {
                     state,
@@ -239,6 +242,8 @@ impl<T: CatalogTransport> WarningService<T> {
                     owner.join(crate::observability::Component::Warnings);
                     let _single = refresh.lock_owned().await;
                     let _owner = owner.enter();
+                    // An offer can have arrived since this task was created.
+                    Self::adopt_into(&store, &zones);
                     if let Some(state) = Self::zone_memory(&zones, &config, true) {
                         return Ok(state);
                     }

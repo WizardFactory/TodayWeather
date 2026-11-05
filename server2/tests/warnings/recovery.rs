@@ -1194,3 +1194,26 @@ async fn an_offer_during_a_zone_read_replaces_what_the_read_found() {
         "the next"
     );
 }
+
+/// The refresh task exists but has not run when the offer arrives.
+#[tokio::test]
+async fn an_offer_before_a_refresh_task_runs_answers_this_request_and_the_next() {
+    use futures_util::FutureExt;
+    let peer = Peer::new();
+    let store = peer.store();
+    let service = WarningService::new(
+        store.clone(),
+        FixedClock::at("2026-09-26T00:10:00.000Z"),
+        ServiceConfig::default(),
+    );
+    let town = jongno();
+    let mut reading = Box::pin(service.special_info(&town));
+    assert!((&mut reading).now_or_never().is_none());
+    store.offer_zone_state(offered_warning());
+    assert_eq!(reading.await.unwrap().len(), 1, "this request");
+    assert_eq!(
+        service.special_info(&town).await.unwrap().len(),
+        1,
+        "the next"
+    );
+}
