@@ -1115,6 +1115,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // Covers the whole canonical discovery -> pending-overlay interval.
         let _raw_pin = self.raw_writer.as_ref().map(|writer| writer.pin());
         let now = (self.clock)();
+        // One instant for the whole request, so a town lookup's wait and the rest do not add up.
+        let observed_until = self.observed_history.then(|| {
+            deadline
+                .checked_sub(ANSWER_RESERVE)
+                .unwrap_or_else(Instant::now)
+                .max(Instant::now())
+                .min(Instant::now() + OBSERVED_WAIT)
+        });
         let mut effective = request.clone();
         if super::middleware_of(&request.version, request.part.as_deref())
             .contains(&"getAllDataFromDb")
@@ -1155,7 +1163,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             // Medium-range inputs depend on region/city, not on a successful town geocode.
             // Start them alongside the owned lookup so a late location cannot discard already
             // available mid data or create a second acquisition wait budget.
-            let until = wait_bound(deadline);
+            let until = observed_until.unwrap_or_else(|| wait_bound(deadline));
             let section = (until + std::time::Duration::from_millis(200)).min(deadline);
             let absent_town = Doc::new();
             let (result, mid, air, life, special) = tokio::join!(
@@ -1183,7 +1191,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 ),
                 self.life.load(now, section),
                 async {
-                    self.warning_cycle(until).await;
+                    self.warning_wait(until).await;
                     self.warnings.zone_state(now as i64, section).await.ok()
                 }
             );
@@ -1214,21 +1222,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // A coordinate outside the KMA grid has no grid collection: legacy's `find` by `mCoord`
         // finds no row, so every grid collection answers empty (no acquisition either).
         let grid = kma_grid(coord);
-        // One wait bound for the whole request (at most REQUEST_WAIT, 3 s, and ANSWER_RESERVE
-        // before the deadline): station observations, ASOS history, the forecast, air and life
+        // One wait bound for the whole request (OBSERVED_WAIT from its start, otherwise at most
+        // REQUEST_WAIT, 3 s, and ANSWER_RESERVE before the deadline): station observations, ASOS history, the forecast, air and life
         // acquisitions all stop waiting at `until`, so the waits never add up; late parts are
         // answered as legacy answers absent data. The air and life inputs end their waits 200 ms
         // before the deadline they are given, so they get `until` + 200 ms (`section`), which
         // also bounds the warning-state read; the assembly keeps the last 300 ms.
-        let until = if self.observed_history {
-            deadline
-                .checked_sub(ANSWER_RESERVE)
-                .unwrap_or_else(Instant::now)
-                .max(Instant::now())
-                .min(Instant::now() + OBSERVED_WAIT)
-        } else {
-            wait_bound(deadline)
-        };
+        let until = observed_until.unwrap_or_else(|| wait_bound(deadline));
         let section = (until + std::time::Duration::from_millis(200)).min(deadline);
         let observations = async {
             let folded = self.observations.stations(now as i64, until).await;
@@ -1294,16 +1294,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             // as an owned task). A failed or late read is the legacy store error
             // (`getSpecialInfo` skips the section).
             async {
-                if self.observed_history {
-                    // Starts a due cycle, but its publications do not hold the answer.
-                    tokio::select! {
-                        biased;
-                        () = self.warning_cycle(until) => {}
-                        () = self.warnings.zones_ready() => {}
-                    }
-                } else {
-                    self.warning_cycle(until).await;
-                }
+                self.warning_wait(until).await;
                 self.warnings.zone_state(now as i64, section).await.ok()
             },
             // S15b-3b life inputs (their owned acquisitions start for every request that reaches
@@ -1422,6 +1413,19 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// Join the shared warning owner, keeping the request's existing bounded wait.
+    /// Starts a due warning cycle and waits for it. Under the observed source the wait ends at
+    /// the zone state it offers, so its publications do not hold the answer.
+    async fn warning_wait(&self, until: Instant) {
+        if self.observed_history {
+            tokio::select! {
+                biased;
+                () = self.warning_cycle(until) => {}
+                () = self.warnings.zones_ready() => {}
+            }
+        } else {
+            self.warning_cycle(until).await;
+        }
+    }
     async fn warning_cycle(&self, until: Instant) {
         use crate::warnings::acquisition_worker::Acquisition;
         if let Some(cycles) = &self.warning_cycles {
