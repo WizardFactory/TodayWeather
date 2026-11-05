@@ -8,7 +8,7 @@ AK requires that a client request waits at most 3 s, answers from what was gathe
 - **WARNINGS:** the warning zone state reaches requests once fetched, before the collector's publications, as AK asked for weather data. A later cycle does not hold a request that already has a current state.
 - **IMAGES:** a request does not wait for an image acquisition that takes longer than a request may wait. It continues and a later request reads the result.
 - **SHORTEST:** a missing ultra-short forecast no longer leaves the rest of the response in its internal shape.
-- **TOWNS:** the geocoder's newer names find their listed towns and mid forecast: Gangwon, Jeonbuk, the merged Jeonnam and Gwangju, and Gunwi in Daegu. A town outside the list gets its forecast within the bound. EC2 showed Gangneung at 6.6 to 8.0 s, and these areas had no mid forecast on any response.
+- **TOWNS:** the geocoder's newer names find their listed towns and mid forecast: Gangwon, Jeonbuk, and the merged Jeonnam and Gwangju. A town outside the list gets its forecast within the bound. EC2 showed Gangneung at 6.6 to 8.0 s, and these areas had no mid forecast on any response.
 - **MEASURED:** the first request of a process is measured again on EC2 against the same scenarios.
 - **PLACEMENT:** the placement gate and the artifact policy pass on the outgoing commits.
 

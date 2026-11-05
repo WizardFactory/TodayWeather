@@ -62,7 +62,6 @@ pub(super) fn listed_first<'a>(first: &'a str, second: &str) -> &'a str {
             "광주광역시"
         }
         ("전남광주통합특별시", _) => "전라남도",
-        ("대구광역시", "군위군") => "경상북도",
         (other, _) => other,
     }
 }

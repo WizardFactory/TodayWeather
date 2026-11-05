@@ -1222,7 +1222,6 @@ async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
         ("전북특별자치도", "군산시", "조촌동"),
         ("전남광주통합특별시", "여수시", "쌍봉동"),
         ("전남광주통합특별시", "광산구", "송정2동"),
-        ("대구광역시", "군위군", "군위읍"),
     ] {
         let peer = Peer::persistent();
         let store = Arc::new(
@@ -1273,7 +1272,7 @@ async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
     }
 }
 
-/// Only those names move: a Daegu district and an unchanged province stay.
+/// Only those names move. Gunwi stays in Daegu: its air and food-poisoning regions are Daegu's.
 #[tokio::test]
 async fn the_listed_province_depends_on_the_new_name_and_its_city() {
     use server2::domestic::kma::backend::KmaSource;
@@ -1285,8 +1284,7 @@ async fn the_listed_province_depends_on_the_new_name_and_its_city() {
         ("전북특별자치도", "군산시", "전라북도"),
         ("전남광주통합특별시", "여수시", "전라남도"),
         ("전남광주통합특별시", "광산구", "광주광역시"),
-        ("대구광역시", "군위군", "경상북도"),
-        ("대구광역시", "수성구", "대구광역시"),
+        ("대구광역시", "군위군", "대구광역시"),
         ("서울특별시", "중구", "서울특별시"),
     ] {
         let mut request = super::source_s3::request();
