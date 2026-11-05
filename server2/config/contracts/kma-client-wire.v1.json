@@ -239,11 +239,11 @@
   "wire_additions": {
     "$.current.arpltn.pm10Index": {
       "types": ["number"],
-      "evidence": "server/controllers/kecoController.js:47 sets it from a measured value. The corpus recorded only null, and the real responses of 2026-11-06 carry a number."
+      "evidence": "Legacy kecoController sets it from a measured value. The corpus recorded only null, and the real responses of 2026-11-06 carry a number."
     },
     "$.current.arpltn.pm25Index": {
       "types": ["number"],
-      "evidence": "server/controllers/kecoController.js:47 sets it from a measured value. The corpus recorded only null, and the real responses of 2026-11-06 carry a number."
+      "evidence": "Legacy kecoController sets it from a measured value. The corpus recorded only null, and the real responses of 2026-11-06 carry a number."
     }
   },
   "rules": {
