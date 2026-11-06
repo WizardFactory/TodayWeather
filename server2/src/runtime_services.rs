@@ -26,6 +26,8 @@ pub struct RuntimeServices {
     pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
     pub raw_writer: Option<Arc<crate::storage::response_first::Writer>>,
     pub narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>>,
+    /// S15b-3c: the image hourly forecast production (an AirKorea acquirer is configured).
+    pub image_production: Option<Arc<dyn crate::domestic::kma::source::air_input::ImageProduction>>,
     pub native_fetch: crate::push::deliver::native_fetch::NativeFetch,
     pub s3: Option<ProcessS3>,
     pub delivery: Option<Arc<crate::push::deliver::supervisor::Workers<ProcessS3>>>,
@@ -194,6 +196,7 @@ impl RuntimeServices {
             raw_writer: built.raw_writer,
             warning_cycles: built.warning_cycles,
             narrative_acquire: built.narrative_acquire,
+            image_production: built.image_production,
             gateway: built.gateway,
             push,
             notices,

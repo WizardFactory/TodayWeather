@@ -277,7 +277,7 @@
       "items": [
         "Writer owns charged raw before Ready; server body end/drop, no waiters, a10s cap or shutdown releases S3 publication.",
         "Default virtual reservation768MiB, shrunk to actual retained bytes; retries preserve originals. S16 waits for a frozen durability fence after the body.",
-        "A request stops waiting 2.5 s after it starts, omits what is late and does not wait for image acquisitions. Warning zone state reaches it before the collector publishes."
+        "A request stops waiting 2.5 s after it starts and omits what is late. It reads the image forecast the process timer produced and decodes no GIF. Warning zone state reaches it before the collector publishes."
       ]
     },
     {
@@ -285,7 +285,7 @@
       "title": "Canonical reuse; conditional candidates",
       "items": [
         "Canonical v2 raw/catalog/group controls remain the restore authority. Same selected original closure must replay exactly.",
-        "The collector stores zone-state daily and KASI capture stores kasi-fold: folds of raw inputs, never assembled weather.",
+        "The collector stores zone-state daily, KASI capture stores kasi-fold and the image timer airkorea-forecast-hourly: folds of raw inputs, never assembled weather.",
         "Per-grid optimal combinations, source plans, day locators, heads and packs remain deferred. Single EC2 runs only: the cold p95 gate is not qualified."
       ]
     }

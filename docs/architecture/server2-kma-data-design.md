@@ -388,6 +388,7 @@ representations/v1/{source}/{kind}/{key_hash}/{day}/{manifest_sha256}.json
 # Server-written folds in canonical raw, each read through one LIST and one lookup:
 raw/v2/kma-warning/zone-state/{YYYY}/{MM}/{DD}/...
 raw/v2/data-go-kr/kasi-fold/{YYYY}/{MM}/{DD}/...
+raw/v2/airkorea-image/airkorea-forecast-hourly/{YYYY}/{MM}/{DD}/...
 
 # Deferred discovery experiments; not initial serving dependencies:
 index/v3/{source}/{kind}/{key_hash}/day/{YYYYMMDD}.json
@@ -471,7 +472,10 @@ A grid head or day locator would not shorten the empty case: it cannot prove abs
 empty answer would still need the LIST. Shared data that many objects fold into is instead stored
 as one fold: `zone-state` once a KST day by the warning collector and `kasi-fold` by the KASI
 capture pass. These hold provider items or legacy-shaped state, not assembled weather, and a new
-process falls back to the original objects when no usable fold exists. The observed response also
+process falls back to the original objects when no usable fold exists. The AirKorea image hourly
+forecast is the one fold requests read without that fallback: `airkorea-forecast-hourly`, the
+legacy `ArpltnHourlyForecast` rows decoded from every stored image acquisition, is made by the
+process timer (below), and no request decodes the GIFs. The observed response also
 uses the release's land zones (`data/kma_forecast_land_zones.csv`) until a forecast-zone list is
 stored, so its first answer can request mid temperatures. Measurements are in the
 [speed evidence](../evidence/research/kma-speed-options-2026-11-04.md#result-of-the-change).
@@ -480,7 +484,7 @@ stored, so its first answer can request mid temperatures. Measurements are in th
 
 The observed request stops waiting for everything it started 2.5 s after it reaches the handler, 2.7 s for air and life and 2.9 s for the narrative it adds last. A KR remap before the snapshot counts too, so the waits cannot add up. What is late is omitted. Stored reads keep the 8 s budget, so a slow S3 delays an answer instead of failing it, which is a decision for AK. The town geocoder runs before the handler and keeps its own 3 s cap.
 
-Two kinds of owned work no longer hold a request. The warning collector offers its zone state once fetched, before its publications; a request answers from that memory, and the push feed still sees only durable rows. A request starts a missing AirKorea image acquisition without waiting for it, because its GIFs take longer than the bound, and a later request reads the result. Measurements are in the [speed evidence](../evidence/research/kma-speed-options-2026-11-04.md#with-one-bound-on-the-request).
+Two kinds of owned work no longer hold a request. The warning collector offers its zone state once fetched, before its publications; a request answers from that memory, and the push feed still sees only durable rows. No request acquires or decodes an AirKorea forecast image, because the GIFs and their decoding take longer than the bound (AK 2026-11-06): the process acquires the images and stores the decoded hourly forecast at startup and every ten minutes, independent of requests, and a request only reads the newest product. Measurements are in the [speed evidence](../evidence/research/kma-speed-options-2026-11-04.md#with-one-bound-on-the-request).
 
 ## Wire, storage and assembly format boundaries
 

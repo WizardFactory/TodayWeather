@@ -172,8 +172,9 @@ pub struct S3Source<T> {
     clock: Clock,
     zones: Arc<tokio::sync::Mutex<Option<ZoneCache>>>,
     observations: Arc<observe::Observations<T>>,
-    /// S15b-3: AirKorea national datasets and the air-provider fallback.
-    air: air_input::AirInputs<T>,
+    /// S15b-3: AirKorea national datasets and the air-provider fallback (shared with the image
+    /// forecast production of the observed source).
+    air: Arc<air_input::AirInputs<T>>,
     /// S15b-3b: life index, MFDS food poisoning and KASI rise/set national datasets.
     life: life_input::LifeInputs<T>,
     /// S15b-4: request-time forecast acquisitions (None: stored records only).
@@ -296,14 +297,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 Arc::new(move || clock().max(0.) as u64)
             }),
             observations,
-            air: {
+            air: Arc::new({
                 let air = air_input::AirInputs::new(transport.clone(), store.clone());
                 if observed {
-                    air.answering_before_image_acquisition()
+                    air.reading_produced_images()
                 } else {
                     air
                 }
-            },
+            }),
             life: life_input::LifeInputs::new(transport.clone(), store.clone()),
             reader: Reader { transport, store },
             warnings: Arc::new(WarningService::new(
@@ -422,18 +423,32 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// S15b-3: request-time AirKorea acquisition (None: stored records only) and the shared
     /// air-provider chain of the fallback (None: the legacy no-provider answer).
     pub fn with_air(
-        mut self,
+        self,
         acquire: Option<Arc<dyn live::AirKoreaAcquire>>,
         air: Option<Arc<dyn crate::world::AirSource>>,
     ) -> Self {
-        self.air = self.air.with_acquire(acquire).with_air(air);
-        self
+        self.map_air(|inputs| inputs.with_acquire(acquire).with_air(air))
     }
     /// S15b-3c: the AirKorea image calibration (the legacy `AIRKOREA_KOREA_IMAGE_*` settings with
     /// the deployed values as defaults).
-    pub fn with_image_calibration(mut self, calibration: air_forecast::Calibration) -> Self {
-        self.air = self.air.with_calibration(calibration);
+    pub fn with_image_calibration(self, calibration: air_forecast::Calibration) -> Self {
+        self.map_air(|inputs| inputs.with_calibration(calibration))
+    }
+    fn map_air(
+        mut self,
+        build: impl FnOnce(air_input::AirInputs<T>) -> air_input::AirInputs<T>,
+    ) -> Self {
+        let inputs = Arc::into_inner(self.air).expect("the air inputs are built before use");
+        self.air = Arc::new(build(inputs));
         self
+    }
+    /// S15b-3c: the scheduled image hourly forecast production of the observed source, whose
+    /// requests read only its product (None: the legacy source, whose requests fold and acquire
+    /// the images, or no AirKorea acquirer).
+    pub fn image_producer(&self) -> Option<Arc<dyn air_input::ImageProduction>> {
+        self.air
+            .produces_images()
+            .then(|| self.air.clone() as Arc<dyn air_input::ImageProduction>)
     }
     /// S15b-3b: owned life-index, KASI and MFDS acquisitions (None: stored records only).
     pub fn with_life(mut self, acquire: Option<Arc<dyn life_live::LifeAcquire>>) -> Self {
@@ -1467,7 +1482,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             && let Some(region) = request.region.as_deref()
         {
             let city = request.city.as_deref().unwrap_or_default();
-            request.region = Some(representative::listed_first(region, city).to_owned());
+            let listed = representative::listed_first(region, city).to_owned();
+            if listed != region {
+                request.requested_region = Some(region.to_owned());
+                request.region = Some(listed);
+            }
         }
     }
     /// Starts a due warning cycle and waits for it. Under the observed source the wait ends at

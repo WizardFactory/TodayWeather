@@ -202,6 +202,7 @@ impl KmaBackend {
             SourceAnswer::Failed(_) => return native_defect(),
         };
         let now = store.as_of_ms().unwrap_or_else(|| (self.clock)());
+        let requested_region = request.requested_region.clone();
         let config = self.config;
         // S16: only a snapshot whose reads were complete records summaries.
         let inputs = self.summaries.as_ref().and_then(|_| store.summary_inputs());
@@ -239,8 +240,20 @@ impl KmaBackend {
             .flatten();
             let by = self.source.narrative_by(deadline);
             crate::narrative::attach(body, office, self.narrative.as_ref(), by).await;
+            if let Some(name) = &requested_region {
+                keep_requested_region(body, name);
+            }
         }
         Ok(outcome)
+    }
+}
+/// The lookups used the town list's province name; `regionName` answers the one requested.
+fn keep_requested_region(body: &mut OrderedJson, name: &str) {
+    if let OrderedJson::Object(fields) = body {
+        let key: Vec<u16> = "regionName".encode_utf16().collect();
+        if let Some((_, value)) = fields.iter_mut().find(|(k, _)| *k == key) {
+            *value = OrderedJson::String(name.encode_utf16().collect());
+        }
     }
 }
 impl BackendHandler for KmaBackend {
@@ -402,6 +415,7 @@ fn parse_request(
         town: it.next(),
         query,
         locale: i18n::guess(Some(lang).filter(|l| !l.is_empty())),
+        requested_region: None,
     })
 }
 

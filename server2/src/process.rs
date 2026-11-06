@@ -11,6 +11,11 @@ use crate::{Config, SharedState, metrics_router};
 use std::{future::IntoFuture, io, sync::Arc, time::Duration};
 use tokio::{net::TcpListener, sync::watch};
 
+/// S15b-3c: the image hourly forecast production period (the first runs at startup). AirKorea
+/// announces four times a day; a missing announcement's images are tried again at most every ten
+/// minutes.
+const IMAGE_PRODUCTION_EVERY: Duration = Duration::from_secs(600);
+
 /// Build the runtime from `config`, build shared services inside it and serve until a signal.
 pub fn run<F>(config: Config, gateway: F) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -168,6 +173,9 @@ where
         .narrative_acquire
         .clone()
         .map(|source| crate::narrative::worker(source, Duration::from_secs(180)));
+    let images = gateway.image_production.clone().map(|production| {
+        crate::domestic::kma::source::air_input::image_worker(production, IMAGE_PRODUCTION_EVERY)
+    });
     let router = gateway.public_router(state.clone());
     let (tx, rx) = watch::channel(false);
     let mut listeners = tokio::task::JoinSet::new();
@@ -229,6 +237,9 @@ where
     tx.send_replace(true);
     if let Some(narrative) = narrative {
         narrative.stop().await;
+    }
+    if let Some(images) = images {
+        images.stop().await;
     }
     let worker_drain = async {
         let jobs = if let Some(delivery) = &mut delivery {

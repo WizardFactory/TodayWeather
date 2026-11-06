@@ -1,0 +1,66 @@
+{
+  "task": "KMA-IMAGE-PRODUCTION",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Observed KMA path: regionName keeps the requested province name, and the AirKorea image hourly forecast is produced on the process timer and stored as one product that requests only read. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-IMAGE-PRODUCTION.json",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/domestic/kma/mod.rs",
+    "server2/src/domestic/kma/source/air_forecast.rs",
+    "server2/src/domestic/kma/source/air_input.rs",
+    "server2/src/domestic/kma/source/forecast_input.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/src/process.rs",
+    "server2/src/runtime_services.rs",
+    "server2/tests/domestic/air_forecast.rs",
+    "server2/tests/domestic/air_forecast_s3.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/runtime_services.rs",
+    "server2/tests/runtime_services/image_production.rs",
+    "server2/tests/runtime_services/process.rs",
+    "server2/tools/runtime_services_smoke.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-image-production.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-image-production.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-image-production.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Scheduled production, product reads and regionName."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "The product among the stored folds and the request rule."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.json",
+      "category": "documentation",
+      "reason": "The request rule and stored folds in the design diagram."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.html",
+      "category": "documentation",
+      "reason": "Generated from the diagram source."
+    },
+    {
+      "path": "docs/operations/server2-infrastructure.md",
+      "category": "documentation",
+      "reason": "The product is not cached on disk."
+    }
+  ]
+}
