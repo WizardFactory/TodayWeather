@@ -1472,3 +1472,119 @@ async fn a_request_behind_a_capture_pass_does_not_list_the_kasi_kind() {
         lists
     );
 }
+
+/// A life acquirer whose acquisitions end only once released; the UV acquisition then publishes
+/// the issuance it asked for (as the live acquirer does) and the others find nothing new.
+struct HeldLife {
+    release: Arc<tokio::sync::Semaphore>,
+    store: Arc<Store>,
+}
+impl LifeAcquire for HeldLife {
+    fn acquire(
+        &self,
+        request: LifeRequest,
+    ) -> server2::gateway::BoxFuture<
+        'static,
+        Result<server2::domestic::kma::source::life_live::LifeOutcome, String>,
+    > {
+        use server2::domestic::family::DataGoKrFamily;
+        use server2::domestic::kma::source::life_live::LifeOutcome;
+        let (release, store) = (self.release.clone(), self.store.clone());
+        Box::pin(async move {
+            let _released = release.acquire().await.map_err(|e| e.to_string())?;
+            let LifeRequest::Index(index) = request else {
+                return Ok(LifeOutcome::Nothing);
+            };
+            if index.family() != DataGoKrFamily::UvIdxV5 {
+                return Ok(LifeOutcome::Nothing);
+            }
+            let p = index.publication();
+            let issued = &p.compact()[..10];
+            let mut item = json!({"code": "A07_2", "areaNo": "1111051500", "date": issued});
+            for n in (0..=75).step_by(3) {
+                item[format!("h{n}")] = json!("5");
+            }
+            publish(
+                &store,
+                "data-go-kr",
+                "uv-idx-v5",
+                named("all-areas"),
+                p.period(),
+                &p.partition(),
+                wall_ms(),
+                &[kma_page(json!([item]))],
+            )
+            .await;
+            Ok(LifeOutcome::Published)
+        })
+    }
+}
+/// The wall clock in ms: the life inputs date their own publications with it, so the source
+/// here runs on it too.
+fn wall_ms() -> f64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as f64
+}
+
+/// AK 2026-11-06: under the observed source the life inputs are supplementary. A life
+/// acquisition that has not ended does not hold the snapshot once the required inputs are in;
+/// it continues on its own, and a later request answers what it published.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_observed_snapshot_does_not_wait_for_a_life_acquisition() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    use super::source_s3::{Unreachable, request};
+    use server2::domestic::kma::backend::{KmaSource, SourceAnswer};
+    use server2::domestic::kma::source::S3Source;
+    use server2::warnings::store::{StoreConfig, WarningStore};
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let release = Arc::new(tokio::sync::Semaphore::new(0));
+    let warnings = Arc::new(
+        WarningStore::new(
+            transport.clone(),
+            CatalogLimits::default(),
+            StoreConfig::default(),
+        )
+        .unwrap(),
+    );
+    let s3 = S3Source::new_observed_with_warning_store(
+        transport.clone(),
+        Arc::new(wall_ms),
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+        warnings,
+    )
+    .unwrap()
+    .with_life(Some(Arc::new(HeldLife {
+        release: release.clone(),
+        store: store.clone(),
+    })));
+    let life = |answer: SourceAnswer| match answer {
+        SourceAnswer::Snapshot(s) => items_of(&s.life_index(1_111_051_500.).unwrap()).len(),
+        SourceAnswer::Forward(r) | SourceAnswer::Failed(r) => panic!("forwarded: {r}"),
+    };
+    // The backend's budget under the observed source: the life inputs would be waited for until
+    // 2.5 s after the start.
+    let started = Instant::now();
+    let first = s3
+        .snapshot(&request(), Instant::now() + Duration::from_secs(8))
+        .await;
+    let took = started.elapsed();
+    assert!(took < Duration::from_millis(2200), "{took:?}");
+    assert_eq!(life(first), 0, "the held UV acquisition is not waited for");
+    release.add_permits(4096);
+    let started = std::time::Instant::now();
+    loop {
+        let later = s3
+            .snapshot(&request(), Instant::now() + Duration::from_secs(8))
+            .await;
+        if life(later) > 0 {
+            break;
+        }
+        assert!(started.elapsed() < Duration::from_secs(60), "never served");
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
+}

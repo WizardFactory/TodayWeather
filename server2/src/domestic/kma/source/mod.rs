@@ -196,6 +196,29 @@ pub struct S3Source<T> {
     /// Requests and the process timer share one controlled warning cycle owner.
     warning_cycles: Option<Arc<warning_cycle::WarningCycles<T>>>,
 }
+/// The required inputs of one request still arriving; the last one in lets the supplementary
+/// life inputs stop waiting (`S3Source::life_beside`).
+struct Required {
+    left: std::sync::atomic::AtomicUsize,
+    done: tokio::sync::Notify,
+}
+impl Required {
+    fn new(inputs: usize) -> Self {
+        Self {
+            left: std::sync::atomic::AtomicUsize::new(inputs),
+            done: tokio::sync::Notify::new(),
+        }
+    }
+    /// `input`, counted in when it ends.
+    async fn arrive<O>(&self, input: impl std::future::Future<Output = O>) -> O {
+        let out = input.await;
+        if self.left.fetch_sub(1, std::sync::atomic::Ordering::AcqRel) == 1 {
+            // A stored permit: the life inputs see it whenever they next wait.
+            self.done.notify_one();
+        }
+        out
+    }
+}
 /// Retry bookkeeping: each key holds the instant its retry bound ends. Expired keys are dropped
 /// when the map has doubled since the last pruning (amortized), and at [`MAX_ATTEMPTS`] live keys
 /// a new key is refused (its acquisition is skipped; the answer comes from S3 as stored).
@@ -1120,6 +1143,27 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // No acquisition was ever saved: legacy has no document either.
         Ok(Vec::new())
     }
+    /// S15b-3b: the life inputs (UV, pollen, food poisoning, sunrise and sunset) of a request
+    /// whose `required` inputs are still arriving; their owned acquisitions start for every
+    /// request that reaches this point. Under the observed source they are supplementary (AK
+    /// 2026-11-06): once the required inputs are in, the answer does not wait for them and takes
+    /// what this process holds, while their reads and acquisitions continue for later requests.
+    /// Otherwise they are waited for until `section`.
+    async fn life_beside(
+        &self,
+        required: &Required,
+        now: f64,
+        section: Instant,
+    ) -> life_input::LifeAnswers {
+        if !self.observed_history {
+            return self.life.load(now, section).await;
+        }
+        tokio::select! {
+            biased;
+            answers = Box::pin(self.life.load(now, section)) => answers,
+            () = required.done.notified() => self.life.held(),
+        }
+    }
     async fn load(&self, request: &KmaRequest, deadline: Instant) -> SourceAnswer {
         match self.build(request, deadline).await {
             Ok(s) => SourceAnswer::Snapshot(Box::new(s)),
@@ -1196,7 +1240,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     .await?;
                 Ok::<_, String>((zones, mids))
             };
-            let optional = async {
+            let air_and_special = async {
                 tokio::join!(
                     self.air.load(
                         &absent_town,
@@ -1207,7 +1251,6 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                         now,
                         section
                     ),
-                    self.life.load(now, section),
                     async {
                         self.warning_wait(until).await;
                         self.warnings.zone_state(now as i64, section).await.ok()
@@ -1236,21 +1279,29 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                         return Err(Unbuilt::Failed("town projection unavailable".into()));
                     }
                     Err(_) => {
-                        let (mid, (air, life, special)) = tokio::join!(
-                            async {
+                        let required = Required::new(2);
+                        let (mid, (air, special), life) = tokio::join!(
+                            required.arrive(Box::pin(async {
                                 match mid_done {
                                     Some(done) => done,
                                     None => mid.await,
                                 }
-                            },
-                            optional
+                            })),
+                            required.arrive(Box::pin(air_and_special)),
+                            self.life_beside(&required, now, section),
                         );
                         let (zones, mids) = mid?;
                         return Ok(Snapshot::missing_town(now, zones, mids, air, life, special));
                     }
                 }
             } else {
-                let (result, mid, (air, life, special)) = tokio::join!(lookup, mid, optional);
+                let required = Required::new(3);
+                let (result, mid, (air, special), life) = tokio::join!(
+                    required.arrive(Box::pin(lookup)),
+                    required.arrive(Box::pin(mid)),
+                    required.arrive(Box::pin(air_and_special)),
+                    self.life_beside(&required, now, section),
+                );
                 let (zones, mids) = mid?;
                 let result = match result {
                     Ok(result) => result,
@@ -1316,6 +1367,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .await?;
             Ok::<_, String>((zones, mids))
         };
+        let required = Required::new(5);
         let (
             zones_and_mids,
             (current, shortest, short, rss),
@@ -1324,8 +1376,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             special,
             life,
         ) = tokio::join!(
-            zones_and_mids,
-            async {
+            required.arrive(Box::pin(zones_and_mids)),
+            required.arrive(Box::pin(async {
                 let Some(grid) = grid else {
                     return (
                         Ok((Vec::new(), None, Vec::new())),
@@ -1340,9 +1392,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     self.grid_answer_by(Family::Short, grid, now, deadline, until),
                     self.rss_answer_by(grid, now, deadline, until),
                 )
-            },
-            observations,
-            self.air.load(
+            })),
+            required.arrive(Box::pin(observations)),
+            required.arrive(Box::pin(self.air.load(
                 &town,
                 &region,
                 &city,
@@ -1350,18 +1402,16 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 image_wanted,
                 now,
                 section
-            ),
+            ))),
             // The legacy warning cycle runs every 3 minutes; a due cycle is waited for until
             // `until` at most, and the warning state is read by `section` (its refresh continues
             // as an owned task). A failed or late read is the legacy store error
             // (`getSpecialInfo` skips the section).
-            async {
+            required.arrive(Box::pin(async {
                 self.warning_wait(until).await;
                 self.warnings.zone_state(now as i64, section).await.ok()
-            },
-            // S15b-3b life inputs (their owned acquisitions start for every request that reaches
-            // this point).
-            self.life.load(now, section),
+            })),
+            self.life_beside(&required, now, section),
         );
         let (zones, mids) = zones_and_mids?;
         let (current, current_ids, current_raw) = current?;
@@ -1588,6 +1638,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> 
         } else {
             deadline
         }
+    }
+    fn narrative_beside(&self) -> bool {
+        self.observed_history
     }
     fn prepare(
         &self,

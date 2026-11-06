@@ -1,0 +1,51 @@
+{
+  "task": "KMA-OPTIONAL-ARMS",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Observed KMA path: the life inputs and the forecast narrative are supplementary and do not hold the answer once the required inputs are in. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-OPTIONAL-ARMS.json",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/domestic/kma/source/life_input.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/narrative/mod.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/domestic/life_s3.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-optional-arms.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-optional-arms.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-optional-arms.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Request waits under the observed source."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "The wait rule of the data design."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.json",
+      "category": "documentation",
+      "reason": "The wait rule in the design diagram."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.html",
+      "category": "documentation",
+      "reason": "Generated from the diagram source."
+    }
+  ]
+}
