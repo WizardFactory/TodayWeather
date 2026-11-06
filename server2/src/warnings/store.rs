@@ -356,6 +356,10 @@ impl<T: CatalogTransport> WarningStore<T> {
             offered: watch::channel(None).0,
         })
     }
+    /// The S3 transport this store reads and publishes through.
+    pub fn transport(&self) -> &T {
+        &self.transport
+    }
     /// Hand the current zone state to requests, ahead of whatever the collector still publishes.
     pub fn offer_zone_state(&self, state: ZoneState) {
         self.offered
