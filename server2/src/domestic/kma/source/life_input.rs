@@ -259,6 +259,14 @@ struct Shared<T> {
 pub struct LifeInputs<T> {
     shared: Arc<Shared<T>>,
 }
+impl<T> Clone for LifeInputs<T> {
+    /// Another handle on the same inputs.
+    fn clone(&self) -> Self {
+        Self {
+            shared: self.shared.clone(),
+        }
+    }
+}
 impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
     pub fn new(transport: T, store: Arc<CatalogStore<T>>) -> Self {
         Self::build(

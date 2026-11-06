@@ -2601,8 +2601,9 @@ cycle, air and life inputs run concurrently.
 Under the observed source (ASOS-primary) the bounds are the instants above, and the life inputs
 and the narrative are supplementary (AK 2026-11-06). A request waits for the life inputs only while
 its required inputs are still arriving: the grids, RSS, mid forecast, station observations and
-history, air and the warning state. Once those are in, it answers with the life data this process
-holds, and the life reads and acquisitions it started continue for later requests. The narrative
+history, air and the warning state. Their load runs as its own task. Once the required inputs are
+in, the request answers with the life data this process holds, and the task goes on: its reads,
+the acquisitions they lead to and the read-back serve later requests. The narrative
 is read from the request's province while the snapshot is built. It goes into the answer only if
 that read has ended when the answer is assembled; otherwise the read continues and fills the
 narrative cache for later requests.

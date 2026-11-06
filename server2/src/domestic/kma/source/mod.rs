@@ -1146,9 +1146,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// S15b-3b: the life inputs (UV, pollen, food poisoning, sunrise and sunset) of a request
     /// whose `required` inputs are still arriving; their owned acquisitions start for every
     /// request that reaches this point. Under the observed source they are supplementary (AK
-    /// 2026-11-06): once the required inputs are in, the answer does not wait for them and takes
-    /// what this process holds, while their reads and acquisitions continue for later requests.
-    /// Otherwise they are waited for until `section`.
+    /// 2026-11-06): their load runs as its own task, and once the required inputs are in the
+    /// answer takes what this process holds while that task goes on (its reads, the
+    /// acquisitions they lead to and the read-back serve later requests). Otherwise they are
+    /// waited for until `section`.
     async fn life_beside(
         &self,
         required: &Required,
@@ -1158,9 +1159,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         if !self.observed_history {
             return self.life.load(now, section).await;
         }
+        let life = self.life.clone();
+        let mut load = crate::observability::spawn(async move { life.load(now, section).await });
         tokio::select! {
             biased;
-            answers = Box::pin(self.life.load(now, section)) => answers,
+            answers = &mut load => answers.unwrap_or_else(|_| self.life.held()),
             () = required.done.notified() => self.life.held(),
         }
     }

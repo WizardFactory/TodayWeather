@@ -1473,13 +1473,16 @@ async fn a_request_behind_a_capture_pass_does_not_list_the_kasi_kind() {
     );
 }
 
-/// A life acquirer whose acquisitions end only once released; the UV acquisition then publishes
-/// the issuance it asked for (as the live acquirer does) and the others find nothing new.
-struct HeldLife {
-    release: Arc<tokio::sync::Semaphore>,
-    store: Arc<Store>,
+/// A life acquirer whose UV acquisition publishes the issuance it asked for (as the live acquirer
+/// does) and counts itself; the others find nothing new.
+#[derive(Default)]
+struct LifeCounts {
+    store: std::sync::OnceLock<Arc<Store>>,
+    uv_calls: AtomicUsize,
+    uv_published: AtomicUsize,
 }
-impl LifeAcquire for HeldLife {
+struct CountedLife(Arc<LifeCounts>);
+impl LifeAcquire for CountedLife {
     fn acquire(
         &self,
         request: LifeRequest,
@@ -1489,15 +1492,15 @@ impl LifeAcquire for HeldLife {
     > {
         use server2::domestic::family::DataGoKrFamily;
         use server2::domestic::kma::source::life_live::LifeOutcome;
-        let (release, store) = (self.release.clone(), self.store.clone());
+        let this = self.0.clone();
         Box::pin(async move {
-            let _released = release.acquire().await.map_err(|e| e.to_string())?;
             let LifeRequest::Index(index) = request else {
                 return Ok(LifeOutcome::Nothing);
             };
             if index.family() != DataGoKrFamily::UvIdxV5 {
                 return Ok(LifeOutcome::Nothing);
             }
+            this.uv_calls.fetch_add(1, Ordering::SeqCst);
             let p = index.publication();
             let issued = &p.compact()[..10];
             let mut item = json!({"code": "A07_2", "areaNo": "1111051500", "date": issued});
@@ -1505,7 +1508,7 @@ impl LifeAcquire for HeldLife {
                 item[format!("h{n}")] = json!("5");
             }
             publish(
-                &store,
+                this.store.get().unwrap(),
                 "data-go-kr",
                 "uv-idx-v5",
                 named("all-areas"),
@@ -1515,6 +1518,7 @@ impl LifeAcquire for HeldLife {
                 &[kma_page(json!([item]))],
             )
             .await;
+            this.uv_published.fetch_add(1, Ordering::SeqCst);
             Ok(LifeOutcome::Published)
         })
     }
@@ -1527,21 +1531,101 @@ fn wall_ms() -> f64 {
         .unwrap()
         .as_millis() as f64
 }
+/// Holds the UV index listing until released; everything passes through to the S06 loopback
+/// peer.
+#[derive(Clone)]
+struct HeldUvListing {
+    inner: BoundedS3<HttpS3Transport>,
+    held: Arc<std::sync::atomic::AtomicBool>,
+    entered: Arc<AtomicUsize>,
+    release: Arc<tokio::sync::Notify>,
+}
+impl server2::storage::ObjectTransport for HeldUvListing {
+    async fn put(
+        &self,
+        record: &server2::storage::PreparedRecord,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put(record).await
+    }
+    async fn head(&self, key: &str) -> Result<server2::storage::Object, server2::storage::Error> {
+        self.inner.head(key).await
+    }
+    async fn get(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::Object, server2::storage::Error> {
+        self.inner.get(key, max).await
+    }
+}
+impl server2::storage::CatalogTransport for HeldUvListing {
+    async fn get_control(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
+        self.inner.get_control(key, max).await
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &server2::storage::WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put_control(key, body, condition).await
+    }
+    async fn list_raw_document(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+        keys: usize,
+        bytes: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        self.inner
+            .list_raw_document(prefix, token, keys, bytes)
+            .await
+    }
+}
+impl server2::history::IndexListing for HeldUvListing {
+    async fn list_index(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+    ) -> Result<server2::storage::ListPage, server2::storage::Error> {
+        if prefix.starts_with("index/v2/data-go-kr/uv-idx-v5/") {
+            self.entered.fetch_add(1, Ordering::SeqCst);
+            let released = self.release.notified();
+            tokio::pin!(released);
+            released.as_mut().enable();
+            if self.held.load(Ordering::SeqCst) {
+                released.await;
+            }
+        }
+        self.inner.list_index(prefix, token).await
+    }
+}
 
-/// AK 2026-11-06: under the observed source the life inputs are supplementary. A life
-/// acquisition that has not ended does not hold the snapshot once the required inputs are in;
-/// it continues on its own, and a later request answers what it published.
+/// AK 2026-11-06: under the observed source the life inputs are supplementary. A request whose
+/// required inputs are in does not wait for its life read (here held in its UV listing); the
+/// load goes on by itself, so once the read ends the acquisition it leads to starts without
+/// another request, and the next request answers what it published (review OPT-life-continuation).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn the_observed_snapshot_does_not_wait_for_a_life_acquisition() {
+async fn the_observed_snapshot_does_not_wait_for_the_life_inputs() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
     use super::source_s3::{Unreachable, request};
     use server2::domestic::kma::backend::{KmaSource, SourceAnswer};
     use server2::domestic::kma::source::S3Source;
     use server2::warnings::store::{StoreConfig, WarningStore};
     let peer = Peer::persistent();
-    let transport = peer.transport();
-    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
-    let release = Arc::new(tokio::sync::Semaphore::new(0));
+    let transport = HeldUvListing {
+        inner: peer.transport(),
+        held: Arc::new(std::sync::atomic::AtomicBool::new(true)),
+        entered: Arc::new(AtomicUsize::new(0)),
+        release: Arc::new(tokio::sync::Notify::new()),
+    };
+    let store = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+    let acquirer = Arc::new(LifeCounts::default());
+    acquirer.store.set(store.clone()).ok().unwrap();
     let warnings = Arc::new(
         WarningStore::new(
             transport.clone(),
@@ -1558,10 +1642,7 @@ async fn the_observed_snapshot_does_not_wait_for_a_life_acquisition() {
         warnings,
     )
     .unwrap()
-    .with_life(Some(Arc::new(HeldLife {
-        release: release.clone(),
-        store: store.clone(),
-    })));
+    .with_life(Some(Arc::new(CountedLife(acquirer.clone()))));
     let life = |answer: SourceAnswer| match answer {
         SourceAnswer::Snapshot(s) => items_of(&s.life_index(1_111_051_500.).unwrap()).len(),
         SourceAnswer::Forward(r) | SourceAnswer::Failed(r) => panic!("forwarded: {r}"),
@@ -1574,8 +1655,27 @@ async fn the_observed_snapshot_does_not_wait_for_a_life_acquisition() {
         .await;
     let took = started.elapsed();
     assert!(took < Duration::from_millis(2200), "{took:?}");
-    assert_eq!(life(first), 0, "the held UV acquisition is not waited for");
-    release.add_permits(4096);
+    assert_eq!(life(first), 0, "the held life read is not waited for");
+    assert!(
+        transport.entered.load(Ordering::SeqCst) > 0,
+        "the life read was held"
+    );
+    assert_eq!(
+        acquirer.uv_calls.load(Ordering::SeqCst),
+        0,
+        "not acquired yet"
+    );
+    // No further request: the first one's load reads, acquires and reads back on its own.
+    transport.held.store(false, Ordering::SeqCst);
+    transport.release.notify_waiters();
+    let started = std::time::Instant::now();
+    while acquirer.uv_published.load(Ordering::SeqCst) == 0 {
+        assert!(
+            started.elapsed() < Duration::from_secs(30),
+            "never acquired"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
     let started = std::time::Instant::now();
     loop {
         let later = s3
@@ -1584,7 +1684,8 @@ async fn the_observed_snapshot_does_not_wait_for_a_life_acquisition() {
         if life(later) > 0 {
             break;
         }
-        assert!(started.elapsed() < Duration::from_secs(60), "never served");
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert!(started.elapsed() < Duration::from_secs(10), "never served");
+        tokio::time::sleep(Duration::from_millis(100)).await;
     }
+    assert_eq!(acquirer.uv_calls.load(Ordering::SeqCst), 1, "acquired once");
 }
