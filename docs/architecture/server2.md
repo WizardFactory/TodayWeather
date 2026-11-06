@@ -3384,12 +3384,14 @@ S3 and answering natively with the Express envelope (JSON with a weak ETag, the 
 The `kma` and `kma-v000901` entries also claim the used direct nation routes
 `/v000903/nation/:nation` and `/v000901/nation/:nation`. The nation backend calls
 fifteen native KMA assemblies using legacy version rules, concurrently; it never calls legacy or
-opens a separate provider source. Air, the narrative and each city's inputs keep the three-second
-request budget (`NATION_INPUTS`); the city answers, whose assemblies queue for the KMA CPU
-admission, have one absolute eight-second deadline (`NATION_DEADLINE`, KMA-NATION-DEADLINE; legacy
-gave each child request 9 s). The direct route has no outer deadline of its own. With one
-three-second limit for both, the queued assemblies were cut in 6 of 13 steady compositions on EC2
-(2026-11-07) and answered the legacy error page.
+opens a separate provider source. Air and the national narrative keep a three-second budget
+(`NATION_INPUTS`). Each city keeps its source's own request budget for its inputs (the observed
+source waits about 2.9 s for acquisitions and gives stored reads up to 8 s); the city answers,
+whose assemblies queue for the KMA CPU admission, have one absolute eight-second deadline
+(`NATION_DEADLINE`, KMA-NATION-DEADLINE; legacy gave each child request 9 s). The direct route has
+no outer deadline of its own. With the earlier three-second composition deadline the queued
+assemblies were cut in 6 of 13 steady compositions on EC2 (2026-11-07) and answered the legacy
+error page.
 The child replies retain legacy city order after removing `airInfo`/`airInfoList`.
 Nation children share the same `KmaBackend` and S16 recorder as direct weather requests.
 When a complete snapshot produces compatible captured `getPastMid` rows, the shared backend

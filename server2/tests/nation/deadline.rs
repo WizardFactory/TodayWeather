@@ -88,10 +88,21 @@ impl NationSource for Budgets {
         })
     }
 }
-fn routes(cities: SlowCities) -> DirectRoutes {
-    with(Arc::new(cities), Arc::new(NoAir))
+/// A national narrative read that never finishes.
+struct PendingNarrative;
+impl server2::narrative::Read for PendingNarrative {
+    fn read(&self, _: u16, _: Instant) -> BoxFuture<'_, Option<server2::narrative::Narrative>> {
+        Box::pin(std::future::pending())
+    }
 }
-fn with(cities: Arc<dyn CitySource>, air: Arc<dyn NationSource>) -> DirectRoutes {
+fn routes(cities: SlowCities) -> DirectRoutes {
+    with(Arc::new(cities), Arc::new(NoAir), None)
+}
+fn with(
+    cities: Arc<dyn CitySource>,
+    air: Arc<dyn NationSource>,
+    narrative: Option<Arc<dyn server2::narrative::Read>>,
+) -> DirectRoutes {
     let clock = Arc::new(|| 0.);
     DirectRoutes::new(
         Arc::new(KmaBackend::new(
@@ -106,7 +117,9 @@ fn with(cities: Arc<dyn CitySource>, air: Arc<dyn NationSource>) -> DirectRoutes
         },
         BackendDispatcher::legacy("http://127.0.0.1:1").unwrap(),
     )
-    .with_nation(Arc::new(NationBackend::new(cities, air, clock)))
+    .with_nation(Arc::new(
+        NationBackend::new(cities, air, clock).with_narrative(narrative),
+    ))
 }
 async fn nation(direct: &DirectRoutes) -> (u16, String, Duration) {
     let started = tokio::time::Instant::now();
@@ -158,7 +171,7 @@ async fn a_city_that_never_answers_is_the_legacy_child_error_at_eight_seconds() 
 #[tokio::test(start_paused = true)]
 async fn air_keeps_the_input_budget_and_cities_get_the_nation_deadline() {
     let budgets = Budgets::default();
-    let direct = with(Arc::new(budgets.clone()), Arc::new(budgets.clone()));
+    let direct = with(Arc::new(budgets.clone()), Arc::new(budgets.clone()), None);
     for path in ["v000903", "v000901"] {
         budgets.0.lock().unwrap().clear();
         let request = Request::builder()
@@ -180,5 +193,31 @@ async fn air_keeps_the_input_budget_and_cities_get_the_nation_deadline() {
             };
             assert_eq!(left, expected, "{path} {what}");
         }
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_late_composition_does_not_wait_for_the_narrative() {
+    let direct = with(
+        Arc::new(SlowCities {
+            delay: Duration::from_millis(3_500),
+            stuck: None,
+        }),
+        Arc::new(NoAir),
+        Some(Arc::new(PendingNarrative)),
+    );
+    for path in ["v000903", "v000901"] {
+        let started = Instant::now();
+        let request = Request::builder()
+            .uri(format!("/{path}/nation/KR"))
+            .body(Body::empty())
+            .unwrap();
+        let response = direct.handle(request).await;
+        assert_eq!(response.status(), 200, "{path}");
+        let body = to_bytes(response.into_body(), 4 * 1024 * 1024)
+            .await
+            .unwrap();
+        assert!(!String::from_utf8_lossy(&body).contains("forecastNarrative"));
+        assert_eq!(started.elapsed(), Duration::from_millis(3_500), "{path}");
     }
 }

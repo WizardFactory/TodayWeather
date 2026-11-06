@@ -32,7 +32,7 @@
       "id": "nation",
       "type": "backend",
       "label": "Nation",
-      "sublabel": "3 s inputs, 8 s cities",
+      "sublabel": "8 s city answers",
       "sources": [
         {
           "path": "server2/src/nation/mod.rs",
@@ -113,7 +113,7 @@
     {
       "from": 150,
       "to": 312,
-      "label": "Native request: 3 s inputs, 8 s answer"
+      "label": "Native request: 3 s air, 8 s cities"
     },
     {
       "from": 326,
@@ -240,7 +240,7 @@
       "dot": "amber",
       "title": "Deadline and ownership",
       "items": [
-        "Air, narrative and city inputs share a three-second budget; city answers queue for the CPU until eight seconds.",
+        "Air and the narrative get three seconds; cities keep their own input budget and may queue for the CPU until eight seconds.",
         "Only prepared rows are returned; acquisition continues after deadline or disconnect."
       ]
     },

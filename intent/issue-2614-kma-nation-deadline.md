@@ -6,7 +6,7 @@ The EC2 verification of 2026-11-07 (all weather families native, one round every
 
 - **QUEUE:** a city whose inputs end near the bound and whose assembly waits for the CPU admission past three seconds still answers, on the KMA backend itself.
 - **SLOW:** cities that answer after more than three seconds still compose the nation answer (all fifteen, legacy order).
-- **INPUTS:** air, the narrative and each city's inputs keep the three-second budget; only the city answers get the eight seconds.
+- **INPUTS:** air and the national narrative keep the three-second budget, and each city keeps its source's own input budget; only the city answers get the eight seconds.
 - **STUCK:** a city that never answers still yields the legacy child error page, at eight seconds, within the 9-second gateway deadline.
 - **UNCHANGED:** the nation parity and request-edge suites pass unchanged.
 - **PLACEMENT:** the placement gate and the artifact policy pass on the outgoing commits.

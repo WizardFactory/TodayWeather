@@ -5346,8 +5346,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
         <!-- Segment Labels -->
         <g data-graph-role="segment-label" data-segment-id="0">
-          <rect x="294.4" y="134" width="211.6" height="18" rx="3" class="c-mask"/>
-          <text x="300.4" y="147" class="t-muted" font-size="9" font-weight="600">Native request: 3 s inputs, 8 s answer</text>
+          <rect x="294.4" y="134" width="196" height="18" rx="3" class="c-mask"/>
+          <text x="300.4" y="147" class="t-muted" font-size="9" font-weight="600">Native request: 3 s air, 8 s cities</text>
         </g>
         <g data-graph-role="segment-label" data-segment-id="1">
           <rect x="56" y="304" width="196" height="18" rx="3" class="c-mask"/>
@@ -5371,15 +5371,15 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <text data-detail="context" x="129.5" y="122" class="t-muted" font-size="7" text-anchor="middle">nation view</text>
         </g>
 
-        <g id="node-nation" data-node-id="nation" data-node-label="Nation" tabindex="0" role="button" aria-label="Focus Nation, 3 s inputs, 8 s cities, Sequence participant" aria-pressed="false" data-node-kind="backend" data-node-sublabel="3 s inputs, 8 s cities" data-node-context="Sequence participant">
-          <title>Nation · 3 s inputs, 8 s cities · Sequence participant</title>
+        <g id="node-nation" data-node-id="nation" data-node-label="Nation" tabindex="0" role="button" aria-label="Focus Nation, 8 s city answers, Sequence participant" aria-pressed="false" data-node-kind="backend" data-node-sublabel="8 s city answers" data-node-context="Sequence participant">
+          <title>Nation · 8 s city answers · Sequence participant</title>
           <rect x="230.60000000000002" y="72" width="135" height="60" rx="6" class="c-mask"/>
           <rect x="230.60000000000002" y="72" width="135" height="60" rx="6" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(236.60000000000002 78) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="298.1" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Nation</text>
-          <text data-detail="context" x="298.1" y="122" class="t-muted" font-size="7" text-anchor="middle">3 s inputs, 8 s cities</text>
+          <text data-detail="context" x="298.1" y="122" class="t-muted" font-size="7" text-anchor="middle">8 s city answers</text>
         </g>
 
         <g id="node-cities" data-node-id="cities" data-node-label="15 cities" tabindex="0" role="button" aria-label="Focus 15 cities, legacy child version, Sequence participant" aria-pressed="false" data-node-kind="backend" data-node-sublabel="legacy child version" data-node-context="Sequence participant">
@@ -5643,7 +5643,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Deadline and ownership</h3>
         </div>
         <ul>
-          <li>Air, narrative and city inputs share a three-second budget; city answers queue for the CPU until eight seconds.</li>
+          <li>Air and the narrative get three seconds; cities keep their own input budget and may queue for the CPU until eight seconds.</li>
           <li>Only prepared rows are returned; acquisition continues after deadline or disconnect.</li>
         </ul>
       </div>

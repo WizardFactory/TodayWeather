@@ -15,10 +15,10 @@ implemented routes and local verification, not a production deployment.
 
 ## Client behavior
 
-A nation request starts all fifteen fixed-city assemblies at once. Air, the
-narrative and each city's inputs wait at most three seconds; the city assemblies
-then queue for the CPU and must answer within eight seconds of the request (legacy
-gave each child request 9 s). Each source returns the data available for that request;
+A nation request starts all fifteen fixed-city assemblies at once. Air and the
+national narrative wait at most three seconds; each city waits for its inputs as an
+ordinary weather request does. The city assemblies then queue for the CPU and must
+answer within eight seconds of the request (legacy gave each child request 9 s). Each source returns the data available for that request;
 late acquisition continues independently and is shared by later requests.
 A missing optional provider branch does not by itself turn the response into an
 error. If an actual city dependency fails, the nation route returns the legacy
@@ -44,8 +44,8 @@ native: GET 200, HEAD 200 with no body, and revalidation 304 with no body.
 The nation-specific tests also publish raw records to a loopback S3 peer and
 reconstruct all seventeen province means twice using new empty-memory sources
 with providers disabled. Twelve concurrent requests share one intentionally
-slow national acquisition. The first requests return available data within the
-three-second input budget; the next request includes the newly saved observation.
+slow national acquisition. The first requests return available air within the
+three-second budget; the next request includes the newly saved observation.
 
 ![Capture of actual local HTTP verification output](assets/server2-nation-http.png)
 

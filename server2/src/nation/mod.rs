@@ -28,12 +28,12 @@ pub trait NationSource: Send + Sync {
     fn nation_air(&self, now: f64, deadline: Instant) -> BoxFuture<'_, NationAir>;
 }
 /// The composition's absolute deadline (KMA-NATION-DEADLINE). Legacy gave each child request
-/// 9 s (`route.nation.js`: "못 받으면 다음 요청에 받도록 timeout을 길게 함"). Every input still waits
-/// at most [`NATION_INPUTS`]; the fifteen city assemblies then queue for the CPU admission, and on
-/// EC2 (2026-11-07) a three-second limit on that queue cut 6 of 13 steady compositions into the
-/// legacy error page.
+/// 9 s (`route.nation.js`: "못 받으면 다음 요청에 받도록 timeout을 길게 함"). Air and the narrative
+/// wait at most [`NATION_INPUTS`] and each city its source's input budget; the fifteen city
+/// assemblies then queue for the CPU admission, and on EC2 (2026-11-07) the three-second
+/// composition deadline cut 6 of 13 steady compositions into the legacy error page.
 pub const NATION_DEADLINE: Duration = Duration::from_secs(8);
-/// The input budget: air, the narrative and each city's inputs (the KMA request budget).
+/// The budget of the nation's own inputs: province air and the national narrative.
 pub const NATION_INPUTS: Duration = Duration::from_secs(3);
 pub const CITIES: [&str; 15] = [
     "서울특별시",
@@ -53,7 +53,7 @@ pub const CITIES: [&str; 15] = [
     "울산광역시",
 ];
 /// Legacy-selected child-version assembly, never an HTTP hop to legacy. `deadline` bounds the city's
-/// answer ([`NATION_DEADLINE`]); its inputs keep the request budget. Unfinished provider work is
+/// answer ([`NATION_DEADLINE`]); its inputs keep its source's request budget. Unfinished provider work is
 /// owned by the shared sources.
 pub trait CitySource: Send + Sync {
     fn weather(
