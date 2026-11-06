@@ -790,6 +790,71 @@ async fn minute_pages_stay_within_the_readers_reach() {
     );
 }
 
+/// KMA-MINUTE-PAGE: a minute page within the readers' reach answers at once; the next page is
+/// acquired beside the request. On EC2 (2026-11-07) the KMA minute page took 2.1-2.6 s, at the
+/// observed 2.5 s bound, so the request that started it waited and still answered the old page.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_held_minute_page_answers_while_the_next_one_is_acquired() {
+    use server2::domestic::kma::source::observe::Observations;
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap());
+    // A first process stores the 10:49 minute page with the hourly and city pages.
+    let first = Arc::new(Observations::new(
+        peer.transport_limited(4),
+        store.clone(),
+        Arc::new(Scripted::new(Duration::ZERO)),
+        Arc::new(Table(Mutex::new(0))),
+    ));
+    let now = NOW as i64;
+    let mut stored = false;
+    for _ in 0..40 {
+        let folded = first
+            .stations(now, Instant::now() + Duration::from_secs(3))
+            .await;
+        if folded.is_some_and(|f| !f.minute.docs().is_empty()) {
+            stored = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    assert!(stored, "the 10:49 page");
+    // A restarted process asks three minutes later, when the next page is due; the provider
+    // takes 3 s to answer it.
+    let slow = Arc::new(Scripted::new(Duration::from_secs(3)));
+    let second = Arc::new(Observations::new(
+        peer.transport_limited(4),
+        store,
+        slow.clone(),
+        Arc::new(Table(Mutex::new(0))),
+    ));
+    let later = now + 3 * 60_000;
+    let started = std::time::Instant::now();
+    let folded = second
+        .stations(later, Instant::now() + Duration::from_millis(2_500))
+        .await
+        .expect("a fold");
+    assert!(
+        started.elapsed() < Duration::from_millis(1_500),
+        "the request waited for the next page: {:?}",
+        started.elapsed()
+    );
+    assert!(
+        !folded.minute.docs().is_empty(),
+        "the held 10:49 page answers"
+    );
+    // The next page is acquired beside the request.
+    let asked = std::time::Instant::now();
+    while !slow.calls.lock().unwrap().iter().any(|c| c == "aws-minute") {
+        assert!(
+            asked.elapsed() < Duration::from_secs(10),
+            "the next page was never acquired"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
 /// The carried 2026-10-15 export (`data/kmastninfos.seed.jsonl`) parses with its recorded
 /// counts, and an older imported export does not replace it.
 #[test]
