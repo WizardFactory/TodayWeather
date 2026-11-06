@@ -165,6 +165,10 @@ struct Capture {
     demand_ms: std::sync::atomic::AtomicI64,
     /// Nationwide hour partitions this process published.
     hours: std::sync::Mutex<HashSet<String>>,
+    /// The current hour partition whose newest stored dataset still has a station an hour
+    /// behind (AirKorea updates some stations after the hour's dataset is out): the capture
+    /// acquires that hour again (KMA-AIR-REFRESH; legacy collected every 10 minutes).
+    lagging: std::sync::Mutex<Option<String>>,
     started: std::sync::atomic::AtomicBool,
 }
 impl<T: IndexListing + Clone + 'static> AirInputs<T> {
@@ -295,14 +299,30 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                     hours.retain(|h| *h >= oldest);
                     hours.contains(&hour)
                 };
-                if !done {
+                let lagging = capture
+                    .lagging
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .as_deref()
+                    == Some(hour.as_str());
+                // The hour again while a station lags: one key per capture interval, so the
+                // per-key retry throttle does not stretch the legacy 10-minute cadence.
+                let key = if !done {
+                    Some(format!("nationwide-{hour}"))
+                } else if lagging {
+                    let window = (now / every.as_millis().max(1) as f64).floor();
+                    Some(format!("nationwide-{hour}-refresh-{window}"))
+                } else {
+                    None
+                };
+                if let Some(key) = key {
                     // Start (or join) without waiting: the owned task runs on its own.
                     let _ = start_flight(
                         &flights,
                         acquire.clone(),
                         &generation,
                         &capture,
-                        &format!("nationwide-{hour}"),
+                        &key,
                         AirKoreaRequest::nationwide(),
                         Instant::now(),
                     )
@@ -660,10 +680,31 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
             c.folded = Arc::new(folded);
             c.folded_key = folded_key;
         }
-        let present = c
-            .parts
-            .get(&current_hour)
-            .is_some_and(|a| a.iter().any(|(t, _)| *t as f64 <= until));
+        let newest = c.parts.get(&current_hour).and_then(|a| {
+            a.iter()
+                .filter(|(t, _)| *t as f64 <= until)
+                .max_by_key(|(t, _)| *t)
+        });
+        let present = newest.is_some();
+        // A station an hour behind in the newest dataset of the hour: AirKorea has not updated it
+        // yet. Older rows are stations out of service and never mark the hour as lagging.
+        let hour_start = (now / HOUR_MS).floor() * HOUR_MS;
+        let lagging = newest.is_some_and(|(_, rows)| {
+            rows.iter()
+                .any(|r| r.ms < hour_start && r.ms >= hour_start - HOUR_MS)
+        });
+        {
+            let mut slot = self
+                .capture
+                .lagging
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            if lagging {
+                *slot = Some(current_hour.clone());
+            } else if slot.as_deref() == Some(current_hour.as_str()) {
+                *slot = None;
+            }
+        }
         if present {
             // Stored already (by this or another process): the capture skips this hour.
             self.capture
