@@ -166,12 +166,11 @@ struct Product {
     made_of: Option<MadeOf>,
 }
 fn parse_product(bytes: &[u8]) -> Option<Product> {
-    let body: serde_json::Value = serde_json::from_slice(bytes).ok()?;
-    let (fold, made) = HourlyForecasts::from_product(&body)?;
+    let (fold, made, made_of) = HourlyForecasts::from_product(bytes)?;
     Some(Product {
         fold,
         made,
-        made_of: body.get("madeOf").and_then(MadeOf::from_json),
+        made_of: MadeOf::from_json(&made_of),
     })
 }
 /// The last product of the productions: what it was made of (None: none was stored) and its
@@ -182,9 +181,11 @@ struct Made {
 }
 /// The product as the requests read it.
 struct ProductRead {
-    /// As stored, and when it was made (0: none was found).
+    /// As stored, when it was made (0: none was found) and its record (completion instant and
+    /// raw digest; a refresh that finds the same newest record reads nothing more).
     stored: Arc<HourlyForecasts>,
     made: f64,
+    record: Option<(u64, String)>,
     /// `stored` without the rows old at `cut`, unchanged up to `whole_until`.
     current: Arc<HourlyForecasts>,
     cut: f64,
@@ -276,13 +277,14 @@ fn stored_pub_date(records: &[RawRecord]) -> String {
         period.slot.get(..2).unwrap_or("00")
     )
 }
-fn image_catalog(day: &str) -> Result<CatalogId, String> {
+/// The day catalog of the image acquisitions (`image::KIND`) or the products ([`PRODUCT_KIND`]).
+fn image_catalog(kind: &str, day: &str) -> Result<CatalogId, String> {
     let key = AirKoreaImageRequest::provider_key()
         .canonical_bytes()
         .map_err(|e| e.to_string())?;
     Ok(CatalogId {
         source: image::SOURCE.into(),
-        kind: image::KIND.into(),
+        kind: kind.into(),
         key_sha256: crate::storage::sha256(&key),
         partition: day.into(),
     })
@@ -389,7 +391,7 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
         if let (Some((text, at, request)), Some(acquire)) = (self.target(now, forecasts), acquire)
             && !self.fold().has(&pub_date(&text))
             && self
-                .acquire_images(at, request, acquire, flights, generation, until)
+                .acquire_images(at, request, acquire, flights, generation, Some(until))
                 .await
         {
             // The acquisition completed after the request instant: read up to now.
@@ -432,8 +434,8 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
                 Some((text, at, request))
             })
     }
-    /// Start (or join) the owned acquisition of one announcement's images and wait for it until
-    /// `ready_by`: true when it published by then.
+    /// Start (or join) the owned acquisition of one announcement's images: a request waits for
+    /// it until `Some(ready_by)`, a production (`None`) until it ends. True when it published.
     async fn acquire_images(
         &self,
         at: Publication,
@@ -441,34 +443,35 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
         acquire: Arc<dyn AirKoreaAcquire>,
         flights: &Flights,
         generation: &Arc<AtomicU64>,
-        ready_by: Instant,
+        ready_by: Option<Instant>,
     ) -> bool {
         let counter = generation.clone();
         let shared = self.shared.clone();
-        flights
-            .join_for(
-                &format!("images-{}", at.compact()),
-                ready_by,
-                super::live::IMAGE_CALL_BUDGET + Duration::from_secs(10),
-                move || -> BoxFuture<'static, bool> {
-                    Box::pin(async move {
-                        let outcome = acquire.acquire_images(request).await;
-                        // A failure may still have published (an ambiguous S3 write): the next
-                        // read lists the catalogs again either way.
-                        if !matches!(outcome, Ok(None)) {
-                            shared
-                                .published_at
-                                .fetch_max(wall_ms(&*shared.clock) as i64, Ordering::AcqRel);
-                        }
-                        let ok = matches!(outcome, Ok(Some(_)));
-                        if ok {
-                            counter.fetch_add(1, Ordering::AcqRel);
-                        }
-                        ok
-                    })
-                },
-            )
-            .await
+        let work = move || -> BoxFuture<'static, bool> {
+            Box::pin(async move {
+                let outcome = acquire.acquire_images(request).await;
+                // A failure may still have published (an ambiguous S3 write): the next read
+                // lists the catalogs again either way.
+                if !matches!(outcome, Ok(None)) {
+                    shared
+                        .published_at
+                        .fetch_max(wall_ms(&*shared.clock) as i64, Ordering::AcqRel);
+                }
+                let ok = matches!(outcome, Ok(Some(_)));
+                if ok {
+                    counter.fetch_add(1, Ordering::AcqRel);
+                }
+                ok
+            })
+        };
+        let (key, owned_for) = (
+            format!("images-{}", at.compact()),
+            super::live::IMAGE_CALL_BUDGET + Duration::from_secs(10),
+        );
+        match ready_by {
+            Some(ready_by) => flights.join_for(&key, ready_by, owned_for, work).await,
+            None => flights.run(&key, owned_for, work).await,
+        }
     }
     /// One scheduled production at `now` (the process timer, never a request) within
     /// `deadline`. The fold of the stored image acquisitions is the last product when that was
@@ -492,8 +495,12 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
             .await
             .map_err(|_| "production deadline".to_owned())?;
         if last.is_none() {
-            // The first production of this process starts from the stored product.
-            let product = read_product(&self.shared, now, deadline).await?;
+            // The first production of this process starts from the stored product; an unreadable
+            // one is made again.
+            let product = match newest_product(&self.shared, now, deadline).await? {
+                Some((id, member)) => read_product(&self.shared, &id, &member, deadline).await?,
+                None => None,
+            };
             *last = Some(product.map_or_else(
                 || Made {
                     of: None,
@@ -512,9 +519,12 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
             .await?;
         if let (Some((text, at, request)), Some(acquire)) = (self.target(now, forecasts), acquire)
             && !fold.has(&pub_date(&text))
-            && self
-                .acquire_images(at, request, acquire, flights, generation, deadline)
-                .await
+            && tokio::time::timeout_at(
+                deadline,
+                self.acquire_images(at, request, acquire, flights, generation, None),
+            )
+            .await
+            .unwrap_or(false)
         {
             let now = wall_ms(&*self.shared.clock).max(now);
             (fold, of, changed) = self
@@ -530,8 +540,15 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .cut;
-        store_product(&self.shared, fold.clone(), cut, &of, deadline).await?;
-        install(&self.shared, fold.clone(), cut, fold.clone(), cut);
+        let record = store_product(&self.shared, fold.clone(), cut, &of, deadline).await?;
+        install(
+            &self.shared,
+            fold.clone(),
+            cut,
+            Some(record),
+            fold.clone(),
+            cut,
+        );
         *last = Some(Made { of: Some(of), fold });
         Ok(true)
     }
@@ -751,7 +768,7 @@ async fn listed<T: IndexListing + Clone + 'static>(
         .map_err(|e| format!("image listing: {e}"))?;
     let mut out = Vec::new();
     for day in window(cut).into_iter().filter(|d| listed.contains(d)) {
-        let id = image_catalog(&day)?;
+        let id = image_catalog(image::KIND, &day)?;
         for (fetched, group, member) in
             listed_acquisitions(&shared.reader.transport, &id, deadline).await?
         {
@@ -890,13 +907,13 @@ async fn read<T: IndexListing + Clone + 'static>(
     state.refreshed = Some(std::time::Instant::now());
     Ok(())
 }
-/// The newest stored product within the days whose rows can still be current (None: none).
-async fn read_product<T: IndexListing + Clone + 'static>(
+/// The newest stored product record within the days whose rows can still be current, from
+/// the day catalogs alone: its catalog and member envelope (None: none is stored).
+async fn newest_product<T: IndexListing + Clone + 'static>(
     shared: &Arc<Shared<T>>,
     now: f64,
     deadline: Instant,
-) -> Result<Option<Product>, String> {
-    let key = AirKoreaImageRequest::provider_key();
+) -> Result<Option<(CatalogId, Envelope)>, String> {
     let first = now - (DAYS - 1) as f64 * DAY_MS;
     let oldest = format!("{:08}", kst_date(first));
     let days = shared
@@ -904,51 +921,93 @@ async fn read_product<T: IndexListing + Clone + 'static>(
         .partitions(
             image::SOURCE,
             PRODUCT_KIND,
-            &key,
+            &AirKoreaImageRequest::provider_key(),
             &months(first, now),
             deadline,
         )
         .await
         .map_err(|e| format!("product listing: {e}"))?;
     for day in days.iter().rev().filter(|d| **d >= oldest) {
-        let found = shared
-            .reader
-            .latest_raw(
-                image::SOURCE,
-                PRODUCT_KIND,
-                &key,
-                day,
-                1,
-                |_| true,
-                deadline,
-            )
-            .await
-            .map_err(|e| format!("product read: {e}"))?;
-        let Some(record) = found.first().and_then(|a| a.first()) else {
-            continue;
-        };
-        let bytes = record.bytes.clone();
-        let product = tokio::time::timeout_at(
-            deadline,
-            super::air_input::cpu_task(&shared.answer_cpu, move || parse_product(&bytes)),
-        )
-        .await
-        .map_err(|_| "product parse deadline".to_owned())??;
-        if product.is_some() {
-            return Ok(product);
+        let id = image_catalog(PRODUCT_KIND, day)?;
+        let newest = listed_acquisitions(&shared.reader.transport, &id, deadline)
+            .await?
+            .into_iter()
+            .max_by(|a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));
+        if let Some((_, _, member)) = newest {
+            return Ok(Some((id, member)));
         }
     }
     Ok(None)
 }
-/// Read the newest stored product for the requests (an empty fold when none is stored).
+/// The record identity of a member envelope: completion instant and raw digest.
+fn record_of(member: &Envelope) -> (u64, String) {
+    (
+        member.identity.fetched_at_ms,
+        member.identity.raw_sha256.clone(),
+    )
+}
+/// Read one stored product record. Ok(None): the record is not a readable product (the next
+/// production stores a new one); a group still being published is an error, read again later.
+async fn read_product<T: IndexListing + Clone + 'static>(
+    shared: &Arc<Shared<T>>,
+    id: &CatalogId,
+    member: &Envelope,
+    deadline: Instant,
+) -> Result<Option<Product>, String> {
+    let page = shared
+        .reader
+        .store
+        .lookup_acquisition(id, &member.identity, deadline)
+        .await
+        .map_err(|e| format!("product read: {e}"))?;
+    let PageOutcome::Ready(page) = page else {
+        return Err("product being published".into());
+    };
+    let Some(bytes) = page
+        .acquisitions()
+        .first()
+        .and_then(|a| a.records().first())
+        .map(|r| r.bytes.clone())
+    else {
+        return Ok(None);
+    };
+    tokio::time::timeout_at(
+        deadline,
+        super::air_input::cpu_task(&shared.answer_cpu, move || parse_product(&bytes)),
+    )
+    .await
+    .map_err(|_| "product parse deadline".to_owned())?
+}
+/// Bring the requests' product up to the newest stored one: nothing more is read when it is
+/// the record held already; none stored, or an unreadable newest record, gives an empty fold
+/// unless a product is held.
 async fn refresh_product<T: IndexListing + Clone + 'static>(
     shared: &Arc<Shared<T>>,
     now: f64,
     deadline: Instant,
 ) -> Result<(), String> {
-    let product = read_product(shared, now, deadline).await?;
-    let (fold, made) =
-        product.map_or_else(|| (HourlyForecasts::default(), 0.), |p| (p.fold, p.made));
+    let newest = newest_product(shared, now, deadline).await?;
+    let record = newest.as_ref().map(|(_, member)| record_of(member));
+    {
+        let mut held = shared.product.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(held) = held
+            .as_mut()
+            .filter(|h| record.is_some() && h.record == record)
+        {
+            held.read = std::time::Instant::now();
+            return Ok(());
+        }
+    }
+    let product = match &newest {
+        Some((id, member)) => read_product(shared, id, member, deadline).await?,
+        None => None,
+    }
+    .unwrap_or(Product {
+        fold: HourlyForecasts::default(),
+        made: 0.,
+        made_of: None,
+    });
+    let (fold, made) = (product.fold, product.made);
     let cut = move || {
         let stored = Arc::new(fold);
         let current = stored
@@ -962,15 +1021,16 @@ async fn refresh_product<T: IndexListing + Clone + 'static>(
     )
     .await
     .map_err(|_| "product cut deadline".to_owned())??;
-    install(shared, stored, made, current, now);
+    install(shared, stored, made, record, current, now);
     Ok(())
 }
-/// Keep a product, made at `made` and cut at `cut`, as what the requests read, unless a newer
-/// one is held (whose read is then current again).
+/// Keep a product, made at `made`, stored as `record` and cut at `cut`, as what the requests
+/// read, unless a newer one is held (whose read is then current again).
 fn install<T>(
     shared: &Shared<T>,
     stored: Arc<HourlyForecasts>,
     made: f64,
+    record: Option<(u64, String)>,
     current: Arc<HourlyForecasts>,
     cut: f64,
 ) {
@@ -982,6 +1042,7 @@ fn install<T>(
             *product = Some(ProductRead {
                 stored,
                 made,
+                record,
                 current,
                 cut,
                 whole_until,
@@ -990,22 +1051,19 @@ fn install<T>(
         }
     }
 }
-/// Store `fold`, made at `made` of `made_of`, as the product of the KST day of `made`.
+/// Store `fold`, made at `made` of `made_of`, as the product of the KST day of `made`: its
+/// record identity.
 async fn store_product<T: IndexListing + Clone + 'static>(
     shared: &Arc<Shared<T>>,
     fold: Arc<HourlyForecasts>,
     made: f64,
     made_of: &MadeOf,
     deadline: Instant,
-) -> Result<(), String> {
-    let made_of = made_of.json();
+) -> Result<(u64, String), String> {
+    let of = made_of.json();
     let bytes = tokio::time::timeout_at(
         deadline,
-        super::air_input::cpu_task(&shared.cpu, move || {
-            let mut body = fold.product(made);
-            body["madeOf"] = made_of;
-            serde_json::to_vec(&body)
-        }),
+        super::air_input::cpu_task(&shared.cpu, move || fold.product(made, &of)),
     )
     .await
     .map_err(|_| "product deadline".to_owned())??
@@ -1020,7 +1078,7 @@ async fn store_product<T: IndexListing + Clone + 'static>(
         period,
         made as u64,
         200,
-        "application/json",
+        "application/gzip",
         Some(Pagination {
             page: 1,
             pages: 1,
@@ -1030,6 +1088,7 @@ async fn store_product<T: IndexListing + Clone + 'static>(
         &limits.raw,
     )
     .map_err(|e| format!("product record: {e}"))?;
+    let stored = record_of(&record.envelope);
     let member = GroupMember {
         envelope: record.envelope.clone(),
         catalogs: vec![
@@ -1045,5 +1104,5 @@ async fn store_product<T: IndexListing + Clone + 'static>(
         .publish(declaration, vec![record], deadline)
         .await
         .map_err(|e| format!("product publication: {e}"))?;
-    Ok(())
+    Ok(stored)
 }

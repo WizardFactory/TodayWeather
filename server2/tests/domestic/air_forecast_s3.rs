@@ -1979,12 +1979,25 @@ async fn stored_images_restore_while_observations_use_the_same_expiring_request_
     );
 }
 
-/// Counts the image GETs (raw GIFs and manifests) at the transport boundary; everything else
-/// passes through to the S06 loopback peer.
+/// Counts the image GETs (raw GIFs and manifests), the product record GETs and the group
+/// descriptor GETs at the transport boundary; everything passes through to the S06 loopback
+/// peer.
 #[derive(Clone)]
 struct CountedImages {
     inner: BoundedS3<HttpS3Transport>,
     image_gets: Arc<AtomicUsize>,
+    product_gets: Arc<AtomicUsize>,
+    descriptor_gets: Arc<AtomicUsize>,
+}
+impl CountedImages {
+    fn new(inner: BoundedS3<HttpS3Transport>) -> Self {
+        Self {
+            inner,
+            image_gets: Arc::default(),
+            product_gets: Arc::default(),
+            descriptor_gets: Arc::default(),
+        }
+    }
 }
 impl server2::storage::ObjectTransport for CountedImages {
     async fn put(
@@ -2004,6 +2017,9 @@ impl server2::storage::ObjectTransport for CountedImages {
         if key.starts_with("raw/v2/airkorea-image/airkorea-forecast-image/") {
             self.image_gets.fetch_add(1, Ordering::SeqCst);
         }
+        if key.starts_with("raw/v2/airkorea-image/airkorea-forecast-hourly/") {
+            self.product_gets.fetch_add(1, Ordering::SeqCst);
+        }
         self.inner.get(key, max).await
     }
 }
@@ -2013,6 +2029,9 @@ impl server2::storage::CatalogTransport for CountedImages {
         key: &str,
         max: usize,
     ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
+        if key.starts_with("index/v2/groups/") {
+            self.descriptor_gets.fetch_add(1, Ordering::SeqCst);
+        }
         self.inner.get_control(key, max).await
     }
     async fn put_control(
@@ -2044,6 +2063,33 @@ impl server2::history::IndexListing for CountedImages {
         self.inner.list_index(prefix, token).await
     }
 }
+/// The JSON of a stored product (gzip).
+fn product_json(stored: &[u8]) -> Value {
+    let mut raw = Vec::new();
+    std::io::Read::read_to_end(&mut flate2::read::GzDecoder::new(stored), &mut raw).unwrap();
+    serde_json::from_slice(&raw).unwrap()
+}
+/// A stored product of `product_json`'s form.
+fn gzip(json: &Value) -> Vec<u8> {
+    let mut gzip = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
+    std::io::Write::write_all(&mut gzip, &serde_json::to_vec(json).unwrap()).unwrap();
+    gzip.finish().unwrap()
+}
+/// Publish a stored product (`bytes`) made at `made` as the product of KST day `day`.
+async fn publish_product(store: &Store, day: u32, made: f64, bytes: Vec<u8>) {
+    publish(
+        store,
+        ("airkorea-image", "airkorea-forecast-hourly"),
+        ProviderKey::Named {
+            id: "national".into(),
+        },
+        Publication::new(day, 0).unwrap().period(),
+        &format!("{day:08}"),
+        made,
+        &[(bytes, "application/gzip")],
+    )
+    .await;
+}
 /// The stored products (`airkorea-forecast-hourly`) of one KST day, newest first.
 async fn products(store: &Arc<Store>, day: &str) -> Vec<Value> {
     let key = ProviderKey::Named {
@@ -2060,7 +2106,7 @@ async fn products(store: &Arc<Store>, day: &str) -> Vec<Value> {
             .acquisitions()
             .iter()
             .rev()
-            .map(|a| serde_json::from_slice(&a.records()[0].bytes).unwrap())
+            .map(|a| product_json(&a.records()[0].bytes))
             .collect(),
         Err(server2::storage::Error::NotFound) => Vec::new(),
         other => panic!("product catalog: {:?}", other.err()),
@@ -2076,11 +2122,8 @@ async fn products(store: &Arc<Store>, day: &str) -> Vec<Value> {
 async fn the_image_forecast_is_produced_on_a_schedule_and_requests_only_read_it() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
-    let image_gets = Arc::new(AtomicUsize::new(0));
-    let transport = CountedImages {
-        inner: peer.transport(),
-        image_gets: image_gets.clone(),
-    };
+    let transport = CountedImages::new(peer.transport());
+    let image_gets = transport.image_gets.clone();
     let limits = CatalogLimits {
         deadline: Duration::from_secs(9),
         raw: server2::storage::Limits {
@@ -2115,9 +2158,12 @@ async fn the_image_forecast_is_produced_on_a_schedule_and_requests_only_read_it(
         0,
         "no request acquires"
     );
-    // The production acquires the images once and stores the fold.
+    // The production acquires the images once and stores the fold, also when the images take
+    // longer than a request may wait (review IMG-production-wait).
+    stub.state.delay_ms.store(4_000, Ordering::SeqCst);
     let before = now_ms();
     assert_eq!(inputs.produce_images().await, Ok(true));
+    stub.state.delay_ms.store(0, Ordering::SeqCst);
     let after = now_ms();
     assert_eq!(stub.state.gifs.load(Ordering::SeqCst), 2, "one acquisition");
     assert_eq!(stub.state.dust.load(Ordering::SeqCst), 1);
@@ -2169,11 +2215,8 @@ async fn the_image_forecast_is_produced_on_a_schedule_and_requests_only_read_it(
 async fn stored_images_are_folded_by_a_production_never_by_a_request() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
-    let image_gets = Arc::new(AtomicUsize::new(0));
-    let transport = CountedImages {
-        inner: peer.transport(),
-        image_gets: image_gets.clone(),
-    };
+    let transport = CountedImages::new(peer.transport());
+    let image_gets = transport.image_gets.clone();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
     let peer_store = store_for(&peer.transport());
     // The station list an hour ago, and the 23시 announcement's images of the previous KST day
@@ -2268,18 +2311,7 @@ async fn stored_images_are_folded_by_a_production_never_by_a_request() {
             0,
             json!([made as u64 - 15 * 86_400_000, "20261001", "an-old-group"]),
         );
-    publish(
-        &peer_store,
-        ("airkorea-image", "airkorea-forecast-hourly"),
-        ProviderKey::Named {
-            id: "national".into(),
-        },
-        Publication::new(20261016, 0).unwrap().period(),
-        "20261016",
-        made,
-        &[(serde_json::to_vec(&product).unwrap(), "application/json")],
-    )
-    .await;
+    publish_product(&peer_store, 20261016, made, gzip(&product)).await;
     let gets = image_gets.load(Ordering::SeqCst);
     let restarted = AirInputs::new(transport.clone(), store.clone())
         .with_clock(test_clock())
@@ -2287,4 +2319,103 @@ async fn stored_images_are_folded_by_a_production_never_by_a_request() {
     assert_eq!(restarted.produce_images().await, Ok(false));
     assert_eq!(image_gets.load(Ordering::SeqCst), gets, "nothing decoded");
     assert_eq!(products(&peer_store, "20261016").await.len(), 2);
+}
+
+/// A refresh reads the newest product alone (one group descriptor and one record, however many
+/// products the day holds), and nothing more while that record stays the newest (review
+/// IMG-product-read-cost).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_newest_product_is_read_alone_and_once() {
+    use server2::domestic::kma::source::air_forecast::Calibration;
+    use server2::domestic::kma::source::forecast_input::ImageForecasts;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let transport = CountedImages::new(peer.transport());
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let peer_store = store_for(&peer.transport());
+    let now = now_ms();
+    let urls = served_urls("https://www.airkorea.or.kr", "23", now);
+    let run = [("2026-10-15 23:00", now - 1_800_000., 'A', &urls)];
+    // Five products of today; the newest holds the fold of the fixture images.
+    for i in 1..=5 {
+        let made = now - 60_000. * f64::from(6 - i);
+        let fold = if i == 5 {
+            expected_fold(&run, made)
+        } else {
+            HourlyForecasts::default()
+        };
+        let stored = fold.product(made, &json!(null)).unwrap();
+        publish_product(&peer_store, 20261016, made, stored).await;
+    }
+    let images = ImageForecasts::new(transport.clone(), store, Calibration::defaults())
+        .with_clock(test_clock())
+        .with_refresh_interval(Duration::ZERO);
+    let three = || Instant::now() + Duration::from_secs(3);
+    let read = images.produced(now, three()).await;
+    let expected = expected_fold(&run, now);
+    for (name, _, _) in stations() {
+        same(
+            &read.by_station(&name),
+            &expected.by_station(&name),
+            &format!("newest {name}"),
+        );
+    }
+    assert!(!read.is_empty());
+    assert_eq!(transport.descriptor_gets.load(Ordering::SeqCst), 1);
+    assert_eq!(transport.product_gets.load(Ordering::SeqCst), 1);
+    // The same newest record: the refresh reads its catalog and nothing more.
+    let again = images.produced(now, three()).await;
+    assert_eq!(again.len(), read.len());
+    assert_eq!(transport.descriptor_gets.load(Ordering::SeqCst), 1);
+    assert_eq!(transport.product_gets.load(Ordering::SeqCst), 1);
+}
+
+/// A newest product that cannot be read answers no rows and does not stop the production: it
+/// stores a new product, which the next process finds current.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_unreadable_newest_product_is_made_again() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = store_for(&transport);
+    let now = now_ms();
+    publish_json(
+        &store,
+        "airkorea-station-list",
+        "stations",
+        Period {
+            local_date: 20261015,
+            slot: "0000".into(),
+        },
+        "20261015",
+        now - 3_600_000.,
+        station_page(),
+    )
+    .await;
+    publish_product(&store, 20261016, now - 1_000., b"not a product".to_vec()).await;
+    let inputs = || {
+        AirInputs::new(transport.clone(), store.clone())
+            .with_clock(test_clock())
+            .reading_produced_images()
+    };
+    let reader = inputs();
+    let seoul = town(37.5665, 126.978);
+    let answer = until(
+        || {
+            reader.load(
+                &seoul,
+                "서울특별시",
+                "중구",
+                false,
+                true,
+                now_ms(),
+                Instant::now() + Duration::from_secs(3),
+            )
+        },
+        |a| a.hourly.is_some(),
+    )
+    .await;
+    assert!(answer.hourly.is_some_and(|h| h.is_empty()));
+    assert_eq!(inputs().produce_images().await, Ok(true));
+    assert_eq!(inputs().produce_images().await, Ok(false));
 }

@@ -609,13 +609,23 @@ impl HourlyForecasts {
             .fold(f64::INFINITY, f64::min)
             + DAY_MS
     }
-    /// The stored form of a produced fold made at `at`: the rows in order, as runs of one
-    /// station, code and announcement on consecutive hours, with each station name and
-    /// announcement listed once. `dataTime` follows from the date, as `apply` derives it.
-    pub fn product(&self, at: f64) -> serde_json::Value {
+    /// The stored form of a produced fold made at `at`: gzip of [`Self::product_json`], so the
+    /// record stays within the raw record bound for any station list the legacy client accepts
+    /// (2,000 stations).
+    pub fn product(&self, at: f64, made_of: &serde_json::Value) -> std::io::Result<Vec<u8>> {
+        use std::io::Write;
+        let mut gzip = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
+        gzip.write_all(&self.product_json(at, made_of))?;
+        gzip.finish()
+    }
+    /// The JSON of a product: the rows in order, as runs of one station, code and announcement on
+    /// consecutive hours, with each station name and announcement listed once, and `made_of`
+    /// (what it was made of). `dataTime` follows from the date, as `apply` derives it. Written as
+    /// it goes, so a large fold holds no JSON tree.
+    fn product_json(&self, at: f64, made_of: &serde_json::Value) -> Vec<u8> {
         let (mut stations, mut pubs) = (Vec::new(), Vec::new());
         let (mut station_of, mut pub_of) = (HashMap::new(), HashMap::new());
-        let mut runs: Vec<(usize, usize, usize, f64, Vec<serde_json::Value>)> = Vec::new();
+        let mut runs = Vec::new();
         let mut last: Option<&Row> = None;
         for r in &self.rows {
             let follows = last.is_some_and(|l| {
@@ -624,94 +634,114 @@ impl HourlyForecasts {
                     && l.pub_date == r.pub_date
                     && l.date + HOUR_MS == r.date
             });
-            match runs.last_mut() {
-                Some(run) if follows => run.4.push(json_number(r.val)),
-                _ => {
-                    let s = *station_of.entry(r.station.as_str()).or_insert_with(|| {
-                        stations.push(r.station.as_str());
-                        stations.len() - 1
-                    });
-                    let p = *pub_of.entry(r.pub_date.as_str()).or_insert_with(|| {
-                        pubs.push(r.pub_date.as_str());
-                        pubs.len() - 1
-                    });
-                    let c = CODES
-                        .iter()
-                        .position(|(code, _, _)| *code == r.code)
-                        .unwrap_or_default();
-                    runs.push((s, c, p, r.date, vec![json_number(r.val)]));
+            if follows {
+                runs.push(b',');
+            } else {
+                let s = *station_of.entry(r.station.as_str()).or_insert_with(|| {
+                    stations.push(r.station.as_str());
+                    stations.len() - 1
+                });
+                let p = *pub_of.entry(r.pub_date.as_str()).or_insert_with(|| {
+                    pubs.push(r.pub_date.as_str());
+                    pubs.len() - 1
+                });
+                let c = CODES
+                    .iter()
+                    .position(|(code, _, _)| *code == r.code)
+                    .unwrap_or_default();
+                if last.is_some() {
+                    runs.extend_from_slice(b"]],");
                 }
+                runs.extend_from_slice(format!("[{s},{c},{p},").as_bytes());
+                write_number(&mut runs, r.date);
+                runs.extend_from_slice(b",[");
             }
+            write_number(&mut runs, r.val);
             last = Some(r);
         }
-        let runs: Vec<serde_json::Value> = runs
-            .into_iter()
-            .map(|(s, c, p, date, vals)| serde_json::json!([s, c, p, json_number(date), vals]))
-            .collect();
-        serde_json::json!({
-            "schema": PRODUCT_SCHEMA,
-            "at": json_number(at),
-            "stations": stations,
-            "pubs": pubs,
-            "runs": runs,
-        })
+        if last.is_some() {
+            runs.extend_from_slice(b"]]");
+        }
+        let mut out = format!("{{\"schema\":{PRODUCT_SCHEMA},\"at\":").into_bytes();
+        write_number(&mut out, at);
+        for (name, list) in [("stations", &stations), ("pubs", &pubs)] {
+            out.extend_from_slice(format!(",\"{name}\":").as_bytes());
+            let _ = serde_json::to_writer(&mut out, list);
+        }
+        out.extend_from_slice(b",\"runs\":[");
+        out.extend_from_slice(&runs);
+        out.extend_from_slice(b"],\"madeOf\":");
+        let _ = serde_json::to_writer(&mut out, made_of);
+        out.push(b'}');
+        out
     }
-    /// A stored product and when it was made; None when it is not one.
-    pub fn from_product(product: &serde_json::Value) -> Option<(Self, f64)> {
-        if product.get("schema")?.as_u64()? != PRODUCT_SCHEMA {
+    /// A stored product: the fold, when it was made and what it was made of; None when it is not
+    /// one, or expands past [`PRODUCT_JSON_BYTES`].
+    pub fn from_product(stored: &[u8]) -> Option<(Self, f64, serde_json::Value)> {
+        use std::io::Read;
+        let mut bytes = Vec::new();
+        flate2::read::GzDecoder::new(stored)
+            .take(PRODUCT_JSON_BYTES + 1)
+            .read_to_end(&mut bytes)
+            .ok()?;
+        if bytes.len() as u64 > PRODUCT_JSON_BYTES {
             return None;
         }
-        let names = |key| -> Option<Vec<&str>> {
-            product
-                .get(key)?
-                .as_array()?
-                .iter()
-                .map(serde_json::Value::as_str)
-                .collect()
-        };
-        let (stations, pubs) = (names("stations")?, names("pubs")?);
-        let at = |v: &serde_json::Value| v.as_u64().and_then(|i| usize::try_from(i).ok());
+        #[derive(serde::Deserialize)]
+        struct Stored {
+            schema: u64,
+            at: f64,
+            stations: Vec<String>,
+            pubs: Vec<String>,
+            runs: Vec<(usize, usize, usize, f64, Vec<f64>)>,
+            #[serde(rename = "madeOf", default)]
+            made_of: serde_json::Value,
+        }
+        let stored: Stored = serde_json::from_slice(&bytes).ok()?;
+        if stored.schema != PRODUCT_SCHEMA {
+            return None;
+        }
         let mut fold = Self::default();
-        for run in product.get("runs")?.as_array()? {
-            let [s, c, p, date, vals] = run.as_array()?.as_slice() else {
-                return None;
-            };
+        for (s, c, p, date, vals) in &stored.runs {
             let (station, code, pub_date) = (
-                *stations.get(at(s)?)?,
-                CODES.get(at(c)?)?.0,
-                *pubs.get(at(p)?)?,
+                stored.stations.get(*s)?,
+                CODES.get(*c)?.0,
+                stored.pubs.get(*p)?,
             );
-            let mut date = date.as_f64()?;
-            for val in vals.as_array()? {
-                let key = (station.to_owned(), date.to_bits(), code);
+            let mut date = *date;
+            for val in vals {
+                let key = (station.clone(), date.to_bits(), code);
                 // A fold holds one row per station, hour and code.
                 if fold.index.insert(key, fold.rows.len()).is_some() {
                     return None;
                 }
                 fold.rows.push(Row {
-                    station: station.to_owned(),
+                    station: station.clone(),
                     date,
                     code,
-                    val: val.as_f64()?,
+                    val: *val,
                     data_time: minute_text(date + 9. * HOUR_MS)?,
-                    pub_date: pub_date.to_owned(),
+                    pub_date: pub_date.clone(),
                 });
                 date += HOUR_MS;
             }
         }
-        Some((fold, product.get("at")?.as_f64()?))
+        Some((fold, stored.at, stored.made_of))
     }
 }
 /// A number as JSON: an integral value without the fraction (exact below 2^53).
-fn json_number(x: f64) -> serde_json::Value {
+fn write_number(out: &mut Vec<u8>, x: f64) {
     if x.fract() == 0. && x.abs() < 9_007_199_254_740_992. && !(x == 0. && x.is_sign_negative()) {
-        serde_json::Value::from(x as i64)
+        out.extend_from_slice((x as i64).to_string().as_bytes());
     } else {
-        serde_json::Value::from(x)
+        let _ = serde_json::to_writer(out, &x);
     }
 }
 /// The schema of [`HourlyForecasts::product`].
 const PRODUCT_SCHEMA: u64 = 1;
+/// The largest product JSON a stored product may expand to: two codes of 2,000 stations over
+/// 144 hours as single-row runs are about 17 MB.
+const PRODUCT_JSON_BYTES: u64 = 64 << 20;
 /// The stored form: the query fields, `__v` from the upsert's insert, then the replacement's
 /// remaining keys in Mongoose 5.1.2's reverse walk.
 fn row_doc(r: &Row) -> Doc {

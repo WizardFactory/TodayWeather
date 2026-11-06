@@ -181,8 +181,10 @@ fn hourly_forecast_rows_and_answers_equal_legacy() {
             &format!("rows after {data_time}"),
         );
         // The produced form read back answers exactly the same.
-        let (restored, made) = HourlyForecasts::from_product(&fold.product(now)).expect("product");
-        assert_eq!(made, now);
+        let made_of = serde_json::json!({"run": data_time});
+        let (restored, made, of) =
+            HourlyForecasts::from_product(&fold.product(now, &made_of).unwrap()).expect("product");
+        assert_eq!((made, of), (now, made_of));
         assert_eq!(restored.len(), fold.len());
         super::source::same(
             &restored.json(),
@@ -616,4 +618,63 @@ fn cycle_starts_equal_legacy() {
         let start = frame_start(&text(at(s, &["url"])), "PM10").unwrap();
         assert_eq!(iso(start), text(at(s, &["start"])));
     }
+}
+
+/// The product of the largest fold the legacy client bounds allow fits one raw record: 2,000
+/// stations (`MAX_TOTAL`), 120 frames (`gif::MAX_FRAMES`) and two announcements that hold
+/// alternate hours, so every row is a run of its own (review IMG-product-size). It reads back
+/// row for row.
+#[test]
+fn the_largest_fold_fits_one_record_and_reads_back_exactly() {
+    let frames = server2::domestic::kma::source::gif::MAX_FRAMES;
+    let stations: Vec<(String, f64, f64)> = (0..2_000)
+        .map(|i| (format!("측정소{i:04}"), 37.0, 127.0))
+        .collect();
+    let start = 1_790_208_000_000.;
+    let values = |parity: usize| -> Vec<(&'static str, f64, StationValues)> {
+        CODES
+            .iter()
+            .map(|(code, _, _)| {
+                let per_station: StationValues = (0..stations.len())
+                    .map(|s| {
+                        Some(
+                            (0..frames)
+                                .map(|f| (f % 2 == parity).then_some(((s + f) % 500) as u16))
+                                .collect(),
+                        )
+                    })
+                    .collect();
+                (*code, start, per_station)
+            })
+            .collect()
+    };
+    let mut fold = HourlyForecasts::default();
+    for (parity, pub_date) in [(0, "2026-09-24 05:00"), (1, "2026-09-24 11:00")] {
+        fold.apply(&Processed {
+            pub_date: pub_date.into(),
+            now: start,
+            stations: &stations,
+            values: values(parity),
+        });
+    }
+    assert_eq!(fold.len(), 2 * 2_000 * frames);
+    let stored = fold.product(start, &serde_json::json!({})).unwrap();
+    let limits = server2::storage::Limits::default();
+    assert!(
+        stored.len() <= limits.raw_bytes,
+        "{} bytes over the raw bound",
+        stored.len()
+    );
+    let (restored, made, _) = HourlyForecasts::from_product(&stored).expect("product");
+    assert_eq!(made, start);
+    // Every stored field of every row in order, without a JSON document per row.
+    assert_eq!(restored.len(), fold.len());
+    assert_eq!(
+        restored.product(start, &serde_json::json!({})).unwrap(),
+        stored
+    );
+    assert_eq!(
+        restored.by_station("측정소1999"),
+        fold.by_station("측정소1999")
+    );
 }

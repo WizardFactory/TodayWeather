@@ -2463,20 +2463,27 @@ and cannot hold one. Load: two GIF downloads per accepted announcement.
 **Scheduled production (observed source, AK 2026-11-06).** The observed response's requests
 never acquire or decode an image: the images and their decoding take longer than a request may
 wait. The bound process produces the fold at startup and then every ten minutes
-(`air_input::image_worker`, prepared when the KMA source has an AirKorea acquirer, stopped at
-shutdown). A production reads the station list and the dust forecast (acquiring either when
+(`air_input::image_worker`, prepared when the native KMA source, which KMA serving and push
+both build, has an AirKorea acquirer; stopped at shutdown). A production reads the station list and the dust forecast (acquiring either when
 missing, as a request does), folds the stored image acquisitions, and acquires the target
 announcement's images when that fold lacks them, waiting for the owned acquisition and folding
-it. It stores the fold as one `airkorea-image`/`airkorea-forecast-hourly` record under the image
-key (partition: the KST day it was made). The record keeps the rows in order as runs of one
-station, code and announcement on consecutive hours, `dataTime` following from the date as
-`apply` derives it, with what the product was made of: the acquisitions, a station list digest
-and a calibration digest. A production whose stored acquisitions, station list and calibration
+it. Its wait for that acquisition ends with the acquisition (60 s call budget), not with a request's
+bound. It stores the fold as one `airkorea-image`/`airkorea-forecast-hourly` record under the
+image key (partition: the KST day it was made). The record is gzip of JSON that keeps the rows in
+order as runs of one station, code and announcement on consecutive hours, `dataTime` following
+from the date as `apply` derives it, with what the product was made of: the acquisitions, a
+station list digest and a calibration digest. Compressed, the largest fold the legacy client
+bounds allow (2,000 stations, 120 frames, two announcements on alternate hours: 480,000 rows,
+each its own run) takes 2.5 MB, inside the 8 MiB raw record bound; a reader refuses one that
+expands past 64 MiB. A production whose stored acquisitions, station list and calibration
 equal the last product's stores and decodes nothing (acquisitions of days before the eight-day
 window are not compared: none of their rows is left), and a new process starts from the stored
 product, so a restart decodes only when something changed. A request reads the newest product of
 the last eight KST days (one owned read shared by concurrent requests, repeated at most every
-minute; the producing process installs its own product at once). It removes the rows older than
+minute; the producing process installs its own product at once). The read picks the newest
+record from the day catalogs and reads that record alone, and reads nothing more while the
+newest record is the one it holds. A newest record that is not a readable product counts as
+none: requests keep the product they hold, and the next production stores a new one. It removes the rows older than
 one day before its instant, as legacy `_removeOldData` does, and until a product exists it gets
 the legacy output for missing data. Legacy master ran `kecoForecast` hourly whether or not anyone
 asked; the timer is the same kind of fixed schedule, so these image acquisitions no longer wait
@@ -2516,7 +2523,11 @@ nothing, a request reads the product, a second production and a new process's fi
 current without reading an image again (also when the product lists an acquisition of a day
 before the window), a new process reads the stored product, another host's stored images are
 folded by a production and never by a request, a later request removes the rows old by its
-instant, and the product read back answers the ten legacy runs byte for byte.
+instant, an acquisition slower than a request's wait still reaches the same production, a
+refresh reads one group descriptor and one record among five products of the day and nothing
+more for the same newest record, an unreadable newest product is made again, the largest fold
+fits one record and reads back exactly, and the product read back answers the ten legacy runs
+byte for byte.
 The runtime prepares the timer only for the native KMA source with an AirKorea acquirer, the
 timer produces at once and then every period until it is stopped, and the process lifecycle smoke
 (`tools/runtime_services_smoke.py`) sees the bound process produce once its listeners are bound and

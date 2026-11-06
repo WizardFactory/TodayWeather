@@ -1,5 +1,6 @@
 //! S15b-3c: the runtime prepares the image hourly forecast production only for the native KMA
-//! source with an AirKorea acquirer; the bound process starts it. Synthetic settings only.
+//! source (built for KMA serving and for push) with an AirKorea acquirer; the bound process
+//! starts it. Synthetic settings only.
 use server2::runtime_services::RuntimeServices;
 
 #[tokio::test]
@@ -9,6 +10,7 @@ async fn runtime_prepares_image_production_only_with_an_airkorea_acquirer() {
         ("kma", false, false),
         ("kma", true, true),
         ("town", true, true),
+        ("push", true, true),
         ("notice", true, false),
     ] {
         let vars = peer.vars(families);
