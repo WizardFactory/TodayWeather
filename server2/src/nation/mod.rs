@@ -27,6 +27,12 @@ pub struct NationAir {
 pub trait NationSource: Send + Sync {
     fn nation_air(&self, now: f64, deadline: Instant) -> BoxFuture<'_, NationAir>;
 }
+/// The composition's absolute deadline (KMA-NATION-DEADLINE). Legacy gave each child request
+/// 9 s (`route.nation.js`: "못 받으면 다음 요청에 받도록 timeout을 길게 함"); this stays within the
+/// 9-second gateway deadline. Each city still bounds its own inputs (about 2.9 s under the observed
+/// source); fifteen assemblies then queue for the CPU admission, and on EC2 (2026-11-07) the old
+/// three-second deadline cut 6 of 13 steady compositions into the legacy error page.
+pub const NATION_DEADLINE: Duration = Duration::from_secs(8);
 pub const CITIES: [&str; 15] = [
     "서울특별시",
     "강원도/춘천시",
@@ -45,7 +51,7 @@ pub const CITIES: [&str; 15] = [
     "울산광역시",
 ];
 /// Legacy-selected child-version assembly, never an HTTP hop to legacy. Air and all 15 cities share one
-/// absolute three-second deadline; unfinished provider work is owned by the shared sources.
+/// absolute deadline ([`NATION_DEADLINE`]); unfinished provider work is owned by the shared sources.
 pub trait CitySource: Send + Sync {
     fn weather(
         &self,
@@ -96,7 +102,7 @@ impl NationBackend {
         self.outcome_for(base, true).await
     }
     pub async fn outcome_for(&self, base: KmaRequest, national: bool) -> Outcome {
-        let deadline = Instant::now() + Duration::from_secs(3);
+        let deadline = Instant::now() + NATION_DEADLINE;
         let now = (self.clock)();
         let air = self.source.nation_air(now, deadline);
         let weather = async {
