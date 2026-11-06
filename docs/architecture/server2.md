@@ -2187,12 +2187,14 @@ bound (30 s per call) and serves the next request; joined requests share it. Dat
 for is visible to it although it completed after the request instant. While a request arrived in the
 last 24 hours, a process capture checks every 10 minutes and acquires the current nationwide hour
 once if it is not stored, so the 24-hour station rows have no hourly gaps (legacy collected every
-10 minutes regardless of demand); that is at most 24 nationwide calls a day. It acquires the hour
-again at each check while the newest stored dataset of the hour has a station one hour behind
-(KMA-AIR-REFRESH): AirKorea updates some stations after the hour's dataset is out, and on EC2 on
-2026-11-07 two stations stayed an hour behind for 50 minutes. Stations further behind are out of
-service and never count, so the refreshes stop once every live station is current; the total stays
-within the 144 daily calls of the legacy cadence.
+10 minutes regardless of demand); that is at most 24 nationwide calls a day. Once the hour is
+stored, each check reads the hour's newest stored dataset (about 335 KB) and acquires the hour again
+while a station is one hour behind (KMA-AIR-REFRESH): AirKorea updates some stations after the hour's
+dataset is out, and on EC2 on 2026-11-07 two stations stayed an hour behind for 50 minutes. Stations
+further behind are out of service and never count; once every live station is current the hour is
+complete and the checks stop reading it. Per process that is one acquisition when the hour is
+missing and at most one per check while a station lags: at most seven logical acquisitions an hour,
+each with its pages and one retry, on the same AirKorea key allowance as the dust forecasts.
 
 Verification (local; test peers only): a pinned Node 16.20.2 + Mongoose 5.1.2 oracle
 ([provenance](../../server2/tests/domestic/fixtures/AIR-PROVENANCE.md)) records the legacy

@@ -446,8 +446,9 @@ struct StubState {
     hours_ago: AtomicUsize,
     /// `hours_ago` applies to the next nationwide call only (later calls answer this hour).
     hours_ago_once: std::sync::atomic::AtomicBool,
-    /// The next nationwide answer has 용산구 an hour behind (AirKorea updates it later).
-    lag_once: std::sync::atomic::AtomicBool,
+    /// The next this many nationwide answers have 용산구 an hour behind (AirKorea updates it
+    /// later).
+    lagging_answers: AtomicUsize,
     /// Every nationwide answer has a station out of service, three hours behind.
     out_of_service: std::sync::atomic::AtomicBool,
     /// Added to every PM10 value (distinguishes a later acquisition).
@@ -523,7 +524,10 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> impl IntoRespo
                 "body": {"totalCount": total, "items": items, "pageNo": page, "numOfRows": 1000}}});
             return ([("content-type", "application/json")], body.to_string());
         }
-        let lag = state.lag_once.swap(false, Ordering::SeqCst);
+        let lag = state
+            .lagging_answers
+            .try_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
+            .is_ok();
         let behind = kst_text(now_ms() - (ago + 1.) * 3_600_000.);
         let items: Vec<serde_json::Value> = STATIONS
             .iter()
@@ -952,8 +956,9 @@ async fn the_hourly_capture_acquires_the_current_hour_while_demand_lasts() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_capture_acquires_the_current_hour_again_while_a_station_lags() {
     // KMA-AIR-REFRESH: AirKorea updates some stations after the hour's dataset is out. Legacy
-    // collected every 10 minutes; the capture acquires the hour again while its newest dataset
-    // has a station an hour behind, and stops once every station is current.
+    // collected every 10 minutes; the capture reads the hour's newest stored dataset at each check
+    // and acquires the hour again while a station is an hour behind, without any request, and
+    // stops once every live station is current.
     let _serial = SERIAL.lock().await;
     let peer = Peer::new();
     let transport = peer.transport();
@@ -962,24 +967,37 @@ async fn the_capture_acquires_the_current_hour_again_while_a_station_lags() {
     let inputs = AirInputs::new(transport.clone(), store.clone())
         .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
         .with_capture_interval(Duration::from_millis(300));
-    stub.state.lag_once.store(true, Ordering::SeqCst);
-    // A station out of service (three hours behind) never makes the hour lag.
+    // 용산구 stays an hour behind in the first two datasets; a station out of service (three
+    // hours behind) is in every dataset and never counts.
+    stub.state.lagging_answers.store(2, Ordering::SeqCst);
     stub.state.out_of_service.store(true, Ordering::SeqCst);
     let hour = kst(now_ms()).hour_start();
     // The request acquires the hour; 용산구 is an hour behind in it.
     let first = yongsan(&inputs).await.expect("an answer");
     assert_eq!(first, kst_text(now_ms() - 3_600_000.));
     assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 1);
-    // Without another request the capture acquires the hour again.
+    // Without another request the capture acquires the hour twice more: the second dataset
+    // still lags (a later check, so a later key), the third is current.
     let started = std::time::Instant::now();
-    while stub.state.nationwide.load(Ordering::SeqCst) < 2 {
+    while stub.state.nationwide.load(Ordering::SeqCst) < 3 {
         assert!(
             started.elapsed() < Duration::from_secs(30),
-            "no refresh while a station lags"
+            "{} acquisitions: no refresh while a station lags",
+            stub.state.nationwide.load(Ordering::SeqCst)
         );
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
-    // A request folds the refreshed dataset: every station is current.
+    // Complete: ten further capture checks ask nothing more in this hour, although the station
+    // out of service stays behind.
+    tokio::time::sleep(Duration::from_millis(3_000)).await;
+    if kst(now_ms()).hour_start() == hour {
+        assert_eq!(
+            stub.state.nationwide.load(Ordering::SeqCst),
+            3,
+            "no refresh once every live station is current"
+        );
+    }
+    // A request folds the refreshed dataset: 용산구 is current.
     let refreshed = loop {
         let answer = yongsan(&inputs).await.expect("an answer");
         if answer == kst_text(now_ms()) {
@@ -992,16 +1010,6 @@ async fn the_capture_acquires_the_current_hour_again_while_a_station_lags() {
         tokio::time::sleep(Duration::from_millis(100)).await;
     };
     assert_eq!(refreshed, kst_text(now_ms()));
-    // Complete: ten further capture checks ask nothing more in this hour.
-    let calls = stub.state.nationwide.load(Ordering::SeqCst);
-    tokio::time::sleep(Duration::from_millis(3_000)).await;
-    if kst(now_ms()).hour_start() == hour {
-        assert_eq!(
-            stub.state.nationwide.load(Ordering::SeqCst),
-            calls,
-            "no refresh once every station is current"
-        );
-    }
 }
 /// The `dataTime` of the 용산구 observation `inputs` answers now (None: missing data).
 async fn yongsan(inputs: &AirInputs<BoundedS3<HttpS3Transport>>) -> Option<String> {

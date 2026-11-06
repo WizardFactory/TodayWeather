@@ -4,8 +4,8 @@ The EC2 verification of 2026-11-07 showed current air one hour stale at some sta
 
 ## Outcomes
 
-- **REFRESH:** while the newest stored dataset of the current hour has a station one hour behind, the process capture acquires the hour again at each 10-minute check, without a request waiting for it.
-- **STOP:** once every live station is current the capture asks nothing more in that hour; stations further behind (out of service) never cause a refresh.
+- **REFRESH:** while the newest stored dataset of the current hour has a station one hour behind, the process capture acquires the hour again at each 10-minute check. The capture reads the stored dataset itself, so it needs no request and no request waits for it.
+- **STOP:** once every live station is current the hour is complete and the capture neither reads nor asks for it again; stations further behind (out of service) never cause a refresh.
 - **UNCHANGED:** requests answer as before (the stored data, no new wait); a missing current hour is acquired as before.
 - **PLACEMENT:** the placement gate and the artifact policy pass on the outgoing commits.
 
