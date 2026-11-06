@@ -4,12 +4,13 @@
   "scope": "Shared S3 admission: a bulk lane for the warning store and the persisted warning feed, so request reads keep permits after a restart. No deployment or production mutation.",
   "server2_paths": [
     "server2/config/tasks/KMA-RESTART-READS.json",
-    "server2/src/world/air_store.rs",
     "server2/src/gateway/runtime.rs",
+    "server2/src/push/deliver/warning_feed.rs",
     "server2/src/runtime_services.rs",
     "server2/src/warnings/store.rs",
-    "server2/src/push/deliver/warning_feed.rs",
+    "server2/src/world/air_store.rs",
     "server2/tests/raw_records.rs",
+    "server2/tests/runtime_services/feed.rs",
     "server2/tests/storage/bulk_lane.rs"
   ],
   "outside": [
