@@ -1,4 +1,4 @@
-//! S17c native nation APIs. The cities share one absolute request deadline.
+//! S17c native nation APIs. The inputs share one request budget and the cities one deadline.
 pub mod air;
 use crate::{
     domestic::kma::{KmaRequest, Outcome, backend::KmaBackend},
@@ -28,11 +28,13 @@ pub trait NationSource: Send + Sync {
     fn nation_air(&self, now: f64, deadline: Instant) -> BoxFuture<'_, NationAir>;
 }
 /// The composition's absolute deadline (KMA-NATION-DEADLINE). Legacy gave each child request
-/// 9 s (`route.nation.js`: "못 받으면 다음 요청에 받도록 timeout을 길게 함"); this stays within the
-/// 9-second gateway deadline. Each city still bounds its own inputs (about 2.9 s under the observed
-/// source); fifteen assemblies then queue for the CPU admission, and on EC2 (2026-11-07) the old
-/// three-second deadline cut 6 of 13 steady compositions into the legacy error page.
+/// 9 s (`route.nation.js`: "못 받으면 다음 요청에 받도록 timeout을 길게 함"). Every input still waits
+/// at most [`NATION_INPUTS`]; the fifteen city assemblies then queue for the CPU admission, and on
+/// EC2 (2026-11-07) a three-second limit on that queue cut 6 of 13 steady compositions into the
+/// legacy error page.
 pub const NATION_DEADLINE: Duration = Duration::from_secs(8);
+/// The input budget: air, the narrative and each city's inputs (the KMA request budget).
+pub const NATION_INPUTS: Duration = Duration::from_secs(3);
 pub const CITIES: [&str; 15] = [
     "서울특별시",
     "강원도/춘천시",
@@ -50,8 +52,9 @@ pub const CITIES: [&str; 15] = [
     "경상북도/안동시",
     "울산광역시",
 ];
-/// Legacy-selected child-version assembly, never an HTTP hop to legacy. Air and all 15 cities share one
-/// absolute deadline ([`NATION_DEADLINE`]); unfinished provider work is owned by the shared sources.
+/// Legacy-selected child-version assembly, never an HTTP hop to legacy. `deadline` bounds the city's
+/// answer ([`NATION_DEADLINE`]); its inputs keep the request budget. Unfinished provider work is
+/// owned by the shared sources.
 pub trait CitySource: Send + Sync {
     fn weather(
         &self,
@@ -65,7 +68,7 @@ impl CitySource for KmaBackend {
         request: KmaRequest,
         deadline: Instant,
     ) -> BoxFuture<'_, Result<Outcome, crate::gateway::GatewayError>> {
-        Box::pin(self.outcome(request, deadline))
+        Box::pin(self.outcome_finishing(request, deadline))
     }
 }
 pub struct NationBackend {
@@ -102,9 +105,10 @@ impl NationBackend {
         self.outcome_for(base, true).await
     }
     pub async fn outcome_for(&self, base: KmaRequest, national: bool) -> Outcome {
-        let deadline = Instant::now() + NATION_DEADLINE;
+        let start = Instant::now();
+        let (inputs, deadline) = (start + NATION_INPUTS, start + NATION_DEADLINE);
         let now = (self.clock)();
-        let air = self.source.nation_air(now, deadline);
+        let air = self.source.nation_air(now, inputs);
         let weather = async {
             let mut jobs = Vec::new();
             for (index, city) in CITIES.into_iter().enumerate() {
@@ -211,7 +215,7 @@ impl NationBackend {
             &mut result,
             national.then_some(108),
             self.narrative.as_ref(),
-            deadline,
+            inputs,
             self.narrative_clock.as_ref(),
         )
         .await;

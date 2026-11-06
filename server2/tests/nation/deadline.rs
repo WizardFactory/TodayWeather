@@ -1,8 +1,8 @@
-//! KMA-NATION-DEADLINE: the nation composition waits for its fifteen cities as long as legacy's
-//! child requests did (9 s each), within the 9-second gateway deadline. Each city bounds its own
-//! inputs at about 2.9 s; fifteen assemblies then queue for the CPU admission, so on EC2
-//! (2026-11-07) the composition ended at about 3 s and missed the old 3-second deadline in 6 of 13
-//! steady requests, answering the legacy error page.
+//! KMA-NATION-DEADLINE: the nation composition waits for its fifteen cities for 8 s (legacy gave
+//! each child request 9 s), while air and each city's inputs keep the three-second budget. On EC2
+//! (2026-11-07) the city inputs ended near that bound and the assemblies, queued for the CPU
+//! admission, were cut at three seconds in 6 of 13 steady requests (the legacy error page).
+//! `tests/domestic/nation_city.rs` checks the queue on the KMA backend itself.
 use super::support::UnusedCitySource;
 use axum::{
     body::{Body, to_bytes},
@@ -12,7 +12,10 @@ use server2::{
     api::{DirectFamilies, DirectRoutes},
     domestic::kma::{AssemblyConfig, KmaRequest, Outcome, backend::KmaBackend},
     gateway::{BackendDispatcher, BoxFuture, GatewayError, OrderedJson},
-    nation::{CitySource, NationAir, NationBackend, NationSource, object, text},
+    nation::{
+        CitySource, NATION_DEADLINE, NATION_INPUTS, NationAir, NationBackend, NationSource, object,
+        text,
+    },
 };
 use std::sync::Arc;
 use std::time::Duration;
@@ -55,7 +58,40 @@ impl NationSource for NoAir {
         })
     }
 }
+/// Records the time each input and city is given from the start of the composition.
+#[derive(Clone, Default)]
+struct Budgets(Arc<std::sync::Mutex<Vec<(&'static str, Duration)>>>);
+impl Budgets {
+    fn note(&self, what: &'static str, deadline: Instant) {
+        let left = deadline - Instant::now();
+        self.0.lock().unwrap().push((what, left));
+    }
+}
+impl CitySource for Budgets {
+    fn weather(
+        &self,
+        _: KmaRequest,
+        deadline: Instant,
+    ) -> BoxFuture<'_, Result<Outcome, GatewayError>> {
+        self.note("city", deadline);
+        Box::pin(async { Ok(Outcome::Json(object(vec![("cityName", text("x"))]))) })
+    }
+}
+impl NationSource for Budgets {
+    fn nation_air(&self, _: f64, deadline: Instant) -> BoxFuture<'_, NationAir> {
+        self.note("air", deadline);
+        Box::pin(async {
+            NationAir {
+                rows: vec![],
+                status: object(vec![]),
+            }
+        })
+    }
+}
 fn routes(cities: SlowCities) -> DirectRoutes {
+    with(Arc::new(cities), Arc::new(NoAir))
+}
+fn with(cities: Arc<dyn CitySource>, air: Arc<dyn NationSource>) -> DirectRoutes {
     let clock = Arc::new(|| 0.);
     DirectRoutes::new(
         Arc::new(KmaBackend::new(
@@ -70,11 +106,7 @@ fn routes(cities: SlowCities) -> DirectRoutes {
         },
         BackendDispatcher::legacy("http://127.0.0.1:1").unwrap(),
     )
-    .with_nation(Arc::new(NationBackend::new(
-        Arc::new(cities),
-        Arc::new(NoAir),
-        clock,
-    )))
+    .with_nation(Arc::new(NationBackend::new(cities, air, clock)))
 }
 async fn nation(direct: &DirectRoutes) -> (u16, String, Duration) {
     let started = tokio::time::Instant::now();
@@ -121,4 +153,32 @@ async fn a_city_that_never_answers_is_the_legacy_child_error_at_eight_seconds() 
         "{body}"
     );
     assert_eq!(took, Duration::from_secs(8));
+}
+
+#[tokio::test(start_paused = true)]
+async fn air_keeps_the_input_budget_and_cities_get_the_nation_deadline() {
+    let budgets = Budgets::default();
+    let direct = with(Arc::new(budgets.clone()), Arc::new(budgets.clone()));
+    for path in ["v000903", "v000901"] {
+        budgets.0.lock().unwrap().clear();
+        let request = Request::builder()
+            .uri(format!("/{path}/nation/KR"))
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(direct.handle(request).await.status(), 200, "{path}");
+        let seen = budgets.0.lock().unwrap().clone();
+        assert_eq!(
+            seen.iter().filter(|(w, _)| *w == "city").count(),
+            15,
+            "{path}"
+        );
+        for (what, left) in seen {
+            let expected = if what == "air" {
+                NATION_INPUTS
+            } else {
+                NATION_DEADLINE
+            };
+            assert_eq!(left, expected, "{path} {what}");
+        }
+    }
 }
