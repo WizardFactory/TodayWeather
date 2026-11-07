@@ -14,6 +14,7 @@
     "server2/src/storage/codec.rs",
     "server2/tests/cache.rs",
     "server2/tests/domestic.rs",
+    "server2/tests/domestic/full_response.rs",
     "server2/tests/domestic/observe.rs",
     "server2/tests/domestic/observe_product.rs",
     "server2/tests/domestic/summary_s3.rs",

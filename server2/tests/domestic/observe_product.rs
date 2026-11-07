@@ -86,13 +86,19 @@ fn process(peer: &Peer) -> (Arc<Obs>, Counted) {
     ));
     (obs, counted)
 }
-async fn answer(obs: &Arc<Obs>) -> Arc<Folded> {
+async fn answer<T>(obs: &Arc<Observations<T>>) -> Arc<Folded>
+where
+    T: server2::history::IndexListing + Clone + Send + Sync + 'static,
+{
     obs.stations(NOW as i64, Instant::now() + Duration::from_millis(2500))
         .await
         .unwrap()
 }
 /// A later answer whose inputs were read completely (S16), or a panic.
-async fn settle(obs: &Arc<Obs>) -> Arc<Folded> {
+async fn settle<T>(obs: &Arc<Observations<T>>) -> Arc<Folded>
+where
+    T: server2::history::IndexListing + Clone + Send + Sync + 'static,
+{
     for _ in 0..120 {
         let folded = answer(obs).await;
         if obs.settled(NOW as i64, &folded) {
@@ -443,16 +449,140 @@ async fn unusable_products_are_replaced_by_the_raw_pages() {
     }
 }
 
+/// A process's transport that holds its LISTs under `held` until the test opens them and records
+/// the prefixes of the LISTs answered, so a test can order two processes' restores.
+#[derive(Clone)]
+struct Listing {
+    inner: Counted,
+    held: String,
+    open: Arc<tokio::sync::watch::Sender<bool>>,
+    answered: Arc<tokio::sync::watch::Sender<Vec<String>>>,
+}
+impl Listing {
+    /// Wait until a LIST under `prefix` was answered.
+    async fn answered(&self, prefix: &str) {
+        let _ = self
+            .answered
+            .subscribe()
+            .wait_for(|a| a.iter().any(|p| p.starts_with(prefix)))
+            .await;
+    }
+    fn open(&self) {
+        self.open.send_replace(true);
+    }
+}
+impl server2::storage::ObjectTransport for Listing {
+    async fn put(
+        &self,
+        record: &server2::storage::PreparedRecord,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put(record).await
+    }
+    async fn head(&self, key: &str) -> Result<server2::storage::Object, server2::storage::Error> {
+        self.inner.head(key).await
+    }
+    async fn get(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::Object, server2::storage::Error> {
+        server2::storage::ObjectTransport::get(&self.inner, key, max).await
+    }
+}
+impl server2::storage::CatalogTransport for Listing {
+    async fn get_control(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
+        self.inner.get_control(key, max).await
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &server2::storage::WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        self.inner.put_control(key, body, condition).await
+    }
+    async fn list_raw_document(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+        keys: usize,
+        bytes: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        self.inner
+            .list_raw_document(prefix, token, keys, bytes)
+            .await
+    }
+}
+impl server2::history::IndexListing for Listing {
+    async fn list_index(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+    ) -> Result<server2::storage::ListPage, server2::storage::Error> {
+        if prefix.starts_with(self.held.as_str()) {
+            let _ = self.open.subscribe().wait_for(|open| *open).await;
+        }
+        let page = self.inner.list_index(prefix, token).await;
+        self.answered.send_modify(|a| a.push(prefix.to_owned()));
+        page
+    }
+}
+/// A process on a [`Listing`] transport that holds the LISTs under `held`.
+fn listing_process(peer: &Peer, held: &str) -> (Arc<Observations<Listing>>, Listing) {
+    let listing = Listing {
+        inner: Counted::new(peer.transport_limited(4)),
+        held: held.to_owned(),
+        open: Arc::new(tokio::sync::watch::channel(false).0),
+        answered: Arc::new(tokio::sync::watch::channel(Vec::new()).0),
+    };
+    let obs = Arc::new(Observations::new(
+        listing.clone(),
+        Arc::new(CatalogStore::new(listing.clone(), CatalogLimits::default()).unwrap()),
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+    ));
+    (obs, listing)
+}
+
 /// Two processes store their products; a third reads the newest of each day, stores none and
-/// answers as they do.
+/// answers as they do. Two processes that run in step make each day's product within a
+/// millisecond or two, and one made in the same millisecond is the same record (instant and
+/// bytes), which S06 stores once: so the second process lists the products (none yet), waits at
+/// its page listing while the first stores its products, and then makes its own.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_newest_of_two_processes_products_is_read() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = seeded_peer(&[], Vec::new()).await;
-    let ((_, _, one), (_, _, two)) = tokio::join!(producing(&peer), producing(&peer));
+    let (b, b_listing) = listing_process(&peer, "index/v2/kma-web/aws-hourly/");
+    let first = tokio::spawn({
+        let b = b.clone();
+        async move { answer(&b).await }
+    });
+    b_listing.answered("index/v2/kma-web/station-pages/").await;
+    let (_, _, one) = producing(&peer).await;
+    for day in DAYS {
+        assert_eq!(
+            products(&peer, day).await.len(),
+            1,
+            "the first process's {day}"
+        );
+    }
+    b_listing.open();
+    first.await.unwrap();
+    let two = settle(&b).await;
     same(&one, &two, "two processes");
     for day in DAYS {
-        assert_eq!(products(&peer, day).await.len(), 2, "{day}");
+        let made: Vec<f64> = products(&peer, day)
+            .await
+            .iter()
+            .map(|p| p["made"].as_f64().unwrap())
+            .collect();
+        assert_eq!(made.len(), 2, "{day}");
+        assert!(made[0] < made[1], "{day}: {made:?}");
     }
     let (f, f_counted) = process(&peer);
     let folded = settle(&f).await;
