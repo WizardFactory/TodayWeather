@@ -595,11 +595,15 @@ impl Writer {
         F: Future<Output = Result<Option<Batch>, Error>> + Send + 'static,
     {
         let scope = ResponseScope::current();
-        let entry = {
+        // The caller is a waiter from the moment it creates or joins the entry: its receiver
+        // exists before the provider can finish, so a provider that is done before the caller
+        // is polled again is not released as one nobody waits for (NoWaiters), which would
+        // publish a response's raw before its body ends.
+        let mut receiver = {
             let mut table = self.table.lock().unwrap_or_else(|e| e.into_inner());
             Self::prune(&mut table);
             if let Some(entry) = table.entries.get(&key) {
-                entry.clone()
+                entry.state.subscribe()
             } else {
                 if self.closing.load(SeqCst)
                     || reserve == 0
@@ -618,6 +622,7 @@ impl Writer {
                 if scope.is_none() {
                     entry.gate.release(ReleaseReason::Background);
                 }
+                let receiver = entry.state.subscribe();
                 table.entries.insert(key, entry.clone());
                 let this = self.clone();
                 let owned = entry.clone();
@@ -659,10 +664,9 @@ impl Writer {
                     this.run(owned, lease, reserve, provider_until, provider)
                         .await;
                 }));
-                entry
+                receiver
             }
         };
-        let mut receiver = entry.state.subscribe();
         loop {
             let state = receiver.borrow_and_update().clone();
             match state {
@@ -772,9 +776,13 @@ impl Writer {
             _lease: lease,
         });
         self.counters.ready.fetch_add(1, SeqCst);
+        // Waiters are counted before they can observe Ready: one that takes the batch and
+        // returns at once must not leave it looking unwaited (NoWaiters), which would publish
+        // its response's raw before the body ends.
+        let waiters = entry.state.receiver_count();
         // The supervisor owns the charged batch before a waiter can observe Ready.
         entry.state.send_replace(Stage::Ready(ready.clone()));
-        if entry.state.receiver_count() == 0 {
+        if waiters == 0 {
             entry.gate.release(ReleaseReason::NoWaiters);
         }
         tokio::select! {
