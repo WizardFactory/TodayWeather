@@ -112,10 +112,11 @@ fn short_page(p: Publication) -> Vec<u8> {
     envelope(items)
 }
 
-/// The station pages and ASOS ranges, with the live minute page from `minute`.
+/// The station pages and ASOS ranges, with the live minute page from `minute` (None: the minute
+/// page fails, so the station answers no reading).
 struct Stations {
     now: f64,
-    minute: Publication,
+    minute: Option<Publication>,
 }
 impl Acquire for Stations {
     fn web(
@@ -143,12 +144,17 @@ impl Acquire for Stations {
                 )
             };
             let (kind, p, body, ct) = match request.family() {
-                WebFamily::AwsMinute => (
-                    "aws-minute",
-                    self.minute,
-                    aws_page(&dotted(self.minute, true), false),
-                    "text/html",
-                ),
+                WebFamily::AwsMinute => {
+                    let Some(minute) = self.minute else {
+                        return Err(DomesticError::Transport);
+                    };
+                    (
+                        "aws-minute",
+                        minute,
+                        aws_page(&dotted(minute, true), false),
+                        "text/html",
+                    )
+                }
                 WebFamily::AwsHourly => {
                     let p = request.publication().unwrap();
                     (
@@ -218,18 +224,31 @@ impl Acquire for Stations {
 }
 
 /// Every forecast family, published through the raw writer; short forecast requests are logged.
+/// With `held` (an earlier current observation, a short publication), that observation answers
+/// only once that short publication has answered.
 struct Forecasts {
     now: f64,
     writer: Arc<Writer>,
     short: Arc<Mutex<Vec<Publication>>>,
+    held: Option<(Publication, Publication)>,
+    released: Arc<tokio::sync::watch::Sender<bool>>,
 }
 impl ForecastAcquire for Forecasts {
     fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>> {
         let (writer, short, fetched_at) =
             (self.writer.clone(), self.short.clone(), self.now - 1000.);
+        let is = |family: F, p: Option<Publication>| {
+            matches!(&request, ForecastRequest::DataGoKr(r)
+                if r.family() == family && Some(r.publication()) == p)
+        };
+        let hold = is(F::UltraSrtNcst, self.held.map(|h| h.0)).then(|| self.released.subscribe());
+        let release = is(F::VilageFcst, self.held.map(|h| h.1)).then(|| self.released.clone());
         Box::pin(async move {
             if request == ForecastRequest::Warnings {
                 return Ok(None);
+            }
+            if let Some(mut released) = hold {
+                let _ = released.wait_for(|released| *released).await;
             }
             let key = format!("test-forecast/{request:?}");
             // The writer's admission per group, as the full-response doubles size it.
@@ -240,7 +259,7 @@ impl ForecastAcquire for Forecasts {
                 ForecastRequest::Zones => 88 * 1024 * 1024,
                 _ => 16 * 1024 * 1024,
             };
-            writer
+            let answer = writer
                 .acquire(
                     key,
                     reserve,
@@ -337,7 +356,11 @@ impl ForecastAcquire for Forecasts {
                 )
                 .await
                 .map(|r| r.map(|r| r.records.clone()))
-                .map_err(|e| format!("{e}"))
+                .map_err(|e| format!("{e}"));
+            if let Some(release) = release {
+                release.send_replace(true);
+            }
+            answer
         })
     }
     fn cached(&self, request: &ForecastRequest) -> Published {
@@ -348,8 +371,13 @@ impl ForecastAcquire for Forecasts {
 }
 
 /// 서울특별시 종로구 청운효자동 (the Seoul cell 60,127) answered at `now` from an empty store, with
-/// the live station reading of `minute`: the body and the short publications requested.
-async fn answered(now: f64, minute: Publication) -> (Value, Vec<Publication>) {
+/// the live station reading of `minute` and the forecasts' `held` observation: the body and the
+/// short publications requested.
+async fn answered(
+    now: f64,
+    minute: Option<Publication>,
+    held: Option<(Publication, Publication)>,
+) -> (Value, Vec<Publication>) {
     let peer = Peer::persistent();
     let store =
         Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
@@ -375,6 +403,8 @@ async fn answered(now: f64, minute: Publication) -> (Value, Vec<Publication>) {
         now,
         writer: writer.clone(),
         short: short.clone(),
+        held,
+        released: Arc::new(tokio::sync::watch::channel(false).0),
     })))
     .with_raw_writer(writer);
     let encoded = |name: &str| -> String { name.bytes().map(|b| format!("%{b:02X}")).collect() };
@@ -431,7 +461,8 @@ fn marked(body: &Value) -> Vec<(String, u64)> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_row_shown_as_current_gets_the_publication_covering_it() {
     let _peers = S3_PEERS.lock().await;
-    let (body, requested) = answered(kst(20260924, 910), publication(20260924, 851)).await;
+    let (body, requested) =
+        answered(kst(20260924, 910), Some(publication(20260924, 851)), None).await;
     assert_eq!(
         body["current"]["dateObj"], "2026.09.24 08:51",
         "the observation the client is shown: {}",
@@ -458,8 +489,58 @@ async fn the_row_shown_as_current_gets_the_publication_covering_it() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_fresh_observation_needs_no_older_publication() {
     let _peers = S3_PEERS.lock().await;
-    let (body, requested) = answered(kst(20260924, 910), publication(20260924, 908)).await;
+    let (body, requested) =
+        answered(kst(20260924, 910), Some(publication(20260924, 908)), None).await;
     assert_eq!(marked(&body), vec![("20260924".to_owned(), 9)]);
     assert_eq!(row(&body, "20260924", 9)["pop"], 8);
     assert_eq!(requested, vec![publication(20260924, 800)]);
+}
+
+/// The shown rows are decided from the station reading (or the newest current observation), not
+/// after today's whole current history (review RP-lagging-current-publication). At 09:10 the
+/// 03:00 observation answers only once the 05:00 short publication has answered, so waiting for
+/// the whole history would start that publication after the wait: the 06:00 row shown as current
+/// still gets its forecast, with one acquisition per short publication.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_slow_earlier_observation_does_not_hold_back_the_shown_publication() {
+    let _peers = S3_PEERS.lock().await;
+    let held = (publication(20260924, 300), publication(20260924, 500));
+    let (body, requested) = answered(
+        kst(20260924, 910),
+        Some(publication(20260924, 851)),
+        Some(held),
+    )
+    .await;
+    assert_eq!(marked(&body), vec![("20260924".to_owned(), 6)]);
+    let shown = row(&body, "20260924", 6);
+    assert_eq!(shown["pop"], 5, "the 05:00 publication's row: {shown}");
+    assert_eq!(shown["wav"], 0.5, "{shown}");
+    assert_eq!(
+        requested,
+        vec![publication(20260924, 500), publication(20260924, 800)],
+        "one acquisition each"
+    );
+}
+
+/// Without a station reading the newest current observation decides the shown rows, as soon as the
+/// current answer has its latest publication: the 08:00 observation marks the 06:00 row, and the
+/// slow 03:00 one still does not hold back the 05:00 publication.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn without_a_station_reading_the_newest_observation_decides_the_shown_row() {
+    let _peers = S3_PEERS.lock().await;
+    let held = (publication(20260924, 300), publication(20260924, 500));
+    let (body, requested) = answered(kst(20260924, 910), None, Some(held)).await;
+    assert_eq!(
+        body["current"]["dateObj"], "2026.09.24 08:00",
+        "the newest observation: {}",
+        body["current"]
+    );
+    assert_eq!(marked(&body), vec![("20260924".to_owned(), 6)]);
+    let shown = row(&body, "20260924", 6);
+    assert_eq!(shown["pop"], 5, "the 05:00 publication's row: {shown}");
+    assert_eq!(
+        requested,
+        vec![publication(20260924, 500), publication(20260924, 800)],
+        "one acquisition each"
+    );
 }

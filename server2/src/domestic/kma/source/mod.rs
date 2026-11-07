@@ -238,6 +238,18 @@ impl Attempts {
             })
     }
 }
+/// What the observed grid answer of one family shares with another's.
+enum Link<'a> {
+    /// Nothing: the legacy replay, and the families no other answer waits for.
+    None,
+    /// The Current answer sends its newest document once its stored read and its latest
+    /// publication settled, without today's earlier acquisitions, so the rows shown as current are
+    /// decided early (review RP-lagging-current-publication).
+    Newest(tokio::sync::oneshot::Sender<Option<Doc>>),
+    /// The Short answer also reads or acquires the publications this resolves to: the ones
+    /// covering the rows the client will show as current ([`shown::publications`]).
+    Shown(BoxFuture<'a, Vec<Publication>>),
+}
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// `acquire` makes the request-time acquisitions (S15b-2 station pages and ASOS ranges);
     /// `locate` geocodes new station addresses.
@@ -644,13 +656,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         deadline: Instant,
         until: Instant,
     ) -> Result<(Vec<Doc>, Option<Vec<InputId>>, Vec<String>), String> {
-        self.grid_answer_with(family, grid, now, deadline, until, None)
+        self.grid_answer_with(family, grid, now, deadline, until, Link::None)
             .await
     }
-    /// [`Self::grid_answer_by`], also reading or acquiring the publications `shown` names once it
-    /// resolves: the ones covering the rows the client will show as current (the observed Short
-    /// answer, [`shown::publications`]). They join the required ones under the same wait and
-    /// retry bound.
+    /// [`Self::grid_answer_by`] with what the observed answer of this family shares with another
+    /// ([`Link`]): the Current answer tells its newest document early, and the Short answer also
+    /// reads or acquires the publications covering the rows the client will show as current,
+    /// under the same wait and retry bound as the required ones.
     async fn grid_answer_with(
         &self,
         family: Family,
@@ -658,7 +670,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         deadline: Instant,
         until: Instant,
-        shown: Option<BoxFuture<'_, Vec<Publication>>>,
+        link: Link<'_>,
     ) -> Result<(Vec<Doc>, Option<Vec<InputId>>, Vec<String>), String> {
         let coord = Coord {
             mx: f64::from(grid.nx()),
@@ -702,6 +714,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             })
         };
         let (mut fetched, excluded, own) = if self.observed_history {
+            let (newest, shown) = match link {
+                Link::Newest(newest) => (Some(newest), None),
+                Link::Shown(shown) => (None, Some(shown)),
+                Link::None => (None, None),
+            };
             let stored = read().shared();
             let latest = sf.latest(now as i64);
             let required_now = required::foreground(sf, now as i64);
@@ -739,16 +756,30 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 }
             };
             let latest_part = async {
-                let Some(latest) = latest else {
-                    return (None, None);
+                let parts = match latest {
+                    None => (None, None),
+                    Some(latest) if absent(&latest) => {
+                        (self.latest_grid(sf, grid, latest, now, until).await, None)
+                    }
+                    Some(latest) => {
+                        let again = !unusable(vec![latest]).await.is_empty();
+                        let acquired = if again {
+                            self.latest_grid(sf, grid, latest, now, until).await
+                        } else {
+                            None
+                        };
+                        (None, acquired)
+                    }
                 };
-                if absent(&latest) {
-                    (self.latest_grid(sf, grid, latest, now, until).await, None)
-                } else if unusable(vec![latest]).await.is_empty() {
-                    (None, None)
-                } else {
-                    (None, self.latest_grid(sf, grid, latest, now, until).await)
+                // The newest document once the stored read and the latest publication settled,
+                // without today's earlier acquisitions (review RP-lagging-current-publication).
+                if let Some(newest) = newest {
+                    let mut known = stored.clone().await.map(|(f, _)| f).unwrap_or_default();
+                    known.extend(parts.0.iter().chain(&parts.1).cloned());
+                    let as_of = (self.clock)().max(now);
+                    let _ = newest.send(grid_documents(family, coord, &known, as_of).pop());
                 }
+                parts
             };
             let earlier: Vec<Publication> = required_now
                 .iter()
@@ -1371,19 +1402,25 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             || (until + std::time::Duration::from_millis(200)).min(deadline),
             |o| o.1,
         );
-        // The station state and the current grid answer are shared: the observed Short answer also
-        // needs them to find the rows the client will show as current (`shown::publications`).
+        // The station state is shared: the observed Short answer also needs it, with the newest
+        // current document, to find the rows the client will show as current
+        // (`shown::publications`).
         let stations = self.observations.stations(now as i64, until).shared();
+        let (newest_sent, newest) = tokio::sync::oneshot::channel();
         let current_grid = async {
             match grid {
                 Some(grid) => {
-                    self.grid_answer_by(Family::Current, grid, now, deadline, until)
+                    let link = if self.observed_history {
+                        Link::Newest(newest_sent)
+                    } else {
+                        Link::None
+                    };
+                    self.grid_answer_with(Family::Current, grid, now, deadline, until, link)
                         .await
                 }
                 None => Ok((Vec::new(), None, Vec::new())),
             }
-        }
-        .shared();
+        };
         let observations = async {
             let folded = stations.clone().await;
             let (history, asos) = self
@@ -1426,16 +1463,25 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                         Ok(Vec::new()),
                     );
                 };
-                let shown = self.observed_history.then(|| {
-                    let (current, stations, town) = (current_grid.clone(), stations.clone(), &town);
-                    Box::pin(async move {
-                        let (current, stations) = tokio::join!(current, stations);
-                        let docs = current.as_ref().map_or(&[][..], |(docs, _, _)| docs);
-                        shown::publications(docs, stations.as_deref(), town, now, true)
-                    }) as BoxFuture<'_, Vec<Publication>>
-                });
+                // The station's time alone decides when it answers; otherwise the newest current
+                // document does, as soon as the current answer has it. Neither waits for today's
+                // whole current history (review RP-lagging-current-publication).
+                let shown = if self.observed_history {
+                    let (stations, town) = (stations.clone(), &town);
+                    Link::Shown(Box::pin(async move {
+                        let stations = stations.await;
+                        let station = shown::station_time(stations.as_deref(), town, now, true);
+                        let newest = match station {
+                            Some(_) => None,
+                            None => newest.await.ok().flatten(),
+                        };
+                        shown::publications(newest.as_ref(), station.as_deref(), now)
+                    }))
+                } else {
+                    Link::None
+                };
                 tokio::join!(
-                    current_grid.clone(),
+                    current_grid,
                     self.grid_answer_by(Family::Shortest, grid, now, deadline, until),
                     self.grid_answer_with(Family::Short, grid, now, deadline, until, shown),
                     self.rss_answer_by(grid, now, deadline, until),

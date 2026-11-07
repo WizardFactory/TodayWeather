@@ -14,22 +14,46 @@ fn hour_value(now: f64, tz: f64) -> (String, String) {
     let t = time::world_time(now, tz);
     (t[..8].to_owned(), format!("{}00", &t[8..10]))
 }
-/// The current object as the chain hands it to `convertUnits`, reduced to what decides its
-/// `dateObj`. `getCurrent` takes the latest current document when it is the clock's hour or later
-/// than the hour three hours before; otherwise the current is the clock's hour (`_makeCurrent`, or
-/// the default `getKmaStnMinuteWeather` sets). That step then copies the station minute's
-/// `stnDateTime` unless the station answers nothing or all-zero readings, and `convert0Hto24H`
-/// writes a `0000` time as the previous day's `2400`.
-fn current_observation(
-    current: &[Doc],
+/// The station minute's time that `getKmaStnMinuteWeather` copies to the current
+/// (`stnDateTime`), unless the station answers nothing or all-zero readings. When present it alone
+/// decides the current's `dateObj`.
+pub(super) fn station_time(
     stations: Option<&Folded>,
     town: &Doc,
     now: f64,
     observed: bool,
-) -> V {
+) -> Option<String> {
+    let empty = Folded::default();
+    let f = stations.unwrap_or(&empty);
+    let clock = V::Date(now + 9. * time::HOUR);
+    let date_time = format!("{}{}", time::yyyymmdd(&clock), time::hhmm(&clock));
+    let town_json: serde_json::Value =
+        serde_json::from_slice(&town.json().to_bytes()).unwrap_or_default();
+    let reading = stn::Stations {
+        registry: &f.registry,
+        hourly: &f.hourly,
+        minute: &f.minute,
+        representative: observed,
+    }
+    .hourly_and_min_rns(&town_json, &date_time)
+    .ok()?;
+    let zero = |k: &str| reading.get(k) == Some(&Val::Num(0.));
+    if zero("t1h") && zero("vec") && zero("wsd") {
+        return None;
+    }
+    match reading.get("stnDateTime") {
+        Some(Val::Str(at)) => Some(at.clone()),
+        _ => None,
+    }
+}
+/// The current object as the chain hands it to `convertUnits`, reduced to what decides its
+/// `dateObj`. `getCurrent` takes the newest current document when it is the clock's hour or later
+/// than the hour three hours before; otherwise the current is the clock's hour (`_makeCurrent`, or
+/// the default `getKmaStnMinuteWeather` sets). That step then copies the station's time
+/// ([`station_time`]), and `convert0Hto24H` writes a `0000` time as the previous day's `2400`.
+fn current_observation(newest: Option<&Doc>, station: Option<&str>, now: f64) -> V {
     let (nd, nt) = hour_value(now, 9.);
-    let latest = current
-        .last()
+    let latest = newest
         .and_then(|d| d.get("currentData"))
         .and_then(Val::as_doc)
         .and_then(|d| {
@@ -50,26 +74,8 @@ fn current_observation(
         None => (nd, nt),
     };
     let current_row = V::Obj(obj(vec![("date", V::from(date)), ("time", V::from(hour))]));
-    let empty = Folded::default();
-    let f = stations.unwrap_or(&empty);
-    let clock = V::Date(now + 9. * time::HOUR);
-    let date_time = format!("{}{}", time::yyyymmdd(&clock), time::hhmm(&clock));
-    let town_json: serde_json::Value =
-        serde_json::from_slice(&town.json().to_bytes()).unwrap_or_default();
-    let reading = stn::Stations {
-        registry: &f.registry,
-        hourly: &f.hourly,
-        minute: &f.minute,
-        representative: observed,
-    }
-    .hourly_and_min_rns(&town_json, &date_time);
-    if let Ok(reading) = reading {
-        let zero = |k: &str| reading.get(k) == Some(&Val::Num(0.));
-        if !(zero("t1h") && zero("vec") && zero("wsd"))
-            && let Some(Val::Str(at)) = reading.get("stnDateTime")
-        {
-            current_row.set("stnDateTime", V::from(at.clone()));
-        }
+    if let Some(at) = station {
+        current_row.set("stnDateTime", V::from(at.to_owned()));
     }
     if strict_eq(&current_row.get("time"), &V::from("0000")) {
         time::convert_0h_to_24h(&current_row);
@@ -77,20 +83,19 @@ fn current_observation(
     current_row
 }
 /// The short publications covering the rows `convertUnits` will mark `currentIndex` that the
-/// latest publication does not cover, newest first. The observation is never older than three
-/// hours, so only the clock-current slot and the one before it can be marked; the rule is
-/// `present::marked_current` over the same row labels (`0000` as the previous day's `2400`).
+/// latest publication does not cover, newest first, from the newest current document and the
+/// station's time. The observation is never older than three hours, so only the clock-current slot
+/// and the one before it can be marked; the rule is `present::marked_current` over the same row
+/// labels (`0000` as the previous day's `2400`).
 pub(super) fn publications(
-    current: &[Doc],
-    stations: Option<&Folded>,
-    town: &Doc,
+    newest: Option<&Doc>,
+    station: Option<&str>,
     now: f64,
-    observed: bool,
 ) -> Vec<Publication> {
     let Some(latest) = schedule::Family::Short.latest(now as i64) else {
         return Vec::new();
     };
-    let observation = current_observation(current, stations, town, now, observed);
+    let observation = current_observation(newest, station, now);
     // `convertUnits` marks nothing when this throws (a station time that is not text).
     let Ok(current_date) = catch(|| present::current_date_obj(&observation)) else {
         return Vec::new();

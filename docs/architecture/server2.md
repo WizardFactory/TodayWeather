@@ -3924,11 +3924,15 @@ the production API, five places, 18:31–19:29 KST) found these defects independ
 - **Previous publication.** From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3. The source then
   also requires the previous publication, the newest covering slot HH (`required::foreground`).
   When the observation lags, the row shown as current is the slot before the clock's, and the
-  source requires the publication covering it as well: once the current grid answer and the
-  station state are in, `shown::publications` applies `present::marked_current` to the current
-  observation as the chain will build it (review RP-lagging-current-publication). Either is read
-  when listed, otherwise acquired as owned single-flight work under the request's wait, with a
-  three-hour retry bound per cell and publication. Each publication the request needs starts as
+  source requires the publication covering it as well: `shown::publications` applies
+  `present::marked_current` to the current observation as the chain will build it. The station's
+  time decides it as soon as the station state is in (`shown::station_time`); without a station
+  reading, the newest current document does, once the current answer's stored read and latest
+  publication have settled. Neither waits for today's earlier current acquisitions (review
+  RP-lagging-current-publication); when the latest observation is unavailable, the newest stored
+  one decides, and an earlier one still being acquired is not waited for. Each of these
+  publications is read when listed, otherwise acquired as owned single-flight work under the
+  request's wait, with a three-hour retry bound per cell and publication. Each publication the request needs starts as
   soon as that is known, whatever else is still being acquired: an absent one at once, a listed
   one when the stored read proves it unusable. A slow acquisition, of the latest or of another
   absent publication, therefore cannot leave the others no time (review
