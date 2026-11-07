@@ -684,130 +684,139 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .map_err(|e| format!("{} listing: {e}", sf.kind()))?;
         let oldest = schedule::from_ms(from as i64).partition();
         let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
-        // The observed path requests what the listing shows absent without waiting for the
-        // stored reads, so stored history does not delay the provider.
-        let absent_first =
-            |p: &Publication| self.observed_history && !wanted.iter().any(|w| *w == p.partition());
-        let required_now: Vec<Publication> = if self.observed_history {
-            required::foreground(sf, now as i64)
-        } else {
-            Vec::new()
-        };
-        // The latest and the required earlier publications start together under the one wait, so
-        // a slow latest acquisition does not leave the others no time (review
-        // RP-previous-acquisition-starvation).
-        let absent = async {
-            let latest = async {
-                match sf.latest(now as i64).filter(absent_first) {
-                    Some(latest) => self.latest_grid(sf, grid, latest, now, until).await,
-                    None => None,
-                }
-            };
-            let today = async {
-                if !self.observed_history {
-                    return Vec::new();
-                }
-                let today: Vec<_> = required_now
-                    .iter()
-                    .copied()
-                    .filter(|p| Some(*p) != sf.latest(now as i64) && absent_first(p))
-                    .collect();
-                self.foreground_grid(sf, grid, &today, until).await
-            };
-            let (latest, today) = tokio::join!(latest, today);
-            latest.into_iter().chain(today).collect::<Vec<_>>()
-        };
-        // The publications of the rows shown as current that the clock rule does not require.
-        let shown_absent = async {
-            let Some(shown) = shown else {
-                return (Vec::new(), Vec::new());
-            };
-            let extra: Vec<Publication> = shown
-                .await
-                .into_iter()
-                .filter(|p| Some(*p) != sf.latest(now as i64) && !required_now.contains(p))
-                .collect();
-            let absent: Vec<Publication> = extra.iter().copied().filter(absent_first).collect();
-            let acquired = self.foreground_grid(sf, grid, &absent, until).await;
-            (extra, acquired)
-        };
-        let (stored, (absent, (extra, shown_acquired))) = tokio::join!(
+        let read = || async {
             self.reader
-                .all_counted(sf.source(), sf.kind(), &key, &wanted, deadline),
-            async { tokio::join!(absent, shown_absent) }
-        );
-        let (mut fetched, excluded) = stored.map_err(|e| format!("{} read: {e}", sf.kind()))?;
-        fetched.extend(absent);
-        fetched.extend(shown_acquired);
-        // S16: this request's own acquisition keeps its stored fetch time in its identity (the
-        // fold sees it at the request instant).
-        let mut own: Option<InputId> = None;
-        if let Some(latest) = sf.latest(now as i64) {
-            // A stored acquisition legacy would not keep (an invalid forecast, a current
-            // observation with a recovery sentinel) leaves its publication missing, so it stays
-            // eligible for the bounded retries.
-            let missing = |p: &Publication| {
-                let partition = p.partition();
-                !fetched.iter().any(|f| {
-                    f.partition == partition
-                        && f.fetched_at_ms as f64 <= now
-                        && usable(family, coord, f)
-                })
-            };
-            let reach = fetch_reach(sf);
-            let required = sf.required(now as i64);
-            let backfill: Vec<Publication> = required
-                .iter()
-                .rev()
-                .skip(1)
-                .take(reach)
-                .copied()
-                .filter(|p| missing(p))
-                .collect();
-            // Listed but unusable publications are still eligible, after the reads showed it.
-            let foreground: Vec<_> = if self.observed_history {
-                required_now
-                    .iter()
-                    .chain(&extra)
-                    .copied()
-                    .filter(|p| *p != latest && missing(p) && !absent_first(p))
-                    .collect()
-            } else {
-                Vec::new()
-            };
-            // Together here too, under the same wait.
-            let latest_missing = missing(&latest) && !absent_first(&latest);
-            let (latest_again, foreground_again) = tokio::join!(
-                async {
-                    if latest_missing {
-                        self.latest_grid(sf, grid, latest, now, until).await
-                    } else {
-                        None
+                .all_counted(sf.source(), sf.kind(), &key, &wanted, deadline)
+                .await
+                .map_err(|e| format!("{} read: {e}", sf.kind()))
+        };
+        // A stored acquisition legacy would not keep (an invalid forecast, a current observation
+        // with a recovery sentinel) leaves its publication missing, so it stays eligible for the
+        // bounded retries.
+        let missing = move |fetched: &[Fetched], p: &Publication| {
+            let partition = p.partition();
+            !fetched.iter().any(|f| {
+                f.partition == partition
+                    && f.fetched_at_ms as f64 <= now
+                    && usable(family, coord, f)
+            })
+        };
+        let (mut fetched, excluded, own) = if self.observed_history {
+            let stored = read().shared();
+            let latest = sf.latest(now as i64);
+            let required_now = required::foreground(sf, now as i64);
+            // What the listing shows absent is requested at once, so stored history does not
+            // delay the provider.
+            let absent = |p: &Publication| !wanted.iter().any(|w| *w == p.partition());
+            // A listed publication is requested again as soon as the stored read shows it
+            // unusable, whatever else is still being acquired (review
+            // RP-previous-acquisition-starvation).
+            let unusable = |listed: Vec<Publication>| {
+                let stored = stored.clone();
+                async move {
+                    if listed.is_empty() {
+                        return listed;
                     }
-                },
-                async {
-                    if self.observed_history {
-                        self.foreground_grid(sf, grid, &foreground, until).await
-                    } else {
-                        Vec::new()
+                    match stored.await {
+                        Ok((fetched, _)) => listed
+                            .into_iter()
+                            .filter(|p| missing(&fetched, p))
+                            .collect(),
+                        Err(_) => Vec::new(),
                     }
                 }
-            );
-            if let Some(f) = latest_again {
-                if self.raw_writer.is_none() {
-                    own = grid_input_id(family, sf.kind(), &f);
+            };
+            // Earlier publications: the absent ones and the unusable listed ones, under the one
+            // wait.
+            let acquired = |publications: Vec<Publication>| {
+                let (first, listed): (Vec<_>, Vec<_>) =
+                    publications.into_iter().partition(|p| absent(p));
+                let again = unusable(listed);
+                async move {
+                    tokio::join!(self.foreground_grid(sf, grid, &first, until), async {
+                        self.foreground_grid(sf, grid, &again.await, until).await
+                    })
                 }
-                fetched.push(if self.observed_history {
-                    f
+            };
+            let latest_part = async {
+                let Some(latest) = latest else {
+                    return (None, None);
+                };
+                if absent(&latest) {
+                    (self.latest_grid(sf, grid, latest, now, until).await, None)
+                } else if unusable(vec![latest]).await.is_empty() {
+                    (None, None)
                 } else {
-                    visible(f, now)
-                });
+                    (None, self.latest_grid(sf, grid, latest, now, until).await)
+                }
+            };
+            let earlier: Vec<Publication> = required_now
+                .iter()
+                .copied()
+                .filter(|p| Some(*p) != latest)
+                .collect();
+            // The publications of the rows shown as current that the clock rule does not
+            // require.
+            let shown_part = async {
+                let Some(shown) = shown else {
+                    return (Vec::new(), Vec::new());
+                };
+                let extra: Vec<Publication> = shown
+                    .await
+                    .into_iter()
+                    .filter(|p| Some(*p) != latest && !required_now.contains(p))
+                    .collect();
+                acquired(extra).await
+            };
+            let (
+                stored,
+                (latest_first, latest_again),
+                (earlier_first, earlier_again),
+                (shown_first, shown_again),
+            ) = tokio::join!(stored.clone(), latest_part, acquired(earlier), shown_part);
+            let (mut fetched, excluded) = stored?;
+            // The fold order is the stored acquisitions, the ones of absent publications, then
+            // the ones asked again.
+            fetched.extend(
+                latest_first
+                    .into_iter()
+                    .chain(earlier_first)
+                    .chain(shown_first)
+                    .chain(latest_again)
+                    .chain(earlier_again)
+                    .chain(shown_again),
+            );
+            (fetched, excluded, None)
+        } else {
+            let (mut fetched, excluded) = read().await?;
+            // S16: this request's own acquisition keeps its stored fetch time in its identity
+            // (the fold sees it at the request instant).
+            let mut own: Option<InputId> = None;
+            if let Some(latest) = sf.latest(now as i64) {
+                let reach = fetch_reach(sf);
+                let required = sf.required(now as i64);
+                let backfill: Vec<Publication> = required
+                    .iter()
+                    .rev()
+                    .skip(1)
+                    .take(reach)
+                    .copied()
+                    .filter(|p| missing(&fetched, p))
+                    .collect();
+                if missing(&fetched, &latest)
+                    && let Some(f) = self.latest_grid(sf, grid, latest, now, until).await
+                {
+                    if self.raw_writer.is_none() {
+                        own = grid_input_id(family, sf.kind(), &f);
+                    }
+                    fetched.push(visible(f, now));
+                }
+                if !backfill.is_empty() {
+                    self.backfill(sf, grid, latest, backfill).await;
+                }
             }
-            fetched.extend(foreground_again);
-            if !self.observed_history && !backfill.is_empty() {
-                self.backfill(sf, grid, latest, backfill).await;
-            }
-        }
+            (fetched, excluded, own)
+        };
         if self.observed_history {
             records::deduplicate(&mut fetched);
         }

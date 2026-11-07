@@ -1,13 +1,15 @@
 //! The previous SHRT publication the current three-hour slot needs from HH+2:10 to HH+2:59, when
 //! the latest starts at HH+3: acquired at most once per cell and publication. An isolated empty
-//! store stands for a cell nothing was stored for. The tests run on a paused clock (the request's
-//! wait and late answers are virtual time) and synchronize on the provider's answers.
+//! store stands for a cell nothing was stored for, and an isolated in-memory store for stored
+//! acquisitions. The tests run on a paused clock (the request's wait and late answers are virtual
+//! time) and synchronize on the provider's answers.
 use super::*;
 use crate::domestic::family::DataGoKrFamily;
 use crate::storage::{
-    CatalogTransport, ControlObject, Error, ListPage, Object, ObjectTransport, Pagination, Period,
-    PreparedRecord, RawRecord, WriteCondition,
+    CatalogId, CatalogTransport, ControlObject, Error, GroupDeclaration, GroupMember, ListPage,
+    Object, ObjectTransport, Pagination, Period, PreparedRecord, RawRecord, WriteCondition,
 };
+use std::collections::BTreeMap;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -45,6 +47,100 @@ impl IndexListing for Empty {
     async fn list_index(&self, _: &str, _: Option<&str>) -> Result<ListPage, Error> {
         Ok(ListPage {
             keys: vec![],
+            next: None,
+        })
+    }
+}
+/// An isolated in-memory S3: raw objects, conditional control objects and the catalog index. The
+/// catalog store publishes into it and the source reads it as it reads S3, with no I/O, so the
+/// paused clock advances only when every task waits for a timer.
+#[derive(Clone, Default)]
+struct Memory(Arc<Mutex<Objects>>);
+#[derive(Default)]
+struct Objects {
+    raw: BTreeMap<String, Object>,
+    control: BTreeMap<String, ControlObject>,
+    revision: u64,
+}
+impl ObjectTransport for Memory {
+    async fn put(&self, record: &PreparedRecord) -> Result<u16, Error> {
+        let mut objects = self.0.lock().unwrap();
+        if objects.raw.contains_key(&record.key) {
+            return Ok(412);
+        }
+        let object = Object {
+            metadata: record.metadata.clone(),
+            length: record.body.len(),
+            body: record.body.clone(),
+        };
+        objects.raw.insert(record.key.clone(), object);
+        Ok(200)
+    }
+    async fn head(&self, key: &str) -> Result<Object, Error> {
+        let objects = self.0.lock().unwrap();
+        let object = objects.raw.get(key).ok_or(Error::NotFound)?;
+        Ok(Object {
+            body: Vec::new(),
+            ..object.clone()
+        })
+    }
+    async fn get(&self, key: &str, _: usize) -> Result<Object, Error> {
+        let objects = self.0.lock().unwrap();
+        objects.raw.get(key).cloned().ok_or(Error::NotFound)
+    }
+}
+impl CatalogTransport for Memory {
+    async fn get_control(&self, key: &str, _: usize) -> Result<ControlObject, Error> {
+        let objects = self.0.lock().unwrap();
+        objects.control.get(key).cloned().ok_or(Error::NotFound)
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &WriteCondition,
+    ) -> Result<u16, Error> {
+        let mut objects = self.0.lock().unwrap();
+        let agrees = match (condition, objects.control.get(key)) {
+            (WriteCondition::Absent, None) => true,
+            (WriteCondition::Match(etag), Some(current)) => *etag == current.etag,
+            _ => false,
+        };
+        if !agrees {
+            return Ok(412);
+        }
+        objects.revision += 1;
+        let etag = format!("\"v{}\"", objects.revision);
+        objects.control.insert(
+            key.to_owned(),
+            ControlObject {
+                body: body.to_vec(),
+                etag,
+                version: None,
+            },
+        );
+        Ok(200)
+    }
+    async fn list_raw_document(
+        &self,
+        _: &str,
+        _: Option<&str>,
+        _: usize,
+        _: usize,
+    ) -> Result<Vec<u8>, Error> {
+        panic!("the source lists the catalog index")
+    }
+}
+impl IndexListing for Memory {
+    async fn list_index(&self, prefix: &str, _: Option<&str>) -> Result<ListPage, Error> {
+        let objects = self.0.lock().unwrap();
+        Ok(ListPage {
+            keys: objects
+                .control
+                .keys()
+                .filter(|key| key.starts_with(prefix))
+                .cloned()
+                .collect(),
             next: None,
         })
     }
@@ -151,14 +247,69 @@ fn records(p: Publication, fetched_at: f64) -> Vec<RawRecord> {
         .unwrap(),
     ]
 }
-/// Answers every SHRT request with its complete page, except `failing`, which fails, and `slow`,
-/// which answers only after a minute. `answered` counts the answers given.
+/// A complete page that organizes nothing: a stored acquisition legacy would not keep, so its
+/// publication stays eligible for the bounded retries.
+fn empty_page() -> Vec<u8> {
+    serde_json::to_vec(&serde_json::json!({"response": {
+        "header": {"resultCode": "00", "resultMsg": "NORMAL_SERVICE"},
+        "body": {"dataType": "JSON", "items": {"item": []}, "pageNo": 1, "numOfRows": 999,
+                 "totalCount": 0}}}))
+    .unwrap()
+}
+/// Publishes one acquisition of `p` with `body`, fetched at `fetched_at`, into `memory` through
+/// the catalog store.
+async fn stored(memory: &Memory, p: Publication, body: Vec<u8>, fetched_at: f64) {
+    let limits = CatalogLimits::default();
+    let record = RawRecord::new(
+        "data-go-kr",
+        "vilage-fcst",
+        &grid().provider_key(),
+        p.period(),
+        fetched_at as u64,
+        200,
+        "application/json",
+        None,
+        Arc::from(body),
+        &limits.raw,
+    )
+    .unwrap();
+    let member = GroupMember {
+        envelope: record.envelope.clone(),
+        catalogs: vec![CatalogId::for_record(&record.envelope.identity, &p.partition()).unwrap()],
+    };
+    let declaration = GroupDeclaration::new(vec![member], &limits).unwrap();
+    CatalogStore::new(memory.clone(), limits)
+        .unwrap()
+        .publish(
+            declaration,
+            vec![record],
+            Instant::now() + Duration::from_secs(10),
+        )
+        .await
+        .unwrap();
+}
+/// Answers every SHRT request with its complete page, except `failing`, which fails, `slow`, which
+/// answers only after a minute, and the first of `after`, which answers only once the second has
+/// answered. `answered` lists the publications answered so far.
 struct Provider {
     now: f64,
     failing: Option<Publication>,
     slow: Option<Publication>,
+    after: Option<(Publication, Publication)>,
     calls: Mutex<Vec<Publication>>,
-    answered: Arc<tokio::sync::watch::Sender<usize>>,
+    answered: Arc<tokio::sync::watch::Sender<Vec<Publication>>>,
+}
+impl Provider {
+    fn new(now: f64) -> Self {
+        Self {
+            now,
+            failing: None,
+            slow: None,
+            after: None,
+            calls: Mutex::new(Vec::new()),
+            answered: Arc::new(tokio::sync::watch::channel(Vec::new()).0),
+        }
+    }
 }
 impl fetch::ForecastAcquire for Provider {
     fn acquire(
@@ -177,21 +328,41 @@ impl fetch::ForecastAcquire for Provider {
             Ok(Some(records(p, self.now)))
         };
         let (slow, answered) = (self.slow == Some(p), self.answered.clone());
+        let first = self
+            .after
+            .filter(|(later, _)| *later == p)
+            .map(|(_, first)| first);
         Box::pin(async move {
+            if let Some(first) = first {
+                let mut done = answered.subscribe();
+                let _ = done.wait_for(|answered| answered.contains(&first)).await;
+            }
             if slow {
                 tokio::time::sleep(Duration::from_secs(60)).await;
             }
-            answered.send_modify(|n| *n += 1);
+            answered.send_modify(|answered| answered.push(p));
             answer
         })
     }
 }
 fn fixture(provider: Arc<Provider>, now: f64) -> S3Source<Empty> {
+    fixture_on(Empty, provider, now)
+}
+fn fixture_on<T: IndexListing + Clone + Send + Sync + 'static>(
+    transport: T,
+    provider: Arc<Provider>,
+    now: f64,
+) -> S3Source<T> {
     let warnings = Arc::new(
-        WarningStore::new(Empty, CatalogLimits::default(), StoreConfig::default()).unwrap(),
+        WarningStore::new(
+            transport.clone(),
+            CatalogLimits::default(),
+            StoreConfig::default(),
+        )
+        .unwrap(),
     );
     let mut s = S3Source::new_with_history_policy(
-        Empty,
+        transport,
         Arc::new(move || now),
         Arc::new(Never),
         Arc::new(Never),
@@ -225,7 +396,7 @@ async fn short_docs(s: &S3Source<Empty>, provider: &Provider, now: f64) -> Vec<D
     provider
         .answered
         .subscribe()
-        .wait_for(|answered| *answered >= started)
+        .wait_for(|answered| answered.len() >= started)
         .await
         .unwrap();
     docs
@@ -245,13 +416,7 @@ fn pop_at(docs: &[Doc], date: &str, time: &str) -> Option<f64> {
 #[tokio::test(start_paused = true)]
 async fn the_previous_publication_supplies_the_current_slot_after_the_latest_moves_on() {
     let now = kst(20261018, 530);
-    let provider = Arc::new(Provider {
-        now,
-        failing: None,
-        slow: None,
-        calls: Mutex::new(Vec::new()),
-        answered: Arc::new(tokio::sync::watch::channel(0).0),
-    });
+    let provider = Arc::new(Provider::new(now));
     let s = fixture(provider.clone(), now);
     let docs = short_docs(&s, &provider, now).await;
     let mut calls = provider.calls.lock().unwrap().clone();
@@ -272,13 +437,7 @@ async fn the_previous_publication_supplies_the_current_slot_after_the_latest_mov
 #[tokio::test(start_paused = true)]
 async fn a_latest_publication_covering_the_current_slot_needs_no_other() {
     let now = kst(20261018, 430);
-    let provider = Arc::new(Provider {
-        now,
-        failing: None,
-        slow: None,
-        calls: Mutex::new(Vec::new()),
-        answered: Arc::new(tokio::sync::watch::channel(0).0),
-    });
+    let provider = Arc::new(Provider::new(now));
     let s = fixture(provider.clone(), now);
     let docs = short_docs(&s, &provider, now).await;
     assert_eq!(
@@ -296,16 +455,14 @@ async fn a_failed_previous_publication_is_not_requested_again_for_three_hours() 
     let now = kst(20261018, 530);
     let previous = publication(20261018, 200);
     let provider = Arc::new(Provider {
-        now,
         failing: Some(previous),
         slow: Some(previous),
-        calls: Mutex::new(Vec::new()),
-        answered: Arc::new(tokio::sync::watch::channel(0).0),
+        ..Provider::new(now)
     });
     let s = fixture(provider.clone(), now);
     let docs = short_docs(&s, &provider, now).await;
     assert_eq!(
-        *provider.answered.borrow(),
+        provider.answered.borrow().len(),
         provider.calls.lock().unwrap().len(),
         "every acquisition it started has answered"
     );
@@ -339,11 +496,8 @@ async fn a_failed_previous_publication_is_not_requested_again_for_three_hours() 
 async fn a_slow_latest_publication_does_not_hold_back_the_previous_one() {
     let now = kst(20261018, 2030);
     let provider = Arc::new(Provider {
-        now,
-        failing: None,
         slow: Some(publication(20261018, 2000)),
-        calls: Mutex::new(Vec::new()),
-        answered: Arc::new(tokio::sync::watch::channel(0).0),
+        ..Provider::new(now)
     });
     let s = fixture(provider.clone(), now);
     let started = Instant::now();
@@ -372,5 +526,59 @@ async fn a_slow_latest_publication_does_not_hold_back_the_previous_one() {
         pop_at(&docs, "20261018", "2100"),
         Some(17.),
         "20:00 is late"
+    );
+}
+
+/// At 20:30 the latest publication (20:00) starts at 21:00, so the stored 17:00 publication, which
+/// organizes nothing, is asked again for the current 18:00 slot; `latest_stored` stores an
+/// unusable 20:00 one too. The provider answers 20:00 only once 17:00 has answered, and a minute
+/// later. The answer, its time on the paused clock and the publications requested.
+async fn unusable_previous(latest_stored: bool) -> (Vec<Doc>, Duration, Vec<Publication>) {
+    let now = kst(20261018, 2030);
+    let (latest, previous) = (publication(20261018, 2000), publication(20261018, 1700));
+    let memory = Memory::default();
+    stored(&memory, previous, empty_page(), now - 60_000.).await;
+    if latest_stored {
+        stored(&memory, latest, empty_page(), now - 60_000.).await;
+    }
+    let provider = Arc::new(Provider {
+        slow: Some(latest),
+        after: Some((latest, previous)),
+        ..Provider::new(now)
+    });
+    let s = fixture_on(memory, provider.clone(), now);
+    let started = Instant::now();
+    let (docs, _, _) = s
+        .grid_answer_by(
+            Family::Short,
+            grid(),
+            now,
+            started + Duration::from_secs(8),
+            started + Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+    let mut calls = provider.calls.lock().unwrap().clone();
+    calls.sort();
+    (docs, started.elapsed(), calls)
+}
+
+/// Review RP-previous-acquisition-starvation, mixed: the latest publication is not stored and is
+/// slow, and the previous one is stored but unusable. Its acquisition starts once the stored read
+/// shows it unusable, not after the latest acquisition: the current slot gets its forecast and the
+/// answer ends at its wait.
+#[tokio::test(start_paused = true)]
+async fn an_unusable_stored_publication_is_asked_again_without_waiting_for_an_absent_one() {
+    let (docs, waited, calls) = unusable_previous(false).await;
+    assert!(waited <= Duration::from_secs(1), "one wait: {waited:?}");
+    assert_eq!(
+        pop_at(&docs, "20261018", "1800"),
+        Some(17.),
+        "the 17:00 row of the current slot"
+    );
+    assert_eq!(
+        calls,
+        vec![publication(20261018, 1700), publication(20261018, 2000)],
+        "one acquisition each"
     );
 }
