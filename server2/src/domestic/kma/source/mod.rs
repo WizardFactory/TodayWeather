@@ -51,6 +51,7 @@ pub mod required;
 pub mod rnshit;
 mod rss;
 pub mod seed;
+mod shown;
 pub mod stations;
 pub mod stn;
 pub mod towns;
@@ -79,6 +80,7 @@ use crate::warnings::{
     store::{StoreConfig, WarningStore},
     zones::ZoneState,
 };
+use futures_util::FutureExt;
 pub use records::Fetched;
 use records::Reader;
 use serde_json::Value;
@@ -642,6 +644,22 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         deadline: Instant,
         until: Instant,
     ) -> Result<(Vec<Doc>, Option<Vec<InputId>>, Vec<String>), String> {
+        self.grid_answer_with(family, grid, now, deadline, until, None)
+            .await
+    }
+    /// [`Self::grid_answer_by`], also reading or acquiring the publications `shown` names once it
+    /// resolves: the ones covering the rows the client will show as current (the observed Short
+    /// answer, [`shown::publications`]). They join the required ones under the same wait and
+    /// retry bound.
+    async fn grid_answer_with(
+        &self,
+        family: Family,
+        grid: crate::history::Grid,
+        now: f64,
+        deadline: Instant,
+        until: Instant,
+        shown: Option<BoxFuture<'_, Vec<Publication>>>,
+    ) -> Result<(Vec<Doc>, Option<Vec<InputId>>, Vec<String>), String> {
         let coord = Coord {
             mx: f64::from(grid.nx()),
             my: f64::from(grid.ny()),
@@ -670,27 +688,48 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // stored reads, so stored history does not delay the provider.
         let absent_first =
             |p: &Publication| self.observed_history && !wanted.iter().any(|w| *w == p.partition());
+        let required_now: Vec<Publication> = if self.observed_history {
+            required::foreground(sf, now as i64)
+        } else {
+            Vec::new()
+        };
         let absent = async {
             let mut acquired = Vec::new();
             if let Some(latest) = sf.latest(now as i64).filter(absent_first) {
                 acquired.extend(self.latest_grid(sf, grid, latest, now, until).await);
             }
             if self.observed_history {
-                let today: Vec<_> = required::foreground(sf, now as i64)
-                    .into_iter()
+                let today: Vec<_> = required_now
+                    .iter()
+                    .copied()
                     .filter(|p| Some(*p) != sf.latest(now as i64) && absent_first(p))
                     .collect();
                 acquired.extend(self.foreground_grid(sf, grid, &today, until).await);
             }
             acquired
         };
-        let (stored, absent) = tokio::join!(
+        // The publications of the rows shown as current that the clock rule does not require.
+        let shown_absent = async {
+            let Some(shown) = shown else {
+                return (Vec::new(), Vec::new());
+            };
+            let extra: Vec<Publication> = shown
+                .await
+                .into_iter()
+                .filter(|p| Some(*p) != sf.latest(now as i64) && !required_now.contains(p))
+                .collect();
+            let absent: Vec<Publication> = extra.iter().copied().filter(absent_first).collect();
+            let acquired = self.foreground_grid(sf, grid, &absent, until).await;
+            (extra, acquired)
+        };
+        let (stored, (absent, (extra, shown_acquired))) = tokio::join!(
             self.reader
                 .all_counted(sf.source(), sf.kind(), &key, &wanted, deadline),
-            absent
+            async { tokio::join!(absent, shown_absent) }
         );
         let (mut fetched, excluded) = stored.map_err(|e| format!("{} read: {e}", sf.kind()))?;
         fetched.extend(absent);
+        fetched.extend(shown_acquired);
         // S16: this request's own acquisition keeps its stored fetch time in its identity (the
         // fold sees it at the request instant).
         let mut own: Option<InputId> = None;
@@ -718,8 +757,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .collect();
             // Listed but unusable publications are still eligible, after the reads showed it.
             let foreground: Vec<_> = if self.observed_history {
-                required::foreground(sf, now as i64)
-                    .into_iter()
+                required_now
+                    .iter()
+                    .chain(&extra)
+                    .copied()
                     .filter(|p| *p != latest && missing(p) && !absent_first(p))
                     .collect()
             } else {
@@ -1298,8 +1339,21 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             || (until + std::time::Duration::from_millis(200)).min(deadline),
             |o| o.1,
         );
+        // The station state and the current grid answer are shared: the observed Short answer also
+        // needs them to find the rows the client will show as current (`shown::publications`).
+        let stations = self.observations.stations(now as i64, until).shared();
+        let current_grid = async {
+            match grid {
+                Some(grid) => {
+                    self.grid_answer_by(Family::Current, grid, now, deadline, until)
+                        .await
+                }
+                None => Ok((Vec::new(), None, Vec::new())),
+            }
+        }
+        .shared();
         let observations = async {
-            let folded = self.observations.stations(now as i64, until).await;
+            let folded = stations.clone().await;
             let (history, asos) = self
                 .observations
                 .history_with_inputs(&town, folded.as_deref(), now, until)
@@ -1340,10 +1394,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                         Ok(Vec::new()),
                     );
                 };
+                let shown = self.observed_history.then(|| {
+                    let (current, stations, town) = (current_grid.clone(), stations.clone(), &town);
+                    Box::pin(async move {
+                        let (current, stations) = tokio::join!(current, stations);
+                        let docs = current.as_ref().map_or(&[][..], |(docs, _, _)| docs);
+                        shown::publications(docs, stations.as_deref(), town, now, true)
+                    }) as BoxFuture<'_, Vec<Publication>>
+                });
                 tokio::join!(
-                    self.grid_answer_by(Family::Current, grid, now, deadline, until),
+                    current_grid.clone(),
                     self.grid_answer_by(Family::Shortest, grid, now, deadline, until),
-                    self.grid_answer_by(Family::Short, grid, now, deadline, until),
+                    self.grid_answer_with(Family::Short, grid, now, deadline, until, shown),
                     self.rss_answer_by(grid, now, deadline, until),
                 )
             },

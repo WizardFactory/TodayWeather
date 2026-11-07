@@ -28,6 +28,8 @@ mod qs;
 mod quota;
 #[path = "domestic/replay.rs"]
 mod replay;
+#[path = "domestic/shown_publication.rs"]
+mod shown_publication;
 #[path = "domestic/source.rs"]
 mod source;
 #[path = "domestic/source_s3.rs"]

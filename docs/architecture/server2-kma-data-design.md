@@ -337,7 +337,7 @@ what it gets today). So does the row the client shows as current (`currentIndex`
 which follows the observation's time and can therefore be past by the clock when
 the observation lags. From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3, so
 the previous one is read from S3 or acquired, at most once per cell and
-publication. Clearing a historical row's forecast amounts also clears the totals
+publication; so is the publication covering a lagging row shown as current. Clearing a historical row's forecast amounts also clears the totals
 kept beside them; its snow amount then finalizes like that of every past row
 without a covering publication (0 over 0 hours) and no forecast text remains.
 The answer keeps legacy's missing values: probability 0 (`adjustShort`), snow

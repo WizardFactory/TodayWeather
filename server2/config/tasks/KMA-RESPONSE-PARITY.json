@@ -12,7 +12,9 @@
     "server2/src/domestic/kma/source/previous_short_tests.rs",
     "server2/tests/domestic.rs",
     "server2/tests/domestic/observed_history.rs",
-    "server2/tests/domestic/parity_evidence.rs"
+    "server2/tests/domestic/parity_evidence.rs",
+    "server2/src/domestic/kma/source/shown.rs",
+    "server2/tests/domestic/shown_publication.rs"
   ],
   "outside": [
     {

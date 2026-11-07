@@ -2581,7 +2581,7 @@ a current observation must carry no recovery sentinel (`t1h` -50 or `reh` -1 is 
 | --- | --- | --- |
 | Latest grid publication (`getUltraSrtNcst`, `getUltraSrtFcst` at HH30, `getVilageFcst`) | Not in S3 for the cell | 5 minutes |
 | Grid backfill (earlier publications: 23 current, 23 ultra-short, 7 short; S14 `schedule`) | Missing publications, in one owned pass per cell, family and latest publication (3 acquisitions in flight, 8 passes in their own pool); the request does not wait | Each pass at most hourly. Each publication shares the latest acquisition's flight and 5-minute retry bound. |
-| Previous short publication (`getVilageFcst`, observed response only; [#2614](#2614-kma-answer-parity-current-row-sentinels-and-yesterday)) | From HH+2:10 to HH+2:59, when the latest starts after the current three-hour slot HH, and it is not in S3 for the cell | 3 hours: one attempt per cell and publication |
+| Previous short publication (`getVilageFcst`, observed response only; [#2614](#2614-kma-answer-parity-current-row-sentinels-and-yesterday)) | From HH+2:10 to HH+2:59, when the latest starts after the current three-hour slot HH; also when a lagging observation shows the slot before the clock's as current and the latest starts after it. Only when it is not in S3 for the cell | 3 hours: one attempt per cell and publication |
 | Latest short RSS (`wid/queryDFS.jsp`) | Not in S3 for the cell | 5 minutes |
 | Latest mid publications (`getMidFcst`, `getMidLandFcst`, `getMidTa` at the 06/18 `tmFc`) | A region legacy collects lacks the latest publication | 5 minutes |
 | Forecast-zone list (`getFcstZoneCd`) | Until one complete readable process refresh; success replaces memory, failure remains demand-retryable (#2819 D1) | 5 minutes after an admitted attempt; stop after success |
@@ -3922,12 +3922,16 @@ the production API, five places, 18:31–19:29 KST) found these defects independ
   keep the forecast totals behind them, which had turned −1 snow into −10 and left the forecast's
   rain or snow text beside a measured amount.
 - **Previous publication.** From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3. The source then
-  also requires the previous publication, the newest covering slot HH (`required::foreground`):
-  read when listed, otherwise acquired as owned single-flight work under the request's wait, with a
-  three-hour retry bound per cell and publication. It is always inside the 54 h read window. This
-  adds at most one `getVilageFcst` acquisition (one or two pages of 999 rows) per cell and three
-  hours, at most 8 a day, and only when the previous publication was not stored while it was the
-  latest: a cell first requested in that window, or after a failed or unusable acquisition. A
+  also requires the previous publication, the newest covering slot HH (`required::foreground`).
+  When the observation lags, the row shown as current is the slot before the clock's, and the
+  source requires the publication covering it as well: once the current grid answer and the
+  station state are in, `shown::publications` applies `present::marked_current` to the current
+  observation as the chain will build it (review RP-lagging-current-publication). Either is read
+  when listed, otherwise acquired as owned single-flight work under the request's wait, with a
+  three-hour retry bound per cell and publication. They are always inside the 54 h read window.
+  This adds at most one `getVilageFcst` acquisition (one or two pages of 999 rows) per cell and
+  publication, at most 8 a day, and only when that publication was not stored while it was the
+  latest: a cell first requested in such a window, or after a failed or unusable acquisition. A
   failure leaves the row with legacy's values for a missing publication.
 - **Sentinels.** A missing probability is 0 on every row (legacy `adjustShort`, so the app never
   prints "-1%"); a missing `s06`, `sn1` or `s1d` stays −1 through the cm-to-mm conversion; an hour
