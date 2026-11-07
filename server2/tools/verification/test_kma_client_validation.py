@@ -325,6 +325,26 @@ class CompareTest(unittest.TestCase):
             'historyStatus.hourlyFieldGaps': 'object where the reference has an array'})
         self.assertEqual(status, 1)
 
+    def test_daily_status_lists_are_judged_by_presence_and_kind(self):
+        # PR-dailystatus: on 2026-11-07 production lacked the Gangwon mid forecast for Gangneung, so its
+        # dailyStatus listed reasons and dates, while server2 had the forecast and empty lists. The lists
+        # are gap diagnostics like those of historyStatus.
+        base = reference()
+        base['midData']['dailyStatus'] = dict(
+            healthy=False, reasons=['land-unavailable', 'temperature-unavailable'],
+            unavailableDates=['20261112', '20261113', '20261114', '20261115', '20261116', '20261117'], rss='retired')
+        candidate = reference()
+        candidate['midData']['dailyStatus'] = dict(healthy=True, reasons=[], unavailableDates=[], rss='retired')
+        status, report, _ = compare(base, candidate)
+        self.assertEqual((status, report['invalid_values'], report['missing_fields']), (0, [], []))
+        self.assertEqual([p for p in report['value_differences'] if 'dailyStatus' in p], ['midData.dailyStatus.healthy'])
+        candidate['midData']['dailyStatus']['reasons'] = 'none'
+        del candidate['midData']['dailyStatus']['unavailableDates']
+        status, report, _ = compare(base, candidate)
+        self.assertEqual({v['path']: v['reason'] for v in report['invalid_values']},
+                         {'midData.dailyStatus.reasons': 'string where the reference has an array'})
+        self.assertEqual((status, report['missing_fields']), (1, ['midData.dailyStatus.unavailableDates']))
+
     def test_candidate_only_keys_pass(self):
         candidate = reference()
         candidate['forecastNarrative'] = dict(stationId=109, text='맑음')

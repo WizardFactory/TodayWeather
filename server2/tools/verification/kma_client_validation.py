@@ -22,8 +22,8 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          Numeric strings, which legacy also sends, are read as JavaScript's Number() reads a
          decimal string, and the same rules apply to them. A number that reads as infinite (the
          string "1e309", or the JSON number 1e309) is invalid; "NaN" is not a number.
-         Not judged: historyObservation and fieldObservations, the contents of the historyStatus
-         lists (which must stay arrays), forecastNarrative. A *Str/*Grade/*Approx/*Hours/*Icon label whose value field
+         Not judged: historyObservation and fieldObservations, the contents of the gap lists in
+         historyStatus and midData.dailyStatus (which must stay arrays), forecastNarrative. A *Str/*Grade/*Approx/*Hours/*Icon label whose value field
          differs or is absent is value-dependent, not missing. Excluded (never missing; listed
          apart when the candidate lacks one, leaves it invalid or keeps it empty): air quality,
          UV, pollen, food poisoning and the KASI extras other than sunrise and sunset. Valid
@@ -69,7 +69,8 @@ SIGNED = TEMPERATURES | WIND_COMPONENTS | {'fromToday'}
 LABEL_SUFFIXES = ('Str', 'Grade', 'Approx', 'Hours', 'Icon')
 ATTRIBUTION = frozenset(('historyObservation', 'fieldObservations'))
 NOT_JUDGED = {'': frozenset(('forecastNarrative',))}
-GAP_LISTS_IN = 'historyStatus'
+# Objects whose lists are gap diagnostics (missing hours and days, unavailable mid dates and reasons).
+GAP_LISTS_IN = frozenset(('historyStatus', 'midData.dailyStatus'))
 # Slow-provider parts, by the normalized path of the object that holds them.
 EXCLUDED = {
     '': frozenset(('airInfoList', 'airInfo')),
@@ -236,7 +237,7 @@ class Comparison:
                 continue
             if not present:
                 self.missing_fields.append(p)
-            elif norm == GAP_LISTS_IN and isinstance(rv, list):
+            elif norm in GAP_LISTS_IN and isinstance(rv, list):
                 # Gap diagnostics: presence and the array kind are judged, contents and emptiness are not.
                 reason = 'null' if cv is None else None if isinstance(cv, list) else invalid(key, cv, rv)
                 if reason:
