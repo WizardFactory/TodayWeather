@@ -29,9 +29,12 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          UV, pollen, food poisoning and the KASI extras other than sunrise and sunset. Valid
          values that differ are information only.
          Exit 0 pass, 1 missing data, 2 not comparable (another or unknown place: regionName,
-         cityName or townName differs, or is absent, null or blank in either body; different
-         publications; or not a KMA body) or unreadable input; the report lists are computed in
-         every case.
+         cityName or townName differs, or is absent, null or blank in either body; a publication,
+         currentPubDate, shortestPubDate, shortPubDate, midData.landPubDate or tempPubDate, that
+         both bodies carry with different values; or not a KMA body) or unreadable input; the
+         report lists are computed in every case. A publication the reference lacks is listed as
+         information (reference_lacks_publication) and the bodies are compared; one only the
+         candidate lacks is missing data.
 
 Standard library only. Only capture opens a connection.
 """
@@ -311,7 +314,7 @@ def comparability(reference, candidate, unreadable):
             reasons.append(f'{name} unreadable: {unreadable[name]}')
         elif not kma_body(body):
             reasons.append(f'{name} is not a KMA body (an object with short, current and midData)')
-    place, differing = {}, {}
+    place, differing, lacking = {}, {}, []
     if isinstance(reference, dict) and isinstance(candidate, dict):
         for name in PLACE:
             r, c = publication(reference, name), publication(candidate, name)
@@ -319,13 +322,18 @@ def comparability(reference, candidate, unreadable):
                 place[name] = dict(reference=r, candidate=c)
                 state = 'unknown' if unknown(r) and unknown(c) else 'differs'
                 reasons.append(f'place {state}: {name} {shown(r)} vs {shown(c)}')
+        # Only a publication both bodies carry can make them not comparable. One the reference lacks is
+        # information; one only the candidate lacks is missing data that the field comparison reports.
         for name in PUBLICATIONS:
             r, c = publication(reference, name), publication(candidate, name)
-            if not same(r, c):
+            if unknown(r):
+                lacking.append(name)
+            elif not unknown(c) and not same(r, c):
                 differing[name] = dict(reference=r, candidate=c)
     if differing:
         reasons.append('publications differ: ' + ', '.join(differing))
-    return dict(ok=not reasons, reasons=reasons, differing_place=place, differing_publications=differing)
+    return dict(ok=not reasons, reasons=reasons, differing_place=place, differing_publications=differing,
+                reference_lacks_publication=lacking)
 
 
 def judge(reference, candidate, unreadable=None):
@@ -371,6 +379,9 @@ def summary(report, groups_shown=12):
     for kind in ('differing_place', 'differing_publications'):
         for name, pair in report['comparable'][kind].items():
             lines.append(f"  {name}: reference {shown(pair['reference'])}, candidate {shown(pair['candidate'])}")
+    if report['comparable']['reference_lacks_publication']:
+        lines.append('reference lacks publication (information): '
+                     + ', '.join(report['comparable']['reference_lacks_publication']))
     sections = (('missing_rows', 'missing rows'), ('missing_fields', 'missing fields'),
                 ('invalid_values', 'invalid values'), ('excluded_missing', 'excluded parts missing (not counted)'),
                 ('value_dependent', 'value-dependent labels (not counted)'))

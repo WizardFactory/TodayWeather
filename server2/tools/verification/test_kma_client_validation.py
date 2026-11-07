@@ -382,6 +382,34 @@ class CompareTest(unittest.TestCase):
         self.assertEqual(report['missing_fields'], ['current.dongnae'])
         self.assertIn('shortPubDate', out)
 
+    def test_publications_are_compared_only_where_both_bodies_carry_them(self):
+        # PR-publication-presence: on 2026-11-07 production had no mid forecast for Gangneung (no
+        # landPubDate, tempPubDate or forecast, daily rows only to D+4), while server2 had one.
+        base = reference()
+        mid = base['midData']
+        del mid['landPubDate'], mid['forecast']
+        mid.update(tempPubDate=None, dailyData=mid['dailyData'][:1], dailyStatus=dict(
+            healthy=False, reasons=['land-unavailable', 'temperature-unavailable'], unavailableDates=['20261107']))
+        status, report, out = compare(base, reference())
+        self.assertEqual((status, report['verdict']), (0, 'pass'))
+        self.assertTrue(report['comparable']['ok'])
+        self.assertEqual(report['comparable']['reference_lacks_publication'],
+                         ['midData.landPubDate', 'midData.tempPubDate'])
+        self.assertIn('reference lacks publication (information): midData.landPubDate, midData.tempPubDate', out)
+        # The candidate lacking a publication the reference has is missing data, not another publication.
+        candidate = reference()
+        del candidate['midData']['landPubDate']
+        candidate['midData']['tempPubDate'] = None
+        status, report, _ = compare(reference(), candidate)
+        self.assertEqual((status, report['verdict'], report['comparable']['ok']), (1, 'missing', True))
+        self.assertEqual(report['missing_fields'], ['midData.landPubDate'])
+        self.assertEqual([(v['path'], v['reason']) for v in report['invalid_values']], [('midData.tempPubDate', 'null')])
+        # Both bodies carry it and the values differ: not comparable.
+        candidate = reference()
+        candidate['midData']['landPubDate'] = '2026-11-06T09:00:00.000Z'
+        status, report, _ = compare(reference(), candidate)
+        self.assertEqual((status, list(report['comparable']['differing_publications'])), (2, ['midData.landPubDate']))
+
     def test_different_place_is_not_comparable_but_lists_are_written(self):
         candidate = reference()
         candidate['townName'] = '소공동'
