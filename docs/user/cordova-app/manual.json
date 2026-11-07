@@ -1,0 +1,230 @@
+{
+  "title": "TodayWeather for Android: user manual (app 1.1.1)",
+  "scenario": "TodayWeather 1.1.1 on Android with Korean screens. Korean labels are followed by their English meaning. Weather values are live examples captured on 7 November 2026.",
+  "steps": [
+    {
+      "title": "First launch: read the access notice",
+      "instruction": "Open TodayWeather. The notice 선택 접근 권한 (Optional permissions) explains why the app may use storage (backing up favorites), location (finding your position) and phone access (avoiding unsuitable ads). Tap 확인 (OK). Android asks for each permission itself when the app needs it.",
+      "screenshot": "screenshots/01-start-access.png",
+      "caption": "The access notice over the start screen (O01).",
+      "expected": "The notice closes and the start screen remains."
+    },
+    {
+      "title": "Choose a place",
+      "instruction": "Tap 현재위치 날씨보기 (Weather at my location) to use your position, or type a place name in 지역 이름을 입력하세요 (Enter a place name). The buttons are shortcuts to major cities.",
+      "screenshot": "screenshots/02-start.png",
+      "caption": "Start screen with the search box, city shortcuts and the current-location button (S01).",
+      "expected": "The weather of the chosen place opens. If you deny location access, search for a place instead."
+    },
+    {
+      "title": "Read today against yesterday",
+      "instruction": "The 시간별날씨 (Hourly) tab shows the current temperature and sky. The next line compares with yesterday: 어제보다 -1°, 맑음 means 1° lower than yesterday, clear sky. The line below it summarizes air quality.",
+      "screenshot": "screenshots/03-hourly.png",
+      "caption": "Hourly weather for 서울 (Seoul). This debug build shows a Google test ad below the tabs (S03).",
+      "expected": "You can tell whether it is warmer or colder than yesterday."
+    },
+    {
+      "title": "Read the hourly chart",
+      "instruction": "In the chart, the blue line 당일 기온 is today and the grey line 전일 기온 is yesterday, in three-hour steps. The red dot is the current temperature. Each column shows the sky and the chance of rain. Swipe the chart sideways for more hours. Tap the small arrow under the chart to show wind and other details.",
+      "screenshot": "screenshots/04-hourly-details.png",
+      "caption": "The chart with details open: wind speeds appear under the chart (S03).",
+      "expected": "The details appear below the chart; tap the arrow again to hide them."
+    },
+    {
+      "title": "Check the coming days",
+      "instruction": "Tap 일별날씨 (Daily). Each column is a day, including the past few days: morning and afternoon sky, rain or snow amount and chance, and a bar from the lowest to the highest temperature. The red dot marks the current temperature on today's bar.",
+      "screenshot": "screenshots/05-daily.png",
+      "caption": "Daily weather from Thursday 5 to Wednesday 11 November (S04).",
+      "expected": "You can compare past and coming days. Tapping the selected tab again refreshes the data."
+    },
+    {
+      "title": "Check air quality",
+      "instruction": "Tap 대기정보 (Air). The top shows the air grade (좋음 Good, 보통 Moderate, 나쁨 Bad, 매우나쁨 Very bad) with advice for outdoor activity. The colored scale marks the current index, and 시간별대기예보 (beta) shows the hourly air forecast.",
+      "screenshot": "screenshots/06-air.png",
+      "caption": "Air quality for Seoul: grade 좋음 with index 48 on the scale (S05).",
+      "expected": "You see the grade and the advice. If no air data exists for the place, this screen stays empty."
+    },
+    {
+      "title": "Switch the pollutant",
+      "instruction": "Scroll down to 상세대기정보 (Air details) and tap a card such as 초미세먼지 (PM2.5) or 미세먼지 (PM10).",
+      "screenshot": "screenshots/07-air-pollutant.png",
+      "caption": "초미세먼지 (PM2.5) selected: 7 µg/m³, grade 좋음 (S05).",
+      "expected": "The value, unit, scale and forecast change to the selected pollutant."
+    },
+    {
+      "title": "Open your saved places",
+      "instruction": "Tap 즐겨찾기 (Favorites). Each row shows a place with its current temperature and the day's lowest and highest. The bell opens notifications for that place.",
+      "screenshot": "screenshots/08-favorites.png",
+      "caption": "Favorites with one saved place (S02).",
+      "expected": "Tapping a row opens that place's weather."
+    },
+    {
+      "title": "Search and add a place",
+      "instruction": "Type a place name in the search box, for example 부산 (Busan), and tap a result.",
+      "screenshot": "screenshots/09-search.png",
+      "caption": "Results for 부산. 현재위치로 지역찾기 (Find by current location) is at the top (S02).",
+      "expected": "The place is added to Favorites and its weather opens."
+    },
+    {
+      "title": "See the new place",
+      "instruction": "The added place opens in 시간별날씨. The arrows at the left and right edges show that more places are saved.",
+      "screenshot": "screenshots/10-added-city.png",
+      "caption": "Weather for 부산광역시 (Busan) after adding it (S03).",
+      "expected": "The title shows the new place."
+    },
+    {
+      "title": "Move between places",
+      "instruction": "Swipe left or right outside the chart, or tap the edge arrows, to switch to another saved place.",
+      "screenshot": "screenshots/11-swipe.png",
+      "caption": "Swiping back to 서울 (S03).",
+      "expected": "The weather of the next place appears. Swiping inside the chart scrolls the chart instead."
+    },
+    {
+      "title": "Add a place abroad",
+      "instruction": "Search an overseas city by its usual name, for example London, and tap the result. Overseas places use the same screens.",
+      "screenshot": "screenshots/12-overseas.png",
+      "caption": "London after adding it (S03).",
+      "expected": "The place appears in Favorites like a Korean place. If its weather cannot be retrieved, the app shows a message; try again later."
+    },
+    {
+      "title": "Edit or delete places",
+      "instruction": "In Favorites, tap 편집 (Edit). Switch 현재위치 (Current location) on or off, or tap ⊗ to delete a place. Tap 확인 (Done) to finish.",
+      "screenshot": "screenshots/13-edit.png",
+      "caption": "Edit mode with the current-location switch and delete buttons (S02).",
+      "expected": "Deleted places disappear from the list."
+    },
+    {
+      "title": "Find the place you are in",
+      "instruction": "Tap the search box, then 현재위치로 지역찾기 (Find by current location). The app looks up your position and lists the area. Tap it.",
+      "screenshot": "screenshots/14-current-location-search.png",
+      "caption": "The current position found: 서울특별시 중구 명동 (S02).",
+      "expected": "The area is added and its weather opens."
+    },
+    {
+      "title": "Weather at your position",
+      "instruction": "The place found from your position works like any other saved place.",
+      "screenshot": "screenshots/15-current-location.png",
+      "caption": "Weather for 명동, the emulator's position (S03).",
+      "expected": "The title shows the area you are in."
+    },
+    {
+      "title": "Set notifications for a place",
+      "instruction": "Tap the bell on the weather screen or in Favorites. 악천후 경보 (Severe weather alert) tells you about rain, snow or bad fine dust within the hours on the bar. 날씨알람 (Weather alarm) sends the weather at your times: choose the days, tap the gear button to change a time or + to add one, then tap 저장 (Save).",
+      "screenshot": "screenshots/16-notifications.png",
+      "caption": "Notification settings for 명동 (S09).",
+      "expected": "The settings are saved for this place. If you deny Android's notification permission, allow it for TodayWeather in Android settings."
+    },
+    {
+      "title": "Open the menu",
+      "instruction": "Tap the menu button ☰ at the top left. The menu lists 기상특보 (Warnings), 전국날씨 (Nationwide weather), 전국미세먼지 (Nationwide air), 널스쿨 풍향 (wind map website), settings, privacy choices, 의견보내기 (Feedback) and 응원리뷰쓰기 (Rate this app).",
+      "screenshot": "screenshots/17-menu.png",
+      "caption": "The side menu (S06).",
+      "expected": "Tap an item to open it; tap ← to close the menu."
+    },
+    {
+      "title": "Change units",
+      "instruction": "Tap 단위설정 (Units). Each row sets a unit: temperature, wind speed, pressure, distance, precipitation and the air-quality standard (대기환경기준).",
+      "screenshot": "screenshots/18-units.png",
+      "caption": "Units: C, m/s, hPa, km, mm and the Korea Environment Corporation standard (S07).",
+      "expected": "Each row opens its list of choices."
+    },
+    {
+      "title": "Pick a unit",
+      "instruction": "Tap 온도단위 (Temperature unit) and choose C or F. The check mark shows the current choice.",
+      "screenshot": "screenshots/19-unit-choice.png",
+      "caption": "Temperature unit list with C selected (S08).",
+      "expected": "The choice applies right away."
+    },
+    {
+      "title": "See the new unit",
+      "instruction": "Go back to the weather screen. Temperatures now use the chosen unit.",
+      "screenshot": "screenshots/20-fahrenheit.png",
+      "caption": "Seoul in Fahrenheit: 45° (S03).",
+      "expected": "All temperatures, including the chart, use °F. Choose C again to switch back."
+    },
+    {
+      "title": "Choose the start screen",
+      "instruction": "In the menu, tap 시작 페이지 (Startup page) and pick the screen the app opens with: 시간별날씨, 일별날씨, 즐겨찾기 or 대기정보.",
+      "screenshot": "screenshots/21-startup-page.png",
+      "caption": "Startup page options with 시간별날씨 selected (S08).",
+      "expected": "The app opens on that screen next time."
+    },
+    {
+      "title": "Choose the refresh interval",
+      "instruction": "Tap 업데이트 주기 (Refresh interval) and pick 수동 (Manual), 30분, 1시간, 3시간, 6시간 or 12시간.",
+      "screenshot": "screenshots/22-refresh-interval.png",
+      "caption": "Refresh interval options with 수동 selected (S08).",
+      "expected": "With 수동, refresh by tapping the selected tab. With an interval, the app reloads the weather after that time while it is open."
+    },
+    {
+      "title": "Change the theme",
+      "instruction": "Tap 테마 설정 (Theme) and choose 밝은 테마 (Light), 어두운 테마 (Dark), 날씨 사진 테마 (Weather photo) or 이전 테마 (Old).",
+      "screenshot": "screenshots/23-theme-dark.png",
+      "caption": "어두운 테마 (Dark theme) (S08).",
+      "expected": "The weather screens use the new colors."
+    },
+    {
+      "title": "Weather photo theme",
+      "instruction": "날씨 사진 테마 shows a photo that matches the current sky behind the temperature.",
+      "screenshot": "screenshots/24-theme-photo.png",
+      "caption": "Weather photo theme for a clear night (S08).",
+      "expected": "The photo follows the current weather."
+    },
+    {
+      "title": "Read weather warnings",
+      "instruction": "In the menu, tap 기상특보 (Weather warnings). The page shows current warnings (기상특보), preliminary warnings (예비특보) and weather information (기상정보) from the Korea Meteorological Administration, each with its time.",
+      "screenshot": "screenshots/25-warnings.png",
+      "caption": "Warnings issued on 7 November 2026 at 16:00 (S12).",
+      "expected": "You see which regions have warnings. This item appears when the app's region is Korea."
+    },
+    {
+      "title": "Nationwide weather",
+      "instruction": "In the menu, tap 전국날씨 (Nationwide weather). A map shows the sky and temperature of major cities. The tabs switch between 날씨/기온 (Weather/Temperature), 강수량 (Precipitation) and 풍향/풍속 (Wind).",
+      "screenshot": "screenshots/26-nationwide.png",
+      "caption": "Nationwide weather map (S10).",
+      "expected": "The map changes with the selected tab."
+    },
+    {
+      "title": "Nationwide wind",
+      "instruction": "The 풍향/풍속 tab shows the wind direction and speed for each city.",
+      "screenshot": "screenshots/27-nationwide-wind.png",
+      "caption": "Wind directions and speeds in m/s (S10).",
+      "expected": "Each city shows its wind."
+    },
+    {
+      "title": "Nationwide air",
+      "instruction": "In the menu, tap 전국미세먼지 (Nationwide air). The tabs switch between PM2.5, PM10, O3, NO2 and SO2.",
+      "screenshot": "screenshots/28-nationwide-air.png",
+      "caption": "PM2.5 by region (S11).",
+      "expected": "Each region shows its value for the selected pollutant."
+    },
+    {
+      "title": "Data sources and version",
+      "instruction": "At the bottom of the menu, 버전 (Version) shows the app version. Tap 정보 (About) to see the data sources: weather from the Korea Meteorological Administration (기상청), air quality from the Ministry of Environment and the Korea Environment Corporation.",
+      "screenshot": "screenshots/29-about.png",
+      "caption": "About: data sources and the note that real-time data is unverified and may contain errors (O10).",
+      "expected": "Tap 확인 (OK) to close the notice."
+    },
+    {
+      "title": "Usage analytics and privacy",
+      "instruction": "In the menu, tap 선택적 이용 통계 (Optional usage analytics). Tap 동의 (Agree) to allow analytics or 거부/철회 (Decline/Withdraw) to refuse; it stays off until you agree. 광고 개인정보 선택 (Ad privacy choices) opens Google's ad privacy form where a choice applies. 개인정보처리방침 and 이용약관 open the privacy policy and terms.",
+      "screenshot": "screenshots/30-analytics-choice.png",
+      "caption": "The usage analytics dialog over the menu (S06).",
+      "expected": "The menu row shows the current choice (꺼짐 means Off). Weather works either way."
+    },
+    {
+      "title": "Share the weather",
+      "instruction": "Tap the share icon at the top right. Android's share sheet offers apps to send a text summary of the place, temperatures and the comparison with yesterday, with a link.",
+      "screenshot": "screenshots/31-share.png",
+      "caption": "Android share sheet with the weather summary (O16).",
+      "expected": "The chosen app receives the text."
+    },
+    {
+      "title": "Exit the app",
+      "instruction": "On a main tab, press Android's Back button. The app asks 종료하시겠습니까? (Do you want to exit?). Tap 확인 (OK) to exit or 취소 (Cancel) to stay.",
+      "screenshot": "screenshots/32-exit.png",
+      "caption": "Exit confirmation (O15).",
+      "expected": "The app closes only after 확인."
+    }
+  ]
+}

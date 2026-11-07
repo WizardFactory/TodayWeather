@@ -1,0 +1,269 @@
+{
+  "description": "Actual captures of the TodayWeather Cordova app for docs/user/cordova-app/manual.json. Live production weather at capture time; not fixtures.",
+  "client_source": "97b57689a9dc65eb8f2306c5f60b63498bcf00d7 (client/ unchanged)",
+  "build": "Cordova 13 debug build (cordova-android 15.1.0) with scripts/verification/rewrite/native/tw-harness.js injected into a copy of the platform www; Google test ad units; Firebase config from private release inputs (not in Git)",
+  "device": {
+    "emulator": "Android emulator AVD flo_api36_phone (Pixel 8 profile)",
+    "android": "16 (API 36)",
+    "build_fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
+    "pixels": [
+      1080,
+      2400
+    ],
+    "density_dpi": 420,
+    "locale": "ko-KR",
+    "time_zone": "Asia/Seoul",
+    "location": "37.5665, 126.9780 (emulator geo fix)"
+  },
+  "runs": [
+    {
+      "id": "full-ko",
+      "harness_mode": "full",
+      "harness_revision": "97b57689 (unchanged)",
+      "started": "2026-11-07T08:56:51.675Z",
+      "finished": "2026-11-07T09:04:32.218Z",
+      "scenarios": "S1-S9 all done",
+      "checks": "100 ok / 0 fail",
+      "unclassified_errors": 0
+    },
+    {
+      "id": "manual-ko",
+      "harness_mode": "manual",
+      "harness_revision": "97b57689 plus the manual mode added in this change",
+      "started": "2026-11-07T09:04:55.026Z",
+      "finished": "2026-11-07T09:06:29.405Z",
+      "scenarios": "S1, M1 done",
+      "checks": "23 ok / 0 fail",
+      "unclassified_errors": 0
+    }
+  ],
+  "writes": "Push writes (PUT /push, POST /push-list, DELETE) were answered locally by the harness; no production writes. Analytics choice left at its default (off).",
+  "processing": "Downscaled from 1080x2400 to 720x1600 (Lanczos), then reduced to a 256-color palette (median cut, no dithering) to keep the repository small; no other edits.",
+  "privacy_review": "Each image inspected on 2026-11-07: public weather, a synthetic emulator location and Google test ads only; no account, token or personal data.",
+  "images": [
+    {
+      "file": "01-start-access.png",
+      "sha256": "baf3335168c94415079c58937938527ae6861bbd89993f1b91046533b1b21bcf",
+      "screen": "O01",
+      "run": "full-ko",
+      "capture": "01-s1-start-popup"
+    },
+    {
+      "file": "02-start.png",
+      "sha256": "d8f799142230810591bb40b6040da14e76a057190e85e657615b81f5bdd8b70a",
+      "screen": "S01",
+      "run": "full-ko",
+      "capture": "02-s1-start"
+    },
+    {
+      "file": "03-hourly.png",
+      "sha256": "4f7e1ebfefaeb2614829a13b79c6baf8d3ab470d1f4af4af949accb53f0d7f7d",
+      "screen": "S03",
+      "run": "full-ko",
+      "capture": "10-s2-warm"
+    },
+    {
+      "file": "04-hourly-details.png",
+      "sha256": "36289ad99e1ab549f38d31033438d9aec6351f86cc91cf5e4c5f33ae1c71dd34",
+      "screen": "S03",
+      "run": "full-ko",
+      "capture": "04-s1-hourly-expanded"
+    },
+    {
+      "file": "05-daily.png",
+      "sha256": "bc01b20026329671af30333057f0c52f3fd669857653d5c2a35f21c2df5a5faf",
+      "screen": "S04",
+      "run": "full-ko",
+      "capture": "05-s1-daily"
+    },
+    {
+      "file": "06-air.png",
+      "sha256": "f3a97fd08fbdfa714dc04c9b159e99ad8265155c0e8f3b2c01a5aebedba7519b",
+      "screen": "S05",
+      "run": "full-ko",
+      "capture": "06-s1-air"
+    },
+    {
+      "file": "07-air-pollutant.png",
+      "sha256": "af96b5eae338a7ba548030df9ab4e5c681d462efe424eb7b8b4791cca87aaeea",
+      "screen": "S05",
+      "run": "full-ko",
+      "capture": "07-s1-air-code"
+    },
+    {
+      "file": "08-favorites.png",
+      "sha256": "7421b738f3f8102ef2e51865c8fbb3542c2ae967140b35c4de02676d96e310a8",
+      "screen": "S02",
+      "run": "full-ko",
+      "capture": "09-s1-favorites"
+    },
+    {
+      "file": "09-search.png",
+      "sha256": "80281e4769bdc69d23f7c08d67a23fafce978eef109969705a10c94578dba6c3",
+      "screen": "S02",
+      "run": "full-ko",
+      "capture": "32-s4-search-results"
+    },
+    {
+      "file": "10-added-city.png",
+      "sha256": "4989d7c29578cf0c28b5828834a48ebb3c4967033f1eb9a69406bb095720566c",
+      "screen": "S03",
+      "run": "full-ko",
+      "capture": "33-s4-busan"
+    },
+    {
+      "file": "11-swipe.png",
+      "sha256": "8785db9b15d9ec0c59a26d69a2c0e6d78c0d654f1aa0ff574c94528683643d0d",
+      "screen": "S03",
+      "run": "full-ko",
+      "capture": "34-s4-swipe-right"
+    },
+    {
+      "file": "12-overseas.png",
+      "sha256": "86f11f8866dd7984e5f5fbaa6dccd14030787fc97ac2ba37b1019413016d3eb8",
+      "screen": "S03",
+      "run": "full-ko",
+      "capture": "36-s4-london"
+    },
+    {
+      "file": "13-edit.png",
+      "sha256": "c29357475159a3761d810dd2ae8f6e7c1e007f5b15c93636014885c4ff4d7971",
+      "screen": "S02",
+      "run": "full-ko",
+      "capture": "39-s4-edit"
+    },
+    {
+      "file": "14-current-location-search.png",
+      "sha256": "c3e4945f4ba073bee1aba27252f9f389f36c448e089441410a391e8de534d48a",
+      "screen": "S02",
+      "run": "full-ko",
+      "capture": "41-s5-location-result"
+    },
+    {
+      "file": "15-current-location.png",
+      "sha256": "b86fdaf8eca5f8a620b34b1af512ac128d6b65f7dd857118344f532faa23f085",
+      "screen": "S03",
+      "run": "full-ko",
+      "capture": "42-s5-location-forecast"
+    },
+    {
+      "file": "16-notifications.png",
+      "sha256": "b1717ba0249604c910a5c3ed7470008c0cb1ec8f8944e02cb096f0aa36cb4703",
+      "screen": "S09",
+      "run": "full-ko",
+      "capture": "44-s6-push"
+    },
+    {
+      "file": "17-menu.png",
+      "sha256": "8aeb46f9c17f358903b963da52869ac722fb21f264023a4c6390e608fe3a8f9b",
+      "screen": "S06",
+      "run": "full-ko",
+      "capture": "11-s2-menu"
+    },
+    {
+      "file": "18-units.png",
+      "sha256": "3197fc49a631aeed6497b66bc0e44b5522a5b4f204d904b03d294d1ac8460f2a",
+      "screen": "S07",
+      "run": "full-ko",
+      "capture": "12-s2-units"
+    },
+    {
+      "file": "19-unit-choice.png",
+      "sha256": "2cc8b1dd145dcc4be912344447d63c701fc25b86c773c59eeb5e8596b1d4897b",
+      "screen": "S08",
+      "run": "full-ko",
+      "capture": "13-s2-unit-temperature"
+    },
+    {
+      "file": "20-fahrenheit.png",
+      "sha256": "6bb503cbb45723b32723b90cf29820efc889de603d5a028acd5b55d4153d9c87",
+      "screen": "S03",
+      "run": "full-ko",
+      "capture": "14-s2-fahrenheit"
+    },
+    {
+      "file": "21-startup-page.png",
+      "sha256": "eba87c4ab426f0b00755e1105818bc725e2db6bf3878584f5043b85bc4d515e0",
+      "screen": "S08",
+      "run": "full-ko",
+      "capture": "19-s2-radio-startupPage"
+    },
+    {
+      "file": "22-refresh-interval.png",
+      "sha256": "9b0cc1268267732f1f119ad4e4296ad8e51b1819642225acc73e0d802adee5c7",
+      "screen": "S08",
+      "run": "full-ko",
+      "capture": "20-s2-radio-refreshInterval"
+    },
+    {
+      "file": "23-theme-dark.png",
+      "sha256": "974cb3289fc57daf8488b424fd718974424f9ada92d6c15f0bcffdc0b26ec262",
+      "screen": "S08",
+      "run": "full-ko",
+      "capture": "17-s2-theme-2-dark"
+    },
+    {
+      "file": "24-theme-photo.png",
+      "sha256": "708523c0ce6b4c632764aef0d0e6464d3ae093d2cd58292e94152645107a5fbf",
+      "screen": "S08",
+      "run": "full-ko",
+      "capture": "15-s2-theme-0-photo"
+    },
+    {
+      "file": "25-warnings.png",
+      "sha256": "0adfe611ba46eb50ec6682b42d1c8e2ae90902919b62acba0a2454a8f56ab7ea",
+      "screen": "S12",
+      "run": "full-ko",
+      "capture": "21-s3-kma-special"
+    },
+    {
+      "file": "26-nationwide.png",
+      "sha256": "d5a3430cb9b39c1cac86960984615410433678002b3a66045d4ad5cb57be9f6d",
+      "screen": "S10",
+      "run": "full-ko",
+      "capture": "22-s3-nation"
+    },
+    {
+      "file": "27-nationwide-wind.png",
+      "sha256": "236c094b22640d8f30b1b5c7342d3df03277b6dc9c89a5ee16d4ded3ffef9acb",
+      "screen": "S10",
+      "run": "full-ko",
+      "capture": "24-s3-nation-type-2"
+    },
+    {
+      "file": "28-nationwide-air.png",
+      "sha256": "c3581da807cb4c63e0ff8e6339304710da8c9d600adb38f17a62c2b9767c0ff6",
+      "screen": "S11",
+      "run": "full-ko",
+      "capture": "26-s3-nation-air"
+    },
+    {
+      "file": "29-about.png",
+      "sha256": "16a1624ff8c4a8303dfd014ee9acf199974d93668ddfa040a6d9541786d2269a",
+      "screen": "O10",
+      "run": "full-ko",
+      "capture": "29-s3-info-popup"
+    },
+    {
+      "file": "30-analytics-choice.png",
+      "sha256": "aab95efdc87562a4117f2767f4415bff994abf6bff9c91a6ce6ad1161171ac79",
+      "screen": "S06",
+      "run": "manual-ko",
+      "capture": "10-m1-analytics-choice"
+    },
+    {
+      "file": "31-share.png",
+      "sha256": "a761d4a907f0db7ff5bbd6a5f4f43adb3aae3c29519865a834998b916a750de2",
+      "screen": "O16",
+      "run": "full-ko",
+      "capture": "52-s9-share"
+    },
+    {
+      "file": "32-exit.png",
+      "sha256": "cb3edd07a82345e82933a24597342dc576dabab71bbcf33f179abbf2270788d4",
+      "screen": "O15",
+      "run": "full-ko",
+      "capture": "47-s7-exit-confirm"
+    }
+  ]
+}

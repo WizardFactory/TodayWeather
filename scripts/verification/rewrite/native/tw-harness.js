@@ -1045,6 +1045,34 @@
         S = [S[0], { name: 'W2_world_tokyo', run: function () { return worldCity(/iPhone|iPad/.test(navigator.userAgent) ? '도쿄' : 'Tokyo', 'tokyo'); } }];
     }
 
+    // ---------- manual mode (window.TW_HARNESS_MODE === 'manual'): menu privacy choices for the user manual ----------
+    // Captures the dialogs the full scenarios do not open. Android back closes them without a value, which the
+    // app treats as no choice (controller.settingctrl.js), so the analytics setting stays at its default.
+    if (window.TW_HARNESS_MODE === 'manual') {
+        S = [S[0], { name: 'M1_privacy_choices', run: function () {
+            function menuButton(expr, label) {
+                var menu = svc('$ionicSideMenuDelegate');
+                return (menu.isOpenLeft() ? Promise.resolve() : openMenu()).then(function () {
+                    var el = byNg(expr);
+                    if (el) { el.scrollIntoView({ block: 'center' }); }
+                    return sleep(600).then(function () { check(label, !!el && !!click(el, label)); return sleep(1500); });
+                });
+            }
+            return Promise.resolve()
+                .then(function () { return waitFor(function () { return /^tab\./.test(stateName()); }, 20000, 'tab'); })
+                .then(function () { return idle(30000); })
+                .then(function () { return menuButton('chooseAnalytics()', 'menu-analytics'); })
+                .then(function () { return waitFor(function () { return !!find('.popup-container.active .popup-buttons button'); }, 8000, 'analytics-popup'); })
+                .then(function () { return shot('m1-analytics-choice'); })
+                .then(function () { return host('back', 3000); })
+                .then(function () { check('analytics-unchanged', svc('Monetization').getCollectionChoice() === false); })
+                .then(function () { return menuButton('openAdPrivacy()', 'menu-ad-privacy'); })
+                .then(function () { return sleep(4000); })
+                .then(function () { return shot('m1-ad-privacy'); })
+                .then(function () { return host('back', 3000); });
+        } }];
+    }
+
     // The update-info popup (O05) was removed, so a popup after a warm launch is a failure. Record it and
     // close it like a user would so the scenario can continue.
     function dismissLaunchPopup(i) {
