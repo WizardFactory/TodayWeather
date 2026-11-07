@@ -1479,6 +1479,17 @@ use super::observe::Counted;
 use server2::domestic::kma::source::life_input::LifeAnswers;
 use server2::resolver::race::HEAD_START;
 
+/// S3 requests in flight for a restarted process's inputs. The process before it keeps its
+/// pooled connections until the peer closes them 2 s after they opened (the test's store and,
+/// with an acquirer, its KASI capture task keep it alive), so a restarted process with the usual
+/// 8 could fill the peer's 16 connections: the quota reservation of its raced acquisition was
+/// then refused at the head start (`connection_reset`) and the first answer lacked what it
+/// would have acquired.
+const RESTARTED_PERMITS: usize = 4;
+/// A restarted process's counted transport, admitting [`RESTARTED_PERMITS`] requests at once.
+fn restarted_transport(peer: &Peer) -> Counted {
+    Counted::new(peer.transport_limited(RESTARTED_PERMITS))
+}
 /// The life inputs of a process reading through `counted`, acquiring through the stub.
 fn restarted(
     peer: &Peer,
@@ -1549,7 +1560,7 @@ async fn a_slow_life_read_starts_uv_at_the_head_start() {
     let asked = |s: &StubState| [&s.uv, &s.weeds, &s.mfds].map(|n| n.load(Ordering::SeqCst));
     assert_eq!(asked(s), [1, 1, 1]);
     // The restart: every stored life read ends after the bound.
-    let counted = Counted::new(peer.transport());
+    let counted = restarted_transport(&peer);
     let b = restarted(&peer, &counted, &store, Some(&stub));
     let gate = counted.hold(&LIFE_RAW);
     let (first, took) = first_request(&b, Duration::from_millis(2700)).await;
@@ -1580,7 +1591,7 @@ async fn a_slow_life_read_starts_uv_at_the_head_start() {
         tokio::time::sleep(Duration::from_millis(250)).await;
         later = b.load(now_ms(), deadline()).await;
     }
-    let cold = restarted(&peer, &Counted::new(peer.transport()), &store, None)
+    let cold = restarted(&peer, &restarted_transport(&peer), &store, None)
         .load(now_ms(), deadline())
         .await;
     same(
@@ -1611,7 +1622,7 @@ async fn a_current_stored_slot_asks_no_uv() {
     let s = &stub.state;
     let asked = |s: &StubState| [&s.uv, &s.weeds, &s.mfds].map(|n| n.load(Ordering::SeqCst));
     assert_eq!(asked(s), [1, 1, 1]);
-    let counted = Counted::new(peer.transport());
+    let counted = restarted_transport(&peer);
     let b = restarted(&peer, &counted, &store, Some(&stub));
     // A head start of 4.7 s keeps a prompt read ahead of it on a slow runner.
     let (first, _) = first_request(&b, Duration::from_millis(6700)).await;
@@ -1952,7 +1963,7 @@ async fn the_life_read_restores_todays_slots_first() {
         )
         .await;
     }
-    let counted = Counted::new(peer.transport());
+    let counted = restarted_transport(&peer);
     let b = restarted(&peer, &counted, &store, None);
     let older: Vec<String> = (3..=14)
         .map(|day| format!("raw/v2/data-go-kr/uv-idx-v5/2026/10/{day:02}/"))
@@ -1974,7 +1985,7 @@ async fn the_life_read_restores_todays_slots_first() {
         today.iter().all(|i| i.as_str() >= "2026101512"),
         "the rest of the window follows: {today:?}"
     );
-    let cold = restarted(&peer, &Counted::new(peer.transport()), &store, None)
+    let cold = restarted(&peer, &restarted_transport(&peer), &store, None)
         .load(now_ms(), deadline())
         .await;
     let mut later = b.load(now_ms(), deadline()).await;
@@ -2007,7 +2018,7 @@ async fn the_kasi_pass_uses_the_bulk_lane() {
             .map(|(_, n)| *n)
             .sum()
     };
-    let counted = Counted::new(peer.transport());
+    let counted = restarted_transport(&peer);
     let pass = restarted(&peer, &counted, &store, None);
     pass.kasi_pass(KASI_NOW).await.unwrap();
     let all = kasi(counted.counts(), false);
@@ -2017,7 +2028,7 @@ async fn the_kasi_pass_uses_the_bulk_lane() {
         all,
         "the pass on the bulk lane"
     );
-    let counted = Counted::new(peer.transport());
+    let counted = restarted_transport(&peer);
     let request = restarted(&peer, &counted, &store, None).with_kasi_wait(Duration::from_secs(20));
     assert!(request.load(KASI_NOW, deadline()).await.kasi.is_some());
     assert!(kasi(counted.counts(), false) > 0);
