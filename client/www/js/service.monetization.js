@@ -11,6 +11,7 @@ angular.module('service.monetization', [])
             favorite_change: {action: ['add', 'remove']},
             location_permission: {outcome: ['granted', 'denied', 'unknown']},
             ad_lifecycle: {action: ['request', 'loaded', 'failed', 'impression', 'show', 'hide', 'consent_failed'], ad_format: ['banner']},
+            ad_load_error: {ad_format: ['banner'], error_code: 'code'},
             ad_policy_exposure: {delay_seconds: 'delay'}
         };
 
@@ -132,7 +133,7 @@ angular.module('service.monetization', [])
                 if (Array.isArray(rule)) {
                     if (rule.indexOf(value) === -1) { valid = false; } else { safe[key] = value; }
                 } else if (typeof value !== 'number' || !isFinite(value) || value < 0 ||
-                    value > (rule === 'delay' ? 120 : 600000) || Math.floor(value) !== value) {
+                    value > (rule === 'delay' ? 120 : rule === 'code' ? 999 : 600000) || Math.floor(value) !== value) {
                     valid = false;
                 } else { safe[key] = value; }
             });
