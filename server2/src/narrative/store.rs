@@ -204,6 +204,24 @@ struct OfficeCache {
     /// When the office's raced acquisition last started.
     raced: Option<Instant>,
 }
+impl OfficeCache {
+    /// Install `value` (a stored read's or an acquisition's) as the office's answer unless the
+    /// unexpired answer holds a later announcement: the newest publication answers, whichever
+    /// ends last (RR2-narrative-regression).
+    fn install(&mut self, value: Option<Narrative>) {
+        let held = self
+            .answer
+            .as_ref()
+            .and_then(|(until, n)| n.clone().filter(|_| Instant::now() < *until));
+        let value = match (value, held) {
+            (Some(new), Some(held)) if held.announcement > new.announcement => Some(held),
+            (None, Some(held)) => Some(held),
+            (value, _) => value,
+        };
+        self.answer = Some((Instant::now() + ANSWER_FOR, value));
+        self.retry_after = None;
+    }
+}
 /// What an office's memory answers now.
 enum Memory {
     Answer(Option<Narrative>),
@@ -289,21 +307,7 @@ impl<T: IndexListing + Clone + 'static> Inner<T> {
             {
                 let mut cache = inner.office(i);
                 match result {
-                    Ok(value) => {
-                        let held = cache
-                            .answer
-                            .as_ref()
-                            .and_then(|(until, n)| n.clone().filter(|_| Instant::now() < *until));
-                        let value = match (value, held) {
-                            (Some(read), Some(held)) if held.announcement > read.announcement => {
-                                Some(held)
-                            }
-                            (None, Some(held)) => Some(held),
-                            (value, _) => value,
-                        };
-                        cache.answer = Some((Instant::now() + ANSWER_FOR, value));
-                        cache.retry_after = None;
-                    }
+                    Ok(value) => cache.install(value),
                     Err(_) => {
                         // Preserve any expired answer without extending its TTL or serving it
                         // stale.
@@ -317,8 +321,8 @@ impl<T: IndexListing + Clone + 'static> Inner<T> {
     }
     /// At `race_at` an office whose stored read has no answer yet (still running, or failed)
     /// gets one acquisition and publication, at most once per [`RACE_RETRY`]; the published
-    /// narrative is the office's answer. An answer by then (a narrative or none stored) asks
-    /// nothing, as a running process asks nothing during a request.
+    /// narrative answers unless the office holds a newer one by then. An answer by then (a
+    /// narrative or none stored) asks nothing, as a running process asks nothing during a request.
     fn race(self: &Arc<Self>, i: usize, station: u16, race_at: Instant) {
         let inner = self.clone();
         crate::observability::spawn(async move {
@@ -347,11 +351,7 @@ impl<T: IndexListing + Clone + 'static> Inner<T> {
             else {
                 return;
             };
-            {
-                let mut cache = inner.office(i);
-                cache.answer = Some((Instant::now() + ANSWER_FOR, Some(published)));
-                cache.retry_after = None;
-            }
+            inner.office(i).install(Some(published));
             inner.changed(i);
         });
     }

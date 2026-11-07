@@ -1647,6 +1647,103 @@ async fn a_slow_office_read_fetches_that_office_once() {
     );
 }
 
+/// The narrative provider with a held fetch of office 109: it answers that office's narrative
+/// published at `tm` once the test releases it (the other offices: none); fetches of 109 counted.
+struct HeldOffice {
+    tm: String,
+    started: tokio::sync::watch::Sender<usize>,
+    release: tokio::sync::watch::Sender<bool>,
+}
+impl HeldOffice {
+    fn new(tm: String) -> Self {
+        Self {
+            tm,
+            started: tokio::sync::watch::channel(0).0,
+            release: tokio::sync::watch::channel(false).0,
+        }
+    }
+    /// Fetches of office 109 so far.
+    fn fetched(&self) -> usize {
+        *self.started.borrow()
+    }
+    /// Wait until `n` fetches of office 109 started.
+    async fn started(&self, n: usize) {
+        let _ = self.started.subscribe().wait_for(|s| *s >= n).await;
+    }
+    fn release(&self) {
+        self.release.send_replace(true);
+    }
+}
+impl Source for HeldOffice {
+    fn fetch(
+        &self,
+        station: u16,
+        _: Instant,
+    ) -> BoxFuture<'_, Result<Option<Page>, server2::providers::AcquisitionError>> {
+        Box::pin(async move {
+            if station != 109 {
+                return Ok(None);
+            }
+            self.started.send_modify(|n| *n += 1);
+            let _ = self.release.subscribe().wait_for(|r| *r).await;
+            Ok(Some(narrative_page(&self.tm, "acquired")))
+        })
+    }
+}
+/// Publish office 109's narrative of `tm` as an earlier process stored it.
+async fn store_narrative_of(peer: &Peer, tm: &str) {
+    Store::new(peer.transport_limited(2))
+        .unwrap()
+        .publish(109, narrative_page(tm, "stored"), deadline())
+        .await
+        .unwrap()
+        .expect("a fresh narrative");
+}
+/// What office 109 answers now (a stored read may start).
+async fn office_text(service: &Service<Counted>) -> Option<String> {
+    service
+        .read(109, Instant::now() + Duration::from_secs(3))
+        .await
+        .map(|n| n.text)
+}
+
+/// RACE and NARRATIVE (RR2-narrative-regression): an acquisition raced at the head start that ends
+/// after the stored read answered with a newer publication does not replace it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_late_raced_acquisition_keeps_the_newer_stored_narrative() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    store_narrative_of(&peer, &hour_before(0)).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    let gate = counted.hold(&["raw/v2/kma-forecast-narrative/"]);
+    // The provider answers the narrative of the hour before.
+    let office = Arc::new(HeldOffice::new(hour_before(1)));
+    let service = Service::new(counted.clone(), office.clone()).unwrap();
+    service.prefetch(109, Instant::now());
+    office.started(1).await;
+    gate.open();
+    assert_eq!(office_text(&service).await.as_deref(), Some("stored"));
+    office.release();
+    // Its publication is written, and the newer stored narrative still answers.
+    let published = "PUT index/v2/kma-forecast-narrative/overview";
+    for _ in 0..100 {
+        if counted.get(published) > 0 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    assert!(counted.get(published) > 0, "{:?}", counted.counts());
+    for _ in 0..10 {
+        assert_eq!(
+            office_text(&service).await.as_deref(),
+            Some("stored"),
+            "the newer publication answers"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    assert_eq!(office.fetched(), 1);
+}
+
 /// FAST (narrative): a stored read done before the head start acquires nothing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_fast_office_read_fetches_nothing() {
