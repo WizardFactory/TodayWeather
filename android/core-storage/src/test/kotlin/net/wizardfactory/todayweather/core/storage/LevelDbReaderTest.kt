@@ -27,6 +27,12 @@ class LevelDbReaderTest {
                 .mapValues { (_, v) -> (v as kotlinx.serialization.json.JsonPrimitive).content }
             assertEquals(expected, WebViewLocalStorage.read(dir), name)
         }
+        // The newest cityIndex exists only in the write-ahead log: without the log the value is older.
+        val dir = File(javaClass.getResource("/leveldb/table-and-log")!!.toURI())
+        val copy = createTempDirectory().toFile().also { dir.copyRecursively(it, overwrite = true) }
+        assertEquals("2", WebViewLocalStorage.read(copy)["cityIndex"])
+        copy.listFiles()!!.filter { it.name.endsWith(".log") }.forEach { it.delete() }
+        assertEquals("1", WebViewLocalStorage.read(copy)["cityIndex"])
     }
 
     @Test

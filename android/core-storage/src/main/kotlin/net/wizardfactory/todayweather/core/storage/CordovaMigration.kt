@@ -233,14 +233,29 @@ object CordovaMigration {
 
     private val ISO_INSTANT = Regex("""^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$""")
 
+    /** An ISO instant (`Date.toISOString()` form) naming a real date and time: no rollover, hours 0–23. */
+    private fun validInstant(text: String): Boolean {
+        if (!ISO_INSTANT.matches(text)) return false
+        val n = Regex("""\d+""").findAll(text).map { it.value.toInt() }.toList()
+        return runCatching {
+            Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                clear()
+                isLenient = false
+                set(n[0], n[1] - 1, n[2], n[3], n[4], n[5])
+                timeInMillis // a non-lenient calendar throws on an out-of-range field here
+            }
+        }.isSuccess
+    }
+
     /**
      * A record the server can take back: integer `cityIndex` and `id`, boolean `enable`, and for an alert
-     * ISO `startTime`/`endTime`, for an alarm an ISO `time` and seven booleans in `dayOfWeek`. Records
+     * ISO `startTime`/`endTime`, for an alarm an ISO `time` and seven booleans in `dayOfWeek`; times must
+     * name real dates and times. Other records are dropped. Records
      * whose `cityIndex` names no place are kept (the Cordova app keeps them too, anomaly A24) and counted.
      */
     private fun validRecord(r: JsonObject): Boolean {
         fun int(k: String) = (r[k] as? JsonPrimitive)?.takeIf { !it.isString }?.intOrNull
-        fun iso(k: String) = (r[k] as? JsonPrimitive)?.takeIf { it.isString && ISO_INSTANT.matches(it.content) } != null
+        fun iso(k: String) = (r[k] as? JsonPrimitive)?.takeIf { it.isString && validInstant(it.content) } != null
         if (int("cityIndex") == null || int("id") == null) return false
         if ((r["enable"] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull == null) return false
         return when (r.string("category")) {

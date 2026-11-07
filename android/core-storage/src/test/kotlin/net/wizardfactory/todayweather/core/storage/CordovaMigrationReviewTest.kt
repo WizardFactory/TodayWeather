@@ -94,11 +94,16 @@ class CordovaMigrationReviewTest {
             alert.replace("\"startTime\":\"2026-11-07T22:00:00.000Z\",", ""),
             ok.replace("\"category\":\"alarm\"", "\"category\":\"other\""),
         )
+        // ISO-shaped but impossible dates and times are dropped too.
+        val impossible = listOf("2026-13-07T22:40:00.000Z", "2026-02-30T22:40:00.000Z", "2026-11-07T24:00:00.000Z",
+            "2026-11-07T22:60:00.000Z", "2026-11-07T22:40:60.000Z", "2026-00-07T22:40:00.000Z")
+        val impossibleRecords = impossible.map { ok.replace("2026-11-07T22:40:00.000Z", it) } +
+            alert.replace("2026-11-08T13:00:00.000Z", "2026-11-31T13:00:00.000Z")
         val s = migrate(mapOf("cities" to "[$placeholder,$seoulCity]",
-            "pushData2" to (listOf(ok, alert, orphan) + broken).joinToString(",", """{"pushList":[""", "]}")))
+            "pushData2" to (listOf(ok, alert, orphan) + broken + impossibleRecords).joinToString(",", """{"pushList":[""", "]}")))
         assertEquals(3, s.push.records.size)
         assertEquals("partial", s.migration!!.keys["pushData2"])
-        assertEquals("7 dropped, 1 orphan", s.migration!!.keys["pushData2.records"])
+        assertEquals("14 dropped, 1 orphan", s.migration!!.keys["pushData2.records"])
     }
 
     @Test

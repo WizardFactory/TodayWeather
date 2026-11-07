@@ -13,3 +13,6 @@ keystore.properties
 
 # Tool dependencies
 tools/**/node_modules/
+
+# LevelDB test fixtures keep their write-ahead logs (the root .gitignore ignores *.log)
+!core-storage/src/test/resources/leveldb/**/*.log

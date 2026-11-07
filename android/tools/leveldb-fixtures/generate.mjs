@@ -6,6 +6,7 @@
 // Output: android/core-storage/src/test/resources/leveldb/<case>/ and <case>.expected.json
 import {ClassicLevel} from 'classic-level';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -16,7 +17,11 @@ const latin1 = (s) => Buffer.concat([Buffer.from([1]), Buffer.from(s, 'latin1')]
 const utf16 = (s) => Buffer.concat([Buffer.from([0]), Buffer.from(s, 'utf16le')]);
 const opts = {keyEncoding: 'buffer', valueEncoding: 'buffer'};
 
-async function expected(dir) {
+// Opening a LevelDB replays and may compact its log, so the oracle reads a copy and the fixture keeps
+// the files exactly as written.
+async function expected(original) {
+    const dir = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'tw-ldb-'));
+    fs.cpSync(original, dir, {recursive: true});
     const db = new ClassicLevel(dir, opts);
     await db.open();
     const out = {};
@@ -25,6 +30,7 @@ async function expected(dir) {
         out[k.subarray(prefix.length).toString('latin1')] = v[0] === 0 ? v.subarray(1).toString('utf16le') : v.subarray(1).toString('latin1');
     }
     await db.close();
+    fs.rmSync(dir, {recursive: true, force: true});
     return out;
 }
 
