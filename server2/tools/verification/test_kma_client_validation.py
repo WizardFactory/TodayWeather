@@ -291,6 +291,23 @@ class CompareTest(unittest.TestCase):
         self.assertEqual(report['missing_fields'], ['current.dongnae'])
         self.assertIn('shortPubDate', out)
 
+    def test_different_place_is_not_comparable_but_lists_are_written(self):
+        candidate = reference()
+        candidate['townName'] = '소공동'
+        del candidate['cityName']
+        del candidate['current']['dongnae']
+        status, report, out = compare(reference(), candidate)
+        self.assertEqual((status, report['verdict']), (2, 'not-comparable'))
+        self.assertFalse(report['comparable']['ok'])
+        self.assertEqual(report['comparable']['differing_place'], {
+            'cityName': dict(reference='중구', candidate='<absent>'),
+            'townName': dict(reference='명동', candidate='소공동')})
+        self.assertEqual(report['comparable']['differing_publications'], {})
+        self.assertIn('place differs: townName 명동 vs 소공동', report['comparable']['reasons'])
+        self.assertIn('place differs: cityName 중구 vs <absent>', report['comparable']['reasons'])
+        self.assertEqual(report['missing_fields'], ['cityName', 'current.dongnae'])
+        self.assertIn('townName: reference 명동, candidate 소공동', out)
+
     def test_non_kma_or_unreadable_input_is_not_comparable(self):
         cases = [({'message': 'Internal server error'}, reference()), (reference(), []),
                  (b'<html>502 Bad Gateway</html>', reference()), (reference(), b'{"short": NaN}')]
