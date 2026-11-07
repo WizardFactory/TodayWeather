@@ -99,8 +99,33 @@ def strings_xml(catalog: dict) -> bytes:
     return ("\n".join(lines) + "\n").encode("utf-8")
 
 
+SKIPPED = []  # tracked duplicates that differ from a kept file only by letter case
+
+
+def tracked_images():
+    """Tracked PNGs from Git, not the file system: case-insensitive checkouts (macOS) hide
+    `client/www/img/KR.png`, a same-content duplicate of the `kr.png` the app references."""
+    rows = subprocess.run(["git", "-C", str(ROOT), "ls-files", "-s", "-z", "--", "client/www/img"],
+                          check=True, capture_output=True, text=True).stdout.split("\0")
+    groups = {}
+    for row in filter(None, rows):
+        meta, path = row.split("\t", 1)
+        if path.endswith(".png"):
+            groups.setdefault(path.lower(), []).append((path, meta.split()[1]))
+    images = []
+    for key, entries in sorted(groups.items()):
+        if len(entries) > 1:
+            keep = [e for e in entries if e[0] == key]
+            if not keep or len({blob for _, blob in entries}) != 1:
+                sys.exit(f"case-insensitive name collision with different content: {entries}")
+            SKIPPED.extend(sorted(path for path, _ in entries if path != key))
+            entries = keep
+        images.append(ROOT / entries[0][0])
+    return sorted(images)
+
+
 def main():
-    images = sorted(p for p in (CLIENT / "img").rglob("*.png") if p.is_file())
+    images = tracked_images()
     town = CLIENT / "data" / "town.js"
     locales = [CLIENT / "locales" / f"{code}.json" for code in LOCALE_DIRS]
     commits = last_commits(images + [town] + locales)
@@ -141,6 +166,7 @@ def main():
         "tool": "android/tools/import_client_assets.py",
         "license": "Same repository and license as client/ (TodayWeather, WizardFactory)",
         "renamed_string_keys": dict(sorted(RENAMED.items())),
+        "skipped_case_duplicates": SKIPPED,
         "files": records,
     }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"imported {len(records)} files; provenance in {PROVENANCE.relative_to(ROOT)}")

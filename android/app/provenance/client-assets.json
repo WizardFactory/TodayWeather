@@ -5,6 +5,9 @@
   "LOC_TODAYWEATHER-TODAY_THAN_YESTERDAY?": "LOC_TODAYWEATHER_TODAY_THAN_YESTERDAY_",
   "LOC_TODAY_THAN_YESTERDAY?": "LOC_TODAY_THAN_YESTERDAY_"
  },
+ "skipped_case_duplicates": [
+  "client/www/img/KR.png"
+ ],
  "files": [
   {
    "source": "client/www/data/town.js",
