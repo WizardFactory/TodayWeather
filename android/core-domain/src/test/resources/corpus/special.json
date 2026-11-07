@@ -64,6 +64,137 @@
  },
  {
   "args": [
+   "ko-KR",
+   "Asia/Seoul",
+   "synthetic"
+  ],
+  "input": [
+   {
+    "announcement": "2026-03-08T06:59:00.000Z",
+    "comment": "line 0\nnext"
+   },
+   {
+    "announcement": "2026-03-08T07:00:00.000Z",
+    "comment": "line 1\nnext"
+   },
+   {
+    "announcement": "2026-11-01T05:59:59.000Z",
+    "comment": "line 2\nnext"
+   },
+   {
+    "announcement": "2026-11-01T06:00:00.000Z",
+    "comment": "line 3\nnext"
+   },
+   {
+    "announcement": "2026-12-31T15:00:00.000Z",
+    "comment": "line 4\nnext"
+   },
+   {
+    "announcement": "2028-02-29T03:30:00.000Z",
+    "comment": "line 5\nnext"
+   },
+   {
+    "announcement": "2026-11-07T15:00:00Z",
+    "comment": "line 6\nnext"
+   },
+   {
+    "announcement": 1794067200000,
+    "comment": "line 7\nnext"
+   },
+   {
+    "announcement": null,
+    "comment": "line 8\nnext"
+   },
+   {
+    "announcement": "not a date",
+    "comment": "line 9\nnext"
+   },
+   {
+    "comment": "line 10\nnext"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "2026. 3. 8. 오후 3:59:00",
+    "comment": "line 0<br>next"
+   },
+   {
+    "announcement": "2026. 3. 8. 오후 4:00:00",
+    "comment": "line 1<br>next"
+   },
+   {
+    "announcement": "2026. 11. 1. 오후 2:59:59",
+    "comment": "line 2<br>next"
+   },
+   {
+    "announcement": "2026. 11. 1. 오후 3:00:00",
+    "comment": "line 3<br>next"
+   },
+   {
+    "announcement": "2027. 1. 1. 오전 12:00:00",
+    "comment": "line 4<br>next"
+   },
+   {
+    "announcement": "2028. 2. 29. 오후 12:30:00",
+    "comment": "line 5<br>next"
+   },
+   {
+    "announcement": "2026. 11. 8. 오전 12:00:00",
+    "comment": "line 6<br>next"
+   },
+   {
+    "announcement": "2026. 11. 8. 오전 1:00:00",
+    "comment": "line 7<br>next"
+   },
+   {
+    "announcement": "1970. 1. 1. 오전 9:00:00",
+    "comment": "line 8<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 9<br>next"
+   },
+   {
+    "comment": "line 10<br>next",
+    "announcement": "Invalid Date Invalid Date"
+   }
+  ]
+ },
+ {
+  "args": [
+   "ko-KR",
+   "Asia/Seoul",
+   "missing-comment"
+  ],
+  "input": [
+   {
+    "announcement": "2026-11-07T15:00:00.000Z",
+    "comment": "a\nb"
+   },
+   {
+    "announcement": "2026-11-07T16:00:00.000Z"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "2026. 11. 8. 오전 12:00:00",
+    "comment": "a<br>b"
+   },
+   {
+    "announcement": "2026. 11. 8. 오전 1:00:00"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
+   }
+  ]
+ },
+ {
+  "args": [
    "en-US",
    "Asia/Seoul"
   ],
@@ -122,6 +253,137 @@
     "type": 3,
     "comment": "<기온 현황과 전망><br>○ (현황) 현재(07시), 북서쪽에서 찬 공기가 남하하면서 동쪽지역과 전남을 중심으로 한파특보가 발효된 가운데, 전국 내륙을 중심으로 아침 기온이 영하권, 그 밖의 전국 대부분 지역에는 5℃ 이하의 기온을 보이고 있습니다.<br><br><br><br>- 또한, 서울 등 일부 지역에서는 올 가을 들어 가장 낮은 일최저기온을 기록한 곳이 있습니다. <br><br><br><br>* 주요지점 일최저기온 현황(7일 07시 현재, 단위: ℃)<br><br><br>- 수도권: 판문점(파주) <br><br>-6.6 신서(연천) <br><br>-6.4 은평(서울) <br><br>-3.3 수원 0.3 서울 0.5 인천 2.4<br><br><br>- 강원도: 설악산(인제) <br><br>-9.0 둔내(횡성) <br><br>-6.8 서석(홍천) <br><br>-6.6 춘천 <br><br>-4.6 원주 <br><br>-2.1<br><br><br>- 충북: 백운(제천) <br><br>-5.5 엄정(충주) <br><br>-4.7 괴산 <br><br>-4.4 음성 <br><br>-3.4 충주 <br><br>-3.0 청주 1.3<br><br><br>- 충남권: 계룡 <br><br>-4.6 유구(공주) <br><br>-3.1 금산 <br><br>-2.4 세종 <br><br>-1.6 홍성 <br><br>-1.3 대전 <br><br>-0.5<br><br><br>- 전북: 진안주천 <br><br>-4.6 무주 <br><br>-3.2 장수 <br><br>-3.1 번암(장수) <br><br>-1.5 임실 <br><br>-1.4 군산 0.6 전주 1.5<br><br><br>- 전남권: 성삼재(구례) <br><br>-2.1 백아면(화순) <br><br>-1.8 보성 <br><br>-0.5 나주 <br><br>-0.4 고흥 0.1 광주 4.2<br><br><br>- 경북권: 북후(안동) <br><br>-6.1 영양 <br><br>-5.0 봉화 <br><br>-4.8 의성 <br><br>-3.7 소곡(울진) <br><br>-4.2 안동 <br><br>-0.9 대구 3.0<br><br><br>- 경남권: 의령군 <br><br>-2.6 삼가(합천) <br><br>-2.1 함안 <br><br>-1.8 대곡(진주) <br><br>-1.8 울산 3.2 창원 5.3 부산 5.8<br><br><br>- 제주도: 윗세오름(제주) <br><br>-3.4 진달래밭(서귀포) <br><br>-2.6 성판악(제주) 2.8 서귀포 8.9 제주 10.7<br><br><br><br>※ 07시 이후에도 기온이 더 내려가는 지역에서는 일최저기온이 달라질 수 있습니다.<br><br><br><br>- 한편, 일부 지역에서는 올가을 처음으로 얼음이 관측된 곳이 있습니다.<br><br><br><br><첫얼음 관측 현황><br><br><br>* 주요지점 첫얼음 관측 현황(07일 07시 현재)<br><br><br>- 서울: 작년보다 10일 느리고, 평년보다 4일 느림<br><br><br>- 인천: 작년보다 4일 느리고, 평년보다 2일 빠름<br><br><br>- 대전: 작년보다 4일 느리고, 평년보다 4일 느림<br><br><br>- 청주: 작년보다 4일 느리고, 평년보다 5일 느림<br><br>○ (전망) 당분간 기온은 평년(최저 2~11℃, 최고 14~19℃)보다 낮겠습니다.<br><br><br><br>- 또한, 오늘과 내일은 중부지방과 전북동부, 경상권내륙, 모레는 강원내륙.산지를 중심으로 아침 기온이 영하권으로 내려가는 곳이 있겠고, 오늘 바람도 약간 강하게 불어 체감온도는 더욱 낮아 춥겠으며, 오늘과 내일 전국 대부분 지역에서 낮과 밤의 기온차가 10~15℃로 크겠으니 급격한 기온변화로 인한 건강관리에 각별히 유의하기 바라며, 한파영향예보(6일 11시 30분 발표)를 참고하여 다음과 같은 사항에 유의하기 바랍니다.<br><br><br><br>o 면역력 약한 노약자와 어린이는 가급적 야외활동 자제하는 등 건강관리 유의<br><br><br>o 옷을 따뜻하게 입고 외출하고, 모자·장갑·목도리 등을 착용하여 보온에 유의하기<br><br><br>o 난로와 전기장판 등 난방기 사용 시 화재 예방에 각별히 유의<br><br><br>o 농작물의 저온 피해가 없도록 보온에 유의<br><br><br><br>- 한편, 오늘과 내일은 중부지방과 전북동부, 경상권내륙, 모레는 강원내륙.산지를 중심으로 얼음이 어는 곳이 있겠고, 오늘은 전국 대부분 지역, 내일은 경북내륙을 중심으로 서리가 내리는 곳도 있겠으니, 농작물 관리에 유의하기 바랍니다.\\n\\n",
     "name": "기상정보"
+   }
+  ]
+ },
+ {
+  "args": [
+   "en-US",
+   "Asia/Seoul",
+   "synthetic"
+  ],
+  "input": [
+   {
+    "announcement": "2026-03-08T06:59:00.000Z",
+    "comment": "line 0\nnext"
+   },
+   {
+    "announcement": "2026-03-08T07:00:00.000Z",
+    "comment": "line 1\nnext"
+   },
+   {
+    "announcement": "2026-11-01T05:59:59.000Z",
+    "comment": "line 2\nnext"
+   },
+   {
+    "announcement": "2026-11-01T06:00:00.000Z",
+    "comment": "line 3\nnext"
+   },
+   {
+    "announcement": "2026-12-31T15:00:00.000Z",
+    "comment": "line 4\nnext"
+   },
+   {
+    "announcement": "2028-02-29T03:30:00.000Z",
+    "comment": "line 5\nnext"
+   },
+   {
+    "announcement": "2026-11-07T15:00:00Z",
+    "comment": "line 6\nnext"
+   },
+   {
+    "announcement": 1794067200000,
+    "comment": "line 7\nnext"
+   },
+   {
+    "announcement": null,
+    "comment": "line 8\nnext"
+   },
+   {
+    "announcement": "not a date",
+    "comment": "line 9\nnext"
+   },
+   {
+    "comment": "line 10\nnext"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "3/8/2026 3:59:00 PM",
+    "comment": "line 0<br>next"
+   },
+   {
+    "announcement": "3/8/2026 4:00:00 PM",
+    "comment": "line 1<br>next"
+   },
+   {
+    "announcement": "11/1/2026 2:59:59 PM",
+    "comment": "line 2<br>next"
+   },
+   {
+    "announcement": "11/1/2026 3:00:00 PM",
+    "comment": "line 3<br>next"
+   },
+   {
+    "announcement": "1/1/2027 12:00:00 AM",
+    "comment": "line 4<br>next"
+   },
+   {
+    "announcement": "2/29/2028 12:30:00 PM",
+    "comment": "line 5<br>next"
+   },
+   {
+    "announcement": "11/8/2026 12:00:00 AM",
+    "comment": "line 6<br>next"
+   },
+   {
+    "announcement": "11/8/2026 1:00:00 AM",
+    "comment": "line 7<br>next"
+   },
+   {
+    "announcement": "1/1/1970 9:00:00 AM",
+    "comment": "line 8<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 9<br>next"
+   },
+   {
+    "comment": "line 10<br>next",
+    "announcement": "Invalid Date Invalid Date"
+   }
+  ]
+ },
+ {
+  "args": [
+   "en-US",
+   "Asia/Seoul",
+   "missing-comment"
+  ],
+  "input": [
+   {
+    "announcement": "2026-11-07T15:00:00.000Z",
+    "comment": "a\nb"
+   },
+   {
+    "announcement": "2026-11-07T16:00:00.000Z"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "11/8/2026 12:00:00 AM",
+    "comment": "a<br>b"
+   },
+   {
+    "announcement": "11/8/2026 1:00:00 AM"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
    }
   ]
  },
@@ -190,6 +452,137 @@
  },
  {
   "args": [
+   "ja-JP",
+   "Asia/Seoul",
+   "synthetic"
+  ],
+  "input": [
+   {
+    "announcement": "2026-03-08T06:59:00.000Z",
+    "comment": "line 0\nnext"
+   },
+   {
+    "announcement": "2026-03-08T07:00:00.000Z",
+    "comment": "line 1\nnext"
+   },
+   {
+    "announcement": "2026-11-01T05:59:59.000Z",
+    "comment": "line 2\nnext"
+   },
+   {
+    "announcement": "2026-11-01T06:00:00.000Z",
+    "comment": "line 3\nnext"
+   },
+   {
+    "announcement": "2026-12-31T15:00:00.000Z",
+    "comment": "line 4\nnext"
+   },
+   {
+    "announcement": "2028-02-29T03:30:00.000Z",
+    "comment": "line 5\nnext"
+   },
+   {
+    "announcement": "2026-11-07T15:00:00Z",
+    "comment": "line 6\nnext"
+   },
+   {
+    "announcement": 1794067200000,
+    "comment": "line 7\nnext"
+   },
+   {
+    "announcement": null,
+    "comment": "line 8\nnext"
+   },
+   {
+    "announcement": "not a date",
+    "comment": "line 9\nnext"
+   },
+   {
+    "comment": "line 10\nnext"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "2026/3/8 15:59:00",
+    "comment": "line 0<br>next"
+   },
+   {
+    "announcement": "2026/3/8 16:00:00",
+    "comment": "line 1<br>next"
+   },
+   {
+    "announcement": "2026/11/1 14:59:59",
+    "comment": "line 2<br>next"
+   },
+   {
+    "announcement": "2026/11/1 15:00:00",
+    "comment": "line 3<br>next"
+   },
+   {
+    "announcement": "2027/1/1 0:00:00",
+    "comment": "line 4<br>next"
+   },
+   {
+    "announcement": "2028/2/29 12:30:00",
+    "comment": "line 5<br>next"
+   },
+   {
+    "announcement": "2026/11/8 0:00:00",
+    "comment": "line 6<br>next"
+   },
+   {
+    "announcement": "2026/11/8 1:00:00",
+    "comment": "line 7<br>next"
+   },
+   {
+    "announcement": "1970/1/1 9:00:00",
+    "comment": "line 8<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 9<br>next"
+   },
+   {
+    "comment": "line 10<br>next",
+    "announcement": "Invalid Date Invalid Date"
+   }
+  ]
+ },
+ {
+  "args": [
+   "ja-JP",
+   "Asia/Seoul",
+   "missing-comment"
+  ],
+  "input": [
+   {
+    "announcement": "2026-11-07T15:00:00.000Z",
+    "comment": "a\nb"
+   },
+   {
+    "announcement": "2026-11-07T16:00:00.000Z"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "2026/11/8 0:00:00",
+    "comment": "a<br>b"
+   },
+   {
+    "announcement": "2026/11/8 1:00:00"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
+   }
+  ]
+ },
+ {
+  "args": [
    "de-DE",
    "Asia/Seoul"
   ],
@@ -248,6 +641,137 @@
     "type": 3,
     "comment": "<기온 현황과 전망><br>○ (현황) 현재(07시), 북서쪽에서 찬 공기가 남하하면서 동쪽지역과 전남을 중심으로 한파특보가 발효된 가운데, 전국 내륙을 중심으로 아침 기온이 영하권, 그 밖의 전국 대부분 지역에는 5℃ 이하의 기온을 보이고 있습니다.<br><br><br><br>- 또한, 서울 등 일부 지역에서는 올 가을 들어 가장 낮은 일최저기온을 기록한 곳이 있습니다. <br><br><br><br>* 주요지점 일최저기온 현황(7일 07시 현재, 단위: ℃)<br><br><br>- 수도권: 판문점(파주) <br><br>-6.6 신서(연천) <br><br>-6.4 은평(서울) <br><br>-3.3 수원 0.3 서울 0.5 인천 2.4<br><br><br>- 강원도: 설악산(인제) <br><br>-9.0 둔내(횡성) <br><br>-6.8 서석(홍천) <br><br>-6.6 춘천 <br><br>-4.6 원주 <br><br>-2.1<br><br><br>- 충북: 백운(제천) <br><br>-5.5 엄정(충주) <br><br>-4.7 괴산 <br><br>-4.4 음성 <br><br>-3.4 충주 <br><br>-3.0 청주 1.3<br><br><br>- 충남권: 계룡 <br><br>-4.6 유구(공주) <br><br>-3.1 금산 <br><br>-2.4 세종 <br><br>-1.6 홍성 <br><br>-1.3 대전 <br><br>-0.5<br><br><br>- 전북: 진안주천 <br><br>-4.6 무주 <br><br>-3.2 장수 <br><br>-3.1 번암(장수) <br><br>-1.5 임실 <br><br>-1.4 군산 0.6 전주 1.5<br><br><br>- 전남권: 성삼재(구례) <br><br>-2.1 백아면(화순) <br><br>-1.8 보성 <br><br>-0.5 나주 <br><br>-0.4 고흥 0.1 광주 4.2<br><br><br>- 경북권: 북후(안동) <br><br>-6.1 영양 <br><br>-5.0 봉화 <br><br>-4.8 의성 <br><br>-3.7 소곡(울진) <br><br>-4.2 안동 <br><br>-0.9 대구 3.0<br><br><br>- 경남권: 의령군 <br><br>-2.6 삼가(합천) <br><br>-2.1 함안 <br><br>-1.8 대곡(진주) <br><br>-1.8 울산 3.2 창원 5.3 부산 5.8<br><br><br>- 제주도: 윗세오름(제주) <br><br>-3.4 진달래밭(서귀포) <br><br>-2.6 성판악(제주) 2.8 서귀포 8.9 제주 10.7<br><br><br><br>※ 07시 이후에도 기온이 더 내려가는 지역에서는 일최저기온이 달라질 수 있습니다.<br><br><br><br>- 한편, 일부 지역에서는 올가을 처음으로 얼음이 관측된 곳이 있습니다.<br><br><br><br><첫얼음 관측 현황><br><br><br>* 주요지점 첫얼음 관측 현황(07일 07시 현재)<br><br><br>- 서울: 작년보다 10일 느리고, 평년보다 4일 느림<br><br><br>- 인천: 작년보다 4일 느리고, 평년보다 2일 빠름<br><br><br>- 대전: 작년보다 4일 느리고, 평년보다 4일 느림<br><br><br>- 청주: 작년보다 4일 느리고, 평년보다 5일 느림<br><br>○ (전망) 당분간 기온은 평년(최저 2~11℃, 최고 14~19℃)보다 낮겠습니다.<br><br><br><br>- 또한, 오늘과 내일은 중부지방과 전북동부, 경상권내륙, 모레는 강원내륙.산지를 중심으로 아침 기온이 영하권으로 내려가는 곳이 있겠고, 오늘 바람도 약간 강하게 불어 체감온도는 더욱 낮아 춥겠으며, 오늘과 내일 전국 대부분 지역에서 낮과 밤의 기온차가 10~15℃로 크겠으니 급격한 기온변화로 인한 건강관리에 각별히 유의하기 바라며, 한파영향예보(6일 11시 30분 발표)를 참고하여 다음과 같은 사항에 유의하기 바랍니다.<br><br><br><br>o 면역력 약한 노약자와 어린이는 가급적 야외활동 자제하는 등 건강관리 유의<br><br><br>o 옷을 따뜻하게 입고 외출하고, 모자·장갑·목도리 등을 착용하여 보온에 유의하기<br><br><br>o 난로와 전기장판 등 난방기 사용 시 화재 예방에 각별히 유의<br><br><br>o 농작물의 저온 피해가 없도록 보온에 유의<br><br><br><br>- 한편, 오늘과 내일은 중부지방과 전북동부, 경상권내륙, 모레는 강원내륙.산지를 중심으로 얼음이 어는 곳이 있겠고, 오늘은 전국 대부분 지역, 내일은 경북내륙을 중심으로 서리가 내리는 곳도 있겠으니, 농작물 관리에 유의하기 바랍니다.\\n\\n",
     "name": "기상정보"
+   }
+  ]
+ },
+ {
+  "args": [
+   "de-DE",
+   "Asia/Seoul",
+   "synthetic"
+  ],
+  "input": [
+   {
+    "announcement": "2026-03-08T06:59:00.000Z",
+    "comment": "line 0\nnext"
+   },
+   {
+    "announcement": "2026-03-08T07:00:00.000Z",
+    "comment": "line 1\nnext"
+   },
+   {
+    "announcement": "2026-11-01T05:59:59.000Z",
+    "comment": "line 2\nnext"
+   },
+   {
+    "announcement": "2026-11-01T06:00:00.000Z",
+    "comment": "line 3\nnext"
+   },
+   {
+    "announcement": "2026-12-31T15:00:00.000Z",
+    "comment": "line 4\nnext"
+   },
+   {
+    "announcement": "2028-02-29T03:30:00.000Z",
+    "comment": "line 5\nnext"
+   },
+   {
+    "announcement": "2026-11-07T15:00:00Z",
+    "comment": "line 6\nnext"
+   },
+   {
+    "announcement": 1794067200000,
+    "comment": "line 7\nnext"
+   },
+   {
+    "announcement": null,
+    "comment": "line 8\nnext"
+   },
+   {
+    "announcement": "not a date",
+    "comment": "line 9\nnext"
+   },
+   {
+    "comment": "line 10\nnext"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "8.3.2026 15:59:00",
+    "comment": "line 0<br>next"
+   },
+   {
+    "announcement": "8.3.2026 16:00:00",
+    "comment": "line 1<br>next"
+   },
+   {
+    "announcement": "1.11.2026 14:59:59",
+    "comment": "line 2<br>next"
+   },
+   {
+    "announcement": "1.11.2026 15:00:00",
+    "comment": "line 3<br>next"
+   },
+   {
+    "announcement": "1.1.2027 00:00:00",
+    "comment": "line 4<br>next"
+   },
+   {
+    "announcement": "29.2.2028 12:30:00",
+    "comment": "line 5<br>next"
+   },
+   {
+    "announcement": "8.11.2026 00:00:00",
+    "comment": "line 6<br>next"
+   },
+   {
+    "announcement": "8.11.2026 01:00:00",
+    "comment": "line 7<br>next"
+   },
+   {
+    "announcement": "1.1.1970 09:00:00",
+    "comment": "line 8<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 9<br>next"
+   },
+   {
+    "comment": "line 10<br>next",
+    "announcement": "Invalid Date Invalid Date"
+   }
+  ]
+ },
+ {
+  "args": [
+   "de-DE",
+   "Asia/Seoul",
+   "missing-comment"
+  ],
+  "input": [
+   {
+    "announcement": "2026-11-07T15:00:00.000Z",
+    "comment": "a\nb"
+   },
+   {
+    "announcement": "2026-11-07T16:00:00.000Z"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "8.11.2026 00:00:00",
+    "comment": "a<br>b"
+   },
+   {
+    "announcement": "8.11.2026 01:00:00"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
    }
   ]
  },
@@ -316,6 +840,137 @@
  },
  {
   "args": [
+   "zh-CN",
+   "Asia/Seoul",
+   "synthetic"
+  ],
+  "input": [
+   {
+    "announcement": "2026-03-08T06:59:00.000Z",
+    "comment": "line 0\nnext"
+   },
+   {
+    "announcement": "2026-03-08T07:00:00.000Z",
+    "comment": "line 1\nnext"
+   },
+   {
+    "announcement": "2026-11-01T05:59:59.000Z",
+    "comment": "line 2\nnext"
+   },
+   {
+    "announcement": "2026-11-01T06:00:00.000Z",
+    "comment": "line 3\nnext"
+   },
+   {
+    "announcement": "2026-12-31T15:00:00.000Z",
+    "comment": "line 4\nnext"
+   },
+   {
+    "announcement": "2028-02-29T03:30:00.000Z",
+    "comment": "line 5\nnext"
+   },
+   {
+    "announcement": "2026-11-07T15:00:00Z",
+    "comment": "line 6\nnext"
+   },
+   {
+    "announcement": 1794067200000,
+    "comment": "line 7\nnext"
+   },
+   {
+    "announcement": null,
+    "comment": "line 8\nnext"
+   },
+   {
+    "announcement": "not a date",
+    "comment": "line 9\nnext"
+   },
+   {
+    "comment": "line 10\nnext"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "2026/3/8 15:59:00",
+    "comment": "line 0<br>next"
+   },
+   {
+    "announcement": "2026/3/8 16:00:00",
+    "comment": "line 1<br>next"
+   },
+   {
+    "announcement": "2026/11/1 14:59:59",
+    "comment": "line 2<br>next"
+   },
+   {
+    "announcement": "2026/11/1 15:00:00",
+    "comment": "line 3<br>next"
+   },
+   {
+    "announcement": "2027/1/1 00:00:00",
+    "comment": "line 4<br>next"
+   },
+   {
+    "announcement": "2028/2/29 12:30:00",
+    "comment": "line 5<br>next"
+   },
+   {
+    "announcement": "2026/11/8 00:00:00",
+    "comment": "line 6<br>next"
+   },
+   {
+    "announcement": "2026/11/8 01:00:00",
+    "comment": "line 7<br>next"
+   },
+   {
+    "announcement": "1970/1/1 09:00:00",
+    "comment": "line 8<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 9<br>next"
+   },
+   {
+    "comment": "line 10<br>next",
+    "announcement": "Invalid Date Invalid Date"
+   }
+  ]
+ },
+ {
+  "args": [
+   "zh-CN",
+   "Asia/Seoul",
+   "missing-comment"
+  ],
+  "input": [
+   {
+    "announcement": "2026-11-07T15:00:00.000Z",
+    "comment": "a\nb"
+   },
+   {
+    "announcement": "2026-11-07T16:00:00.000Z"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "2026/11/8 00:00:00",
+    "comment": "a<br>b"
+   },
+   {
+    "announcement": "2026/11/8 01:00:00"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
+   }
+  ]
+ },
+ {
+  "args": [
    "zh-TW",
    "Asia/Seoul"
   ],
@@ -379,6 +1034,137 @@
  },
  {
   "args": [
+   "zh-TW",
+   "Asia/Seoul",
+   "synthetic"
+  ],
+  "input": [
+   {
+    "announcement": "2026-03-08T06:59:00.000Z",
+    "comment": "line 0\nnext"
+   },
+   {
+    "announcement": "2026-03-08T07:00:00.000Z",
+    "comment": "line 1\nnext"
+   },
+   {
+    "announcement": "2026-11-01T05:59:59.000Z",
+    "comment": "line 2\nnext"
+   },
+   {
+    "announcement": "2026-11-01T06:00:00.000Z",
+    "comment": "line 3\nnext"
+   },
+   {
+    "announcement": "2026-12-31T15:00:00.000Z",
+    "comment": "line 4\nnext"
+   },
+   {
+    "announcement": "2028-02-29T03:30:00.000Z",
+    "comment": "line 5\nnext"
+   },
+   {
+    "announcement": "2026-11-07T15:00:00Z",
+    "comment": "line 6\nnext"
+   },
+   {
+    "announcement": 1794067200000,
+    "comment": "line 7\nnext"
+   },
+   {
+    "announcement": null,
+    "comment": "line 8\nnext"
+   },
+   {
+    "announcement": "not a date",
+    "comment": "line 9\nnext"
+   },
+   {
+    "comment": "line 10\nnext"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "2026/3/8 下午3:59:00",
+    "comment": "line 0<br>next"
+   },
+   {
+    "announcement": "2026/3/8 下午4:00:00",
+    "comment": "line 1<br>next"
+   },
+   {
+    "announcement": "2026/11/1 下午2:59:59",
+    "comment": "line 2<br>next"
+   },
+   {
+    "announcement": "2026/11/1 下午3:00:00",
+    "comment": "line 3<br>next"
+   },
+   {
+    "announcement": "2027/1/1 上午12:00:00",
+    "comment": "line 4<br>next"
+   },
+   {
+    "announcement": "2028/2/29 下午12:30:00",
+    "comment": "line 5<br>next"
+   },
+   {
+    "announcement": "2026/11/8 上午12:00:00",
+    "comment": "line 6<br>next"
+   },
+   {
+    "announcement": "2026/11/8 上午1:00:00",
+    "comment": "line 7<br>next"
+   },
+   {
+    "announcement": "1970/1/1 上午9:00:00",
+    "comment": "line 8<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 9<br>next"
+   },
+   {
+    "comment": "line 10<br>next",
+    "announcement": "Invalid Date Invalid Date"
+   }
+  ]
+ },
+ {
+  "args": [
+   "zh-TW",
+   "Asia/Seoul",
+   "missing-comment"
+  ],
+  "input": [
+   {
+    "announcement": "2026-11-07T15:00:00.000Z",
+    "comment": "a\nb"
+   },
+   {
+    "announcement": "2026-11-07T16:00:00.000Z"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "2026/11/8 上午12:00:00",
+    "comment": "a<br>b"
+   },
+   {
+    "announcement": "2026/11/8 上午1:00:00"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
+   }
+  ]
+ },
+ {
+  "args": [
    "en-US",
    "America/New_York"
   ],
@@ -437,6 +1223,137 @@
     "type": 3,
     "comment": "<기온 현황과 전망><br>○ (현황) 현재(07시), 북서쪽에서 찬 공기가 남하하면서 동쪽지역과 전남을 중심으로 한파특보가 발효된 가운데, 전국 내륙을 중심으로 아침 기온이 영하권, 그 밖의 전국 대부분 지역에는 5℃ 이하의 기온을 보이고 있습니다.<br><br><br><br>- 또한, 서울 등 일부 지역에서는 올 가을 들어 가장 낮은 일최저기온을 기록한 곳이 있습니다. <br><br><br><br>* 주요지점 일최저기온 현황(7일 07시 현재, 단위: ℃)<br><br><br>- 수도권: 판문점(파주) <br><br>-6.6 신서(연천) <br><br>-6.4 은평(서울) <br><br>-3.3 수원 0.3 서울 0.5 인천 2.4<br><br><br>- 강원도: 설악산(인제) <br><br>-9.0 둔내(횡성) <br><br>-6.8 서석(홍천) <br><br>-6.6 춘천 <br><br>-4.6 원주 <br><br>-2.1<br><br><br>- 충북: 백운(제천) <br><br>-5.5 엄정(충주) <br><br>-4.7 괴산 <br><br>-4.4 음성 <br><br>-3.4 충주 <br><br>-3.0 청주 1.3<br><br><br>- 충남권: 계룡 <br><br>-4.6 유구(공주) <br><br>-3.1 금산 <br><br>-2.4 세종 <br><br>-1.6 홍성 <br><br>-1.3 대전 <br><br>-0.5<br><br><br>- 전북: 진안주천 <br><br>-4.6 무주 <br><br>-3.2 장수 <br><br>-3.1 번암(장수) <br><br>-1.5 임실 <br><br>-1.4 군산 0.6 전주 1.5<br><br><br>- 전남권: 성삼재(구례) <br><br>-2.1 백아면(화순) <br><br>-1.8 보성 <br><br>-0.5 나주 <br><br>-0.4 고흥 0.1 광주 4.2<br><br><br>- 경북권: 북후(안동) <br><br>-6.1 영양 <br><br>-5.0 봉화 <br><br>-4.8 의성 <br><br>-3.7 소곡(울진) <br><br>-4.2 안동 <br><br>-0.9 대구 3.0<br><br><br>- 경남권: 의령군 <br><br>-2.6 삼가(합천) <br><br>-2.1 함안 <br><br>-1.8 대곡(진주) <br><br>-1.8 울산 3.2 창원 5.3 부산 5.8<br><br><br>- 제주도: 윗세오름(제주) <br><br>-3.4 진달래밭(서귀포) <br><br>-2.6 성판악(제주) 2.8 서귀포 8.9 제주 10.7<br><br><br><br>※ 07시 이후에도 기온이 더 내려가는 지역에서는 일최저기온이 달라질 수 있습니다.<br><br><br><br>- 한편, 일부 지역에서는 올가을 처음으로 얼음이 관측된 곳이 있습니다.<br><br><br><br><첫얼음 관측 현황><br><br><br>* 주요지점 첫얼음 관측 현황(07일 07시 현재)<br><br><br>- 서울: 작년보다 10일 느리고, 평년보다 4일 느림<br><br><br>- 인천: 작년보다 4일 느리고, 평년보다 2일 빠름<br><br><br>- 대전: 작년보다 4일 느리고, 평년보다 4일 느림<br><br><br>- 청주: 작년보다 4일 느리고, 평년보다 5일 느림<br><br>○ (전망) 당분간 기온은 평년(최저 2~11℃, 최고 14~19℃)보다 낮겠습니다.<br><br><br><br>- 또한, 오늘과 내일은 중부지방과 전북동부, 경상권내륙, 모레는 강원내륙.산지를 중심으로 아침 기온이 영하권으로 내려가는 곳이 있겠고, 오늘 바람도 약간 강하게 불어 체감온도는 더욱 낮아 춥겠으며, 오늘과 내일 전국 대부분 지역에서 낮과 밤의 기온차가 10~15℃로 크겠으니 급격한 기온변화로 인한 건강관리에 각별히 유의하기 바라며, 한파영향예보(6일 11시 30분 발표)를 참고하여 다음과 같은 사항에 유의하기 바랍니다.<br><br><br><br>o 면역력 약한 노약자와 어린이는 가급적 야외활동 자제하는 등 건강관리 유의<br><br><br>o 옷을 따뜻하게 입고 외출하고, 모자·장갑·목도리 등을 착용하여 보온에 유의하기<br><br><br>o 난로와 전기장판 등 난방기 사용 시 화재 예방에 각별히 유의<br><br><br>o 농작물의 저온 피해가 없도록 보온에 유의<br><br><br><br>- 한편, 오늘과 내일은 중부지방과 전북동부, 경상권내륙, 모레는 강원내륙.산지를 중심으로 얼음이 어는 곳이 있겠고, 오늘은 전국 대부분 지역, 내일은 경북내륙을 중심으로 서리가 내리는 곳도 있겠으니, 농작물 관리에 유의하기 바랍니다.\\n\\n",
     "name": "기상정보"
+   }
+  ]
+ },
+ {
+  "args": [
+   "en-US",
+   "America/New_York",
+   "synthetic"
+  ],
+  "input": [
+   {
+    "announcement": "2026-03-08T06:59:00.000Z",
+    "comment": "line 0\nnext"
+   },
+   {
+    "announcement": "2026-03-08T07:00:00.000Z",
+    "comment": "line 1\nnext"
+   },
+   {
+    "announcement": "2026-11-01T05:59:59.000Z",
+    "comment": "line 2\nnext"
+   },
+   {
+    "announcement": "2026-11-01T06:00:00.000Z",
+    "comment": "line 3\nnext"
+   },
+   {
+    "announcement": "2026-12-31T15:00:00.000Z",
+    "comment": "line 4\nnext"
+   },
+   {
+    "announcement": "2028-02-29T03:30:00.000Z",
+    "comment": "line 5\nnext"
+   },
+   {
+    "announcement": "2026-11-07T15:00:00Z",
+    "comment": "line 6\nnext"
+   },
+   {
+    "announcement": 1794067200000,
+    "comment": "line 7\nnext"
+   },
+   {
+    "announcement": null,
+    "comment": "line 8\nnext"
+   },
+   {
+    "announcement": "not a date",
+    "comment": "line 9\nnext"
+   },
+   {
+    "comment": "line 10\nnext"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "3/8/2026 1:59:00 AM",
+    "comment": "line 0<br>next"
+   },
+   {
+    "announcement": "3/8/2026 3:00:00 AM",
+    "comment": "line 1<br>next"
+   },
+   {
+    "announcement": "11/1/2026 1:59:59 AM",
+    "comment": "line 2<br>next"
+   },
+   {
+    "announcement": "11/1/2026 1:00:00 AM",
+    "comment": "line 3<br>next"
+   },
+   {
+    "announcement": "12/31/2026 10:00:00 AM",
+    "comment": "line 4<br>next"
+   },
+   {
+    "announcement": "2/28/2028 10:30:00 PM",
+    "comment": "line 5<br>next"
+   },
+   {
+    "announcement": "11/7/2026 10:00:00 AM",
+    "comment": "line 6<br>next"
+   },
+   {
+    "announcement": "11/7/2026 11:00:00 AM",
+    "comment": "line 7<br>next"
+   },
+   {
+    "announcement": "12/31/1969 7:00:00 PM",
+    "comment": "line 8<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 9<br>next"
+   },
+   {
+    "comment": "line 10<br>next",
+    "announcement": "Invalid Date Invalid Date"
+   }
+  ]
+ },
+ {
+  "args": [
+   "en-US",
+   "America/New_York",
+   "missing-comment"
+  ],
+  "input": [
+   {
+    "announcement": "2026-11-07T15:00:00.000Z",
+    "comment": "a\nb"
+   },
+   {
+    "announcement": "2026-11-07T16:00:00.000Z"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
+   }
+  ],
+  "expected": [
+   {
+    "announcement": "11/7/2026 10:00:00 AM",
+    "comment": "a<br>b"
+   },
+   {
+    "announcement": "11/7/2026 11:00:00 AM"
+   },
+   {
+    "announcement": "2026-11-07T17:00:00.000Z",
+    "comment": "c\nd"
    }
   ]
  }

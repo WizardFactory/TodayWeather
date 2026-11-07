@@ -169,6 +169,48 @@ const CONVERSION = [
     ['empty-object', null, 'V07', () => ({})],
 ];
 
+// Every captured unit variant with zero, missing, sentinel and string values (V05). The mutations are
+// declarative so the Kotlin test applies the same ones; the expected output is stored as the SHA-256
+// of its canonical JSON (sorted keys) to keep the corpus small.
+const VALUE_MUTATIONS = {
+    zero: {set: 0, keys: ['t1h', 't3h', 'pop', 'rn1', 'r06', 's06', 'wsd', 'reh', 'tmn', 'tmx'], onlyPresent: true},
+    missing: {delete: true, keys: ['t1h', 't3h', 'pop', 'rn1', 'wsd', 'skyIcon', 'tmn', 'tmx']},
+    sentinel: {set: -50, keys: ['t1h', 't3h', 'tmn', 'tmx'], onlyPresent: true, also: {set: -1, keys: ['pop', 'reh', 'wsd']}},
+    string: {stringify: true, keys: ['t1h', 't3h', 'pop', 'rn1', 'wsd', 'tmn', 'tmx']},
+};
+function applyValueMutation(d, m) {
+    const rows = d.source === 'KMA'
+        ? [d.current, ...(d.short || []), ...((d.midData && d.midData.dailyData) || [])]
+        : [...(d.thisTime || []), ...(d.hourly || []), ...(d.daily || [])];
+    const apply = (spec, r) => {
+        for (const k of spec.keys) {
+            if (spec.delete) delete r[k];
+            else if (spec.stringify) { if (typeof r[k] === 'number') r[k] = String(r[k]); }
+            else if (!spec.onlyPresent || k in r) r[k] = spec.set;
+        }
+        if (spec.also) apply(spec.also, r);
+    };
+    rows.filter((r) => r && typeof r === 'object').forEach((r) => apply(m, r));
+}
+const canonical = (v) => (Array.isArray(v) ? `[${v.map(canonical).join(',')}]`
+    : v && typeof v === 'object' ? `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canonical(v[k])}`).join(',')}}`
+    : JSON.stringify(v));
+const UNIT_FILES = ['kma-seoul', 'kma-seoul-f', 'kma-seoul-imperial', 'kma-seoul-aqicn', 'kma-seoul-who', 'vc-london', 'vc-london-f', 'vc-tokyo'];
+
+function unitCases(util) {
+    const out = [];
+    for (const file of UNIT_FILES) {
+        for (const [kind, mutation] of Object.entries(VALUE_MUTATIONS)) {
+            const data = input(file);
+            applyValueMutation(data, mutation);
+            const converted = util.convertWeatherData([{data}]);
+            out.push({name: `${file}-${kind}`, rows: ['V05'], inputFile: `inputs/${file}.json`, mutation: kind,
+                expectedSha256: converted == null ? null : createHash('sha256').update(canonical(JSON.parse(JSON.stringify(converted)))).digest('hex')});
+        }
+    }
+    return {mutations: VALUE_MUTATIONS, cases: out};
+}
+
 function conversionCases(util) {
     const cases = [];
     for (const [name, file, rows, mutate] of CONVERSION) {
@@ -207,7 +249,8 @@ function functionCases(util) {
 
     out.diffTodayYesterday = [];
     const pairs = [[15, 12], [12, 15], [10, 10], [10.04, 10], [10.06, 10], [-0.3, 0.2], [20.55, 18.1], [7, undefined],
-        [undefined, 7], [-50, 12], ['12', '10'], [3.14159, 1]];
+        [undefined, 7], [-50, 12], ['12', '10'], [3.14159, 1], [0, 0], [0, -0.04], [-50, -50], [null, 5], ['', '1'],
+        ['abc', 1], [99.95, 0], [-0.05, 0], [0.05, 0], [32, 31.5], [-40, -39.5]];
     for (const lang of ['ko', 'en']) {
         for (const unit of ['C', 'F']) {
             const f = forecastFunctions(lang, unit);
@@ -223,6 +266,17 @@ function functionCases(util) {
         {rn1: -1}, {pty: 1}, {rn1: '5', pty: 3}, {rn1: 9.99}, {rn1: 10}];
     out.rainSnowFall = rains.map((v) => ({args: [v], expected: f.rainSnowFall(clone(v))}));
     out.rainSnowFallSymbol = rains.map((v) => ({args: [v], expected: f.rainSnowFallSymbol(clone(v))}));
+
+    // The update time shown under the current weather (applyWeatherData's updateTime IIFE).
+    const src = fs.readFileSync(path.join(JS, 'controller.forecastctrl.js'), 'utf8');
+    const start = src.indexOf('$scope.updateTime = (function () {') + '$scope.updateTime = '.length;
+    const end = src.indexOf('})();', start) + 2;
+    const updateTimeContext = {console: quiet, Util: {ga: {trackEvent() {}, trackException() {}}}, Date};
+    vm.runInNewContext(`this.updateTime = function (cityData) { return ${src.slice(start, end)}(); };`, updateTimeContext);
+    const times = [{stnDateTime: '2026-11-07 23:00'}, {date: '20261107', time: '2300'}, {date: '20261231', time: '2400'},
+        {date: '20280229', time: '0000'}, {date: '20261107', time: 23}, {date: '2026', time: '1'}, {stnDateTime: '', date: '20261107', time: '0900'},
+        {date: 20261107, time: '0900'}, {}, null];
+    out.updateTime = times.map((cw) => ({args: [cw], expected: updateTimeContext.updateTime({currentWeather: cw}) ?? null}));
 
     out.todayPosition = [];
     for (const name of ['kma-seoul', 'vc-london']) {
@@ -351,6 +405,13 @@ function airCases() {
         }
     }
     out.aqiList.push({args: ['missing-air', 0], expected: clone(context.aqiList({}, undefined))});
+    // Time boundaries (V04): midnight written as 24:00 and 00:00, month and year ends, a leap day.
+    const rows = ['2026-11-07 22:00', '2026-11-07 23:00', '2026-11-07 24:00', '2026-11-08 00:00', '2026-11-08 01:00',
+        '2026-11-30 24:00', '2026-12-01 00:00', '2026-12-31 23:00', '2027-01-01 00:00', '2028-02-28 24:00', '2028-02-29 00:00',
+        '2028-03-01 00:00', '2026-11-08 5:00', 'bad'].map((date, i) => ({date, val: i, grade: 1 + (i % 4)}));
+    for (const current of ['2026-11-07 23:00', '2026-11-07 24:00', '2026-11-30 24:00', '2026-12-31 23:00', '2028-02-28 24:00', '']) {
+        out.hourlyForecast.push({args: ['synthetic', 0, current], input: clone(rows), expected: clone(context.hourly(current, clone(rows)))});
+    }
     return out;
 }
 
@@ -404,6 +465,15 @@ function specialCases() {
         const context = {console: quiet, Util: {ga: {trackException() {}}}, Date: LocaleDate};
         vm.runInNewContext(extract('controller.kma.special.js', 'function parseSpecialData(') + '\nthis.parse = parseSpecialData;', context);
         out.push({args: [locale, timeZone], expected: clone(context.parse(input('special')))});
+        const synthetic = [
+            '2026-03-08T06:59:00.000Z', '2026-03-08T07:00:00.000Z', '2026-11-01T05:59:59.000Z', '2026-11-01T06:00:00.000Z',
+            '2026-12-31T15:00:00.000Z', '2028-02-29T03:30:00.000Z', '2026-11-07T15:00:00Z', 1794067200000, null,
+            'not a date', undefined,
+        ].map((announcement, i) => ({...(announcement === undefined ? {} : {announcement}), comment: `line ${i}\nnext`}));
+        out.push({args: [locale, timeZone, 'synthetic'], input: synthetic, expected: clone(context.parse(clone(synthetic)))});
+        const failing = [{announcement: '2026-11-07T15:00:00.000Z', comment: 'a\nb'}, {announcement: '2026-11-07T16:00:00.000Z'},
+            {announcement: '2026-11-07T17:00:00.000Z', comment: 'c\nd'}];
+        out.push({args: [locale, timeZone, 'missing-comment'], input: failing, expected: clone(context.parse(clone(failing)))});
     }
     return out;
 }
@@ -421,6 +491,7 @@ const write = (rel, value) => {
 fs.rmSync(path.join(OUT, 'conversion'), {recursive: true, force: true});
 for (const c of conversionCases(util)) write(`conversion/${c.name}.json`, c);
 write('functions.json', functionCases(util));
+write('units.json', unitCases(util));
 write('weather-info.json', [await lateResponseCase(util)]);
 write('air.json', airCases());
 write('nation.json', await nationCases());

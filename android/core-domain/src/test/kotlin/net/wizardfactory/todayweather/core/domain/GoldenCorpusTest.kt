@@ -82,12 +82,94 @@ class GoldenCorpusTest {
         for ((args, expected) in cases("rainSnowFallSymbol")) {
             assertEquals(str(expected), ForecastText.rainSnowFallSymbol(args[0].jsonObject), "symbol $args")
         }
+        for ((args, expected) in cases("updateTime")) {
+            val cw = args[0]
+            assertEquals(if (expected == JsonNull) null else str(expected), UpdateTime.of(cw), "updateTime $args")
+        }
         for ((args, expected) in cases("todayPosition")) {
             val city = WeatherConverter.convert(read("inputs/${str(args[0])}.json"))!!
             val position = ChartPosition.todayOffset(str(args[1]), args[2].jsonPrimitive.double, city)
             assertEquals(expected.jsonPrimitive.double, position, 1e-9, "todayPosition $args")
         }
     }
+
+    /** units.json: each unit variant with zero, missing, sentinel and string values; hashes of canonical JSON. */
+    @Test
+    fun unitVariantsMatchCordova() {
+        val units = read("units.json").jsonObject
+        val mutations = units["mutations"]!!.jsonObject
+        val cases = units["cases"]!!.jsonArray
+        assertEquals(32, cases.size)
+        for (c in cases.map { it.jsonObject }) {
+            val input = mutate(read(c["inputFile"]!!.jsonPrimitive.content).jsonObject, mutations[c["mutation"]!!.jsonPrimitive.content]!!.jsonObject)
+            val actual = WeatherConverter.convert(input)
+            val expected = c["expectedSha256"]
+            if (expected == null || expected is JsonNull) {
+                assertEquals(null, actual, c["name"].toString())
+            } else {
+                assertEquals(expected.jsonPrimitive.content, sha256(canonical(actual!!)), c["name"].toString())
+            }
+        }
+    }
+
+    private fun mutate(data: JsonObject, spec: JsonObject): JsonObject {
+        fun applyTo(row: JsonObject, spec: JsonObject): JsonObject {
+            var r = row
+            for (k in spec["keys"]!!.jsonArray.map { it.jsonPrimitive.content }) {
+                r = when {
+                    spec["delete"] != null -> JsonObject(r - k)
+                    spec["stringify"] != null -> r[k].let { v ->
+                        if (v is JsonPrimitive && !v.isString && v != JsonNull && v.content !in setOf("true", "false")) {
+                            JsonObject(r + (k to JsonPrimitive(Js.numberToString(v.content.toDouble()))))
+                        } else r
+                    }
+                    spec["onlyPresent"] != null && k !in r -> r
+                    else -> JsonObject(r + (k to spec["set"]!!))
+                }
+            }
+            return (spec["also"] as? JsonObject)?.let { applyTo(r, it) } ?: r
+        }
+        fun mapRows(arr: JsonElement?) = (arr as? JsonArray)?.let { JsonArray(it.map { row -> if (row is JsonObject) applyTo(row, spec) else row }) }
+        val out = data.toMutableMap()
+        if ((data["source"] as? JsonPrimitive)?.content == "KMA") {
+            (data["current"] as? JsonObject)?.let { out["current"] = applyTo(it, spec) }
+            mapRows(data["short"])?.let { out["short"] = it }
+            (data["midData"] as? JsonObject)?.let { mid -> mapRows(mid["dailyData"])?.let { out["midData"] = JsonObject(mid + ("dailyData" to it)) } }
+        } else {
+            for (k in listOf("thisTime", "hourly", "daily")) mapRows(data[k])?.let { out[k] = it }
+        }
+        return JsonObject(out)
+    }
+
+    /** JSON.stringify with object keys sorted, as the generator hashes it. */
+    private fun canonical(e: JsonElement): String = when (e) {
+        is JsonObject -> e.keys.sorted().joinToString(",", "{", "}") { quote(it) + ":" + canonical(e[it]!!) }
+        is JsonArray -> e.joinToString(",", "[", "]") { canonical(it) }
+        JsonNull -> "null"
+        is JsonPrimitive -> when {
+            e.isString -> quote(e.content)
+            e.content == "true" || e.content == "false" -> e.content
+            else -> Js.numberToString(e.content.toDouble())
+        }
+    }
+
+    private fun quote(s: String) = buildString {
+        append('"')
+        for (c in s) when {
+            c == '"' -> append("\\\"")
+            c == '\\' -> append("\\\\")
+            c == '\n' -> append("\\n")
+            c == '\r' -> append("\\r")
+            c == '\t' -> append("\\t")
+            c == '\b' -> append("\\b")
+            c == '\u000c' -> append("\\f")
+            c < ' ' -> append("\\u%04x".format(c.code))
+            else -> append(c)
+        }
+        append('"')
+    }
+
+    private fun sha256(s: String) = java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
 
     @Test
     fun lateResponseIsAListedDifference() {

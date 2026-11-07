@@ -93,6 +93,22 @@ object ForecastText {
     }
 }
 
+/** The update time under the current weather (the `updateTime` IIFE in ForecastCtrl.applyWeatherData). */
+object UpdateTime {
+    /** Null where the Cordova code returns undefined (no current weather); "" where it catches an error. */
+    fun of(currentWeather: JsonElement?): String? {
+        if (!Js.truthy(currentWeather)) return null
+        val cw = currentWeather as? JsonObject ?: return ""
+        val stn = cw["stnDateTime"]
+        if (Js.truthy(stn)) return Js.string(stn)
+        val date = cw["date"]
+        if (date !is JsonPrimitive || !date.isString) return "" // tmpDate.substr is not a function
+        val d = date.content
+        fun substr(start: Int, len: Int) = if (start >= d.length) "" else d.substring(start, minOf(d.length, start + len))
+        return substr(0, 4) + "-" + substr(4, 2) + "-" + substr(6, 2) + " " + Js.string(cw["time"]) + ":00"
+    }
+}
+
 object GeoLocation {
     /** `geolocationNormalize`: three decimals, as the Cordova app sends coordinates. */
     fun normalize(lat: Double, long: Double): Pair<Double, Double> = Js.toFixedNumber(lat, 3) to Js.toFixedNumber(long, 3)

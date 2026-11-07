@@ -15,7 +15,11 @@ android {
         // AN-19 sets the release value above every active Play track.
         versionCode = 200000
         versionName = "2.0.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    // Device tests read the golden corpus generated for core-domain.
+    sourceSets["androidTest"].assets.srcDir("../core-domain/src/test/resources")
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -46,4 +50,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.org.json)
+
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }

@@ -77,4 +77,4 @@ AC1 regeneration without diff; AC2 JVM corpus tests pass in both CI jobs; AC3 co
 
 Test-first: `GoldenCorpusTest` against `TODO()` stubs failed (3/3), then passed. Smoke: regeneration twice with no diff; `client/`-free build from a `git archive`.
 
-Review round 1 (F1–F5) added the air display rules, the nationwide and warning functions, the real TabCtrl completion for A01, null-row handling (Red: removing it fails `kma-null-daily-row`) and the `core-model` views; `GoldenCorpusDisplayTest` and `ModelsTest` cover them.
+Review round 1 (F1–F5) added the air display rules, the nationwide and warning functions, the real TabCtrl completion for A01, null-row handling (Red: removing it fails `kma-null-daily-row`) and the `core-model` views; `GoldenCorpusDisplayTest` and `ModelsTest` cover them. Round 2 (F2, F6, F7) added unit-variant value cases, time-boundary and invalid-date cases, `UpdateTime`, `java.util`-based warning formatting, and `CoreOnDeviceTest` run on API 24 and API 36 emulators.

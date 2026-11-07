@@ -19,6 +19,8 @@ Running it again without changes in `client/` or the inputs changes nothing. `co
 | `NationCtrl`, `NationAirCtrl` (`controller.nation*.js`) | the controllers with a stub `WeatherUtil.getNationWeather` returning the captured response | `Nationwide` (`nation.json`) |
 | `parseSpecialData` (`controller.kma.special.js`) | the extracted function with `Date` locale methods fixed to each language and Asia/Seoul (plus en-US in New York) | `Warnings` (`special.json`) |
 
+`CoreOnDeviceTest` (app `androidTest`) runs the converter and the warning parser against the corpus on a device; it passed on API 24 and API 36 emulators.
+
 `core-model` holds typed views of these responses and of the converted place weather (`PlaceWeather`, `CurrentWeather`, `DailyForecast`, `AirStation`, `NationResponse`, `WeatherWarning`, `GeocodeResponse`); `ModelsTest` checks them against the captured responses.
 
 `sprintf.js` is installed at build time and not tracked; the code formats only one `%s`, which the generator substitutes.
@@ -46,8 +48,8 @@ Client rows of `docs/rewrite/verification-matrix.md` and the corpus cases that c
 
 | Row | Cases |
 | --- | --- |
-| V04 time boundaries | `vc-newyork`, `vc-sydney` (offsets and daylight saving as served), `kma-no-current-index`, `kma-current-index-first`, `kma-midnight-today-first-day`, `vc-no-current-index`, `todayPosition` |
-| V05 units, zero, missing, sentinel and string values | `kma-seoul-fahrenheit`, `vc-london-fahrenheit`, `kma-seoul-imperial`, `kma-seoul-aqicn`, `kma-seoul-who`, `vc-tokyo`, `kma-zero-precipitation`, `kma-rain-everywhere`, `kma-sentinels`, `kma-string-values`, `diffTodayYesterday` (C and F), `rainSnowFall` |
+| V04 time boundaries | `functions.json` `updateTime` (24:00, year end, leap day, numeric and missing dates), `air.json` synthetic `hourlyForecast` (midnight as 24:00 and 00:00, month and year ends, leap day), `special.json` synthetic announcements (both New York daylight-saving changes, year end, leap day), `vc-newyork`, `vc-sydney` (offsets and daylight saving as served), `kma-no-current-index`, `kma-current-index-first`, `kma-midnight-today-first-day`, `vc-no-current-index`, `todayPosition` |
+| V05 units, zero, missing, sentinel and string values | `units.json` (each of the 8 unit and standard variants with zero, missing, sentinel and string values; expected output as the SHA-256 of canonical JSON), `kma-seoul-fahrenheit`, `vc-london-fahrenheit`, `kma-seoul-imperial`, `kma-seoul-aqicn`, `kma-seoul-who`, `vc-tokyo`, `kma-zero-precipitation`, `kma-rain-everywhere`, `kma-sentinels`, `kma-string-values`, `diffTodayYesterday` (C and F), `rainSnowFall` |
 | V06 coordinates and address-only places | `kma-address-only`, `geolocationNormalize`, `shortenAddress`, `townFromAddress` |
 | V07 unknown source, missing parts, error bodies | `kma-null-short-row`, `kma-null-daily-row`, `vc-null-hourly-row`, `vc-null-daily-row`, `kma-number-row`, `unknown-source`, `vc-no-pubdate`, `vc-no-units`, `kma-missing-short`, `kma-missing-mid`, `kma-missing-current`, `world-missing-daily`, `world-missing-thistime`, `html-error-body`, `empty-object`, the captured responses |
 | V09 response after a place switch | `weather-info.json` (`late-response-after-switch`, the real TabCtrl completion) |

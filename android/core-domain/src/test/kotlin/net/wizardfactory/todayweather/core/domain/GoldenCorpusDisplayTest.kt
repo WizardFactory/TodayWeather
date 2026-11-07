@@ -1,7 +1,6 @@
 package net.wizardfactory.todayweather.core.domain
 
 import java.io.File
-import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.json.Json
@@ -79,9 +78,10 @@ class GoldenCorpusDisplayTest {
             }
             assertEquals<JsonElement>(expected, actual, "aqiList $args")
         }
-        for ((args, expected) in cases(air["hourlyForecast"]!!)) {
-            val station = stations(s(args[0])!!)[args[1].jsonPrimitive.int]
-            val hourly = station["pollutants"]!!.jsonObject["aqi"]!!.jsonObject["hourly"]
+        for (case in air["hourlyForecast"]!!.jsonArray.map { it.jsonObject }) {
+            val args = case["args"]!!.jsonArray
+            val expected = case["expected"] ?: JsonNull
+            val hourly = case["input"] ?: stations(s(args[0])!!)[args[1].jsonPrimitive.int]["pollutants"]!!.jsonObject["aqi"]!!.jsonObject["hourly"]
             assertEquals<JsonElement?>(expected, AirQuality.hourlyForecast(s(args[2])!!, hourly), "hourly $args")
         }
         for ((args, expected) in cases(air["dustForecast"]!!)) {
@@ -118,9 +118,10 @@ class GoldenCorpusDisplayTest {
 
     @Test
     fun warningsMatchCordova() {
-        val input = read("inputs/special.json").jsonArray
-        for ((args, expected) in cases(read("special.json"))) {
-            assertEquals(expected, Warnings.parse(input, s(args[0])!!, ZoneId.of(s(args[1])!!)), "special $args")
+        for (case in read("special.json").jsonArray.map { it.jsonObject }) {
+            val args = case["args"]!!.jsonArray
+            val input = case["input"] ?: read("inputs/special.json")
+            assertEquals(case["expected"], Warnings.parse(input, s(args[0])!!, s(args[1])!!), "special $args")
         }
     }
 

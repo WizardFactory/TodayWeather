@@ -775,6 +775,149 @@
   {
    "args": [
     "ko",
+    "C",
+    {
+     "t1h": 0
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": 0
+    },
+    {
+     "t1h": -0.04
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": -50
+    },
+    {
+     "t1h": -50
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": null
+    },
+    {
+     "t1h": 5
+    }
+   ],
+   "expected": "어제보다 -5˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": ""
+    },
+    {
+     "t1h": "1"
+    }
+   ],
+   "expected": "어제보다 -1˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": "abc"
+    },
+    {
+     "t1h": 1
+    }
+   ],
+   "expected": "어제보다 NaN˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": 99.95
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "어제보다 +100˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": -0.05
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "어제보다 -0.1˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": 0.05
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "어제보다 +0.1˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": 32
+    },
+    {
+     "t1h": 31.5
+    }
+   ],
+   "expected": "어제보다 +0.5˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": -40
+    },
+    {
+     "t1h": -39.5
+    }
+   ],
+   "expected": "어제보다 -0.5˚"
+  },
+  {
+   "args": [
+    "ko",
     "F",
     {
      "t1h": 15
@@ -923,6 +1066,149 @@
     }
    ],
    "expected": "어제보다 +2˚"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 0
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 0
+    },
+    {
+     "t1h": -0.04
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": -50
+    },
+    {
+     "t1h": -50
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": null
+    },
+    {
+     "t1h": 5
+    }
+   ],
+   "expected": "어제보다 -5˚"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": ""
+    },
+    {
+     "t1h": "1"
+    }
+   ],
+   "expected": "어제보다 -1˚"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": "abc"
+    },
+    {
+     "t1h": 1
+    }
+   ],
+   "expected": "어제보다 NaN˚"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 99.95
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "어제보다 +100˚"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": -0.05
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 0.05
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 32
+    },
+    {
+     "t1h": 31.5
+    }
+   ],
+   "expected": "어제보다 +1˚"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": -40
+    },
+    {
+     "t1h": -39.5
+    }
+   ],
+   "expected": "어제와 동일"
   },
   {
    "args": [
@@ -1079,6 +1365,149 @@
   {
    "args": [
     "en",
+    "C",
+    {
+     "t1h": 0
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": 0
+    },
+    {
+     "t1h": -0.04
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": -50
+    },
+    {
+     "t1h": -50
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": null
+    },
+    {
+     "t1h": 5
+    }
+   ],
+   "expected": "-5˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": ""
+    },
+    {
+     "t1h": "1"
+    }
+   ],
+   "expected": "-1˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": "abc"
+    },
+    {
+     "t1h": 1
+    }
+   ],
+   "expected": "NaN˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": 99.95
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "+100˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": -0.05
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "-0.1˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": 0.05
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "+0.1˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": 32
+    },
+    {
+     "t1h": 31.5
+    }
+   ],
+   "expected": "+0.5˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": -40
+    },
+    {
+     "t1h": -39.5
+    }
+   ],
+   "expected": "-0.5˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
     "F",
     {
      "t1h": 15
@@ -1227,6 +1656,149 @@
     }
    ],
    "expected": "+2˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 0
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 0
+    },
+    {
+     "t1h": -0.04
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": -50
+    },
+    {
+     "t1h": -50
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": null
+    },
+    {
+     "t1h": 5
+    }
+   ],
+   "expected": "-5˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": ""
+    },
+    {
+     "t1h": "1"
+    }
+   ],
+   "expected": "-1˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": "abc"
+    },
+    {
+     "t1h": 1
+    }
+   ],
+   "expected": "NaN˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 99.95
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "+100˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": -0.05
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 0.05
+    },
+    {
+     "t1h": 0
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 32
+    },
+    {
+     "t1h": 31.5
+    }
+   ],
+   "expected": "+1˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": -40
+    },
+    {
+     "t1h": -39.5
+    }
+   ],
+   "expected": "Same as yesterday"
   }
  ],
  "rainSnowFall": [
@@ -1427,6 +1999,92 @@
     }
    ],
    "expected": "rain"
+  }
+ ],
+ "updateTime": [
+  {
+   "args": [
+    {
+     "stnDateTime": "2026-11-07 23:00"
+    }
+   ],
+   "expected": "2026-11-07 23:00"
+  },
+  {
+   "args": [
+    {
+     "date": "20261107",
+     "time": "2300"
+    }
+   ],
+   "expected": "2026-11-07 2300:00"
+  },
+  {
+   "args": [
+    {
+     "date": "20261231",
+     "time": "2400"
+    }
+   ],
+   "expected": "2026-12-31 2400:00"
+  },
+  {
+   "args": [
+    {
+     "date": "20280229",
+     "time": "0000"
+    }
+   ],
+   "expected": "2028-02-29 0000:00"
+  },
+  {
+   "args": [
+    {
+     "date": "20261107",
+     "time": 23
+    }
+   ],
+   "expected": "2026-11-07 23:00"
+  },
+  {
+   "args": [
+    {
+     "date": "2026",
+     "time": "1"
+    }
+   ],
+   "expected": "2026-- 1:00"
+  },
+  {
+   "args": [
+    {
+     "stnDateTime": "",
+     "date": "20261107",
+     "time": "0900"
+    }
+   ],
+   "expected": "2026-11-07 0900:00"
+  },
+  {
+   "args": [
+    {
+     "date": 20261107,
+     "time": "0900"
+    }
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    {}
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null
+   ],
+   "expected": null
   }
  ],
  "todayPosition": [
