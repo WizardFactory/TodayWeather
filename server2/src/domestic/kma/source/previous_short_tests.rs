@@ -1,6 +1,7 @@
 //! The previous SHRT publication the current three-hour slot needs from HH+2:10 to HH+2:59, when
 //! the latest starts at HH+3: acquired at most once per cell and publication. An isolated empty
-//! store stands for a cell nothing was stored for.
+//! store stands for a cell nothing was stored for. The tests run on a paused clock (the request's
+//! wait and late answers are virtual time) and synchronize on the provider's answers.
 use super::*;
 use crate::domestic::family::DataGoKrFamily;
 use crate::storage::{
@@ -151,12 +152,13 @@ fn records(p: Publication, fetched_at: f64) -> Vec<RawRecord> {
     ]
 }
 /// Answers every SHRT request with its complete page, except `failing`, which fails, and `slow`,
-/// which answers only after a minute.
+/// which answers only after a minute. `answered` counts the answers given.
 struct Provider {
     now: f64,
     failing: Option<Publication>,
     slow: Option<Publication>,
     calls: Mutex<Vec<Publication>>,
+    answered: Arc<tokio::sync::watch::Sender<usize>>,
 }
 impl fetch::ForecastAcquire for Provider {
     fn acquire(
@@ -174,11 +176,12 @@ impl fetch::ForecastAcquire for Provider {
         } else {
             Ok(Some(records(p, self.now)))
         };
-        let slow = self.slow == Some(p);
+        let (slow, answered) = (self.slow == Some(p), self.answered.clone());
         Box::pin(async move {
             if slow {
                 tokio::time::sleep(Duration::from_secs(60)).await;
             }
+            answered.send_modify(|n| *n += 1);
             answer
         })
     }
@@ -205,7 +208,10 @@ fn fixture(provider: Arc<Provider>, now: f64) -> S3Source<Empty> {
     .unwrap();
     s
 }
-async fn short_docs(s: &S3Source<Empty>, now: f64) -> Vec<Doc> {
+/// The documents of one request, after every acquisition it started has answered. The tests run
+/// on a paused clock, so the request's wait and a late answer are virtual time; completion is the
+/// provider's answer count, not elapsed time.
+async fn short_docs(s: &S3Source<Empty>, provider: &Provider, now: f64) -> Vec<Doc> {
     let docs = s
         .grid_answer(
             Family::Short,
@@ -215,8 +221,13 @@ async fn short_docs(s: &S3Source<Empty>, now: f64) -> Vec<Doc> {
         )
         .await
         .unwrap();
-    // Let the owned acquisitions the request stopped waiting for finish before assertions.
-    tokio::time::sleep(Duration::from_millis(30)).await;
+    let started = provider.calls.lock().unwrap().len();
+    provider
+        .answered
+        .subscribe()
+        .wait_for(|answered| *answered >= started)
+        .await
+        .unwrap();
     docs
 }
 /// The probability of the stored row at `date`/`time` (None: no document holds the slot).
@@ -231,7 +242,7 @@ fn pop_at(docs: &[Doc], date: &str, time: &str) -> Option<f64> {
 
 /// 2026-10-18 05:30 KST: the current slot is 03:00 and the latest (05:00) starts at 06:00, so
 /// the 02:00 publication supplies the current row; it is acquired with the latest.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn the_previous_publication_supplies_the_current_slot_after_the_latest_moves_on() {
     let now = kst(20261018, 530);
     let provider = Arc::new(Provider {
@@ -239,9 +250,10 @@ async fn the_previous_publication_supplies_the_current_slot_after_the_latest_mov
         failing: None,
         slow: None,
         calls: Mutex::new(Vec::new()),
+        answered: Arc::new(tokio::sync::watch::channel(0).0),
     });
     let s = fixture(provider.clone(), now);
-    let docs = short_docs(&s, now).await;
+    let docs = short_docs(&s, &provider, now).await;
     let mut calls = provider.calls.lock().unwrap().clone();
     calls.sort();
     assert_eq!(
@@ -257,7 +269,7 @@ async fn the_previous_publication_supplies_the_current_slot_after_the_latest_mov
 }
 
 /// Before HH+2:10 the latest covers the current slot: nothing older is requested.
-#[tokio::test]
+#[tokio::test(start_paused = true)]
 async fn a_latest_publication_covering_the_current_slot_needs_no_other() {
     let now = kst(20261018, 430);
     let provider = Arc::new(Provider {
@@ -265,9 +277,10 @@ async fn a_latest_publication_covering_the_current_slot_needs_no_other() {
         failing: None,
         slow: None,
         calls: Mutex::new(Vec::new()),
+        answered: Arc::new(tokio::sync::watch::channel(0).0),
     });
     let s = fixture(provider.clone(), now);
-    let docs = short_docs(&s, now).await;
+    let docs = short_docs(&s, &provider, now).await;
     assert_eq!(
         provider.calls.lock().unwrap().clone(),
         vec![publication(20261018, 200)]
@@ -275,25 +288,31 @@ async fn a_latest_publication_covering_the_current_slot_needs_no_other() {
     assert_eq!(pop_at(&docs, "20261018", "0300"), Some(2.));
 }
 
-/// Failure path: the previous publication fails. The answer still comes (without that slot)
-/// and the cell does not ask for the publication again within three hours, so its added
-/// data.go.kr calls stay at one per cell and three hours.
-#[tokio::test]
+/// Failure path: the previous publication fails, and only after the request stopped waiting. The
+/// answer still comes (without that slot) and the cell does not ask for the publication again
+/// within three hours, so its added data.go.kr calls stay at one per cell and publication.
+#[tokio::test(start_paused = true)]
 async fn a_failed_previous_publication_is_not_requested_again_for_three_hours() {
     let now = kst(20261018, 530);
     let previous = publication(20261018, 200);
     let provider = Arc::new(Provider {
         now,
         failing: Some(previous),
-        slow: None,
+        slow: Some(previous),
         calls: Mutex::new(Vec::new()),
+        answered: Arc::new(tokio::sync::watch::channel(0).0),
     });
     let s = fixture(provider.clone(), now);
-    let docs = short_docs(&s, now).await;
+    let docs = short_docs(&s, &provider, now).await;
+    assert_eq!(
+        *provider.answered.borrow(),
+        provider.calls.lock().unwrap().len(),
+        "every acquisition it started has answered"
+    );
     assert_eq!(pop_at(&docs, "20261018", "0300"), None);
     assert_eq!(pop_at(&docs, "20261018", "0600"), Some(5.));
     let later = kst(20261018, 559);
-    short_docs(&s, later).await;
+    short_docs(&s, &provider, later).await;
     let asked = |p: Publication| {
         provider
             .calls
@@ -324,6 +343,7 @@ async fn a_slow_latest_publication_does_not_hold_back_the_previous_one() {
         failing: None,
         slow: Some(publication(20261018, 2000)),
         calls: Mutex::new(Vec::new()),
+        answered: Arc::new(tokio::sync::watch::channel(0).0),
     });
     let s = fixture(provider.clone(), now);
     let started = Instant::now();
