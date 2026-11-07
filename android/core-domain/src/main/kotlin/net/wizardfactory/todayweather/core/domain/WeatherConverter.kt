@@ -96,6 +96,7 @@ object WeatherConverter {
         var count = 0
         var today: JsonElement = JsonNull
         val table = days.mapIndexed { index, day ->
+            if (day == JsonNull) throw JsTypeError() // data.fromToday on a null row
             var data = day
             if (data is JsonObject && Js.looseEquals(data["fromToday"], 0.0)) {
                 data = JsonObject(data + ("index" to JsonPrimitive(index)))
@@ -124,6 +125,7 @@ object WeatherConverter {
         var currentIndex: Int? = if (worldFallback) null else -1
         var count = 0
         list.forEachIndexed { index, item ->
+            if (item == JsonNull) throw JsTypeError() // tempObject.currentIndex on a null row
             val o = item as? JsonObject
             if (o != null && Js.truthy(o["currentIndex"])) currentIndex = index
             if (o != null && Js.greater(o["fromToday"], -2.0)) {

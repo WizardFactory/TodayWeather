@@ -125,6 +125,15 @@ const CONVERSION = [
     ['vc-london-fahrenheit', 'vc-london-f', 'V05', null],
     ['vc-newyork', 'vc-newyork', 'V04', null],
     ['vc-sydney', 'vc-sydney', 'V04', null],
+    ['kma-seoul-imperial', 'kma-seoul-imperial', 'V05,V32', null],
+    ['kma-seoul-aqicn', 'kma-seoul-aqicn', 'V05,V32', null],
+    ['kma-seoul-who', 'kma-seoul-who', 'V05,V32', null],
+    ['vc-tokyo', 'vc-tokyo', 'V04,V32', null],
+    ['kma-null-short-row', 'kma-seoul', 'V07', (d) => { d.short[3] = null; }],
+    ['kma-null-daily-row', 'kma-seoul', 'V07', (d) => { d.midData.dailyData[2] = null; }],
+    ['vc-null-hourly-row', 'vc-london', 'V07', (d) => { d.hourly[5] = null; }],
+    ['vc-null-daily-row', 'vc-london', 'V07', (d) => { d.daily[1] = null; }],
+    ['kma-number-row', 'kma-seoul', 'V07', (d) => { d.short[4] = 7; }],
     ['kma-no-current-index', 'kma-seoul', 'V04', (d) => each(d.short, (s) => { delete s.currentIndex; })],
     ['kma-current-index-first', 'kma-seoul', 'V04', (d) => each(d.short, (s, i) => { s.currentIndex = i === 0; })],
     ['kma-midnight-today-first-day', 'kma-seoul', 'V04', (d) => each(d.midData.dailyData, (s, i) => { s.fromToday = i - 0; })],
@@ -230,24 +239,173 @@ function functionCases(util) {
     return out;
 }
 
-// V09: a weather request for place A completes after the user selected place B (anomaly A01).
-function lateResponseCase(util) {
+// V09: the real TabCtrl.updateWeatherData completes for place A after the user selected place B (A01).
+async function lateResponseCase(util) {
     const {info} = loadWeatherInfo(util);
-    info.loadCities = () => {};
     info.addCity({address: '대한민국 서울특별시 중구 명동', location: {lat: 37.56, long: 126.98}, currentPosition: false});
     info.addCity({address: 'United Kingdom London', location: {lat: 51.51, long: -0.13}, currentPosition: false});
+    let respond;
+    const pending = new Promise((resolve) => { respond = resolve; });
+    const weatherUtil = Object.create(util);
+    weatherUtil.getWeatherByGeoInfo = () => pending; // the request for Seoul stays outstanding
+    const context = {
+        console: quiet, WeatherUtil: weatherUtil, WeatherInfo: info, Monetization: {track() {}},
+        strFailToGetWeatherInfo: 'fail', Date,
+        $q: {defer() { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); promise.catch(() => {}); return {promise, resolve, reject}; }},
+    };
+    vm.runInNewContext(extract('controller.tabctrl.js', 'function updateWeatherData(') + '\nthis.update = updateWeatherData;', context);
     info.setCityIndex(0);
-    const requestedFor = info.getCityIndex();
-    info.setCityIndex(1); // the user swipes to London while Seoul's request is outstanding
-    const seoul = util.convertWeatherData([{data: input('kma-seoul')}]);
-    info.updateCity(info.getCityIndex(), seoul); // TabCtrl applies it to the completion-time selection
+    const done = context.update(info.getCityOfIndex(0));
+    info.setCityIndex(1); // the user swipes to London
+    respond([{data: input('kma-seoul')}]);
+    await done;
     return {
-        name: 'late-response-after-switch', rows: ['V09'], anomaly: 'A01',
-        requestedForIndex: requestedFor, appliedToIndex: info.getCityIndex(),
+        name: 'late-response-after-switch', rows: ['V09'], anomaly: 'A01', requestedForIndex: 0,
+        appliedToIndex: [0, 1].find((i) => info.getCityOfIndex(i).source === 'KMA') ?? null,
         cities: [0, 1].map((i) => ({index: i, address: info.getCityOfIndex(i).address,
             source: info.getCityOfIndex(i).source ?? null,
             t1h: info.getCityOfIndex(i).currentWeather ? info.getCityOfIndex(i).currentWeather.t1h : null})),
     };
+}
+
+// Air quality display (V10, V32): standards, grade colors and icons, the gauge label, pollutant lists.
+function airCases() {
+    const airUnits = ['airkorea', 'airkorea_who', 'airnow', 'aqicn', undefined, null, 'unknown'];
+    const out = {standards: [], gradeColor: [], sentimentIcon: [], labelPosition: [], aqiList: [], dustForecast: [], hourlyForecast: [], airCodeUnit: []};
+    const tab = (airUnit) => {
+        const $scope = {};
+        const context = {
+            $scope, console: quiet, Util: {ga: {trackEvent() {}, trackException() {}}},
+            Units: {getUnit: () => airUnit}, $sce: {trustAsHtml: (s) => s},
+            aqiStandard: loadWeatherUtil({}).aqiStandard, airUnit: undefined,
+        };
+        vm.runInNewContext([
+            extract('controller.tabctrl.js', 'function setAirUnit('),
+            '$scope.getSentimentIcon = ' + extract('controller.tabctrl.js', '$scope.getSentimentIcon = function'),
+            '$scope.grade2Color = ' + extract('controller.tabctrl.js', '$scope.grade2Color = function'),
+            '$scope.airkoreaGrade2Color = ' + extract('controller.tabctrl.js', '$scope.airkoreaGrade2Color = function'),
+            'setAirUnit();',
+        ].join('\n'), context);
+        return $scope;
+    };
+    const grades = [undefined, 0, 1, 2, 3, 4, 5, 6, 7, '2'];
+    for (const airUnit of airUnits) {
+        const $scope = tab(airUnit);
+        out.standards.push({args: [airUnit ?? null], expected: {list: clone($scope.aqiStandard ?? null), maxValue: clone($scope.aqiMaxValue ?? null)}});
+        for (const g of grades) {
+            out.gradeColor.push({args: [airUnit ?? null, g ?? null, null], expected: $scope.grade2Color(g)});
+            out.gradeColor.push({args: [airUnit ?? null, g ?? null, '#888'], expected: $scope.grade2Color(g, '#888')});
+            out.sentimentIcon.push({args: [airUnit ?? null, g ?? null], expected: $scope.getSentimentIcon(g)});
+        }
+        if (airUnit === 'airkorea') {
+            out.airkoreaGradeColor = grades.map((g) => ({args: [g ?? null], expected: $scope.airkoreaGrade2Color(g)}));
+        }
+    }
+    // Gauge label: x of the value marker over the standard's grade bands.
+    const air = (airUnit, aqiCode, width) => {
+        const $scope = tab(airUnit);
+        const context = {
+            $scope, console: quiet, Util: {ga: {trackException() {}}}, aqiCode,
+            angular: {element: (el) => ({prop: () => el})},
+            document: {getElementById: (id) => (id === 'aqistd' ? width : 52)},
+        };
+        vm.runInNewContext('$scope.getLabelPosition = ' + extract('controller.air.js', '$scope.getLabelPosition = function') +
+            '\n$scope.getAirCodeUnit = ' + extract('controller.air.js', '$scope.getAirCodeUnit = function') +
+            '\n' + extract('controller.air.js', 'function _getAQIname(') + '\n' + extract('controller.air.js', 'function _getAQIList(') +
+            '\n' + extract('controller.air.js', 'function _getDustForecast(') + '\n' + extract('controller.air.js', 'function _getHourlyForecast(') +
+            '\nthis.aqiList = _getAQIList; this.dust = _getDustForecast; this.hourly = _getHourlyForecast;', context);
+        return {$scope, context};
+    };
+    const standards = loadWeatherUtil({}).aqiStandard;
+    for (const airUnit of ['airkorea', 'airkorea_who', 'airnow', 'aqicn']) {
+        for (const code of ['aqi', 'pm25', 'pm10', 'o3', 'no2', 'co', 'so2']) {
+            for (const width of [300, 360]) {
+                const {$scope} = air(airUnit, code, width);
+                const bp = standards[airUnit].value[code];
+                for (let g = 1; g < bp.length; g++) {
+                    for (const v of [bp[g - 1], bp[g], bp[g] + 0.001]) {
+                        out.labelPosition.push({args: [airUnit, code, width, g, v], expected: $scope.getLabelPosition(g, v)});
+                    }
+                }
+            }
+        }
+    }
+    const {$scope, context} = air('airkorea', 'pm25', 360);
+    for (const code of ['aqi', 'pm25', 'pm10', 'o3', 'no2', 'co', 'so2', 'xyz']) {
+        out.airCodeUnit.push({args: [code], expected: $scope.getAirCodeUnit(code)});
+    }
+    for (const name of ['kma-seoul', 'kma-seoul-aqicn', 'vc-london', 'vc-tokyo']) {
+        const data = input(name);
+        const stations = data.airInfoList || (data.airInfo ? [data.airInfo] : []);
+        stations.forEach((station, i) => {
+            const last = station.last || {};
+            out.aqiList.push({args: [name, i], expected: clone(context.aqiList(last, station.pollutants))});
+            if (station.pollutants && station.pollutants.aqi && station.pollutants.aqi.hourly && last.dataTime) {
+                out.hourlyForecast.push({args: [name, i, last.dataTime], expected: clone(context.hourly(last.dataTime, clone(station.pollutants.aqi.hourly)))});
+            }
+        });
+        const days = data.midData ? data.midData.dailyData : data.daily;
+        for (const code of ['aqi', 'pm25', 'pm10', 'o3']) {
+            context.aqiCode = code;
+            out.dustForecast.push({args: [name, code], expected: clone(context.dust(clone(days)) ?? null)});
+        }
+    }
+    out.aqiList.push({args: ['missing-air', 0], expected: clone(context.aqiList({}, undefined))});
+    return out;
+}
+
+// Nationwide weather and air (S10, S11) and weather warnings (S12) from captured responses.
+async function nationCases() {
+    const nation = input('nation');
+    const make = (file, ctrl, airUnit) => {
+        let controller;
+        const context = {angular: {module: () => ({controller: (_, fn) => { controller = fn; }})}, console: quiet};
+        vm.runInNewContext(fs.readFileSync(path.join(JS, file), 'utf8'), context);
+        const $scope = {};
+        const WeatherUtil = Object.create(loadWeatherUtil({}));
+        let loaded;
+        const ready = new Promise((r) => { loaded = r; });
+        WeatherUtil.getNationWeather = () => ({then(ok) { ok(clone(nation)); loaded(); return {finally(f) { f(); }}; }});
+        controller($scope, {region: 'KR', ga: {trackException() {}}}, WeatherUtil, {}, {show() {}, hide() {}},
+            {getUnit: (u) => (u === 'airUnit' ? airUnit : {precipitationUnit: 'mm', windSpeedUnit: 'm/s'}[u])});
+        return {$scope, ready};
+    };
+    const weather = make('controller.nation.js');
+    const out = {weather: [], air: []};
+    for (const type of [0, 1, 2]) {
+        weather.$scope.changeWeatherType(type);
+        for (const city of weather.$scope.cityList) {
+            out.weather.push({args: [type, city.name], expected: {icon: weather.$scope.getIcon(city.name) ?? null,
+                text1: weather.$scope.getText1(city.name) ?? null, text2: weather.$scope.getText2(city.name) ?? null,
+                text1Unit: weather.$scope.getText1Unit() ?? null, text2Unit: weather.$scope.getText2Unit() ?? null}});
+        }
+    }
+    out.weatherCities = clone(weather.$scope.cityList);
+    for (const airUnit of ['airkorea', 'airnow']) {
+        const air = make('controller.nation.air.js', 'controller.nation.air', airUnit);
+        for (const type of air.$scope.airTypeList) {
+            air.$scope.changeAirType(type);
+            for (const city of air.$scope.cityList) {
+                out.air.push({args: [airUnit, type, city.name], expected: {text1: air.$scope.getText1(city.name) ?? null, color: air.$scope.grade2Color(city.name)}});
+            }
+        }
+        out.airCities = clone(air.$scope.cityList);
+    }
+    return out;
+}
+
+function specialCases() {
+    const out = [];
+    for (const [locale, timeZone] of [['ko-KR', 'Asia/Seoul'], ['en-US', 'Asia/Seoul'], ['ja-JP', 'Asia/Seoul'], ['de-DE', 'Asia/Seoul'], ['zh-CN', 'Asia/Seoul'], ['zh-TW', 'Asia/Seoul'], ['en-US', 'America/New_York']]) {
+        class LocaleDate extends Date {
+            toLocaleDateString() { return super.toLocaleDateString(locale, {timeZone}); }
+            toLocaleTimeString() { return super.toLocaleTimeString(locale, {timeZone}); }
+        }
+        const context = {console: quiet, Util: {ga: {trackException() {}}}, Date: LocaleDate};
+        vm.runInNewContext(extract('controller.kma.special.js', 'function parseSpecialData(') + '\nthis.parse = parseSpecialData;', context);
+        out.push({args: [locale, timeZone], expected: clone(context.parse(input('special')))});
+    }
+    return out;
 }
 
 // ---------------------------------------------------------------- write
@@ -263,9 +421,13 @@ const write = (rel, value) => {
 fs.rmSync(path.join(OUT, 'conversion'), {recursive: true, force: true});
 for (const c of conversionCases(util)) write(`conversion/${c.name}.json`, c);
 write('functions.json', functionCases(util));
-write('weather-info.json', [lateResponseCase(util)]);
+write('weather-info.json', [await lateResponseCase(util)]);
+write('air.json', airCases());
+write('nation.json', await nationCases());
+write('special.json', specialCases());
 
-const sources = ['service.weatherutil.js', 'service.weatherinfo.js', 'controller.forecastctrl.js']
+const sources = ['service.weatherutil.js', 'service.weatherinfo.js', 'controller.forecastctrl.js', 'controller.tabctrl.js',
+    'controller.air.js', 'controller.nation.js', 'controller.nation.air.js', 'controller.kma.special.js']
     .map((f) => `client/www/js/${f}`).concat(['client/www/locales/ko.json', 'client/www/locales/en.json']);
 write('source.json', {
     generator: 'android/tools/corpus/generate.mjs',

@@ -1,0 +1,12780 @@
+{
+ "standards": [
+  {
+   "args": [
+    "airkorea"
+   ],
+   "expected": {
+    "list": [
+     {
+      "color": "#32a1ff",
+      "str": "LOC_GOOD",
+      "value": {
+       "pm25": 15,
+       "pm10": 30,
+       "o3": 0.03,
+       "no2": 0.03,
+       "co": 2,
+       "so2": 0.02,
+       "aqi": 50
+      }
+     },
+     {
+      "color": "#00c73c",
+      "str": "LOC_MODERATE",
+      "value": {
+       "pm25": 35,
+       "pm10": 80,
+       "o3": 0.09,
+       "no2": 0.06,
+       "co": 9,
+       "so2": 0.05,
+       "aqi": 100
+      }
+     },
+     {
+      "color": "#fd9b5a",
+      "str": "LOC_UNHEALTHY",
+      "value": {
+       "pm25": 75,
+       "pm10": 150,
+       "o3": 0.15,
+       "no2": 0.2,
+       "co": 15,
+       "so2": 0.15,
+       "aqi": 250
+      }
+     },
+     {
+      "color": "#ff5959",
+      "str": "LOC_VERY_UNHEALTHY",
+      "value": {
+       "pm25": 500,
+       "pm10": 600,
+       "o3": 0.6,
+       "no2": 2,
+       "co": 50,
+       "so2": 1,
+       "aqi": 500
+      }
+     }
+    ],
+    "maxValue": {
+     "pm25": 100,
+     "pm10": 150,
+     "o3": 0.15,
+     "no2": 0.2,
+     "co": 9,
+     "so2": 0.05,
+     "aqi": 250
+    }
+   }
+  },
+  {
+   "args": [
+    "airkorea_who"
+   ],
+   "expected": {
+    "list": [
+     {
+      "color": "#32a1ff",
+      "str": "LOC_GOOD",
+      "value": {
+       "pm25": 15,
+       "pm10": 30,
+       "o3": 0.03,
+       "no2": 0.03,
+       "co": 2,
+       "so2": 0.02,
+       "aqi": 50
+      }
+     },
+     {
+      "color": "#00c73c",
+      "str": "LOC_MODERATE",
+      "value": {
+       "pm25": 25,
+       "pm10": 50,
+       "o3": 0.09,
+       "no2": 0.06,
+       "co": 9,
+       "so2": 0.05,
+       "aqi": 100
+      }
+     },
+     {
+      "color": "#fd9b5a",
+      "str": "LOC_UNHEALTHY",
+      "value": {
+       "pm25": 50,
+       "pm10": 100,
+       "o3": 0.15,
+       "no2": 0.2,
+       "co": 15,
+       "so2": 0.15,
+       "aqi": 250
+      }
+     },
+     {
+      "color": "#ff5959",
+      "str": "LOC_VERY_UNHEALTHY",
+      "value": {
+       "pm25": 500,
+       "pm10": 600,
+       "o3": 0.6,
+       "no2": 2,
+       "co": 50,
+       "so2": 1,
+       "aqi": 500
+      }
+     }
+    ],
+    "maxValue": {
+     "pm25": 100,
+     "pm10": 150,
+     "o3": 0.15,
+     "no2": 0.2,
+     "co": 9,
+     "so2": 0.05,
+     "aqi": 250
+    }
+   }
+  },
+  {
+   "args": [
+    "airnow"
+   ],
+   "expected": {
+    "list": [
+     {
+      "color": "#00c73c",
+      "str": "LOC_GOOD",
+      "value": {
+       "pm25": 12,
+       "pm10": 54,
+       "o3": 0.054,
+       "no2": 0.053,
+       "co": 4.4,
+       "so2": 0.035,
+       "aqi": 50
+      }
+     },
+     {
+      "color": "#d2d211",
+      "str": "LOC_MODERATE",
+      "value": {
+       "pm25": 35.4,
+       "pm10": 154,
+       "o3": 0.124,
+       "no2": 0.1,
+       "co": 9.4,
+       "so2": 0.75,
+       "aqi": 100
+      }
+     },
+     {
+      "color": "#ff6f00",
+      "str": "LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS",
+      "value": {
+       "pm25": 55.4,
+       "pm10": 254,
+       "o3": 0.164,
+       "no2": 0.36,
+       "co": 12.4,
+       "so2": 0.185,
+       "aqi": 150
+      }
+     },
+     {
+      "color": "#FF0000",
+      "str": "LOC_UNHEALTHY",
+      "value": {
+       "pm25": 150.4,
+       "pm10": 354,
+       "o3": 0.204,
+       "no2": 0.649,
+       "co": 15.4,
+       "so2": 0.304,
+       "aqi": 200
+      }
+     },
+     {
+      "color": "#b4004b",
+      "str": "LOC_VERY_UNHEALTHY",
+      "value": {
+       "pm25": 250.4,
+       "pm10": 424,
+       "o3": 0.404,
+       "no2": 1.249,
+       "co": 30.4,
+       "so2": 0.604,
+       "aqi": 300
+      }
+     },
+     {
+      "color": "#940021",
+      "str": "LOC_HAZARDOUS",
+      "value": {
+       "pm25": 500.4,
+       "pm10": 604,
+       "o3": 0.604,
+       "no2": 2.049,
+       "co": 50.4,
+       "so2": 1.004,
+       "aqi": 500
+      }
+     }
+    ],
+    "maxValue": {
+     "pm25": 100,
+     "pm10": 150,
+     "o3": 0.164,
+     "no2": 0.36,
+     "co": 12.4,
+     "so2": 0.185,
+     "aqi": 200
+    }
+   }
+  },
+  {
+   "args": [
+    "aqicn"
+   ],
+   "expected": {
+    "list": [
+     {
+      "color": "#00c73c",
+      "str": "LOC_GOOD",
+      "value": {
+       "pm25": 35,
+       "pm10": 50,
+       "o3": 0.075,
+       "no2": 0.049,
+       "co": 4,
+       "so2": 0.052,
+       "aqi": 50
+      }
+     },
+     {
+      "color": "#d2d211",
+      "str": "LOC_MODERATE",
+      "value": {
+       "pm25": 75,
+       "pm10": 150,
+       "o3": 0.093,
+       "no2": 0.097,
+       "co": 8,
+       "so2": 0.175,
+       "aqi": 100
+      }
+     },
+     {
+      "color": "#ff6f00",
+      "str": "LOC_UNHEALTHY_FOR_SENSITIVE_GROUPS",
+      "value": {
+       "pm25": 115,
+       "pm10": 250,
+       "o3": 0.14,
+       "no2": 0.341,
+       "co": 28,
+       "so2": 0.227,
+       "aqi": 150
+      }
+     },
+     {
+      "color": "#FF0000",
+      "str": "LOC_UNHEALTHY",
+      "value": {
+       "pm25": 150,
+       "pm10": 350,
+       "o3": 0.187,
+       "no2": 0.584,
+       "co": 48,
+       "so2": 0.28,
+       "aqi": 200
+      }
+     },
+     {
+      "color": "#b4004b",
+      "str": "LOC_VERY_UNHEALTHY",
+      "value": {
+       "pm25": 250,
+       "pm10": 420,
+       "o3": 0.374,
+       "no2": 1.14,
+       "co": 72,
+       "so2": 0.56,
+       "aqi": 300
+      }
+     },
+     {
+      "color": "#940021",
+      "str": "LOC_HAZARDOUS",
+      "value": {
+       "pm25": 500,
+       "pm10": 600,
+       "o3": 0.56,
+       "no2": 1.87,
+       "co": 120,
+       "so2": 0.916,
+       "aqi": 500
+      }
+     }
+    ],
+    "maxValue": {
+     "pm25": 100,
+     "pm10": 150,
+     "o3": 0.14,
+     "no2": 0.341,
+     "co": 28,
+     "so2": 0.227,
+     "aqi": 200
+    }
+   }
+  },
+  {
+   "args": [
+    null
+   ],
+   "expected": {
+    "list": null,
+    "maxValue": null
+   }
+  },
+  {
+   "args": [
+    null
+   ],
+   "expected": {
+    "list": null,
+    "maxValue": null
+   }
+  },
+  {
+   "args": [
+    "unknown"
+   ],
+   "expected": {
+    "list": null,
+    "maxValue": null
+   }
+  }
+ ],
+ "gradeColor": [
+  {
+   "args": [
+    "airkorea",
+    null,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "airkorea",
+    null,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "airkorea",
+    0,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "airkorea",
+    0,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "airkorea",
+    1,
+    null
+   ],
+   "expected": "#32a1ff"
+  },
+  {
+   "args": [
+    "airkorea",
+    1,
+    "#888"
+   ],
+   "expected": "#32a1ff"
+  },
+  {
+   "args": [
+    "airkorea",
+    2,
+    null
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    "airkorea",
+    2,
+    "#888"
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    "airkorea",
+    3,
+    null
+   ],
+   "expected": "#fd9b5a"
+  },
+  {
+   "args": [
+    "airkorea",
+    3,
+    "#888"
+   ],
+   "expected": "#fd9b5a"
+  },
+  {
+   "args": [
+    "airkorea",
+    4,
+    null
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea",
+    4,
+    "#888"
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea",
+    5,
+    null
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea",
+    5,
+    "#888"
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea",
+    6,
+    null
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea",
+    6,
+    "#888"
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea",
+    7,
+    null
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea",
+    7,
+    "#888"
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea",
+    "2",
+    null
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    "airkorea",
+    "2",
+    "#888"
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    null,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "airkorea_who",
+    null,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    0,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "airkorea_who",
+    0,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    1,
+    null
+   ],
+   "expected": "#32a1ff"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    1,
+    "#888"
+   ],
+   "expected": "#32a1ff"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    2,
+    null
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    2,
+    "#888"
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    3,
+    null
+   ],
+   "expected": "#fd9b5a"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    3,
+    "#888"
+   ],
+   "expected": "#fd9b5a"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    4,
+    null
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    4,
+    "#888"
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    5,
+    null
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    5,
+    "#888"
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    6,
+    null
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    6,
+    "#888"
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    7,
+    null
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    7,
+    "#888"
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "2",
+    null
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "2",
+    "#888"
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    "airnow",
+    null,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "airnow",
+    null,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "airnow",
+    0,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "airnow",
+    0,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "airnow",
+    1,
+    null
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    "airnow",
+    1,
+    "#888"
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    "airnow",
+    2,
+    null
+   ],
+   "expected": "#d2d211"
+  },
+  {
+   "args": [
+    "airnow",
+    2,
+    "#888"
+   ],
+   "expected": "#d2d211"
+  },
+  {
+   "args": [
+    "airnow",
+    3,
+    null
+   ],
+   "expected": "#ff6f00"
+  },
+  {
+   "args": [
+    "airnow",
+    3,
+    "#888"
+   ],
+   "expected": "#ff6f00"
+  },
+  {
+   "args": [
+    "airnow",
+    4,
+    null
+   ],
+   "expected": "#FF0000"
+  },
+  {
+   "args": [
+    "airnow",
+    4,
+    "#888"
+   ],
+   "expected": "#FF0000"
+  },
+  {
+   "args": [
+    "airnow",
+    5,
+    null
+   ],
+   "expected": "#b4004b"
+  },
+  {
+   "args": [
+    "airnow",
+    5,
+    "#888"
+   ],
+   "expected": "#b4004b"
+  },
+  {
+   "args": [
+    "airnow",
+    6,
+    null
+   ],
+   "expected": "#940021"
+  },
+  {
+   "args": [
+    "airnow",
+    6,
+    "#888"
+   ],
+   "expected": "#940021"
+  },
+  {
+   "args": [
+    "airnow",
+    7,
+    null
+   ],
+   "expected": "#940021"
+  },
+  {
+   "args": [
+    "airnow",
+    7,
+    "#888"
+   ],
+   "expected": "#940021"
+  },
+  {
+   "args": [
+    "airnow",
+    "2",
+    null
+   ],
+   "expected": "#d2d211"
+  },
+  {
+   "args": [
+    "airnow",
+    "2",
+    "#888"
+   ],
+   "expected": "#d2d211"
+  },
+  {
+   "args": [
+    "aqicn",
+    null,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "aqicn",
+    null,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "aqicn",
+    0,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "aqicn",
+    0,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "aqicn",
+    1,
+    null
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    "aqicn",
+    1,
+    "#888"
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    "aqicn",
+    2,
+    null
+   ],
+   "expected": "#d2d211"
+  },
+  {
+   "args": [
+    "aqicn",
+    2,
+    "#888"
+   ],
+   "expected": "#d2d211"
+  },
+  {
+   "args": [
+    "aqicn",
+    3,
+    null
+   ],
+   "expected": "#ff6f00"
+  },
+  {
+   "args": [
+    "aqicn",
+    3,
+    "#888"
+   ],
+   "expected": "#ff6f00"
+  },
+  {
+   "args": [
+    "aqicn",
+    4,
+    null
+   ],
+   "expected": "#FF0000"
+  },
+  {
+   "args": [
+    "aqicn",
+    4,
+    "#888"
+   ],
+   "expected": "#FF0000"
+  },
+  {
+   "args": [
+    "aqicn",
+    5,
+    null
+   ],
+   "expected": "#b4004b"
+  },
+  {
+   "args": [
+    "aqicn",
+    5,
+    "#888"
+   ],
+   "expected": "#b4004b"
+  },
+  {
+   "args": [
+    "aqicn",
+    6,
+    null
+   ],
+   "expected": "#940021"
+  },
+  {
+   "args": [
+    "aqicn",
+    6,
+    "#888"
+   ],
+   "expected": "#940021"
+  },
+  {
+   "args": [
+    "aqicn",
+    7,
+    null
+   ],
+   "expected": "#940021"
+  },
+  {
+   "args": [
+    "aqicn",
+    7,
+    "#888"
+   ],
+   "expected": "#940021"
+  },
+  {
+   "args": [
+    "aqicn",
+    "2",
+    null
+   ],
+   "expected": "#d2d211"
+  },
+  {
+   "args": [
+    "aqicn",
+    "2",
+    "#888"
+   ],
+   "expected": "#d2d211"
+  },
+  {
+   "args": [
+    null,
+    null,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    null,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    0,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    0,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    1,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    1,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    2,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    2,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    3,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    3,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    4,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    4,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    5,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    5,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    6,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    6,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    7,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    7,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    "2",
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    "2",
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    null,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    null,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    0,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    0,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    1,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    1,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    2,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    2,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    3,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    3,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    4,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    4,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    5,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    5,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    6,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    6,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    7,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    7,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    null,
+    "2",
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    null,
+    "2",
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "unknown",
+    null,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "unknown",
+    null,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "unknown",
+    0,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "unknown",
+    0,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "unknown",
+    1,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "unknown",
+    1,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "unknown",
+    2,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "unknown",
+    2,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "unknown",
+    3,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "unknown",
+    3,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "unknown",
+    4,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "unknown",
+    4,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "unknown",
+    5,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "unknown",
+    5,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "unknown",
+    6,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "unknown",
+    6,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "unknown",
+    7,
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "unknown",
+    7,
+    "#888"
+   ],
+   "expected": "#888"
+  },
+  {
+   "args": [
+    "unknown",
+    "2",
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "unknown",
+    "2",
+    "#888"
+   ],
+   "expected": "#888"
+  }
+ ],
+ "sentimentIcon": [
+  {
+   "args": [
+    "airkorea",
+    null
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea",
+    0
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea",
+    1
+   ],
+   "expected": "&#xE815;"
+  },
+  {
+   "args": [
+    "airkorea",
+    2
+   ],
+   "expected": "&#xE812;"
+  },
+  {
+   "args": [
+    "airkorea",
+    3
+   ],
+   "expected": "&#xE811;"
+  },
+  {
+   "args": [
+    "airkorea",
+    4
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea",
+    5
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea",
+    6
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea",
+    7
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea",
+    "2"
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    null
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    0
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    1
+   ],
+   "expected": "&#xE815;"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    2
+   ],
+   "expected": "&#xE812;"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    3
+   ],
+   "expected": "&#xE811;"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    4
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    5
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    6
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    7
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "2"
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airnow",
+    null
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airnow",
+    0
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airnow",
+    1
+   ],
+   "expected": "&#xE815;"
+  },
+  {
+   "args": [
+    "airnow",
+    2
+   ],
+   "expected": "&#xE812;"
+  },
+  {
+   "args": [
+    "airnow",
+    3
+   ],
+   "expected": "&#xE811;"
+  },
+  {
+   "args": [
+    "airnow",
+    4
+   ],
+   "expected": "&#xE811;"
+  },
+  {
+   "args": [
+    "airnow",
+    5
+   ],
+   "expected": "&#xE7F3;"
+  },
+  {
+   "args": [
+    "airnow",
+    6
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airnow",
+    7
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "airnow",
+    "2"
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "aqicn",
+    null
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "aqicn",
+    0
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "aqicn",
+    1
+   ],
+   "expected": "&#xE815;"
+  },
+  {
+   "args": [
+    "aqicn",
+    2
+   ],
+   "expected": "&#xE812;"
+  },
+  {
+   "args": [
+    "aqicn",
+    3
+   ],
+   "expected": "&#xE811;"
+  },
+  {
+   "args": [
+    "aqicn",
+    4
+   ],
+   "expected": "&#xE811;"
+  },
+  {
+   "args": [
+    "aqicn",
+    5
+   ],
+   "expected": "&#xE7F3;"
+  },
+  {
+   "args": [
+    "aqicn",
+    6
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "aqicn",
+    7
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "aqicn",
+    "2"
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    null,
+    null
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    null,
+    0
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    null,
+    1
+   ],
+   "expected": "&#xE815;"
+  },
+  {
+   "args": [
+    null,
+    2
+   ],
+   "expected": "&#xE812;"
+  },
+  {
+   "args": [
+    null,
+    3
+   ],
+   "expected": "&#xE811;"
+  },
+  {
+   "args": [
+    null,
+    4
+   ],
+   "expected": "&#xE811;"
+  },
+  {
+   "args": [
+    null,
+    5
+   ],
+   "expected": "&#xE7F3;"
+  },
+  {
+   "args": [
+    null,
+    6
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    null,
+    7
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    null,
+    "2"
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    null,
+    null
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    null,
+    0
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    null,
+    1
+   ],
+   "expected": "&#xE815;"
+  },
+  {
+   "args": [
+    null,
+    2
+   ],
+   "expected": "&#xE812;"
+  },
+  {
+   "args": [
+    null,
+    3
+   ],
+   "expected": "&#xE811;"
+  },
+  {
+   "args": [
+    null,
+    4
+   ],
+   "expected": "&#xE811;"
+  },
+  {
+   "args": [
+    null,
+    5
+   ],
+   "expected": "&#xE7F3;"
+  },
+  {
+   "args": [
+    null,
+    6
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    null,
+    7
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    null,
+    "2"
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "unknown",
+    null
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "unknown",
+    0
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "unknown",
+    1
+   ],
+   "expected": "&#xE815;"
+  },
+  {
+   "args": [
+    "unknown",
+    2
+   ],
+   "expected": "&#xE812;"
+  },
+  {
+   "args": [
+    "unknown",
+    3
+   ],
+   "expected": "&#xE811;"
+  },
+  {
+   "args": [
+    "unknown",
+    4
+   ],
+   "expected": "&#xE811;"
+  },
+  {
+   "args": [
+    "unknown",
+    5
+   ],
+   "expected": "&#xE7F3;"
+  },
+  {
+   "args": [
+    "unknown",
+    6
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "unknown",
+    7
+   ],
+   "expected": "&#xE814;"
+  },
+  {
+   "args": [
+    "unknown",
+    "2"
+   ],
+   "expected": "&#xE814;"
+  }
+ ],
+ "labelPosition": [
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    300,
+    1,
+    50
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    300,
+    1,
+    50.001
+   ],
+   "expected": 51.00153999999999
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    300,
+    2,
+    50
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    300,
+    2,
+    100
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    300,
+    2,
+    100.001
+   ],
+   "expected": 128.00154
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    300,
+    3,
+    100
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    300,
+    3,
+    250
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    300,
+    3,
+    250.001
+   ],
+   "expected": 205.00051333333334
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    300,
+    4,
+    250
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    300,
+    4,
+    500
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    300,
+    4,
+    500.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    360,
+    1,
+    50
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    360,
+    1,
+    50.001
+   ],
+   "expected": 66.00183999999999
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    360,
+    2,
+    50
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    360,
+    2,
+    100
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    360,
+    2,
+    100.001
+   ],
+   "expected": 158.00184000000002
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    360,
+    3,
+    100
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    360,
+    3,
+    250
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    360,
+    3,
+    250.001
+   ],
+   "expected": 250.00061333333332
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    360,
+    4,
+    250
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    360,
+    4,
+    500
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "aqi",
+    360,
+    4,
+    500.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    300,
+    1,
+    15
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    300,
+    1,
+    15.001
+   ],
+   "expected": 51.00513333333333
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    300,
+    2,
+    15
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    300,
+    2,
+    35
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    300,
+    2,
+    35.001
+   ],
+   "expected": 128.00385
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    300,
+    3,
+    35
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    300,
+    3,
+    75
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    300,
+    3,
+    75.001
+   ],
+   "expected": 205.00192500000003
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    300,
+    4,
+    75
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    300,
+    4,
+    500
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    300,
+    4,
+    500.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    360,
+    1,
+    15
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    360,
+    1,
+    15.001
+   ],
+   "expected": 66.00613333333334
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    360,
+    2,
+    15
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    360,
+    2,
+    35
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    360,
+    2,
+    35.001
+   ],
+   "expected": 158.00459999999998
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    360,
+    3,
+    35
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    360,
+    3,
+    75
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    360,
+    3,
+    75.001
+   ],
+   "expected": 250.0023
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    360,
+    4,
+    75
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    360,
+    4,
+    500
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm25",
+    360,
+    4,
+    500.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    300,
+    1,
+    30
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    300,
+    1,
+    30.001
+   ],
+   "expected": 51.00256666666667
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    300,
+    2,
+    30
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    300,
+    2,
+    80
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    300,
+    2,
+    80.001
+   ],
+   "expected": 128.00154
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    300,
+    3,
+    80
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    300,
+    3,
+    150
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    300,
+    3,
+    150.001
+   ],
+   "expected": 205.0011
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    300,
+    4,
+    150
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    300,
+    4,
+    600
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    300,
+    4,
+    600.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    360,
+    1,
+    30
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    360,
+    1,
+    30.001
+   ],
+   "expected": 66.00306666666667
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    360,
+    2,
+    30
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    360,
+    2,
+    80
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    360,
+    2,
+    80.001
+   ],
+   "expected": 158.00184000000002
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    360,
+    3,
+    80
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    360,
+    3,
+    150
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    360,
+    3,
+    150.001
+   ],
+   "expected": 250.00131428571427
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    360,
+    4,
+    150
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    360,
+    4,
+    600
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "pm10",
+    360,
+    4,
+    600.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    300,
+    1,
+    0.03
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    300,
+    1,
+    0.031
+   ],
+   "expected": 53.56666666666668
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    300,
+    2,
+    0.03
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    300,
+    2,
+    0.09
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    300,
+    2,
+    0.091
+   ],
+   "expected": 129.28333333333333
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    300,
+    3,
+    0.09
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    300,
+    3,
+    0.15
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    300,
+    3,
+    0.151
+   ],
+   "expected": 206.28333333333333
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    300,
+    4,
+    0.15
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    300,
+    4,
+    0.6
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    300,
+    4,
+    0.601
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    360,
+    1,
+    0.03
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    360,
+    1,
+    0.031
+   ],
+   "expected": 69.06666666666668
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    360,
+    2,
+    0.03
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    360,
+    2,
+    0.09
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    360,
+    2,
+    0.091
+   ],
+   "expected": 159.53333333333333
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    360,
+    3,
+    0.09
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    360,
+    3,
+    0.15
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    360,
+    3,
+    0.151
+   ],
+   "expected": 251.5333333333333
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    360,
+    4,
+    0.15
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    360,
+    4,
+    0.6
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "o3",
+    360,
+    4,
+    0.601
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    300,
+    1,
+    0.03
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    300,
+    1,
+    0.031
+   ],
+   "expected": 53.56666666666668
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    300,
+    2,
+    0.03
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    300,
+    2,
+    0.06
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    300,
+    2,
+    0.061
+   ],
+   "expected": 130.56666666666666
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    300,
+    3,
+    0.06
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    300,
+    3,
+    0.2
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    300,
+    3,
+    0.201
+   ],
+   "expected": 205.55
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    300,
+    4,
+    0.2
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    300,
+    4,
+    2
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    300,
+    4,
+    2.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    360,
+    1,
+    0.03
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    360,
+    1,
+    0.031
+   ],
+   "expected": 69.06666666666668
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    360,
+    2,
+    0.03
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    360,
+    2,
+    0.06
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    360,
+    2,
+    0.061
+   ],
+   "expected": 161.06666666666666
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    360,
+    3,
+    0.06
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    360,
+    3,
+    0.2
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    360,
+    3,
+    0.201
+   ],
+   "expected": 250.65714285714284
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    360,
+    4,
+    0.2
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    360,
+    4,
+    2
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "no2",
+    360,
+    4,
+    2.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    300,
+    1,
+    2
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    300,
+    1,
+    2.001
+   ],
+   "expected": 51.0385
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    300,
+    2,
+    2
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    300,
+    2,
+    9
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    300,
+    2,
+    9.001
+   ],
+   "expected": 128.011
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    300,
+    3,
+    9
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    300,
+    3,
+    15
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    300,
+    3,
+    15.001
+   ],
+   "expected": 205.01283333333333
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    300,
+    4,
+    15
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    300,
+    4,
+    50
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    300,
+    4,
+    50.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    360,
+    1,
+    2
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    360,
+    1,
+    2.001
+   ],
+   "expected": 66.04599999999999
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    360,
+    2,
+    2
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    360,
+    2,
+    9
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    360,
+    2,
+    9.001
+   ],
+   "expected": 158.01314285714284
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    360,
+    3,
+    9
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    360,
+    3,
+    15
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    360,
+    3,
+    15.001
+   ],
+   "expected": 250.01533333333333
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    360,
+    4,
+    15
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    360,
+    4,
+    50
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "co",
+    360,
+    4,
+    50.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    300,
+    1,
+    0.02
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    300,
+    1,
+    0.021
+   ],
+   "expected": 54.85000000000001
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    300,
+    2,
+    0.02
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    300,
+    2,
+    0.05
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    300,
+    2,
+    0.051000000000000004
+   ],
+   "expected": 130.56666666666666
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    300,
+    3,
+    0.05
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    300,
+    3,
+    0.15
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    300,
+    3,
+    0.151
+   ],
+   "expected": 205.76999999999998
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    300,
+    4,
+    0.15
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    300,
+    4,
+    1
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    300,
+    4,
+    1.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    360,
+    1,
+    0.02
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    360,
+    1,
+    0.021
+   ],
+   "expected": 70.60000000000001
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    360,
+    2,
+    0.02
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    360,
+    2,
+    0.05
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    360,
+    2,
+    0.051000000000000004
+   ],
+   "expected": 161.06666666666666
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    360,
+    3,
+    0.05
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    360,
+    3,
+    0.15
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    360,
+    3,
+    0.151
+   ],
+   "expected": 250.92000000000002
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    360,
+    4,
+    0.15
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    360,
+    4,
+    1
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea",
+    "so2",
+    360,
+    4,
+    1.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    300,
+    1,
+    50
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    300,
+    1,
+    50.001
+   ],
+   "expected": 51.00153999999999
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    300,
+    2,
+    50
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    300,
+    2,
+    100
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    300,
+    2,
+    100.001
+   ],
+   "expected": 128.00154
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    300,
+    3,
+    100
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    300,
+    3,
+    250
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    300,
+    3,
+    250.001
+   ],
+   "expected": 205.00051333333334
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    300,
+    4,
+    250
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    300,
+    4,
+    500
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    300,
+    4,
+    500.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    360,
+    1,
+    50
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    360,
+    1,
+    50.001
+   ],
+   "expected": 66.00183999999999
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    360,
+    2,
+    50
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    360,
+    2,
+    100
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    360,
+    2,
+    100.001
+   ],
+   "expected": 158.00184000000002
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    360,
+    3,
+    100
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    360,
+    3,
+    250
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    360,
+    3,
+    250.001
+   ],
+   "expected": 250.00061333333332
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    360,
+    4,
+    250
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    360,
+    4,
+    500
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "aqi",
+    360,
+    4,
+    500.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    300,
+    1,
+    15
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    300,
+    1,
+    15.001
+   ],
+   "expected": 51.00513333333333
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    300,
+    2,
+    15
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    300,
+    2,
+    25
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    300,
+    2,
+    25.001
+   ],
+   "expected": 128.0077
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    300,
+    3,
+    25
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    300,
+    3,
+    50
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    300,
+    3,
+    50.001
+   ],
+   "expected": 205.00307999999998
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    300,
+    4,
+    50
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    300,
+    4,
+    500
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    300,
+    4,
+    500.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    360,
+    1,
+    15
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    360,
+    1,
+    15.001
+   ],
+   "expected": 66.00613333333334
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    360,
+    2,
+    15
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    360,
+    2,
+    25
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    360,
+    2,
+    25.001
+   ],
+   "expected": 158.00920000000002
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    360,
+    3,
+    25
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    360,
+    3,
+    50
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    360,
+    3,
+    50.001
+   ],
+   "expected": 250.00367999999997
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    360,
+    4,
+    50
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    360,
+    4,
+    500
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm25",
+    360,
+    4,
+    500.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    300,
+    1,
+    30
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    300,
+    1,
+    30.001
+   ],
+   "expected": 51.00256666666667
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    300,
+    2,
+    30
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    300,
+    2,
+    50
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    300,
+    2,
+    50.001
+   ],
+   "expected": 128.00385
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    300,
+    3,
+    50
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    300,
+    3,
+    100
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    300,
+    3,
+    100.001
+   ],
+   "expected": 205.00154
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    300,
+    4,
+    100
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    300,
+    4,
+    600
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    300,
+    4,
+    600.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    360,
+    1,
+    30
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    360,
+    1,
+    30.001
+   ],
+   "expected": 66.00306666666667
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    360,
+    2,
+    30
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    360,
+    2,
+    50
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    360,
+    2,
+    50.001
+   ],
+   "expected": 158.00459999999998
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    360,
+    3,
+    50
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    360,
+    3,
+    100
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    360,
+    3,
+    100.001
+   ],
+   "expected": 250.00184000000002
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    360,
+    4,
+    100
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    360,
+    4,
+    600
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "pm10",
+    360,
+    4,
+    600.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    300,
+    1,
+    0.03
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    300,
+    1,
+    0.031
+   ],
+   "expected": 53.56666666666668
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    300,
+    2,
+    0.03
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    300,
+    2,
+    0.09
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    300,
+    2,
+    0.091
+   ],
+   "expected": 129.28333333333333
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    300,
+    3,
+    0.09
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    300,
+    3,
+    0.15
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    300,
+    3,
+    0.151
+   ],
+   "expected": 206.28333333333333
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    300,
+    4,
+    0.15
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    300,
+    4,
+    0.6
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    300,
+    4,
+    0.601
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    360,
+    1,
+    0.03
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    360,
+    1,
+    0.031
+   ],
+   "expected": 69.06666666666668
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    360,
+    2,
+    0.03
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    360,
+    2,
+    0.09
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    360,
+    2,
+    0.091
+   ],
+   "expected": 159.53333333333333
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    360,
+    3,
+    0.09
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    360,
+    3,
+    0.15
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    360,
+    3,
+    0.151
+   ],
+   "expected": 251.5333333333333
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    360,
+    4,
+    0.15
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    360,
+    4,
+    0.6
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "o3",
+    360,
+    4,
+    0.601
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    300,
+    1,
+    0.03
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    300,
+    1,
+    0.031
+   ],
+   "expected": 53.56666666666668
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    300,
+    2,
+    0.03
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    300,
+    2,
+    0.06
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    300,
+    2,
+    0.061
+   ],
+   "expected": 130.56666666666666
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    300,
+    3,
+    0.06
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    300,
+    3,
+    0.2
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    300,
+    3,
+    0.201
+   ],
+   "expected": 205.55
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    300,
+    4,
+    0.2
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    300,
+    4,
+    2
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    300,
+    4,
+    2.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    360,
+    1,
+    0.03
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    360,
+    1,
+    0.031
+   ],
+   "expected": 69.06666666666668
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    360,
+    2,
+    0.03
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    360,
+    2,
+    0.06
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    360,
+    2,
+    0.061
+   ],
+   "expected": 161.06666666666666
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    360,
+    3,
+    0.06
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    360,
+    3,
+    0.2
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    360,
+    3,
+    0.201
+   ],
+   "expected": 250.65714285714284
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    360,
+    4,
+    0.2
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    360,
+    4,
+    2
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "no2",
+    360,
+    4,
+    2.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    300,
+    1,
+    2
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    300,
+    1,
+    2.001
+   ],
+   "expected": 51.0385
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    300,
+    2,
+    2
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    300,
+    2,
+    9
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    300,
+    2,
+    9.001
+   ],
+   "expected": 128.011
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    300,
+    3,
+    9
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    300,
+    3,
+    15
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    300,
+    3,
+    15.001
+   ],
+   "expected": 205.01283333333333
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    300,
+    4,
+    15
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    300,
+    4,
+    50
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    300,
+    4,
+    50.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    360,
+    1,
+    2
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    360,
+    1,
+    2.001
+   ],
+   "expected": 66.04599999999999
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    360,
+    2,
+    2
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    360,
+    2,
+    9
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    360,
+    2,
+    9.001
+   ],
+   "expected": 158.01314285714284
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    360,
+    3,
+    9
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    360,
+    3,
+    15
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    360,
+    3,
+    15.001
+   ],
+   "expected": 250.01533333333333
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    360,
+    4,
+    15
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    360,
+    4,
+    50
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "co",
+    360,
+    4,
+    50.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    300,
+    1,
+    0.02
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    300,
+    1,
+    0.021
+   ],
+   "expected": 54.85000000000001
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    300,
+    2,
+    0.02
+   ],
+   "expected": 51
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    300,
+    2,
+    0.05
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    300,
+    2,
+    0.051000000000000004
+   ],
+   "expected": 130.56666666666666
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    300,
+    3,
+    0.05
+   ],
+   "expected": 128
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    300,
+    3,
+    0.15
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    300,
+    3,
+    0.151
+   ],
+   "expected": 205.76999999999998
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    300,
+    4,
+    0.15
+   ],
+   "expected": 205
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    300,
+    4,
+    1
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    300,
+    4,
+    1.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    360,
+    1,
+    0.02
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    360,
+    1,
+    0.021
+   ],
+   "expected": 70.60000000000001
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    360,
+    2,
+    0.02
+   ],
+   "expected": 66
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    360,
+    2,
+    0.05
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    360,
+    2,
+    0.051000000000000004
+   ],
+   "expected": 161.06666666666666
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    360,
+    3,
+    0.05
+   ],
+   "expected": 158
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    360,
+    3,
+    0.15
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    360,
+    3,
+    0.151
+   ],
+   "expected": 250.92000000000002
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    360,
+    4,
+    0.15
+   ],
+   "expected": 250
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    360,
+    4,
+    1
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airkorea_who",
+    "so2",
+    360,
+    4,
+    1.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    1,
+    50
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    1,
+    50.001
+   ],
+   "expected": 26.001039999999996
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    2,
+    50
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    2,
+    100
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    2,
+    100.001
+   ],
+   "expected": 78.00104
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    3,
+    100
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    3,
+    150
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    3,
+    150.001
+   ],
+   "expected": 130.00104
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    4,
+    150
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    4,
+    200
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    4,
+    200.001
+   ],
+   "expected": 182.00104
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    5,
+    200
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    5,
+    300
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    5,
+    300.001
+   ],
+   "expected": 234.00052
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    6,
+    300
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    6,
+    500
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    300,
+    6,
+    500.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    1,
+    50
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    1,
+    50.001
+   ],
+   "expected": 36.001239999999996
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    2,
+    50
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    2,
+    100
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    2,
+    100.001
+   ],
+   "expected": 98.00124000000001
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    3,
+    100
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    3,
+    150
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    3,
+    150.001
+   ],
+   "expected": 160.00124
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    4,
+    150
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    4,
+    200
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    4,
+    200.001
+   ],
+   "expected": 222.00124
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    5,
+    200
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    5,
+    300
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    5,
+    300.001
+   ],
+   "expected": 284.00061999999997
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    6,
+    300
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    6,
+    500
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "aqi",
+    360,
+    6,
+    500.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    1,
+    12
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    1,
+    12.001
+   ],
+   "expected": 26.004333333333328
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    2,
+    12
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    2,
+    35.4
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    2,
+    35.400999999999996
+   ],
+   "expected": 78.00222222222223
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    3,
+    35.4
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    3,
+    55.4
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    3,
+    55.400999999999996
+   ],
+   "expected": 130.0026
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    4,
+    55.4
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    4,
+    150.4
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    4,
+    150.401
+   ],
+   "expected": 182.00054736842105
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    5,
+    150.4
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    5,
+    250.4
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    5,
+    250.401
+   ],
+   "expected": 234.00052
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    6,
+    250.4
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    6,
+    500.4
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    300,
+    6,
+    500.40099999999995
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    1,
+    12
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    1,
+    12.001
+   ],
+   "expected": 36.00516666666666
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    2,
+    12
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    2,
+    35.4
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    2,
+    35.400999999999996
+   ],
+   "expected": 98.00264957264957
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    3,
+    35.4
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    3,
+    55.4
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    3,
+    55.400999999999996
+   ],
+   "expected": 160.0031
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    4,
+    55.4
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    4,
+    150.4
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    4,
+    150.401
+   ],
+   "expected": 222.00065263157893
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    5,
+    150.4
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    5,
+    250.4
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    5,
+    250.401
+   ],
+   "expected": 284.00062
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    6,
+    250.4
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    6,
+    500.4
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "pm25",
+    360,
+    6,
+    500.40099999999995
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    1,
+    54
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    1,
+    54.001
+   ],
+   "expected": 26.00096296296296
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    2,
+    54
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    2,
+    154
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    2,
+    154.001
+   ],
+   "expected": 78.00052
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    3,
+    154
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    3,
+    254
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    3,
+    254.001
+   ],
+   "expected": 130.00052
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    4,
+    254
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    4,
+    354
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    4,
+    354.001
+   ],
+   "expected": 182.00052
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    5,
+    354
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    5,
+    424
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    5,
+    424.001
+   ],
+   "expected": 234.00074285714282
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    6,
+    424
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    6,
+    604
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    300,
+    6,
+    604.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    1,
+    54
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    1,
+    54.001
+   ],
+   "expected": 36.00114814814814
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    2,
+    54
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    2,
+    154
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    2,
+    154.001
+   ],
+   "expected": 98.00062
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    3,
+    154
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    3,
+    254
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    3,
+    254.001
+   ],
+   "expected": 160.00062
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    4,
+    254
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    4,
+    354
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    4,
+    354.001
+   ],
+   "expected": 222.00062
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    5,
+    354
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    5,
+    424
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    5,
+    424.001
+   ],
+   "expected": 284.0008857142857
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    6,
+    424
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    6,
+    604
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "pm10",
+    360,
+    6,
+    604.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    1,
+    0.054
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    1,
+    0.055
+   ],
+   "expected": 26.96296296296297
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    2,
+    0.054
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    2,
+    0.124
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    2,
+    0.125
+   ],
+   "expected": 78.74285714285713
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    3,
+    0.124
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    3,
+    0.164
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    3,
+    0.165
+   ],
+   "expected": 131.3
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    4,
+    0.164
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    4,
+    0.204
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    4,
+    0.205
+   ],
+   "expected": 183.3
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    5,
+    0.204
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    5,
+    0.404
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    5,
+    0.405
+   ],
+   "expected": 234.26
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    6,
+    0.404
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    6,
+    0.604
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    300,
+    6,
+    0.605
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    1,
+    0.054
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    1,
+    0.055
+   ],
+   "expected": 37.14814814814815
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    2,
+    0.054
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    2,
+    0.124
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    2,
+    0.125
+   ],
+   "expected": 98.88571428571429
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    3,
+    0.124
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    3,
+    0.164
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    3,
+    0.165
+   ],
+   "expected": 161.55
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    4,
+    0.164
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    4,
+    0.204
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    4,
+    0.205
+   ],
+   "expected": 223.55
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    5,
+    0.204
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    5,
+    0.404
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    5,
+    0.405
+   ],
+   "expected": 284.31
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    6,
+    0.404
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    6,
+    0.604
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "o3",
+    360,
+    6,
+    0.605
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    1,
+    0.053
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    1,
+    0.054
+   ],
+   "expected": 26.9811320754717
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    2,
+    0.053
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    2,
+    0.1
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    2,
+    0.101
+   ],
+   "expected": 79.1063829787234
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    3,
+    0.1
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    3,
+    0.36
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    3,
+    0.361
+   ],
+   "expected": 130.2
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    4,
+    0.36
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    4,
+    0.649
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    4,
+    0.65
+   ],
+   "expected": 182.17993079584775
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    5,
+    0.649
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    5,
+    1.249
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    5,
+    1.25
+   ],
+   "expected": 234.08666666666664
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    6,
+    1.249
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    6,
+    2.049
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    300,
+    6,
+    2.05
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    1,
+    0.053
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    1,
+    0.054
+   ],
+   "expected": 37.16981132075472
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    2,
+    0.053
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    2,
+    0.1
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    2,
+    0.101
+   ],
+   "expected": 99.31914893617021
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    3,
+    0.1
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    3,
+    0.36
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    3,
+    0.361
+   ],
+   "expected": 160.23846153846154
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    4,
+    0.36
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    4,
+    0.649
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    4,
+    0.65
+   ],
+   "expected": 222.21453287197232
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    5,
+    0.649
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    5,
+    1.249
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    5,
+    1.25
+   ],
+   "expected": 284.10333333333335
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    6,
+    1.249
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    6,
+    2.049
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "no2",
+    360,
+    6,
+    2.05
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    1,
+    4.4
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    1,
+    4.401000000000001
+   ],
+   "expected": 26.011818181818185
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    2,
+    4.4
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    2,
+    9.4
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    2,
+    9.401
+   ],
+   "expected": 78.0104
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    3,
+    9.4
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    3,
+    12.4
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    3,
+    12.401
+   ],
+   "expected": 130.0173333333333
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    4,
+    12.4
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    4,
+    15.4
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    4,
+    15.401
+   ],
+   "expected": 182.0173333333333
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    5,
+    15.4
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    5,
+    30.4
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    5,
+    30.401
+   ],
+   "expected": 234.00346666666667
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    6,
+    30.4
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    6,
+    50.4
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    300,
+    6,
+    50.400999999999996
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    1,
+    4.4
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    1,
+    4.401000000000001
+   ],
+   "expected": 36.01409090909091
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    2,
+    4.4
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    2,
+    9.4
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    2,
+    9.401
+   ],
+   "expected": 98.0124
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    3,
+    9.4
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    3,
+    12.4
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    3,
+    12.401
+   ],
+   "expected": 160.02066666666664
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    4,
+    12.4
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    4,
+    15.4
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    4,
+    15.401
+   ],
+   "expected": 222.02066666666664
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    5,
+    15.4
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    5,
+    30.4
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    5,
+    30.401
+   ],
+   "expected": 284.00413333333336
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    6,
+    30.4
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    6,
+    50.4
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "co",
+    360,
+    6,
+    50.400999999999996
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    1,
+    0.035
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    1,
+    0.036000000000000004
+   ],
+   "expected": 27.485714285714295
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    2,
+    0.035
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    2,
+    0.75
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    2,
+    0.751
+   ],
+   "expected": 78.07272727272726
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    3,
+    0.75
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    3,
+    0.185
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    3,
+    0.186
+   ],
+   "expected": 129.90796460176992
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    4,
+    0.185
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    4,
+    0.304
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    4,
+    0.305
+   ],
+   "expected": 182.43697478991595
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    5,
+    0.304
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    5,
+    0.604
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    5,
+    0.605
+   ],
+   "expected": 234.17333333333335
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    6,
+    0.604
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    6,
+    1.004
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    300,
+    6,
+    1.005
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    1,
+    0.035
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    1,
+    0.036000000000000004
+   ],
+   "expected": 37.77142857142858
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    2,
+    0.035
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    2,
+    0.75
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    2,
+    0.751
+   ],
+   "expected": 98.08671328671329
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    3,
+    0.75
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    3,
+    0.185
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    3,
+    0.186
+   ],
+   "expected": 159.89026548672567
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    4,
+    0.185
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    4,
+    0.304
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    4,
+    0.305
+   ],
+   "expected": 222.52100840336135
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    5,
+    0.304
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    5,
+    0.604
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    5,
+    0.605
+   ],
+   "expected": 284.20666666666665
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    6,
+    0.604
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    6,
+    1.004
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "airnow",
+    "so2",
+    360,
+    6,
+    1.005
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    1,
+    50
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    1,
+    50.001
+   ],
+   "expected": 26.001039999999996
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    2,
+    50
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    2,
+    100
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    2,
+    100.001
+   ],
+   "expected": 78.00104
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    3,
+    100
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    3,
+    150
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    3,
+    150.001
+   ],
+   "expected": 130.00104
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    4,
+    150
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    4,
+    200
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    4,
+    200.001
+   ],
+   "expected": 182.00104
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    5,
+    200
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    5,
+    300
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    5,
+    300.001
+   ],
+   "expected": 234.00052
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    6,
+    300
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    6,
+    500
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    300,
+    6,
+    500.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    1,
+    50
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    1,
+    50.001
+   ],
+   "expected": 36.001239999999996
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    2,
+    50
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    2,
+    100
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    2,
+    100.001
+   ],
+   "expected": 98.00124000000001
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    3,
+    100
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    3,
+    150
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    3,
+    150.001
+   ],
+   "expected": 160.00124
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    4,
+    150
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    4,
+    200
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    4,
+    200.001
+   ],
+   "expected": 222.00124
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    5,
+    200
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    5,
+    300
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    5,
+    300.001
+   ],
+   "expected": 284.00061999999997
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    6,
+    300
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    6,
+    500
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "aqi",
+    360,
+    6,
+    500.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    1,
+    35
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    1,
+    35.001
+   ],
+   "expected": 26.001485714285707
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    2,
+    35
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    2,
+    75
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    2,
+    75.001
+   ],
+   "expected": 78.00130000000001
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    3,
+    75
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    3,
+    115
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    3,
+    115.001
+   ],
+   "expected": 130.00130000000001
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    4,
+    115
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    4,
+    150
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    4,
+    150.001
+   ],
+   "expected": 182.0014857142857
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    5,
+    150
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    5,
+    250
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    5,
+    250.001
+   ],
+   "expected": 234.00052
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    6,
+    250
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    6,
+    500
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    300,
+    6,
+    500.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    1,
+    35
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    1,
+    35.001
+   ],
+   "expected": 36.001771428571416
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    2,
+    35
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    2,
+    75
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    2,
+    75.001
+   ],
+   "expected": 98.00155000000001
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    3,
+    75
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    3,
+    115
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    3,
+    115.001
+   ],
+   "expected": 160.00155
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    4,
+    115
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    4,
+    150
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    4,
+    150.001
+   ],
+   "expected": 222.00177142857143
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    5,
+    150
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    5,
+    250
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    5,
+    250.001
+   ],
+   "expected": 284.00062
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    6,
+    250
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    6,
+    500
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm25",
+    360,
+    6,
+    500.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    1,
+    50
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    1,
+    50.001
+   ],
+   "expected": 26.001039999999996
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    2,
+    50
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    2,
+    150
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    2,
+    150.001
+   ],
+   "expected": 78.00052
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    3,
+    150
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    3,
+    250
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    3,
+    250.001
+   ],
+   "expected": 130.00052
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    4,
+    250
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    4,
+    350
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    4,
+    350.001
+   ],
+   "expected": 182.00052
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    5,
+    350
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    5,
+    420
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    5,
+    420.001
+   ],
+   "expected": 234.00074285714282
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    6,
+    420
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    6,
+    600
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    300,
+    6,
+    600.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    1,
+    50
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    1,
+    50.001
+   ],
+   "expected": 36.001239999999996
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    2,
+    50
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    2,
+    150
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    2,
+    150.001
+   ],
+   "expected": 98.00062
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    3,
+    150
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    3,
+    250
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    3,
+    250.001
+   ],
+   "expected": 160.00062
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    4,
+    250
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    4,
+    350
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    4,
+    350.001
+   ],
+   "expected": 222.00062
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    5,
+    350
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    5,
+    420
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    5,
+    420.001
+   ],
+   "expected": 284.0008857142857
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    6,
+    420
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    6,
+    600
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "pm10",
+    360,
+    6,
+    600.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    1,
+    0.075
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    1,
+    0.076
+   ],
+   "expected": 26.693333333333335
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    2,
+    0.075
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    2,
+    0.093
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    2,
+    0.094
+   ],
+   "expected": 80.88888888888889
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    3,
+    0.093
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    3,
+    0.14
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    3,
+    0.14100000000000001
+   ],
+   "expected": 131.1063829787234
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    4,
+    0.14
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    4,
+    0.187
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    4,
+    0.188
+   ],
+   "expected": 183.1063829787234
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    5,
+    0.187
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    5,
+    0.374
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    5,
+    0.375
+   ],
+   "expected": 234.27807486631013
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    6,
+    0.374
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    6,
+    0.56
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    300,
+    6,
+    0.561
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    1,
+    0.075
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    1,
+    0.076
+   ],
+   "expected": 36.826666666666675
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    2,
+    0.075
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    2,
+    0.093
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    2,
+    0.094
+   ],
+   "expected": 101.44444444444444
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    3,
+    0.093
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    3,
+    0.14
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    3,
+    0.14100000000000001
+   ],
+   "expected": 161.31914893617022
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    4,
+    0.14
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    4,
+    0.187
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    4,
+    0.188
+   ],
+   "expected": 223.31914893617022
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    5,
+    0.187
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    5,
+    0.374
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    5,
+    0.375
+   ],
+   "expected": 284.331550802139
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    6,
+    0.374
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    6,
+    0.56
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "o3",
+    360,
+    6,
+    0.561
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    1,
+    0.049
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    1,
+    0.05
+   ],
+   "expected": 27.06122448979592
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    2,
+    0.049
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    2,
+    0.097
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    2,
+    0.098
+   ],
+   "expected": 79.08333333333333
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    3,
+    0.097
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    3,
+    0.341
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    3,
+    0.342
+   ],
+   "expected": 130.21311475409834
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    4,
+    0.341
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    4,
+    0.584
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    4,
+    0.585
+   ],
+   "expected": 182.21399176954733
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    5,
+    0.584
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    5,
+    1.14
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    5,
+    1.1409999999999998
+   ],
+   "expected": 234.0935251798561
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    6,
+    1.14
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    6,
+    1.87
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    300,
+    6,
+    1.871
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    1,
+    0.049
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    1,
+    0.05
+   ],
+   "expected": 37.26530612244898
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    2,
+    0.049
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    2,
+    0.097
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    2,
+    0.098
+   ],
+   "expected": 99.29166666666666
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    3,
+    0.097
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    3,
+    0.341
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    3,
+    0.342
+   ],
+   "expected": 160.25409836065575
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    4,
+    0.341
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    4,
+    0.584
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    4,
+    0.585
+   ],
+   "expected": 222.2551440329218
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    5,
+    0.584
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    5,
+    1.14
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    5,
+    1.1409999999999998
+   ],
+   "expected": 284.11151079136687
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    6,
+    1.14
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    6,
+    1.87
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "no2",
+    360,
+    6,
+    1.871
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    1,
+    4
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    1,
+    4.001
+   ],
+   "expected": 26.013000000000005
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    2,
+    4
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    2,
+    8
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    2,
+    8.001
+   ],
+   "expected": 78.01299999999999
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    3,
+    8
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    3,
+    28
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    3,
+    28.001
+   ],
+   "expected": 130.0026
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    4,
+    28
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    4,
+    48
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    4,
+    48.001
+   ],
+   "expected": 182.0026
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    5,
+    48
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    5,
+    72
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    5,
+    72.001
+   ],
+   "expected": 234.00216666666665
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    6,
+    72
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    6,
+    120
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    300,
+    6,
+    120.001
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    1,
+    4
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    1,
+    4.001
+   ],
+   "expected": 36.0155
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    2,
+    4
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    2,
+    8
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    2,
+    8.001
+   ],
+   "expected": 98.01549999999999
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    3,
+    8
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    3,
+    28
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    3,
+    28.001
+   ],
+   "expected": 160.00310000000002
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    4,
+    28
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    4,
+    48
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    4,
+    48.001
+   ],
+   "expected": 222.0031
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    5,
+    48
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    5,
+    72
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    5,
+    72.001
+   ],
+   "expected": 284.00258333333335
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    6,
+    72
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    6,
+    120
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "co",
+    360,
+    6,
+    120.001
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    1,
+    0.052
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    1,
+    0.053
+   ],
+   "expected": 27
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    2,
+    0.052
+   ],
+   "expected": 26
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    2,
+    0.175
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    2,
+    0.176
+   ],
+   "expected": 78.42276422764228
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    3,
+    0.175
+   ],
+   "expected": 78
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    3,
+    0.227
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    3,
+    0.228
+   ],
+   "expected": 131
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    4,
+    0.227
+   ],
+   "expected": 130
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    4,
+    0.28
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    4,
+    0.281
+   ],
+   "expected": 182.9811320754717
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    5,
+    0.28
+   ],
+   "expected": 182
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    5,
+    0.56
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    5,
+    0.561
+   ],
+   "expected": 234.1857142857143
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    6,
+    0.56
+   ],
+   "expected": 234
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    6,
+    0.916
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    300,
+    6,
+    0.917
+   ],
+   "expected": 248
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    1,
+    0
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    1,
+    0.052
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    1,
+    0.053
+   ],
+   "expected": 37.192307692307686
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    2,
+    0.052
+   ],
+   "expected": 36
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    2,
+    0.175
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    2,
+    0.176
+   ],
+   "expected": 98.5040650406504
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    3,
+    0.175
+   ],
+   "expected": 98
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    3,
+    0.227
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    3,
+    0.228
+   ],
+   "expected": 161.19230769230768
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    4,
+    0.227
+   ],
+   "expected": 160
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    4,
+    0.28
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    4,
+    0.281
+   ],
+   "expected": 223.16981132075472
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    5,
+    0.28
+   ],
+   "expected": 222
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    5,
+    0.56
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    5,
+    0.561
+   ],
+   "expected": 284.2214285714286
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    6,
+    0.56
+   ],
+   "expected": 284
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    6,
+    0.916
+   ],
+   "expected": 308
+  },
+  {
+   "args": [
+    "aqicn",
+    "so2",
+    360,
+    6,
+    0.917
+   ],
+   "expected": 308
+  }
+ ],
+ "aqiList": [
+  {
+   "args": [
+    "kma-seoul",
+    0
+   ],
+   "expected": [
+    {
+     "name": "LOC_AQI",
+     "value": 40,
+     "grade": 1,
+     "str": "좋음",
+     "code": "aqi"
+    },
+    {
+     "name": "LOC_PM25",
+     "value": 12,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm25"
+    },
+    {
+     "name": "LOC_PM10",
+     "value": 24,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm10"
+    },
+    {
+     "name": "LOC_O3",
+     "value": 0.008,
+     "grade": 1,
+     "str": "좋음",
+     "code": "o3"
+    },
+    {
+     "name": "LOC_NO2",
+     "value": 0.024,
+     "grade": 1,
+     "str": "좋음",
+     "code": "no2"
+    },
+    {
+     "name": "LOC_CO",
+     "value": 0.4,
+     "grade": 1,
+     "str": "좋음",
+     "code": "co"
+    },
+    {
+     "name": "LOC_SO2",
+     "value": 0.002,
+     "grade": 1,
+     "str": "좋음",
+     "code": "so2"
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul",
+    1
+   ],
+   "expected": [
+    {
+     "name": "LOC_AQI",
+     "value": 47,
+     "grade": 1,
+     "str": "좋음",
+     "code": "aqi"
+    },
+    {
+     "name": "LOC_PM25",
+     "value": 4,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm25"
+    },
+    {
+     "name": "LOC_PM10",
+     "value": 26,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm10"
+    },
+    {
+     "name": "LOC_O3",
+     "value": 0.013,
+     "grade": 1,
+     "str": "좋음",
+     "code": "o3"
+    },
+    {
+     "name": "LOC_NO2",
+     "value": 0.028,
+     "grade": 1,
+     "str": "좋음",
+     "code": "no2"
+    },
+    {
+     "name": "LOC_CO",
+     "value": 0.6,
+     "grade": 1,
+     "str": "좋음",
+     "code": "co"
+    },
+    {
+     "name": "LOC_SO2",
+     "value": 0.002,
+     "grade": 1,
+     "str": "좋음",
+     "code": "so2"
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul",
+    2
+   ],
+   "expected": [
+    {
+     "name": "LOC_AQI",
+     "value": 47,
+     "grade": 1,
+     "str": "좋음",
+     "code": "aqi"
+    },
+    {
+     "name": "LOC_PM25",
+     "value": 11,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm25"
+    },
+    {
+     "name": "LOC_PM10",
+     "value": 28,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm10"
+    },
+    {
+     "name": "LOC_O3",
+     "value": 0.004,
+     "grade": 1,
+     "str": "좋음",
+     "code": "o3"
+    },
+    {
+     "name": "LOC_NO2",
+     "value": 0.025,
+     "grade": 1,
+     "str": "좋음",
+     "code": "no2"
+    },
+    {
+     "name": "LOC_CO",
+     "value": 0.4,
+     "grade": 1,
+     "str": "좋음",
+     "code": "co"
+    },
+    {
+     "name": "LOC_SO2",
+     "value": 0.002,
+     "grade": 1,
+     "str": "좋음",
+     "code": "so2"
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul-aqicn",
+    0
+   ],
+   "expected": [
+    {
+     "name": "LOC_AQI",
+     "value": 25,
+     "grade": 1,
+     "str": "좋음",
+     "code": "aqi"
+    },
+    {
+     "name": "LOC_PM25",
+     "value": 12,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm25"
+    },
+    {
+     "name": "LOC_PM10",
+     "value": 24,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm10"
+    },
+    {
+     "name": "LOC_O3",
+     "value": 0.008,
+     "grade": 1,
+     "str": "좋음",
+     "code": "o3"
+    },
+    {
+     "name": "LOC_NO2",
+     "value": 0.024,
+     "grade": 1,
+     "str": "좋음",
+     "code": "no2"
+    },
+    {
+     "name": "LOC_CO",
+     "value": 0.4,
+     "grade": 1,
+     "str": "좋음",
+     "code": "co"
+    },
+    {
+     "name": "LOC_SO2",
+     "value": 0.002,
+     "grade": 1,
+     "str": "좋음",
+     "code": "so2"
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul-aqicn",
+    1
+   ],
+   "expected": [
+    {
+     "name": "LOC_AQI",
+     "value": 29,
+     "grade": 1,
+     "str": "좋음",
+     "code": "aqi"
+    },
+    {
+     "name": "LOC_PM25",
+     "value": 4,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm25"
+    },
+    {
+     "name": "LOC_PM10",
+     "value": 26,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm10"
+    },
+    {
+     "name": "LOC_O3",
+     "value": 0.013,
+     "grade": 1,
+     "str": "좋음",
+     "code": "o3"
+    },
+    {
+     "name": "LOC_NO2",
+     "value": 0.028,
+     "grade": 1,
+     "str": "좋음",
+     "code": "no2"
+    },
+    {
+     "name": "LOC_CO",
+     "value": 0.6,
+     "grade": 1,
+     "str": "좋음",
+     "code": "co"
+    },
+    {
+     "name": "LOC_SO2",
+     "value": 0.002,
+     "grade": 1,
+     "str": "좋음",
+     "code": "so2"
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul-aqicn",
+    2
+   ],
+   "expected": [
+    {
+     "name": "LOC_AQI",
+     "value": 28,
+     "grade": 1,
+     "str": "좋음",
+     "code": "aqi"
+    },
+    {
+     "name": "LOC_PM25",
+     "value": 11,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm25"
+    },
+    {
+     "name": "LOC_PM10",
+     "value": 28,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm10"
+    },
+    {
+     "name": "LOC_O3",
+     "value": 0.004,
+     "grade": 1,
+     "str": "좋음",
+     "code": "o3"
+    },
+    {
+     "name": "LOC_NO2",
+     "value": 0.025,
+     "grade": 1,
+     "str": "좋음",
+     "code": "no2"
+    },
+    {
+     "name": "LOC_CO",
+     "value": 0.4,
+     "grade": 1,
+     "str": "좋음",
+     "code": "co"
+    },
+    {
+     "name": "LOC_SO2",
+     "value": 0.002,
+     "grade": 1,
+     "str": "좋음",
+     "code": "so2"
+    }
+   ]
+  },
+  {
+   "args": [
+    "vc-london",
+    0
+   ],
+   "expected": [
+    {
+     "name": "LOC_AQI",
+     "value": 151,
+     "grade": 3,
+     "str": "나쁨",
+     "code": "aqi"
+    },
+    {
+     "name": "LOC_PM25",
+     "value": 48.51,
+     "grade": 3,
+     "str": "나쁨",
+     "code": "pm25"
+    },
+    {
+     "name": "LOC_PM10",
+     "value": 53.41,
+     "grade": 2,
+     "str": "보통",
+     "code": "pm10"
+    },
+    {
+     "name": "LOC_O3",
+     "value": 0.003,
+     "grade": 1,
+     "str": "좋음",
+     "code": "o3"
+    },
+    {
+     "name": "LOC_NO2",
+     "value": 0.047,
+     "grade": 2,
+     "str": "보통",
+     "code": "no2"
+    },
+    {
+     "name": "LOC_CO",
+     "value": 0.387,
+     "grade": 1,
+     "str": "좋음",
+     "code": "co"
+    },
+    {
+     "name": "LOC_SO2",
+     "value": 0.001,
+     "grade": 1,
+     "str": "좋음",
+     "code": "so2"
+    }
+   ]
+  },
+  {
+   "args": [
+    "vc-tokyo",
+    0
+   ],
+   "expected": [
+    {
+     "name": "LOC_AQI",
+     "value": 31,
+     "grade": 1,
+     "str": "좋음",
+     "code": "aqi"
+    },
+    {
+     "name": "LOC_PM25",
+     "value": 5.98,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm25"
+    },
+    {
+     "name": "LOC_PM10",
+     "value": 7.65,
+     "grade": 1,
+     "str": "좋음",
+     "code": "pm10"
+    },
+    {
+     "name": "LOC_O3",
+     "value": 0.034,
+     "grade": 1,
+     "str": "좋음",
+     "code": "o3"
+    },
+    {
+     "name": "LOC_NO2",
+     "value": 0.013,
+     "grade": 1,
+     "str": "좋음",
+     "code": "no2"
+    },
+    {
+     "name": "LOC_CO",
+     "value": 0.209,
+     "grade": 1,
+     "str": "좋음",
+     "code": "co"
+    },
+    {
+     "name": "LOC_SO2",
+     "value": 0,
+     "grade": 1,
+     "str": "좋음",
+     "code": "so2"
+    }
+   ]
+  },
+  {
+   "args": [
+    "missing-air",
+    0
+   ],
+   "expected": []
+  }
+ ],
+ "dustForecast": [
+  {
+   "args": [
+    "kma-seoul",
+    "aqi"
+   ],
+   "expected": []
+  },
+  {
+   "args": [
+    "kma-seoul",
+    "pm25"
+   ],
+   "expected": [
+    {
+     "date": "20261108",
+     "pop": 60,
+     "pty": 1,
+     "r06": 1.5,
+     "reh": 63,
+     "s06": 0,
+     "sky": 4,
+     "lgtAm": 0,
+     "ptyAm": 0,
+     "skyAm": "cloud",
+     "wfAm": "흐림",
+     "ptyPm": 1,
+     "skyPm": "cloud_rain",
+     "wfPm": "흐리고 비",
+     "t1d": 5.9,
+     "wsd": 1.1,
+     "r06Hours": 24,
+     "r06Approx": true,
+     "s06Hours": 24,
+     "s06Approx": false,
+     "ultrv": 2,
+     "ultrvGrade": 0,
+     "fsn": 12.6,
+     "fsnGrade": 0,
+     "dustForecast": {
+      "sido": "서울",
+      "pm10Grade": 1,
+      "pm10Str": "좋음",
+      "pm25Grade": 1,
+      "pm25Str": "좋음"
+     },
+     "locationName": "서울",
+     "locationGeo": [
+      126.983333,
+      37.566666
+     ],
+     "sunrise": "2026.11.08 07:04",
+     "suntransit": "2026.11.08 12:15",
+     "sunset": "2026.11.08 17:27",
+     "moonrise": "2026.11.08 05:55",
+     "moontransit": "2026.11.08 11:15",
+     "moonset": "2026.11.08 16:28",
+     "civilm": "2026.11.08 06:36",
+     "civile": "2026.11.08 17:55",
+     "nautm": "2026.11.08 06:05",
+     "naute": "2026.11.08 18:26",
+     "astm": "2026.11.08 05:34",
+     "aste": "2026.11.08 18:57",
+     "skyIcon": "cloud_rain",
+     "dateObj": "2026.11.08 00:00",
+     "tmx": 8,
+     "tmn": 2,
+     "fromToday": 0,
+     "dayOfWeek": 0,
+     "fsnStr": "관심",
+     "ultrvStr": "낮음",
+     "wsdGrade": 1,
+     "wsdStr": "바람약함",
+     "ptyStr": "강수량",
+     "r06Str": "~3mm",
+     "grade": 1,
+     "str": "좋음"
+    },
+    {
+     "date": "20261109",
+     "pop": 30,
+     "pty": 0,
+     "r06": 0,
+     "reh": 76,
+     "s06": 0,
+     "sky": 2,
+     "ptyAm": 0,
+     "skyAm": "sun_bigcloud",
+     "wfAm": "구름많음",
+     "ptyPm": 0,
+     "skyPm": "sun",
+     "wfPm": "맑음",
+     "t1d": 7.3,
+     "wsd": 1.4,
+     "r06Hours": 24,
+     "r06Approx": false,
+     "s06Hours": 24,
+     "s06Approx": false,
+     "ultrv": 2,
+     "ultrvGrade": 0,
+     "fsn": 21.7,
+     "fsnGrade": 0,
+     "dustForecast": {
+      "sido": "서울",
+      "pm10Grade": 1,
+      "pm10Str": "좋음",
+      "pm25Grade": 1,
+      "pm25Str": "좋음"
+     },
+     "locationName": "서울",
+     "locationGeo": [
+      126.983333,
+      37.566666
+     ],
+     "sunrise": "2026.11.09 07:05",
+     "suntransit": "2026.11.09 12:15",
+     "sunset": "2026.11.09 17:26",
+     "moonrise": "2026.11.09 06:58",
+     "moontransit": "2026.11.09 12:02",
+     "moonset": "2026.11.09 17:00",
+     "civilm": "2026.11.09 06:37",
+     "civile": "2026.11.09 17:54",
+     "nautm": "2026.11.09 06:06",
+     "naute": "2026.11.09 18:25",
+     "astm": "2026.11.09 05:35",
+     "aste": "2026.11.09 18:56",
+     "skyIcon": "sun_smallcloud",
+     "dateObj": "2026.11.09 00:00",
+     "tmx": 11,
+     "tmn": 4,
+     "fromToday": 1,
+     "dayOfWeek": 1,
+     "fsnStr": "관심",
+     "ultrvStr": "낮음",
+     "wsdGrade": 1,
+     "wsdStr": "바람약함",
+     "grade": 1,
+     "str": "좋음"
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul",
+    "pm10"
+   ],
+   "expected": [
+    {
+     "date": "20261108",
+     "pop": 60,
+     "pty": 1,
+     "r06": 1.5,
+     "reh": 63,
+     "s06": 0,
+     "sky": 4,
+     "lgtAm": 0,
+     "ptyAm": 0,
+     "skyAm": "cloud",
+     "wfAm": "흐림",
+     "ptyPm": 1,
+     "skyPm": "cloud_rain",
+     "wfPm": "흐리고 비",
+     "t1d": 5.9,
+     "wsd": 1.1,
+     "r06Hours": 24,
+     "r06Approx": true,
+     "s06Hours": 24,
+     "s06Approx": false,
+     "ultrv": 2,
+     "ultrvGrade": 0,
+     "fsn": 12.6,
+     "fsnGrade": 0,
+     "dustForecast": {
+      "sido": "서울",
+      "pm10Grade": 1,
+      "pm10Str": "좋음",
+      "pm25Grade": 1,
+      "pm25Str": "좋음"
+     },
+     "locationName": "서울",
+     "locationGeo": [
+      126.983333,
+      37.566666
+     ],
+     "sunrise": "2026.11.08 07:04",
+     "suntransit": "2026.11.08 12:15",
+     "sunset": "2026.11.08 17:27",
+     "moonrise": "2026.11.08 05:55",
+     "moontransit": "2026.11.08 11:15",
+     "moonset": "2026.11.08 16:28",
+     "civilm": "2026.11.08 06:36",
+     "civile": "2026.11.08 17:55",
+     "nautm": "2026.11.08 06:05",
+     "naute": "2026.11.08 18:26",
+     "astm": "2026.11.08 05:34",
+     "aste": "2026.11.08 18:57",
+     "skyIcon": "cloud_rain",
+     "dateObj": "2026.11.08 00:00",
+     "tmx": 8,
+     "tmn": 2,
+     "fromToday": 0,
+     "dayOfWeek": 0,
+     "fsnStr": "관심",
+     "ultrvStr": "낮음",
+     "wsdGrade": 1,
+     "wsdStr": "바람약함",
+     "ptyStr": "강수량",
+     "r06Str": "~3mm",
+     "grade": 1,
+     "str": "좋음"
+    },
+    {
+     "date": "20261109",
+     "pop": 30,
+     "pty": 0,
+     "r06": 0,
+     "reh": 76,
+     "s06": 0,
+     "sky": 2,
+     "ptyAm": 0,
+     "skyAm": "sun_bigcloud",
+     "wfAm": "구름많음",
+     "ptyPm": 0,
+     "skyPm": "sun",
+     "wfPm": "맑음",
+     "t1d": 7.3,
+     "wsd": 1.4,
+     "r06Hours": 24,
+     "r06Approx": false,
+     "s06Hours": 24,
+     "s06Approx": false,
+     "ultrv": 2,
+     "ultrvGrade": 0,
+     "fsn": 21.7,
+     "fsnGrade": 0,
+     "dustForecast": {
+      "sido": "서울",
+      "pm10Grade": 1,
+      "pm10Str": "좋음",
+      "pm25Grade": 1,
+      "pm25Str": "좋음"
+     },
+     "locationName": "서울",
+     "locationGeo": [
+      126.983333,
+      37.566666
+     ],
+     "sunrise": "2026.11.09 07:05",
+     "suntransit": "2026.11.09 12:15",
+     "sunset": "2026.11.09 17:26",
+     "moonrise": "2026.11.09 06:58",
+     "moontransit": "2026.11.09 12:02",
+     "moonset": "2026.11.09 17:00",
+     "civilm": "2026.11.09 06:37",
+     "civile": "2026.11.09 17:54",
+     "nautm": "2026.11.09 06:06",
+     "naute": "2026.11.09 18:25",
+     "astm": "2026.11.09 05:35",
+     "aste": "2026.11.09 18:56",
+     "skyIcon": "sun_smallcloud",
+     "dateObj": "2026.11.09 00:00",
+     "tmx": 11,
+     "tmn": 4,
+     "fromToday": 1,
+     "dayOfWeek": 1,
+     "fsnStr": "관심",
+     "ultrvStr": "낮음",
+     "wsdGrade": 1,
+     "wsdStr": "바람약함",
+     "grade": 1,
+     "str": "좋음"
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul",
+    "o3"
+   ],
+   "expected": []
+  },
+  {
+   "args": [
+    "kma-seoul-aqicn",
+    "aqi"
+   ],
+   "expected": []
+  },
+  {
+   "args": [
+    "kma-seoul-aqicn",
+    "pm25"
+   ],
+   "expected": [
+    {
+     "date": "20261108",
+     "pop": 60,
+     "pty": 1,
+     "r06": 1.5,
+     "reh": 62,
+     "s06": 0,
+     "sky": 4,
+     "lgtAm": 0,
+     "ptyAm": 0,
+     "skyAm": "cloud",
+     "wfAm": "흐림",
+     "ptyPm": 1,
+     "skyPm": "cloud_rain",
+     "wfPm": "흐리고 비",
+     "t1d": 5.9,
+     "wsd": 1.9,
+     "r06Hours": 24,
+     "r06Approx": true,
+     "s06Hours": 24,
+     "s06Approx": false,
+     "ultrv": 2,
+     "ultrvGrade": 0,
+     "fsn": 12.6,
+     "fsnGrade": 0,
+     "dustForecast": {
+      "sido": "서울",
+      "pm10Grade": 1,
+      "pm10Str": "좋음",
+      "pm25Grade": 1,
+      "pm25Str": "좋음"
+     },
+     "locationName": "서울",
+     "locationGeo": [
+      126.983333,
+      37.566666
+     ],
+     "sunrise": "2026.11.08 07:04",
+     "suntransit": "2026.11.08 12:15",
+     "sunset": "2026.11.08 17:27",
+     "moonrise": "2026.11.08 05:55",
+     "moontransit": "2026.11.08 11:15",
+     "moonset": "2026.11.08 16:28",
+     "civilm": "2026.11.08 06:36",
+     "civile": "2026.11.08 17:55",
+     "nautm": "2026.11.08 06:05",
+     "naute": "2026.11.08 18:26",
+     "astm": "2026.11.08 05:34",
+     "aste": "2026.11.08 18:57",
+     "skyIcon": "cloud_rain",
+     "dateObj": "2026.11.08 00:00",
+     "tmx": 8,
+     "tmn": 2,
+     "fromToday": 0,
+     "dayOfWeek": 0,
+     "fsnStr": "관심",
+     "ultrvStr": "낮음",
+     "wsdGrade": 1,
+     "wsdStr": "바람약함",
+     "ptyStr": "강수량",
+     "r06Str": "~3mm",
+     "grade": 1,
+     "str": "좋음"
+    },
+    {
+     "date": "20261109",
+     "pop": 30,
+     "pty": 0,
+     "r06": 0,
+     "reh": 76,
+     "s06": 0,
+     "sky": 2,
+     "ptyAm": 0,
+     "skyAm": "sun_bigcloud",
+     "wfAm": "구름많음",
+     "ptyPm": 0,
+     "skyPm": "sun",
+     "wfPm": "맑음",
+     "t1d": 7.3,
+     "wsd": 2.7,
+     "r06Hours": 24,
+     "r06Approx": false,
+     "s06Hours": 24,
+     "s06Approx": false,
+     "ultrv": 2,
+     "ultrvGrade": 0,
+     "fsn": 21.7,
+     "fsnGrade": 0,
+     "dustForecast": {
+      "sido": "서울",
+      "pm10Grade": 1,
+      "pm10Str": "좋음",
+      "pm25Grade": 1,
+      "pm25Str": "좋음"
+     },
+     "locationName": "서울",
+     "locationGeo": [
+      126.983333,
+      37.566666
+     ],
+     "sunrise": "2026.11.09 07:05",
+     "suntransit": "2026.11.09 12:15",
+     "sunset": "2026.11.09 17:26",
+     "moonrise": "2026.11.09 06:58",
+     "moontransit": "2026.11.09 12:02",
+     "moonset": "2026.11.09 17:00",
+     "civilm": "2026.11.09 06:37",
+     "civile": "2026.11.09 17:54",
+     "nautm": "2026.11.09 06:06",
+     "naute": "2026.11.09 18:25",
+     "astm": "2026.11.09 05:35",
+     "aste": "2026.11.09 18:56",
+     "skyIcon": "sun_smallcloud",
+     "dateObj": "2026.11.09 00:00",
+     "tmx": 11,
+     "tmn": 4,
+     "fromToday": 1,
+     "dayOfWeek": 1,
+     "fsnStr": "관심",
+     "ultrvStr": "낮음",
+     "wsdGrade": 1,
+     "wsdStr": "바람약함",
+     "grade": 1,
+     "str": "좋음"
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul-aqicn",
+    "pm10"
+   ],
+   "expected": [
+    {
+     "date": "20261108",
+     "pop": 60,
+     "pty": 1,
+     "r06": 1.5,
+     "reh": 62,
+     "s06": 0,
+     "sky": 4,
+     "lgtAm": 0,
+     "ptyAm": 0,
+     "skyAm": "cloud",
+     "wfAm": "흐림",
+     "ptyPm": 1,
+     "skyPm": "cloud_rain",
+     "wfPm": "흐리고 비",
+     "t1d": 5.9,
+     "wsd": 1.9,
+     "r06Hours": 24,
+     "r06Approx": true,
+     "s06Hours": 24,
+     "s06Approx": false,
+     "ultrv": 2,
+     "ultrvGrade": 0,
+     "fsn": 12.6,
+     "fsnGrade": 0,
+     "dustForecast": {
+      "sido": "서울",
+      "pm10Grade": 1,
+      "pm10Str": "좋음",
+      "pm25Grade": 1,
+      "pm25Str": "좋음"
+     },
+     "locationName": "서울",
+     "locationGeo": [
+      126.983333,
+      37.566666
+     ],
+     "sunrise": "2026.11.08 07:04",
+     "suntransit": "2026.11.08 12:15",
+     "sunset": "2026.11.08 17:27",
+     "moonrise": "2026.11.08 05:55",
+     "moontransit": "2026.11.08 11:15",
+     "moonset": "2026.11.08 16:28",
+     "civilm": "2026.11.08 06:36",
+     "civile": "2026.11.08 17:55",
+     "nautm": "2026.11.08 06:05",
+     "naute": "2026.11.08 18:26",
+     "astm": "2026.11.08 05:34",
+     "aste": "2026.11.08 18:57",
+     "skyIcon": "cloud_rain",
+     "dateObj": "2026.11.08 00:00",
+     "tmx": 8,
+     "tmn": 2,
+     "fromToday": 0,
+     "dayOfWeek": 0,
+     "fsnStr": "관심",
+     "ultrvStr": "낮음",
+     "wsdGrade": 1,
+     "wsdStr": "바람약함",
+     "ptyStr": "강수량",
+     "r06Str": "~3mm",
+     "grade": 1,
+     "str": "좋음"
+    },
+    {
+     "date": "20261109",
+     "pop": 30,
+     "pty": 0,
+     "r06": 0,
+     "reh": 76,
+     "s06": 0,
+     "sky": 2,
+     "ptyAm": 0,
+     "skyAm": "sun_bigcloud",
+     "wfAm": "구름많음",
+     "ptyPm": 0,
+     "skyPm": "sun",
+     "wfPm": "맑음",
+     "t1d": 7.3,
+     "wsd": 2.7,
+     "r06Hours": 24,
+     "r06Approx": false,
+     "s06Hours": 24,
+     "s06Approx": false,
+     "ultrv": 2,
+     "ultrvGrade": 0,
+     "fsn": 21.7,
+     "fsnGrade": 0,
+     "dustForecast": {
+      "sido": "서울",
+      "pm10Grade": 1,
+      "pm10Str": "좋음",
+      "pm25Grade": 1,
+      "pm25Str": "좋음"
+     },
+     "locationName": "서울",
+     "locationGeo": [
+      126.983333,
+      37.566666
+     ],
+     "sunrise": "2026.11.09 07:05",
+     "suntransit": "2026.11.09 12:15",
+     "sunset": "2026.11.09 17:26",
+     "moonrise": "2026.11.09 06:58",
+     "moontransit": "2026.11.09 12:02",
+     "moonset": "2026.11.09 17:00",
+     "civilm": "2026.11.09 06:37",
+     "civile": "2026.11.09 17:54",
+     "nautm": "2026.11.09 06:06",
+     "naute": "2026.11.09 18:25",
+     "astm": "2026.11.09 05:35",
+     "aste": "2026.11.09 18:56",
+     "skyIcon": "sun_smallcloud",
+     "dateObj": "2026.11.09 00:00",
+     "tmx": 11,
+     "tmn": 4,
+     "fromToday": 1,
+     "dayOfWeek": 1,
+     "fsnStr": "관심",
+     "ultrvStr": "낮음",
+     "wsdGrade": 1,
+     "wsdStr": "바람약함",
+     "grade": 1,
+     "str": "좋음"
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul-aqicn",
+    "o3"
+   ],
+   "expected": []
+  },
+  {
+   "args": [
+    "vc-london",
+    "aqi"
+   ],
+   "expected": []
+  },
+  {
+   "args": [
+    "vc-london",
+    "pm25"
+   ],
+   "expected": []
+  },
+  {
+   "args": [
+    "vc-london",
+    "pm10"
+   ],
+   "expected": []
+  },
+  {
+   "args": [
+    "vc-london",
+    "o3"
+   ],
+   "expected": []
+  },
+  {
+   "args": [
+    "vc-tokyo",
+    "aqi"
+   ],
+   "expected": []
+  },
+  {
+   "args": [
+    "vc-tokyo",
+    "pm25"
+   ],
+   "expected": []
+  },
+  {
+   "args": [
+    "vc-tokyo",
+    "pm10"
+   ],
+   "expected": []
+  },
+  {
+   "args": [
+    "vc-tokyo",
+    "o3"
+   ],
+   "expected": []
+  }
+ ],
+ "hourlyForecast": [
+  {
+   "args": [
+    "kma-seoul",
+    0,
+    "2026-11-08 00:00"
+   ],
+   "expected": [
+    {
+     "date": "2026-11-08 01:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 1
+    },
+    {
+     "date": "2026-11-08 02:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 2
+    },
+    {
+     "date": "2026-11-08 03:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 3
+    },
+    {
+     "date": "2026-11-08 04:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 4
+    },
+    {
+     "date": "2026-11-08 05:00",
+     "code": "pm10",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 5
+    },
+    {
+     "date": "2026-11-08 06:00",
+     "code": "pm10",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 6
+    },
+    {
+     "date": "2026-11-08 07:00",
+     "code": "pm10",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 7
+    },
+    {
+     "date": "2026-11-08 08:00",
+     "code": "pm10",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 8
+    },
+    {
+     "date": "2026-11-08 09:00",
+     "code": "pm10",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 9
+    },
+    {
+     "date": "2026-11-08 10:00",
+     "code": "pm10",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 10
+    },
+    {
+     "date": "2026-11-08 11:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 11
+    },
+    {
+     "date": "2026-11-08 12:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 12
+    },
+    {
+     "date": "2026-11-08 13:00",
+     "code": "pm10",
+     "val": 20,
+     "grade": 1,
+     "str": "좋음",
+     "time": 13
+    },
+    {
+     "date": "2026-11-08 14:00",
+     "code": "pm10",
+     "val": 20,
+     "grade": 1,
+     "str": "좋음",
+     "time": 14
+    },
+    {
+     "date": "2026-11-08 15:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 15
+    },
+    {
+     "date": "2026-11-08 16:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 16
+    },
+    {
+     "date": "2026-11-08 17:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 17
+    },
+    {
+     "date": "2026-11-08 18:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 18
+    },
+    {
+     "date": "2026-11-08 19:00",
+     "code": "pm10",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 19
+    },
+    {
+     "date": "2026-11-08 20:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 20
+    },
+    {
+     "date": "2026-11-08 21:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 21
+    },
+    {
+     "date": "2026-11-08 22:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 22
+    },
+    {
+     "date": "2026-11-08 23:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 23
+    },
+    {
+     "date": "2026-11-09 00:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 0
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul",
+    1,
+    "2026-11-08 00:00"
+   ],
+   "expected": [
+    {
+     "date": "2026-11-08 01:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 1
+    },
+    {
+     "date": "2026-11-08 02:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 2
+    },
+    {
+     "date": "2026-11-08 03:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 3
+    },
+    {
+     "date": "2026-11-08 04:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 4
+    },
+    {
+     "date": "2026-11-08 05:00",
+     "code": "pm10",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 5
+    },
+    {
+     "date": "2026-11-08 06:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 6
+    },
+    {
+     "date": "2026-11-08 07:00",
+     "code": "pm10",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 7
+    },
+    {
+     "date": "2026-11-08 08:00",
+     "code": "pm10",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 8
+    },
+    {
+     "date": "2026-11-08 09:00",
+     "code": "pm10",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 9
+    },
+    {
+     "date": "2026-11-08 10:00",
+     "code": "pm10",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 10
+    },
+    {
+     "date": "2026-11-08 11:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 11
+    },
+    {
+     "date": "2026-11-08 12:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 12
+    },
+    {
+     "date": "2026-11-08 13:00",
+     "code": "pm10",
+     "val": 20,
+     "grade": 1,
+     "str": "좋음",
+     "time": 13
+    },
+    {
+     "date": "2026-11-08 14:00",
+     "code": "pm10",
+     "val": 20,
+     "grade": 1,
+     "str": "좋음",
+     "time": 14
+    },
+    {
+     "date": "2026-11-08 15:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 15
+    },
+    {
+     "date": "2026-11-08 16:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 16
+    },
+    {
+     "date": "2026-11-08 17:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 17
+    },
+    {
+     "date": "2026-11-08 18:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 18
+    },
+    {
+     "date": "2026-11-08 19:00",
+     "code": "pm10",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 19
+    },
+    {
+     "date": "2026-11-08 20:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 20
+    },
+    {
+     "date": "2026-11-08 21:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 21
+    },
+    {
+     "date": "2026-11-08 22:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 22
+    },
+    {
+     "date": "2026-11-08 23:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 23
+    },
+    {
+     "date": "2026-11-09 00:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 0
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul",
+    2,
+    "2026-11-08 00:00"
+   ],
+   "expected": [
+    {
+     "date": "2026-11-08 01:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 1
+    },
+    {
+     "date": "2026-11-08 02:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 2
+    },
+    {
+     "date": "2026-11-08 03:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 3
+    },
+    {
+     "date": "2026-11-08 04:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 4
+    },
+    {
+     "date": "2026-11-08 05:00",
+     "code": "pm10",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 5
+    },
+    {
+     "date": "2026-11-08 06:00",
+     "code": "pm10",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 6
+    },
+    {
+     "date": "2026-11-08 07:00",
+     "code": "pm10",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 7
+    },
+    {
+     "date": "2026-11-08 08:00",
+     "code": "pm10",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 8
+    },
+    {
+     "date": "2026-11-08 09:00",
+     "code": "pm10",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 9
+    },
+    {
+     "date": "2026-11-08 10:00",
+     "code": "pm10",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 10
+    },
+    {
+     "date": "2026-11-08 11:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 11
+    },
+    {
+     "date": "2026-11-08 12:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 12
+    },
+    {
+     "date": "2026-11-08 13:00",
+     "code": "pm10",
+     "val": 20,
+     "grade": 1,
+     "str": "좋음",
+     "time": 13
+    },
+    {
+     "date": "2026-11-08 14:00",
+     "code": "pm10",
+     "val": 20,
+     "grade": 1,
+     "str": "좋음",
+     "time": 14
+    },
+    {
+     "date": "2026-11-08 15:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 15
+    },
+    {
+     "date": "2026-11-08 16:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 16
+    },
+    {
+     "date": "2026-11-08 17:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 17
+    },
+    {
+     "date": "2026-11-08 18:00",
+     "code": "pm25",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 18
+    },
+    {
+     "date": "2026-11-08 19:00",
+     "code": "pm10",
+     "val": 30,
+     "grade": 1,
+     "str": "좋음",
+     "time": 19
+    },
+    {
+     "date": "2026-11-08 20:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 20
+    },
+    {
+     "date": "2026-11-08 21:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 21
+    },
+    {
+     "date": "2026-11-08 22:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 22
+    },
+    {
+     "date": "2026-11-08 23:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 23
+    },
+    {
+     "date": "2026-11-09 00:00",
+     "code": "pm25",
+     "val": 40,
+     "grade": 1,
+     "str": "좋음",
+     "time": 0
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul-aqicn",
+    0,
+    "2026-11-08 00:00"
+   ],
+   "expected": [
+    {
+     "date": "2026-11-08 01:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 1
+    },
+    {
+     "date": "2026-11-08 02:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 2
+    },
+    {
+     "date": "2026-11-08 03:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 3
+    },
+    {
+     "date": "2026-11-08 04:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 4
+    },
+    {
+     "date": "2026-11-08 05:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 5
+    },
+    {
+     "date": "2026-11-08 06:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 6
+    },
+    {
+     "date": "2026-11-08 07:00",
+     "code": "pm10",
+     "val": 24,
+     "grade": 1,
+     "str": "좋음",
+     "time": 7
+    },
+    {
+     "date": "2026-11-08 08:00",
+     "code": "pm10",
+     "val": 24,
+     "grade": 1,
+     "str": "좋음",
+     "time": 8
+    },
+    {
+     "date": "2026-11-08 09:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 9
+    },
+    {
+     "date": "2026-11-08 10:00",
+     "code": "pm10",
+     "val": 24,
+     "grade": 1,
+     "str": "좋음",
+     "time": 10
+    },
+    {
+     "date": "2026-11-08 11:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 11
+    },
+    {
+     "date": "2026-11-08 12:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 12
+    },
+    {
+     "date": "2026-11-08 13:00",
+     "code": "pm10",
+     "val": 12,
+     "grade": 1,
+     "str": "좋음",
+     "time": 13
+    },
+    {
+     "date": "2026-11-08 14:00",
+     "code": "pm10",
+     "val": 12,
+     "grade": 1,
+     "str": "좋음",
+     "time": 14
+    },
+    {
+     "date": "2026-11-08 15:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 15
+    },
+    {
+     "date": "2026-11-08 16:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 16
+    },
+    {
+     "date": "2026-11-08 17:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 17
+    },
+    {
+     "date": "2026-11-08 18:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 18
+    },
+    {
+     "date": "2026-11-08 19:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 19
+    },
+    {
+     "date": "2026-11-08 20:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 20
+    },
+    {
+     "date": "2026-11-08 21:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 21
+    },
+    {
+     "date": "2026-11-08 22:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 22
+    },
+    {
+     "date": "2026-11-08 23:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 23
+    },
+    {
+     "date": "2026-11-09 00:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 0
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul-aqicn",
+    1,
+    "2026-11-08 00:00"
+   ],
+   "expected": [
+    {
+     "date": "2026-11-08 01:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 1
+    },
+    {
+     "date": "2026-11-08 02:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 2
+    },
+    {
+     "date": "2026-11-08 03:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 3
+    },
+    {
+     "date": "2026-11-08 04:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 4
+    },
+    {
+     "date": "2026-11-08 05:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 5
+    },
+    {
+     "date": "2026-11-08 06:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 6
+    },
+    {
+     "date": "2026-11-08 07:00",
+     "code": "pm10",
+     "val": 24,
+     "grade": 1,
+     "str": "좋음",
+     "time": 7
+    },
+    {
+     "date": "2026-11-08 08:00",
+     "code": "pm10",
+     "val": 24,
+     "grade": 1,
+     "str": "좋음",
+     "time": 8
+    },
+    {
+     "date": "2026-11-08 09:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 9
+    },
+    {
+     "date": "2026-11-08 10:00",
+     "code": "pm10",
+     "val": 24,
+     "grade": 1,
+     "str": "좋음",
+     "time": 10
+    },
+    {
+     "date": "2026-11-08 11:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 11
+    },
+    {
+     "date": "2026-11-08 12:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 12
+    },
+    {
+     "date": "2026-11-08 13:00",
+     "code": "pm10",
+     "val": 12,
+     "grade": 1,
+     "str": "좋음",
+     "time": 13
+    },
+    {
+     "date": "2026-11-08 14:00",
+     "code": "pm10",
+     "val": 12,
+     "grade": 1,
+     "str": "좋음",
+     "time": 14
+    },
+    {
+     "date": "2026-11-08 15:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 15
+    },
+    {
+     "date": "2026-11-08 16:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 16
+    },
+    {
+     "date": "2026-11-08 17:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 17
+    },
+    {
+     "date": "2026-11-08 18:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 18
+    },
+    {
+     "date": "2026-11-08 19:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 19
+    },
+    {
+     "date": "2026-11-08 20:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 20
+    },
+    {
+     "date": "2026-11-08 21:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 21
+    },
+    {
+     "date": "2026-11-08 22:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 22
+    },
+    {
+     "date": "2026-11-08 23:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 23
+    },
+    {
+     "date": "2026-11-09 00:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 0
+    }
+   ]
+  },
+  {
+   "args": [
+    "kma-seoul-aqicn",
+    2,
+    "2026-11-08 00:00"
+   ],
+   "expected": [
+    {
+     "date": "2026-11-08 01:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 1
+    },
+    {
+     "date": "2026-11-08 02:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 2
+    },
+    {
+     "date": "2026-11-08 03:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 3
+    },
+    {
+     "date": "2026-11-08 04:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 4
+    },
+    {
+     "date": "2026-11-08 05:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 5
+    },
+    {
+     "date": "2026-11-08 06:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 6
+    },
+    {
+     "date": "2026-11-08 07:00",
+     "code": "pm10",
+     "val": 24,
+     "grade": 1,
+     "str": "좋음",
+     "time": 7
+    },
+    {
+     "date": "2026-11-08 08:00",
+     "code": "pm10",
+     "val": 24,
+     "grade": 1,
+     "str": "좋음",
+     "time": 8
+    },
+    {
+     "date": "2026-11-08 09:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 9
+    },
+    {
+     "date": "2026-11-08 10:00",
+     "code": "pm10",
+     "val": 24,
+     "grade": 1,
+     "str": "좋음",
+     "time": 10
+    },
+    {
+     "date": "2026-11-08 11:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 11
+    },
+    {
+     "date": "2026-11-08 12:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 12
+    },
+    {
+     "date": "2026-11-08 13:00",
+     "code": "pm10",
+     "val": 12,
+     "grade": 1,
+     "str": "좋음",
+     "time": 13
+    },
+    {
+     "date": "2026-11-08 14:00",
+     "code": "pm10",
+     "val": 12,
+     "grade": 1,
+     "str": "좋음",
+     "time": 14
+    },
+    {
+     "date": "2026-11-08 15:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 15
+    },
+    {
+     "date": "2026-11-08 16:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 16
+    },
+    {
+     "date": "2026-11-08 17:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 17
+    },
+    {
+     "date": "2026-11-08 18:00",
+     "code": "pm25",
+     "val": 13,
+     "grade": 1,
+     "str": "좋음",
+     "time": 18
+    },
+    {
+     "date": "2026-11-08 19:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 19
+    },
+    {
+     "date": "2026-11-08 20:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 20
+    },
+    {
+     "date": "2026-11-08 21:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 21
+    },
+    {
+     "date": "2026-11-08 22:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 22
+    },
+    {
+     "date": "2026-11-08 23:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 23
+    },
+    {
+     "date": "2026-11-09 00:00",
+     "code": "pm10",
+     "val": 18,
+     "grade": 1,
+     "str": "좋음",
+     "time": 0
+    }
+   ]
+  }
+ ],
+ "airCodeUnit": [
+  {
+   "args": [
+    "aqi"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "pm25"
+   ],
+   "expected": "㎍/㎥"
+  },
+  {
+   "args": [
+    "pm10"
+   ],
+   "expected": "㎍/㎥"
+  },
+  {
+   "args": [
+    "o3"
+   ],
+   "expected": "ppm"
+  },
+  {
+   "args": [
+    "no2"
+   ],
+   "expected": "ppm"
+  },
+  {
+   "args": [
+    "co"
+   ],
+   "expected": "ppm"
+  },
+  {
+   "args": [
+    "so2"
+   ],
+   "expected": "ppm"
+  },
+  {
+   "args": [
+    "xyz"
+   ],
+   "expected": ""
+  }
+ ],
+ "airkoreaGradeColor": [
+  {
+   "args": [
+    null
+   ]
+  },
+  {
+   "args": [
+    0
+   ]
+  },
+  {
+   "args": [
+    1
+   ],
+   "expected": "#32a1ff"
+  },
+  {
+   "args": [
+    2
+   ],
+   "expected": "#00c73c"
+  },
+  {
+   "args": [
+    3
+   ],
+   "expected": "#fd9b5a"
+  },
+  {
+   "args": [
+    4
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    5
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    6
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    7
+   ],
+   "expected": "#ff5959"
+  },
+  {
+   "args": [
+    "2"
+   ],
+   "expected": "#00c73c"
+  }
+ ]
+}

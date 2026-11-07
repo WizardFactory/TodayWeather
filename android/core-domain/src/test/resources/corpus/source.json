@@ -17,6 +17,31 @@
    "sha256": "15116a38393d91835d506a1de7a823be8bbdffea7b2dcb258c112d17575536d8"
   },
   {
+   "path": "client/www/js/controller.tabctrl.js",
+   "commit": "2154640a3acedf3f77759e5389fe102569c4c30d",
+   "sha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd"
+  },
+  {
+   "path": "client/www/js/controller.air.js",
+   "commit": "f0a744f1964e601237f6be31a78916a3b545edf4",
+   "sha256": "760b7e32832cc12d49c063b044a48f0726aa6460b744bae7c6a809418c04af6e"
+  },
+  {
+   "path": "client/www/js/controller.nation.js",
+   "commit": "38ce90a9165306713e943512bc17e691a44d3dea",
+   "sha256": "f6e551d1aeabf8d8c0f8ac80fd8dc1acd599fccc40f911ee5e1cb2099725f1df"
+  },
+  {
+   "path": "client/www/js/controller.nation.air.js",
+   "commit": "2341ca6dc1b7fdd41c1d07f1bb1636238271666a",
+   "sha256": "3507191eebbe090dd2aa0b98bcb15295b84a44d519726cfcb1e9f1087634fae7"
+  },
+  {
+   "path": "client/www/js/controller.kma.special.js",
+   "commit": "986f085de2d6b0b7d2e0c004ace8f4ea003baf3d",
+   "sha256": "2be626aaf8f0fd8091a8e5d9f726847d45d29f924167ae448172c5212fc95583"
+  },
+  {
    "path": "client/www/locales/ko.json",
    "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
    "sha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3"

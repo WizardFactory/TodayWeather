@@ -14,7 +14,12 @@ Running it again without changes in `client/` or the inputs changes nothing. `co
 | --- | --- | --- |
 | `WeatherUtil.convertWeatherData`, `getShortenAddress`, `convertAddressArray`, `getTownFromFullAddress`, `getWeatherEmoji`, `geolocationNormalize` (`service.weatherutil.js`) | the AngularJS factory in a `vm` context with stub `Util`, `Units` and `Monetization` | `WeatherConverter`, `AddressFormat`, `ForecastText`, `GeoLocation` |
 | `_diffTodayYesterday`, `_makeRainSnowFallValueStr`, `getRainSnowFall`, `getRainSnowFallSymbol`, `getTodayPosition` (`controller.forecastctrl.js`) | each function extracted from the source and run with a stub `$scope`, `$translate` and the locale catalogs | `ForecastText`, `ChartPosition` |
-| `WeatherInfo.setCityIndex`/`updateCity` (`service.weatherinfo.js`) | the factory with recording storage | the record of anomaly A01 (see `differences.md`) |
+| `TabCtrl.updateWeatherData` with the real `WeatherInfo` (`controller.tabctrl.js`, `service.weatherinfo.js`) | the extracted function with a request that completes after the place switch | the record of anomaly A01 (see `differences.md`); AN-08 implements the decided fix |
+| `aqiStandard` (`service.weatherutil.js`), TabCtrl `setAirUnit`, `grade2Color`, `airkoreaGrade2Color`, `getSentimentIcon`, AirCtrl `getLabelPosition`, `getAirCodeUnit`, `_getAQIList`, `_getDustForecast`, `_getHourlyForecast` | extracted functions with stub `$scope`, `Units` and element widths | `AirQuality` (`air.json`) |
+| `NationCtrl`, `NationAirCtrl` (`controller.nation*.js`) | the controllers with a stub `WeatherUtil.getNationWeather` returning the captured response | `Nationwide` (`nation.json`) |
+| `parseSpecialData` (`controller.kma.special.js`) | the extracted function with `Date` locale methods fixed to each language and Asia/Seoul (plus en-US in New York) | `Warnings` (`special.json`) |
+
+`core-model` holds typed views of these responses and of the converted place weather (`PlaceWeather`, `CurrentWeather`, `DailyForecast`, `AirStation`, `NationResponse`, `WeatherWarning`, `GeocodeResponse`); `ModelsTest` checks them against the captured responses.
 
 `sprintf.js` is installed at build time and not tracked; the code formats only one `%s`, which the generator substitutes.
 
@@ -28,6 +33,12 @@ Running it again without changes in `client/` or the inputs changes nothing. `co
 | `kma-jeju` | `/weather/v000903/coord/33.5,126.53` |
 | `vc-london`, `vc-london-f` | `/weather/v000903/coord/51.51,-0.13` (Celsius, Fahrenheit) |
 | `vc-newyork`, `vc-sydney` | New York and Sydney, for UTC offsets on both sides and daylight-saving zones |
+| `kma-seoul-imperial` | Seoul with °F, mph, inHg, mi, in and the airnow standard |
+| `kma-seoul-aqicn`, `kma-seoul-who` | Seoul with the aqicn and airkorea_who standards and other wind/pressure units (kt, mmHg, bft, mb) |
+| `vc-tokyo` | Tokyo with km/h and the airnow standard |
+| `nation` | `/v000903/nation/KR` (15 cities of weather, 17 provinces of air) |
+| `special` | `/v000903/kma/special` (3 bulletins) |
+| `geocode-seoul` | `/geocode/v000903/coord/37.56,126.98` |
 
 ## Coverage of the verification matrix
 
@@ -36,13 +47,14 @@ Client rows of `docs/rewrite/verification-matrix.md` and the corpus cases that c
 | Row | Cases |
 | --- | --- |
 | V04 time boundaries | `vc-newyork`, `vc-sydney` (offsets and daylight saving as served), `kma-no-current-index`, `kma-current-index-first`, `kma-midnight-today-first-day`, `vc-no-current-index`, `todayPosition` |
-| V05 units, zero, missing, sentinel and string values | `kma-seoul-fahrenheit`, `vc-london-fahrenheit`, `kma-zero-precipitation`, `kma-rain-everywhere`, `kma-sentinels`, `kma-string-values`, `diffTodayYesterday` (C and F), `rainSnowFall` |
+| V05 units, zero, missing, sentinel and string values | `kma-seoul-fahrenheit`, `vc-london-fahrenheit`, `kma-seoul-imperial`, `kma-seoul-aqicn`, `kma-seoul-who`, `vc-tokyo`, `kma-zero-precipitation`, `kma-rain-everywhere`, `kma-sentinels`, `kma-string-values`, `diffTodayYesterday` (C and F), `rainSnowFall` |
 | V06 coordinates and address-only places | `kma-address-only`, `geolocationNormalize`, `shortenAddress`, `townFromAddress` |
-| V07 unknown source, missing parts, error bodies | `unknown-source`, `vc-no-pubdate`, `vc-no-units`, `kma-missing-short`, `kma-missing-mid`, `kma-missing-current`, `world-missing-daily`, `world-missing-thistime`, `html-error-body`, `empty-object`, the captured responses |
-| V09 response after a place switch | `weather-info.json` (`late-response-after-switch`) |
-| V10 missing air data | `kma-no-air`, `kma-empty-air-list` |
+| V07 unknown source, missing parts, error bodies | `kma-null-short-row`, `kma-null-daily-row`, `vc-null-hourly-row`, `vc-null-daily-row`, `kma-number-row`, `unknown-source`, `vc-no-pubdate`, `vc-no-units`, `kma-missing-short`, `kma-missing-mid`, `kma-missing-current`, `world-missing-daily`, `world-missing-thistime`, `html-error-body`, `empty-object`, the captured responses |
+| V09 response after a place switch | `weather-info.json` (`late-response-after-switch`, the real TabCtrl completion) |
+| V10 missing air data | `kma-no-air`, `kma-empty-air-list`, `air.json` `aqiList` (`missing-air`, stations without values) |
 | V24 language | `kma-seoul-en`, `diffTodayYesterday` (ko, en) |
 | V31 precipitation and icon codes | the captured responses' `pty`/`skyIcon` values, `weatherEmoji`, `rainSnowFallSymbol` |
-| V32 air standards | `airInfoList`/`airInfo` pass-through in every case; grade mapping is screen code and belongs to AN-09 |
+| V32 air standards | `air.json`: each standard (airkorea, airkorea_who, airnow, aqicn, missing, null, unknown) for every pollutant: grade bands and maxima, grade colors and icons for grades 0–7 and a string grade, and the gauge label at each band's lower bound, upper bound and upper bound + 0.001 at two widths; `nation.json` air colors for airkorea and airnow |
+| S10–S12 nationwide weather, air, warnings | `nation.json` (three modes × 15 cities, six pollutants × 17 provinces × two standards), `special.json` (seven language/zone pairs) |
 
 Behavior that differs from `packages/weather-core` or a documented anomaly is listed in [differences.md](differences.md).

@@ -6,7 +6,7 @@ Status uses the recommended defaults that AK accepted on 2026-11-08 for this run
 
 | ID | Behavior in Cordova (corpus evidence) | Other behavior | Source | Status |
 | --- | --- | --- | --- | --- |
-| A01 | A weather response is applied to the place selected when it completes, not the place that requested it: Seoul's data lands on London (`weather-info.json`, V09). | Tie each response to the requesting place. | A01 | Fix (recommended); implemented in AN-08 (data layer). The corpus keeps the Cordova record. |
+| A01 | A weather response is applied to the place selected when it completes, not the place that requested it: the real `TabCtrl.updateWeatherData` completion puts Seoul's data on London (`weather-info.json`, V09). | Tie each response to the requesting place. | A01 | Fix (recommended); implemented in AN-08 (data layer). The corpus keeps the Cordova record. |
 | A02 | `updateCity` keeps older air data when a response omits it. | Replace air data with the response's. | A02 | Keep. |
 | A03 | The converted place weather has no `units` object (`vc-no-units`, all cases). | Keep units with the data. | A03, weather-core `parseUnits` | Keep; the data layer requests in the current units. |
 | A05 | Latitude 0 fails the coordinate branch (truthiness). | Check for a number. | A05 | Keep (no Korean or common overseas place at latitude 0). |
@@ -17,3 +17,7 @@ Status uses the recommended defaults that AK accepted on 2026-11-08 for this run
 | C4 | Sentinels and negative values (`t1h` -50, `pop`/`reh` -1) pass through; string numbers count like numbers (`"0"` is truthy) (`kma-sentinels`, `kma-string-values`). | weather-core turns invalid or negative values into null. | weather-core `numberValue`; V05 | Keep; screens show what the Cordova screens show. |
 | C5 | `getShortenAddress` joins with a comma: `서울시,명동`. | weather-core joins with a space. | weather-core `shortenAddress` | Keep. |
 | C6 | `rainSnowFall` returns the raw value below 10 (a string stays a string) and `Math.round` from 10. | — | corpus | Keep. |
+| A17 | The airnow standard's SO2 grade-2 upper bound is 0.75 instead of 0.075, so the gauge label interpolates over an inverted band (`air.json` `labelPosition`). | 0.075 per the commented ppb row. | A17 | Keep. |
+| C7 | A row that is `null` inside `short`, `hourly`, `midData.dailyData` or `daily` makes the whole conversion fail (null), while a number row passes through (`kma-null-*`, `vc-null-*`, `kma-number-row`). | Skip invalid rows. | corpus | Keep. |
+| C8 | `grade2Color` clamps grades above the standard's last grade to it and returns the default for 0, negatives, fractions and missing standards; `getSentimentIcon` compares strictly, so a grade sent as a string gets the "very unhealthy" icon (`air.json`). | — | corpus | Keep. |
+| C9 | Warning times use the WebView's default short date and medium time for the device language (`special.json`: ko-KR, en-US, ja-JP, de-DE, zh-CN, zh-TW). The Kotlin port reproduces these six languages; others fall back to the en-US form. | Native localized formats. | corpus | Keep for the six app languages. |

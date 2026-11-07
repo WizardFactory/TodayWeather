@@ -9,6 +9,11 @@ on:
       - "client/www/js/service.weatherutil.js"
       - "client/www/js/service.weatherinfo.js"
       - "client/www/js/controller.forecastctrl.js"
+      - "client/www/js/controller.tabctrl.js"
+      - "client/www/js/controller.air.js"
+      - "client/www/js/controller.nation.js"
+      - "client/www/js/controller.nation.air.js"
+      - "client/www/js/controller.kma.special.js"
       - ".github/workflows/android.yml"
   push:
     branches: [master]
@@ -20,6 +25,11 @@ on:
       - "client/www/js/service.weatherutil.js"
       - "client/www/js/service.weatherinfo.js"
       - "client/www/js/controller.forecastctrl.js"
+      - "client/www/js/controller.tabctrl.js"
+      - "client/www/js/controller.air.js"
+      - "client/www/js/controller.nation.js"
+      - "client/www/js/controller.nation.air.js"
+      - "client/www/js/controller.kma.special.js"
       - ".github/workflows/android.yml"
 permissions:
   contents: read
