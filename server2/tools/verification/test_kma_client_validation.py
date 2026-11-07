@@ -315,6 +315,16 @@ class CompareTest(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertEqual(report['missing_fields'], ['historyStatus.missingDailyDates'])
 
+    def test_history_gap_lists_stay_arrays(self):
+        # CV-history-list-kind: list contents are not judged, but a list must stay a list.
+        candidate = reference()
+        candidate['historyStatus'].update(missingHourlySlots='none', hourlyFieldGaps={})
+        status, report, _ = compare(reference(), candidate)
+        self.assertEqual({v['path']: v['reason'] for v in report['invalid_values']}, {
+            'historyStatus.missingHourlySlots': 'string where the reference has an array',
+            'historyStatus.hourlyFieldGaps': 'object where the reference has an array'})
+        self.assertEqual(status, 1)
+
     def test_candidate_only_keys_pass(self):
         candidate = reference()
         candidate['forecastNarrative'] = dict(stationId=109, text='맑음')

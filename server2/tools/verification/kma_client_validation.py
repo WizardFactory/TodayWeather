@@ -23,7 +23,7 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          decimal string, and the same rules apply to them. A number that reads as infinite (the
          string "1e309", or the JSON number 1e309) is invalid; "NaN" is not a number.
          Not judged: historyObservation and fieldObservations, the contents of the historyStatus
-         lists, forecastNarrative. A *Str/*Grade/*Approx/*Hours/*Icon label whose value field
+         lists (which must stay arrays), forecastNarrative. A *Str/*Grade/*Approx/*Hours/*Icon label whose value field
          differs or is absent is value-dependent, not missing. Excluded (never missing; listed
          apart when the candidate lacks one, leaves it invalid or keeps it empty): air quality,
          UV, pollen, food poisoning and the KASI extras other than sunrise and sunset. Valid
@@ -237,8 +237,10 @@ class Comparison:
             if not present:
                 self.missing_fields.append(p)
             elif norm == GAP_LISTS_IN and isinstance(rv, list):
-                if cv is None:
-                    self.invalid_values.append(dict(path=p, reference=brief(rv), candidate=None, reason='null'))
+                # Gap diagnostics: presence and the array kind are judged, contents and emptiness are not.
+                reason = 'null' if cv is None else None if isinstance(cv, list) else invalid(key, cv, rv)
+                if reason:
+                    self.invalid_values.append(dict(path=p, reference=brief(rv), candidate=brief(cv), reason=reason))
             else:
                 self.value(key, rv, cv, p, n)
 
