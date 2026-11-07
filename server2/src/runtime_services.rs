@@ -83,10 +83,8 @@ impl RuntimeServices {
         };
         let warning_store = if families.kma_source() || families.push {
             Some(Arc::new(
-                ProcessWarnings::new(
-                    s3.clone().ok_or(GatewayError::InvalidConfiguration)?,
-                    crate::storage::CatalogLimits::default(),
-                    crate::warnings::store::StoreConfig::default(),
+                gateway::runtime::warning_store(
+                    s3.as_ref().ok_or(GatewayError::InvalidConfiguration)?,
                 )
                 .map_err(|_| GatewayError::InvalidConfiguration)?,
             ))
@@ -107,9 +105,8 @@ impl RuntimeServices {
             None
         };
         let warning_feed = warning_store.as_ref().map(|_| {
-            Arc::new(ProcessFeed::new(
-                Arc::new(s3.clone().expect("warning storage constructed")),
-                Arc::new(crate::budget::SystemClock),
+            Arc::new(gateway::runtime::warning_feed(
+                s3.as_ref().expect("warning storage constructed"),
             ))
         });
         let built = gateway::runtime::build_shared(
