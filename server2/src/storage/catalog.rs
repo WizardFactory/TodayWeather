@@ -198,6 +198,10 @@ impl<T: CatalogTransport> CatalogStore<T> {
             limits,
         })
     }
+    /// The limits this store was built with (a second store of the same bucket uses them too).
+    pub fn limits(&self) -> &CatalogLimits {
+        &self.limits
+    }
     fn deadline(&self, deadline: Instant) -> Instant {
         deadline.min(Instant::now() + self.limits.deadline)
     }
