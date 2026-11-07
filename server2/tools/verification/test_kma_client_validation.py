@@ -257,6 +257,19 @@ class CompareTest(unittest.TestCase):
         self.assertEqual(report['missing_fields'],
                          ['midData.dailyData[20261106].sunrise', 'midData.dailyData[20261106].sunset'])
 
+    def test_excluded_parts_kept_empty_are_listed(self):
+        # CV-empty-excluded: an excluded part emptied by the candidate is listed like a deleted one.
+        candidate = reference()
+        candidate.update(airInfoList=[], airInfo={})
+        candidate['current'].update(arpltn={}, summaryAir='')
+        row(candidate, 'daily', '20261106').update(dustForecast={}, locationGeo=[])
+        status, report, _ = compare(reference(), candidate)
+        self.assertEqual((status, report['verdict']), (0, 'pass'))
+        self.assertNothingMissing(report)
+        self.assertEqual(sorted(report['excluded_missing']), sorted([
+            'airInfoList', 'airInfo', 'current.arpltn', 'current.summaryAir',
+            'midData.dailyData[20261106].dustForecast', 'midData.dailyData[20261106].locationGeo']))
+
     def test_attribution_and_history_gap_lists_are_not_judged(self):
         candidate = reference()
         for container in [candidate['current'], *candidate['short'], *candidate['midData']['dailyData']]:

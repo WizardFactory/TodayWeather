@@ -22,9 +22,10 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          decimal string, and the same rules apply to them.
          Not judged: historyObservation and fieldObservations, the contents of the historyStatus
          lists, forecastNarrative. A *Str/*Grade/*Approx/*Hours/*Icon label whose value field
-         differs or is absent is value-dependent, not missing. Excluded (listed apart, never
-         missing): air quality, UV, pollen, food poisoning and the KASI extras other than
-         sunrise and sunset. Valid values that differ are information only.
+         differs or is absent is value-dependent, not missing. Excluded (never missing; listed
+         apart when the candidate lacks one, leaves it invalid or keeps it empty): air quality,
+         UV, pollen, food poisoning and the KASI extras other than sunrise and sunset. Valid
+         values that differ are information only.
          Exit 0 pass, 1 missing data, 2 not comparable (another or unknown place: regionName,
          cityName or townName differs, or is absent, null or blank in either body; different
          publications; or not a KMA body) or unreadable input; the report lists are computed in
@@ -113,6 +114,11 @@ def js_number(value):
 
 def blank(value):
     return isinstance(value, str) and not value.strip(JS_SPACE)
+
+
+def emptied(reference, value):
+    """An object or array the candidate keeps empty where the reference one holds data."""
+    return isinstance(value, (dict, list)) and not value and isinstance(reference, (dict, list)) and bool(reference)
 
 
 def kind(value):
@@ -207,7 +213,7 @@ class Comparison:
             valid = invalid(key, rv) is None
             lost = valid and (not present or invalid(key, cv, rv) is not None)
             if excluded(norm, key):
-                if lost:
+                if lost or (valid and present and emptied(rv, cv)):
                     self.excluded_missing.append(p)
                 continue
             stem = label_stem(key, ref, cand)
