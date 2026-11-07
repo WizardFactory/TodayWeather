@@ -12,7 +12,11 @@
     "wsd",
     "reh",
     "tmn",
-    "tmx"
+    "tmx",
+    "hPa",
+    "press",
+    "vis",
+    "visibility"
    ],
    "onlyPresent": true
   },
@@ -26,7 +30,11 @@
     "wsd",
     "skyIcon",
     "tmn",
-    "tmx"
+    "tmx",
+    "hPa",
+    "press",
+    "vis",
+    "visibility"
    ]
   },
   "sentinel": {
@@ -43,8 +51,13 @@
     "keys": [
      "pop",
      "reh",
-     "wsd"
-    ]
+     "wsd",
+     "hPa",
+     "press",
+     "vis",
+     "visibility"
+    ],
+    "onlyPresent": true
    }
   },
   "string": {
@@ -56,7 +69,11 @@
     "rn1",
     "wsd",
     "tmn",
-    "tmx"
+    "tmx",
+    "hPa",
+    "press",
+    "vis",
+    "visibility"
    ]
   }
  },
@@ -68,7 +85,7 @@
    ],
    "inputFile": "inputs/kma-seoul.json",
    "mutation": "zero",
-   "expectedSha256": "e54580b2d8fab180cc2bb5074d04e7f48ca91284e7ad0c270fa6c14324865bca"
+   "expectedSha256": "ff885b612eeef2810a6e26da856a85527442f067ac0c2f29a4fb0e09aede82b8"
   },
   {
    "name": "kma-seoul-missing",
@@ -77,7 +94,7 @@
    ],
    "inputFile": "inputs/kma-seoul.json",
    "mutation": "missing",
-   "expectedSha256": "88d0609e74fe37d77a24b8902b91f522423d80648dcac416b65c5e62be69bf27"
+   "expectedSha256": "5a67bbfe40688b49fa9fbe7c4f0e6d58d5c22608f6f1107220657f264f7e43bc"
   },
   {
    "name": "kma-seoul-sentinel",
@@ -86,7 +103,7 @@
    ],
    "inputFile": "inputs/kma-seoul.json",
    "mutation": "sentinel",
-   "expectedSha256": "6bcca21208492ba6db005c67a247a6011ed5aac428d7bf9ce3932d4d317ac846"
+   "expectedSha256": "af5defe4b2b68ef7361fcb1e24e8407293b557e7acff3aed6409482ebc96d28c"
   },
   {
    "name": "kma-seoul-string",
@@ -95,7 +112,7 @@
    ],
    "inputFile": "inputs/kma-seoul.json",
    "mutation": "string",
-   "expectedSha256": "373bb88eddcdac09c335c125ae6d87e115c9518ecce44dd29c2a964afee14931"
+   "expectedSha256": "609742cc068b47a2159bae1473288611516b84445bde38a4b124f91bad27fc25"
   },
   {
    "name": "kma-seoul-f-zero",
@@ -104,7 +121,7 @@
    ],
    "inputFile": "inputs/kma-seoul-f.json",
    "mutation": "zero",
-   "expectedSha256": "eddb6b152a54855332a65f6fb7ac83eaf46dcc7a07ea9e30ae73892bd05fc8ac"
+   "expectedSha256": "9c53e3c7b1a0b3b85d66cd34f346b237d98938731b3705177b19d8ed6e459715"
   },
   {
    "name": "kma-seoul-f-missing",
@@ -113,7 +130,7 @@
    ],
    "inputFile": "inputs/kma-seoul-f.json",
    "mutation": "missing",
-   "expectedSha256": "0d5f0b2698be874f7c8385c63ba5eab81d5ee60b6471b1e27eecc96c7ae40f18"
+   "expectedSha256": "53bd27d379a377839574db0dff84ee4518c293fa10083351f4c16e23dccc397a"
   },
   {
    "name": "kma-seoul-f-sentinel",
@@ -122,7 +139,7 @@
    ],
    "inputFile": "inputs/kma-seoul-f.json",
    "mutation": "sentinel",
-   "expectedSha256": "b14e8517ac7e167e15eb00b1eb1d8be5b596f2a24d934c2061f8ed0aec08002e"
+   "expectedSha256": "2fa1553bbc4da0dab00444eb470a66b1dd64dade14174ed22a5b710d5a04521f"
   },
   {
    "name": "kma-seoul-f-string",
@@ -131,7 +148,7 @@
    ],
    "inputFile": "inputs/kma-seoul-f.json",
    "mutation": "string",
-   "expectedSha256": "b7b22d2f66ff9c41ed68af884dc4c5a83aab0750d9652002d98ced4c1a3cc80b"
+   "expectedSha256": "81929af65ff133ab941460196135e216b9edc4b31968ea8ac9f5e5296fd6065a"
   },
   {
    "name": "kma-seoul-imperial-zero",
@@ -140,7 +157,7 @@
    ],
    "inputFile": "inputs/kma-seoul-imperial.json",
    "mutation": "zero",
-   "expectedSha256": "43f3d94b281a22a52ebe5c78a587c5e7072aa1f4b79bd699f58ff5256d68aedf"
+   "expectedSha256": "949026dc95f83c23649d0efbe175b2097fcbae5e07623582777bc8765a842a02"
   },
   {
    "name": "kma-seoul-imperial-missing",
@@ -149,7 +166,7 @@
    ],
    "inputFile": "inputs/kma-seoul-imperial.json",
    "mutation": "missing",
-   "expectedSha256": "e38f685ade8be40317a3ada2e76e7d4f7c450020232e2ef01fdf115149244814"
+   "expectedSha256": "9d97e1824b54f76fedd9ba55442b7c2bce1b9fbf59815d1d4bee73dff30ba2f3"
   },
   {
    "name": "kma-seoul-imperial-sentinel",
@@ -158,7 +175,7 @@
    ],
    "inputFile": "inputs/kma-seoul-imperial.json",
    "mutation": "sentinel",
-   "expectedSha256": "f1e3440af49074b97c4243cd0fc2b55898fb2f038c0fd4b12f80a9a89f9a155f"
+   "expectedSha256": "3d31ca94c94e55247056783cdc4b0341ae95a8e92d324098f57a46400abed242"
   },
   {
    "name": "kma-seoul-imperial-string",
@@ -167,7 +184,7 @@
    ],
    "inputFile": "inputs/kma-seoul-imperial.json",
    "mutation": "string",
-   "expectedSha256": "860a636a9dc71d007ab0becb11631ca46ee8bbcfcc06344dc340af3598e0ac6a"
+   "expectedSha256": "0a8c54d511604b69c79b7f77cc170953e044bd2ce9f692e433a648b357dc1dd3"
   },
   {
    "name": "kma-seoul-aqicn-zero",
@@ -176,7 +193,7 @@
    ],
    "inputFile": "inputs/kma-seoul-aqicn.json",
    "mutation": "zero",
-   "expectedSha256": "521aa84aaa8ea7bc00a554e22ba74d0f8dde1b16a4098c6b7b5d7569a40ff39e"
+   "expectedSha256": "40715fcc2fa399d3a05ede4f73a763b020c361c5abaa067100fc1c8ef2ea82f4"
   },
   {
    "name": "kma-seoul-aqicn-missing",
@@ -185,7 +202,7 @@
    ],
    "inputFile": "inputs/kma-seoul-aqicn.json",
    "mutation": "missing",
-   "expectedSha256": "a90a8de8acaf1e33e488edcb417d1625ec2643732741d447974f2da3a4a39079"
+   "expectedSha256": "bdb0409e5c3bbcaa419f16addbf2babe6319c5aca3f250b7084f7f0773b92b8c"
   },
   {
    "name": "kma-seoul-aqicn-sentinel",
@@ -194,7 +211,7 @@
    ],
    "inputFile": "inputs/kma-seoul-aqicn.json",
    "mutation": "sentinel",
-   "expectedSha256": "7232065141053ad43476e9ab49afcbee61d270680ae5fbaa840dac9ef5479403"
+   "expectedSha256": "def2736d9690eb1ebca80abe5d18319e7125421237bcc4bcea1b1c9c90325a3c"
   },
   {
    "name": "kma-seoul-aqicn-string",
@@ -203,7 +220,7 @@
    ],
    "inputFile": "inputs/kma-seoul-aqicn.json",
    "mutation": "string",
-   "expectedSha256": "9d17c8ff6048e7c6168ecc996eb4b1695b62b10443cadd4fb47888401cebd32b"
+   "expectedSha256": "5af3192c49184e2f9a469241a9af03367446cabed9ccd2bbad41665b444129e6"
   },
   {
    "name": "kma-seoul-who-zero",
@@ -212,7 +229,7 @@
    ],
    "inputFile": "inputs/kma-seoul-who.json",
    "mutation": "zero",
-   "expectedSha256": "1516aa308815d3949878d90e197ff1a8d1fa7914d3d16745474933ea233f23dd"
+   "expectedSha256": "1a179fcb015cbcb2d4b38a327891b4d85e8e9e426718bb6f630ff2a9a5ef03b2"
   },
   {
    "name": "kma-seoul-who-missing",
@@ -221,7 +238,7 @@
    ],
    "inputFile": "inputs/kma-seoul-who.json",
    "mutation": "missing",
-   "expectedSha256": "ce5ae51fe3a6bc1e6acc05f82b8e4852dae29998d7d096a129041d9b92458c20"
+   "expectedSha256": "30f4424105c2761d5ac30928a1d19b9bf6c40c3fbb26f51fa20f8c73889516cc"
   },
   {
    "name": "kma-seoul-who-sentinel",
@@ -230,7 +247,7 @@
    ],
    "inputFile": "inputs/kma-seoul-who.json",
    "mutation": "sentinel",
-   "expectedSha256": "043d29215f35cdf9dbc9055164ad1edeb525f622fbe6a1694349a218dfeae617"
+   "expectedSha256": "739fe32da5162a605a53f1268252feb15518a3a6b5b7a9b18a260197d6c7e318"
   },
   {
    "name": "kma-seoul-who-string",
@@ -239,7 +256,7 @@
    ],
    "inputFile": "inputs/kma-seoul-who.json",
    "mutation": "string",
-   "expectedSha256": "a81add6b330cd29d4e176162629e69d65cf7da137df48604321d4a7d55c16abf"
+   "expectedSha256": "a8ffb23281400786a66c39af25155fdf72fb748f6e4bce5dc24945074b3e4931"
   },
   {
    "name": "vc-london-zero",
@@ -248,7 +265,7 @@
    ],
    "inputFile": "inputs/vc-london.json",
    "mutation": "zero",
-   "expectedSha256": "efebc805d1ddb762a841dfd2c110837f29e2c1312c51bd9a1bf25ed4dd7505f1"
+   "expectedSha256": "e16035f1b0699132ed3ccaa54fdab3d44c805109029e666fe7879eacc73ce9a7"
   },
   {
    "name": "vc-london-missing",
@@ -257,7 +274,7 @@
    ],
    "inputFile": "inputs/vc-london.json",
    "mutation": "missing",
-   "expectedSha256": "3c59429e999a9b4be510bf063a8d9831fce4c436f10b18972e0b7c3cc89c4406"
+   "expectedSha256": "66dcf46bffe88c84a2a9c5a6b1169dded6728a57751b581720f492a5c57600ae"
   },
   {
    "name": "vc-london-sentinel",
@@ -266,7 +283,7 @@
    ],
    "inputFile": "inputs/vc-london.json",
    "mutation": "sentinel",
-   "expectedSha256": "b5aeabfc8f3b3bbf443d4392e6baf5330d96a78f55d875c04fdeed05ea68c141"
+   "expectedSha256": "d25b29df67b34622d42df5340dffa5bbcf668aa8ad3239efee5b7613bed5a753"
   },
   {
    "name": "vc-london-string",
@@ -275,7 +292,7 @@
    ],
    "inputFile": "inputs/vc-london.json",
    "mutation": "string",
-   "expectedSha256": "00cd2a34b3a1c9887f3c501e7d04b58423a9fd1c4e1960b39906d3891c9ebdc5"
+   "expectedSha256": "7bbdbe458ae30de84c948d6711a9aec800c4b8f6627179512dd0b9d82a34483a"
   },
   {
    "name": "vc-london-f-zero",
@@ -284,7 +301,7 @@
    ],
    "inputFile": "inputs/vc-london-f.json",
    "mutation": "zero",
-   "expectedSha256": "36d05771ee7d2bd40a8e460b33b4ea2bff2fafbfdc490c3d86cd1c6ce599d020"
+   "expectedSha256": "f66162a46bbec98a5957d0e45e855b0393b2d3b4a4fb14493ffbf41d77a385cb"
   },
   {
    "name": "vc-london-f-missing",
@@ -293,7 +310,7 @@
    ],
    "inputFile": "inputs/vc-london-f.json",
    "mutation": "missing",
-   "expectedSha256": "54da2860b48d5aab3dbf30c5ebafa0fe0257c6341427f35ed0d4ed01b94609ba"
+   "expectedSha256": "96e240d2ece0f95313d968977fcafe50bb791725ecebc829646e9ce21446670a"
   },
   {
    "name": "vc-london-f-sentinel",
@@ -302,7 +319,7 @@
    ],
    "inputFile": "inputs/vc-london-f.json",
    "mutation": "sentinel",
-   "expectedSha256": "86eefbc47f2bde4e2a3d724c97e9c88de20ba9c1d384b4328489360571a88c55"
+   "expectedSha256": "cd57d3f4dc63464051d0ab6982de88806ebf977bed103bec57520f8f88211e8e"
   },
   {
    "name": "vc-london-f-string",
@@ -311,7 +328,7 @@
    ],
    "inputFile": "inputs/vc-london-f.json",
    "mutation": "string",
-   "expectedSha256": "58473107b3312d8b3aa35d614bcd28a08aaa712ec9e8d4dc61af4315c2d753a9"
+   "expectedSha256": "31edc671b2f7d1e2d3dd333b0c489dc0a1ed568b19ebca759bd6bed131cc756f"
   },
   {
    "name": "vc-tokyo-zero",
@@ -320,7 +337,7 @@
    ],
    "inputFile": "inputs/vc-tokyo.json",
    "mutation": "zero",
-   "expectedSha256": "9cf8b3a1ff3e3b88451da9e06f28f741cd80fbee9fc05a62d18fe88f6a4e8c88"
+   "expectedSha256": "c48d0635b7a7ec8caf114f3a1a61dec95e0abd5362fc14e50c6eb15208bc7fd1"
   },
   {
    "name": "vc-tokyo-missing",
@@ -329,7 +346,7 @@
    ],
    "inputFile": "inputs/vc-tokyo.json",
    "mutation": "missing",
-   "expectedSha256": "55bf70a6678356e011f216e139685e2dab475b04a883c09abcd0efaeca292321"
+   "expectedSha256": "7d62da910fdd34b78a3fcf27e5be4d424521e6692b287181ed913f752f09a822"
   },
   {
    "name": "vc-tokyo-sentinel",
@@ -338,7 +355,7 @@
    ],
    "inputFile": "inputs/vc-tokyo.json",
    "mutation": "sentinel",
-   "expectedSha256": "64d0f4f9099576e869ed9c09761774992b5741bb6e9d939cb16a857cf0a78dda"
+   "expectedSha256": "d72313e6d6e5e42993176b43ac9e76fe0499afc1a043f78ab5a5b53a2ce2c211"
   },
   {
    "name": "vc-tokyo-string",
@@ -347,7 +364,7 @@
    ],
    "inputFile": "inputs/vc-tokyo.json",
    "mutation": "string",
-   "expectedSha256": "1c8ced6f985d1d4af5650aeaabee9d3003a41419167965068ade44915d97320c"
+   "expectedSha256": "75010635859c58db61280f9ec5626d38413572ee0095d1840c4e278a149a3810"
   }
  ]
 }

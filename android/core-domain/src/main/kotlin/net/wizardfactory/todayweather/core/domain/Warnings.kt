@@ -22,7 +22,7 @@ object Warnings {
         val out = list.toMutableList()
         for ((i, item) in list.withIndex()) {
             if (item !is JsonObject) break // special.announcement on a non-object (or comment.replace) throws
-            val millis = jsDate(item["announcement"])
+            val millis = jsDate(item["announcement"], zone)
             val text = if (millis == null) "Invalid Date Invalid Date" else localDateTime(millis, zone, languageTag)
             var o = JsonObject(item + ("announcement" to JsonPrimitive(text)))
             out[i] = o
@@ -34,30 +34,48 @@ object Warnings {
         return JsonArray(out)
     }
 
-    private val ISO = Regex("""^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?(Z|[+-]\d{2}:\d{2})?)?$""")
+    private val ISO = Regex(
+        """^([+-]\d{6}|\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?(Z|[+-]\d{2}:\d{2})?)?$""",
+    )
+    private const val MAX_TIME = 8_640_000_000_000_000L
 
-    /** `new Date(value)` for the forms the server sends; null for an Invalid Date. */
-    fun jsDate(value: JsonElement?): Long? = when {
-        value == null -> null
-        value == JsonNull -> 0L
-        value is JsonPrimitive && !value.isString -> value.doubleOrNull?.toLong()
-        value is JsonPrimitive -> ISO.matchEntire(value.content)?.let { m ->
-            val g = m.groupValues
-            val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-            cal.clear()
-            cal.set(g[1].toInt(), g[2].toInt() - 1, g[3].toInt(), g[4].ifEmpty { "0" }.toInt(), g[5].ifEmpty { "0" }.toInt(), g[6].ifEmpty { "0" }.toInt())
-            cal.set(Calendar.MILLISECOND, g[7].padEnd(3, '0').take(3).ifEmpty { "0" }.toInt())
-            val offset = g[8]
-            var millis = cal.timeInMillis
-            if (offset.length == 6) {
-                val sign = if (offset[0] == '-') -1 else 1
-                millis -= sign * (offset.substring(1, 3).toLong() * 3600_000 + offset.substring(4, 6).toLong() * 60_000)
-            } else if (offset.isEmpty() && g[4].isNotEmpty()) {
-                return null // local-time forms are not sent by the server; not reproduced
-            }
-            millis
+    /**
+     * `new Date(value)` as V8 reads the forms the server could send; null for an Invalid Date.
+     * ISO strings: month 1–12, day 1–31 (days past the month's end roll over), hour 0–24 (24 only at
+     * 24:00:00), minute and second 0–59, offsets up to ±23:59. A date alone is UTC; a date and time
+     * without an offset is local time in [zone]. Numbers are milliseconds within ±8.64e15.
+     */
+    fun jsDate(value: JsonElement?, zone: TimeZone = TimeZone.getTimeZone("UTC")): Long? {
+        if (value == null) return null
+        if (value == JsonNull) return 0L
+        val p = value as? JsonPrimitive ?: return null
+        if (!p.isString) {
+            val n = p.doubleOrNull ?: return null
+            return if (kotlin.math.abs(n) <= MAX_TIME) n.toLong() else null
         }
-        else -> null
+        val g = ISO.matchEntire(p.content)?.groupValues ?: return null
+        val year = g[1].toInt(); val month = g[2].toInt(); val day = g[3].toInt()
+        val hasTime = g[4].isNotEmpty()
+        val hour = g[4].ifEmpty { "0" }.toInt(); val minute = g[5].ifEmpty { "0" }.toInt()
+        val second = g[6].ifEmpty { "0" }.toInt(); val millis = g[7].padEnd(3, '0').take(3).ifEmpty { "0" }.toInt()
+        if (month !in 1..12 || day !in 1..31 || minute > 59 || second > 59) return null
+        if (hour > 24 || (hour == 24 && (minute != 0 || second != 0 || millis != 0))) return null
+        val offset = g[8]
+        var offsetMillis = 0L
+        if (offset.length == 6) {
+            val oh = offset.substring(1, 3).toInt(); val om = offset.substring(4, 6).toInt()
+            if (oh > 23 || om > 59) return null
+            offsetMillis = (if (offset[0] == '-') -1 else 1) * (oh * 3_600_000L + om * 60_000L)
+        }
+        val local = hasTime && offset.isEmpty()
+        val cal = Calendar.getInstance(if (local) zone else TimeZone.getTimeZone("UTC")).apply {
+            clear()
+            isLenient = true
+            set(year, month - 1, day, hour, minute, second)
+            set(Calendar.MILLISECOND, millis)
+        }
+        val t = cal.timeInMillis - offsetMillis
+        return if (kotlin.math.abs(t) <= MAX_TIME) t else null
     }
 
     /** ICU (Chromium) default short date and medium time per language, as the WebView prints them. */

@@ -111,6 +111,90 @@
    },
    {
     "comment": "line 10\nnext"
+   },
+   {
+    "announcement": "2026-13-01T00:00:00Z",
+    "comment": "line 11\nnext"
+   },
+   {
+    "announcement": "2026-02-30T00:00:00Z",
+    "comment": "line 12\nnext"
+   },
+   {
+    "announcement": "2026-04-31T00:00:00Z",
+    "comment": "line 13\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:00Z",
+    "comment": "line 14\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:01Z",
+    "comment": "line 15\nnext"
+   },
+   {
+    "announcement": "2026-11-07T25:00:00Z",
+    "comment": "line 16\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:60:00Z",
+    "comment": "line 17\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:59:60Z",
+    "comment": "line 18\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+24:00",
+    "comment": "line 19\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+23:59",
+    "comment": "line 20\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00-09:30",
+    "comment": "line 21\nnext"
+   },
+   {
+    "announcement": "2026-00-07T00:00:00Z",
+    "comment": "line 22\nnext"
+   },
+   {
+    "announcement": "2026-11-00T00:00:00Z",
+    "comment": "line 23\nnext"
+   },
+   {
+    "announcement": "2026-11-07",
+    "comment": "line 24\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00",
+    "comment": "line 25\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00",
+    "comment": "line 26\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00Z",
+    "comment": "line 27\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00.1234Z",
+    "comment": "line 28\nnext"
+   },
+   {
+    "announcement": "+002026-11-07T10:00:00Z",
+    "comment": "line 29\nnext"
+   },
+   {
+    "announcement": 8640000000000001,
+    "comment": "line 30\nnext"
+   },
+   {
+    "announcement": -8640000000000001,
+    "comment": "line 31\nnext"
    }
   ],
   "expected": [
@@ -157,6 +241,90 @@
    {
     "comment": "line 10<br>next",
     "announcement": "Invalid Date Invalid Date"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 11<br>next"
+   },
+   {
+    "announcement": "2026. 3. 2. 오전 9:00:00",
+    "comment": "line 12<br>next"
+   },
+   {
+    "announcement": "2026. 5. 1. 오전 9:00:00",
+    "comment": "line 13<br>next"
+   },
+   {
+    "announcement": "2026. 11. 8. 오전 9:00:00",
+    "comment": "line 14<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 15<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 16<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 17<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 18<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 19<br>next"
+   },
+   {
+    "announcement": "2026. 11. 6. 오후 7:01:00",
+    "comment": "line 20<br>next"
+   },
+   {
+    "announcement": "2026. 11. 8. 오전 4:30:00",
+    "comment": "line 21<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 22<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 23<br>next"
+   },
+   {
+    "announcement": "2026. 11. 7. 오전 9:00:00",
+    "comment": "line 24<br>next"
+   },
+   {
+    "announcement": "2026. 11. 7. 오전 10:00:00",
+    "comment": "line 25<br>next"
+   },
+   {
+    "announcement": "2026. 11. 7. 오전 10:00:00",
+    "comment": "line 26<br>next"
+   },
+   {
+    "announcement": "2026. 11. 7. 오후 7:00:00",
+    "comment": "line 27<br>next"
+   },
+   {
+    "announcement": "2026. 11. 7. 오후 7:00:00",
+    "comment": "line 28<br>next"
+   },
+   {
+    "announcement": "2026. 11. 7. 오후 7:00:00",
+    "comment": "line 29<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 30<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 31<br>next"
    }
   ]
  },
@@ -305,6 +473,90 @@
    },
    {
     "comment": "line 10\nnext"
+   },
+   {
+    "announcement": "2026-13-01T00:00:00Z",
+    "comment": "line 11\nnext"
+   },
+   {
+    "announcement": "2026-02-30T00:00:00Z",
+    "comment": "line 12\nnext"
+   },
+   {
+    "announcement": "2026-04-31T00:00:00Z",
+    "comment": "line 13\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:00Z",
+    "comment": "line 14\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:01Z",
+    "comment": "line 15\nnext"
+   },
+   {
+    "announcement": "2026-11-07T25:00:00Z",
+    "comment": "line 16\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:60:00Z",
+    "comment": "line 17\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:59:60Z",
+    "comment": "line 18\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+24:00",
+    "comment": "line 19\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+23:59",
+    "comment": "line 20\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00-09:30",
+    "comment": "line 21\nnext"
+   },
+   {
+    "announcement": "2026-00-07T00:00:00Z",
+    "comment": "line 22\nnext"
+   },
+   {
+    "announcement": "2026-11-00T00:00:00Z",
+    "comment": "line 23\nnext"
+   },
+   {
+    "announcement": "2026-11-07",
+    "comment": "line 24\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00",
+    "comment": "line 25\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00",
+    "comment": "line 26\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00Z",
+    "comment": "line 27\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00.1234Z",
+    "comment": "line 28\nnext"
+   },
+   {
+    "announcement": "+002026-11-07T10:00:00Z",
+    "comment": "line 29\nnext"
+   },
+   {
+    "announcement": 8640000000000001,
+    "comment": "line 30\nnext"
+   },
+   {
+    "announcement": -8640000000000001,
+    "comment": "line 31\nnext"
    }
   ],
   "expected": [
@@ -351,6 +603,90 @@
    {
     "comment": "line 10<br>next",
     "announcement": "Invalid Date Invalid Date"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 11<br>next"
+   },
+   {
+    "announcement": "3/2/2026 9:00:00 AM",
+    "comment": "line 12<br>next"
+   },
+   {
+    "announcement": "5/1/2026 9:00:00 AM",
+    "comment": "line 13<br>next"
+   },
+   {
+    "announcement": "11/8/2026 9:00:00 AM",
+    "comment": "line 14<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 15<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 16<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 17<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 18<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 19<br>next"
+   },
+   {
+    "announcement": "11/6/2026 7:01:00 PM",
+    "comment": "line 20<br>next"
+   },
+   {
+    "announcement": "11/8/2026 4:30:00 AM",
+    "comment": "line 21<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 22<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 23<br>next"
+   },
+   {
+    "announcement": "11/7/2026 9:00:00 AM",
+    "comment": "line 24<br>next"
+   },
+   {
+    "announcement": "11/7/2026 10:00:00 AM",
+    "comment": "line 25<br>next"
+   },
+   {
+    "announcement": "11/7/2026 10:00:00 AM",
+    "comment": "line 26<br>next"
+   },
+   {
+    "announcement": "11/7/2026 7:00:00 PM",
+    "comment": "line 27<br>next"
+   },
+   {
+    "announcement": "11/7/2026 7:00:00 PM",
+    "comment": "line 28<br>next"
+   },
+   {
+    "announcement": "11/7/2026 7:00:00 PM",
+    "comment": "line 29<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 30<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 31<br>next"
    }
   ]
  },
@@ -499,6 +835,90 @@
    },
    {
     "comment": "line 10\nnext"
+   },
+   {
+    "announcement": "2026-13-01T00:00:00Z",
+    "comment": "line 11\nnext"
+   },
+   {
+    "announcement": "2026-02-30T00:00:00Z",
+    "comment": "line 12\nnext"
+   },
+   {
+    "announcement": "2026-04-31T00:00:00Z",
+    "comment": "line 13\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:00Z",
+    "comment": "line 14\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:01Z",
+    "comment": "line 15\nnext"
+   },
+   {
+    "announcement": "2026-11-07T25:00:00Z",
+    "comment": "line 16\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:60:00Z",
+    "comment": "line 17\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:59:60Z",
+    "comment": "line 18\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+24:00",
+    "comment": "line 19\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+23:59",
+    "comment": "line 20\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00-09:30",
+    "comment": "line 21\nnext"
+   },
+   {
+    "announcement": "2026-00-07T00:00:00Z",
+    "comment": "line 22\nnext"
+   },
+   {
+    "announcement": "2026-11-00T00:00:00Z",
+    "comment": "line 23\nnext"
+   },
+   {
+    "announcement": "2026-11-07",
+    "comment": "line 24\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00",
+    "comment": "line 25\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00",
+    "comment": "line 26\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00Z",
+    "comment": "line 27\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00.1234Z",
+    "comment": "line 28\nnext"
+   },
+   {
+    "announcement": "+002026-11-07T10:00:00Z",
+    "comment": "line 29\nnext"
+   },
+   {
+    "announcement": 8640000000000001,
+    "comment": "line 30\nnext"
+   },
+   {
+    "announcement": -8640000000000001,
+    "comment": "line 31\nnext"
    }
   ],
   "expected": [
@@ -545,6 +965,90 @@
    {
     "comment": "line 10<br>next",
     "announcement": "Invalid Date Invalid Date"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 11<br>next"
+   },
+   {
+    "announcement": "2026/3/2 9:00:00",
+    "comment": "line 12<br>next"
+   },
+   {
+    "announcement": "2026/5/1 9:00:00",
+    "comment": "line 13<br>next"
+   },
+   {
+    "announcement": "2026/11/8 9:00:00",
+    "comment": "line 14<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 15<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 16<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 17<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 18<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 19<br>next"
+   },
+   {
+    "announcement": "2026/11/6 19:01:00",
+    "comment": "line 20<br>next"
+   },
+   {
+    "announcement": "2026/11/8 4:30:00",
+    "comment": "line 21<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 22<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 23<br>next"
+   },
+   {
+    "announcement": "2026/11/7 9:00:00",
+    "comment": "line 24<br>next"
+   },
+   {
+    "announcement": "2026/11/7 10:00:00",
+    "comment": "line 25<br>next"
+   },
+   {
+    "announcement": "2026/11/7 10:00:00",
+    "comment": "line 26<br>next"
+   },
+   {
+    "announcement": "2026/11/7 19:00:00",
+    "comment": "line 27<br>next"
+   },
+   {
+    "announcement": "2026/11/7 19:00:00",
+    "comment": "line 28<br>next"
+   },
+   {
+    "announcement": "2026/11/7 19:00:00",
+    "comment": "line 29<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 30<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 31<br>next"
    }
   ]
  },
@@ -693,6 +1197,90 @@
    },
    {
     "comment": "line 10\nnext"
+   },
+   {
+    "announcement": "2026-13-01T00:00:00Z",
+    "comment": "line 11\nnext"
+   },
+   {
+    "announcement": "2026-02-30T00:00:00Z",
+    "comment": "line 12\nnext"
+   },
+   {
+    "announcement": "2026-04-31T00:00:00Z",
+    "comment": "line 13\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:00Z",
+    "comment": "line 14\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:01Z",
+    "comment": "line 15\nnext"
+   },
+   {
+    "announcement": "2026-11-07T25:00:00Z",
+    "comment": "line 16\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:60:00Z",
+    "comment": "line 17\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:59:60Z",
+    "comment": "line 18\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+24:00",
+    "comment": "line 19\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+23:59",
+    "comment": "line 20\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00-09:30",
+    "comment": "line 21\nnext"
+   },
+   {
+    "announcement": "2026-00-07T00:00:00Z",
+    "comment": "line 22\nnext"
+   },
+   {
+    "announcement": "2026-11-00T00:00:00Z",
+    "comment": "line 23\nnext"
+   },
+   {
+    "announcement": "2026-11-07",
+    "comment": "line 24\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00",
+    "comment": "line 25\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00",
+    "comment": "line 26\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00Z",
+    "comment": "line 27\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00.1234Z",
+    "comment": "line 28\nnext"
+   },
+   {
+    "announcement": "+002026-11-07T10:00:00Z",
+    "comment": "line 29\nnext"
+   },
+   {
+    "announcement": 8640000000000001,
+    "comment": "line 30\nnext"
+   },
+   {
+    "announcement": -8640000000000001,
+    "comment": "line 31\nnext"
    }
   ],
   "expected": [
@@ -739,6 +1327,90 @@
    {
     "comment": "line 10<br>next",
     "announcement": "Invalid Date Invalid Date"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 11<br>next"
+   },
+   {
+    "announcement": "2.3.2026 09:00:00",
+    "comment": "line 12<br>next"
+   },
+   {
+    "announcement": "1.5.2026 09:00:00",
+    "comment": "line 13<br>next"
+   },
+   {
+    "announcement": "8.11.2026 09:00:00",
+    "comment": "line 14<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 15<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 16<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 17<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 18<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 19<br>next"
+   },
+   {
+    "announcement": "6.11.2026 19:01:00",
+    "comment": "line 20<br>next"
+   },
+   {
+    "announcement": "8.11.2026 04:30:00",
+    "comment": "line 21<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 22<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 23<br>next"
+   },
+   {
+    "announcement": "7.11.2026 09:00:00",
+    "comment": "line 24<br>next"
+   },
+   {
+    "announcement": "7.11.2026 10:00:00",
+    "comment": "line 25<br>next"
+   },
+   {
+    "announcement": "7.11.2026 10:00:00",
+    "comment": "line 26<br>next"
+   },
+   {
+    "announcement": "7.11.2026 19:00:00",
+    "comment": "line 27<br>next"
+   },
+   {
+    "announcement": "7.11.2026 19:00:00",
+    "comment": "line 28<br>next"
+   },
+   {
+    "announcement": "7.11.2026 19:00:00",
+    "comment": "line 29<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 30<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 31<br>next"
    }
   ]
  },
@@ -887,6 +1559,90 @@
    },
    {
     "comment": "line 10\nnext"
+   },
+   {
+    "announcement": "2026-13-01T00:00:00Z",
+    "comment": "line 11\nnext"
+   },
+   {
+    "announcement": "2026-02-30T00:00:00Z",
+    "comment": "line 12\nnext"
+   },
+   {
+    "announcement": "2026-04-31T00:00:00Z",
+    "comment": "line 13\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:00Z",
+    "comment": "line 14\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:01Z",
+    "comment": "line 15\nnext"
+   },
+   {
+    "announcement": "2026-11-07T25:00:00Z",
+    "comment": "line 16\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:60:00Z",
+    "comment": "line 17\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:59:60Z",
+    "comment": "line 18\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+24:00",
+    "comment": "line 19\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+23:59",
+    "comment": "line 20\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00-09:30",
+    "comment": "line 21\nnext"
+   },
+   {
+    "announcement": "2026-00-07T00:00:00Z",
+    "comment": "line 22\nnext"
+   },
+   {
+    "announcement": "2026-11-00T00:00:00Z",
+    "comment": "line 23\nnext"
+   },
+   {
+    "announcement": "2026-11-07",
+    "comment": "line 24\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00",
+    "comment": "line 25\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00",
+    "comment": "line 26\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00Z",
+    "comment": "line 27\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00.1234Z",
+    "comment": "line 28\nnext"
+   },
+   {
+    "announcement": "+002026-11-07T10:00:00Z",
+    "comment": "line 29\nnext"
+   },
+   {
+    "announcement": 8640000000000001,
+    "comment": "line 30\nnext"
+   },
+   {
+    "announcement": -8640000000000001,
+    "comment": "line 31\nnext"
    }
   ],
   "expected": [
@@ -933,6 +1689,90 @@
    {
     "comment": "line 10<br>next",
     "announcement": "Invalid Date Invalid Date"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 11<br>next"
+   },
+   {
+    "announcement": "2026/3/2 09:00:00",
+    "comment": "line 12<br>next"
+   },
+   {
+    "announcement": "2026/5/1 09:00:00",
+    "comment": "line 13<br>next"
+   },
+   {
+    "announcement": "2026/11/8 09:00:00",
+    "comment": "line 14<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 15<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 16<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 17<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 18<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 19<br>next"
+   },
+   {
+    "announcement": "2026/11/6 19:01:00",
+    "comment": "line 20<br>next"
+   },
+   {
+    "announcement": "2026/11/8 04:30:00",
+    "comment": "line 21<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 22<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 23<br>next"
+   },
+   {
+    "announcement": "2026/11/7 09:00:00",
+    "comment": "line 24<br>next"
+   },
+   {
+    "announcement": "2026/11/7 10:00:00",
+    "comment": "line 25<br>next"
+   },
+   {
+    "announcement": "2026/11/7 10:00:00",
+    "comment": "line 26<br>next"
+   },
+   {
+    "announcement": "2026/11/7 19:00:00",
+    "comment": "line 27<br>next"
+   },
+   {
+    "announcement": "2026/11/7 19:00:00",
+    "comment": "line 28<br>next"
+   },
+   {
+    "announcement": "2026/11/7 19:00:00",
+    "comment": "line 29<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 30<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 31<br>next"
    }
   ]
  },
@@ -1081,6 +1921,90 @@
    },
    {
     "comment": "line 10\nnext"
+   },
+   {
+    "announcement": "2026-13-01T00:00:00Z",
+    "comment": "line 11\nnext"
+   },
+   {
+    "announcement": "2026-02-30T00:00:00Z",
+    "comment": "line 12\nnext"
+   },
+   {
+    "announcement": "2026-04-31T00:00:00Z",
+    "comment": "line 13\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:00Z",
+    "comment": "line 14\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:01Z",
+    "comment": "line 15\nnext"
+   },
+   {
+    "announcement": "2026-11-07T25:00:00Z",
+    "comment": "line 16\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:60:00Z",
+    "comment": "line 17\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:59:60Z",
+    "comment": "line 18\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+24:00",
+    "comment": "line 19\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+23:59",
+    "comment": "line 20\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00-09:30",
+    "comment": "line 21\nnext"
+   },
+   {
+    "announcement": "2026-00-07T00:00:00Z",
+    "comment": "line 22\nnext"
+   },
+   {
+    "announcement": "2026-11-00T00:00:00Z",
+    "comment": "line 23\nnext"
+   },
+   {
+    "announcement": "2026-11-07",
+    "comment": "line 24\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00",
+    "comment": "line 25\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00",
+    "comment": "line 26\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00Z",
+    "comment": "line 27\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00.1234Z",
+    "comment": "line 28\nnext"
+   },
+   {
+    "announcement": "+002026-11-07T10:00:00Z",
+    "comment": "line 29\nnext"
+   },
+   {
+    "announcement": 8640000000000001,
+    "comment": "line 30\nnext"
+   },
+   {
+    "announcement": -8640000000000001,
+    "comment": "line 31\nnext"
    }
   ],
   "expected": [
@@ -1127,6 +2051,90 @@
    {
     "comment": "line 10<br>next",
     "announcement": "Invalid Date Invalid Date"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 11<br>next"
+   },
+   {
+    "announcement": "2026/3/2 上午9:00:00",
+    "comment": "line 12<br>next"
+   },
+   {
+    "announcement": "2026/5/1 上午9:00:00",
+    "comment": "line 13<br>next"
+   },
+   {
+    "announcement": "2026/11/8 上午9:00:00",
+    "comment": "line 14<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 15<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 16<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 17<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 18<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 19<br>next"
+   },
+   {
+    "announcement": "2026/11/6 下午7:01:00",
+    "comment": "line 20<br>next"
+   },
+   {
+    "announcement": "2026/11/8 上午4:30:00",
+    "comment": "line 21<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 22<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 23<br>next"
+   },
+   {
+    "announcement": "2026/11/7 上午9:00:00",
+    "comment": "line 24<br>next"
+   },
+   {
+    "announcement": "2026/11/7 上午10:00:00",
+    "comment": "line 25<br>next"
+   },
+   {
+    "announcement": "2026/11/7 上午10:00:00",
+    "comment": "line 26<br>next"
+   },
+   {
+    "announcement": "2026/11/7 下午7:00:00",
+    "comment": "line 27<br>next"
+   },
+   {
+    "announcement": "2026/11/7 下午7:00:00",
+    "comment": "line 28<br>next"
+   },
+   {
+    "announcement": "2026/11/7 下午7:00:00",
+    "comment": "line 29<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 30<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 31<br>next"
    }
   ]
  },
@@ -1275,6 +2283,90 @@
    },
    {
     "comment": "line 10\nnext"
+   },
+   {
+    "announcement": "2026-13-01T00:00:00Z",
+    "comment": "line 11\nnext"
+   },
+   {
+    "announcement": "2026-02-30T00:00:00Z",
+    "comment": "line 12\nnext"
+   },
+   {
+    "announcement": "2026-04-31T00:00:00Z",
+    "comment": "line 13\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:00Z",
+    "comment": "line 14\nnext"
+   },
+   {
+    "announcement": "2026-11-07T24:00:01Z",
+    "comment": "line 15\nnext"
+   },
+   {
+    "announcement": "2026-11-07T25:00:00Z",
+    "comment": "line 16\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:60:00Z",
+    "comment": "line 17\nnext"
+   },
+   {
+    "announcement": "2026-11-07T23:59:60Z",
+    "comment": "line 18\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+24:00",
+    "comment": "line 19\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00+23:59",
+    "comment": "line 20\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00-09:30",
+    "comment": "line 21\nnext"
+   },
+   {
+    "announcement": "2026-00-07T00:00:00Z",
+    "comment": "line 22\nnext"
+   },
+   {
+    "announcement": "2026-11-00T00:00:00Z",
+    "comment": "line 23\nnext"
+   },
+   {
+    "announcement": "2026-11-07",
+    "comment": "line 24\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00",
+    "comment": "line 25\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00",
+    "comment": "line 26\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00Z",
+    "comment": "line 27\nnext"
+   },
+   {
+    "announcement": "2026-11-07T10:00:00.1234Z",
+    "comment": "line 28\nnext"
+   },
+   {
+    "announcement": "+002026-11-07T10:00:00Z",
+    "comment": "line 29\nnext"
+   },
+   {
+    "announcement": 8640000000000001,
+    "comment": "line 30\nnext"
+   },
+   {
+    "announcement": -8640000000000001,
+    "comment": "line 31\nnext"
    }
   ],
   "expected": [
@@ -1321,6 +2413,90 @@
    {
     "comment": "line 10<br>next",
     "announcement": "Invalid Date Invalid Date"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 11<br>next"
+   },
+   {
+    "announcement": "3/1/2026 7:00:00 PM",
+    "comment": "line 12<br>next"
+   },
+   {
+    "announcement": "4/30/2026 8:00:00 PM",
+    "comment": "line 13<br>next"
+   },
+   {
+    "announcement": "11/7/2026 7:00:00 PM",
+    "comment": "line 14<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 15<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 16<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 17<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 18<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 19<br>next"
+   },
+   {
+    "announcement": "11/6/2026 5:01:00 AM",
+    "comment": "line 20<br>next"
+   },
+   {
+    "announcement": "11/7/2026 2:30:00 PM",
+    "comment": "line 21<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 22<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 23<br>next"
+   },
+   {
+    "announcement": "11/6/2026 7:00:00 PM",
+    "comment": "line 24<br>next"
+   },
+   {
+    "announcement": "11/7/2026 10:00:00 AM",
+    "comment": "line 25<br>next"
+   },
+   {
+    "announcement": "11/7/2026 10:00:00 AM",
+    "comment": "line 26<br>next"
+   },
+   {
+    "announcement": "11/7/2026 5:00:00 AM",
+    "comment": "line 27<br>next"
+   },
+   {
+    "announcement": "11/7/2026 5:00:00 AM",
+    "comment": "line 28<br>next"
+   },
+   {
+    "announcement": "11/7/2026 5:00:00 AM",
+    "comment": "line 29<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 30<br>next"
+   },
+   {
+    "announcement": "Invalid Date Invalid Date",
+    "comment": "line 31<br>next"
    }
   ]
  },

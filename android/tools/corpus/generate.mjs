@@ -173,10 +173,11 @@ const CONVERSION = [
 // declarative so the Kotlin test applies the same ones; the expected output is stored as the SHA-256
 // of its canonical JSON (sorted keys) to keep the corpus small.
 const VALUE_MUTATIONS = {
-    zero: {set: 0, keys: ['t1h', 't3h', 'pop', 'rn1', 'r06', 's06', 'wsd', 'reh', 'tmn', 'tmx'], onlyPresent: true},
-    missing: {delete: true, keys: ['t1h', 't3h', 'pop', 'rn1', 'wsd', 'skyIcon', 'tmn', 'tmx']},
-    sentinel: {set: -50, keys: ['t1h', 't3h', 'tmn', 'tmx'], onlyPresent: true, also: {set: -1, keys: ['pop', 'reh', 'wsd']}},
-    string: {stringify: true, keys: ['t1h', 't3h', 'pop', 'rn1', 'wsd', 'tmn', 'tmx']},
+    // Temperature, precipitation, wind, pressure (hPa, press) and distance (vis, visibility) fields.
+    zero: {set: 0, keys: ['t1h', 't3h', 'pop', 'rn1', 'r06', 's06', 'wsd', 'reh', 'tmn', 'tmx', 'hPa', 'press', 'vis', 'visibility'], onlyPresent: true},
+    missing: {delete: true, keys: ['t1h', 't3h', 'pop', 'rn1', 'wsd', 'skyIcon', 'tmn', 'tmx', 'hPa', 'press', 'vis', 'visibility']},
+    sentinel: {set: -50, keys: ['t1h', 't3h', 'tmn', 'tmx'], onlyPresent: true, also: {set: -1, keys: ['pop', 'reh', 'wsd', 'hPa', 'press', 'vis', 'visibility'], onlyPresent: true}},
+    string: {stringify: true, keys: ['t1h', 't3h', 'pop', 'rn1', 'wsd', 'tmn', 'tmx', 'hPa', 'press', 'vis', 'visibility']},
 };
 function applyValueMutation(d, m) {
     const rows = d.source === 'KMA'
@@ -462,6 +463,8 @@ function specialCases() {
             toLocaleDateString() { return super.toLocaleDateString(locale, {timeZone}); }
             toLocaleTimeString() { return super.toLocaleTimeString(locale, {timeZone}); }
         }
+        // The device zone is also the zone in which new Date() reads a local-time string.
+        process.env.TZ = timeZone;
         const context = {console: quiet, Util: {ga: {trackException() {}}}, Date: LocaleDate};
         vm.runInNewContext(extract('controller.kma.special.js', 'function parseSpecialData(') + '\nthis.parse = parseSpecialData;', context);
         out.push({args: [locale, timeZone], expected: clone(context.parse(input('special')))});
@@ -469,11 +472,19 @@ function specialCases() {
             '2026-03-08T06:59:00.000Z', '2026-03-08T07:00:00.000Z', '2026-11-01T05:59:59.000Z', '2026-11-01T06:00:00.000Z',
             '2026-12-31T15:00:00.000Z', '2028-02-29T03:30:00.000Z', '2026-11-07T15:00:00Z', 1794067200000, null,
             'not a date', undefined,
+            // ISO range rules of new Date(): rollover of day 29-31, 24:00 only at :00, offsets up to 23:59,
+            // local time without an offset, and the time value limit.
+            '2026-13-01T00:00:00Z', '2026-02-30T00:00:00Z', '2026-04-31T00:00:00Z', '2026-11-07T24:00:00Z',
+            '2026-11-07T24:00:01Z', '2026-11-07T25:00:00Z', '2026-11-07T23:60:00Z', '2026-11-07T23:59:60Z',
+            '2026-11-07T10:00:00+24:00', '2026-11-07T10:00:00+23:59', '2026-11-07T10:00:00-09:30', '2026-00-07T00:00:00Z',
+            '2026-11-00T00:00:00Z', '2026-11-07', '2026-11-07T10:00', '2026-11-07T10:00:00', '2026-11-07T10:00Z',
+            '2026-11-07T10:00:00.1234Z', '+002026-11-07T10:00:00Z', 8640000000000001, -8640000000000001, // beyond the time value limit (far-future DST rules differ by platform)
         ].map((announcement, i) => ({...(announcement === undefined ? {} : {announcement}), comment: `line ${i}\nnext`}));
         out.push({args: [locale, timeZone, 'synthetic'], input: synthetic, expected: clone(context.parse(clone(synthetic)))});
         const failing = [{announcement: '2026-11-07T15:00:00.000Z', comment: 'a\nb'}, {announcement: '2026-11-07T16:00:00.000Z'},
             {announcement: '2026-11-07T17:00:00.000Z', comment: 'c\nd'}];
         out.push({args: [locale, timeZone, 'missing-comment'], input: failing, expected: clone(context.parse(clone(failing)))});
+        delete process.env.TZ;
     }
     return out;
 }
