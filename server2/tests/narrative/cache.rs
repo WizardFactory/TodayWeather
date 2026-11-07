@@ -143,6 +143,8 @@ async fn failed_reads_do_not_cache_absence_for_the_next_request() {
         assert_eq!(calls.load(SeqCst), 3, "confirmed absence still caches");
     }
 }
+/// KMA-RESTART-RACE (decision 6): a waiter that stops waiting neither cancels the stored read nor
+/// gates the office; the next request joins the running read and answers from it.
 #[tokio::test]
 async fn a_deadline_expired_read_does_not_poison_the_next_request() {
     let (service, calls) = fixture(First::Slow);
@@ -156,15 +158,15 @@ async fn a_deadline_expired_read_does_not_poison_the_next_request() {
     assert!(service.read(108, deadline()).await.is_none());
     assert_eq!(
         calls.load(SeqCst),
-        1,
-        "completed timeout has the short error gate"
+        2,
+        "the next request joins the read the first stopped waiting for (both date indexes)"
     );
     tokio::time::sleep(Duration::from_millis(1100)).await;
     assert!(service.read(108, deadline()).await.is_none());
     assert_eq!(
         calls.load(SeqCst),
-        3,
-        "new eligible request retries after the short error gate"
+        2,
+        "its confirmed absence answers, no error gate and no new read"
     );
 }
 #[tokio::test(start_paused = true)]

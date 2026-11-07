@@ -187,72 +187,217 @@ fn decode(station: u16, tm: &str, raw: &RawRecord, now: i64) -> Result<Narrative
 }
 /// Completed storage faults have a short gate, not a confirmed-absence entry.
 const ERROR_RETRY: Duration = Duration::from_secs(1);
+/// How long a stored answer (a narrative or its confirmed absence) is served.
+const ANSWER_FOR: Duration = Duration::from_secs(30);
+/// One owned store read of an office (S3, never a request's wait).
+const READ_FOR: Duration = Duration::from_secs(30);
+/// An office's raced acquisition starts at most this often.
+const RACE_RETRY: Duration = Duration::from_secs(600);
+/// One acquisition and its publication.
+const FETCH_FOR: Duration = Duration::from_secs(30);
 #[derive(Default)]
 struct OfficeCache {
     answer: Option<(Instant, Option<Narrative>)>,
     retry_after: Option<Instant>,
+    /// An owned store read of the office runs.
+    reading: bool,
+    /// When the office's raced acquisition last started.
+    raced: Option<Instant>,
 }
-type Cache = Mutex<OfficeCache>;
-pub struct Service<T> {
+/// What an office's memory answers now.
+enum Memory {
+    Answer(Option<Narrative>),
+    /// A completed storage fault within its short gate.
+    Gated,
+    Missing,
+}
+struct Inner<T> {
     store: Store<T>,
     source: Arc<dyn Source>,
     cycle: Mutex<()>,
-    cache: [Cache; 10],
+    cache: [std::sync::Mutex<OfficeCache>; 10],
+    /// Bumped whenever an office's memory changes.
+    changed: [tokio::sync::watch::Sender<u64>; 10],
+}
+/// The narrative service: stored reads run as owned work per office (KMA-RESTART-RACE: a
+/// waiter that stops waiting neither cancels a read nor keeps its answer from the next request),
+/// and the periodic refresh acquires every office.
+pub struct Service<T> {
+    inner: Arc<Inner<T>>,
 }
 impl<T: IndexListing + Clone> Service<T> {
     pub fn new(transport: T, source: Arc<dyn Source>) -> Result<Self, Error> {
         Ok(Self {
-            store: Store::new(transport)?,
-            source,
-            cycle: Mutex::new(()),
-            cache: std::array::from_fn(|_| Mutex::new(OfficeCache::default())),
+            inner: Arc::new(Inner {
+                store: Store::new(transport)?,
+                source,
+                cycle: Mutex::new(()),
+                cache: std::array::from_fn(|_| std::sync::Mutex::new(OfficeCache::default())),
+                changed: std::array::from_fn(|_| tokio::sync::watch::channel(0).0),
+            }),
         })
+    }
+}
+fn office_index(station: u16) -> Option<usize> {
+    OFFICES.iter().position(|o| o.0 == station)
+}
+impl<T: IndexListing + Clone + 'static> Inner<T> {
+    fn office(&self, i: usize) -> std::sync::MutexGuard<'_, OfficeCache> {
+        self.cache[i].lock().unwrap_or_else(|e| e.into_inner())
+    }
+    fn memory(&self, i: usize) -> Memory {
+        let cache = self.office(i);
+        if let Some((until, value)) = cache.answer.as_ref()
+            && Instant::now() < *until
+        {
+            let now = now_ms();
+            return Memory::Answer(value.as_ref().filter(|n| n.fresh(now)).cloned());
+        }
+        if cache
+            .retry_after
+            .is_some_and(|until| Instant::now() < until)
+        {
+            return Memory::Gated;
+        }
+        Memory::Missing
+    }
+    fn changed(&self, i: usize) {
+        self.changed[i].send_modify(|n| *n = n.wrapping_add(1));
+    }
+    /// Start the owned store read of an office unless one runs. Its outcome is the office's
+    /// answer (a fault: the short gate); a newer narrative a raced acquisition published
+    /// meanwhile stays.
+    fn start_read(self: &Arc<Self>, i: usize, station: u16) {
+        {
+            let mut cache = self.office(i);
+            if cache.reading {
+                return;
+            }
+            cache.reading = true;
+        }
+        let inner = self.clone();
+        crate::observability::spawn(async move {
+            let reading = Reading(inner.clone(), i);
+            let result = crate::observability::observe(
+                crate::observability::Component::Domestic,
+                crate::observability::Stage::Lookup,
+                inner
+                    .store
+                    .read(station, now_ms(), Instant::now() + READ_FOR),
+            )
+            .await;
+            {
+                let mut cache = inner.office(i);
+                match result {
+                    Ok(value) => {
+                        let held = cache
+                            .answer
+                            .as_ref()
+                            .and_then(|(until, n)| n.clone().filter(|_| Instant::now() < *until));
+                        let value = match (value, held) {
+                            (Some(read), Some(held)) if held.announcement > read.announcement => {
+                                Some(held)
+                            }
+                            (None, Some(held)) => Some(held),
+                            (value, _) => value,
+                        };
+                        cache.answer = Some((Instant::now() + ANSWER_FOR, value));
+                        cache.retry_after = None;
+                    }
+                    Err(_) => {
+                        // Preserve any expired answer without extending its TTL or serving it
+                        // stale.
+                        cache.retry_after = Some(Instant::now() + ERROR_RETRY);
+                    }
+                }
+            }
+            drop(reading);
+            inner.changed(i);
+        });
+    }
+    /// At `race_at` an office whose stored read has no answer yet (still running, or failed)
+    /// gets one acquisition and publication, at most once per [`RACE_RETRY`]; the published
+    /// narrative is the office's answer. An answer by then (a narrative or none stored) asks
+    /// nothing, as a running process asks nothing during a request.
+    fn race(self: &Arc<Self>, i: usize, station: u16, race_at: Instant) {
+        let inner = self.clone();
+        crate::observability::spawn(async move {
+            tokio::time::sleep_until(race_at).await;
+            if matches!(inner.memory(i), Memory::Answer(_)) {
+                return;
+            }
+            {
+                let mut cache = inner.office(i);
+                if cache.raced.is_some_and(|at| at.elapsed() < RACE_RETRY) {
+                    return;
+                }
+                cache.raced = Some(Instant::now());
+            }
+            crate::resolver::race::raced(crate::observability::Component::Domestic);
+            let deadline = Instant::now() + FETCH_FOR;
+            let Ok(Ok(Some(page))) =
+                tokio::time::timeout_at(deadline, inner.source.fetch(station, deadline)).await
+            else {
+                return;
+            };
+            let Ok(Some(published)) = inner
+                .store
+                .publish(station, page, Instant::now() + Duration::from_secs(3))
+                .await
+            else {
+                return;
+            };
+            {
+                let mut cache = inner.office(i);
+                cache.answer = Some((Instant::now() + ANSWER_FOR, Some(published)));
+                cache.retry_after = None;
+            }
+            inner.changed(i);
+        });
+    }
+}
+/// Marks an office's owned read ended when dropped (also if the read panicked).
+struct Reading<T: IndexListing + Clone + 'static>(Arc<Inner<T>>, usize);
+impl<T: IndexListing + Clone + 'static> Drop for Reading<T> {
+    fn drop(&mut self) {
+        self.0.office(self.1).reading = false;
     }
 }
 impl<T: IndexListing + Clone + 'static> Read for Service<T> {
     fn read(&self, station: u16, deadline: Instant) -> BoxFuture<'_, Option<Narrative>> {
         Box::pin(async move {
-            let i = OFFICES.iter().position(|o| o.0 == station)?;
-            let mut cache = tokio::time::timeout_at(deadline, self.cache[i].lock())
-                .await
-                .ok()?;
-            let now = now_ms();
-            if let Some((until, value)) = cache.answer.as_ref()
-                && Instant::now() < *until
-            {
-                return value.as_ref().filter(|n| n.fresh(now)).cloned();
-            }
-            if cache
-                .retry_after
-                .is_some_and(|until| Instant::now() < until)
-            {
-                return None;
-            }
-            let result = crate::observability::observe(
-                crate::observability::Component::Domestic,
-                crate::observability::Stage::Lookup,
-                self.store.read(station, now, deadline),
-            )
-            .await;
-            match result {
-                Ok(value) => {
-                    cache.answer = Some((Instant::now() + Duration::from_secs(30), value.clone()));
-                    cache.retry_after = None;
-                    value
+            let i = office_index(station)?;
+            let mut changes = self.inner.changed[i].subscribe();
+            loop {
+                match self.inner.memory(i) {
+                    Memory::Answer(value) => return value,
+                    Memory::Gated => return None,
+                    Memory::Missing => self.inner.start_read(i, station),
                 }
-                Err(_) => {
-                    // Preserve any expired answer without extending its TTL or serving it stale.
-                    cache.retry_after = Some(Instant::now() + ERROR_RETRY);
-                    None
+                // The read goes on past this waiter; the next request uses its answer.
+                match tokio::time::timeout_at(deadline, changes.changed()).await {
+                    Ok(Ok(())) => {}
+                    _ => return None,
                 }
             }
         })
+    }
+    fn prefetch(&self, station: u16, race_at: Instant) {
+        let Some(i) = office_index(station) else {
+            return;
+        };
+        match self.inner.memory(i) {
+            Memory::Answer(_) => return,
+            Memory::Gated => {}
+            Memory::Missing => self.inner.start_read(i, station),
+        }
+        self.inner.race(i, station, race_at);
     }
 }
 impl<T: IndexListing + Clone + 'static> Acquire for Service<T> {
     fn refresh(&self) -> BoxFuture<'_, ()> {
         Box::pin(async move {
-            let Ok(_cycle) = self.cycle.try_lock() else {
+            let Ok(_cycle) = self.inner.cycle.try_lock() else {
                 return;
             };
             for (i, (station, _, _)) in OFFICES.iter().enumerate() {
@@ -261,9 +406,12 @@ impl<T: IndexListing + Clone + 'static> Acquire for Service<T> {
                     crate::observability::Component::Provider,
                     crate::observability::Stage::Acquire,
                     async {
-                        tokio::time::timeout_at(deadline, self.source.fetch(*station, deadline))
-                            .await
-                            .map_err(|_| super::provider::Error::Deadline)?
+                        tokio::time::timeout_at(
+                            deadline,
+                            self.inner.source.fetch(*station, deadline),
+                        )
+                        .await
+                        .map_err(|_| super::provider::Error::Deadline)?
                     },
                 )
                 .await;
@@ -271,13 +419,21 @@ impl<T: IndexListing + Clone + 'static> Acquire for Service<T> {
                     && crate::observability::observe(
                         crate::observability::Component::Domestic,
                         crate::observability::Stage::Publish,
-                        self.store
-                            .publish(*station, page, Instant::now() + Duration::from_secs(3)),
+                        self.inner.store.publish(
+                            *station,
+                            page,
+                            Instant::now() + Duration::from_secs(3),
+                        ),
                     )
                     .await
                     .is_ok()
                 {
-                    *self.cache[i].lock().await = OfficeCache::default();
+                    {
+                        let mut cache = self.inner.office(i);
+                        cache.answer = None;
+                        cache.retry_after = None;
+                    }
+                    self.inner.changed(i);
                 }
             }
         })
