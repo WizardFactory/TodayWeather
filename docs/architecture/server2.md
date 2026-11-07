@@ -2581,6 +2581,7 @@ a current observation must carry no recovery sentinel (`t1h` -50 or `reh` -1 is 
 | --- | --- | --- |
 | Latest grid publication (`getUltraSrtNcst`, `getUltraSrtFcst` at HH30, `getVilageFcst`) | Not in S3 for the cell | 5 minutes |
 | Grid backfill (earlier publications: 23 current, 23 ultra-short, 7 short; S14 `schedule`) | Missing publications, in one owned pass per cell, family and latest publication (3 acquisitions in flight, 8 passes in their own pool); the request does not wait | Each pass at most hourly. Each publication shares the latest acquisition's flight and 5-minute retry bound. |
+| Previous short publication (`getVilageFcst`, observed response only; [#2614](#2614-kma-answer-parity-current-row-sentinels-and-yesterday)) | From HH+2:10 to HH+2:59, when the latest starts after the current three-hour slot HH, and it is not in S3 for the cell | 3 hours: one attempt per cell and publication |
 | Latest short RSS (`wid/queryDFS.jsp`) | Not in S3 for the cell | 5 minutes |
 | Latest mid publications (`getMidFcst`, `getMidLandFcst`, `getMidTa` at the 06/18 `tmFc`) | A region legacy collects lacks the latest publication | 5 minutes |
 | Forecast-zone list (`getFcstZoneCd`) | Until one complete readable process refresh; success replaces memory, failure remains demand-retryable (#2819 D1) | 5 minutes after an admitted attempt; stop after success |
@@ -3899,6 +3900,47 @@ in that specific smoke and covered separately by source/history regressions.
 The [proposed contract](diagrams/server2-late-publication.html) and
 [editable source](diagrams/server2-late-publication.sequence.json) preserve their
 pre-implementation base identity; they are not execution or readiness evidence.
+
+### #2614 KMA answer parity: current row, sentinels and yesterday
+
+AK defined client validation on 2026-11-07: a server2 answer gives the client all the data the
+client receives today, except parts left out because their provider is slow; legacy omission
+rules are last-resort safeguards. An EC2 parity run that day (server2 from an empty bucket against
+the production API, five places, 18:31–19:29 KST) found these defects independent of what S3 holds
+([intent](../../intent/issue-2614-kma-response-parity.md),
+[acceptance](../../specs/issue-2614-kma-response-parity.md)). Under ASOS-primary:
+
+- **Current row.** A three-hour row is past once its interval has passed (label + 3 h ≤ now). The
+  current-time row (label ≤ now < label + 3 h) keeps the forecast of the newest publication
+  covering it, with observed fields merged over it as legacy `_mergeShortWithCurrent` does, so its
+  `pop`, `wav`, `s06` and `r06`, and today's `tmn`/`tmx` where legacy keeps them, reach the client
+  again (`short::past_slot`). Past rows keep the ASOS-primary rule; their cleared amounts no longer
+  keep the forecast totals behind them, which had turned −1 snow into −10 and left the forecast's
+  rain or snow text beside a measured amount.
+- **Previous publication.** From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3. The source then
+  also requires the previous publication, the newest covering slot HH (`required::foreground`):
+  read when listed, otherwise acquired as owned single-flight work under the request's wait, with a
+  three-hour retry bound per cell and publication. It is always inside the 54 h read window. This
+  adds at most one `getVilageFcst` acquisition (one or two pages of 999 rows) per cell and three
+  hours, at most 8 a day, and only when the previous publication was not stored while it was the
+  latest: a cell first requested in that window, or after a failed or unusable acquisition. A
+  failure leaves the row with legacy's values for a missing publication.
+- **Sentinels.** A missing probability is 0 on every row (legacy `adjustShort`, so the app never
+  prints "-1%"); a missing `s06`, `sn1` or `s1d` stays −1 through the cm-to-mm conversion; an hour
+  ASOS fills without a grid observation (a row of legacy's validation template) carries wind
+  components −100, the value legacy's three-hour summary skips, instead of the template's −1.
+- **Yesterday.** `can_compare` adds one branch that legacy lacks: the live reading of station X in
+  the current hour (`KMA_STATION_LIVE`) and X's ASOS hour exactly 24 h earlier (`KMA_ASOS`) are one
+  thermometer, so `current.yesterday.t1h` is sent. Other stations, hours and sources keep the
+  safeguard, a stored grid yesterday row keeps its precedence, and `comparisonAvailable: true`
+  still short-circuits. In the run every pair was such a pair.
+
+`currentIndex` marks the row of the current observation's time, not of the clock. When the
+observation lags into the previous slot (a grid nowcast before HH:40 at a slot boundary, or a late
+live reading) the marked row is past by the clock and keeps the ASOS-primary rule. Past-slot
+forecast values, ASOS precipitation rules and fetching older publications for past rows wait for
+AK's decisions. Tests: `observed_history` and `parity_evidence` (domestic), `policy`, `present`,
+`required` and `previous_short_tests` (library).
 
 ### #2819 D1 forecast-zone recovery
 

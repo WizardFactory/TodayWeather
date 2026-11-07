@@ -329,6 +329,23 @@ Do not keep only every sixth VSRT publication merely because each covers six
 hours: overlapping forecasts can have different values. Any such thinning
 requires a value-equivalence proof.
 
+On the public axis a three-hour row is historical once its interval has passed
+(label + 3 h ≤ now). The current-time row (label ≤ now < label + 3 h) keeps the
+forecast of the newest publication covering it, with the observed fields merged
+over it as legacy `_mergeShortWithCurrent` does (AK 2026-11-07: the client gets
+what it gets today). From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3, so
+the previous one is read from S3 or acquired, at most once per cell and
+publication. Clearing a historical row's forecast amounts also clears the totals
+kept beside them; its snow amount then finalizes like that of every past row
+without a covering publication (0 over 0 hours) and no forecast text remains.
+The answer keeps legacy's missing values: probability 0 (`adjustShort`), snow
+−1 through the cm-to-mm conversion, and wind components −100 where ASOS fills an
+hour that no grid observation holds. The yesterday comparison additionally pairs
+the live reading of station X in the current hour with X's ASOS hour exactly 24 h
+earlier, one thermometer; other stations, hours and sources keep the safeguard,
+which is a last-resort rule since `yesterday.t1h` must be sent. See the
+[#2614 parity record](server2.md#2614-kma-answer-parity-current-row-sentinels-and-yesterday).
+
 The machine-checked precipitation slice of this contract is
 [`server2/config/contracts/kma-history.v1.json`](../../server2/config/contracts/kma-history.v1.json)
 (version 1, slice `precipitation-1`). It declares sources, hourly/slot/half
