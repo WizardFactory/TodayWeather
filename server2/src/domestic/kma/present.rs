@@ -394,7 +394,8 @@ pub fn set_yesterday(cx: &mut Cx) -> Flow {
     if !current.truthy() || !list.truthy() {
         return Flow::Next;
     }
-    let _ = catch(|| current.set("yesterday", policy::yesterday(&current, &list)));
+    let primary = policy::observations_primary(&cx.req);
+    let _ = catch(|| current.set("yesterday", policy::yesterday(&current, &list, primary)));
     Flow::Next
 }
 
@@ -1312,8 +1313,9 @@ pub fn get_summary(cx: &mut Cx) -> Flow {
     }
     let l = cx.locale;
     let query = cx.r("query");
+    let primary = policy::observations_primary(&cx.req);
     let r = catch(|| {
-        current.set("yesterday", policy::yesterday(&current, &list));
+        current.set("yesterday", policy::yesterday(&current, &list, primary));
         current.set(
             "summary",
             summary(&current, &current.get("yesterday"), &query, l),

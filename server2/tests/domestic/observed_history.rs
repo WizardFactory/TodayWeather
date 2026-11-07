@@ -15,6 +15,12 @@ fn history() -> OrderedJson {
 
 /// ASOS hourly and daily records of `station` for September 17..23.
 fn history_at(station: &str) -> OrderedJson {
+    history_records(station, Some("asos-primary-v1"))
+}
+
+/// The ASOS records of `station` under `policy` (None: the legacy history read, which only fills
+/// invalid fields).
+fn history_records(station: &str, policy: Option<&str>) -> OrderedJson {
     let mut hourly = Vec::new();
     let mut daily = Vec::new();
     for day in 17..=23 {
@@ -29,12 +35,12 @@ fn history_at(station: &str) -> OrderedJson {
             "stationId":station,"key":format!("202609{day:02}"),
             "values":{"taMin":7,"taMax":27,"t1d":17,"rn1":12,"reh":60,"wsd":2}}));
     }
-    OrderedJson::parse(
-        &serde_json::to_vec(&json!({"policy":"asos-primary-v1",
-        "startDate":"20260917","endDate":"20260923","hourly":hourly,"daily":daily}))
-        .unwrap(),
-    )
-    .unwrap()
+    let mut data =
+        json!({"startDate":"20260917","endDate":"20260923","hourly":hourly,"daily":daily});
+    if let Some(policy) = policy {
+        data["policy"] = json!(policy);
+    }
+    OrderedJson::parse(&serde_json::to_vec(&data).unwrap()).unwrap()
 }
 
 fn assembled(injected: bool) -> Value {
@@ -347,6 +353,37 @@ fn a_live_reading_compares_with_the_same_stations_asos_hour_a_day_earlier() {
     assert_eq!(yesterday["fieldObservations"]["t1h"]["source"], "KMA_ASOS");
     assert_eq!(yesterday["comparisonAvailable"], true, "{yesterday}");
     assert_eq!(yesterday["t1h"], 17, "{yesterday}");
+}
+
+/// Legacy mode keeps legacy's comparison safeguard: the paired replay of frozen legacy inputs
+/// (`tools/shadow/replay.py --family kma-rich`) withholds a live reading against an ASOS hour.
+/// Without the ASOS-primary policy ASOS only fills a missing grid hour, here 2026-09-23 09:00.
+#[test]
+fn legacy_mode_keeps_the_legacy_yesterday_safeguard() {
+    let sc = scenario("station-first-rain");
+    let patch: fn(TownModel, OrderedJson) -> OrderedJson = |model, docs| match model {
+        TownModel::Current => without(docs, "currentData", |d, t| d == "20260923" && t == "0900"),
+        _ => docs,
+    };
+    let body = assembled_from(
+        sc,
+        &Patched {
+            inner: replay(sc).with_history(history_records("108", None)),
+            town_model: patch,
+        },
+    );
+    let current = &body["current"];
+    assert_eq!(
+        current["fieldObservations"]["t1h"]["source"],
+        "KMA_STATION_LIVE"
+    );
+    let yesterday = &current["yesterday"];
+    assert_eq!(
+        yesterday["fieldObservations"]["t1h"]["source"], "KMA_ASOS",
+        "{yesterday}"
+    );
+    assert_eq!(yesterday["comparisonAvailable"], false, "{yesterday}");
+    assert!(yesterday.get("t1h").is_none(), "{yesterday}");
 }
 
 /// Another station's ASOS hour keeps the comparison safeguard.

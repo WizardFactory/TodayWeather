@@ -3939,7 +3939,9 @@ the production API, five places, 18:31–19:29 KST) found these defects independ
   prints "-1%"); a missing `s06`, `sn1` or `s1d` stays −1 through the cm-to-mm conversion; an hour
   ASOS fills without a grid observation (a row of legacy's validation template) carries wind
   components −100, the value legacy's three-hour summary skips, instead of the template's −1.
-- **Yesterday.** `can_compare` adds one branch that legacy lacks: the live reading of station X in
+- **Yesterday.** Under ASOS-primary only, the comparison adds one branch that legacy lacks
+  (`compare_sources`; legacy mode keeps legacy's `can_compare`, which the kma-rich paired replay
+  of frozen legacy inputs checks): the live reading of station X in
   the current hour (`KMA_STATION_LIVE`) and X's ASOS hour exactly 24 h earlier (`KMA_ASOS`) are one
   thermometer, so `current.yesterday.t1h` is sent. Other stations, hours and sources keep the
   safeguard, a stored grid yesterday row keeps its precedence, and `comparisonAvailable: true`

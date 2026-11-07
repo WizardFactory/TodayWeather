@@ -342,7 +342,7 @@ kept beside them; its snow amount then finalizes like that of every past row
 without a covering publication (0 over 0 hours) and no forecast text remains.
 The answer keeps legacy's missing values: probability 0 (`adjustShort`), snow
 −1 through the cm-to-mm conversion, and wind components −100 where ASOS fills an
-hour that no grid observation holds. The yesterday comparison additionally pairs
+hour that no grid observation holds. Under ASOS-primary the yesterday comparison also pairs
 the live reading of station X in the current hour with X's ASOS hour exactly 24 h
 earlier, one thermometer; other stations, hours and sources keep the safeguard,
 which is a last-resort rule since `yesterday.t1h` must be sent. See the

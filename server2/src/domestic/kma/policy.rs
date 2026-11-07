@@ -625,8 +625,12 @@ fn measurement_hour(source: &V) -> f64 {
     }
     instant(&V::Str(format!("{}00", &s[..10]).into()))
 }
-/// `observations.canCompare(current, yesterday)`.
+/// `observations.canCompare(current, yesterday)`, as legacy decides it.
 pub fn can_compare(current: &V, yesterday: &V) -> bool {
+    compare_sources(current, yesterday, false)
+}
+/// [`can_compare`], with one branch legacy lacks under ASOS-primary (`primary`).
+fn compare_sources(current: &V, yesterday: &V, primary: bool) -> bool {
     if !current.truthy()
         || !yesterday.truthy()
         || yesterday.get("missing").truthy()
@@ -654,11 +658,13 @@ pub fn can_compare(current: &V, yesterday: &V) -> bool {
             && hour == slot_ms(current)
             && hour - slot_ms(yesterday) == DAY;
     }
-    // Not in legacy: AK 2026-11-07 requires `yesterday.t1h` and keeps this rule only as a
-    // last-resort safeguard. Under ASOS-primary the yesterday hour is the station's ASOS record,
-    // so the live reading of station X in the current hour and X's ASOS hour exactly 24 h
-    // earlier are one thermometer. Other stations, hours and sources keep the safeguard.
-    if a.truthy()
+    // Not in legacy, and only under ASOS-primary: AK 2026-11-07 requires `yesterday.t1h` and
+    // keeps this rule only as a last-resort safeguard. There the yesterday hour is the station's
+    // ASOS record, so the live reading of station X in the current hour and X's ASOS hour exactly
+    // 24 h earlier are one thermometer. Other stations, hours and sources keep the safeguard; the
+    // legacy mode keeps legacy's answer (the paired replay of frozen legacy inputs).
+    if primary
+        && a.truthy()
         && b.truthy()
         && strict_eq(&a.get("source"), &V::s("KMA_STATION_LIVE"))
         && strict_eq(&b.get("source"), &V::s("KMA_ASOS"))
@@ -1171,7 +1177,7 @@ pub fn merge_daily_status(req: &V, now: f64) {
 }
 
 /// `observations.yesterday(current, rows)`.
-pub fn yesterday(current: &V, rows: &V) -> V {
+pub fn yesterday(current: &V, rows: &V, primary: bool) -> V {
     let s = slot_v(current);
     let target = key(instant(&s) - DAY, false);
     let found = rows.as_arr().map(|a| {
@@ -1194,7 +1200,7 @@ pub fn yesterday(current: &V, rows: &V) -> V {
     }
     let r = V::Obj(result.o().assign_copy());
     r.del("comparisonAvailable");
-    let available = can_compare(current, &r);
+    let available = compare_sources(current, &r, primary);
     r.set("comparisonAvailable", available);
     if !available {
         r.del("t1h");
@@ -1473,15 +1479,15 @@ mod tests {
         }
         row
     }
-    /// `observations.yesterday` over a current-list holding `row`.
-    fn compared(current: &V, row: &V) -> V {
-        yesterday(current, &V::Arr(Arr::from_vec(vec![row.clone()])))
+    /// `observations.yesterday` over a current-list holding `row`, under ASOS-primary or not.
+    fn compared(current: &V, row: &V, primary: bool) -> V {
+        yesterday(current, &V::Arr(Arr::from_vec(vec![row.clone()])), primary)
     }
 
     /// AK 2026-11-07: `current.yesterday.t1h` must be sent. The EC2 parity run of that day
     /// (18:28 KST live readings, ASOS of 2026-11-06 18:00; bodies `body-0..4.json` of
     /// `kma-ec2-20261107p`) paired every place's live station with the same station's ASOS hour
-    /// 24 h earlier, and the safeguard withheld all of them.
+    /// 24 h earlier, and the safeguard withheld all of them. The legacy mode keeps legacy's answer.
     #[test]
     fn the_parity_run_pairs_compare_with_yesterday() {
         for (place, station, now, before) in [
@@ -1503,13 +1509,20 @@ mod tests {
                 before,
                 Some(("KMA_ASOS", station, "202611061800")),
             );
-            assert!(can_compare(&current, &row), "{place}");
-            let y = compared(&current, &row);
+            assert!(compare_sources(&current, &row, true), "{place}");
+            let y = compared(&current, &row, true);
             assert!(
                 strict_eq(&y.get("comparisonAvailable"), &V::Bool(true)),
                 "{place}"
             );
             assert_eq!(to_number(&y.get("t1h")), before, "{place}");
+            assert!(!can_compare(&current, &row), "legacy: {place}");
+            let legacy = compared(&current, &row, false);
+            assert!(
+                strict_eq(&legacy.get("comparisonAvailable"), &V::Bool(false)),
+                "legacy: {place}"
+            );
+            assert!(legacy.get("t1h").is_undef(), "legacy: {place}");
         }
     }
 
@@ -1530,15 +1543,16 @@ mod tests {
             reading("20261106", time, 6.7, Some(("KMA_ASOS", station, key)))
         };
         let current = live("202611071828");
-        assert!(can_compare(&current, &asos("108", "1800", "202611061800")));
-        assert!(!can_compare(&current, &asos("159", "1800", "202611061800")));
-        assert!(!can_compare(&current, &asos("", "1800", "202611061800")));
+        let primary = |current: &V, row: &V| compare_sources(current, row, true);
+        assert!(primary(&current, &asos("108", "1800", "202611061800")));
+        assert!(!primary(&current, &asos("159", "1800", "202611061800")));
+        assert!(!primary(&current, &asos("", "1800", "202611061800")));
         // The yesterday row and its ASOS key are both an hour off the current slot.
-        assert!(!can_compare(&current, &asos("108", "1900", "202611061900")));
+        assert!(!primary(&current, &asos("108", "1900", "202611061900")));
         // An ASOS key that is not the yesterday row's own hour.
-        assert!(!can_compare(&current, &asos("108", "1800", "202611061700")));
+        assert!(!primary(&current, &asos("108", "1800", "202611061700")));
         // A live reading from another hour than the current slot.
-        assert!(!can_compare(
+        assert!(!primary(
             &live("202611071728"),
             &asos("108", "1800", "202611061800")
         ));
@@ -1548,22 +1562,22 @@ mod tests {
             6.7,
             Some(("KMA_STATION_HOURLY", "108", "202611061800")),
         );
-        assert!(!can_compare(&current, &hourly));
+        assert!(!primary(&current, &hourly));
         let asos_now = reading(
             "20261107",
             "1800",
             6.5,
             Some(("KMA_ASOS", "108", "202611071800")),
         );
-        assert!(!can_compare(&asos_now, &live("202611061828")));
+        assert!(!primary(&asos_now, &live("202611061828")));
         // A stored grid row for yesterday (no temperature source) keeps today's precedence.
         let grid = reading("20261106", "1800", 6.7, None);
-        assert!(can_compare(&current, &grid));
+        assert!(primary(&current, &grid) && can_compare(&current, &grid));
         let marked = asos("159", "1800", "202611061800");
         marked.set("comparisonAvailable", true);
-        assert!(can_compare(&current, &marked));
+        assert!(primary(&current, &marked) && can_compare(&current, &marked));
         // The yesterday answer withholds the temperature it cannot compare.
-        let y = compared(&current, &asos("159", "1800", "202611061800"));
+        let y = compared(&current, &asos("159", "1800", "202611061800"), true);
         assert!(strict_eq(&y.get("comparisonAvailable"), &V::Bool(false)));
         assert!(y.get("t1h").is_undef());
     }
