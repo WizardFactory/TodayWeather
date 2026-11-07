@@ -1744,6 +1744,34 @@ async fn a_late_raced_acquisition_keeps_the_newer_stored_narrative() {
     assert_eq!(office.fetched(), 1);
 }
 
+/// NARRATIVE (RR2-narrative-singleflight): a request's race for an office the periodic refresh is
+/// fetching joins that fetch and its publication: one provider call.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_race_joins_the_refresh_fetch_of_the_office() {
+    use server2::narrative::Acquire as _;
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    store_narrative_of(&peer, &hour_before(1)).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    let gate = counted.hold(&["raw/v2/kma-forecast-narrative/"]);
+    let office = Arc::new(HeldOffice::new(hour_before(0)));
+    let service = Arc::new(Service::new(counted.clone(), office.clone()).unwrap());
+    let refresh = tokio::spawn({
+        let service = service.clone();
+        async move { service.refresh().await }
+    });
+    office.started(1).await;
+    // The request's stored read is held, so its race starts at once.
+    service.prefetch(109, Instant::now());
+    let again = tokio::time::timeout(Duration::from_secs(1), office.started(2)).await;
+    office.release();
+    refresh.await.unwrap();
+    gate.open();
+    assert!(again.is_err(), "the race fetched the office again");
+    assert_eq!(office.fetched(), 1, "one fetch of the office");
+    assert_eq!(office_text(&service).await.as_deref(), Some("acquired"));
+}
+
 /// FAST (narrative): a stored read done before the head start acquires nothing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_fast_office_read_fetches_nothing() {

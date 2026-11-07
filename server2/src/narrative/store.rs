@@ -193,8 +193,13 @@ const ANSWER_FOR: Duration = Duration::from_secs(30);
 const READ_FOR: Duration = Duration::from_secs(30);
 /// An office's raced acquisition starts at most this often.
 const RACE_RETRY: Duration = Duration::from_secs(600);
-/// One acquisition and its publication.
+/// One acquisition of an office (its provider calls).
 const FETCH_FOR: Duration = Duration::from_secs(30);
+/// The publication after an acquisition.
+const PUBLISH_FOR: Duration = Duration::from_secs(3);
+/// What one owned fetch of an office did: None when it fetched or published nothing, otherwise
+/// what its publication selected.
+type Fetched = Option<Option<Narrative>>;
 #[derive(Default)]
 struct OfficeCache {
     answer: Option<(Instant, Option<Narrative>)>,
@@ -232,6 +237,9 @@ enum Memory {
 struct Inner<T> {
     store: Store<T>,
     source: Arc<dyn Source>,
+    /// One fetch and publication per office at a time, shared by the periodic refresh and the
+    /// request race (RR2-narrative-singleflight): a caller that comes while one runs joins it.
+    fetches: crate::resolver::OwnedFlights<u16, Fetched>,
     cycle: Mutex<()>,
     cache: [std::sync::Mutex<OfficeCache>; 10],
     /// Bumped whenever an office's memory changes.
@@ -249,6 +257,12 @@ impl<T: IndexListing + Clone> Service<T> {
             inner: Arc::new(Inner {
                 store: Store::new(transport)?,
                 source,
+                fetches: crate::resolver::OwnedFlights::new(crate::resolver::OwnedConfig {
+                    running: OFFICES.len(),
+                    entries: OFFICES.len() * 4,
+                    retain: Duration::from_secs(3),
+                })
+                .expect("static narrative fetch bounds"),
                 cycle: Mutex::new(()),
                 cache: std::array::from_fn(|_| std::sync::Mutex::new(OfficeCache::default())),
                 changed: std::array::from_fn(|_| tokio::sync::watch::channel(0).0),
@@ -338,22 +352,54 @@ impl<T: IndexListing + Clone + 'static> Inner<T> {
                 cache.raced = Some(Instant::now());
             }
             crate::resolver::race::raced(crate::observability::Component::Domestic);
-            let deadline = Instant::now() + FETCH_FOR;
-            let Ok(Ok(Some(page))) =
-                tokio::time::timeout_at(deadline, inner.source.fetch(station, deadline)).await
-            else {
-                return;
-            };
-            let Ok(Some(published)) = inner
-                .store
-                .publish(station, page, Instant::now() + Duration::from_secs(3))
-                .await
-            else {
-                return;
-            };
-            inner.office(i).install(Some(published));
-            inner.changed(i);
+            inner.acquire(i, station).await;
         });
+    }
+    /// Fetch and publish office `i` ([`Self::fetch`]) and install what the publication selected
+    /// unless the office holds a newer narrative: the race and the periodic refresh both end so,
+    /// whichever of them and the stored read ends last.
+    async fn acquire(self: &Arc<Self>, i: usize, station: u16) {
+        if let Some(Some(published)) = self.fetch(station).await {
+            self.office(i).install(Some(published));
+            self.changed(i);
+        }
+    }
+    /// Fetch and publish `station`'s narrative, or join the fetch of it that runs: one provider
+    /// call however many callers come while it runs (and within a few seconds after).
+    async fn fetch(self: &Arc<Self>, station: u16) -> Fetched {
+        let inner = self.clone();
+        let waited = self
+            .fetches
+            .wait(station, FETCH_FOR + PUBLISH_FOR, move |_| async move {
+                let deadline = Instant::now() + FETCH_FOR;
+                let fetched = crate::observability::observe(
+                    crate::observability::Component::Provider,
+                    crate::observability::Stage::Acquire,
+                    async {
+                        tokio::time::timeout_at(deadline, inner.source.fetch(station, deadline))
+                            .await
+                            .map_err(|_| super::provider::Error::Deadline)?
+                    },
+                )
+                .await;
+                let Ok(Some(page)) = fetched else {
+                    return None;
+                };
+                crate::observability::observe(
+                    crate::observability::Component::Domestic,
+                    crate::observability::Stage::Publish,
+                    inner
+                        .store
+                        .publish(station, page, Instant::now() + PUBLISH_FOR),
+                )
+                .await
+                .ok()
+            })
+            .await;
+        match waited {
+            crate::resolver::Waited::Ready(fetched) => fetched,
+            _ => None,
+        }
     }
 }
 /// Marks an office's owned read ended when dropped (also if the read panicked).
@@ -401,40 +447,8 @@ impl<T: IndexListing + Clone + 'static> Acquire for Service<T> {
                 return;
             };
             for (i, (station, _, _)) in OFFICES.iter().enumerate() {
-                let deadline = Instant::now() + Duration::from_secs(30);
-                let fetched = crate::observability::observe(
-                    crate::observability::Component::Provider,
-                    crate::observability::Stage::Acquire,
-                    async {
-                        tokio::time::timeout_at(
-                            deadline,
-                            self.inner.source.fetch(*station, deadline),
-                        )
-                        .await
-                        .map_err(|_| super::provider::Error::Deadline)?
-                    },
-                )
-                .await;
-                if let Ok(Some(page)) = fetched
-                    && crate::observability::observe(
-                        crate::observability::Component::Domestic,
-                        crate::observability::Stage::Publish,
-                        self.inner.store.publish(
-                            *station,
-                            page,
-                            Instant::now() + Duration::from_secs(3),
-                        ),
-                    )
-                    .await
-                    .is_ok()
-                {
-                    {
-                        let mut cache = self.inner.office(i);
-                        cache.answer = None;
-                        cache.retry_after = None;
-                    }
-                    self.inner.changed(i);
-                }
+                // A request race fetching the office now is joined, not repeated.
+                self.inner.acquire(i, *station).await;
             }
         })
     }
