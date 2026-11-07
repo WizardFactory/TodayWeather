@@ -1049,12 +1049,16 @@ async fn same_hour_aws_and_city_restore_respects_fetched_order_and_field_presenc
 /// Counts S3 requests at the transport boundary by method and object class (`raw/v2/source/kind`,
 /// `index/v2/source/kind`, `index/v2/groups` descriptors, `list index/v2/source/kind`); every
 /// request passes through to the S06 loopback peer.
+/// Held GETs: the key prefix, how many pass first, the hold and how many were seen.
+type Delay = (String, usize, Duration, usize);
 #[derive(Clone)]
 pub(super) struct Counted {
     inner: server2::world::BoundedS3<server2::storage::HttpS3Transport>,
     counts: Arc<Mutex<HashMap<String, usize>>>,
-    /// GETs of one class after the first `n` are held this long.
-    delay: Arc<Mutex<Option<(String, usize, Duration)>>>,
+    /// GETs of keys under a prefix after the first `n` (counted here) are held this long.
+    delay: Arc<Mutex<Option<Delay>>>,
+    /// GETs of keys under this prefix fail.
+    fail: Arc<Mutex<Option<String>>>,
 }
 impl Counted {
     pub(super) fn new(inner: server2::world::BoundedS3<server2::storage::HttpS3Transport>) -> Self {
@@ -1062,16 +1066,32 @@ impl Counted {
             inner,
             counts: Arc::default(),
             delay: Arc::default(),
+            fail: Arc::default(),
         }
     }
-    /// Hold every GET of `class` after its first `after` for `hold`.
-    pub(super) fn delay_gets(&self, class: &str, after: usize, hold: Duration) {
-        *self.delay.lock().unwrap() = Some((class.to_owned(), after, hold));
+    /// Hold every GET of a key under `prefix` after its first `after` for `hold`.
+    pub(super) fn delay_gets(&self, prefix: &str, after: usize, hold: Duration) {
+        *self.delay.lock().unwrap() = Some((prefix.to_owned(), after, hold, 0));
+    }
+    /// Fail every GET of a key under `prefix` (None: none).
+    pub(super) fn fail_gets(&self, prefix: Option<&str>) {
+        *self.fail.lock().unwrap() = prefix.map(str::to_owned);
     }
     fn held(&self, key: &str) -> Option<Duration> {
-        let delay = self.delay.lock().unwrap().clone()?;
-        let class = Self::class(key);
-        (class == delay.0 && self.get(&format!("GET {class}")) > delay.1).then_some(delay.2)
+        let mut delay = self.delay.lock().unwrap();
+        let (prefix, after, hold, seen) = delay.as_mut()?;
+        if !key.starts_with(prefix.as_str()) {
+            return None;
+        }
+        *seen += 1;
+        (*seen > *after).then_some(*hold)
+    }
+    fn failed(&self, key: &str) -> bool {
+        self.fail
+            .lock()
+            .unwrap()
+            .as_deref()
+            .is_some_and(|prefix| key.starts_with(prefix))
     }
     fn class(key: &str) -> String {
         if key.starts_with("index/v2/groups/") {
@@ -1115,6 +1135,9 @@ impl server2::storage::ObjectTransport for Counted {
         self.count("GET", key);
         if let Some(hold) = self.held(key) {
             tokio::time::sleep(hold).await;
+        }
+        if self.failed(key) {
+            return Err(server2::storage::Error::Transport);
         }
         self.inner.get(key, max).await
     }

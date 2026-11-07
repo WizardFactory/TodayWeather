@@ -156,13 +156,19 @@ impl RecordId {
             .strip_suffix(".raw.gz")
             .and_then(|f| f.split_once('-'))
             .ok_or(invalid.clone())?;
-        let number = |t: &str| t.parse::<u32>().map_err(|_| invalid.clone());
+        // Four, two and two digits (the key's own widths), so the date cannot overflow.
+        let number = |t: &str, width: usize| {
+            (t.len() == width && t.bytes().all(|b| b.is_ascii_digit()))
+                .then(|| t.parse::<u32>().ok())
+                .flatten()
+                .ok_or(invalid.clone())
+        };
         let id = Self {
             source: source.into(),
             kind: kind.into(),
             key_sha256: key_sha256.into(),
             period: Period {
-                local_date: number(y)? * 10000 + number(m)? * 100 + number(d)?,
+                local_date: number(y, 4)? * 10000 + number(m, 2)? * 100 + number(d, 2)?,
                 slot: slot.into(),
             },
             fetched_at_ms: fetched.parse().map_err(|_| invalid.clone())?,

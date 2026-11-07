@@ -2317,8 +2317,11 @@ older schema or parse revision, a grown city set, no product, or a new newest pa
 parse gives the day's raw read as before, which records every complete group as known and every
 excluded one. When a fold's city set has grown past the set an AWS page was reduced for (a city
 page restored after the products, or acquired since, names another station), `Flight::Expand`
-reads those pages in full again by their raw identity (no request waits for it; a failed read is
-tried again after ten minutes), and the next fold reduces them for the new set. `Flight::Load` ends after the products, today's
+reads those pages in full again by their raw identity, four per catalog read, and keeps each read
+as it completes; no request waits for it. A page whose read was started waits a minute before it
+is tried again; pages not reached before the read's 30 s limit, and due retries, are started by the
+next fold or request without waiting for a new hourly page. The next fold reduces the pages read
+in full for the new set. `Flight::Load` ends after the products, today's
 and yesterday's comparisons, the seed and the four newest minute pages. `Flight::LoadRest`, which
 no request waits for, then compares the other days (each marked read and the pages dirty) and
 restores the rest of the minute window. Reloads every five minutes compare with the pages held.
@@ -2331,7 +2334,8 @@ repaired group completes the day and its product is stored again without it. A g
 after a product, older than its pages, is unaccounted for and checked like any new group, so a
 restart from products counts a day complete exactly when a raw read would, given that a complete
 raw object is never deleted. `settled()` counts `LoadRest`, `Product`, `Expand` and a due product
-comparison as busy.
+comparison as busy, and is false while a held AWS page is reduced for a city set that does not
+cover the last fold's (its past rows of a city station would be missing).
 Right after the first deployment the window's oldest day has no product (some of its hours were
 already out of the window) and is read from its raw pages after the first answer.
 
@@ -2341,8 +2345,8 @@ Verification (local, S06 loopback S3 peer, no provider): targeted member GET cou
 restored alone and equal to a cold raw read, unusable products replaced by the raw pages and stored
 again, two processes' products, unsettled answers during the rest of the read, a day with an
 S06-excluded group kept partial, a repaired group completing its day (and recording summaries), a
-station joining the city set after the products, an incomplete newest minute acquisition, and the
-disk cache exclusion.
+station joining the city set after the products (also with failing and with slow full reads), an
+incomplete newest minute acquisition, and the disk cache exclusion.
 
 ### S15b-2 s station registry seed (2026-10-15)
 

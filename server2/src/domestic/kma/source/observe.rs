@@ -84,8 +84,9 @@ const MINUTE_KEEP_MS: f64 = 40. * 60_000.;
 const MINUTE_FIRST: usize = 4;
 /// A day's product is stored at most once per this interval by one process.
 const PRODUCT_EVERY: Duration = Duration::from_secs(600);
-/// A reduced AWS hourly page whose full read failed is read again after this long.
-const EXPAND_RETRY: Duration = Duration::from_secs(600);
+/// A reduced AWS hourly page whose full read was tried is read again after this long (an S3
+/// read, retried as a failed ASOS S3 read is).
+const EXPAND_RETRY: Duration = Duration::from_secs(60);
 /// Acquisitions of one minute tried, newest first, when a newer one is not complete or does not
 /// parse.
 const MINUTE_CANDIDATES: usize = 3;
@@ -496,10 +497,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         if let Some(rx) = self.fold_if_dirty(now_ms) {
             Self::wait(vec![rx], until).await;
         }
-        // A product comparison a finishing one missed.
+        // A product comparison a finishing one missed, and a due full read of reduced pages.
         if self.state().product_due && self.flight(&Flight::Product).is_none() {
             self.want_products(now_ms);
         }
+        self.expand_due();
         // Before the first fold the carried seed alone is the registry (no pages yet).
         Some(self.state().folded.clone().unwrap_or_else(seed_only))
     }
@@ -1391,6 +1393,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             s.pages.city.retain(|h, _| *h >= first);
             s.pages.ids.retain(|(_, h), _| *h >= first);
             s.pages.reduced.retain(|h, _| *h >= first);
+            s.expand_attempts.retain(|h, _| *h >= first);
             // Minute pages older than the readers' reach, however they arrived (S3 or local).
             let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
             s.pages.minute.retain(|k, _| *k > floor);
@@ -1451,27 +1454,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     }
                 }
                 s.hourly_fold = Some(fold.clone());
-                // Pages reduced for a smaller city set lack a city station's rows (a station
-                // joined the set since): they are read in full again.
-                let stale: Vec<(Publication, String)> = s
-                    .pages
-                    .reduced
-                    .iter()
-                    .filter(|(_, set)| !set.is_superset(&fold.cities))
-                    .filter_map(|(h, _)| {
-                        let (_, _, raw_id) = s.pages.ids.get(&("aws-hourly", *h))?;
-                        Some((*h, raw_id.clone()))
-                    })
-                    .filter(|(h, _)| {
-                        s.expand_attempts
-                            .get(h)
-                            .is_none_or(|at| at.elapsed() >= EXPAND_RETRY)
-                    })
-                    .collect();
                 drop(s);
-                if !stale.is_empty() {
-                    self.expand(stale);
-                }
+                self.expand_due();
                 self.want_products(now_ms);
                 fold
             }
@@ -1561,56 +1545,99 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
 
     // ---- reduced pages ----
 
-    /// Read the AWS hourly `pages` (hour and raw identity) in full again and hold their whole
-    /// rows while still the held pages; no request waits for it.
-    fn expand(self: &Arc<Self>, pages: Vec<(Publication, String)>) {
+    /// Pages reduced for a smaller city set than the last fold's lack a city station's rows (a
+    /// station joined the set since): read the due ones in full again, unless a read runs. Called
+    /// after every fold and request, so a retry does not wait for a new hourly page.
+    fn expand_due(self: &Arc<Self>) {
+        if self.flight(&Flight::Expand).is_some() {
+            return;
+        }
+        let due: Vec<(Publication, String)> = {
+            let s = self.state();
+            stale_pages(&s)
+                .into_iter()
+                .filter(|(h, _)| {
+                    s.expand_attempts
+                        .get(h)
+                        .is_none_or(|at| at.elapsed() >= EXPAND_RETRY)
+                })
+                .collect()
+        };
+        if due.is_empty() {
+            return;
+        }
         let _ = self.start(Flight::Expand, Duration::ZERO, move |this| {
-            Box::pin(async move { this.read_full(pages).await })
+            Box::pin(async move { this.read_full(due).await })
         });
     }
-    async fn read_full(&self, pages: Vec<(Publication, String)>) {
+    /// Read the AWS hourly `pages` (hour and raw identity) in full again, a few at a time, and hold
+    /// the whole rows of each read while still the held page. A read is kept as it completes; the
+    /// pages not started before the deadline stay due (only started pages wait for
+    /// [`EXPAND_RETRY`]).
+    async fn read_full(&self, mut pages: Vec<(Publication, String)>) {
         let deadline = Instant::now() + READ_DEADLINE;
-        let mut wanted = Vec::new();
-        {
+        pages.sort();
+        let mut batches: Vec<Vec<(Publication, CatalogId, crate::storage::RecordId)>> = Vec::new();
+        for (hour, raw_id) in pages {
+            let (Ok(member), Ok(catalog)) = (
+                crate::storage::RecordId::from_object_key(&raw_id),
+                super::records::catalog("kma-web", "aws-hourly", &aws_key(), &hour.base_date()),
+            ) else {
+                // Not a readable identity: tried again after the retry interval.
+                self.state()
+                    .expand_attempts
+                    .insert(hour, std::time::Instant::now());
+                continue;
+            };
+            match batches.last_mut() {
+                Some(batch) if batch.len() < MINUTE_FIRST && batch[0].1 == catalog => {
+                    batch.push((hour, catalog, member))
+                }
+                _ => batches.push(vec![(hour, catalog, member)]),
+            }
+        }
+        for batch in batches {
+            if Instant::now() >= deadline {
+                break;
+            }
+            {
+                let mut s = self.state();
+                for (hour, _, _) in &batch {
+                    s.expand_attempts.insert(*hour, std::time::Instant::now());
+                }
+            }
+            let wanted: Vec<_> = batch
+                .into_iter()
+                .map(|(_, catalog, member)| (catalog, member))
+                .collect();
+            let Ok(read) = self.restore(&wanted, deadline).await else {
+                continue;
+            };
+            let parsed = crate::observability::spawn_blocking(move || {
+                read.iter()
+                    .filter_map(|a| a.as_deref().and_then(parse_hourly))
+                    .collect::<Vec<_>>()
+            })
+            .await
+            .unwrap_or_default();
             let mut s = self.state();
-            for (hour, raw_id) in &pages {
-                s.expand_attempts.insert(*hour, std::time::Instant::now());
-                let (Ok(member), Ok(catalog)) = (
-                    crate::storage::RecordId::from_object_key(raw_id),
-                    super::records::catalog("kma-web", "aws-hourly", &aws_key(), &hour.base_date()),
-                ) else {
-                    continue;
-                };
-                wanted.push((catalog, member));
+            let mut changed = false;
+            for (p, rows, _, _, raw_id) in parsed {
+                let same = s
+                    .pages
+                    .ids
+                    .get(&("aws-hourly", p))
+                    .is_some_and(|(_, _, held)| *held == raw_id);
+                if same {
+                    s.pages.hourly.insert(p, rows);
+                    s.pages.reduced.remove(&p);
+                    changed = true;
+                }
             }
-        }
-        let Ok(read) = self.restore(&wanted, deadline).await else {
-            return;
-        };
-        let parsed = crate::observability::spawn_blocking(move || {
-            read.iter()
-                .filter_map(|a| a.as_deref().and_then(parse_hourly))
-                .collect::<Vec<_>>()
-        })
-        .await
-        .unwrap_or_default();
-        let mut s = self.state();
-        let mut changed = false;
-        for (p, rows, _, _, raw_id) in parsed {
-            let same = s
-                .pages
-                .ids
-                .get(&("aws-hourly", p))
-                .is_some_and(|(_, _, held)| *held == raw_id);
-            if same {
-                s.pages.hourly.insert(p, rows);
-                s.pages.reduced.remove(&p);
-                changed = true;
+            if changed {
+                s.pages.dirty = true;
+                s.pages.hourly_dirty = true;
             }
-        }
-        if changed {
-            s.pages.dirty = true;
-            s.pages.hourly_dirty = true;
         }
     }
 
@@ -2079,6 +2106,7 @@ impl<T> Observations<T> {
         // the snapshot did not use.
         if s.pages.dirty
             || s.product_due
+            || !stale_pages(&s).is_empty()
             || s.seed_failed
             || s.pages.minute_read.is_none()
             || !s.folded.as_ref().is_some_and(|f| Arc::ptr_eq(f, folded))
@@ -2200,6 +2228,22 @@ pub(super) fn facts(row: &Doc) -> Doc {
         }
     }
     out
+}
+/// The held AWS hourly pages (hour and raw identity) reduced for a city set that does not cover
+/// the last fold's.
+fn stale_pages(s: &State) -> Vec<(Publication, String)> {
+    let Some(fold) = &s.hourly_fold else {
+        return Vec::new();
+    };
+    s.pages
+        .reduced
+        .iter()
+        .filter(|(_, set)| !set.is_superset(&fold.cities))
+        .filter_map(|(h, _)| {
+            let (_, _, raw_id) = s.pages.ids.get(&("aws-hourly", *h))?;
+            Some((*h, raw_id.clone()))
+        })
+        .collect()
 }
 /// The day products to store at `now_ms` (each attempt is recorded): per day whose every hour
 /// is in the window, that was read without failure and holds pages, the held pages unless the

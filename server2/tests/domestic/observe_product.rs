@@ -647,3 +647,84 @@ async fn a_repaired_group_completes_its_day_after_the_product() {
         "the day's product is stored again without the exclusion"
     );
 }
+
+/// Products, then a later city page naming 강남 (400), whose AWS rows the products keep reduced:
+/// the peer and the cold peer holding the same raw pages without products.
+async fn grown_city_set() -> (Peer, Peer) {
+    let peer = seeded_peer(&[], Vec::new()).await;
+    let _ = producing(&peer).await;
+    let hour = p(20260924, 800);
+    let later = page_record(
+        "city-obs",
+        hour,
+        schedule::to_ms(hour) as u64 + 50 * 60_000,
+        city_page_of(hour, &[("108", "서울"), ("400", "강남")]),
+    );
+    let store = CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap();
+    publish_record(&store, later.clone()).await;
+    (peer, seeded_peer(&[], vec![later]).await)
+}
+
+/// RO-city-growth: while pages reduced for a smaller city set cannot be read in full again (here
+/// the 09-17 pages fail), answers stay unsettled; the next attempt follows a later request without
+/// any new hourly page, and the answers then equal a cold read.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_failed_full_read_keeps_answers_unsettled_until_it_is_tried_again() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let (peer, cold_peer) = grown_city_set().await;
+    let (c, c_counted) = process(&peer);
+    const FAILING: &str = "raw/v2/kma-web/aws-hourly/2026/09/17";
+    c_counted.fail_gets(Some(FAILING));
+    let attempts = || c_counted.get(&format!("GET {FAILING}"));
+    until(&c, || attempts() > 0).await;
+    for _ in 0..20 {
+        let folded = answer(&c).await;
+        assert!(
+            !c.settled(NOW as i64, &folded),
+            "the 09-17 pages are still reduced"
+        );
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+    c_counted.fail_gets(None);
+    let tried = attempts();
+    let mut folded = answer(&c).await;
+    for _ in 0..240 {
+        if c.settled(NOW as i64, &folded) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        folded = answer(&c).await;
+    }
+    assert!(attempts() > tried, "read again without a new hourly page");
+    assert!(c.settled(NOW as i64, &folded), "settled after the retry");
+    let (d, _) = process(&cold_peer);
+    let d_folded = settle(&d).await;
+    same(&folded, &d_folded, "cold read");
+}
+
+/// RO-expand-progress: reading the reduced pages in full again takes longer than one read's
+/// limit (each AWS page GET of 09-20..24 takes 400 ms); what was read is kept and the rest follows,
+/// so the answers settle and equal a cold read.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_slow_full_read_progresses_over_several_runs() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let (peer, cold_peer) = grown_city_set().await;
+    let (c, c_counted) = process(&peer);
+    c_counted.delay_gets(
+        "raw/v2/kma-web/aws-hourly/2026/09/2",
+        0,
+        Duration::from_millis(400),
+    );
+    let mut folded = answer(&c).await;
+    for _ in 0..300 {
+        if c.settled(NOW as i64, &folded) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        folded = answer(&c).await;
+    }
+    assert!(c.settled(NOW as i64, &folded), "the full read completed");
+    let (d, _) = process(&cold_peer);
+    let d_folded = settle(&d).await;
+    same(&folded, &d_folded, "cold read");
+}

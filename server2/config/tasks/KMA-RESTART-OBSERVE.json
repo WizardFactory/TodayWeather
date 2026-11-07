@@ -17,7 +17,8 @@
     "server2/tests/domestic/observe.rs",
     "server2/tests/domestic/observe_product.rs",
     "server2/tests/domestic/summary_s3.rs",
-    "server2/tests/storage/catalog_wire.rs"
+    "server2/tests/storage/catalog_wire.rs",
+    "server2/tests/storage/codec.rs"
   ],
   "outside": [
     {
