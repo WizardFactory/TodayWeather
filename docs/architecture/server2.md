@@ -2381,7 +2381,7 @@ would not make. Each raced restore records one `operation.action` (stage `restor
 | --- | --- | --- |
 | Station pages | `Flight::Load`: the products, today and yesterday, the four newest minute pages | the minute page, the latest hourly and city page, the previous hourly page while a fetch now is still within two hours of its hour, and the fill below. Each acquisition (and the restore) is folded as it ends while the others are waited for, so a slow provider does not keep the pages that came before it from the first answer. A restored page never replaces a newer acquired one (newest fetch wins), and a replaced page stays accounted for S16 |
 | ASOS history | the station's S3 state, started with the request; its station comes from the current fold or, before any fold, from the default station list (the carried seed); the hourly and daily kinds are read together | the station's recovery run, started at the head start. A run before the read ends plans the whole window (one hourly and one daily range), and its ranges answer until the read merges them (replay in fetch order, `same_original`) |
-| Life (UV, pollen, MFDS) | the first life read of a process lists the four families together, restores the partitions of today (KST) and the latest before first and folds them for the requests, then the rest of the 14-day window | the UV, pollen and MFDS acquisitions decided from the fold at the head start. A request uses an acquisition's published records at once, over the stored fold, until a read of S3 holds them (an answer holds what completed by its instant, or by the publication it waited for). UV's provider needs 5.5 to 7 s for four slots, so in practice only the restore delivers it in time |
+| Life (UV, pollen, MFDS) | the first life read of a process lists the four families together, restores the partitions of today (KST) and the latest before first, together and with at most four S3 reads in flight among them (wide reads below), and folds them for the requests, then the rest of the 14-day window | the UV, pollen and MFDS acquisitions decided from the fold at the head start. A request uses an acquisition's published records at once, over the stored fold, until a read of S3 holds them (an answer holds what completed by its instant, or by the publication it waited for). UV's provider needs 5.5 to 7 s for four slots, so in practice only the restore delivers it in time |
 | Narrative | the office's stored read, started right after `prepare` beside the snapshot as owned work: a waiter that stops waiting neither cancels it nor sets the error gate | one fetch-and-publish of the office when the read has no answer at the head start (still running or failed), at most once per office and ten minutes. It shares one fetch per office with the three-minute refresh: whichever starts second joins the running one. The newest publication answers, whichever of the read, the race and the refresh ends last, also past the answer's 30 s TTL: an announcement older than one the office answered is not installed, and the next request reads S3 |
 | Warnings | the request's zone-state read, started with the request on the request lane | the warning cycle (every three minutes), whose offered state answers when it comes first, or when the read fails |
 
@@ -2405,6 +2405,17 @@ store beside it. Reads a request waits for stay on the request lane, including t
 warning zone-state read: the source reads it through a view of the process warning store on its
 own transport (`WarningStore::on_transport`), which shares the store's zone offers and counters
 while the collector replays and publishes on the bulk lane.
+
+**Wide reads.** `CatalogStore::lookup` restores a catalog one S3 read at a time: on EC2 after the
+restarts, today's UV partition (three 4-page acquisitions) took 16 reads in a row. The life read's
+needed partitions use `CatalogStore::lookup_wide` instead, opt-in per call
+(`Reader::acquisitions_wide`); every other reader still uses `lookup`. After the catalog it reads
+the group descriptors and records ahead, up to `width` at a time, then restores over them with the
+same checks and result. It waits for one I/O admission of the store, as `lookup` does, and takes
+the others only if they are free at once, so no other reader's lookup queues behind it; its reads
+still pass the shared S3 admission (12 in flight per process) like any other read. The four reads
+are shared among the needed partitions (one partition read alone gets all four), so the station
+restore keeps the rest of the admission.
 
 **Provider calls a raced restart adds** (none when every restore beats the head start). Keyless:
 KMA web pages (the minute page, the latest hourly and city page and the previous hourly page, at

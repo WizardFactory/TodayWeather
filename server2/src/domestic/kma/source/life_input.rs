@@ -63,6 +63,10 @@ const FULL_READ: Duration = Duration::from_secs(86_400);
 /// The latest partitions of each life kind re-read on every refresh (a repeated acquisition of
 /// the previous issuance lands in its partition).
 const RECENT_PARTITIONS: usize = 3;
+/// S3 reads in flight for the first read's needed partitions (KMA-RESTART-RACE NEEDED-FIRST):
+/// restored one record at a time, today's UV alone took 16 reads in a row on EC2. A third of
+/// the process's S3 admission, so the station restore keeps the rest.
+const NEEDED_READS: usize = 4;
 /// Retry throttle of one dataset key (S15b-3a).
 const RETRY: Duration = Duration::from_secs(600);
 /// Owned S3 read tasks.
@@ -960,23 +964,37 @@ async fn read_life_once<T: IndexListing + Clone + 'static>(
         let today = Publication::new(kst_date(cut), 0)
             .map(Publication::partition)
             .unwrap_or_default();
+        let mut needed: Vec<(usize, String)> = Vec::new();
         for (k, parts) in wanted.iter_mut().enumerate() {
             let at = parts
                 .partition_point(|p| p.as_str() < today.as_str())
                 .saturating_sub(1);
-            let needed = parts.split_off(at);
-            let fetched = shared
-                .reader
-                .all(
-                    DATA_GO_KR,
-                    LIFE_FAMILIES[k].0.kind(),
-                    &all_areas(),
-                    &needed,
-                    deadline,
-                )
-                .await
-                .map_err(|e| format!("life read: {e}"))?;
-            found.extend(fetched.into_iter().map(|f| (k, f)));
+            needed.extend(parts.split_off(at).into_iter().map(|p| (k, p)));
+        }
+        // Every family's needed partitions are restored together, NEEDED_READS S3 reads in
+        // flight shared among them: a partition read alone gets them all.
+        for chunk in needed.chunks(NEEDED_READS) {
+            let width = NEEDED_READS / chunk.len();
+            let reads = crate::history::join_all(
+                chunk
+                    .iter()
+                    .map(|(k, p)| {
+                        shared.reader.acquisitions_wide(
+                            DATA_GO_KR,
+                            LIFE_FAMILIES[*k].0.kind(),
+                            &areas,
+                            p,
+                            width,
+                            deadline,
+                        )
+                    })
+                    .collect(),
+            )
+            .await;
+            for ((k, _), fetched) in chunk.iter().zip(reads) {
+                let fetched = fetched.map_err(|e| format!("life read: {e}"))?;
+                found.extend(fetched.into_iter().map(|f| (*k, f)));
+            }
         }
         let first_fold = fold_life(shared, Arc::default(), fresh(&found), deadline).await?;
         shared.life.lock().unwrap_or_else(|e| e.into_inner()).folded = first_fold;

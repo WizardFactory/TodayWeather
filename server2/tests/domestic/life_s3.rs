@@ -1643,7 +1643,8 @@ fn uv_page(issued: &str) -> Vec<u8> {
 }
 
 /// An in-memory S3 for a paused clock: raw objects, conditional control objects and index
-/// listings; each LIST takes `list_delay` (virtual time).
+/// listings; each LIST takes `list_delay` and each GET `get_delay` (virtual time), and the most
+/// GETs in flight at once is kept.
 #[derive(Clone, Default)]
 struct MemS3(Arc<Mutex<MemData>>);
 #[derive(Default)]
@@ -1652,10 +1653,23 @@ struct MemData {
     controls: std::collections::BTreeMap<String, (Vec<u8>, u64)>,
     revision: u64,
     list_delay: Duration,
+    get_delay: Duration,
+    gets: usize,
+    peak_gets: usize,
 }
 impl MemS3 {
     fn data(&self) -> std::sync::MutexGuard<'_, MemData> {
         self.0.lock().unwrap()
+    }
+    async fn get_delayed(&self) {
+        let delay = {
+            let mut d = self.data();
+            d.gets += 1;
+            d.peak_gets = d.peak_gets.max(d.gets);
+            d.get_delay
+        };
+        tokio::time::sleep(delay).await;
+        self.data().gets -= 1;
     }
 }
 impl server2::storage::ObjectTransport for MemS3 {
@@ -1692,6 +1706,7 @@ impl server2::storage::ObjectTransport for MemS3 {
         key: &str,
         maximum: usize,
     ) -> Result<server2::storage::Object, server2::storage::Error> {
+        self.get_delayed().await;
         let o = self
             .data()
             .objects
@@ -1710,6 +1725,7 @@ impl server2::storage::CatalogTransport for MemS3 {
         key: &str,
         maximum: usize,
     ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
+        self.get_delayed().await;
         let (body, revision) = self
             .data()
             .controls
@@ -1848,6 +1864,65 @@ async fn the_needed_first_read_lists_the_life_families_together() {
         "today's UV was folded before the head start: {:?}",
         asked.0.lock().unwrap()
     );
+}
+
+/// Page `n` of a UV acquisition: the rows of [`uv_page`] under their own page number.
+fn uv_page_numbered(issued: &str, n: u32) -> Vec<u8> {
+    let mut page: serde_json::Value = serde_json::from_slice(&uv_page(issued)).unwrap();
+    page["response"]["body"]["pageNo"] = json!(n);
+    page.to_string().into_bytes()
+}
+
+/// NEEDED-FIRST: the first life read restores today's records with several S3 reads in flight.
+/// Today's UV partition holds three 4-page acquisitions, as after the EC2 restarts: read one at a
+/// time, its catalog, 3 descriptors and 12 pages are 16 reads in a row, which at 170 ms each (a
+/// paused clock) end past the request's life section (2.5 s). Read at most 4 at a time, today's
+/// UV is on the first answer.
+#[tokio::test(start_paused = true)]
+async fn the_needed_first_read_restores_todays_records_together() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let mem = MemS3::default();
+    let store = Arc::new(CatalogStore::new(mem.clone(), CatalogLimits::default()).unwrap());
+    let p = Publication::parse_compact("202610161200").unwrap();
+    // Acquired 10, 15 and 20 minutes after the issuance, before the request (12:30 KST).
+    for minutes in [10., 15., 20.] {
+        let pages: Vec<Vec<u8>> = (1..=4).map(|n| uv_page_numbered("2026101612", n)).collect();
+        publish(
+            &store,
+            "data-go-kr",
+            "uv-idx-v5",
+            named("all-areas"),
+            p.period(),
+            &p.partition(),
+            server2::history::schedule::to_ms(p) as f64 + minutes * 60_000.,
+            &pages,
+        )
+        .await;
+    }
+    {
+        let mut d = mem.data();
+        d.get_delay = Duration::from_millis(170);
+        d.peak_gets = 0;
+    }
+    let inputs = LifeInputs::new(mem.clone(), store)
+        .with_clock(test_clock())
+        .with_acquire(Some(Arc::new(Asked::default())))
+        .with_kasi_schedule(HOLD, HOLD);
+    let started = Instant::now();
+    let answers = inputs
+        .load_by(
+            now_ms(),
+            started + HEAD_START,
+            started + Duration::from_millis(2700),
+        )
+        .await;
+    let today = uv_issued(&answers, 1_100_000_000.);
+    assert!(
+        today.iter().any(|i| i == "2026101612"),
+        "today's UV on the first answer: {today:?}"
+    );
+    let peak = mem.data().peak_gets;
+    assert!(peak <= 4, "S3 reads in flight: {peak}");
 }
 
 /// NEEDED-FIRST: the first life read of a process restores today's partitions (and the latest

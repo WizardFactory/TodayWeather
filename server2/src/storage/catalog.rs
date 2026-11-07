@@ -169,6 +169,10 @@ struct Context {
     controls: usize,
     output: usize,
     pins: BTreeMap<CatalogId, Option<Pinned>>,
+    /// Descriptors and raw records a wide lookup read ahead, by object key: the restore takes
+    /// each once where it would have read it (anything else it reads as before).
+    ahead_controls: BTreeMap<String, Result<ControlObject, Error>>,
+    ahead_raw: BTreeMap<String, Result<RawRecord, Error>>,
 }
 impl Context {
     fn new() -> Self {
@@ -176,8 +180,15 @@ impl Context {
             controls: 0,
             output: 0,
             pins: BTreeMap::new(),
+            ahead_controls: BTreeMap::new(),
+            ahead_raw: BTreeMap::new(),
         }
     }
+}
+/// One read of a wide lookup's read-ahead: a descriptor, or a raw record (by object key).
+enum Ahead {
+    Control(String),
+    Raw(String, RecordId),
 }
 pub struct CatalogStore<T> {
     transport: Arc<T>,
@@ -238,10 +249,14 @@ impl<T: CatalogTransport> CatalogStore<T> {
         Ok(())
     }
     async fn control(&self, key: &str, c: &mut Context) -> Result<ControlObject, Error> {
-        let obj = self
-            .transport
-            .get_control(key, self.limits.control_bytes)
-            .await?;
+        let obj = match c.ahead_controls.remove(key) {
+            Some(read) => read?,
+            None => {
+                self.transport
+                    .get_control(key, self.limits.control_bytes)
+                    .await?
+            }
+        };
         self.count_control(c, obj.body.len())?;
         Ok(obj)
     }
@@ -291,7 +306,18 @@ impl<T: CatalogTransport> CatalogStore<T> {
         if c.output > self.limits.output_bytes {
             return Err(Error::Capacity);
         }
-        let record = self.raw.load(&e.identity).await?;
+        let ahead = if c.ahead_raw.is_empty() {
+            None
+        } else {
+            e.identity
+                .object_key()
+                .ok()
+                .and_then(|key| c.ahead_raw.remove(&key))
+        };
+        let record = match ahead {
+            Some(read) => read?,
+            None => self.raw.load(&e.identity).await?,
+        };
         if &record.envelope != e {
             return Err(Error::Corrupt("raw member envelope"));
         }
@@ -736,6 +762,112 @@ impl<T: CatalogTransport> CatalogStore<T> {
             },
         )
         .await
+    }
+    /// [`Self::lookup`] with up to `width` S3 reads in flight instead of one, opt-in per call for
+    /// a read a request waits on. After the catalog, the group descriptors and records its restore
+    /// reads are read ahead together; the restore then runs as in `lookup` over them (same
+    /// checks, exclusions and result; a read that failed fails where the restore meets it). A
+    /// group the restore excludes may have been read in vain.
+    ///
+    /// It waits for one of the store's I/O admissions, as `lookup` does, and takes up to
+    /// `width - 1` more only if they are free at once: it never waits for them, so no other
+    /// reader's lookup queues behind it. Its reads in flight never exceed its admissions, so the
+    /// raw reads stay within the raw store's.
+    pub async fn lookup_wide(
+        &self,
+        id: &CatalogId,
+        width: usize,
+        deadline: Instant,
+    ) -> Result<LookupOutcome, Error> {
+        let width = width.clamp(1, self.limits.io.min(self.limits.raw.io));
+        crate::observability::observe(
+            crate::observability::Component::S3,
+            crate::observability::Stage::Lookup,
+            async {
+                id.validate()?;
+                timeout_at(self.deadline(deadline), async {
+                    let _admission = self.admit().await?;
+                    let extra = (1..width).rev().find_map(|n| {
+                        let permits = self.io.clone().try_acquire_many_owned(n as u32).ok()?;
+                        Some((n, permits))
+                    });
+                    let width = 1 + extra.as_ref().map_or(0, |(n, _)| *n);
+                    let mut c = Context::new();
+                    self.pin(id, &mut c).await?;
+                    if width > 1
+                        && let Some(Some(p)) = c.pins.get(id)
+                    {
+                        let entries = p.catalog.entries.clone();
+                        self.read_ahead(&entries, width, &mut c).await;
+                    }
+                    self.lookup_inner(id, &mut c).await
+                })
+                .await
+                .map_err(|_| Error::Timeout)?
+            },
+        )
+        .await
+    }
+    /// Read what restoring `entries` reads, each group's descriptor and every listed record, up
+    /// to `width` at a time (results kept for the restore). A listed page outside a group is
+    /// excluded unread; reading stops where the records would pass the restore's output bound.
+    async fn read_ahead(&self, entries: &[Envelope], width: usize, c: &mut Context) {
+        use futures_util::StreamExt;
+        let mut descriptors = BTreeSet::new();
+        let mut reads = Vec::new();
+        let mut output = c.output;
+        for e in entries {
+            match &e.fetch_group {
+                Some(r) => match r.descriptor_key() {
+                    Ok(key) => {
+                        if descriptors.insert(key.clone()) {
+                            reads.push(Ahead::Control(key));
+                        }
+                    }
+                    // The restore fails on this group before any record of it.
+                    Err(_) => continue,
+                },
+                None if e.pagination.is_some() => continue,
+                None => {}
+            }
+            output = output.saturating_add(e.raw_length);
+            if output > self.limits.output_bytes {
+                break;
+            }
+            if let Ok(key) = e.identity.object_key() {
+                reads.push(Ahead::Raw(key, e.identity.clone()));
+            }
+        }
+        enum Read {
+            Control(String, Result<ControlObject, Error>),
+            Raw(String, Box<Result<RawRecord, Error>>),
+        }
+        let read: Vec<Read> = futures_util::stream::iter(reads)
+            .map(|ahead| async move {
+                match ahead {
+                    Ahead::Control(key) => {
+                        let read = self
+                            .transport
+                            .get_control(&key, self.limits.control_bytes)
+                            .await;
+                        Read::Control(key, read)
+                    }
+                    Ahead::Raw(key, id) => Read::Raw(key, Box::new(self.raw.load(&id).await)),
+                }
+            })
+            .buffer_unordered(width)
+            .collect()
+            .await;
+        for r in read {
+            match r {
+                Read::Control(key, read) => {
+                    c.ahead_controls.insert(key, read);
+                }
+                Read::Raw(key, read) => {
+                    c.ahead_raw.insert(key, *read);
+                }
+            }
+        }
     }
     fn uncertain(e: Error) -> Error {
         match e {

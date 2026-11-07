@@ -1448,3 +1448,96 @@ async fn targeted_members_read_one_catalog_and_only_their_groups() {
     ));
     assert!(started.elapsed() < Duration::from_secs(1));
 }
+/// A wide lookup (opt-in per call) reads the descriptors and records ahead and restores what a
+/// lookup restores: the same acquisitions, exclusions and dependencies, each object read once.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn wide_lookup_restores_what_a_lookup_restores() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let mut groups = Vec::new();
+    for fetch in 1..=3 {
+        let (d, raw) = group(fetch, fetch as u32);
+        store
+            .publish(d.clone(), raw.clone(), deadline())
+            .await
+            .unwrap();
+        groups.push((d, raw));
+    }
+    let id = groups[0].0.partitions[0].clone();
+    // The second group loses its last page: both lookups exclude it.
+    let lost = groups[1].1[1].envelope.identity.object_key().unwrap();
+    peer.fault("forget", &lost).await;
+    let records = |set: &CompleteSet| {
+        set.acquisitions()
+            .iter()
+            .map(|a| {
+                a.records()
+                    .iter()
+                    .map(|r| (r.envelope.clone(), r.bytes.to_vec()))
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>()
+    };
+    let before = peer.requests("GET ").await;
+    let narrow = ready(store.lookup(&id, deadline()).await.unwrap());
+    let narrow_gets = peer.requests("GET ").await - before;
+    let before = peer.requests("GET ").await;
+    let wide = ready(store.lookup_wide(&id, 4, deadline()).await.unwrap());
+    let wide_gets = peer.requests("GET ").await - before;
+    assert_eq!(narrow.acquisitions().len(), 2);
+    assert_eq!(narrow.excluded_groups(), 1);
+    assert_eq!(records(&wide), records(&narrow));
+    assert_eq!(wide.excluded_groups(), narrow.excluded_groups());
+    assert_eq!(wide.excluded_members(), narrow.excluded_members());
+    assert_eq!(wide.dependencies(), narrow.dependencies());
+    assert_eq!(wide.coverage(), narrow.coverage());
+    // Two catalogs, three descriptors and six pages (one missing), each read once.
+    assert_eq!((narrow_gets, wide_gets), (11, 11));
+}
+/// A wide lookup takes the store's further I/O admissions only when they are free: with the
+/// store's other admission held by a slow lookup, it restores one read at a time instead of
+/// waiting for it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn wide_lookup_takes_only_free_admissions() {
+    let peer = Peer::new();
+    let store = Arc::new(
+        CatalogStore::new(
+            peer.transport(),
+            CatalogLimits {
+                io: 2,
+                ..CatalogLimits::default()
+            },
+        )
+        .unwrap(),
+    );
+    let (wide, raw) = group(1, 1);
+    store.publish(wide.clone(), raw, deadline()).await.unwrap();
+    let (slow, raw) = singleton(1, 32, None);
+    store.publish(slow.clone(), raw, deadline()).await.unwrap();
+    let slow_id = slow.partitions[0].clone();
+    peer.fault("delay", &slow_id.key()).await;
+    let held = tokio::spawn({
+        let (store, id) = (store.clone(), slow_id.clone());
+        async move { store.lookup(&id, deadline()).await.map(|_| ()) }
+    });
+    // The slow lookup holds its admission while the peer delays its catalog read.
+    let mut waited = 0;
+    while peer.requests(&format!("GET {}", slow_id.key())).await == 0 {
+        assert!(waited < 400, "the slow lookup never read its catalog");
+        tokio::time::sleep(Duration::from_millis(5)).await;
+        waited += 1;
+    }
+    let read = ready(
+        store
+            .lookup_wide(&wide.partitions[0], 2, deadline())
+            .await
+            .unwrap(),
+    );
+    assert!(
+        !held.is_finished(),
+        "the wide lookup waited for the held admission"
+    );
+    assert_eq!(read.acquisitions().len(), 1);
+    assert_eq!(read.acquisitions()[0].records().len(), 2);
+    held.await.unwrap().unwrap();
+}

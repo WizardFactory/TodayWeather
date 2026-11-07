@@ -254,6 +254,35 @@ impl<T: IndexListing + Clone> Reader<T> {
         partition: &str,
         deadline: Instant,
     ) -> Result<(Vec<Fetched>, usize), Error> {
+        self.restored(source, kind, key, partition, 1, deadline)
+            .await
+    }
+    /// [`Self::acquisitions`] with up to `width` S3 reads in flight
+    /// ([`CatalogStore::lookup_wide`]), for a read a request waits on.
+    pub async fn acquisitions_wide(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        width: usize,
+        deadline: Instant,
+    ) -> Result<Vec<Fetched>, Error> {
+        self.restored(source, kind, key, partition, width, deadline)
+            .await
+            .map(|(f, _)| f)
+    }
+    /// One catalog's complete acquisitions and excluded groups, restored with `width` S3 reads in
+    /// flight (one: [`CatalogStore::lookup`]).
+    async fn restored(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        width: usize,
+        deadline: Instant,
+    ) -> Result<(Vec<Fetched>, usize), Error> {
         let id = CatalogId {
             source: source.into(),
             kind: kind.into(),
@@ -261,7 +290,12 @@ impl<T: IndexListing + Clone> Reader<T> {
             partition: partition.into(),
         };
         id.validate()?;
-        let set = match self.store.lookup(&id, deadline).await {
+        let looked = if width > 1 {
+            self.store.lookup_wide(&id, width, deadline).await
+        } else {
+            self.store.lookup(&id, deadline).await
+        };
+        let set = match looked {
             Ok(LookupOutcome::Ready(set)) => set,
             Ok(LookupOutcome::Incomplete) => return Err(Error::Corrupt("incomplete catalog")),
             Err(Error::NotFound) => return Ok((Vec::new(), 0)),

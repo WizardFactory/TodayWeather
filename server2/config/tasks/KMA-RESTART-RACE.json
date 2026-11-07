@@ -10,6 +10,7 @@
     "server2/src/domestic/kma/source/life_live.rs",
     "server2/src/domestic/kma/source/mod.rs",
     "server2/src/domestic/kma/source/observe.rs",
+    "server2/src/domestic/kma/source/records.rs",
     "server2/src/history/transport.rs",
     "server2/src/narrative/mod.rs",
     "server2/src/narrative/store.rs",
@@ -26,7 +27,8 @@
     "server2/tests/domestic/observe_product.rs",
     "server2/tests/narrative/cache.rs",
     "server2/tests/resolver.rs",
-    "server2/tests/resolver/race.rs"
+    "server2/tests/resolver/race.rs",
+    "server2/tests/storage/catalog_wire.rs"
   ],
   "outside": [
     {
