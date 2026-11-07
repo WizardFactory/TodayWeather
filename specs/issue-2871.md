@@ -17,7 +17,7 @@ Inputs: [intent](../intent/issue-2871.md) and the [dated evidence](../docs/evide
   state running or loop silently. When permission is granted but location services
   are off, the turn-on message is shown. The popup buttons are unchanged.
 - **Ads SDK start (AC3).** On Android, the emi adapter re-initializes after the
-  `on.consent.status.*` event rather than from the `initialize` callback; on iOS it
+  `on.consent.status.not_required`/`obtained` or `on.personalization.state` events rather than from the `initialize` callback; on iOS it
   still uses that callback. Only one retry is allowed, and the consent gates and the
   test-unit UMP fallback are unchanged.
 - **Load-error code (AC2).** On `on.banner.failed.load`, the event's integer `code`
@@ -25,7 +25,7 @@ Inputs: [intent](../intent/issue-2871.md) and the [dated evidence](../docs/evide
   - Always: write a JSON console line with that code, or `unavailable` when there is none.
   - Only when there is a code: track `ad_load_error {ad_format, error_code}` through
     the consent-gated Monetization allowlist. `ad_lifecycle failed` is retained.
-- **app-ads.txt (AC1).** `npm run store:app-ads` prints
+- **app-ads.txt (AC1).** `node client/scripts/make-app-ads.mjs` prints
   `google.com, pub-<id>, DIRECT, f08c47fec0942fa0`. It derives the line from both
   release app IDs and rejects missing, malformed, sample or mixed-publisher IDs.
   The output is uploaded only as `todayweather.ai/app-ads.txt`.

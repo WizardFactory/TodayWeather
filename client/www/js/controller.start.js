@@ -533,6 +533,7 @@ start.controller('StartCtrl', function($scope, $rootScope, $location, TwAds, $oc
                                 break;
                             case 'granted':
                                 // Permission is granted, so the location services are off.
+                                $scope.setLocationAuthorizationStatus(status);
                                 msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
                                 deferred.reject(msg);
                                 break;

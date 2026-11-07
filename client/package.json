@@ -31,7 +31,6 @@
     "www:release": "npm run www:libs && npm run www:css && npm run www:config:release && npm run www:firebase",
     "build:android:release": "node scripts/build-release.mjs android",
     "build:ios:release": "node scripts/build-release.mjs ios",
-    "store:app-ads": "node scripts/make-app-ads.mjs",
     "store:lanes": "bundle exec fastlane lanes",
     "store:export:android": "bundle exec fastlane android export_play",
     "store:export:ios": "bundle exec fastlane ios export_ios",

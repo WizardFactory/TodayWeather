@@ -23,3 +23,17 @@ test('missing, malformed, sample and mixed-publisher IDs are rejected', async ()
     assert.throws(() => appAdsTxt(env('ca-app-pub-3940256099942544~3347511713', `ca-app-pub-${PUB}~2`)), /sample/);
     assert.throws(() => appAdsTxt(env(`ca-app-pub-${PUB}~1`, 'ca-app-pub-6543210987654321~2')), /different AdMob publishers/);
 });
+
+test('the documented command writes exactly the seller line to stdout', () => {
+    const fs = require('node:fs'), os = require('node:os'), {execFileSync} = require('node:child_process');
+    // A scratch client dir: the script reads <client>/.env next to its scripts/ folder.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'app-ads-'));
+    fs.mkdirSync(path.join(dir, 'scripts'));
+    for (const f of ['make-app-ads.mjs', 'env.mjs']) {
+        fs.copyFileSync(path.join(__dirname, '..', 'scripts', f), path.join(dir, 'scripts', f));
+    }
+    fs.writeFileSync(path.join(dir, '.env'), `TW_ADMOB_APP_ID_ANDROID=ca-app-pub-${PUB}~1111111111\nTW_ADMOB_APP_ID_IOS="ca-app-pub-${PUB}~2222222222"\n`);
+    const out = execFileSync(process.execPath, ['scripts/make-app-ads.mjs'], {cwd: dir});
+    fs.rmSync(dir, {recursive: true, force: true});
+    assert.equal(out.toString(), `google.com, pub-${PUB}, DIRECT, f08c47fec0942fa0\n`);
+});

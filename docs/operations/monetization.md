@@ -132,7 +132,7 @@ session without an Ads SDK start. It also records the unchanged configuration (i
 claim restoration until each AK step below is recorded in #2871:
 
 1. Ship the fixed client in the next store release (#2605). Older builds keep both
-   defects. iOS 1.0.10 (GMA 7.49.0) stays on a deprecated SDK until users update.
+   defects. iOS 1.0.10 (GMA 7.49.0 per the #2871 AdMob report) stays on a deprecated SDK until users update.
 2. Confirm app-ads.txt authorization for both apps in AdMob.
 3. In the AdMob Policy center, request a review for each weather app's "Site Behavior:
    Navigation" restriction after the release is live

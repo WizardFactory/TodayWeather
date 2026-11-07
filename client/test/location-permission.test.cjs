@@ -17,9 +17,9 @@ const STATUS = {
 };
 const LOCATION_MODE = {HIGH_ACCURACY: 'high_accuracy', DEVICE_ONLY: 'device_only', BATTERY_SAVING: 'battery_saving', LOCATION_OFF: 'location_off'};
 const CONTROLLERS = {
-    start: {file: 'www/js/controller.start.js', end: '    function saveCity('},
-    search: {file: 'www/js/controller.searchctrl.js', end: '        function loadWeatherData('},
-    tab: {file: 'www/js/controller.tabctrl.js', end: '        function updateWeatherData('}
+    start: {file: 'www/js/controller.start.js', end: '    function saveCity(', denied: 'LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED'},
+    search: {file: 'www/js/controller.searchctrl.js', end: '        function loadWeatherData(', denied: 'LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED'},
+    tab: {file: 'www/js/controller.tabctrl.js', end: '        function updateWeatherData(', denied: 'LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY'}
 };
 const PENDING = Symbol('pending');
 
@@ -57,7 +57,7 @@ function load(name, env) {
     assert.ok(start > 0 && source.indexOf(end) > start, `${file} location functions not found`);
     const q = {defer() { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return {resolve, reject, promise}; }};
     const context = {
-        $q: q, $scope: {setLocationAuthorizationStatus() {}}, $translate: {instant: key => key}, $ionicLoading: {hide() {}},
+        $q: q, $scope: {setLocationAuthorizationStatus(status) { env.recorded = status; }}, $translate: {instant: key => key}, $ionicLoading: {hide() {}},
         Util: env.util, cordova: env.cordova, window: {cordova: env.cordova}, ionic: env.ionic,
         console: {log() {}, error() {}, info() {}},
         WeatherUtil: {
@@ -73,13 +73,13 @@ function load(name, env) {
 
 // The callers retry silently on a null rejection (resume/locationOn reload); anything else is shown to the user.
 async function settle(update) {
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 1; attempt <= 5; attempt++) {
         const result = await Promise.race([
             update().then(value => ({value}), reason => ({reason})),
             new Promise(done => setTimeout(() => done(PENDING), 1000))
         ]);
         if (result === PENDING) { return PENDING; }
-        if (!('reason' in result) || result.reason !== null) { return result; }
+        if (!('reason' in result) || result.reason !== null) { return {...result, attempts: attempt}; }
     }
     return 'endless silent retries';
 }
@@ -89,7 +89,9 @@ for (const name of Object.keys(CONTROLLERS)) {
         const env = device('android', {status: STATUS.android.NOT_REQUESTED, answers: [STATUS.android.DENIED_ONCE]});
         const result = await settle(load(name, env));
         assert.notEqual(result, PENDING, 'location request never settled');
-        assert.match(String(result.reason), /DENIED/);
+        // The prompt answer itself ends the request; no silent reload attempt.
+        assert.equal(result.reason, CONTROLLERS[name].denied);
+        assert.equal(result.attempts, 1);
         assert.equal(env.state.prompts, 1);
     });
 
@@ -97,7 +99,9 @@ for (const name of Object.keys(CONTROLLERS)) {
         const env = device('android', {status: STATUS.android.DENIED_ONCE, answers: [STATUS.android.DENIED_ALWAYS]});
         const result = await settle(load(name, env));
         assert.notEqual(result, PENDING, 'location request never settled');
-        assert.match(String(result.reason), /DENIED/);
+        // The prompt answer itself ends the request; no silent reload attempt.
+        assert.equal(result.reason, CONTROLLERS[name].denied);
+        assert.equal(result.attempts, 1);
         assert.equal(env.state.prompts, 1);
     });
 
@@ -115,7 +119,8 @@ for (const name of Object.keys(CONTROLLERS)) {
         const env = device('ios', {status: STATUS.ios.NOT_REQUESTED, answers: [STATUS.ios.DENIED_ALWAYS]});
         const result = await settle(load(name, env));
         assert.notEqual(result, PENDING, 'location request never settled');
-        assert.ok(typeof result.reason === 'string' && result.reason, 'denial settled silently');
+        assert.equal(result.reason, CONTROLLERS[name].denied);
+        assert.equal(result.attempts, 1);
     });
 
     test(`${name}: a granted prompt reloads and resolves the position`, async () => {
@@ -125,5 +130,16 @@ for (const name of Object.keys(CONTROLLERS)) {
             assert.ok(result.value && result.value.location, `${platform}: ${JSON.stringify(result)}`);
             assert.equal(env.state.prompts, 1);
         }
+    });
+}
+
+for (const name of ['start', 'search']) {
+    test(`${name}: granted permission with location services off asks to turn them on`, async () => {
+        const env = device('android', {status: STATUS.android.GRANTED_WHEN_IN_USE, locationOn: false});
+        const result = await settle(load(name, env));
+        assert.equal(result.reason, 'LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION');
+        // The retry popup picks its buttons from this status; a stale DENIED_ALWAYS would offer app settings.
+        assert.equal(env.recorded, STATUS.android.GRANTED_WHEN_IN_USE);
+        assert.equal(env.state.prompts, 0);
     });
 }

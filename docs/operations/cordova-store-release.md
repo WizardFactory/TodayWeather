@@ -162,7 +162,8 @@ from the developer-website host, or at most one domain level above it. The old
 hosts fail: the Play listing's `todayweather.wizardfactory.net` returns 404, and the
 App Store listing links a Facebook page. See the [dated evidence](../evidence/tasks/issue-2871/README.md).
 
-1. From `client/` with the release `.env`, run `npm run store:app-ads > "$TMPDIR/app-ads.txt"`.
+1. From `client/` with the release `.env`, run `node scripts/make-app-ads.mjs > "$TMPDIR/app-ads.txt"`
+   (not through `npm run`, whose banner lines would end up in the file).
    The script derives the single publisher line from `TW_ADMOB_APP_ID_ANDROID` and
    `TW_ADMOB_APP_ID_IOS`. It refuses sample IDs and IDs from different publishers.
    Keep the output out of Git.

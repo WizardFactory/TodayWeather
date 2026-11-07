@@ -12,7 +12,7 @@ not here. Account IDs, revenue and raw console data are omitted.
 | `wizardfactory.net` apex | No A record; `www.wizardfactory.net` is HTTP-only GitHub Pages, and the crawler skips `www.` |
 | `https://todayweather.ai/app-ads.txt` before upload | 403 (object absent, private S3 origin) |
 | Upload (authorized by AK) | One `app-ads.txt` object in the landing bucket, `text/plain; charset=utf-8`, plus an invalidation of that path |
-| After upload | HTTPS 200 and HTTP→HTTPS 200; the body is byte-identical to `npm run store:app-ads` output (59 bytes, one `google.com, pub-…, DIRECT, f08c47fec0942fa0` line); the landing root is unchanged |
+| After upload | HTTPS 200 and HTTP→HTTPS 200; the body is byte-identical to the `client/scripts/make-app-ads.mjs` output (59 bytes, one `google.com, pub-…, DIRECT, f08c47fec0942fa0` line); the landing root is unchanged |
 
 AdMob looks for the file on the store developer-website host and at most one domain
 level above it ([AdMob help](https://support.google.com/admob/answer/9363762)). Both
