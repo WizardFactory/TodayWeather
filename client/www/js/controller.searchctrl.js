@@ -657,18 +657,12 @@ angular.module('controller.searchctrl', [])
                     if (Util.isLocationEnabled()) {
                         cordova.plugins.diagnostic.getLocationAuthorizationStatus(function (status) {
                             $scope.setLocationAuthorizationStatus(status);
-                            // diagnostic 7+ reports GRANTED_WHEN_IN_USE while background location is not granted
-                            if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED
-                                || status === cordova.plugins.diagnostic.permissionStatus.GRANTED_WHEN_IN_USE) {
-                                _getCurrentPosition(deferred, true, true);
-                            } else if (status === cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
-                                _getCurrentPosition(deferred, true, false);
-                            } else if (status === cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED
-                                || status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
-                                _getCurrentPosition(deferred, true, undefined);
-                            }
+                            // A requestable status (undefined) shows the system prompt again; any other status settles.
+                            var permission = Util.classifyLocationPermission(status);
+                            _getCurrentPosition(deferred, true, permission === 'granted' ? true : permission === 'denied' ? false : undefined);
                         }, function (error) {
                             console.error("Error getting for location authorization status: " + error);
+                            deferred.reject(strFailToGetCurrentPosition);
                         });
                     } else {
                         _getCurrentPosition(deferred, false, undefined);
@@ -722,23 +716,21 @@ angular.module('controller.searchctrl', [])
                         cordova.plugins.diagnostic.requestLocationAuthorization(function (status) {
                             if (ionic.Platform.isAndroid()) {
                                 $scope.setLocationAuthorizationStatus(status);
-                                if (status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
-                                    msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
-                                    deferred.reject(msg);
-                                }
-                                else {
-                                    console.log('status='+status+ ' by request location authorization and reload by resume');
-                                    deferred.reject(null);
-                                }
+                            }
+                            if (Util.classifyLocationPermission(status) !== 'granted') {
+                                msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
+                                deferred.reject(msg);
                             }
                             else {
-                                //메세지 없이 통과시키고, reload by locationOn.
+                                // Granted: Android reloads by resume, iOS by locationOn.
+                                console.log('status='+status+ ' by request location authorization and reload');
                                 deferred.reject(null);
                             }
                         }, function (error) {
                             Util.ga.trackEvent('position', 'error', 'request location authorization');
                             Util.ga.trackException(error, false);
-                            deferred.reject(null);
+                            // A silent rejection would request again; show the failure instead.
+                            deferred.reject(strFailToGetCurrentPosition);
                         }, cordova.plugins.diagnostic.locationAuthorizationMode.WHEN_IN_USE);
                     }
                     else {
@@ -778,46 +770,44 @@ angular.module('controller.searchctrl', [])
                         // android : 오늘날씨의 다음 작업을 허용하시겠습니까? 이 기기의 위치에 액세스하기
 
                         cordova.plugins.diagnostic.getLocationAuthorizationStatus(function (status) {
-                            switch (status) {
-                                case cordova.plugins.diagnostic.permissionStatus.DENIED:
+                            switch (Util.classifyLocationPermission(status)) {
+                                case 'denied':
                                     console.log("Permission denied");
                                     $scope.setLocationAuthorizationStatus(status);
                                     msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
                                     deferred.reject(msg);
                                     break;
-                                case cordova.plugins.diagnostic.permissionStatus.GRANTED:
-                                    console.error("Permission granted always");
+                                case 'granted':
+                                    // Permission is granted, so the location services are off.
+                                    msg = $translate.instant("LOC_PLEASE_TURN_ON_LOCATION_SERVICES_TO_FIND_YOUR_CURRENT_LOCATION");
+                                    deferred.reject(msg);
                                     break;
-                                case cordova.plugins.diagnostic.permissionStatus.GRANTED_WHEN_IN_USE:
-                                    console.error("Permission granted only when in use");
-                                    break;
-                                case cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED:
+                                case 'requestable':
                                     console.log("Permission not requested");
                                     cordova.plugins.diagnostic.requestLocationAuthorization(function (status) {
                                         if (ionic.Platform.isAndroid()) {
                                             $scope.setLocationAuthorizationStatus(status);
-                                            if (status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
-                                                msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
-                                                deferred.reject(msg);
-                                            }
-                                            else {
-                                                console.log('status=' + status + ' by request location authorization and reload by resume');
-                                                deferred.reject(null);
-                                            }
+                                        }
+                                        if (Util.classifyLocationPermission(status) !== 'granted') {
+                                            msg = $translate.instant("LOC_ACCESS_TO_LOCATION_SERVICES_HAS_BEEN_DENIED");
+                                            deferred.reject(msg);
                                         }
                                         else {
-                                            //메세지 없이 통과시키고, reload by locationOn.
+                                            // Granted: Android reloads by resume, iOS by locationOn.
+                                            console.log('status='+status+ ' by request location authorization and reload');
                                             deferred.reject(null);
                                         }
                                     }, function (error) {
                                         Util.ga.trackEvent('position', 'error', 'request location authorization');
                                         Util.ga.trackException(error, false);
-                                        deferred.reject(null);
+                                        // A silent rejection would request again; show the failure instead.
+                                        deferred.reject(strFailToGetCurrentPosition);
                                     }, cordova.plugins.diagnostic.locationAuthorizationMode.WHEN_IN_USE);
                                     break;
                             }
                         }, function (error) {
                             console.error("The following error occurred: " + error);
+                            deferred.reject(strFailToGetCurrentPosition);
                         });
                     }
                     else {
