@@ -31,7 +31,7 @@ use crate::domestic::publication::Publication;
 use crate::domestic::{Acquired, DomesticError};
 use crate::gateway::{BoxFuture, OrderedJson};
 use crate::history::{IndexListing, schedule};
-use crate::storage::{CatalogStore, ProviderKey, RawRecord};
+use crate::storage::{CatalogId, CatalogStore, ProviderKey, RawRecord};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -621,32 +621,95 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         }
         // Minute pages of the last 40 minutes, newest first.
         let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
+        let wanted = self.minute_entries(now_ms, deadline).await;
+        self.restore_minutes(wanted, floor, deadline).await;
+        let mut s = self.state();
+        s.pages.minute.retain(|k, _| *k > floor);
+        s.pages.minute_read = Some(std::time::Instant::now());
+        s.pages.dirty = true;
+    }
+    /// The minute pages of the readers' reach that this process does not hold, newest first by
+    /// completion: the day catalogs are listed (control objects only, no record is read), and of
+    /// each minute only its newest acquisition is kept. A catalog that cannot be listed adds
+    /// nothing (the next reload lists it again).
+    async fn minute_entries(&self, now_ms: i64, deadline: Instant) -> Vec<MinuteEntry> {
+        let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
+        let today = schedule::from_ms(now_ms);
         let mut partitions = vec![format!("{:08}", today.date())];
         if floor.date() != today.date() {
             partitions.push(format!("{:08}", floor.date()));
         }
-        let mut found = Vec::new();
+        let held: BTreeSet<Publication> = self.state().pages.minute.keys().copied().collect();
+        let mut newest: BTreeMap<Publication, MinuteEntry> = BTreeMap::new();
         for partition in partitions {
-            let read = self
-                .reader
-                .latest_raw(
-                    "kma-web",
-                    "aws-minute",
-                    &aws_key(),
-                    &partition,
-                    4,
-                    |read| {
-                        read.last()
-                            .and_then(|a| a.first())
-                            .and_then(record_publication)
-                            .is_some_and(|p| p < floor)
-                    },
-                    deadline,
-                )
-                .await;
-            if let Ok(read) = read {
-                found.extend(read);
+            let Ok(id) = super::records::catalog("kma-web", "aws-minute", &aws_key(), &partition)
+            else {
+                continue;
+            };
+            let Ok(listed) = self.reader.listed_acquisitions(&id, deadline).await else {
+                continue;
+            };
+            for (completed, _, e) in listed {
+                let Some(p) = Publication::new(
+                    e.identity.period.local_date,
+                    e.identity.period.slot.parse().unwrap_or(u16::MAX),
+                ) else {
+                    continue;
+                };
+                if p <= floor || held.contains(&p) {
+                    continue;
+                }
+                let entry = MinuteEntry {
+                    catalog: id.clone(),
+                    member: e.identity,
+                    completed,
+                };
+                // Of one minute, the acquisition a latest-first read meets first.
+                if newest.get(&p).is_none_or(|old| entry.after(old)) {
+                    newest.insert(p, entry);
+                }
             }
+        }
+        let mut out: Vec<MinuteEntry> = newest.into_values().collect();
+        out.sort_by(|a, b| b.order().cmp(&a.order()));
+        out
+    }
+    /// Restore `entries` (one catalog read per catalog, then only their groups) and keep the pages
+    /// after `floor` that this process does not hold. A group that is not complete leaves its
+    /// minute out, not the others.
+    async fn restore_minutes(
+        &self,
+        entries: Vec<MinuteEntry>,
+        floor: Publication,
+        deadline: Instant,
+    ) {
+        let mut by_catalog: Vec<(CatalogId, Vec<crate::storage::RecordId>)> = Vec::new();
+        for e in entries {
+            match by_catalog.iter_mut().find(|(id, _)| *id == e.catalog) {
+                Some((_, members)) => members.push(e.member),
+                None => by_catalog.push((e.catalog, vec![e.member])),
+            }
+        }
+        let mut found = Vec::new();
+        for (id, members) in by_catalog {
+            match self.reader.members(&id, &members, deadline).await {
+                Ok(Some(read)) => found.extend(read),
+                Ok(None) => {
+                    for member in members {
+                        if let Ok(Some(read)) = self
+                            .reader
+                            .members(&id, std::slice::from_ref(&member), deadline)
+                            .await
+                        {
+                            found.extend(read);
+                        }
+                    }
+                }
+                Err(_) => {}
+            }
+        }
+        if found.is_empty() {
+            return;
         }
         let parsed = crate::observability::spawn_blocking(move || {
             found
@@ -661,8 +724,6 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         for (p, rows) in parsed {
             s.pages.minute.entry(p).or_insert(rows);
         }
-        s.pages.minute.retain(|k, _| *k > floor);
-        s.pages.minute_read = Some(std::time::Instant::now());
         s.pages.dirty = true;
     }
     /// The newest imported seed that parses and was exported after the carried one: partitions
@@ -1510,6 +1571,21 @@ fn object(pairs: Vec<(&str, OrderedJson)>) -> OrderedJson {
             .map(|(k, v)| (k.encode_utf16().collect(), v))
             .collect(),
     )
+}
+/// A listed minute acquisition to restore.
+struct MinuteEntry {
+    catalog: CatalogId,
+    member: crate::storage::RecordId,
+    completed: u64,
+}
+impl MinuteEntry {
+    /// Latest-first catalog order: completion, then the raw digest.
+    fn order(&self) -> (u64, &str) {
+        (self.completed, &self.member.raw_sha256)
+    }
+    fn after(&self, other: &Self) -> bool {
+        self.order() > other.order()
+    }
 }
 type ParsedPage = (Publication, Arc<Vec<Doc>>, f64, String, String);
 fn parse_hourly(records: &[RawRecord]) -> Option<ParsedPage> {

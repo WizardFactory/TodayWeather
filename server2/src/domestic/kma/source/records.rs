@@ -3,10 +3,13 @@
 //! in page order and its fetch instant.
 use crate::history::IndexListing;
 use crate::storage::{
-    CatalogId, CatalogStore, Error, LookupOutcome, PageOutcome, ProviderKey, RawRecord, ReadCursor,
-    ReadOrder, sha256,
+    Catalog, CatalogId, CatalogLimits, CatalogStore, Envelope, Error, LookupOutcome, PageOutcome,
+    ProviderKey, RawRecord, ReadCursor, ReadOrder, sha256,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 use tokio::time::Instant;
 
 /// One complete acquisition.
@@ -43,7 +46,8 @@ impl<T: Clone> Clone for Reader<T> {
         }
     }
 }
-fn catalog(
+/// The catalog of one key and partition.
+pub fn catalog(
     source: &str,
     kind: &str,
     key: &ProviderKey,
@@ -184,6 +188,45 @@ impl<T: IndexListing + Clone> Reader<T> {
         }
         Ok(out)
     }
+    /// The acquisitions one catalog lists: (completion instant, fetch group, a member envelope),
+    /// from the catalog control object alone (no descriptor or record body is read); empty when
+    /// the catalog does not exist. One acquisition per fetch group; its completion is its
+    /// members' latest fetch instant.
+    pub async fn listed_acquisitions(
+        &self,
+        id: &CatalogId,
+        deadline: Instant,
+    ) -> Result<Vec<(u64, String, Envelope)>, Error> {
+        let limits = CatalogLimits::default();
+        let object = match tokio::time::timeout_at(
+            deadline,
+            self.transport.get_control(&id.key(), limits.control_bytes),
+        )
+        .await
+        {
+            Err(_) => return Err(Error::Timeout),
+            Ok(Err(Error::NotFound)) => return Ok(Vec::new()),
+            Ok(Err(e)) => return Err(e),
+            Ok(Ok(object)) => object,
+        };
+        let catalog = Catalog::from_bytes(&object.body, id, &limits)?;
+        let mut groups: BTreeMap<String, (u64, Envelope)> = BTreeMap::new();
+        for e in catalog.entries {
+            let group = match &e.fetch_group {
+                Some(g) => g.descriptor_key()?,
+                None => e.identity.raw_sha256.clone(),
+            };
+            let fetched = e.identity.fetched_at_ms;
+            groups
+                .entry(group)
+                .and_modify(|(f, _)| *f = (*f).max(fetched))
+                .or_insert((fetched, e));
+        }
+        Ok(groups
+            .into_iter()
+            .map(|(group, (fetched, e))| (fetched, group, e))
+            .collect())
+    }
     /// The hash a key's partitions are listed under.
     pub fn key_hash(key: &ProviderKey) -> Result<String, Error> {
         Ok(sha256(&key.canonical_bytes()?))
@@ -284,6 +327,26 @@ impl<T: IndexListing + Clone> Reader<T> {
             Ok(LookupOutcome::Incomplete) => Err(Error::Corrupt("incomplete catalog")),
             Err(Error::NotFound) => Ok((Vec::new(), 0)),
             Err(e) => Err(e),
+        }
+    }
+    /// The acquisitions of the named members of one catalog as raw records in member order (pages
+    /// in page order): one catalog read and the named groups only. None when a member is not
+    /// listed or its group is not complete.
+    pub async fn members(
+        &self,
+        id: &CatalogId,
+        members: &[crate::storage::RecordId],
+        deadline: Instant,
+    ) -> Result<Option<Vec<Vec<RawRecord>>>, Error> {
+        match self.store.lookup_members(id, members, deadline).await? {
+            PageOutcome::Ready(found) => Ok(Some(
+                found
+                    .acquisitions()
+                    .iter()
+                    .map(|a| ordered(a.records()))
+                    .collect(),
+            )),
+            PageOutcome::Incomplete => Ok(None),
         }
     }
     /// The newest acquisitions of one catalog, latest first, read in pages of `page` until

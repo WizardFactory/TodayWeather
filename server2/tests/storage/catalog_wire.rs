@@ -1362,3 +1362,89 @@ async fn repair_scope_foreign_period_partition_cannot_misfile_group() {
     ));
     assert_eq!(peer.puts(&foreign.key()).await, 0);
 }
+/// A targeted read of named members reads the catalog once and then only their groups: one
+/// descriptor and one raw body per member, never the other groups' descriptors.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn targeted_members_read_one_catalog_and_only_their_groups() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let mut members = Vec::new();
+    for fetch in 1..=30 {
+        let (d, raw) = singleton(fetch, 32, None);
+        members.push(raw[0].envelope.identity.clone());
+        store.publish(d, raw, deadline()).await.unwrap();
+    }
+    let (d, _) = singleton(1, 32, None);
+    let id = d.partitions[0].clone();
+    let named = vec![members[29].clone(), members[3].clone(), members[17].clone()];
+    let before = peer.requests("GET ").await;
+    let PageOutcome::Ready(page) = store.lookup_members(&id, &named, deadline()).await.unwrap()
+    else {
+        panic!("complete members")
+    };
+    assert_eq!(peer.requests("GET ").await - before, 1 + 2 * named.len());
+    let read: Vec<_> = page
+        .acquisitions()
+        .iter()
+        .map(|a| a.records()[0].envelope.identity.clone())
+        .collect();
+    assert_eq!(read, named, "member order");
+    // A member the catalog does not list: nothing is answered.
+    let (_, unknown) = singleton(99, 32, None);
+    assert!(matches!(
+        store
+            .lookup_members(
+                &id,
+                &[members[0].clone(), unknown[0].envelope.identity.clone()],
+                deadline()
+            )
+            .await
+            .unwrap(),
+        PageOutcome::Incomplete
+    ));
+    // A member of another kind is refused.
+    let mut foreign_kind = members[0].clone();
+    foreign_kind.kind = "other".into();
+    assert!(matches!(
+        store.lookup_members(&id, &[foreign_kind], deadline()).await,
+        Err(Error::Invalid(_))
+    ));
+    let (other, foreign) = group(100, 2);
+    store
+        .publish(other.clone(), foreign.clone(), deadline())
+        .await
+        .unwrap();
+    // Both members of one group: the group is read once, its pages in order.
+    let PageOutcome::Ready(page) = store
+        .lookup_members(
+            &other.partitions[0],
+            &[
+                foreign[1].envelope.identity.clone(),
+                foreign[0].envelope.identity.clone(),
+            ],
+            deadline(),
+        )
+        .await
+        .unwrap()
+    else {
+        panic!("complete group")
+    };
+    assert_eq!(page.acquisitions().len(), 1);
+    assert_eq!(page.acquisitions()[0].records().len(), 2);
+    // The store deadline holds across many members.
+    peer.fault("slow-all", "unused").await;
+    let bounded = CatalogStore::new(
+        peer.transport(),
+        CatalogLimits {
+            deadline: Duration::from_millis(100),
+            ..CatalogLimits::default()
+        },
+    )
+    .unwrap();
+    let started = std::time::Instant::now();
+    assert!(matches!(
+        bounded.lookup_members(&id, &members, deadline()).await,
+        Err(Error::Timeout)
+    ));
+    assert!(started.elapsed() < Duration::from_secs(1));
+}
