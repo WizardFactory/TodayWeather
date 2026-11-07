@@ -2265,6 +2265,72 @@ from `/gather` against the retired `KmaStnMinute`; the rules are ported but not 
 decision), and the deployed `ASOS_HISTORY_STATIONS` allowlist (every registry city station is a
 candidate).
 
+### S15b-2 restart read and station page products (2026-11-07)
+
+The EC2 restart comparison of #2866 showed the first request after a restart without minute
+observations or past days: the load restored every stored hourly and city page of the window one
+day after another, parsed each again (about 1.0 to 1.4 s per day on a t3.small), and read the
+minute pages last through latest-first pages that read the descriptor of every minute group of the
+day. AK chose the day product design on 2026-11-07 ([intent](../../intent/issue-2614-kma-restart-observe.md),
+[spec](../../specs/issue-2614-kma-restart-observe.md), [plan](../../plans/issue-2614-kma-restart-observe.md)).
+
+**Targeted reads.** `CatalogStore::lookup_members` reads one catalog and then only the named
+members' groups (one descriptor and one raw body each); `lookup_acquisition` is its one-member
+case, and `ordered_candidates`/`lookup_page` are unchanged for the other cursor readers.
+`Reader::listed_acquisitions` lists a catalog's acquisitions from the control object alone and is
+shared with the image forecast. The minute catalogs of the readers' 40 minutes are listed once; of
+each minute only the newest acquisition (completion, then raw digest) is restored, at most four
+members per read.
+
+**Day product.** One product per KST day D: source `kma-web`, kind `station-pages`, the AWS page
+key, partition `YYYYMMDD`, period D/0000, fetched at its making instant, published as a one-member
+group. It is gzip JSON of the parsed inputs of the hourly fold, not its output: `schema`,
+`parseRevision` (bumped when page parsing or the reduction to registry facts changes), `made`,
+`day`, `excluded`, `cityIds`, a `facts` table and `pages`. Per kind and hour of D it holds the
+newest page as the process keeps it (`kind`, `hour`, `fetchedAt`, `sha256`, `rawId`, `rows`).
+AWS rows equal to their registry facts are indices into `facts`; city rows are whole. `cityIds` is
+the city set the reduced rows are whole for (the intersection of the sets the day's pages were
+reduced with). `excluded` is the number of the day's listed groups S06 excluded when the pages
+were read, carried forward while the day is compared rather than read again. Values keep every
+stored value (undefined, dates, negative zero, NaN) and key order. A reader refuses a product that
+expands past 16 MiB.
+
+Any process that folds writes products: after a fold that recomputed the hourly part a
+`Flight::Product` (never awaited by a request) stores the day whose made-of (sorted page raw
+identities, `cityIds`, `parseRevision`) differs from the last product this process read or stored.
+Only days read without failure whose every hour is in the window are stored, each at most once per
+ten minutes per process. Products are not cached on disk.
+
+**Restart read.** In parallel: the product, AWS hourly and city partition LISTs, the seed and the
+minute catalogs. Then for the due days, newest first and eight at a time, the day's page and
+product catalogs are listed (control objects only) and, the first time a process reads the day,
+its newest product (completion, then digest) is read and decoded. A product whose `cityIds` does
+not cover the current city set (seed and city pages) is not used. Product pages the catalogs do not
+list are dropped (S3 is truth). A day is then compared: for each kind and hour whose newest listed
+page (latest fetch; of one instant the smaller digest, the page a read of every acquisition keeps)
+is newer than the held one, that page alone is restored and parsed. An unreadable product, an older
+schema or parse revision, a grown city set, no product, or a newer page that is not complete or
+does not parse gives the day's raw read as before. `Flight::Load` ends after the products, today's
+and yesterday's comparisons, the seed and the four newest minute pages. `Flight::LoadRest`, which
+no request waits for, then compares the other days (each marked read and the pages dirty) and
+restores the rest of the minute window. Reloads every five minutes compare with the pages held.
+
+**S16.** Answers, the station page input identities and the response-first durability set are
+unchanged: a page restored from a product carries the raw identity and digest of the stored page.
+A day is partial when its held `excluded` is above zero or a newer group is not complete, as a raw
+read with excluded groups is. `settled()` counts `LoadRest`, `Product` and a due product comparison
+as busy. Not recorded by a product: a listed group older than its pages that is published later; if
+S06 excludes it, a restart from the product counts the day complete where a raw read would not.
+Right after the first deployment the window's oldest day has no product (some of its hours were
+already out of the window) and is read from its raw pages after the first answer.
+
+Verification (local, S06 loopback S3 peer, no provider): targeted member GET counts, a restart over
+200 stored minute groups, the value codec round trip, a restart with unreachable providers answering
+168 past hourly pages and minute rows on its first request without raw page GETs, a later page
+restored alone and equal to a cold raw read, unusable products replaced by the raw pages and stored
+again, two processes' products, unsettled answers during the rest of the read, a day with an
+S06-excluded group kept partial, and the disk cache exclusion.
+
 ### S15b-2 s station registry seed (2026-10-15)
 
 AK authorized a one-time read-only export of the legacy `kmastninfos` on 2026-10-15. It ran with
@@ -3033,6 +3099,13 @@ input therefore recomputes the day; an older input set never supersedes a newer 
 S16 also changes one S15b-2 behavior: a station-page day whose `aws-hourly` or `city-obs` catalog
 is not listed now reads as empty. Before, the absent catalog's lookup answered "incomplete", so a
 day without city pages never loaded its hourly pages from S3 and was read again on every load.
+
+Since the [restart read](#s15b-2-restart-read-and-station-page-products-2026-11-07) (2026-11-07) a
+station-page day can be read from its day product and the day catalogs instead of every raw page.
+The input identities are the same, a product carries the S06 exclusions of the read it was made
+from, and a station fold is not complete while the rest of a restart read or a product comparison
+is still running.
+The first answer after a start therefore records no summary; a later request does.
 
 **Last-year lookup** (`summary::Lookup::last_year`, not wired to a route). The same date a year
 earlier (Feb 29 → Feb 28), then ±1..±3, earlier first. At each date: the town's grid summary, then

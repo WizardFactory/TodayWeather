@@ -5,7 +5,6 @@
   "server2_paths": [
     "server2/config/tasks/KMA-RESTART-OBSERVE.json",
     "server2/src/cache/disk.rs",
-    "server2/src/domestic/kma/source/doc.rs",
     "server2/src/domestic/kma/source/forecast_input.rs",
     "server2/src/domestic/kma/source/mod.rs",
     "server2/src/domestic/kma/source/observe.rs",
@@ -16,6 +15,7 @@
     "server2/tests/domestic.rs",
     "server2/tests/domestic/observe.rs",
     "server2/tests/domestic/observe_product.rs",
+    "server2/tests/domestic/summary_s3.rs",
     "server2/tests/storage/catalog_wire.rs"
   ],
   "outside": [
@@ -38,6 +38,11 @@
       "path": "docs/architecture/server2.md",
       "category": "documentation",
       "reason": "The observation restart read, the station page product and its S16 note."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "The station page product among the server-written folds."
     },
     {
       "path": "docs/operations/server2-infrastructure.md",

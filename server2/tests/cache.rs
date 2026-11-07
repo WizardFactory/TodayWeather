@@ -430,3 +430,25 @@ async fn publication_reconciliation_never_uses_cache_to_mask_same_length_s3_corr
     );
     assert_eq!(gets.load(Ordering::SeqCst), 2);
 }
+/// The station page products (`kma-web` / `station-pages`, made and read again by processes) stay
+/// out of the disk cache beside the cached station pages, as the image forecast product does.
+#[tokio::test]
+async fn the_station_page_product_is_not_cached() {
+    let d = Directory::new();
+    let page = record("kma-web", "aws-hourly", 1, b"page".to_vec());
+    let product = record("kma-web", "station-pages", 2, b"product".to_vec());
+    let w = wire(&[page.clone(), product.clone()]);
+    for _ in 0..2 {
+        let c = Arc::new(DiskCache::new(&d.0, "bucket-a/seoul", 1048576, 16).unwrap());
+        let s = store(w.clone(), Some(c.clone()));
+        s.load(&page.envelope.identity).await.unwrap();
+        s.load(&product.envelope.identity).await.unwrap();
+        idle(&c).await;
+    }
+    assert_eq!(d.files().len(), 1, "the page only");
+    assert_eq!(
+        w.gets.load(Ordering::SeqCst),
+        3,
+        "the product is read each time"
+    );
+}

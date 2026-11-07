@@ -253,6 +253,22 @@ async fn serve(backend: &KmaBackend) {
         .unwrap();
     assert!(matches!(served, Native::Served(_)), "served natively");
 }
+/// Serve until `date` has a stored summary: the first answer after a start is not complete (the
+/// days past yesterday are read after it), a later one is.
+async fn serve_until(
+    backend: &KmaBackend,
+    recorder: &Recorder<BoundedS3<HttpS3Transport>>,
+    date: u32,
+) {
+    for _ in 0..40 {
+        serve(backend).await;
+        assert!(recorder.idle(deadline()).await);
+        if names(recorder, date).await > 0 {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
 async fn names(recorder: &Recorder<BoundedS3<HttpS3Transport>>, date: u32) -> usize {
     recorder
         .store()
@@ -293,8 +309,7 @@ async fn served_requests_record_complete_grid_days_and_late_revisions() {
         .await
         .unwrap();
     let (backend, recorder) = backend(&peer, Arc::new(Unreachable));
-    serve(&backend).await;
-    assert!(recorder.idle(deadline()).await);
+    serve_until(&backend, &recorder, 20260923).await;
     let store = recorder.store();
     let d23 = store
         .newest(&town(), 20260923, deadline())
@@ -339,8 +354,7 @@ async fn served_requests_record_complete_grid_days_and_late_revisions() {
     day(&catalogs, 20260922, [18]).await;
     current(&catalogs, 20260922, 0, 30., NOW - 60_000.).await;
     let (backend, recorder) = backend_again(&peer);
-    serve(&backend).await;
-    assert!(recorder.idle(deadline()).await);
+    serve_until(&backend, &recorder, 20260922).await;
     let store = recorder.store();
     let d22 = store
         .newest(&town(), 20260922, deadline())
@@ -560,7 +574,15 @@ async fn only_the_current_fold_of_a_complete_read_is_settled() {
         Arc::new(Unreachable),
     ));
     let now = NOW as i64;
-    let folded = observations.stations(now, deadline()).await.unwrap();
+    // The rest of the read and the product comparison follow the first answer.
+    let mut folded = observations.stations(now, deadline()).await.unwrap();
+    for _ in 0..20 {
+        if observations.settled(now, &folded) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        folded = observations.stations(now, deadline()).await.unwrap();
+    }
     assert!(
         observations.settled(now, &folded),
         "every window day read, fold current"
@@ -621,8 +643,16 @@ async fn seed_settled(ats: &[f64], fault: &str) -> bool {
         Arc::new(Unreachable),
     ));
     let now = NOW as i64;
-    let folded = observations.stations(now, deadline()).await.unwrap();
-    observations.settled(now, &folded)
+    // The days past yesterday are read after the first answer: a read that can settle does so
+    // within a few requests.
+    for _ in 0..20 {
+        let folded = observations.stations(now, deadline()).await.unwrap();
+        if observations.settled(now, &folded) {
+            return true;
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+    false
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

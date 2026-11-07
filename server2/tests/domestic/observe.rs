@@ -1053,26 +1053,42 @@ async fn same_hour_aws_and_city_restore_respects_fetched_order_and_field_presenc
 pub(super) struct Counted {
     inner: server2::world::BoundedS3<server2::storage::HttpS3Transport>,
     counts: Arc<Mutex<HashMap<String, usize>>>,
+    /// GETs of one class after the first `n` are held this long.
+    delay: Arc<Mutex<Option<(String, usize, Duration)>>>,
 }
 impl Counted {
     pub(super) fn new(inner: server2::world::BoundedS3<server2::storage::HttpS3Transport>) -> Self {
         Self {
             inner,
             counts: Arc::default(),
+            delay: Arc::default(),
         }
     }
-    fn count(&self, method: &str, key: &str) {
-        let class = if key.starts_with("index/v2/groups/") {
+    /// Hold every GET of `class` after its first `after` for `hold`.
+    pub(super) fn delay_gets(&self, class: &str, after: usize, hold: Duration) {
+        *self.delay.lock().unwrap() = Some((class.to_owned(), after, hold));
+    }
+    fn held(&self, key: &str) -> Option<Duration> {
+        let delay = self.delay.lock().unwrap().clone()?;
+        let class = Self::class(key);
+        (class == delay.0 && self.get(&format!("GET {class}")) > delay.1).then_some(delay.2)
+    }
+    fn class(key: &str) -> String {
+        if key.starts_with("index/v2/groups/") {
             "index/v2/groups".to_owned()
         } else {
             key.split('/').take(4).collect::<Vec<_>>().join("/")
-        };
-        *self
-            .counts
-            .lock()
-            .unwrap()
-            .entry(format!("{method} {class}"))
-            .or_default() += 1;
+        }
+    }
+    fn count(&self, method: &str, key: &str) {
+        let class = Self::class(key);
+        let mut counts = self.counts.lock().unwrap();
+        *counts.entry(format!("{method} {class}")).or_default() += 1;
+        // Raw records also by KST day (`raw/v2/source/kind/YYYY/MM/DD`).
+        if key.starts_with("raw/") {
+            let day = key.split('/').take(7).collect::<Vec<_>>().join("/");
+            *counts.entry(format!("{method} {day}")).or_default() += 1;
+        }
     }
     /// Requests so far of `method` and `class` (for example `GET raw/v2/kma-web/aws-minute`).
     pub(super) fn get(&self, what: &str) -> usize {
@@ -1097,6 +1113,9 @@ impl server2::storage::ObjectTransport for Counted {
         max: usize,
     ) -> Result<server2::storage::Object, server2::storage::Error> {
         self.count("GET", key);
+        if let Some(hold) = self.held(key) {
+            tokio::time::sleep(hold).await;
+        }
         self.inner.get(key, max).await
     }
 }
@@ -1190,6 +1209,16 @@ pub(super) async fn store_pages<T>(transport: &T, records: Vec<RawRecord>)
 where
     T: server2::storage::CatalogTransport + Clone,
 {
+    store_pages_without(transport, records, &[]).await;
+}
+/// [`store_pages`], leaving out the raw bodies of `missing` (S06 then excludes their groups).
+pub(super) async fn store_pages_without<T>(
+    transport: &T,
+    records: Vec<RawRecord>,
+    missing: &[server2::storage::RecordId],
+) where
+    T: server2::storage::CatalogTransport + Clone,
+{
     use server2::storage::{Catalog, RawRecordStore, WriteCondition};
     let limits = CatalogLimits::default();
     let raw = RawRecordStore::new(transport.clone(), limits.raw.clone()).unwrap();
@@ -1209,7 +1238,9 @@ where
                 .unwrap(),
             200
         );
-        raw.publish(attached[0].clone()).await.unwrap();
+        if !missing.contains(&attached[0].envelope.identity) {
+            raw.publish(attached[0].clone()).await.unwrap();
+        }
         let id = d.partitions[0].clone();
         let at = match catalogs.iter().position(|c| c.identity == id) {
             Some(at) => at,
@@ -1300,8 +1331,9 @@ async fn a_restart_restores_only_the_minute_pages_within_reach() {
         descriptors <= 20 && raws <= 20,
         "{descriptors} descriptor and {raws} raw GETs for 20 minutes within reach"
     );
+    // One listing, then one catalog read per targeted read of at most four members.
     assert!(
-        counted.get("GET index/v2/kma-web/aws-minute") <= 4,
+        counted.get("GET index/v2/kma-web/aws-minute") <= 1 + 20 / 4,
         "the minute catalogs are read a bounded number of times"
     );
 }
