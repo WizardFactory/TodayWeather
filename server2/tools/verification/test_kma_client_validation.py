@@ -183,6 +183,23 @@ class CompareTest(unittest.TestCase):
             'short[20261107 15].t3h': 'not a number'})
         self.assertEqual((status, report['missing_fields']), (1, []))
 
+    def test_scalars_of_another_kind_are_reported(self):
+        # CV-scalar-kind: booleans, numbers and text are different data; a number and a numeric string are not.
+        candidate = reference()
+        candidate['current'].update(t1h=False, reh=True, weather=False, skyIcon=1, uuu='-1')
+        row(candidate, 'short', '20261107 15')['r06Approx'] = 0
+        row(candidate, 'short', '20261107 18')['pop'] = '30'
+        row(candidate, 'shortest', '20261107 1800')['rn1Approx'] = 'false'
+        status, report, _ = compare(reference(), candidate)
+        self.assertEqual({v['path']: v['reason'] for v in report['invalid_values']}, {
+            'current.t1h': 'boolean where the reference has a number',
+            'current.reh': 'boolean where the reference has a number',
+            'current.weather': 'boolean where the reference has a string',
+            'current.skyIcon': 'number where the reference has a string',
+            'short[20261107 15].r06Approx': 'number where the reference has a boolean',
+            'shortest[20261107 1800].rn1Approx': 'string where the reference has a boolean'})
+        self.assertEqual(status, 1)
+
     def test_both_invalid_is_not_reported(self):
         base = reference()
         base['current']['weather'] = ''

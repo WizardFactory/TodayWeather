@@ -15,7 +15,8 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          and key must be in the candidate, with a valid value wherever the reference value is
          valid. Invalid: absent, null, an empty or blank string where the reference has a value,
          an empty list where the reference list is not, another kind (object or array against a
-         scalar, or the reverse), a non-numeric string where the reference is a number, a
+         scalar or the reverse, a boolean against a number or string or the reverse, a number
+         against text), a non-numeric string where the reference is a number, a
          temperature (heatIndex and sensorytem included) at or below -50, a wind component (uuu,
          vvv) at or below -100, or a negative number in a field that is never negative.
          Numeric strings, which legacy also sends, are read as JavaScript's Number() reads a
@@ -147,14 +148,19 @@ def invalid(key, value, reference=NO_REFERENCE):
     if value is None:
         return 'null'
     if reference is not NO_REFERENCE:
-        containers = (isinstance(reference, (dict, list)), isinstance(value, (dict, list)))
-        if containers != (False, False) and kind(value) != kind(reference):
-            return f"{kind(value)} where the reference has {'an' if containers[0] else 'a'} {kind(reference)}"
+        mine, theirs = kind(value), kind(reference)
+        other_kind = f"{mine} where the reference has {'an' if theirs in ('object', 'array') else 'a'} {theirs}"
+        if mine != theirs and {'object', 'array'} & {mine, theirs}:
+            return other_kind
         if blank(value) and not blank(reference):
             return 'empty string'
-        if isinstance(value, str) and js_number(value) is None and js_number(reference) is not None:
+        if mine != theirs and 'boolean' in (mine, theirs):
+            return other_kind
+        if mine == 'string' and js_number(value) is None and js_number(reference) is not None:
             return 'not a number'
-        if isinstance(value, list) and not value and scalar_list(reference) and reference:
+        if mine == 'number' and theirs == 'string' and js_number(reference) is None:
+            return other_kind
+        if mine == 'array' and not value and scalar_list(reference) and reference:
             return 'empty list'
     amount = js_number(value)
     if amount is not None:
