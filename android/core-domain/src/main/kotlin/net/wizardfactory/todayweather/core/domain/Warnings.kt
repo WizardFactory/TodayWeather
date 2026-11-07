@@ -83,17 +83,17 @@ object Warnings {
         val t = Calendar.getInstance(zone).apply { timeInMillis = millis }
         val y = t.get(Calendar.YEAR); val mo = t.get(Calendar.MONTH) + 1; val d = t.get(Calendar.DAY_OF_MONTH)
         val h = t.get(Calendar.HOUR_OF_DAY)
-        val mi = "%02d".format(t.get(Calendar.MINUTE)); val s = "%02d".format(t.get(Calendar.SECOND))
+        val mi = "%02d".format(java.util.Locale.ROOT, t.get(Calendar.MINUTE)); val s = "%02d".format(java.util.Locale.ROOT, t.get(Calendar.SECOND))
         val h12 = if (h % 12 == 0) 12 else h % 12
         val am = h < 12
         return when (languageTag.substringBefore('-').lowercase()) {
             "ko" -> "$y. $mo. $d. ${if (am) "오전" else "오후"} $h12:$mi:$s"
             "ja" -> "$y/$mo/$d $h:$mi:$s"
-            "de" -> "$d.$mo.$y ${"%02d".format(h)}:$mi:$s"
+            "de" -> "$d.$mo.$y ${"%02d".format(java.util.Locale.ROOT, h)}:$mi:$s"
             "zh" -> if (languageTag.equals("zh-TW", true) || "Hant" in languageTag) {
                 "$y/$mo/$d ${if (am) "上午" else "下午"}$h12:$mi:$s"
             } else {
-                "$y/$mo/$d ${"%02d".format(h)}:$mi:$s"
+                "$y/$mo/$d ${"%02d".format(java.util.Locale.ROOT, h)}:$mi:$s"
             }
             else -> "$mo/$d/$y $h12:$mi:$s ${if (am) "AM" else "PM"}"
         }
