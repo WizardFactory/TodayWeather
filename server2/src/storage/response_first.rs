@@ -78,9 +78,26 @@ pub struct Batch {
     pub declaration: GroupDeclaration,
     pub records: Vec<RawRecord>,
 }
+/// A step of an acquisition at which the writer awaits [`Publisher::checkpoint`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Checkpoint {
+    /// The creating caller has created the entry and started its job, and waits for it next.
+    Created,
+    /// The job's batch is valid and charged; who waits for it is not settled and it is not
+    /// Ready yet.
+    Validated,
+    /// The batch is Ready and who waits for it is settled.
+    Announced,
+}
 /// Only this publisher can confer durable eligibility. RAM records carry no S06 token.
 pub trait Publisher: Send + Sync + 'static {
     fn publish(&self, batch: Arc<Batch>, deadline: Instant) -> BoxFuture<'_, Result<(), Error>>;
+    /// A test seam, not a setting: the writer awaits it at `point` of every acquisition, so a
+    /// test can order responses against the writer's steps. Production publishers keep this
+    /// default, which is ready at once.
+    fn checkpoint(&self, _point: Checkpoint) -> BoxFuture<'_, ()> {
+        Box::pin(std::future::ready(()))
+    }
 }
 impl<T: CatalogTransport + 'static> Publisher for CatalogStore<T> {
     fn publish(&self, batch: Arc<Batch>, deadline: Instant) -> BoxFuture<'_, Result<(), Error>> {
@@ -599,11 +616,11 @@ impl Writer {
         // exists before the provider can finish, so a provider that is done before the caller
         // is polled again is not released as one nobody waits for (NoWaiters), which would
         // publish a response's raw before its body ends.
-        let mut receiver = {
+        let (mut receiver, created) = {
             let mut table = self.table.lock().unwrap_or_else(|e| e.into_inner());
             Self::prune(&mut table);
             if let Some(entry) = table.entries.get(&key) {
-                entry.state.subscribe()
+                (entry.state.subscribe(), false)
             } else {
                 if self.closing.load(SeqCst)
                     || reserve == 0
@@ -664,9 +681,12 @@ impl Writer {
                     this.run(owned, lease, reserve, provider_until, provider)
                         .await;
                 }));
-                receiver
+                (receiver, true)
             }
         };
+        if created {
+            self.publisher.checkpoint(Checkpoint::Created).await;
+        }
         loop {
             let state = receiver.borrow_and_update().clone();
             match state {
@@ -776,15 +796,22 @@ impl Writer {
             _lease: lease,
         });
         self.counters.ready.fetch_add(1, SeqCst);
-        // Waiters are counted before they can observe Ready: one that takes the batch and
-        // returns at once must not leave it looking unwaited (NoWaiters), which would publish
-        // its response's raw before the body ends.
-        let waiters = entry.state.receiver_count();
-        // The supervisor owns the charged batch before a waiter can observe Ready.
-        entry.state.send_replace(Stage::Ready(ready.clone()));
-        if waiters == 0 {
-            entry.gate.release(ReleaseReason::NoWaiters);
+        self.publisher.checkpoint(Checkpoint::Validated).await;
+        // Who waits is settled under the table lock, the one callers create and join entries
+        // under, together with the Ready announcement: a response that joins before Ready is
+        // counted, one that joins after it finds the batch Ready, and a waiter cannot take the
+        // batch and leave before it is counted. Released as unwaited (NoWaiters), a response's
+        // own raw would be published before its body ends.
+        {
+            let _joins = self.table.lock().unwrap_or_else(|e| e.into_inner());
+            let waiters = entry.state.receiver_count();
+            // The supervisor owns the charged batch before a waiter can observe Ready.
+            entry.state.send_replace(Stage::Ready(ready.clone()));
+            if waiters == 0 {
+                entry.gate.release(ReleaseReason::NoWaiters);
+            }
         }
+        self.publisher.checkpoint(Checkpoint::Announced).await;
         tokio::select! {
             _=entry.gate.wait()=>(),
             _=tokio::time::sleep(self.config.dormancy)=>entry.gate.release(ReleaseReason::DormancyCap),
