@@ -338,3 +338,21 @@ fn the_current_row_keeps_its_forecast_extreme_where_legacy_does() {
         assert_eq!(shown(true), 1, "ASOS-primary keeps today's {field} {value}");
     }
 }
+
+/// The live reading of station X now and X's ASOS hour exactly 24 h earlier are one thermometer
+/// (YESTERDAY): production sent `yesterday.t1h` for all five places, the run's server2 none.
+#[test]
+fn the_parity_run_places_get_yesterdays_temperature() {
+    for place in &PLACES {
+        let body = answered(place, &PARITY, true);
+        let current = &body["current"];
+        assert_eq!(current["t1h"], place.live, "{}: {current}", place.name);
+        let yesterday = &current["yesterday"];
+        assert_eq!(
+            yesterday["comparisonAvailable"], true,
+            "{}: {yesterday}",
+            place.name
+        );
+        assert_eq!(yesterday["t1h"], place.yesterday, "{}", place.name);
+    }
+}

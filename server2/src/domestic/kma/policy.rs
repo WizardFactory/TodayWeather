@@ -654,6 +654,22 @@ pub fn can_compare(current: &V, yesterday: &V) -> bool {
             && hour == slot_ms(current)
             && hour - slot_ms(yesterday) == DAY;
     }
+    // Not in legacy: AK 2026-11-07 requires `yesterday.t1h` and keeps this rule only as a
+    // last-resort safeguard. Under ASOS-primary the yesterday hour is the station's ASOS record,
+    // so the live reading of station X in the current hour and X's ASOS hour exactly 24 h
+    // earlier are one thermometer. Other stations, hours and sources keep the safeguard.
+    if a.truthy()
+        && b.truthy()
+        && strict_eq(&a.get("source"), &V::s("KMA_STATION_LIVE"))
+        && strict_eq(&b.get("source"), &V::s("KMA_ASOS"))
+    {
+        let hour = measurement_hour(&a);
+        return station(&a.get("stationId")).is_some()
+            && to_str(&a.get("stationId")) == to_str(&b.get("stationId"))
+            && hour == slot_ms(current)
+            && measurement_hour(&b) == slot_ms(yesterday)
+            && hour - measurement_hour(&b) == DAY;
+    }
     if !a.truthy()
         || !b.truthy()
         || !strict_eq(&a.get("source"), &b.get("source"))
@@ -1438,5 +1454,117 @@ mod tests {
             assert!(is_tz_iso(s) && timestamp(&V::s(s)).is_nan(), "{s}");
         }
         assert!(timestamp(&V::s("2026-09-24T08:00:00Z")).is_finite());
+    }
+
+    /// An hourly row at `date`/`time` whose temperature `t1h` came from `source`.
+    fn reading(date: &str, time: &str, t1h: f64, source: Option<(&str, &str, &str)>) -> V {
+        let row = V::Obj(obj(vec![
+            ("date", V::s(date)),
+            ("time", V::s(time)),
+            ("t1h", V::Num(t1h)),
+        ]));
+        if let Some((source, station, key)) = source {
+            let src = V::Obj(obj(vec![
+                ("source", V::s(source)),
+                ("stationId", V::s(station)),
+                ("key", V::s(key)),
+            ]));
+            record(&row, &src, &["t1h"]);
+        }
+        row
+    }
+    /// `observations.yesterday` over a current-list holding `row`.
+    fn compared(current: &V, row: &V) -> V {
+        yesterday(current, &V::Arr(Arr::from_vec(vec![row.clone()])))
+    }
+
+    /// AK 2026-11-07: `current.yesterday.t1h` must be sent. The EC2 parity run of that day
+    /// (18:28 KST live readings, ASOS of 2026-11-06 18:00; bodies `body-0..4.json` of
+    /// `kma-ec2-20261107p`) paired every place's live station with the same station's ASOS hour
+    /// 24 h earlier, and the safeguard withheld all of them.
+    #[test]
+    fn the_parity_run_pairs_compare_with_yesterday() {
+        for (place, station, now, before) in [
+            ("Seoul", "108", 6.5, 6.7),
+            ("Busan", "159", 10.8, 13.4),
+            ("Gangneung", "105", 6.6, 9.9),
+            ("Jeju", "184", 12.4, 13.8),
+            ("Cheorwon", "95", 4.7, 5.6),
+        ] {
+            let current = reading(
+                "20261107",
+                "1800",
+                now,
+                Some(("KMA_STATION_LIVE", station, "202611071828")),
+            );
+            let row = reading(
+                "20261106",
+                "1800",
+                before,
+                Some(("KMA_ASOS", station, "202611061800")),
+            );
+            assert!(can_compare(&current, &row), "{place}");
+            let y = compared(&current, &row);
+            assert!(
+                strict_eq(&y.get("comparisonAvailable"), &V::Bool(true)),
+                "{place}"
+            );
+            assert_eq!(to_number(&y.get("t1h")), before, "{place}");
+        }
+    }
+
+    /// The safeguard still withholds other pairs: another station, another hour, another source,
+    /// a reading without a station; a stored grid row keeps its existing precedence and an
+    /// explicit `comparisonAvailable: true` still short-circuits.
+    #[test]
+    fn the_comparison_safeguard_still_withholds_unrelated_pairs() {
+        let live = |key: &str| {
+            reading(
+                "20261107",
+                "1800",
+                6.5,
+                Some(("KMA_STATION_LIVE", "108", key)),
+            )
+        };
+        let asos = |station: &str, time: &str, key: &str| {
+            reading("20261106", time, 6.7, Some(("KMA_ASOS", station, key)))
+        };
+        let current = live("202611071828");
+        assert!(can_compare(&current, &asos("108", "1800", "202611061800")));
+        assert!(!can_compare(&current, &asos("159", "1800", "202611061800")));
+        assert!(!can_compare(&current, &asos("", "1800", "202611061800")));
+        // The yesterday row and its ASOS key are both an hour off the current slot.
+        assert!(!can_compare(&current, &asos("108", "1900", "202611061900")));
+        // An ASOS key that is not the yesterday row's own hour.
+        assert!(!can_compare(&current, &asos("108", "1800", "202611061700")));
+        // A live reading from another hour than the current slot.
+        assert!(!can_compare(
+            &live("202611071728"),
+            &asos("108", "1800", "202611061800")
+        ));
+        let hourly = reading(
+            "20261106",
+            "1800",
+            6.7,
+            Some(("KMA_STATION_HOURLY", "108", "202611061800")),
+        );
+        assert!(!can_compare(&current, &hourly));
+        let asos_now = reading(
+            "20261107",
+            "1800",
+            6.5,
+            Some(("KMA_ASOS", "108", "202611071800")),
+        );
+        assert!(!can_compare(&asos_now, &live("202611061828")));
+        // A stored grid row for yesterday (no temperature source) keeps today's precedence.
+        let grid = reading("20261106", "1800", 6.7, None);
+        assert!(can_compare(&current, &grid));
+        let marked = asos("159", "1800", "202611061800");
+        marked.set("comparisonAvailable", true);
+        assert!(can_compare(&current, &marked));
+        // The yesterday answer withholds the temperature it cannot compare.
+        let y = compared(&current, &asos("159", "1800", "202611061800"));
+        assert!(strict_eq(&y.get("comparisonAvailable"), &V::Bool(false)));
+        assert!(y.get("t1h").is_undef());
     }
 }

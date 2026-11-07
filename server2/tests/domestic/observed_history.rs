@@ -309,6 +309,33 @@ fn asos_filled_hours_keep_the_missing_wind_component_value() {
     assert_eq!(short_row(&legacy, "20260923", 12)["uuu"], -1);
 }
 
+/// AK 2026-11-07: `current.yesterday.t1h` must be sent; the comparison rule is a last-resort
+/// safeguard. The live reading of station 108 now and its ASOS hour exactly 24 h earlier come
+/// from one thermometer.
+#[test]
+fn a_live_reading_compares_with_the_same_stations_asos_hour_a_day_earlier() {
+    let body = assembled_scenario("station-first-rain", Some(history()));
+    let current = &body["current"];
+    assert_eq!(
+        current["fieldObservations"]["t1h"]["source"],
+        "KMA_STATION_LIVE"
+    );
+    let yesterday = &current["yesterday"];
+    assert_eq!(yesterday["fieldObservations"]["t1h"]["source"], "KMA_ASOS");
+    assert_eq!(yesterday["comparisonAvailable"], true, "{yesterday}");
+    assert_eq!(yesterday["t1h"], 17, "{yesterday}");
+}
+
+/// Another station's ASOS hour keeps the comparison safeguard.
+#[test]
+fn another_stations_asos_hour_keeps_the_comparison_safeguard() {
+    let body = assembled_scenario("station-first-rain", Some(history_at("109")));
+    let yesterday = &body["current"]["yesterday"];
+    assert_eq!(yesterday["fieldObservations"]["t1h"]["stationId"], "109");
+    assert_eq!(yesterday["comparisonAvailable"], false, "{yesterday}");
+    assert!(yesterday.get("t1h").is_none(), "{yesterday}");
+}
+
 #[test]
 fn asos_primary_replaces_forecast_history_and_uses_official_daily_values() {
     let body = assembled(true);
