@@ -1361,6 +1361,34 @@ pub fn convert_0h_to_24h(cx: &mut Cx) -> Flow {
 fn past_slot(row: &V, now: f64) -> bool {
     policy::slot(row).is_some_and(|key| policy::instant(&s(&key)) + 3. * time::HOUR <= now)
 }
+/// The rows `convertUnits` will mark `currentIndex`, the row the client shows as current: it
+/// follows the observation's time, so a lagging observation marks a row past by the clock, and
+/// that row keeps its forecast too. The rule is `present::marked_current` over the same inputs,
+/// final here: `getCurrent` and `getKmaStnMinuteWeather` set the current's date, time and station
+/// minute, `convert0Hto24H` the rows' times, and no later step writes them or reorders the rows.
+/// `adjustShort` only drops trailing rows without a temperature, which moves the mark only when
+/// the current slot and every later row have none. Without a current object, or when the rule
+/// throws there, `convertUnits` marks nothing earlier than the clock-current row either.
+fn shown_current(cx: &Cx, rows: &[V]) -> Vec<bool> {
+    let current = cx.r("current");
+    if !current.truthy() {
+        return vec![false; rows.len()];
+    }
+    catch(|| {
+        let current_date = super::present::current_date_obj(&current);
+        rows.iter()
+            .enumerate()
+            .map(|(i, row)| {
+                super::present::marked_current(
+                    &super::present::row_date_obj(row),
+                    rows.get(i + 1),
+                    &current_date,
+                )
+            })
+            .collect()
+    })
+    .unwrap_or_else(|_| vec![false; rows.len()])
+}
 /// `_mergeShortWithCurrent(shortList, currentList)`.
 fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
     let (req_date, _) = cx.time_value(9.);
@@ -1410,8 +1438,14 @@ fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
             slots.entry((d.to_string(), tm.to_string())).or_insert(t);
         }
     }
-    for item in short.items() {
-        let historical = primary && past_slot(&item, cx.now);
+    let rows = short.items();
+    let shown = if primary {
+        shown_current(cx, &rows)
+    } else {
+        vec![false; rows.len()]
+    };
+    for (index, item) in rows.into_iter().enumerate() {
+        let historical = primary && past_slot(&item, cx.now) && !shown[index];
         if historical {
             // No past SHRT/RSS fallback. Unsupported historical forecast-only fields
             // remain explicit sentinels; measured rain below carries its true 3h interval.

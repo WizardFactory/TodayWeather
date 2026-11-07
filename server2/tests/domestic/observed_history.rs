@@ -202,6 +202,29 @@ fn the_current_row_keeps_its_forecast_under_asos_primary() {
     assert_eq!(now["wav"], 0.8, "{now}");
 }
 
+/// The row the client shows as current keeps its forecast too. `currentIndex` follows the
+/// observation's time: at 09:10 the recording's station reading is from 08:50, so the 06:00 row
+/// is marked, as legacy marked it, although its interval has passed by the clock. Its forecast
+/// holds `1mm 미만` rain and `5.0cm 이상` snow; the rows before it stay past.
+#[test]
+fn the_row_marked_current_keeps_its_forecast_when_the_observation_lags() {
+    let legacy = recorded_body("rain-categories");
+    let body = assembled_scenario("rain-categories", Some(history()));
+    let (shown, was) = (
+        short_row(&body, "20260924", 6),
+        short_row(&legacy, "20260924", 6),
+    );
+    assert_eq!(was["currentIndex"], true, "legacy marks it: {was}");
+    assert_eq!(shown["currentIndex"], true, "{shown}");
+    for field in [
+        "pop", "wav", "r06", "r06Hours", "r06Str", "s06", "s06Hours", "s06Str",
+    ] {
+        assert_eq!(shown[field], was[field], "{field}: {shown}");
+    }
+    let past = short_row(&body, "20260924", 3);
+    assert_eq!(past["wav"], -1, "an unmarked past row stays past: {past}");
+}
+
 /// Past rows (label + 3 h <= now) keep the ASOS-primary rule, and no forecast precipitation
 /// total stays behind the cleared amounts: the hidden total kept the forecast's text beside the
 /// measured amount and turned the cleared -1 into -10 snow. The recording forecasts

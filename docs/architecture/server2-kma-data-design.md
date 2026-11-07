@@ -333,7 +333,9 @@ On the public axis a three-hour row is historical once its interval has passed
 (label + 3 h ≤ now). The current-time row (label ≤ now < label + 3 h) keeps the
 forecast of the newest publication covering it, with the observed fields merged
 over it as legacy `_mergeShortWithCurrent` does (AK 2026-11-07: the client gets
-what it gets today). From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3, so
+what it gets today). So does the row the client shows as current (`currentIndex`),
+which follows the observation's time and can therefore be past by the clock when
+the observation lags. From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3, so
 the previous one is read from S3 or acquired, at most once per cell and
 publication. Clearing a historical row's forecast amounts also clears the totals
 kept beside them; its snow amount then finalizes like that of every past row

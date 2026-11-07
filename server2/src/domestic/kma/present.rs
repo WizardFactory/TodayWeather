@@ -624,21 +624,34 @@ fn convert_air_info(info: &V, unit: &V, current_date: &V) {
         }
     }
 }
+/// `current.dateObj` as `convertUnits` sets it: the station minute's time when the current carries
+/// one, else the current's own date and time.
+pub(super) fn current_date_obj(current: &V) -> V {
+    V::from(if current.has("stnDateTime") {
+        time::dotted_to_dot_space(&sv(&current.get("stnDateTime")))
+    } else {
+        time::dot_space(&to_str(&add(&current.get("date"), &current.get("time"))))
+    })
+}
+/// A short row's `dateObj`, from its date and (still string) time.
+pub(super) fn row_date_obj(row: &V) -> V {
+    V::from(time::dot_space(&to_str(&add(
+        &row.get("date"),
+        &row.get("time"),
+    ))))
+}
+/// `convertUnits`'s `currentIndex` rule: a row whose `dateObj` is not after the current's, when it
+/// is the last row or the next row's is not before it. Legacy never sets `foundCurrentIndex`, so
+/// every qualifying row is marked. The ASOS-primary wipe applies the same rule
+/// (`short::shown_current`), so the row the client shows as current keeps its forecast.
+pub(super) fn marked_current(date_obj: &V, next: Option<&V>, current_date: &V) -> bool {
+    le(date_obj, current_date) && next.is_none_or(|next| le(current_date, &row_date_obj(next)))
+}
 pub fn convert_units_mw(cx: &mut Cx) -> Flow {
     let query = cx.r("query");
     let _ = catch(|| {
         let current = cx.r("current");
-        if current.has("stnDateTime") {
-            current.set(
-                "dateObj",
-                time::dotted_to_dot_space(&sv(&current.get("stnDateTime"))),
-            );
-        } else {
-            current.set(
-                "dateObj",
-                time::dot_space(&to_str(&add(&current.get("date"), &current.get("time")))),
-            );
-        }
+        current.set("dateObj", current_date_obj(&current));
         let current_date = current.get("dateObj");
         current.set(
             "time",
@@ -676,10 +689,7 @@ pub fn convert_units_mw(cx: &mut Cx) -> Flow {
         // Legacy never sets foundCurrentIndex, so every qualifying row is marked.
         let found = false;
         for (index, v) in rows.iter().enumerate() {
-            v.set(
-                "dateObj",
-                time::dot_space(&to_str(&add(&v.get("date"), &v.get("time")))),
-            );
+            v.set("dateObj", row_date_obj(v));
             v.set(
                 "time",
                 parse_int(&V::from(super::js::slice(&sv(&v.get("time")), 0, Some(-2)))),
@@ -688,17 +698,8 @@ pub fn convert_units_mw(cx: &mut Cx) -> Flow {
                 "fromToday",
                 time::diff_days(&v.get("dateObj"), &current_date),
             );
-            if !found && le(&v.get("dateObj"), &current_date) {
-                if index == rows.len() - 1 {
-                    v.set("currentIndex", true);
-                } else {
-                    let next = &rows[index + 1];
-                    let next_date =
-                        time::dot_space(&to_str(&add(&next.get("date"), &next.get("time"))));
-                    if le(&current_date, &V::from(next_date)) {
-                        v.set("currentIndex", true);
-                    }
-                }
+            if !found && marked_current(&v.get("dateObj"), rows.get(index + 1), &current_date) {
+                v.set("currentIndex", true);
             }
             convert_weather_data(v, &query);
         }

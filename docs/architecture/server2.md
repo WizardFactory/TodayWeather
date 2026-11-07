@@ -3914,7 +3914,11 @@ the production API, five places, 18:31–19:29 KST) found these defects independ
   current-time row (label ≤ now < label + 3 h) keeps the forecast of the newest publication
   covering it, with observed fields merged over it as legacy `_mergeShortWithCurrent` does, so its
   `pop`, `wav`, `s06` and `r06`, and today's `tmn`/`tmx` where legacy keeps them, reach the client
-  again (`short::past_slot`). Past rows keep the ASOS-primary rule; their cleared amounts no longer
+  again (`short::past_slot`). So does the row the client shows as current: `currentIndex` follows
+  the observation's time, so a lagging observation (a grid nowcast before HH:40 at a slot
+  boundary, or a late live reading) marks a row already past by the clock. The wipe applies
+  `convertUnits`'s rule to the same inputs, which are final by then (`short::shown_current`,
+  `present::marked_current`). Past rows keep the ASOS-primary rule; their cleared amounts no longer
   keep the forecast totals behind them, which had turned −1 snow into −10 and left the forecast's
   rain or snow text beside a measured amount.
 - **Previous publication.** From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3. The source then
@@ -3935,12 +3939,11 @@ the production API, five places, 18:31–19:29 KST) found these defects independ
   safeguard, a stored grid yesterday row keeps its precedence, and `comparisonAvailable: true`
   still short-circuits. In the run every pair was such a pair.
 
-`currentIndex` marks the row of the current observation's time, not of the clock. When the
-observation lags into the previous slot (a grid nowcast before HH:40 at a slot boundary, or a late
-live reading) the marked row is past by the clock and keeps the ASOS-primary rule. Past-slot
-forecast values, ASOS precipitation rules and fetching older publications for past rows wait for
-AK's decisions. Tests: `observed_history` and `parity_evidence` (domestic), `policy`, `present`,
-`required` and `previous_short_tests` (library).
+`adjustShort` later drops trailing rows without a temperature; that moves the mark only when the
+current slot and every later row have none, so the wipe's rule matches `convertUnits` otherwise.
+Past-slot forecast values, ASOS precipitation rules and fetching older publications for past rows
+wait for AK's decisions. Tests: `observed_history` and `parity_evidence` (domestic), `policy`,
+`present`, `required` and `previous_short_tests` (library).
 
 ### #2819 D1 forecast-zone recovery
 
