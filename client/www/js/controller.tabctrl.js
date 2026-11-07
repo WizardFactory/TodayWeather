@@ -976,18 +976,12 @@ angular.module('controller.tabctrl', [])
                         cordova.plugins.diagnostic.getLocationAuthorizationStatus(function (status) {
                             console.log('status='+status);
                             $scope.setLocationAuthorizationStatus(status);
-                            // diagnostic 7+ reports GRANTED_WHEN_IN_USE while background location is not granted
-                            if (status === cordova.plugins.diagnostic.permissionStatus.GRANTED
-                                || status === cordova.plugins.diagnostic.permissionStatus.GRANTED_WHEN_IN_USE) {
-                                _getCurrentPosition(deferred, cityInfo, true, true);
-                            } else if (status === cordova.plugins.diagnostic.permissionStatus.DENIED_ALWAYS) {
-                                _getCurrentPosition(deferred, cityInfo, true, false);
-                            } else if (status === cordova.plugins.diagnostic.permissionStatus.NOT_REQUESTED
-                                || status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
-                                _getCurrentPosition(deferred, cityInfo, true, undefined);
-                            }
+                            // A requestable status (undefined) shows the system prompt again; any other status settles.
+                            var permission = Util.classifyLocationPermission(status);
+                            _getCurrentPosition(deferred, cityInfo, true, permission === 'granted' ? true : permission === 'denied' ? false : undefined);
                         }, function (error) {
                             console.error("Error getting for location authorization status: " + error);
+                            deferred.reject(strFailToGetCurrentPosition);
                         });
                     } else {
                         _getCurrentPosition(deferred, cityInfo, false, undefined);
@@ -1038,23 +1032,21 @@ angular.module('controller.tabctrl', [])
                             // ios에서는 registerLocationStateChangeHandler에서 locationStatus가 변경되고 reload 이벤트가 발생함
                             if (ionic.Platform.isAndroid()) {
                                 $scope.setLocationAuthorizationStatus(status);
-                                if (status === cordova.plugins.diagnostic.permissionStatus.DENIED) {
-                                    msg = $translate.instant("LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY");
-                                    deferred.reject(msg);
-                                }
-                                else {
-                                    console.log('status='+status+ ' by request location authorization and reload by resume');
-                                    deferred.reject(null);
-                                }
+                            }
+                            if (Util.classifyLocationPermission(status) !== 'granted') {
+                                msg = $translate.instant("LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY");
+                                deferred.reject(msg);
                             }
                             else {
-                                //메세지 없이 통과시키고, reload by locationOn.
+                                // Granted: Android reloads by resume, iOS by locationOn.
+                                console.log('status='+status+ ' by request location authorization and reload');
                                 deferred.reject(null);
                             }
                         }, function (error) {
                             Util.ga.trackEvent('position', 'error', 'request location authorization');
                             Util.ga.trackException(error, false);
-                            deferred.reject(null);
+                            // A silent rejection would request again; show the failure instead.
+                            deferred.reject(strFailToGetCurrentPosition);
                         }, cordova.plugins.diagnostic.locationAuthorizationMode.WHEN_IN_USE);
                     }
                     else {
