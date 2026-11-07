@@ -1,0 +1,9 @@
+{
+  "name": "tw-leveldb-fixtures",
+  "private": true,
+  "description": "Writes real LevelDB directories for core-storage's LevelDbReader tests",
+  "type": "module",
+  "dependencies": {
+    "classic-level": "3.0.0"
+  }
+}
