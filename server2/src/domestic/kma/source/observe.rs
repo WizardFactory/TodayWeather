@@ -519,11 +519,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         if !self.observed_history {
             self.backfill_hours(now_ms);
         }
+        // Each acquisition is a part of its own (RR2-page-progress): a page that arrives while a
+        // slower provider is still waited for is folded then, not when the slowest one ends.
         let mut parts: futures_util::stream::FuturesUnordered<BoxFuture<'_, ()>> =
-            futures_util::stream::FuturesUnordered::new();
-        parts.push(Box::pin(async move {
-            crate::history::join_all(owned).await;
-        }));
+            owned.into_iter().collect();
         if raced {
             parts.push(self.fill_window(now_ms, asked, until));
             parts.push(Box::pin(load));

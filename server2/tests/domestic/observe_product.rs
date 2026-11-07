@@ -752,12 +752,27 @@ fn warm_city_page(h: Publication) -> Vec<u8> {
 }
 /// What a provider answers now (fetched at 10:49): every hour's AWS and city page with the stored
 /// bodies (except the warmer city page of 10:00), the minute page of 10:49 and station 108's
-/// ranges. Every call is logged.
+/// ranges. Every call is logged; a call whose label starts with a delayed prefix answers after
+/// that delay.
 #[derive(Default)]
 pub(super) struct Pages {
     calls: std::sync::Mutex<Vec<String>>,
+    delays: std::sync::Mutex<Vec<(String, Duration)>>,
 }
 impl Pages {
+    /// Answer the calls whose label starts with `prefix` after `delay`.
+    fn delay(&self, prefix: &str, delay: Duration) {
+        self.delays.lock().unwrap().push((prefix.to_owned(), delay));
+    }
+    fn delay_of(&self, label: &str) -> Option<Duration> {
+        self.delays
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(prefix, _)| label.starts_with(prefix.as_str()))
+            .map(|(_, delay)| *delay)
+            .max()
+    }
     pub(super) fn calls(&self) -> Vec<String> {
         self.calls.lock().unwrap().clone()
     }
@@ -804,6 +819,9 @@ impl Acquire for Pages {
                 }
                 WebFamily::TownRss => return Err(DomesticError::Transport),
             };
+            if let Some(delay) = self.delay_of(&label) {
+                tokio::time::sleep(delay).await;
+            }
             self.calls.lock().unwrap().push(label);
             Ok(Acquired::Complete(acquisition(
                 "kma-web",
@@ -988,6 +1006,36 @@ async fn a_slow_product_read_starts_the_current_pages_at_the_head_start() {
         NOW,
     );
     assert_eq!(restarted, steady(&c).await, "a process that read S3");
+}
+
+/// RACE (RR2-page-progress): with the restore later than the request bound, the pages that arrive
+/// while a slower provider is still waited for reach the first answer. Here the minute and hourly
+/// pages arrive half a second after the head start and the city page only after the bound.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn pages_that_arrive_before_a_slow_provider_reach_the_first_answer() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = seeded_peer(&[], Vec::new()).await;
+    let _ = producing(&peer).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    let pages = Arc::new(Pages::default());
+    pages.delay("aws-", Duration::from_millis(500));
+    pages.delay("city", Duration::from_secs(5));
+    let b = observed(&counted, pages.clone(), NOW);
+    let gate = counted.hold(&STATION_RAW);
+    let (answer, took) = first(&b).await;
+    gate.open();
+    assert!(gate.was_reached(), "the restore reads during the request");
+    assert!(took < Duration::from_millis(3500), "{took:?}");
+    let town = town(answer.as_ref());
+    let stn = answer
+        .stn_hourly_and_min_rns(&town, "202609241049", &serde_json::json!({}))
+        .expect("the minute and current hourly rows");
+    assert_eq!(
+        json(&stn)["stnDateTime"],
+        "2026.09.24.10:49",
+        "the acquired minute page: {}",
+        json(&stn)
+    );
 }
 
 /// FAST (stations and ASOS): a restore done before the head start asks no provider, and the first
