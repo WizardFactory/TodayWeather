@@ -830,3 +830,86 @@ fn inheriting_a_scope_keeps_nested_futures_small() {
     let size = std::mem::size_of_val(&nested);
     assert!(size < 4 * 1024, "{size} bytes on the caller's stack");
 }
+
+/// A batch of one grid's current conditions (distinct natural keys for many acquisitions).
+fn batch_grid(nx: u16, ny: u16) -> Batch {
+    let r = RawRecord::new(
+        "kma",
+        "current",
+        &ProviderKey::Grid { nx, ny },
+        Period {
+            local_date: 20261025,
+            slot: "1200".into(),
+        },
+        1792897200000,
+        200,
+        "application/json",
+        None,
+        Arc::from(&b"{\"t1h\":17}"[..]),
+        &Limits::default(),
+    )
+    .unwrap();
+    let d = GroupDeclaration::new(
+        vec![GroupMember {
+            envelope: r.envelope.clone(),
+            catalogs: vec![CatalogId::for_record(&r.envelope.identity, "20261025-1200").unwrap()],
+        }],
+        &CatalogLimits::default(),
+    )
+    .unwrap();
+    Batch {
+        declaration: d,
+        records: vec![r],
+    }
+}
+/// A response's own acquisition is held until its body ends even when its provider is done
+/// before the caller that created it is polled again (CI run 42379684133: a raw group published
+/// before the body terminal). The caller is the test thread, so the provider runs on a worker at
+/// once; on a busy runner the caller can be descheduled between creating the acquisition and
+/// waiting for it, and a waiter counted only then made the writer release it as one nobody
+/// waits for (NoWaiters).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_creating_waiter_holds_its_instant_provider_until_the_body_ends() {
+    let sink = Arc::new(Sink::default());
+    let writer = Writer::new(
+        sink.clone(),
+        Config {
+            retained_bytes: 64 << 20,
+            group_bytes: 16384,
+            entries: 8192,
+            ..Config::default()
+        },
+    )
+    .unwrap();
+    let scope = ResponseScope::default();
+    scope
+        .run(async {
+            for i in 0..2000u16 {
+                writer
+                    .acquire(
+                        format!("current/{i}"),
+                        16384,
+                        Instant::now() + Duration::from_secs(5),
+                        async move { Ok(Some(batch_grid(1 + i % 140, 1 + i / 140))) },
+                    )
+                    .await
+                    .unwrap();
+            }
+        })
+        .await;
+    let early: Vec<_> = scope
+        .batches()
+        .into_iter()
+        .filter_map(|b| b.released.map(|r| r.1))
+        .collect();
+    assert_eq!(early, Vec::new(), "released before the body ended");
+    assert_eq!(
+        sink.attempts.load(SeqCst),
+        0,
+        "published before the body ended"
+    );
+    drop(scope.body(axum::body::Body::from("weather")));
+    sink.allow.add_permits(2000);
+    assert!(writer.drain(Instant::now() + Duration::from_secs(10)).await);
+    assert_eq!(writer.stats().durable, 2000);
+}
