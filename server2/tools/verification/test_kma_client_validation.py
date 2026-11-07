@@ -507,6 +507,20 @@ class RecordedBodiesTest(unittest.TestCase):
         status, report, _ = compare(sentinel, edited(sentinel, reh=None))
         self.assertEqual((status, report['missing_fields']), (0, []))
 
+    def test_labels_follow_a_value_field_given_as_a_numeric_string(self):
+        # CV-numeric-label-equality: this recording sends wsd "2"; a candidate's wsd 2 is the same value,
+        # so the wind labels must still be there.
+        body = dict(self.bodies)['oracle.json.gz:current-interpolated-strings']
+        candidate = copy.deepcopy(body)
+        slot = next(r for r in candidate['short'] if (r['date'], r['time']) == ('20260922', 24))
+        self.assertEqual(slot['wsd'], '2')
+        slot['wsd'] = 2
+        del slot['wsdGrade'], slot['wsdStr']
+        status, report, _ = compare(body, candidate)
+        self.assertEqual(report['missing_fields'], ['short[20260922 24].wsdGrade', 'short[20260922 24].wsdStr'])
+        self.assertEqual((status, report['value_dependent']), (1, []))
+        self.assertNotIn('short[].wsd', report['value_differences'])
+
     def test_heat_index_is_a_temperature_and_other_indices_stay_never_negative(self):
         # CV-negative-heat-index: below 80 F legacy returns the temperature as heatIndex, so this winter
         # recording has current.heatIndex -12.5. Like a temperature, only -50 and below carries no data.

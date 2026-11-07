@@ -24,7 +24,8 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          string "1e309", or the JSON number 1e309) is invalid; "NaN" is not a number.
          Not judged: historyObservation and fieldObservations, the contents of the gap lists in
          historyStatus and midData.dailyStatus (which must stay arrays), forecastNarrative. A *Str/*Grade/*Approx/*Hours/*Icon label whose value field
-         differs or is absent is value-dependent, not missing. Excluded (never missing; listed
+         differs or is absent is value-dependent, not missing (a number and a numeric string of
+         equal value are the same value here and in the value differences). Excluded (never missing; listed
          apart when the candidate lacks one, leaves it invalid or keeps it empty): air quality,
          UV, pollen, food poisoning and the KASI extras other than sunrise and sunset. Valid
          values that differ are information only.
@@ -149,6 +150,15 @@ def same(a, b):
     return type(a) is type(b) and a == b
 
 
+def same_data(a, b):
+    """Like same(), except that a finite number and a numeric string of equal value are the same data."""
+    if isinstance(a, str) != isinstance(b, str):
+        x, y = js_number(a), js_number(b)
+        if x is not None and y is not None and math.isfinite(x) and math.isfinite(y):
+            return x == y
+    return same(a, b)
+
+
 def invalid(key, value, reference=NO_REFERENCE):
     """Why `value` carries no data, or None. A candidate value is judged against the valid reference value."""
     if value is None:
@@ -231,7 +241,7 @@ class Comparison:
                     self.excluded_missing.append(p)
                 continue
             stem = label_stem(key, ref, cand)
-            if stem and not (stem in ref and stem in cand and same(ref[stem], cand[stem])):
+            if stem and not (stem in ref and stem in cand and same_data(ref[stem], cand[stem])):
                 if lost:
                     self.value_dependent.append(dict(path=p, stem=stem, reference=brief(ref.get(stem, ABSENT)),
                                                      candidate=brief(cand.get(stem, ABSENT))))
@@ -256,7 +266,7 @@ class Comparison:
             self.objects(rv, cv, path, norm)
         elif isinstance(rv, list) and not scalar_list(rv):
             self.rows(key, rv, cv, path, norm)
-        elif not same(rv, cv):
+        elif not same_data(rv, cv):
             group = self.differences.setdefault(norm, dict(count=0, examples=[]))
             group['count'] += 1
             if len(group['examples']) < 3:
