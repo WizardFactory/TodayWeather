@@ -349,6 +349,14 @@ unversioned path are checked only against the legacy wire profile.
 | app | `$.midData.dailyData[].skyPm` | string (optional) | [app.js:1298](../../client/www/js/app.js#L1298) |
 | app | `$.midData.dailyData[].rn1` | number (optional) | [service.weatherutil.js:441](../../client/www/js/service.weatherutil.js#L441) |
 
+The eval is the wire-shape check: JSON types, required wire fields, the consumer reads above
+and the observed-history rules. A pass does not show that a body carries everything the client
+receives today. Client validation, as AK defined it on 2026-11-07, is
+[`kma_client_validation.py`](../../server2/tools/verification/kma_client_validation.py). It
+compares a body row by row and field by field with a production capture of the same path and
+publications, and leaves out only parts whose provider is slow: air quality, life indices (UV,
+pollen, food poisoning) and the KASI extras other than `sunrise` and `sunset`.
+
 ## Daily forecast validity (issue #2560)
 
 The mid-land/temperature collectors preserve available day-3–10 fields without
