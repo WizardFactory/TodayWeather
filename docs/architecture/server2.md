@@ -2401,16 +2401,30 @@ warning zone-state read: the source reads it through a view of the process warni
 own transport (`WarningStore::on_transport`), which shares the store's zone offers and counters
 while the collector replays and publishes on the bulk lane.
 
-**Provider calls a raced restart adds** (none when every restore beats the head start): KMA web
-pages (keyless): the minute page, the latest hourly and city page and the previous hourly page
-(at most 4), and the absent hours of today and yesterday (at most 46). data.go.kr: one hourly and
-one daily ASOS range per raced station (2), UV 1 (more only while a slot answers no data, at most
-5), pollen at most 3 (the three kinds; out of season they answer no data), the narrative at most 1
-per office (10 offices) per ten minutes. MFDS 1 (keyless). Grids, RSS, mid and AirKorea add none.
-A one-town restart therefore spends at most 11 data.go.kr units of a key's 10,000 per KST day,
-and each further raced station 2 more. Every acquisition stores a second copy beside the stored
-one, and today's day product is stored again when its pages changed (at most once per ten
-minutes).
+**Provider calls a raced restart adds** (none when every restore beats the head start). Keyless:
+KMA web pages (the minute page, the latest hourly and city page and the previous hourly page, at
+most 4, and the absent hours of today and yesterday, at most 46) and MFDS (1). Grids, RSS, mid and
+AirKorea add none. Every acquisition stores a second copy beside the stored one, and today's day
+product is stored again when its pages changed (at most once per ten minutes).
+
+data.go.kr charges one unit per HTTP attempt of a page to its quota owner: one key and one API,
+each with its own allowance per KST day (`DataGoKrApi::daily_units`; 10,000 for each API below on
+the development account), so units of different APIs never add up to one limit. A page gets at
+most two attempts (`FundedExecutor`): the second after a retryable failure, or on the next key
+after a quota or authentication answer. Logical acquisitions and units per raced restart:
+
+| Quota owner (API) | Acquisitions | Pages each | Units, normal | Units, at most |
+| --- | --- | --- | --- | --- |
+| `AsosHourly` | one range per raced station (the window's 168 hours) | 1 (999 rows a page) | 1 per station | 2 per station |
+| `AsosDaily` | one range per raced station (7 days) | 1 | 1 per station | 2 per station |
+| `LivingWthrIdx` (UV V5) | the current three-hour slot, then each of up to four earlier slots while one answers no data (a failure stops) | all areas: 4 for the 3,851 areas seen on 2026-10-15, at most 8; a no-data answer is one page | 4, plus 1 per no-data slot before it | 2 × (4 + 8) = 24 |
+| `HealthWthrIdx` (pollen V3) | one per kind whose latest 06/18 KST issuance is missing (at most 3) | all areas in season (not measured, at most 8); 1 out of season (no data) | 3 out of season; 3 × its pages in season | 2 × 3 × 8 = 48 |
+| `VilageFcstMsg` (narrative) | the request's office when its read has no answer at the head start, at most once per office and ten minutes, and none while the three-minute refresh fetches that office (one shared fetch) | 1 | 1 per raced office | 2 on one key; over K configured keys, one unit on each key that answers quota or authentication and two on the key that fails retryably: K + 1 |
+
+A one-town restart (one raced station and office) normally adds 1 `AsosHourly`, 1 `AsosDaily`, 4
+`LivingWthrIdx`, 3 `HealthWthrIdx` out of season (three times the kind's pages in season) and 1
+`VilageFcstMsg` unit; each further raced station adds 1 `AsosHourly` and 1 `AsosDaily`. The last
+column bounds each owner when pages fail. These are bounds from the code, not measured quota use.
 
 **Failure paths.** A provider failure during the race leaves that part to the restore or to the
 next request (never 503 for late data). A restore failure after the race keeps the provider data.
