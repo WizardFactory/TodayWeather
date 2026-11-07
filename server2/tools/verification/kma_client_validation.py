@@ -25,9 +25,10 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          differs or is absent is value-dependent, not missing. Excluded (listed apart, never
          missing): air quality, UV, pollen, food poisoning and the KASI extras other than
          sunrise and sunset. Valid values that differ are information only.
-         Exit 0 pass, 1 missing data, 2 not comparable (another place: regionName, cityName or
-         townName; different publications; or not a KMA body) or unreadable input; the report
-         lists are computed in every case.
+         Exit 0 pass, 1 missing data, 2 not comparable (another or unknown place: regionName,
+         cityName or townName differs, or is absent, null or blank in either body; different
+         publications; or not a KMA body) or unreadable input; the report lists are computed in
+         every case.
 
 Standard library only. Only capture opens a connection.
 """
@@ -269,6 +270,14 @@ def kma_body(body):
             and isinstance(body.get('current'), dict) and isinstance(body.get('midData'), dict))
 
 
+def unknown(value):
+    return value is None or value == ABSENT or blank(value)
+
+
+def shown(value):
+    return 'null' if value is None else value
+
+
 def publication(body, name):
     node = body
     for part in name.split('.'):
@@ -287,9 +296,10 @@ def comparability(reference, candidate, unreadable):
     if isinstance(reference, dict) and isinstance(candidate, dict):
         for name in PLACE:
             r, c = publication(reference, name), publication(candidate, name)
-            if not same(r, c):
+            if unknown(r) or unknown(c) or not same(r, c):
                 place[name] = dict(reference=r, candidate=c)
-                reasons.append(f'place differs: {name} {r} vs {c}')
+                state = 'unknown' if unknown(r) and unknown(c) else 'differs'
+                reasons.append(f'place {state}: {name} {shown(r)} vs {shown(c)}')
         for name in PUBLICATIONS:
             r, c = publication(reference, name), publication(candidate, name)
             if not same(r, c):
@@ -341,7 +351,7 @@ def summary(report, groups_shown=12):
     lines += [f'not comparable: {reason}' for reason in report['comparable']['reasons']]
     for kind in ('differing_place', 'differing_publications'):
         for name, pair in report['comparable'][kind].items():
-            lines.append(f"  {name}: reference {pair['reference']}, candidate {pair['candidate']}")
+            lines.append(f"  {name}: reference {shown(pair['reference'])}, candidate {shown(pair['candidate'])}")
     sections = (('missing_rows', 'missing rows'), ('missing_fields', 'missing fields'),
                 ('invalid_values', 'invalid values'), ('excluded_missing', 'excluded parts missing (not counted)'),
                 ('value_dependent', 'value-dependent labels (not counted)'))

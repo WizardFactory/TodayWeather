@@ -326,6 +326,21 @@ class CompareTest(unittest.TestCase):
         self.assertEqual(report['missing_fields'], ['cityName', 'current.dongnae'])
         self.assertIn('townName: reference 명동, candidate 소공동', out)
 
+    def test_place_absent_from_both_bodies_is_not_comparable(self):
+        # CV-missing-place: a place field both bodies lack, or leave null, names no place.
+        base = reference()
+        del base['townName']
+        base['cityName'] = None
+        status, report, out = compare(base, copy.deepcopy(base))
+        self.assertEqual((status, report['verdict']), (2, 'not-comparable'))
+        self.assertEqual(report['comparable']['differing_place'], {
+            'cityName': dict(reference=None, candidate=None),
+            'townName': dict(reference='<absent>', candidate='<absent>')})
+        self.assertIn('place unknown: townName <absent> vs <absent>', report['comparable']['reasons'])
+        self.assertIn('place unknown: cityName null vs null', report['comparable']['reasons'])
+        self.assertIn('townName: reference <absent>, candidate <absent>', out)
+        self.assertNothingMissing(report)
+
     def test_non_kma_or_unreadable_input_is_not_comparable(self):
         cases = [({'message': 'Internal server error'}, reference()), (reference(), []),
                  (b'<html>502 Bad Gateway</html>', reference()), (reference(), b'{"short": NaN}')]
