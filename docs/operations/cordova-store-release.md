@@ -73,6 +73,18 @@ npm run build:ios:release
 npm run store:upload:ios -- ipa:/absolute/path/to/TodayWeather.ipa
 ```
 
+`build:ios:release` prepares the workspace and does not archive. The iOS 1.1.0 (2) release used command-line archive and export with Xcode 27.2. Set manual signing on the App target's Release configuration only: Pods frameworks reject a provisioning profile passed to every target, so do not pass one as an `xcodebuild` setting. `platforms/` is generated, so repeat this after each prepare. Then archive, and export with `method: app-store-connect`, `signingStyle: manual` and the bundle ID mapped to the App Store profile:
+
+```sh
+cd client/platforms/ios
+xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+  -destination 'generic/platform=iOS' -archivePath /absolute/path/TodayWeather.xcarchive archive
+xcodebuild -exportArchive -archivePath /absolute/path/TodayWeather.xcarchive \
+  -exportOptionsPlist /absolute/path/ExportOptions.plist -exportPath /absolute/path/export
+```
+
+Bump `ios-CFBundleVersion` in `client/config.xml` and commit it with the release. Build numbers cannot be reused for a marketing version: read the existing ones from App Store Connect first.
+
 For the verified legacy APK route, first run `npm run build:android:release` to enforce release configuration and signing-input checks. Then, from the same prepared `client/` checkout, build the APK with the same private build configuration (resolve its absolute path from `TW_ANDROID_BUILD_JSON` and `TW_RELEASE_LOCAL_DIR`):
 
 ```sh

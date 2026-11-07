@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="net.wizardfactory.todayweather" version="1.1.0" android-versionCode="100090" ios-CFBundleVersion="1" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
+<widget id="net.wizardfactory.todayweather" version="1.1.0" android-versionCode="100090" ios-CFBundleVersion="2" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>TodayWeather</name>
     <description>
         Inform how warm or cold it is today than yesterday.
@@ -29,6 +29,7 @@
     <!-- Real AdMob app IDs come from client/.env at prepare time; package.json keeps Google's sample IDs. -->
     <hook type="after_prepare" src="scripts/admob-app-id.js" />
     <hook type="after_prepare" src="scripts/ios-no-tracking.js" />
+    <hook type="after_prepare" src="scripts/ios-pods-deployment-target.js" />
     <platform name="android">
         <!-- Ionic routes own screen_view; suppress automatic Activity-level duplicates. -->
         <config-file target="AndroidManifest.xml" parent="application">

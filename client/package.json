@@ -138,5 +138,8 @@
         "IOS_FIREBASE_SDK_VERSION": "12.14.0"
       }
     }
+  },
+  "allowScripts": {
+    "cordova.plugins.diagnostic@7.4.0": true
   }
 }

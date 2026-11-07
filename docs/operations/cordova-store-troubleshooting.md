@@ -19,7 +19,10 @@ Keep exported listing/assets and previous website object versions for scoped res
 | Background-location declaration persists after removal from new build | [Legacy artifacts](#legacy-artifacts) |
 | Xcode archive/export has no usable distribution certificate/profile | [iOS signing](#ios-signing) |
 | P12 import fails despite the expected password | [P12 import](#p12-import) |
+| Xcode rejects Pods targets for their deployment target | [Pods deployment target](#pods-deployment-target) |
+| Archive stays at a `codesign` step without CPU use | [Keychain prompt](#keychain-prompt) |
 | Uploaded build is unavailable to TestFlight testers, or group write returns 422 | [TestFlight availability](#testflight-availability) |
+| Resubmitting a rejected version returns 409 | [App Review resubmission](#app-review-resubmission) |
 | Privacy page, store URL and repository content differ | [Policy document drift](#policy-document-drift) |
 | Upload/track says completed but open beta is not available | [Publication state](#publication-state) |
 | Fastlane fails before any API request with a Ruby dependency error | [Ruby environment](#ruby-environment) |
@@ -94,6 +97,26 @@ Keep exported listing/assets and previous website object versions for scoped res
 
 **Verify:** The imported distribution identity includes its private key and can sign/export the expected app. A successful certificate-only import is insufficient.
 
+## Pods deployment target
+
+**Symptom:** Archive fails on Xcode 27.2 with `The iOS deployment target 'IPHONEOS_DEPLOYMENT_TARGET' is set to 12.0` for Google Mobile Ads and User Messaging Platform Pods targets. Xcode 26.5 accepted the same project.
+
+**Check:** Confirm the `after_prepare` hook `client/scripts/ios-pods-deployment-target.js` ran, then read the deployment targets in `platforms/ios/Pods/Pods.xcodeproj/project.pbxproj`. Re-running `pod install` outside Cordova regenerates that file without the hook.
+
+**Resolve:** Run `cordova prepare ios` so that the hook raises only the targets below the `deployment-target` preference in `config.xml`. The app minimum remains the runtime boundary; the hook does not change it.
+
+**Verify:** No Pods target is below the app minimum, and a previously failing Pods scheme builds. iOS 1.1.0 (2) passed `IPHONEOS_DEPLOYMENT_TARGET=15.0` on the archive command line before this hook existed.
+
+## Keychain prompt
+
+**Symptom:** An archive or export stays at `codesign` for minutes, and `SecurityAgent` is running.
+
+**Check:** A key newly imported with `security import -T /usr/bin/codesign` can still ask for console approval on its first use. A remote shell cannot answer that dialog.
+
+**Resolve:** Ask the operator at the console to enter the login password and choose **Always Allow**. The waiting `codesign` then continues. Start long archives detached from a time-limited session, so that waiting for approval does not kill the build.
+
+**Verify:** The archive finishes, and later signing does not ask again. `security set-key-partition-list` also works without a prompt, but it allows Apple tools to use every private key in that keychain, so reserve it for when the dialog is unavailable.
+
 ## TestFlight availability
 
 **Symptom:** Upload succeeded but testers cannot see the build; processing/compliance remains unresolved, or linking a group returns 422.
@@ -103,6 +126,16 @@ Keep exported listing/assets and previous website object versions for scoped res
 **Resolve:** Wait for processing to finish, resolve the actual build's compliance requirement with the operator, and attach/enable the build for the intended existing group only if necessary. The 1.1.0 recovery's immediate group write failed; subsequent readback showed the build already in the group and testing, so no duplicate write was needed. Escalate a persistent error with its actual detail instead of repeating the mutation. External beta review remains a separate workflow.
 
 **Verify:** Processing is `VALID`, the build is internally available (`IN_BETA_TESTING` in the observed API), group membership is present, and an eligible tester can install the intended build. Refresh tester counts rather than reusing an earlier response. The maintained upload lane skips processing waits and does not perform all these checks.
+
+## App Review resubmission
+
+**Symptom:** After a rejection, `PATCH /v1/reviewSubmissions/{id}` with `submitted: true` returns 409 `STATE_ERROR.ENTITY_STATE_INVALID`. The submission is `UNRESOLVED_ISSUES` and its item is `REJECTED`.
+
+**Check:** Read the submission, its items and the version's current build. Confirm that the replacement build is `VALID`, has an export-compliance answer and belongs to the same version. Read `releaseType`: `AFTER_APPROVAL` publishes to users as soon as the review is approved.
+
+**Resolve:** Attach the replacement build to the version, then mark the rejected item with `resolved: true`, then set `submitted: true` on the same submission. This was verified for iOS 1.1.0 (2). Submission needs explicit authorization, and no maintained lane performs it.
+
+**Verify:** The submission and the version both read `WAITING_FOR_REVIEW`, and the version's build is the replacement. This state does not prove approval.
 
 ## Policy document drift
 
@@ -141,5 +174,7 @@ Record the release SHA/version, environment/date, redacted symptom and failed st
 ## Dated evidence and limitations
 
 The build source was merge commit `dc2cc9fc6068772d983645a3721e4ec261e79e2e`; Android was 1.1.0/100090 (minimum API 24, target 36), iOS was 1.1.0/build 1. At the last 2026-10-02 Console observation, the three Android releases and privacy URL/Data safety/health changes were under review, managed publishing was enabled, and no open-beta or production publication was verified. Internal TestFlight was available. Physical-device acceptance, policy finalization and final listing reconciliation remained unfinished. These are dated observations, not live status or a blanket compliance conclusion.
+
+iOS 1.1.0 (2) was built on 2026-10-31 from merge commit `f676133703f4b7da5442269e63b226ffe9c9607e` with `ios-CFBundleVersion` raised to 2, using Xcode 27.2 and the 2026-10-02 signing backup. It was resubmitted after the [#2855](https://github.com/WizardFactory/TodayWeather/issues/2855) rejection and was `WAITING_FOR_REVIEW` at the last observation. See the [resubmission record](https://github.com/WizardFactory/TodayWeather/issues/2605#issuecomment-6559551614).
 
 Evidence: [replacement and review request](https://github.com/WizardFactory/TodayWeather/issues/2605#issuecomment-5942179691), [latest observed review list](https://github.com/WizardFactory/TodayWeather/issues/2605#issuecomment-5946376982), [policy wording verification](https://github.com/WizardFactory/TodayWeather/issues/2660#issuecomment-5944363100). Platform guidance: [Android signing and legacy eligibility](https://developer.android.com/studio/publish/app-signing), [Google review and managed publishing](https://support.google.com/googleplay/android-developer/answer/9859654), [internal TestFlight groups](https://developer.apple.com/help/app-store-connect/test-a-beta-version/add-internal-testers).
