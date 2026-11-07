@@ -366,6 +366,31 @@ class RecordedBodiesTest(unittest.TestCase):
             self.assertEqual((status, report['missing_rows'], report['missing_fields'], report['invalid_values']),
                              (0, [], [], []), name)
 
+    def test_numeric_strings_follow_the_sentinel_rules(self):
+        # CV-string-sentinel: legacy sends numeric strings (reh "60" and wsd "2" in short rows of this
+        # recording); JavaScript reads them as numbers, so a string sentinel carries no data either.
+        body = dict(self.bodies)['oracle.json.gz:current-interpolated-strings']
+        slot = next(r for r in body['short'] if isinstance(r.get('reh'), str))
+        path = f"short[{slot['date']} {slot['time']}]"
+
+        def edited(base, **values):
+            copied = copy.deepcopy(base)
+            target = next(r for r in copied['short'] if (r['date'], r['time']) == (slot['date'], slot['time']))
+            for key, value in values.items():
+                target.pop(key) if value is None else target.update({key: value})
+            return copied
+
+        status, report, _ = compare(body, edited(body, reh='-1', wsd=' -1 ', t3h='-50'))
+        self.assertEqual({v['path']: v['reason'] for v in report['invalid_values']},
+                         {f'{path}.reh': 'negative', f'{path}.wsd': 'negative',
+                          f'{path}.t3h': 'temperature at or below -50'})
+        self.assertEqual(status, 1)
+        status, report, _ = compare(body, edited(body, reh=60, wsd='2.0', t3h='-12.5'))
+        self.assertEqual((status, report['invalid_values']), (0, []))
+        sentinel = edited(body, reh='-1')
+        status, report, _ = compare(sentinel, edited(sentinel, reh=None))
+        self.assertEqual((status, report['missing_fields']), (0, []))
+
     def test_rows_and_fields_removed_from_a_recorded_body_are_reported(self):
         name, body = next((n, b) for n, b in self.bodies
                           if len(b['short']) == 41 and len(b['midData']['dailyData']) == 18)

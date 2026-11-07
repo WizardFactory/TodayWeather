@@ -17,6 +17,8 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          an empty list where the reference list is not, another kind (object or array against a
          scalar, or the reverse), a non-numeric string where the reference is a number, a
          temperature at or below -50, or a negative number in a field that is never negative.
+         Numeric strings, which legacy also sends, are read as JavaScript's Number() reads a
+         decimal string, and the same rules apply to them.
          Not judged: historyObservation and fieldObservations, the contents of the historyStatus
          lists, forecastNarrative. A *Str/*Grade/*Approx/*Hours/*Icon label whose value field
          differs or is absent is value-dependent, not missing. Excluded (listed apart, never
@@ -141,10 +143,11 @@ def invalid(key, value, reference=NO_REFERENCE):
             return 'not a number'
         if isinstance(value, list) and not value and scalar_list(reference) and reference:
             return 'empty list'
-    if number(value):
-        if key in TEMPERATURES and value <= -50:
+    amount = js_number(value)
+    if amount is not None:
+        if key in TEMPERATURES and amount <= -50:
             return 'temperature at or below -50'
-        if key not in SIGNED and value < 0:
+        if key not in SIGNED and amount < 0:
             return 'negative'
     return None
 
