@@ -31,8 +31,8 @@ const DAY: f64 = 86_400_000.;
 
 /// Publish one acquisition group as the S13 acquirers do.
 #[allow(clippy::too_many_arguments)]
-async fn publish(
-    store: &Store,
+async fn publish<T: server2::storage::CatalogTransport>(
+    store: &CatalogStore<T>,
     source: &str,
     kind: &str,
     key: ProviderKey,
@@ -1640,6 +1640,214 @@ fn uv_page(issued: &str) -> Vec<u8> {
         })
         .collect();
     kma_page(serde_json::Value::Array(items))
+}
+
+/// An in-memory S3 for a paused clock: raw objects, conditional control objects and index
+/// listings; each LIST takes `list_delay` (virtual time).
+#[derive(Clone, Default)]
+struct MemS3(Arc<Mutex<MemData>>);
+#[derive(Default)]
+struct MemData {
+    objects: std::collections::BTreeMap<String, server2::storage::Object>,
+    controls: std::collections::BTreeMap<String, (Vec<u8>, u64)>,
+    revision: u64,
+    list_delay: Duration,
+}
+impl MemS3 {
+    fn data(&self) -> std::sync::MutexGuard<'_, MemData> {
+        self.0.lock().unwrap()
+    }
+}
+impl server2::storage::ObjectTransport for MemS3 {
+    async fn put(
+        &self,
+        record: &server2::storage::PreparedRecord,
+    ) -> Result<u16, server2::storage::Error> {
+        let mut d = self.data();
+        if d.objects.contains_key(&record.key) {
+            return Ok(412);
+        }
+        let object = server2::storage::Object {
+            metadata: record.metadata.clone(),
+            length: record.body.len(),
+            body: record.body.clone(),
+        };
+        d.objects.insert(record.key.clone(), object);
+        Ok(200)
+    }
+    async fn head(&self, key: &str) -> Result<server2::storage::Object, server2::storage::Error> {
+        let d = self.data();
+        let o = d
+            .objects
+            .get(key)
+            .ok_or(server2::storage::Error::NotFound)?;
+        Ok(server2::storage::Object {
+            metadata: o.metadata.clone(),
+            length: o.length,
+            body: Vec::new(),
+        })
+    }
+    async fn get(
+        &self,
+        key: &str,
+        maximum: usize,
+    ) -> Result<server2::storage::Object, server2::storage::Error> {
+        let o = self
+            .data()
+            .objects
+            .get(key)
+            .cloned()
+            .ok_or(server2::storage::Error::NotFound)?;
+        if o.length > maximum {
+            return Err(server2::storage::Error::Capacity);
+        }
+        Ok(o)
+    }
+}
+impl server2::storage::CatalogTransport for MemS3 {
+    async fn get_control(
+        &self,
+        key: &str,
+        maximum: usize,
+    ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
+        let (body, revision) = self
+            .data()
+            .controls
+            .get(key)
+            .cloned()
+            .ok_or(server2::storage::Error::NotFound)?;
+        if body.len() > maximum {
+            return Err(server2::storage::Error::Capacity);
+        }
+        Ok(server2::storage::ControlObject {
+            body,
+            etag: format!("\"{revision}\""),
+            version: None,
+        })
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &server2::storage::WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        let mut d = self.data();
+        let current = d.controls.get(key).map(|(_, r)| format!("\"{r}\""));
+        let allowed = match condition {
+            server2::storage::WriteCondition::Absent => current.is_none(),
+            server2::storage::WriteCondition::Match(etag) => {
+                current.as_deref() == Some(etag.as_str())
+            }
+        };
+        if !allowed {
+            return Ok(412);
+        }
+        d.revision += 1;
+        let revision = d.revision;
+        d.controls.insert(key.to_owned(), (body.to_vec(), revision));
+        Ok(200)
+    }
+    async fn list_raw_document(
+        &self,
+        _: &str,
+        _: Option<&str>,
+        _: usize,
+        _: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        Err(server2::storage::Error::Invalid(
+            "no raw listing in this test",
+        ))
+    }
+}
+impl server2::history::IndexListing for MemS3 {
+    async fn list_index(
+        &self,
+        prefix: &str,
+        _: Option<&str>,
+    ) -> Result<server2::storage::ListPage, server2::storage::Error> {
+        let delay = self.data().list_delay;
+        tokio::time::sleep(delay).await;
+        let keys = self
+            .data()
+            .controls
+            .keys()
+            .filter(|k| k.starts_with(prefix))
+            .cloned()
+            .collect();
+        Ok(server2::storage::ListPage { keys, next: None })
+    }
+}
+/// A life provider that answers nothing and records which datasets were asked.
+#[derive(Default)]
+struct Asked(Mutex<Vec<String>>);
+impl Asked {
+    fn uv(&self) -> usize {
+        self.0
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|a| a.contains("UvIdx"))
+            .count()
+    }
+}
+impl LifeAcquire for Asked {
+    fn acquire(
+        &self,
+        request: LifeRequest,
+    ) -> server2::gateway::BoxFuture<
+        'static,
+        Result<server2::domestic::kma::source::life_live::LifeOutcome, String>,
+    > {
+        self.0.lock().unwrap().push(format!("{request:?}"));
+        Box::pin(async { Ok(server2::domestic::kma::source::life_live::LifeOutcome::Nothing) })
+    }
+}
+
+/// NEEDED-FIRST: the first life read lists the four families' partitions together. With every
+/// LIST taking 300 ms (a paused clock), today's UV is folded before the 700 ms head start, so the
+/// request starts no UV acquisition; listed one family after another, the four listings alone
+/// end past it.
+#[tokio::test(start_paused = true)]
+async fn the_needed_first_read_lists_the_life_families_together() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let mem = MemS3::default();
+    let store = Arc::new(CatalogStore::new(mem.clone(), CatalogLimits::default()).unwrap());
+    for time in (0..=12).step_by(3).map(|h| format!("20261016{h:02}")) {
+        let p = Publication::parse_compact(&format!("{time}00")).unwrap();
+        publish(
+            &store,
+            "data-go-kr",
+            "uv-idx-v5",
+            named("all-areas"),
+            p.period(),
+            &p.partition(),
+            server2::history::schedule::to_ms(p) as f64 + 600_000.,
+            &[uv_page(&time)],
+        )
+        .await;
+    }
+    mem.data().list_delay = Duration::from_millis(300);
+    let asked = Arc::new(Asked::default());
+    let inputs = LifeInputs::new(mem.clone(), store)
+        .with_clock(test_clock())
+        .with_acquire(Some(asked.clone()))
+        .with_kasi_schedule(HOLD, HOLD);
+    let started = Instant::now();
+    let answers = inputs
+        .load_by(
+            now_ms(),
+            started + HEAD_START,
+            started + Duration::from_millis(2700),
+        )
+        .await;
+    let today = uv_issued(&answers, 1_100_000_000.);
+    assert!(today.iter().any(|i| i == "2026101612"), "{today:?}");
+    assert_eq!(
+        asked.uv(),
+        0,
+        "today's UV was folded before the head start: {:?}",
+        asked.0.lock().unwrap()
+    );
 }
 
 /// NEEDED-FIRST: the first life read of a process restores today's partitions (and the latest

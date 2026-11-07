@@ -908,13 +908,23 @@ async fn read_life_once<T: IndexListing + Clone + 'static>(
         .map(Publication::partition)
         .unwrap_or_default();
     let window = months(cut - LIFE_LOOKBACK_MS, cut);
+    // The four families are listed together: listed one after another, the listings alone could
+    // outlast the restore's head start before today's UV is read.
+    let areas = all_areas();
+    let listings = crate::history::join_all(
+        LIFE_FAMILIES
+            .iter()
+            .map(|(family, _)| {
+                shared
+                    .reader
+                    .partitions(DATA_GO_KR, family.kind(), &areas, &window, deadline)
+            })
+            .collect(),
+    )
+    .await;
     let mut wanted: Vec<Vec<String>> = Vec::new();
-    for (k, (family, _)) in LIFE_FAMILIES.iter().enumerate() {
-        let partitions = shared
-            .reader
-            .partitions(DATA_GO_KR, family.kind(), &all_areas(), &window, deadline)
-            .await
-            .map_err(|e| format!("life listing: {e}"))?;
+    for (k, partitions) in listings.into_iter().enumerate() {
+        let partitions = partitions.map_err(|e| format!("life listing: {e}"))?;
         let partitions: Vec<String> = partitions.into_iter().filter(|p| *p >= from).collect();
         let known: BTreeSet<&str> = seen
             .iter()
