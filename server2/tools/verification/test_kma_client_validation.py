@@ -200,6 +200,19 @@ class CompareTest(unittest.TestCase):
             'shortest[20261107 1800].rn1Approx': 'string where the reference has a boolean'})
         self.assertEqual(status, 1)
 
+    def test_non_finite_numbers_are_reported(self):
+        # CV-nonfinite-number: "1e309" and the JSON number 1e309 read as infinity; "NaN" is not a number.
+        candidate = reference()
+        candidate['current'].update(t1h='1e309', reh='-1e309', wsd='NaN')
+        row(candidate, 'short', '20261107 15')['pop'] = 'OVERFLOW'
+        text = json.dumps(candidate, ensure_ascii=False).replace('"OVERFLOW"', '1e309')
+        self.assertIn('"pop": 1e309', text)
+        status, report, _ = compare(reference(), text.encode())
+        self.assertEqual({v['path']: v['reason'] for v in report['invalid_values']}, {
+            'current.t1h': 'not finite', 'current.reh': 'not finite', 'current.wsd': 'not a number',
+            'short[20261107 15].pop': 'not finite'})
+        self.assertEqual(status, 1)
+
     def test_both_invalid_is_not_reported(self):
         base = reference()
         base['current']['weather'] = ''

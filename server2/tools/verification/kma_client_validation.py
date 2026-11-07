@@ -20,7 +20,8 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          temperature (heatIndex and sensorytem included) at or below -50, a wind component (uuu,
          vvv) at or below -100, or a negative number in a field that is never negative.
          Numeric strings, which legacy also sends, are read as JavaScript's Number() reads a
-         decimal string, and the same rules apply to them.
+         decimal string, and the same rules apply to them. A number that reads as infinite (the
+         string "1e309", or the JSON number 1e309) is invalid; "NaN" is not a number.
          Not judged: historyObservation and fieldObservations, the contents of the historyStatus
          lists, forecastNarrative. A *Str/*Grade/*Approx/*Hours/*Icon label whose value field
          differs or is absent is value-dependent, not missing. Excluded (never missing; listed
@@ -37,6 +38,7 @@ Standard library only. Only capture opens a connection.
 import argparse
 import http.client
 import json
+import math
 import re
 import sys
 import time
@@ -164,6 +166,8 @@ def invalid(key, value, reference=NO_REFERENCE):
             return 'empty list'
     amount = js_number(value)
     if amount is not None:
+        if not math.isfinite(amount):
+            return 'not finite'
         if key in TEMPERATURES and amount <= -50:
             return 'temperature at or below -50'
         if key in WIND_COMPONENTS and amount <= -100:
