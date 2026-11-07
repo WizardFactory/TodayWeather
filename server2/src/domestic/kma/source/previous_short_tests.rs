@@ -150,10 +150,12 @@ fn records(p: Publication, fetched_at: f64) -> Vec<RawRecord> {
         .unwrap(),
     ]
 }
-/// Answers every SHRT request with its complete page, except `failing`, which fails.
+/// Answers every SHRT request with its complete page, except `failing`, which fails, and `slow`,
+/// which answers only after a minute.
 struct Provider {
     now: f64,
     failing: Option<Publication>,
+    slow: Option<Publication>,
     calls: Mutex<Vec<Publication>>,
 }
 impl fetch::ForecastAcquire for Provider {
@@ -172,7 +174,13 @@ impl fetch::ForecastAcquire for Provider {
         } else {
             Ok(Some(records(p, self.now)))
         };
-        Box::pin(async move { answer })
+        let slow = self.slow == Some(p);
+        Box::pin(async move {
+            if slow {
+                tokio::time::sleep(Duration::from_secs(60)).await;
+            }
+            answer
+        })
     }
 }
 fn fixture(provider: Arc<Provider>, now: f64) -> S3Source<Empty> {
@@ -229,6 +237,7 @@ async fn the_previous_publication_supplies_the_current_slot_after_the_latest_mov
     let provider = Arc::new(Provider {
         now,
         failing: None,
+        slow: None,
         calls: Mutex::new(Vec::new()),
     });
     let s = fixture(provider.clone(), now);
@@ -254,6 +263,7 @@ async fn a_latest_publication_covering_the_current_slot_needs_no_other() {
     let provider = Arc::new(Provider {
         now,
         failing: None,
+        slow: None,
         calls: Mutex::new(Vec::new()),
     });
     let s = fixture(provider.clone(), now);
@@ -275,6 +285,7 @@ async fn a_failed_previous_publication_is_not_requested_again_for_three_hours() 
     let provider = Arc::new(Provider {
         now,
         failing: Some(previous),
+        slow: None,
         calls: Mutex::new(Vec::new()),
     });
     let s = fixture(provider.clone(), now);
@@ -298,5 +309,48 @@ async fn a_failed_previous_publication_is_not_requested_again_for_three_hours() 
         s.attempts.remaining(&key) > Duration::from_secs(3 * 3600 - 60),
         "bounded for three hours: {:?}",
         s.attempts.remaining(&key)
+    );
+}
+
+/// Review RP-previous-acquisition-starvation: the latest and the previous publication start
+/// together under one wait. At 20:30 the latest (20:00) starts at 21:00, so the 17:00 publication
+/// covers the current 18:00 slot; the 20:00 one answers after the wait, the 17:00 one at once.
+/// The 18:00 slot still gets its forecast, and the answer ends at the wait (a paused clock).
+#[tokio::test(start_paused = true)]
+async fn a_slow_latest_publication_does_not_hold_back_the_previous_one() {
+    let now = kst(20261018, 2030);
+    let provider = Arc::new(Provider {
+        now,
+        failing: None,
+        slow: Some(publication(20261018, 2000)),
+        calls: Mutex::new(Vec::new()),
+    });
+    let s = fixture(provider.clone(), now);
+    let started = Instant::now();
+    let until = started + Duration::from_secs(1);
+    let (docs, _, _) = s
+        .grid_answer_by(
+            Family::Short,
+            grid(),
+            now,
+            started + Duration::from_secs(8),
+            until,
+        )
+        .await
+        .unwrap();
+    assert!(
+        started.elapsed() <= Duration::from_secs(1),
+        "one wait: {:?}",
+        started.elapsed()
+    );
+    assert_eq!(
+        pop_at(&docs, "20261018", "1800"),
+        Some(17.),
+        "the 17:00 row of the current slot"
+    );
+    assert_eq!(
+        pop_at(&docs, "20261018", "2100"),
+        Some(17.),
+        "20:00 is late"
     );
 }

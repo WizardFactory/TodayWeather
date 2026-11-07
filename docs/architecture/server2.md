@@ -3928,7 +3928,9 @@ the production API, five places, 18:31–19:29 KST) found these defects independ
   station state are in, `shown::publications` applies `present::marked_current` to the current
   observation as the chain will build it (review RP-lagging-current-publication). Either is read
   when listed, otherwise acquired as owned single-flight work under the request's wait, with a
-  three-hour retry bound per cell and publication. They are always inside the 54 h read window.
+  three-hour retry bound per cell and publication. The latest and these publications start
+  together under that one wait, also when a read proves a listed one unusable, so a slow latest
+  acquisition cannot leave them no time (review RP-previous-acquisition-starvation). They are always inside the 54 h read window.
   This adds at most one `getVilageFcst` acquisition (one or two pages of 999 rows) per cell and
   publication, at most 8 a day, and only when that publication was not stored while it was the
   latest: a cell first requested in such a window, or after a failed or unusable acquisition. A

@@ -10,15 +10,18 @@ use super::source_s3::{
 };
 use serde_json::{Value, json};
 use server2::domestic::asos::{AsosKind, AsosRequest};
-use server2::domestic::family::{DataGoKrFamily as F, WebFamily, WebRequest};
+use server2::domestic::family::{
+    DataGoKrFamily as F, DataGoKrRequest, Target, WebFamily, WebRequest,
+};
 use server2::domestic::kma::backend::{KmaSource, SourceAnswer, parse_path};
-use server2::domestic::kma::source::S3Source;
 use server2::domestic::kma::source::fetch::{ForecastAcquire, ForecastRequest, Published};
 use server2::domestic::kma::source::observe::Acquire;
+use server2::domestic::kma::source::{Doc, Family, S3Source, Val};
 use server2::domestic::kma::{AssemblyConfig, Outcome, assemble};
 use server2::domestic::publication::Publication;
 use server2::domestic::{Acquired, DomesticError};
 use server2::gateway::BoxFuture;
+use server2::history::Grid;
 use server2::resolver::Acquisition;
 use server2::storage::response_first::{Batch, Config, Writer};
 use server2::storage::{
@@ -462,4 +465,118 @@ async fn a_fresh_observation_needs_no_older_publication() {
     assert_eq!(marked(&body), vec![("20260924".to_owned(), 9)]);
     assert_eq!(row(&body, "20260924", 9)["pop"], 8);
     assert_eq!(requested, vec![publication(20260924, 800)]);
+}
+
+/// Answers short forecasts directly (nothing published), `slow` only after five seconds.
+struct Late {
+    now: f64,
+    slow: Publication,
+}
+impl ForecastAcquire for Late {
+    fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>> {
+        let ForecastRequest::DataGoKr(r) = request else {
+            panic!("only short forecasts: {request:?}")
+        };
+        assert_eq!(r.family(), F::VilageFcst);
+        let p = r.publication();
+        let a = acquisition(
+            "data-go-kr",
+            F::VilageFcst.kind(),
+            &r.provider_key(),
+            p,
+            &p.partition(),
+            short_page(p),
+            "application/json",
+            self.now - 1000.,
+        );
+        let slow = p == self.slow;
+        Box::pin(async move {
+            if slow {
+                tokio::time::sleep(Duration::from_secs(5)).await;
+            }
+            Ok(Some(a.records))
+        })
+    }
+}
+/// The probability of the short document at `date`/`time`.
+fn pop_at(docs: &[Doc], date: &str, time: &str) -> Option<f64> {
+    docs.iter().find_map(|d| {
+        let row = d.get("shortData")?.as_doc()?;
+        (row.get("date")?.as_str()? == date && row.get("time")?.as_str()? == time)
+            .then(|| row.get("pop").and_then(Val::as_num))
+            .flatten()
+    })
+}
+
+/// Review RP-previous-acquisition-starvation, the listed-but-unusable path: at 20:30 the latest
+/// (20:00) and the previous (17:00) publication are stored but organize nothing, so both are asked
+/// again after the read. The 20:00 provider answers after the wait, the 17:00 one at once: the
+/// current 18:00 slot still gets its forecast, and the answer ends at the wait.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn listed_but_unusable_publications_are_requested_together() {
+    let _peers = S3_PEERS.lock().await;
+    let now = kst(20260924, 2030);
+    let peer = Peer::persistent();
+    let store = CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap();
+    for p in [publication(20260924, 1700), publication(20260924, 2000)] {
+        let key = DataGoKrRequest::new(F::VilageFcst, Target::Grid { nx: 60, ny: 127 }, p)
+            .unwrap()
+            .provider_key();
+        let a = acquisition(
+            "data-go-kr",
+            F::VilageFcst.kind(),
+            &key,
+            p,
+            &p.partition(),
+            envelope(Vec::new()),
+            "application/json",
+            now - 60_000.,
+        );
+        store
+            .publish(
+                a.declaration,
+                a.records,
+                Instant::now() + Duration::from_secs(10),
+            )
+            .await
+            .unwrap();
+    }
+    let warnings = Arc::new(
+        WarningStore::new(
+            peer.transport_limited(2),
+            CatalogLimits::default(),
+            StoreConfig::default(),
+        )
+        .unwrap(),
+    );
+    let source = S3Source::new_observed_with_warning_store(
+        peer.transport_limited(4),
+        Arc::new(move || now),
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+        warnings,
+    )
+    .unwrap()
+    .with_forecast(Some(Arc::new(Late {
+        now,
+        slow: publication(20260924, 2000),
+    })));
+    let started = Instant::now();
+    // The request's wait ends 500 ms before this deadline (`wait_bound`).
+    let docs = source
+        .grid_answer(
+            Family::Short,
+            Grid::new(60, 127).unwrap(),
+            now,
+            started + Duration::from_millis(1500),
+        )
+        .await
+        .unwrap();
+    let waited = started.elapsed();
+    assert!(waited < Duration::from_millis(1500), "one wait: {waited:?}");
+    assert_eq!(
+        pop_at(&docs, "20260924", "1800"),
+        Some(17.),
+        "the 17:00 row of the current slot"
+    );
 }

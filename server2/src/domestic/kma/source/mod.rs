@@ -693,20 +693,29 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         } else {
             Vec::new()
         };
+        // The latest and the required earlier publications start together under the one wait, so
+        // a slow latest acquisition does not leave the others no time (review
+        // RP-previous-acquisition-starvation).
         let absent = async {
-            let mut acquired = Vec::new();
-            if let Some(latest) = sf.latest(now as i64).filter(absent_first) {
-                acquired.extend(self.latest_grid(sf, grid, latest, now, until).await);
-            }
-            if self.observed_history {
+            let latest = async {
+                match sf.latest(now as i64).filter(absent_first) {
+                    Some(latest) => self.latest_grid(sf, grid, latest, now, until).await,
+                    None => None,
+                }
+            };
+            let today = async {
+                if !self.observed_history {
+                    return Vec::new();
+                }
                 let today: Vec<_> = required_now
                     .iter()
                     .copied()
                     .filter(|p| Some(*p) != sf.latest(now as i64) && absent_first(p))
                     .collect();
-                acquired.extend(self.foreground_grid(sf, grid, &today, until).await);
-            }
-            acquired
+                self.foreground_grid(sf, grid, &today, until).await
+            };
+            let (latest, today) = tokio::join!(latest, today);
+            latest.into_iter().chain(today).collect::<Vec<_>>()
         };
         // The publications of the rows shown as current that the clock rule does not require.
         let shown_absent = async {
@@ -766,10 +775,25 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             } else {
                 Vec::new()
             };
-            if missing(&latest)
-                && !absent_first(&latest)
-                && let Some(f) = self.latest_grid(sf, grid, latest, now, until).await
-            {
+            // Together here too, under the same wait.
+            let latest_missing = missing(&latest) && !absent_first(&latest);
+            let (latest_again, foreground_again) = tokio::join!(
+                async {
+                    if latest_missing {
+                        self.latest_grid(sf, grid, latest, now, until).await
+                    } else {
+                        None
+                    }
+                },
+                async {
+                    if self.observed_history {
+                        self.foreground_grid(sf, grid, &foreground, until).await
+                    } else {
+                        Vec::new()
+                    }
+                }
+            );
+            if let Some(f) = latest_again {
                 if self.raw_writer.is_none() {
                     own = grid_input_id(family, sf.kind(), &f);
                 }
@@ -779,9 +803,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     visible(f, now)
                 });
             }
-            if self.observed_history {
-                fetched.extend(self.foreground_grid(sf, grid, &foreground, until).await);
-            } else if !backfill.is_empty() {
+            fetched.extend(foreground_again);
+            if !self.observed_history && !backfill.is_empty() {
                 self.backfill(sf, grid, latest, backfill).await;
             }
         }
