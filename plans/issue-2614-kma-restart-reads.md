@@ -12,6 +12,6 @@ Task declaration: `server2/config/tasks/KMA-RESTART-READS.json`. Follows `plans/
 
 | User | Goal | Prerequisites | Actions | Expected | Failure path | Criteria |
 | --- | --- | --- | --- | --- | --- | --- |
-| App user after a deployment | A valid first answer | Stored bucket with warnings; process restarted | Open the weather | A body that passes the client validation within the bound | Observations, past days or warnings not ready: they come on a later request | LANE, WARNINGS, RESTART |
+| App user after a deployment | A complete first answer | Stored bucket with warnings; process restarted | Open the weather | Every field the client gets today within the bound, except slow-provider parts such as fine dust | Not met on 2026-11-07: current observations, yesterday, past days and more came only on a later request | LANE, WARNINGS, RESTART |
 | Operator | Warning work keeps going | Warning acquisition running | Requests arrive | Requests admitted; warnings finish later | Admission closed: Capacity error as before | LANE |
 | Reviewer | Placement and policy | Commits | Run the gates | Pass | Undeclared path fails | PLACEMENT |
