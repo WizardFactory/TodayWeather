@@ -35,10 +35,20 @@
       "scenarios": "S1, M1 done",
       "checks": "23 ok / 0 fail",
       "unclassified_errors": 0
+    },
+    {
+      "id": "manual-ko-3",
+      "harness_mode": "manual",
+      "harness_revision": "97b57689 plus the manual mode in this change (M1 privacy dialogs, M2 station and push dialogs, M3 chart ends)",
+      "started": "2026-11-07T09:35:35.046Z",
+      "finished": "2026-11-07T09:38:03.509Z",
+      "scenarios": "S1, M1, M2, M3 done",
+      "checks": "37 ok / 0 fail",
+      "unclassified_errors": 0
     }
   ],
-  "writes": "Push writes (PUT /push, POST /push-list, DELETE) were answered locally by the harness; no production writes. Analytics choice left at its default (off).",
-  "processing": "Downscaled from 1080x2400 to 720x1600 (Lanczos), then reduced to a 256-color palette (median cut, no dithering) to keep the repository small; no other edits.",
+  "writes": "Push writes (PUT /push, POST /push-list, DELETE) were answered locally by the harness; no production writes. The analytics choice stayed at its default (off); the notification dialogs were closed without saving.",
+  "processing": "Each source capture (1080x2400, SHA-256 in source_sha256) was downscaled to 720x1600 (Lanczos) and reduced to a 256-color palette (median cut, no dithering); no other edits.",
   "privacy_review": "Each image inspected on 2026-11-07: public weather, a synthetic emulator location and Google test ads only; no account, token or personal data.",
   "images": [
     {
@@ -46,224 +56,312 @@
       "sha256": "baf3335168c94415079c58937938527ae6861bbd89993f1b91046533b1b21bcf",
       "screen": "O01",
       "run": "full-ko",
-      "capture": "01-s1-start-popup"
+      "capture": "01-s1-start-popup",
+      "source_sha256": "1b7632841e5ccba587ac0825664ad3c7a438032f20878779ac8fb236b0ffd8e9"
     },
     {
       "file": "02-start.png",
       "sha256": "d8f799142230810591bb40b6040da14e76a057190e85e657615b81f5bdd8b70a",
       "screen": "S01",
       "run": "full-ko",
-      "capture": "02-s1-start"
+      "capture": "02-s1-start",
+      "source_sha256": "0e118df592419d94ca423db1beaf98936ded901b1d66421d393079e4196d16a4"
     },
     {
       "file": "03-hourly.png",
       "sha256": "4f7e1ebfefaeb2614829a13b79c6baf8d3ab470d1f4af4af949accb53f0d7f7d",
       "screen": "S03",
       "run": "full-ko",
-      "capture": "10-s2-warm"
+      "capture": "10-s2-warm",
+      "source_sha256": "b99de6f7d22d8c23ae80c465a511a94261dc10773aff313da0da3b30d5d8b320"
     },
     {
       "file": "04-hourly-details.png",
       "sha256": "36289ad99e1ab549f38d31033438d9aec6351f86cc91cf5e4c5f33ae1c71dd34",
       "screen": "S03",
       "run": "full-ko",
-      "capture": "04-s1-hourly-expanded"
+      "capture": "04-s1-hourly-expanded",
+      "source_sha256": "2affdeeda39dfc6e8c184fb853fda64b13e26c3fd2a6f85f64d7a05f460f4410"
     },
     {
-      "file": "05-daily.png",
+      "file": "05-hourly-start.png",
+      "sha256": "4238841549894c3e0a7e24e3d1a576a756b2e8e261ec19bfb5f9af4d986e4707",
+      "screen": "S03",
+      "run": "manual-ko-3",
+      "capture": "15-m3-hourly-start",
+      "source_sha256": "9a4a2ae4571fad3ac8ae7a07cb68257d519512594185d1be5d7093f33d12e350"
+    },
+    {
+      "file": "06-hourly-end.png",
+      "sha256": "ee318bbc251437570f494512767e02fb4f7a01f581f59fb485a84598ae8fb438",
+      "screen": "S03",
+      "run": "manual-ko-3",
+      "capture": "16-m3-hourly-end",
+      "source_sha256": "8ec9590edda5514ec6ad637f8588236c85d3944b6c45fd0bddaf39f0732bfdbf"
+    },
+    {
+      "file": "07-daily.png",
       "sha256": "bc01b20026329671af30333057f0c52f3fd669857653d5c2a35f21c2df5a5faf",
       "screen": "S04",
       "run": "full-ko",
-      "capture": "05-s1-daily"
+      "capture": "05-s1-daily",
+      "source_sha256": "ecda90a43f885d26fe19ce8557f0cbe38b472211afcbcd483524c7aa46d0c4a6"
     },
     {
-      "file": "06-air.png",
+      "file": "08-daily-start.png",
+      "sha256": "de3971e8b4a1aa8edef17558338f984d88c51da6f22e590930beb26028ebbcaf",
+      "screen": "S04",
+      "run": "manual-ko-3",
+      "capture": "17-m3-daily-start",
+      "source_sha256": "c582db3492ec49b95205a1cfb84629984a1fee0ee10ffda6cbf1871b38d5dc58"
+    },
+    {
+      "file": "09-daily-end.png",
+      "sha256": "c66e8a559812484dedb08aeca13db29a79c12dae07a0a846b9722e74d384d148",
+      "screen": "S04",
+      "run": "manual-ko-3",
+      "capture": "18-m3-daily-end",
+      "source_sha256": "e1dc7785a17362a1c7ef268e7450723c3c347880c09be137d26125c8876456dd"
+    },
+    {
+      "file": "10-air.png",
       "sha256": "f3a97fd08fbdfa714dc04c9b159e99ad8265155c0e8f3b2c01a5aebedba7519b",
       "screen": "S05",
       "run": "full-ko",
-      "capture": "06-s1-air"
+      "capture": "06-s1-air",
+      "source_sha256": "45e56c2497969d7c924e68cde91edda6cd5aae4c3cb4b7871c2226c834f76dd3"
     },
     {
-      "file": "07-air-pollutant.png",
+      "file": "11-air-pollutant.png",
       "sha256": "af96b5eae338a7ba548030df9ab4e5c681d462efe424eb7b8b4791cca87aaeea",
       "screen": "S05",
       "run": "full-ko",
-      "capture": "07-s1-air-code"
+      "capture": "07-s1-air-code",
+      "source_sha256": "7148f31d76261cd964c01f09ee2dc8aae239c4a57e6993aa04d68ff0fae66000"
     },
     {
-      "file": "08-favorites.png",
+      "file": "12-air-station.png",
+      "sha256": "0537607faeac73976781c9a49b07a324b730ef7c8d5c07550ddcfc7326f99421",
+      "screen": "S05",
+      "run": "manual-ko-3",
+      "capture": "12-m2-air-station",
+      "source_sha256": "00336e061055cb640a4ec7d54a702905e70964675abeccc819ba49cf0240e365"
+    },
+    {
+      "file": "13-favorites.png",
       "sha256": "7421b738f3f8102ef2e51865c8fbb3542c2ae967140b35c4de02676d96e310a8",
       "screen": "S02",
       "run": "full-ko",
-      "capture": "09-s1-favorites"
+      "capture": "09-s1-favorites",
+      "source_sha256": "ac52be890fd2058d387e97d7f90f117a7dc801ecf7947ce67cd1bfebfb5ab07f"
     },
     {
-      "file": "09-search.png",
+      "file": "14-search.png",
       "sha256": "80281e4769bdc69d23f7c08d67a23fafce978eef109969705a10c94578dba6c3",
       "screen": "S02",
       "run": "full-ko",
-      "capture": "32-s4-search-results"
+      "capture": "32-s4-search-results",
+      "source_sha256": "ea36937ab273e44a7d93deb1fd240e281702def0e84e076afcc1ff430b0eda0a"
     },
     {
-      "file": "10-added-city.png",
+      "file": "15-added-city.png",
       "sha256": "4989d7c29578cf0c28b5828834a48ebb3c4967033f1eb9a69406bb095720566c",
       "screen": "S03",
       "run": "full-ko",
-      "capture": "33-s4-busan"
+      "capture": "33-s4-busan",
+      "source_sha256": "ebf649237b4c5a66255899572690ba34237f8ad5d0b53a0e9223bbab0024d3c6"
     },
     {
-      "file": "11-swipe.png",
+      "file": "16-swipe.png",
       "sha256": "8785db9b15d9ec0c59a26d69a2c0e6d78c0d654f1aa0ff574c94528683643d0d",
       "screen": "S03",
       "run": "full-ko",
-      "capture": "34-s4-swipe-right"
+      "capture": "34-s4-swipe-right",
+      "source_sha256": "cb0fd815e3b1d873441ab694b1a0a440b5cd57fa039a51b1a6a873e3cb636c45"
     },
     {
-      "file": "12-overseas.png",
+      "file": "17-overseas.png",
       "sha256": "86f11f8866dd7984e5f5fbaa6dccd14030787fc97ac2ba37b1019413016d3eb8",
       "screen": "S03",
       "run": "full-ko",
-      "capture": "36-s4-london"
+      "capture": "36-s4-london",
+      "source_sha256": "4de78c0a52cff571980fbaa3a5b939fc72e6569b87e510e07aab837496678460"
     },
     {
-      "file": "13-edit.png",
+      "file": "18-edit.png",
       "sha256": "c29357475159a3761d810dd2ae8f6e7c1e007f5b15c93636014885c4ff4d7971",
       "screen": "S02",
       "run": "full-ko",
-      "capture": "39-s4-edit"
+      "capture": "39-s4-edit",
+      "source_sha256": "c0b4f921f366c7d3a47f0540912d93622494b1e2b8081a97b82fcca812e0a5b5"
     },
     {
-      "file": "14-current-location-search.png",
+      "file": "19-current-location-search.png",
       "sha256": "c3e4945f4ba073bee1aba27252f9f389f36c448e089441410a391e8de534d48a",
       "screen": "S02",
       "run": "full-ko",
-      "capture": "41-s5-location-result"
+      "capture": "41-s5-location-result",
+      "source_sha256": "cf9dd029caa1a5e4af3987d57c480742f21045732e55a3d07e952b3a1602dfad"
     },
     {
-      "file": "15-current-location.png",
+      "file": "20-current-location.png",
       "sha256": "b86fdaf8eca5f8a620b34b1af512ac128d6b65f7dd857118344f532faa23f085",
       "screen": "S03",
       "run": "full-ko",
-      "capture": "42-s5-location-forecast"
+      "capture": "42-s5-location-forecast",
+      "source_sha256": "ad7b51c28da6396072041519ce8722fcac78bc704c2a845186cf483c639a4ad2"
     },
     {
-      "file": "16-notifications.png",
+      "file": "21-notifications.png",
       "sha256": "b1717ba0249604c910a5c3ed7470008c0cb1ec8f8944e02cb096f0aa36cb4703",
       "screen": "S09",
       "run": "full-ko",
-      "capture": "44-s6-push"
+      "capture": "44-s6-push",
+      "source_sha256": "2515141d0c417c8663d8a7b53ef4e613bb50f1128e52a192bc5958e31a404ba9"
     },
     {
-      "file": "17-menu.png",
+      "file": "22-time-picker.png",
+      "sha256": "b8a210756c2ac85e4e3ec73c9d75568911e0194c22053c7a0e6084a058694512",
+      "screen": "O14",
+      "run": "manual-ko-3",
+      "capture": "13-m2-time-picker",
+      "source_sha256": "f51179347357dd571c0965f6a9f8676d8f565a476aaa33ba61e334fcae93218a"
+    },
+    {
+      "file": "23-save-confirm.png",
+      "sha256": "2484fdb95a4fc8a4bdc43b1cd5c833dc4e234dbf969b4e0bc505dd4784fe495c",
+      "screen": "O12",
+      "run": "manual-ko-3",
+      "capture": "14-m2-save-confirm",
+      "source_sha256": "16380ae147840c418851f14331835fb636b575e912e357b7508b1ea874930c51"
+    },
+    {
+      "file": "24-menu.png",
       "sha256": "8aeb46f9c17f358903b963da52869ac722fb21f264023a4c6390e608fe3a8f9b",
       "screen": "S06",
       "run": "full-ko",
-      "capture": "11-s2-menu"
+      "capture": "11-s2-menu",
+      "source_sha256": "5e336faa2ff91c2fa94116b9f05bdd742badcf7718a14692d8005b29fceea320"
     },
     {
-      "file": "18-units.png",
+      "file": "25-units.png",
       "sha256": "3197fc49a631aeed6497b66bc0e44b5522a5b4f204d904b03d294d1ac8460f2a",
       "screen": "S07",
       "run": "full-ko",
-      "capture": "12-s2-units"
+      "capture": "12-s2-units",
+      "source_sha256": "391523c57a9f726680e9144eeef3ac1e65064eeae00049a9b6572eb2a715a55e"
     },
     {
-      "file": "19-unit-choice.png",
+      "file": "26-unit-choice.png",
       "sha256": "2cc8b1dd145dcc4be912344447d63c701fc25b86c773c59eeb5e8596b1d4897b",
       "screen": "S08",
       "run": "full-ko",
-      "capture": "13-s2-unit-temperature"
+      "capture": "13-s2-unit-temperature",
+      "source_sha256": "3d5243184bd19ee71d1124e89098f488430e117ffae3c2aeb9be13d045f36aa8"
     },
     {
-      "file": "20-fahrenheit.png",
+      "file": "27-fahrenheit.png",
       "sha256": "6bb503cbb45723b32723b90cf29820efc889de603d5a028acd5b55d4153d9c87",
       "screen": "S03",
       "run": "full-ko",
-      "capture": "14-s2-fahrenheit"
+      "capture": "14-s2-fahrenheit",
+      "source_sha256": "b442a1ea90581b5597c1adf183ec4b4fb6d619461696c921133503a4627e695e"
     },
     {
-      "file": "21-startup-page.png",
+      "file": "28-startup-page.png",
       "sha256": "eba87c4ab426f0b00755e1105818bc725e2db6bf3878584f5043b85bc4d515e0",
       "screen": "S08",
       "run": "full-ko",
-      "capture": "19-s2-radio-startupPage"
+      "capture": "19-s2-radio-startupPage",
+      "source_sha256": "7775858217e7bdf2131f91b9623050a6c70b71337ac3adcefd5026b061f3d7c4"
     },
     {
-      "file": "22-refresh-interval.png",
+      "file": "29-refresh-interval.png",
       "sha256": "9b0cc1268267732f1f119ad4e4296ad8e51b1819642225acc73e0d802adee5c7",
       "screen": "S08",
       "run": "full-ko",
-      "capture": "20-s2-radio-refreshInterval"
+      "capture": "20-s2-radio-refreshInterval",
+      "source_sha256": "cae04d0294615ed0eaac9938412f26b7e433eab3c06ff918703e1b067e572eb7"
     },
     {
-      "file": "23-theme-dark.png",
+      "file": "30-theme-dark.png",
       "sha256": "974cb3289fc57daf8488b424fd718974424f9ada92d6c15f0bcffdc0b26ec262",
-      "screen": "S08",
+      "screen": "S03",
       "run": "full-ko",
-      "capture": "17-s2-theme-2-dark"
+      "capture": "17-s2-theme-2-dark",
+      "source_sha256": "24eab0ded8bb8ae125c9255826d414d61f554733eb7d52ad93f0207ae40df474"
     },
     {
-      "file": "24-theme-photo.png",
+      "file": "31-theme-photo.png",
       "sha256": "708523c0ce6b4c632764aef0d0e6464d3ae093d2cd58292e94152645107a5fbf",
-      "screen": "S08",
+      "screen": "S03",
       "run": "full-ko",
-      "capture": "15-s2-theme-0-photo"
+      "capture": "15-s2-theme-0-photo",
+      "source_sha256": "58aebb2368f52a2b7bb0864e2dfd0a5208a6b3519333e85bb74041ca79773be7"
     },
     {
-      "file": "25-warnings.png",
+      "file": "32-warnings.png",
       "sha256": "0adfe611ba46eb50ec6682b42d1c8e2ae90902919b62acba0a2454a8f56ab7ea",
       "screen": "S12",
       "run": "full-ko",
-      "capture": "21-s3-kma-special"
+      "capture": "21-s3-kma-special",
+      "source_sha256": "9c0d3875dcd79a6428e52fe16ad5dd42588400790474ee559dfdbe514afaeaed"
     },
     {
-      "file": "26-nationwide.png",
+      "file": "33-nationwide.png",
       "sha256": "d5a3430cb9b39c1cac86960984615410433678002b3a66045d4ad5cb57be9f6d",
       "screen": "S10",
       "run": "full-ko",
-      "capture": "22-s3-nation"
+      "capture": "22-s3-nation",
+      "source_sha256": "eb5d9d07c33dcb4f4e589a480c2f1286295b1fee7a8e18fb55fa2d013078c52d"
     },
     {
-      "file": "27-nationwide-wind.png",
+      "file": "34-nationwide-wind.png",
       "sha256": "236c094b22640d8f30b1b5c7342d3df03277b6dc9c89a5ee16d4ded3ffef9acb",
       "screen": "S10",
       "run": "full-ko",
-      "capture": "24-s3-nation-type-2"
+      "capture": "24-s3-nation-type-2",
+      "source_sha256": "ab49bc5a517d14914fac8ade980be7c424eb42a5aa895553469cf8dde79cbe65"
     },
     {
-      "file": "28-nationwide-air.png",
+      "file": "35-nationwide-air.png",
       "sha256": "c3581da807cb4c63e0ff8e6339304710da8c9d600adb38f17a62c2b9767c0ff6",
       "screen": "S11",
       "run": "full-ko",
-      "capture": "26-s3-nation-air"
+      "capture": "26-s3-nation-air",
+      "source_sha256": "75c3a82c3e63e90e40a619e59a9abb4fb728215ed4c4a4f860c433944e18d260"
     },
     {
-      "file": "29-about.png",
+      "file": "36-about.png",
       "sha256": "16a1624ff8c4a8303dfd014ee9acf199974d93668ddfa040a6d9541786d2269a",
       "screen": "O10",
       "run": "full-ko",
-      "capture": "29-s3-info-popup"
+      "capture": "29-s3-info-popup",
+      "source_sha256": "2fc32c9880e06a61a44e9517c5d4a35b5a04455a146db8b4d064e2fc8b9eac6c"
     },
     {
-      "file": "30-analytics-choice.png",
+      "file": "37-analytics-choice.png",
       "sha256": "aab95efdc87562a4117f2767f4415bff994abf6bff9c91a6ce6ad1161171ac79",
       "screen": "S06",
       "run": "manual-ko",
-      "capture": "10-m1-analytics-choice"
+      "capture": "10-m1-analytics-choice",
+      "source_sha256": "9ad7245bfdebe25b5562dda3c1aa270b0da105f2bb30d3561a51d5327e75c1d3"
     },
     {
-      "file": "31-share.png",
+      "file": "38-share.png",
       "sha256": "a761d4a907f0db7ff5bbd6a5f4f43adb3aae3c29519865a834998b916a750de2",
       "screen": "O16",
       "run": "full-ko",
-      "capture": "52-s9-share"
+      "capture": "52-s9-share",
+      "source_sha256": "839b56dfe45664b071533ef11bba0c05345b8fb63ac7aa149fec197d075e9f30"
     },
     {
-      "file": "32-exit.png",
+      "file": "39-exit.png",
       "sha256": "cb3edd07a82345e82933a24597342dc576dabab71bbcf33f179abbf2270788d4",
       "screen": "O15",
       "run": "full-ko",
-      "capture": "47-s7-exit-confirm"
+      "capture": "47-s7-exit-confirm",
+      "source_sha256": "c494f5de5bf8d813b52e223dd42d5d8834581a65a48c48f50aeef91fe29e54fc"
     }
   ]
 }
