@@ -742,6 +742,20 @@ pub fn daily_observation(req: &V, date: &V, field: &str) -> V {
         .filter(|v| valid(field, v))
         .unwrap_or_default()
 }
+/// ASOS measures no wind components. An hour ASOS fills that no grid observation holds is a row
+/// of legacy's validation template (`updateCurrentListForValidation`, the only rows with `mx`
+/// -1), whose placeholder -1 for them reads as a measured component in the three-hour summary.
+/// Their missing value there is -100 (legacy `_convertSummaryTo3H`), so a past slot keeps it.
+fn missing_wind_components(row: &V) {
+    if !strict_eq(&row.get("mx"), &V::Num(-1.)) {
+        return;
+    }
+    for field in ["uuu", "vvv"] {
+        if strict_eq(&row.get(field), &V::Num(-1.)) {
+            row.set(field, -100.);
+        }
+    }
+}
 /// `service.mergeHourly(req, data)` + `policy.mergeHourly(req, data.hourly)`.
 pub fn merge_hourly(req: &V, data: &V) {
     if !data.truthy() {
@@ -782,6 +796,9 @@ pub fn merge_hourly(req: &V, data: &V) {
         if !fields.is_empty() {
             let refs: Vec<&str> = fields.iter().map(String::as_str).collect();
             record(&row, source, &refs);
+            if primary {
+                missing_wind_components(&row);
+            }
         }
     }
     if primary {
@@ -854,6 +871,7 @@ pub fn merge_hourly(req: &V, data: &V) {
             }
             let refs: Vec<&str> = fields.iter().map(String::as_str).collect();
             record_more(&row, source, &refs);
+            missing_wind_components(&row);
         }
     }
 }

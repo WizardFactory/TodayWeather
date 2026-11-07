@@ -1667,9 +1667,10 @@ pub fn adjust_short(cx: &mut Cx) -> Flow {
     let days = Arr::new();
     let n50 = V::Num(-50.);
     for row in list.items() {
+        // "과거 short가 없는 경우 -1로 client로 넘어가는 것을 방지함": legacy sends every missing
+        // probability as 0, ASOS-filled past rows included, so the app never prints "-1%".
         if row.get("pop").nullish() || loose_eq(&row.get("pop"), &V::Num(-1.)) {
-            let past_observed = policy::observations_primary(&cx.req) && past_slot(&row, cx.now);
-            row.set("pop", if past_observed { -1. } else { 0. });
+            row.set("pop", 0.);
         }
         let day = day_summary(&days, &row.get("date"));
         if day.get("taMax").is_undef() {

@@ -558,8 +558,10 @@ fn convert_weather_data(w: &V, query: &V) {
     let to_wind = query.get("windSpeedUnit");
     let to_press = query.get("pressureUnit");
     let to_dist = query.get("distanceUnit");
+    // cm to mm. Legacy multiplies unconditionally; its finalized rows never hold the missing
+    // value -1 here, so it stays -1 rather than becoming -10 (#2614 parity).
     for name in ["s06", "sn1", "s1d"] {
-        if w.has(name) {
+        if w.has(name) && !strict_eq(&w.get(name), &n(-1.)) {
             w.set(name, to_number(&w.get(name)) * 10.);
         }
     }
@@ -1350,7 +1352,7 @@ pub fn data_to_fixed(cx: &mut Cx) -> Flow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domestic::kma::js::Arr;
+    use crate::domestic::kma::js::{Arr, Ob, obj};
     #[test]
     fn unit_switches_compare_like_legacy() {
         let arr = |u: &str| V::Arr(Arr::from_vec(vec![V::s(u)]));
@@ -1379,5 +1381,19 @@ mod tests {
             &convert_units("m/s", &arr("m/s"), &n(2.)),
             &n(2.)
         ));
+    }
+    /// Legacy `_convertWeatherData` turns centimetres into millimetres (`*= 10`). Its finalized
+    /// rows never hold the -1 sentinel there, so a missing amount must stay -1, never -10.
+    #[test]
+    fn a_missing_snow_amount_stays_missing_through_the_cm_to_mm_conversion() {
+        let row = V::Obj(obj(vec![("s06", n(-1.)), ("sn1", n(-1.)), ("s1d", n(-1.))]));
+        convert_weather_data(&row, &V::Obj(Ob::new()));
+        for name in ["s06", "sn1", "s1d"] {
+            assert!(strict_eq(&row.get(name), &n(-1.)), "{name}");
+        }
+        let measured = V::Obj(obj(vec![("s06", n(1.5)), ("s1d", n(0.))]));
+        convert_weather_data(&measured, &V::Obj(Ob::new()));
+        assert!(strict_eq(&measured.get("s06"), &n(15.)));
+        assert!(strict_eq(&measured.get("s1d"), &n(0.)));
     }
 }

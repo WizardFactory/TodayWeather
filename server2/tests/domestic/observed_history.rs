@@ -257,6 +257,58 @@ fn without_a_covering_publication_the_current_row_keeps_legacys_missing_values()
     }
 }
 
+/// Legacy `adjustShort` sends a missing probability as 0, so "-1%" never reaches the app; past
+/// ASOS rows included.
+#[test]
+fn a_missing_probability_reaches_the_client_as_legacy_sends_it() {
+    let body = assembled(true);
+    assert_eq!(short_row(&body, "20260923", 3)["pop"], 0);
+    for row in body["short"].as_array().unwrap() {
+        assert!(row["pop"].as_f64().unwrap() >= 0., "{row}");
+    }
+}
+
+/// ASOS measures no wind components. Hours it fills without a grid observation carry legacy's
+/// missing value -100 for them (`_convertSummaryTo3H`), so their past slot keeps that sentinel
+/// rather than the validation template's -1; grid-observed components stay.
+#[test]
+fn asos_filled_hours_keep_the_missing_wind_component_value() {
+    let sc = scenario("domestic-v000903");
+    let patch: fn(TownModel, OrderedJson) -> OrderedJson = |model, docs| match model {
+        TownModel::Current => without(docs, "currentData", |d, t| {
+            d == "20260923" && ["1000", "1100", "1200"].contains(&t)
+        }),
+        _ => docs,
+    };
+    let body = assembled_from(
+        sc,
+        &Patched {
+            inner: replay(sc).with_history(history()),
+            town_model: patch,
+        },
+    );
+    let filled = short_row(&body, "20260923", 12);
+    assert_eq!(filled["t3h"], 17, "ASOS filled the slot: {filled}");
+    assert_eq!(
+        (filled["uuu"].clone(), filled["vvv"].clone()),
+        (json!(-100), json!(-100))
+    );
+    let observed = short_row(&body, "20260923", 15);
+    assert_eq!(
+        (observed["uuu"].clone(), observed["vvv"].clone()),
+        (json!(1), json!(-2))
+    );
+    // Legacy mode keeps legacy's own answer for the same template hours.
+    let legacy = assembled_from(
+        sc,
+        &Patched {
+            inner: replay(sc),
+            town_model: patch,
+        },
+    );
+    assert_eq!(short_row(&legacy, "20260923", 12)["uuu"], -1);
+}
+
 #[test]
 fn asos_primary_replaces_forecast_history_and_uses_official_daily_values() {
     let body = assembled(true);
@@ -301,8 +353,8 @@ fn asos_primary_replaces_forecast_history_and_uses_official_daily_values() {
     assert!(row.get("s06Text").is_none());
     assert!(row.get("s06Str").is_none());
     assert_eq!(
-        row["pop"], -1,
-        "ASOS has no precipitation probability; never invent zero"
+        row["pop"], 0,
+        "ASOS has no precipitation probability; legacy adjustShort sends a missing one as 0"
     );
 }
 
