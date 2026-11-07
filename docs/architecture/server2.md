@@ -2418,7 +2418,9 @@ S16 completeness stays unsettled while the restores run (`Flight::Load`, the sta
 `Flight::LoadRest`).
 
 Verification (local, S06 loopback S3 peer, provider doubles; a test transport holds the reads of
-stored keys until after the request bound, within the 3 s S06 lookup deadline): per family the
+stored keys at a gate the test opens once the first answer is in, so a restore ends after the
+answer whatever the runner's speed, and records that a read was held; the 700 ms head start itself
+is checked on a paused clock): per family the
 raced first answer, one acquisition per dataset key and the settled answer equal to a process that
 read S3, the fill, the default station list, the needed-first life read, the owned narrative read,
 the zone-state read beside a cycle that never ends, the lanes (including a full bulk lane), and a

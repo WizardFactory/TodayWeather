@@ -1462,7 +1462,7 @@ async fn a_late_town_lookup_keeps_the_mid_forecast_of_its_region() {
 
 // ---- KMA-RESTART-RACE: the narrative and the warning state start with the request ----
 
-use super::observe::Counted;
+use super::observe::{Counted, STATION_RAW};
 use server2::domestic::kma::source::life_live::{LifeAcquire, LifeOutcome, LifeRequest};
 use server2::narrative::{
     Read as _,
@@ -1471,11 +1471,6 @@ use server2::narrative::{
 };
 use server2::warnings::zones::{Entry, Town, ZoneState, ZoneTable};
 
-/// When stored reads that start now end: after the observed request's 2.5 s wait and within the
-/// 3 s S06 lookup deadline.
-fn after_the_bound() -> Instant {
-    Instant::now() + Duration::from_millis(2600)
-}
 /// A KST hour (`YYYYMMDDHHMM`) `back` hours before the current one: a narrative published then
 /// is fresh on the wall clock.
 fn hour_before(back: i64) -> String {
@@ -1577,7 +1572,7 @@ async fn the_narrative_is_read_while_the_snapshot_runs() {
     let peer = Peer::persistent();
     store_narrative(&peer).await;
     let counted = Counted::new(peer.transport_limited(4));
-    counted.slow_until("raw/v2/kma-warning/", after_the_bound());
+    let gate = counted.hold(&["raw/v2/kma-warning/"]);
     counted.delay_gets(
         "raw/v2/kma-forecast-narrative/",
         0,
@@ -1587,6 +1582,8 @@ async fn the_narrative_is_read_while_the_snapshot_runs() {
     let service = Arc::new(Service::new(counted.clone(), office.clone()).unwrap());
     let backend = narrative_backend(observed_on(&counted, Arc::new(Unreachable)), service);
     let (body, took) = answer_of(&backend).await;
+    gate.open();
+    assert!(gate.was_reached(), "the warning state read is held");
     assert!(took >= Duration::from_millis(2400), "{took:?}");
     assert!(
         body["forecastNarrative"]["text"].is_string(),
@@ -1625,7 +1622,7 @@ async fn a_slow_office_read_fetches_that_office_once() {
     let peer = Peer::persistent();
     store_narrative(&peer).await;
     let counted = Counted::new(peer.transport_limited(8));
-    counted.slow_until("raw/v2/kma-forecast-narrative/", after_the_bound());
+    let gate = counted.hold(&["raw/v2/kma-forecast-narrative/"]);
     let office = Arc::new(Office::default());
     let service = Arc::new(Service::new(counted.clone(), office.clone()).unwrap());
     let backend = narrative_backend(observed_on(&counted, Arc::new(Unreachable)), service);
@@ -1634,6 +1631,8 @@ async fn a_slow_office_read_fetches_that_office_once() {
         answer_of(&backend),
         answer_of(&backend)
     );
+    gate.open();
+    assert!(gate.was_reached(), "the office's stored read is held");
     for (body, _) in [a, b, c] {
         assert_eq!(
             body["forecastNarrative"]["text"], "acquired",
@@ -2011,26 +2010,33 @@ async fn a_slow_restart_answers_every_stored_family_first() {
     let peer = Peer::persistent();
     let produced = produced_answer(&peer).await;
     let counted = Counted::new(peer.transport_limited(4));
-    let slow = after_the_bound();
-    for prefix in [
-        "raw/v2/kma-web/",
-        "raw/v2/data-go-kr/asos-",
-        "raw/v2/data-go-kr/uv-idx-v5/",
-        "raw/v2/data-go-kr/oak-pollen-v3/",
-        "raw/v2/data-go-kr/pine-pollen-v3/",
-        "raw/v2/data-go-kr/weeds-pollen-v3/",
-        "raw/v2/mfds/",
-        "raw/v2/kma-forecast-narrative/",
-        "raw/v2/kma-warning/",
-    ] {
-        counted.slow_until(prefix, slow);
-    }
+    let gate = counted.hold(
+        &[
+            &STATION_RAW[..],
+            &[
+                "raw/v2/data-go-kr/asos-",
+                "raw/v2/data-go-kr/uv-idx-v5/",
+                "raw/v2/data-go-kr/oak-pollen-v3/",
+                "raw/v2/data-go-kr/pine-pollen-v3/",
+                "raw/v2/data-go-kr/weeds-pollen-v3/",
+                "raw/v2/mfds/",
+                "raw/v2/kma-forecast-narrative/",
+                "raw/v2/kma-warning/",
+            ],
+        ]
+        .concat(),
+    );
     let store =
         Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
     let writer = Writer::new(store, Config::default()).unwrap();
     let doubles = Doubles::new(&peer);
     let backend = process_on(&counted, &doubles, Some((writer, true)), false);
     let (body, took) = answer_of(&backend).await;
+    gate.open();
+    assert!(
+        gate.was_reached(),
+        "the stored families are read during the request"
+    );
     assert!(took < Duration::from_millis(3300), "{took:?}");
     // Current station observations, the ASOS history (past days), today's UV, the narrative and
     // the active warning.

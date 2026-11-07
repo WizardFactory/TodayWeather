@@ -1062,10 +1062,10 @@ pub(super) struct Counted {
     delay: Arc<Mutex<Option<Delay>>>,
     /// GETs of keys under this prefix fail.
     fail: Arc<Mutex<Option<String>>>,
-    /// Requests of stored keys (or LIST prefixes) under a prefix wait until the instant: a slow
-    /// store. Keys written through this transport are not slowed (a new acquisition's
-    /// publication reads back what it wrote).
-    slow: Arc<Mutex<Vec<(String, Instant)>>>,
+    /// Requests of stored keys (or LIST prefixes) under a gate's prefixes wait until the test
+    /// opens it: a slow store. Keys written through this transport are not held (a new
+    /// acquisition's publication reads back what it wrote).
+    gates: Arc<Mutex<Vec<Gate>>>,
     written: Arc<Mutex<std::collections::HashSet<String>>>,
     /// The bulk lane's view.
     bulk: bool,
@@ -1079,7 +1079,7 @@ impl Counted {
             counts: Arc::default(),
             delay: Arc::default(),
             fail: Arc::default(),
-            slow: Arc::default(),
+            gates: Arc::default(),
             written: Arc::default(),
             bulk: false,
             bulk_open: Arc::new(tokio::sync::watch::channel(true).0),
@@ -1093,10 +1093,17 @@ impl Counted {
     pub(super) fn fail_gets(&self, prefix: Option<&str>) {
         *self.fail.lock().unwrap() = prefix.map(str::to_owned);
     }
-    /// Every request of a stored key or LIST prefix under `prefix` made before `at` waits until
-    /// `at` (keep `at` within the 3 s S06 lookup deadline of a read, or the read fails).
-    pub(super) fn slow_until(&self, prefix: &str, at: Instant) {
-        self.slow.lock().unwrap().push((prefix.to_owned(), at));
+    /// Hold every request of a stored key or LIST prefix under one of `prefixes` until the
+    /// returned gate opens (KMA-RESTART-RACE: a restore that ends where the test says, not at an
+    /// instant a slow runner can reach late).
+    pub(super) fn hold(&self, prefixes: &[&str]) -> Gate {
+        let gate = Gate {
+            prefixes: prefixes.iter().map(|p| (*p).to_owned()).collect(),
+            open: Arc::new(tokio::sync::watch::channel(false).0),
+            held: Arc::new(tokio::sync::watch::channel(0).0),
+        };
+        self.gates.lock().unwrap().push(gate.clone());
+        gate
     }
     /// The bulk lane's view: the same counts, its requests also counted as `bulk ...`.
     pub(super) fn bulk(&self) -> Self {
@@ -1150,16 +1157,16 @@ impl Counted {
         if self.written.lock().unwrap().contains(key) {
             return;
         }
-        let until = self
-            .slow
+        let gates: Vec<Gate> = self
+            .gates
             .lock()
             .unwrap()
             .iter()
-            .filter(|(prefix, _)| key.starts_with(prefix.as_str()))
-            .map(|(_, at)| *at)
-            .max();
-        if let Some(at) = until {
-            tokio::time::sleep_until(at).await;
+            .filter(|g| g.prefixes.iter().any(|p| key.starts_with(p.as_str())))
+            .cloned()
+            .collect();
+        for gate in gates {
+            gate.pass().await;
         }
     }
     fn count(&self, method: &str, key: &str) {
@@ -1259,6 +1266,43 @@ impl server2::history::IndexListing for Counted {
     }
     fn bulk_view(&self) -> Self {
         self.bulk()
+    }
+}
+
+/// The raw objects of the station restore (`Flight::Load`): the station pages, the day products and
+/// the station seed. The town RSS, also `kma-web`, is read by every request and is not raced.
+pub(super) const STATION_RAW: [&str; 4] = [
+    "raw/v2/kma-web/aws-",
+    "raw/v2/kma-web/city-obs/",
+    "raw/v2/kma-web/station-pages/",
+    "raw/v2/kma-web/kma-stn-info/",
+];
+/// A test's gate in front of a slow store ([`Counted::hold`]): the reads it holds wait until the
+/// test opens it, so the order of a restore and an answer is the test's. Open it as soon as the
+/// answer it must follow is in: a read held past the 3 s S06 lookup deadline fails.
+#[derive(Clone)]
+pub(super) struct Gate {
+    prefixes: Vec<String>,
+    open: Arc<tokio::sync::watch::Sender<bool>>,
+    /// Reads that arrived while it was closed.
+    held: Arc<tokio::sync::watch::Sender<usize>>,
+}
+impl Gate {
+    async fn pass(&self) {
+        let mut open = self.open.subscribe();
+        if *open.borrow() {
+            return;
+        }
+        self.held.send_modify(|n| *n += 1);
+        let _ = open.wait_for(|open| *open).await;
+    }
+    /// Whether a read was held (the stored read started before the gate opened).
+    pub(super) fn was_reached(&self) -> bool {
+        *self.held.borrow() > 0
+    }
+    /// Let the held reads and every later one through.
+    pub(super) fn open(&self) {
+        self.open.send_replace(true);
     }
 }
 

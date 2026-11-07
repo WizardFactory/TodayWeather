@@ -5,7 +5,7 @@
 //! unusable product is replaced by the raw pages, and S16 completeness is kept. The S06 loopback
 //! S3 test peer holds the pages; the acquirer never reaches a provider.
 use super::observe::{
-    Counted, aws_page, city_page, dotted, page_record, publish_record, repair_raw,
+    Counted, STATION_RAW, aws_page, city_page, dotted, page_record, publish_record, repair_raw,
     store_pages_without,
 };
 use super::source_s3::{NOW, Peer, Unreachable, deadline};
@@ -850,11 +850,6 @@ impl Acquire for Pages {
         })
     }
 }
-/// When stored reads that start now end: after the observed request's 2.5 s wait and within the
-/// 3 s S06 lookup deadline.
-fn after_the_bound() -> Instant {
-    Instant::now() + Duration::from_millis(2600)
-}
 /// The observed source of a process on `counted` with the clock at `now`.
 fn observed(counted: &Counted, acquire: Arc<dyn Acquire>, now: f64) -> S3Source<Counted> {
     let warnings = Arc::new(
@@ -950,9 +945,11 @@ async fn a_slow_product_read_starts_the_current_pages_at_the_head_start() {
     let counted = Counted::new(peer.transport_limited(4));
     let pages = Arc::new(Pages::default());
     let b = observed(&counted, pages.clone(), NOW);
-    let slow = after_the_bound();
-    counted.slow_until("raw/v2/kma-web/", slow);
+    // The stored pages and products answer after the first request.
+    let gate = counted.hold(&STATION_RAW);
     let (answer, took) = first(&b).await;
+    gate.open();
+    assert!(gate.was_reached(), "the restore reads during the request");
     assert!(took < Duration::from_millis(3500), "{took:?}");
     let town = town(answer.as_ref());
     let stn = answer
@@ -978,7 +975,6 @@ async fn a_slow_product_read_starts_the_current_pages_at_the_head_start() {
         "{:?}",
         pages.calls()
     );
-    tokio::time::sleep_until(slow).await;
     let restarted = steady(&b).await;
     let (later, _) = first(&b).await;
     assert_eq!(
@@ -1045,8 +1041,13 @@ async fn history_uses_the_default_station_list_while_the_station_restore_runs() 
     let counted = Counted::new(peer.transport_limited(4));
     let pages = Arc::new(Pages::default());
     let b = observed(&counted, pages.clone(), NOW);
-    counted.slow_until("raw/v2/kma-web/", after_the_bound());
+    let gate = counted.hold(&STATION_RAW);
     let (answer, took) = first(&b).await;
+    gate.open();
+    assert!(
+        gate.was_reached(),
+        "the station restore reads during the request"
+    );
     assert!(took < Duration::from_millis(3500), "{took:?}");
     let town = town(answer.as_ref());
     let history = json(&answer.history(&town).unwrap());
@@ -1078,9 +1079,13 @@ async fn a_slow_asos_restore_answers_from_the_raced_ranges() {
     let counted = Counted::new(peer.transport_limited(4));
     let pages = Arc::new(Pages::default());
     let b = observed(&counted, pages.clone(), NOW);
-    let slow = after_the_bound();
-    counted.slow_until("raw/v2/data-go-kr/asos-", slow);
+    let gate = counted.hold(&["raw/v2/data-go-kr/asos-"]);
     let (answer, took) = first(&b).await;
+    gate.open();
+    assert!(
+        gate.was_reached(),
+        "the ASOS restore reads during the request"
+    );
     assert!(took < Duration::from_millis(3500), "{took:?}");
     let town = town(answer.as_ref());
     assert_eq!(history_hours(&answer, &town), 168, "the raced ranges");
@@ -1092,7 +1097,6 @@ async fn a_slow_asos_restore_answers_from_the_raced_ranges() {
         ],
         "one range of each kind"
     );
-    tokio::time::sleep_until(slow).await;
     assert_eq!(steady(&b).await[2], produced[2], "the stored history");
 }
 
@@ -1121,9 +1125,10 @@ async fn the_fill_asks_only_absent_hours_of_today_and_yesterday() {
     let counted = Counted::new(peer.transport_limited(4));
     let pages = Arc::new(Pages::default());
     let b = observed(&counted, pages.clone(), at);
-    let slow = after_the_bound();
-    counted.slow_until("raw/v2/kma-web/", slow);
+    let gate = counted.hold(&STATION_RAW);
     let _ = first(&b).await;
+    gate.open();
+    assert!(gate.was_reached(), "the restore reads during the request");
     let mut expected: Vec<String> = ["202609240600", "202609240500"]
         .into_iter()
         .map(str::to_owned)
@@ -1141,7 +1146,6 @@ async fn the_fill_asks_only_absent_hours_of_today_and_yesterday() {
     let mut asked = pages.of("aws-hourly");
     asked.sort();
     assert_eq!(asked, expected, "the absent hours once each and the latest");
-    tokio::time::sleep_until(slow).await;
     let _ = steady(&b).await;
     let mut again = pages.of("aws-hourly");
     again.sort();

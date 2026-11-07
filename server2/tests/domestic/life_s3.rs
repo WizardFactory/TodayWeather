@@ -1479,11 +1479,6 @@ use super::observe::Counted;
 use server2::domestic::kma::source::life_input::LifeAnswers;
 use server2::resolver::race::HEAD_START;
 
-/// When stored reads that start now end: after the request's 2.5 s wait and within the 3 s S06
-/// lookup deadline.
-fn after_the_bound() -> Instant {
-    Instant::now() + Duration::from_millis(2600)
-}
 /// The life inputs of a process reading through `counted`, acquiring through the stub.
 fn restarted(
     peer: &Peer,
@@ -1556,11 +1551,13 @@ async fn a_slow_life_read_starts_uv_at_the_head_start() {
     // The restart: every stored life read ends after the bound.
     let counted = Counted::new(peer.transport());
     let b = restarted(&peer, &counted, &store, Some(&stub));
-    let slow = after_the_bound();
-    for prefix in LIFE_RAW {
-        counted.slow_until(prefix, slow);
-    }
+    let gate = counted.hold(&LIFE_RAW);
     let (first, took) = first_request(&b, Duration::from_millis(2700)).await;
+    gate.open();
+    assert!(
+        gate.was_reached(),
+        "the life restore reads during the request"
+    );
     assert!(took < Duration::from_millis(3000), "{took:?}");
     assert_eq!(
         uv_issued(&first, 1_100_000_000.),
@@ -1575,7 +1572,6 @@ async fn a_slow_life_read_starts_uv_at_the_head_start() {
         "each dataset asked once by the restart"
     );
     // The stored reads end: the answers of a process that read S3.
-    tokio::time::sleep_until(slow).await;
     let mut later = b.load(now_ms(), deadline()).await;
     for _ in 0..40 {
         if later.life.len() == produced.life.len() {
@@ -1675,14 +1671,16 @@ async fn the_life_read_restores_todays_slots_first() {
     }
     let counted = Counted::new(peer.transport());
     let b = restarted(&peer, &counted, &store, None);
-    let slow = after_the_bound();
-    for day in 3..=14 {
-        counted.slow_until(
-            &format!("raw/v2/data-go-kr/uv-idx-v5/2026/10/{day:02}/"),
-            slow,
-        );
-    }
+    let older: Vec<String> = (3..=14)
+        .map(|day| format!("raw/v2/data-go-kr/uv-idx-v5/2026/10/{day:02}/"))
+        .collect();
+    let gate = counted.hold(&older.iter().map(String::as_str).collect::<Vec<_>>());
     let (first, took) = first_request(&b, Duration::from_millis(2700)).await;
+    gate.open();
+    assert!(
+        gate.was_reached(),
+        "the older days are read during the request"
+    );
     assert!(took < Duration::from_millis(3000), "{took:?}");
     let today = uv_issued(&first, 1_100_000_000.);
     assert!(
@@ -1693,7 +1691,6 @@ async fn the_life_read_restores_todays_slots_first() {
         today.iter().all(|i| i.as_str() >= "2026101512"),
         "the rest of the window follows: {today:?}"
     );
-    tokio::time::sleep_until(slow).await;
     let cold = restarted(&peer, &Counted::new(peer.transport()), &store, None)
         .load(now_ms(), deadline())
         .await;
