@@ -2279,25 +2279,27 @@ members' groups (one descriptor and one raw body each); `lookup_acquisition` is 
 case, and `ordered_candidates`/`lookup_page` are unchanged for the other cursor readers.
 `Reader::listed_acquisitions` lists a catalog's acquisitions from the control object alone and is
 shared with the image forecast. The minute catalogs of the readers' 40 minutes are listed once; of
-each minute only the newest acquisition (completion, then raw digest) is restored, at most four
+each minute the newest acquisition (completion, then raw digest) is restored, and when it is not
+complete or does not parse the next one of that minute (at most three per minute), at most four
 members per read.
 
 **Day product.** One product per KST day D: source `kma-web`, kind `station-pages`, the AWS page
 key, partition `YYYYMMDD`, period D/0000, fetched at its making instant, published as a one-member
 group. It is gzip JSON of the parsed inputs of the hourly fold, not its output: `schema`,
 `parseRevision` (bumped when page parsing or the reduction to registry facts changes), `made`,
-`day`, `excluded`, `cityIds`, a `facts` table and `pages`. Per kind and hour of D it holds the
+`day`, `excluded`, `knownIds`, `excludedIds`, `cityIds`, a `facts` table and `pages`. Per kind and hour of D it holds the
 newest page as the process keeps it (`kind`, `hour`, `fetchedAt`, `sha256`, `rawId`, `rows`).
 AWS rows equal to their registry facts are indices into `facts`; city rows are whole. `cityIds` is
 the city set the reduced rows are whole for (the intersection of the sets the day's pages were
-reduced with). `excluded` is the number of the day's listed groups S06 excluded when the pages
-were read, carried forward while the day is compared rather than read again. Values keep every
+reduced with). Every listed group of the day is accounted for: its pages, `knownIds` (the raw
+identities of the other groups found complete, such as superseded acquisitions) and `excludedIds`
+(a member of each group S06 excluded; `excluded` is their number). Values keep every
 stored value (undefined, dates, negative zero, NaN) and key order. A reader refuses a product that
 expands past 16 MiB.
 
 Any process that folds writes products: after a fold that recomputed the hourly part a
 `Flight::Product` (never awaited by a request) stores the day whose made-of (sorted page raw
-identities, `cityIds`, `parseRevision`) differs from the last product this process read or stored.
+identities, `cityIds`, excluded identities, `parseRevision`) differs from the last product this process read or stored.
 Only days read without failure whose every hour is in the window are stored, each at most once per
 ten minutes per process. Products are not cached on disk.
 
@@ -2306,21 +2308,30 @@ minute catalogs. Then for the due days, newest first and eight at a time, the da
 product catalogs are listed (control objects only) and, the first time a process reads the day,
 its newest product (completion, then digest) is read and decoded. A product whose `cityIds` does
 not cover the current city set (seed and city pages) is not used. Product pages the catalogs do not
-list are dropped (S3 is truth). A day is then compared: for each kind and hour whose newest listed
-page (latest fetch; of one instant the smaller digest, the page a read of every acquisition keeps)
-is newer than the held one, that page alone is restored and parsed. An unreadable product, an older
-schema or parse revision, a grown city set, no product, or a newer page that is not complete or
-does not parse gives the day's raw read as before. `Flight::Load` ends after the products, today's
+list are dropped (S3 is truth). A day is then compared: every listed group that is neither held nor
+known complete (the excluded ones again, and those published since) is restored, four per catalog
+read; a complete one becomes known, an incomplete one excluded. Of each kind and hour the newest
+complete new page (latest fetch; of one instant the smaller digest, the page a read of every
+acquisition keeps) that is newer than the held one is parsed and held. An unreadable product, an
+older schema or parse revision, a grown city set, no product, or a new newest page that does not
+parse gives the day's raw read as before, which records every complete group as known and every
+excluded one. When a fold's city set has grown past the set an AWS page was reduced for (a city
+page restored after the products, or acquired since, names another station), `Flight::Expand`
+reads those pages in full again by their raw identity (no request waits for it; a failed read is
+tried again after ten minutes), and the next fold reduces them for the new set. `Flight::Load` ends after the products, today's
 and yesterday's comparisons, the seed and the four newest minute pages. `Flight::LoadRest`, which
 no request waits for, then compares the other days (each marked read and the pages dirty) and
 restores the rest of the minute window. Reloads every five minutes compare with the pages held.
 
 **S16.** Answers, the station page input identities and the response-first durability set are
 unchanged: a page restored from a product carries the raw identity and digest of the stored page.
-A day is partial when its held `excluded` is above zero or a newer group is not complete, as a raw
-read with excluded groups is. `settled()` counts `LoadRest`, `Product` and a due product comparison
-as busy. Not recorded by a product: a listed group older than its pages that is published later; if
-S06 excludes it, a restart from the product counts the day complete where a raw read would not.
+A day is partial while one of its listed groups is excluded, as a raw read with excluded groups is.
+Excluded groups are checked again at every read of the day (a restart, and each reload), so a
+repaired group completes the day and its product is stored again without it. A group published
+after a product, older than its pages, is unaccounted for and checked like any new group, so a
+restart from products counts a day complete exactly when a raw read would, given that a complete
+raw object is never deleted. `settled()` counts `LoadRest`, `Product`, `Expand` and a due product
+comparison as busy.
 Right after the first deployment the window's oldest day has no product (some of its hours were
 already out of the window) and is read from its raw pages after the first answer.
 
@@ -2329,7 +2340,9 @@ Verification (local, S06 loopback S3 peer, no provider): targeted member GET cou
 168 past hourly pages and minute rows on its first request without raw page GETs, a later page
 restored alone and equal to a cold raw read, unusable products replaced by the raw pages and stored
 again, two processes' products, unsettled answers during the rest of the read, a day with an
-S06-excluded group kept partial, and the disk cache exclusion.
+S06-excluded group kept partial, a repaired group completing its day (and recording summaries), a
+station joining the city set after the products, an incomplete newest minute acquisition, and the
+disk cache exclusion.
 
 ### S15b-2 s station registry seed (2026-10-15)
 

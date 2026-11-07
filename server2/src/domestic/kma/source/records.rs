@@ -306,6 +306,29 @@ impl<T: IndexListing + Clone> Reader<T> {
             .await
             .map(|(r, _)| r)
     }
+    /// [`Self::raw`] and a listed member of each group S06 excluded (S16 completeness).
+    pub async fn raw_excluded(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        deadline: Instant,
+    ) -> Result<(Vec<Vec<RawRecord>>, Vec<crate::storage::RecordId>), Error> {
+        let id = catalog(source, kind, key, partition)?;
+        match self.store.lookup(&id, deadline).await {
+            Ok(LookupOutcome::Ready(set)) => Ok((
+                set.acquisitions()
+                    .iter()
+                    .map(|a| ordered(a.records()))
+                    .collect(),
+                set.excluded_members().to_vec(),
+            )),
+            Ok(LookupOutcome::Incomplete) => Err(Error::Corrupt("incomplete catalog")),
+            Err(Error::NotFound) => Ok((Vec::new(), Vec::new())),
+            Err(e) => Err(e),
+        }
+    }
     /// [`Self::raw`] and the number of listed groups S06 excluded (S16 completeness).
     pub async fn raw_counted(
         &self,

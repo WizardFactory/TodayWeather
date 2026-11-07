@@ -1041,3 +1041,65 @@ async fn older_native_routes_record_only_compatible_daily_rows() {
         }
     }
 }
+
+/// RO-sticky-excluded end to end: a station page group whose raw body was missing when the day
+/// products were made blocks every summary; once it is repaired, a new process records the
+/// complete grid day as a process reading the raw pages would.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_repaired_station_group_lets_a_restart_record_summaries() {
+    use super::observe::{aws_page, dotted, page_record, repair_raw, store_pages_without};
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let catalogs = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    seed(&catalogs, &[]).await;
+    day(&catalogs, 20260923, 1..=24).await;
+    // 09-21 05:00: a complete AWS hourly page and an earlier acquisition without its raw body.
+    let hour = p(20260921, 500);
+    let at = server2::history::schedule::to_ms(hour) as u64;
+    let kept = page_record(
+        "aws-hourly",
+        hour,
+        at + 15 * 60_000,
+        aws_page(&dotted(hour), false),
+    );
+    let lost = page_record(
+        "aws-hourly",
+        hour,
+        at + 5 * 60_000,
+        aws_page(&dotted(hour), true),
+    );
+    store_pages_without(
+        &peer.transport_limited(4),
+        vec![kept, lost.clone()],
+        std::slice::from_ref(&lost.envelope.identity),
+    )
+    .await;
+    let (backend, recorder) = backend(&peer, Arc::new(Unreachable));
+    let mut made = false;
+    for _ in 0..40 {
+        serve(&backend).await;
+        assert!(recorder.idle(deadline()).await);
+        if !super::observe_product::products(&peer, 20260921)
+            .await
+            .is_empty()
+        {
+            made = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+    assert!(made, "the 09-21 product is stored");
+    assert_eq!(
+        names(&recorder, 20260923).await,
+        0,
+        "the 09-21 read is partial"
+    );
+    repair_raw(&peer.transport_limited(4), &lost).await;
+    let (backend, recorder) = backend_again(&peer);
+    serve_until(&backend, &recorder, 20260923).await;
+    assert_eq!(
+        names(&recorder, 20260923).await,
+        1,
+        "recorded after the repair"
+    );
+}

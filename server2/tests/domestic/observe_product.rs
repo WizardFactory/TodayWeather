@@ -4,7 +4,10 @@
 //! products are compared with the catalogs (S3 is truth): a page published later is restored, an
 //! unusable product is replaced by the raw pages, and S16 completeness is kept. The S06 loopback
 //! S3 test peer holds the pages; the acquirer never reaches a provider.
-use super::observe::{Counted, aws_page, city_page, dotted, page_record, store_pages_without};
+use super::observe::{
+    Counted, aws_page, city_page, dotted, page_record, publish_record, repair_raw,
+    store_pages_without,
+};
 use super::source_s3::{NOW, Peer, Unreachable, deadline};
 use serde_json::Value;
 use server2::domestic::kma::source::observe::{Folded, Observations};
@@ -41,7 +44,7 @@ fn city_date(h: Publication) -> String {
 /// Every hour from 2026-09-16 00:00 to 10:00 of 2026-09-24 (the nine day partitions a process at
 /// 10:50 reads), each with its AWS hourly and city page acquired 15 minutes into the hour, and the
 /// minute pages of the last 40 minutes.
-fn station_records() -> Vec<RawRecord> {
+pub(super) fn station_records() -> Vec<RawRecord> {
     let mut out = Vec::new();
     let mut h = p(20260916, 0);
     while h <= p(20260924, 1000) {
@@ -206,7 +209,7 @@ fn product_catalog(day: u32) -> CatalogId {
     }
 }
 /// The stored products of one day, oldest first, as JSON.
-async fn products(peer: &Peer, day: u32) -> Vec<Value> {
+pub(super) async fn products(peer: &Peer, day: u32) -> Vec<Value> {
     product_texts(peer, day)
         .await
         .iter()
@@ -406,7 +409,7 @@ async fn unusable_products_are_replaced_by_the_raw_pages() {
     let unlisted = hour3.replace(".raw.gz", "0.raw.gz");
     let variants: Vec<(&str, Vec<u8>, bool)> = vec![
         ("unreadable", b"not a product".to_vec(), true),
-        ("older schema", edit("\"schema\":1,", "\"schema\":0,"), true),
+        ("older schema", edit("\"schema\":2,", "\"schema\":1,"), true),
         (
             "older parse revision",
             edit("\"parseRevision\":1,", "\"parseRevision\":0,"),
@@ -523,7 +526,124 @@ async fn an_excluded_group_keeps_its_day_partial_through_the_product() {
         assert!(!b.settled(NOW as i64, &folded), "the 09-21 read is partial");
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
-    assert_eq!(raw_gets(&b_counted, "aws-hourly"), 0);
+    // Only the excluded group is checked again (its missing raw body), no raw read of the day.
+    assert_eq!(raw_gets(&b_counted, "aws-hourly"), 1);
     let last = answer(&b).await;
     assert_eq!(hours_of_108(&last, p(20260917, 0), p(20260923, 2300)), 168);
+}
+
+/// A city page of `h` naming `stations` (`(id, name)`), as `city_page` does for 108 alone.
+fn city_page_of(h: Publication, stations: &[(&str, &str)]) -> Vec<u8> {
+    let rows: String = stations
+        .iter()
+        .map(|(id, name)| {
+            format!(
+                r#"<tr><td><a href="city-obs.do?stn={id}">{name}</a></td><td>맑음</td><td>3</td><td>18.0</td><td>60</td><td>남서</td><td>2.0</td></tr>"#
+            )
+        })
+        .collect();
+    format!(
+        r#"<html><head><meta charset="utf-8"></head><body><div class="cmp-table-topinfo"><strong>기상실황표</strong>{}</div><table id="weather_table"><thead><tr id="table_header2"><th>이름</th><th>현재일기</th><th>운량<br/>1/10</th><th>현재<br/>기온</th><th>습도<br/>%</th><th>풍향</th><th>풍속</th></tr></thead><tbody>{rows}</tbody></table></body></html>"#,
+        city_date(h)
+    )
+    .into_bytes()
+}
+
+/// RO-city-growth: a city page published after the products names a station the products
+/// reduced to its registry facts (강남, 400). Its AWS rows of every stored page are read in full
+/// again, and the answers equal a cold read of the raw pages.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_station_joining_the_city_set_after_the_products_is_read_in_full() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = seeded_peer(&[], Vec::new()).await;
+    let _ = producing(&peer).await;
+    let hour = p(20260924, 800);
+    let later = page_record(
+        "city-obs",
+        hour,
+        schedule::to_ms(hour) as u64 + 50 * 60_000,
+        city_page_of(hour, &[("108", "서울"), ("400", "강남")]),
+    );
+    let store = CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap();
+    publish_record(&store, later.clone()).await;
+    let (c, _) = process(&peer);
+    let c_folded = settle(&c).await;
+    let cold_peer = seeded_peer(&[], vec![later]).await;
+    let (d, _) = process(&cold_peer);
+    let d_folded = settle(&d).await;
+    assert!(
+        d_folded
+            .hourly
+            .docs()
+            .iter()
+            .any(|r| r.get("stnId") == Some(&Val::Num(400.))),
+        "a cold read holds the new city station's rows"
+    );
+    same(&c_folded, &d_folded, "cold read");
+}
+
+/// RO-minute-fallback: when the newest acquisition of a minute is not complete (S06 excludes it),
+/// an older complete acquisition of that minute is used, as a latest-first read of every
+/// acquisition does.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_incomplete_newest_minute_acquisition_falls_back_to_an_older_one() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let minute = p(20260924, 1049);
+    let lost = page_record(
+        "aws-minute",
+        minute,
+        schedule::to_ms(minute) as u64 + 40_000,
+        aws_page(&dotted(minute), false),
+    );
+    let missing = lost.envelope.identity.clone();
+    let peer = seeded_peer(std::slice::from_ref(&missing), vec![lost]).await;
+    let (b, _) = process(&peer);
+    let b_folded = settle(&b).await;
+    let cold_peer = seeded_peer(&[], Vec::new()).await;
+    let (d, _) = process(&cold_peer);
+    let d_folded = settle(&d).await;
+    same(&b_folded, &d_folded, "the 10:49 minute page");
+}
+
+/// RO-sticky-excluded: a product made while a group's raw body was missing records it; once the
+/// group is repaired, a restart reads the day as complete (as a raw read does) and stores the
+/// day's product again without the exclusion.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_repaired_group_completes_its_day_after_the_product() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let hour = p(20260921, 500);
+    let lost = page_record(
+        "aws-hourly",
+        hour,
+        schedule::to_ms(hour) as u64 + 5 * 60_000,
+        aws_page(&dotted(hour), false),
+    );
+    let peer = seeded_peer(
+        std::slice::from_ref(&lost.envelope.identity),
+        vec![lost.clone()],
+    )
+    .await;
+    let (a, a_counted) = process(&peer);
+    until(&a, || {
+        a_counted.get(&format!("PUT {PRODUCTS}")) >= DAYS.len()
+    })
+    .await;
+    assert_eq!(
+        products(&peer, 20260921).await[0]["excluded"],
+        Value::from(1)
+    );
+    repair_raw(&peer.transport_limited(4), &lost).await;
+    let (b, b_counted) = process(&peer);
+    let b_folded = settle(&b).await;
+    let cold_peer = seeded_peer(&[], vec![lost]).await;
+    let (d, _) = process(&cold_peer);
+    let d_folded = settle(&d).await;
+    same(&b_folded, &d_folded, "cold read");
+    until(&b, || b_counted.get(&format!("PUT {PRODUCTS}")) >= 1).await;
+    let stored = products(&peer, 20260921).await;
+    assert_eq!(stored.len(), 2);
+    assert!(
+        stored.iter().any(|v| v["excluded"] == 0),
+        "the day's product is stored again without the exclusion"
+    );
 }

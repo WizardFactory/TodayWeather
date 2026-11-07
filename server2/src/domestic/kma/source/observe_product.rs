@@ -8,9 +8,11 @@
 //! registry facts (the reduced form the fold keeps them in), each distinct facts document once.
 //!
 //! A product is never the truth: a reader compares it with the day catalogs and restores what it
-//! lacks. `cityIds` is the city set its reduced rows keep in full; `excluded` is the number of the
-//! day's listed groups S06 excluded when its pages were read (S16 completeness). Values keep
-//! every [`Val`] (undefined, dates, negative zero and NaN) through a tagged string form.
+//! lacks. `cityIds` is the city set its reduced rows keep in full. Every listed group of the day is
+//! accounted for (S16 completeness): its pages, `knownIds` (the other groups found complete) and
+//! `excludedIds` (a member of each group S06 excluded, `excluded` of them); a reader checks the
+//! excluded and the unaccounted groups again. Values keep every [`Val`] (undefined, dates, negative
+//! zero and NaN) through a tagged string form.
 use super::doc::{Doc, Val};
 use crate::domestic::publication::Publication;
 use serde::de::{self, Deserializer, MapAccess, SeqAccess, Visitor};
@@ -22,7 +24,7 @@ use std::sync::Arc;
 /// Kind of the product (source `kma-web`, the AWS page key, partition `YYYYMMDD`).
 pub const KIND: &str = "station-pages";
 /// The product's layout.
-pub const SCHEMA: u64 = 1;
+pub const SCHEMA: u64 = 2;
 /// Bumped whenever page parsing (`parse_aws`, `parse_city`) or the reduction to registry facts
 /// changes: an older product is then read as absent.
 pub const PARSE_REVISION: u64 = 1;
@@ -48,25 +50,33 @@ pub struct StoredPage {
 pub struct DayProduct {
     pub made: f64,
     pub day: u32,
-    /// Listed groups S06 excluded when these pages were read.
-    pub excluded: usize,
+    /// Raw identities of the other listed groups found complete.
+    pub known: BTreeSet<String>,
+    /// Raw identities of a member of each listed group S06 excluded.
+    pub excluded: BTreeSet<String>,
     pub city_ids: BTreeSet<String>,
     pub pages: Vec<StoredPage>,
 }
-/// What a product is made of: its pages, city set and parse revision.
+/// What a product is made of: its pages, city set, excluded groups and parse revision.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MadeOf {
     pages: Vec<String>,
     city_ids: Vec<String>,
+    excluded: Vec<String>,
     revision: u64,
 }
 impl MadeOf {
-    pub fn new<'a>(raw_ids: impl Iterator<Item = &'a str>, city_ids: &BTreeSet<String>) -> Self {
+    pub fn new<'a>(
+        raw_ids: impl Iterator<Item = &'a str>,
+        city_ids: &BTreeSet<String>,
+        excluded: &BTreeSet<String>,
+    ) -> Self {
         let mut pages: Vec<String> = raw_ids.map(str::to_owned).collect();
         pages.sort();
         Self {
             pages,
             city_ids: city_ids.iter().cloned().collect(),
+            excluded: excluded.iter().cloned().collect(),
             revision: PARSE_REVISION,
         }
     }
@@ -74,7 +84,11 @@ impl MadeOf {
 
 impl DayProduct {
     pub fn made_of(&self) -> MadeOf {
-        MadeOf::new(self.pages.iter().map(|p| p.raw_id.as_str()), &self.city_ids)
+        MadeOf::new(
+            self.pages.iter().map(|p| p.raw_id.as_str()),
+            &self.city_ids,
+            &self.excluded,
+        )
     }
     /// The stored form: gzip of the product JSON. An AWS row equal to its registry facts
     /// (`facts`) is stored as an index into the facts table.
@@ -111,7 +125,9 @@ impl DayProduct {
             parse_revision: PARSE_REVISION,
             made: self.made,
             day: self.day,
-            excluded: self.excluded,
+            excluded: self.excluded.len(),
+            known_ids: &self.known,
+            excluded_ids: &self.excluded,
             city_ids: &self.city_ids,
             facts: table.into_iter().map(DocOut).collect(),
             pages,
@@ -134,7 +150,11 @@ impl DayProduct {
             return None;
         }
         let stored: ProductIn = serde_json::from_slice(&bytes).ok()?;
-        if stored.schema != SCHEMA || stored.parse_revision != PARSE_REVISION || stored.day != day {
+        if stored.schema != SCHEMA
+            || stored.parse_revision != PARSE_REVISION
+            || stored.day != day
+            || stored.excluded != stored.excluded_ids.len()
+        {
             return None;
         }
         let facts: Vec<Doc> = stored
@@ -176,7 +196,8 @@ impl DayProduct {
         Some(Self {
             made: stored.made,
             day,
-            excluded: stored.excluded,
+            known: stored.known_ids,
+            excluded: stored.excluded_ids,
             city_ids: stored.city_ids,
             pages,
         })
@@ -191,6 +212,8 @@ struct ProductOut<'a> {
     made: f64,
     day: u32,
     excluded: usize,
+    known_ids: &'a BTreeSet<String>,
+    excluded_ids: &'a BTreeSet<String>,
     city_ids: &'a BTreeSet<String>,
     facts: Vec<DocOut<'a>>,
     pages: Vec<PageOut<'a>>,
@@ -225,6 +248,8 @@ struct ProductIn {
     made: f64,
     day: u32,
     excluded: usize,
+    known_ids: BTreeSet<String>,
+    excluded_ids: BTreeSet<String>,
     city_ids: BTreeSet<String>,
     facts: Vec<ValIn>,
     pages: Vec<PageIn>,
@@ -394,7 +419,8 @@ mod tests {
         let product = DayProduct {
             made: 1_790_300_000_000.5,
             day: 20260924,
-            excluded: 2,
+            known: ["raw/c".to_owned()].into(),
+            excluded: ["raw/d".to_owned(), "raw/e".to_owned()].into(),
             city_ids: ["108".to_owned()].into(),
             pages: vec![
                 StoredPage {
@@ -419,7 +445,10 @@ mod tests {
         let back = DayProduct::decode(&bytes, 20260924).unwrap();
         assert_eq!(back.made_of(), product.made_of());
         assert_eq!(back.city_ids, product.city_ids);
-        assert_eq!((back.made, back.excluded), (product.made, product.excluded));
+        assert_eq!(
+            (back.made, &back.known, &back.excluded),
+            (product.made, &product.known, &product.excluded)
+        );
         for (a, b) in back.pages.iter().zip(&product.pages) {
             assert_eq!(
                 (a.kind, a.hour, a.fetched_at_ms, &a.sha256, &a.raw_id),

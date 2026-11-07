@@ -84,6 +84,11 @@ const MINUTE_KEEP_MS: f64 = 40. * 60_000.;
 const MINUTE_FIRST: usize = 4;
 /// A day's product is stored at most once per this interval by one process.
 const PRODUCT_EVERY: Duration = Duration::from_secs(600);
+/// A reduced AWS hourly page whose full read failed is read again after this long.
+const EXPAND_RETRY: Duration = Duration::from_secs(600);
+/// Acquisitions of one minute tried, newest first, when a newer one is not complete or does not
+/// parse.
+const MINUTE_CANDIDATES: usize = 3;
 /// Legacy minute collection cadence.
 const MINUTE_CADENCE: i64 = 2;
 /// S3 day partitions read again after this long (other processes may have published).
@@ -180,6 +185,8 @@ enum Flight {
     LoadRest,
     /// Store the day products whose pages changed.
     Product,
+    /// Read AWS hourly pages in full again whose reduction misses a city station.
+    Expand,
     Fold,
     Geocode,
     Minute,
@@ -216,8 +223,12 @@ struct Pages {
     failed_days: std::collections::BTreeSet<u32>,
     /// Days whose latest S3 read failed (no product is stored for them).
     unreadable: BTreeSet<u32>,
-    /// Listed groups S06 excluded in each read day (S16; a product carries the count).
-    excluded: BTreeMap<u32, usize>,
+    /// Raw identities of the listed groups of each read day found complete beyond the held
+    /// pages (superseded ones; S16 accounts for every listed group).
+    known: BTreeMap<u32, BTreeSet<String>>,
+    /// Raw identities of a member of each listed group of a read day S06 excluded (S16; checked
+    /// again at every read of the day).
+    excluded: BTreeMap<u32, BTreeSet<String>>,
     /// AWS hourly pages kept reduced to registry facts outside this city set.
     reduced: BTreeMap<Publication, Arc<BTreeSet<String>>>,
     minute_read: Option<std::time::Instant>,
@@ -257,6 +268,8 @@ struct State {
     product_attempts: HashMap<u32, std::time::Instant>,
     /// A fold recomputed the hourly part since the products were last compared.
     product_due: bool,
+    /// When this process last read each reduced AWS hourly page in full again.
+    expand_attempts: HashMap<Publication, std::time::Instant>,
 }
 #[derive(Clone)]
 struct HourlyFold {
@@ -595,6 +608,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             s.pages.failed_days.retain(|d| *d >= oldest);
             s.pages.unreadable.retain(|d| *d >= oldest);
             s.pages.excluded.retain(|d, _| *d >= oldest);
+            s.pages.known.retain(|d, _| *d >= oldest);
             s.products.retain(|d, _| *d >= oldest);
             s.product_attempts.retain(|d, _| *d >= oldest);
         }
@@ -726,7 +740,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         };
         for r in reads.iter_mut() {
             if s.pages.days.contains_key(&r.day) {
-                r.base = Some(s.pages.excluded.get(&r.day).copied().unwrap_or(0));
+                r.base = Some(Accounted {
+                    known: s.pages.known.get(&r.day).cloned().unwrap_or_default(),
+                    excluded: s.pages.excluded.get(&r.day).cloned().unwrap_or_default(),
+                });
                 continue;
             }
             let (Some(listed), Some(stored)) = (&r.listed, r.product.take()) else {
@@ -737,7 +754,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             }
             s.products.insert(r.day, stored.made_of());
             let reduced = Arc::new(stored.city_ids.clone());
-            for page in stored.pages {
+            let mut stored = stored;
+            for page in std::mem::take(&mut stored.pages) {
                 if !listed.iter().any(|l| l.raw_id == page.raw_id) {
                     continue;
                 }
@@ -751,15 +769,19 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 );
                 hold(&mut s.pages, page.kind, held, reduced);
             }
-            r.base = Some(stored.excluded);
+            r.base = Some(Accounted {
+                known: stored.known,
+                excluded: stored.excluded,
+            });
             s.pages.dirty = true;
             s.pages.hourly_dirty = true;
         }
     }
     /// Bring one day up to its catalogs. With pages held for it (a product, or an earlier read),
-    /// only the newest listed page of each kind and hour that is newer than the held one is
-    /// restored and parsed; otherwise, or when such a page is not complete or does not parse,
-    /// every page of the day is read as before (the newest complete page of each hour).
+    /// only the listed groups not accounted for are restored: the excluded ones again and the new
+    /// ones, and a new page newer than the held one of its kind and hour is parsed and held.
+    /// Otherwise, or when such a page does not parse, every page of the day is read as before
+    /// (the newest complete page of each hour).
     async fn complete_day(&self, r: DayRead, deadline: Instant) {
         let DayRead {
             day, listed, base, ..
@@ -768,34 +790,73 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             self.day_failed(day);
             return;
         };
-        if let Some(excluded) = base {
-            match self.restore_newer(&listed, deadline).await {
-                Ok(Some(changed)) => return self.day_read(day, excluded, changed),
+        if let Some(base) = base {
+            match self.compare_day(day, &listed, base, deadline).await {
+                Ok(Some((changed, accounted))) => return self.day_read(day, accounted, changed),
                 Ok(None) => {}
                 Err(()) => return self.day_failed(day),
             }
         }
         self.raw_day(day, &listed, deadline).await;
     }
-    /// Restore and hold the newest listed pages newer than the held ones. Ok(None): one is not
-    /// complete or does not parse.
-    async fn restore_newer(
+    /// [`Self::complete_day`] with pages held. Ok(None): a new newest page does not parse.
+    async fn compare_day(
         &self,
+        day: u32,
         listed: &[ListedPage],
+        base: Accounted,
         deadline: Instant,
-    ) -> Result<Option<bool>, ()> {
-        let mut newest: BTreeMap<(&'static str, Publication), &ListedPage> = BTreeMap::new();
-        for page in listed {
-            let slot = newest.entry((page.kind, page.hour)).or_insert(page);
-            if newer(page.at, &page.sha256, Some((slot.at, slot.sha256.as_str()))) {
-                *slot = page;
+    ) -> Result<Option<(bool, Accounted)>, ()> {
+        let Accounted { mut known, .. } = base;
+        let unknown: Vec<&ListedPage> = {
+            let s = self.state();
+            let held: BTreeSet<&str> = s
+                .pages
+                .ids
+                .iter()
+                .filter(|((_, hour), _)| hour.date() == day)
+                .map(|(_, (_, _, raw_id))| raw_id.as_str())
+                .collect();
+            listed
+                .iter()
+                .filter(|p| !held.contains(p.raw_id.as_str()) && !known.contains(&p.raw_id))
+                .collect()
+        };
+        let wanted: Vec<(CatalogId, crate::storage::RecordId)> = unknown
+            .iter()
+            .map(|p| (p.catalog.clone(), p.member.clone()))
+            .collect();
+        let read = self.restore(&wanted, deadline).await?;
+        let mut excluded = BTreeSet::new();
+        let mut complete: Vec<(&ListedPage, Vec<RawRecord>)> = Vec::new();
+        for (page, records) in unknown.into_iter().zip(read) {
+            match records {
+                Some(records) => {
+                    known.insert(page.raw_id.clone());
+                    complete.push((page, records));
+                }
+                None => {
+                    excluded.insert(page.raw_id.clone());
+                }
             }
         }
-        let wanted: Vec<&ListedPage> = {
+        // Of each kind and hour the newest complete new page, when newer than the held one.
+        let mut newest: BTreeMap<(&'static str, Publication), (&ListedPage, Vec<RawRecord>)> =
+            BTreeMap::new();
+        for (page, records) in complete {
+            match newest.get(&(page.kind, page.hour)) {
+                Some((other, _))
+                    if !newer(page.at, &page.sha256, Some((other.at, &other.sha256))) => {}
+                _ => {
+                    newest.insert((page.kind, page.hour), (page, records));
+                }
+            }
+        }
+        let found: Vec<(&'static str, Vec<RawRecord>)> = {
             let s = self.state();
             newest
                 .into_values()
-                .filter(|page| {
+                .filter(|(page, _)| {
                     newer(
                         page.at,
                         &page.sha256,
@@ -805,28 +866,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                             .map(|(at, sha, _)| (*at, sha.as_str())),
                     )
                 })
+                .map(|(page, records)| (page.kind, records))
                 .collect()
         };
-        if wanted.is_empty() {
-            return Ok(Some(false));
-        }
-        let mut found: Vec<(&'static str, Vec<RawRecord>)> = Vec::new();
-        for kind in product::PAGE_KINDS {
-            let of_kind: Vec<&ListedPage> =
-                wanted.iter().copied().filter(|p| p.kind == kind).collect();
-            for chunk in of_kind.chunks(MINUTE_FIRST) {
-                let members: Vec<_> = chunk.iter().map(|p| p.member.clone()).collect();
-                match self
-                    .reader
-                    .members(&chunk[0].catalog, &members, deadline)
-                    .await
-                {
-                    Ok(Some(read)) => found.extend(read.into_iter().map(|a| (kind, a))),
-                    Ok(None) => return Ok(None),
-                    Err(_) => return Err(()),
-                }
-            }
-        }
         let parsed = crate::observability::spawn_blocking(move || {
             found
                 .iter()
@@ -851,7 +893,50 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         for (kind, page) in parsed {
             changed |= hold(&mut s.pages, kind, page, None);
         }
-        Ok(Some(changed))
+        // Pages a newer one replaced stay accounted for.
+        known.extend(s.pages.known.get(&day).into_iter().flatten().cloned());
+        Ok(Some((changed, Accounted { known, excluded })))
+    }
+    /// Restore `wanted` (catalog and member), a few members per catalog read (each read is bounded
+    /// by the S06 lookup deadline): the records of each, or None when its group is not complete.
+    /// Err: a read failed.
+    async fn restore(
+        &self,
+        wanted: &[(CatalogId, crate::storage::RecordId)],
+        deadline: Instant,
+    ) -> Result<Vec<Option<Vec<RawRecord>>>, ()> {
+        let mut out: Vec<Option<Vec<RawRecord>>> = vec![None; wanted.len()];
+        let mut at = 0;
+        while at < wanted.len() {
+            let catalog = &wanted[at].0;
+            let mut end = at + 1;
+            while end < wanted.len() && end - at < MINUTE_FIRST && wanted[end].0 == *catalog {
+                end += 1;
+            }
+            let members: Vec<_> = wanted[at..end].iter().map(|(_, m)| m.clone()).collect();
+            match self.reader.members(catalog, &members, deadline).await {
+                Ok(Some(read)) if read.len() == members.len() => {
+                    for (slot, records) in out[at..end].iter_mut().zip(read) {
+                        *slot = Some(records);
+                    }
+                }
+                Ok(_) if members.len() == 1 => {}
+                Ok(_) => {
+                    // One of them is not complete: each alone.
+                    for (slot, member) in out[at..end].iter_mut().zip(&members) {
+                        *slot = self
+                            .reader
+                            .members(catalog, std::slice::from_ref(member), deadline)
+                            .await
+                            .map_err(|_| ())?
+                            .and_then(|mut read| read.pop());
+                    }
+                }
+                Err(_) => return Err(()),
+            }
+            at = end;
+        }
+        Ok(out)
     }
     /// Read every page of one day (each complete acquisition is restored and parsed).
     async fn raw_day(&self, day: u32, listed: &[ListedPage], deadline: Instant) {
@@ -865,24 +950,38 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             async {
                 if want_hourly {
                     self.reader
-                        .raw_counted("kma-web", "aws-hourly", &aws, &partition, deadline)
+                        .raw_excluded("kma-web", "aws-hourly", &aws, &partition, deadline)
                         .await
                 } else {
-                    Ok((Vec::new(), 0))
+                    Ok((Vec::new(), Vec::new()))
                 }
             },
             async {
                 if want_city {
                     self.reader
-                        .raw_counted("kma-web", "city-obs", &city_k, &partition, deadline)
+                        .raw_excluded("kma-web", "city-obs", &city_k, &partition, deadline)
                         .await
                 } else {
-                    Ok((Vec::new(), 0))
+                    Ok((Vec::new(), Vec::new()))
                 }
             },
         );
         let (Ok((hourly, hourly_excluded)), Ok((city, city_excluded))) = (hourly, city) else {
             return self.day_failed(day);
+        };
+        // S16: every listed group is complete (known) or excluded.
+        let key = |r: &RawRecord| r.envelope.identity.object_key().ok();
+        let accounted = Accounted {
+            known: hourly
+                .iter()
+                .chain(&city)
+                .filter_map(|a| a.first().and_then(key))
+                .collect(),
+            excluded: hourly_excluded
+                .iter()
+                .chain(&city_excluded)
+                .filter_map(|id| id.object_key().ok())
+                .collect(),
         };
         let parsed = crate::observability::spawn_blocking(move || {
             (
@@ -907,15 +1006,17 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             }
         }
         // S16: a group S06 excluded makes the day's read partial.
-        self.day_read(day, hourly_excluded + city_excluded, true);
+        self.day_read(day, accounted, true);
     }
-    /// A day read completely, with `excluded` listed groups S06 excluded (S16).
-    fn day_read(&self, day: u32, excluded: usize, changed: bool) {
+    /// A day read completely: its listed groups found complete and those S06 excluded (S16).
+    fn day_read(&self, day: u32, accounted: Accounted, changed: bool) {
         let mut s = self.state();
         s.pages.days.insert(day, std::time::Instant::now());
         s.pages.unreadable.remove(&day);
-        s.pages.excluded.insert(day, excluded);
-        if excluded > 0 {
+        let partial = !accounted.excluded.is_empty();
+        s.pages.known.insert(day, accounted.known);
+        s.pages.excluded.insert(day, accounted.excluded);
+        if partial {
             s.pages.failed_days.insert(day);
         } else {
             s.pages.failed_days.remove(&day);
@@ -932,10 +1033,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         s.pages.failed_days.insert(day);
     }
     /// The minute pages of the readers' reach that this process does not hold, newest first by
-    /// completion: the day catalogs are listed (control objects only, no record is read), and of
-    /// each minute only its newest acquisition is kept. A catalog that cannot be listed adds
-    /// nothing (the next reload lists it again).
-    async fn minute_entries(&self, now_ms: i64, deadline: Instant) -> Vec<MinuteEntry> {
+    /// completion: the day catalogs are listed (control objects only, no record is read). Of each
+    /// minute up to [`MINUTE_CANDIDATES`] acquisitions are kept, newest first (the order a
+    /// latest-first read meets them). A catalog that cannot be listed adds nothing (the next reload
+    /// lists it again).
+    async fn minute_entries(&self, now_ms: i64, deadline: Instant) -> Vec<Vec<MinuteEntry>> {
         let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
         let today = schedule::from_ms(now_ms);
         let mut partitions = vec![format!("{:08}", today.date())];
@@ -943,7 +1045,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             partitions.push(format!("{:08}", floor.date()));
         }
         let held: BTreeSet<Publication> = self.state().pages.minute.keys().copied().collect();
-        let mut newest: BTreeMap<Publication, MinuteEntry> = BTreeMap::new();
+        let mut minutes: BTreeMap<Publication, Vec<MinuteEntry>> = BTreeMap::new();
         for partition in partitions {
             let Ok(id) = super::records::catalog("kma-web", "aws-minute", &aws_key(), &partition)
             else {
@@ -962,73 +1064,75 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 if p <= floor || held.contains(&p) {
                     continue;
                 }
-                let entry = MinuteEntry {
+                minutes.entry(p).or_default().push(MinuteEntry {
                     catalog: id.clone(),
                     member: e.identity,
                     completed,
-                };
-                // Of one minute, the acquisition a latest-first read meets first.
-                if newest.get(&p).is_none_or(|old| entry.after(old)) {
-                    newest.insert(p, entry);
-                }
+                });
             }
         }
-        let mut out: Vec<MinuteEntry> = newest.into_values().collect();
-        out.sort_by(|a, b| b.order().cmp(&a.order()));
+        let mut out: Vec<Vec<MinuteEntry>> = minutes
+            .into_values()
+            .map(|mut candidates| {
+                candidates.sort_by(|a, b| b.order().cmp(&a.order()));
+                candidates.truncate(MINUTE_CANDIDATES);
+                candidates
+            })
+            .collect();
+        out.sort_by(|a, b| b[0].order().cmp(&a[0].order()));
         out
     }
-    /// Restore `entries` (one catalog read per catalog, then only their groups) and keep the pages
-    /// after `floor` that this process does not hold. A group that is not complete leaves its
-    /// minute out, not the others.
+    /// Restore the minutes (candidates newest first) and keep the pages after `floor` that this
+    /// process does not hold: the newest acquisition of each, and for a minute whose acquisition
+    /// is not complete or does not parse, the next one.
     async fn restore_minutes(
         &self,
-        entries: Vec<MinuteEntry>,
+        minutes: Vec<Vec<MinuteEntry>>,
         floor: Publication,
         deadline: Instant,
     ) {
-        // A few members per read: each read is bounded by the S06 lookup deadline.
-        let mut by_catalog: Vec<(CatalogId, Vec<crate::storage::RecordId>)> = Vec::new();
-        for e in entries {
-            match by_catalog
+        let mut pending: Vec<std::vec::IntoIter<MinuteEntry>> =
+            minutes.into_iter().map(Vec::into_iter).collect();
+        let mut done = vec![false; pending.len()];
+        let mut kept = Vec::new();
+        for _ in 0..MINUTE_CANDIDATES {
+            let round: Vec<(usize, MinuteEntry)> = pending
                 .iter_mut()
-                .find(|(id, members)| *id == e.catalog && members.len() < MINUTE_FIRST)
-            {
-                Some((_, members)) => members.push(e.member),
-                None => by_catalog.push((e.catalog, vec![e.member])),
+                .enumerate()
+                .filter(|(i, _)| !done[*i])
+                .filter_map(|(i, c)| c.next().map(|e| (i, e)))
+                .collect();
+            if round.is_empty() {
+                break;
             }
-        }
-        let mut found = Vec::new();
-        for (id, members) in by_catalog {
-            match self.reader.members(&id, &members, deadline).await {
-                Ok(Some(read)) => found.extend(read),
-                Ok(None) => {
-                    for member in members {
-                        if let Ok(Some(read)) = self
-                            .reader
-                            .members(&id, std::slice::from_ref(&member), deadline)
-                            .await
-                        {
-                            found.extend(read);
-                        }
+            let wanted: Vec<_> = round
+                .iter()
+                .map(|(_, e)| (e.catalog.clone(), e.member.clone()))
+                .collect();
+            let Ok(read) = self.restore(&wanted, deadline).await else {
+                break;
+            };
+            let parsed = crate::observability::spawn_blocking(move || {
+                read.iter()
+                    .map(|a| a.as_deref().and_then(parse_minute))
+                    .collect::<Vec<_>>()
+            })
+            .await
+            .unwrap_or_default();
+            for ((i, _), page) in round.iter().zip(parsed) {
+                if let Some((p, rows)) = page {
+                    done[*i] = true;
+                    if p > floor {
+                        kept.push((p, rows));
                     }
                 }
-                Err(_) => {}
             }
         }
-        if found.is_empty() {
+        if kept.is_empty() {
             return;
         }
-        let parsed = crate::observability::spawn_blocking(move || {
-            found
-                .iter()
-                .filter_map(|a| parse_minute(a))
-                .filter(|(p, _)| *p > floor)
-                .collect::<Vec<_>>()
-        })
-        .await
-        .unwrap_or_default();
         let mut s = self.state();
-        for (p, rows) in parsed {
+        for (p, rows) in kept {
             s.pages.minute.entry(p).or_insert(rows);
         }
         s.pages.dirty = true;
@@ -1347,7 +1451,27 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     }
                 }
                 s.hourly_fold = Some(fold.clone());
+                // Pages reduced for a smaller city set lack a city station's rows (a station
+                // joined the set since): they are read in full again.
+                let stale: Vec<(Publication, String)> = s
+                    .pages
+                    .reduced
+                    .iter()
+                    .filter(|(_, set)| !set.is_superset(&fold.cities))
+                    .filter_map(|(h, _)| {
+                        let (_, _, raw_id) = s.pages.ids.get(&("aws-hourly", *h))?;
+                        Some((*h, raw_id.clone()))
+                    })
+                    .filter(|(h, _)| {
+                        s.expand_attempts
+                            .get(h)
+                            .is_none_or(|at| at.elapsed() >= EXPAND_RETRY)
+                    })
+                    .collect();
                 drop(s);
+                if !stale.is_empty() {
+                    self.expand(stale);
+                }
                 self.want_products(now_ms);
                 fold
             }
@@ -1433,6 +1557,61 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 s.pages.hourly_dirty = true;
             })
         });
+    }
+
+    // ---- reduced pages ----
+
+    /// Read the AWS hourly `pages` (hour and raw identity) in full again and hold their whole
+    /// rows while still the held pages; no request waits for it.
+    fn expand(self: &Arc<Self>, pages: Vec<(Publication, String)>) {
+        let _ = self.start(Flight::Expand, Duration::ZERO, move |this| {
+            Box::pin(async move { this.read_full(pages).await })
+        });
+    }
+    async fn read_full(&self, pages: Vec<(Publication, String)>) {
+        let deadline = Instant::now() + READ_DEADLINE;
+        let mut wanted = Vec::new();
+        {
+            let mut s = self.state();
+            for (hour, raw_id) in &pages {
+                s.expand_attempts.insert(*hour, std::time::Instant::now());
+                let (Ok(member), Ok(catalog)) = (
+                    crate::storage::RecordId::from_object_key(raw_id),
+                    super::records::catalog("kma-web", "aws-hourly", &aws_key(), &hour.base_date()),
+                ) else {
+                    continue;
+                };
+                wanted.push((catalog, member));
+            }
+        }
+        let Ok(read) = self.restore(&wanted, deadline).await else {
+            return;
+        };
+        let parsed = crate::observability::spawn_blocking(move || {
+            read.iter()
+                .filter_map(|a| a.as_deref().and_then(parse_hourly))
+                .collect::<Vec<_>>()
+        })
+        .await
+        .unwrap_or_default();
+        let mut s = self.state();
+        let mut changed = false;
+        for (p, rows, _, _, raw_id) in parsed {
+            let same = s
+                .pages
+                .ids
+                .get(&("aws-hourly", p))
+                .is_some_and(|(_, _, held)| *held == raw_id);
+            if same {
+                s.pages.hourly.insert(p, rows);
+                s.pages.reduced.remove(&p);
+                changed = true;
+            }
+        }
+        if changed {
+            s.pages.dirty = true;
+            s.pages.hourly_dirty = true;
+        }
     }
 
     // ---- day products ----
@@ -1887,6 +2066,7 @@ impl<T> Observations<T> {
                 Flight::Fold,
                 Flight::Geocode,
                 Flight::Product,
+                Flight::Expand,
             ]
             .iter()
             .any(|f| flights.contains_key(f))
@@ -1969,9 +2149,6 @@ impl MinuteEntry {
     /// Latest-first catalog order: completion, then the raw digest.
     fn order(&self) -> (u64, &str) {
         (self.completed, &self.member.raw_sha256)
-    }
-    fn after(&self, other: &Self) -> bool {
-        self.order() > other.order()
     }
 }
 type ParsedPage = (Publication, Arc<Vec<Doc>>, f64, String, String);
@@ -2077,7 +2254,12 @@ fn product_candidates(s: &mut State, now_ms: i64) -> Vec<(DayProduct, MadeOf)> {
                 })
             })
             .unwrap_or_else(|| (*cities).clone());
-        let made_of = MadeOf::new(pages.iter().map(|p| p.raw_id.as_str()), &city_ids);
+        let excluded = s.pages.excluded.get(&day).cloned().unwrap_or_default();
+        let made_of = MadeOf::new(
+            pages.iter().map(|p| p.raw_id.as_str()),
+            &city_ids,
+            &excluded,
+        );
         if s.products.get(&day) == Some(&made_of)
             || s.product_attempts
                 .get(&day)
@@ -2090,7 +2272,16 @@ fn product_candidates(s: &mut State, now_ms: i64) -> Vec<(DayProduct, MadeOf)> {
             DayProduct {
                 made,
                 day,
-                excluded: s.pages.excluded.get(&day).copied().unwrap_or(0),
+                known: s
+                    .pages
+                    .known
+                    .get(&day)
+                    .into_iter()
+                    .flatten()
+                    .filter(|id| !pages.iter().any(|p| p.raw_id == **id))
+                    .cloned()
+                    .collect(),
+                excluded,
                 city_ids,
                 pages,
             },
@@ -2235,6 +2426,13 @@ fn hold(
     if !newer(at, &sha, current) {
         return false;
     }
+    if let Some((_, _, replaced)) = pages.ids.get(&(kind, p)) {
+        pages
+            .known
+            .entry(p.date())
+            .or_default()
+            .insert(replaced.clone());
+    }
     if kind == "aws-hourly" {
         pages.hourly.insert(p, rows);
         pages.hourly_at.insert(p, at);
@@ -2269,7 +2467,12 @@ struct DayRead {
     day: u32,
     listed: Option<Vec<ListedPage>>,
     product: Option<DayProduct>,
-    base: Option<usize>,
+    base: Option<Accounted>,
+}
+/// The listed groups of a day beyond its held pages: found complete, and S06 excluded.
+struct Accounted {
+    known: BTreeSet<String>,
+    excluded: BTreeSet<String>,
 }
 /// A page a day catalog lists.
 struct ListedPage {

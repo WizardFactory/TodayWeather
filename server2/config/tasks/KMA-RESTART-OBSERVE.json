@@ -11,6 +11,7 @@
     "server2/src/domestic/kma/source/observe_product.rs",
     "server2/src/domestic/kma/source/records.rs",
     "server2/src/storage/catalog.rs",
+    "server2/src/storage/codec.rs",
     "server2/tests/cache.rs",
     "server2/tests/domestic.rs",
     "server2/tests/domestic/observe.rs",

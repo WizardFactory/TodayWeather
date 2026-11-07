@@ -1202,6 +1202,31 @@ fn one_group(record: &RawRecord) -> GroupDeclaration {
     };
     GroupDeclaration::new(vec![member], &CatalogLimits::default()).unwrap()
 }
+/// Publish one KMA page record as the S13 acquirer does (one group, the day catalog).
+pub(super) async fn publish_record<T: server2::storage::CatalogTransport>(
+    store: &CatalogStore<T>,
+    record: RawRecord,
+) {
+    store
+        .publish(one_group(&record), vec![record], deadline())
+        .await
+        .unwrap();
+}
+/// Store the raw body [`store_pages_without`] left out (a repair of its group).
+pub(super) async fn repair_raw<T>(transport: &T, record: &RawRecord)
+where
+    T: server2::storage::CatalogTransport + Clone,
+{
+    let limits = CatalogLimits::default();
+    let attached = one_group(record)
+        .attach(vec![record.clone()], &limits)
+        .unwrap();
+    server2::storage::RawRecordStore::new(transport.clone(), limits.raw.clone())
+        .unwrap()
+        .publish(attached[0].clone())
+        .await
+        .unwrap();
+}
 /// Store many page groups as their publications leave them (descriptor, raw body, one catalog
 /// entry each), writing each new day catalog once: the S3 test peer keeps 64 revisions of an
 /// object, fewer than the publications of a day.
