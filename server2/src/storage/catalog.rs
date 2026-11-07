@@ -169,9 +169,8 @@ struct Context {
     controls: usize,
     output: usize,
     pins: BTreeMap<CatalogId, Option<Pinned>>,
-    /// Raw records a wide lookup read ahead, by object key: the restore takes each once where it
-    /// would have read it (anything else it reads as before).
-    ahead_raw: BTreeMap<String, Result<RawRecord, Error>>,
+    /// Pages of one group read at once (a wide lookup; one otherwise).
+    width: usize,
 }
 impl Context {
     fn new() -> Self {
@@ -179,7 +178,7 @@ impl Context {
             controls: 0,
             output: 0,
             pins: BTreeMap::new(),
-            ahead_raw: BTreeMap::new(),
+            width: 1,
         }
     }
 }
@@ -295,18 +294,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
         if c.output > self.limits.output_bytes {
             return Err(Error::Capacity);
         }
-        let ahead = if c.ahead_raw.is_empty() {
-            None
-        } else {
-            e.identity
-                .object_key()
-                .ok()
-                .and_then(|key| c.ahead_raw.remove(&key))
-        };
-        let record = match ahead {
-            Some(read) => read?,
-            None => self.raw.load(&e.identity).await?,
-        };
+        let record = self.raw.load(&e.identity).await?;
         if &record.envelope != e {
             return Err(Error::Corrupt("raw member envelope"));
         }
@@ -323,9 +311,57 @@ impl<T: CatalogTransport> CatalogStore<T> {
         c: &mut Context,
     ) -> Result<Vec<RawRecord>, Error> {
         let envelopes = self.envelopes(d).await?;
+        if c.width > 1 {
+            return self.group_records_wide(&envelopes, c).await;
+        }
         let mut records = Vec::new();
         for e in &envelopes {
             records.push(self.raw_checked(e, c).await?);
+        }
+        Ok(records)
+    }
+    /// [`Self::group_records`] of a wide lookup: up to `c.width` pages read at once and met in
+    /// page order with the same output accounting and checks, so the first failure ends the group
+    /// as in `lookup`. The reads still in flight are then dropped and no later page is started.
+    async fn group_records_wide(
+        &self,
+        envelopes: &[Envelope],
+        c: &mut Context,
+    ) -> Result<Vec<RawRecord>, Error> {
+        use futures_util::StreamExt;
+        // A page is read only if the output bound admits it after the pages before it.
+        let mut output = Some(c.output);
+        let mut admitted = Vec::with_capacity(envelopes.len());
+        for e in envelopes {
+            output = output
+                .and_then(|o| o.checked_add(e.raw_length))
+                .filter(|o| *o <= self.limits.output_bytes);
+            admitted.push(output.map(|_| e.identity.clone()));
+        }
+        let reads = futures_util::stream::iter(admitted)
+            .map(|id| async move {
+                match id {
+                    Some(id) => Some(self.raw.load(&id).await),
+                    None => None,
+                }
+            })
+            .buffered(c.width);
+        let mut reads = std::pin::pin!(reads);
+        let mut records = Vec::with_capacity(envelopes.len());
+        for e in envelopes {
+            c.output = c.output.checked_add(e.raw_length).ok_or(Error::Capacity)?;
+            if c.output > self.limits.output_bytes {
+                return Err(Error::Capacity);
+            }
+            // Admitted by the same sum, so read.
+            let Some(Some(read)) = reads.next().await else {
+                return Err(Error::Capacity);
+            };
+            let record = read?;
+            if &record.envelope != e {
+                return Err(Error::Corrupt("raw member envelope"));
+            }
+            records.push(record);
         }
         Ok(records)
     }
@@ -753,11 +789,11 @@ impl<T: CatalogTransport> CatalogStore<T> {
         .await
     }
     /// [`Self::lookup`] with up to `width` S3 reads in flight instead of one, opt-in per call for
-    /// a read a request waits on. After the catalog, the records its restore reads are read ahead
-    /// together; the restore then runs as in `lookup` over them (same checks, exclusions and
-    /// result; a read that failed fails where the restore meets it). The restore reads the
-    /// descriptors itself, within the control byte budget as `lookup` does. A group the restore
-    /// excludes may have been read in vain.
+    /// a read a request waits on. The restore runs as in `lookup` (same checks, control byte
+    /// budget, exclusions and result), except that a group's pages are read up to `width` at a
+    /// time as it reaches the group. They are met in page order: the first failure ends the group
+    /// as in `lookup` and drops the reads still in flight (at most `width - 1` later pages were
+    /// requested), and nothing is read ahead of the group being restored.
     ///
     /// It waits for one of the store's I/O admissions, as `lookup` does, and takes up to
     /// `width - 1` more only if they are free at once: it never waits for them, so no other
@@ -781,15 +817,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
                         let permits = self.io.clone().try_acquire_many_owned(n as u32).ok()?;
                         Some((n, permits))
                     });
-                    let width = 1 + extra.as_ref().map_or(0, |(n, _)| *n);
                     let mut c = Context::new();
-                    self.pin(id, &mut c).await?;
-                    if width > 1
-                        && let Some(Some(p)) = c.pins.get(id)
-                    {
-                        let entries = p.catalog.entries.clone();
-                        self.read_ahead(&entries, width, &mut c).await;
-                    }
+                    c.width = 1 + extra.as_ref().map_or(0, |(n, _)| *n);
                     self.lookup_inner(id, &mut c).await
                 })
                 .await
@@ -797,39 +826,6 @@ impl<T: CatalogTransport> CatalogStore<T> {
             },
         )
         .await
-    }
-    /// Read the records restoring `entries` reads, every listed record, up to `width` at a time
-    /// (results kept for the restore). Descriptors are left to the restore, which counts them
-    /// against the control byte budget. A listed page outside a group is excluded unread; reading
-    /// stops where the records would pass the restore's output bound.
-    async fn read_ahead(&self, entries: &[Envelope], width: usize, c: &mut Context) {
-        use futures_util::StreamExt;
-        let mut reads = Vec::new();
-        let mut output = c.output;
-        for e in entries {
-            match &e.fetch_group {
-                // The restore fails on this group before any record of it.
-                Some(r) if r.descriptor_key().is_err() => continue,
-                None if e.pagination.is_some() => continue,
-                _ => {}
-            }
-            output = output.saturating_add(e.raw_length);
-            if output > self.limits.output_bytes {
-                break;
-            }
-            if let Ok(key) = e.identity.object_key() {
-                reads.push((key, e.identity.clone()));
-            }
-        }
-        let read: Vec<(String, Result<RawRecord, Error>)> = futures_util::stream::iter(reads)
-            .map(|(key, id)| async move {
-                let read = self.raw.load(&id).await;
-                (key, read)
-            })
-            .buffer_unordered(width)
-            .collect()
-            .await;
-        c.ahead_raw.extend(read);
     }
     fn uncertain(e: Error) -> Error {
         match e {

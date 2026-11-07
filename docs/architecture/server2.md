@@ -2409,10 +2409,11 @@ while the collector replays and publishes on the bulk lane.
 **Wide reads.** `CatalogStore::lookup` restores a catalog one S3 read at a time: on EC2 after the
 restarts, today's UV partition (three 4-page acquisitions) took 16 reads in a row. The life read's
 needed partitions use `CatalogStore::lookup_wide` instead, opt-in per call
-(`Reader::acquisitions_wide`); every other reader still uses `lookup`. After the catalog it reads
-the records ahead, up to `width` at a time, then restores over them with the same checks and
-result; the restore reads the descriptors itself, within the control byte budget as `lookup`
-does. It waits for one I/O admission of the store, as `lookup` does, and takes
+(`Reader::acquisitions_wide`); every other reader still uses `lookup`. It restores as `lookup`
+does (same checks, control byte budget, exclusions and result), except that a group's pages are
+read up to `width` at a time when the restore reaches the group and are met in page order: the
+first failure ends the group and drops the reads still in flight, and nothing is read ahead of the
+group being restored. It waits for one I/O admission of the store, as `lookup` does, and takes
 the others only if they are free at once, so no other reader's lookup queues behind it; its reads
 still pass the shared S3 admission (12 in flight per process) like any other read. The four reads
 are shared among the needed partitions (one partition read alone gets all four), so the station

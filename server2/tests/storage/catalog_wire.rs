@@ -1448,8 +1448,20 @@ async fn targeted_members_read_one_catalog_and_only_their_groups() {
     ));
     assert!(started.elapsed() < Duration::from_secs(1));
 }
-/// A wide lookup (opt-in per call) reads the descriptors and records ahead and restores what a
-/// lookup restores: the same acquisitions, exclusions and dependencies, each object read once.
+/// The records of a restored set, by acquisition (envelope and bytes).
+fn restored(set: &CompleteSet) -> Vec<Vec<(Envelope, Vec<u8>)>> {
+    set.acquisitions()
+        .iter()
+        .map(|a| {
+            a.records()
+                .iter()
+                .map(|r| (r.envelope.clone(), r.bytes.to_vec()))
+                .collect()
+        })
+        .collect()
+}
+/// A wide lookup (opt-in per call) restores what a lookup restores: the same acquisitions,
+/// exclusions and dependencies, each object read once.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn wide_lookup_restores_what_a_lookup_restores() {
     let peer = Peer::new();
@@ -1467,17 +1479,6 @@ async fn wide_lookup_restores_what_a_lookup_restores() {
     // The second group loses its last page: both lookups exclude it.
     let lost = groups[1].1[1].envelope.identity.object_key().unwrap();
     peer.fault("forget", &lost).await;
-    let records = |set: &CompleteSet| {
-        set.acquisitions()
-            .iter()
-            .map(|a| {
-                a.records()
-                    .iter()
-                    .map(|r| (r.envelope.clone(), r.bytes.to_vec()))
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>()
-    };
     let before = peer.requests("GET ").await;
     let narrow = ready(store.lookup(&id, deadline()).await.unwrap());
     let narrow_gets = peer.requests("GET ").await - before;
@@ -1486,7 +1487,7 @@ async fn wide_lookup_restores_what_a_lookup_restores() {
     let wide_gets = peer.requests("GET ").await - before;
     assert_eq!(narrow.acquisitions().len(), 2);
     assert_eq!(narrow.excluded_groups(), 1);
-    assert_eq!(records(&wide), records(&narrow));
+    assert_eq!(restored(&wide), restored(&narrow));
     assert_eq!(wide.excluded_groups(), narrow.excluded_groups());
     assert_eq!(wide.excluded_members(), narrow.excluded_members());
     assert_eq!(wide.dependencies(), narrow.dependencies());
@@ -1591,4 +1592,93 @@ async fn wide_lookup_keeps_the_control_budget_of_a_lookup() {
     assert!(matches!(wide, Err(Error::Capacity)), "{wide:?}");
     assert_eq!(narrow_reads, 3);
     assert_eq!(wide_reads, narrow_reads, "descriptors the wide lookup read");
+}
+/// The peer's transport, never answering a GET of `held`.
+struct Holding {
+    inner: HttpS3Transport,
+    held: String,
+}
+impl ObjectTransport for Holding {
+    async fn put(&self, record: &PreparedRecord) -> Result<u16, Error> {
+        self.inner.put(record).await
+    }
+    async fn head(&self, key: &str) -> Result<Object, Error> {
+        self.inner.head(key).await
+    }
+    async fn get(&self, key: &str, maximum: usize) -> Result<Object, Error> {
+        if key == self.held {
+            std::future::pending::<()>().await;
+        }
+        self.inner.get(key, maximum).await
+    }
+    async fn ready(&self) -> Result<(), Error> {
+        self.inner.ready().await
+    }
+}
+impl CatalogTransport for Holding {
+    async fn get_control(&self, key: &str, maximum: usize) -> Result<ControlObject, Error> {
+        self.inner.get_control(key, maximum).await
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &WriteCondition,
+    ) -> Result<u16, Error> {
+        self.inner.put_control(key, body, condition).await
+    }
+    async fn list_raw_document(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+        maximum_keys: usize,
+        maximum_bytes: usize,
+    ) -> Result<Vec<u8>, Error> {
+        self.inner
+            .list_raw_document(prefix, token, maximum_keys, maximum_bytes)
+            .await
+    }
+}
+/// A wide lookup leaves a group at its first missing page as a lookup does: the healthy group is
+/// restored and the other excluded, also when a later page of that group never answers (the wide
+/// lookup does not wait for it).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn wide_lookup_leaves_a_group_at_its_first_missing_page() {
+    let peer = Peer::new();
+    let publisher = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let (healthy, raw) = group(1, 1);
+    publisher
+        .publish(healthy.clone(), raw, deadline())
+        .await
+        .unwrap();
+    let (broken, pages) = group(2, 2);
+    publisher
+        .publish(broken, pages.clone(), deadline())
+        .await
+        .unwrap();
+    // The second group's first page is missing and its second never answers.
+    let missing = pages[0].envelope.identity.object_key().unwrap();
+    peer.fault("forget", &missing).await;
+    let store = CatalogStore::new(
+        Holding {
+            inner: peer.transport(),
+            held: pages[1].envelope.identity.object_key().unwrap(),
+        },
+        CatalogLimits::default(),
+    )
+    .unwrap();
+    let id = healthy.partitions[0].clone();
+    let narrow = ready(store.lookup(&id, deadline()).await.unwrap());
+    let wide = match store
+        .lookup_wide(&id, 4, Instant::now() + Duration::from_secs(1))
+        .await
+    {
+        Ok(found) => ready(found),
+        Err(e) => panic!("wide lookup: {e:?}"),
+    };
+    assert_eq!(narrow.acquisitions().len(), 1);
+    assert_eq!(narrow.excluded_groups(), 1);
+    assert_eq!(restored(&wide), restored(&narrow));
+    assert_eq!(wide.excluded_groups(), narrow.excluded_groups());
+    assert_eq!(wide.excluded_members(), narrow.excluded_members());
 }
