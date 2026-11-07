@@ -56,7 +56,11 @@ The audit does not catch a control clipped by an `overflow: hidden` parent, for 
 
 ## Manual mode (user manual captures)
 
-`build-harness.sh android manual` runs a fresh start (S1) and then `M1_privacy_choices`: it opens the side menu, taps the analytics choice and captures its dialog (`m1-analytics-choice`), closes it with Android back (no value, so the analytics setting stays off), then taps the ad privacy choice and captures the result (`m1-ad-privacy`). The [Cordova app user manual](../../../../docs/user/cordova-app/README.md) uses these captures together with the `full` run.
+`build-harness.sh android manual` runs a fresh start (S1) and then three scenarios for the [Cordova app user manual](../../../../docs/user/cordova-app/README.md), which uses these captures together with the `full` run:
+
+- `M1_privacy_choices` opens the side menu, taps the analytics choice and captures its dialog (`m1-analytics-choice`). It closes the dialog with Android back, which returns no value, so the analytics setting stays off. It then taps the ad privacy choice and captures the result (`m1-ad-privacy`).
+- `M2_station_and_push_dialogs` scrolls the air tab to the station cards (`m2-air-station`). It then opens the notification settings, captures the time picker on the add row (`m2-time-picker`) and closes it, toggles one weekday, and captures the save confirmation after the back arrow (`m2-save-confirm`). It closes that confirmation without saving and checks that no `POST /push-list` was sent.
+- `M3_chart_ranges` scrolls the hourly and daily charts to both ends and captures each (`m3-hourly-start`, `m3-hourly-end`, `m3-daily-start`, `m3-daily-end`).
 
 ## Upgrade mode (store update simulation)
 

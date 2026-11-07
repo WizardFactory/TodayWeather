@@ -151,7 +151,7 @@
     },
     {
       "title": "Set an alarm time",
-      "instruction": "Tap a time to change it, or HH:MM with + to add one (up to five). Set the hour, minute and AM/PM with the arrows. 설정 (Set) applies the time, 삭제 (Delete) removes that alarm and 닫기 (Close) leaves it unchanged.",
+      "instruction": "Tap a time to change it, or HH:MM with + to add one (up to five). Set the hour, minute and AM/PM with the arrows. 설정 (Set) applies the time, 삭제 (Delete) removes that alarm and 닫기 (Close) leaves it unchanged. Midnight (12:00 AM) cannot be set: the app treats it like 삭제.",
       "screenshot": "screenshots/22-time-picker.png",
       "caption": "Time picker for a new alarm (O14).",
       "expected": "The list shows the time; it is kept after you save."
