@@ -582,3 +582,24 @@ async fn an_unusable_stored_publication_is_asked_again_without_waiting_for_an_ab
         "one acquisition each"
     );
 }
+
+/// Review RP-listed-test-wall-clock, the listed-but-unusable path of
+/// RP-previous-acquisition-starvation: the latest and the previous publication are both stored but
+/// unusable, so both are asked again after the read, together. The provider answers 20:00 only
+/// once 17:00 has answered, so asking them one after the other would leave the slot empty; on the
+/// paused clock the answer ends at its wait.
+#[tokio::test(start_paused = true)]
+async fn listed_but_unusable_publications_are_requested_together() {
+    let (docs, waited, calls) = unusable_previous(true).await;
+    assert!(waited <= Duration::from_secs(1), "one wait: {waited:?}");
+    assert_eq!(
+        pop_at(&docs, "20261018", "1800"),
+        Some(17.),
+        "the 17:00 row of the current slot"
+    );
+    assert_eq!(
+        calls,
+        vec![publication(20261018, 1700), publication(20261018, 2000)],
+        "one acquisition each"
+    );
+}
