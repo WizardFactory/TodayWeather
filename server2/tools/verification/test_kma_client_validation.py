@@ -165,6 +165,24 @@ class CompareTest(unittest.TestCase):
                                  'current.rn1': (0, -1), 'current.geo': ([126.965, 37.57], [])})
         self.assertEqual(report['missing_fields'], [])
 
+    def test_empty_or_other_kind_values_against_valid_scalars_are_reported(self):
+        # CV-empty-numeric: an empty string, a container or a non-number cannot stand in for a value.
+        candidate = reference()
+        candidate['current'].update(t1h='', reh=[], sky={}, weather=dict(text='맑음'), dongnae='none', geo='126.965')
+        row(candidate, 'short', '20261107 15').update(r06Approx='', pop=[20], t3h='warm')
+        status, report, _ = compare(reference(), candidate)
+        found = {v['path']: v['reason'] for v in report['invalid_values']}
+        self.assertEqual(found, {
+            'current.t1h': 'empty string', 'current.reh': 'array where the reference has a number',
+            'current.sky': 'object where the reference has a number',
+            'current.weather': 'object where the reference has a string',
+            'current.dongnae': 'string where the reference has an object',
+            'current.geo': 'string where the reference has an array',
+            'short[20261107 15].r06Approx': 'empty string',
+            'short[20261107 15].pop': 'array where the reference has a number',
+            'short[20261107 15].t3h': 'not a number'})
+        self.assertEqual((status, report['missing_fields']), (1, []))
+
     def test_both_invalid_is_not_reported(self):
         base = reference()
         base['current']['weather'] = ''

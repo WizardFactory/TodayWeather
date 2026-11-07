@@ -13,8 +13,10 @@ capture  One GET of base+path with Accept-Language ko-KR (20 s timeout, no retry
 compare  Judges --candidate against --reference. Rows of short and shortest match by date and
          time, midData.dailyData rows by date, other object arrays by index. Every reference row
          and key must be in the candidate, with a valid value wherever the reference value is
-         valid. Invalid: absent, null, an empty string or list where the reference is not empty,
-         a temperature at or below -50, or a negative number in a field that is never negative.
+         valid. Invalid: absent, null, an empty or blank string where the reference has a value,
+         an empty list where the reference list is not, another kind (object or array against a
+         scalar, or the reverse), a non-numeric string where the reference is a number, a
+         temperature at or below -50, or a negative number in a field that is never negative.
          Not judged: historyObservation and fieldObservations, the contents of the historyStatus
          lists, forecastNarrative. A *Str/*Grade/*Approx/*Hours/*Icon label whose value field
          differs or is absent is value-dependent, not missing. Excluded (listed apart, never
@@ -64,6 +66,10 @@ EXCLUDED = {
 }
 EXCLUDED_PREFIXES = ('ultrv', 'flower', 'pollen', 'fsn')
 PREFIXES_IN = frozenset(('current', 'midData.dailyData[]'))
+# JavaScript white space and line terminators, which Number() strips from a string.
+JS_SPACE = '\t\n\x0b\x0c\r \xa0\u1680' + ''.join(map(chr, range(0x2000, 0x200b))) + '\u2028\u2029\u202f\u205f\u3000\ufeff'
+DECIMAL = re.compile(r'[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?')
+NO_REFERENCE = object()
 
 
 def load_json(data):
@@ -87,6 +93,29 @@ def scalar_list(value):
     return isinstance(value, list) and not any(isinstance(item, dict) for item in value)
 
 
+def js_number(value):
+    """A number, or a decimal numeric string read as JavaScript's Number() reads it; else None."""
+    if number(value):
+        return value
+    if isinstance(value, str) and DECIMAL.fullmatch(value.strip(JS_SPACE)):
+        return float(value.strip(JS_SPACE))
+    return None
+
+
+def blank(value):
+    return isinstance(value, str) and not value.strip(JS_SPACE)
+
+
+def kind(value):
+    if isinstance(value, bool):
+        return 'boolean'
+    if number(value):
+        return 'number'
+    if isinstance(value, str):
+        return 'string'
+    return 'array' if isinstance(value, list) else 'object'
+
+
 def same(a, b):
     """JSON equality: 1 equals 1.0, true never equals 1."""
     if number(a) and number(b):
@@ -98,14 +127,20 @@ def same(a, b):
     return type(a) is type(b) and a == b
 
 
-def invalid(key, value, reference=None):
-    """Why `value` carries no data, or None. A reference value is judged with reference=None."""
+def invalid(key, value, reference=NO_REFERENCE):
+    """Why `value` carries no data, or None. A candidate value is judged against the valid reference value."""
     if value is None:
         return 'null'
-    if isinstance(value, str) and not value and isinstance(reference, str) and reference:
-        return 'empty string'
-    if isinstance(value, list) and not value and scalar_list(reference) and reference:
-        return 'empty list'
+    if reference is not NO_REFERENCE:
+        containers = (isinstance(reference, (dict, list)), isinstance(value, (dict, list)))
+        if containers != (False, False) and kind(value) != kind(reference):
+            return f"{kind(value)} where the reference has {'an' if containers[0] else 'a'} {kind(reference)}"
+        if blank(value) and not blank(reference):
+            return 'empty string'
+        if isinstance(value, str) and js_number(value) is None and js_number(reference) is not None:
+            return 'not a number'
+        if isinstance(value, list) and not value and scalar_list(reference) and reference:
+            return 'empty list'
     if number(value):
         if key in TEMPERATURES and value <= -50:
             return 'temperature at or below -50'
@@ -184,9 +219,9 @@ class Comparison:
         if reason:
             self.invalid_values.append(dict(path=path, reference=brief(rv), candidate=brief(cv), reason=reason))
         elif isinstance(rv, dict):
-            self.objects(rv, cv if isinstance(cv, dict) else {}, path, norm)
+            self.objects(rv, cv, path, norm)
         elif isinstance(rv, list) and not scalar_list(rv):
-            self.rows(key, rv, cv if isinstance(cv, list) else [], path, norm)
+            self.rows(key, rv, cv, path, norm)
         elif not same(rv, cv):
             group = self.differences.setdefault(norm, dict(count=0, examples=[]))
             group['count'] += 1
