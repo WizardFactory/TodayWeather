@@ -48,6 +48,16 @@
       "path": "docs/operations/server2-infrastructure.md",
       "category": "documentation",
       "reason": "The station page product is not cached on disk."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.json",
+      "category": "documentation",
+      "reason": "Archify source: station pages restore from a stored fold."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.html",
+      "category": "documentation",
+      "reason": "Archify output regenerated from the source."
     }
   ]
 }
