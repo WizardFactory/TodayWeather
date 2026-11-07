@@ -6,7 +6,7 @@ The EC2 verification of 2026-11-07 (01:19-03:15 KST) restarted server2 13 times 
 
 - **LANE:** the shared S3 admission has a bulk lane: bulk work holds at most a third of the permits (4 of 12), so request reads always keep the rest. Bulk work still counts toward the shared limit.
 - **WARNINGS:** the process warning store and the persisted warning feed (collector, zone replay, publications and warning reads) use the bulk lane in both production wirings.
-- **RESTART:** on EC2, the first request after a restart on stored data with accumulated warnings answers with the minute observations and the past days, faster than master.
+- **RESTART:** on EC2, the first request after a restart on stored data with accumulated warnings answers within the request bound with a body that passes the client validation (`server2/tools/verification/kma_client_eval.py`); parts not ready by then (minute observations, past days, warnings) come on later requests. AK chose this criterion on 2026-11-07 (option 2, "응답 기준을 client validation") after the EC2 comparisons showed that the first request after a restart restores every source from S3 (1,100 to 1,300 S3 calls) and that neither this change nor #2872 completes it.
 - **PLACEMENT:** the placement gate and the artifact policy pass on the outgoing commits.
 
 ## Decisions for AK
