@@ -235,7 +235,7 @@ impl ForecastAcquire for Forecasts {
                                     },
                                     p,
                                     p.base_date(),
-                                    zone_page(),
+                                    land_zone_page(),
                                     "application/json",
                                 )
                             }
@@ -258,6 +258,39 @@ impl ForecastAcquire for Forecasts {
             .cached(&format!("test-forecast/{request:?}"))
             .map(|r| r.records.clone())
     }
+}
+/// The forecast-zone list the double answers: like the provider's, it holds every land zone the
+/// release carries (`Zones::packaged`, the city zones of `getMidTa`) besides the Seoul region of
+/// [`zone_page`]. A request reads this list when it is stored before its zone read and the
+/// release's land zones otherwise, so a test of a town outside Seoul answers the same either way
+/// (a Seoul-only list left the mid temperatures of such towns uncollected whenever it was stored
+/// first).
+fn land_zone_page() -> Vec<u8> {
+    use server2::domestic::kma::source::{Val, Zones};
+    let seoul: serde_json::Value = serde_json::from_slice(&zone_page()).unwrap();
+    let mut items: Vec<serde_json::Value> = seoul["response"]["body"]["items"]["item"]
+        .as_array()
+        .unwrap()
+        .clone();
+    for zone in Zones::packaged().docs() {
+        let text = |k: &str| zone.get(k).and_then(Val::as_str).unwrap().to_owned();
+        let id = text("regId");
+        if items.iter().any(|item| item["regId"] == id.as_str()) {
+            continue;
+        }
+        items.push(json!({
+            "regId": id,
+            "tmSt": "201601010000",
+            "tmEd": "210012310000",
+            "regSp": text("regSp"),
+            "regName": text("regName"),
+        }));
+    }
+    serde_json::to_vec(&json!({"response": {
+        "header": {"resultCode": "00", "resultMsg": "NORMAL_SERVICE"},
+        "body": {"dataType": "JSON", "items": {"item": items}, "pageNo": 1, "numOfRows": 1000,
+                 "totalCount": items.len()}}}))
+    .unwrap()
 }
 struct FixedGeo;
 impl Geocoder for FixedGeo {
@@ -1214,20 +1247,38 @@ async fn a_town_outside_the_list_gets_its_forecast_within_the_bound() {
 }
 
 /// The geocoder's name for the province must reach the listed town and its mid forecast.
+///
+/// The request starts the process's forecast-zone acquisition without waiting for it, and its
+/// zone read then uses that list when it is already stored, the release's land zones otherwise.
+/// Both orders happen (they depend on how fast the stored list is published), so the test runs
+/// each town with the list stored before the request and without it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
     let _peers = S3_PEERS.lock().await;
-    for (region, city, town) in [
+    for ((region, city, town), stored_first) in [
         ("강원특별자치도", "강릉시", "홍제동"),
         ("전북특별자치도", "군산시", "조촌동"),
         ("전남광주통합특별시", "여수시", "쌍봉동"),
         ("전남광주통합특별시", "광산구", "송정2동"),
-    ] {
+    ]
+    .into_iter()
+    .flat_map(|town| [(town, true), (town, false)])
+    {
         let peer = Peer::persistent();
         let store = Arc::new(
             CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap(),
         );
         let writer = Writer::new(store, Config::default()).unwrap();
+        if stored_first {
+            Forecasts {
+                writer: writer.clone(),
+                calls: Arc::new(AtomicUsize::new(0)),
+            }
+            .acquire(ForecastRequest::Zones)
+            .await
+            .unwrap()
+            .expect("the forecast-zone list is stored");
+        }
         let source = build_source(&peer, Arc::new(Providers::default()))
             .with_forecast(Some(Arc::new(Forecasts {
                 writer: writer.clone(),
@@ -1265,7 +1316,7 @@ async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
                     "future-mid-unavailable"
                 ]
                 .contains(&reason.as_str().unwrap()),
-                "{region} {city}: {status}"
+                "{region} {city} (zone list stored first: {stored_first}): {status}"
             );
         }
         let daily = body["midData"]["dailyData"].as_array().unwrap();

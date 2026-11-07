@@ -1,0 +1,13 @@
+{
+  "task": "KMA-TEST-CLOCK",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Test-only: the province test of the full KMA response answered a Seoul-only forecast-zone list from its double, so its mid temperatures depended on whether that list was stored before the request's zone read. The test now runs both orders and the double answers the release's land zones. No runtime, deployment or production change.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-TEST-CLOCK.json",
+    "server2/tests/domestic/full_response.rs"
+  ],
+  "outside": [],
+  "path_notes": {
+    "server2/tests/domestic/full_response.rs": "a_province_under_its_new_name_finds_its_town_and_mid_forecast runs each town with the forecast-zone list stored before the request and without it; the Forecasts double's forecast-zone answer (land_zone_page) holds the Seoul fixture and every land zone of Zones::packaged, as the provider's list does"
+  }
+}
