@@ -1246,12 +1246,53 @@ async fn a_town_outside_the_list_gets_its_forecast_within_the_bound() {
     );
 }
 
+/// The test double's forecast-zone request held until [`HeldZones::release`]; every other request
+/// goes straight to [`Forecasts`].
+struct HeldZones {
+    inner: Forecasts,
+    open: tokio::sync::watch::Sender<bool>,
+}
+impl HeldZones {
+    fn release(&self) {
+        self.open.send_replace(true);
+    }
+}
+impl ForecastAcquire for HeldZones {
+    fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>> {
+        let mut open = self.open.subscribe();
+        let zones = request == ForecastRequest::Zones;
+        let acquired = self.inner.acquire(request);
+        Box::pin(async move {
+            if zones {
+                let _ = open.wait_for(|open| *open).await;
+            }
+            acquired.await
+        })
+    }
+    fn cached(&self, request: &ForecastRequest) -> Published {
+        self.inner.cached(request)
+    }
+}
+/// The forecast-zone lists S3 holds now.
+async fn stored_zone_lists(peer: &Peer) -> usize {
+    server2::history::IndexListing::list_index(
+        &peer.transport_limited(2),
+        "index/v2/data-go-kr/forecast-zone/",
+        None,
+    )
+    .await
+    .unwrap()
+    .keys
+    .len()
+}
+
 /// The geocoder's name for the province must reach the listed town and its mid forecast.
 ///
 /// The request starts the process's forecast-zone acquisition without waiting for it, and its
-/// zone read then uses that list when it is already stored, the release's land zones otherwise.
-/// Both orders happen (they depend on how fast the stored list is published), so the test runs
-/// each town with the list stored before the request and without it.
+/// zone read then uses the stored list when there is one, the release's land zones otherwise.
+/// Each town is asked both ways: with the list stored before the request, and with the zone
+/// request held until the answer is checked, so that no list is stored before it and the land
+/// zones answer (TC-force-fallback-order).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
     let _peers = S3_PEERS.lock().await;
@@ -1279,11 +1320,15 @@ async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
             .unwrap()
             .expect("the forecast-zone list is stored");
         }
-        let source = build_source(&peer, Arc::new(Providers::default()))
-            .with_forecast(Some(Arc::new(Forecasts {
+        let zones = Arc::new(HeldZones {
+            inner: Forecasts {
                 writer: writer.clone(),
                 calls: Arc::new(AtomicUsize::new(0)),
-            })))
+            },
+            open: tokio::sync::watch::channel(stored_first).0,
+        });
+        let source = build_source(&peer, Arc::new(Providers::default()))
+            .with_forecast(Some(zones.clone()))
             .with_raw_writer(writer.clone());
         let backend = KmaBackend::new(
             Arc::new(source),
@@ -1298,6 +1343,12 @@ async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
             .outcome(request, Instant::now() + Duration::from_secs(8))
             .await
             .unwrap();
+        // The lists the answer could read: the held request stored none before it.
+        assert_eq!(
+            stored_zone_lists(&peer).await,
+            usize::from(stored_first),
+            "{region} {city}: zone lists stored at the answer (stored first: {stored_first})"
+        );
         let server2::domestic::kma::Outcome::Json(body) = outcome else {
             panic!("{outcome:?}")
         };
@@ -1321,6 +1372,19 @@ async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
         }
         let daily = body["midData"]["dailyData"].as_array().unwrap();
         assert_eq!(daily.last().unwrap()["date"], json!("20261004"));
+        // The held request then stores its list.
+        zones.release();
+        for _ in 0..100 {
+            if stored_zone_lists(&peer).await == 1 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        assert_eq!(
+            stored_zone_lists(&peer).await,
+            1,
+            "{region} {city}: the list"
+        );
     }
 }
 
