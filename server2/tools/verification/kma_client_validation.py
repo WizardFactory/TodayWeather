@@ -21,14 +21,16 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          vvv) at or below -100, or a negative number in a field that is never negative.
          Numeric strings, which legacy also sends, are read as JavaScript's Number() reads a
          decimal string, and the same rules apply to them. A number that reads as infinite (the
-         string "1e309", or the JSON number 1e309) is invalid; "NaN" is not a number.
+         string "1e309", the JSON number 1e309, or an integer beyond the float range such as
+         10**400) is invalid in the candidate and no data in the reference; "NaN" is not a number.
          Not judged: historyObservation and fieldObservations, the contents of the gap lists in
-         historyStatus and midData.dailyStatus (which must stay arrays), forecastNarrative. A *Str/*Grade/*Approx/*Hours/*Icon label whose value field
-         differs or is absent is value-dependent, not missing (a number and a numeric string of
-         equal value are the same value here and in the value differences). Excluded (never missing; listed
-         apart when the candidate lacks one, leaves it invalid or keeps it empty): air quality,
-         UV, pollen, food poisoning and the KASI extras other than sunrise and sunset. Valid
-         values that differ are information only.
+         historyStatus and midData.dailyStatus (which must stay arrays), forecastNarrative.
+         A *Str/*Grade/*Approx/*Hours/*Icon label whose value field differs or is absent is
+         value-dependent, not missing (a number and a numeric string of equal value are the same
+         value here and in the value differences). Excluded (never missing; listed apart when the
+         candidate lacks one, leaves it invalid or keeps it empty): air quality, UV, pollen, food
+         poisoning and the KASI extras other than sunrise and sunset. Valid values that differ
+         are information only.
          Exit 0 pass, 1 missing data, 2 not comparable (another or unknown place: regionName,
          cityName or townName differs, or is absent, null or blank in either body; a publication,
          currentPubDate, shortestPubDate, shortPubDate, midData.landPubDate or tempPubDate, that
@@ -112,9 +114,13 @@ def scalar_list(value):
 
 
 def js_number(value):
-    """A number, or a decimal numeric string read as JavaScript's Number() reads it; else None."""
+    """A number, or a decimal numeric string read as JavaScript's Number() reads it, as a float; else
+    None. An integer beyond the float range reads as infinite, as it does in JavaScript."""
     if number(value):
-        return value
+        try:
+            return float(value)
+        except OverflowError:
+            return math.inf if value > 0 else -math.inf
     if isinstance(value, str) and DECIMAL.fullmatch(value.strip(JS_SPACE)):
         return float(value.strip(JS_SPACE))
     return None
@@ -208,7 +214,7 @@ def normalize(path):
 
 
 def key_part(value):
-    return str(int(value)) if number(value) and float(value).is_integer() else str(value)
+    return str(int(value)) if isinstance(value, float) and value.is_integer() else str(value)
 
 
 def label_stem(key, ref, cand):

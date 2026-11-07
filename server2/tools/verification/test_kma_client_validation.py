@@ -213,6 +213,22 @@ class CompareTest(unittest.TestCase):
             'short[20261107 15].pop': 'not finite'})
         self.assertEqual(status, 1)
 
+    def test_integers_too_large_for_a_float_never_crash(self):
+        # CV-large-integer: 10**400 has no float value; it is not finite in the candidate, no data in the
+        # reference, and harmless as a row key.
+        candidate = reference()
+        candidate['current']['t1h'] = 10 ** 400
+        candidate['short'].append(dict(row(candidate, 'short', '20261107 18'), time=10 ** 400))
+        status, report, _ = compare(reference(), candidate)
+        self.assertEqual([(v['path'], v['reason']) for v in report['invalid_values']], [('current.t1h', 'not finite')])
+        self.assertEqual(status, 1)
+        base = reference()
+        base['current']['reh'] = -10 ** 400
+        candidate = reference()
+        del candidate['current']['reh']
+        status, report, _ = compare(base, candidate)
+        self.assertEqual((status, report['missing_fields'], report['invalid_values']), (0, [], []))
+
     def test_both_invalid_is_not_reported(self):
         base = reference()
         base['current']['weather'] = ''
