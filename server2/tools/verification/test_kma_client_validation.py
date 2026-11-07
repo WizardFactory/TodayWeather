@@ -410,6 +410,20 @@ class CompareTest(unittest.TestCase):
         status, report, _ = compare(reference(), candidate)
         self.assertEqual((status, list(report['comparable']['differing_publications'])), (2, ['midData.landPubDate']))
 
+    def test_reference_publication_without_a_value_is_not_demanded(self):
+        # CV-blank-publication-reference: an absent, null or blank reference publication carries no value.
+        absent = object()
+        for value in (absent, None, ' '):
+            with self.subTest(reference='absent' if value is absent else value):
+                base = reference()
+                base['midData'].pop('landPubDate') if value is absent else base['midData'].update(landPubDate=value)
+                candidate = reference()
+                del candidate['midData']['landPubDate']
+                status, report, _ = compare(base, candidate)
+                self.assertEqual((status, report['verdict']), (0, 'pass'))
+                self.assertEqual(report['comparable']['reference_lacks_publication'], ['midData.landPubDate'])
+                self.assertEqual(report['missing_fields'], [])
+
     def test_different_place_is_not_comparable_but_lists_are_written(self):
         candidate = reference()
         candidate['townName'] = '소공동'

@@ -33,9 +33,9 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          cityName or townName differs, or is absent, null or blank in either body; a publication,
          currentPubDate, shortestPubDate, shortPubDate, midData.landPubDate or tempPubDate, that
          both bodies carry with different values; or not a KMA body) or unreadable input; the
-         report lists are computed in every case. A publication the reference lacks is listed as
-         information (reference_lacks_publication) and the bodies are compared; one only the
-         candidate lacks is missing data.
+         report lists are computed in every case. A publication the reference lacks (absent,
+         null or blank) is listed as information (reference_lacks_publication), the bodies are
+         compared and the candidate need not carry it; one only the candidate lacks is missing data.
 
 Standard library only. Only capture opens a connection.
 """
@@ -233,6 +233,8 @@ class Comparison:
             if key in ATTRIBUTION or key in NOT_JUDGED.get(norm, ()):
                 continue
             p, n = join(path, key), join(norm, key)
+            if p in PUBLICATIONS and unknown(rv):
+                continue  # a reference publication without a value demands nothing, as in comparability
             present, cv = key in cand, cand.get(key)
             valid = invalid(key, rv) is None
             lost = valid and (not present or invalid(key, cv, rv) is not None)
