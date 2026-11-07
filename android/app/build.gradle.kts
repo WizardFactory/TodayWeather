@@ -3,6 +3,12 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// The Firebase configuration is a private input (README.md). Without it the app builds and runs
+// with Firebase uninitialized, which sends nothing.
+if (file("google-services.json").exists()) {
+    apply(plugin = libs.plugins.google.services.get().pluginId)
+}
+
 android {
     namespace = "net.wizardfactory.todayweather"
     compileSdk = 37
@@ -40,6 +46,10 @@ dependencies {
     implementation(project(":core-domain"))
     implementation(project(":core-data"))
     implementation(project(":core-storage"))
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.kotlinx.coroutines.android)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

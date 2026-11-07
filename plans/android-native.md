@@ -78,3 +78,26 @@ AC1 regeneration without diff; AC2 JVM corpus tests pass in both CI jobs; AC3 co
 Test-first: `GoldenCorpusTest` against `TODO()` stubs failed (3/3), then passed. Smoke: regeneration twice with no diff; `client/`-free build from a `git archive`.
 
 Review round 1 (F1–F5) added the air display rules, the nationwide and warning functions, the real TabCtrl completion for A01, null-row handling (Red: removing it fails `kma-null-daily-row`) and the `core-model` views; `GoldenCorpusDisplayTest` and `ModelsTest` cover them. Round 2 (F2, F6, F7) added unit-variant value cases, time-boundary and invalid-date cases, `UpdateTime`, `java.util`-based warning formatting, and `CoreOnDeviceTest` run on API 24 and API 36 emulators. Round 3 (F2, F7) added pressure and distance fields to the value cases and V8's ISO date range rules.
+
+## AN-03 — Cordova data migration and upgrade test (#2882)
+
+Design decision: read the WebView `localStorage` as the first source, because the suite mirror lost a write on the emulator (two quick `cities` writes; the suite kept the first). Reading is file-based and read-only (LevelDB logs/tables with Snappy, or the pre-Chromium-61 SQLite file), so the Cordova data stays intact for AN-17. Analytics: SDK collection flags are written off before `FirebaseInitProvider`; calling only `setAnalyticsCollectionEnabled(false)` left the persisted flag on (the process ended before the asynchronous write) and the SDK logged `app_update`. Archify not applicable (no system flow change beyond the app's own start).
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN03-US1 | Cordova user updates to the native app | Cordova 1.1.1 with places, units, settings, alarms, analytics opt-in | Install the native update; open it; reopen it | Same places, selection, units, settings and alarms; `Device-Id` unchanged; no analytics event; Cordova data still present | A missing or broken key takes the Cordova default, recorded in `MigrationInfo` | AC1, AC2 |
+| AN03-US2 | Cordova user whose suite missed a write | Suite older than localStorage | Update | Newest localStorage values win | Unparsable localStorage value falls back to the suite | AC1 |
+| AN03-US3 | User of a pre-`pushData2` version | Legacy `pushData` only | Update | Alarms converted as the Cordova app does; alert introduction pending | – | AC1 |
+| AN03-US4 | Maintainer runs the upgrade test | Emulator, Cordova and native debug APKs | `tools/upgrade/run-upgrade-test.sh` | Both instrumentation runs pass; 0 analytics events | Online emulator or physical device: the script refuses | AC2 |
+
+### Acceptance (from #2882)
+
+- AC1: JVM tests cover valid, partial, malformed, legacy-suite and legacy-`pushData` inputs; a second migration run changes nothing.
+- AC2: the emulator upgrade test passes (places, `cityIndex`, units, settings, alarms, `Device-Id`, analytics off after restart, sources kept).
+- AC3: delivery (README, review PASS, CI, merge).
+
+### Checks
+
+JVM: `CordovaMigrationTest` (10), `LevelDbReaderTest` (5, files written by a test writer). Device: `run-upgrade-test.sh` on API 36 (LevelDB) and API 24 (SQLite localStorage) emulators. Smoke: debug build without the Firebase configuration starts with analytics off.

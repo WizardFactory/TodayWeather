@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -15,6 +16,10 @@ android {
 }
 
 dependencies {
-    implementation(project(":core-model"))
-    testImplementation(libs.kotlin.test)
+    api(project(":core-model"))
+    implementation(project(":core-domain"))
+    api(libs.androidx.datastore.core)
+    implementation(libs.kotlinx.coroutines.android)
+    testImplementation(libs.kotlin.test.junit)
+    testImplementation(libs.junit)
 }
