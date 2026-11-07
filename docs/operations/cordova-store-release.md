@@ -154,6 +154,38 @@ See the [current privacy/data-flow worksheet](store-privacy-review.md) and the T
 
 Keep provider review and source/caution notices current; do not represent an unresolved item as verified. Provider presence in the code is not evidence of production activation or contractual permission. Store credits do not replace mandatory in-app notices. The client About menu now exposes the existing translated KMA/AirKorea notice in every locale. Provider-specific fallback air attribution, links/branding and equivalent Visual Crossing cautions in the app still need implementation after the provider set is confirmed. Firebase/AdMob data collection, UMP, ATT, Apple privacy declarations, age rating and Play Data safety require a separate account/binary review.
 
+## Developer website and app-ads.txt
+
+AK selected `https://todayweather.ai` on 2026-11-07 (#2871). It is the developer
+website for both store listings and the host of `app-ads.txt`. AdMob reads the file
+from the developer-website host, or at most one domain level above it. The old
+hosts fail: the Play listing's `todayweather.wizardfactory.net` returns 404, and the
+App Store listing links a Facebook page. See the [dated evidence](../evidence/tasks/issue-2871/README.md).
+
+1. From `client/` with the release `.env`, run `npm run store:app-ads > "$TMPDIR/app-ads.txt"`.
+   The script derives the single publisher line from `TW_ADMOB_APP_ID_ANDROID` and
+   `TW_ADMOB_APP_ID_IOS`. It refuses sample IDs and IDs from different publishers.
+   Keep the output out of Git.
+2. Upload only this object, with the landing settings from the section above:
+   `aws s3api put-object --bucket "$LANDING_BUCKET" --expected-bucket-owner "$LANDING_ACCOUNT_ID" --key app-ads.txt --body "$TMPDIR/app-ads.txt" --content-type 'text/plain; charset=utf-8' --cache-control 'public, max-age=300'`,
+   then `aws cloudfront create-invalidation --distribution-id "$LANDING_DISTRIBUTION" --paths /app-ads.txt`.
+   Record the version ID in an ignored receipt.
+3. Verify `curl -sS -o public.txt -w '%{http_code} %{content_type}\n' https://todayweather.ai/app-ads.txt`.
+   Expect `200 text/plain; charset=utf-8` and `cmp public.txt "$TMPDIR/app-ads.txt"` to succeed.
+   The `http://` URL redirects there.
+4. AK: in Play Console, set **Store settings → Store listing contact details → Website**
+   to `https://todayweather.ai`. In App Store Connect, set the app version's
+   **Marketing URL** to the same address; it becomes the product page's "Developer
+   Website" link. It is version metadata: if the live version cannot be edited, set
+   it on the next version submission. Confirm that both public listings show the new link.
+5. AK: in AdMob **Apps → View all apps → app-ads.txt**, use "Check for updates" no
+   sooner than 24 hours after each listing change. Record the status for both apps
+   in #2871. A 404 or "not found" result means steps 3–4 do not match yet.
+
+The first upload ran on 2026-11-07 and was verified with steps 1–3. Steps 4–5 are
+still open. Rollback: restore the previous object version or delete the key; never
+`sync --delete` the bucket.
+
 ## Verification and next gates
 
 ```sh

@@ -122,6 +122,28 @@ all assigned active users; do not compare only users who saw ads. Firebase's
 estimated-revenue objective is not the custom ARPDAU ratio. Retention/crash
 guardrails and rollback take precedence over a revenue improvement.
 
+## AdMob eligibility recovery (#2871)
+
+The [2026-11-07 evidence](../evidence/tasks/issue-2871/README.md) records the fixed client
+defects: an endless location spinner after a permission denial, and an Android first
+session without an Ads SDK start. It also records the unchanged configuration (iOS
+`npa=1`, Android `AD_ID`). The developer website and `app-ads.txt` are in the
+[store runbook](cordova-store-release.md#developer-website-and-app-adstxt). Do not
+claim restoration until each AK step below is recorded in #2871:
+
+1. Ship the fixed client in the next store release (#2605). Older builds keep both
+   defects. iOS 1.0.10 (GMA 7.49.0) stays on a deprecated SDK until users update.
+2. Confirm app-ads.txt authorization for both apps in AdMob.
+3. In the AdMob Policy center, request a review for each weather app's "Site Behavior:
+   Navigation" restriction after the release is live
+   ([AdMob help](https://support.google.com/admob/answer/10448709)). Record the
+   request date and the outcome. A pending or rejected review keeps #2871 open.
+4. Report before/after cohorts with an explicit date range and timezone, app version,
+   GMA SDK, ad unit, country and consent mode. Keep match rate (matched/requests)
+   separate from show rate (impressions/matched). Put policy and authorization status
+   in their own columns, not in client metrics. `ad_load_error` codes from consenting
+   Analytics users show the client-side no-fill/network mix; they are not fill rate.
+
 ## Verification commands and remaining gates
 
 ```sh
