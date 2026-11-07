@@ -54,3 +54,27 @@ Design skipped: no system flow; the module layout is fixed by #2877. Archify not
 ### Checks
 
 Test-first: `ImportedClientAssetsTest` failed before the import (missing catalogs and provenance) and passed after it. Smoke: install and launch on an API 36 emulator; build and test in a copy without `client/`; import tool run twice with no diff.
+
+## AN-02 — golden corpus and Kotlin weather core (#2881)
+
+Design: the response passes through as `kotlinx.serialization` JSON trees, as the Cordova code passes objects through; `Js` reproduces JavaScript truthiness, comparison and number formatting so decisions match exactly. The comparison is exact on the whole converted object. Archify not applicable (no system structure change).
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN02-US1 | Maintainer regenerates the corpus | Node 22, checkout with `client/` | `node android/tools/corpus/generate.mjs`; `git diff` | No diff without source changes | A Cordova change shows as a corpus diff in CI | AC1 |
+| AN02-US2 | Developer checks the Kotlin core | JDK 17 | `./gradlew :core-domain:test` | Every conversion and function case matches | A mismatch names the case and JSON path | AC2 |
+| AN02-US3 | Reviewer checks coverage | – | Read `tools/corpus/README.md` | Each client verification-matrix row maps to cases | A missing row is visible | AC3 |
+| AN02-US4 | AK decides at AN-06 | – | Read `tools/corpus/differences.md` | Each difference has evidence and a status | – | AC4 |
+| AN02-US5 | Maintainer delivers | PR | Checker, CI, review, merge | Green and PASS | Findings corrected | AC5 |
+
+### Acceptance (from #2881)
+
+AC1 regeneration without diff; AC2 JVM corpus tests pass in both CI jobs; AC3 coverage table; AC4 `differences.md` with evidence; AC5 delivery.
+
+### Checks
+
+Test-first: `GoldenCorpusTest` against `TODO()` stubs failed (3/3), then passed. Smoke: regeneration twice with no diff; `client/`-free build from a `git archive`.
+
+Review round 1 (F1–F5) added the air display rules, the nationwide and warning functions, the real TabCtrl completion for A01, null-row handling (Red: removing it fails `kma-null-daily-row`) and the `core-model` views; `GoldenCorpusDisplayTest` and `ModelsTest` cover them. Round 2 (F2, F6, F7) added unit-variant value cases, time-boundary and invalid-date cases, `UpdateTime`, `java.util`-based warning formatting, and `CoreOnDeviceTest` run on API 24 and API 36 emulators. Round 3 (F2, F7) added pressure and distance fields to the value cases and V8's ISO date range rules.

@@ -48,6 +48,10 @@ It copies `client/www/img/**/*.png` to `app/src/main/assets/img/`, converts `cli
 
 Do not edit the generated files. While iOS stays on Cordova, change translations in `client/www/locales/` (for example #2613) and re-run the tool, so both apps get the change.
 
+## Golden corpus
+
+`core-domain` is checked against outputs of the Cordova code itself: [`tools/corpus/generate.mjs`](tools/corpus/README.md) runs the client's conversion and display functions under Node and writes `core-domain/src/test/resources/corpus/`; `GoldenCorpusTest` must match every case. CI regenerates the corpus and fails on a diff, so a change in the Cordova code shows up as a corpus change. Known behavior differences are listed in [`tools/corpus/differences.md`](tools/corpus/differences.md).
+
 ## Private inputs
 
 Private inputs stay out of Git, docs and logs, as in the Cordova build (`npm run release:fetch`). Later sub-issues add them by name only:
