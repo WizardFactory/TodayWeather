@@ -169,9 +169,8 @@ struct Context {
     controls: usize,
     output: usize,
     pins: BTreeMap<CatalogId, Option<Pinned>>,
-    /// Descriptors and raw records a wide lookup read ahead, by object key: the restore takes
-    /// each once where it would have read it (anything else it reads as before).
-    ahead_controls: BTreeMap<String, Result<ControlObject, Error>>,
+    /// Raw records a wide lookup read ahead, by object key: the restore takes each once where it
+    /// would have read it (anything else it reads as before).
     ahead_raw: BTreeMap<String, Result<RawRecord, Error>>,
 }
 impl Context {
@@ -180,15 +179,9 @@ impl Context {
             controls: 0,
             output: 0,
             pins: BTreeMap::new(),
-            ahead_controls: BTreeMap::new(),
             ahead_raw: BTreeMap::new(),
         }
     }
-}
-/// One read of a wide lookup's read-ahead: a descriptor, or a raw record (by object key).
-enum Ahead {
-    Control(String),
-    Raw(String, RecordId),
 }
 pub struct CatalogStore<T> {
     transport: Arc<T>,
@@ -249,14 +242,10 @@ impl<T: CatalogTransport> CatalogStore<T> {
         Ok(())
     }
     async fn control(&self, key: &str, c: &mut Context) -> Result<ControlObject, Error> {
-        let obj = match c.ahead_controls.remove(key) {
-            Some(read) => read?,
-            None => {
-                self.transport
-                    .get_control(key, self.limits.control_bytes)
-                    .await?
-            }
-        };
+        let obj = self
+            .transport
+            .get_control(key, self.limits.control_bytes)
+            .await?;
         self.count_control(c, obj.body.len())?;
         Ok(obj)
     }
@@ -764,10 +753,11 @@ impl<T: CatalogTransport> CatalogStore<T> {
         .await
     }
     /// [`Self::lookup`] with up to `width` S3 reads in flight instead of one, opt-in per call for
-    /// a read a request waits on. After the catalog, the group descriptors and records its restore
-    /// reads are read ahead together; the restore then runs as in `lookup` over them (same
-    /// checks, exclusions and result; a read that failed fails where the restore meets it). A
-    /// group the restore excludes may have been read in vain.
+    /// a read a request waits on. After the catalog, the records its restore reads are read ahead
+    /// together; the restore then runs as in `lookup` over them (same checks, exclusions and
+    /// result; a read that failed fails where the restore meets it). The restore reads the
+    /// descriptors itself, within the control byte budget as `lookup` does. A group the restore
+    /// excludes may have been read in vain.
     ///
     /// It waits for one of the store's I/O admissions, as `lookup` does, and takes up to
     /// `width - 1` more only if they are free at once: it never waits for them, so no other
@@ -808,66 +798,38 @@ impl<T: CatalogTransport> CatalogStore<T> {
         )
         .await
     }
-    /// Read what restoring `entries` reads, each group's descriptor and every listed record, up
-    /// to `width` at a time (results kept for the restore). A listed page outside a group is
-    /// excluded unread; reading stops where the records would pass the restore's output bound.
+    /// Read the records restoring `entries` reads, every listed record, up to `width` at a time
+    /// (results kept for the restore). Descriptors are left to the restore, which counts them
+    /// against the control byte budget. A listed page outside a group is excluded unread; reading
+    /// stops where the records would pass the restore's output bound.
     async fn read_ahead(&self, entries: &[Envelope], width: usize, c: &mut Context) {
         use futures_util::StreamExt;
-        let mut descriptors = BTreeSet::new();
         let mut reads = Vec::new();
         let mut output = c.output;
         for e in entries {
             match &e.fetch_group {
-                Some(r) => match r.descriptor_key() {
-                    Ok(key) => {
-                        if descriptors.insert(key.clone()) {
-                            reads.push(Ahead::Control(key));
-                        }
-                    }
-                    // The restore fails on this group before any record of it.
-                    Err(_) => continue,
-                },
+                // The restore fails on this group before any record of it.
+                Some(r) if r.descriptor_key().is_err() => continue,
                 None if e.pagination.is_some() => continue,
-                None => {}
+                _ => {}
             }
             output = output.saturating_add(e.raw_length);
             if output > self.limits.output_bytes {
                 break;
             }
             if let Ok(key) = e.identity.object_key() {
-                reads.push(Ahead::Raw(key, e.identity.clone()));
+                reads.push((key, e.identity.clone()));
             }
         }
-        enum Read {
-            Control(String, Result<ControlObject, Error>),
-            Raw(String, Box<Result<RawRecord, Error>>),
-        }
-        let read: Vec<Read> = futures_util::stream::iter(reads)
-            .map(|ahead| async move {
-                match ahead {
-                    Ahead::Control(key) => {
-                        let read = self
-                            .transport
-                            .get_control(&key, self.limits.control_bytes)
-                            .await;
-                        Read::Control(key, read)
-                    }
-                    Ahead::Raw(key, id) => Read::Raw(key, Box::new(self.raw.load(&id).await)),
-                }
+        let read: Vec<(String, Result<RawRecord, Error>)> = futures_util::stream::iter(reads)
+            .map(|(key, id)| async move {
+                let read = self.raw.load(&id).await;
+                (key, read)
             })
             .buffer_unordered(width)
             .collect()
             .await;
-        for r in read {
-            match r {
-                Read::Control(key, read) => {
-                    c.ahead_controls.insert(key, read);
-                }
-                Read::Raw(key, read) => {
-                    c.ahead_raw.insert(key, *read);
-                }
-            }
-        }
+        c.ahead_raw.extend(read);
     }
     fn uncertain(e: Error) -> Error {
         match e {

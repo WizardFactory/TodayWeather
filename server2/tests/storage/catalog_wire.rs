@@ -1541,3 +1541,54 @@ async fn wide_lookup_takes_only_free_admissions() {
     assert_eq!(read.acquisitions()[0].records().len(), 2);
     held.await.unwrap().unwrap();
 }
+/// A wide lookup keeps the control byte budget of a lookup: with descriptors each within the
+/// per-object limit but together over the retained budget, both fail with Capacity at the same
+/// descriptor, and the wide lookup reads (and holds) no descriptor beyond it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn wide_lookup_keeps_the_control_budget_of_a_lookup() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    for fetch in 1..=12 {
+        let (d, raw) = singleton(fetch, 32, None);
+        store.publish(d, raw, deadline()).await.unwrap();
+    }
+    let (d, _) = singleton(1, 32, None);
+    let id = d.partitions[0].clone();
+    // The catalog's size and its largest descriptor's.
+    let transport = peer.transport();
+    let catalog = transport
+        .get_control(&id.key(), 1 << 20)
+        .await
+        .unwrap()
+        .body;
+    let entries = Catalog::from_bytes(&catalog, &id, &CatalogLimits::default())
+        .unwrap()
+        .entries;
+    assert_eq!(entries.len(), 12);
+    let mut largest = 0;
+    for e in &entries {
+        let key = e.fetch_group.as_ref().unwrap().descriptor_key().unwrap();
+        let body = transport.get_control(&key, 1 << 20).await.unwrap().body;
+        largest = largest.max(body.len());
+    }
+    // Two descriptors fit beside the catalog, a third does not.
+    let tight = CatalogStore::new(
+        peer.transport(),
+        CatalogLimits {
+            control_bytes: catalog.len().max(largest),
+            retained_control_bytes: catalog.len() + 2 * largest + largest / 2,
+            ..CatalogLimits::default()
+        },
+    )
+    .unwrap();
+    let before = peer.requests("GET index/v2/groups/").await;
+    let narrow = tight.lookup(&id, deadline()).await;
+    let narrow_reads = peer.requests("GET index/v2/groups/").await - before;
+    let before = peer.requests("GET index/v2/groups/").await;
+    let wide = tight.lookup_wide(&id, 4, deadline()).await;
+    let wide_reads = peer.requests("GET index/v2/groups/").await - before;
+    assert!(matches!(narrow, Err(Error::Capacity)), "{narrow:?}");
+    assert!(matches!(wide, Err(Error::Capacity)), "{wide:?}");
+    assert_eq!(narrow_reads, 3);
+    assert_eq!(wide_reads, narrow_reads, "descriptors the wide lookup read");
+}
