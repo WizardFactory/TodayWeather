@@ -38,6 +38,8 @@ $ npm install
 ### mobile application
 TodayWeather builds with Cordova 13 from npm scripts (cordova-android 15, targetSdk 36; cordova-ios 8, iOS 15+). gulp and `ionic state` are no longer used.
 
+User manual for the current Android app, with actual screenshots: [docs/user/cordova-app](docs/user/cordova-app/README.md) ([PDF](docs/user/cordova-app/manual.pdf)).
+
 ```bash
 $ cd TodayWeather/client/
 $ npm ci
