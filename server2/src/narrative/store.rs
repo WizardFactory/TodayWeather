@@ -203,6 +203,9 @@ type Fetched = Option<Option<Narrative>>;
 #[derive(Default)]
 struct OfficeCache {
     answer: Option<(Instant, Option<Narrative>)>,
+    /// The latest announcement the office has answered, kept past the answer's TTL: an older
+    /// one never answers again (RR2-narrative-regression).
+    newest: Option<String>,
     retry_after: Option<Instant>,
     /// An owned store read of the office runs.
     reading: bool,
@@ -210,19 +213,29 @@ struct OfficeCache {
     raced: Option<Instant>,
 }
 impl OfficeCache {
-    /// Install `value` (a stored read's or an acquisition's) as the office's answer unless the
-    /// unexpired answer holds a later announcement: the newest publication answers, whichever
-    /// ends last (RR2-narrative-regression).
+    /// Install `value` (a stored read's or an acquisition's) as the office's answer. A narrative
+    /// older than the latest announcement the office answered is not installed, even once that
+    /// answer's TTL has passed: the answer stays as it is (an expired one is not extended), so
+    /// the next request reads S3, which holds the newer one. A confirmed absence keeps an
+    /// unexpired narrative. The newest publication answers, whichever ends last
+    /// (RR2-narrative-regression).
     fn install(&mut self, value: Option<Narrative>) {
+        if let (Some(new), Some(newest)) = (&value, &self.newest)
+            && new.announcement < *newest
+        {
+            return;
+        }
         let held = self
             .answer
             .as_ref()
             .and_then(|(until, n)| n.clone().filter(|_| Instant::now() < *until));
         let value = match (value, held) {
-            (Some(new), Some(held)) if held.announcement > new.announcement => Some(held),
             (None, Some(held)) => Some(held),
             (value, _) => value,
         };
+        if let Some(n) = &value {
+            self.newest = Some(n.announcement.clone());
+        }
         self.answer = Some((Instant::now() + ANSWER_FOR, value));
         self.retry_after = None;
     }
