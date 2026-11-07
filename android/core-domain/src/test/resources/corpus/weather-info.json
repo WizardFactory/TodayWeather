@@ -1,0 +1,25 @@
+[
+ {
+  "name": "late-response-after-switch",
+  "rows": [
+   "V09"
+  ],
+  "anomaly": "A01",
+  "requestedForIndex": 0,
+  "appliedToIndex": 1,
+  "cities": [
+   {
+    "index": 0,
+    "address": "대한민국 서울특별시 중구 명동",
+    "source": null,
+    "t1h": null
+   },
+   {
+    "index": 1,
+    "address": "United Kingdom London",
+    "source": "KMA",
+    "t1h": 3.3
+   }
+  ]
+ }
+]

@@ -1,0 +1,1562 @@
+{
+ "shortenAddress": [
+  {
+   "args": [
+    "대한민국 서울특별시 중구 명동"
+   ],
+   "expected": "서울시,명동"
+  },
+  {
+   "args": [
+    "대한민국 서울특별시 중구"
+   ],
+   "expected": "서울시,중구"
+  },
+  {
+   "args": [
+    "대한민국 서울특별시"
+   ],
+   "expected": "서울시"
+  },
+  {
+   "args": [
+    "대한민국 경기도 성남시 분당구 정자동"
+   ],
+   "expected": "성남시,정자동"
+  },
+  {
+   "args": [
+    "대한민국 경기도 성남시 분당구"
+   ],
+   "expected": "성남시,분당구"
+  },
+  {
+   "args": [
+    "대한민국 경기도 수원시"
+   ],
+   "expected": "경기도,수원시"
+  },
+  {
+   "args": [
+    "대한민국 제주특별자치도 제주시 연동"
+   ],
+   "expected": "제주시,연동"
+  },
+  {
+   "args": [
+    "대한민국 제주특별자치도 서귀포시"
+   ],
+   "expected": "제주도,서귀포시"
+  },
+  {
+   "args": [
+    "대한민국 세종특별자치시 조치원읍"
+   ],
+   "expected": "세종시,조치원읍"
+  },
+  {
+   "args": [
+    "대한민국 부산광역시 해운대구 우동"
+   ],
+   "expected": "부산시,우동"
+  },
+  {
+   "args": [
+    "대한민국 경상남도 남해군 남해읍"
+   ],
+   "expected": "남해군,남해읍"
+  },
+  {
+   "args": [
+    "대한민국 강원도 강릉시 교동"
+   ],
+   "expected": "강릉시,교동"
+  },
+  {
+   "args": [
+    "대한민국 인천광역시 강화군 강화읍 관청리"
+   ],
+   "expected": "강화군,관청리"
+  },
+  {
+   "args": [
+    "대한민국"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    ""
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "London, UK"
+   ],
+   "expected": "UK"
+  },
+  {
+   "args": [
+    "United Kingdom London Westminster Abbey Road 1"
+   ],
+   "expected": ""
+  }
+ ],
+ "addressArray": [
+  {
+   "args": [
+    "대한민국 서울특별시 중구 명동"
+   ],
+   "expected": [
+    "대한민국",
+    "서울특별시",
+    "중구",
+    "명동"
+   ]
+  },
+  {
+   "args": [
+    "대한민국 서울특별시 중구"
+   ],
+   "expected": [
+    "대한민국",
+    "서울특별시",
+    "중구"
+   ]
+  },
+  {
+   "args": [
+    "대한민국 서울특별시"
+   ],
+   "expected": [
+    "대한민국",
+    "서울특별시"
+   ]
+  },
+  {
+   "args": [
+    "대한민국 경기도 성남시 분당구 정자동"
+   ],
+   "expected": [
+    "대한민국",
+    "경기도",
+    "성남시",
+    "분당구",
+    "정자동"
+   ]
+  },
+  {
+   "args": [
+    "대한민국 경기도 성남시 분당구"
+   ],
+   "expected": [
+    "대한민국",
+    "경기도",
+    "성남시",
+    "분당구"
+   ]
+  },
+  {
+   "args": [
+    "대한민국 경기도 수원시"
+   ],
+   "expected": [
+    "대한민국",
+    "경기도",
+    "수원시"
+   ]
+  },
+  {
+   "args": [
+    "대한민국 제주특별자치도 제주시 연동"
+   ],
+   "expected": [
+    "대한민국",
+    "제주특별자치도",
+    "제주시",
+    "연동"
+   ]
+  },
+  {
+   "args": [
+    "대한민국 제주특별자치도 서귀포시"
+   ],
+   "expected": [
+    "대한민국",
+    "제주특별자치도",
+    "서귀포시"
+   ]
+  },
+  {
+   "args": [
+    "대한민국 세종특별자치시 조치원읍"
+   ],
+   "expected": [
+    "대한민국",
+    "세종특별자치시",
+    "조치원읍"
+   ]
+  },
+  {
+   "args": [
+    "대한민국 부산광역시 해운대구 우동"
+   ],
+   "expected": [
+    "대한민국",
+    "부산광역시",
+    "해운대구",
+    "우동"
+   ]
+  },
+  {
+   "args": [
+    "대한민국 경상남도 남해군 남해읍"
+   ],
+   "expected": [
+    "대한민국",
+    "경상남도",
+    "남해군",
+    "남해읍"
+   ]
+  },
+  {
+   "args": [
+    "대한민국 강원도 강릉시 교동"
+   ],
+   "expected": [
+    "대한민국",
+    "강원도",
+    "강릉시",
+    "교동"
+   ]
+  },
+  {
+   "args": [
+    "대한민국 인천광역시 강화군 강화읍 관청리"
+   ],
+   "expected": [
+    "대한민국",
+    "인천광역시",
+    "강화군",
+    "강화읍",
+    "관청리"
+   ]
+  },
+  {
+   "args": [
+    "대한민국"
+   ],
+   "expected": [
+    "대한민국"
+   ]
+  },
+  {
+   "args": [
+    ""
+   ],
+   "expected": []
+  },
+  {
+   "args": [
+    "London, UK"
+   ],
+   "expected": [
+    "London,",
+    "UK"
+   ]
+  },
+  {
+   "args": [
+    "United Kingdom London Westminster Abbey Road 1"
+   ],
+   "expected": [
+    "United",
+    "Kingdom",
+    "London",
+    "Westminster",
+    "Abbey",
+    "Road",
+    "1"
+   ]
+  }
+ ],
+ "townFromAddress": [
+  {
+   "args": [
+    "대한민국 서울특별시 중구 명동"
+   ],
+   "expected": {
+    "first": "서울특별시",
+    "second": "중구",
+    "third": "명동"
+   }
+  },
+  {
+   "args": [
+    "대한민국 서울특별시 중구"
+   ],
+   "expected": {
+    "first": "서울특별시",
+    "second": "중구",
+    "third": ""
+   }
+  },
+  {
+   "args": [
+    "대한민국 서울특별시"
+   ],
+   "expected": {
+    "first": "서울특별시",
+    "second": "",
+    "third": ""
+   }
+  },
+  {
+   "args": [
+    "대한민국 경기도 성남시 분당구 정자동"
+   ],
+   "expected": {
+    "first": "경기도",
+    "second": "성남시분당구",
+    "third": "정자동"
+   }
+  },
+  {
+   "args": [
+    "대한민국 경기도 성남시 분당구"
+   ],
+   "expected": {
+    "first": "경기도",
+    "second": "성남시분당구",
+    "third": ""
+   }
+  },
+  {
+   "args": [
+    "대한민국 경기도 수원시"
+   ],
+   "expected": {
+    "first": "경기도",
+    "second": "수원시",
+    "third": ""
+   }
+  },
+  {
+   "args": [
+    "대한민국 제주특별자치도 제주시 연동"
+   ],
+   "expected": {
+    "first": "제주특별자치도",
+    "second": "제주시",
+    "third": "연동"
+   }
+  },
+  {
+   "args": [
+    "대한민국 제주특별자치도 서귀포시"
+   ],
+   "expected": {
+    "first": "제주특별자치도",
+    "second": "서귀포시",
+    "third": ""
+   }
+  },
+  {
+   "args": [
+    "대한민국 세종특별자치시 조치원읍"
+   ],
+   "expected": {
+    "first": "세종특별자치시",
+    "second": "세종특별자치시",
+    "third": "조치원읍"
+   }
+  },
+  {
+   "args": [
+    "대한민국 부산광역시 해운대구 우동"
+   ],
+   "expected": {
+    "first": "부산광역시",
+    "second": "해운대구",
+    "third": "우동"
+   }
+  },
+  {
+   "args": [
+    "대한민국 경상남도 남해군 남해읍"
+   ],
+   "expected": {
+    "first": "경상남도",
+    "second": "남해군",
+    "third": "남해읍"
+   }
+  },
+  {
+   "args": [
+    "대한민국 강원도 강릉시 교동"
+   ],
+   "expected": {
+    "first": "강원도",
+    "second": "강릉시",
+    "third": "교동"
+   }
+  },
+  {
+   "args": [
+    "대한민국 인천광역시 강화군 강화읍 관청리"
+   ],
+   "expected": {
+    "first": "인천광역시",
+    "second": "강화군강화읍",
+    "third": "관청리"
+   }
+  },
+  {
+   "args": [
+    "대한민국"
+   ],
+   "expected": {
+    "first": "",
+    "second": "",
+    "third": ""
+   }
+  },
+  {
+   "args": [
+    ""
+   ],
+   "expected": {
+    "first": "",
+    "second": "",
+    "third": ""
+   }
+  },
+  {
+   "args": [
+    "London, UK"
+   ],
+   "expected": {
+    "first": "UK",
+    "second": "",
+    "third": ""
+   }
+  },
+  {
+   "args": [
+    "United Kingdom London Westminster Abbey Road 1"
+   ],
+   "expected": {
+    "first": "",
+    "second": "",
+    "third": ""
+   }
+  }
+ ],
+ "weatherEmoji": [
+  {
+   "args": [
+    "Sun"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "Moon"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "SunSmallCloud"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "MoonBigCloud"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "Cloud"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "CloudRain"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "CloudSnow"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "CloudRainSnow"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "CloudLightning"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "SunBigCloudRainLightning"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "sun"
+   ],
+   "expected": "🌞"
+  },
+  {
+   "args": [
+    "cloud"
+   ],
+   "expected": "☁"
+  },
+  {
+   "args": [
+    "rainsnow"
+   ],
+   "expected": "☔☃"
+  },
+  {
+   "args": [
+    "Fog"
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    ""
+   ],
+   "expected": ""
+  }
+ ],
+ "geolocationNormalize": [
+  {
+   "args": [
+    {
+     "lat": 37.5665,
+     "long": 126.978
+    }
+   ],
+   "expected": {
+    "lat": 37.566,
+    "long": 126.978
+   }
+  },
+  {
+   "args": [
+    {
+     "lat": 10.7626638,
+     "long": 106.6296638
+    }
+   ],
+   "expected": {
+    "lat": 10.763,
+    "long": 106.63
+   }
+  },
+  {
+   "args": [
+    {
+     "lat": -33.86785,
+     "long": 151.20732
+    }
+   ],
+   "expected": {
+    "lat": -33.868,
+    "long": 151.207
+   }
+  },
+  {
+   "args": [
+    {
+     "lat": 0,
+     "long": 0
+    }
+   ],
+   "expected": {
+    "lat": 0,
+    "long": 0
+   }
+  },
+  {
+   "args": [
+    {
+     "lat": 51.50735,
+     "long": -0.12776
+    }
+   ],
+   "expected": {
+    "lat": 51.507,
+    "long": -0.128
+   }
+  },
+  {
+   "args": [
+    {
+     "lat": 37.5664999,
+     "long": 126.9785001
+    }
+   ],
+   "expected": {
+    "lat": 37.566,
+    "long": 126.979
+   }
+  }
+ ],
+ "diffTodayYesterday": [
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": 15
+    },
+    {
+     "t1h": 12
+    }
+   ],
+   "expected": "어제보다 +3˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": 12
+    },
+    {
+     "t1h": 15
+    }
+   ],
+   "expected": "어제보다 -3˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": 10
+    },
+    {
+     "t1h": 10
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": 10.04
+    },
+    {
+     "t1h": 10
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": 10.06
+    },
+    {
+     "t1h": 10
+    }
+   ],
+   "expected": "어제보다 +0.1˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": -0.3
+    },
+    {
+     "t1h": 0.2
+    }
+   ],
+   "expected": "어제보다 -0.5˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": 20.55
+    },
+    {
+     "t1h": 18.1
+    }
+   ],
+   "expected": "어제보다 +2.4˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": 7
+    },
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {},
+    {
+     "t1h": 7
+    }
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": -50
+    },
+    {
+     "t1h": 12
+    }
+   ],
+   "expected": "어제보다 -62˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": "12"
+    },
+    {
+     "t1h": "10"
+    }
+   ],
+   "expected": "어제보다 +2˚"
+  },
+  {
+   "args": [
+    "ko",
+    "C",
+    {
+     "t1h": 3.14159
+    },
+    {
+     "t1h": 1
+    }
+   ],
+   "expected": "어제보다 +2.1˚"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 15
+    },
+    {
+     "t1h": 12
+    }
+   ],
+   "expected": "어제보다 +3˚"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 12
+    },
+    {
+     "t1h": 15
+    }
+   ],
+   "expected": "어제보다 -3˚"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 10
+    },
+    {
+     "t1h": 10
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 10.04
+    },
+    {
+     "t1h": 10
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 10.06
+    },
+    {
+     "t1h": 10
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": -0.3
+    },
+    {
+     "t1h": 0.2
+    }
+   ],
+   "expected": "어제와 동일"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 20.55
+    },
+    {
+     "t1h": 18.1
+    }
+   ],
+   "expected": "어제보다 +2˚"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 7
+    },
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {},
+    {
+     "t1h": 7
+    }
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": -50
+    },
+    {
+     "t1h": 12
+    }
+   ],
+   "expected": "어제보다 -62˚"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": "12"
+    },
+    {
+     "t1h": "10"
+    }
+   ],
+   "expected": "어제보다 +2˚"
+  },
+  {
+   "args": [
+    "ko",
+    "F",
+    {
+     "t1h": 3.14159
+    },
+    {
+     "t1h": 1
+    }
+   ],
+   "expected": "어제보다 +2˚"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": 15
+    },
+    {
+     "t1h": 12
+    }
+   ],
+   "expected": "+3˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": 12
+    },
+    {
+     "t1h": 15
+    }
+   ],
+   "expected": "-3˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": 10
+    },
+    {
+     "t1h": 10
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": 10.04
+    },
+    {
+     "t1h": 10
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": 10.06
+    },
+    {
+     "t1h": 10
+    }
+   ],
+   "expected": "+0.1˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": -0.3
+    },
+    {
+     "t1h": 0.2
+    }
+   ],
+   "expected": "-0.5˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": 20.55
+    },
+    {
+     "t1h": 18.1
+    }
+   ],
+   "expected": "+2.4˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": 7
+    },
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {},
+    {
+     "t1h": 7
+    }
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": -50
+    },
+    {
+     "t1h": 12
+    }
+   ],
+   "expected": "-62˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": "12"
+    },
+    {
+     "t1h": "10"
+    }
+   ],
+   "expected": "+2˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "C",
+    {
+     "t1h": 3.14159
+    },
+    {
+     "t1h": 1
+    }
+   ],
+   "expected": "+2.1˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 15
+    },
+    {
+     "t1h": 12
+    }
+   ],
+   "expected": "+3˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 12
+    },
+    {
+     "t1h": 15
+    }
+   ],
+   "expected": "-3˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 10
+    },
+    {
+     "t1h": 10
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 10.04
+    },
+    {
+     "t1h": 10
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 10.06
+    },
+    {
+     "t1h": 10
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": -0.3
+    },
+    {
+     "t1h": 0.2
+    }
+   ],
+   "expected": "Same as yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 20.55
+    },
+    {
+     "t1h": 18.1
+    }
+   ],
+   "expected": "+2˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 7
+    },
+    null
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {},
+    {
+     "t1h": 7
+    }
+   ],
+   "expected": ""
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": -50
+    },
+    {
+     "t1h": 12
+    }
+   ],
+   "expected": "-62˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": "12"
+    },
+    {
+     "t1h": "10"
+    }
+   ],
+   "expected": "+2˚ from yesterday"
+  },
+  {
+   "args": [
+    "en",
+    "F",
+    {
+     "t1h": 3.14159
+    },
+    {
+     "t1h": 1
+    }
+   ],
+   "expected": "+2˚ from yesterday"
+  }
+ ],
+ "rainSnowFall": [
+  {
+   "args": [
+    {}
+   ],
+   "expected": "0"
+  },
+  {
+   "args": [
+    {
+     "rn1": 3.2
+    }
+   ],
+   "expected": 3.2
+  },
+  {
+   "args": [
+    {
+     "rn1": 12.6,
+     "pty": 3
+    }
+   ],
+   "expected": 13
+  },
+  {
+   "args": [
+    {
+     "rn1": 0,
+     "s06": 1.5
+    }
+   ],
+   "expected": 1.5
+  },
+  {
+   "args": [
+    {
+     "s06": 14.4
+    }
+   ],
+   "expected": 14
+  },
+  {
+   "args": [
+    {
+     "r06": 0.3
+    }
+   ],
+   "expected": 0.3
+  },
+  {
+   "args": [
+    {
+     "r06": 27.5,
+     "rn1": 0
+    }
+   ],
+   "expected": 28
+  },
+  {
+   "args": [
+    {
+     "rn1": -1
+    }
+   ],
+   "expected": "0"
+  },
+  {
+   "args": [
+    {
+     "pty": 1
+    }
+   ],
+   "expected": "0"
+  },
+  {
+   "args": [
+    {
+     "rn1": "5",
+     "pty": 3
+    }
+   ],
+   "expected": "5"
+  },
+  {
+   "args": [
+    {
+     "rn1": 9.99
+    }
+   ],
+   "expected": 9.99
+  },
+  {
+   "args": [
+    {
+     "rn1": 10
+    }
+   ],
+   "expected": 10
+  }
+ ],
+ "rainSnowFallSymbol": [
+  {
+   "args": [
+    {}
+   ],
+   "expected": "rain"
+  },
+  {
+   "args": [
+    {
+     "rn1": 3.2
+    }
+   ],
+   "expected": "rain"
+  },
+  {
+   "args": [
+    {
+     "rn1": 12.6,
+     "pty": 3
+    }
+   ],
+   "expected": "snow"
+  },
+  {
+   "args": [
+    {
+     "rn1": 0,
+     "s06": 1.5
+    }
+   ],
+   "expected": "snow"
+  },
+  {
+   "args": [
+    {
+     "s06": 14.4
+    }
+   ],
+   "expected": "snow"
+  },
+  {
+   "args": [
+    {
+     "r06": 0.3
+    }
+   ],
+   "expected": "rain"
+  },
+  {
+   "args": [
+    {
+     "r06": 27.5,
+     "rn1": 0
+    }
+   ],
+   "expected": "rain"
+  },
+  {
+   "args": [
+    {
+     "rn1": -1
+    }
+   ],
+   "expected": "rain"
+  },
+  {
+   "args": [
+    {
+     "pty": 1
+    }
+   ],
+   "expected": "rain"
+  },
+  {
+   "args": [
+    {
+     "rn1": "5",
+     "pty": 3
+    }
+   ],
+   "expected": "snow"
+  },
+  {
+   "args": [
+    {
+     "rn1": 9.99
+    }
+   ],
+   "expected": "rain"
+  },
+  {
+   "args": [
+    {
+     "rn1": 10
+    }
+   ],
+   "expected": "rain"
+  }
+ ],
+ "todayPosition": [
+  {
+   "args": [
+    "kma-seoul",
+    "short",
+    320
+   ],
+   "expected": 320
+  },
+  {
+   "args": [
+    "kma-seoul",
+    "mid",
+    320
+   ],
+   "expected": 228.57142857142858
+  },
+  {
+   "args": [
+    "kma-seoul",
+    "short",
+    360
+   ],
+   "expected": 360
+  },
+  {
+   "args": [
+    "kma-seoul",
+    "mid",
+    360
+   ],
+   "expected": 257.14285714285717
+  },
+  {
+   "args": [
+    "kma-seoul",
+    "short",
+    412
+   ],
+   "expected": 412
+  },
+  {
+   "args": [
+    "kma-seoul",
+    "mid",
+    412
+   ],
+   "expected": 294.2857142857143
+  },
+  {
+   "args": [
+    "kma-seoul",
+    "short",
+    700
+   ],
+   "expected": 420
+  },
+  {
+   "args": [
+    "kma-seoul",
+    "mid",
+    700
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "vc-london",
+    "short",
+    320
+   ],
+   "expected": 548.5714285714286
+  },
+  {
+   "args": [
+    "vc-london",
+    "mid",
+    320
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "vc-london",
+    "short",
+    360
+   ],
+   "expected": 617.1428571428571
+  },
+  {
+   "args": [
+    "vc-london",
+    "mid",
+    360
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "vc-london",
+    "short",
+    412
+   ],
+   "expected": 706.2857142857142
+  },
+  {
+   "args": [
+    "vc-london",
+    "mid",
+    412
+   ],
+   "expected": 0
+  },
+  {
+   "args": [
+    "vc-london",
+    "short",
+    700
+   ],
+   "expected": 720
+  },
+  {
+   "args": [
+    "vc-london",
+    "mid",
+    700
+   ],
+   "expected": 0
+  }
+ ]
+}

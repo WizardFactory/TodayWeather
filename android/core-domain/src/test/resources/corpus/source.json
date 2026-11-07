@@ -1,0 +1,30 @@
+{
+ "generator": "android/tools/corpus/generate.mjs",
+ "sources": [
+  {
+   "path": "client/www/js/service.weatherutil.js",
+   "commit": "23837d96c524ef275331c706d3304a8cb008ea28",
+   "sha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0"
+  },
+  {
+   "path": "client/www/js/service.weatherinfo.js",
+   "commit": "23837d96c524ef275331c706d3304a8cb008ea28",
+   "sha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca"
+  },
+  {
+   "path": "client/www/js/controller.forecastctrl.js",
+   "commit": "72536d7d802e67b08fd748c25dd2d1e9436aa2da",
+   "sha256": "15116a38393d91835d506a1de7a823be8bbdffea7b2dcb258c112d17575536d8"
+  },
+  {
+   "path": "client/www/locales/ko.json",
+   "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
+   "sha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3"
+  },
+  {
+   "path": "client/www/locales/en.json",
+   "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
+   "sha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92"
+  }
+ ]
+}
