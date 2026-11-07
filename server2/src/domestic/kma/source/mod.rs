@@ -808,7 +808,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         }
     }
     /// Foreground history covers today's unavailable-in-ASOS hours and the D-1 24:00 boundary.
-    /// Never request old SHRT for history.
+    /// Never request old SHRT for history: the only older SHRT is the previous publication the
+    /// current three-hour slot needs from HH+2:10 to HH+2:59 (see [`required::foreground`]).
     async fn foreground_grid(
         &self,
         sf: schedule::Family,
@@ -816,6 +817,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         publications: &[Publication],
         until: Instant,
     ) -> Vec<Fetched> {
+        let memo = if sf == schedule::Family::Short {
+            PREVIOUS_SHORT_RETRY
+        } else {
+            LATEST_RETRY
+        };
         let mut acquired = Vec::new();
         for chunk in publications.chunks(BACKFILL_CONCURRENCY) {
             if Instant::now() >= until {
@@ -826,7 +832,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 Some(self.acquire(
                     grid_flight(sf, grid, *p),
                     fetch::ForecastRequest::DataGoKr(request),
-                    LATEST_RETRY,
+                    memo,
                     until,
                 ))
             });
@@ -1790,6 +1796,10 @@ pub fn grid_input_id(family: Family, kind: &str, f: &Fetched) -> Option<InputId>
 const LATEST_RETRY: std::time::Duration = std::time::Duration::from_secs(5 * 60);
 /// Retry bound of a backfill publication (legacy's past-condition pass runs hourly).
 const BACKFILL_RETRY: std::time::Duration = std::time::Duration::from_secs(3600);
+/// Retry bound of the previous SHRT publication the current slot needs (HH+2:10 to HH+2:59):
+/// one attempt per cell and publication, at most one data.go.kr acquisition per cell and three
+/// hours. A failure leaves that row with legacy's missing-publication values until the next one.
+const PREVIOUS_SHORT_RETRY: std::time::Duration = std::time::Duration::from_secs(3 * 3600);
 /// Backfill acquisitions in flight per pass.
 const BACKFILL_CONCURRENCY: usize = 3;
 /// Backfill passes running at once (each with [`BACKFILL_CONCURRENCY`] acquisitions).
@@ -2319,5 +2329,7 @@ mod tests {
     }
 }
 
+#[cfg(test)]
+mod previous_short_tests;
 #[cfg(test)]
 mod zone_retry_tests;

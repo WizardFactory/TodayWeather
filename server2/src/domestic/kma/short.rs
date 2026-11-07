@@ -1354,6 +1354,13 @@ pub fn convert_0h_to_24h(cx: &mut Cx) -> Flow {
     }
     Flow::Next
 }
+/// A three-hour row whose whole interval has passed (`label + 3 h <= now`). The current-time row
+/// (`label <= now < label + 3 h`) is not past: under ASOS-primary it keeps the forecast of the
+/// newest publication covering it, with the observed fields merged over it as legacy
+/// `_mergeShortWithCurrent` does (AK 2026-11-07 client validation).
+fn past_slot(row: &V, now: f64) -> bool {
+    policy::slot(row).is_some_and(|key| policy::instant(&s(&key)) + 3. * time::HOUR <= now)
+}
 /// `_mergeShortWithCurrent(shortList, currentList)`.
 fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
     let (req_date, _) = cx.time_value(9.);
@@ -1404,11 +1411,15 @@ fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
         }
     }
     for item in short.items() {
-        let historical =
-            primary && policy::slot(&item).is_some_and(|key| policy::instant(&s(&key)) <= cx.now);
+        let historical = primary && past_slot(&item, cx.now);
         if historical {
             // No past SHRT/RSS fallback. Unsupported historical forecast-only fields
             // remain explicit sentinels; measured rain below carries its true 3h interval.
+            // The forecast totals kept beside the amounts go too, so that finalization and the
+            // rain/snow texts see the cleared amount rather than the forecast (#2614 parity).
+            for field in ["r06", "s06"] {
+                precip::keep(&item, field, None);
+            }
             for (field, missing) in [
                 ("pop", -1.),
                 ("pty", -1.),
@@ -1657,8 +1668,7 @@ pub fn adjust_short(cx: &mut Cx) -> Flow {
     let n50 = V::Num(-50.);
     for row in list.items() {
         if row.get("pop").nullish() || loose_eq(&row.get("pop"), &V::Num(-1.)) {
-            let past_observed = policy::observations_primary(&cx.req)
-                && policy::slot(&row).is_some_and(|key| policy::instant(&s(&key)) <= cx.now);
+            let past_observed = policy::observations_primary(&cx.req) && past_slot(&row, cx.now);
             row.set("pop", if past_observed { -1. } else { 0. });
         }
         let day = day_summary(&days, &row.get("date"));

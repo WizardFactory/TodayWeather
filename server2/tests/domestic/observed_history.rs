@@ -3,23 +3,30 @@ use super::support::*;
 use serde_json::{Value, json};
 use server2::domestic::asos::AsosKind;
 use server2::domestic::kma::source::asos::AsosFetched;
-use server2::domestic::kma::{Outcome, assemble};
+use server2::domestic::kma::{
+    DbVersion, KmaStore, MidModel, Outcome, StoreResult, TownModel, assemble,
+};
 use server2::gateway::OrderedJson;
 use std::{collections::BTreeSet, sync::Arc};
 
 fn history() -> OrderedJson {
+    history_at("108")
+}
+
+/// ASOS hourly and daily records of `station` for September 17..23.
+fn history_at(station: &str) -> OrderedJson {
     let mut hourly = Vec::new();
     let mut daily = Vec::new();
     for day in 17..=23 {
         for hour in 0..24 {
             hourly.push(
                 json!({"source":"KMA_ASOS","kind":"hourly","timeBasis":"UTC",
-                "stationId":"108","key":format!("202609{day:02}{hour:02}00"),
+                "stationId":station,"key":format!("202609{day:02}{hour:02}00"),
                 "values":{"t1h":17,"reh":60,"sky":4,"pty":1,"rn1":0.5,"wsd":2,"vec":180}}),
             );
         }
         daily.push(json!({"source":"KMA_ASOS","kind":"daily","timeBasis":"UTC",
-            "stationId":"108","key":format!("202609{day:02}"),
+            "stationId":station,"key":format!("202609{day:02}"),
             "values":{"taMin":7,"taMax":27,"t1d":17,"rn1":12,"reh":60,"wsd":2}}));
     }
     OrderedJson::parse(
@@ -35,15 +42,24 @@ fn assembled(injected: bool) -> Value {
 }
 
 fn assembled_with(history: Option<OrderedJson>) -> Value {
-    let sc = scenario("domestic-v000903");
+    assembled_scenario("domestic-v000903", history)
+}
+
+/// A recorded scenario at its clock, ASOS-primary when `history` is injected.
+fn assembled_scenario(id: &str, history: Option<OrderedJson>) -> Value {
+    let sc = scenario(id);
     let store = replay(sc);
     let store = match history {
         Some(history) => store.with_history(history),
         None => store,
     };
+    assembled_from(sc, &store)
+}
+
+fn assembled_from(sc: &Value, store: &dyn KmaStore) -> Value {
     let out = assemble(
         &request(sc),
-        &store,
+        store,
         clock_ms(sc["clock"].as_str().unwrap()),
         oracle_config(),
     );
@@ -51,6 +67,194 @@ fn assembled_with(history: Option<OrderedJson>) -> Value {
         panic!("assembly failed: {out:?}")
     };
     serde_json::from_slice(&body.to_bytes()).unwrap()
+}
+
+/// The body legacy answered when the scenario was recorded.
+fn recorded_body(id: &str) -> Value {
+    serde_json::from_str(scenario(id)["body"].as_str().unwrap()).unwrap()
+}
+
+fn short_row<'a>(body: &'a Value, date: &str, time: u32) -> &'a Value {
+    body["short"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["date"] == date && r["time"] == time)
+        .unwrap_or_else(|| panic!("{date} {time} slot"))
+}
+
+/// The replay store of a recording with the documents of some grid collections changed. The
+/// recording still answers every call first, so the assembly's calls and arguments stay checked.
+struct Patched {
+    inner: RecordedStore,
+    town_model: fn(TownModel, OrderedJson) -> OrderedJson,
+}
+impl KmaStore for Patched {
+    fn db_version(&self) -> DbVersion {
+        self.inner.db_version()
+    }
+    fn towns(&self) -> StoreResult {
+        self.inner.towns()
+    }
+    fn town(&self, a: &str, b: &str, c: &str) -> StoreResult {
+        self.inner.town(a, b, c)
+    }
+    fn region_code(&self, region: &str, city: &str) -> StoreResult {
+        self.inner.region_code(region, city)
+    }
+    fn town_model(&self, model: TownModel, mx: &Value, my: &Value) -> StoreResult {
+        self.inner
+            .town_model(model, mx, my)
+            .map(|docs| (self.town_model)(model, docs))
+    }
+    fn mid_model(&self, model: MidModel, reg_id: &Value) -> StoreResult {
+        self.inner.mid_model(model, reg_id)
+    }
+    fn forecast_zone(&self, region: &str, city: &str) -> StoreResult {
+        self.inner.forecast_zone(region, city)
+    }
+    fn stn_hourly_and_min_rns(
+        &self,
+        town: &Value,
+        date_time: &str,
+        current: &Value,
+    ) -> StoreResult {
+        self.inner.stn_hourly_and_min_rns(town, date_time, current)
+    }
+    fn city_hourly(&self, town: &Value) -> StoreResult {
+        self.inner.city_hourly(town)
+    }
+    fn history(&self, town: &Value) -> StoreResult {
+        self.inner.history(town)
+    }
+    fn area_no(&self, a: &str, b: &str, c: &str) -> StoreResult {
+        self.inner.area_no(a, b, c)
+    }
+    fn area_no_near(&self, lon_lat: &Value) -> StoreResult {
+        self.inner.area_no_near(lon_lat)
+    }
+    fn life_index(&self, area_no: f64) -> StoreResult {
+        self.inner.life_index(area_no)
+    }
+    fn food_poisoning(&self, sd: &str, sgg: &str, start: &str, end: &str) -> StoreResult {
+        self.inner.food_poisoning(sd, sgg, start, end)
+    }
+    fn arpltn(&self, town: &Value, now_ms: f64) -> StoreResult {
+        self.inner.arpltn(town, now_ms)
+    }
+    fn dust_forecast(&self, region: &str, city: &str, date: &str) -> StoreResult {
+        self.inner.dust_forecast(region, city, date)
+    }
+    fn air_fallback(&self, g_coord: &Value, now_ms: f64) -> StoreResult {
+        self.inner.air_fallback(g_coord, now_ms)
+    }
+    fn air_forecast(&self, source: &str, station: &Value) -> StoreResult {
+        self.inner.air_forecast(source, station)
+    }
+    fn rise_set(&self, geocode: &Value, dates: &[String]) -> StoreResult {
+        self.inner.rise_set(geocode, dates)
+    }
+    fn special_zones(&self, area_codes: &[String]) -> StoreResult {
+        self.inner.special_zones(area_codes)
+    }
+    fn as_of_ms(&self) -> Option<f64> {
+        self.inner.as_of_ms()
+    }
+    fn unconsumed(&self) -> Option<String> {
+        self.inner.unconsumed()
+    }
+}
+/// The documents of `docs` (a DB 2.0 grid collection) except those `drop` selects by the
+/// `(date, time)` of their `data_key` row.
+fn without(docs: OrderedJson, data_key: &str, drop: fn(&str, &str) -> bool) -> OrderedJson {
+    let OrderedJson::Array(docs) = docs else {
+        panic!("a grid collection is an array")
+    };
+    let at = |doc: &OrderedJson, key: &str| {
+        doc.get(data_key)
+            .and_then(|row| row.get(key))
+            .and_then(OrderedJson::string)
+            .unwrap_or_default()
+    };
+    OrderedJson::Array(
+        docs.into_iter()
+            .filter(|doc| !drop(&at(doc, "date"), &at(doc, "time")))
+            .collect(),
+    )
+}
+
+/// AK 2026-11-07 (client validation): the three-hour row of the current time (label <= now <
+/// label + 3 h) keeps the forecast of the newest publication covering it, with the observed
+/// fields merged over it as legacy `_mergeShortWithCurrent` does; it is not a past row. The
+/// recording's clock is 09:10 KST, so the 09:00 row is current and legacy answered it.
+#[test]
+fn the_current_row_keeps_its_forecast_under_asos_primary() {
+    let legacy = recorded_body("domestic-v000903");
+    let body = assembled(true);
+    let (now, was) = (
+        short_row(&body, "20260924", 9),
+        short_row(&legacy, "20260924", 9),
+    );
+    for field in ["pop", "wav", "s06", "s06Hours", "r06", "r06Hours"] {
+        assert_eq!(now[field], was[field], "{field}: {now}");
+    }
+    assert_eq!(now["pop"], 20, "the 0500 publication's probability: {now}");
+    assert_eq!(now["wav"], 0.8, "{now}");
+}
+
+/// Past rows (label + 3 h <= now) keep the ASOS-primary rule, and no forecast precipitation
+/// total stays behind the cleared amounts: the hidden total kept the forecast's text beside the
+/// measured amount and turned the cleared -1 into -10 snow. The recording forecasts
+/// `30.0~50.0mm` rain for 2026-09-23 06:00 and `5.0cm 이상` snow for 09:00 (ASOS-filled), and
+/// nothing for 2026-09-24 03:00 (grid-observed).
+#[test]
+fn a_past_row_keeps_no_forecast_total_behind_its_cleared_amounts() {
+    let legacy = recorded_body("rain-categories");
+    assert_eq!(short_row(&legacy, "20260923", 6)["r06Str"], "30~50mm");
+    assert_eq!(short_row(&legacy, "20260923", 9)["s06Str"], "5~?cm");
+    let body = assembled_scenario("rain-categories", Some(history()));
+    let wet = short_row(&body, "20260923", 6);
+    assert_eq!(wet["r06"], 1.5, "three measured ASOS hours: {wet}");
+    assert_eq!(wet["r06Str"], "1.5mm", "the measured amount's text: {wet}");
+    let snowy = short_row(&body, "20260923", 9);
+    assert_eq!(snowy["wav"], -1, "no past forecast value: {snowy}");
+    assert_eq!(snowy["s06"], 0, "{snowy}");
+    assert!(snowy.get("s06Str").is_none(), "no forecast text: {snowy}");
+    let observed = short_row(&body, "20260924", 3);
+    assert_eq!(observed["s06"], 0, "never -10: {observed}");
+}
+
+/// Failure path: with no publication covering the current slot the row keeps what legacy sends
+/// for a missing publication (probability 0), and the request is still answered.
+#[test]
+fn without_a_covering_publication_the_current_row_keeps_legacys_missing_values() {
+    let sc = scenario("domestic-v000903");
+    let patch: fn(TownModel, OrderedJson) -> OrderedJson = |model, docs| match model {
+        TownModel::Short => without(docs, "shortData", |d, t| d == "20260924" && t == "0900"),
+        _ => docs,
+    };
+    let legacy = assembled_from(
+        sc,
+        &Patched {
+            inner: replay(sc),
+            town_model: patch,
+        },
+    );
+    let body = assembled_from(
+        sc,
+        &Patched {
+            inner: replay(sc).with_history(history()),
+            town_model: patch,
+        },
+    );
+    let (now, was) = (
+        short_row(&body, "20260924", 9),
+        short_row(&legacy, "20260924", 9),
+    );
+    assert_eq!(was["pop"], 0, "legacy adjustShort: {was}");
+    for field in ["pop", "wav", "s06", "s06Hours"] {
+        assert_eq!(now[field], was[field], "{field}: {now}");
+    }
 }
 
 #[test]
@@ -86,11 +290,16 @@ fn asos_primary_replaces_forecast_history_and_uses_official_daily_values() {
     );
     assert_eq!(row["r06Hours"], 3);
     assert_eq!(row["pty"], 1);
-    assert!(
-        row.get("s06").is_none(),
-        "an unsupported snow amount cannot inherit forecast text"
+    // The forecast total behind the cleared amount is gone (#2614 parity): the unsupported snow
+    // amount finalizes like every past row without a covering publication, no amount over no
+    // hours, and never inherits the forecast's amount or text.
+    assert_eq!(
+        (row["s06"].clone(), row["s06Hours"].clone()),
+        (json!(0), json!(0)),
+        "an unsupported snow amount cannot inherit the forecast: {row}"
     );
     assert!(row.get("s06Text").is_none());
+    assert!(row.get("s06Str").is_none());
     assert_eq!(
         row["pop"], -1,
         "ASOS has no precipitation probability; never invent zero"

@@ -20,6 +20,8 @@ mod observe;
 mod observed_history;
 #[path = "domestic/parity.rs"]
 mod parity;
+#[path = "domestic/parity_evidence.rs"]
+mod parity_evidence;
 #[path = "domestic/qs.rs"]
 mod qs;
 #[path = "domestic/quota.rs"]
