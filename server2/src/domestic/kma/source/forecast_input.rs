@@ -40,8 +40,8 @@ use crate::gateway::BoxFuture;
 use crate::history::IndexListing;
 use crate::resolver::{OwnedConfig, OwnedFlights};
 use crate::storage::{
-    Catalog, CatalogId, CatalogLimits, CatalogStore, Envelope, GroupDeclaration, GroupMember,
-    PageOutcome, Pagination, RawRecord,
+    CatalogId, CatalogLimits, CatalogStore, Envelope, GroupDeclaration, GroupMember, PageOutcome,
+    Pagination, RawRecord,
 };
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -289,44 +289,19 @@ fn image_catalog(kind: &str, day: &str) -> Result<CatalogId, String> {
         partition: day.into(),
     })
 }
-/// The acquisitions one day catalog lists: (completion instant, fetch group, a member envelope),
-/// from the catalog control object alone (no record body is read).
-async fn listed_acquisitions<T: IndexListing>(
-    transport: &T,
+/// The acquisitions one day catalog lists ([`Reader::listed_acquisitions`]).
+async fn listed_acquisitions<T: IndexListing + Clone>(
+    reader: &Reader<T>,
     id: &CatalogId,
     deadline: Instant,
 ) -> Result<Vec<(u64, String, Envelope)>, String> {
-    let limits = CatalogLimits::default();
-    let object = match tokio::time::timeout_at(
-        deadline,
-        transport.get_control(&id.key(), limits.control_bytes),
-    )
-    .await
-    {
-        Err(_) => return Err("image catalog deadline".into()),
-        Ok(Err(crate::storage::Error::NotFound)) => return Ok(Vec::new()),
-        Ok(Err(e)) => return Err(format!("image catalog: {e}")),
-        Ok(Ok(object)) => object,
-    };
-    let catalog = Catalog::from_bytes(&object.body, id, &limits)
-        .map_err(|e| format!("image catalog: {e}"))?;
-    // One acquisition per fetch group; its completion is its members' latest fetch instant.
-    let mut groups: BTreeMap<String, (u64, Envelope)> = BTreeMap::new();
-    for e in catalog.entries {
-        let group = match &e.fetch_group {
-            Some(g) => g.descriptor_key().map_err(|e| e.to_string())?,
-            None => e.identity.raw_sha256.clone(),
-        };
-        let fetched = e.identity.fetched_at_ms;
-        groups
-            .entry(group)
-            .and_modify(|(f, _)| *f = (*f).max(fetched))
-            .or_insert((fetched, e));
-    }
-    Ok(groups
-        .into_iter()
-        .map(|(group, (fetched, e))| (fetched, group, e))
-        .collect())
+    reader
+        .listed_acquisitions(id, deadline)
+        .await
+        .map_err(|e| match e {
+            crate::storage::Error::Timeout => "image catalog deadline".to_owned(),
+            e => format!("image catalog: {e}"),
+        })
 }
 
 impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
@@ -769,9 +744,7 @@ async fn listed<T: IndexListing + Clone + 'static>(
     let mut out = Vec::new();
     for day in window(cut).into_iter().filter(|d| listed.contains(d)) {
         let id = image_catalog(image::KIND, &day)?;
-        for (fetched, group, member) in
-            listed_acquisitions(&shared.reader.transport, &id, deadline).await?
-        {
+        for (fetched, group, member) in listed_acquisitions(&shared.reader, &id, deadline).await? {
             if fetched as f64 <= cut {
                 out.push(((fetched, day.clone(), group), id.clone(), member));
             }
@@ -929,7 +902,7 @@ async fn newest_product<T: IndexListing + Clone + 'static>(
         .map_err(|e| format!("product listing: {e}"))?;
     for day in days.iter().rev().filter(|d| **d >= oldest) {
         let id = image_catalog(PRODUCT_KIND, day)?;
-        let newest = listed_acquisitions(&shared.reader.transport, &id, deadline)
+        let newest = listed_acquisitions(&shared.reader, &id, deadline)
             .await?
             .into_iter()
             .max_by(|a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));

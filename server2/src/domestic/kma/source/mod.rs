@@ -43,6 +43,7 @@ pub mod live;
 pub mod mfds;
 mod mid;
 pub mod observe;
+pub mod observe_product;
 pub mod pages;
 mod records;
 mod reference;

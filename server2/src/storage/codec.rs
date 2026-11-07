@@ -144,6 +144,41 @@ impl RecordId {
             self.raw_sha256
         ))
     }
+    /// The identity whose [`Self::object_key`] is `key`.
+    pub fn from_object_key(key: &str) -> Result<Self, Error> {
+        let invalid = Error::Invalid("record object key");
+        let rest = key.strip_prefix("raw/v2/").ok_or(invalid.clone())?;
+        let parts: Vec<&str> = rest.split('/').collect();
+        let [source, kind, y, m, d, slot, key_sha256, file] = parts[..] else {
+            return Err(invalid);
+        };
+        let (fetched, raw) = file
+            .strip_suffix(".raw.gz")
+            .and_then(|f| f.split_once('-'))
+            .ok_or(invalid.clone())?;
+        // Four, two and two digits (the key's own widths), so the date cannot overflow.
+        let number = |t: &str, width: usize| {
+            (t.len() == width && t.bytes().all(|b| b.is_ascii_digit()))
+                .then(|| t.parse::<u32>().ok())
+                .flatten()
+                .ok_or(invalid.clone())
+        };
+        let id = Self {
+            source: source.into(),
+            kind: kind.into(),
+            key_sha256: key_sha256.into(),
+            period: Period {
+                local_date: number(y, 4)? * 10000 + number(m, 2)? * 100 + number(d, 2)?,
+                slot: slot.into(),
+            },
+            fetched_at_ms: fetched.parse().map_err(|_| invalid.clone())?,
+            raw_sha256: raw.into(),
+        };
+        if id.object_key()? != key {
+            return Err(invalid);
+        }
+        Ok(id)
+    }
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -16,6 +16,8 @@ mod life;
 mod life_s3;
 #[path = "domestic/observe.rs"]
 mod observe;
+#[path = "domestic/observe_product.rs"]
+mod observe_product;
 #[path = "domestic/observed_history.rs"]
 mod observed_history;
 #[path = "domestic/parity.rs"]
