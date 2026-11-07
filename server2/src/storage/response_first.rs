@@ -81,9 +81,13 @@ pub struct Batch {
 /// A step of an acquisition at which the writer awaits [`Publisher::checkpoint`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Checkpoint {
+    /// The creating caller has created the entry and started its job, and waits for it next.
+    Created,
     /// The job's batch is valid and charged; who waits for it is not settled and it is not
     /// Ready yet.
     Validated,
+    /// The batch is Ready and who waits for it is settled.
+    Announced,
 }
 /// Only this publisher can confer durable eligibility. RAM records carry no S06 token.
 pub trait Publisher: Send + Sync + 'static {
@@ -612,11 +616,11 @@ impl Writer {
         // exists before the provider can finish, so a provider that is done before the caller
         // is polled again is not released as one nobody waits for (NoWaiters), which would
         // publish a response's raw before its body ends.
-        let mut receiver = {
+        let (mut receiver, created) = {
             let mut table = self.table.lock().unwrap_or_else(|e| e.into_inner());
             Self::prune(&mut table);
             if let Some(entry) = table.entries.get(&key) {
-                entry.state.subscribe()
+                (entry.state.subscribe(), false)
             } else {
                 if self.closing.load(SeqCst)
                     || reserve == 0
@@ -677,9 +681,12 @@ impl Writer {
                     this.run(owned, lease, reserve, provider_until, provider)
                         .await;
                 }));
-                receiver
+                (receiver, true)
             }
         };
+        if created {
+            self.publisher.checkpoint(Checkpoint::Created).await;
+        }
         loop {
             let state = receiver.borrow_and_update().clone();
             match state {
@@ -804,6 +811,7 @@ impl Writer {
                 entry.gate.release(ReleaseReason::NoWaiters);
             }
         }
+        self.publisher.checkpoint(Checkpoint::Announced).await;
         tokio::select! {
             _=entry.gate.wait()=>(),
             _=tokio::time::sleep(self.config.dormancy)=>entry.gate.release(ReleaseReason::DormancyCap),
