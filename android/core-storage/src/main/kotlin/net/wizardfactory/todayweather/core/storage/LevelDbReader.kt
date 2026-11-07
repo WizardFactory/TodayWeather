@@ -5,35 +5,66 @@ import java.io.File
 /**
  * Read-only reader for a LevelDB directory, enough to read the Cordova WebView's localStorage
  * (`app_webview/Default/Local Storage/leveldb`). It never opens the database through LevelDB, takes
- * no lock and writes nothing: it decodes the write-ahead logs (`*.log`) and the table files
- * (`*.ldb`, `*.sst`, uncompressed or Snappy) and keeps, for each key, the entry with the highest
- * sequence number. Corrupt log records (bad checksum) and unreadable tables are skipped.
+ * no lock and writes nothing. It follows `CURRENT` to the MANIFEST, replays its version edits to find
+ * the live table files and the current log numbers, then reads those tables (uncompressed or Snappy)
+ * and logs and keeps, for each key, the entry with the highest sequence number. Files that are no
+ * longer live (left over after a compaction) are ignored, so a deleted key cannot reappear. Corrupt
+ * log records (bad checksum) and unreadable tables are skipped.
  */
 object LevelDbReader {
     private const val BLOCK_SIZE = 32768
     private const val TABLE_MAGIC = 0xdb4775248b80fb57uL
 
-    /** Live key/value pairs of the database in [dir]; deleted keys are absent. */
+    /** Live key/value pairs of the database in [dir]; deleted keys are absent. Empty without a readable MANIFEST. */
     fun read(dir: File): Map<ByteKey, ByteArray> {
+        val manifestName = runCatching { File(dir, "CURRENT").readText().trim() }.getOrNull() ?: return emptyMap()
+        val version = runCatching { replayManifest(File(dir, manifestName).readBytes()) }.getOrNull() ?: return emptyMap()
         val latest = HashMap<ByteKey, Pair<Long, ByteArray?>>()
         fun offer(key: ByteArray, seq: Long, value: ByteArray?) {
             val k = ByteKey(key)
             val old = latest[k]
             if (old == null || seq > old.first) latest[k] = seq to value
         }
-        val files = dir.listFiles()?.sortedBy { it.name } ?: return emptyMap()
-        for (f in files) {
-            when {
-                f.name.endsWith(".log") -> runCatching { readLog(f.readBytes(), ::offer) }
-                f.name.endsWith(".ldb") || f.name.endsWith(".sst") -> runCatching { readTable(f.readBytes(), ::offer) }
-            }
+        for (number in version.tables) {
+            val f = listOf("%06d.ldb", "%06d.sst").map { File(dir, it.format(java.util.Locale.ROOT, number)) }.firstOrNull { it.isFile }
+            f?.let { runCatching { readTable(it.readBytes(), ::offer) } }
         }
+        val logs = dir.listFiles()?.mapNotNull { f -> f.name.removeSuffix(".log").takeIf { f.name.endsWith(".log") }?.toLongOrNull()?.let { it to f } }
+            ?.filter { (n, _) -> n >= version.logNumber || n == version.prevLogNumber }?.sortedBy { it.first } ?: emptyList()
+        for ((_, f) in logs) runCatching { readLog(f.readBytes()) { applyBatch(it, ::offer) } }
         return latest.mapNotNull { (k, v) -> v.second?.let { k to it } }.toMap()
     }
 
-    // ---------------------------------------------------------------- write-ahead log
+    private class Version(val tables: Set<Long>, val logNumber: Long, val prevLogNumber: Long)
 
-    private fun readLog(data: ByteArray, offer: (ByteArray, Long, ByteArray?) -> Unit) {
+    /** VersionEdit records of the MANIFEST (tags of LevelDB's version_edit.cc). */
+    private fun replayManifest(data: ByteArray): Version {
+        val live = HashSet<Long>()
+        var logNumber = 0L
+        var prevLogNumber = -1L
+        readLog(data) { edit ->
+            val c = Cursor(edit, 0)
+            while (c.pos < edit.size) {
+                when (c.varint().toInt()) {
+                    1 -> c.slice() // comparator
+                    2 -> logNumber = c.varint()
+                    3 -> c.varint() // next file number
+                    4 -> c.varint() // last sequence
+                    5 -> { c.varint(); c.slice() } // compact pointer
+                    6 -> { c.varint(); live.remove(c.varint()) } // deleted file
+                    7 -> { c.varint(); live.add(c.varint()); c.varint(); c.slice(); c.slice() } // new file
+                    9 -> prevLogNumber = c.varint()
+                    else -> throw IllegalStateException("unknown version edit tag")
+                }
+            }
+        }
+        return Version(live, logNumber, prevLogNumber)
+    }
+
+    // ---------------------------------------------------------------- write-ahead log format
+
+    /** Calls [onRecord] for each complete record (log and MANIFEST files share this format). */
+    private fun readLog(data: ByteArray, onRecord: (ByteArray) -> Unit) {
         var pos = 0
         val record = java.io.ByteArrayOutputStream()
         while (pos + 7 <= data.size) {
@@ -49,10 +80,10 @@ object LevelDbReader {
             pos += 7 + len
             if (!ok) { record.reset(); continue }
             when (type) {
-                1 -> { record.reset(); applyBatch(payload, offer) } // FULL
+                1 -> { record.reset(); onRecord(payload) } // FULL
                 2 -> { record.reset(); record.write(payload) } // FIRST
                 3 -> record.write(payload) // MIDDLE
-                4 -> { record.write(payload); applyBatch(record.toByteArray(), offer); record.reset() } // LAST
+                4 -> { record.write(payload); onRecord(record.toByteArray()); record.reset() } // LAST
             }
         }
     }

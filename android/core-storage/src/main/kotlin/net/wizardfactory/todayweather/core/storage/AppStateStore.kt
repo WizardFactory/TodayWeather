@@ -40,33 +40,59 @@ object AppStateStore {
     }
 }
 
+/** What the migration reads; see [CordovaMigration.migrate]. */
+data class MigrationSources(
+    val local: Map<String, String>,
+    val suite: Map<String, String?>,
+    val legacySuite: Map<String, String?>,
+)
+
 /**
- * Runs [CordovaMigration] once, on the first start of the native app over a Cordova install. The
- * Cordova suites stay untouched (the rollback hand-back, AN-17, reads and writes them).
+ * Runs [CordovaMigration] once into [store]: a stored state with migration metadata is never
+ * replaced, whatever the sources or the clock say later.
+ */
+class MigrationRunner(
+    private val store: DataStore<AppState>,
+    private val sources: () -> MigrationSources,
+    private val clock: () -> Long,
+    private val zone: () -> TimeZone,
+    private val region: () -> String?,
+) {
+    suspend fun runIfNeeded(): AppState {
+        store.data.first().let { if (it.migration != null) return it }
+        return store.updateData { state ->
+            if (state.migration != null) return@updateData state
+            val s = sources()
+            CordovaMigration.migrate(s.local, s.suite, s.legacySuite, region(), clock(), zone())
+        }
+    }
+}
+
+/**
+ * Runs the migration on the first start of the native app over a Cordova install. The Cordova storage
+ * (WebView files and suites) is read, never changed: the rollback hand-back (AN-17) uses it.
  */
 class CordovaMigrator(
     private val context: Context,
-    private val store: DataStore<AppState> = AppStateStore.get(context),
-    private val clock: () -> Long = System::currentTimeMillis,
+    store: DataStore<AppState> = AppStateStore.get(context),
+    clock: () -> Long = System::currentTimeMillis,
 ) {
-    /**
-     * Returns the state after the migration; a second call changes nothing. The Cordova storage (WebView
-     * files and suites) is read, never changed.
-     */
-    suspend fun migrateIfNeeded(): AppState {
-        if (store.data.first().migration != null) return store.data.first()
-        return store.updateData { state ->
-            if (state.migration != null) return@updateData state
-            CordovaMigration.migrate(
+    private val runner = MigrationRunner(
+        store,
+        sources = {
+            MigrationSources(
                 local = WebViewLocalStorage.readAppData(File(context.applicationInfo.dataDir)),
                 suite = read(context.getSharedPreferences(CordovaMigration.SUITE, Context.MODE_PRIVATE)),
                 legacySuite = read(context.getSharedPreferences(CordovaMigration.LEGACY_SUITE, Context.MODE_PRIVATE)),
-                region = Locale.getDefault().country.ifEmpty { null },
-                nowMillis = clock(),
-                zone = TimeZone.getDefault(),
             )
-        }
-    }
+        },
+        clock = clock,
+        zone = TimeZone::getDefault,
+        region = { Locale.getDefault().country.ifEmpty { null } },
+    )
+
+    /** Returns the state after the migration; a second call changes nothing. */
+    suspend fun migrateIfNeeded(): AppState = runner.runIfNeeded()
 
     private fun read(prefs: SharedPreferences): Map<String, String?> =
         prefs.all.filterKeys { !it.startsWith("_") }.mapValues { (_, v) -> v?.toString() }

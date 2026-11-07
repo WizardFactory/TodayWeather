@@ -101,3 +101,5 @@ Design decision: read the WebView `localStorage` as the first source, because th
 ### Checks
 
 JVM: `CordovaMigrationTest` (10), `LevelDbReaderTest` (5, files written by a test writer). Device: `run-upgrade-test.sh` on API 36 (LevelDB) and API 24 (SQLite localStorage) emulators. Smoke: debug build without the Firebase configuration starts with analytics off.
+
+Review round 1 (F1–F8): slots kept for broken city entries, coordinate validation and serialization, MANIFEST-based LevelDB reading with real-LevelDB fixtures, wall-time `secs2date`, locale-independent number formatting (also in AN-02's warning times), push record validation, the upgrade test's preconditions (negative run exits 4 without the Firebase configuration), and `MigrationRunner` with a JVM re-run test.

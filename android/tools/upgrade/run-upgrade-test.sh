@@ -37,6 +37,16 @@ adb shell am force-stop $PKG
 adb exec-out run-as $PKG cat shared_prefs/group.net.wizardfactory.todayweather.xml > "$OUT/suite-before.xml"
 adb exec-out run-as $PKG cat shared_prefs/com.google.android.gms.measurement.prefs.xml > "$OUT/measurement-before.xml" || true
 
+# Preconditions, so the analytics check cannot pass vacuously: the Cordova opt-in happened, the SDK
+# persisted collection as enabled, and the native build carries the Firebase configuration.
+node -e 'const s=JSON.parse(require("fs").readFileSync(process.argv[1]));if(s.analyticsChoice!==true||!s.deviceId)process.exit(1)' "$OUT/seeded.json" \
+    || { echo "precondition: Cordova analytics opt-in or device id missing" >&2; exit 4; }
+grep -q 'name="measurement_enabled_from_api" value="true"' "$OUT/measurement-before.xml" \
+    || { echo "precondition: analytics collection was not enabled before the update" >&2; exit 4; }
+AAPT2=$(ls -d "${ANDROID_HOME:-$HOME/Library/Android/sdk}"/build-tools/*/aapt2 | tail -1)
+"$AAPT2" dump resources "$APP/debug/app-debug.apk" | grep -q "string/google_app_id" \
+    || { echo "precondition: the native APK has no Firebase configuration (app/google-services.json)" >&2; exit 4; }
+
 adb shell setprop log.tag.FA VERBOSE
 adb shell setprop log.tag.FA-SVC VERBOSE
 adb logcat -c

@@ -17,6 +17,18 @@ class LevelDbReaderTest {
     private fun utf16(s: String) = byteArrayOf(0) + s.toByteArray(Charsets.UTF_16LE)
     private fun latin1(s: String) = byteArrayOf(1) + s.toByteArray(Charsets.ISO_8859_1)
 
+    /** Directories written by the real LevelDB library (android/tools/leveldb-fixtures), with expected values read through it. */
+    @Test
+    fun realLevelDbFixturesMatchLevelDb() {
+        for (name in listOf("obsolete-table", "table-and-log")) {
+            val dir = File(javaClass.getResource("/leveldb/$name")!!.toURI())
+            val expected = kotlinx.serialization.json.Json.parseToJsonElement(File(dir.parentFile, "$name.expected.json").readText())
+                .let { it as kotlinx.serialization.json.JsonObject }
+                .mapValues { (_, v) -> (v as kotlinx.serialization.json.JsonPrimitive).content }
+            assertEquals(expected, WebViewLocalStorage.read(dir), name)
+        }
+    }
+
     @Test
     fun logRecordsDeletesAndFragmentsAcrossBlocks() {
         val dir = createTempDirectory().toFile()
@@ -26,6 +38,7 @@ class LevelDbReaderTest {
                 log(batch(3, put(key("cities"), utf16("[\"서울\",\"London\"]")), put(key("big"), latin1(big)))) +
                 log(batch(5, delete(key("units")))),
         )
+        manifest(dir, emptyList())
         val items = WebViewLocalStorage.read(dir)
         assertEquals("[\"서울\",\"London\"]", items["cities"])
         assertEquals(big, items["big"])
@@ -38,6 +51,7 @@ class LevelDbReaderTest {
         val good = log(batch(1, put(key("a"), latin1("1"))))
         val bad = log(batch(2, put(key("a"), latin1("2")))).also { it[it.size - 1] = (it[it.size - 1] + 1).toByte() }
         File(dir, "000005.log").writeBytes(good + bad)
+        manifest(dir, emptyList())
         assertEquals("1", WebViewLocalStorage.read(dir)["a"])
     }
 
@@ -49,6 +63,8 @@ class LevelDbReaderTest {
         File(dir, "000007.ldb").writeBytes(table(entries, seq = 10, snappy = false))
         File(dir, "000008.ldb").writeBytes(table(listOf(key("units") to latin1("{\"airUnit\":\"airkorea\"}".repeat(3))), seq = 11, snappy = true))
         File(dir, "000009.log").writeBytes(log(batch(20, put(key("cityIndex"), latin1("1")))))
+        File(dir, "000004.log").writeBytes(log(batch(30, put(key("cityIndex"), latin1("9"))))) // older log: not current
+        manifest(dir, listOf(7, 8), logNumber = 9)
         val items = WebViewLocalStorage.read(dir)
         assertEquals("1", items["cityIndex"])
         assertEquals("[\"명동\"]", items["cities"])
@@ -61,6 +77,7 @@ class LevelDbReaderTest {
         val dir = createTempDirectory().toFile()
         val fileOrigin = "_file://".toByteArray() + 0 + 1 + "cities".toByteArray()
         File(dir, "000003.log").writeBytes(log(batch(1, put(fileOrigin, latin1("old")))))
+        manifest(dir, emptyList())
         assertEquals(emptyMap(), WebViewLocalStorage.read(dir))
         assertEquals(emptyMap(), WebViewLocalStorage.read(File(dir, "absent")))
     }
@@ -157,6 +174,20 @@ class LevelDbReaderTest {
         fixed(footer, 0xdb4775248b80fb57uL.toLong(), 8)
         out.write(footer.toByteArray())
         return out.toByteArray()
+    }
+
+    /** CURRENT and a MANIFEST listing [tables] as live; logs numbered >= [logNumber] are current. */
+    private fun manifest(dir: File, tables: List<Long>, logNumber: Long = 0) {
+        val edit = ByteArrayOutputStream()
+        val name = "leveldb.BytewiseComparator".toByteArray()
+        edit.write(1); varint(edit, name.size.toLong()); edit.write(name)
+        edit.write(2); varint(edit, logNumber)
+        for (n in tables) { edit.write(7); varint(edit, 0); varint(edit, n); varint(edit, 100); varint(edit, 1); edit.write(0); varint(edit, 1); edit.write(0xff) }
+        val saved = logPos
+        logPos = 0
+        File(dir, "MANIFEST-000002").writeBytes(log(edit.toByteArray()))
+        logPos = saved
+        File(dir, "CURRENT").writeText("MANIFEST-000002\n")
     }
 
     private fun tag(seq: Long) = ByteArrayOutputStream().also { fixed(it, (seq shl 8) or 1, 8) }.toByteArray()

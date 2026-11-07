@@ -28,8 +28,10 @@ object CordovaMigration {
     const val SUITE = "group.net.wizardfactory.todayweather"
     const val LEGACY_SUITE = "net.wizardfactory.todayweather_preferences"
 
+    // Weather caches are refetched; `location` lives in [Place.location] (validated: a non-finite number
+    // would make the state unserializable).
     private val CACHE_KEYS = setOf("currentWeather", "timeTable", "timeChart", "dayTable", "dayChart", "airInfo",
-        "airInfoList", "loadTime")
+        "airInfoList", "loadTime", "location")
     private val EXTRA_KEYS = listOf("startVersion", "appVersion", "disableUpdateInfo")
 
     /**
@@ -90,10 +92,10 @@ object CordovaMigration {
             if (cities != null) report["cities"] = "malformed"
             return listOf(Place.currentPositionPlaceholder())
         }
-        val out = list.mapNotNull { it as? JsonObject }.map { city ->
-            val loc = city["location"] as? JsonObject
-            val lat = (loc?.get("lat") as? JsonPrimitive)?.doubleOrNull
-            val long = (loc?.get("long") as? JsonPrimitive)?.doubleOrNull
+        // An entry that is not an object keeps its slot as a disabled place, so `cityIndex` and the
+        // alarms' `cityIndex` still point at the same places.
+        val out = list.mapIndexed { index, item ->
+            val city = item as? JsonObject ?: return@mapIndexed Place(currentPosition = index == 0, disable = true)
             Place(
                 currentPosition = (city["currentPosition"] as? JsonPrimitive)?.booleanOrNull == true,
                 // createCity: a missing disable means enabled
@@ -101,14 +103,24 @@ object CordovaMigration {
                 name = city.string("name"),
                 address = city.string("address"),
                 country = city.string("country"),
-                location = if (lat != null && long != null) Location(lat, long) else null,
+                location = location(city["location"]),
                 source = city.string("source"),
                 photo = city.string("photo"),
                 cordova = JsonObject(city.filterKeys { it !in CACHE_KEYS }),
             )
         }
-        report["cities"] = if (out.size == list.size && out.isNotEmpty()) "migrated" else "malformed"
+        report["cities"] = if (list.all { it is JsonObject } && out.isNotEmpty()) "migrated" else "partial"
         return out.ifEmpty { listOf(Place.currentPositionPlaceholder()) }
+    }
+
+    /** Finite coordinates within ±90/±180, or null (the place is then address-only, as old favorites are). */
+    private fun location(value: JsonElement?): Location? {
+        val loc = value as? JsonObject ?: return null
+        val lat = (loc["lat"] as? JsonPrimitive)?.takeIf { !it.isString }?.doubleOrNull
+        val long = (loc["long"] as? JsonPrimitive)?.takeIf { !it.isString }?.doubleOrNull
+        if (lat == null || long == null || !lat.isFinite() || !long.isFinite()) return null
+        if (lat !in -90.0..90.0 || long !in -180.0..180.0) return null
+        return Location(lat, long)
     }
 
     /** `loadCities` index rules; `setFirstCityIndex` when absent, out of range or invalid. */
@@ -180,7 +192,9 @@ object CordovaMigration {
         if (obj != null) {
             val list = obj["pushList"] as? JsonArray
             val records = list?.mapNotNull { r -> (r as? JsonObject)?.takeIf { validRecord(it) } } ?: emptyList()
+            val orphans = records.count { (it["cityIndex"] as JsonPrimitive).intOrNull !in places.indices }
             report["pushData2"] = if (list != null && records.size == list.size) "migrated" else "partial"
+            report["pushData2.records"] = "${(list?.size ?: 0) - records.size} dropped, $orphans orphan"
             return PushState(
                 registrationId = obj.string("registrationId"),
                 type = obj.string("type") ?: "android",
@@ -217,10 +231,25 @@ object CordovaMigration {
         )
     }
 
+    private val ISO_INSTANT = Regex("""^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$""")
+
+    /**
+     * A record the server can take back: integer `cityIndex` and `id`, boolean `enable`, and for an alert
+     * ISO `startTime`/`endTime`, for an alarm an ISO `time` and seven booleans in `dayOfWeek`. Records
+     * whose `cityIndex` names no place are kept (the Cordova app keeps them too, anomaly A24) and counted.
+     */
     private fun validRecord(r: JsonObject): Boolean {
-        val category = r.string("category")
-        return (r["cityIndex"] as? JsonPrimitive)?.intOrNull != null && r["id"] is JsonPrimitive &&
-            (category == "alert" || category == "alarm")
+        fun int(k: String) = (r[k] as? JsonPrimitive)?.takeIf { !it.isString }?.intOrNull
+        fun iso(k: String) = (r[k] as? JsonPrimitive)?.takeIf { it.isString && ISO_INSTANT.matches(it.content) } != null
+        if (int("cityIndex") == null || int("id") == null) return false
+        if ((r["enable"] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull == null) return false
+        return when (r.string("category")) {
+            "alert" -> iso("startTime") && iso("endTime")
+            "alarm" -> iso("time") && (r["dayOfWeek"] as? JsonArray)?.let { days ->
+                days.size == 7 && days.all { (it as? JsonPrimitive)?.takeIf { p -> !p.isString }?.booleanOrNull != null }
+            } == true
+            else -> false
+        }
     }
 
     /** `newPushAlert` base fields with `_getSimpleCityInfo`; a city without location or town gets only the base. */
@@ -246,12 +275,16 @@ object CordovaMigration {
         return base + info
     }
 
-    /** `secs2date`: local midnight of the migration day plus [secs], as an ISO instant. */
+    /**
+     * `secs2date`: `setHours(0,0,0,0)` then `setSeconds(secs)` on the migration day, which sets local wall
+     * time (07:00 stays 07:00 on daylight-saving days), as an ISO instant.
+     */
     fun secs2date(secs: Int, nowMillis: Long, zone: TimeZone): String {
         val cal = Calendar.getInstance(zone).apply {
             timeInMillis = nowMillis
-            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-            add(Calendar.SECOND, secs)
+            isLenient = true
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.MILLISECOND, 0)
+            set(Calendar.SECOND, secs)
         }
         return iso(cal.timeInMillis)
     }
@@ -264,7 +297,7 @@ object CordovaMigration {
 
     fun iso(millis: Long): String {
         val c = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = millis }
-        return "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ".format(c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1,
+        return "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ".format(java.util.Locale.ROOT, c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1,
             c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), c.get(Calendar.SECOND),
             c.get(Calendar.MILLISECOND))
     }

@@ -10,3 +10,6 @@ app/google-services.json
 keystore.properties
 *.jks
 *.keystore
+
+# Tool dependencies
+tools/**/node_modules/
