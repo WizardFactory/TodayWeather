@@ -54,6 +54,14 @@ The audit does not catch a control clipped by an `overflow: hidden` parent, for 
 
 `build-harness.sh <android|ios> world` runs a fresh start and then adds Tokyo through the search tab ("Tokyo" on Android, "도쿄" on the ko-KR simulator). It checks that the weather request succeeds, the hourly and daily charts render, the expanded details show the Visual Crossing attribution, and the city is added to the favorites.
 
+## Manual mode (user manual captures)
+
+`build-harness.sh android manual` runs a fresh start (S1) and then three scenarios for the [Cordova app user manual](../../../../docs/user/cordova-app/README.md), which uses these captures together with the `full` run:
+
+- `M1_privacy_choices` opens the side menu, taps the analytics choice and captures its dialog (`m1-analytics-choice`). It closes the dialog with Android back, which returns no value, so the analytics setting stays off. It then taps the ad privacy choice and captures the result (`m1-ad-privacy`).
+- `M2_station_and_push_dialogs` scrolls the air tab to the station cards (`m2-air-station`). It then opens the notification settings, captures the time picker on the add row (`m2-time-picker`) and closes it, toggles one weekday, and captures the save confirmation after the back arrow (`m2-save-confirm`). It closes that confirmation without saving and checks that no `POST /push-list` was sent.
+- `M3_chart_ranges` scrolls the hourly and daily charts to both ends and captures each (`m3-hourly-start`, `m3-hourly-end`, `m3-daily-start`, `m3-daily-end`).
+
 ## Upgrade mode (store update simulation)
 
 `build-harness.sh <android|ios> upgrade` checks that an update from the store version keeps the user's data although the web origin changes. Launch 1 runs S1 and adds a push record, leaves a marker in the native App Group preferences and prints `TWHOST wipe-web-storage`. After stopping the app, the driver deletes only the web storage (Android `app_webview/…/Local Storage` via `run-as`; iOS `Library/WebKit`) and keeps the native preferences. Launch 2 must open a tab screen, not S01, with the same number of cities and push records restored by `TwStorage.init`.
