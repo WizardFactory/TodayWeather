@@ -26,11 +26,11 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          Not judged: historyObservation and fieldObservations, the contents of the gap lists in
          historyStatus and midData.dailyStatus (which must stay arrays), forecastNarrative.
          A *Str/*Grade/*Approx/*Hours/*Icon label whose value field differs or is absent is
-         value-dependent, not missing (a number and a numeric string of equal value are the same
-         value here and in the value differences). Excluded (never missing; listed apart when the
-         candidate lacks one, leaves it invalid or keeps it empty): air quality, UV, pollen, food
-         poisoning and the KASI extras other than sunrise and sunset. Valid values that differ
-         are information only.
+         value-dependent, not missing (numbers and numeric strings of equal finite value, such as
+         2, "2", "2.0" and "2e0", are the same value here and in the value differences).
+         Excluded (never missing; listed apart when the candidate lacks one, leaves it invalid or
+         keeps it empty): air quality, UV, pollen, food poisoning and the KASI extras other than
+         sunrise and sunset. Valid values that differ are information only.
          Exit 0 pass, 1 missing data, 2 not comparable (another or unknown place: regionName,
          cityName or townName differs, or is absent, null or blank in either body; a publication,
          currentPubDate, shortestPubDate, shortPubDate, midData.landPubDate or tempPubDate, that
@@ -157,8 +157,9 @@ def same(a, b):
 
 
 def same_data(a, b):
-    """Like same(), except that a finite number and a numeric string of equal value are the same data."""
-    if isinstance(a, str) != isinstance(b, str):
+    """Like same(), except that numeric strings are read as numbers: a number or numeric string and
+    another numeric string of equal finite value ("2", 2, "2.0", " 2 ", "2e0") are the same data."""
+    if isinstance(a, str) or isinstance(b, str):
         x, y = js_number(a), js_number(b)
         if x is not None and y is not None and math.isfinite(x) and math.isfinite(y):
             return x == y
