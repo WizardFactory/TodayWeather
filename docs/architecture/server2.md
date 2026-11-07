@@ -342,7 +342,11 @@ instance headroom remains unqualified. Normal retries retain the same original
 bytes (9 s attempts, backoff capped at 30 s). Deterministic invalid input parks
 until shutdown; corrupt stored/control reads remain eligible for retry.
 Body end/error/drop releases publication; a 10 s dormancy cap, no-waiter detection
-and shutdown also release it. The hook proves server body termination, not remote
+and shutdown also release it. A caller is a waiter from the moment it creates or joins an
+acquisition, and the waiters are counted before they can see the batch ready, so a waiter that
+takes the batch and returns at once (or one not yet polled again when a fast provider is done)
+does not make its response's raw look unwaited: on a loaded runner either order published a
+group before the body ended (CI run 42379684133, 2026-11-07). The hook proves server body termination, not remote
 receipt. Quiesce rejects queued misses and a 34 s shutdown drain counts abandoned
 served originals. No durable copy means exact crash recovery can be impossible.
 
