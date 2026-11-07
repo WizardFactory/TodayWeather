@@ -357,8 +357,9 @@ on wait/write admission or timeout, and a later request retries unexamined input
 Legacy optional backfill
 remains durable-before-visible. The public gateway stays 9 s; ASOS-primary KMA gets
 an 8 s handler budget for stored reads, and everything it waits for ends 2.5 s after the handler
-starts (2.7 s for air and life, 2.9 s for the narrative), while geocode retains its own 3 s
-cap. Other handlers keep their existing budgets. These are limits, not latency
+starts (2.7 s for air), while geocode retains its own 3 s cap. The life inputs (UV, pollen, food
+poisoning, sunrise and sunset) and the narrative are supplementary (AK 2026-11-06): they are not
+waited for once the forecast, observations, air and warnings are in. Other handlers keep their existing budgets. These are limits, not latency
 measurements. See the [current implementation record](../evidence/research/kma-full-response-implementation-2026-10-25.md)
 and [selected protocol](server2-kma-data-design.md#response-first-durability-and-recovery).
 
@@ -2596,6 +2597,16 @@ the air and life reads stop 300 ms before the deadline. The gateway's native att
 ends at most 3 s after the request starts (`gateway::backend`), so the reads that remain and the
 assembly still fit. The mid regions start as soon as the zone list is read. The grids, RSS, warning
 cycle, air and life inputs run concurrently.
+
+Under the observed source (ASOS-primary) the bounds are the instants above, and the life inputs
+and the narrative are supplementary (AK 2026-11-06). A request waits for the life inputs only while
+its required inputs are still arriving: the grids, RSS, mid forecast, station observations and
+history, air and the warning state. Their load runs as its own task. Once the required inputs are
+in, the request answers with the life data this process holds, and the task goes on: its reads,
+the acquisitions they lead to and the read-back serve later requests. The narrative
+is read from the request's province while the snapshot is built. It goes into the answer only if
+that read has ended when the answer is assembled; otherwise the read continues and fills the
+narrative cache for later requests.
 
 An acquisition that finishes after the bound serves the next request. If no zone list is stored
 yet, `forecast_zone` answers `[]`. If the warning state cannot be read, `special_zones` returns the

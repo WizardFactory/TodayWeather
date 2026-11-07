@@ -259,6 +259,14 @@ struct Shared<T> {
 pub struct LifeInputs<T> {
     shared: Arc<Shared<T>>,
 }
+impl<T> Clone for LifeInputs<T> {
+    /// Another handle on the same inputs.
+    fn clone(&self) -> Self {
+        Self {
+            shared: self.shared.clone(),
+        }
+    }
+}
 impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
     pub fn new(transport: T, store: Arc<CatalogStore<T>>) -> Self {
         Self::build(
@@ -332,6 +340,21 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
     }
     /// The life, MFDS and KASI folds for a request at `now`. Waits end 200 ms before the
     /// deadline; whatever is not ready then is answered from the last folds.
+    /// What this process holds now, without reading or waiting: a request that stopped waiting
+    /// for [`Self::load`] answers with it (the reads and acquisitions it started continue).
+    pub fn held(&self) -> LifeAnswers {
+        LifeAnswers {
+            life: self.life_fold(),
+            mfds: self
+                .shared
+                .mfds
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .folded
+                .clone(),
+            kasi: self.kasi(),
+        }
+    }
     pub async fn load(&self, now: f64, deadline: Instant) -> LifeAnswers {
         let until = deadline - Duration::from_millis(200);
         self.note_demand();
