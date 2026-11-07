@@ -16,7 +16,8 @@ compare  Judges --candidate against --reference. Rows of short and shortest matc
          valid. Invalid: absent, null, an empty or blank string where the reference has a value,
          an empty list where the reference list is not, another kind (object or array against a
          scalar, or the reverse), a non-numeric string where the reference is a number, a
-         temperature at or below -50, or a negative number in a field that is never negative.
+         temperature (heatIndex and sensorytem included) at or below -50, a wind component (uuu,
+         vvv) at or below -100, or a negative number in a field that is never negative.
          Numeric strings, which legacy also sends, are read as JavaScript's Number() reads a
          decimal string, and the same rules apply to them.
          Not judged: historyObservation and fieldObservations, the contents of the historyStatus
@@ -53,8 +54,13 @@ ABSENT = '<absent>'
 PLACE = ('regionName', 'cityName', 'townName')
 PUBLICATIONS = ('currentPubDate', 'shortestPubDate', 'shortPubDate', 'midData.landPubDate', 'midData.tempPubDate')
 ROW_KEYS = {'short': ('date', 'time'), 'shortest': ('date', 'time'), 'midData.dailyData': ('date',)}
-TEMPERATURES = frozenset(('t1h', 't3h', 'tmx', 'tmn', 't1d', 'taMin', 'taMax', 'sensorytem', 'sensoryTem', 'dpt'))
-SIGNED = TEMPERATURES | {'uuu', 'vvv', 'fromToday'}
+# Legacy missing values: -50 for temperatures, -100 for the wind components and -1 for the rest
+# (legacy controllerTown.js invalid-value table and empty time table). heatIndex is the temperature
+# itself below 80 F and sensorytem a wind chill or the temperature, so both are temperatures.
+TEMPERATURES = frozenset(('t1h', 't3h', 'tmx', 'tmn', 't1d', 'taMin', 'taMax', 'sensorytem', 'sensoryTem', 'dpt',
+                          'heatIndex'))
+WIND_COMPONENTS = frozenset(('uuu', 'vvv'))
+SIGNED = TEMPERATURES | WIND_COMPONENTS | {'fromToday'}
 LABEL_SUFFIXES = ('Str', 'Grade', 'Approx', 'Hours', 'Icon')
 ATTRIBUTION = frozenset(('historyObservation', 'fieldObservations'))
 NOT_JUDGED = {'': frozenset(('forecastNarrative',))}
@@ -147,6 +153,8 @@ def invalid(key, value, reference=NO_REFERENCE):
     if amount is not None:
         if key in TEMPERATURES and amount <= -50:
             return 'temperature at or below -50'
+        if key in WIND_COMPONENTS and amount <= -100:
+            return 'wind component at or below -100'
         if key not in SIGNED and amount < 0:
             return 'negative'
     return None

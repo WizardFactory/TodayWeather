@@ -391,6 +391,43 @@ class RecordedBodiesTest(unittest.TestCase):
         status, report, _ = compare(sentinel, edited(sentinel, reh=None))
         self.assertEqual((status, report['missing_fields']), (0, []))
 
+    def test_heat_index_is_a_temperature_and_other_indices_stay_never_negative(self):
+        # CV-negative-heat-index: below 80 F legacy returns the temperature as heatIndex, so this winter
+        # recording has current.heatIndex -12.5. Like a temperature, only -50 and below carries no data.
+        body = dict(self.bodies)['kma-town.json.gz:v000803-winter-cold-wind']
+        self.assertEqual((body['current']['t1h'], body['current']['heatIndex']), (-12.5, -12.5))
+        candidate = copy.deepcopy(body)
+        del candidate['current']['heatIndex']
+        status, report, _ = compare(body, candidate)
+        self.assertEqual((status, report['missing_fields']), (1, ['current.heatIndex']))
+        warm = copy.deepcopy(body)
+        warm['current']['heatIndex'] = 3.5
+        cold = copy.deepcopy(body)
+        cold['current'].update(heatIndex=-1.2, dspls=-1, decpsn=-1)
+        status, report, _ = compare(warm, cold)
+        self.assertEqual({v['path']: v['reason'] for v in report['invalid_values']},
+                         {'current.dspls': 'negative', 'current.decpsn': 'negative'})
+        cold['current'].update(heatIndex=-50, dspls=27, decpsn=0)
+        status, report, _ = compare(body, cold)
+        self.assertEqual([(v['path'], v['reason']) for v in report['invalid_values']],
+                         [('current.heatIndex', 'temperature at or below -50')])
+
+    def test_wind_components_use_the_legacy_missing_value(self):
+        # Legacy writes -100 for a missing uuu or vvv; this recording carries it in four short rows,
+        # while -2 is a real component.
+        body = dict(self.bodies)['oracle.json.gz:missing-short']
+        candidate = copy.deepcopy(body)
+        for slot in candidate['short']:
+            if slot.get('uuu') == -100:
+                del slot['uuu'], slot['vvv']
+        valid = next(r for r in candidate['short'] if (r.get('uuu'), r.get('vvv')) == (1, -2))
+        valid['uuu'] = -100
+        status, report, _ = compare(body, candidate)
+        self.assertEqual(report['missing_fields'], [])
+        self.assertEqual([(v['path'], v['reason']) for v in report['invalid_values']],
+                         [(f"short[{valid['date']} {valid['time']}].uuu", 'wind component at or below -100')])
+        self.assertEqual(status, 1)
+
     def test_rows_and_fields_removed_from_a_recorded_body_are_reported(self):
         name, body = next((n, b) for n, b in self.bodies
                           if len(b['short']) == 41 and len(b['midData']['dailyData']) == 18)
