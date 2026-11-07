@@ -1,0 +1,12 @@
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+dependencies {
+    testImplementation(libs.kotlin.test)
+}
+dependencies { implementation(project(":core-model")) }

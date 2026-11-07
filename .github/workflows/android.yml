@@ -1,0 +1,57 @@
+name: Android
+on:
+  pull_request:
+    paths:
+      - "android/**"
+      - "client/www/img/**"
+      - "client/www/locales/**"
+      - "client/www/data/town.js"
+      - ".github/workflows/android.yml"
+  push:
+    branches: [master]
+    paths:
+      - "android/**"
+      - "client/www/img/**"
+      - "client/www/locales/**"
+      - "client/www/data/town.js"
+      - ".github/workflows/android.yml"
+permissions:
+  contents: read
+jobs:
+  build:
+    name: Build and test (with client import check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Imported client assets are current
+        run: |
+          python3 android/tools/import_client_assets.py
+          git diff --exit-code -- android
+          test -z "$(git status --porcelain -- android)"
+      - name: Build and unit tests
+        working-directory: android
+        run: ./gradlew assembleDebug test
+  without-client:
+    name: Build and test without client/
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove client/
+        run: rm -rf client && test ! -e client
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and unit tests
+        working-directory: android
+        run: ./gradlew assembleDebug test
