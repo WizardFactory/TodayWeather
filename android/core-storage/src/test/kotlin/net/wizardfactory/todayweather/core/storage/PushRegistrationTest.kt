@@ -1,0 +1,73 @@
+package net.wizardfactory.todayweather.core.storage
+
+import java.io.File
+import java.util.TimeZone
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
+
+/** Requests after a start against those of the Cordova Push service (corpus/push.json). */
+class PushRegistrationTest {
+    private val corpus = Json.parseToJsonElement(File(javaClass.getResource("/corpus/push.json")!!.toURI()).readText()).jsonObject
+
+    @Test
+    fun requestsMatchCordovaForEveryTokenCase() {
+        val places = corpus["cities"]!!.jsonArray.map { c ->
+            val o = c.jsonObject
+            val loc = o["location"]!!.jsonObject
+            Place(currentPosition = o["currentPosition"]!!.jsonPrimitive.content == "true", disable = false,
+                name = o["name"]?.jsonPrimitive?.content, address = o["address"]?.jsonPrimitive?.content,
+                country = o["country"]?.jsonPrimitive?.content, source = o["source"]?.jsonPrimitive?.content,
+                location = Location(loc["lat"]!!.jsonPrimitive.content.toDouble(), loc["long"]!!.jsonPrimitive.content.toDouble()))
+        }
+        val records = corpus["pushList"]!!.jsonArray.map { it.jsonObject }
+        for (case in corpus["cases"]!!.jsonArray.map { it.jsonObject }) {
+            fun str(k: String) = case[k]?.takeIf { it != JsonNull }?.jsonPrimitive?.content
+            val units = UnitSettings("C", "m/s", "hPa", "km", "mm", str("airUnit")!!)
+            val ctx = PushRegistration.Context(
+                deviceId = corpus["deviceId"]!!.jsonPrimitive.content, language = corpus["language"]!!.jsonPrimitive.content,
+                appVersion = corpus["appVersion"]!!.jsonPrimitive.content, units = units,
+                nowMillis = corpus["now"]!!.jsonPrimitive.long, zone = TimeZone.getTimeZone(corpus["zone"]!!.jsonPrimitive.content),
+            )
+            val state = PushState(fcmToken = str("storedToken"), records = records)
+            val result = PushRegistration.onStart(state, places, str("newToken"), ctx)
+            val expected = case["requests"]!!.jsonArray.map { it.jsonObject }
+            assertEquals(expected.size, result.requests.size, "${str("name")}: request count")
+            expected.zip(result.requests).forEach { (e, a) ->
+                val path = e["url"]!!.jsonPrimitive.content.removePrefix("https://server").replace("/v000902/", "/v000903/")
+                assertEquals(e["method"]!!.jsonPrimitive.content, a.method, str("name"))
+                assertEquals(path, a.path, str("name"))
+                assertEquals(e["headers"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }, a.headers, str("name"))
+                assertEquals(e["data"], a.body, "${str("name")} ${a.method} body")
+            }
+            assertEquals(str("newToken") ?: str("storedToken"), result.state.fcmToken, "${str("name")}: stored token")
+        }
+    }
+
+    @Test
+    fun aRefreshedTokenIsReplacedWithoutTheStartRepost() {
+        val ctx = PushRegistration.Context("d", "ko-KR", "2.0.0", UnitSettings.defaults("KR"), 0, TimeZone.getTimeZone("UTC"))
+        val record = corpus["pushList"]!!.jsonArray[2].jsonObject
+        val changed = PushRegistration.onTokenRefresh(PushState(fcmToken = "a", records = listOf(record)), emptyList(), "b", ctx)
+        assertEquals(listOf("PUT"), changed.requests.map { it.method })
+        val first = PushRegistration.onTokenRefresh(PushState(records = listOf(record)), emptyList(), "b", ctx)
+        assertEquals(listOf("PUT", "POST"), first.requests.map { it.method }, "a first token also posts the list")
+        assertEquals(emptyList(), PushRegistration.onTokenRefresh(PushState(fcmToken = "b", records = listOf(record)), emptyList(), "b", ctx).requests)
+    }
+
+    @Test
+    fun nothingIsSentWithoutRecordsOrToken() {
+        val ctx = PushRegistration.Context("d", "ko-KR", "2.0.0", UnitSettings.defaults("KR"), 0, TimeZone.getTimeZone("UTC"))
+        assertEquals(emptyList(), PushRegistration.onStart(PushState(), emptyList(), null, ctx).requests)
+        val first = PushRegistration.onStart(PushState(), emptyList(), "t", ctx)
+        assertEquals(listOf("PUT"), first.requests.map { it.method }, "a first token is still registered")
+        assertEquals(JsonObject(mapOf("newToken" to JsonPrimitive("t"), "oldToken" to JsonNull)), first.requests.single().body)
+    }
+}

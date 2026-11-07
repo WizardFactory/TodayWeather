@@ -103,3 +103,21 @@ Design decision: read the WebView `localStorage` as the first source, because th
 JVM: `CordovaMigrationTest` (10), `LevelDbReaderTest` (5, files written by a test writer). Device: `run-upgrade-test.sh` on API 36 (LevelDB) and API 24 (SQLite localStorage) emulators. Smoke: debug build without the Firebase configuration starts with analytics off.
 
 Review round 1 (F1–F8): slots kept for broken city entries, coordinate validation and serialization, MANIFEST-based LevelDB reading with real-LevelDB fixtures, wall-time `secs2date`, locale-independent number formatting (also in AN-02's warning times), push record validation, the upgrade test's preconditions (negative run exits 4 without the Firebase configuration), and `MigrationRunner` with a JVM re-run test. Round 2: record times must be real dates (non-lenient check); the LevelDB fixtures keep a non-empty write-ahead log.
+
+## AN-04 — push re-registration after the update (#2883)
+
+Design: `PushRegistration` reproduces `Push.init`/`loadPushInfo`/`_makePostObj` as pure Kotlin; the app runs it after the migration with an FCM token (`FirebaseTokenSource`) and an HTTP transport (`core-data`). The server URL is a private build input. Device tests swap token and transport in `TestTodayWeatherApp` (androidTest), so no test sends anything and the app has no test mode. Path version `v000903` (decision 2, AN-06 confirms).
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN04-US1 | Cordova user with alarms updates; token unchanged | Migrated records, stored token | Open the native app | One `POST /v000903/push-list` with every record once, same `Device-Id` | Server unreachable: no retry until the next start (as Cordova) | AC1, AC2 |
+| AN04-US2 | Same user; FCM token changed | Stored token differs | Open the app | `PUT /v000903/push` (new/old token), then the list; stored token updated | – | AC1, AC2 |
+| AN04-US3 | Maintainer | Emulator, APKs | `run-upgrade-test.sh … token-a` and `… token-b` | Both pass; requests recorded, none sent | Preconditions missing: exit 4 | AC2, AC3 |
+
+### Acceptance (from #2883)
+
+- AC1: unit tests compare the native requests (path, headers, body) with the Cordova app's for first, unchanged and changed tokens.
+- AC2: the emulator upgrade test passes for both token cases; every migrated record registered once with the same `Device-Id`; no request reaches the production push server.
+- AC3: delivery.

@@ -21,6 +21,8 @@ Running it again without changes in `client/` or the inputs changes nothing. `co
 
 `CoreOnDeviceTest` (app `androidTest`) runs the converter and the warning parser against the corpus on a device; it passed on API 24 and API 36 emulators.
 
+`corpus/push.json` in `core-storage`'s test resources records the requests of the Cordova `Push` service (`service.push.js`, with recording `$http`) after a start for a first, an unchanged and a changed FCM token; `PushRegistrationTest` compares them with `PushRegistration`.
+
 `core-model` holds typed views of these responses and of the converted place weather (`PlaceWeather`, `CurrentWeather`, `DailyForecast`, `AirStation`, `NationResponse`, `WeatherWarning`, `GeocodeResponse`); `ModelsTest` checks them against the captured responses.
 
 `sprintf.js` is installed at build time and not tracked; the code formats only one `%s`, which the generator substitutes.

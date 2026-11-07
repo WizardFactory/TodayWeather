@@ -1,6 +1,8 @@
 #!/bin/sh
 # Emulator upgrade test (gate G1 of #2877, state part): Cordova 1.1.1 debug APK -> native debug APK.
-#   ANDROID_SERIAL=emulator-5554 android/tools/upgrade/run-upgrade-test.sh <cordova-debug.apk> [out-dir]
+#   ANDROID_SERIAL=emulator-5554 android/tools/upgrade/run-upgrade-test.sh <cordova-debug.apk> [out-dir] [token]
+# token: the FCM token the native app gets; the seed stores token-a, so token-a is the unchanged case
+# and token-b (default) the changed one.
 # The emulator stays offline while the Cordova app runs, so it has no FCM token and writes nothing to
 # the production push server. Requires the native debug and androidTest APKs (./gradlew assembleDebug
 # assembleDebugAndroidTest) signed with the same debug key as the Cordova APK.
@@ -8,6 +10,7 @@ set -eu
 case "${ANDROID_SERIAL:-}" in emulator-*) ;; *) echo "Set ANDROID_SERIAL to an emulator" >&2; exit 2 ;; esac
 CORDOVA_APK=$1
 OUT=${2:-/tmp/tw-upgrade}
+TOKEN=${3:-token-b}
 HERE=$(cd "$(dirname "$0")" && pwd)
 APP=$HERE/../../app/build/outputs/apk
 PKG=net.wizardfactory.todayweather
@@ -53,10 +56,10 @@ adb logcat -c
 adb install -r "$APP/debug/app-debug.apk"
 adb install -r "$APP/androidTest/debug/app-debug-androidTest.apk"
 SEEDED=$(base64 < "$OUT/seeded.json" | tr -d '\n')
-RUNNER=$PKG.test/androidx.test.runner.AndroidJUnitRunner
-adb shell am instrument -w -e seeded "$SEEDED" -e class $PKG.CordovaUpgradeTest#firstStartMigratesTheCordovaState $RUNNER | tee "$OUT/first-start.txt"
+RUNNER=$PKG.test/$PKG.TestRunner
+adb shell am instrument -w -e seeded "$SEEDED" -e token "$TOKEN" -e class $PKG.CordovaUpgradeTest#firstStartMigratesTheCordovaState $RUNNER | tee "$OUT/first-start.txt"
 adb shell am force-stop $PKG
-adb shell am instrument -w -e seeded "$SEEDED" -e class $PKG.CordovaUpgradeTest#afterRestartNothingChangesAndAnalyticsStaysOff $RUNNER | tee "$OUT/after-restart.txt"
+adb shell am instrument -w -e seeded "$SEEDED" -e token "$TOKEN" -e class $PKG.CordovaUpgradeTest#afterRestartNothingChangesAndAnalyticsStaysOff $RUNNER | tee "$OUT/after-restart.txt"
 adb logcat -d > "$OUT/logcat.txt"
 adb exec-out run-as $PKG cat shared_prefs/com.google.android.gms.measurement.prefs.xml > "$OUT/measurement-after.xml" || true
 

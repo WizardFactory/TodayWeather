@@ -489,6 +489,69 @@ function specialCases() {
     return out;
 }
 
+// Push registration after a start (gate G1, push part): the requests the real Push service sends for a
+// first, an unchanged and a changed FCM token, including loadPushInfo's repair and 3 s repost.
+const PUSH_CITIES = [
+    {currentPosition: true, disable: false, name: '회현동', address: '대한민국 서울특별시 중구 회현동', source: 'KMA',
+        location: {lat: 37.56, long: 126.98}},
+    {currentPosition: false, disable: false, name: '명동', address: '대한민국 서울특별시 중구 명동', source: 'KMA',
+        location: {lat: 37.56, long: 126.98}},
+    {currentPosition: false, disable: false, name: 'London', address: 'United Kingdom London', country: 'GB', source: 'VC',
+        location: {lat: 51.51, long: -0.13}},
+];
+const PUSH_LIST = [
+    {cityIndex: 0, id: 1, startTime: '2026-11-07T22:00:00.000Z', endTime: '2026-11-08T13:00:00.000Z', enable: true, category: 'alert', name: 'stale'},
+    {cityIndex: 1, id: 1, startTime: '2026-11-07T22:00:00.000Z', endTime: '2026-11-08T13:00:00.000Z', enable: true, category: 'alert',
+        name: '명동', source: 'KMA', location: {lat: 37.56, long: 126.98}, town: {first: '서울특별시', second: '중구', third: '명동'}},
+    {cityIndex: 1, id: 2, time: '2026-11-07T22:40:00.000Z', dayOfWeek: [false, true, true, true, true, true, false], enable: true,
+        category: 'alarm', name: '명동', source: 'KMA', location: {lat: 37.56, long: 126.98}, town: {first: '서울특별시', second: '중구', third: '명동'}},
+    {cityIndex: 2, id: 1, startTime: '2026-11-08T03:00:00.000Z', endTime: '2026-11-08T03:00:00.000Z', enable: false, category: 'alert',
+        name: 'London', source: 'VC', location: {long: -0.13}},
+    {cityIndex: 2, id: 2, time: '2026-11-07T21:00:00.000Z', dayOfWeek: [true, true, true, true, true, true, true], enable: false,
+        category: 'alarm', name: 'London', source: 'VC', location: {lat: 51.51, long: -0.13}},
+];
+
+function pushRequests(storedToken, newToken, airUnit) {
+    process.env.TZ = 'Asia/Seoul';
+    let factory;
+    const timers = [];
+    const calls = [];
+    const context = {
+        angular: {module: () => ({factory: (_, fn) => { factory = fn; }})}, console: quiet, window: {},
+        clientConfig: {package: 'todayWeather', serverUrl: 'https://server'}, ionic: {Platform: {isAndroid: () => true, isIOS: () => false}},
+        setTimeout: (fn) => timers.push(fn), Date: FixedDate,
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(JS, 'service.push.js'), 'utf8'), context);
+    const $http = (cfg) => { calls.push(clone({method: cfg.method, url: cfg.url, headers: cfg.headers, data: cfg.data})); return {success() { return this; }, error() { return this; }}; };
+    const stored = {pushData2: {registrationId: null, type: 'android', category: '', fcmToken: storedToken, pushList: PUSH_LIST}};
+    const TwStorage = {get: (k) => clone(stored[k] ?? null), set() {}};
+    const Util = {ga: {trackEvent() {}, trackException() {}}, uuid: 'device-uuid', language: 'ko-KR', version: '1.1.1'};
+    const units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit};
+    const Units = {getAllUnits: () => clone(units)};
+    const WeatherInfo = {getCityOfIndex: (i) => clone(PUSH_CITIES[i])};
+    let tokenCallback;
+    const Firebase = {init(t) { tokenCallback = t; }, inited: true};
+    const push = factory($http, TwStorage, Util, loadWeatherUtil(units), WeatherInfo, Units, {$broadcast() {}}, Firebase);
+    push.init();
+    if (newToken) tokenCallback(undefined, newToken);
+    timers.splice(0).forEach((fn) => fn());
+    delete process.env.TZ;
+    return calls;
+}
+
+function pushCases() {
+    return {
+        cities: PUSH_CITIES, pushList: PUSH_LIST, deviceId: 'device-uuid', language: 'ko-KR', appVersion: '1.1.1',
+        now: FixedDate.now(), zone: 'Asia/Seoul',
+        cases: [
+            ['first-token', null, 'token-b', 'airkorea'], ['unchanged-token', 'token-a', 'token-a', 'airkorea'],
+            ['changed-token', 'token-a', 'token-b', 'airkorea'], ['changed-token-airnow', 'token-a', 'token-b', 'airnow'],
+            ['no-token', null, null, 'airkorea'],
+        ].map(([name, storedToken, newToken, airUnit]) => ({name, storedToken, newToken, airUnit,
+            requests: pushRequests(storedToken, newToken, airUnit)})),
+    };
+}
+
 // ---------------------------------------------------------------- write
 const units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km',
     precipitationUnit: 'mm', airUnit: 'airkorea'};
@@ -507,9 +570,14 @@ write('weather-info.json', [await lateResponseCase(util)]);
 write('air.json', airCases());
 write('nation.json', await nationCases());
 write('special.json', specialCases());
+{
+    const file = path.join(ROOT, 'android/core-storage/src/test/resources/corpus/push.json');
+    fs.mkdirSync(path.dirname(file), {recursive: true});
+    fs.writeFileSync(file, JSON.stringify(pushCases(), null, 1) + '\n');
+}
 
 const sources = ['service.weatherutil.js', 'service.weatherinfo.js', 'controller.forecastctrl.js', 'controller.tabctrl.js',
-    'controller.air.js', 'controller.nation.js', 'controller.nation.air.js', 'controller.kma.special.js']
+    'controller.air.js', 'controller.nation.js', 'controller.nation.air.js', 'controller.kma.special.js', 'service.push.js']
     .map((f) => `client/www/js/${f}`).concat(['client/www/locales/ko.json', 'client/www/locales/en.json']);
 write('source.json', {
     generator: 'android/tools/corpus/generate.mjs',

@@ -63,14 +63,18 @@ On every start the app runs `CordovaMigrator` (core-storage); after the first su
 
 `tools/leveldb-fixtures` writes the LevelDB test directories with the real LevelDB library (`npm ci && node generate.mjs`).
 
+### Push re-registration
+
+After the migration, every start does what the Cordova `Push.init` does (gate G1, push part): repair the current-position records and records with a broken location from the place list, replace a changed FCM token on the server (`PUT /v000903/push` with `newToken`/`oldToken`; a first token also posts the list), then post the whole list again (`POST /v000903/push-list`) when a token exists. `PushRegistration` (core-storage) builds the requests like `_makePostObj` (same `Device-Id`, `cityIndex`, `id`, category, times as UTC seconds of day, units, `timezoneOffset`); `corpus/push.json`, generated from the Cordova `Push` service, pins them for a first, an unchanged and a changed token. `MessagingService.onNewToken` handles a token that changes while the app runs. Requests go to `TW_SERVER_URL` (a private input: environment variable or `android/private.properties`); without it the app sends nothing. Device tests run with `TestRunner`, whose application records push requests instead of sending them.
+
 ### Upgrade test (emulator)
 
 ```sh
 cd android && ./gradlew assembleDebug assembleDebugAndroidTest
-ANDROID_SERIAL=emulator-5554 tools/upgrade/run-upgrade-test.sh <cordova-1.1.1-debug.apk> [out-dir]
+ANDROID_SERIAL=emulator-5554 tools/upgrade/run-upgrade-test.sh <cordova-1.1.1-debug.apk> [out-dir] [token-a|token-b]
 ```
 
-The Cordova debug APK must be signed with the same debug key (`client/`: `npx cordova prepare android && npx cordova compile android --debug`, with the private inputs). The script takes the emulator offline, installs the Cordova APK, seeds places, units, settings, alarms and an analytics opt-in through the app's own services over WebView DevTools (`seed-cordova.mjs`), installs this build over it and runs `CordovaUpgradeTest` twice (first start, restart). It fails if any analytics event is logged after the update, and, so that this cannot pass vacuously, if the Cordova opt-in or the SDK's enabled flag is missing before the update or the native APK has no Firebase configuration. It refuses a non-emulator `ANDROID_SERIAL` and a device that still has a network.
+The Cordova debug APK must be signed with the same debug key (`client/`: `npx cordova prepare android && npx cordova compile android --debug`, with the private inputs). The script takes the emulator offline, installs the Cordova APK, seeds places, units, settings, alarms and an analytics opt-in through the app's own services over WebView DevTools (`seed-cordova.mjs`), installs this build over it and runs `CordovaUpgradeTest` twice (first start, restart). The seed stores the FCM token `token-a`; the native app gets `token-a` (unchanged: only the list is posted) or `token-b` (changed: replacement, then the list), and every migrated record must be registered once with the same `Device-Id`. It fails if any analytics event is logged after the update, and, so that this cannot pass vacuously, if the Cordova opt-in or the SDK's enabled flag is missing before the update or the native APK has no Firebase configuration. It refuses a non-emulator `ANDROID_SERIAL` and a device that still has a network.
 
 ## Private inputs
 
