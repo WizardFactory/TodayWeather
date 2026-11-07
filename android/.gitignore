@@ -1,0 +1,12 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.kotlin/
+captures/
+# Private inputs (see README.md)
+app/google-services.json
+keystore.properties
+*.jks
+*.keystore
