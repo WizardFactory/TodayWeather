@@ -190,10 +190,12 @@ class WeatherSessionTest {
         val state = Memory(AppState(places = listOf(current, london), placeIndex = 0, units = UnitSettings.defaults("KR")))
         val repository = WeatherRepository("https://server.test.invalid", null, { url, _ -> requests += url; seoulBody },
             { testScheduler.currentTime }, StandardTestDispatcher(testScheduler))
-        val session = WeatherSession(repository, backgroundScope, state, { listOf("ko") }, { photos }) { 0.5 }
+        var feedLoads = 0
+        val session = WeatherSession(repository, backgroundScope, state, { listOf("ko") }, { photos }, { feedLoads++ }) { 0.5 }
         session.reload(WeatherSession.Sender.INIT)
         runCurrent()
         assertEquals(null, state.value.places[0].photo, "no feed yet: no photo")
+        assertEquals(1, feedLoads, "a weather update without the feed loads it (`_getPhoto`)")
         photos = feed
         session.photosLoaded()
         assertEquals("https://photos.test.invalid/moon-1.jpg", state.value.places[0].photo)

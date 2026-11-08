@@ -31,6 +31,8 @@ class WeatherSession(
     private val state: StateAccess,
     private val languages: () -> List<String>,
     private val photos: () -> WeatherPhotos?,
+    /** Loads the photo feed (`loadWeatherPhotos`), which a weather update without it asks for. */
+    private val loadPhotos: () -> Unit = {},
     private val random: () -> Double = Math::random,
 ) {
     /** Who asks for a reload (`reloadEvent` senders). */
@@ -150,9 +152,14 @@ class WeatherSession(
         }
     }
 
-    /** `updateCity`'s changes to the place that requested the weather, and its new photo, wherever it is in the list now. */
+    /**
+     * `updateCity`'s changes to the place that requested the weather, and its new photo, wherever it is in the list now.
+     * Without the feed the photo is none and the feed loads (`_getPhoto`).
+     */
     private suspend fun save(result: LoadResult.Loaded) {
-        val photo = photos()?.let { photoFor(result.entry.weather, it) }
+        val feed = photos()
+        if (feed == null) loadPhotos()
+        val photo = feed?.let { photoFor(result.entry.weather, it) }
         val source = (result.entry.weather["source"] as? JsonPrimitive)?.content
         state.change { s ->
             s.copy(places = s.places.map { place ->

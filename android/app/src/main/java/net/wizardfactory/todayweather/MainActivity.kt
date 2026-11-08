@@ -198,7 +198,7 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     val photoLoader = PhotoLoader(app)
 
-    val session = WeatherSession(twApp.weather, viewModelScope, twApp.appState, ::languages, { twApp.photos.photos })
+    val session = WeatherSession(twApp.weather, viewModelScope, twApp.appState, ::languages, { twApp.photos.photos }, ::loadPhotos)
 
     init {
         twApp.onOpened()
