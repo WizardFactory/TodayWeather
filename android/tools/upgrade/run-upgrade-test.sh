@@ -36,7 +36,14 @@ cleanup() {
     set +e
     adb uninstall $PKG.test >/dev/null 2>&1
     adb uninstall $PKG >/dev/null 2>&1
-    if adb shell pm list packages $PKG | tr -d '\r' | grep -Eq "^package:$PKG(\.test)?$"; then
+    # The network comes back only when PackageManager answers (the list has the framework package) and
+    # lists neither package; a failed or unreadable query counts as still installed.
+    packages=$(adb shell pm list packages 2>/dev/null | tr -d '\r')
+    if ! printf '%s\n' "$packages" | grep -qx "package:android"; then
+        echo "cleanup: cannot read the package list; the emulator stays offline" >&2
+        exit 5
+    fi
+    if printf '%s\n' "$packages" | grep -Eqx "package:$PKG(\.test)?"; then
         echo "cleanup: $PKG is still installed; the emulator stays offline" >&2
         exit 5
     fi

@@ -61,6 +61,8 @@ jobs:
       - name: Build and unit tests
         working-directory: android
         run: ./gradlew assembleDebug test
+      - name: Upgrade test cleanup (adb test double)
+        run: sh android/tools/upgrade/test-cleanup.sh
   without-client:
     name: Build and test without client/
     runs-on: ubuntu-latest
