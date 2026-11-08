@@ -200,6 +200,7 @@ Design (survey: `reports/sdlc/android-an-07/shell-survey.md`, from the Cordova t
 | AN07-US5 | User switches theme and language | Theme set; system language English | Open the app | Colors and images of the theme; English texts | Unsupported language: English | AC2 |
 | AN07-US6 | Tablet or foldable user resizes and rotates | Large screen emulator | Resize, rotate, multi-window | Nothing clipped; tab bar and header adapt | – | AC3 |
 | AN07-US7 | Cordova user updates | Home-screen shortcut to the Cordova app | Update; tap the shortcut; a notification tap during the migration | The native app opens; the entry intent is handled after the migration | – | AC4 |
+| AN07-US8 | Maintainer refreshes the shell references after a Cordova shell change | Emulator, Cordova debug APK | `check-sources.mjs` fails for the shell; run `tools/shell-reference/capture.sh`, `./gradlew test`, `tools/large-screen/run-shell-fit.sh` | New references and provenance; tests pass within the recorded tolerances. The emulator is offline while an app is installed; network, display, rotation and navigation are restored | Non-emulator serial or a network that stays up: refused | AC2, AC5 |
 
 ### Acceptance (from #2886)
 
