@@ -632,6 +632,73 @@ function photoCases() {
         {name: 'null-item', feed: broken, groups: brokenGroups}], cases};
 }
 
+// WeatherUtil.getWeatherByGeoInfo with a recording $http: the URL each place and unit setting requests, or the
+// rejection for a place without coordinates or address. Kotlin: WeatherRequests.url.
+function requestCases() {
+    let factory;
+    const context = {
+        angular: {module: () => ({factory: (_, fn) => { factory = fn; }}), isArray: Array.isArray},
+        console: quiet, clientConfig: {debug: false, serverUrl: 'https://server.test.invalid'}, window: {},
+        setTimeout: () => 0, clearTimeout() {},
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(JS, 'service.weatherutil.js'), 'utf8'), context);
+    const settle = () => {
+        let state = null, value;
+        const waiting = [];
+        const done = (s, v) => { if (state) return; state = s; value = v; waiting.splice(0).forEach(([ok, err]) => (s === 'ok' ? ok : err)?.(v)); };
+        const promise = {then(ok, err) {
+            const next = settle();
+            const run = (s, v) => {
+                try {
+                    const f = s === 'ok' ? ok : err;
+                    if (f) next.resolve(f(v)); else (s === 'ok' ? next.resolve : next.reject)(v);
+                } catch (e) { next.reject(e); }
+            };
+            if (state) run(state, value); else waiting.push([(v) => run('ok', v), (v) => run('err', v)]);
+            return next.promise;
+        }};
+        return {resolve: (v) => done('ok', v), reject: (e) => done('err', e), promise};
+    };
+    const $q = {defer: settle, reject: (e) => { const d = settle(); d.reject(e); return d.promise; },
+        all: (list) => { const d = settle(); const out = []; let left = list.length;
+            list.forEach((p, i) => p.then((v) => { out[i] = v; if (--left === 0) d.resolve(out); }, d.reject)); return d.promise; }};
+    let requested = [];
+    const $http = (options) => {
+        requested.push(options);
+        return {success(fn) { fn({}, 200); return {error() {}}; }};
+    };
+    let units;
+    const util = factory($q, $http, {ga: {trackEvent() {}, trackException() {}}}, {getAllUnits: () => units, getUnit: (k) => units[k]},
+        {track() {}});
+    const KR = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea'};
+    const US = {temperatureUnit: 'F', windSpeedUnit: 'mph', pressureUnit: 'inHg', distanceUnit: 'mi', precipitationUnit: 'in', airUnit: 'airnow'};
+    const DE = {temperatureUnit: 'C', windSpeedUnit: 'km/h', pressureUnit: 'mb', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'aqicn'};
+    const CASES = [
+        ['seoul', {location: {lat: 37.5665, long: 126.978}}, KR],
+        ['london-us-units', {location: {lat: 51.51, long: -0.13}}, US],
+        ['whole-degrees', {location: {lat: 37, long: 127}}, DE],
+        ['small-fraction', {location: {lat: 0.0005, long: -0.25}}, KR],
+        ['latitude-zero-uses-address', {location: {lat: 0, long: 126.9}, address: '대한민국 서울특별시 중구 명동'}, KR],
+        ['address-four-parts', {address: '대한민국 서울특별시 중구 명동'}, KR],
+        ['address-without-country', {address: '서울특별시 중구 명동'}, KR],
+        ['address-gu', {address: '대한민국 경기도 성남시 분당구'}, KR],
+        ['address-five-parts', {address: '대한민국 경기도 성남시 분당구 정자동'}, KR],
+        ['address-eup', {address: '대한민국 세종특별자치시 조치원읍'}, KR],
+        ['address-region-only', {address: '대한민국 서울특별시'}, KR],
+        ['address-free-form', {address: 'United Kingdom London Westminster Abbey Road'}, KR],
+        ['address-country-only', {address: '대한민국'}, KR],
+        ['no-location-or-address', {}, KR],
+        ['empty-address', {address: ''}, KR],
+    ];
+    return CASES.map(([name, geoInfo, u]) => {
+        units = u;
+        requested = [];
+        let error = null;
+        util.getWeatherByGeoInfo(clone(geoInfo)).then(() => {}, (e) => { error = e && e.message ? 'rejected' : String(e); });
+        return {name, geoInfo, units: u, ...(requested.length ? {url: requested[0].url, timeout: requested[0].timeout} : {}), ...(error ? {error} : {})};
+    });
+}
+
 // ---------------------------------------------------------------- write
 const units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km',
     precipitationUnit: 'mm', airUnit: 'airkorea'};
@@ -651,6 +718,7 @@ write('air.json', airCases());
 write('nation.json', await nationCases());
 write('special.json', specialCases());
 write('photos.json', photoCases());
+write('requests.json', requestCases());
 {
     const file = path.join(ROOT, 'android/core-storage/src/test/resources/corpus/push.json');
     fs.mkdirSync(path.dirname(file), {recursive: true});
