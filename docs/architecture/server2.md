@@ -3980,6 +3980,12 @@ the [history contract](../../server2/config/contracts/kma-history.v1.json):
   `_getDaySummaryListByShort` gives them, D-2 and D-1; their types, texts and extremes stay
   observed (`mid::PAST_DAY_FIELDS`). Nothing older than the 54 h read window is read, and no
   publication is acquired for a past row.
+- **Wet-bulb rain** (`wet-bulb-rain-v2`). An uncoded normal-QC ASOS amount at a wet-bulb
+  temperature of at least 5 °C is rain in every month, not only April to October; in November to
+  March that amount is the three-hour quantity at a mark (`AsosStore::type_rain`). Below 5 °C the
+  type stays unknown, and a recorded code still decides. The winter part (R2w) has no held-out
+  sample at this cutoff; post hoc, the three snow or mixed errors of the December–March sample at
+  2.5 °C lie below 5 °C.
 
 Legacy replay mode is unchanged; the kma-rich and kma paired replays check it.
 

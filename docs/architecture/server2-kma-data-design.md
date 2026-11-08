@@ -367,9 +367,12 @@ evidence from becoming PTY 0. A slot whose evidence has no known type gets PTY
 amounts close against that total, an April–October QC9 hour without a
 precipitation code is dry (R1b). A blank daily total without numeric or coded
 hourly precipitation is 0 mm (D1). Both passed held-out validation and AK
-approved them on 2026-10-31. `wet-bulb-rain-v1` types an uncoded April–October
-amount as rain at a wet-bulb temperature of at least 5 °C (R2s, approved
-2026-11-03 after a fourth held-out sample). Hourly rule-derived values stay
+approved them on 2026-10-31. `wet-bulb-rain-v2` types an uncoded amount as
+rain at a wet-bulb temperature of at least 5 °C: April–October (R2s, approved
+2026-11-03 after a fourth held-out sample) and, since AK's 2026-11-08 decision,
+November–March too (R2w, the three-hour amount at a mark). No held-out sample
+covers the winter cutoff; post hoc, the three errors of the third sample lie
+below 5 °C wet-bulb. Below 5 °C the type stays unknown. Hourly rule-derived values stay
 apart from measured values in the ASOS record's `inferred` field. They fill only
 what measured ASOS, ODAM and VSRT left missing. A derived rain type also replaces
 PTY 0, because the ASOS amount contradicts it, and a recorded type always stays.
@@ -380,8 +383,8 @@ reports `station-unrepresentative`. Island stations serve only their own county.
 Stations 185 and 188 keep their measurements but not wind. Towns without an
 official coordinate keep the nearest station. The temperature-qualified type (R2)
 and winter windows (W1) failed a second held-out sample, a winter-inclusive
-wet-bulb variant failed a third, and both remain proposed edges that are excluded
-from coverage; see the
+wet-bulb variant at a 2.5 °C cutoff failed a third, and both remain proposed edges
+that are excluded from coverage; see the
 [2026-10-30 research](../evidence/research/kma-history-gap-options-2026-10-30.md#held-out-validation-of-proposed-rules-2026-10-31).
 
 Client delivery is checked separately by the

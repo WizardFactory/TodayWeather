@@ -293,7 +293,19 @@
       "approval": "approved",
       "verification": "verified",
       "holdout": "docs/evidence/research/kma-history-gap-options-2026-10-30.md#fourth-held-out-sample-april-october-wet-bulb-rule-r2s-2026-11-02",
-      "rule": "wet-bulb-rain-v1"
+      "rule": "wet-bulb-rain-v2"
+    },
+    {
+      "id": "R2w",
+      "node": "hourly.pty",
+      "source": "asos-hourly",
+      "field": "rn, ta, hm",
+      "transform": "winter-wet-bulb-rain: in a November-March hour, an uncoded normal-QC amount (the three-hour quantity at a mark) at wet-bulb >= 5.0 C (Stull 2011) becomes PTY 1; below that it stays unknown, and a recorded type stays",
+      "precedence": 4,
+      "approval": "approved",
+      "verification": "unverified",
+      "holdout": "docs/evidence/research/kma-history-gap-options-2026-10-30.md#third-held-out-sample-wet-bulb-variant-2026-11-02 (December-March at a 2.5 C cutoff; post hoc, its three snow or mixed errors lie below 5 C wet-bulb; no held-out sample at this cutoff). AK approved it on 2026-11-08.",
+      "rule": "wet-bulb-rain-v2"
     },
     {
       "id": "R1b",
@@ -360,9 +372,9 @@
       "implementation": "server2/src/domestic/kma/source/asos.rs",
       "summary": "Under ASOS-primary only, per observation day 01:00..24:00 KST with all 24 latest hourly originals: when numeric hourly amounts (any QC) sum to sumRn, or sumRn is blank with no numeric hour, an April-October blank QC9 hour without a precipitation code gets rn1 0 and PTY 0 (R1b); a blank sumRn without numeric or coded hourly precipitation and without rain duration gets rn1 0 (D1). Days whose stored rain fields differ from their latest originals are skipped; only absent fields are filled. Hourly results are derived values, as below."
     },
-    "wet-bulb-rain-v1": {
+    "wet-bulb-rain-v2": {
       "implementation": "server2/src/domestic/kma/source/asos.rs",
-      "summary": "Under ASOS-primary only, per April-October hour of the latest originals: a normal-QC numeric amount without a phenomenon code, with unflagged temperature and humidity of at least 5 %, gets a derived PTY 1 when the wet-bulb temperature (Stull 2011, humidity at most 99) is at least 5 C. November-March stays unknown."
+      "summary": "Under ASOS-primary only, per hour of the latest originals in every month (AK 2026-11-08; v1 covered April-October, AK 2026-11-03): a normal-QC numeric amount without a phenomenon code, with unflagged temperature and humidity of at least 5 %, gets a derived PTY 1 when the wet-bulb temperature (Stull 2011, humidity at most 99) is at least 5 C. A November-March amount is the three-hour quantity at a mark. Below 5 C the type stays unknown."
     },
     "derived-precedence": {
       "implementation": "server2/src/domestic/kma/policy.rs",

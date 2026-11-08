@@ -666,7 +666,7 @@ fn replay_with_policy(
         let daily = latest_items(station, fetched, AsosKind::Daily);
         store.clear_contradicted_dry_types();
         store.close_dry_days(station, &hourly, &daily);
-        store.type_warm_rain(station, &hourly);
+        store.type_rain(station, &hourly);
         if super::representative::wind_unrepresentative(station) {
             store.drop_wind();
         }
@@ -732,7 +732,7 @@ fn warm_season(key: &str) -> bool {
         .is_some_and(|m| (4..=10).contains(&m))
 }
 /// Wet-bulb temperature from air temperature and relative humidity (Stull 2011), with humidity
-/// at most 99 % as in the held-out validation of `wet-bulb-rain-v1`.
+/// at most 99 % as in the held-out validation of `wet-bulb-rain`.
 fn wet_bulb(t: f64, humidity: f64) -> f64 {
     let rh = humidity.min(99.);
     t * (0.151977 * (rh + 8.313659).sqrt()).atan() + (t + rh).atan() - (rh - 1.676331).atan()
@@ -813,15 +813,16 @@ impl AsosStore {
             }
         }
     }
-    /// `wet-bulb-rain-v1` (R2s of `kma-history.v1`), approved by AK on 2026-11-03 after
-    /// held-out validation: in an April–October hour, a normal-QC numeric amount in the latest
-    /// original without a phenomenon code is rain when its unflagged temperature and humidity
-    /// (at least 5 %) give a wet-bulb temperature of at least 5 °C. A stored PTY from a code
-    /// always stays.
-    fn type_warm_rain(&mut self, station: &str, hourly: &BTreeMap<String, Value>) {
+    /// `wet-bulb-rain-v2` (R2s and R2w of `kma-history.v1`): a normal-QC numeric amount in the
+    /// latest original without a phenomenon code is rain when its unflagged temperature and
+    /// humidity (at least 5 %) give a wet-bulb temperature of at least 5 °C. AK approved it for
+    /// April–October on 2026-11-03 after held-out validation (v1) and for every month on
+    /// 2026-11-08; a winter amount is the three-hour quantity at a mark. Below 5 °C the type
+    /// stays unknown, and a stored PTY from a code always stays.
+    fn type_rain(&mut self, station: &str, hourly: &BTreeMap<String, Value>) {
         let all: BTreeSet<String> = hourly.keys().cloned().collect();
         for (key, item) in hourly {
-            if !warm_season(key) || !reports_rain(item) || !uncoded(item) {
+            if !reports_rain(item) || !uncoded(item) {
                 continue;
             }
             let Some((_, values)) = normalize(AsosKind::Hourly, item, station, &all) else {

@@ -8,7 +8,9 @@
     "server2/src/domestic/kma/short.rs",
     "server2/src/domestic/kma/mid.rs",
     "server2/src/domestic/kma/source/mod.rs",
-    "server2/tests/domestic/observed_history.rs"
+    "server2/tests/domestic/observed_history.rs",
+    "server2/src/domestic/kma/source/asos.rs",
+    "server2/tests/domestic/asos.rs"
   ],
   "outside": [
     {
