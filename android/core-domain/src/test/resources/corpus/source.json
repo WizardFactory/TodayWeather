@@ -47,6 +47,11 @@
    "sha256": "d4255f73355cc1bcf16a68f2ae7bfcfa48a956b93bdbe675227d4fcc43b6a140"
   },
   {
+   "path": "client/www/js/controller.units.js",
+   "commit": "71b55e62f3abe5e399d8a7092e86f7c686481c58",
+   "sha256": "adb460378b128059ac5613de542a502c2ada1a8d17822f9cbd87368e36e1ad18"
+  },
+  {
    "path": "client/www/locales/ko.json",
    "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
    "sha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3"
