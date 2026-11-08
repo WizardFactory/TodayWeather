@@ -12,7 +12,8 @@ import net.wizardfactory.todayweather.core.storage.PushRequest
 
 /**
  * Runs device tests with [TestTodayWeatherApp]: the push token comes from the `token` argument and push
- * requests are recorded instead of sent, so no test reaches the production push server. With `transport`
+ * requests are recorded instead of sent, so no test reaches the production push server. With `weather`
+ * `production`, weather requests go to the build's server (TW_SERVER_URL). With `transport`
  * `hold`, a recorded request never gets an answer (it stays in flight). With `migration` `hold`, the data
  * migration of the process waits until a test releases it.
  */
@@ -51,7 +52,11 @@ class TestTodayWeatherApp : TodayWeatherApp() {
         handled += intent to migration.isCompleted
     }
 
-    override fun serverUrl() = "https://push.test.invalid"
+    /**
+     * The production server only for a test that asks (`weather` `production`: the AN-08 render check, read-only weather
+     * requests); push requests are recorded either way.
+     */
+    override fun serverUrl() = if (TestRunner.args.getString("weather") == "production") BuildConfig.SERVER_URL else "https://push.test.invalid"
     override fun weatherPhotosUrl() = "" // no photo feed request from device tests
     override fun tokenSource() = TokenSource { TestRunner.args.getString("token") }
     override fun pushTransport() = net.wizardfactory.todayweather.core.data.PushTransport {
