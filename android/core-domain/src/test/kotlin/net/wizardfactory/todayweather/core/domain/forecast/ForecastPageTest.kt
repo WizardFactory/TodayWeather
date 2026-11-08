@@ -77,6 +77,19 @@ class ForecastPageTest {
     }
 
     @Test
+    fun linksEndWithTheirArrow() {
+        val rows = page(ForecastType.SHORT, record("kma-seoul"), 1).detailAir!!
+        for (label in listOf("대기환경기준", "예보자료")) {
+            val text = rows.single { it.label == label }.text
+            assertEquals(RunStyle.LINK, text.first().style)
+            assertEquals(TextRun("\uF3D3", RunStyle.LINK_ARROW), text.last(), "$label: `.colgroup-box a:after`")
+            assertTrue(text.first().text.endsWith(" "), "$label: the space before the arrow stays")
+        }
+        assertEquals(PageAction.Units, rows.single { it.label == "대기환경기준" }.action)
+        assertEquals(PageAction.AirForecastInfo("airkorea"), rows.single { it.label == "예보자료" }.action)
+    }
+
+    @Test
     fun aPlaceWithoutWeatherKeepsThePreviousPage() {
         val scope = scope(ForecastType.SHORT)
         scope.open(record("kma-seoul"), 2, false)
@@ -99,7 +112,8 @@ class ForecastPageTest {
         // An element's own text is trimmed in the captures; the space before a nested element is in the run.
         fun runs(runs: List<TextRun>) = runs.mapNotNull { r ->
             val t = r.text.trim()
-            if (t.isEmpty()) null else when (r.style) {
+            // The link arrow is a pseudo-element, not an element of the captures.
+            if (t.isEmpty() || r.style == RunStyle.LINK_ARROW) null else when (r.style) {
                 RunStyle.SMALL, RunStyle.SUB_SMALL -> "small:$t"
                 RunStyle.SUB -> "sub:$t"
                 else -> "text:$t" + (r.color?.let { "@$it" } ?: "")

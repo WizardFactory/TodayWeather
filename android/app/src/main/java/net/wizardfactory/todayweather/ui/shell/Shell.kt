@@ -377,7 +377,7 @@ private fun MenuButton(row: MenuRow, value: String?, colors: ShellColors, height
  * native app lets text follow the font scale (AN-06) but not the icons.
  */
 @Composable
-private fun Icon(content: @Composable () -> Unit) {
+internal fun Icon(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale = 1f), content = content)
 }
 
@@ -386,7 +386,7 @@ private fun Icon(content: @Composable () -> Unit) {
  * the half-leading centers a line's font box.
  */
 @Composable
-private fun FixedLine(height: Dp, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+internal fun FixedLine(height: Dp, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Box(modifier.height(height), contentAlignment = Alignment.Center) { content() }
 }
 
@@ -394,7 +394,7 @@ private fun FixedLine(height: Dp, modifier: Modifier = Modifier, content: @Compo
  * A CSS line box: [lineHeight] with half the leading above the font's ascent and half below its descent; an
  * unspecified [lineHeight] keeps the font's own box (for [FixedLine]).
  */
-private fun line(size: TextUnit, lineHeight: TextUnit, color: Color, weight: FontWeight = FontWeight.Normal, family: FontFamily? = null) =
+internal fun line(size: TextUnit, lineHeight: TextUnit, color: Color, weight: FontWeight = FontWeight.Normal, family: FontFamily? = null) =
     TextStyle(
         fontSize = size, lineHeight = lineHeight, color = color, fontWeight = weight, fontFamily = family,
         lineHeightStyle = if (lineHeight.isSpecified) LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None) else null,
@@ -407,7 +407,7 @@ private fun line(size: TextUnit, lineHeight: TextUnit, color: Color, weight: Fon
  * baseline. Icon fonts draw their own glyphs; an icon inside a line of text takes the text's baseline.
  */
 @Composable
-private fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style, maxLines: Int = 1) {
+internal fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style, maxLines: Int = 1) {
     val measurer = rememberTextMeasurer()
     val reference = if (baselineOf.fontFamily == null) "x" else text
     val line = remember(baselineOf, reference, measurer) { measurer.measure(reference, baselineOf) }
@@ -422,19 +422,21 @@ private fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifi
 
 /** [text] in [style] with the photo theme's [outline]: four 0.5 dp diagonal shadows (`text-shadow`). */
 @Composable
-private fun OutlinedText(text: String, style: TextStyle, outline: Color?, modifier: Modifier = Modifier) {
+internal fun OutlinedText(text: String, style: TextStyle, outline: Color?, modifier: Modifier = Modifier, maxLines: Int = 1, fill: Boolean = false) {
+    // [fill]: the text takes the whole width, so its alignment applies (centered lines of the weather header).
+    val width = if (fill) Modifier.fillMaxWidth() else Modifier
     Box(modifier) {
         if (outline != null) {
             for ((dx, dy) in listOf(-0.5f to -0.5f, 0.5f to -0.5f, -0.5f to 0.5f, 0.5f to 0.5f)) {
-                LineText(text, style.copy(color = outline), Modifier.offset(dx.dp, dy.dp))
+                LineText(text, style.copy(color = outline), width.offset(dx.dp, dy.dp), maxLines = maxLines)
             }
         }
-        LineText(text, style)
+        LineText(text, style, width, maxLines = maxLines)
     }
 }
 
 /** Ionic draws a bar's 1 px border as a hairline: the half CSS pixel on the inner side of its top or [bottom] edge. */
-private fun Modifier.hairline(color: Color, bottom: Boolean) = drawBehind {
+internal fun Modifier.hairline(color: Color, bottom: Boolean) = drawBehind {
     val h = 0.5.dp.toPx()
     drawRect(color, Offset(0f, if (bottom) size.height - h else h), Size(size.width, h))
 }

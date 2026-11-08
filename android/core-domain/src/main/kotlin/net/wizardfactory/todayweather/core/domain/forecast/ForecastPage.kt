@@ -16,8 +16,11 @@ data class PageUnits(
     val precipitation: String?, val air: String?,
 )
 
-/** How a piece of a row's text is set: the row's font, `<small>` (0.8 em), `.sub-text` (13 px, #666), `<small>` in it, or a link. */
-enum class RunStyle { PLAIN, SMALL, SUB, SUB_SMALL, LINK }
+/**
+ * How a piece of a row's text is set: the row's font, `<small>` (0.8 em), `.sub-text` (13 px, #666), `<small>` in it, a
+ * link, or the arrow after a link (`.colgroup-box a:after`, the Ionicons glyph U+F3D3).
+ */
+enum class RunStyle { PLAIN, SMALL, SUB, SUB_SMALL, LINK, LINK_ARROW }
 
 /** A piece of a row's text; [color] is a grade color (`grade2Color`), null for the row's own color. */
 data class TextRun(val text: String, val style: RunStyle = RunStyle.PLAIN, val color: String? = null)
@@ -113,6 +116,8 @@ class ForecastPage(private val scope: ForecastScope, private val units: PageUnit
     val showChart: Boolean = scope.type == ForecastType.MID || scope.timeWidth.let { it != null && it != 0.0 && !it.isNaN() }
 
     val hourlyAqiTitle: String = texts["LOC_HOURLY_AQI_FORECAST"] + " (beta)"
+    val detailWeatherTitle: String = texts["LOC_DETAIL_WEATHER"]
+    val detailAirTitle: String = texts["LOC_DETAIL_AQI"]
 
     /** The hourly AQI forecast card (S03), more than one row. */
     val hourlyAqi: List<AqiCell>? = if (scope.type != ForecastType.SHORT || !scope.showDetailWeather || !scope.showHourlyAqiForecast()) null
@@ -242,14 +247,14 @@ class ForecastPage(private val scope: ForecastScope, private val units: PageUnit
         if (Js.truthy(a["stationName"])) rows += AirRow(texts["LOC_STATION"], STATION, null, runs(TextRun(Js.display(a["stationName"]))))
         if (Js.truthy(a["dataTime"])) rows += AirRow(texts["LOC_PUBLIC"], TIME, null, runs(TextRun(Js.display(a["dataTime"]))))
         rows += AirRow(texts["LOC_AIR_QUALITY_INDEX_UNIT"], INFO, null,
-            runs(TextRun(ForecastFormat.airUnitKey(units.air)?.let { texts[it] }.orEmpty() + " ", RunStyle.LINK)), PageAction.Units)
+            runs(TextRun(ForecastFormat.airUnitKey(units.air)?.let { texts[it] }.orEmpty() + " ", RunStyle.LINK), LINK_ARROW_RUN), PageAction.Units)
         if (Js.truthy(scope.airForecastPubdate)) {
             rows += AirRow(texts["LOC_FORECAST"], TIME, null, runs(TextRun(Js.display(scope.airForecastPubdate))))
         }
         val source = scope.airForecastSource
         if (Js.truthy(source)) {
             val text = (source as? JsonPrimitive)?.takeIf { it.isString }?.content
-            rows += AirRow(texts["LOC_AIR_FORECAST_SOURCE"], INFO, null, runs(TextRun((text?.uppercase() ?: "") + " ", RunStyle.LINK)),
+            rows += AirRow(texts["LOC_AIR_FORECAST_SOURCE"], INFO, null, runs(TextRun((text?.uppercase() ?: "") + " ", RunStyle.LINK), LINK_ARROW_RUN),
                 text?.let { PageAction.AirForecastInfo(it) })
         }
         return rows
@@ -337,6 +342,9 @@ class ForecastPage(private val scope: ForecastScope, private val units: PageUnit
         const val STATION = ""
         const val TIME = ""
         const val INFO = ""
+
+        /** `.colgroup-box a:after`: the Ionicons arrow after a link's text. */
+        private val LINK_ARROW_RUN = TextRun("\uF3D3", RunStyle.LINK_ARROW)
 
         /** The translation keys the pages read, for the app to load from its catalog. */
         val KEYS = listOf(

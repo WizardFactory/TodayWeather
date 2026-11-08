@@ -32,28 +32,32 @@ internal fun chartTextStyle(color: Color, size: TextUnit) =
     TextStyle(color = color, fontSize = size, platformStyle = PlatformTextStyle(includeFontPadding = false))
 
 /**
- * Draws a chart [svg] at [top] (dp) as the WebView draws the Cordova SVG with the light-theme styles:
- * elements in document order, coordinates in dp; elements at NaN positions are skipped.
+ * Draws a chart [svg] at [top] (dp) as the WebView draws the Cordova SVG with the theme's [colors]: elements in
+ * document order, coordinates in dp; elements at NaN positions are skipped.
  */
-internal fun DrawScope.drawSvg(svg: Svg, top: Double, images: ChartImages, measurer: TextMeasurer) {
-    for (node in svg.children) drawNode(node, top, images, measurer)
+internal fun DrawScope.drawSvg(svg: Svg, top: Double, images: ChartImages, measurer: TextMeasurer, colors: ChartColors = ChartColors.LIGHT) {
+    for (node in svg.children) drawNode(node, top, images, measurer, colors)
 }
 
-private fun DrawScope.drawNode(node: SvgNode, top: Double, images: ChartImages, measurer: TextMeasurer) {
+private fun DrawScope.drawNode(node: SvgNode, top: Double, images: ChartImages, measurer: TextMeasurer, colors: ChartColors) {
     fun x(v: Double) = (v * density).toFloat()
     fun y(v: Double) = ((v + top) * density).toFloat()
     when (node) {
-        is SvgGroup -> node.children.forEach { drawNode(it, top, images, measurer) }
+        is SvgGroup -> node.children.forEach { drawNode(it, top, images, measurer, colors) }
         is SvgRect -> {
-            if (node.cls == "chart-bar" && listOf(node.x, node.y, node.width, node.height).none { it.isNaN() }) {
-                drawRect(ChartStyle.today, Offset(x(node.x), y(node.y)), androidx.compose.ui.geometry.Size(x(node.width), x(node.height)))
+            if (listOf(node.x, node.y, node.width, node.height).any { it.isNaN() }) return
+            val size = androidx.compose.ui.geometry.Size(x(node.width), x(node.height))
+            if (node.cls == "chart-bar") drawRect(colors.bar, Offset(x(node.x), y(node.y)), size)
+            // current-rect is transparent but in the old theme, where its 1 px stroke has the fill's color.
+            if (node.cls == "current-rect" && colors.currentRect != null) {
+                drawRect(colors.currentRect, Offset(x(node.x), y(node.y)), size)
+                drawRect(colors.currentRect, Offset(x(node.x), y(node.y)), size, style = Stroke(width = 1 * density))
             }
-            // current-rect is transparent in the light theme.
         }
         is SvgLine -> {
             val (color, alpha) = when (node.cls) {
-                "guide-vivid-line" -> ChartStyle.guideVivid to 0.6f
-                "guide-line" -> ChartStyle.guide to 0.3f
+                "guide-vivid-line" -> colors.guideVivid to 0.6f
+                "guide-line" -> colors.guide to 0.3f
                 else -> return
             }
             if (listOf(node.x1, node.y1, node.x2, node.y2).any { it.isNaN() }) return
@@ -73,11 +77,11 @@ private fun DrawScope.drawNode(node: SvgNode, top: Double, images: ChartImages, 
             // An invalid rotate() (undefined angle) is ignored by the browser.
             if (r != null && !r.angle.isNaN()) rotate(r.angle.toFloat(), Offset(x(r.cx), y(r.cy)), draw) else draw()
         }
-        is SvgText -> drawSvgText(node, top, measurer)
+        is SvgText -> drawSvgText(node, top, measurer, colors)
         is SvgPath -> {
             val (color, width) = when {
-                node.cls.endsWith("line-today") -> ChartStyle.today to 2.0
-                node.cls.endsWith("line-yesterday") -> ChartStyle.yesterday to 1.0
+                node.cls.endsWith("line-today") -> colors.lineToday to 2.0
+                node.cls.endsWith("line-yesterday") -> colors.lineYesterday to 1.0
                 else -> return
             }
             val points = node.points.filter { !it.first.isNaN() && !it.second.isNaN() }
@@ -89,23 +93,23 @@ private fun DrawScope.drawNode(node: SvgNode, top: Double, images: ChartImages, 
             drawPath(path, color, style = Stroke(width = (width * density).toFloat(), join = StrokeJoin.Miter, miter = 4f))
         }
         is SvgCircle -> {
-            val color = when {
-                node.cls.contains("circle-today-current") -> ChartStyle.current
-                node.cls.contains("circle-yesterday-current") || node.cls.contains("circle-yesterday") -> ChartStyle.yesterday
-                node.cls.contains("circle-today") -> ChartStyle.today
+            val (color, stroke) = when {
+                node.cls.contains("circle-today-current") -> colors.circleTodayCurrent to colors.circleTodayCurrentStroke
+                node.cls.contains("circle-yesterday-current") || node.cls.contains("circle-yesterday") -> colors.circleYesterday to colors.circleYesterday
+                node.cls.contains("circle-today") -> colors.circleToday to colors.circleToday
                 else -> return
             }
             if (node.cx.isNaN() || node.cy.isNaN()) return
             val center = Offset(x(node.cx), y(node.cy))
-            // Fill and a 2 px stroke of the same color: the disc reaches r + 1.
+            // A fill and a 2 px stroke: the disc reaches r + 1.
             drawCircle(color, radius = x(node.r), center = center)
-            drawCircle(color, radius = x(node.r), center = center, style = Stroke(width = 2 * density))
+            drawCircle(stroke, radius = x(node.r), center = center, style = Stroke(width = 2 * density))
         }
     }
 }
 
-private fun DrawScope.drawSvgText(node: SvgText, top: Double, measurer: TextMeasurer) {
-    val (color, size) = ChartStyle.svgText(node.cls) ?: return
+private fun DrawScope.drawSvgText(node: SvgText, top: Double, measurer: TextMeasurer, colors: ChartColors) {
+    val (color, size) = ChartStyle.svgText(node.cls, colors) ?: return
     val text: AnnotatedString = buildAnnotatedString {
         append(node.text)
         node.tspan?.let { t ->
