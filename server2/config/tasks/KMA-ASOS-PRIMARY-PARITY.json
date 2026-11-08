@@ -48,6 +48,21 @@
       "path": "docs/reference/external-apis/kma.md",
       "category": "documentation",
       "reason": "ASOS-primary contract."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.json",
+      "category": "documentation",
+      "reason": "Data design diagram source: past rows and the wet-bulb rule."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.html",
+      "category": "documentation",
+      "reason": "Regenerated diagram."
+    },
+    {
+      "path": "intent/issue-2614-kma-full-response.md",
+      "category": "documentation",
+      "reason": "Dated note: the approved all-season rule differs from the failed 2.5 °C variant."
     }
   ]
 }
