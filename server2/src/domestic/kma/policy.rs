@@ -1164,6 +1164,42 @@ pub fn guard_precipitation(req: &V) {
         }
     }
 }
+/// Contract `untyped-half-v1`, ASOS-primary only (AK 2026-11-08): a past half whose hours have
+/// no known type has no text. `_getDaySummaryList` drops its PTY, but legacy
+/// `_convertSkyToKorStr` reduces its text to the sky prefix (`흐리고 `), which is no weather text
+/// (`weather`); the half is withheld like the type, while a half built from known hours keeps
+/// its fields.
+pub fn withhold_untyped_halves(req: &V, now: f64) {
+    if !observations_primary(req) {
+        return;
+    }
+    let mid = req.get("midData");
+    let Some(today) = date_ms(now) else {
+        return;
+    };
+    if !mid.truthy() {
+        return;
+    }
+    for row in mid
+        .get("dailyData")
+        .as_arr()
+        .map(Arr::items)
+        .unwrap_or_default()
+    {
+        if !row.truthy() || !super::js::lt(&row.get("date"), &V::s(&today)) {
+            continue;
+        }
+        for half in ["Am", "Pm"] {
+            let text = format!("wf{half}");
+            if row.get(&format!("pty{half}")).is_undef()
+                && !row.get(&text).is_undef()
+                && !weather(&row.get(&text))
+            {
+                row.del(&text);
+            }
+        }
+    }
+}
 pub fn merge_daily_status(req: &V, now: f64) {
     let data = req.get("_history");
     if !data.truthy() {

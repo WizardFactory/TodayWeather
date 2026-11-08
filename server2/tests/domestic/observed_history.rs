@@ -662,6 +662,32 @@ fn precipitation_history(untyped: &[&str], typed: &[&str]) -> OrderedJson {
     .unwrap()
 }
 
+/// ASOS hourly records for September 17..23, dry except the `typeless` hours, which report
+/// neither a type nor an amount.
+fn typeless_history(typeless: &[&str]) -> OrderedJson {
+    let mut hourly = Vec::new();
+    for day in 17..=23 {
+        for hour in 0..24 {
+            let key = format!("202609{day:02}{hour:02}00");
+            let values = if typeless.contains(&key.as_str()) {
+                json!({"t1h":17,"reh":60,"sky":4,"wsd":2,"vec":180})
+            } else {
+                json!({"t1h":17,"reh":60,"sky":4,"pty":0,"rn1":0,"wsd":2,"vec":180})
+            };
+            hourly.push(
+                json!({"source":"KMA_ASOS","kind":"hourly","timeBasis":"UTC",
+                "stationId":"108","key":key,"values":values}),
+            );
+        }
+    }
+    OrderedJson::parse(
+        &serde_json::to_vec(&json!({"policy":"asos-primary-v1",
+        "startDate":"20260917","endDate":"20260923","hourly":hourly,"daily":[]}))
+        .unwrap(),
+    )
+    .unwrap()
+}
+
 fn day<'a>(body: &'a Value, date: &str) -> &'a Value {
     body["midData"]["dailyData"]
         .as_array()
@@ -1024,4 +1050,35 @@ fn observed_summary_identity_carries_the_contract_policy_version() {
             );
         }
     }
+}
+
+/// A past half whose hours have no known type has no text either. Legacy `_convertSkyToKorStr`
+/// reduces it to the sky prefix (`흐리고 `), which is no weather text; under ASOS-primary the half
+/// is withheld, its type and text absent, and its date listed as missing. The recording's grid
+/// hours of the 2026-09-20 afternoon are dropped, and ASOS reports them without a type or amount.
+/// Legacy mode keeps legacy's answer.
+#[test]
+fn a_past_half_without_a_known_type_has_no_prefix_text() {
+    let sc = scenario("domestic-v000903");
+    let patch: fn(TownModel, OrderedJson) -> OrderedJson = |model, docs| match model {
+        TownModel::Current => without(docs, "currentData", |d, t| {
+            (d == "20260920" && t >= "1300") || (d == "20260921" && t == "0000")
+        }),
+        _ => docs,
+    };
+    let mut hours: Vec<String> = (13..24).map(|h| format!("20260920{h:02}00")).collect();
+    hours.push("202609210000".into());
+    let hours: Vec<&str> = hours.iter().map(String::as_str).collect();
+    let body = assembled_from(
+        sc,
+        &Patched {
+            inner: replay(sc).with_history(typeless_history(&hours)),
+            town_model: patch,
+        },
+    );
+    let d20 = day(&body, "20260920");
+    assert!(d20.get("ptyPm").is_none(), "{d20}");
+    assert!(d20.get("wfPm").is_none(), "no sky prefix: {d20}");
+    assert_eq!(d20["wfAm"], "흐림", "a known half keeps its text: {d20}");
+    assert!(missing_dates(&body).contains(&"20260920".to_string()));
 }

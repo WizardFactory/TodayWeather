@@ -15,7 +15,8 @@
     "server2/src/domestic/kma/source/required.rs",
     "server2/tests/domestic.rs",
     "server2/tests/domestic/nowcast_fill.rs",
-    "server2/tests/domestic/shown_publication.rs"
+    "server2/tests/domestic/shown_publication.rs",
+    "server2/src/domestic/kma/policy.rs"
   ],
   "outside": [
     {

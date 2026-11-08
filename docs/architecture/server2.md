@@ -3997,6 +3997,12 @@ the [history contract](../../server2/config/contracts/kma-history.v1.json):
   and unknown hour: none for a cell whose hours are stored or known, up to the 22 hours of the
   previous day a new cell reaches shortly after midnight, all of them before ASOS releases the
   previous day at 11:00, and in winter the hours between the three-hour marks.
+- **Past days** (`untyped-half-v1`). A past day's AM and PM come from its hours, so a half built
+  from known hours, measured, rule-derived or filled from the nowcast, keeps its type, sky and
+  text. A half whose hours have no known type, such as a QC9 afternoon older than the nowcast's
+  reach, has no text either: legacy `_convertSkyToKorStr` reduces it to the sky prefix
+  (`흐리고 `), which is no weather text (`policy::withhold_untyped_halves`), and its date is
+  listed in `missingDailyDates`.
 
 Legacy replay mode is unchanged; the kma-rich and kma paired replays check it.
 

@@ -365,7 +365,9 @@ invariants. SKY values, snow, LGT and other daily rain totals are not declared
 yet. Under ASOS-primary, `precipitation-guard-v1` keeps measured precipitation
 evidence from becoming PTY 0. A slot whose evidence has no known type gets PTY
 −1. A half loses its PTY, SKY and text, keeps its date and is listed in
-`missingDailyDates`. `dry-closure-v1` checks each observation day
+`missingDailyDates`. A past half whose hours have no known type loses its
+text with its PTY rather than keeping a sky prefix that is no weather text
+(`untyped-half-v1`); a half built from known or filled hours keeps its fields. `dry-closure-v1` checks each observation day
 (01:00–24:00 KST) against its official daily total. When the day's 24 hourly
 amounts close against that total, an April–October QC9 hour without a
 precipitation code is dry (R1b). A blank daily total without numeric or coded

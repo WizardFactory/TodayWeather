@@ -68,3 +68,28 @@ async fn a_late_nowcast_fills_the_next_answer() {
     let slot = row(&next.body, "20260923", 24);
     assert_eq!(slot["pty"], 1, "the stored nowcast: {slot}");
 }
+
+/// The half-day of a past day built from filled hours keeps its type, sky and text: the 2026-09-23
+/// afternoon has dry ASOS hours and the nowcast's rain at 21:00..23:00.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_past_half_built_from_filled_hours_keeps_its_fields() {
+    let _peers = S3_PEERS.lock().await;
+    let raining = [2100, 2200, 2300].map(|t| publication(20260923, t));
+    let scene = Scene {
+        minute: Some(publication(20260924, 851)),
+        untyped: raining.to_vec(),
+        raining: raining.to_vec(),
+        ..Scene::default()
+    };
+    let answer = Session::new(kst(20260924, 910), &scene).answer().await;
+    let day = answer.body["midData"]["dailyData"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|d| d["date"] == "20260923")
+        .cloned()
+        .unwrap();
+    assert_eq!(day["ptyPm"], 1, "{day}");
+    assert_eq!(day["wfPm"], "흐리고 비", "{day}");
+    assert_eq!(day["skyPm"], "cloud_rain", "{day}");
+}

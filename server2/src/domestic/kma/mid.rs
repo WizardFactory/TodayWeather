@@ -777,6 +777,7 @@ pub fn merge_mid_with_short(cx: &mut Cx) -> Flow {
     // guard runs first so that guarded halves are reported as missing.
     if cx.r("_history").truthy() {
         policy::guard_precipitation(&cx.req);
+        policy::withhold_untyped_halves(&cx.req, now);
         policy::merge_daily_status(&cx.req, now);
     }
     let mut by_date: Vec<(String, V)> = Vec::new();
