@@ -177,3 +177,34 @@ Decision record, no code. Gates G1 (AN-03, AN-04), G2 (AN-05) and G3 (AN-02) pas
 - AC1: the gates pass, with their evidence linked from #2885.
 - AC2: #2877 has the decision comment (go, priority, budget, estimate, each decision; an open decision names the sub-issue it blocks).
 - AC3: delivery (plan and intent updated, review PASS, CI, merge).
+
+## AN-07 — app shell, navigation, themes and languages (#2886)
+
+Design (survey: `reports/sdlc/android-an-07/shell-survey.md`, from the Cordova templates, controllers and SCSS):
+
+- `core-domain` `shell/`: `AppLanguage` (the first system locale picks one of the six catalogs as angular-translate does: en, de, ko, ja, zh-CN, zh-TW; zh-HK and zh-TW to zh-TW, other zh to zh-CN, else en) and the region (last part of the first locale with a region, default KR) that shows the Korea-only menu rows; `Theme` (light, dark, photo, old) with the icon and weather image folders of `theme.js`; `StartupPage` ("0" hourly, "1" daily, "2" locations, "3" air, others hourly); `WeatherPhotos` (the photo feed grouped by tags and chosen per sky icon as `service.weatherutil.js` does, checked against goldens from the Cordova code).
+- `app` `ui/shell/`: the bottom tab bar (Locations, Hourly, Daily, Air; the selected weather or air tab shows the refresh glyph and reports a refresh, a second tap within 700 ms does nothing), the header bar (44 dp, menu button, title, actions), the full-screen side menu (200 ms slide; rows in Cordova order, rows 1–4 only for region KR; AN-12, AN-13 and AN-15 connect the rows), dialogs, and the exit confirmation on a main tab (`LOC_DO_YOU_WANT_TO_EXIT`). Theme colors come from the Cordova SCSS per theme and page (the old theme colors Hourly and Daily). Edge-to-edge with system bar insets, a reserved slot under the tab bar for the AN-15 banner, and the content width following the window (600 dp and wider included).
+- Glyphs: Ionicons 2.0.1 (from the Cordova build's Ionic 1.3.5, MIT) and Material Icons (`client/www/fonts`, Apache 2.0) as fonts with provenance.
+- Language: the activity applies the AppLanguage locale to its resources. Text follows the system font scale (AN-06).
+- Launch: the launcher keeps the Cordova component name `net.wizardfactory.todayweather/.MainActivity` (so home-screen shortcuts keep working without an alias), `singleTop`; the splash screen stays until the migration finishes, and entry intents (launcher, notification taps) wait for it.
+- Photo theme: `TW_WEATHER_PHOTOS_URL` (private input, like the server URL; without it no photo, as in Cordova builds from the template config) loaded once per run with the Cordova timeout and retries; Hourly and Daily show the chosen photo behind the header block (AN-08 fills the block).
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN07-US1 | User moves between tabs | App open | Tap each tab; tap the selected Hourly tab | Tab content switches; the selected weather or air tab shows the refresh glyph and a tap asks for a refresh | Second tap within 700 ms does nothing | AC1 |
+| AN07-US2 | User starts on the chosen page | Startup page set to daily | Open the app | The Daily tab is selected | Unknown value: Hourly | AC1 |
+| AN07-US3 | User opens the menu and leaves | App open | Tap the menu button; press back | Menu slides in with the Cordova rows (KR rows for region KR); back closes it | – | AC1, AC2 |
+| AN07-US4 | User leaves the app | Main tab, no dialog | Press back; Cancel; back; OK | Exit question; Cancel keeps the app; OK closes it | Back on a dialog closes only the dialog | AC1 |
+| AN07-US5 | User switches theme and language | Theme set; system language English | Open the app | Colors and images of the theme; English texts | Unsupported language: English | AC2 |
+| AN07-US6 | Tablet or foldable user resizes and rotates | Large screen emulator | Resize, rotate, multi-window | Nothing clipped; tab bar and header adapt | – | AC3 |
+| AN07-US7 | Cordova user updates | Home-screen shortcut to the Cordova app | Update; tap the shortcut; a notification tap during the migration | The native app opens; the entry intent is handled after the migration | – | AC4 |
+
+### Acceptance (from #2886)
+
+- AC1: UI tests pass for tab switching, the startup-page setting, opening and closing the menu, back on a dialog and the exit confirmation.
+- AC2: screenshot tests cover the shell in each theme, in Korean and English (with Cordova comparisons of the tab bar, header bar and menu).
+- AC3: on tablet and foldable emulators, resizing and rotating leave no clipped content.
+- AC4: after an update from the Cordova build on an emulator, the existing home-screen shortcut opens the native app, and an instrumented test shows an entry intent arriving during the migration is handled after it finishes.
+- AC5: delivery (README, review PASS, CI, merge).
