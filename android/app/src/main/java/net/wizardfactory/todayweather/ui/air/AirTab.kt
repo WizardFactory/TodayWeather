@@ -1,7 +1,6 @@
 package net.wizardfactory.todayweather.ui.air
 
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -99,7 +98,7 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
                 val glyph = if (host.locationEnabled()) LOCATION_ON else LOCATION_OFF
                 Icon {
                     OutlinedText(" $glyph", line(19.sp, TextUnit.Unspecified, colors.headerText, family = Glyphs.materialIcons), colors.headerOutline,
-                        Modifier.clickable {}.testTag(WeatherTabTags.LOCATION))
+                        Modifier.testTag(WeatherTabTags.LOCATION))
                 }
             }
             if (loadingSelected) {
