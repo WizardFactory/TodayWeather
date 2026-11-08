@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.TodayWeather" parent="@android:style/Theme.Material.Light.NoActionBar" />
+
+    <!-- Splash screen as the Cordova build (white background), kept until the data migration finishes. -->
+    <style name="Theme.TodayWeather.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#FFFFFF</item>
+        <item name="postSplashScreenTheme">@style/Theme.TodayWeather</item>
+    </style>
+</resources>

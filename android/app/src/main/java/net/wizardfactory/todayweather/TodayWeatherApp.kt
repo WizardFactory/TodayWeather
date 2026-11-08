@@ -25,9 +25,15 @@ open class TodayWeatherApp : Application() {
     open fun pushTransport(): PushTransport = HttpPushTransport(serverUrl())
 
     /** The Cordova data migration, started on every process start; it does nothing after the first one. */
-    val migration: Deferred<AppState> by lazy {
-        appScope.async(Dispatchers.IO) { CordovaMigrator(this@TodayWeatherApp).migrateIfNeeded() }
-    }
+    val migration: Deferred<AppState> by lazy { appScope.async(Dispatchers.IO) { migrate() } }
+
+    protected open suspend fun migrate(): AppState = CordovaMigrator(this).migrateIfNeeded()
+
+    /** Entry intents (launcher, notification taps), handled in order once the migration has finished. */
+    val entryIntents: EntryIntents by lazy { EntryIntents(appScope, migration, ::onEntryIntent) }
+
+    /** Handles an entry intent after the migration; notification taps are AN-14's work. */
+    protected open fun onEntryIntent(intent: android.content.Intent) {}
 
     /** Push registrations (gate G1, push part), one at a time. */
     val push: PushSync by lazy {
