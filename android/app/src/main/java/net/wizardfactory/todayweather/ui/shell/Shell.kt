@@ -17,10 +17,10 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
@@ -38,6 +38,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -65,9 +66,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.sp
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -213,30 +216,31 @@ fun HeaderBar(colors: ShellColors, title: String, onMenu: () -> Unit, actions: @
 
 /**
  * An icon button of a header bar (`.bar .button.button-icon`) below the bar's 5 dp padding: a transparent 1 dp
- * border, [padding] at each side, a 32 sp glyph on a 32 dp line with 2 dp at each side, and 0.87 opacity, which
+ * border, [padding] at each side, a 32 dp glyph on a 32 dp line with 2 dp at each side, and 0.87 opacity, which
  * every `.button` has in ionic.app.scss.
  */
 @Composable
 fun BarButton(glyph: String, colors: ShellColors, onClick: () -> Unit, modifier: Modifier = Modifier, padding: Dp = 8.dp) {
     Box(modifier.padding(top = 5.dp).alpha(0.87f).clickable(onClick = onClick).padding(vertical = 1.dp, horizontal = 1.dp + padding + 2.dp)) {
-        OutlinedText(glyph, line(32.sp, 32.sp, colors.headerText, family = Glyphs.ionicons), colors.headerOutline)
+        Icon { OutlinedText(glyph, line(32.sp, 32.sp, colors.headerText, family = Glyphs.ionicons), colors.headerOutline) }
     }
 }
 
-/** `.bar .title` on Android: one line of 44 dp, 19 sp, medium. */
+/** `.bar .title` on Android: 19 sp, medium, on one line of 44 dp. */
 @Composable
 private fun BarTitle(title: String, colors: ShellColors, modifier: Modifier = Modifier) {
-    OutlinedText(title, line(19.sp, 44.sp, colors.headerText, FontWeight.Medium), colors.headerOutline, modifier)
+    FixedLine(44.dp, modifier) { OutlinedText(title, line(19.sp, TextUnit.Unspecified, colors.headerText, FontWeight.Medium), colors.headerOutline) }
 }
 
 /**
  * `.tabs.tabs-icon-top`: 49 dp with a hairline at the top and the items 2 dp below it. Each item, up to 150 dp
- * wide, has a 32 sp glyph on a 32 dp line over a 10 sp label on a 14 dp line, at 0.7 opacity unless selected.
+ * wide, has a 32 dp glyph on a 32 dp line over a 10 sp label on a 14 sp line, at 0.7 opacity unless selected; a
+ * larger system font scale makes the bar taller.
  */
 @Composable
 fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().height(49.dp).background(colors.tabBar).hairline(colors.tabLine, bottom = false).padding(top = 2.dp),
+        Modifier.fillMaxWidth().heightIn(min = 49.dp).background(colors.tabBar).hairline(colors.tabLine, bottom = false).padding(top = 2.dp),
         horizontalArrangement = Arrangement.Center,
     ) {
         for (tab in Tab.entries) {
@@ -249,11 +253,11 @@ fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
             }
             // .tab-item: flex 1 up to 150 dp; wider windows center the items (.tabs justify-content).
             Column(
-                Modifier.weight(1f, fill = false).widthIn(max = 150.dp).fillMaxWidth().fillMaxHeight().alpha(if (on) 1f else 0.7f)
+                Modifier.weight(1f, fill = false).widthIn(max = 150.dp).fillMaxWidth().heightIn(min = 47.dp).alpha(if (on) 1f else 0.7f)
                     .clickable { onTab(tab) }.testTag(ShellTags.tab(tab)),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                LineText(glyph, line(32.sp, 32.sp, colors.tabText, family = Glyphs.ionicons))
+                Icon { LineText(glyph, line(32.sp, 32.sp, colors.tabText, family = Glyphs.ionicons)) }
                 LineText(stringResource(label), line(10.sp, 14.sp, colors.tabText))
             }
         }
@@ -313,10 +317,9 @@ private fun MenuItem(row: MenuRow, state: ShellState, colors: ShellColors, borde
     val value = state.menuValues[row] ?: if (row == MenuRow.VERSION) state.version else null
     Column(Modifier.fillMaxWidth().clickable(onClick = onClick).testTag(ShellTags.row(row))) {
         Box(Modifier.fillMaxWidth().height(border).background(colors.menuBorder))
-        Row(Modifier.fillMaxWidth().height(height).background(colors.menuItem).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().heightIn(min = height).background(colors.menuItem).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             val style = line(16.sp, 22.85.sp, colors.menuText)
-            LineText(stringResource(row.textKey), style, Modifier.weight(1f))
-            if (value != null) LineText(value, style)
+            LabelAndValue(stringResource(row.textKey), value, style, Modifier.weight(1f))
             // The chevron sits on the row's baseline (`<i class="icon ion-chevron-right">` floated in the text's line).
             if (row.chevron) LineText(Glyphs.CHEVRON_RIGHT, line(16.sp, 22.85.sp, colors.menuText, family = Glyphs.ionicons), baselineOf = style)
         }
@@ -324,8 +327,33 @@ private fun MenuItem(row: MenuRow, state: ShellState, colors: ShellColors, borde
 }
 
 /**
- * `.item.button.button-block`: a 47 dp block with a 1 dp border and 4 dp corners, a bold 15 sp label followed by
- * " · [value]" when the row has one (the analytics choice), at 0.87 opacity.
+ * A row's label with its [value] at the right (`<span style="float: right">`). When large text in a narrow window
+ * leaves no room for both, the value moves under the label, 16 dp from the row's edges, and the row grows.
+ */
+@Composable
+private fun LabelAndValue(label: String, value: String?, style: TextStyle, modifier: Modifier) {
+    Layout(content = { LineText(label, style); if (value != null) LineText(value, style) }, modifier) { parts, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val right = parts.getOrNull(1)?.measure(loose)
+        val oneLine = right == null || parts[0].maxIntrinsicWidth(loose.maxHeight) + right.width <= constraints.maxWidth
+        val left = parts[0].measure(loose.copy(maxWidth = if (oneLine && right != null) constraints.maxWidth - right.width else constraints.maxWidth))
+        val padding = 16.dp.roundToPx()
+        val height = if (oneLine) max(left.height, right?.height ?: 0) else padding + left.height + right!!.height + padding
+        layout(constraints.maxWidth, height) {
+            if (oneLine) {
+                left.place(0, (height - left.height) / 2)
+                right?.place(constraints.maxWidth - right.width, (height - right.height) / 2)
+            } else {
+                left.place(0, padding)
+                right!!.place(constraints.maxWidth - right.width, padding + left.height)
+            }
+        }
+    }
+}
+
+/**
+ * `.item.button.button-block`: a 47 dp block with a 1 dp border and 4 dp corners, a bold 15 sp label on a 42 dp
+ * line followed by " · [value]" when the row has one (the analytics choice), at 0.87 opacity.
  */
 @Composable
 private fun MenuButton(row: MenuRow, value: String?, colors: ShellColors, height: Dp, onClick: () -> Unit) {
@@ -334,15 +362,38 @@ private fun MenuButton(row: MenuRow, value: String?, colors: ShellColors, height
         Modifier.fillMaxWidth().height(height).alpha(0.87f).clip(RoundedCornerShape(4.dp)).background(colors.menuItem)
             .border(1.dp, colors.menuBorder, RoundedCornerShape(4.dp)).clickable(onClick = onClick).testTag(ShellTags.row(row)),
     ) {
-        LineText(text, line(15.sp, 42.sp, colors.menuText, FontWeight.Bold), Modifier.align(Alignment.TopCenter).padding(top = 1.dp, start = 12.dp, end = 12.dp))
+        FixedLine(42.dp, Modifier.align(Alignment.TopCenter).padding(top = 1.dp, start = 12.dp, end = 12.dp)) {
+            LineText(text, line(15.sp, TextUnit.Unspecified, colors.menuText, FontWeight.Bold))
+        }
     }
 }
 
-/** A CSS line box: [lineHeight] with half the leading above the font's ascent and half below its descent. */
+/**
+ * Glyphs keep their size whatever the system font scale. The Cordova app kept the WebView's text zoom at 100 %; the
+ * native app lets text follow the font scale (AN-06) but not the icons.
+ */
+@Composable
+private fun Icon(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale = 1f), content = content)
+}
+
+/**
+ * A CSS line of a fixed [height] (`line-height` in px): its text, which follows the font scale, centered in it as
+ * the half-leading centers a line's font box.
+ */
+@Composable
+private fun FixedLine(height: Dp, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Box(modifier.height(height), contentAlignment = Alignment.Center) { content() }
+}
+
+/**
+ * A CSS line box: [lineHeight] with half the leading above the font's ascent and half below its descent; an
+ * unspecified [lineHeight] keeps the font's own box (for [FixedLine]).
+ */
 private fun line(size: TextUnit, lineHeight: TextUnit, color: Color, weight: FontWeight = FontWeight.Normal, family: FontFamily? = null) =
     TextStyle(
         fontSize = size, lineHeight = lineHeight, color = color, fontWeight = weight, fontFamily = family,
-        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
+        lineHeightStyle = if (lineHeight.isSpecified) LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None) else null,
         platformStyle = PlatformTextStyle(includeFontPadding = false),
     )
 
@@ -355,10 +406,12 @@ private fun line(size: TextUnit, lineHeight: TextUnit, color: Color, weight: Fon
 private fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style) {
     val measurer = rememberTextMeasurer()
     val reference = if (baselineOf.fontFamily == null) "x" else text
-    val baseline = remember(baselineOf, reference, measurer) { measurer.measure(reference, baselineOf).firstBaseline }
+    val line = remember(baselineOf, reference, measurer) { measurer.measure(reference, baselineOf) }
     Text(text, modifier.layout { measurable, constraints ->
         val placeable = measurable.measure(constraints)
-        layout(placeable.width, placeable.height) { placeable.place(0, baseline.roundToInt() - placeable[FirstBaseline]) }
+        // The line is as tall as one in the style's own font, so a taller fallback line centers as a Latin one.
+        val height = if (baselineOf === style) line.size.height else placeable.height
+        layout(placeable.width, height) { placeable.place(0, line.firstBaseline.roundToInt() - placeable[FirstBaseline]) }
     }, maxLines = 1, overflow = TextOverflow.Ellipsis, style = style)
 }
 

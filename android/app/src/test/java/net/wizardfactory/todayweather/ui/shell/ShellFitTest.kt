@@ -16,7 +16,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The shell on large and resized windows (#2886 AC3, [ShellFit]): tablet and foldable sizes in both orientations,
- * a split-screen half and a small window, in Korean (region KR, with the Korea-only rows) and English. Images of
+ * a split-screen half and a small window, and three of them at font scale 1.3, in Korean (region KR, with the
+ * Korea-only rows) and English. Images of
  * each state go to build/shell-fit/. The app's own activity is checked on the tablet and foldable emulators while it
  * rotates, resizes and folds (ShellFitDeviceTest, tools/large-screen/run-shell-fit.sh).
  */
@@ -33,6 +34,11 @@ abstract class ShellFitTest(private val lang: String, private val region: String
     @Test @Config(qualifiers = "+w797dp-h411dp-land") fun foldableClosedRotated() = fits("fold-closed-rotated")
     @Test @Config(qualifiers = "+w640dp-h800dp-port") fun splitScreenHalf() = fits("split-half")
     @Test @Config(qualifiers = "+w320dp-h480dp-port") fun smallWindow() = fits("small-window")
+
+    // Text follows the system font scale (AN-06); the shell keeps fitting at 1.3.
+    @Test @Config(qualifiers = "+w360dp-h640dp-port", fontScale = 1.3f) fun phoneLargeText() = fits("phone-text-1.3")
+    @Test @Config(qualifiers = "+w320dp-h480dp-port", fontScale = 1.3f) fun smallWindowLargeText() = fits("small-window-text-1.3")
+    @Test @Config(qualifiers = "+w1280dp-h800dp-land", fontScale = 1.3f) fun tabletLargeText() = fits("tablet-landscape-text-1.3")
 
     private fun fits(name: String) {
         ShellFit.show(rule, Theme.LIGHT, region)
