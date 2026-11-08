@@ -232,20 +232,21 @@ impl Acquire for Stations {
 }
 
 /// Every forecast family, published through the raw writer; short forecast and current
-/// observation requests are logged. With `held` (an earlier current observation, a short
-/// publication), that observation answers only once that short publication has answered. The
-/// `raining` current observations report rain; the `late` one answers only once `released`.
+/// observation requests are logged when made, and the current observations answered in
+/// `nowcasts`. With `held` (an earlier current observation, a short publication), that
+/// observation answers only once that short publication has answered. The `raining` current
+/// observations report rain; the `late` one answers only once `late_released`.
 struct Forecasts {
     now: f64,
     writer: Arc<Writer>,
     short: Arc<Mutex<Vec<Publication>>>,
     current: Arc<Mutex<Vec<Publication>>>,
+    nowcasts: Arc<tokio::sync::watch::Sender<Vec<Publication>>>,
     held: Option<(Publication, Publication)>,
     released: Arc<tokio::sync::watch::Sender<bool>>,
     raining: Vec<Publication>,
     late: Option<Publication>,
     late_released: Arc<tokio::sync::watch::Sender<bool>>,
-    late_answered: Arc<tokio::sync::watch::Sender<bool>>,
 }
 impl ForecastAcquire for Forecasts {
     fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>> {
@@ -257,13 +258,14 @@ impl ForecastAcquire for Forecasts {
         };
         let hold = is(F::UltraSrtNcst, self.held.map(|h| h.0)).then(|| self.released.subscribe());
         let release = is(F::VilageFcst, self.held.map(|h| h.1)).then(|| self.released.clone());
-        let late = is(F::UltraSrtNcst, self.late)
-            .then(|| (self.late_released.subscribe(), self.late_answered.clone()));
-        if let ForecastRequest::DataGoKr(r) = &request
-            && r.family() == F::UltraSrtNcst
-        {
-            self.current.lock().unwrap().push(r.publication());
-        }
+        let late = is(F::UltraSrtNcst, self.late).then(|| self.late_released.subscribe());
+        let nowcast = match &request {
+            ForecastRequest::DataGoKr(r) if r.family() == F::UltraSrtNcst => {
+                self.current.lock().unwrap().push(r.publication());
+                Some((r.publication(), self.nowcasts.clone()))
+            }
+            _ => None,
+        };
         let raining = self.raining.clone();
         Box::pin(async move {
             if request == ForecastRequest::Warnings {
@@ -272,7 +274,7 @@ impl ForecastAcquire for Forecasts {
             if let Some(mut released) = hold {
                 let _ = released.wait_for(|released| *released).await;
             }
-            if let Some((mut released, _)) = late.clone() {
+            if let Some(mut released) = late {
                 let _ = released.wait_for(|released| *released).await;
             }
             let key = format!("test-forecast/{request:?}");
@@ -390,8 +392,8 @@ impl ForecastAcquire for Forecasts {
             if let Some(release) = release {
                 release.send_replace(true);
             }
-            if let Some((_, answered)) = late {
-                answered.send_replace(true);
+            if let Some((p, nowcasts)) = nowcast {
+                nowcasts.send_modify(|answered| answered.push(p));
             }
             answer
         })
@@ -454,9 +456,14 @@ pub(super) struct Session {
     source: S3Source<BoundedS3<HttpS3Transport>>,
     short: Arc<Mutex<Vec<Publication>>>,
     current: Arc<Mutex<Vec<Publication>>>,
+    nowcasts: Arc<tokio::sync::watch::Sender<Vec<Publication>>>,
+    late: Option<Publication>,
     late_released: Arc<tokio::sync::watch::Sender<bool>>,
-    late_answered: Arc<tokio::sync::watch::Sender<bool>>,
 }
+/// Answers a session may take until its station and ASOS state is ready.
+const SETTLE_ANSWERS: usize = 20;
+/// How long a test waits for scripted current observations to answer.
+const NOWCAST_WAIT: Duration = Duration::from_secs(60);
 impl Session {
     pub fn new(now: f64, scene: &Scene) -> Self {
         let peer = Peer::persistent();
@@ -469,7 +476,7 @@ impl Session {
             Arc::new(Mutex::new(Vec::new())),
         );
         let late_released = Arc::new(tokio::sync::watch::channel(false).0);
-        let late_answered = Arc::new(tokio::sync::watch::channel(false).0);
+        let nowcasts = Arc::new(tokio::sync::watch::channel(Vec::new()).0);
         let warnings = Arc::new(
             WarningStore::new(
                 peer.transport_limited(2),
@@ -495,12 +502,12 @@ impl Session {
             writer: writer.clone(),
             short: short.clone(),
             current: current.clone(),
+            nowcasts: nowcasts.clone(),
             held: scene.held,
             released: Arc::new(tokio::sync::watch::channel(false).0),
             raining: scene.raining.clone(),
             late: scene.late,
             late_released: late_released.clone(),
-            late_answered: late_answered.clone(),
         })))
         .with_raw_writer(writer);
         Self {
@@ -509,18 +516,39 @@ impl Session {
             source,
             short,
             current,
+            nowcasts,
+            late: scene.late,
             late_released,
-            late_answered,
         }
     }
     /// Lets the late current observation answer, and waits until it has.
     pub async fn release(&self) {
         self.late_released.send_replace(true);
-        let _ = self
-            .late_answered
-            .subscribe()
-            .wait_for(|answered| *answered)
+        self.nowcasts_answered(&self.late.into_iter().collect::<Vec<_>>())
             .await;
+    }
+    /// Waits until the scripted provider has answered the current observations `wanted`.
+    pub async fn nowcasts_answered(&self, wanted: &[Publication]) {
+        let mut answered = self.nowcasts.subscribe();
+        tokio::time::timeout(
+            NOWCAST_WAIT,
+            answered.wait_for(|answered| wanted.iter().all(|p| answered.contains(p))),
+        )
+        .await
+        .expect("the current observations answered")
+        .unwrap();
+    }
+    /// Answers until `ready` holds for an answer, which it returns: a cold station and ASOS
+    /// load can outlast one answer's 2.5 s wait (it then serves a later answer), so a test that
+    /// waits for work these start does not depend on how long the first answer takes.
+    pub async fn settle(&self, ready: impl Fn(&Answer) -> bool) -> Answer {
+        for _ in 0..SETTLE_ANSWERS {
+            let answer = self.answer().await;
+            if ready(&answer) {
+                return answer;
+            }
+        }
+        panic!("not ready after {SETTLE_ANSWERS} answers")
     }
     pub async fn answer(&self) -> Answer {
         let encoded =

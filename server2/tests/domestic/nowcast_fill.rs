@@ -2,8 +2,10 @@
 //! rules leave unknown takes the cell's grid nowcast for that hour, read from S3 or acquired once
 //! per cell and base time within the request's wait; a late one serves the next answer. From an
 //! empty store at 2026-09-24 09:10 KST, the nowcast reaches back to 2026-09-23 10:00. Scripted
-//! providers only; no provider is reached.
-use super::shown_publication::{Scene, Session, kst, publication, row};
+//! providers only; no provider is reached. A cold station and ASOS load may outlast the first
+//! answer's wait, so the tests answer until the unknown hours are requested and wait for the
+//! scripted nowcasts, rather than timing the first answer (review AP-nowcast-test-determinism).
+use super::shown_publication::{Answer, Scene, Session, kst, publication, row};
 use super::source_s3::S3_PEERS;
 use server2::domestic::publication::Publication;
 
@@ -14,6 +16,10 @@ fn yesterday(requested: &[Publication]) -> Vec<Publication> {
         .copied()
         .filter(|p| p.date() == 20260923)
         .collect()
+}
+/// Whether every one of `hours` has been requested.
+fn requested(hours: &[Publication]) -> impl Fn(&Answer) -> bool + '_ {
+    move |answer: &Answer| hours.iter().all(|p| answer.current.contains(p))
 }
 
 /// The ASOS hours 21:00..23:00 measured an uncoded amount too cold for the wet-bulb rule, and so
@@ -31,7 +37,10 @@ async fn unknown_hours_of_the_last_23_hours_take_the_grid_nowcast() {
         raining: raining.to_vec(),
         ..Scene::default()
     };
-    let answer = Session::new(kst(20260924, 910), &scene).answer().await;
+    let session = Session::new(kst(20260924, 910), &scene);
+    session.settle(requested(&raining)).await;
+    session.nowcasts_answered(&raining).await;
+    let answer = session.answer().await;
     assert_eq!(
         yesterday(&answer.current),
         raining,
@@ -58,10 +67,9 @@ async fn a_late_nowcast_fills_the_next_answer() {
         ..Scene::default()
     };
     let session = Session::new(kst(20260924, 910), &scene);
-    let first = session.answer().await;
-    assert_eq!(yesterday(&first.current), [late]);
+    let first = session.settle(requested(&[late])).await;
     let slot = row(&first.body, "20260923", 24);
-    assert_eq!(slot["pty"], -1, "unknown on the first answer: {slot}");
+    assert_eq!(slot["pty"], -1, "unknown while its nowcast is late: {slot}");
     session.release().await;
     let next = session.answer().await;
     assert_eq!(yesterday(&next.current), [late], "one acquisition");
@@ -81,7 +89,10 @@ async fn a_past_half_built_from_filled_hours_keeps_its_fields() {
         raining: raining.to_vec(),
         ..Scene::default()
     };
-    let answer = Session::new(kst(20260924, 910), &scene).answer().await;
+    let session = Session::new(kst(20260924, 910), &scene);
+    session.settle(requested(&raining)).await;
+    session.nowcasts_answered(&raining).await;
+    let answer = session.answer().await;
     let day = answer.body["midData"]["dailyData"]
         .as_array()
         .unwrap()
