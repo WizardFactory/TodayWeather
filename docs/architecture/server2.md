@@ -342,7 +342,12 @@ instance headroom remains unqualified. Normal retries retain the same original
 bytes (9 s attempts, backoff capped at 30 s). Deterministic invalid input parks
 until shutdown; corrupt stored/control reads remain eligible for retry.
 Body end/error/drop releases publication; a 10 s dormancy cap, no-waiter detection
-and shutdown also release it. The hook proves server body termination, not remote
+and shutdown also release it. A caller is a waiter from the moment it creates or joins an
+acquisition, and the waiters are counted together with the Ready announcement, under the lock
+callers create and join entries under. A waiter that takes the batch and returns at once, one not
+yet polled again when a fast provider is done, or a response that joins after the creator was
+cancelled but before Ready therefore never makes its response's raw look unwaited: on a loaded
+runner such an order published a group before the body ended (CI run 42379684133, 2026-11-07). The hook proves server body termination, not remote
 receipt. Quiesce rejects queued misses and a 34 s shutdown drain counts abandoned
 served originals. No durable copy means exact crash recovery can be impossible.
 
@@ -1708,7 +1713,7 @@ The table records the S10c state.
 | --- | --- | --- |
 | Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf`, `kma` (S15; reads `SERVER2_S3_*` since S15b-1), `kma-v000901`, `kma-v000902` (S17a), `town` (S17b) | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
 | World versions | `SERVER2_WORLD_VERSIONS` | `v000901,v000902,v000903` |
-| S3 (shared) | `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`, `SERVER2_S3_BUCKET`, `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY` | `ap-northeast-2`; `https://s3.<region>.amazonaws.com/`; bucket and static credentials required when any family is native. One 12-request admission for weather, air and budgets. The importers use the same settings. |
+| S3 (shared) | `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`, `SERVER2_S3_BUCKET`, `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY` | `ap-northeast-2`; `https://s3.<region>.amazonaws.com/`; bucket and static credentials required when any family is native. One 12-request admission for weather, air and budgets; warning work holds at most a third of it through the bulk lane (KMA-RESTART-READS). The importers use the same settings. |
 | Geocoder keys/endpoints | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY`, `GEOCODER_KAKAO_BASE_URL`, `GEOCODER_GOOGLE_BASE_URL` | Existing legacy names; `https://dapi.kakao.com`, `https://maps.googleapis.com`; the Google fingerprint rule applies to the production endpoint, as in legacy. |
 | Geocoder quotas | `SERVER2_GEOCODER_KAKAO_DAILY_UNITS` (per key), `SERVER2_GEOCODER_GOOGLE_DAILY_UNITS` | Required with that provider's key. One S08 window per key and UTC day, owner = domain-separated SHA-256 of the key. |
 | World weather | `VC_SECRET_KEY`, `SERVER2_WORLD_VC_DAILY_UNITS`, `SERVER2_WORLD_VC_QUOTA_ID`, `SERVER2_WORLD_VC_URL` | URL defaults to the legacy Timeline root `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/`. |
@@ -3741,7 +3746,12 @@ Exact reverse coordinates retain the geocoder's memory-only contract.
 
 The KMA source and request-driven collector share WarningStore. The persisted S12
 feed hook is installed before the collector enters Arc; zone publication precedes
-feed publication. There is no startup collection. Notice serving constructs no
+feed publication. The store and the feed use the bulk lane of the shared S3 admission
+(KMA-RESTART-READS): together they hold at most a third of its permits. On 2026-11-07 the
+first request after a restart started the collector, whose progress load, zone replay and
+publications made 859 S3 requests in 9 s while the request's observation reads waited past
+their bound. With the lane, request reads keep two thirds of the admission and the warning
+work finishes later. There is no startup collection. Notice serving constructs no
 Translator; publication/translation stays in the CLI. Push starts its existing
 registration writer only, with success after durable S3 journal publication.
 

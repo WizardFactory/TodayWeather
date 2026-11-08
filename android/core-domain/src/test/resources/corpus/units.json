@@ -1,0 +1,370 @@
+{
+ "mutations": {
+  "zero": {
+   "set": 0,
+   "keys": [
+    "t1h",
+    "t3h",
+    "pop",
+    "rn1",
+    "r06",
+    "s06",
+    "wsd",
+    "reh",
+    "tmn",
+    "tmx",
+    "hPa",
+    "press",
+    "vis",
+    "visibility"
+   ],
+   "onlyPresent": true
+  },
+  "missing": {
+   "delete": true,
+   "keys": [
+    "t1h",
+    "t3h",
+    "pop",
+    "rn1",
+    "wsd",
+    "skyIcon",
+    "tmn",
+    "tmx",
+    "hPa",
+    "press",
+    "vis",
+    "visibility"
+   ]
+  },
+  "sentinel": {
+   "set": -50,
+   "keys": [
+    "t1h",
+    "t3h",
+    "tmn",
+    "tmx"
+   ],
+   "onlyPresent": true,
+   "also": {
+    "set": -1,
+    "keys": [
+     "pop",
+     "reh",
+     "wsd",
+     "hPa",
+     "press",
+     "vis",
+     "visibility"
+    ],
+    "onlyPresent": true
+   }
+  },
+  "string": {
+   "stringify": true,
+   "keys": [
+    "t1h",
+    "t3h",
+    "pop",
+    "rn1",
+    "wsd",
+    "tmn",
+    "tmx",
+    "hPa",
+    "press",
+    "vis",
+    "visibility"
+   ]
+  }
+ },
+ "cases": [
+  {
+   "name": "kma-seoul-zero",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul.json",
+   "mutation": "zero",
+   "expectedSha256": "ff885b612eeef2810a6e26da856a85527442f067ac0c2f29a4fb0e09aede82b8"
+  },
+  {
+   "name": "kma-seoul-missing",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul.json",
+   "mutation": "missing",
+   "expectedSha256": "5a67bbfe40688b49fa9fbe7c4f0e6d58d5c22608f6f1107220657f264f7e43bc"
+  },
+  {
+   "name": "kma-seoul-sentinel",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul.json",
+   "mutation": "sentinel",
+   "expectedSha256": "af5defe4b2b68ef7361fcb1e24e8407293b557e7acff3aed6409482ebc96d28c"
+  },
+  {
+   "name": "kma-seoul-string",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul.json",
+   "mutation": "string",
+   "expectedSha256": "609742cc068b47a2159bae1473288611516b84445bde38a4b124f91bad27fc25"
+  },
+  {
+   "name": "kma-seoul-f-zero",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-f.json",
+   "mutation": "zero",
+   "expectedSha256": "9c53e3c7b1a0b3b85d66cd34f346b237d98938731b3705177b19d8ed6e459715"
+  },
+  {
+   "name": "kma-seoul-f-missing",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-f.json",
+   "mutation": "missing",
+   "expectedSha256": "53bd27d379a377839574db0dff84ee4518c293fa10083351f4c16e23dccc397a"
+  },
+  {
+   "name": "kma-seoul-f-sentinel",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-f.json",
+   "mutation": "sentinel",
+   "expectedSha256": "2fa1553bbc4da0dab00444eb470a66b1dd64dade14174ed22a5b710d5a04521f"
+  },
+  {
+   "name": "kma-seoul-f-string",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-f.json",
+   "mutation": "string",
+   "expectedSha256": "81929af65ff133ab941460196135e216b9edc4b31968ea8ac9f5e5296fd6065a"
+  },
+  {
+   "name": "kma-seoul-imperial-zero",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-imperial.json",
+   "mutation": "zero",
+   "expectedSha256": "949026dc95f83c23649d0efbe175b2097fcbae5e07623582777bc8765a842a02"
+  },
+  {
+   "name": "kma-seoul-imperial-missing",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-imperial.json",
+   "mutation": "missing",
+   "expectedSha256": "9d97e1824b54f76fedd9ba55442b7c2bce1b9fbf59815d1d4bee73dff30ba2f3"
+  },
+  {
+   "name": "kma-seoul-imperial-sentinel",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-imperial.json",
+   "mutation": "sentinel",
+   "expectedSha256": "3d31ca94c94e55247056783cdc4b0341ae95a8e92d324098f57a46400abed242"
+  },
+  {
+   "name": "kma-seoul-imperial-string",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-imperial.json",
+   "mutation": "string",
+   "expectedSha256": "0a8c54d511604b69c79b7f77cc170953e044bd2ce9f692e433a648b357dc1dd3"
+  },
+  {
+   "name": "kma-seoul-aqicn-zero",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-aqicn.json",
+   "mutation": "zero",
+   "expectedSha256": "40715fcc2fa399d3a05ede4f73a763b020c361c5abaa067100fc1c8ef2ea82f4"
+  },
+  {
+   "name": "kma-seoul-aqicn-missing",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-aqicn.json",
+   "mutation": "missing",
+   "expectedSha256": "bdb0409e5c3bbcaa419f16addbf2babe6319c5aca3f250b7084f7f0773b92b8c"
+  },
+  {
+   "name": "kma-seoul-aqicn-sentinel",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-aqicn.json",
+   "mutation": "sentinel",
+   "expectedSha256": "def2736d9690eb1ebca80abe5d18319e7125421237bcc4bcea1b1c9c90325a3c"
+  },
+  {
+   "name": "kma-seoul-aqicn-string",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-aqicn.json",
+   "mutation": "string",
+   "expectedSha256": "5af3192c49184e2f9a469241a9af03367446cabed9ccd2bbad41665b444129e6"
+  },
+  {
+   "name": "kma-seoul-who-zero",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-who.json",
+   "mutation": "zero",
+   "expectedSha256": "1a179fcb015cbcb2d4b38a327891b4d85e8e9e426718bb6f630ff2a9a5ef03b2"
+  },
+  {
+   "name": "kma-seoul-who-missing",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-who.json",
+   "mutation": "missing",
+   "expectedSha256": "30f4424105c2761d5ac30928a1d19b9bf6c40c3fbb26f51fa20f8c73889516cc"
+  },
+  {
+   "name": "kma-seoul-who-sentinel",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-who.json",
+   "mutation": "sentinel",
+   "expectedSha256": "739fe32da5162a605a53f1268252feb15518a3a6b5b7a9b18a260197d6c7e318"
+  },
+  {
+   "name": "kma-seoul-who-string",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/kma-seoul-who.json",
+   "mutation": "string",
+   "expectedSha256": "a8ffb23281400786a66c39af25155fdf72fb748f6e4bce5dc24945074b3e4931"
+  },
+  {
+   "name": "vc-london-zero",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/vc-london.json",
+   "mutation": "zero",
+   "expectedSha256": "e16035f1b0699132ed3ccaa54fdab3d44c805109029e666fe7879eacc73ce9a7"
+  },
+  {
+   "name": "vc-london-missing",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/vc-london.json",
+   "mutation": "missing",
+   "expectedSha256": "66dcf46bffe88c84a2a9c5a6b1169dded6728a57751b581720f492a5c57600ae"
+  },
+  {
+   "name": "vc-london-sentinel",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/vc-london.json",
+   "mutation": "sentinel",
+   "expectedSha256": "d25b29df67b34622d42df5340dffa5bbcf668aa8ad3239efee5b7613bed5a753"
+  },
+  {
+   "name": "vc-london-string",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/vc-london.json",
+   "mutation": "string",
+   "expectedSha256": "7bbdbe458ae30de84c948d6711a9aec800c4b8f6627179512dd0b9d82a34483a"
+  },
+  {
+   "name": "vc-london-f-zero",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/vc-london-f.json",
+   "mutation": "zero",
+   "expectedSha256": "f66162a46bbec98a5957d0e45e855b0393b2d3b4a4fb14493ffbf41d77a385cb"
+  },
+  {
+   "name": "vc-london-f-missing",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/vc-london-f.json",
+   "mutation": "missing",
+   "expectedSha256": "96e240d2ece0f95313d968977fcafe50bb791725ecebc829646e9ce21446670a"
+  },
+  {
+   "name": "vc-london-f-sentinel",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/vc-london-f.json",
+   "mutation": "sentinel",
+   "expectedSha256": "cd57d3f4dc63464051d0ab6982de88806ebf977bed103bec57520f8f88211e8e"
+  },
+  {
+   "name": "vc-london-f-string",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/vc-london-f.json",
+   "mutation": "string",
+   "expectedSha256": "31edc671b2f7d1e2d3dd333b0c489dc0a1ed568b19ebca759bd6bed131cc756f"
+  },
+  {
+   "name": "vc-tokyo-zero",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/vc-tokyo.json",
+   "mutation": "zero",
+   "expectedSha256": "c48d0635b7a7ec8caf114f3a1a61dec95e0abd5362fc14e50c6eb15208bc7fd1"
+  },
+  {
+   "name": "vc-tokyo-missing",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/vc-tokyo.json",
+   "mutation": "missing",
+   "expectedSha256": "7d62da910fdd34b78a3fcf27e5be4d424521e6692b287181ed913f752f09a822"
+  },
+  {
+   "name": "vc-tokyo-sentinel",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/vc-tokyo.json",
+   "mutation": "sentinel",
+   "expectedSha256": "d72313e6d6e5e42993176b43ac9e76fe0499afc1a043f78ab5a5b53a2ce2c211"
+  },
+  {
+   "name": "vc-tokyo-string",
+   "rows": [
+    "V05"
+   ],
+   "inputFile": "inputs/vc-tokyo.json",
+   "mutation": "string",
+   "expectedSha256": "75010635859c58db61280f9ec5626d38413572ee0095d1840c4e278a149a3810"
+  }
+ ]
+}

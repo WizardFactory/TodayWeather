@@ -1,0 +1,19 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.kotlin/
+captures/
+# Private inputs (see README.md)
+app/google-services.json
+keystore.properties
+private.properties
+*.jks
+*.keystore
+
+# Tool dependencies
+tools/**/node_modules/
+
+# LevelDB test fixtures keep their write-ahead logs (the root .gitignore ignores *.log)
+!core-storage/src/test/resources/leveldb/**/*.log

@@ -99,6 +99,10 @@ def main():
              '--output', str(reports/'native-staging'), '--archive', str(reports/'artifact-native/native.tar.gz'),
              '--source-revision', revision],
         ])
+    # KMA client validation tool tests: loopback HTTP only, no network. Run after the
+    # artifact tests; inserted last so the positional inserts above keep their order.
+    commands.insert(commands.index([sys.executable, 'tools/test_verify_artifact.py']) + 1,
+                    [sys.executable, 'tools/verification/test_kma_client_validation.py'])
     for command in commands:
         print('+',' '.join(command),flush=True);subprocess.run(command,check=True)
 

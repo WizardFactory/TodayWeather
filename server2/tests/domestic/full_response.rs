@@ -235,7 +235,7 @@ impl ForecastAcquire for Forecasts {
                                     },
                                     p,
                                     p.base_date(),
-                                    zone_page(),
+                                    land_zone_page(),
                                     "application/json",
                                 )
                             }
@@ -258,6 +258,39 @@ impl ForecastAcquire for Forecasts {
             .cached(&format!("test-forecast/{request:?}"))
             .map(|r| r.records.clone())
     }
+}
+/// The forecast-zone list the double answers: like the provider's, it holds every land zone the
+/// release carries (`Zones::packaged`, the city zones of `getMidTa`) besides the Seoul region of
+/// [`zone_page`]. A request reads this list when it is stored before its zone read and the
+/// release's land zones otherwise, so a test of a town outside Seoul answers the same either way
+/// (a Seoul-only list left the mid temperatures of such towns uncollected whenever it was stored
+/// first).
+fn land_zone_page() -> Vec<u8> {
+    use server2::domestic::kma::source::{Val, Zones};
+    let seoul: serde_json::Value = serde_json::from_slice(&zone_page()).unwrap();
+    let mut items: Vec<serde_json::Value> = seoul["response"]["body"]["items"]["item"]
+        .as_array()
+        .unwrap()
+        .clone();
+    for zone in Zones::packaged().docs() {
+        let text = |k: &str| zone.get(k).and_then(Val::as_str).unwrap().to_owned();
+        let id = text("regId");
+        if items.iter().any(|item| item["regId"] == id.as_str()) {
+            continue;
+        }
+        items.push(json!({
+            "regId": id,
+            "tmSt": "201601010000",
+            "tmEd": "210012310000",
+            "regSp": text("regSp"),
+            "regName": text("regName"),
+        }));
+    }
+    serde_json::to_vec(&json!({"response": {
+        "header": {"resultCode": "00", "resultMsg": "NORMAL_SERVICE"},
+        "body": {"dataType": "JSON", "items": {"item": items}, "pageNo": 1, "numOfRows": 1000,
+                 "totalCount": items.len()}}}))
+    .unwrap()
 }
 struct FixedGeo;
 impl Geocoder for FixedGeo {
@@ -1213,26 +1246,89 @@ async fn a_town_outside_the_list_gets_its_forecast_within_the_bound() {
     );
 }
 
+/// The test double's forecast-zone request held until [`HeldZones::release`]; every other request
+/// goes straight to [`Forecasts`].
+struct HeldZones {
+    inner: Forecasts,
+    open: tokio::sync::watch::Sender<bool>,
+}
+impl HeldZones {
+    fn release(&self) {
+        self.open.send_replace(true);
+    }
+}
+impl ForecastAcquire for HeldZones {
+    fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>> {
+        let mut open = self.open.subscribe();
+        let zones = request == ForecastRequest::Zones;
+        let acquired = self.inner.acquire(request);
+        Box::pin(async move {
+            if zones {
+                let _ = open.wait_for(|open| *open).await;
+            }
+            acquired.await
+        })
+    }
+    fn cached(&self, request: &ForecastRequest) -> Published {
+        self.inner.cached(request)
+    }
+}
+/// The forecast-zone lists S3 holds now.
+async fn stored_zone_lists(peer: &Peer) -> usize {
+    server2::history::IndexListing::list_index(
+        &peer.transport_limited(2),
+        "index/v2/data-go-kr/forecast-zone/",
+        None,
+    )
+    .await
+    .unwrap()
+    .keys
+    .len()
+}
+
 /// The geocoder's name for the province must reach the listed town and its mid forecast.
+///
+/// The request starts the process's forecast-zone acquisition without waiting for it, and its
+/// zone read then uses the stored list when there is one, the release's land zones otherwise.
+/// Each town is asked both ways: with the list stored before the request, and with the zone
+/// request held until the answer is checked, so that no list is stored before it and the land
+/// zones answer (TC-force-fallback-order).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
     let _peers = S3_PEERS.lock().await;
-    for (region, city, town) in [
+    for ((region, city, town), stored_first) in [
         ("강원특별자치도", "강릉시", "홍제동"),
         ("전북특별자치도", "군산시", "조촌동"),
         ("전남광주통합특별시", "여수시", "쌍봉동"),
         ("전남광주통합특별시", "광산구", "송정2동"),
-    ] {
+    ]
+    .into_iter()
+    .flat_map(|town| [(town, true), (town, false)])
+    {
         let peer = Peer::persistent();
         let store = Arc::new(
             CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap(),
         );
         let writer = Writer::new(store, Config::default()).unwrap();
-        let source = build_source(&peer, Arc::new(Providers::default()))
-            .with_forecast(Some(Arc::new(Forecasts {
+        if stored_first {
+            Forecasts {
                 writer: writer.clone(),
                 calls: Arc::new(AtomicUsize::new(0)),
-            })))
+            }
+            .acquire(ForecastRequest::Zones)
+            .await
+            .unwrap()
+            .expect("the forecast-zone list is stored");
+        }
+        let zones = Arc::new(HeldZones {
+            inner: Forecasts {
+                writer: writer.clone(),
+                calls: Arc::new(AtomicUsize::new(0)),
+            },
+            open: tokio::sync::watch::channel(stored_first).0,
+        });
+        let source = build_source(&peer, Arc::new(Providers::default()))
+            .with_forecast(Some(zones.clone()))
             .with_raw_writer(writer.clone());
         let backend = KmaBackend::new(
             Arc::new(source),
@@ -1247,6 +1343,12 @@ async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
             .outcome(request, Instant::now() + Duration::from_secs(8))
             .await
             .unwrap();
+        // The lists the answer could read: the held request stored none before it.
+        assert_eq!(
+            stored_zone_lists(&peer).await,
+            usize::from(stored_first),
+            "{region} {city}: zone lists stored at the answer (stored first: {stored_first})"
+        );
         let server2::domestic::kma::Outcome::Json(body) = outcome else {
             panic!("{outcome:?}")
         };
@@ -1265,11 +1367,24 @@ async fn a_province_under_its_new_name_finds_its_town_and_mid_forecast() {
                     "future-mid-unavailable"
                 ]
                 .contains(&reason.as_str().unwrap()),
-                "{region} {city}: {status}"
+                "{region} {city} (zone list stored first: {stored_first}): {status}"
             );
         }
         let daily = body["midData"]["dailyData"].as_array().unwrap();
         assert_eq!(daily.last().unwrap()["date"], json!("20261004"));
+        // The held request then stores its list.
+        zones.release();
+        for _ in 0..100 {
+            if stored_zone_lists(&peer).await == 1 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        assert_eq!(
+            stored_zone_lists(&peer).await,
+            1,
+            "{region} {city}: the list"
+        );
     }
 }
 

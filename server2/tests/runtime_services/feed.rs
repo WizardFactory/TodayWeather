@@ -6,6 +6,14 @@ async fn construction_exposes_shared_durable_feed_without_precollection() {
     assert!(s.warning_store.is_some());
     assert!(s.warning_feed.is_some());
     assert_eq!(s.s3.as_ref().unwrap().limit(), 12);
+    // KMA-RESTART-READS: the warning work takes the bulk lane of the process admission.
+    assert!(!s.s3.as_ref().unwrap().is_bulk());
+    assert!(s.warning_store.as_ref().unwrap().transport().is_bulk());
+    assert!(s.warning_feed.as_ref().unwrap().transport().is_bulk());
+    assert_eq!(
+        s.warning_store.as_ref().unwrap().transport().lane_limit(),
+        4
+    );
     // Constructor alone must not publish warnings or initialize a delivery ledger.
     let counts: serde_json::Value = serde_json::from_slice(
         &reqwest::get(format!("{}__catalog/status", peer.endpoint))

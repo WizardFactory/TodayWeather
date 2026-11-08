@@ -404,6 +404,17 @@ and the app, slot and date order, and the observed-history rules.
 scenario in legacy and ASOS-primary mode. `python3 kma_client_eval.py --body <file>
 --version <v> --surface <s> [--observed-history]` checks a captured body.
 
+The eval is the wire-shape check: types, required wire fields, consumer reads and observed
+history. It does not show that the client gets everything it gets today. On 2026-11-07 it
+passed all 36 bodies of an EC2 restart run, although every first answer after a restart lacked
+past days and yesterday's values. Client validation (AK, 2026-11-07) is
+[`kma_client_validation.py`](../../server2/tools/verification/kma_client_validation.py).
+`capture --path <path> --out <dir>` records the production answer with one GET. `compare
+--reference <capture> --candidate <body>` requires every reference row, field and valid value
+of the same publications, except air quality, life indices (UV, pollen, food poisoning) and the
+KASI extras other than sunrise and sunset, which it lists apart. It exits 0 (pass), 1 (missing
+data) or 2 (not comparable).
+
 ## S3 layout and ownership
 
 Keep existing canonical raw and group identities unchanged. New paths below are
