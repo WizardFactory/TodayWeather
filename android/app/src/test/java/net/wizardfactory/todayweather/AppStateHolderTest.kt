@@ -20,8 +20,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * #2913 F3, F6: changes are saved in the order they were made, even when the dispatcher runs the newest work first (as
- * a thread pool may); the screens see each change at once, and another writer's update is saved in turn.
+ * #2913 F3, F6, F7: changes are saved in the order they were made, even when the dispatcher runs the newest work first
+ * (as a thread pool may); the screens see each change at once, another writer's update is saved in turn, and a change
+ * whose save failed stays and is saved with the next write.
  */
 class AppStateHolderTest {
     /** Runs dispatched work when the test says, newest first. */
@@ -86,6 +87,38 @@ class AppStateHolderTest {
         assertEquals(1, store.value.placeIndex)
         assertEquals("r1", store.value.push.registrationId)
         assertTrue(store.value.expandShortChart)
+    }
+
+    /** A store whose first save fails, as a full disk would. */
+    private class FailingOnceStore(initial: AppState) : DataStore<AppState> {
+        var value = initial
+        var failures = 1
+        override val data: Flow<AppState> = MutableStateFlow(initial)
+        override suspend fun updateData(transform: suspend (t: AppState) -> AppState): AppState {
+            if (failures-- > 0) throw java.io.IOException("disk full")
+            return transform(value).also { value = it }
+        }
+    }
+
+    /**
+     * #2913 F7: a screen change whose save fails stays on the screens and is saved with the next write, so an unrelated
+     * save that follows (PushSync's token) neither hides it nor leaves it out of the store.
+     */
+    @Test
+    fun aChangeWhoseSaveFailedStaysAndIsSavedWithTheNextWrite() = runTest {
+        val store = FailingOnceStore(AppState(placeIndex = 0))
+        val holder = AppStateHolder(store, CoroutineScope(StandardTestDispatcher(testScheduler)), CompletableDeferred(AppState()).also { it.complete(AppState()) })
+        runCurrent()
+        holder.change { it.copy(placeIndex = 1) }
+        runCurrent()
+        assertEquals("the failed change stays on the screens", 1, holder.current()?.placeIndex)
+        assertEquals(0, store.value.placeIndex)
+        holder.dataStore.updateData { it.copy(push = it.push.copy(registrationId = "r1")) }
+        runCurrent()
+        assertEquals(1, holder.current()?.placeIndex)
+        assertEquals("r1", holder.current()?.push?.registrationId)
+        assertEquals("saved with the next write", 1, store.value.placeIndex)
+        assertEquals(store.value, holder.current())
     }
 
     @Test

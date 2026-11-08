@@ -20,7 +20,8 @@ import net.wizardfactory.todayweather.core.storage.AppState
  * The screens' changes ([change]) show at once and the other writers of the process (PushSync, through [dataStore])
  * wait for their turn; one writer saves everything in the order it was asked for, as the Cordova app set its
  * in-memory city list and then its storage. The screens see the last saved state with the screens' changes not yet
- * saved applied on top, in order. Since nothing else writes the store, the last saved state is always the newest.
+ * saved applied on top, in order. Since nothing else writes the store, the last saved state is always the newest. A
+ * screen change whose save fails stays shown and is saved again with the next write.
  */
 class AppStateHolder(private val store: DataStore<AppState>, private val scope: CoroutineScope, migration: Deferred<AppState>) : StateAccess {
     private sealed interface Write {
@@ -34,6 +35,9 @@ class AppStateHolder(private val store: DataStore<AppState>, private val scope: 
     private val lock = Any()
     private var saved: AppState? = null
     private val unsaved = ArrayDeque<(AppState) -> AppState>()
+
+    /** Screen changes whose save failed: still shown, and saved again with the next write. */
+    private val failed = ArrayList<(AppState) -> AppState>()
     private val flow = MutableStateFlow<AppState?>(null)
     private val writes = Channel<Write>(Channel.UNLIMITED)
 
@@ -60,19 +64,21 @@ class AppStateHolder(private val store: DataStore<AppState>, private val scope: 
                 publish()
             }
             for (write in writes) {
+                // Earlier changes whose save failed go first in this one (only this writer changes the list).
+                val retry = synchronized(lock) { failed.toList() }
+                fun withRetry(state: AppState) = retry.fold(state) { s, update -> update(s) }
                 when (write) {
                     is Write.Change -> {
-                        val result = save { write.update(it) }
+                        val result = save { write.update(withRetry(it)) }
                         synchronized(lock) {
                             unsaved.removeFirst()
-                            // A change that could not be saved stays on the screens.
-                            saved = result.getOrNull() ?: saved?.let(write.update)
+                            result.onSuccess { failed.clear(); saved = it }.onFailure { failed += write.update }
                             publish()
                         }
                     }
                     is Write.Update -> {
-                        val result = save(write.transform)
-                        result.getOrNull()?.let { synchronized(lock) { saved = it; publish() } }
+                        val result = save { write.transform(withRetry(it)) }
+                        result.onSuccess { synchronized(lock) { failed.clear(); saved = it; publish() } }
                         result.fold(write.done::complete, write.done::completeExceptionally)
                     }
                 }
@@ -99,8 +105,8 @@ class AppStateHolder(private val store: DataStore<AppState>, private val scope: 
         Result.failure(e)
     }
 
-    /** The saved state with the unsaved changes on top; under [lock]. */
+    /** The saved state with the failed and the unsaved changes on top, in order; under [lock]. */
     private fun publish() {
-        flow.value = unsaved.fold(saved ?: return) { state, update -> update(state) }
+        flow.value = (failed + unsaved).fold(saved ?: return) { state, update -> update(state) }
     }
 }
