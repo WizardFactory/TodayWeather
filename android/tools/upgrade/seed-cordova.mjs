@@ -65,6 +65,9 @@ const SEED = `(function () {
         Push.updatePushListByCityIndex([Push.newPushAlert(1, 1, 7, 22),
             Push.newPushAlarm(2, 1, 7 * 3600 + 40 * 60, week), Push.newPushAlarm(3, 1, 20 * 3600 + 20 * 60, week)], 1);
         Push.updatePushListByCityIndex([Push.newPushAlarm(2, 2, 6 * 3600, [true, true, true, true, true, true, true])], 2);
+        // A stored FCM token, as an online install has (the emulator is offline, so the app has none).
+        Push.pushData.fcmToken = 'token-a';
+        Push.savePushInfo();
         return new Promise(function (resolve) { Monetization.setCollectionEnabled(true, resolve); });
     }).then(function () {
         return wait(3000); // native suite writes are asynchronous

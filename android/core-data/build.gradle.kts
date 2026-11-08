@@ -15,6 +15,12 @@ android {
 }
 
 dependencies {
-    implementation(project(":core-model"))
-    testImplementation(libs.kotlin.test)
+    api(project(":core-model"))
+    api(project(":core-storage"))
+    api(libs.okhttp)
+    implementation(libs.kotlinx.coroutines.android)
+    testImplementation(libs.kotlin.test.junit)
+    testImplementation(libs.junit)
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

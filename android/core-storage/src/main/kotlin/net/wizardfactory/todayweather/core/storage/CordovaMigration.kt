@@ -13,7 +13,6 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
-import net.wizardfactory.todayweather.core.domain.AddressFormat
 
 /**
  * One-time migration of the Cordova app's native preference suites into [AppState].
@@ -270,23 +269,7 @@ object CordovaMigration {
     /** `newPushAlert` base fields with `_getSimpleCityInfo`; a city without location or town gets only the base. */
     private fun newRecord(cityIndex: Int, id: Int, places: List<Place>): Map<String, JsonElement> {
         val base = linkedMapOf<String, JsonElement>("cityIndex" to JsonPrimitive(cityIndex), "id" to JsonPrimitive(id))
-        val city = places.getOrNull(cityIndex) ?: return base
-        val info = linkedMapOf<String, JsonElement>()
-        city.name?.let { info["name"] = JsonPrimitive(it) }
-        city.source?.let { info["source"] = JsonPrimitive(it) }
-        city.location?.takeIf { it.lat != 0.0 }?.let {
-            info["location"] = JsonObject(mapOf("lat" to JsonPrimitive(it.lat), "long" to JsonPrimitive(it.long)))
-        }
-        if (city.source == "KMA" && city.address != null) {
-            val address = if ("대한민국" in city.address) city.address else "대한민국 " + city.address
-            val town = AddressFormat.town(AddressFormat.split(address))
-            if (town.first.isNotEmpty()) {
-                info["town"] = JsonObject(mapOf("first" to JsonPrimitive(town.first), "second" to JsonPrimitive(town.second),
-                    "third" to JsonPrimitive(town.third)))
-                if ("name" !in info) info["name"] = JsonPrimitive(town.third.ifEmpty { town.second.ifEmpty { town.first } })
-            }
-        }
-        if ("location" !in info && "town" !in info) return base // _getSimpleCityInfo throws; the record keeps its base
+        val info = places.getOrNull(cityIndex)?.let(CityInfo::simple) ?: return base
         return base + info
     }
 

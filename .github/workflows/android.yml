@@ -8,6 +8,7 @@ on:
       - "client/www/data/town.js"
       - "client/www/js/service.weatherutil.js"
       - "client/www/js/service.weatherinfo.js"
+      - "client/www/js/service.push.js"
       - "client/www/js/controller.forecastctrl.js"
       - "client/www/js/controller.tabctrl.js"
       - "client/www/js/controller.air.js"
@@ -24,6 +25,7 @@ on:
       - "client/www/data/town.js"
       - "client/www/js/service.weatherutil.js"
       - "client/www/js/service.weatherinfo.js"
+      - "client/www/js/service.push.js"
       - "client/www/js/controller.forecastctrl.js"
       - "client/www/js/controller.tabctrl.js"
       - "client/www/js/controller.air.js"
@@ -59,6 +61,8 @@ jobs:
       - name: Build and unit tests
         working-directory: android
         run: ./gradlew assembleDebug test
+      - name: Upgrade test cleanup (adb test double)
+        run: sh android/tools/upgrade/test-cleanup.sh
   without-client:
     name: Build and test without client/
     runs-on: ubuntu-latest
