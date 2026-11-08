@@ -431,6 +431,24 @@ Limits:
 
 Originals, receipt and scripts are ignored local evidence under `reports/kma-rule-holdout4-20261102/`. AK approved R2s on 2026-11-03.
 
+### Fifth held-out sample: 5.0 °C wet-bulb rule in November–March, 2026-11-08
+
+AK approved applying the 5.0 °C cutoff in every month on 2026-11-08 (`wet-bulb-rain-v2`). The rule and criteria were fixed before any request (pre-registration 14:42 KST, first request 14:47:38 KST): in a November–March hour, an amount without a phenomenon code (numeric, normal rain QC, trace 0.0 included; temperature and humidity unflagged, humidity at least 5 %) is PTY 1 when the wet-bulb temperature (Stull 2011, humidity capped at 99 %) is at least 5.0 °C. Truth is the recorded code at stations that code all 24 hours, mapped as server2 maps it. A stricter window check (C5) covers every three-hour mark the rule would type, whatever its own code. The sample was 18 station-months (stations 108, 112, 119, 131, 133, 136, 138, 146, 152, 159, 165, 184; November 2024 to March 2026), none fetched before; 18 calls, one page each, all HTTP 200, result 00 and full rows.
+
+| Criterion | Required | Result |
+| --- | ---: | ---: |
+| Scored hours (wet-bulb >= 5, own rain/snow/mixed code) | >= 80 | 117 |
+| Scored hours at 5.0–8.0 °C wet-bulb | >= 30 | 71 |
+| Snow or mixed hours with an amount at wet-bulb >= 0 °C (exposure) | >= 20 | 63 |
+| Scored hours with a snow or mixed code | 0 | 0 |
+| Typed three-hour windows with a snow or mixed code (160 typed marks) | 0 | 0 |
+
+**The rule passes.** With zero errors in 117 hours the 95 % upper bound is about 2.6 % for staffed stations like these. The cutoff was weakly challenged: the warmest snow or mixed hour with an amount was station 133, 2025-01-06 12:00 KST (air 3.5 °C, humidity 89 %, wet-bulb 2.43 °C), a margin of 2.57 °C; 49 of the 63 exposure hours were at 0–1 °C. Post hoc (not deciding): zero errors at every cutoff from 3.0 to 6.0 °C, so this sample cannot separate 5.0 °C from 3.0 °C; air temperature at or above 5 °C instead would have made 4 hourly and 11 window errors.
+
+Found before the requests, in the third sample's data, with the stricter window check: station 138, 2026-02-25 03:00 KST had no code and a trace amount (0.0) at wet-bulb 6.18 °C while its window held sleet (code 06) at 01:00, so the 5.0 °C rule would type that mark as rain. The third sample's narrower window check had missed it; the post-hoc statement that all three errors there were below 5 °C holds for hours, not for this window.
+
+Originals, pre-registration, receipt and scripts are ignored local evidence under `reports/kma-rule-holdout5-20261108/`.
+
 ### R1b and D1 implemented locally, 2026-10-31
 
 `dry-closure-v1` is in [`asos.rs`](../../../server2/src/domestic/kma/source/asos.rs). It runs after the observed replay and only under ASOS-primary.

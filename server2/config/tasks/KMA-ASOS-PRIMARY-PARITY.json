@@ -75,6 +75,11 @@
       "path": "intent/issue-2614-kma-full-response.md",
       "category": "documentation",
       "reason": "Dated note: the approved all-season rule differs from the failed 2.5 °C variant."
+    },
+    {
+      "path": "docs/evidence/research/kma-history-gap-options-2026-10-30.md",
+      "category": "documentation",
+      "reason": "Fifth held-out sample of the 5.0 °C wet-bulb rule in November-March."
     }
   ]
 }
