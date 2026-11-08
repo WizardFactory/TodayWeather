@@ -13,6 +13,7 @@ export const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 export const REFERENCE_SETS = [
     {name: 'chart', provenance: 'core-domain/src/test/resources/chart-reference/provenance.json', tool: 'android/tools/chart-reference/capture.sh'},
     {name: 'shell', provenance: 'app/src/test/resources/shell-reference/provenance.json', tool: 'android/tools/shell-reference/capture.sh'},
+    {name: 'forecast', provenance: 'app/src/test/resources/forecast-reference/provenance.json', tool: 'android/tools/forecast-reference/capture.sh'},
 ];
 
 /**
