@@ -2,11 +2,13 @@ package net.wizardfactory.todayweather.core.data
 
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
@@ -101,6 +103,25 @@ class WeatherPhotoFeedTest {
         val feed = WeatherPhotoFeed("", backgroundScope) { calls++; feedBody }
         assertNull(feed.load())
         assertEquals(0, calls)
+    }
+
+    /** #2912 review F1: the first answer returns at once; the slower request is cancelled, not waited for. */
+    @Test
+    fun overHttpTheFirstAnswerReturnsAtOnceAndTheSlowerRequestIsCancelled() = runBlocking {
+        val server = MockWebServer()
+        server.start()
+        // The first attempt answers after 3 s; the second, started at 2 s, would answer after 30 s.
+        server.enqueue(MockResponse.Builder().body(feedBody).headersDelay(3, TimeUnit.SECONDS).build())
+        server.enqueue(MockResponse.Builder().body(feedBody).headersDelay(30, TimeUnit.SECONDS).build())
+        val url = server.url("/photos/list.json").toString()
+        val get = HttpPhotoFeedGet()
+        val start = System.nanoTime()
+        val result = firstSettled(WeatherPhotoFeed.ATTEMPTS, WeatherPhotoFeed.ATTEMPT_GAP_MS) { get.get(url) }
+        val elapsed = (System.nanoTime() - start) / 1_000_000
+        assertEquals(feedBody, result.getOrNull())
+        assertEquals(2, server.requestCount)
+        assertTrue(elapsed < 6_000, "the feed came after $elapsed ms")
+        server.close()
     }
 
     @Test

@@ -27,7 +27,7 @@ import net.wizardfactory.todayweather.core.domain.shell.Theme
 /**
  * Whether the shell fits the window (#2886 AC3), for JVM and device tests (src/sharedTest). On the main screen,
  * with the menu open and scrolled to its last row, and with the exit question: every text is drawn whole, neither
- * ellipsized nor wider or taller than the room it got. The safe area is the window without the system bars and
+ * ellipsized nor wider (on one line) or taller than the room it got; a text may wrap within its lines. The safe area is the window without the system bars and
  * the display cutout: on the main screen and in the menu every text lies across its width, and the menu button,
  * the tabs, the menu's back button and its last row, scrolled into view, lie inside it.
  */
@@ -104,9 +104,10 @@ object ShellFit {
         node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
         val layout = layouts.firstOrNull() ?: return "has no text layout"
         if ((0 until layout.lineCount).any { layout.isLineEllipsized(it) }) return "is ellipsized"
-        // The paragraph's width is the width it may take; a cut text is wider than the size it got.
+        // The paragraph's width is the width it may take; a cut single line is wider than the size it got. A text
+        // that wraps within its lines is whole.
         val width = layout.multiParagraph.intrinsics.maxIntrinsicWidth
-        if (layout.multiParagraph.didExceedMaxLines || layout.didOverflowHeight || width > layout.size.width + 0.5f) {
+        if (layout.multiParagraph.didExceedMaxLines || layout.didOverflowHeight || (layout.lineCount == 1 && width > layout.size.width + 0.5f)) {
             return "overflows (${width}x${layout.multiParagraph.height} in ${layout.size})"
         }
         // Bounds are clipped to what shows: empty for an empty text or a row scrolled out of view.

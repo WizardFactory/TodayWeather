@@ -64,7 +64,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -235,7 +238,7 @@ private fun BarTitle(title: String, colors: ShellColors, modifier: Modifier = Mo
 /**
  * `.tabs.tabs-icon-top`: 49 dp with a hairline at the top and the items 2 dp below it. Each item, up to 150 dp
  * wide, has a 32 dp glyph on a 32 dp line over a 10 sp label on a 14 sp line, at 0.7 opacity unless selected; a
- * larger system font scale makes the bar taller.
+ * larger system font scale makes the bar taller, and a label too long for its item takes a second line.
  */
 @Composable
 fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
@@ -258,7 +261,8 @@ fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon { LineText(glyph, line(32.sp, 32.sp, colors.tabText, family = Glyphs.ionicons)) }
-                LineText(stringResource(label), line(10.sp, 14.sp, colors.tabText))
+                // A label too long for its item (large text, a narrow window) wraps onto a second line.
+                LineText(stringResource(label), line(10.sp, 14.sp, colors.tabText).copy(textAlign = TextAlign.Center, hyphens = Hyphens.Auto, lineBreak = LineBreak.Heading), maxLines = 2)
             }
         }
     }
@@ -398,21 +402,22 @@ private fun line(size: TextUnit, lineHeight: TextUnit, color: Color, weight: Fon
     )
 
 /**
- * One line of [text] where Chrome puts it: on the baseline of a line in the font of [baselineOf]. Android lowers a
- * line drawn by a taller fallback font, such as Noto Sans CJK for Korean, while Chrome keeps the first font's
+ * [text] where Chrome puts it: its first line on the baseline of a line in the font of [baselineOf]. Android lowers
+ * a line drawn by a taller fallback font, such as Noto Sans CJK for Korean, while Chrome keeps the first font's
  * baseline. Icon fonts draw their own glyphs; an icon inside a line of text takes the text's baseline.
  */
 @Composable
-private fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style) {
+private fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style, maxLines: Int = 1) {
     val measurer = rememberTextMeasurer()
     val reference = if (baselineOf.fontFamily == null) "x" else text
     val line = remember(baselineOf, reference, measurer) { measurer.measure(reference, baselineOf) }
     Text(text, modifier.layout { measurable, constraints ->
         val placeable = measurable.measure(constraints)
-        // The line is as tall as one in the style's own font, so a taller fallback line centers as a Latin one.
-        val height = if (baselineOf === style) line.size.height else placeable.height
+        // Lines of a set height keep it; a line of the font's own height is as tall as one in the style's own font,
+        // so a taller fallback line centers as a Latin one.
+        val height = if (style.lineHeight.isSpecified) placeable.height else line.size.height
         layout(placeable.width, height) { placeable.place(0, line.firstBaseline.roundToInt() - placeable[FirstBaseline]) }
-    }, maxLines = 1, overflow = TextOverflow.Ellipsis, style = style)
+    }, maxLines = maxLines, overflow = TextOverflow.Ellipsis, style = style)
 }
 
 /** [text] in [style] with the photo theme's [outline]: four 0.5 dp diagonal shadows (`text-shadow`). */

@@ -2,35 +2,52 @@ package net.wizardfactory.todayweather.core.data
 
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import net.wizardfactory.todayweather.core.domain.shell.WeatherPhotos
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 
 /** Gets the body of a URL, or throws. */
 fun interface PhotoFeedGet {
     suspend fun get(url: String): String
 }
 
-/** [PhotoFeedGet] over HTTP with the Cordova app's 20-second timeout per attempt (`_getHttp(url, 20000)`). */
+/**
+ * [PhotoFeedGet] over HTTP with the Cordova app's 20-second timeout per attempt (`_getHttp(url, 20000)`). Cancelling
+ * the caller cancels the call, so a slower attempt ends when another has answered.
+ */
 class HttpPhotoFeedGet(
     private val client: OkHttpClient = OkHttpClient.Builder().callTimeout(20, TimeUnit.SECONDS).build(),
 ) : PhotoFeedGet {
-    override suspend fun get(url: String): String = withContext(Dispatchers.IO) {
-        client.newCall(Request.Builder().url(url).build()).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            response.body.string()
-        }
+    override suspend fun get(url: String): String = suspendCancellableCoroutine { continuation ->
+        val call = client.newCall(Request.Builder().url(url).build())
+        continuation.invokeOnCancellation { call.cancel() }
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                continuation.resumeWithException(e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val body = runCatching {
+                    response.use { if (it.isSuccessful) it.body.string() else throw IOException("HTTP ${it.code}") }
+                }
+                body.fold(continuation::resume, continuation::resumeWithException)
+            }
+        })
     }
 }
 
@@ -77,7 +94,8 @@ class WeatherPhotoFeed(
 
 /**
  * `_retryGetHttp`: starts [attempt], and another [gapMs] later while none has settled, up to [attempts]; the first
- * attempt to settle decides, a failure included. The others are cancelled.
+ * attempt to settle decides, a failure included. The others are cancelled, and must end when cancelled: the result
+ * returns once they have.
  */
 internal suspend fun <T> firstSettled(attempts: Int, gapMs: Long, attempt: suspend () -> T): Result<T> = coroutineScope {
     val first = CompletableDeferred<Result<T>>()

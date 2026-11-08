@@ -12,7 +12,7 @@
  },
  "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the screen captures in shell-reference/<lang>",
  "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts (Korean glyphs up to 1 px narrower) and centered text on whole device pixels. The photo theme's header is white with a grey outline over the white page, so only the mean sees it.",
- "sensitivity": "Measured 2026-11-08 by changing the shell one way at a time and rerunning: tab items 1 dp lower, no hairlines and a missing analytics value each fail all 8 screenshot tests; no photo outline fails both photo tests (header mean); menu blocks without the 0.87 opacity fail both dark tests. Missing chevrons and a regular title weight pass the screenshots, so ShellTest checks the menu's rows, values and chevrons; ShellFit catches cut text such as tab items capped at 40 dp or a value that does not move under its label at font scale 1.3.",
+ "sensitivity": "Measured 2026-11-08 by changing the shell one way at a time and rerunning: tab items 1 dp lower, no hairlines and a missing analytics value each fail all 8 screenshot tests; no photo outline fails both photo tests (header mean); menu blocks without the 0.87 opacity fail both dark tests. Missing chevrons and a regular title weight pass the screenshots, so ShellTest checks the menu's rows, values and chevrons; ShellFit catches cut text such as a Japanese or German tab label kept on one line, or a value that does not move under its label, at font scale 1.3.",
  "cases": {
   "en-US-dark-header": {
    "strong": 0.00761,
@@ -25,8 +25,8 @@
    "heightDifference": 0
   },
   "en-US-dark-tabs": {
-   "strong": 0.00064,
-   "mean": 1.574,
+   "strong": 0.00125,
+   "mean": 1.821,
    "heightDifference": 0
   },
   "en-US-light-header": {
@@ -40,8 +40,8 @@
    "heightDifference": 0
   },
   "en-US-light-tabs": {
-   "strong": 0.00075,
-   "mean": 1.734,
+   "strong": 0.00149,
+   "mean": 2.003,
    "heightDifference": 0
   },
   "en-US-old-header": {
@@ -55,8 +55,8 @@
    "heightDifference": 0
   },
   "en-US-old-tabs": {
-   "strong": 0.00083,
-   "mean": 1.738,
+   "strong": 0.00177,
+   "mean": 2.011,
    "heightDifference": 0
   },
   "en-US-photo-header": {
@@ -70,8 +70,8 @@
    "heightDifference": 0
   },
   "en-US-photo-tabs": {
-   "strong": 0.00075,
-   "mean": 1.734,
+   "strong": 0.00149,
+   "mean": 2.003,
    "heightDifference": 0
   },
   "ko-KR-dark-header": {
@@ -80,8 +80,8 @@
    "heightDifference": 0
   },
   "ko-KR-dark-menu": {
-   "strong": 0.01646,
-   "mean": 3.12,
+   "strong": 0.01489,
+   "mean": 2.901,
    "heightDifference": 0
   },
   "ko-KR-dark-tabs": {
@@ -95,8 +95,8 @@
    "heightDifference": 0
   },
   "ko-KR-light-menu": {
-   "strong": 0.01035,
-   "mean": 2.553,
+   "strong": 0.00935,
+   "mean": 2.376,
    "heightDifference": 0
   },
   "ko-KR-light-tabs": {
@@ -110,8 +110,8 @@
    "heightDifference": 0
   },
   "ko-KR-old-menu": {
-   "strong": 0.01002,
-   "mean": 2.484,
+   "strong": 0.00902,
+   "mean": 2.307,
    "heightDifference": 0
   },
   "ko-KR-old-tabs": {
@@ -125,8 +125,8 @@
    "heightDifference": 0
   },
   "ko-KR-photo-menu": {
-   "strong": 0.01092,
-   "mean": 2.627,
+   "strong": 0.00994,
+   "mean": 2.45,
    "heightDifference": 0
   },
   "ko-KR-photo-tabs": {
