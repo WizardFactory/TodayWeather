@@ -15,21 +15,34 @@ const adb = (...args) => execFileSync('adb', ['-s', serial, ...args]).toString()
 const repo = path.resolve(root, '..');
 const git = (...args) => execFileSync('git', ['-C', repo, ...args]).toString().trim();
 
-// Chart sources: the directives, controllers, templates, styles, D3 and the image theme map.
+// Chart sources in the APK: the directives, controllers, templates, styles, D3 and the image theme map. The
+// stylesheet and D3 are build outputs that Git ignores (gulp sass of client/scss, Bower); their tracked inputs
+// are recorded instead, so check-sources.mjs works on a clean checkout.
 const SOURCES = ['js/app.js', 'js/controller.forecastctrl.js', 'js/controller.tabctrl.js', 'js/service.weatherutil.js',
     'js/service.weatherinfo.js', 'templates/tab-forecast.html', 'templates/tab-dailyforecast.html', 'css/ionic.app.css',
     'lib/d3/d3.js', 'data/theme.js'];
+const GENERATED_FROM = {'css/ionic.app.css': 'client/scss/ionic.app.scss', 'lib/d3/d3.js': 'client/bower.json'};
+const tracked = (file) => execFileSync('git', ['-C', repo, 'ls-files', '--', file]).toString().trim() !== '';
 const sources = SOURCES.map((file) => {
     const inApk = execFileSync('unzip', ['-p', apk, `assets/www/${file}`], {maxBuffer: 1 << 26});
-    const entry = {file: `client/www/${file}`, apkSha256: sha(inApk)};
+    const entry = {file: `client/www/${file}`, apkSha256: sha(inApk), tracked: tracked(`client/www/${file}`)};
+    if (GENERATED_FROM[file]) entry.generatedFrom = GENERATED_FROM[file];
     const local = path.join(repo, 'client/www', file);
     if (fs.existsSync(local)) {
         entry.clientSha256 = sha(fs.readFileSync(local));
         entry.matchesClient = entry.clientSha256 === entry.apkSha256;
-        entry.lastCommit = git('log', '-1', '--format=%H', '--', `client/www/${file}`);
+        if (entry.tracked) entry.lastCommit = git('log', '-1', '--format=%H', '--', `client/www/${file}`);
     }
     return entry;
 });
+const notTracked = sources.filter((s) => !s.tracked && !s.generatedFrom).map((s) => s.file);
+if (notTracked.length) throw new Error(`untracked chart sources without a tracked input: ${notTracked.join(', ')}`);
+const mismatched = sources.filter((s) => s.tracked && !s.matchesClient).map((s) => s.file);
+if (mismatched.length) throw new Error(`the APK was not built from this checkout: ${mismatched.join(', ')} differ from client/`);
+const inputs = Object.values(GENERATED_FROM).map((file) => ({file, sha256: sha(fs.readFileSync(path.join(repo, file))),
+    lastCommit: git('log', '-1', '--format=%H', '--', file)}));
+const d3Version = (execFileSync('unzip', ['-p', apk, 'assets/www/lib/d3/d3.js'], {maxBuffer: 1 << 26}).toString()
+    .match(/version: "([^"]+)"/) || [])[1];
 
 const badging = execFileSync(fs.readdirSync(path.join(process.env.ANDROID_HOME || path.join(process.env.HOME, 'Library/Android/sdk'), 'build-tools'))
     .sort().reverse().map((v) => path.join(process.env.ANDROID_HOME || path.join(process.env.HOME, 'Library/Android/sdk'), 'build-tools', v, 'aapt2'))
@@ -43,8 +56,9 @@ const captured = files(sceneRoot).filter((f) => /^\d+x\d+\//.test(f));
 
 const provenance = {
     tool: 'android/tools/chart-reference/capture.sh',
-    capturedAt: new Date().toISOString(),
-    cordovaApk: {sha256: sha(fs.readFileSync(apk)), versionCode: version && version[1], versionName: version && version[2], sources},
+    capturedAt: sizes.map((s) => JSON.parse(fs.readFileSync(path.join(sceneRoot, s, 'capture.json'), 'utf8')).capturedAt).sort()[0],
+    cordovaApk: {sha256: sha(fs.readFileSync(apk)), versionCode: version && version[1], versionName: version && version[2], d3Version, sources},
+    inputs,
     emulator: {fingerprint: adb('shell', 'getprop', 'ro.build.fingerprint'), sdk: adb('shell', 'getprop', 'ro.build.version.sdk'),
         locale: adb('shell', 'getprop', 'persist.sys.locale') || adb('shell', 'getprop', 'ro.product.locale')},
     displays: Object.fromEntries(sizes.map((s) => [s, JSON.parse(fs.readFileSync(path.join(sceneRoot, s, 'capture.json'), 'utf8'))])),
@@ -52,6 +66,5 @@ const provenance = {
     files: captured.map((f) => ({file: f, sha256: sha(fs.readFileSync(path.join(sceneRoot, f)))})),
 };
 fs.writeFileSync(path.join(sceneRoot, 'provenance.json'), JSON.stringify(provenance, null, 1) + '\n');
-const mismatched = sources.filter((s) => s.matchesClient === false).map((s) => s.file);
-console.log(`provenance: ${captured.filter((f) => f.endsWith('.json')).length} scene files, ${captured.filter((f) => f.endsWith('.png')).length} captures` +
-    (mismatched.length ? `; APK sources differ from client/: ${mismatched.join(', ')}` : '; APK chart sources match client/'));
+console.log(`provenance: ${captured.filter((f) => f.endsWith('.json')).length} scene files, ${captured.filter((f) => f.endsWith('.png')).length} captures; ` +
+    `tracked chart sources in the APK match client/; inputs ${inputs.map((i) => i.file).join(', ')}`);

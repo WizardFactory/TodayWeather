@@ -141,8 +141,12 @@ class ChartSceneTest {
         }
     }
 
+    /** Within [tolerance]; NaN (a JavaScript NaN or undefined, or an absent attribute) only equals NaN. */
     private fun near(expected: Double, actual: Double, what: String) {
-        if (expected.isNaN() && actual.isNaN()) return
+        if (expected.isNaN() || actual.isNaN()) {
+            if (expected.isNaN() != actual.isNaN()) fail("$what: expected $expected, got $actual")
+            return
+        }
         if (abs(expected - actual) > tolerance) fail("$what: expected $expected, got $actual")
     }
 

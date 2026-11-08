@@ -279,6 +279,7 @@ async function capturePositions(id, opening, maxLeft, dir, chart) {
 }
 
 fs.mkdirSync(OUT_SCENES, {recursive: true});
+const capturedAt = new Date().toISOString();
 const captured = [];
 for (const fixture of FIXTURES) {
     if (!fixture.allSizes && size !== BASE_SIZE) continue;
@@ -300,5 +301,5 @@ for (const fixture of FIXTURES) {
     captured.push(fixture.name);
     console.log(`${size} ${fixture.name}: hourly ${record.hourly.scroll.width}x${record.hourly.wrapper.h}, daily ${record.daily.scroll.width}`);
 }
-fs.writeFileSync(path.join(OUT_SCENES, 'capture.json'), JSON.stringify({size, env, fixtures: captured}, null, 1) + '\n');
+fs.writeFileSync(path.join(OUT_SCENES, 'capture.json'), JSON.stringify({size, capturedAt, env, fixtures: captured}, null, 1) + '\n');
 ws.close();

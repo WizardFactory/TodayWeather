@@ -1,14 +1,16 @@
 {
  "tool": "android/tools/chart-reference/capture.sh",
- "capturedAt": "2026-11-08T05:59:28.999Z",
+ "capturedAt": "2026-11-08T06:13:23.614Z",
  "cordovaApk": {
   "sha256": "964443f77cdba9aeae7f4b55118ac2dd2cd7fb579a25ce8ad17cc8b09b8c41e9",
   "versionCode": "100091",
   "versionName": "1.1.1",
+  "d3Version": "3.5.17",
   "sources": [
    {
     "file": "client/www/js/app.js",
     "apkSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+    "tracked": true,
     "clientSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
     "matchesClient": true,
     "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
@@ -16,6 +18,7 @@
    {
     "file": "client/www/js/controller.forecastctrl.js",
     "apkSha256": "15116a38393d91835d506a1de7a823be8bbdffea7b2dcb258c112d17575536d8",
+    "tracked": true,
     "clientSha256": "15116a38393d91835d506a1de7a823be8bbdffea7b2dcb258c112d17575536d8",
     "matchesClient": true,
     "lastCommit": "72536d7d802e67b08fd748c25dd2d1e9436aa2da"
@@ -23,6 +26,7 @@
    {
     "file": "client/www/js/controller.tabctrl.js",
     "apkSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+    "tracked": true,
     "clientSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
     "matchesClient": true,
     "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
@@ -30,6 +34,7 @@
    {
     "file": "client/www/js/service.weatherutil.js",
     "apkSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+    "tracked": true,
     "clientSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
     "matchesClient": true,
     "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
@@ -37,6 +42,7 @@
    {
     "file": "client/www/js/service.weatherinfo.js",
     "apkSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+    "tracked": true,
     "clientSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
     "matchesClient": true,
     "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
@@ -44,6 +50,7 @@
    {
     "file": "client/www/templates/tab-forecast.html",
     "apkSha256": "d3ee01fee285c59344f51ce968732cd2a1d702de39492daa191c3a9e363afeac",
+    "tracked": true,
     "clientSha256": "d3ee01fee285c59344f51ce968732cd2a1d702de39492daa191c3a9e363afeac",
     "matchesClient": true,
     "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
@@ -51,6 +58,7 @@
    {
     "file": "client/www/templates/tab-dailyforecast.html",
     "apkSha256": "02ce9d47c24b740d02e17e13d0c2a0d7d227ff6b1ca44c3c5bf7cd3a6ff16f6a",
+    "tracked": true,
     "clientSha256": "02ce9d47c24b740d02e17e13d0c2a0d7d227ff6b1ca44c3c5bf7cd3a6ff16f6a",
     "matchesClient": true,
     "lastCommit": "1e88c0ac09e6395d6248f0ba818002f7acb1599b"
@@ -58,26 +66,41 @@
    {
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+    "tracked": false,
+    "generatedFrom": "client/scss/ionic.app.scss",
     "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true,
-    "lastCommit": ""
+    "matchesClient": true
    },
    {
     "file": "client/www/lib/d3/d3.js",
     "apkSha256": "81f43003a3e5919b0ba96bb86d4e215cfadb4eace2c66d01e4c76f04b23e39ab",
+    "tracked": false,
+    "generatedFrom": "client/bower.json",
     "clientSha256": "81f43003a3e5919b0ba96bb86d4e215cfadb4eace2c66d01e4c76f04b23e39ab",
-    "matchesClient": true,
-    "lastCommit": "fa184150e7bfe1468c9a4457e05ecf6c00f6aaa6"
+    "matchesClient": true
    },
    {
     "file": "client/www/data/theme.js",
     "apkSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+    "tracked": true,
     "clientSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
     "matchesClient": true,
     "lastCommit": "88a5e8b2a5e8f19c71b56e17f1858312e4d8826c"
    }
   ]
  },
+ "inputs": [
+  {
+   "file": "client/scss/ionic.app.scss",
+   "sha256": "927bd183ff47493c995577b37cbb4ce427e55b946bd895d9933f14570f95747b",
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  },
+  {
+   "file": "client/bower.json",
+   "sha256": "2b844fe0fb5ef0b2be2af18b6a407b7e9ca2c0e5bc4b8fa325edc9141382e22c",
+   "lastCommit": "31867aa17886861b57463bb0084db017790cb241"
+  }
+ ],
  "emulator": {
   "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
   "sdk": "36",
@@ -86,6 +109,7 @@
  "displays": {
   "360x780": {
    "size": "360x780",
+   "capturedAt": "2026-11-08T06:14:41.916Z",
    "env": {
     "screen": {
      "width": 360,
@@ -103,6 +127,7 @@
   },
   "384x832": {
    "size": "384x832",
+   "capturedAt": "2026-11-08T06:13:23.614Z",
    "env": {
     "screen": {
      "width": 384,
@@ -129,6 +154,7 @@
   },
   "412x892": {
    "size": "412x892",
+   "capturedAt": "2026-11-08T06:15:01.777Z",
    "env": {
     "screen": {
      "width": 412,
@@ -149,7 +175,7 @@
  "files": [
   {
    "file": "360x780/capture.json",
-   "sha256": "1db90406d36da372bfd98b2dd84340727b262fa92395430fca769cd074586f91"
+   "sha256": "399ef0e183788854dd2ef35ec0583325dbd12087d86f42f1e7348547d07af257"
   },
   {
    "file": "360x780/kma-seoul.json",
@@ -185,7 +211,7 @@
   },
   {
    "file": "384x832/capture.json",
-   "sha256": "d9bf14df5c146fb0f71688c166ead1996cb74080ae895860f4f0d1eabc748688"
+   "sha256": "cd4631a61262143433643af4b5f53892d8b1e2f4703f9588c3d0477ba6622b4c"
   },
   {
    "file": "384x832/kma-current-index-first.json",
@@ -257,7 +283,7 @@
   },
   {
    "file": "412x892/capture.json",
-   "sha256": "de042bf4a377040be75703963307eed597af674f8e54cb864af63a4bfd9a1adf"
+   "sha256": "3c84fce0b6ba1425694553e115e6c43d49c92ef6b8a151e54aeb91f40eee0c2f"
   },
   {
    "file": "412x892/kma-seoul.json",
