@@ -131,3 +131,27 @@ Design: `PushRegistration` reproduces `Push.init`/`loadPushInfo`/`_makePostObj` 
 JVM: `PushRegistrationTest` (Cordova goldens: first, unchanged, changed token, air unit, no token, New York daylight-saving alerts), `PushSyncTest` (B then C with a held transport; a token during the start registration), `HttpPushTransportTest`. Device: `run-upgrade-test.sh` for `token-a` and `token-b` on API 36 and `token-b` on API 24, including `PushTokenWorkTest` (token work interrupted with its `PUT` in flight by the end of the process, completed by the next process without an app open). Script cleanup: success, interrupted (TERM) and failed runs leave neither package installed and restore the network; `test-cleanup.sh` (adb test double, CI) keeps the device offline with exit 5 when the package query fails (also after partial output), answers with anything but a package list, or still lists a package.
 
 Review round 1 (F1–F5): cleanup before the network returns on every exit; registrations serialized; token work in WorkManager; local-time end-minute decrement with V8's daylight-saving rules; `service.push.js` in the CI path filters. Also corrected: the start registration ran on every process start, including background starts for FCM; it now runs when the app is opened. Round 2 (F1): a failed or unreadable package query no longer counts as removed. Round 3 (F1): the query's exit status and the whole answer are checked.
+
+## AN-05 — hourly and daily charts (#2884)
+
+Design: `core-domain` `chart/` builds each chart as the SVG its Cordova directive draws (`Svg`, D3 v3 arithmetic, `ChartMetrics` from the screen size, header labels, legend texts and the opening offset from `ChartPosition`). `app` `ui/chart/` draws the scenes with Compose (`HourlyChartView`, `DailyChartView`), light theme only (themes are AN-07); the expander reports to the caller, and the screen (AN-08) keeps `expandShortChart`. References come from the Cordova debug build on the emulator (`tools/chart-reference/capture.sh`, sharing the offline guard with the upgrade test in `tools/emulator/offline.sh`) and live under `core-domain/src/test/resources/chart-reference/` with provenance and per-comparison tolerances. Robolectric renders the screenshots (SDK 34; SDK 36 needs Java 21). Archify not applicable (app-internal component, no service structure or flow change).
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN05-US1 | User checks the hourly forecast | Weather loaded | Open the forecast | The chart opens with the current hour in the second column. Day and hour labels, lines for today and yesterday, value circles, the current-temperature dots, icons, rain chance and amount and the pinned legend appear as in Cordova | Missing values are drawn as Cordova draws them (empty text, no image) | AC1, AC2 |
+| AN05-US2 | Same user looks back and ahead | Hourly chart shown | Scroll to both ends | The first and last columns are as in Cordova | – | AC2 |
+| AN05-US3 | User reads wind and humidity | Hourly chart shown | Tap the expander | Wind direction and speed rows and humidity rows appear; tapping again hides them | – | AC1, AC2 |
+| AN05-US4 | User checks the coming days | Weather loaded | Open the daily forecast and scroll | Today is in the third column. Weekday and date, morning and afternoon icons, rain chance and amount, bars on one scale and today's dot appear as in Cordova | – | AC1, AC2 |
+| AN05-US5 | Maintainer refreshes the references after a Cordova chart change | Emulator, Cordova debug APK | `check-sources.mjs` fails; run `capture.sh`, `device-smoke.sh`, `./gradlew test` | New references and provenance. The emulator is offline while the build is installed, and the network and display are restored afterwards | Non-emulator serial or a network that stays up: refused | AC2, AC3 |
+
+### Acceptance (from #2884)
+
+- AC1: the scenes match the Cordova SVG, labels, legend and opening offsets for every captured fixture and size (`ChartSceneTest`).
+- AC2: screenshot comparisons pass at 384×832, 360×780 and 412×892 within recorded tolerances at the opening position and both scroll ends (`ChartScreenshotTest`). References and provenance are under `android/`, and the tests run in both CI jobs.
+- AC3: delivery (README, review PASS, CI, merge).
+
+### Checks
+
+JVM: `ChartSceneTest` (15 fixture-size captures, element by element), `ChartScreenshotTest` (18 comparisons), `ChartBehaviorTest`. Device: `device-smoke.sh` on API 36 (18 comparisons with the emulator's fonts). CI: `check-sources.mjs` in the job with `client/`.
