@@ -1,6 +1,7 @@
 package net.wizardfactory.todayweather
 
 import android.app.Application
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -10,6 +11,7 @@ import net.wizardfactory.todayweather.core.data.HttpPushTransport
 import net.wizardfactory.todayweather.core.data.PushSync
 import net.wizardfactory.todayweather.core.data.PushTransport
 import net.wizardfactory.todayweather.core.data.WeatherPhotoFeed
+import net.wizardfactory.todayweather.core.data.WeatherRepository
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.AppStateStore
 import net.wizardfactory.todayweather.core.storage.CordovaMigrator
@@ -40,9 +42,15 @@ open class TodayWeatherApp : Application() {
     /** The weather photo feed of the photo theme, loaded once per process (AN-08 chooses each place's photo). */
     val photos: WeatherPhotoFeed by lazy { WeatherPhotoFeed(weatherPhotosUrl(), appScope) }
 
-    /** Push registrations (gate G1, push part), one at a time. */
+    /** The saved state as the screens see it, once the migration has finished; the only writer of the store after it. */
+    val appState: AppStateHolder by lazy { AppStateHolder(AppStateStore.get(this), appScope, migration) }
+
+    /** Each place's weather, cached in files so a cold start shows the last weather while it loads (#2887). */
+    val weather: WeatherRepository by lazy { WeatherRepository(serverUrl(), File(filesDir, "weather")) }
+
+    /** Push registrations (gate G1, push part), one at a time; their token is saved in turn with the screens' changes. */
     val push: PushSync by lazy {
-        PushSync(AppStateStore.get(this), pushTransport()) { state -> pushContext(this, serverUrl(), state) }
+        PushSync(appState.dataStore, pushTransport()) { state -> pushContext(this, serverUrl(), state) }
     }
 
     /** The registration of the latest app open; null before the first. */

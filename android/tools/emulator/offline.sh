@@ -7,7 +7,8 @@
 #   go_offline                     # before the first install
 # On every exit offline_cleanup runs the optional function named in $CLEANUP_HOOK, uninstalls both
 # packages and restores the network only when the package query succeeds with a complete list that has
-# neither package; otherwise it exits 5 and the device stays offline.
+# neither package; otherwise it exits 5 and the device stays offline. online_cleanup is the same check for a
+# run that needs the network: when the removal cannot be confirmed it takes the device offline and exits 5.
 PKG=net.wizardfactory.todayweather
 
 emulator_guard() {
@@ -37,6 +38,17 @@ go_offline() {
     fi
 }
 
+# Whether both packages are gone: the package query succeeds, its whole answer is a package list with the
+# framework package, and it lists neither package; anything else counts as still installed.
+packages_removed() {
+    packages=$(adb shell pm list packages 2>/dev/null) || return 1
+    packages=$(printf '%s\n' "$packages" | tr -d '\r' | sed '/^$/d')
+    if printf '%s\n' "$packages" | grep -qv "^package:" || ! printf '%s\n' "$packages" | grep -qx "package:android"; then
+        return 1
+    fi
+    ! printf '%s\n' "$packages" | grep -Eqx "package:$PKG(\.test)?"
+}
+
 offline_cleanup() {
     status=$?
     trap - EXIT INT TERM
@@ -44,23 +56,32 @@ offline_cleanup() {
     [ -n "${CLEANUP_HOOK:-}" ] && "$CLEANUP_HOOK"
     adb uninstall $PKG.test >/dev/null 2>&1
     adb uninstall $PKG >/dev/null 2>&1
-    # The network comes back only when the package query succeeds, its whole answer is a package list
-    # with the framework package, and it lists neither package; anything else counts as still installed.
-    if ! packages=$(adb shell pm list packages 2>/dev/null); then
-        echo "cleanup: the package query failed; the emulator stays offline" >&2
-        exit 5
-    fi
-    packages=$(printf '%s\n' "$packages" | tr -d '\r' | sed '/^$/d')
-    if printf '%s\n' "$packages" | grep -qv "^package:" || ! printf '%s\n' "$packages" | grep -qx "package:android"; then
-        echo "cleanup: cannot read the package list; the emulator stays offline" >&2
-        exit 5
-    fi
-    if printf '%s\n' "$packages" | grep -Eqx "package:$PKG(\.test)?"; then
-        echo "cleanup: $PKG is still installed; the emulator stays offline" >&2
+    # The network comes back only when both packages are confirmed gone.
+    if ! packages_removed; then
+        echo "cleanup: cannot confirm that $PKG is uninstalled; the emulator stays offline" >&2
         exit 5
     fi
     airplane 0
     adb shell svc wifi enable
     adb shell svc data enable
+    exit $status
+}
+
+# For a run that needs the network (run-production-weather.sh): on every exit both packages are uninstalled,
+# and when that cannot be confirmed the emulator goes offline and the script exits 5, so a build with the
+# production configuration never stays on an online device.
+online_cleanup() {
+    status=$?
+    trap - EXIT INT TERM
+    set +e
+    adb uninstall $PKG.test >/dev/null 2>&1
+    adb uninstall $PKG >/dev/null 2>&1
+    if ! packages_removed; then
+        echo "cleanup: cannot confirm that $PKG is uninstalled; the emulator goes offline" >&2
+        airplane 1
+        adb shell svc wifi disable
+        adb shell svc data disable
+        exit 5
+    fi
     exit $status
 }

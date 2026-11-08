@@ -22,4 +22,5 @@ object Glyphs {
     const val NOTIFICATIONS_NONE = ""
     const val SHARE = ""
     const val CHEVRON_RIGHT = ""
+    const val CHEVRON_LEFT = ""
 }

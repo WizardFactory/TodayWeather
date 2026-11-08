@@ -79,7 +79,7 @@ class WeatherPhotoFeedTest {
     fun oneLoadIsSharedRepeatedAfterAFailureAndKeptAfterASuccess() = runTest {
         var calls = 0
         val answer = CompletableDeferred<String>()
-        val feed = WeatherPhotoFeed("https://photos.test.invalid/list.json", backgroundScope) { _ ->
+        val feed = WeatherPhotoFeed("https://photos.test.invalid/list.json", backgroundScope) { _, _ ->
             calls++
             if (calls == 1) throw IOException("offline") else answer.await()
         }
@@ -100,7 +100,7 @@ class WeatherPhotoFeedTest {
     @Test
     fun withoutAUrlNothingIsRequested() = runTest {
         var calls = 0
-        val feed = WeatherPhotoFeed("", backgroundScope) { calls++; feedBody }
+        val feed = WeatherPhotoFeed("", backgroundScope) { _, _ -> calls++; feedBody }
         assertNull(feed.load())
         assertEquals(0, calls)
     }
@@ -114,9 +114,9 @@ class WeatherPhotoFeedTest {
         server.enqueue(MockResponse.Builder().body(feedBody).headersDelay(3, TimeUnit.SECONDS).build())
         server.enqueue(MockResponse.Builder().body(feedBody).headersDelay(30, TimeUnit.SECONDS).build())
         val url = server.url("/photos/list.json").toString()
-        val get = HttpPhotoFeedGet()
+        val get = OkHttpGet(WeatherPhotoFeed.TIMEOUT_MS)
         val start = System.nanoTime()
-        val result = firstSettled(WeatherPhotoFeed.ATTEMPTS, WeatherPhotoFeed.ATTEMPT_GAP_MS) { get.get(url) }
+        val result = firstSettled(WeatherPhotoFeed.ATTEMPTS, WeatherPhotoFeed.ATTEMPT_GAP_MS) { get.get(url, emptyMap()) }
         val elapsed = (System.nanoTime() - start) / 1_000_000
         assertEquals(feedBody, result.getOrNull())
         assertEquals(2, server.requestCount)
@@ -130,7 +130,7 @@ class WeatherPhotoFeedTest {
         val server = MockWebServer()
         server.start()
         server.enqueue(MockResponse.Builder().body(feedBody).headersDelay(12, TimeUnit.SECONDS).build())
-        assertEquals(feedBody, HttpPhotoFeedGet().get(server.url("/photos/list.json").toString()))
+        assertEquals(feedBody, OkHttpGet(WeatherPhotoFeed.TIMEOUT_MS).get(server.url("/photos/list.json").toString(), emptyMap()))
         server.close()
     }
 
@@ -140,7 +140,7 @@ class WeatherPhotoFeedTest {
         server.start()
         server.enqueue(MockResponse.Builder().body(feedBody).headersDelay(5, TimeUnit.SECONDS).build())
         val start = System.nanoTime()
-        val failure = runCatching { HttpPhotoFeedGet(timeoutMs = 1_000).get(server.url("/photos/list.json").toString()) }.exceptionOrNull()
+        val failure = runCatching { OkHttpGet(1_000).get(server.url("/photos/list.json").toString(), emptyMap()) }.exceptionOrNull()
         val elapsed = (System.nanoTime() - start) / 1_000_000
         assertNotNull(failure, "a 5 s answer within a 1 s limit")
         assertTrue(elapsed in 900..3_000, "ended after $elapsed ms")
@@ -154,9 +154,9 @@ class WeatherPhotoFeedTest {
         server.enqueue(MockResponse.Builder().code(200).body(feedBody).build())
         server.enqueue(MockResponse.Builder().code(404).build())
         val url = server.url("/photos/list.json").toString()
-        assertEquals(feedBody, HttpPhotoFeedGet().get(url))
+        assertEquals(feedBody, OkHttpGet(WeatherPhotoFeed.TIMEOUT_MS).get(url, emptyMap()))
         assertEquals("/photos/list.json", server.takeRequest().target)
-        val failure = runCatching { HttpPhotoFeedGet().get(url) }.exceptionOrNull()
+        val failure = runCatching { OkHttpGet(WeatherPhotoFeed.TIMEOUT_MS).get(url, emptyMap()) }.exceptionOrNull()
         assertEquals("HTTP 404", failure?.message)
         server.close()
     }

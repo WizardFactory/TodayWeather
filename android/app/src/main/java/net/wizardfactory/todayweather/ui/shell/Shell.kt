@@ -53,6 +53,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
@@ -122,9 +123,22 @@ object ShellTags {
 }
 
 /**
+ * What a tab shows: its page, and in the header bar its title with what follows it (the weather pages' location
+ * glyph and spinner) and its buttons. [scrolled] is the page's scroll in dp: the photo theme's bar darkens with it.
+ */
+class TabContent(
+    val title: String = "",
+    val afterTitle: @Composable RowScope.(ShellColors) -> Unit = {},
+    val actions: @Composable RowScope.(ShellColors) -> Unit = {},
+    val scrolled: () -> Float = { 0f },
+    val page: @Composable BoxScope.(ShellColors) -> Unit = {},
+)
+
+/**
  * The frame every screen shares (gate of AN-07, #2886): the page of the selected tab under its header bar, the
  * bottom tab bar, the full-screen side menu, the exit confirmation and a slot for the bottom banner (AN-15).
- * Android back closes the menu, then a dialog, and on a main tab asks before leaving ([onExit]).
+ * Android back closes the menu, then a dialog, and on a main tab asks before leaving ([onExit]). [content] gives
+ * the selected tab's page and bar; it is composed while its tab is selected, so a page starts afresh each time.
  */
 @Composable
 fun TodayWeatherShell(
@@ -133,7 +147,7 @@ fun TodayWeatherShell(
     onMenuRow: (MenuRow) -> Unit,
     onExit: () -> Unit,
     banner: @Composable () -> Unit = {},
-    page: @Composable BoxScope.(Tab, ShellColors) -> Unit = { _, _ -> },
+    content: @Composable (Tab) -> TabContent = { TabContent() },
 ) {
     var selected by rememberSaveable { mutableStateOf(state.startupTab) }
     var menuOpen by rememberSaveable { mutableStateOf(false) }
@@ -148,9 +162,11 @@ fun TodayWeatherShell(
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
             Column(Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.sides)) {
+                val tab = content(selected)
                 Box(Modifier.fillMaxWidth().weight(1f).testTag(ShellTags.page(selected))) {
-                    page(selected, colors)
-                    HeaderBar(colors, title = "", onMenu = { menuOpen = true })
+                    tab.page(this, colors)
+                    HeaderBar(colors, tab.title, onMenu = { menuOpen = true }, afterTitle = { tab.afterTitle(this, colors) },
+                        scrolled = if (state.theme == Theme.PHOTO) tab.scrolled else ({ 0f })) { tab.actions(this, colors) }
                 }
                 TabBar(selected, colors) { tab ->
                     val now = System.currentTimeMillis()
@@ -189,19 +205,34 @@ fun TodayWeatherShell(
 
 /**
  * The header bar of a tab (`ion-nav-bar`, `.bar.bar-header`): 44 dp with a hairline at the bottom, the menu button
- * at the left, the page's [actions] at the right and the title (19 sp, medium) centered between equal sides that
- * clear the wider group of buttons, as Ionic places it (ionic.bundle.js `calcWidths`: that group plus 10 dp, and
- * the title's 10 dp margin).
+ * at the left, the page's [actions] at the right and the title (19 sp, medium, then [afterTitle]) centered between
+ * equal sides that clear the wider group of buttons, as Ionic places it (ionic.bundle.js `calcWidths`: that group
+ * plus 10 dp, and the title's 10 dp margin). Once the page has [scrolled] past 44 dp a dark gradient fills in over
+ * the next 88 dp (`bar-scrolled`, app.js; the photo theme passes the page's scroll).
  */
 @Composable
-fun HeaderBar(colors: ShellColors, title: String, onMenu: () -> Unit, actions: @Composable RowScope.() -> Unit = {}) {
+fun HeaderBar(
+    colors: ShellColors,
+    title: String,
+    onMenu: () -> Unit,
+    afterTitle: @Composable RowScope.() -> Unit = {},
+    scrolled: () -> Float = { 0f },
+    actions: @Composable RowScope.() -> Unit = {},
+) {
     Layout(
         content = {
             BarButton(Glyphs.NAVICON, colors, onMenu, Modifier.testTag(ShellTags.MENU_BUTTON))
             Row { actions() }
-            BarTitle(title, colors)
+            BarTitle(title, colors, afterTitle = afterTitle)
         },
-        modifier = Modifier.fillMaxWidth().height(44.dp).background(colors.headerBar).hairline(colors.headerLine, bottom = true),
+        modifier = Modifier.fillMaxWidth().height(44.dp).background(colors.headerBar).drawBehind {
+            val y = scrolled()
+            if (y >= 44) {
+                val start = minOf(1f, (y - 44) / 88)
+                drawRect(Brush.verticalGradient(0f to Color(0xFF444444).copy(alpha = start), 0.5f to Color(0xFF444444).copy(alpha = start),
+                    1f to Color(0xFF444444).copy(alpha = start / 2)))
+            }
+        }.hairline(colors.headerLine, bottom = true),
     ) { (menu, buttons, text), constraints ->
         val loose = constraints.copy(minWidth = 0)
         val left = menu.measure(loose)
@@ -229,10 +260,15 @@ fun BarButton(glyph: String, colors: ShellColors, onClick: () -> Unit, modifier:
     }
 }
 
-/** `.bar .title` on Android: 19 sp, medium, on one line of 44 dp. */
+/** `.bar .title` on Android: 19 sp, medium, on one line of 44 dp; what follows it is centered on the line. */
 @Composable
-private fun BarTitle(title: String, colors: ShellColors, modifier: Modifier = Modifier) {
-    FixedLine(44.dp, modifier) { OutlinedText(title, line(19.sp, TextUnit.Unspecified, colors.headerText, FontWeight.Medium), colors.headerOutline) }
+private fun BarTitle(title: String, colors: ShellColors, modifier: Modifier = Modifier, afterTitle: @Composable RowScope.() -> Unit = {}) {
+    FixedLine(44.dp, modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedText(title, line(19.sp, TextUnit.Unspecified, colors.headerText, FontWeight.Medium), colors.headerOutline)
+            afterTitle()
+        }
+    }
 }
 
 /**
@@ -377,7 +413,7 @@ private fun MenuButton(row: MenuRow, value: String?, colors: ShellColors, height
  * native app lets text follow the font scale (AN-06) but not the icons.
  */
 @Composable
-private fun Icon(content: @Composable () -> Unit) {
+internal fun Icon(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale = 1f), content = content)
 }
 
@@ -386,7 +422,7 @@ private fun Icon(content: @Composable () -> Unit) {
  * the half-leading centers a line's font box.
  */
 @Composable
-private fun FixedLine(height: Dp, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+internal fun FixedLine(height: Dp, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Box(modifier.height(height), contentAlignment = Alignment.Center) { content() }
 }
 
@@ -394,7 +430,7 @@ private fun FixedLine(height: Dp, modifier: Modifier = Modifier, content: @Compo
  * A CSS line box: [lineHeight] with half the leading above the font's ascent and half below its descent; an
  * unspecified [lineHeight] keeps the font's own box (for [FixedLine]).
  */
-private fun line(size: TextUnit, lineHeight: TextUnit, color: Color, weight: FontWeight = FontWeight.Normal, family: FontFamily? = null) =
+internal fun line(size: TextUnit, lineHeight: TextUnit, color: Color, weight: FontWeight = FontWeight.Normal, family: FontFamily? = null) =
     TextStyle(
         fontSize = size, lineHeight = lineHeight, color = color, fontWeight = weight, fontFamily = family,
         lineHeightStyle = if (lineHeight.isSpecified) LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None) else null,
@@ -407,7 +443,7 @@ private fun line(size: TextUnit, lineHeight: TextUnit, color: Color, weight: Fon
  * baseline. Icon fonts draw their own glyphs; an icon inside a line of text takes the text's baseline.
  */
 @Composable
-private fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style, maxLines: Int = 1) {
+internal fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style, maxLines: Int = 1) {
     val measurer = rememberTextMeasurer()
     val reference = if (baselineOf.fontFamily == null) "x" else text
     val line = remember(baselineOf, reference, measurer) { measurer.measure(reference, baselineOf) }
@@ -422,19 +458,21 @@ private fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifi
 
 /** [text] in [style] with the photo theme's [outline]: four 0.5 dp diagonal shadows (`text-shadow`). */
 @Composable
-private fun OutlinedText(text: String, style: TextStyle, outline: Color?, modifier: Modifier = Modifier) {
+internal fun OutlinedText(text: String, style: TextStyle, outline: Color?, modifier: Modifier = Modifier, maxLines: Int = 1, fill: Boolean = false) {
+    // [fill]: the text takes the whole width, so its alignment applies (centered lines of the weather header).
+    val width = if (fill) Modifier.fillMaxWidth() else Modifier
     Box(modifier) {
         if (outline != null) {
             for ((dx, dy) in listOf(-0.5f to -0.5f, 0.5f to -0.5f, -0.5f to 0.5f, 0.5f to 0.5f)) {
-                LineText(text, style.copy(color = outline), Modifier.offset(dx.dp, dy.dp))
+                LineText(text, style.copy(color = outline), width.offset(dx.dp, dy.dp), maxLines = maxLines)
             }
         }
-        LineText(text, style)
+        LineText(text, style, width, maxLines = maxLines)
     }
 }
 
 /** Ionic draws a bar's 1 px border as a hairline: the half CSS pixel on the inner side of its top or [bottom] edge. */
-private fun Modifier.hairline(color: Color, bottom: Boolean) = drawBehind {
+internal fun Modifier.hairline(color: Color, bottom: Boolean) = drawBehind {
     val h = 0.5.dp.toPx()
     drawRect(color, Offset(0f, if (bottom) size.height - h else h), Size(size.width, h))
 }

@@ -15,8 +15,14 @@ class ChartMetrics(val bodyWidth: Double, val bodyHeight: Double) {
     /** `smallImageSize`: icons in both charts. */
     val iconSize: Double = columnWidth - columnWidth * 0.2 * 2
 
-    /** `bigFontSize`: the chart heights grow with it. */
+    /** `headerHeight`: the minimum height of the weather pages' header block, bar included. */
+    val headerHeight: Double
+
+    /** `bigFontSize`: the header's temperature; the chart heights grow with it. */
     val bigFontSize: Double
+
+    /** `bigImageSize`: the header's sky image. */
+    val bigImageSize: Double get() = bigFontSize * 0.9
 
     init {
         val headerRatio = when {
@@ -24,7 +30,7 @@ class ChartMetrics(val bodyWidth: Double, val bodyHeight: Double) {
             bodyHeight < 840 -> 3.0 / 8
             else -> 5.0 / 12
         }
-        val headerHeight = if (bodyHeight * headerRatio < 192) 192.0 else bodyHeight * headerRatio
+        headerHeight = if (bodyHeight * headerRatio < 192) 192.0 else bodyHeight * headerRatio
         val contentWidth = bodyWidth * 0.8
         val contentHeight = headerHeight - 44 - 5 - 24 * 3
         val big = if (contentWidth / 4 < contentHeight * 0.9) contentWidth / 4 else contentHeight * 0.9
