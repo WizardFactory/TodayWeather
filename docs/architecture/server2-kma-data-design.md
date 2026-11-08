@@ -144,7 +144,10 @@ distinguishes compatible inputs from candidate replacements:
 | Live station refinements | Reuse existing city/hourly/minute inputs and rain neighborhood | New APIHub endpoints need field/value equivalence before substitution |
 
 ODAM does not currently provide SKY/LGT. ASOS cloud amount can produce a sky
-category. The observed adapter now parses bounded, unambiguous domestic
+category. Under ASOS-primary an hour before today within the nowcast's 23 h
+reach whose type or amount the ASOS rules leave unknown reads the cell's stored
+ODAM or acquires it once per cell and base time within the request wait
+(`nowcast-fill-v1`, AK 2026-11-08); a late one serves the next answer. The observed adapter now parses bounded, unambiguous domestic
 phenomenon codes into PTY, keeps unknowns absent and represents winter rain as
 `rn3h` only at three-hour ending marks. It does not invent numeric LGT. Official VSRT files exist through the previous
 day, but an archive page is not proof of an automated low-latency API.

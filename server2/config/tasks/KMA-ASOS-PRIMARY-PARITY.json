@@ -10,7 +10,12 @@
     "server2/src/domestic/kma/source/mod.rs",
     "server2/tests/domestic/observed_history.rs",
     "server2/src/domestic/kma/source/asos.rs",
-    "server2/tests/domestic/asos.rs"
+    "server2/tests/domestic/asos.rs",
+    "server2/src/domestic/kma/source/fill.rs",
+    "server2/src/domestic/kma/source/required.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/nowcast_fill.rs",
+    "server2/tests/domestic/shown_publication.rs"
   ],
   "outside": [
     {

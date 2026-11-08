@@ -5,6 +5,7 @@
 - **WET-BULB:** a numeric uncoded ASOS amount in January (or any month) with wet-bulb >= 5 °C gives PTY 1 (rain); below 5 °C it stays unknown; recorded weather codes still win.
   Tests (domestic): `asos::an_uncoded_winter_amount_at_wet_bulb_five_or_more_is_rain`, `asos::an_uncoded_amount_at_wet_bulb_five_or_more_is_rain`, `asos::a_recorded_code_outranks_the_wet_bulb_rule_in_any_fetch_order`.
 - **NOWCAST-FILL:** an hour of the last 23 h with unknown PTY/RN1 after the ASOS rules causes one owned `getUltraSrtNcst` acquisition for that cell and base time (or a stored read); its PTY/RN1 fill the hour on the answer that has them; hours older than 23 h are never requested; known or stored hours request nothing.
+  Tests: `nowcast_fill::unknown_hours_of_the_last_23_hours_take_the_grid_nowcast`, `nowcast_fill::a_late_nowcast_fills_the_next_answer` (domestic); `source::fill::tests::known_hours_and_hours_beyond_the_reach_ask_for_nothing`, `source::fill::tests::an_unknown_type_or_amount_asks_for_its_nowcast`, `source::fill::tests::a_rule_derived_value_and_a_winter_three_hour_amount_are_known`, `source::fill::tests::a_day_not_yet_released_asks_for_its_reachable_hours_and_a_loading_answer_for_none` (library).
 - **DAILY:** past days built from filled hours keep their AM/PM fields.
 - **DOCUMENTS:** contract, history contract JSON and architecture text match the code.
 - **PLACEMENT:** the placement gate passes against `server2/config/tasks/KMA-ASOS-PRIMARY-PARITY.json` (base `origin/feat/2614-kma-response-parity`), and the artifact policy passes on outgoing commits.

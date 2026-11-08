@@ -3986,6 +3986,17 @@ the [history contract](../../server2/config/contracts/kma-history.v1.json):
   type stays unknown, and a recorded code still decides. The winter part (R2w) has no held-out
   sample at this cutoff; post hoc, the three snow or mixed errors of the December–March sample at
   2.5 °C lie below 5 °C.
+- **Nowcast fill** (`nowcast-fill-v1`). An hour before today within the last 23 hours, which the
+  nowcast API still serves (`publication::past_current_bases`), whose type or amount the ASOS
+  rules leave unknown (`fill::unknown_hours`) takes the cell's grid nowcast. The ASOS answer hands
+  those hours to the current grid answer, which reads them from S3 or acquires them as owned
+  single-flight work, as it does the publications of the rows shown as current. Each is asked at
+  most once per cell and base time (`NOWCAST_FILL_RETRY`, 24 h) through the process data.go.kr
+  acquirer and its quota; a late acquisition is stored and serves the next answer, and an ASOS
+  answer still loading asks for nothing. This adds at most one `getUltraSrtNcst` call per cell
+  and unknown hour: none for a cell whose hours are stored or known, up to the 22 hours of the
+  previous day a new cell reaches shortly after midnight, all of them before ASOS releases the
+  previous day at 11:00, and in winter the hours between the three-hour marks.
 
 Legacy replay mode is unchanged; the kma-rich and kma paired replays check it.
 

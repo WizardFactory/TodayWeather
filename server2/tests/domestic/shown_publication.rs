@@ -22,18 +22,20 @@ use server2::gateway::BoxFuture;
 use server2::resolver::Acquisition;
 use server2::storage::response_first::{Batch, Config, Writer};
 use server2::storage::{
-    CatalogId, CatalogLimits, CatalogStore, GroupDeclaration, GroupMember, ProviderKey, RawRecord,
+    CatalogId, CatalogLimits, CatalogStore, GroupDeclaration, GroupMember, HttpS3Transport,
+    ProviderKey, RawRecord,
 };
 use server2::warnings::store::{StoreConfig, WarningStore};
+use server2::world::BoundedS3;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::time::Instant;
 
-fn publication(date: u32, time: u16) -> Publication {
+pub(super) fn publication(date: u32, time: u16) -> Publication {
     Publication::new(date, time).unwrap()
 }
 /// UTC milliseconds of a KST wall-clock time.
-fn kst(date: u32, time: u16) -> f64 {
+pub(super) fn kst(date: u32, time: u16) -> f64 {
     server2::history::schedule::to_ms(publication(date, time)) as f64
 }
 /// One complete acquisition fetched at `fetched_at`, before the request instant.
@@ -113,10 +115,12 @@ fn short_page(p: Publication) -> Vec<u8> {
 }
 
 /// The station pages and ASOS ranges, with the live minute page from `minute` (None: the minute
-/// page fails, so the station answers no reading).
+/// page fails, so the station answers no reading). The `untyped` ASOS hours carry an uncoded
+/// amount too cold for the wet-bulb rule, so their precipitation type stays unknown.
 struct Stations {
     now: f64,
     minute: Option<Publication>,
+    untyped: Vec<Publication>,
 }
 impl Acquire for Stations {
     fn web(
@@ -198,8 +202,12 @@ impl Acquire for Stations {
                 match request.asos_kind() {
                     AsosKind::Hourly => {
                         for hour in 0..24 {
+                            let untyped = self
+                                .untyped
+                                .contains(&publication(20260900 + day, hour * 100));
+                            let (ta, rn) = if untyped { ("2", "0.5") } else { ("17", "") };
                             rows.push(json!({"tm": format!("2026-09-{day} {hour:02}:00"),
-                                "stnId": "108", "ta": "17", "hm": "60", "rn": "", "rnQcflg": "",
+                                "stnId": "108", "ta": ta, "hm": "60", "rn": rn, "rnQcflg": "",
                                 "dc10Tca": "10", "dmstMtphNo": "", "ws": "2", "wd": "180"}));
                         }
                     }
@@ -223,15 +231,21 @@ impl Acquire for Stations {
     }
 }
 
-/// Every forecast family, published through the raw writer; short forecast requests are logged.
-/// With `held` (an earlier current observation, a short publication), that observation answers
-/// only once that short publication has answered.
+/// Every forecast family, published through the raw writer; short forecast and current
+/// observation requests are logged. With `held` (an earlier current observation, a short
+/// publication), that observation answers only once that short publication has answered. The
+/// `raining` current observations report rain; the `late` one answers only once `released`.
 struct Forecasts {
     now: f64,
     writer: Arc<Writer>,
     short: Arc<Mutex<Vec<Publication>>>,
+    current: Arc<Mutex<Vec<Publication>>>,
     held: Option<(Publication, Publication)>,
     released: Arc<tokio::sync::watch::Sender<bool>>,
+    raining: Vec<Publication>,
+    late: Option<Publication>,
+    late_released: Arc<tokio::sync::watch::Sender<bool>>,
+    late_answered: Arc<tokio::sync::watch::Sender<bool>>,
 }
 impl ForecastAcquire for Forecasts {
     fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>> {
@@ -243,11 +257,22 @@ impl ForecastAcquire for Forecasts {
         };
         let hold = is(F::UltraSrtNcst, self.held.map(|h| h.0)).then(|| self.released.subscribe());
         let release = is(F::VilageFcst, self.held.map(|h| h.1)).then(|| self.released.clone());
+        let late = is(F::UltraSrtNcst, self.late)
+            .then(|| (self.late_released.subscribe(), self.late_answered.clone()));
+        if let ForecastRequest::DataGoKr(r) = &request
+            && r.family() == F::UltraSrtNcst
+        {
+            self.current.lock().unwrap().push(r.publication());
+        }
+        let raining = self.raining.clone();
         Box::pin(async move {
             if request == ForecastRequest::Warnings {
                 return Ok(None);
             }
             if let Some(mut released) = hold {
+                let _ = released.wait_for(|released| *released).await;
+            }
+            if let Some((mut released, _)) = late.clone() {
                 let _ = released.wait_for(|released| *released).await;
             }
             let key = format!("test-forecast/{request:?}");
@@ -269,10 +294,15 @@ impl ForecastAcquire for Forecasts {
                             ForecastRequest::DataGoKr(r) => {
                                 let base = r.publication();
                                 let (p, body) = match r.family() {
-                                    F::UltraSrtNcst => (
-                                        base,
-                                        current_page(&base.base_date(), &base.base_time(), "8.5"),
-                                    ),
+                                    F::UltraSrtNcst => {
+                                        let (date, time) = (base.base_date(), base.base_time());
+                                        let page = if raining.contains(&base) {
+                                            raining_page(&date, &time)
+                                        } else {
+                                            current_page(&date, &time, "8.5")
+                                        };
+                                        (base, page)
+                                    }
                                     F::UltraSrtFcst => {
                                         let p = publication(base.date(), base.time() / 100 * 100);
                                         let at = slots(p.date(), p.time(), &[1, 2, 3, 4, 5, 6]);
@@ -360,6 +390,9 @@ impl ForecastAcquire for Forecasts {
             if let Some(release) = release {
                 release.send_replace(true);
             }
+            if let Some((_, answered)) = late {
+                answered.send_replace(true);
+            }
             answer
         })
     }
@@ -370,68 +403,182 @@ impl ForecastAcquire for Forecasts {
     }
 }
 
-/// 서울특별시 종로구 청운효자동 (the Seoul cell 60,127) answered at `now` from an empty store, with
-/// the live station reading of `minute` and the forecasts' `held` observation: the body and the
-/// short publications requested.
+/// A current observation page reporting rain (PTY 1, 0.5 mm).
+fn raining_page(date: &str, time: &str) -> Vec<u8> {
+    let values = [
+        ("PTY", "1"),
+        ("REH", "90"),
+        ("RN1", "0.5"),
+        ("T1H", "8.5"),
+        ("UUU", "1.2"),
+        ("VEC", "200"),
+        ("VVV", "-0.5"),
+        ("WSD", "2.1"),
+    ];
+    envelope(
+        values
+            .iter()
+            .map(|(c, v)| {
+                json!({"baseDate": date, "baseTime": time, "category": c, "nx": 60, "ny": 127,
+                       "obsrValue": v})
+            })
+            .collect(),
+    )
+}
+
+/// What the scripted providers answer.
+#[derive(Clone, Default)]
+pub(super) struct Scene {
+    /// The live station reading's minute (None: the minute page fails).
+    pub minute: Option<Publication>,
+    /// An earlier current observation answered only once a short publication has answered.
+    pub held: Option<(Publication, Publication)>,
+    /// ASOS hours whose precipitation type the ASOS rules leave unknown.
+    pub untyped: Vec<Publication>,
+    /// Current observations reporting rain.
+    pub raining: Vec<Publication>,
+    /// A current observation answered only once [`Session::release`] is called.
+    pub late: Option<Publication>,
+}
+/// One answer: the body and the short and current publications requested so far.
+pub(super) struct Answer {
+    pub body: Value,
+    pub short: Vec<Publication>,
+    pub current: Vec<Publication>,
+}
+/// 서울특별시 종로구 청운효자동 (the Seoul cell 60,127) answered from an empty store at `now` by
+/// one observed source on an S3 peer.
+pub(super) struct Session {
+    _peer: Peer,
+    now: f64,
+    source: S3Source<BoundedS3<HttpS3Transport>>,
+    short: Arc<Mutex<Vec<Publication>>>,
+    current: Arc<Mutex<Vec<Publication>>>,
+    late_released: Arc<tokio::sync::watch::Sender<bool>>,
+    late_answered: Arc<tokio::sync::watch::Sender<bool>>,
+}
+impl Session {
+    pub fn new(now: f64, scene: &Scene) -> Self {
+        let peer = Peer::persistent();
+        let store = Arc::new(
+            CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap(),
+        );
+        let writer = Writer::new(store, Config::default()).unwrap();
+        let (short, current) = (
+            Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
+        );
+        let late_released = Arc::new(tokio::sync::watch::channel(false).0);
+        let late_answered = Arc::new(tokio::sync::watch::channel(false).0);
+        let warnings = Arc::new(
+            WarningStore::new(
+                peer.transport_limited(2),
+                CatalogLimits::default(),
+                StoreConfig::default(),
+            )
+            .unwrap(),
+        );
+        let source = S3Source::new_observed_with_warning_store(
+            peer.transport_limited(4),
+            Arc::new(move || now),
+            Arc::new(Stations {
+                now,
+                minute: scene.minute,
+                untyped: scene.untyped.clone(),
+            }),
+            Arc::new(Unreachable),
+            warnings,
+        )
+        .unwrap()
+        .with_forecast(Some(Arc::new(Forecasts {
+            now,
+            writer: writer.clone(),
+            short: short.clone(),
+            current: current.clone(),
+            held: scene.held,
+            released: Arc::new(tokio::sync::watch::channel(false).0),
+            raining: scene.raining.clone(),
+            late: scene.late,
+            late_released: late_released.clone(),
+            late_answered: late_answered.clone(),
+        })))
+        .with_raw_writer(writer);
+        Self {
+            _peer: peer,
+            now,
+            source,
+            short,
+            current,
+            late_released,
+            late_answered,
+        }
+    }
+    /// Lets the late current observation answer, and waits until it has.
+    pub async fn release(&self) {
+        self.late_released.send_replace(true);
+        let _ = self
+            .late_answered
+            .subscribe()
+            .wait_for(|answered| *answered)
+            .await;
+    }
+    pub async fn answer(&self) -> Answer {
+        let encoded =
+            |name: &str| -> String { name.bytes().map(|b| format!("%{b:02X}")).collect() };
+        let path = format!(
+            "/v000903/kma/addr/{}/{}/{}",
+            encoded("서울특별시"),
+            encoded("종로구"),
+            encoded("청운효자동")
+        );
+        // The observed request's budget (8 s): its waits end 2.5 s after it starts.
+        let deadline = Instant::now() + Duration::from_secs(8);
+        let request = self
+            .source
+            .prepare(parse_path(&path, "").unwrap(), deadline)
+            .await
+            .unwrap_or_else(|_| panic!("prepared"));
+        let SourceAnswer::Snapshot(snapshot) = self.source.snapshot(&request, deadline).await
+        else {
+            panic!("a snapshot")
+        };
+        let out = assemble(
+            &request,
+            snapshot.as_ref(),
+            self.now,
+            AssemblyConfig::default(),
+        );
+        let Outcome::Json(body) = out else {
+            panic!("assembly failed: {out:?}")
+        };
+        let sorted = |log: &Mutex<Vec<Publication>>| {
+            let mut log = log.lock().unwrap().clone();
+            log.sort();
+            log
+        };
+        Answer {
+            body: serde_json::from_slice(&body.to_bytes()).unwrap(),
+            short: sorted(&self.short),
+            current: sorted(&self.current),
+        }
+    }
+}
+/// The body at `now` with the live station reading of `minute` and the forecasts' `held`
+/// observation, and the short publications requested.
 async fn answered(
     now: f64,
     minute: Option<Publication>,
     held: Option<(Publication, Publication)>,
 ) -> (Value, Vec<Publication>) {
-    let peer = Peer::persistent();
-    let store =
-        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
-    let writer = Writer::new(store, Config::default()).unwrap();
-    let short = Arc::new(Mutex::new(Vec::new()));
-    let warnings = Arc::new(
-        WarningStore::new(
-            peer.transport_limited(2),
-            CatalogLimits::default(),
-            StoreConfig::default(),
-        )
-        .unwrap(),
-    );
-    let source = S3Source::new_observed_with_warning_store(
-        peer.transport_limited(4),
-        Arc::new(move || now),
-        Arc::new(Stations { now, minute }),
-        Arc::new(Unreachable),
-        warnings,
-    )
-    .unwrap()
-    .with_forecast(Some(Arc::new(Forecasts {
-        now,
-        writer: writer.clone(),
-        short: short.clone(),
+    let scene = Scene {
+        minute,
         held,
-        released: Arc::new(tokio::sync::watch::channel(false).0),
-    })))
-    .with_raw_writer(writer);
-    let encoded = |name: &str| -> String { name.bytes().map(|b| format!("%{b:02X}")).collect() };
-    let path = format!(
-        "/v000903/kma/addr/{}/{}/{}",
-        encoded("서울특별시"),
-        encoded("종로구"),
-        encoded("청운효자동")
-    );
-    // The observed request's budget (8 s): its waits end 2.5 s after it starts.
-    let deadline = Instant::now() + Duration::from_secs(8);
-    let request = source
-        .prepare(parse_path(&path, "").unwrap(), deadline)
-        .await
-        .unwrap_or_else(|_| panic!("prepared"));
-    let SourceAnswer::Snapshot(snapshot) = source.snapshot(&request, deadline).await else {
-        panic!("a snapshot")
+        ..Scene::default()
     };
-    let out = assemble(&request, snapshot.as_ref(), now, AssemblyConfig::default());
-    let Outcome::Json(body) = out else {
-        panic!("assembly failed: {out:?}")
-    };
-    let mut requested = short.lock().unwrap().clone();
-    requested.sort();
-    (serde_json::from_slice(&body.to_bytes()).unwrap(), requested)
+    let answer = Session::new(now, &scene).answer().await;
+    (answer.body, answer.short)
 }
-fn row(body: &Value, date: &str, time: u32) -> Value {
+pub(super) fn row(body: &Value, date: &str, time: u32) -> Value {
     body["short"]
         .as_array()
         .unwrap()
