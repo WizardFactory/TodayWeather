@@ -11,7 +11,9 @@ case "$*" in
     "shell pm list packages"*)
         case "$FAKE_ADB_CASE" in
             list-fails) exit 1 ;;
+            partial-then-fails) printf 'package:android\r\n'; exit 1 ;;
             pm-error) echo "Error: Could not access the Package Manager.  Is the system running?" ;;
+            mixed-error) printf 'package:android\r\nError: Could not access the Package Manager.\r\n' ;;
             still-installed) printf 'package:android\r\npackage:net.wizardfactory.todayweather.test\r\n' ;;
             removed) printf 'package:android\r\npackage:com.android.settings\r\n' ;;
         esac ;;

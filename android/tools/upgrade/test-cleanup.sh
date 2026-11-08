@@ -1,7 +1,7 @@
 #!/bin/sh
 # Checks the cleanup of run-upgrade-test.sh with an adb test double (test/adb): the network comes back only
-# when the package list can be read and has neither package; otherwise the script exits 5 and the device
-# stays offline. Needs no device.
+# when the package query succeeds with a complete list that has neither package; a failed, partial or
+# mixed answer or a remaining package makes the script exit 5 and the device stays offline. Needs no device.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 TMP=$(mktemp -d)
@@ -21,7 +21,9 @@ check() { # case, expected exit status, expected count of network-restoring call
     fi
 }
 check list-fails 5 0
+check partial-then-fails 5 0
 check pm-error 5 0
+check mixed-error 5 0
 check still-installed 5 0
 check removed 1 3
 exit $failed
