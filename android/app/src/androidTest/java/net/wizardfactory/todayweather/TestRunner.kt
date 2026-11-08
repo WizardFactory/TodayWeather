@@ -9,7 +9,8 @@ import net.wizardfactory.todayweather.core.storage.PushRequest
 
 /**
  * Runs device tests with [TestTodayWeatherApp]: the push token comes from the `token` argument and push
- * requests are recorded instead of sent, so no test reaches the production push server.
+ * requests are recorded instead of sent, so no test reaches the production push server. With `transport`
+ * `hold`, a recorded request never gets an answer (it stays in flight).
  */
 class TestRunner : AndroidJUnitRunner() {
     override fun onCreate(arguments: Bundle?) {
@@ -29,7 +30,11 @@ class TestTodayWeatherApp : TodayWeatherApp() {
     val sent = java.util.Collections.synchronizedList(mutableListOf<PushRequest>())
     override fun serverUrl() = "https://push.test.invalid"
     override fun tokenSource() = TokenSource { TestRunner.args.getString("token") }
-    override fun pushTransport() = net.wizardfactory.todayweather.core.data.PushTransport { sent += it; 200 }
+    override fun pushTransport() = net.wizardfactory.todayweather.core.data.PushTransport {
+        sent += it
+        if (TestRunner.args.getString("transport") == "hold") kotlinx.coroutines.awaitCancellation()
+        200
+    }
 }
 
 /** Body helper for assertions. */

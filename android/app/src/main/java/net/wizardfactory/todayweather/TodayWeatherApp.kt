@@ -7,11 +7,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import net.wizardfactory.todayweather.core.data.HttpPushTransport
+import net.wizardfactory.todayweather.core.data.PushSync
 import net.wizardfactory.todayweather.core.data.PushTransport
 import net.wizardfactory.todayweather.core.storage.AppState
+import net.wizardfactory.todayweather.core.storage.AppStateStore
 import net.wizardfactory.todayweather.core.storage.CordovaMigrator
 
-/** The application and its dependencies. Device tests replace dependencies in a subclass (androidTest). */
+/**
+ * The application and its dependencies. Device tests replace dependencies in a subclass (androidTest).
+ * Members are lazy because WorkManager can run a worker before [onCreate].
+ */
 open class TodayWeatherApp : Application() {
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -19,19 +24,31 @@ open class TodayWeatherApp : Application() {
     open fun tokenSource(): TokenSource = FirebaseTokenSource(this)
     open fun pushTransport(): PushTransport = HttpPushTransport(serverUrl())
 
-    /** The Cordova data migration, started on every launch; it does nothing after the first one. */
-    lateinit var migration: Deferred<AppState>
+    /** The Cordova data migration, started on every process start; it does nothing after the first one. */
+    val migration: Deferred<AppState> by lazy {
+        appScope.async(Dispatchers.IO) { CordovaMigrator(this@TodayWeatherApp).migrateIfNeeded() }
+    }
+
+    /** Push registrations (gate G1, push part), one at a time. */
+    val push: PushSync by lazy {
+        PushSync(AppStateStore.get(this), pushTransport()) { state -> pushContext(this, serverUrl(), state) }
+    }
+
+    /** The registration of the latest app open; null before the first. */
+    @Volatile var opened: Deferred<PushSync.Outcome?>? = null
         private set
 
-    /** Push re-registration after the migration (gate G1, push part). */
-    lateinit var pushStartup: Deferred<PushStartup.Outcome?>
-        private set
+    /**
+     * The app was opened ([MainActivity], not recreated for a configuration change): the Cordova `Push.init` of
+     * every app start. A process started in the background (FCM, WorkManager) registers nothing.
+     */
+    fun onOpened(): Deferred<PushSync.Outcome?> = appScope.async(Dispatchers.IO) {
+        migration.await()
+        push.onStart { tokenSource().token() }
+    }.also { opened = it }
 
     override fun onCreate() {
         super.onCreate()
-        migration = appScope.async(Dispatchers.IO) { CordovaMigrator(this@TodayWeatherApp).migrateIfNeeded() }
-        pushStartup = appScope.async(Dispatchers.IO) {
-            PushStartup(this@TodayWeatherApp, serverUrl(), tokenSource(), pushTransport()).run(migration.await())
-        }
+        migration.start()
     }
 }

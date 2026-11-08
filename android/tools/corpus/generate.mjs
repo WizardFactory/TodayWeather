@@ -511,8 +511,16 @@ const PUSH_LIST = [
         category: 'alarm', name: 'London', source: 'VC', location: {lat: 51.51, long: -0.13}},
 ];
 
-function pushRequests(storedToken, newToken, airUnit) {
-    process.env.TZ = 'Asia/Seoul';
+// Alerts whose start equals their end: the end moves one minute back in local time (setMinutes), which
+// differs from 60 seconds across New York's daylight-saving changes: 01:00 EST becomes 00:59 EDT, 01:30 EST
+// becomes the earlier 01:29 (EDT) and 03:00 EDT becomes the skipped 02:59, read with the earlier offset.
+const DST_LIST = ['2026-11-01T06:00:00.000Z', '2026-11-01T06:30:00.000Z', '2026-11-01T05:00:00.000Z', '2026-03-08T07:00:00.000Z',
+    '2026-03-08T07:30:00.000Z']
+    .map((t, i) => ({cityIndex: 2, id: i + 1, startTime: t, endTime: t, enable: true, category: 'alert', name: 'London', source: 'VC',
+        location: {lat: 51.51, long: -0.13}}));
+
+function pushRequests(storedToken, newToken, airUnit, zone = 'Asia/Seoul', list = PUSH_LIST) {
+    process.env.TZ = zone;
     let factory;
     const timers = [];
     const calls = [];
@@ -523,7 +531,7 @@ function pushRequests(storedToken, newToken, airUnit) {
     };
     vm.runInNewContext(fs.readFileSync(path.join(JS, 'service.push.js'), 'utf8'), context);
     const $http = (cfg) => { calls.push(clone({method: cfg.method, url: cfg.url, headers: cfg.headers, data: cfg.data})); return {success() { return this; }, error() { return this; }}; };
-    const stored = {pushData2: {registrationId: null, type: 'android', category: '', fcmToken: storedToken, pushList: PUSH_LIST}};
+    const stored = {pushData2: {registrationId: null, type: 'android', category: '', fcmToken: storedToken, pushList: list}};
     const TwStorage = {get: (k) => clone(stored[k] ?? null), set() {}};
     const Util = {ga: {trackEvent() {}, trackException() {}}, uuid: 'device-uuid', language: 'ko-KR', version: '1.1.1'};
     const units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit};
@@ -548,7 +556,10 @@ function pushCases() {
             ['changed-token', 'token-a', 'token-b', 'airkorea'], ['changed-token-airnow', 'token-a', 'token-b', 'airnow'],
             ['no-token', null, null, 'airkorea'],
         ].map(([name, storedToken, newToken, airUnit]) => ({name, storedToken, newToken, airUnit,
-            requests: pushRequests(storedToken, newToken, airUnit)})),
+            requests: pushRequests(storedToken, newToken, airUnit)})).concat([
+            {name: 'dst-new-york', storedToken: 'token-a', newToken: 'token-a', airUnit: 'airnow', zone: 'America/New_York',
+                pushList: DST_LIST, requests: pushRequests('token-a', 'token-a', 'airnow', 'America/New_York', DST_LIST)},
+        ]),
     };
 }
 

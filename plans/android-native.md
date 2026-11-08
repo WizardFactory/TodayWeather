@@ -27,6 +27,8 @@ Consumes the [intent](../intent/android-native.md) and [spec](../specs/android-n
 
 AN-19 (#2898) is out of scope for this run.
 
+AN-18 also delivers the native app's user manual with screenshots of the implemented screens: `docs/user/android-app/` (`manual.json`, `manual.pdf`, `screenshots/`, provenance), with the sections of `docs/user/cordova-app` ([decision on #2897](https://github.com/WizardFactory/TodayWeather/issues/2897#issuecomment-6716907228)).
+
 ## AN-01 — project skeleton, imported assets and CI (#2880)
 
 Design skipped: no system flow; the module layout is fixed by #2877. Archify not applicable (no structure diagram changes; the service overview gains the Android client in AN-19).
@@ -106,7 +108,7 @@ Review round 1 (F1–F8): slots kept for broken city entries, coordinate validat
 
 ## AN-04 — push re-registration after the update (#2883)
 
-Design: `PushRegistration` reproduces `Push.init`/`loadPushInfo`/`_makePostObj` as pure Kotlin; the app runs it after the migration with an FCM token (`FirebaseTokenSource`) and an HTTP transport (`core-data`). The server URL is a private build input. Device tests swap token and transport in `TestTodayWeatherApp` (androidTest), so no test sends anything and the app has no test mode. Path version `v000903` (decision 2, AN-06 confirms).
+Design: `PushRegistration` reproduces `Push.init`/`loadPushInfo`/`_makePostObj` as pure Kotlin. `PushSync` (`core-data`) runs registrations one at a time: read the stored state, send, store the token. The app runs the start registration after the migration when it is opened (`MainActivity`, once per open as the Cordova web page; not for a process started in the background), with an FCM token (`FirebaseTokenSource`) and an HTTP transport. `MessagingService.onNewToken` hands a token to WorkManager (`PushTokenWorker`, one unique chain), so the replacement completes after the process ends. The server URL is a private build input. Device tests swap token and transport in `TestTodayWeatherApp` (androidTest), so no test sends anything and the app has no test mode. Path version `v000903` (decision 2, AN-06 confirms).
 
 ### User scenarios
 
@@ -114,10 +116,18 @@ Design: `PushRegistration` reproduces `Push.init`/`loadPushInfo`/`_makePostObj` 
 | --- | --- | --- | --- | --- | --- | --- |
 | AN04-US1 | Cordova user with alarms updates; token unchanged | Migrated records, stored token | Open the native app | One `POST /v000903/push-list` with every record once, same `Device-Id` | Server unreachable: no retry until the next start (as Cordova) | AC1, AC2 |
 | AN04-US2 | Same user; FCM token changed | Stored token differs | Open the app | `PUT /v000903/push` (new/old token), then the list; stored token updated | – | AC1, AC2 |
-| AN04-US3 | Maintainer | Emulator, APKs | `run-upgrade-test.sh … token-a` and `… token-b` | Both pass; requests recorded, none sent | Preconditions missing: exit 4 | AC2, AC3 |
+| AN04-US3 | Maintainer | Emulator, APKs | `run-upgrade-test.sh … token-a` and `… token-b` | Both pass; requests recorded, none sent; both packages removed before the network returns | Preconditions missing: exit 4; interrupted or failed run: packages removed, then network restored | AC2, AC3 |
+| AN04-US4 | User whose FCM token changes twice while the app runs | Stored token A | FCM delivers B, then C | `PUT` A→B, then B→C; stored token C | The process ends before the work runs: a later process completes it | AC1, AC2 |
+| AN04-US5 | User in a daylight-saving zone with an alert whose start equals its end | New York, record at a transition | Open the app | End time one local minute earlier, as `setMinutes` in V8 | – | AC1 |
 
 ### Acceptance (from #2883)
 
 - AC1: unit tests compare the native requests (path, headers, body) with the Cordova app's for first, unchanged and changed tokens.
 - AC2: the emulator upgrade test passes for both token cases; every migrated record registered once with the same `Device-Id`; no request reaches the production push server.
 - AC3: delivery.
+
+### Checks
+
+JVM: `PushRegistrationTest` (Cordova goldens: first, unchanged, changed token, air unit, no token, New York daylight-saving alerts), `PushSyncTest` (B then C with a held transport; a token during the start registration), `HttpPushTransportTest`. Device: `run-upgrade-test.sh` for `token-a` and `token-b` on API 36 and `token-b` on API 24, including `PushTokenWorkTest` (token work interrupted with its `PUT` in flight by the end of the process, completed by the next process without an app open). Script cleanup: success, interrupted (TERM) and failed runs leave neither package installed and restore the network.
+
+Review round 1 (F1–F5): cleanup before the network returns on every exit; registrations serialized; token work in WorkManager; local-time end-minute decrement with V8's daylight-saving rules; `service.push.js` in the CI path filters. Also corrected: the start registration ran on every process start, including background starts for FCM; it now runs when the app is opened.

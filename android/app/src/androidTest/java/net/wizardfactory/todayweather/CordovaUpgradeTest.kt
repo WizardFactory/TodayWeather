@@ -1,6 +1,7 @@
 package net.wizardfactory.todayweather
 
 import android.content.Context
+import android.content.Intent
 import android.util.Base64
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -22,6 +23,7 @@ import net.wizardfactory.todayweather.core.storage.UnitSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,6 +77,7 @@ class CordovaUpgradeTest {
         val again = runBlocking { CordovaMigrator(context, AppStateStore.get(context)).migrateIfNeeded() }
         assertEquals(first, again)
         assertTrue("app_state.json unchanged", before.contentEquals(file.readBytes()))
+        assertTrue("a process start without an app open registers nothing", (context.applicationContext as TestTodayWeatherApp).sent.isEmpty())
         // The SDK's persisted collection flag (set by the Cordova opt-in) is now off.
         val measurement = context.getSharedPreferences("com.google.android.gms.measurement.prefs", Context.MODE_PRIVATE)
         assertFalse(measurement.getBoolean("measurement_enabled_from_api", true))
@@ -82,13 +85,17 @@ class CordovaUpgradeTest {
     }
 
     /**
-     * Gate G1, push part: the migrated alarms and alerts are registered once more with the same Device-Id,
-     * for an unchanged token (seeded `token-a`) and a changed one (`token-b`), through the recording
-     * transport of [TestTodayWeatherApp] (nothing is sent).
+     * Gate G1, push part: when the app opens, the migrated alarms and alerts are registered once more with the
+     * same Device-Id, for an unchanged token (seeded `token-a`) and a changed one (`token-b`), through the
+     * recording transport of [TestTodayWeatherApp] (nothing is sent).
      */
     private fun assertPushReRegistered(state: net.wizardfactory.todayweather.core.storage.AppState, deviceId: String) {
         val app = context.applicationContext as TestTodayWeatherApp
-        val outcome = runBlocking { app.pushStartup.await() }!!
+        assertNull("the process start alone registers nothing", app.opened)
+        assertTrue(app.sent.isEmpty())
+        InstrumentationRegistry.getInstrumentation()
+            .startActivitySync(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        val outcome = runBlocking { app.opened!!.await() }!!
         val token = TestRunner.args.getString("token")!!
         val seededToken = storage("pushData2").jsonObject["fcmToken"]!!.jsonPrimitive.content
         val expectedMethods = if (token == seededToken) listOf("POST") else listOf("PUT", "POST")

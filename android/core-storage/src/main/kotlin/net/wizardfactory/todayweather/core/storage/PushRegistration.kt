@@ -107,7 +107,7 @@ object PushRegistration {
             "alert" -> {
                 val start = utcSecs(r["startTime"])
                 var end = utcSecs(r["endTime"])
-                if (start == end) end = utcSecs(r["endTime"], minusMinutes = 1)
+                if (start == end) end = epochMillis(r["endTime"])?.let { utcSecs(minuteBack(it, ctx.zone)) } ?: end
                 put("startTime", start)
                 put("endTime", end)
                 put("airAlertsBreakPoint", JsonPrimitive(if (ctx.units.airUnit == "airkorea" || ctx.units.airUnit == "airkorea_who") 3 else 4))
@@ -116,16 +116,36 @@ object PushRegistration {
     }
 
     /** `date2utcSecs(new Date(iso))`: UTC hours and minutes of the stored instant, in seconds. */
-    private fun utcSecs(value: JsonElement?, minusMinutes: Int = 0): JsonPrimitive {
-        val iso = (value as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return JsonPrimitive(0)
-        val m = Regex("""^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})""").find(iso) ?: return JsonPrimitive(0)
-        val (y, mo, d, h, mi, s) = m.destructured
-        val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
-            clear(); set(y.toInt(), mo.toInt() - 1, d.toInt(), h.toInt(), mi.toInt(), s.toInt())
-            add(Calendar.MINUTE, -minusMinutes)
-        }
-        return JsonPrimitive(cal.get(Calendar.HOUR_OF_DAY) * 3600 + cal.get(Calendar.MINUTE) * 60)
+    private fun utcSecs(value: JsonElement?): JsonPrimitive = epochMillis(value)?.let(::utcSecs) ?: JsonPrimitive(0)
+
+    private fun utcSecs(millis: Long): JsonPrimitive {
+        val ms = Math.floorMod(millis, DAY)
+        return JsonPrimitive(ms / 3_600_000 * 3600 + ms % 3_600_000 / 60_000 * 60)
     }
+
+    /** The instant of a stored ISO time (`toISOString`, UTC). */
+    private fun epochMillis(value: JsonElement?): Long? {
+        val iso = (value as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return null
+        val m = Regex("""^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})""").find(iso) ?: return null
+        val (y, mo, d, h, mi, s) = m.destructured
+        return Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+            clear(); set(y.toInt(), mo.toInt() - 1, d.toInt(), h.toInt(), mi.toInt(), s.toInt())
+        }.timeInMillis
+    }
+
+    /**
+     * `date.setMinutes(date.getMinutes() - 1)` in [zone]: the local wall time one minute earlier, turned back into
+     * an instant as V8 does (ECMA-262 `UTC(t)`): a repeated local time takes its earlier instant, a skipped one
+     * the offset before the transition. In New York on 2026-11-01, 06:00Z (01:00 EST) becomes 04:59Z (00:59 EDT).
+     */
+    private fun minuteBack(millis: Long, zone: TimeZone): Long {
+        val local = millis + zone.getOffset(millis) - 60_000
+        val before = zone.getOffset(local - DAY)
+        val after = zone.getOffset(local + DAY)
+        return if (zone.getOffset(local - before) != before && zone.getOffset(local - after) == after) local - after else local - before
+    }
+
+    private const val DAY = 86_400_000L
 }
 
 /** `Push._getSimpleCityInfo`: name, source, location (when lat is set) and the KMA town of a place. */

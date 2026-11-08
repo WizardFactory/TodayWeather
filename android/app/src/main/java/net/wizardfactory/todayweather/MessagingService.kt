@@ -1,9 +1,7 @@
 package net.wizardfactory.todayweather
 
 import com.google.firebase.messaging.FirebaseMessagingService
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import net.wizardfactory.todayweather.core.storage.AppStateStore
+import java.util.concurrent.ExecutionException
 
 /**
  * FCM entry point. Token changes are registered as the Cordova app's token callback does; showing and
@@ -11,12 +9,11 @@ import net.wizardfactory.todayweather.core.storage.AppStateStore
  */
 class MessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
-        val app = application as TodayWeatherApp
-        app.appScope.launch {
-            app.migration.await()
-            app.pushStartup.await() // the start-time registration goes first
-            val state = AppStateStore.get(app).data.first() // includes a token stored by the start
-            PushStartup(app, app.serverUrl(), app.tokenSource(), app.pushTransport()).onNewToken(state, token)
+        // Called on a background thread: return once WorkManager has stored the work. If it cannot store it,
+        // the next app open registers the current token.
+        try {
+            PushTokenWorker.enqueue(this, token).result.get()
+        } catch (_: ExecutionException) {
         }
     }
 }

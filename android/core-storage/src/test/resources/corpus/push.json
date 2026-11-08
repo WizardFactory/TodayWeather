@@ -1157,6 +1157,248 @@
    "newToken": null,
    "airUnit": "airkorea",
    "requests": []
+  },
+  {
+   "name": "dst-new-york",
+   "storedToken": "token-a",
+   "newToken": "token-a",
+   "airUnit": "airnow",
+   "zone": "America/New_York",
+   "pushList": [
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-01T06:00:00.000Z",
+     "endTime": "2026-11-01T06:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "startTime": "2026-11-01T06:30:00.000Z",
+     "endTime": "2026-11-01T06:30:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 3,
+     "startTime": "2026-11-01T05:00:00.000Z",
+     "endTime": "2026-11-01T05:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 4,
+     "startTime": "2026-03-08T07:00:00.000Z",
+     "endTime": "2026-03-08T07:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 5,
+     "startTime": "2026-03-08T07:30:00.000Z",
+     "endTime": "2026-03-08T07:30:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "requests": [
+    {
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "device-uuid"
+     },
+     "data": [
+      {
+       "type": "android",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airnow",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": -300,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 21600,
+       "endTime": 17940,
+       "airAlertsBreakPoint": 4
+      },
+      {
+       "type": "android",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alert",
+       "enable": true,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airnow",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": -300,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 23400,
+       "endTime": 19740,
+       "airAlertsBreakPoint": 4
+      },
+      {
+       "type": "android",
+       "cityIndex": 2,
+       "id": 3,
+       "category": "alert",
+       "enable": true,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airnow",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": -300,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 18000,
+       "endTime": 17940,
+       "airAlertsBreakPoint": 4
+      },
+      {
+       "type": "android",
+       "cityIndex": 2,
+       "id": 4,
+       "category": "alert",
+       "enable": true,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airnow",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": -300,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 25200,
+       "endTime": 28740,
+       "airAlertsBreakPoint": 4
+      },
+      {
+       "type": "android",
+       "cityIndex": 2,
+       "id": 5,
+       "category": "alert",
+       "enable": true,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airnow",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": -300,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 27000,
+       "endTime": 26940,
+       "airAlertsBreakPoint": 4
+      }
+     ]
+    }
+   ]
   }
  ]
 }

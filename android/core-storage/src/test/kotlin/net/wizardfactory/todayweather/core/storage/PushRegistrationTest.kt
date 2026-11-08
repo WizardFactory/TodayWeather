@@ -27,15 +27,16 @@ class PushRegistrationTest {
                 country = o["country"]?.jsonPrimitive?.content, source = o["source"]?.jsonPrimitive?.content,
                 location = Location(loc["lat"]!!.jsonPrimitive.content.toDouble(), loc["long"]!!.jsonPrimitive.content.toDouble()))
         }
-        val records = corpus["pushList"]!!.jsonArray.map { it.jsonObject }
         for (case in corpus["cases"]!!.jsonArray.map { it.jsonObject }) {
             fun str(k: String) = case[k]?.takeIf { it != JsonNull }?.jsonPrimitive?.content
             val units = UnitSettings("C", "m/s", "hPa", "km", "mm", str("airUnit")!!)
+            val zone = (case["zone"] ?: corpus["zone"])!!.jsonPrimitive.content
             val ctx = PushRegistration.Context(
                 deviceId = corpus["deviceId"]!!.jsonPrimitive.content, language = corpus["language"]!!.jsonPrimitive.content,
                 appVersion = corpus["appVersion"]!!.jsonPrimitive.content, units = units,
-                nowMillis = corpus["now"]!!.jsonPrimitive.long, zone = TimeZone.getTimeZone(corpus["zone"]!!.jsonPrimitive.content),
+                nowMillis = corpus["now"]!!.jsonPrimitive.long, zone = TimeZone.getTimeZone(zone),
             )
+            val records = (case["pushList"] ?: corpus["pushList"])!!.jsonArray.map { it.jsonObject }
             val state = PushState(fcmToken = str("storedToken"), records = records)
             val result = PushRegistration.onStart(state, places, str("newToken"), ctx)
             val expected = case["requests"]!!.jsonArray.map { it.jsonObject }
