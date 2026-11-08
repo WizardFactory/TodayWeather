@@ -357,12 +357,12 @@ function airCases() {
         }
     }
     // Gauge label: x of the value marker over the standard's grade bands.
-    const air = (airUnit, aqiCode, width) => {
+    const air = (airUnit, aqiCode, width, labelWidth = 52) => {
         const $scope = tab(airUnit);
         const context = {
             $scope, console: quiet, Util: {ga: {trackException() {}}}, aqiCode,
             angular: {element: (el) => ({prop: () => el})},
-            document: {getElementById: (id) => (id === 'aqistd' ? width : 52)},
+            document: {getElementById: (id) => (id === 'aqistd' ? width : labelWidth)},
         };
         vm.runInNewContext('$scope.getLabelPosition = ' + extract('controller.air.js', '$scope.getLabelPosition = function') +
             '\n$scope.getAirCodeUnit = ' + extract('controller.air.js', '$scope.getAirCodeUnit = function') +
@@ -380,6 +380,21 @@ function airCases() {
                 for (let g = 1; g < bp.length; g++) {
                     for (const v of [bp[g - 1], bp[g], bp[g] + 0.001]) {
                         out.labelPosition.push({args: [airUnit, code, width, g, v], expected: $scope.getLabelPosition(g, v)});
+                    }
+                }
+            }
+        }
+    }
+    // The gauge of a 384 dp screen (376 dp) with labels as wide as S05 draws them: empty (22), "40" (39), "151" (48) and
+    // "0.008" (61), as captured from the Cordova build (air-reference).
+    for (const airUnit of ['airkorea', 'airnow']) {
+        for (const code of ['aqi', 'pm25', 'o3']) {
+            for (const labelWidth of [22, 39, 48, 61]) {
+                const {$scope} = air(airUnit, code, 376, labelWidth);
+                const bp = standards[airUnit].value[code];
+                for (let g = 1; g < bp.length; g++) {
+                    for (const v of [bp[g - 1], (bp[g - 1] + bp[g]) / 2, bp[g]]) {
+                        out.labelPosition.push({args: [airUnit, code, 376, g, v, labelWidth], expected: $scope.getLabelPosition(g, v)});
                     }
                 }
             }
@@ -851,6 +866,156 @@ function forecastCases(util) {
     return cases;
 }
 
+// AirCtrl, the controller of S05 (/tab/air), for one visit of the page: the whole controller runs with TabCtrl's
+// initSize, setAirUnit, grade2Color and getSentimentIcon, the real WeatherUtil and a WeatherInfo holding the visit's
+// places. The page opens with the visit's code (the link's `?code=`) on its selected place; then each action runs as on
+// the page: ['apply', i] selects place i and fires applyEvent (a swipe or a load: back to the first station),
+// ['code', c] taps a detail cell (setMainAqiCode) and ['station', i] a station (setStation). After the opening and each
+// action the case records the scope values the template reads, so values an apply did not reach (it stops at the first
+// error) keep what an earlier place set. The device zone is the visit's (Asia/Seoul unless given): the hourly chart
+// dates a missing slot in it. Kotlin: AirScope.
+function airVisit(util, visit) {
+    process.env.TZ = visit.zone;
+    const units = visit.units;
+    const handlers = {};
+    let scrolls = 0;
+    const $scope = {$on: (name, fn) => { handlers[name] = fn; }};
+    const cities = visit.places.map((p) => cityRecord(util, p));
+    let index = visit.index ?? 0;
+    const WeatherInfo = {
+        getCityIndex: () => index, setCityIndex(i) { index = i; }, getCityOfIndex: (i) => (i in cities ? cities[i] : null),
+        getEnabledCityCount: () => cities.length,
+    };
+    let controller;
+    const context = {
+        angular: {module: () => ({controller: (_, fn) => { controller = fn; }}), element: (el) => ({prop: () => el})},
+        console: quiet, clientConfig: {package: 'todayWeather'}, window: {screen: {width: visit.width, height: visit.height}},
+        document: {getElementById: () => 0}, ionic: {Platform: {isIOS: () => false, isAndroid: () => true}}, $scope,
+        Units: {getUnit: (k) => units[k]}, Util: {ga: {trackEvent() {}, trackException() {}}}, $sce: {trustAsHtml: (v) => v},
+        aqiStandard: util.aqiStandard, airUnit: undefined,
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(JS, 'controller.air.js'), 'utf8'), context);
+    vm.runInContext([
+        '$scope.initSize = ' + extract('controller.tabctrl.js', '$scope.initSize = function'),
+        extract('controller.tabctrl.js', 'function setAirUnit('),
+        '$scope.getSentimentIcon = ' + extract('controller.tabctrl.js', '$scope.getSentimentIcon = function'),
+        '$scope.grade2Color = ' + extract('controller.tabctrl.js', '$scope.grade2Color = function'),
+        'setAirUnit();',
+    ].join('\n'), context);
+    // Where an object the scope holds comes from: "<place>/airInfoList/<i>/last", "<place>/airInfo/last" or
+    // "<place>/currentWeather/arpltn" (the observation), "<place>/currentWeather".
+    const of = (value) => {
+        if (value === undefined) return undefined;
+        for (let p = 0; p < cities.length; p++) {
+            const c = cities[p];
+            if (c.currentWeather === value) return `${p}/currentWeather`;
+            if (c.currentWeather && c.currentWeather.arpltn === value) return `${p}/currentWeather/arpltn`;
+            if (c.airInfo && c.airInfo.last === value) return `${p}/airInfo/last`;
+            const list = Array.isArray(c.airInfoList) ? c.airInfoList : [];
+            for (let i = 0; i < list.length; i++) if (list[i] && list[i].last === value) return `${p}/airInfoList/${i}/last`;
+        }
+        return 'other';
+    };
+    const snapshot = (after) => {
+        const s = $scope;
+        const cell = (o) => o && {...o, face: s.getSentimentIcon(o.grade), color: s.grade2Color(o.grade)};
+        return clone({
+            after, address: s.address, currentPosition: s.currentPosition, hasPush: s.hasPush, cityCount: s.cityCount,
+            aqiCode: s.aqiCode, airCodeName: s.airCodeName, mainName: s.mainName, stnIndex: s.stnIndex,
+            airInfoOf: of(s.airInfo), currentWeatherOf: of(s.currentWeather),
+            airCodeGrade: s.airCodeGrade, airCodeValue: s.airCodeValue, airCodeStr: s.airCodeStr, mainInfo: s.mainInfo,
+            airCodeActionGuide: s.airCodeActionGuide, unit: s.getAirCodeUnit(s.aqiCode),
+            mainColor: s.grade2Color(s.airCodeGrade), labelColor: s.grade2Color(s.airCodeGrade, 'white'), face: s.getSentimentIcon(s.airCodeGrade),
+            forecastPubdate: s.forecastPubdate, forecastSource: s.forecastSource,
+            aqiList: s.aqiList && s.aqiList.map(cell), stnList: s.stnList && s.stnList.map(cell),
+            dayForecast: s.dayForecast && s.dayForecast.map((d) => ({...d, face: s.getSentimentIcon(d.grade), color: s.grade2Color(d.grade, 'white')})),
+            airChart: s.airChart && {maxValue: s.airChart.maxValue, data: Array.from(s.airChart.data, (d) => (d === undefined ? null : d))},
+            hourlyChartTitle: s.hourlyChartTitle, chartAirHeight: s.chartAirHeight, scrolls,
+            bodyWidth: s.bodyWidth, headerHeight: s.headerHeight, bigFontSize: s.bigFontSize,
+        });
+    };
+    controller($scope, {code: visit.code}, {trustAsHtml: (v) => v}, WeatherInfo, util, {getUnit: (k) => units[k]},
+        {ga: {trackEvent() {}, trackException() {}}}, {scrollTop() { scrolls++; }}, {clearHistory() {}},
+        {hasPushInfo: (i) => visit.places[i].hasPush === true}, {path() {}});
+    const applied = [snapshot('open')];
+    for (const [action, arg] of visit.actions || []) {
+        if (action === 'apply') { index = arg; handlers.applyEvent({}, 'swipe'); }
+        else if (action === 'code') $scope.setMainAqiCode(arg);
+        else if (action === 'station') $scope.setStation(arg);
+        else throw new Error(`unknown action ${action}`);
+        applied.push(snapshot(`${action} ${arg}`));
+    }
+    delete process.env.TZ;
+    return {name: visit.name, width: visit.width, height: visit.height, zone: visit.zone, units, code: visit.code ?? null,
+        index: visit.index ?? 0, places: visit.places, actions: visit.actions || [], applied};
+}
+
+function airVisitCases(util) {
+    const KR = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea'};
+    const US = {temperatureUnit: 'F', windSpeedUnit: 'mph', pressureUnit: 'inHg', distanceUnit: 'mi', precipitationUnit: 'in', airUnit: 'airnow'};
+    const seoul = {fixture: 'kma-seoul', place: {name: '회현동', address: '대한민국 서울특별시 중구 회현동', country: 'KR', location: {lat: 37.56, long: 126.98}}};
+    const london = {fixture: 'vc-london', place: {name: '런던', address: '영국 런던', country: 'GB', location: {lat: 51.51, long: -0.13}}};
+    const tokyo = {fixture: 'vc-tokyo', place: {name: '도쿄', address: '일본 도쿄', country: 'JP', location: {lat: 35.68, long: 139.69}}};
+    const jeju = {fixture: 'kma-jeju', place: {name: '연동', address: '대한민국 제주특별자치도 제주시 연동', country: 'KR', location: {lat: 33.5, long: 126.53}}};
+    const at = (place, extra) => ({...place, ...extra, place: {...place.place, ...(extra.place || {})}});
+    const noAir = at(jeju, {mutations: [{op: 'delete', path: ['airInfoList']}, {op: 'delete', path: ['currentWeather', 'arpltn']}]});
+    const observationOnly = at(jeju, {mutations: [{op: 'delete', path: ['airInfoList']}]});
+    const station = ['airInfoList', 0];
+    const daily = input('kma-seoul').airInfoList[0].pollutants.aqi.daily;
+    const sixDays = [0, 1, 2, 3, 4, 5].map((i) => ({...daily[i % daily.length], date: `2026-11-${String(8 + i).padStart(2, '0')}`,
+        fromToday: i, dayOfWeek: i % 7}));
+    // A series that ends at the end of November: the eleven slots after it are dated on 1 December.
+    const monthEnd = Array.from({length: 13}, (_, i) => ({date: `2026-11-30 ${String(11 + i).padStart(2, '0')}:00`, val: 30 + i, grade: 1, str: '좋음'}));
+    // Only the current hour on the day New York's clocks go forward: the twelve hours before it are dated by moving the
+    // clock back, and 02:00, which that day skips, becomes 03:00 (twice).
+    const springForward = [{date: '2026-03-08 12:00', val: 40, grade: 1, str: '좋음'}];
+    const allCodes = [['code', 'pm25'], ['code', 'pm10'], ['code', 'o3'], ['code', 'no2'], ['code', 'co'], ['code', 'so2'], ['code', 'aqi']];
+    const visits = [
+        {name: 'seoul', places: [seoul], actions: [['station', 1], ['station', 2], ['code', 'pm25'], ['station', 1], ...allCodes, ['apply', 0]]},
+        {name: 'seoul-link-pm25', code: 'pm25', places: [seoul]},
+        {name: 'seoul-link-o3', code: 'o3', places: [seoul], actions: [['station', 2]]},
+        {name: 'seoul-link-khai', code: 'khai', places: [seoul]},
+        {name: 'seoul-link-unknown', code: 'xyz', places: [seoul]},
+        {name: 'london', places: [london], actions: allCodes},
+        {name: 'tokyo-airnow', units: {...KR, airUnit: 'airnow'}, places: [tokyo], actions: allCodes},
+        {name: 'seoul-aqicn', units: {...KR, airUnit: 'aqicn'}, places: [at(seoul, {fixture: 'kma-seoul-aqicn'})], actions: [...allCodes, ['station', 2]]},
+        {name: 'seoul-who', units: {...KR, airUnit: 'airkorea_who'}, places: [at(seoul, {fixture: 'kma-seoul-who'})], actions: allCodes},
+        {name: 'seoul-airnow', units: US, places: [at(seoul, {fixture: 'kma-seoul-imperial'})], actions: allCodes},
+        {name: 'jeju', places: [jeju], actions: [['station', 1], ['code', 'pm10']]},
+        // A swipe or a load returns to the first station; the pollutant stays.
+        {name: 'seoul-london-seoul', places: [seoul, london], actions: [['code', 'pm25'], ['station', 2], ['apply', 1], ['apply', 0]]},
+        // The apply stops at the missing observation: everything but the title stays from the previous place.
+        {name: 'seoul-then-no-air', places: [seoul, noAir], actions: [['station', 1], ['apply', 1], ['apply', 0]]},
+        // The forecast rows are assigned only for a place with air keys (A16).
+        {name: 'seoul-then-observation-only', places: [seoul, observationOnly], actions: [['apply', 1]]},
+        {name: 'london-then-observation-only', places: [london, observationOnly], actions: [['apply', 1]]},
+        {name: 'no-air', places: [noAir]},
+        {name: 'observation-only', places: [observationOnly], actions: [['code', 'pm25']]},
+        {name: 'empty-air-list', places: [at(seoul, {mutations: [{op: 'set', path: ['airInfoList'], value: []}]})]},
+        {name: 'pollutant-fallback', code: 'pm25', places: [at(seoul, {mutations: [{op: 'set', path: [...station, 'last', 'pm25Value'], value: null},
+            {op: 'delete', path: [...station, 'pollutants', 'pm25']}]})]},
+        {name: 'pollutant-value-missing', code: 'pm25', places: [at(seoul, {mutations: [{op: 'delete', path: [...station, 'last', 'pm25Value']}]})]},
+        {name: 'station-value-zero', code: 'pm25', places: [at(seoul, {mutations: [{op: 'set', path: ['airInfoList', 2, 'last', 'pm25Value'], value: 0},
+            {op: 'set', path: [...station, 'last', 'pm25Value'], value: 0}]})], actions: [['station', 2]]},
+        {name: 'no-current-hour', places: [at(seoul, {mutations: [{op: 'set', path: [...station, 'last', 'dataTime'], value: '2026-11-10 00:00'}]})]},
+        {name: 'station-without-last', places: [at(seoul, {mutations: [{op: 'delete', path: ['airInfoList', 1, 'last']}]})], actions: [['station', 1], ['station', 0]]},
+        {name: 'station-out-of-range', places: [seoul], actions: [['station', 5]]},
+        {name: 'month-end', places: [at(seoul, {mutations: [{op: 'set', path: [...station, 'pollutants', 'aqi', 'hourly'], value: monthEnd},
+            {op: 'set', path: [...station, 'last', 'dataTime'], value: '2026-11-30 23:00'}]})]},
+        {name: 'spring-forward-new-york', zone: 'America/New_York', places: [at(seoul, {mutations: [
+            {op: 'set', path: [...station, 'pollutants', 'aqi', 'hourly'], value: springForward},
+            {op: 'set', path: [...station, 'last', 'dataTime'], value: '2026-03-08 12:00'}]})]},
+        {name: 'six-days', places: [at(seoul, {mutations: [{op: 'set', path: [...station, 'pollutants', 'aqi', 'daily'], value: sixDays}]})]},
+        {name: 'six-days-narrow', width: 320, height: 568, places: [at(seoul, {mutations: [{op: 'set', path: [...station, 'pollutants', 'aqi', 'daily'], value: sixDays}]})]},
+        {name: 'tablet', width: 800, height: 1280, places: [seoul]},
+        {name: 'current-position', places: [{...jeju, hasPush: true, place: {address: jeju.place.address, currentPosition: true, location: jeju.place.location}}]},
+        {name: 'unknown-standard', units: {...KR, airUnit: 'unknown'}, places: [seoul]},
+        {name: 'no-places', places: []},
+    ];
+    return visits.map((v) => airVisit(util, {width: 384, height: 832, units: KR, zone: 'Asia/Seoul', ...v,
+        places: v.places.map((p) => ({hasPush: false, ...p}))}));
+}
+
 // TabCtrl's template helpers of S03/S04 and the pollen popup rows (showPollenInfo with a recording $ionicPopup).
 function forecastHelperCases() {
     const units = {airUnit: 'airkorea'};
@@ -937,7 +1102,7 @@ for (const c of conversionCases(util)) write(`conversion/${c.name}.json`, c);
 write('functions.json', functionCases(util));
 write('units.json', unitCases(util));
 write('weather-info.json', [await lateResponseCase(util)]);
-write('air.json', airCases());
+write('air.json', {...airCases(), visits: airVisitCases(util)});
 write('nation.json', await nationCases());
 write('special.json', specialCases());
 write('photos.json', photoCases());

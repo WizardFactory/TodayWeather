@@ -15,7 +15,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.location.LocationManagerCompat
@@ -32,6 +35,7 @@ import net.wizardfactory.todayweather.core.domain.shell.StartupPage
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.domain.shell.Theme
 import net.wizardfactory.todayweather.core.storage.AppState
+import net.wizardfactory.todayweather.ui.air.rememberAirTab
 import net.wizardfactory.todayweather.ui.forecast.PhotoLoader
 import net.wizardfactory.todayweather.ui.forecast.RetryDialog
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
@@ -41,6 +45,7 @@ import net.wizardfactory.todayweather.ui.shell.MenuRow
 import net.wizardfactory.todayweather.ui.shell.ShellState
 import net.wizardfactory.todayweather.ui.shell.TabContent
 import net.wizardfactory.todayweather.ui.shell.TodayWeatherShell
+import net.wizardfactory.todayweather.ui.shell.rememberShellNavigation
 
 /**
  * The launcher activity. It keeps the Cordova component name (`net.wizardfactory.todayweather/.MainActivity`),
@@ -115,8 +120,8 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * The app's screens over the saved [state]: the shell with the weather tabs (#2887) and the retry confirmation. The
- * other tabs and the menu's pages come with their sub-issues (AN-09, AN-10, AN-12, AN-13, AN-15).
+ * The app's screens over the saved [state]: the shell with the weather tabs (#2887), the Air tab (#2888) and the retry
+ * confirmation. The Locations tab and the menu's pages come with their sub-issues (AN-10, AN-12, AN-13, AN-15).
  */
 @Composable
 fun AppContent(
@@ -130,6 +135,11 @@ fun AppContent(
     onExit: () -> Unit,
 ) {
     val theme = Theme.of(state.settings.theme)
+    val navigation = rememberShellNavigation(StartupPage.tab(state.settings.startupPage))
+    // `?code=` of /tab/air: the pollutant S03 or S04 opened S05 on. The weather tabs keep it in the URL (`$location.path`),
+    // so S05 opens on it again; the Locations tab replaces the URL (`href="#/tab/search"`) and clears it.
+    var airCode by rememberSaveable { mutableStateOf<String?>(null) }
+    val applies by session.applies.collectAsState()
     TodayWeatherShell(
         ShellState(
             theme = theme,
@@ -148,10 +158,17 @@ fun AppContent(
         onRefresh = { session.reload(WeatherSession.Sender.TAB) },
         onMenuRow = {}, // AN-12, AN-13 and AN-15 open the pages
         onExit = onExit,
+        navigation = navigation,
+        onSelect = { tab -> if (tab == Tab.LOCATIONS) airCode = null },
     ) { tab ->
         when (tab) {
-            Tab.HOURLY, Tab.DAILY -> rememberWeatherTab(tab, state, entries, loading, theme, host)
-            else -> TabContent() // AN-09 and AN-10
+            Tab.HOURLY, Tab.DAILY -> rememberWeatherTab(tab, state, entries, loading, theme, host, onAirInfo = { code ->
+                // `goAirInfoPage(code)`: /tab/air?code=.
+                airCode = code
+                navigation.selected = Tab.AIR
+            })
+            Tab.AIR -> rememberAirTab(state, entries, loading, theme, host, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY })
+            else -> TabContent() // AN-10
         }
     }
     if (retry) RetryDialog(onClose = session::closeRetry, onRetry = session::confirmRetry)

@@ -43,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -122,6 +123,19 @@ object ShellTags {
     fun row(row: MenuRow) = "shell-menu-${row.name.lowercase()}"
 }
 
+/** The selected tab: the tab bar changes it, and so can a page (S03's air cells open the Air tab, S05's weather opens S03). */
+class ShellNavigation(initial: Tab) {
+    var selected: Tab by mutableStateOf(initial)
+
+    companion object {
+        val Saver: Saver<ShellNavigation, String> = Saver(save = { it.selected.name }, restore = { ShellNavigation(Tab.valueOf(it)) })
+    }
+}
+
+/** The selection, kept across configuration changes and process restores like the shell's other state. */
+@Composable
+fun rememberShellNavigation(startup: Tab): ShellNavigation = rememberSaveable(saver = ShellNavigation.Saver) { ShellNavigation(startup) }
+
 /**
  * What a tab shows: its page, and in the header bar its title with what follows it (the weather pages' location
  * glyph and spinner) and its buttons. [scrolled] is the page's scroll in dp: the photo theme's bar darkens with it.
@@ -147,9 +161,12 @@ fun TodayWeatherShell(
     onMenuRow: (MenuRow) -> Unit,
     onExit: () -> Unit,
     banner: @Composable () -> Unit = {},
+    navigation: ShellNavigation = rememberShellNavigation(state.startupTab),
+    /** A tab the user selected on the tab bar. */
+    onSelect: (Tab) -> Unit = {},
     content: @Composable (Tab) -> TabContent = { TabContent() },
 ) {
-    var selected by rememberSaveable { mutableStateOf(state.startupTab) }
+    val selected = navigation.selected
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     var exitAsked by rememberSaveable { mutableStateOf(false) }
     var lastTap by remember { mutableLongStateOf(0L) }
@@ -174,7 +191,8 @@ fun TodayWeatherShell(
                         // Cordova: the selected weather or air tab refreshes; a second tap within 700 ms does nothing.
                         if (tab != Tab.LOCATIONS && now - lastTap >= 700) onRefresh(tab)
                     } else {
-                        selected = tab
+                        navigation.selected = tab
+                        onSelect(tab)
                     }
                     lastTap = now
                 }
