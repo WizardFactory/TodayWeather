@@ -431,7 +431,7 @@ Limits:
 
 Originals, receipt and scripts are ignored local evidence under `reports/kma-rule-holdout4-20261102/`. AK approved R2s on 2026-11-03.
 
-### Fifth held-out sample: 5.0 °C wet-bulb rule in November–March, 2026-11-08
+### Fifth held-out sample: 5.0 °C wet-bulb rule in November-March, 2026-11-08
 
 AK approved applying the 5.0 °C cutoff in every month on 2026-11-08 (`wet-bulb-rain-v2`). The rule and criteria were fixed before any request (pre-registration 14:42 KST, first request 14:47:38 KST): in a November–March hour, an amount without a phenomenon code (numeric, normal rain QC, trace 0.0 included; temperature and humidity unflagged, humidity at least 5 %) is PTY 1 when the wet-bulb temperature (Stull 2011, humidity capped at 99 %) is at least 5.0 °C. Truth is the recorded code at stations that code all 24 hours, mapped as server2 maps it. A stricter window check (C5) covers every three-hour mark the rule would type, whatever its own code. The sample was 18 station-months (stations 108, 112, 119, 131, 133, 136, 138, 146, 152, 159, 165, 184; November 2024 to March 2026), none fetched before; 18 calls, one page each, all HTTP 200, result 00 and full rows.
 

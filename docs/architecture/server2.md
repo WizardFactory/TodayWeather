@@ -3993,9 +3993,11 @@ the [history contract](../../server2/config/contracts/kma-history.v1.json):
 - **Wet-bulb rain** (`wet-bulb-rain-v2`). An uncoded normal-QC ASOS amount at a wet-bulb
   temperature of at least 5 °C is rain in every month, not only April to October; in November to
   March that amount is the three-hour quantity at a mark (`AsosStore::type_rain`). Below 5 °C the
-  type stays unknown, and a recorded code still decides. The winter part (R2w) has no held-out
-  sample at this cutoff; post hoc, the three snow or mixed errors of the December–March sample at
-  2.5 °C lie below 5 °C.
+  type stays unknown, and a recorded code still decides. The winter part (R2w) passed a
+  pre-registered [fifth held-out sample](../evidence/research/kma-history-gap-options-2026-10-30.md#fifth-held-out-sample-50-c-wet-bulb-rule-in-november-march-2026-11-08)
+  (117 scored hours and 160 typed windows without a snow or mixed code). Its cutoff was weakly
+  challenged (warmest snow at 2.43 °C wet-bulb), and one earlier window would be typed as rain
+  (station 138, 2026-02-25 03:00: a trace at 6.18 °C with sleet at 01:00).
 - **Nowcast fill** (`nowcast-fill-v1`). An hour before today within the last 23 hours, which the
   nowcast API still serves (`publication::past_current_bases`), whose type or amount the ASOS
   rules leave unknown (`fill::unknown_hours`) takes the cell's grid nowcast. The ASOS answer hands

@@ -304,8 +304,8 @@
       "transform": "winter-wet-bulb-rain: in a November-March hour, an uncoded normal-QC amount (the three-hour quantity at a mark) at wet-bulb >= 5.0 C (Stull 2011) becomes PTY 1; below that it stays unknown, and a recorded type stays",
       "precedence": 4,
       "approval": "approved",
-      "verification": "unverified",
-      "holdout": "docs/evidence/research/kma-history-gap-options-2026-10-30.md#third-held-out-sample-wet-bulb-variant-2026-11-02 (December-March at a 2.5 C cutoff; post hoc, its three snow or mixed errors lie below 5 C wet-bulb; no held-out sample at this cutoff). AK approved it on 2026-11-08.",
+      "verification": "verified",
+      "holdout": "docs/evidence/research/kma-history-gap-options-2026-10-30.md#fifth-held-out-sample-50-c-wet-bulb-rule-in-november-march-2026-11-08 (pre-registered November-March sample: 117 scored hours and 160 typed windows without a snow or mixed code; cutoff weakly challenged, warmest snow at 2.43 C wet-bulb; the third sample's data hold one window this rule types as rain, station 138, 2026-02-25 03:00, a trace at 6.18 C with sleet at 01:00). AK approved it on 2026-11-08.",
       "rule": "wet-bulb-rain-v2"
     },
     {
