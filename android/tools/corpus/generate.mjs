@@ -563,6 +563,75 @@ function pushCases() {
     };
 }
 
+// WeatherUtil.loadWeatherPhotos with a $http that answers with synthetic feeds (the feed URL is a private build
+// input; the body is a JSON array, docs/rewrite/client-data-contracts.md), then findWeatherPhoto for every
+// weather image name with Math.random fixed. Kotlin: WeatherPhotos.
+function photoCases() {
+    const photo = (id, tags) => ({id, ...(tags === undefined ? {} : {tags}), twUrls: {regular: `https://photos.test.invalid/${id}.jpg`}});
+    const feed = [
+        photo('sun-1', ['sun']), photo('sun-2', ['sun']), photo('sun-3', ['sun']),
+        photo('sun-small-1', ['sun', 'smallcloud']), photo('sun-small-2', ['smallcloud', 'sun']),
+        photo('sun-big-1', ['sun', 'bigcloud']),
+        photo('moon-1', ['moon']), photo('moon-small-1', ['moon', 'smallcloud']), photo('moon-big-1', ['bigcloud', 'moon']),
+        photo('cloud-1', ['cloud']), photo('cloud-2', ['cloud']),
+        photo('rain-1', ['rain']), photo('rain-sun-1', ['sun', 'rain']), photo('snow-1', ['snow']),
+        photo('lightning-1', ['rain', 'lightning']),
+        photo('null-tag-1', [null, 'sun']), photo('fog-1', ['fog']),
+        photo('string-tags-1', 'sun'), photo('no-tags-1', undefined), 7,
+    ];
+    // A null item throws in the grouping loop: the items after it stay out of the groups.
+    const broken = [photo('cloud-1', ['cloud']), null, photo('sun-1', ['sun'])];
+    let factory;
+    const random = {value: 0};
+    const context = {
+        angular: {module: () => ({factory: (_, fn) => { factory = fn; }}), isArray: Array.isArray},
+        console: quiet, clientConfig: {debug: false, weatherPhotosUrl: 'https://photos.test.invalid/list.json'}, window: {},
+        setTimeout: () => 0, clearTimeout() {}, random,
+    };
+    vm.runInNewContext('Math.random = function () { return random.value; };\n' +
+        fs.readFileSync(path.join(JS, 'service.weatherutil.js'), 'utf8'), context);
+    // A $q whose promises settle at once; the feed request answers without a network.
+    const $q = {defer() {
+        let state = null, value;
+        const waiting = [];
+        const settle = (s, v) => {
+            if (state) return;
+            state = s; value = v;
+            waiting.splice(0).forEach(([ok, err]) => (s === 'ok' ? ok : err)?.(v));
+        };
+        return {resolve: (v) => settle('ok', v), reject: (e) => settle('err', e), promise: {then(ok, err) {
+            if (state) (state === 'ok' ? ok : err)?.(value); else waiting.push([ok, err]);
+            return this;
+        }}};
+    }};
+    const requests = [];
+    let body;
+    const $http = (options) => {
+        requests.push(options);
+        return {success(fn) { fn(clone(body), 200); return {error() {}}; }};
+    };
+    const util = factory($q, $http, {ga: {trackEvent() {}, trackException() {}}}, {getUnit() {}}, {track() {}});
+    const load = (value) => {
+        body = value;
+        delete context.window.weatherPhotos;
+        try { util.loadWeatherPhotos(); } catch (e) { /* a broken item ends the grouping, as on the device */ }
+        return Object.fromEntries(Object.entries(context.window.weatherPhotos).map(([k, v]) => [k, v.map((p) => p.id)]));
+    };
+    const brokenGroups = load(broken);
+    const groups = load(feed);
+    const icons = fs.readdirSync(path.join(ROOT, 'client/www/img/weather_default')).filter((f) => f.endsWith('.png'))
+        .map((f) => f.slice(0, -4)).sort();
+    const cases = [];
+    for (const skyIcon of [...icons, '', null]) {
+        for (const r of [0, 0.5, 0.999]) {
+            random.value = r;
+            cases.push({skyIcon, random: r, photo: util.findWeatherPhoto(skyIcon === null ? {} : {skyIcon})});
+        }
+    }
+    return {request: {url: requests[0].url, timeout: requests[0].timeout}, feeds: [{name: 'feed', feed, groups},
+        {name: 'null-item', feed: broken, groups: brokenGroups}], cases};
+}
+
 // ---------------------------------------------------------------- write
 const units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km',
     precipitationUnit: 'mm', airUnit: 'airkorea'};
@@ -581,6 +650,7 @@ write('weather-info.json', [await lateResponseCase(util)]);
 write('air.json', airCases());
 write('nation.json', await nationCases());
 write('special.json', specialCases());
+write('photos.json', photoCases());
 {
     const file = path.join(ROOT, 'android/core-storage/src/test/resources/corpus/push.json');
     fs.mkdirSync(path.dirname(file), {recursive: true});

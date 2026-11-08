@@ -8,6 +8,9 @@ Outputs (paths relative to android/app/):
   src/main/assets/img/**             copies of client/www/img/**/*.png
   src/main/assets/data/towns.json    client/www/data/town.js without its `window.towns=` prefix
   src/main/res/values*/client_strings.xml  client/www/locales/*.json as string resources
+  src/main/res/font/material_icons.ttf  client/www/fonts/MaterialIcons-Regular.ttf
+  src/main/res/mipmap-*/ic_launcher.png   client/tw.resources/android/icon/drawable-*-icon.png (launcher icon)
+  src/main/res/drawable-nodpi/splash_icon.png  client/tw.resources/android-launcher-icon.png (Android 12+ splash)
   provenance/client-assets.json      source path, last commit, and hashes for every output
 
 Usage: python3 android/tools/import_client_assets.py   (from anywhere inside the repository)
@@ -23,6 +26,9 @@ from xml.sax.saxutils import escape
 
 ROOT = Path(__file__).resolve().parents[2]
 CLIENT = ROOT / "client" / "www"
+# The TodayWeather build resources that client/config.xml names (`tw.resources/...`).
+TW_RESOURCES = ROOT / "client" / "tw.resources"
+ICON_DENSITIES = ["ldpi", "mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
 APP = ROOT / "android" / "app"
 ASSETS = APP / "src" / "main" / "assets"
 RES = APP / "src" / "main" / "res"
@@ -61,7 +67,8 @@ def last_commits(paths):
     found = {}
     log = subprocess.run(
         ["git", "-C", str(ROOT), "log", "--format=@%H", "--name-only", "--", "client/www/img",
-         "client/www/locales", "client/www/data/town.js"],
+         "client/www/locales", "client/www/data/town.js", "client/www/fonts/MaterialIcons-Regular.ttf",
+         "client/tw.resources/android/icon", "client/tw.resources/android-launcher-icon.png"],
         check=True, capture_output=True, text=True).stdout
     commit = None
     for line in log.splitlines():
@@ -128,7 +135,10 @@ def main():
     images = tracked_images()
     town = CLIENT / "data" / "town.js"
     locales = [CLIENT / "locales" / f"{code}.json" for code in LOCALE_DIRS]
-    commits = last_commits(images + [town] + locales)
+    material_icons = CLIENT / "fonts" / "MaterialIcons-Regular.ttf"
+    launcher_icons = [TW_RESOURCES / "android" / "icon" / f"drawable-{d}-icon.png" for d in ICON_DENSITIES]
+    splash_icon = TW_RESOURCES / "android-launcher-icon.png"
+    commits = last_commits(images + [town] + locales + [material_icons] + launcher_icons + [splash_icon])
 
     outputs = []  # (source, output, data)
     for src in images:
@@ -145,6 +155,15 @@ def main():
     for code, src in zip(LOCALE_DIRS, locales):
         catalog = json.loads(src.read_text(encoding="utf-8"))
         outputs.append((src, RES / LOCALE_DIRS[code] / "client_strings.xml", strings_xml(catalog)))
+
+    # The Material Icons font of the Cordova app (location and expander glyphs).
+    outputs.append((material_icons, RES / "font" / "material_icons.ttf", material_icons.read_bytes()))
+
+    # The launcher icon and the Android 12+ splash icon of the Cordova build (config.xml <icon>,
+    # AndroidWindowSplashScreenAnimatedIcon), so the home screen and the launch look the same after the update.
+    for density, src in zip(ICON_DENSITIES, launcher_icons):
+        outputs.append((src, RES / f"mipmap-{density}" / "ic_launcher.png", src.read_bytes()))
+    outputs.append((splash_icon, RES / "drawable-nodpi" / "splash_icon.png", splash_icon.read_bytes()))
 
     # Replace the generated trees so files removed from client/ disappear here too.
     shutil.rmtree(ASSETS / "img", ignore_errors=True)
@@ -164,7 +183,7 @@ def main():
     PROVENANCE.parent.mkdir(parents=True, exist_ok=True)
     PROVENANCE.write_text(json.dumps({
         "tool": "android/tools/import_client_assets.py",
-        "license": "Same repository and license as client/ (TodayWeather, WizardFactory)",
+        "license": "Same repository and license as client/ (TodayWeather, WizardFactory), except res/font/material_icons.ttf: Material Icons, Apache License 2.0 (Google)",
         "renamed_string_keys": dict(sorted(RENAMED.items())),
         "skipped_case_duplicates": SKIPPED,
         "files": records,

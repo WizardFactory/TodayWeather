@@ -18,6 +18,7 @@ Running it again without changes in `client/` or the inputs changes nothing. `co
 | `aqiStandard` (`service.weatherutil.js`), TabCtrl `setAirUnit`, `grade2Color`, `airkoreaGrade2Color`, `getSentimentIcon`, AirCtrl `getLabelPosition`, `getAirCodeUnit`, `_getAQIList`, `_getDustForecast`, `_getHourlyForecast` | extracted functions with stub `$scope`, `Units` and element widths | `AirQuality` (`air.json`) |
 | `NationCtrl`, `NationAirCtrl` (`controller.nation*.js`) | the controllers with a stub `WeatherUtil.getNationWeather` returning the captured response | `Nationwide` (`nation.json`) |
 | `parseSpecialData` (`controller.kma.special.js`) | the extracted function with `Date` locale methods fixed to each language and Asia/Seoul (plus en-US in New York) | `Warnings` (`special.json`) |
+| `loadWeatherPhotos`, `findWeatherPhoto` (`service.weatherutil.js`) | the factory with an immediate `$q`, a `$http` that answers with synthetic feeds (a JSON array; one with a `null` item that ends the grouping) and `Math.random` fixed, for every weather image name | `WeatherPhotos` (`photos.json`) |
 
 `CoreOnDeviceTest` (app `androidTest`) runs the converter and the warning parser against the corpus on a device; it passed on API 24 and API 36 emulators.
 

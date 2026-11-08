@@ -24,6 +24,12 @@ on:
       - "client/www/js/controller.nation.js"
       - "client/www/js/controller.nation.air.js"
       - "client/www/js/controller.kma.special.js"
+      - "client/www/index.html"
+      - "client/www/templates/tabs-android.html"
+      - "client/www/js/controller.settingctrl.js"
+      - "client/www/fonts/MaterialIcons-Regular.ttf"
+      - "client/tw.resources/android/icon/**"
+      - "client/tw.resources/android-launcher-icon.png"
       - ".github/workflows/android.yml"
   push:
     branches: [master]
@@ -50,6 +56,12 @@ on:
       - "client/www/js/controller.nation.js"
       - "client/www/js/controller.nation.air.js"
       - "client/www/js/controller.kma.special.js"
+      - "client/www/index.html"
+      - "client/www/templates/tabs-android.html"
+      - "client/www/js/controller.settingctrl.js"
+      - "client/www/fonts/MaterialIcons-Regular.ttf"
+      - "client/tw.resources/android/icon/**"
+      - "client/tw.resources/android-launcher-icon.png"
       - ".github/workflows/android.yml"
 permissions:
   contents: read
@@ -76,8 +88,8 @@ jobs:
           node android/tools/corpus/generate.mjs
           git diff --exit-code -- android
           test -z "$(git status --porcelain -- android)"
-      - name: Chart references match the client chart sources
-        run: node android/tools/chart-reference/check-sources.mjs
+      - name: Chart and shell references match the client sources
+        run: node android/tools/emulator/check-sources.mjs
       - name: Build and unit tests
         working-directory: android
         run: ./gradlew assembleDebug test

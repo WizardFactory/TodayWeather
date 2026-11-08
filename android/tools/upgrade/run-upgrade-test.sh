@@ -56,6 +56,16 @@ adb shell am instrument -w -e seeded "$SEEDED" -e token "$TOKEN" -e class $PKG.C
 # process completes the stored work (PushTokenWorkTest).
 adb shell am instrument -w -e previous "$TOKEN" -e transport hold -e class $PKG.PushTokenWorkTest#tokenWorkIsInterruptedWithItsRequestInFlight $RUNNER | tee "$OUT/token-work-interrupted.txt"
 adb shell am instrument -w -e previous "$TOKEN" -e class $PKG.PushTokenWorkTest#tokenWorkCompletesAfterTheProcessEnded $RUNNER | tee "$OUT/token-work-completed.txt"
+# Entry intents that arrive while the migration runs are handled after it (EntryIntentTest, #2886 AC4).
+adb shell am instrument -w -e migration hold -e class $PKG.EntryIntentTest $RUNNER | tee "$OUT/entry-intents.txt"
+# The home-screen shortcut of the Cordova app: the launcher's intent for the same component opens the native
+# activity. Opened outside the instrumentation, the app finds no network (offline) for its start registration.
+adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER $PKG | tail -1 > "$OUT/launcher.txt"
+adb shell am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n $PKG/.MainActivity | tee "$OUT/shortcut.txt"
+sleep 2
+adb shell dumpsys activity activities | grep -E "topResumedActivity|mResumedActivity" > "$OUT/shortcut-resumed.txt" || true
+adb exec-out screencap -p > "$OUT/shortcut.png"
+adb shell am force-stop $PKG
 adb logcat -d > "$OUT/logcat.txt"
 adb exec-out run-as $PKG cat shared_prefs/com.google.android.gms.measurement.prefs.xml > "$OUT/measurement-after.xml" || true
 
@@ -63,6 +73,10 @@ grep -q "^OK (1 test)" "$OUT/first-start.txt"
 grep -q "^OK (1 test)" "$OUT/after-restart.txt"
 grep -q "^OK (1 test)" "$OUT/token-work-interrupted.txt"
 grep -q "^OK (1 test)" "$OUT/token-work-completed.txt"
+grep -q "^OK (1 test)" "$OUT/entry-intents.txt"
+grep -qx "$PKG/.MainActivity" "$OUT/launcher.txt"
+grep -q "^Status: ok" "$OUT/shortcut.txt"
+grep -q "$PKG/.MainActivity" "$OUT/shortcut-resumed.txt"
 EVENTS=$(grep -c "Logging event" "$OUT/logcat.txt" || true)
 echo "analytics events logged after the update: $EVENTS"
 test "$EVENTS" -eq 0
