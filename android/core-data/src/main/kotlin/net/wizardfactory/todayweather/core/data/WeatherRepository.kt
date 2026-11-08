@@ -2,6 +2,7 @@ package net.wizardfactory.todayweather.core.data
 
 import java.io.File
 import java.security.MessageDigest
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,6 +52,8 @@ class WeatherRepository(
     private val cacheDir: File?,
     private val http: HttpGet = OkHttpGet(WeatherRequests.TIMEOUT_MS),
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Where the file cache is read and written. */
+    private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val entries = MutableStateFlow<Map<String, WeatherEntry>>(emptyMap())
     private val running = MutableStateFlow<Set<String>>(emptySet())
@@ -120,7 +123,7 @@ class WeatherRepository(
         return LoadResult.Loaded(key, entry, updated)
     }
 
-    private suspend fun readCache(key: String): WeatherEntry? = withContext(Dispatchers.IO) {
+    private suspend fun readCache(key: String): WeatherEntry? = withContext(io) {
         val file = cacheFile(key) ?: return@withContext null
         if (!file.isFile) return@withContext null
         runCatching {
@@ -129,7 +132,7 @@ class WeatherRepository(
         }.getOrNull()
     }
 
-    private suspend fun writeCache(key: String, entry: WeatherEntry) = withContext(Dispatchers.IO) {
+    private suspend fun writeCache(key: String, entry: WeatherEntry) = withContext(io) {
         val file = cacheFile(key) ?: return@withContext
         runCatching {
             file.parentFile?.mkdirs()

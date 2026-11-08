@@ -40,7 +40,7 @@ class WeatherRepositoryTest {
 
     private fun currentOf(entry: WeatherEntry?) = entry!!.weather["currentWeather"]!!.jsonObject
 
-    private fun repository(http: HttpGet, cache: File? = null) = WeatherRepository("https://server.test.invalid", cache, http) { now }
+    private fun repository(http: HttpGet, cache: File? = null) = WeatherRepository("https://server.test.invalid", cache, http, { now })
 
     /** #2887 A01: Cordova put the answer for the place it asked about on the place selected when it came. */
     @Test

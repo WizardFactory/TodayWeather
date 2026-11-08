@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -143,10 +144,14 @@ fun WeatherPage(
             HeaderBlock(page, content.metrics, theme, colors, photo, photoGradient, onPrevious, onNext, onAction)
             Spacer(Modifier.height(5.dp))
             Box(Modifier.testTag(ForecastTags.block(1))) {
-                if (!daily && page.showChart && content.hourly != null) {
-                    HourlyChartView(content.hourly, expanded, onToggleExpanded, colors = colors.chart)
+                // The charts are drawn to their columns, which the screen's width sets: their text keeps its size whatever
+                // the font scale, as glyphs do, or larger text would run into the next column.
+                Icon {
+                    if (!daily && page.showChart && content.hourly != null) {
+                        HourlyChartView(content.hourly, expanded, onToggleExpanded, colors = colors.chart)
+                    }
+                    if (daily && content.daily != null) DailyChartView(content.daily, colors = colors.chart)
                 }
-                if (daily && content.daily != null) DailyChartView(content.daily, colors = colors.chart)
             }
             Spacer(Modifier.height(10.dp))
         }
@@ -260,7 +265,10 @@ private fun Summary(text: String, colors: ForecastColors, modifier: Modifier) {
         }
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             for (line in lines) {
-                FixedLine(with(LocalDensity.current) { 24.sp.toDp() }) { OutlinedText(line, style, colors.headerOutline) }
+                // The glyphs may reach past the 24 sp line, as in CSS: the text keeps its own height, centered on it.
+                FixedLine(with(LocalDensity.current) { 24.sp.toDp() }) {
+                    OutlinedText(line, style, colors.headerOutline, Modifier.wrapContentHeight(unbounded = true))
+                }
             }
         }
     }
@@ -446,8 +454,9 @@ private fun DustRows(rows: List<DustRow>, colors: ForecastColors, onAction: (Pag
 }
 
 /**
- * `.card-scroll` with `.rowgroup-vspacing-box`: a day per cell, at least 132 dp wide with 5 dp padding, scrolling when
- * wider than the page; each cell has the calendar title and rows of a 24 dp image, a value and its label.
+ * `.card-scroll` with `.rowgroup-vspacing-box`: a day per cell, at least 132 dp wide with 5 dp padding and wider for
+ * longer texts, which do not wrap (`white-space: nowrap`), scrolling when wider than the page; each cell has the
+ * calendar title and rows of a 24 dp image, a value and its label.
  */
 @Composable
 private fun DayCells(days: List<DayCell>, theme: Theme, colors: ForecastColors) {
@@ -462,7 +471,7 @@ private fun DayCells(days: List<DayCell>, theme: Theme, colors: ForecastColors) 
 private fun DayRow(days: List<DayCell>, cellWidth: Dp, theme: Theme, colors: ForecastColors) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
         for (day in days) {
-            Column(Modifier.width(cellWidth).padding(horizontal = 5.dp)) {
+            Column(Modifier.widthIn(min = cellWidth).padding(horizontal = 5.dp)) {
                 Row(Modifier.padding(start = 24.dp), verticalAlignment = Alignment.CenterVertically) {
                     CssText(buildAnnotatedString {
                         withStyle(SpanStyle(fontFamily = Glyphs.ionicons)) { append(Glyphs.CALENDAR) }

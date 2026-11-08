@@ -893,6 +893,35 @@ function forecastHelperCases() {
     return out;
 }
 
+// WeatherInfo's selection of the place to show (setFirstCityIndex, setNextCityIndex, setPrevCityIndex,
+// getEnabledCityCount) for lists of one to four places with the current position (index 0) on or off, from every
+// index. Kotlin: PlaceIndex.
+function cityIndexCases(util) {
+    const out = [];
+    for (const count of [1, 2, 3, 4]) {
+        for (const firstDisabled of [false, true]) {
+            const {info} = loadWeatherInfo(util);
+            for (let i = 0; i < count; i++) {
+                info.addCity({address: `대한민국 서울특별시 중구 동${i}`, location: {lat: 37 + i / 100, long: 127}, currentPosition: i === 0});
+            }
+            if (firstDisabled) info.getCityOfIndex(0).disable = true;
+            for (let from = -1; from < count; from++) {
+                const run = (op) => {
+                    if (from >= 0) info.setCityIndex(from); else info.setCityIndex(0);
+                    if (from < 0) { info.setFirstCityIndex(); return info.getCityIndex(); }
+                    info[op]();
+                    return info.getCityIndex();
+                };
+                out.push({count, firstDisabled, from, enabled: info.getEnabledCityCount(),
+                    first: from < 0 ? run() : undefined,
+                    next: from >= 0 ? run('setNextCityIndex') : undefined,
+                    previous: from >= 0 ? run('setPrevCityIndex') : undefined});
+            }
+        }
+    }
+    return out;
+}
+
 // ---------------------------------------------------------------- write
 const units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km',
     precipitationUnit: 'mm', airUnit: 'airkorea'};
@@ -913,7 +942,7 @@ write('nation.json', await nationCases());
 write('special.json', specialCases());
 write('photos.json', photoCases());
 write('requests.json', requestCases());
-write('forecast.json', {visits: forecastCases(util), helpers: forecastHelperCases()});
+write('forecast.json', {visits: forecastCases(util), helpers: forecastHelperCases(), cityIndex: cityIndexCases(util)});
 {
     const file = path.join(ROOT, 'android/core-storage/src/test/resources/corpus/push.json');
     fs.mkdirSync(path.dirname(file), {recursive: true});

@@ -91,6 +91,25 @@ class ForecastScopeTest {
         }
     }
 
+    @Test
+    fun placeSelectionMatchesWeatherInfo() {
+        val cases = golden["cityIndex"]!!.jsonArray.map { it.jsonObject }
+        assertEquals(28, cases.size)
+        for (case in cases) {
+            val count = case["count"]!!.jsonPrimitive.int
+            val disabled = List(count) { it == 0 && case["firstDisabled"]!!.jsonPrimitive.boolean }
+            val from = case["from"]!!.jsonPrimitive.int
+            val name = "count $count, first disabled ${disabled[0]}, from $from"
+            assertEquals(case["enabled"]!!.jsonPrimitive.int, PlaceIndex.enabledCount(disabled), "$name: enabled")
+            if (from < 0) {
+                assertEquals(case["first"]!!.jsonPrimitive.int, PlaceIndex.first(disabled, 0), "$name: first")
+            } else {
+                assertEquals(case["next"]!!.jsonPrimitive.int, PlaceIndex.next(disabled, from), "$name: next")
+                assertEquals(case["previous"]!!.jsonPrimitive.int, PlaceIndex.previous(disabled, from), "$name: previous")
+            }
+        }
+    }
+
     private fun check(expected: JsonObject, scope: ForecastScope, records: List<JsonObject>, name: String) {
         fun same(key: String, actual: JsonElement?) = assertEquals(expected[key], actual, "$name: $key")
         fun number(key: String, actual: Double?) {

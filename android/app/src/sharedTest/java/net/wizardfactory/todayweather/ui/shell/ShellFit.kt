@@ -85,7 +85,7 @@ object ShellFit {
     }
 
     /** The window without the system bars and the display cutout, in the root's pixels. */
-    private fun safeArea(activity: ComponentActivity, window: Rect): Rect {
+    fun safeArea(activity: ComponentActivity, window: Rect): Rect {
         val insets = ViewCompat.getRootWindowInsets(activity.window.decorView)
             ?.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()) ?: return window
         return Rect(window.left + insets.left, window.top + insets.top, window.right - insets.right, window.bottom - insets.bottom)
@@ -95,7 +95,7 @@ object ShellFit {
         other.left >= left - 0.5f && other.top >= top - 0.5f && other.right <= right + 0.5f && other.bottom <= bottom + 0.5f
 
     /** Texts that are cut: ellipsized or overflowing their line, or reaching past the sides of [safe]. */
-    private fun texts(rule: AndroidComposeTestRule<*, *>, where: String, safe: Rect?): List<String> =
+    fun texts(rule: AndroidComposeTestRule<*, *>, where: String, safe: Rect?): List<String> =
         rule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true).fetchSemanticsNodes()
             .mapNotNull { node -> cut(node, safe)?.let { "$where: \"${node.text()}\" $it" } }
 
